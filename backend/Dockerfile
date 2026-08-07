@@ -1,16 +1,9 @@
-FROM python:3.10-slim
+FROM ghcr.io/gynsys/arko360_platform/backend:latest
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
-    gcc \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
-RUN pip install --no-cache-dir -r requirements.txt
-
+# The base image already has torch and all requirements installed.
+# We just need to copy our modified codebase over the existing one.
 COPY . .
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]

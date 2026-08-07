@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  apupro-db:
+    image: postgres:14
+    restart: always
+    environment:
+      POSTGRES_USER: apupro_user
+      POSTGRES_PASSWORD: apupro_password
+      POSTGRES_DB: apupro_db
+    volumes:
+      - apupro_db_data:/var/lib/postgresql/data
+    ports:
+      - "5440:5432"
+
+  apupro-backend:
+    build: 
+      context: ./backend
+    restart: always
+    ports:
+      - "8010:8001"
+    environment:
+      - DATABASE_URL=postgresql://apupro_user:apupro_password@apupro-db:5432/apupro_db
+      - SECRET_KEY=changethisinproduction
+    depends_on:
+      - apupro-db
+
+  apupro-frontend:
+    build:
+      context: ./frontend
+    restart: always
+    ports:
+      - "3010:80"
+    environment:
+      - VITE_API_URL=http://apupro.arko360.net/api/v1
+
+volumes:
+  apupro_db_data:
