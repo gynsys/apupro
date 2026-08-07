@@ -1,0 +1,330 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Plus, Printer, Trash2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { budgetService } from '../../services/budgetService';
+import { API_URL } from '../../services/api';
+import ComponentSearchModal from '../../components/ComponentSearchModal';
+import PrintAPUModal from '../../components/PrintAPUModal';
+import PrintAPULayout from '../../components/PrintAPULayout';
+import ApuEditorUI from '../../components/ApuEditorUI';
+
+
+export default function BudgetAPUEditorPage() {
+  const { id, itemId } = useParams();
+  const navigate = useNavigate();
+
+  const [budget, setBudget] = useState(null);
+  const [item, setItem] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
+  const [editingHeader, setEditingHeader] = useState({ code: false, description: false });
+  
+  const [searchModal, setSearchModal] = useState({ isOpen: false, type: '', title: '' });
+  const [syncing, setSyncing] = useState(false);
+  
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [printOptions, setPrintOptions] = useState(null);
+
+  useEffect(() => {
+    if (printOptions) {
+      setTimeout(() => {
+        window.print();
+        setPrintOptions(null);
+        setPrintModalOpen(false);
+      }, 300);
+    }
+  }, [printOptions]);
+
+
+
+  // ── Numeric field change (local state only) ──────────────────────────────
+  const handleComponentChange = (type, compId, field, value) => {
+    const val = parseFloat(value) || 0;
+    setItem(prev => {
+      const updated = { ...prev };
+      updated[type] = updated[type].map(c =>
+        c.id === compId ? { ...c, [field]: val } : c
+      );
+      return updated;
+    });
+  };
+
+  const handleComponentBlur = async (type, compId, field, value) => {
+    const val = parseFloat(value) || 0;
+    try {
+      await budgetService.updateComponent(id, itemId, type, compId, { [field]: val });
+    } catch (error) {
+      toast.error('Error al actualizar el componente');
+      loadData();
+    }
+  };
+
+  // ── Text field change (description / codigo) ─────────────────────────────
+  const handleTextChange = (type, compId, field, value) => {
+    setItem(prev => ({
+      ...prev,
+      [type]: prev[type].map(c => c.id === compId ? { ...c, [field]: value } : c)
+    }));
+  };
+
+  const handleTextBlur = async (type, compId, field, value) => {
+    try {
+      await budgetService.updateComponent(id, itemId, type, compId, { [field]: value });
+      toast.success('Actualizado');
+      loadData(); // Recargar datos para reflejar cambios
+    } catch (error) {
+      toast.error('Error al actualizar');
+      loadData();
+    }
+  };
+
+  // ── Delete component ─────────────────────────────────────────────────────
+  const handleDeleteComponent = async (type, compId) => {
+    setDeletingId(compId);
+    try {
+      await budgetService.deleteComponent(id, itemId, type, compId);
+      setItem(prev => ({
+        ...prev,
+        [type]: prev[type].filter(c => c.id !== compId)
+      }));
+      toast.success('Eliminado');
+    } catch (error) {
+      toast.error('Error al eliminar');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [id, itemId]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const budgetData = await budgetService.getById(id);
+      setBudget(budgetData);
+      const foundItem = budgetData.items.find(i => i.id === itemId);
+      if (!foundItem) {
+        toast.error('Partida no encontrada en este presupuesto');
+        navigate(`/budgets/${id}`);
+      }
+      setItem(foundItem);
+    } catch (error) {
+      console.error(error);
+      toast.error('Error cargando APU');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePerformanceChange = async (newPerf) => {
+    const val = parseFloat(newPerf) || 1;
+    setItem(prev => ({ ...prev, performance: val }));
+    try {
+      await budgetService.updateItem(id, itemId, { performance: val });
+    } catch (error) {
+      toast.error('Error actualizando rendimiento');
+    }
+  };
+
+  const handleHeaderFieldChange = (field, value) => {
+    setItem(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleHeaderFieldBlur = async (field, value) => {
+    try {
+      await budgetService.updateItem(id, itemId, { [field]: value });
+      toast.success('Actualizado');
+      setEditingHeader(prev => ({ ...prev, [field === 'cov_par' ? 'code' : 'description']: false }));
+    } catch (error) {
+      toast.error('Error al actualizar');
+      loadData();
+    }
+  };
+
+  const handleAddComponent = async (componentData) => {
+    try {
+      setLoading(true);
+      await budgetService.addComponent(id, itemId, searchModal.type, componentData);
+      toast.success('Agregado con éxito');
+      setSearchModal({ isOpen: false, type: '', title: '' });
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al agregar el insumo');
+      setLoading(false);
+    }
+  };
+
+  // ── Handlers for Manual Blank Rows (to match AI logic) ─────────────
+  const handleAddBlankRow = (type) => {
+    setItem(prev => {
+      const updated = { ...prev };
+      const newRow = {
+        id: "NEW-" + Math.floor(Math.random() * 100000),
+        codigo: "",
+        descripcion: "",
+        cantidad: 1,
+        precio_unitario: 0,
+      };
+      
+      if (type === 'materials') {
+        newRow.unidad = "und";
+        newRow.desperdicio = 0;
+      } else if (type === 'equipments') {
+        newRow.depreciacion = 1.0;
+      } else if (type === 'labors') {
+        newRow.jornal = 0;
+      }
+      
+      updated[type] = [...(updated[type] || []), newRow];
+      return updated;
+    });
+  };
+
+  const handleRemoveRow = async (type, compId) => {
+    // If it's a NEW row (not saved in DB), just remove it from local state
+    if (String(compId).startsWith('NEW-')) {
+      setItem(prev => ({
+        ...prev,
+        [type]: prev[type].filter(c => c.id !== compId)
+      }));
+    } else {
+      // If it exists in backend, delete via API
+      handleDeleteComponent(type, compId);
+    }
+  };
+
+  const handleApuEditorComponentChange = (type, compId, field, value) => {
+    // For text fields like codigo, descripcion, unidad
+    if (['codigo', 'descripcion', 'unidad'].includes(field)) {
+      handleTextChange(type, compId, field, value);
+    } else {
+      handleComponentChange(type, compId, field, value);
+    }
+  };
+
+  const handleApuEditorComponentBlur = async (type, compId, field, value) => {
+    // We only send to API if it's NOT a new row
+    if (String(compId).startsWith('NEW-')) {
+      // If the user finishes editing a new row, and it has valid desc/price, we could auto-save it
+      // For now, we wait for a manual save button? Actually, in budgets, changes save automatically.
+      // We will create the component if it has enough data.
+      if (field === 'descripcion' && value.trim() !== '') {
+        try {
+          const compToSave = item[type].find(c => c.id === compId);
+          if (compToSave) {
+            setLoading(true);
+            const dataToSave = { ...compToSave };
+            delete dataToSave.id; // remove fake ID
+            await budgetService.addComponent(id, itemId, type, dataToSave);
+            toast.success('Insumo guardado');
+            await loadData();
+          }
+        } catch (error) {
+          toast.error('Error al guardar nuevo insumo');
+          setLoading(false);
+        }
+      }
+      return;
+    }
+
+    if (['codigo', 'descripcion', 'unidad'].includes(field)) {
+      handleTextBlur(type, compId, field, value);
+    } else {
+      handleComponentBlur(type, compId, field, value);
+    }
+  };
+
+  if (loading || !item || !budget) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-slate-400">
+        <Loader className="animate-spin" size={32} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 md:p-6 max-w-7xl mx-auto pb-24 print:p-0 print:m-0 print:max-w-none print:bg-white print:w-full">
+      {printOptions && (
+        <PrintAPULayout
+          partida={{ ...item, fcas_percent: budget.fcas_percent, admin_percent: budget.admin_percent, util_percent: budget.util_percent, rendimiento: item.performance, cantidad: item.quantity }}
+          materiales={item.materials || []}
+          equipos={item.equipments || []}
+          mano_obra={item.labors || []}
+          options={{ ...printOptions, companyName: budget.name }}
+        />
+      )}
+      
+      {printModalOpen && (
+        <PrintAPUModal
+          isOpen={printModalOpen}
+          onClose={() => setPrintModalOpen(false)}
+          onPrint={(options) => setPrintOptions(options)}
+          budgetName={budget.name}
+        />
+      )}
+      
+      <div className="print:hidden flex flex-col min-h-full">
+        {/* TOOLBAR */}
+        <div className="flex items-center justify-between mb-4 sticky top-0 z-30 bg-gray-50/95 backdrop-blur py-3 px-4 md:px-6 border-b border-gray-200/50 shadow-sm">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate(`/budgets/${id}`)}
+              className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 hover:border-blue-400 hover:shadow-md transition-all duration-200 shrink-0 shadow-sm"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h2 className="text-sm font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+                <Calculator size={16} className="text-blue-500" /> APU PRESUPUESTADO
+              </h2>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setPrintModalOpen(true)}
+              className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 hover:border-blue-400 hover:shadow-md transition-all duration-200 shadow-sm"
+              title="Imprimir"
+            >
+              <Printer size={20} />
+            </button>
+          </div>
+        </div>
+
+        <ApuEditorUI
+          item={item}
+          settings={{
+            currency: budget.currency,
+            exchange_rate: budget.exchange_rate || 1.0,
+            material_inflation: budget.material_inflation || 0,
+            equipment_inflation: budget.equipment_inflation || 0,
+            labor_inflation: budget.labor_inflation || 0,
+            labor_bonus: budget.labor_bonus || 0,
+            fcas_percent: budget.fcas_percent || 417,
+            admin_percent: budget.admin_percent || 15,
+            profit_percent: budget.profit_percent || 10,
+            iva_percent: budget.iva_percent || 0
+          }}
+          onHeaderChange={handleApuEditorComponentChange}
+          onHeaderBlur={handleApuEditorComponentBlur}
+          onComponentChange={handleApuEditorComponentChange}
+          onComponentBlur={handleApuEditorComponentBlur}
+          onRemoveRow={handleRemoveRow}
+          onAddBlankRow={handleAddBlankRow}
+          onAddSearchRow={(type) => setSearchModal({ isOpen: true, type, title: `Buscar ${type}` })}
+          deletingId={deletingId}
+        />
+      </div>
+      <ComponentSearchModal
+        isOpen={searchModal.isOpen}
+        type={searchModal.type}
+        title={searchModal.title}
+        onClose={() => setSearchModal({ isOpen: false, type: '', title: '' })}
+        onAdd={handleAddComponent}
+      />
+    </div>
+  );
+}

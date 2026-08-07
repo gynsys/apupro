@@ -1,0 +1,33 @@
+{
+  "timestamp": 1781622625.5194845,
+  "nodes_count": 25,
+  "elements_count": 0,
+  "shells_count": 1,
+  "ndof": 150,
+  "combinations": [
+    {
+      "id": "C1",
+      "name": "1CV",
+      "factors": {
+        "CM": 0.0,
+        "CV": 1.0
+      }
+    }
+  ],
+  "solver_info": "ARKO3D Stiffness Matrix Method",
+  "formulas_aplicadas": {
+    "matriz_rigidez_local": "[k_loc] = f(E, G, A, J, Iy, Ix, L)",
+    "transformacion_coordenadas": "[K_global] = [T]^T * [k_loc] * [T]",
+    "ensamblaje_global": "Sumatoria de [K_global_elem] para todos los elementos",
+    "ecuacion_principal": "[K] * {U} = {F}",
+    "penalty_method": "Multiplicaci\u00f3n de la diagonal de [K] por 1e30 en los Grados de Libertad restringidos",
+    "recuperacion_fuerzas_locales": "{f_local} = [k_loc] * {u_local} + {f_fixed_local}",
+    "teoria_aplicada_barras": "Flexi\u00f3n 3D de Euler-Bernoulli y Torsi\u00f3n de Saint-Venant",
+    "teoria_aplicada_losas": "Elemento Finito Quad-4 Isoparam\u00e9trico. Membrana (Plane Stress) + Flexi\u00f3n (Mindlin-Reissner con Integraci\u00f3n Reducida Selectiva) + Rigidez Ficticia de Drilling (Rz)"
+  },
+  "results_summary": {
+    "C1": {
+      "max_displacement": 0.17904180460542102
+    }
+  }
+}
