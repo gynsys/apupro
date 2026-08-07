@@ -28,11 +28,11 @@ services:
   apupro-frontend:
     build:
       context: ./frontend
+      args:
+        - VITE_API_URL=https://apupro.arko360.net/api/v1
     restart: always
     ports:
       - "3010:80"
-    environment:
-      - VITE_API_URL=http://apupro.arko360.net/api/v1
 
 volumes:
   apupro_db_data:
