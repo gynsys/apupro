@@ -27,7 +27,7 @@ const Login = () => {
       } else if (isSuperAdminDomain) {
         navigate('/admin');
       } else {
-        window.location.href = 'https://arko360.net/app/budgets';
+        navigate('/budgets');
       }
     } else {
       setError(result.error || 'Ocurrió un error al iniciar sesión');
