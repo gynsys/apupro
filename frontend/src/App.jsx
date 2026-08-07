@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import EngineeringTools from './components/EngineeringTools.jsx';
 import Login from './pages/Login.jsx';
 import ForgotPassword from './pages/ForgotPassword.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import AdminLayout from './components/layout/AdminLayout.jsx';
-import BlogManagementPage from './pages/admin/BlogManagementPage.jsx';
-import SocialGeneratorPage from './modules/biblioarko/pages/social-generator';
 import ProfilePage from './pages/admin/ProfilePage.jsx';
 import MaterialsPage from './pages/admin/MaterialsPage.jsx';
 import BudgetHomePage from './pages/admin/BudgetHomePage.jsx';
@@ -89,8 +86,6 @@ function App() {
               }
             >
               <Route index element={<Navigate to="/admin/profile" replace />} />
-              <Route path="blog" element={<BlogManagementPage />} />
-              <Route path="social-generator" element={<SocialGeneratorPage />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="materials" element={<MaterialsPage />} />
             </Route>
@@ -136,8 +131,6 @@ function App() {
               }
             >
               <Route index element={<Navigate to="profile" replace />} />
-              <Route path="blog" element={<BlogManagementPage />} />
-              <Route path="social-generator" element={<SocialGeneratorPage />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="materials" element={<MaterialsPage />} />
             </Route>
