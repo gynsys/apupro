@@ -2,9 +2,7 @@ import React from 'react';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-export default function HeroSection() {
-  const navigate = useNavigate();
-
+export default function HeroSection({ onLoginClick }) {
   return (
     <section className="relative overflow-hidden bg-slate-950 text-white min-h-screen flex items-center pt-20">
       {/* Background gradients */}
@@ -33,7 +31,7 @@ export default function HeroSection() {
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button 
-              onClick={() => navigate('/login')}
+              onClick={onLoginClick}
               className="w-full sm:w-auto px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_-10px_rgba(37,99,235,0.5)] flex items-center justify-center gap-2"
             >
               Iniciar Sesión
