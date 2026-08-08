@@ -4,6 +4,8 @@ import FeaturesSection from '../components/landing/FeaturesSection';
 import PreviewSection from '../components/landing/PreviewSection';
 import Footer from '../components/landing/Footer';
 
+import Header from '../components/landing/Header';
+
 export default function LandingPage() {
   // Smooth scroll logic (optional, for hash links)
   useEffect(() => {
@@ -20,6 +22,7 @@ export default function LandingPage() {
 
   return (
     <div className="font-sans antialiased text-slate-900 bg-slate-950 selection:bg-blue-500/30">
+      <Header />
       <HeroSection />
       <FeaturesSection />
       <PreviewSection />
