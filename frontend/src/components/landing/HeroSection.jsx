@@ -60,7 +60,7 @@ export default function HeroSection() {
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 size={20} className="text-blue-500" />
-              <span>Reportes Lulowin</span>
+              <span>Exportabilidad a Excel</span>
             </div>
           </div>
         </div>

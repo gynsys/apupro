@@ -13,9 +13,9 @@ const features = [
     description: 'Accede a miles de materiales, equipos y mano de obra actualizados. Clona y personaliza bases para cada proyecto.'
   },
   {
-    icon: <FileSpreadsheet className="w-8 h-8 text-green-500" />,
-    title: 'Exportación a PDF / Lulowin',
-    description: 'Genera reportes impecables listos para licitaciones o exporta al formato tradicional BC3/Lulowin sin fricciones.'
+    icon: <FileSpreadsheet className="w-6 h-6" />,
+    title: 'Exportación a PDF / Excel',
+    description: 'Genera reportes impecables listos para licitaciones o exporta al formato tradicional BC3 y Excel sin fricciones.'
   },
   {
     icon: <Zap className="w-8 h-8 text-amber-500" />,
