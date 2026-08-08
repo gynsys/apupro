@@ -25,7 +25,7 @@ export default function AdminLayout() {
   }))
 
   const handleLogout = () => {
-    navigate(urlSlug ? `/${urlSlug}/login` : '/login')
+    navigate(urlSlug ? `/${urlSlug}` : '/')
   }
 
   // Obtener el color primario de las variables CSS o usar el valor por defecto
@@ -36,7 +36,7 @@ export default function AdminLayout() {
   const primaryColor = getPrimaryColor()
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 animate-fade-in">
       {/* Mobile sidebar */}
       <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
         <div className="fixed inset-0 bg-black bg-opacity-25" onClick={() => setSidebarOpen(false)} />

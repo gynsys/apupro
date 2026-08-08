@@ -6,7 +6,7 @@ export const AdminHeader = ({ showDashboardButton = true, onMenuClick, doctor, i
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    navigate('/login');
+    navigate('/');
   };
 
   return (

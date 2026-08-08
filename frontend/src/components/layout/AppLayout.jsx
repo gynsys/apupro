@@ -28,7 +28,7 @@ export default function AppLayout() {
   const { isAuthenticated, logout } = useContext(AuthContext);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleLogout = () => { logout(); navigate('/login'); };
+  const handleLogout = () => { logout(); navigate('/'); };
 
   const isActive = (item) =>
     item.exact ? location.pathname === item.href : location.pathname.startsWith(item.href);
@@ -104,7 +104,7 @@ export default function AppLayout() {
   return (
     /* ── Root: gradient mesh background ──────────────────────── */
     <div
-      className="h-screen overflow-hidden flex flex-col print:block"
+      className="h-screen overflow-hidden flex flex-col print:block animate-fade-in"
       style={{
         background: 'linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 40%, #f5f3ff 100%)',
       }}
