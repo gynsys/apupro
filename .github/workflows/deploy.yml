@@ -81,8 +81,8 @@ jobs:
             # Pull the new images
             docker compose pull
             
-            # Restart containers with the new images
-            docker compose up -d
+            # Restart containers with the new images or build them if missing
+            docker compose up -d --build
             
             # Clean up again just in case
             docker image prune -af
