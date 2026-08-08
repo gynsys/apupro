@@ -42,7 +42,7 @@ export default function AppLayout() {
           <Layout size={18} />
         </div>
         <span className="text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-600">
-          APUpro
+          CostBase
         </span>
       </div>
 
@@ -96,7 +96,7 @@ export default function AppLayout() {
       </div>
 
       <div className="px-5 pt-4 border-t border-white/40">
-        <p className="text-[10px] text-slate-300 font-mono">APUpro v1.0</p>
+        <p className="text-[10px] text-slate-300 font-mono">CostBase v1.0</p>
       </div>
     </nav>
   );
@@ -137,7 +137,7 @@ export default function AppLayout() {
             <Layout size={18} />
           </div>
           <span className="text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-600 hidden sm:block">
-            APUpro
+            CostBase
           </span>
         </button>
 

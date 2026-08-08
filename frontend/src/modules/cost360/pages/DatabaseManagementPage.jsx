@@ -129,7 +129,7 @@ export default function DatabaseManagementPage() {
               </div>
               <div>
                 <h1 className="text-xl font-extrabold text-slate-800 tracking-tight leading-none">Gestión de Bases de Datos</h1>
-                <p className="text-sm text-blue-600/80 font-medium mt-0.5">Administra y duplica bases de datos de APUpro</p>
+                <p className="text-sm text-blue-600/80 font-medium mt-0.5">Administra y duplica bases de datos de CostBase</p>
               </div>
             </div>
             <button

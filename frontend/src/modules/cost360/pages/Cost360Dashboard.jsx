@@ -56,7 +56,7 @@ const Cost360Dashboard = () => {
       setTotalItems(response.total);
       setHasMore(response.items.length === LIMIT && (currentSkip + LIMIT) < response.total);
     } catch (error) {
-      toast.error('Error al cargar la base de datos de APUpro');
+      toast.error('Error al cargar la base de datos de CostBase');
     } finally {
       setLoading(false);
     }
