@@ -12,9 +12,9 @@ const ProtectedRoute = ({ children }) => {
     // pathParts[0] is empty, pathParts[1] is the slug, pathParts[2] is 'admin'
     if (pathParts.length > 2 && pathParts[2] === 'admin' && pathParts[1] !== 'admin') {
       const slug = pathParts[1];
-      return <Navigate to={`/${slug}/login`} replace />;
+      return <Navigate to={`/${slug}`} replace />;
     }
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return children;
