@@ -29,7 +29,7 @@ services:
     build:
       context: ./frontend
       args:
-        - VITE_API_URL=https://apupro.arko360.net/api/v1
+        - VITE_API_URL=https://costbase.arko360.net/api/v1
     restart: always
     ports:
       - "3010:80"
