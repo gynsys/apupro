@@ -3,8 +3,9 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { 
   ArrowLeft, Settings, Plus, Search, Layers, FileText, 
-  DollarSign, Hash, Percent, Loader, X, Trash2, ArrowUp, ArrowDown, FolderPlus, RefreshCw, ChevronDown, Database
+  DollarSign, Hash, Percent, Loader, X, Trash2, ArrowUp, ArrowDown, FolderPlus, RefreshCw, ChevronDown, Database, GripVertical
 } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { toast } from 'react-hot-toast';
 import { budgetService } from '../../services/budgetService';
 import { API_URL } from '../../services/api';
@@ -309,21 +310,22 @@ export default function BudgetWorksheetPage() {
     }
   };
 
-  const handleMove = async (index, direction) => {
-    if (direction === 'up' && index === 0) return;
-    if (direction === 'down' && index === budget.items.length - 1) return;
+  const handleDragEnd = async (result) => {
+    if (!result.destination) return;
     
-    const newItems = [...budget.items];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
     
-    // Swap in array
-    [newItems[index], newItems[targetIndex]] = [newItems[targetIndex], newItems[index]];
+    if (sourceIndex === destinationIndex) return;
+
+    const newItems = Array.from(budget.items);
+    const [reorderedItem] = newItems.splice(sourceIndex, 1);
+    newItems.splice(destinationIndex, 0, reorderedItem);
     
     // Update state immediately for UX
     setBudget(prev => ({ ...prev, items: newItems }));
     
     try {
-      // Send the new ordered IDs to backend
       const itemIds = newItems.map(i => i.id);
       await budgetService.reorderItems(id, itemIds);
     } catch (error) {
@@ -445,241 +447,263 @@ export default function BudgetWorksheetPage() {
       {/* WORKSHEET TABLE */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex-1 flex flex-col relative overflow-hidden">
         <div className="flex-1 overflow-y-auto min-h-0 relative">
-          <table className="w-full text-left border-separate border-spacing-0">
-            <thead className="sticky top-0 z-30 shadow-md ring-1 ring-slate-200 bg-white">
-              {/* PAGE HEADER INSIDE TABLE HEADER */}
-              <tr>
-                <th colSpan="8" className="p-0 border-b border-slate-200 bg-white">
-                  <div className="px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div className="flex items-center gap-4">
-                      <button 
-                        onClick={() => navigate('/budgets')}
-                        className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
-                      >
-                        <ArrowLeft size={20} className="text-slate-600" />
-                      </button>
-                      <div>
-                        <h1 className="text-2xl font-bold text-slate-800 leading-tight">{budget.name}</h1>
-                        <p className="text-sm text-slate-500 font-medium font-normal">Hoja de Presupuesto</p>
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <table className="w-full text-left border-separate border-spacing-0">
+              <thead className="sticky top-0 z-30 shadow-md ring-1 ring-slate-200 bg-white">
+                {/* PAGE HEADER INSIDE TABLE HEADER */}
+                <tr>
+                  <th colSpan="8" className="p-0 border-b border-slate-200 bg-white">
+                    <div className="px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                      <div className="flex items-center gap-4">
+                        <button 
+                          onClick={() => navigate('/budgets')}
+                          className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
+                        >
+                          <ArrowLeft size={20} className="text-slate-600" />
+                        </button>
+                        <div>
+                          <h1 className="text-2xl font-bold text-slate-800 leading-tight">{budget.name}</h1>
+                          <p className="text-sm text-slate-500 font-medium font-normal">Hoja de Presupuesto</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex gap-3">
-                      {headerPortalTarget && createPortal(
-                        <div className="flex gap-2 mx-2">
-                          {/* Database Selector Dropdown */}
-                          <div 
-                            className="relative"
-                            onMouseEnter={() => setHeaderDbDropdownOpen(true)}
-                            onMouseLeave={() => setHeaderDbDropdownOpen(false)}
-                          >
-                            <button
+                      <div className="flex gap-3">
+                        {headerPortalTarget && createPortal(
+                          <div className="flex gap-2 mx-2">
+                            {/* Database Selector Dropdown */}
+                            <div 
+                              className="relative"
+                              onMouseEnter={() => setHeaderDbDropdownOpen(true)}
+                              onMouseLeave={() => setHeaderDbDropdownOpen(false)}
+                            >
+                              <button
+                                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm text-sm"
+                              >
+                                <Database size={16} />
+                                Base de Datos
+                                <ChevronDown size={14} className={headerDbDropdownOpen ? 'rotate-180 transition-transform duration-200' : 'transition-transform duration-200'} />
+                              </button>
+                              {headerDbDropdownOpen && (
+                                <div className="absolute top-full left-0 pt-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                  <div className="bg-white border border-slate-200 rounded-lg shadow-xl min-w-[200px] overflow-hidden py-1">
+                                    {databases.map(db => (
+                                      <button
+                                        key={db.id}
+                                        onClick={() => {
+                                          setActiveDatabase(db);
+                                          setHeaderDbDropdownOpen(false);
+                                        }}
+                                        className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors flex items-center gap-2 ${
+                                          activeDatabase.id === db.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'
+                                        }`}
+                                      >
+                                        <Database size={14} />
+                                        {db.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <button 
+                              onClick={handleSyncPrices}
+                              disabled={syncing}
+                              className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl hover:bg-blue-100 transition-colors font-medium shadow-sm text-sm"
+                            >
+                              <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
+                              {syncing ? 'Actualizando...' : 'Actualizar Precios'}
+                            </button>
+                            <button 
+                              onClick={() => setShowSettings(!showSettings)}
                               className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm text-sm"
                             >
-                              <Database size={16} />
-                              Base de Datos
-                              <ChevronDown size={14} className={headerDbDropdownOpen ? 'rotate-180 transition-transform duration-200' : 'transition-transform duration-200'} />
+                              <Settings size={16} /> Configuración Global
                             </button>
-                            {headerDbDropdownOpen && (
-                              <div className="absolute top-full left-0 pt-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                                <div className="bg-white border border-slate-200 rounded-lg shadow-xl min-w-[200px] overflow-hidden py-1">
-                                  {databases.map(db => (
-                                    <button
-                                      key={db.id}
-                                      onClick={() => {
-                                        setActiveDatabase(db);
-                                        setHeaderDbDropdownOpen(false);
-                                      }}
-                                      className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors flex items-center gap-2 ${
-                                        activeDatabase.id === db.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'
-                                      }`}
-                                    >
-                                      <Database size={14} />
-                                      {db.name}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          <button 
-                            onClick={handleSyncPrices}
-                            disabled={syncing}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl hover:bg-blue-100 transition-colors font-medium shadow-sm text-sm"
-                          >
-                            <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
-                            {syncing ? 'Actualizando...' : 'Actualizar Precios'}
-                          </button>
-                          <button 
-                            onClick={() => setShowSettings(!showSettings)}
-                            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm text-sm"
-                          >
-                            <Settings size={16} /> Configuración Global
-                          </button>
-                        </div>,
-                        headerPortalTarget
-                      )}
-                      <button  
-                        onClick={() => { setChapterName(""); setShowChapterModal(true); }}
-                        className="flex items-center gap-2 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 px-4 py-2 rounded-xl font-medium shadow-sm transition-all text-sm"
-                      >
-                        <FolderPlus size={16} /> Agregar Capítulo
-                      </button>
-                      <button  
-                        onClick={handleOpenSearchModal}
-                        className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2 rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-all active:scale-95 text-sm"
-                      >
-                        <Plus size={16} /> Agregar Partida
-                      </button>
-                    </div>
-                  </div>
-                </th>
-              </tr>
-              {/* COLUMN HEADERS */}
-              <tr className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 font-semibold shadow-sm">
-                <th className="p-4 w-16 text-center bg-slate-50 border-b border-slate-200">#</th>
-                <th className="p-4 w-32 bg-slate-50 border-b border-slate-200">Código</th>
-                <th className="p-4 bg-slate-50 border-b border-slate-200">Descripción</th>
-                <th className="p-4 w-20 text-center bg-slate-50 border-b border-slate-200">Und</th>
-                <th className="p-4 w-28 text-right bg-slate-50 border-b border-slate-200">Cantidad</th>
-                <th className="p-4 w-32 text-right bg-slate-50 border-b border-slate-200">Precio Unit.</th>
-                <th className="p-4 w-32 text-right bg-slate-50 border-b border-slate-200">Total</th>
-                <th className="p-4 w-32 text-center bg-slate-50 border-b border-slate-200">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {budget.items.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="p-12 text-center text-slate-500">
-                    <Layers className="mx-auto mb-3 text-slate-300" size={32} />
-                    <p>No hay partidas en este presupuesto.</p>
-                    <button 
-                      onClick={handleOpenSearchModal}
-                      className="mt-4 text-blue-600 font-medium hover:underline"
-                    >
-                      Buscar e incluir la primera partida
-                    </button>
-                  </td>
-                </tr>
-              ) : (
-                (() => {
-                  let itemNumber = 0;
-                  return budget.items.map((item, idx) => {
-                    const isSelected = selectedItemId === item.id;
-                    
-                    if (item.is_chapter) {
-                      return (
-                        <tr 
-                          key={item.id} 
-                          onClick={() => setSelectedItemId(isSelected ? null : item.id)}
-                          className={`hover:bg-slate-100 transition-colors cursor-pointer group ${isSelected ? 'bg-blue-50/50 ring-inset ring-2 ring-blue-500/50' : 'bg-slate-100/50'}`}
+                          </div>,
+                          headerPortalTarget
+                        )}
+                        <button  
+                          onClick={() => { setChapterName(""); setShowChapterModal(true); }}
+                          className="flex items-center gap-2 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 px-4 py-2 rounded-xl font-medium shadow-sm transition-all text-sm"
                         >
-                          <td className="p-4 text-center font-bold text-slate-800"></td>
-                          <td 
-                            colSpan="6" 
-                            className="p-4 text-sm font-bold text-slate-900 tracking-wide uppercase"
-                            onDoubleClick={(e) => {
-                              e.stopPropagation();
-                              setEditingChapterId(item.id);
-                              setEditingChapterName(item.description);
-                            }}
+                          <FolderPlus size={16} /> Agregar Capítulo
+                        </button>
+                        <button  
+                          onClick={handleOpenSearchModal}
+                          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2 rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-all active:scale-95 text-sm"
+                        >
+                          <Plus size={16} /> Agregar Partida
+                        </button>
+                      </div>
+                    </div>
+                  </th>
+                </tr>
+                {/* COLUMN HEADERS */}
+                <tr className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 font-semibold shadow-sm">
+                  <th className="p-4 w-16 text-center bg-slate-50 border-b border-slate-200">#</th>
+                  <th className="p-4 w-32 bg-slate-50 border-b border-slate-200">Código</th>
+                  <th className="p-4 bg-slate-50 border-b border-slate-200">Descripción</th>
+                  <th className="p-4 w-20 text-center bg-slate-50 border-b border-slate-200">Und</th>
+                  <th className="p-4 w-28 text-right bg-slate-50 border-b border-slate-200">Cantidad</th>
+                  <th className="p-4 w-32 text-right bg-slate-50 border-b border-slate-200">Precio Unit.</th>
+                  <th className="p-4 w-32 text-right bg-slate-50 border-b border-slate-200">Total</th>
+                  <th className="p-4 w-32 text-center bg-slate-50 border-b border-slate-200">Acciones</th>
+                </tr>
+              </thead>
+              <Droppable droppableId="budget-items">
+                {(provided) => (
+                  <tbody 
+                    className="divide-y divide-slate-100"
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                  >
+                    {budget.items.length === 0 ? (
+                      <tr>
+                        <td colSpan="8" className="p-12 text-center text-slate-500">
+                          <Layers className="mx-auto mb-3 text-slate-300" size={32} />
+                          <p>No hay partidas en este presupuesto.</p>
+                          <button 
+                            onClick={handleOpenSearchModal}
+                            className="mt-4 text-blue-600 font-medium hover:underline"
                           >
-                            {editingChapterId === item.id ? (
-                              <input
-                                autoFocus
-                                type="text"
-                                value={editingChapterName}
-                                onChange={e => setEditingChapterName(e.target.value)}
-                                onBlur={() => handleSaveChapterEdit(item.id)}
-                                onKeyDown={e => {
-                                  if (e.key === 'Enter') handleSaveChapterEdit(item.id);
-                                  if (e.key === 'Escape') setEditingChapterId(null);
-                                }}
-                                className="w-full bg-white border border-blue-400 rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 font-bold uppercase"
-                                onClick={e => e.stopPropagation()}
-                              />
-                            ) : (
-                              <div title="Doble clic para editar" className="w-full h-full">
-                                {item.description}
-                              </div>
-                            )}
-                          </td>
-                          <td className="p-4 text-center">
-                            <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={(e) => { e.stopPropagation(); handleMove(idx, 'up'); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 transition-colors" title="Subir">
-                                <ArrowUp size={16} />
-                              </button>
-                              <button onClick={(e) => { e.stopPropagation(); handleMove(idx, 'down'); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 transition-colors" title="Bajar">
-                                <ArrowDown size={16} />
-                              </button>
-                              <button onClick={(e) => { e.stopPropagation(); handleDeleteItem(item.id); }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 transition-colors" title="Eliminar">
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    }
+                            Buscar e incluir la primera partida
+                          </button>
+                        </td>
+                      </tr>
+                    ) : (
+                      (() => {
+                        let itemNumber = 0;
+                        return (
+                          <>
+                            {budget.items.map((item, idx) => {
+                              const isSelected = selectedItemId === item.id;
+                              
+                              if (item.is_chapter) {
+                                return (
+                                  <Draggable key={item.id} draggableId={item.id} index={idx}>
+                                    {(provided, snapshot) => (
+                                      <tr 
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        onClick={() => setSelectedItemId(isSelected ? null : item.id)}
+                                        className={`hover:bg-slate-100 transition-colors cursor-pointer group ${isSelected ? 'bg-blue-50/50 ring-inset ring-2 ring-blue-500/50' : 'bg-slate-100/50'} ${snapshot.isDragging ? 'shadow-lg ring-1 ring-blue-400 bg-white z-50 relative' : ''}`}
+                                      >
+                                        <td className="p-4 text-center">
+                                          <div {...provided.dragHandleProps} className="inline-flex items-center justify-center p-1.5 text-slate-400 hover:text-blue-600 rounded-lg cursor-grab active:cursor-grabbing hover:bg-slate-200/50 transition-colors">
+                                            <GripVertical size={16} />
+                                          </div>
+                                        </td>
+                                        <td 
+                                          colSpan="6" 
+                                          className="p-4 text-sm font-bold text-slate-900 tracking-wide uppercase"
+                                          onDoubleClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingChapterId(item.id);
+                                            setEditingChapterName(item.description);
+                                          }}
+                                        >
+                                          {editingChapterId === item.id ? (
+                                            <input
+                                              autoFocus
+                                              type="text"
+                                              value={editingChapterName}
+                                              onChange={e => setEditingChapterName(e.target.value)}
+                                              onBlur={() => handleSaveChapterEdit(item.id)}
+                                              onKeyDown={e => {
+                                                if (e.key === 'Enter') handleSaveChapterEdit(item.id);
+                                                if (e.key === 'Escape') setEditingChapterId(null);
+                                              }}
+                                              className="w-full bg-white border border-blue-400 rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 font-bold uppercase"
+                                              onClick={e => e.stopPropagation()}
+                                            />
+                                          ) : (
+                                            <div title="Doble clic para editar" className="w-full h-full">
+                                              {item.description}
+                                            </div>
+                                          )}
+                                        </td>
+                                        <td className="p-4 text-center">
+                                          <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteItem(item.id); }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 transition-colors" title="Eliminar">
+                                              <Trash2 size={16} />
+                                            </button>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </Draggable>
+                                );
+                              }
 
-                    itemNumber++;
-                    return (
-                      <tr 
-                        key={item.id} 
-                        onClick={() => setSelectedItemId(isSelected ? null : item.id)}
-                        className={`hover:bg-blue-50/50 transition-colors cursor-pointer group ${isSelected ? 'bg-blue-50 ring-inset ring-2 ring-blue-400' : ''}`}
-                      >
-                        <td className="p-4 text-center text-slate-400 font-medium text-sm">{itemNumber}</td>
-                        <td className="p-4 text-sm font-mono text-slate-600">{item.cov_par || item.cod_par}</td>
-                      <td className="p-4 text-sm text-slate-800">
-                        <div className="line-clamp-2 leading-relaxed" title={item.description}>
-                          {item.description}
-                        </div>
-                      </td>
-                      <td className="p-4 text-center text-sm font-medium text-slate-500">{item.unit}</td>
-                      <td className="p-4 text-right" onClick={e => e.stopPropagation()}>
-                        <input 
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          className="w-24 text-right bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={item.quantity}
-                          onChange={e => handleQuantityChange(item.id, e.target.value)}
-                          onBlur={e => saveQuantity(item.id, e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') {
-                              e.target.blur();
-                            }
-                          }}
-                        />
-                      </td>
-                      <td className="p-4 text-right text-sm font-medium text-slate-700">
-                        {calculatePU(item).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                      <td className="p-4 text-right text-sm font-bold text-slate-900">
-                        {(calculatePU(item) * item.quantity).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                      <td className="p-4 text-center">
-                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={(e) => { e.stopPropagation(); handleMove(idx, 'up'); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 transition-colors" title="Subir">
-                            <ArrowUp size={16} />
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); handleMove(idx, 'down'); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 transition-colors" title="Bajar">
-                            <ArrowDown size={16} />
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); navigate(`/budgets/${budget.id}/item/${item.id}`); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 transition-colors" title="Editar APU">
-                            <Settings size={16} />
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); handleDeleteItem(item.id); }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 transition-colors" title="Eliminar">
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                });
-              })()
-              )}
-            </tbody>
-          </table>
+                              itemNumber++;
+                              return (
+                                <Draggable key={item.id} draggableId={item.id} index={idx}>
+                                  {(provided, snapshot) => (
+                                    <tr 
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      onClick={() => setSelectedItemId(isSelected ? null : item.id)}
+                                      className={`hover:bg-blue-50/50 transition-colors cursor-pointer group ${isSelected ? 'bg-blue-50 ring-inset ring-2 ring-blue-400' : ''} ${snapshot.isDragging ? 'shadow-xl ring-1 ring-blue-500 bg-white z-50 relative' : ''}`}
+                                    >
+                                      <td className="p-4 text-center">
+                                        <div {...provided.dragHandleProps} className="inline-flex items-center justify-center p-1.5 text-slate-400 hover:text-blue-600 rounded-lg cursor-grab active:cursor-grabbing hover:bg-slate-200/50 transition-colors">
+                                          <span className="mr-1 text-slate-400 font-medium text-sm hidden group-hover:hidden">{itemNumber}</span>
+                                          <GripVertical size={16} className="hidden group-hover:block" />
+                                        </div>
+                                      </td>
+                                      <td className="p-4 text-sm font-mono text-slate-600">{item.cov_par || item.cod_par}</td>
+                                    <td className="p-4 text-sm text-slate-800">
+                                      <div className="line-clamp-2 leading-relaxed" title={item.description}>
+                                        {item.description}
+                                      </div>
+                                    </td>
+                                    <td className="p-4 text-center text-sm font-medium text-slate-500">{item.unit}</td>
+                                    <td className="p-4 text-right" onClick={e => e.stopPropagation()}>
+                                      <input 
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        className="w-24 text-right bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        value={item.quantity}
+                                        onChange={e => handleQuantityChange(item.id, e.target.value)}
+                                        onBlur={e => saveQuantity(item.id, e.target.value)}
+                                        onKeyDown={e => {
+                                          if (e.key === 'Enter') {
+                                            e.target.blur();
+                                          }
+                                        }}
+                                      />
+                                    </td>
+                                    <td className="p-4 text-right text-sm font-medium text-slate-700">
+                                      {calculatePU(item).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </td>
+                                    <td className="p-4 text-right text-sm font-bold text-slate-900">
+                                      {(calculatePU(item) * item.quantity).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </td>
+                                    <td className="p-4 text-center">
+                                      <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={(e) => { e.stopPropagation(); navigate(`/budgets/${budget.id}/item/${item.id}`); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 transition-colors" title="Editar APU">
+                                          <Settings size={16} />
+                                        </button>
+                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteItem(item.id); }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 transition-colors" title="Eliminar">
+                                          <Trash2 size={16} />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                  )}
+                                </Draggable>
+                              );
+                            })}
+                            {provided.placeholder}
+                          </>
+                        );
+                      })()
+                    )}
+                  </tbody>
+                )}
+              </Droppable>
+            </table>
+          </DragDropContext>
         </div>
         </div>
         
