@@ -55,7 +55,7 @@ export default function AppLayout() {
               <Link
                 to={href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 btn-borde-azul-redondeado ${
                   active
                     ? 'bg-blue-600/10 text-blue-700 shadow-sm border border-blue-200/60'
                     : 'text-slate-500 hover:bg-slate-50'
