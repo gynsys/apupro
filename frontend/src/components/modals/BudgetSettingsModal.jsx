@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Settings, X, DollarSign, Hash, Percent } from 'lucide-react';
+import { Settings, X, DollarSign, Hash, Percent, UploadCloud, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { budgetService } from '../../services/budgetService';
 
 export default function BudgetSettingsModal({ budget, onClose, onSave }) {
   const [configTab, setConfigTab] = useState('general');
+  const [logoPreview, setLogoPreview] = useState(null);
   const [settings, setSettings] = useState({
     currency: budget.currency || 'USD',
     exchange_rate: budget.exchange_rate || 1.0,
@@ -20,8 +21,23 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
     company_name: budget.company_name || '',
     company_rif: budget.company_rif || '',
     client_name: budget.client_name || '',
-    project_name: budget.project_name || ''
+    project_name: budget.project_name || '',
+    logo: null
   });
+
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setLogoPreview(url);
+      setSettings(prev => ({ ...prev, logo: file }));
+    }
+  };
+
+  const clearLogo = () => {
+    setLogoPreview(null);
+    setSettings(prev => ({ ...prev, logo: null }));
+  };
 
   const handleSaveSettings = async () => {
     try {
@@ -104,6 +120,36 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                   onChange={e => setSettings({...settings, client_name: e.target.value})}
                   className="px-3 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                 />
+              </div>
+              </div>
+              <div className="flex flex-col gap-2 w-full mt-2">
+                <label className="text-[13px] font-semibold text-amber-900">Logo de la Empresa (Opcional)</label>
+                
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-4 flex-1 border-2 border-dashed border-sky-200 rounded-xl p-4 cursor-pointer bg-white/50 transition-all hover:border-sky-600 hover:bg-sky-100 group">
+                    <div className="bg-sky-50 text-sky-600 p-2.5 rounded-full flex transition-colors group-hover:bg-sky-600 group-hover:text-white">
+                      <UploadCloud size={24} />
+                    </div>
+                    <div>
+                      <p className="m-0 text-sm font-semibold text-sky-700">Cargar imagen del logo</p>
+                    </div>
+                    <input type="file" className="hidden" accept="image/png, image/jpeg" onChange={handleLogoChange} />
+                  </label>
+                  
+                  {logoPreview && (
+                    <div className="flex items-center gap-3 bg-white p-2 border border-sky-200 rounded-xl">
+                      <img src={logoPreview} alt="Logo preview" className="w-12 h-12 object-contain rounded-md" />
+                      <button 
+                        type="button" 
+                        onClick={clearLogo}
+                        className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Eliminar logo"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ) : (
