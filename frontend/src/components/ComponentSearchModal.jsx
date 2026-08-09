@@ -1,17 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Loader2, ChevronDown, Database } from 'lucide-react';
+import { X, Search, Plus, Loader2, ChevronDown, Database } from 'lucide-react';
 import { budgetService } from '../services/budgetService';
 import { useDatabaseContext } from '../contexts/DatabaseContext';
-import Cost360SearchBar from '../modules/cost360/components/Cost360SearchBar';
 
 const DatabaseIcon = Database;
 
 export default function ComponentSearchModal({ isOpen, onClose, onAdd, type, title }) {
   const [query, setQuery] = useState('');
-  const [searchCovenin, setSearchCovenin] = useState('');
-  const [searchChapter, setSearchChapter] = useState('');
-  const [searchDesc, setSearchDesc] = useState(true);
-  const [searchInsumos, setSearchInsumos] = useState(false);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [dbDropdownOpen, setDbDropdownOpen] = useState(false);
@@ -20,8 +15,6 @@ export default function ComponentSearchModal({ isOpen, onClose, onAdd, type, tit
   useEffect(() => {
     if (isOpen) {
       setQuery('');
-      setSearchCovenin('');
-      setSearchChapter('');
       setResults([]);
     }
   }, [isOpen, type]);
@@ -30,11 +23,11 @@ export default function ComponentSearchModal({ isOpen, onClose, onAdd, type, tit
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!query.trim() && !searchCovenin.trim()) return;
+    if (!query.trim()) return;
     
     try {
       setLoading(true);
-      const data = await budgetService.searchComponents(type, query, activeDatabase.id, searchCovenin, searchChapter, searchDesc, searchInsumos);
+      const data = await budgetService.searchComponents(type, query, activeDatabase.id);
       setResults(data);
     } catch (error) {
       console.error(error);
@@ -117,20 +110,26 @@ export default function ComponentSearchModal({ isOpen, onClose, onAdd, type, tit
 
         {/* Body */}
         <div className="p-6 flex flex-col flex-1 min-h-0">
-          <Cost360SearchBar
-            searchQuery={query}
-            setSearchQuery={setQuery}
-            searchCovenin={searchCovenin}
-            setSearchCovenin={setSearchCovenin}
-            searchChapter={searchChapter}
-            setSearchChapter={setSearchChapter}
-            searchDesc={searchDesc}
-            setSearchDesc={setSearchDesc}
-            searchInsumos={searchInsumos}
-            setSearchInsumos={setSearchInsumos}
-            isSearching={loading}
-            onSearch={handleSearch}
-          />
+          <form onSubmit={handleSearch} className="flex gap-3 mb-6">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Buscar por código o descripción..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <button 
+              type="submit" 
+              className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-medium text-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
+              disabled={loading}
+            >
+              {loading ? <Loader2 size={16} className="animate-spin" /> : 'Buscar'}
+            </button>
+          </form>
 
           <div className="flex-1 overflow-y-auto border border-slate-200 rounded-xl">
             {results.length === 0 && !loading && query && (

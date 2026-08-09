@@ -129,8 +129,8 @@ def get_apu(item_code: str, database_id: str = "master", db: Session = Depends(g
     )
 
 @router.get("/materials")
-def search_materials_route(skip: int = 0, limit: int = 50, search: str = "", database_id: str = "master", search_covenin: str = None, search_chapter: str = None, search_desc: bool = True, search_insumos: bool = False, db: Session = Depends(get_db)):
-    total, items = search_materials_paginated(db, skip, limit, search, search_covenin, search_chapter, search_desc, search_insumos)
+def search_materials_route(skip: int = 0, limit: int = 50, search: str = "", database_id: str = "master", db: Session = Depends(get_db)):
+    total, items = search_materials_paginated(db, skip, limit, search)
     # Aplicar factor de inflación de materiales si la base no es maestra
     if database_id and database_id != "master":
         db_config = get_database_by_id(db, database_id)
@@ -141,8 +141,8 @@ def search_materials_route(skip: int = 0, limit: int = 50, search: str = "", dat
     return {"total": total, "items": items}
 
 @router.get("/equipments")
-def search_equipments_route(skip: int = 0, limit: int = 50, search: str = "", database_id: str = "master", search_covenin: str = None, search_chapter: str = None, search_desc: bool = True, search_insumos: bool = False, db: Session = Depends(get_db)):
-    total, items = search_equipments_paginated(db, skip, limit, search, search_covenin, search_chapter, search_desc, search_insumos)
+def search_equipments_route(skip: int = 0, limit: int = 50, search: str = "", database_id: str = "master", db: Session = Depends(get_db)):
+    total, items = search_equipments_paginated(db, skip, limit, search)
     # Aplicar factor de inflación de equipos si la base no es maestra
     if database_id and database_id != "master":
         db_config = get_database_by_id(db, database_id)
@@ -153,8 +153,8 @@ def search_equipments_route(skip: int = 0, limit: int = 50, search: str = "", da
     return {"total": total, "items": items}
 
 @router.get("/labors")
-def search_labors_route(skip: int = 0, limit: int = 50, search: str = "", database_id: str = "master", search_covenin: str = None, search_chapter: str = None, search_desc: bool = True, search_insumos: bool = False, db: Session = Depends(get_db)):
-    total, items = search_labors_paginated(db, skip, limit, search, search_covenin, search_chapter, search_desc, search_insumos)
+def search_labors_route(skip: int = 0, limit: int = 50, search: str = "", database_id: str = "master", db: Session = Depends(get_db)):
+    total, items = search_labors_paginated(db, skip, limit, search)
     # Aplicar factor de inflación de mano de obra si la base no es maestra
     if database_id and database_id != "master":
         db_config = get_database_by_id(db, database_id)

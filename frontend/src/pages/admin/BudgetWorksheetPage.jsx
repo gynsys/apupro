@@ -10,6 +10,7 @@ import { budgetService } from '../../services/budgetService';
 import { API_URL } from '../../services/api';
 import { useDatabaseContext } from '../../contexts/DatabaseContext';
 import BudgetSettingsModal from '../../components/modals/BudgetSettingsModal';
+import Cost360SearchBar from '../../modules/cost360/components/Cost360SearchBar';
 
 export default function BudgetWorksheetPage() {
   const { id } = useParams();
@@ -44,6 +45,10 @@ export default function BudgetWorksheetPage() {
   // Search DB Modal
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchCovenin, setSearchCovenin] = useState('');
+  const [searchChapter, setSearchChapter] = useState('');
+  const [searchDesc, setSearchDesc] = useState(true);
+  const [searchInsumos, setSearchInsumos] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
 
@@ -115,10 +120,18 @@ export default function BudgetWorksheetPage() {
     if (e) e.preventDefault();
     try {
       setSearching(true);
-      const url = searchQuery.trim() 
-        ? `${API_URL}/cost360/items?search=${encodeURIComponent(searchQuery.trim())}&limit=30&database_id=${activeDatabase.id}`
-        : `${API_URL}/cost360/items?limit=30&database_id=${activeDatabase.id}`;
+      const params = new URLSearchParams({
+        limit: '30',
+        database_id: activeDatabase.id,
+        search_desc: searchDesc,
+        search_insumos: searchInsumos
+      });
       
+      if (searchQuery.trim()) params.append('search', searchQuery.trim());
+      if (searchCovenin.trim()) params.append('covenin', searchCovenin.trim());
+      if (searchChapter.trim()) params.append('chapter', searchChapter.trim());
+      
+      const url = `${API_URL}/cost360/items?${params.toString()}`;
       const res = await fetch(url);
       const data = await res.json();
       setSearchResults(data.items || []);
@@ -712,23 +725,20 @@ export default function BudgetWorksheetPage() {
             </div>
             
             <div className="px-6 py-4 border-b border-amber-600/15 bg-white/40">
-              <form onSubmit={searchDatabase} className="flex gap-3">
-                <input 
-                  type="text" 
-                  autoFocus
-                  placeholder="Ej. Transporte de maquinaria pesada 30 ton..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 px-4 py-2 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
-                />
-                <button 
-                  type="submit"
-                  disabled={searching}
-                  className="bg-sky-600 hover:bg-sky-700 text-white px-8 py-2 rounded-xl text-sm font-semibold shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:-translate-y-[1px] disabled:opacity-50 disabled:hover:translate-y-0"
-                >
-                  {searching ? 'Buscando...' : 'Buscar'}
-                </button>
-              </form>
+              <Cost360SearchBar
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                searchCovenin={searchCovenin}
+                setSearchCovenin={setSearchCovenin}
+                searchChapter={searchChapter}
+                setSearchChapter={setSearchChapter}
+                searchDesc={searchDesc}
+                setSearchDesc={setSearchDesc}
+                searchInsumos={searchInsumos}
+                setSearchInsumos={setSearchInsumos}
+                isSearching={searching}
+                onSearch={searchDatabase}
+              />
             </div>
 
             <div className="overflow-y-auto p-4 flex-1 bg-white/20">
