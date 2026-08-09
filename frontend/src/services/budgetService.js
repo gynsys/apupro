@@ -14,10 +14,20 @@ export const budgetService = {
     return response.blob();
   },
 
-  searchComponents: async (type, query, databaseId = 'master') => {
+  searchComponents: async (type, query, databaseId = 'master', searchCovenin = '', searchChapter = '', searchDesc = true, searchInsumos = false) => {
     // type is 'materials', 'equipments', or 'labors'
     // databaseId is the ID of the selected database (e.g., 'master', 'personalizada', 'junio')
-    const response = await fetch(`${API_URL}/cost360/${type}?search=${encodeURIComponent(query)}&database_id=${databaseId}`);
+    const params = new URLSearchParams({
+      search: query,
+      database_id: databaseId,
+      search_desc: searchDesc,
+      search_insumos: searchInsumos
+    });
+    
+    if (searchCovenin) params.append('search_covenin', searchCovenin);
+    if (searchChapter) params.append('search_chapter', searchChapter);
+    
+    const response = await fetch(`${API_URL}/cost360/${type}?${params.toString()}`);
     if (!response.ok) throw new Error(`Error al buscar ${type}`);
     return response.json();
   },

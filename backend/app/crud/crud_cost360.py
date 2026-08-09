@@ -115,29 +115,77 @@ def get_apu_labors(db: Session, item_code: str):
         .join(CostLabor, CostAPULabor.CodIns == CostLabor.CodMan)\
         .filter(CostAPULabor.CodPar == item_code).all()
 
-def search_materials_paginated(db: Session, skip: int, limit: int, search: str):
+def search_materials_paginated(db: Session, skip: int, limit: int, search: str, search_covenin: str = None, search_chapter: str = None, search_desc: bool = True, search_insumos: bool = False):
     query = db.query(CostMaterial)
     if search:
         search_term = f"%{search}%"
-        query = query.filter(CostMaterial.CodMat.ilike(search_term) | CostMaterial.Descri.ilike(search_term))
+        if search_desc:
+            query = query.filter(CostMaterial.CodMat.ilike(search_term) | CostMaterial.Descri.ilike(search_term))
+        else:
+            query = query.filter(CostMaterial.CodMat.ilike(search_term))
+    
+    # Búsqueda por código COVENIN de partidas que usan este material
+    if search_covenin:
+        query = query.join(CostAPUMaterial, CostMaterial.CodMat == CostAPUMaterial.CodIns)\
+                    .join(CostItem, CostAPUMaterial.CodPar == CostItem.CodPar)\
+                    .filter(CostItem.CovPar.ilike(f"%{search_covenin}%"))
+    
+    # Búsqueda por capítulo de partidas que usan este material
+    if search_chapter:
+        query = query.join(CostAPUMaterial, CostMaterial.CodMat == CostAPUMaterial.CodIns)\
+                    .join(CostItem, CostAPUMaterial.CodPar == CostItem.CodPar)\
+                    .filter(CostItem.CodPar.startswith(search_chapter))
+    
     total = query.count()
     items = query.order_by(CostMaterial.CodMat).offset(skip).limit(limit).all()
     return total, items
 
-def search_equipments_paginated(db: Session, skip: int, limit: int, search: str):
+def search_equipments_paginated(db: Session, skip: int, limit: int, search: str, search_covenin: str = None, search_chapter: str = None, search_desc: bool = True, search_insumos: bool = False):
     query = db.query(CostEquipment)
     if search:
         search_term = f"%{search}%"
-        query = query.filter(CostEquipment.CodEqu.ilike(search_term) | CostEquipment.Descri.ilike(search_term))
+        if search_desc:
+            query = query.filter(CostEquipment.CodEqu.ilike(search_term) | CostEquipment.Descri.ilike(search_term))
+        else:
+            query = query.filter(CostEquipment.CodEqu.ilike(search_term))
+    
+    # Búsqueda por código COVENIN de partidas que usan este equipo
+    if search_covenin:
+        query = query.join(CostAPUEquipment, CostEquipment.CodEqu == CostAPUEquipment.CodIns)\
+                    .join(CostItem, CostAPUEquipment.CodPar == CostItem.CodPar)\
+                    .filter(CostItem.CovPar.ilike(f"%{search_covenin}%"))
+    
+    # Búsqueda por capítulo de partidas que usan este equipo
+    if search_chapter:
+        query = query.join(CostAPUEquipment, CostEquipment.CodEqu == CostAPUEquipment.CodIns)\
+                    .join(CostItem, CostAPUEquipment.CodPar == CostItem.CodPar)\
+                    .filter(CostItem.CodPar.startswith(search_chapter))
+    
     total = query.count()
     items = query.order_by(CostEquipment.CodEqu).offset(skip).limit(limit).all()
     return total, items
 
-def search_labors_paginated(db: Session, skip: int, limit: int, search: str):
+def search_labors_paginated(db: Session, skip: int, limit: int, search: str, search_covenin: str = None, search_chapter: str = None, search_desc: bool = True, search_insumos: bool = False):
     query = db.query(CostLabor)
     if search:
         search_term = f"%{search}%"
-        query = query.filter(CostLabor.CodMan.ilike(search_term) | CostLabor.Descri.ilike(search_term))
+        if search_desc:
+            query = query.filter(CostLabor.CodMan.ilike(search_term) | CostLabor.Descri.ilike(search_term))
+        else:
+            query = query.filter(CostLabor.CodMan.ilike(search_term))
+    
+    # Búsqueda por código COVENIN de partidas que usan este personal
+    if search_covenin:
+        query = query.join(CostAPULabor, CostLabor.CodMan == CostAPULabor.CodIns)\
+                    .join(CostItem, CostAPULabor.CodPar == CostItem.CodPar)\
+                    .filter(CostItem.CovPar.ilike(f"%{search_covenin}%"))
+    
+    # Búsqueda por capítulo de partidas que usan este personal
+    if search_chapter:
+        query = query.join(CostAPULabor, CostLabor.CodMan == CostAPULabor.CodIns)\
+                    .join(CostItem, CostAPULabor.CodPar == CostItem.CodPar)\
+                    .filter(CostItem.CodPar.startswith(search_chapter))
+    
     total = query.count()
     items = query.order_by(CostLabor.CodMan).offset(skip).limit(limit).all()
     return total, items
