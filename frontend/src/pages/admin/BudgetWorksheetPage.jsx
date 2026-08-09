@@ -50,6 +50,7 @@ export default function BudgetWorksheetPage() {
   const [searchDesc, setSearchDesc] = useState(true);
   const [searchInsumos, setSearchInsumos] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
+  const [totalSearchResults, setTotalSearchResults] = useState(0);
   const [searching, setSearching] = useState(false);
 
   // Row selection & Reordering
@@ -135,6 +136,7 @@ export default function BudgetWorksheetPage() {
       const res = await fetch(url);
       const data = await res.json();
       setSearchResults(data.items || []);
+      setTotalSearchResults(data.total || 0);
     } catch (error) {
       console.error(error);
     } finally {
@@ -739,6 +741,13 @@ export default function BudgetWorksheetPage() {
                 isSearching={searching}
                 onSearch={searchDatabase}
               />
+
+              {totalSearchResults > 0 && (
+                <p className="mt-3 text-xs text-slate-500 font-medium">
+                  <span className="font-bold text-slate-700">{new Intl.NumberFormat('es-VE').format(totalSearchResults)}</span>{' '}
+                  {(searchQuery || searchCovenin || searchChapter) ? 'coincidencias' : 'Total Partidas'}
+                </p>
+              )}
             </div>
 
             <div className="overflow-y-auto p-4 flex-1 bg-white/20">

@@ -93,8 +93,16 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
     if tipo_actividad:
         query = query.filter(CostItem.TipoActividad == tipo_actividad)
     
+    # Priorizar partidas con COVENIN completo (formato [LETRA].[9 DÍGITOS] como C.110800300)
+    # Usamos un CASE para ordenar primero las que tienen COVENIN completo
+    from sqlalchemy import case, literal_column, func, text
+    covenin_priority = case(
+        (CostItem.CovPar.op('~*')(r'^[a-z]\.\d{9}$'), 0),  # COVENIN completo tiene prioridad 0 (case-insensitive)
+        else_=1  # Otros tienen prioridad 1
+    )
+    
     total = query.count()
-    items = query.order_by(CostItem.CodPar).offset(skip).limit(limit).all()
+    items = query.order_by(covenin_priority, CostItem.CodPar).offset(skip).limit(limit).all()
     return total, items
 
 def get_item_by_code(db: Session, item_code: str):
