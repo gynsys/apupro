@@ -164,9 +164,9 @@ export default function BudgetHomePage() {
           </div>
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm hover:shadow shadow-blue-500/20 transition-all duration-200"
+            className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out"
           >
-            <Plus size={20} className="group-hover:scale-110 transition-transform" />
+            <Plus size={20} className="group-hover:scale-110 group-hover:rotate-90 transition-transform duration-300" />
             Nuevo Presupuesto
           </button>
         </div>
