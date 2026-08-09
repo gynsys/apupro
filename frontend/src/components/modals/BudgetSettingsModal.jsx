@@ -121,7 +121,6 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                   className="px-3 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                 />
               </div>
-              </div>
               <div className="flex flex-col gap-2 w-full mt-2">
                 <label className="text-[13px] font-semibold text-amber-900">Logo de la Empresa (Opcional)</label>
                 
