@@ -87,10 +87,11 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
     if covenin:
         query = query.filter(CostItem.CovPar.ilike(f"%{covenin}%"))
     if chapter:
-        # Filtrar por capítulo: busca tanto en CodPar como en CovPar para mayor precisión
+        # Filtrar por capítulo: buscar en CodPar y verificar consistencia con CovPar
+        # Esto evita que partidas con CovPar de otra categoría aparezcan
         query = query.filter(
-            (CostItem.CodPar.startswith(chapter)) | 
-            (CostItem.CovPar.startswith(chapter))
+            (CostItem.CodPar.startswith(chapter)) & 
+            (CostItem.CovPar.like(f"{chapter}%"))
         )
     if categoria:
         query = query.filter(CostItem.Categoria == categoria)
@@ -98,10 +99,10 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
         query = query.filter(CostItem.TipoActividad == tipo_actividad)
     
     # Priorizar partidas con COVENIN completo (formato [LETRA].[9 DÍGITOS] como C.110800300)
-    # Usamos un CASE para ordenar primero las que tienen COVENIN completo
-    from sqlalchemy import case, literal_column, func, text
+    # Usamos una función SQL nativa para mayor compatibilidad
+    from sqlalchemy import case, func
     covenin_priority = case(
-        (CostItem.CovPar.op('~*')(r'^[a-z]\.\d{9}$'), 0),  # COVENIN completo tiene prioridad 0 (case-insensitive)
+        (func.length(CostItem.CovPar) == 11, 0),  # COVENIN completo tiene 11 caracteres (LETRA + punto + 9 dígitos)
         else_=1  # Otros tienen prioridad 1
     )
     
