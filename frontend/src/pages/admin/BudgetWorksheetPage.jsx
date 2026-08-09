@@ -52,6 +52,9 @@ export default function BudgetWorksheetPage() {
   const [searchResults, setSearchResults] = useState([]);
   const [totalSearchResults, setTotalSearchResults] = useState(0);
   const [searching, setSearching] = useState(false);
+  const [searchSkip, setSearchSkip] = useState(0);
+  const [hasMoreSearchResults, setHasMoreSearchResults] = useState(false);
+  const SEARCH_LIMIT = 30;
 
   // Row selection & Reordering
   const [selectedItemId, setSelectedItemId] = useState(null);
@@ -117,12 +120,14 @@ export default function BudgetWorksheetPage() {
     }
   };
 
-  const searchDatabase = async (e) => {
+  const searchDatabase = async (e, append = false) => {
     if (e) e.preventDefault();
     try {
       setSearching(true);
+      const currentSkip = append ? searchSkip : 0;
       const params = new URLSearchParams({
-        limit: '30',
+        skip: currentSkip.toString(),
+        limit: SEARCH_LIMIT.toString(),
         database_id: activeDatabase.id,
         search_desc: searchDesc,
         search_insumos: searchInsumos
@@ -135,8 +140,17 @@ export default function BudgetWorksheetPage() {
       const url = `${API_URL}/cost360/items?${params.toString()}`;
       const res = await fetch(url);
       const data = await res.json();
-      setSearchResults(data.items || []);
+      
+      if (append) {
+        setSearchResults(prev => [...prev, ...(data.items || [])]);
+        setSearchSkip(currentSkip + SEARCH_LIMIT);
+      } else {
+        setSearchResults(data.items || []);
+        setSearchSkip(SEARCH_LIMIT);
+      }
+      
       setTotalSearchResults(data.total || 0);
+      setHasMoreSearchResults((data.items || []).length === SEARCH_LIMIT && (currentSkip + SEARCH_LIMIT) < (data.total || 0));
     } catch (error) {
       console.error(error);
     } finally {
@@ -146,6 +160,8 @@ export default function BudgetWorksheetPage() {
 
   const handleOpenSearchModal = () => {
     setShowSearchModal(true);
+    setSearchSkip(0);
+    setHasMoreSearchResults(false);
     if (searchResults.length === 0) {
       searchDatabase();
     }
@@ -783,6 +799,17 @@ export default function BudgetWorksheetPage() {
                       </button>
                     </div>
                   ))}
+                </div>
+              )}
+              
+              {hasMoreSearchResults && !searching && (
+                <div className="text-center pt-4">
+                  <button
+                    onClick={(e) => searchDatabase(e, true)}
+                    className="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2 rounded-xl text-sm font-semibold shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:-translate-y-[1px]"
+                  >
+                    Cargar más...
+                  </button>
                 </div>
               )}
             </div>

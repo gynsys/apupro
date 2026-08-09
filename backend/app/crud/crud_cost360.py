@@ -87,7 +87,11 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
     if covenin:
         query = query.filter(CostItem.CovPar.ilike(f"%{covenin}%"))
     if chapter:
-        query = query.filter(CostItem.CodPar.startswith(chapter))
+        # Filtrar por capítulo: busca tanto en CodPar como en CovPar para mayor precisión
+        query = query.filter(
+            (CostItem.CodPar.startswith(chapter)) | 
+            (CostItem.CovPar.startswith(chapter))
+        )
     if categoria:
         query = query.filter(CostItem.Categoria == categoria)
     if tipo_actividad:
