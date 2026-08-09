@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, and_
 from typing import Optional, List, Tuple
 from app.db.models.cost360 import (
     CostItem, CostMaterial, CostEquipment, CostLabor,
@@ -18,18 +18,25 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
     # Failsafe: Si ambos están apagados, forzar búsqueda por descripción por defecto
     if not search_desc and not search_insumos:
         search_desc = True
-        
+    
+    # Determinar qué base de datos está seleccionada y configurar la query apropiada
     if database_id == "personalizada":
+        # Base de datos personalizada: buscar en CustomCostItem
         query = db.query(CustomCostItem)
         if search:
             words = search.split()
+            all_filters = []
             for word in words:
-                filters = []
+                word_filters = []
                 if search_desc:
-                    filters.append(CustomCostItem.description.ilike(f"%{word}%"))
+                    word_filters.append(CustomCostItem.description.ilike(f"%{word}%"))
                 if search_insumos:
-                    filters.append(CustomCostItem.apu_data.ilike(f"%{word}%"))
-                query = query.filter(or_(*filters))
+                    word_filters.append(CustomCostItem.apu_data.ilike(f"%{word}%"))
+                if word_filters:
+                    all_filters.append(or_(*word_filters))
+            
+            if all_filters:
+                query = query.filter(and_(*all_filters))
         
         total = query.count()
         custom_items = query.order_by(CustomCostItem.created_at.desc()).offset(skip).limit(limit).all()
@@ -64,25 +71,41 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
                 "TipoActividad": "Custom"
             })
         return total, items
-
+    
+    # Para cualquier otra base de datos (master o personalizadas adicionales), buscar en CostItem
     query = db.query(CostItem)
+    
+    # Si no es master, verificar si es una base de datos personalizada con filtros específicos
+    if database_id and database_id != "master":
+        db_config = get_database_by_id(db, database_id)
+        if db_config and not db_config.is_master:
+            # Aplicar filtros específicos de la base de datos personalizada si existen
+            # Aquí podrías agregar lógica específica según cómo estén configuradas las bases personalizadas
+            pass  # Por ahora, busca en toda la base maestra
+    
     if search:
         words = search.split()
+        all_filters = []
         for word in words:
-            filters = []
+            word_filters = []
             if search_desc:
-                filters.extend([
+                word_filters.extend([
                     CostItem.Descri.ilike(f"%{word}%"),
                     CostItem.CodPar.ilike(f"%{word}%"),
                     CostItem.CovPar.ilike(f"%{word}%")
                 ])
             if search_insumos:
-                filters.extend([
+                word_filters.extend([
                     CostItem.apu_materials.any(CostAPUMaterial.material.has(CostMaterial.Descri.ilike(f"%{word}%"))),
                     CostItem.apu_equipments.any(CostAPUEquipment.equipment.has(CostEquipment.Descri.ilike(f"%{word}%"))),
                     CostItem.apu_labors.any(CostAPULabor.labor.has(CostLabor.Descri.ilike(f"%{word}%")))
                 ])
-            query = query.filter(or_(*filters))
+            if word_filters:
+                all_filters.append(or_(*word_filters))
+        
+        # Aplicar todos los filtros con AND entre palabras diferentes para mayor precisión
+        if all_filters:
+            query = query.filter(and_(*all_filters))
             
     if covenin:
         query = query.filter(CostItem.CovPar.ilike(f"%{covenin}%"))
