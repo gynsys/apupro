@@ -34,33 +34,24 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
     if (file) {
       setUploadingLogo(true);
       try {
-        const formData = new FormData();
-        formData.append('logo', file);
-        
-        // Usar la misma URL que usa budgetService
-        const API_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') 
-          ? 'http://localhost:8010' 
-          : window.location.origin;
-        const response = await fetch(`${API_URL}/api/v1/budgets/${budget.id}/upload-logo`, {
-          method: 'POST',
-          body: formData
-        });
-        
-        if (!response.ok) {
-          throw new Error('Error al subir el logo');
-        }
-        
-        const data = await response.json();
-        const logoUrl = data.logo_url;
-        
-        // Guardar en localStorage
-        localStorage.setItem(`budget_logo_${budget.id}`, logoUrl);
-        setLogoPreview(logoUrl);
-        toast.success('Logo cargado exitosamente');
+        // Convertir imagen a base64
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const base64String = event.target.result;
+          // Guardar en localStorage
+          localStorage.setItem(`budget_logo_${budget.id}`, base64String);
+          setLogoPreview(base64String);
+          toast.success('Logo cargado exitosamente');
+          setUploadingLogo(false);
+        };
+        reader.onerror = () => {
+          toast.error('Error al leer la imagen');
+          setUploadingLogo(false);
+        };
+        reader.readAsDataURL(file);
       } catch (error) {
         toast.error('Error al cargar el logo');
         console.error(error);
-      } finally {
         setUploadingLogo(false);
       }
     }
