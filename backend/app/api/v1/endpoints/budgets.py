@@ -1,7 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List
+import os
+import uuid
+import shutil
+from pathlib import Path
 from app.db.base import get_db
 from app.db.models.budget import Budget, BudgetItem, BudgetAPUMaterial as DBMaterial, BudgetAPUEquipment as DBEquipment, BudgetAPULabor as DBLabor
 from app.db.models.cost360 import CostItem, CostAPUMaterial, CostAPUEquipment, CostAPULabor
@@ -49,14 +53,38 @@ def update_budget(budget_id: str, budget_in: BudgetUpdate, db: Session = Depends
     db.refresh(budget)
     return budget
 
-@router.delete("/{budget_id}")
-def delete_budget(budget_id: str, db: Session = Depends(get_db)):
+@router.post("/{budget_id}/upload-logo")
+async def upload_budget_logo(budget_id: str, logo: UploadFile = File(...), db: Session = Depends(get_db)):
+    """Sube el logo de la empresa para un presupuesto específico"""
     budget = db.query(Budget).filter(Budget.id == budget_id).first()
     if not budget:
         raise HTTPException(status_code=404, detail="Budget not found")
-    db.delete(budget)
+    
+    # Crear directorio para logos si no existe
+    upload_dir = Path("public/company_logos")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Generar nombre único para el archivo
+    file_extension = logo.filename.split('.')[-1].lower()
+    if file_extension not in ['png', 'jpg', 'jpeg']:
+        raise HTTPException(status_code=400, detail="Solo se permiten archivos PNG, JPG o JPEG")
+    
+    unique_filename = f"{budget.id}_{uuid.uuid4().hex[:8]}.{file_extension}"
+    file_path = upload_dir / unique_filename
+    
+    # Guardar el archivo
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(logo.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error guardando el archivo: {str(e)}")
+    
+    # Actualizar el presupuesto con la URL del logo
+    logo_url = f"/company_logos/{unique_filename}"
+    budget.company_logo = logo_url
     db.commit()
-    return {"ok": True}
+    
+    return {"logo_url": logo_url}
 
 @router.post("/{budget_id}/items", response_model=BudgetItemSchema)
 def add_item_to_budget(budget_id: str, item_in: BudgetItemCreate, db: Session = Depends(get_db)):
@@ -430,3 +458,36 @@ def sync_budget_prices(budget_id: str, db: Session = Depends(get_db)):
                 
     db.commit()
     return {"status": "ok", "message": "Precios sincronizados con la Base Maestra"}
+
+@router.post("/{budget_id}/upload-logo")
+async def upload_budget_logo(budget_id: str, logo: UploadFile = File(...), db: Session = Depends(get_db)):
+    """Sube el logo de la empresa para un presupuesto específico"""
+    budget = db.query(Budget).filter(Budget.id == budget_id).first()
+    if not budget:
+        raise HTTPException(status_code=404, detail="Budget not found")
+    
+    # Crear directorio para logos si no existe
+    upload_dir = Path("public/company_logos")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Generar nombre único para el archivo
+    file_extension = logo.filename.split('.')[-1].lower()
+    if file_extension not in ['png', 'jpg', 'jpeg']:
+        raise HTTPException(status_code=400, detail="Solo se permiten archivos PNG, JPG o JPEG")
+    
+    unique_filename = f"{budget.id}_{uuid.uuid4().hex[:8]}.{file_extension}"
+    file_path = upload_dir / unique_filename
+    
+    # Guardar el archivo
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(logo.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error guardando el archivo: {str(e)}")
+    
+    # Actualizar el presupuesto con la URL del logo
+    logo_url = f"/company_logos/{unique_filename}"
+    budget.company_logo = logo_url
+    db.commit()
+    
+    return {"logo_url": logo_url}

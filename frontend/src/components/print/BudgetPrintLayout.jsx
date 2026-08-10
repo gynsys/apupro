@@ -115,7 +115,11 @@ export default function BudgetPrintLayout({ budget, config }) {
         <div className="header" style={{ marginBottom: '20px' }}>
           {config.includeLogo && (
             <div className="logo" style={{ marginBottom: '10px' }}>
-              <img src="/images/logo_arko360.png" alt="Logo" style={{ maxHeight: '60px' }} onError={(e) => e.target.style.display = 'none'} />
+              {budget.company_logo ? (
+                <img src={budget.company_logo} alt="Logo Empresa" style={{ maxHeight: '60px' }} onError={(e) => e.target.style.display = 'none'} />
+              ) : (
+                <img src="/images/logo_aeko360.png" alt="Logo Default" style={{ maxHeight: '60px' }} onError={(e) => e.target.style.display = 'none'} />
+              )}
             </div>
           )}
           <div style={{ fontSize: '12px', fontWeight: 'bold' }}>

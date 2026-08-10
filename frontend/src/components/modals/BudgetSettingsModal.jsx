@@ -6,7 +6,8 @@ import { budgetService } from '../../services/budgetService';
 
 export default function BudgetSettingsModal({ budget, onClose, onSave }) {
   const [configTab, setConfigTab] = useState('general');
-  const [logoPreview, setLogoPreview] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(budget.company_logo || null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [settings, setSettings] = useState({
     currency: budget.currency || 'USD',
     exchange_rate: budget.exchange_rate || 1.0,
@@ -20,23 +21,51 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
     equipment_inflation: budget.equipment_inflation ?? 0.0,
     company_name: budget.company_name || '',
     company_rif: budget.company_rif || '',
+    company_logo: budget.company_logo || '',
     client_name: budget.client_name || '',
-    project_name: budget.project_name || '',
-    logo: null
+    project_name: budget.project_name || ''
   });
 
-  const handleLogoChange = (e) => {
+  const handleLogoChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setLogoPreview(url);
-      setSettings(prev => ({ ...prev, logo: file }));
+      setUploadingLogo(true);
+      try {
+        const formData = new FormData();
+        formData.append('logo', file);
+        
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8010';
+        const response = await fetch(`${API_URL}/api/v1/budgets/${budget.id}/upload-logo`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!response.ok) {
+          throw new Error('Error al subir el logo');
+        }
+        
+        const data = await response.json();
+        setLogoPreview(data.logo_url);
+        setSettings(prev => ({ ...prev, company_logo: data.logo_url }));
+        toast.success('Logo cargado exitosamente');
+      } catch (error) {
+        toast.error('Error al cargar el logo');
+        console.error(error);
+      } finally {
+        setUploadingLogo(false);
+      }
     }
   };
 
-  const clearLogo = () => {
-    setLogoPreview(null);
-    setSettings(prev => ({ ...prev, logo: null }));
+  const clearLogo = async () => {
+    try {
+      await budgetService.update(budget.id, { company_logo: null });
+      setLogoPreview(null);
+      setSettings(prev => ({ ...prev, company_logo: null }));
+      toast.success('Logo eliminado');
+    } catch (error) {
+      toast.error('Error al eliminar el logo');
+    }
   };
 
   const handleSaveSettings = async () => {
@@ -127,12 +156,18 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                 <div className="flex items-center gap-4">
                   <label className="flex items-center gap-4 flex-1 border-2 border-dashed border-sky-200 rounded-xl p-4 cursor-pointer bg-white/50 transition-all hover:border-sky-600 hover:bg-sky-100 group">
                     <div className="bg-sky-50 text-sky-600 p-2.5 rounded-full flex transition-colors group-hover:bg-sky-600 group-hover:text-white">
-                      <UploadCloud size={24} />
+                      {uploadingLogo ? (
+                        <UploadCloud size={24} className="animate-spin" />
+                      ) : (
+                        <UploadCloud size={24} />
+                      )}
                     </div>
                     <div>
-                      <p className="m-0 text-sm font-semibold text-sky-700">Cargar imagen del logo</p>
+                      <p className="m-0 text-sm font-semibold text-sky-700">
+                        {uploadingLogo ? 'Subiendo...' : 'Cargar imagen del logo'}
+                      </p>
                     </div>
-                    <input type="file" className="hidden" accept="image/png, image/jpeg" onChange={handleLogoChange} />
+                    <input type="file" className="hidden" accept="image/png, image/jpeg, image/jpg" onChange={handleLogoChange} disabled={uploadingLogo} />
                   </label>
                   
                   {logoPreview && (

@@ -9,6 +9,7 @@ import { toast } from 'react-hot-toast';
 import { budgetService } from '../../services/budgetService';
 import BudgetSettingsModal from '../../components/modals/BudgetSettingsModal';
 import CreateBudgetModal from '../../components/modals/CreateBudgetModal';
+import BudgetPrintModal from '../../components/modals/BudgetPrintModal';
 
 export default function BudgetHomePage() {
   const [budgets, setBudgets] = useState([]);
@@ -23,6 +24,8 @@ export default function BudgetHomePage() {
   const [renamingBudget, setRenamingBudget] = useState(null);
   const [renameName, setRenameName] = useState("");
   const [settingsBudget, setSettingsBudget] = useState(null);
+  const [printBudget, setPrintBudget] = useState(null);
+  const [printModalOpen, setPrintModalOpen] = useState(false);
   
   const navigate = useNavigate();
 
@@ -237,7 +240,7 @@ export default function BudgetHomePage() {
                     <Settings size={16} />
                   </button>
                   <button 
-                    onClick={(e) => { e.stopPropagation(); navigate(`/budgets/${budget.id}?print=true`); }}
+                    onClick={(e) => { e.stopPropagation(); setPrintBudget(budget); setPrintModalOpen(true); }}
                     className="btn-accion"
                     title="Imprimir"
                   >
@@ -416,6 +419,21 @@ export default function BudgetHomePage() {
             setSettingsBudget(null);
             loadBudgets();
           }}
+        />
+      )}
+      
+      {printModalOpen && printBudget && (
+        <BudgetPrintModal
+          onClose={() => {
+            setPrintModalOpen(false);
+            setPrintBudget(null);
+          }}
+          onPrint={(config) => {
+            setPrintModalOpen(false);
+            setPrintBudget(null);
+            navigate(`/budgets/${printBudget.id}?print=true`);
+          }}
+          initialCurrency={printBudget.currency || 'USD'}
         />
       )}
     </div>
