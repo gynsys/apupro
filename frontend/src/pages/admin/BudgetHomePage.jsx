@@ -258,8 +258,8 @@ export default function BudgetHomePage() {
       toast.error('Error al exportar el presupuesto');
     }
   };
-    try {
-      const budgetData = await budgetService.getById(budget.id);
+
+  const handleDuplicate = async (e) => {
       
       // Generar HTML que Excel puede abrir (formato XLS)
       const formatCurrency = (val) => val.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
