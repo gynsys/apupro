@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Folder, Plus, FileText, Trash2, Edit3, Copy, Search, 
+  Folder, FolderOpen, Plus, FileText, Trash2, Edit3, Copy, Search, 
   Settings, Printer,
   MoreVertical, Clock, DollarSign, Loader
 } from 'lucide-react';
