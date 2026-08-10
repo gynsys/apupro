@@ -32,7 +32,6 @@ class Budget(Base):
     # Datos de la Empresa y Obra
     company_name = Column(String, nullable=True)
     company_rif = Column(String, nullable=True)
-    company_logo = Column(String, nullable=True) # URL o ruta del logo de la empresa
     project_name = Column(Text, nullable=True)
     
     # Fechas

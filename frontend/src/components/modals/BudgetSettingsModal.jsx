@@ -6,7 +6,11 @@ import { budgetService } from '../../services/budgetService';
 
 export default function BudgetSettingsModal({ budget, onClose, onSave }) {
   const [configTab, setConfigTab] = useState('general');
-  const [logoPreview, setLogoPreview] = useState(budget.company_logo || null);
+  const [logoPreview, setLogoPreview] = useState(() => {
+    // Cargar logo desde localStorage
+    const savedLogo = localStorage.getItem(`budget_logo_${budget.id}`);
+    return savedLogo || null;
+  });
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [settings, setSettings] = useState({
     currency: budget.currency || 'USD',
@@ -21,7 +25,6 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
     equipment_inflation: budget.equipment_inflation ?? 0.0,
     company_name: budget.company_name || '',
     company_rif: budget.company_rif || '',
-    company_logo: budget.company_logo || '',
     client_name: budget.client_name || '',
     project_name: budget.project_name || ''
   });
@@ -45,8 +48,11 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
         }
         
         const data = await response.json();
-        setLogoPreview(data.logo_url);
-        setSettings(prev => ({ ...prev, company_logo: data.logo_url }));
+        const logoUrl = data.logo_url;
+        
+        // Guardar en localStorage
+        localStorage.setItem(`budget_logo_${budget.id}`, logoUrl);
+        setLogoPreview(logoUrl);
         toast.success('Logo cargado exitosamente');
       } catch (error) {
         toast.error('Error al cargar el logo');
@@ -59,9 +65,9 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
 
   const clearLogo = async () => {
     try {
-      await budgetService.update(budget.id, { company_logo: null });
+      // Eliminar de localStorage
+      localStorage.removeItem(`budget_logo_${budget.id}`);
       setLogoPreview(null);
-      setSettings(prev => ({ ...prev, company_logo: null }));
       toast.success('Logo eliminado');
     } catch (error) {
       toast.error('Error al eliminar el logo');
