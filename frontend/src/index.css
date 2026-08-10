@@ -9,10 +9,28 @@ html, body, #root {
 
 @media print {
   @page {
-    margin: 0; /* This removes the header/footer (date and URL) */
+    margin: 1cm;
   }
   body {
-    padding: 1cm; /* Gives some padding so content doesn't stick to the very edge of the paper */
+    padding: 0;
+    background-color: white;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  #root {
+    display: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}
+
+@media screen {
+  .print-only {
+    display: none !important;
   }
 }
 

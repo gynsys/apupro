@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { 
-  ArrowLeft, Settings, Plus, Search, Layers, FileText, 
+  ArrowLeft, Settings, Plus, Search, Layers, FileText, Printer,
   DollarSign, Hash, Percent, Loader, X, Trash2, ArrowUp, ArrowDown, FolderPlus, RefreshCw, ChevronDown, Database, GripVertical
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -11,6 +11,8 @@ import { budgetService } from '../../services/budgetService';
 import { API_URL } from '../../services/api';
 import { useDatabaseContext } from '../../contexts/DatabaseContext';
 import BudgetSettingsModal from '../../components/modals/BudgetSettingsModal';
+import BudgetPrintModal from '../../components/modals/BudgetPrintModal';
+import BudgetPrintLayout from '../../components/print/BudgetPrintLayout';
 import Cost360SearchBar from '../../modules/cost360/components/Cost360SearchBar';
 
 export default function BudgetWorksheetPage() {
@@ -23,6 +25,8 @@ export default function BudgetWorksheetPage() {
   
   // Settings Panel
   const [showSettings, setShowSettings] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printConfig, setPrintConfig] = useState(null);
   const [configTab, setConfigTab] = useState('general'); // 'general' or 'params'
   const [settings, setSettings] = useState({
     currency: 'USD',
@@ -444,6 +448,29 @@ export default function BudgetWorksheetPage() {
         />
       )}
 
+      {/* PRINT MODAL */}
+      {showPrintModal && (
+        <BudgetPrintModal 
+          onClose={() => setShowPrintModal(false)}
+          onPrint={(config) => {
+            setShowPrintModal(false);
+            setPrintConfig(config);
+            setTimeout(() => {
+              window.print();
+            }, 300);
+          }}
+          initialCurrency={budget.currency || 'USD'}
+        />
+      )}
+      
+      {/* PRINT LAYOUT (Hidden from screen via CSS, only visible when printing) */}
+      {printConfig && (
+        <BudgetPrintLayout 
+          budget={budget}
+          config={printConfig}
+        />
+      )}
+
       {/* WORKSHEET TABLE */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex-1 flex flex-col relative overflow-hidden">
         <div className="flex-1 overflow-y-auto min-h-0 relative">
@@ -517,6 +544,12 @@ export default function BudgetWorksheetPage() {
                               className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm text-sm"
                             >
                               <Settings size={16} /> Configuración Global
+                            </button>
+                            <button 
+                              onClick={() => setShowPrintModal(true)}
+                              className="flex items-center gap-2 px-4 py-2 bg-white border border-amber-200 text-amber-700 rounded-xl hover:bg-amber-50 transition-colors font-medium shadow-sm text-sm"
+                            >
+                              <Printer size={16} /> Imprimir
                             </button>
                           </div>,
                           headerPortalTarget
