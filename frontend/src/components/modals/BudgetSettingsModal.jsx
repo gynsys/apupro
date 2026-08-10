@@ -37,7 +37,10 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
         const formData = new FormData();
         formData.append('logo', file);
         
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8010';
+        // Usar la misma URL que usa budgetService
+        const API_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') 
+          ? 'http://localhost:8010' 
+          : window.location.origin;
         const response = await fetch(`${API_URL}/api/v1/budgets/${budget.id}/upload-logo`, {
           method: 'POST',
           body: formData
