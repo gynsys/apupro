@@ -128,29 +128,79 @@ export default function BudgetHomePage() {
     try {
       const budgetData = await budgetService.getById(budget.id);
       
-      // Crear CSV con formato mejorado para Excel
-      // Agregar BOM UTF-8 para que Excel reconozca caracteres especiales
-      const BOM = '\uFEFF';
-      let csv = BOM + 'Part. No,Código,Código COVENIN,Descripción,Unidad,Cantidad,Precio Unitario,Total\n';
-      
-      let partNumber = 1;
+      // Generar HTML que Excel puede abrir (formato XLS)
       const formatCurrency = (val) => val.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       
+      let html = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+        <head>
+          <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+          <!--[if gte mso 9]>
+          <xml>
+            <x:ExcelWorkbook>
+              <x:ExcelWorksheets>
+                <x:ExcelWorksheet>
+                  <x:Name>Presupuesto</x:Name>
+                <x:WorksheetOptions>
+                  <x:Panes></x:Panes>
+                </x:WorksheetOptions>
+              </x:ExcelWorksheet>
+              </x:ExcelWorksheets>
+            </x:ExcelWorkbook>
+          </xml>
+          <![endif]-->
+        </head>
+        <body>
+          <table border="1">
+            <thead>
+              <tr>
+                <th style="background-color: #4CAF50; color: white; font-weight: bold;">Part. No</th>
+                <th style="background-color: #4CAF50; color: white; font-weight: bold;">Código</th>
+                <th style="background-color: #4CAF50; color: white; font-weight: bold;">Código COVENIN</th>
+                <th style="background-color: #4CAF50; color: white; font-weight: bold;">Descripción</th>
+                <th style="background-color: #4CAF50; color: white; font-weight: bold;">Unidad</th>
+                <th style="background-color: #4CAF50; color: white; font-weight: bold;">Cantidad</th>
+                <th style="background-color: #4CAF50; color: white; font-weight: bold;">Precio Unitario</th>
+                <th style="background-color: #4CAF50; color: white; font-weight: bold;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      let partNumber = 1;
       budgetData.items.forEach(item => {
         if (!item.is_chapter) {
           const pu = calculatePU(item, budgetData);
           const total = pu * item.quantity;
-          csv += `${partNumber},"${item.cod_par}","${item.cov_par || ''}","${item.description}","${item.unit}",${item.quantity},${formatCurrency(pu)},${formatCurrency(total)}\n`;
+          html += `
+            <tr>
+              <td style="text-align: center;">${partNumber}</td>
+              <td>${item.cod_par}</td>
+              <td>${item.cov_par || ''}</td>
+              <td>${item.description}</td>
+              <td style="text-align: center;">${item.unit}</td>
+              <td style="text-align: right;">${item.quantity}</td>
+              <td style="text-align: right;">${formatCurrency(pu)}</td>
+              <td style="text-align: right;">${formatCurrency(total)}</td>
+            </tr>
+          `;
           partNumber++;
         }
       });
       
-      // Crear blob y descargar
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      html += `
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
+      
+      // Crear blob y descargar como .xls
+      const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      link.setAttribute('download', `${budget.name.replace(/[^a-z0-9]/gi, '_')}.csv`);
+      link.setAttribute('download', `${budget.name.replace(/[^a-z0-9]/gi, '_')}.xls`);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
