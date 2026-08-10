@@ -10,6 +10,7 @@ import { budgetService } from '../../services/budgetService';
 import BudgetSettingsModal from '../../components/modals/BudgetSettingsModal';
 import CreateBudgetModal from '../../components/modals/CreateBudgetModal';
 import BudgetPrintModal from '../../components/modals/BudgetPrintModal';
+import BudgetPrintLayout from '../../components/print/BudgetPrintLayout';
 
 export default function BudgetHomePage() {
   const [budgets, setBudgets] = useState([]);
@@ -26,6 +27,8 @@ export default function BudgetHomePage() {
   const [settingsBudget, setSettingsBudget] = useState(null);
   const [printBudget, setPrintBudget] = useState(null);
   const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [printConfig, setPrintConfig] = useState(null);
+  const [printBudgetData, setPrintBudgetData] = useState(null);
   
   const navigate = useNavigate();
 
@@ -428,14 +431,31 @@ export default function BudgetHomePage() {
             setPrintModalOpen(false);
             setPrintBudget(null);
           }}
-          onPrint={(config) => {
+          onPrint={async (config) => {
             setPrintModalOpen(false);
-            // Navegar a la página del presupuesto con la configuración de impresión
-            // La página manejará la impresión con esa configuración
-            navigate(`/budgets/${printBudget.id}`, { state: { printConfig: config } });
+            try {
+              const budgetData = await budgetService.getById(printBudget.id);
+              setPrintBudgetData(budgetData);
+              setPrintConfig(config);
+              // Esperar a que el layout se renderice y luego imprimir
+              setTimeout(() => {
+                window.print();
+              }, 500);
+            } catch (error) {
+              console.error('Error al cargar presupuesto:', error);
+              toast.error('Error al cargar el presupuesto para impresión');
+            }
           }}
           initialCurrency={printBudget.currency || 'USD'}
           budgetId={printBudget.id}
+        />
+      )}
+      
+      {/* Layout de impresión */}
+      {printConfig && printBudgetData && (
+        <BudgetPrintLayout 
+          budget={printBudgetData}
+          config={printConfig}
         />
       )}
     </div>

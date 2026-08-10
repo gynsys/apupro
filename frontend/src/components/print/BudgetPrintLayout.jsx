@@ -58,28 +58,37 @@ export default function BudgetPrintLayout({ budget, config }) {
 
   const items = budget.items || [];
   
+  // Filtrar capítulos según la configuración
+  const shouldIncludeChapters = config.type === 'capitulos';
+  
   items.forEach((item, index) => {
     if (item.is_chapter) {
-      if (config.type === 'capitulos' && currentChapter) {
+      if (shouldIncludeChapters) {
+        if (currentChapter) {
+          rows.push({
+            type: 'chapter-subtotal',
+            chapterId: currentChapter.id,
+            description: `Total ${config.currency}. ${currentChapter.description}:`,
+            amount: currentChapterSubtotal
+          });
+        }
+        currentChapter = item;
+        currentChapterSubtotal = 0;
+        
         rows.push({
-          type: 'chapter-subtotal',
-          chapterId: currentChapter.id,
-          description: `Total Bs. ${currentChapter.description}:`,
-          amount: currentChapterSubtotal
+          type: 'chapter',
+          ...item
         });
+      } else {
+        // Si no incluir capítulos, resetear el capítulo actual
+        currentChapter = null;
+        currentChapterSubtotal = 0;
       }
-      currentChapter = item;
-      currentChapterSubtotal = 0;
-      
-      rows.push({
-        type: 'chapter',
-        ...item
-      });
     } else {
       const pu = calculatePU(item);
       const total = pu * item.quantity;
       
-      if (currentChapter) {
+      if (shouldIncludeChapters && currentChapter) {
         currentChapterSubtotal += total;
       }
 
@@ -93,7 +102,7 @@ export default function BudgetPrintLayout({ budget, config }) {
     }
   });
 
-  if (config.type === 'capitulos' && currentChapter) {
+  if (shouldIncludeChapters && currentChapter) {
     rows.push({
       type: 'chapter-subtotal',
       chapterId: currentChapter.id,
@@ -113,23 +122,28 @@ export default function BudgetPrintLayout({ budget, config }) {
       <div className="print-container">
         {/* ENCABEZADO */}
         <div className="header" style={{ marginBottom: '20px' }}>
-          {config.includeLogo && (
-            <div className="logo" style={{ marginBottom: '10px' }}>
-              {(() => {
-                const savedLogo = localStorage.getItem(`budget_logo_${budget.id}`);
-                if (savedLogo) {
-                  return <img src={savedLogo} alt="Logo Empresa" style={{ maxHeight: '60px' }} onError={(e) => e.target.style.display = 'none'} />;
-                }
-                return <img src="/images/logo_aeko360.png" alt="Logo Default" style={{ maxHeight: '60px' }} onError={(e) => e.target.style.display = 'none'} />;
-              })()}
-            </div>
-          )}
-          <div style={{ fontSize: '12px', fontWeight: 'bold' }}>
-            <p style={{ margin: '2px 0' }}>Obra: <span style={{fontWeight: 'normal'}}>{budget.project_name || 'N/A'}</span></p>
-            <p style={{ margin: '2px 0' }}>Contratante: <span style={{fontWeight: 'normal'}}>{budget.client_name || 'N/A'}</span></p>
-            {config.includeRif && budget.company_rif && (
-              <p style={{ margin: '2px 0' }}>RIF: <span style={{fontWeight: 'normal'}}>{budget.company_rif}</span></p>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px' }}>
+            {config.includeLogo && (
+              <div className="logo" style={{ flexShrink: 0 }}>
+                {(() => {
+                  const savedLogo = localStorage.getItem(`budget_logo_${budget.id}`);
+                  if (savedLogo) {
+                    return <img src={savedLogo} alt="Logo Empresa" style={{ maxHeight: '60px' }} onError={(e) => e.target.style.display = 'none'} />;
+                  }
+                  return <img src="/images/logo_aeko360.png" alt="Logo Default" style={{ maxHeight: '60px' }} onError={(e) => e.target.style.display = 'none'} />;
+                })()}
+              </div>
             )}
+            <div style={{ fontSize: '12px', fontWeight: 'bold', flex: 1 }}>
+              <p style={{ margin: '2px 0' }}>Obra: <span style={{fontWeight: 'normal'}}>{budget.project_name || 'N/A'}</span></p>
+              {budget.client_name && (
+                <p style={{ margin: '2px 0' }}>Contratante: <span style={{fontWeight: 'normal'}}>{budget.client_name}</span></p>
+              )}
+              {config.includeRif && budget.company_rif && (
+                <p style={{ margin: '2px 0' }}>RIF: <span style={{fontWeight: 'normal'}}>{budget.company_rif}</span></p>
+              )}
+            </div>
+          </div>
           </div>
           <h2 style={{ textAlign: 'center', letterSpacing: '8px', marginTop: '20px', fontSize: '18px' }}>
             {config.title || 'PRESUPUESTO'}
@@ -153,8 +167,8 @@ export default function BudgetPrintLayout({ budget, config }) {
               if (row.type === 'chapter') {
                 return (
                   <tr key={`cap-${row.id}`}>
-                    <td style={{ ...tdStyle, borderLeft: '1px solid #000', borderBottom: '1px solid #000' }}></td>
-                    <td colSpan="5" style={{ ...tdStyle, fontWeight: 'bold', paddingTop: '10px', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>
+                    <td style={{ ...tdStyle, borderLeft: '1px solid #000', borderTop: '1px solid #000', borderBottom: '1px solid #000' }}></td>
+                    <td colSpan="5" style={{ ...tdStyle, fontWeight: 'bold', paddingTop: '10px', borderRight: '1px solid #000', borderTop: '1px solid #000', borderBottom: '1px solid #000' }}>
                       {row.description}
                     </td>
                   </tr>

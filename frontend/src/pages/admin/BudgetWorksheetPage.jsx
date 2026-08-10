@@ -78,6 +78,20 @@ export default function BudgetWorksheetPage() {
     if (new URLSearchParams(location.search).get('settings') === 'true') {
       setShowSettings(true);
     }
+    // Verificar si se debe imprimir
+    if (new URLSearchParams(location.search).get('print') === 'true') {
+      // Esperar a que el presupuesto cargue y luego imprimir
+      setTimeout(() => {
+        const savedConfig = localStorage.getItem(`print_config_${id}`);
+        if (savedConfig) {
+          setPrintConfig(JSON.parse(savedConfig));
+          localStorage.removeItem(`print_config_${id}`);
+          setTimeout(() => {
+            window.print();
+          }, 300);
+        }
+      }, 500);
+    }
   }, [id, location.search]);
 
   const loadBudget = async () => {
