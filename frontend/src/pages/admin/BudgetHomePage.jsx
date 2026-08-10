@@ -128,131 +128,48 @@ export default function BudgetHomePage() {
     try {
       const budgetData = await budgetService.getById(budget.id);
       
-      // Generar SpreadsheetML (XML de Excel) con fórmulas
-      let xml = `<?xml version="1.0"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:o="urn:schemas-microsoft-com:office:office"
- xmlns:x="urn:schemas-microsoft-com:office:excel"
- xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:html="http://www.w3.org/TR/REC-html40">
- <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
-  <Author>CostBase</Author>
-  <Created>${new Date().toISOString()}</Created>
- </DocumentProperties>
- <ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel">
-  <WindowHeight>12000</WindowHeight>
-  <WindowWidth>16000</WindowWidth>
-  <WindowTopX>0</WindowTopX>
-  <WindowTopY>0</WindowTopY>
-  <ProtectStructure>False</ProtectStructure>
-  <ProtectWindows>False</ProtectWindows>
- </ExcelWorkbook>
- <Styles>
-  <Style ss:ID="Default" ss:Name="Normal">
-   <Alignment ss:Vertical="Bottom"/>
-   <Borders/>
-   <Font ss:FontName="Calibri" ss:Size="11"/>
-   <Interior/>
-   <NumberFormat/>
-   <Protection/>
-  </Style>
-  <Style ss:ID="Header">
-   <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/>
-   <Interior ss:Color="#4CAF50" ss:Pattern="Solid"/>
-   <Font ss:Color="#FFFFFF"/>
-  </Style>
-  <Style ss:ID="Currency">
-   <NumberFormat ss:Format="#,##0.00"/>
-  </Style>
-  <Style ss:ID="Total">
-   <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/>
-   <Interior ss:Color="#E8F5E9" ss:Pattern="Solid"/>
-   <NumberFormat ss:Format="#,##0.00"/>
-  </Style>
- </Styles>
- <Worksheet ss:Name="Presupuesto">
-  <Table ss:ExpandedColumnCount="7" ss:ExpandedRowCount="${budgetData.items.filter(i => !i.is_chapter).length + 10}" x:FullColumns="1" x:FullRows="1" ss:DefaultRowHeight="15">
-   <Column ss:Width="50"/>
-   <Column ss:Width="120"/>
-   <Column ss:Width="300"/>
-   <Column ss:Width="60"/>
-   <Column ss:Width="80"/>
-   <Column ss:Width="100"/>
-   <Column ss:Width="100"/>
-   <Row ss:Height="30">
-    <Cell ss:MergeAcross="6"><Data ss:Type="String">${budgetData.project_name || 'PRESUPUESTO'}</Data></Cell>
-   </Row>
-   <Row>
-    <Cell ss:MergeAcross="6"><Data ss:Type="String">Obra: ${budgetData.project_name || 'N/A'}</Data></Cell>
-   </Row>
-   ${budgetData.client_name ? `<Row><Cell ss:MergeAcross="6"><Data ss:Type="String">Contratante: ${budgetData.client_name}</Data></Cell></Row>` : ''}
-   ${budgetData.company_rif ? `<Row><Cell ss:MergeAcross="6"><Data ss:Type="String">RIF: ${budgetData.company_rif}</Data></Cell></Row>` : ''}
-   <Row ss:Height="20"/>
-   <Row>
-    <Cell><Data ss:Type="String">Part. No</Data></Cell>
-    <Cell><Data ss:Type="String">Código COVENIN</Data></Cell>
-    <Cell><Data ss:Type="String">Descripción</Data></Cell>
-    <Cell><Data ss:Type="String">Unidad</Data></Cell>
-    <Cell><Data ss:Type="String">Cantidad</Data></Cell>
-    <Cell><Data ss:Type="String">Precio Unitario</Data></Cell>
-    <Cell><Data ss:Type="String">Total</Data></Cell>
-   </Row>`;
+      // Generar CSV con BOM UTF-8 para que Excel lo reconozca correctamente
+      const BOM = '\uFEFF';
+      const formatCurrency = (val) => val.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       
-      let rowIndex = 10;
+      let csv = BOM + 'Presupuesto\n';
+      csv += `Obra: ${budgetData.project_name || 'N/A'}\n`;
+      if (budgetData.client_name) csv += `Contratante: ${budgetData.client_name}\n`;
+      if (budgetData.company_rif) csv += `RIF: ${budgetData.company_rif}\n`;
+      csv += '\n';
+      csv += 'Part. No,Código COVENIN,Descripción,Unidad,Cantidad,Precio Unitario,Total\n';
+      
       let partNumber = 1;
+      let subtotal = 0;
       budgetData.items.forEach(item => {
         if (!item.is_chapter) {
           const pu = calculatePU(item, budgetData);
           const total = pu * item.quantity;
-          const row = rowIndex + partNumber;
-          xml += `
-   <Row>
-    <Cell><Data ss:Type="Number">${partNumber}</Data></Cell>
-    <Cell><Data ss:Type="String">${item.cov_par || ''}</Data></Cell>
-    <Cell><Data ss:Type="String">${item.description}</Data></Cell>
-    <Cell><Data ss:Type="String">${item.unit}</Data></Cell>
-    <Cell><Data ss:Type="Number">${item.quantity}</Data></Cell>
-    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${pu}</Data></Cell>
-    <Cell ss:StyleID="Currency" ss:Formula="=RC[-1]*RC[-2]"><Data ss:Type="Number">${total}</Data></Cell>
-   </Row>`;
+          subtotal += total;
+          csv += `${partNumber},"${item.cov_par || ''}","${item.description}","${item.unit}",${item.quantity},${formatCurrency(pu)},${formatCurrency(total)}\n`;
           partNumber++;
         }
       });
       
-      const totalRowIndex = rowIndex + partNumber;
-      const subtotalRow = totalRowIndex;
-      const ivaRow = totalRowIndex + 1;
-      const totalRow = totalRowIndex + 2;
+      const ivaAmount = subtotal * ((budgetData.iva_percent ?? 16.0) / 100);
+      const totalGeneral = subtotal + ivaAmount;
       
-      xml += `
-   <Row ss:StyleID="Total">
-    <Cell ss:MergeAcross="5"><Data ss:Type="String">Total (Sin I.V.A.)</Data></Cell>
-    <Cell ss:StyleID="Currency" ss:Formula="=SUM(R[-${partNumber}]C:R[-1]C)"><Data ss:Type="Number">0</Data></Cell>
-   </Row>
-   <Row ss:StyleID="Total">
-    <Cell ss:MergeAcross="5"><Data ss:Type="String">I.V.A. (${budgetData.iva_percent ?? 16}%)</Data></Cell>
-    <Cell ss:StyleID="Currency" ss:Formula="=R[-1]C*${(budgetData.iva_percent ?? 16) / 100}"><Data ss:Type="Number">0</Data></Cell>
-   </Row>
-   <Row ss:StyleID="Total">
-    <Cell ss:MergeAcross="5"><Data ss:Type="String">Total General</Data></Cell>
-    <Cell ss:StyleID="Currency" ss:Formula="=R[-2]C+R[-1]C"><Data ss:Type="Number">0</Data></Cell>
-   </Row>
-  </Table>
- </Worksheet>
-</Workbook>`;
+      csv += `\n,,,,"Total (Sin I.V.A.):",,${formatCurrency(subtotal)}\n`;
+      csv += `,,,,"I.V.A. (${budgetData.iva_percent ?? 16}%):",,${formatCurrency(ivaAmount)}\n`;
+      csv += `,,,,"Total General:",,${formatCurrency(totalGeneral)}\n`;
       
-      // Crear blob y descargar como .xls
-      const blob = new Blob([xml], { type: 'application/vnd.ms-excel' });
+      // Crear blob y descargar como .csv
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      link.setAttribute('download', `${budget.name.replace(/[^a-z0-9]/gi, '_')}.xls`);
+      link.setAttribute('download', `${budget.name.replace(/[^a-z0-9]/gi, '_')}.csv`);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       
-      toast.success('Presupuesto exportado exitosamente con fórmulas');
+      toast.success('Presupuesto exportado exitosamente');
     } catch (error) {
       console.error('Error al exportar:', error);
       toast.error('Error al exportar el presupuesto');
