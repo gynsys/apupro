@@ -144,7 +144,6 @@ export default function BudgetPrintLayout({ budget, config }) {
               )}
             </div>
           </div>
-          </div>
           <h2 style={{ textAlign: 'center', letterSpacing: '8px', marginTop: '20px', fontSize: '18px' }}>
             {config.title || 'PRESUPUESTO'}
           </h2>
