@@ -147,8 +147,8 @@ export default function BudgetPrintLayout({ budget, config }) {
               if (row.type === 'chapter') {
                 return (
                   <tr key={`cap-${row.id}`}>
-                    <td style={tdStyle}></td>
-                    <td colSpan="5" style={{ ...tdStyle, fontWeight: 'bold', paddingTop: '10px' }}>
+                    <td style={{ ...tdStyle, borderLeft: '1px solid #000', borderBottom: '1px solid #000' }}></td>
+                    <td colSpan="5" style={{ ...tdStyle, fontWeight: 'bold', paddingTop: '10px', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>
                       {row.description}
                     </td>
                   </tr>
@@ -158,11 +158,11 @@ export default function BudgetPrintLayout({ budget, config }) {
               if (row.type === 'chapter-subtotal') {
                 return (
                   <tr key={`sub-${row.chapterId}`}>
-                    <td colSpan="2" style={{ ...tdStyle, textAlign: 'right', fontWeight: 'bold', paddingBottom: '10px' }}>
+                    <td colSpan="2" style={{ ...tdStyle, textAlign: 'right', fontWeight: 'bold', paddingBottom: '10px', borderLeft: '1px solid #000', borderBottom: '1px solid #000' }}>
                       <span style={{ textDecoration: 'underline' }}>{row.description}</span>
                     </td>
-                    <td colSpan="3" style={tdStyle}></td>
-                    <td style={{ ...tdStyle, fontWeight: 'bold', textAlign: 'right', textDecoration: 'underline', paddingBottom: '10px' }}>
+                    <td colSpan="3" style={{ ...tdStyle, borderBottom: '1px solid #000' }}></td>
+                    <td style={{ ...tdStyle, fontWeight: 'bold', textAlign: 'right', textDecoration: 'underline', paddingBottom: '10px', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>
                       {formatCurrency(row.amount)}
                     </td>
                   </tr>

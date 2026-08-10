@@ -4,7 +4,7 @@ import { Printer, X, CheckSquare, Square, Type, DollarSign } from 'lucide-react'
 
 export default function BudgetPrintModal({ onClose, onPrint, initialCurrency = 'USD' }) {
   const [config, setConfig] = useState({
-    type: 'capitulos', // 'general' or 'capitulos'
+    type: 'general', // 'general' or 'capitulos' - cambiado a 'general' por defecto
     includeLogo: true,
     includeRif: true,
     includeIva: true,
