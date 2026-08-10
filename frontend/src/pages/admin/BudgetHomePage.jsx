@@ -131,10 +131,20 @@ export default function BudgetHomePage() {
       // Generar HTML que Excel puede abrir (formato XLS)
       const formatCurrency = (val) => val.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       
+      // Obtener logo del localStorage
+      const savedLogo = localStorage.getItem(`budget_logo_${budget.id}`);
+      const logoHtml = savedLogo ? `<img src="${savedLogo}" style="max-height: 60px;" />` : '';
+      
       let html = `
         <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
         <head>
           <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+          <style>
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #000; padding: 8px; }
+            th { background-color: #4CAF50; color: white; font-weight: bold; text-align: center; }
+            .total-row { background-color: #e8f5e9; font-weight: bold; }
+          </style>
           <!--[if gte mso 9]>
           <xml>
             <x:ExcelWorkbook>
@@ -151,11 +161,17 @@ export default function BudgetHomePage() {
           <![endif]-->
         </head>
         <body>
+          <div style="margin-bottom: 20px;">
+            ${logoHtml}
+            <h2 style="text-align: center; letter-spacing: 8px; margin: 20px 0;">${budgetData.project_name || 'PRESUPUESTO'}</h2>
+            <p><strong>Obra:</strong> ${budgetData.project_name || 'N/A'}</p>
+            ${budgetData.client_name ? `<p><strong>Contratante:</strong> ${budgetData.client_name}</p>` : ''}
+            ${budgetData.company_rif ? `<p><strong>RIF:</strong> ${budgetData.company_rif}</p>` : ''}
+          </div>
           <table border="1">
             <thead>
               <tr>
                 <th style="background-color: #4CAF50; color: white; font-weight: bold;">Part. No</th>
-                <th style="background-color: #4CAF50; color: white; font-weight: bold;">Código</th>
                 <th style="background-color: #4CAF50; color: white; font-weight: bold;">Código COVENIN</th>
                 <th style="background-color: #4CAF50; color: white; font-weight: bold;">Descripción</th>
                 <th style="background-color: #4CAF50; color: white; font-weight: bold;">Unidad</th>
@@ -168,14 +184,15 @@ export default function BudgetHomePage() {
       `;
       
       let partNumber = 1;
+      let subtotal = 0;
       budgetData.items.forEach(item => {
         if (!item.is_chapter) {
           const pu = calculatePU(item, budgetData);
           const total = pu * item.quantity;
+          subtotal += total;
           html += `
             <tr>
               <td style="text-align: center;">${partNumber}</td>
-              <td>${item.cod_par}</td>
               <td>${item.cov_par || ''}</td>
               <td>${item.description}</td>
               <td style="text-align: center;">${item.unit}</td>
@@ -188,8 +205,25 @@ export default function BudgetHomePage() {
         }
       });
       
+      const ivaAmount = subtotal * ((budgetData.iva_percent ?? 16.0) / 100);
+      const totalGeneral = subtotal + ivaAmount;
+      
       html += `
             </tbody>
+            <tfoot>
+              <tr class="total-row">
+                <td colspan="6" style="text-align: right;">Total (Sin I.V.A.):</td>
+                <td style="text-align: right;">${formatCurrency(subtotal)}</td>
+              </tr>
+              <tr class="total-row">
+                <td colspan="6" style="text-align: right;">I.V.A. (${budgetData.iva_percent ?? 16}%):</td>
+                <td style="text-align: right;">${formatCurrency(ivaAmount)}</td>
+              </tr>
+              <tr class="total-row">
+                <td colspan="6" style="text-align: right;">Total General:</td>
+                <td style="text-align: right;">${formatCurrency(totalGeneral)}</td>
+              </tr>
+            </tfoot>
           </table>
         </body>
         </html>
