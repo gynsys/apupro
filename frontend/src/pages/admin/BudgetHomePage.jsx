@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Folder, FolderOpen, Plus, FileText, Trash2, Edit3, Copy, Search, 
-  Settings, Printer,
+  Settings, Printer, FileSpreadsheet,
   MoreVertical, Clock, DollarSign, Loader
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -122,6 +122,39 @@ export default function BudgetHomePage() {
         </div>
       </div>
     ), { duration: Infinity });
+  };
+
+  const handleExportToExcel = async (budget) => {
+    try {
+      const budgetData = await budgetService.getById(budget.id);
+      
+      // Crear CSV que Excel puede abrir
+      let csv = 'Código,Código COVENIN,Descripción,Unidad,Cantidad,Precio Unitario,Total\n';
+      
+      budgetData.items.forEach(item => {
+        if (!item.is_chapter) {
+          const pu = calculatePU(item, budgetData);
+          const total = pu * item.quantity;
+          csv += `"${item.cod_par}","${item.cov_par || ''}","${item.description}","${item.unit}",${item.quantity},${pu.toFixed(2)},${total.toFixed(2)}\n`;
+        }
+      });
+      
+      // Crear blob y descargar
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${budget.name.replace(/[^a-z0-9]/gi, '_')}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('Presupuesto exportado exitosamente');
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      toast.error('Error al exportar el presupuesto');
+    }
   };
 
   const handleDuplicate = async (e) => {
@@ -248,6 +281,13 @@ export default function BudgetHomePage() {
                     title="Imprimir"
                   >
                     <Printer size={16} />
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleExportToExcel(budget); }}
+                    className="btn-accion"
+                    title="Exportar a Excel"
+                  >
+                    <FileSpreadsheet size={16} />
                   </button>
                   <button 
                     onClick={(e) => { e.stopPropagation(); setRenamingBudget(budget); setRenameName(budget.name); }}
