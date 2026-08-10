@@ -1,6 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import File as FastAPIFile
 from sqlalchemy.orm import Session
 from typing import Optional
+from pathlib import Path
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill
 
 from app.db.base import get_db
 from app.schemas.cost360 import (
@@ -383,6 +387,285 @@ def update_database_route(database_id: str, payload: Cost360DatabaseUpdate, db: 
         return updated_database
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/apu/{item_id}/export-excel")
+async def export_apu_excel(item_id: str, db: Session = Depends(get_db)):
+    """Genera un archivo Excel con fórmulas nativas A1 para un APU específico.
+    Sigue la estructura exacta del archivo apu_formulas.py de referencia.
+    """
+    from openpyxl.utils import get_column_letter
+    from openpyxl.styles import Border, Side
+
+    # ── 1. Obtener la partida principal ──────────────────────────────────
+    try:
+        item = get_item_by_code(db, item_id.split('-')[0])
+    except Exception:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    # ── 2. Obtener APU: las funciones devuelven listas de tuplas (apu_row, master_row) ──
+    mat_rows = get_apu_materials(db, item_id)
+    eq_rows  = get_apu_equipments(db, item_id)
+    mo_rows  = get_apu_labors(db, item_id)
+
+    rendimiento    = item.RenPar or 1.0
+    admin_gg       = 16.0
+    imprevisto_ut  = 10.0
+    financiamiento = 0.0
+    iva            = 0.0
+    otros_imp      = 0.0
+    prestaciones   = 435.0   # % FCAS / Prestaciones Sociales
+
+    # ── 3. Helpers de estilo ──────────────────────────────────────────────
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"APU {item.CovPar or item.CodPar}"
+
+    thin       = Side(style='thin')
+    border_all = Border(left=thin, right=thin, top=thin, bottom=thin)
+    fmt_money  = '#,##0.00'
+
+    green_fill  = PatternFill(start_color="4CAF50", end_color="4CAF50", fill_type="solid")
+    orange_fill = PatternFill(start_color="FFA726", end_color="FFA726", fill_type="solid")
+    total_fill  = PatternFill(start_color="E8F5E9", end_color="E8F5E9", fill_type="solid")
+
+    def sty(cell, bold: bool = False, size: int = 11, align: str = "left",
+            border: bool = False, number_format: str = None, fill: PatternFill = None,
+            color: str = None):
+        cell.font      = Font(bold=bold, size=size, name="Calibri",
+                              color=color if color else "000000")
+        cell.alignment = Alignment(horizontal=align, vertical="center", wrap_text=True)
+        if border:
+            cell.border = border_all
+        if number_format:
+            cell.number_format = number_format
+        if fill:
+            cell.fill = fill
+
+    def hdr_cell(cell, text: str = None):
+        """Celda de encabezado de columna: fondo verde, texto blanco, borde."""
+        if text is not None:
+            cell.value = text
+        sty(cell, bold=True, size=11, align="center", border=True,
+            fill=green_fill, color="FFFFFF")
+
+    # ── 4. ENCABEZADO ────────────────────────────────────────────────────
+    ws.merge_cells("B1:H1")
+    ws["B1"] = "ANALISIS DE PRECIO UNITARIO"
+    sty(ws["B1"], bold=True, size=14, align="center", fill=green_fill, color="FFFFFF")
+
+    ws.merge_cells("B2:H2")
+    ws["B2"] = f"Obra: {item.Descri or 'N/A'}"
+
+    ws["B8"] = "Rendimiento:"
+    ws["H8"] = rendimiento
+    sty(ws["H8"], number_format="0.00")
+
+    ws["B9"] = "Código:"
+    ws["C9"] = item.CovPar or item.CodPar
+    ws["E9"] = "Unidad:"
+    ws["F9"] = item.UniPar or ""
+
+    # ── 5. MATERIALES ────────────────────────────────────────────────────
+    mat_sec = 11
+    ws.merge_cells(f"B{mat_sec}:H{mat_sec}")
+    ws[f"B{mat_sec}"] = "MATERIALES"
+    sty(ws[f"B{mat_sec}"], bold=True, size=12, fill=orange_fill)
+
+    for i, h in enumerate(["No.", "Descripción", "Und.", "Cant.", "Desp.", "Precio", "Total"]):
+        hdr_cell(ws.cell(mat_sec + 1, i + 2), h)
+
+    row = mat_sec + 2
+    mat_first = row
+    for i, (apu_mat, master_mat) in enumerate(mat_rows):
+        ws.cell(row, 2, i + 1)
+        ws.cell(row, 3, master_mat.Descri or "")
+        ws.cell(row, 4, master_mat.UniMat or "")
+        ws.cell(row, 5, apu_mat.CanIns or 0)
+        ws.cell(row, 6, apu_mat.Desper or 0)
+        ws.cell(row, 7, master_mat.CosMat or 0)
+        sty(ws.cell(row, 7), number_format=fmt_money)
+        ws.cell(row, 8, f"=ROUND((G{row}*E{row})*((F{row}/100)+1),2)")
+        sty(ws.cell(row, 8), number_format=fmt_money)
+        row += 1
+
+    mat_last    = row - 1
+    mat_tot_row = row
+    ws.cell(mat_tot_row, 6, "Total Materiales:")
+    sty(ws.cell(mat_tot_row, 6), bold=True)
+    ws.cell(mat_tot_row, 8, f"=SUM(H{mat_first}:H{mat_last})")
+    sty(ws.cell(mat_tot_row, 8), bold=True, number_format=fmt_money, fill=total_fill)
+
+    # ── 6. EQUIPOS ───────────────────────────────────────────────────────
+    eq_sec = mat_tot_row + 2
+    ws.merge_cells(f"B{eq_sec}:H{eq_sec}")
+    ws[f"B{eq_sec}"] = "EQUIPOS"
+    sty(ws[f"B{eq_sec}"], bold=True, size=12, fill=orange_fill)
+
+    for i, h in enumerate(["No.", "Descripción", "", "Cant.", "Cop/Dep", "Precio", "Total"]):
+        hdr_cell(ws.cell(eq_sec + 1, i + 2), h)
+
+    row = eq_sec + 2
+    eq_first = row
+    for i, (apu_eq, master_eq) in enumerate(eq_rows):
+        ws.cell(row, 2, i + 1)
+        ws.cell(row, 3, master_eq.Descri or "")
+        ws.cell(row, 5, apu_eq.CanIns or 0)
+        ws.cell(row, 6, apu_eq.Deprec if apu_eq.Deprec is not None else 1.0)
+        ws.cell(row, 7, master_eq.CosDia or 0)
+        sty(ws.cell(row, 7), number_format=fmt_money)
+        ws.cell(row, 8, f"=ROUND((G{row}*E{row})*(F{row}),2)")
+        sty(ws.cell(row, 8), number_format=fmt_money)
+        row += 1
+
+    eq_last    = row - 1
+    eq_tot_row = row
+    ws.cell(eq_tot_row, 6, "Total Equipos:")
+    sty(ws.cell(eq_tot_row, 6), bold=True)
+    ws.cell(eq_tot_row, 8, f"=SUM(H{eq_first}:H{eq_last})")
+    sty(ws.cell(eq_tot_row, 8), bold=True, number_format=fmt_money, fill=total_fill)
+
+    eq_cuo_row = eq_tot_row + 1
+    ws.cell(eq_cuo_row, 5, "Costo Unitario Equipos:")
+    ws.cell(eq_cuo_row, 8, f"=ROUND(H{eq_tot_row}/H8,2)")
+    sty(ws.cell(eq_cuo_row, 8), bold=True, number_format=fmt_money, fill=total_fill)
+
+    # ── 7. MANO DE OBRA ──────────────────────────────────────────────────
+    mo_sec = eq_cuo_row + 2
+    ws.merge_cells(f"B{mo_sec}:H{mo_sec}")
+    ws[f"B{mo_sec}"] = "MANO DE OBRA"
+    sty(ws[f"B{mo_sec}"], bold=True, size=12, fill=orange_fill)
+
+    for i, h in enumerate(["No.", "Descripción", "Cant.", "Jornal", "Bono", "Total Jornal", "Total Bono"]):
+        hdr_cell(ws.cell(mo_sec + 1, i + 2), h)
+
+    row = mo_sec + 2
+    mo_first = row
+    for i, (apu_mo, master_mo) in enumerate(mo_rows):
+        ws.cell(row, 2, i + 1)
+        ws.cell(row, 3, master_mo.Descri or "")
+        ws.cell(row, 4, apu_mo.CanIns or 0)
+        ws.cell(row, 5, master_mo.Jornal or 0)
+        sty(ws.cell(row, 5), number_format=fmt_money)
+        ws.cell(row, 6, master_mo.Bono or 0)
+        sty(ws.cell(row, 6), number_format=fmt_money)
+        ws.cell(row, 7, f"=ROUND((D{row}*E{row}),2)")
+        sty(ws.cell(row, 7), number_format=fmt_money)
+        ws.cell(row, 8, f"=ROUND((D{row}*F{row}),2)")
+        sty(ws.cell(row, 8), number_format=fmt_money)
+        row += 1
+
+    mo_last    = row - 1
+    mo_sub_row = row
+    ws.cell(mo_sub_row, 4, "SubTotal Mano de Obra:")
+    sty(ws.cell(mo_sub_row, 4), bold=True)
+    ws.cell(mo_sub_row, 7, f"=SUM(G{mo_first}:G{mo_last})")
+    sty(ws.cell(mo_sub_row, 7), bold=True, number_format=fmt_money, fill=total_fill)
+    ws.cell(mo_sub_row, 8, f"=SUM(H{mo_first}:H{mo_last})")
+    sty(ws.cell(mo_sub_row, 8), bold=True, number_format=fmt_money, fill=total_fill)
+
+    mo_ps_row = mo_sub_row + 1
+    ws.cell(mo_ps_row, 3, f"{prestaciones},00")
+    ws.cell(mo_ps_row, 4, "Prestaciones Sociales:")
+    ws.cell(mo_ps_row, 7, f"=ROUND((C{mo_ps_row}/100)*G{mo_sub_row},2)")
+    sty(ws.cell(mo_ps_row, 7), number_format=fmt_money)
+    ws.cell(mo_ps_row, 8, 0)
+
+    mo_tg_row = mo_ps_row + 1
+    ws.cell(mo_tg_row, 4, "Total General Mano de Obra:")
+    sty(ws.cell(mo_tg_row, 4), bold=True)
+    ws.cell(mo_tg_row, 8, f"=G{mo_ps_row}+H{mo_ps_row}+G{mo_sub_row}+H{mo_sub_row}")
+    sty(ws.cell(mo_tg_row, 8), bold=True, number_format=fmt_money, fill=total_fill)
+
+    mo_cuo_row = mo_tg_row + 1
+    ws.cell(mo_cuo_row, 4, "Costo Unitario de Mano de Obra:")
+    ws.cell(mo_cuo_row, 8, f"=ROUND(H{mo_tg_row}/H8,2)")
+    sty(ws.cell(mo_cuo_row, 8), bold=True, number_format=fmt_money, fill=total_fill)
+
+    # ── 8. RESUMEN ───────────────────────────────────────────────────────
+    res_sec = mo_cuo_row + 2
+    ws.merge_cells(f"B{res_sec}:H{res_sec}")
+    ws[f"B{res_sec}"] = "RESUMEN"
+    sty(ws[f"B{res_sec}"], bold=True, size=12, fill=green_fill, color="FFFFFF")
+
+    cd_row = res_sec + 1
+    ws.cell(cd_row, 5, "COSTO DIRECTO SUBTOTAL A:")
+    sty(ws.cell(cd_row, 5), bold=True)
+    ws.cell(cd_row, 8, f"=ROUND(H{mat_tot_row}+H{eq_cuo_row}+H{mo_cuo_row},2)")
+    sty(ws.cell(cd_row, 8), bold=True, number_format=fmt_money, fill=total_fill)
+
+    ad_row = cd_row + 1
+    ws.cell(ad_row, 3, f"{admin_gg},00")
+    ws.cell(ad_row, 4, "Administración y Gastos Generales:")
+    ws.cell(ad_row, 8, f"=ROUND((H{cd_row}*C{ad_row})/100,2)")
+    sty(ws.cell(ad_row, 8), number_format=fmt_money)
+
+    sb_row = ad_row + 1
+    ws.cell(sb_row, 4, "SUBTOTAL B:")
+    sty(ws.cell(sb_row, 4), bold=True)
+    ws.cell(sb_row, 8, f"=H{cd_row}+H{ad_row}")
+    sty(ws.cell(sb_row, 8), bold=True, number_format=fmt_money, fill=total_fill)
+
+    iu_row = sb_row + 1
+    ws.cell(iu_row, 5, f"{imprevisto_ut},00")
+    ws.cell(iu_row, 6, "Imprevisto Utilidad:")
+    ws.cell(iu_row, 8, f"=ROUND((H{sb_row}*E{iu_row})/100,2)")
+    sty(ws.cell(iu_row, 8), number_format=fmt_money)
+
+    sc_row = iu_row + 1
+    ws.cell(sc_row, 4, "SUBTOTAL C:")
+    sty(ws.cell(sc_row, 4), bold=True)
+    ws.cell(sc_row, 8, f"=H{sb_row}+H{iu_row}")
+    sty(ws.cell(sc_row, 8), bold=True, number_format=fmt_money, fill=total_fill)
+
+    fin_row = sc_row + 1
+    ws.cell(fin_row, 5, f"{financiamiento},00")
+    ws.cell(fin_row, 6, "Financiamiento:")
+    ws.cell(fin_row, 8, f"=ROUND((H{sc_row}*E{fin_row})/100,2)")
+    sty(ws.cell(fin_row, 8), number_format=fmt_money)
+
+    ps_row = fin_row + 1
+    ws.cell(ps_row, 4, "PRECIO UNITARIO SIN IMPUESTO:")
+    sty(ws.cell(ps_row, 4), bold=True)
+    ws.cell(ps_row, 8, f"=H{sc_row}+H{fin_row}")
+    sty(ws.cell(ps_row, 8), bold=True, number_format=fmt_money, fill=total_fill)
+
+    iva_row = ps_row + 1
+    ws.cell(iva_row, 5, f"{iva},00")
+    ws.cell(iva_row, 6, "Impuesto (I.V.A.):")
+    ws.cell(iva_row, 8, f"=ROUND((H{ps_row}*E{iva_row})/100,2)")
+    sty(ws.cell(iva_row, 8), number_format=fmt_money)
+
+    oi_row = iva_row + 1
+    ws.cell(oi_row, 5, f"{otros_imp},00")
+    ws.cell(oi_row, 6, "Otros Impuestos:")
+    ws.cell(oi_row, 8, f"=ROUND((H{ps_row}*E{oi_row})/100,2)")
+    sty(ws.cell(oi_row, 8), number_format=fmt_money)
+
+    pf_row = oi_row + 2
+    ws.cell(pf_row, 4, "PRECIO UNITARIO (Bs.F.):")
+    sty(ws.cell(pf_row, 4), bold=True, size=12)
+    ws.cell(pf_row, 8, f"=H{ps_row}+H{iva_row}+H{oi_row}")
+    sty(ws.cell(pf_row, 8), bold=True, size=12, number_format=fmt_money, fill=total_fill)
+
+    # ── 9. Anchos de columna ─────────────────────────────────────────────
+    ws.column_dimensions['A'].width = 4
+    ws.column_dimensions['B'].width = 5
+    ws.column_dimensions['C'].width = 50
+    ws.column_dimensions['D'].width = 14
+    ws.column_dimensions['E'].width = 14
+    ws.column_dimensions['F'].width = 18
+    ws.column_dimensions['G'].width = 16
+    ws.column_dimensions['H'].width = 18
+
+    # ── 10. Guardar y retornar ────────────────────────────────────────────
+    temp_dir = Path("temp")
+    temp_dir.mkdir(exist_ok=True)
+    filename  = f"APU_{item.CovPar or item.CodPar}.xlsx"
+    file_path = temp_dir / filename
+    wb.save(file_path)
+
+    return FastAPIFile(path=str(file_path), filename=filename)
 
 @router.delete("/databases/{database_id}")
 def delete_database_route(database_id: str, db: Session = Depends(get_db)):

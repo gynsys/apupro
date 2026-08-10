@@ -89,71 +89,30 @@ export default function APUViewer() {
   const utilCost = subtotalB * (utilPercent / 100);
   const unitPrice = subtotalB + utilCost;
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
     try {
-      // Generar CSV con BOM UTF-8 para que Excel lo reconozca correctamente
-      const BOM = '\uFEFF';
-      const formatCurrency = (val) => val.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      // Llamar al backend para generar el Excel con fórmulas
+      const API_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') 
+        ? 'http://localhost:8010' 
+        : window.location.origin;
       
-      let csv = BOM + 'ANÁLISIS DE PRECIO UNITARIO\n';
-      csv += `Obra: ${partida.Descri || 'N/A'}\n`;
-      csv += `Código: ${partida.CovPar || partida.CodPar}\n`;
-      csv += `Unidad: ${partida.UniPar}\n`;
-      csv += `Rendimiento: ${rendimiento}\n`;
-      csv += '\n';
-      
-      // MATERIALES
-      csv += '1. MATERIALES\n';
-      csv += 'No.,Descripción,Und.,Cant.,Desp.,Precio,Total\n';
-      materiales.forEach((m, i) => {
-        const total = (m.Precio || 0) * (m.Cant || 0) * ((m.Desperdicio || 0) / 100 + 1);
-        csv += `${i + 1},"${m.Descri || ''}","${m.UniPar || ''}",${m.Cant || 0},${m.Desperdicio || 0},${formatCurrency(m.Precio || 0)},${formatCurrency(total)}\n`;
+      const response = await fetch(`${API_URL}/api/v1/cost360/apu/${id}/export-excel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
-      const totalMat = materiales.reduce((acc, m) => acc + ((m.Precio || 0) * (m.Cant || 0) * ((m.Desperdicio || 0) / 100 + 1)), 0);
-      csv += `,,,,,Total Materiales:,${formatCurrency(totalMat)}\n`;
       
-      csv += '\n';
+      if (!response.ok) {
+        throw new Error('Error al generar el Excel');
+      }
       
-      // EQUIPOS
-      csv += '2. EQUIPOS\n';
-      csv += 'No.,Descripción,,Cant.,Cop/Dep,Precio,Total\n';
-      equipos.forEach((e, i) => {
-        const total = (e.Precio || 0) * (e.Cant || 0) * (e.CopDep || 0);
-        csv += `${i + 1},"${e.Descri || ''}","",${e.Cant || 0},${e.CopDep || 0},${formatCurrency(e.Precio || 0)},${formatCurrency(total)}\n`;
-      });
-      const totalEq = equipos.reduce((acc, e) => acc + ((e.Precio || 0) * (e.Cant || 0) * (e.CopDep || 0)), 0);
-      csv += `,,,,,Total Equipos:,${formatCurrency(totalEq)}\n`;
-      
-      csv += '\n';
-      
-      // MANO DE OBRA
-      csv += '3. MANO DE OBRA\n';
-      csv += 'No.,Descripción,Cant.,Jornal,Bono,Total Jornal,Total Bono\n';
-      mano_obra.forEach((mo, i) => {
-        const totalJornal = (mo.Cant || 0) * (mo.Jornal || 0);
-        const totalBono = (mo.Cant || 0) * (mo.Bono || 0);
-        csv += `${i + 1},"${mo.Descri || ''}",${mo.Cant || 0},${formatCurrency(mo.Jornal || 0)},${formatCurrency(mo.Bono || 0)},${formatCurrency(totalJornal)},${formatCurrency(totalBono)}\n`;
-      });
-      const totalJornal = mano_obra.reduce((acc, mo) => acc + ((mo.Cant || 0) * (mo.Jornal || 0)), 0);
-      const totalBono = mano_obra.reduce((acc, mo) => acc + ((mo.Cant || 0) * (mo.Bono || 0)), 0);
-      csv += `,,,,,Total Mano de Obra:,${formatCurrency(totalJornal)},${formatCurrency(totalBono)}\n`;
-      
-      csv += '\n';
-      
-      // RESUMEN
-      csv += 'RESUMEN\n';
-      csv += `Costo Directo:,,,${formatCurrency(subtotalA)}\n`;
-      csv += `Administración y Gastos (${adminPercent}%):,,,${formatCurrency(adminCost)}\n`;
-      csv += `Subtotal B:,,,${formatCurrency(subtotalB)}\n`;
-      csv += `Imprevisto y Utilidad (${utilPercent}%):,,,${formatCurrency(utilCost)}\n`;
-      csv += `PRECIO UNITARIO FINAL:,,,${formatCurrency(unitPrice)}\n`;
-      
-      // Crear blob y descargar
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      // Descargar el archivo generado
+      const blob = await response.blob();
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      link.setAttribute('download', `APU_${partida.CovPar || partida.CodPar}.csv`);
+      link.setAttribute('download', `APU_${partida.CovPar || partida.CodPar}.xlsx`);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();

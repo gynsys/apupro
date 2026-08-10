@@ -126,44 +126,28 @@ export default function BudgetHomePage() {
 
   const handleExportToExcel = async (budget) => {
     try {
-      const budgetData = await budgetService.getById(budget.id);
+      // Llamar al backend para generar el Excel con fórmulas
+      const API_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') 
+        ? 'http://localhost:8010' 
+        : window.location.origin;
       
-      // Generar CSV con BOM UTF-8 para que Excel lo reconozca correctamente
-      const BOM = '\uFEFF';
-      const formatCurrency = (val) => val.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      
-      let csv = BOM + 'Presupuesto\n';
-      csv += `Obra: ${budgetData.project_name || 'N/A'}\n`;
-      if (budgetData.client_name) csv += `Contratante: ${budgetData.client_name}\n`;
-      if (budgetData.company_rif) csv += `RIF: ${budgetData.company_rif}\n`;
-      csv += '\n';
-      csv += 'Part. No,Código COVENIN,Descripción,Unidad,Cantidad,Precio Unitario,Total\n';
-      
-      let partNumber = 1;
-      let subtotal = 0;
-      budgetData.items.forEach(item => {
-        if (!item.is_chapter) {
-          const pu = calculatePU(item, budgetData);
-          const total = pu * item.quantity;
-          subtotal += total;
-          csv += `${partNumber},"${item.cov_par || ''}","${item.description}","${item.unit}",${item.quantity},${formatCurrency(pu)},${formatCurrency(total)}\n`;
-          partNumber++;
-        }
+      const response = await fetch(`${API_URL}/api/v1/budgets/${budget.id}/export-excel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       
-      const ivaAmount = subtotal * ((budgetData.iva_percent ?? 16.0) / 100);
-      const totalGeneral = subtotal + ivaAmount;
+      if (!response.ok) {
+        throw new Error('Error al generar el Excel');
+      }
       
-      csv += `\n,,,,"Total (Sin I.V.A.):",,${formatCurrency(subtotal)}\n`;
-      csv += `,,,,"I.V.A. (${budgetData.iva_percent ?? 16}%):",,${formatCurrency(ivaAmount)}\n`;
-      csv += `,,,,"Total General:",,${formatCurrency(totalGeneral)}\n`;
-      
-      // Crear blob y descargar como .csv
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      // Descargar el archivo generado
+      const blob = await response.blob();
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      link.setAttribute('download', `${budget.name.replace(/[^a-z0-9]/gi, '_')}.csv`);
+      link.setAttribute('download', `${budget.name.replace(/[^a-z0-9]/gi, '_')}.xlsx`);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();

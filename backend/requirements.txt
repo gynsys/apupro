@@ -187,3 +187,4 @@ matplotlib
 sentence-transformers
 scikit-learn
 pandas
+openpyxl==3.1.2
