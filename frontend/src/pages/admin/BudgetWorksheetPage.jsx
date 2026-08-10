@@ -481,6 +481,7 @@ export default function BudgetWorksheetPage() {
             }, 300);
           }}
           initialCurrency={budget.currency || 'USD'}
+          budgetId={id}
         />
       )}
       
