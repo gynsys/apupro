@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Printer } from 'lucide-react';
+import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Printer, FileSpreadsheet } from 'lucide-react';
 import cost360Service from '../services/cost360Service';
 import PrintAPUModal from '../../../components/PrintAPUModal';
 import PrintAPULayout from '../../../components/PrintAPULayout';
@@ -89,6 +89,257 @@ export default function APUViewer() {
   const utilCost = subtotalB * (utilPercent / 100);
   const unitPrice = subtotalB + utilCost;
 
+  const handleExportToExcel = () => {
+    try {
+      // Generar SpreadsheetML con fórmulas similares al archivo de muestra
+      const formatCurrency = (val) => val.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      
+      let xml = `<?xml version="1.0"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+  <Author>CostBase</Author>
+  <Created>${new Date().toISOString()}</Created>
+ </DocumentProperties>
+ <ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel">
+  <WindowHeight>12000</WindowHeight>
+  <WindowWidth>16000</WindowWidth>
+  <WindowTopX>0</WindowTopX>
+  <WindowTopY>0</WindowTopY>
+  <ProtectStructure>False</ProtectStructure>
+  <ProtectWindows>False</ProtectWindows>
+ </ExcelWorkbook>
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Bottom"/>
+   <Borders/>
+   <Font ss:FontName="Calibri" ss:Size="11"/>
+   <Interior/>
+   <NumberFormat/>
+   <Protection/>
+  </Style>
+  <Style ss:ID="Header">
+   <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/>
+   <Interior ss:Color="#4CAF50" ss:Pattern="Solid"/>
+   <Font ss:Color="#FFFFFF"/>
+  </Style>
+  <Style ss:ID="SectionHeader">
+   <Font ss:FontName="Calibri" ss:Size="12" ss:Bold="1"/>
+   <Interior ss:Color="#FFA726" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="Currency">
+   <NumberFormat ss:Format="#,##0.00"/>
+  </Style>
+  <Style ss:ID="Total">
+   <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/>
+   <Interior ss:Color="#E8F5E9" ss:Pattern="Solid"/>
+   <NumberFormat ss:Format="#,##0.00"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="APU">
+  <Table ss:ExpandedColumnCount="8" ss:ExpandedRowCount="${materiales.length + equipos.length + mano_obra.length + 20}" x:FullColumns="1" x:FullRows="1" ss:DefaultRowHeight="15">
+   <Column ss:Width="50"/>
+   <Column ss:Width="300"/>
+   <Column ss:Width="60"/>
+   <Column ss:Width="80"/>
+   <Column ss:Width="80"/>
+   <Column ss:Width="80"/>
+   <Column ss:Width="100"/>
+   <Column ss:Width="100"/>
+   <Row ss:Height="30">
+    <Cell ss:MergeAcross="7"><Data ss:Type="String">ANÁLISIS DE PRECIO UNITARIO</Data></Cell>
+   </Row>
+   <Row>
+    <Cell ss:MergeAcross="7"><Data ss:Type="String">Obra: ${partida.Descri || 'N/A'}</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">Código:</Data></Cell>
+    <Cell><Data ss:Type="String">${partida.CovPar || partida.CodPar}</Data></Cell>
+    <Cell><Data ss:Type="String">Unidad:</Data></Cell>
+    <Cell><Data ss:Type="String">${partida.UniPar}</Data></Cell>
+    <Cell><Data ss:Type="String">Rendimiento:</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${rendimiento}</Data></Cell>
+   </Row>
+   <Row ss:Height="20"/>`;
+      
+      let currentRow = 5;
+      
+      // MATERIALES
+      xml += `
+   <Row ss:StyleID="SectionHeader">
+    <Cell ss:MergeAcross="7"><Data ss:Type="String">1. MATERIALES</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">No.</Data></Cell>
+    <Cell><Data ss:Type="String">Descripción</Data></Cell>
+    <Cell><Data ss:Type="String">Und.</Data></Cell>
+    <Cell><Data ss:Type="String">Cant.</Data></Cell>
+    <Cell><Data ss:Type="String">Desp.</Data></Cell>
+    <Cell><Data ss:Type="String">Precio</Data></Cell>
+    <Cell><Data ss:Type="String">Total</Data></Cell>
+   </Row>`;
+      
+      currentRow += 2;
+      const matStartRow = currentRow;
+      materiales.forEach((m, i) => {
+        const row = currentRow + i;
+        xml += `
+   <Row>
+    <Cell><Data ss:Type="Number">${i + 1}</Data></Cell>
+    <Cell><Data ss:Type="String">${m.Descri || ''}</Data></Cell>
+    <Cell><Data ss:Type="String">${m.UniPar || ''}</Data></Cell>
+    <Cell><Data ss:Type="Number">${m.Cant || 0}</Data></Cell>
+    <Cell><Data ss:Type="Number">${m.Desperdicio || 0}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${m.Precio || 0}</Data></Cell>
+    <Cell ss:StyleID="Currency" ss:Formula="=ROUND((RC[-1]*RC[-3])*((RC[-2]/100)+1),2)"><Data ss:Type="Number">${m.subtotal || 0}</Data></Cell>
+   </Row>`;
+      });
+      
+      currentRow += materiales.length;
+      const matEndRow = currentRow;
+      xml += `
+   <Row ss:StyleID="Total">
+    <Cell ss:MergeAcross="5"><Data ss:Type="String">Total Materiales:</Data></Cell>
+    <Cell ss:StyleID="Currency" ss:Formula="=SUM(R[${matEndRow - matStartRow}]C:R[-1]C)"><Data ss:Type="Number">${calculateMaterialTotal()}</Data></Cell>
+   </Row>`;
+      
+      currentRow++;
+      
+      // EQUIPOS
+      xml += `
+   <Row ss:Height="10"/>
+   <Row ss:StyleID="SectionHeader">
+    <Cell ss:MergeAcross="7"><Data ss:Type="String">2. EQUIPOS</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">No.</Data></Cell>
+    <Cell><Data ss:Type="String">Descripción</Data></Cell>
+    <Cell><Data ss:Type="String"></Data></Cell>
+    <Cell><Data ss:Type="String">Cant.</Data></Cell>
+    <Cell><Data ss:Type="String">Cop/Dep</Data></Cell>
+    <Cell><Data ss:Type="String">Precio</Data></Cell>
+    <Cell><Data ss:Type="String">Total</Data></Cell>
+   </Row>`;
+      
+      currentRow += 2;
+      const eqStartRow = currentRow;
+      equipos.forEach((e, i) => {
+        const row = currentRow + i;
+        xml += `
+   <Row>
+    <Cell><Data ss:Type="Number">${i + 1}</Data></Cell>
+    <Cell><Data ss:Type="String">${e.Descri || ''}</Data></Cell>
+    <Cell><Data ss:Type="String"></Data></Cell>
+    <Cell><Data ss:Type="Number">${e.Cant || 0}</Data></Cell>
+    <Cell><Data ss:Type="Number">${e.CopDep || 0}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${e.Precio || 0}</Data></Cell>
+    <Cell ss:StyleID="Currency" ss:Formula="=ROUND((RC[-1]*RC[-3])*(RC[-2]),2)"><Data ss:Type="Number">${e.subtotal || 0}</Data></Cell>
+   </Row>`;
+      });
+      
+      currentRow += equipos.length;
+      const eqEndRow = currentRow;
+      xml += `
+   <Row ss:StyleID="Total">
+    <Cell ss:MergeAcross="5"><Data ss:Type="String">Total Equipos:</Data></Cell>
+    <Cell ss:StyleID="Currency" ss:Formula="=SUM(R[${eqEndRow - eqStartRow}]C:R[-1]C)"><Data ss:Type="Number">${calculateEquipmentTotalDay()}</Data></Cell>
+   </Row>`;
+      
+      currentRow++;
+      
+      // MANO DE OBRA
+      xml += `
+   <Row ss:Height="10"/>
+   <Row ss:StyleID="SectionHeader">
+    <Cell ss:MergeAcross="7"><Data ss:Type="String">3. MANO DE OBRA</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">No.</Data></Cell>
+    <Cell><Data ss:Type="String">Descripción</Data></Cell>
+    <Cell><Data ss:Type="String">Cant.</Data></Cell>
+    <Cell><Data ss:Type="String">Jornal</Data></Cell>
+    <Cell><Data ss:Type="String">Bono</Data></Cell>
+    <Cell><Data ss:Type="String">Total Jornal</Data></Cell>
+    <Cell><Data ss:Type="String">Total Bono</Data></Cell>
+   </Row>`;
+      
+      currentRow += 2;
+      const moStartRow = currentRow;
+      mano_obra.forEach((mo, i) => {
+        const row = currentRow + i;
+        xml += `
+   <Row>
+    <Cell><Data ss:Type="Number">${i + 1}</Data></Cell>
+    <Cell><Data ss:Type="String">${mo.Descri || ''}</Data></Cell>
+    <Cell><Data ss:Type="Number">${mo.Cant || 0}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${mo.Jornal || 0}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${mo.Bono || 0}</Data></Cell>
+    <Cell ss:StyleID="Currency" ss:Formula="=RC[-3]*RC[-2]"><Data ss:Type="Number">${mo.tot_jornal || 0}</Data></Cell>
+    <Cell ss:StyleID="Currency" ss:Formula="=RC[-4]*RC[-3]"><Data ss:Type="Number">${mo.tot_bono || 0}</Data></Cell>
+   </Row>`;
+      });
+      
+      currentRow += mano_obra.length;
+      const moEndRow = currentRow;
+      xml += `
+   <Row ss:StyleID="Total">
+    <Cell ss:MergeAcross="4"><Data ss:Type="String">Total Mano de Obra:</Data></Cell>
+    <Cell ss:StyleID="Currency" ss:Formula="=SUM(R[${moEndRow - moStartRow}]C[-1]:R[-1]C[-1])"><Data ss:Type="Number">${calculateLaborTotalJornalDay()}</Data></Cell>
+    <Cell ss:StyleID="Currency" ss:Formula="=SUM(R[${moEndRow - moStartRow}]C:R[-1]C)"><Data ss:Type="Number">${calculateLaborTotalBonoDay()}</Data></Cell>
+   </Row>`;
+      
+      currentRow++;
+      
+      // RESUMEN
+      xml += `
+   <Row ss:Height="20"/>
+   <Row ss:StyleID="SectionHeader">
+    <Cell ss:MergeAcross="7"><Data ss:Type="String">RESUMEN</Data></Cell>
+   </Row>
+   <Row>
+    <Cell ss:MergeAcross="5"><Data ss:Type="String">Costo Directo:</Data></Cell>
+    <Cell ss:StyleID="Currency" ss:Formula="=R[${matEndRow}]C+R[${eqEndRow}]C+R[${moEndRow}]C"><Data ss:Type="Number">${subtotalA}</Data></Cell>
+   </Row>
+   <Row>
+    <Cell ss:MergeAcross="5"><Data ss:Type="String">Administración y Gastos (${adminPercent}%):</Data></Cell>
+    <Cell ss:StyleID="Currency" ss:Formula="=R[-1]C*${adminPercent/100}"><Data ss:Type="Number">${adminCost}</Data></Cell>
+   </Row>
+   <Row>
+    <Cell ss:MergeAcross="5"><Data ss:Type="String">Subtotal B:</Data></Cell>
+    <Cell ss:StyleID="Currency" ss:Formula="=R[-2]C+R[-1]C"><Data ss:Type="Number">${subtotalB}</Data></Cell>
+   </Row>
+   <Row>
+    <Cell ss:MergeAcross="5"><Data ss:Type="String">Imprevisto y Utilidad (${utilPercent}%):</Data></Cell>
+    <Cell ss:StyleID="Currency" ss:Formula="=R[-1]C*${utilPercent/100}"><Data ss:Type="Number">${utilCost}</Data></Cell>
+   </Row>
+   <Row ss:StyleID="Total">
+    <Cell ss:MergeAcross="5"><Data ss:Type="String">PRECIO UNITARIO FINAL:</Data></Cell>
+    <Cell ss:StyleID="Currency" ss:Formula="=R[-2]C+R[-1]C"><Data ss:Type="Number">${unitPrice}</Data></Cell>
+   </Row>
+  </Table>
+ </Worksheet>
+</Workbook>`;
+      
+      // Crear blob y descargar
+      const blob = new Blob([xml], { type: 'application/vnd.ms-excel' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `APU_${partida.CovPar || partida.CodPar}.xls`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      console.log('APU exportado exitosamente con fórmulas');
+    } catch (error) {
+      console.error('Error al exportar APU:', error);
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto min-h-screen pb-20 print:p-0 print:m-0 print:max-w-none print:bg-white print:w-full">
       {printOptions && (
@@ -123,13 +374,22 @@ export default function APUViewer() {
               <Calculator size={16} className="text-blue-500" /> ANÁLISIS DE PRECIO UNITARIO
             </h2>
           </div>
-          <button 
-            onClick={() => setPrintModalOpen(true)}
-            className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 transition-colors shadow-sm flex items-center gap-2"
-            title="Imprimir"
-          >
-            <Printer size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setPrintModalOpen(true)}
+              className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 transition-colors shadow-sm flex items-center gap-2"
+              title="Imprimir"
+            >
+              <Printer size={20} />
+            </button>
+            <button 
+              onClick={() => handleExportToExcel()}
+              className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-green-600 transition-colors shadow-sm flex items-center gap-2"
+              title="Exportar a Excel"
+            >
+              <FileSpreadsheet size={20} />
+            </button>
+          </div>
         </div>
       </div>
 
