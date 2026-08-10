@@ -237,7 +237,7 @@ export default function BudgetHomePage() {
                     <Settings size={16} />
                   </button>
                   <button 
-                    onClick={(e) => { e.stopPropagation(); window.print(); }}
+                    onClick={(e) => { e.stopPropagation(); navigate(`/budgets/${budget.id}?print=true`); }}
                     className="btn-accion"
                     title="Imprimir"
                   >
