@@ -73,8 +73,6 @@ export default function BudgetWorksheetPage() {
   const [editingChapterId, setEditingChapterId] = useState(null);
   const [editingChapterName, setEditingChapterName] = useState("");
 
-  const location = useLocation();
-
   useEffect(() => {
     loadBudget();
     if (new URLSearchParams(location.search).get('settings') === 'true') {
