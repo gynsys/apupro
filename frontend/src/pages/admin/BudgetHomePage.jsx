@@ -260,132 +260,10 @@ export default function BudgetHomePage() {
   };
 
   const handleDuplicate = async (e) => {
-      
-      // Generar HTML que Excel puede abrir (formato XLS)
-      const formatCurrency = (val) => val.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      
-      // Obtener logo del localStorage
-      const savedLogo = localStorage.getItem(`budget_logo_${budget.id}`);
-      const logoHtml = savedLogo ? `<img src="${savedLogo}" style="max-height: 60px;" />` : '';
-      
-      let html = `
-        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
-        <head>
-          <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-          <style>
-            table { border-collapse: collapse; width: 100%; }
-            th, td { border: 1px solid #000; padding: 8px; }
-            th { background-color: #4CAF50; color: white; font-weight: bold; text-align: center; }
-            .total-row { background-color: #e8f5e9; font-weight: bold; }
-          </style>
-          <!--[if gte mso 9]>
-          <xml>
-            <x:ExcelWorkbook>
-              <x:ExcelWorksheets>
-                <x:ExcelWorksheet>
-                  <x:Name>Presupuesto</x:Name>
-                <x:WorksheetOptions>
-                  <x:Panes></x:Panes>
-                </x:WorksheetOptions>
-              </x:ExcelWorksheet>
-              </x:ExcelWorksheets>
-            </x:ExcelWorkbook>
-          </xml>
-          <![endif]-->
-        </head>
-        <body>
-          <div style="margin-bottom: 20px;">
-            ${logoHtml}
-            <h2 style="text-align: center; letter-spacing: 8px; margin: 20px 0;">${budgetData.project_name || 'PRESUPUESTO'}</h2>
-            <p><strong>Obra:</strong> ${budgetData.project_name || 'N/A'}</p>
-            ${budgetData.client_name ? `<p><strong>Contratante:</strong> ${budgetData.client_name}</p>` : ''}
-            ${budgetData.company_rif ? `<p><strong>RIF:</strong> ${budgetData.company_rif}</p>` : ''}
-          </div>
-          <table border="1">
-            <thead>
-              <tr>
-                <th style="background-color: #4CAF50; color: white; font-weight: bold;">Part. No</th>
-                <th style="background-color: #4CAF50; color: white; font-weight: bold;">Código COVENIN</th>
-                <th style="background-color: #4CAF50; color: white; font-weight: bold;">Descripción</th>
-                <th style="background-color: #4CAF50; color: white; font-weight: bold;">Unidad</th>
-                <th style="background-color: #4CAF50; color: white; font-weight: bold;">Cantidad</th>
-                <th style="background-color: #4CAF50; color: white; font-weight: bold;">Precio Unitario</th>
-                <th style="background-color: #4CAF50; color: white; font-weight: bold;">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-      `;
-      
-      let partNumber = 1;
-      let subtotal = 0;
-      budgetData.items.forEach(item => {
-        if (!item.is_chapter) {
-          const pu = calculatePU(item, budgetData);
-          const total = pu * item.quantity;
-          subtotal += total;
-          html += `
-            <tr>
-              <td style="text-align: center;">${partNumber}</td>
-              <td>${item.cov_par || ''}</td>
-              <td>${item.description}</td>
-              <td style="text-align: center;">${item.unit}</td>
-              <td style="text-align: right;">${item.quantity}</td>
-              <td style="text-align: right;">${formatCurrency(pu)}</td>
-              <td style="text-align: right;">${formatCurrency(total)}</td>
-            </tr>
-          `;
-          partNumber++;
-        }
-      });
-      
-      const ivaAmount = subtotal * ((budgetData.iva_percent ?? 16.0) / 100);
-      const totalGeneral = subtotal + ivaAmount;
-      
-      html += `
-            </tbody>
-            <tfoot>
-              <tr class="total-row">
-                <td colspan="6" style="text-align: right;">Total (Sin I.V.A.):</td>
-                <td style="text-align: right;">${formatCurrency(subtotal)}</td>
-              </tr>
-              <tr class="total-row">
-                <td colspan="6" style="text-align: right;">I.V.A. (${budgetData.iva_percent ?? 16}%):</td>
-                <td style="text-align: right;">${formatCurrency(ivaAmount)}</td>
-              </tr>
-              <tr class="total-row">
-                <td colspan="6" style="text-align: right;">Total General:</td>
-                <td style="text-align: right;">${formatCurrency(totalGeneral)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </body>
-        </html>
-      `;
-      
-      // Crear blob y descargar como .xls
-      const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `${budget.name.replace(/[^a-z0-9]/gi, '_')}.xls`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      toast.success('Presupuesto exportado exitosamente');
-    } catch (error) {
-      console.error('Error al exportar:', error);
-      toast.error('Error al exportar el presupuesto');
-    }
-  };
-
-  const handleDuplicate = async (e) => {
     e.preventDefault();
     if (!duplicateName.trim()) return;
     
     try {
-      setDuplicatingStatus('Duplicando...');
       const newBudget = await budgetService.duplicateBudget(duplicatingBudget.id, duplicateName);
       toast.success('Presupuesto duplicado exitosamente');
       setDuplicatingBudget(null);
@@ -393,8 +271,6 @@ export default function BudgetHomePage() {
       loadBudgets();
     } catch (error) {
       toast.error('Error al duplicar presupuesto');
-    } finally {
-      setDuplicatingStatus('');
     }
   };
 
@@ -409,6 +285,17 @@ export default function BudgetHomePage() {
       loadBudgets();
     } catch (error) {
       toast.error('Error al actualizar nombre');
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await budgetService.delete(deletingId);
+      toast.success('Presupuesto eliminado');
+      setDeletingId(null);
+      loadBudgets();
+    } catch (error) {
+      toast.error('Error al eliminar presupuesto');
     }
   };
 
