@@ -128,14 +128,20 @@ export default function BudgetHomePage() {
     try {
       const budgetData = await budgetService.getById(budget.id);
       
-      // Crear CSV que Excel puede abrir
-      let csv = 'Código,Código COVENIN,Descripción,Unidad,Cantidad,Precio Unitario,Total\n';
+      // Crear CSV con formato mejorado para Excel
+      // Agregar BOM UTF-8 para que Excel reconozca caracteres especiales
+      const BOM = '\uFEFF';
+      let csv = BOM + 'Part. No,Código,Código COVENIN,Descripción,Unidad,Cantidad,Precio Unitario,Total\n';
+      
+      let partNumber = 1;
+      const formatCurrency = (val) => val.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       
       budgetData.items.forEach(item => {
         if (!item.is_chapter) {
           const pu = calculatePU(item, budgetData);
           const total = pu * item.quantity;
-          csv += `"${item.cod_par}","${item.cov_par || ''}","${item.description}","${item.unit}",${item.quantity},${pu.toFixed(2)},${total.toFixed(2)}\n`;
+          csv += `${partNumber},"${item.cod_par}","${item.cov_par || ''}","${item.description}","${item.unit}",${item.quantity},${formatCurrency(pu)},${formatCurrency(total)}\n`;
+          partNumber++;
         }
       });
       
