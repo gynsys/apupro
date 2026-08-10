@@ -18,6 +18,7 @@ import Cost360SearchBar from '../../modules/cost360/components/Cost360SearchBar'
 export default function BudgetWorksheetPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [budget, setBudget] = useState(null);
   const [loading, setLoading] = useState(true);
   const [headerDbDropdownOpen, setHeaderDbDropdownOpen] = useState(false);
@@ -102,6 +103,14 @@ export default function BudgetWorksheetPage() {
         client_name: data.client_name || '',
         project_name: data.project_name || ''
       });
+      
+      // Verificar si hay configuración de impresión desde la navegación
+      if (location.state?.printConfig) {
+        setPrintConfig(location.state.printConfig);
+        setTimeout(() => {
+          window.print();
+        }, 300);
+      }
     } catch (error) {
       console.error(error);
       toast.error('Error cargando el presupuesto');

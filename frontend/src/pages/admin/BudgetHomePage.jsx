@@ -430,10 +430,12 @@ export default function BudgetHomePage() {
           }}
           onPrint={(config) => {
             setPrintModalOpen(false);
-            setPrintBudget(null);
-            navigate(`/budgets/${printBudget.id}?print=true`);
+            // Navegar a la página del presupuesto con la configuración de impresión
+            // La página manejará la impresión con esa configuración
+            navigate(`/budgets/${printBudget.id}`, { state: { printConfig: config } });
           }}
           initialCurrency={printBudget.currency || 'USD'}
+          budgetId={printBudget.id}
         />
       )}
     </div>
