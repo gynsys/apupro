@@ -389,210 +389,259 @@ def update_database_route(database_id: str, payload: Cost360DatabaseUpdate, db: 
 
 @router.post("/apu/{item_id}/export-excel")
 async def export_apu_excel(item_id: str, db: Session = Depends(get_db)):
-    """Genera un archivo Excel con fórmulas nativas A1 para un APU específico.
-    Sigue la estructura exacta del archivo apu_formulas.py de referencia.
-    """
+    """Genera un archivo Excel con fórmulas nativas usando el formato del script de referencia apu_formulas.py"""
     try:
         from openpyxl import Workbook
-        from openpyxl.styles import Font, Alignment, PatternFill
+        from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
         from openpyxl.utils import get_column_letter
-        from openpyxl.styles import Border, Side
+        from pathlib import Path
 
-        # ── 1. Obtener la partida principal ──────────────────────────────────
+        # Obtener la partida principal
         try:
             item = get_item_by_code(db, item_id.split('-')[0])
         except Exception:
             raise HTTPException(status_code=404, detail="Item not found")
 
-        # ── 2. Obtener APU: las funciones devuelven listas de tuplas (apu_row, master_row) ──
+        # Obtener APU
         mat_rows = get_apu_materials(db, item_id)
-        eq_rows  = get_apu_equipments(db, item_id)
-        mo_rows  = get_apu_labors(db, item_id)
+        eq_rows = get_apu_equipments(db, item_id)
+        mo_rows = get_apu_labors(db, item_id)
 
-        rendimiento    = item.RenPar or 1.0
-        admin_gg       = 16.0
-        imprevisto_ut  = 10.0
+        rendimiento = item.RenPar or 1.0
+        admin_gg = 16.0
+        imprevisto_ut = 10.0
         financiamiento = 0.0
-        iva            = 0.0
-        otros_imp      = 0.0
-        prestaciones   = 435.0   # % FCAS / Prestaciones Sociales
+        iva = 0.0
+        otros_imp = 0.0
+        prestaciones = 435.0
 
-        # ── 3. Helpers de estilo ──────────────────────────────────────────────
-        header_style = PatternFill(start_color="4CAF50", end_color="4CAF50", fill_type="solid")
-        header_font = Font(bold=True, color="FFFFFF", size=11)
-        section_style = PatternFill(start_color="FFA726", end_color="FFA726", fill_type="solid")
-        section_font = Font(bold=True, size=12)
-        total_style = PatternFill(start_color="E8F5E9", end_color="E8F5E9", fill_type="solid")
-        total_font = Font(bold=True, size=11)
-        currency_format = '#,##0.00'
-
-        # ── 4. Crear workbook y hoja ───────────────────────────────────────────
+        # Crear workbook
         wb = Workbook()
         ws = wb.active
-        ws.title = "APU"
+        ws.title = f"APU_{item.CovPar or item.CodPar}"
 
-        # ── 5. HEADER ─────────────────────────────────────────────────────────
+        # Helper para estilos
+        def style_cell(cell, bold=False, size=11, align="left", border=False, number_format=None):
+            cell.font = Font(bold=bold, size=size, name="Calibri")
+            cell.alignment = Alignment(horizontal=align, vertical="center", wrap_text=True)
+            if border:
+                thin = Side(style='thin')
+                cell.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+            if number_format:
+                cell.number_format = number_format
+
+        # HEADER (Formato del script de referencia)
         ws.merge_cells("B1:H1")
         ws["B1"] = "ANÁLISIS DE PRECIO UNITARIO"
-        ws["B1"].fill = header_style
-        ws["B1"].font = header_font
-
+        style_cell(ws["B1"], bold=True, size=14, align="center")
+        
         ws.merge_cells("B2:H2")
-        ws["B2"] = f"Obra: {item.Descri or 'N/A'}"
+        ws["B2"] = "ANÁLISIS DE PRECIO UNITARIO"
+        style_cell(ws["B2"], bold=True, size=12, align="center")
+        
+        ws["B3"] = f"Obra: {item.Descri or 'N/A'}"
+        ws["B4"] = f"Contratante: N/A"
+        ws["E5"] = "Part. No.:"
+        ws["F5"] = "1"
+        ws["G5"] = "Fecha:"
+        ws["H5"] = "46244"
+        ws["B6"] = "Descripción:"
+        ws.merge_cells("C6:H6")
+        ws["C6"] = item.Descri or 'N/A'
+        ws["G8"] = "Rendimiento:"
+        ws["H8"] = rendimiento
+        ws["B9"] = "Código:"
+        ws["C9"] = item.CovPar or item.CodPar
+        ws["E9"] = "Unidad:"
+        ws["F9"] = item.UniPar
+        ws["G9"] = "Cantidad:"
+        ws["H9"] = "1"
 
-        ws.cell(3, 2, "Código:")
-        ws.cell(3, 3, item.CovPar or item.CodPar)
-        ws.cell(3, 5, "Unidad:")
-        ws.cell(3, 6, item.UniPar)
-        ws.cell(3, 7, "Rendimiento:")
-        ws.cell(3, 8, rendimiento)
-
-        # ── 6. MATERIALES ─────────────────────────────────────────────────────
-        ws.merge_cells(f"B{5}:H{5}")
-        ws[f"B{5}"] = "1. MATERIALES"
-        ws[f"B{5}"].fill = section_style
-        ws[f"B{5}"].font = section_font
-
-        mat_headers = ["No.", "Descripción", "Und.", "Cant.", "Desp.", "Precio", "Total"]
-        for i, header in enumerate(mat_headers):
-            cell = ws.cell(6, i + 2)
-            cell.value = header
-            cell.fill = header_style
-            cell.font = header_font
-            cell.alignment = Alignment(horizontal="center")
-
-        mat_row = 7
-        mat_start = mat_row
+        # MATERIALES
+        mat_start = 11
+        ws.merge_cells(f"B{mat_start}:H{mat_start}")
+        ws[f"B{mat_start}"] = "MATERIALES"
+        style_cell(ws[f"B{mat_start}"], bold=True, size=12)
+        
+        headers = ["No.", "Descripción", "Und.", "Cant.", "Desp.", "Precio", "Total"]
+        for i, h in enumerate(headers):
+            col = get_column_letter(i + 2)
+            ws[f"{col}{mat_start+1}"] = h
+            style_cell(ws[f"{col}{mat_start+1}"], bold=True, border=True)
+        
+        row = mat_start + 2
         for i, (apu_mat, mat) in enumerate(mat_rows):
-            ws.cell(mat_row, 2, i + 1)
-            ws.cell(mat_row, 3, mat.Descri if mat else '')
-            ws.cell(mat_row, 4, mat.UniMat if mat else '')
-            ws.cell(mat_row, 5, apu_mat.CanIns or 0)
-            ws.cell(mat_row, 6, apu_mat.Desper or 0)
-            ws.cell(mat_row, 7, mat.CosMat if mat else 0).number_format = currency_format
-            ws.cell(mat_row, 8, f"=ROUND((RC[-1]*RC[-3])*((RC[-2]/100)+1),2)").number_format = currency_format
-            mat_row += 1
+            ws[f"B{row}"] = i + 1
+            ws[f"C{row}"] = mat.Descri if mat else ''
+            ws[f"D{row}"] = mat.UniMat if mat else ''
+            ws[f"E{row}"] = apu_mat.CanIns or 0
+            ws[f"F{row}"] = apu_mat.Desper or 0
+            ws[f"G{row}"] = mat.CosMat if mat else 0
+            ws[f"H{row}"] = f"=ROUND((G{row}*E{row})*((F{row}/100)+1),2)"
+            style_cell(ws[f"H{row}"], number_format='#,##0.00')
+            row += 1
+        
+        total_mat_row = row
+        ws[f"F{total_mat_row}"] = "Total Materiales:"
+        first_data = mat_start + 2
+        last_data = total_mat_row - 1
+        ws[f"H{total_mat_row}"] = f"=SUM(H{first_data}:H{last_data})"
+        style_cell(ws[f"H{total_mat_row}"], bold=True, number_format='#,##0.00')
 
-        mat_end = mat_row - 1
-        ws.cell(mat_row, 2, "Total Materiales:")
-        ws.cell(mat_row, 2).font = total_font
-        ws.cell(mat_row, 8, f"=SUM(H{mat_start}:H{mat_end})").number_format = currency_format
-        ws.cell(mat_row, 8).fill = total_style
-        ws.cell(mat_row, 8).font = total_font
-
-        # ── 7. EQUIPOS ───────────────────────────────────────────────────────
-        eq_row = mat_row + 2
-        ws.merge_cells(f"B{eq_row}:H{eq_row}")
-        ws[f"B{eq_row}"] = "2. EQUIPOS"
-        ws[f"B{eq_row}"].fill = section_style
-        ws[f"B{eq_row}"].font = section_font
-
-        eq_headers = ["No.", "Descripción", "", "Cant.", "Cop/Dep", "Precio", "Total"]
-        for i, header in enumerate(eq_headers):
-            cell = ws.cell(eq_row + 1, i + 2)
-            cell.value = header
-            cell.fill = header_style
-            cell.font = header_font
-            cell.alignment = Alignment(horizontal="center")
-
-        eq_row += 2
-        eq_start = eq_row
+        # EQUIPOS
+        eq_start = total_mat_row + 2
+        ws.merge_cells(f"B{eq_start}:H{eq_start}")
+        ws[f"B{eq_start}"] = "EQUIPOS"
+        style_cell(ws[f"B{eq_start}"], bold=True, size=12)
+        
+        headers = ["No.", "Descripción", "", "Cant.", "Cop/Dep", "Precio", "Total"]
+        for i, h in enumerate(headers):
+            col = get_column_letter(i + 2)
+            ws[f"{col}{eq_start+1}"] = h
+            style_cell(ws[f"{col}{eq_start+1}"], bold=True, border=True)
+        
+        row = eq_start + 2
         for i, (apu_eq, eq) in enumerate(eq_rows):
-            ws.cell(eq_row, 2, i + 1)
-            ws.cell(eq_row, 3, eq.Descri if eq else '')
-            ws.cell(eq_row, 5, apu_eq.CanIns or 0)
-            ws.cell(eq_row, 6, apu_eq.Deprec or 0)
-            ws.cell(eq_row, 7, eq.CosDia if eq else 0).number_format = currency_format
-            ws.cell(eq_row, 8, f"=ROUND((RC[-1]*RC[-3])*(RC[-2]),2)").number_format = currency_format
-            eq_row += 1
+            ws[f"B{row}"] = i + 1
+            ws[f"C{row}"] = eq.Descri if eq else ''
+            ws[f"E{row}"] = apu_eq.CanIns or 0
+            ws[f"F{row}"] = apu_eq.Deprec or 0
+            ws[f"G{row}"] = eq.CosDia if eq else 0
+            ws[f"H{row}"] = f"=ROUND((G{row}*E{row})*(F{row}),2)"
+            style_cell(ws[f"H{row}"], number_format='#,##0.00')
+            row += 1
+        
+        total_eq_row = row
+        ws[f"F{total_eq_row}"] = "Total Equipos:"
+        first_data = eq_start + 2
+        last_data = total_eq_row - 1
+        ws[f"H{total_eq_row}"] = f"=SUM(H{first_data}:H{last_data})"
+        style_cell(ws[f"H{total_eq_row}"], bold=True, number_format='#,##0.00')
+        
+        cuo_row = total_eq_row + 1
+        ws[f"E{cuo_row}"] = "Costo Unitarios Equipos:"
+        ws[f"H{cuo_row}"] = f"=ROUND(H{total_eq_row}/H9,2)"
+        style_cell(ws[f"H{cuo_row}"], bold=True, number_format='#,##0.00')
 
-        eq_end = eq_row - 1
-        ws.cell(eq_row, 2, "Total Equipos:")
-        ws.cell(eq_row, 2).font = total_font
-        ws.cell(eq_row, 8, f"=SUM(H{eq_start}:H{eq_end})").number_format = currency_format
-        ws.cell(eq_row, 8).fill = total_style
-        ws.cell(eq_row, 8).font = total_font
-
-        # ── 8. MANO DE OBRA ──────────────────────────────────────────────────
-        mo_row = eq_row + 2
-        ws.merge_cells(f"B{mo_row}:H{mo_row}")
-        ws[f"B{mo_row}"] = "3. MANO DE OBRA"
-        ws[f"B{mo_row}"].fill = section_style
-        ws[f"B{mo_row}"].font = section_font
-
-        mo_headers = ["No.", "Descripción", "Cant.", "Jornal", "Bono", "Total Jornal", "Total Bono"]
-        for i, header in enumerate(mo_headers):
-            cell = ws.cell(mo_row + 1, i + 2)
-            cell.value = header
-            cell.fill = header_style
-            cell.font = header_font
-            cell.alignment = Alignment(horizontal="center")
-
-        mo_row += 2
-        mo_start = mo_row
+        # MANO DE OBRA
+        mo_start = cuo_row + 2
+        ws.merge_cells(f"B{mo_start}:H{mo_start}")
+        ws[f"B{mo_start}"] = "MANO DE OBRA"
+        style_cell(ws[f"B{mo_start}"], bold=True, size=12)
+        
+        headers = ["No.", "Descripción", "Cant.", "Jornal", "Bono", "Total Jornal", "Total Bono"]
+        for i, h in enumerate(headers):
+            col = get_column_letter(i + 2)
+            ws[f"{col}{mo_start+1}"] = h
+            style_cell(ws[f"{col}{mo_start+1}"], bold=True, border=True)
+        
+        row = mo_start + 2
         for i, (apu_mo, mo) in enumerate(mo_rows):
-            ws.cell(mo_row, 2, i + 1)
-            ws.cell(mo_row, 3, mo.Descri if mo else '')
-            ws.cell(mo_row, 4, apu_mo.Cant or 0)
-            ws.cell(mo_row, 5, mo.Jornal if mo else 0).number_format = currency_format
-            ws.cell(mo_row, 6, mo.Bono if mo else 0).number_format = currency_format
-            ws.cell(mo_row, 7, f"=RC[-3]*RC[-2]").number_format = currency_format
-            ws.cell(mo_row, 8, f"=RC[-4]*RC[-3]").number_format = currency_format
-            mo_row += 1
+            ws[f"B{row}"] = i + 1
+            ws[f"C{row}"] = mo.Descri if mo else ''
+            ws[f"D{row}"] = apu_mo.CanIns or 0
+            ws[f"E{row}"] = mo.Jornal if mo else 0
+            ws[f"F{row}"] = mo.Bono if mo else 0
+            ws[f"G{row}"] = f"=ROUND((D{row}*E{row}),2)"
+            ws[f"H{row}"] = f"=ROUND((D{row}*F{row}),2)"
+            style_cell(ws[f"G{row}"], number_format='#,##0.00')
+            style_cell(ws[f"H{row}"], number_format='#,##0.00')
+            row += 1
+        
+        sub_row = row
+        first_data = mo_start + 2
+        last_data = sub_row - 1
+        ws[f"D{sub_row}"] = "SubTotal Mano de Obra:"
+        ws[f"G{sub_row}"] = f"=SUM(G{first_data}:G{last_data})"
+        ws[f"H{sub_row}"] = f"=SUM(H{first_data}:H{last_data})"
+        style_cell(ws[f"G{sub_row}"], bold=True, number_format='#,##0.00')
+        style_cell(ws[f"H{sub_row}"], bold=True, number_format='#,##0.00')
+        
+        ps_row = sub_row + 1
+        ws[f"C{ps_row}"] = f"{prestaciones},00"
+        ws[f"D{ps_row}"] = "Prestaciones Sociales:"
+        ws[f"G{ps_row}"] = f"=ROUND((C{ps_row}/100)*G{sub_row},2)"
+        ws[f"H{ps_row}"] = 0
+        style_cell(ws[f"G{ps_row}"], number_format='#,##0.00')
+        
+        tg_row = ps_row + 1
+        ws[f"D{tg_row}"] = "Total General Mano de Obra:"
+        ws[f"H{tg_row}"] = f"=G{ps_row}+H{ps_row}+G{sub_row}+H{sub_row}"
+        style_cell(ws[f"H{tg_row}"], bold=True, number_format='#,##0.00')
+        
+        cuo_mo_row = tg_row + 1
+        ws[f"D{cuo_mo_row}"] = "Costo Unitario de Mano de Obra:"
+        ws[f"H{cuo_mo_row}"] = f"=ROUND(H{tg_row}/H9,2)"
+        style_cell(ws[f"H{cuo_mo_row}"], bold=True, number_format='#,##0.00')
 
-        mo_end = mo_row - 1
-        ws.cell(mo_row, 2, "Total Mano de Obra:")
-        ws.cell(mo_row, 2).font = total_font
-        ws.cell(mo_row, 7, f"=SUM(G{mo_start}:G{mo_end})").number_format = currency_format
-        ws.cell(mo_row, 7).fill = total_style
-        ws.cell(mo_row, 7).font = total_font
-        ws.cell(mo_row, 8, f"=SUM(H{mo_start}:H{mo_end})").number_format = currency_format
-        ws.cell(mo_row, 8).fill = total_style
-        ws.cell(mo_row, 8).font = total_font
+        # RESUMEN
+        resumen_start = cuo_mo_row + 2
+        cd_row = resumen_start + 1
+        ws[f"E{cd_row}"] = "COSTO DIRECTO SUBTOTAL A:"
+        ws[f"H{cd_row}"] = f"=ROUND(H{total_mat_row}+H{total_eq_row}+H{cuo_mo_row},2)"
+        style_cell(ws[f"H{cd_row}"], bold=True, number_format='#,##0.00')
+        
+        ad_row = cd_row + 1
+        ws[f"C{ad_row}"] = f"{admin_gg},00"
+        ws[f"D{ad_row}"] = "Administración y Gastos Generales:"
+        ws[f"H{ad_row}"] = f"=ROUND((H{cd_row}*C{ad_row})/100,2)"
+        style_cell(ws[f"H{ad_row}"], number_format='#,##0.00')
+        
+        sb_row = ad_row + 1
+        ws[f"D{sb_row}"] = "SUBTOTAL B:"
+        ws[f"H{sb_row}"] = f"=H{cd_row}+H{ad_row}"
+        style_cell(ws[f"H{sb_row}"], bold=True, number_format='#,##0.00')
+        
+        iu_row = sb_row + 1
+        ws[f"B{iu_row}"] = "SON: ( CATORCE MIL CIENTO CUARENTA Y UN Bs. con 78/100 ctms)"
+        ws[f"E{iu_row}"] = f"{imprevisto_ut},00"
+        ws[f"F{iu_row}"] = "Imprevisto Utilidad:"
+        ws[f"H{iu_row}"] = f"=ROUND((H{sb_row}*E{iu_row})/100,2)"
+        style_cell(ws[f"H{iu_row}"], number_format='#,##0.00')
+        
+        sc_row = iu_row + 1
+        ws[f"D{sc_row}"] = "SUBTOTAL C:"
+        ws[f"H{sc_row}"] = f"=H{sb_row}+H{iu_row}"
+        style_cell(ws[f"H{sc_row}"], bold=True, number_format='#,##0.00')
+        
+        fin_row = sc_row + 1
+        ws[f"E{fin_row}"] = f"{financiamiento},00"
+        ws[f"F{fin_row}"] = "Financiamiento:"
+        ws[f"H{fin_row}"] = f"=ROUND((H{sc_row}*E{fin_row})/100,2)"
+        style_cell(ws[f"H{fin_row}"], number_format='#,##0.00')
+        
+        ps_row = fin_row + 1
+        ws[f"D{ps_row}"] = "PRECIO UNITARIO SIN IMPUESTO:"
+        ws[f"H{ps_row}"] = f"=H{sc_row}+H{fin_row}"
+        style_cell(ws[f"H{ps_row}"], bold=True, number_format='#,##0.00')
+        
+        iva_row = ps_row + 1
+        ws[f"E{iva_row}"] = f"{iva},00"
+        ws[f"F{iva_row}"] = "Impuesto (I.V.A.):"
+        ws[f"H{iva_row}"] = f"=ROUND((H{ps_row}*E{iva_row})/100,2)"
+        style_cell(ws[f"H{iva_row}"], number_format='#,##0.00')
+        
+        oi_row = iva_row + 1
+        ws[f"E{oi_row}"] = f"{otros_imp},00"
+        ws[f"F{oi_row}"] = "Otros Impuestos:"
+        ws[f"H{oi_row}"] = f"=ROUND((H{ps_row}*E{oi_row})/100,2)"
+        style_cell(ws[f"H{oi_row}"], number_format='#,##0.00')
+        
+        pf_row = oi_row + 2
+        ws[f"D{pf_row}"] = "PRECIO UNITARIO (Bs.F.):"
+        ws[f"H{pf_row}"] = f"=H{ps_row}+H{iva_row}+H{oi_row}"
+        style_cell(ws[f"H{pf_row}"], bold=True, number_format='#,##0.00')
 
-        # ── 9. RESUMEN ───────────────────────────────────────────────────────
-        summary_row = mo_row + 2
-        ws.merge_cells(f"B{summary_row}:H{summary_row}")
-        ws[f"B{summary_row}"] = "RESUMEN"
-        ws[f"B{summary_row}"].fill = section_style
-        ws[f"B{summary_row}"].font = section_font
-
-        # Cálculos del resumen (simplificados)
-        ws.cell(summary_row + 1, 2, "Costo Directo:")
-        ws.cell(summary_row + 1, 8, f"=H{mat_end}+H{eq_end}+H{mo_end}").number_format = currency_format
-
-        ws.cell(summary_row + 2, 2, "Administración y Gastos (15%):")
-        ws.cell(summary_row + 2, 8, f"=R[-1]C*0.15").number_format = currency_format
-
-        ws.cell(summary_row + 3, 2, "Subtotal B:")
-        ws.cell(summary_row + 3, 8, "=R[-2]C+R[-1]C").number_format = currency_format
-
-        ws.cell(summary_row + 4, 2, "Imprevisto y Utilidad (10%):")
-        ws.cell(summary_row + 4, 8, f"=R[-1]C*0.10").number_format = currency_format
-
-        ws.cell(summary_row + 5, 2, "PRECIO UNITARIO FINAL:")
-        ws.cell(summary_row + 5, 8, "=R[-2]C+R[-1]C").number_format = currency_format
-        ws.cell(summary_row + 5, 8).fill = total_style
-        ws.cell(summary_row + 5, 8).font = total_font
-
-        # ── 10. Ajustar anchos de columnas ─────────────────────────────────────
-        ws.column_dimensions['B'] = 8
-        ws.column_dimensions['C'] = 30
-        ws.column_dimensions['D'] = 10
-        ws.column_dimensions['E'] = 12
-        ws.column_dimensions['F'] = 12
-        ws.column_dimensions['G'] = 15
-        ws.column_dimensions['H'] = 15
-
-        # ── 11. Guardar archivo temporal ───────────────────────────────────────
+        # Guardar archivo temporal
         temp_dir = Path("temp")
         temp_dir.mkdir(exist_ok=True)
         filename = f"APU_{item.CovPar or item.CodPar}.xlsx"
         file_path = temp_dir / filename
-
+        
         wb.save(file_path)
-
+        
         return FileResponse(path=str(file_path), filename=filename)
+        
     except Exception as e:
         import traceback
         print(f"Error exportando APU Excel: {str(e)}")
