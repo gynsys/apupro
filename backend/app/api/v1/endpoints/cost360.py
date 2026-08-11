@@ -435,15 +435,23 @@ async def export_apu_excel(item_id: str, db: Session = Depends(get_db)):
         ws["B1"] = "ANÁLISIS DE PRECIO UNITARIO"
         style_cell(ws["B1"], bold=True, size=14, align="center")
         
-        ws["B3"] = f"Obra: {item.Descri or 'N/A'}"
-        ws["B4"] = f"Contratante: N/A"
+        # B3: Obra - usar item.Descri como nombre de obra por ahora, dejar vacío si no hay
+        obra_nombre = item.Descri if item.Descri else ''
+        ws["B3"] = f"Obra: {obra_nombre}" if obra_nombre else "Obra:"
+        
+        # B4: Contratante - dejar vacío si no hay
+        ws["B4"] = ""  # Dejar vacío hasta que tengamos datos del contratante
         ws["E5"] = "Part. No.:"
         ws["F5"] = "1"
         ws["G5"] = "Fecha:"
-        ws["H5"] = "46244"
+        from datetime import datetime
+        ws["H5"] = datetime.now().strftime("%d/%m/%Y")
         ws["B6"] = "Descripción:"
+        style_cell(ws["B6"], size=7)
         ws.merge_cells("C6:H6")
-        ws["C6"] = item.Descri or 'N/A'
+        ws["C6"] = item.Descri or ''
+        style_cell(ws["C6"], size=7, align="left")
+        ws["C6"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
         ws["G8"] = "Rendimiento:"
         ws["H8"] = rendimiento
         ws["B9"] = "Código:"
@@ -630,7 +638,7 @@ async def export_apu_excel(item_id: str, db: Session = Depends(get_db)):
 
         # Ajustar anchos de columnas (sintaxis correcta del script local)
         ws.column_dimensions['A'].width = 12
-        ws.column_dimensions['B'].width = 5
+        ws.column_dimensions['B'].width = 8
         ws.column_dimensions['C'].width = 50
         ws.column_dimensions['D'].width = 12
         ws.column_dimensions['E'].width = 12
