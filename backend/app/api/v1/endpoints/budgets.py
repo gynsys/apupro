@@ -6,7 +6,7 @@ import os
 import uuid
 import shutil
 from pathlib import Path
-from fastapi.responses import File as FastAPIFile
+from fastapi.responses import FileResponse
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from openpyxl.utils import get_column_letter
@@ -575,7 +575,7 @@ async def export_budget_excel(budget_id: str, db: Session = Depends(get_db)):
     
     wb.save(file_path)
     
-    return FastAPIFile(path=str(file_path), filename=filename)
+    return FileResponse(path=str(file_path), filename=filename)
 
 @router.post("/{budget_id}/upload-logo")
 async def upload_budget_logo(budget_id: str, logo: UploadFile = File(...), db: Session = Depends(get_db)):
