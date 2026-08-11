@@ -440,12 +440,12 @@ async def export_apu_excel(item_id: str, db: Session = Depends(get_db)):
         ws.merge_cells("B2:H2")
         ws["B2"] = f"Obra: {item.Descri or 'N/A'}"
 
-        ws.cell("B3", "Código:")
-        ws.cell("C3", item.CovPar or item.CodPar)
-        ws.cell("E3", "Unidad:")
-        ws.cell("F3", item.UniPar)
-        ws.cell("G3", "Rendimiento:")
-        ws.cell("H3", rendimiento)
+        ws.cell(3, 2, "Código:")
+        ws.cell(3, 3, item.CovPar or item.CodPar)
+        ws.cell(3, 5, "Unidad:")
+        ws.cell(3, 6, item.UniPar)
+        ws.cell(3, 7, "Rendimiento:")
+        ws.cell(3, 8, rendimiento)
 
         # ── 6. MATERIALES ─────────────────────────────────────────────────────
         ws.merge_cells(f"B{5}:H{5}")

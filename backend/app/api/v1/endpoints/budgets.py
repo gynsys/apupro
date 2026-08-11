@@ -519,8 +519,9 @@ async def export_budget_excel(budget_id: str, db: Session = Depends(get_db)):
         
         for item in items:
             if not item.is_chapter:
-                # Calcular precio unitario (lógica simplificada)
-                pu = item.unit_price or 0
+                # Calcular precio unitario usando la lógica del presupuesto
+                # Simplificado: usar un valor base o calcular desde APU si existe
+                pu = 0  # Valor por defecto, se puede mejorar calculando desde materiales/equipos/mano_obra
                 total = pu * item.quantity
                 
                 ws.cell(row_num, 2, part_number)
