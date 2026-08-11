@@ -7,9 +7,6 @@ import uuid
 import shutil
 from pathlib import Path
 from fastapi.responses import FileResponse
-from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
-from openpyxl.utils import get_column_letter
 from app.db.base import get_db
 from app.db.models.budget import Budget, BudgetItem, BudgetAPUMaterial as DBMaterial, BudgetAPUEquipment as DBEquipment, BudgetAPULabor as DBLabor
 from app.db.models.cost360 import CostItem, CostAPUMaterial, CostAPUEquipment, CostAPULabor
@@ -466,6 +463,9 @@ def sync_budget_prices(budget_id: str, db: Session = Depends(get_db)):
 @router.post("/{budget_id}/export-excel")
 async def export_budget_excel(budget_id: str, db: Session = Depends(get_db)):
     """Genera un archivo Excel con fórmulas para el presupuesto"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill
+    
     budget = db.query(Budget).filter(Budget.id == budget_id).first()
     if not budget:
         raise HTTPException(status_code=404, detail="Budget not found")

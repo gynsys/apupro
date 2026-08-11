@@ -1,10 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import File as FastAPIFile
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import Optional
 from pathlib import Path
-from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill
 
 from app.db.base import get_db
 from app.schemas.cost360 import (
@@ -665,7 +663,7 @@ async def export_apu_excel(item_id: str, db: Session = Depends(get_db)):
     file_path = temp_dir / filename
     wb.save(file_path)
 
-    return FastAPIFile(path=str(file_path), filename=filename)
+    return FileResponse(path=str(file_path), filename=filename)
 
 @router.delete("/databases/{database_id}")
 def delete_database_route(database_id: str, db: Session = Depends(get_db)):
