@@ -435,10 +435,6 @@ async def export_apu_excel(item_id: str, db: Session = Depends(get_db)):
         ws["B1"] = "ANÁLISIS DE PRECIO UNITARIO"
         style_cell(ws["B1"], bold=True, size=14, align="center")
         
-        ws.merge_cells("B2:H2")
-        ws["B2"] = "ANÁLISIS DE PRECIO UNITARIO"
-        style_cell(ws["B2"], bold=True, size=12, align="center")
-        
         ws["B3"] = f"Obra: {item.Descri or 'N/A'}"
         ws["B4"] = f"Contratante: N/A"
         ws["E5"] = "Part. No.:"
@@ -558,7 +554,7 @@ async def export_apu_excel(item_id: str, db: Session = Depends(get_db)):
         style_cell(ws[f"H{sub_row}"], bold=True, number_format='#,##0.00')
         
         ps_row = sub_row + 1
-        ws[f"C{ps_row}"] = f"{prestaciones},00"
+        ws[f"C{ps_row}"] = prestaciones
         ws[f"D{ps_row}"] = "Prestaciones Sociales:"
         ws[f"G{ps_row}"] = f"=ROUND((C{ps_row}/100)*G{sub_row},2)"
         ws[f"H{ps_row}"] = 0
@@ -582,7 +578,7 @@ async def export_apu_excel(item_id: str, db: Session = Depends(get_db)):
         style_cell(ws[f"H{cd_row}"], bold=True, number_format='#,##0.00')
         
         ad_row = cd_row + 1
-        ws[f"C{ad_row}"] = f"{admin_gg},00"
+        ws[f"C{ad_row}"] = admin_gg
         ws[f"D{ad_row}"] = "Administración y Gastos Generales:"
         ws[f"H{ad_row}"] = f"=ROUND((H{cd_row}*C{ad_row})/100,2)"
         style_cell(ws[f"H{ad_row}"], number_format='#,##0.00')
@@ -594,7 +590,7 @@ async def export_apu_excel(item_id: str, db: Session = Depends(get_db)):
         
         iu_row = sb_row + 1
         ws[f"B{iu_row}"] = "SON: ( CATORCE MIL CIENTO CUARENTA Y UN Bs. con 78/100 ctms)"
-        ws[f"E{iu_row}"] = f"{imprevisto_ut},00"
+        ws[f"E{iu_row}"] = imprevisto_ut
         ws[f"F{iu_row}"] = "Imprevisto Utilidad:"
         ws[f"H{iu_row}"] = f"=ROUND((H{sb_row}*E{iu_row})/100,2)"
         style_cell(ws[f"H{iu_row}"], number_format='#,##0.00')
@@ -605,7 +601,7 @@ async def export_apu_excel(item_id: str, db: Session = Depends(get_db)):
         style_cell(ws[f"H{sc_row}"], bold=True, number_format='#,##0.00')
         
         fin_row = sc_row + 1
-        ws[f"E{fin_row}"] = f"{financiamiento},00"
+        ws[f"E{fin_row}"] = financiamiento
         ws[f"F{fin_row}"] = "Financiamiento:"
         ws[f"H{fin_row}"] = f"=ROUND((H{sc_row}*E{fin_row})/100,2)"
         style_cell(ws[f"H{fin_row}"], number_format='#,##0.00')
@@ -616,13 +612,13 @@ async def export_apu_excel(item_id: str, db: Session = Depends(get_db)):
         style_cell(ws[f"H{ps_row}"], bold=True, number_format='#,##0.00')
         
         iva_row = ps_row + 1
-        ws[f"E{iva_row}"] = f"{iva},00"
+        ws[f"E{iva_row}"] = iva
         ws[f"F{iva_row}"] = "Impuesto (I.V.A.):"
         ws[f"H{iva_row}"] = f"=ROUND((H{ps_row}*E{iva_row})/100,2)"
         style_cell(ws[f"H{iva_row}"], number_format='#,##0.00')
         
         oi_row = iva_row + 1
-        ws[f"E{oi_row}"] = f"{otros_imp},00"
+        ws[f"E{oi_row}"] = otros_imp
         ws[f"F{oi_row}"] = "Otros Impuestos:"
         ws[f"H{oi_row}"] = f"=ROUND((H{ps_row}*E{oi_row})/100,2)"
         style_cell(ws[f"H{oi_row}"], number_format='#,##0.00')
