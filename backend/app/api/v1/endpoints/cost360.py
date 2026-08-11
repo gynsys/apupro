@@ -463,13 +463,13 @@ async def export_apu_excel(item_id: str, db: Session = Depends(get_db)):
 
         mat_row = 7
         mat_start = mat_row
-        for i, mat in enumerate(mat_rows):
+        for i, (apu_mat, mat) in enumerate(mat_rows):
             ws.cell(mat_row, 2, i + 1)
-            ws.cell(mat_row, 3, mat.Descri or '')
-            ws.cell(mat_row, 4, mat.UniPar or '')
-            ws.cell(mat_row, 5, mat.Cant or 0)
-            ws.cell(mat_row, 6, mat.Desperdicio or 0)
-            ws.cell(mat_row, 7, mat.Precio or 0).number_format = currency_format
+            ws.cell(mat_row, 3, mat.Descri if mat else '')
+            ws.cell(mat_row, 4, mat.UniMat if mat else '')
+            ws.cell(mat_row, 5, apu_mat.Cant or 0)
+            ws.cell(mat_row, 6, apu_mat.Desperdicio or 0)
+            ws.cell(mat_row, 7, mat.CosMat if mat else 0).number_format = currency_format
             ws.cell(mat_row, 8, f"=ROUND((RC[-1]*RC[-3])*((RC[-2]/100)+1),2)").number_format = currency_format
             mat_row += 1
 
@@ -497,12 +497,12 @@ async def export_apu_excel(item_id: str, db: Session = Depends(get_db)):
 
         eq_row += 2
         eq_start = eq_row
-        for i, eq in enumerate(eq_rows):
+        for i, (apu_eq, eq) in enumerate(eq_rows):
             ws.cell(eq_row, 2, i + 1)
-            ws.cell(eq_row, 3, eq.Descri or '')
-            ws.cell(eq_row, 5, eq.Cant or 0)
-            ws.cell(eq_row, 6, eq.CopDep or 0)
-            ws.cell(eq_row, 7, eq.Precio or 0).number_format = currency_format
+            ws.cell(eq_row, 3, eq.Descri if eq else '')
+            ws.cell(eq_row, 5, apu_eq.Cant or 0)
+            ws.cell(eq_row, 6, apu_eq.CopDep or 0)
+            ws.cell(eq_row, 7, eq.CosDia if eq else 0).number_format = currency_format
             ws.cell(eq_row, 8, f"=ROUND((RC[-1]*RC[-3])*(RC[-2]),2)").number_format = currency_format
             eq_row += 1
 
@@ -530,12 +530,12 @@ async def export_apu_excel(item_id: str, db: Session = Depends(get_db)):
 
         mo_row += 2
         mo_start = mo_row
-        for i, mo in enumerate(mo_rows):
+        for i, (apu_mo, mo) in enumerate(mo_rows):
             ws.cell(mo_row, 2, i + 1)
-            ws.cell(mo_row, 3, mo.Descri or '')
-            ws.cell(mo_row, 4, mo.Cant or 0)
-            ws.cell(mo_row, 5, mo.Jornal or 0).number_format = currency_format
-            ws.cell(mo_row, 6, mo.Bono or 0).number_format = currency_format
+            ws.cell(mo_row, 3, mo.Descri if mo else '')
+            ws.cell(mo_row, 4, apu_mo.Cant or 0)
+            ws.cell(mo_row, 5, mo.Jornal if mo else 0).number_format = currency_format
+            ws.cell(mo_row, 6, mo.Bono if mo else 0).number_format = currency_format
             ws.cell(mo_row, 7, f"=RC[-3]*RC[-2]").number_format = currency_format
             ws.cell(mo_row, 8, f"=RC[-4]*RC[-3]").number_format = currency_format
             mo_row += 1
