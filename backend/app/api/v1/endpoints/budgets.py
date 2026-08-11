@@ -559,15 +559,6 @@ async def export_budget_excel(budget_id: str, db: Session = Depends(get_db)):
         ws.cell(row_num, 8).fill = total_style
         ws.cell(row_num, 8).font = total_font
         
-        # Ajustar anchos de columnas
-        ws.column_dimensions['B'] = 8
-        ws.column_dimensions['C'] = 20
-        ws.column_dimensions['D'] = 40
-        ws.column_dimensions['E'] = 10
-        ws.column_dimensions['F'] = 12
-        ws.column_dimensions['G'] = 15
-        ws.column_dimensions['H'] = 15
-        
         # Guardar archivo temporal
         temp_dir = Path("temp")
         temp_dir.mkdir(exist_ok=True)
