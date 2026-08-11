@@ -628,6 +628,16 @@ async def export_apu_excel(item_id: str, db: Session = Depends(get_db)):
         ws[f"H{pf_row}"] = f"=H{ps_row}+H{iva_row}+H{oi_row}"
         style_cell(ws[f"H{pf_row}"], bold=True, number_format='#,##0.00')
 
+        # Ajustar anchos de columnas (sintaxis correcta del script local)
+        ws.column_dimensions['A'].width = 12
+        ws.column_dimensions['B'].width = 5
+        ws.column_dimensions['C'].width = 50
+        ws.column_dimensions['D'].width = 12
+        ws.column_dimensions['E'].width = 12
+        ws.column_dimensions['F'].width = 12
+        ws.column_dimensions['G'].width = 15
+        ws.column_dimensions['H'].width = 18
+
         # Guardar archivo temporal
         temp_dir = Path("temp")
         temp_dir.mkdir(exist_ok=True)
