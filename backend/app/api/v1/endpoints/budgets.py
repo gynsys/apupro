@@ -463,119 +463,125 @@ def sync_budget_prices(budget_id: str, db: Session = Depends(get_db)):
 @router.post("/{budget_id}/export-excel")
 async def export_budget_excel(budget_id: str, db: Session = Depends(get_db)):
     """Genera un archivo Excel con fórmulas para el presupuesto"""
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment, PatternFill
-    
-    budget = db.query(Budget).filter(Budget.id == budget_id).first()
-    if not budget:
-        raise HTTPException(status_code=404, detail="Budget not found")
-    
-    # Obtener items del presupuesto
-    items = db.query(BudgetItem).filter(BudgetItem.budget_id == budget_id).all()
-    
-    # Crear workbook de Excel
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Presupuesto"
-    
-    # Estilos
-    header_style = PatternFill(start_color="4CAF50", end_color="4CAF50", fill_type="solid")
-    header_font = Font(bold=True, color="FFFFFF", size=11)
-    total_style = PatternFill(start_color="E8F5E9", end_color="E8F5E9", fill_type="solid")
-    total_font = Font(bold=True, size=11)
-    currency_format = '#,##0.00'
-    
-    # Header
-    ws.merge_cells("B1:H1")
-    ws["B1"] = budget.project_name or "PRESUPUESTO"
-    ws["B1"].fill = header_style
-    ws["B1"].font = header_font
-    
-    ws.merge_cells("B2:H2")
-    ws["B2"] = f"Obra: {budget.project_name or 'N/A'}"
-    
-    if budget.client_name:
-        ws.merge_cells("B3:H3")
-        ws["B3"] = f"Contratante: {budget.client_name}"
-    
-    if budget.company_rif:
-        ws.merge_cells("B4:H4")
-        ws["B4"] = f"RIF: {budget.company_rif}"
-    
-    # Encabezados de tabla
-    headers = ["Part. No", "Código COVENIN", "Descripción", "Unidad", "Cantidad", "Precio Unitario", "Total"]
-    for i, header in enumerate(headers):
-        cell = ws.cell(6, i + 2)
-        cell.value = header
-        cell.fill = header_style
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal="center")
-    
-    # Filas de datos
-    row_num = 7
-    part_number = 1
-    first_data_row = row_num
-    
-    for item in items:
-        if not item.is_chapter:
-            # Calcular precio unitario (lógica simplificada)
-            pu = item.unit_price or 0
-            total = pu * item.quantity
-            
-            ws.cell(row_num, 2, part_number)
-            ws.cell(row_num, 3, item.cov_par or item.cod_par or '')
-            ws.cell(row_num, 4, item.description)
-            ws.cell(row_num, 5, item.unit)
-            ws.cell(row_num, 6, item.quantity)
-            ws.cell(row_num, 7, pu).number_format = currency_format
-            ws.cell(row_num, 8, f"=RC[-1]*RC[-2]").number_format = currency_format
-            
-            part_number += 1
-            row_num += 1
-    
-    last_data_row = row_num - 1
-    
-    # Totales
-    ws.cell(row_num, 2, "Total (Sin I.V.A.):")
-    ws.cell(row_num, 2).font = total_font
-    ws.cell(row_num, 8, f"=SUM(H{first_data_row}:H{last_data_row})").number_format = currency_format
-    ws.cell(row_num, 8).fill = total_style
-    ws.cell(row_num, 8).font = total_font
-    
-    row_num += 1
-    iva_percent = budget.iva_percent or 16
-    ws.cell(row_num, 2, f"I.V.A. ({iva_percent}%):")
-    ws.cell(row_num, 2).font = total_font
-    ws.cell(row_num, 8, f"=R[-1]C*{iva_percent/100}").number_format = currency_format
-    ws.cell(row_num, 8).fill = total_style
-    ws.cell(row_num, 8).font = total_font
-    
-    row_num += 1
-    ws.cell(row_num, 2, "Total General:")
-    ws.cell(row_num, 2).font = total_font
-    ws.cell(row_num, 8, "=R[-2]C+R[-1]C").number_format = currency_format
-    ws.cell(row_num, 8).fill = total_style
-    ws.cell(row_num, 8).font = total_font
-    
-    # Ajustar anchos de columnas
-    ws.column_dimensions['B'] = 8
-    ws.column_dimensions['C'] = 20
-    ws.column_dimensions['D'] = 40
-    ws.column_dimensions['E'] = 10
-    ws.column_dimensions['F'] = 12
-    ws.column_dimensions['G'] = 15
-    ws.column_dimensions['H'] = 15
-    
-    # Guardar archivo temporal
-    temp_dir = Path("temp")
-    temp_dir.mkdir(exist_ok=True)
-    import re
-    filename = f"{re.sub(r'[^a-z0-9]', '_', budget.name.lower())}.xlsx"
-    file_path = temp_dir / filename
-    
-    wb.save(file_path)
-    
-    return FileResponse(path=str(file_path), filename=filename)
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment, PatternFill
+        
+        budget = db.query(Budget).filter(Budget.id == budget_id).first()
+        if not budget:
+            raise HTTPException(status_code=404, detail="Budget not found")
+        
+        # Obtener items del presupuesto
+        items = db.query(BudgetItem).filter(BudgetItem.budget_id == budget_id).all()
+        
+        # Crear workbook de Excel
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Presupuesto"
+        
+        # Estilos
+        header_style = PatternFill(start_color="4CAF50", end_color="4CAF50", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF", size=11)
+        total_style = PatternFill(start_color="E8F5E9", end_color="E8F5E9", fill_type="solid")
+        total_font = Font(bold=True, size=11)
+        currency_format = '#,##0.00'
+        
+        # Header
+        ws.merge_cells("B1:H1")
+        ws["B1"] = budget.project_name or "PRESUPUESTO"
+        ws["B1"].fill = header_style
+        ws["B1"].font = header_font
+        
+        ws.merge_cells("B2:H2")
+        ws["B2"] = f"Obra: {budget.project_name or 'N/A'}"
+        
+        if budget.client_name:
+            ws.merge_cells("B3:H3")
+            ws["B3"] = f"Contratante: {budget.client_name}"
+        
+        if budget.company_rif:
+            ws.merge_cells("B4:H4")
+            ws["B4"] = f"RIF: {budget.company_rif}"
+        
+        # Encabezados de tabla
+        headers = ["Part. No", "Código COVENIN", "Descripción", "Unidad", "Cantidad", "Precio Unitario", "Total"]
+        for i, header in enumerate(headers):
+            cell = ws.cell(6, i + 2)
+            cell.value = header
+            cell.fill = header_style
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center")
+        
+        # Filas de datos
+        row_num = 7
+        part_number = 1
+        first_data_row = row_num
+        
+        for item in items:
+            if not item.is_chapter:
+                # Calcular precio unitario (lógica simplificada)
+                pu = item.unit_price or 0
+                total = pu * item.quantity
+                
+                ws.cell(row_num, 2, part_number)
+                ws.cell(row_num, 3, item.cov_par or item.cod_par or '')
+                ws.cell(row_num, 4, item.description)
+                ws.cell(row_num, 5, item.unit)
+                ws.cell(row_num, 6, item.quantity)
+                ws.cell(row_num, 7, pu).number_format = currency_format
+                ws.cell(row_num, 8, f"=RC[-1]*RC[-2]").number_format = currency_format
+                
+                part_number += 1
+                row_num += 1
+        
+        last_data_row = row_num - 1
+        
+        # Totales
+        ws.cell(row_num, 2, "Total (Sin I.V.A.):")
+        ws.cell(row_num, 2).font = total_font
+        ws.cell(row_num, 8, f"=SUM(H{first_data_row}:H{last_data_row})").number_format = currency_format
+        ws.cell(row_num, 8).fill = total_style
+        ws.cell(row_num, 8).font = total_font
+        
+        row_num += 1
+        iva_percent = budget.iva_percent or 16
+        ws.cell(row_num, 2, f"I.V.A. ({iva_percent}%):")
+        ws.cell(row_num, 2).font = total_font
+        ws.cell(row_num, 8, f"=R[-1]C*{iva_percent/100}").number_format = currency_format
+        ws.cell(row_num, 8).fill = total_style
+        ws.cell(row_num, 8).font = total_font
+        
+        row_num += 1
+        ws.cell(row_num, 2, "Total General:")
+        ws.cell(row_num, 2).font = total_font
+        ws.cell(row_num, 8, "=R[-2]C+R[-1]C").number_format = currency_format
+        ws.cell(row_num, 8).fill = total_style
+        ws.cell(row_num, 8).font = total_font
+        
+        # Ajustar anchos de columnas
+        ws.column_dimensions['B'] = 8
+        ws.column_dimensions['C'] = 20
+        ws.column_dimensions['D'] = 40
+        ws.column_dimensions['E'] = 10
+        ws.column_dimensions['F'] = 12
+        ws.column_dimensions['G'] = 15
+        ws.column_dimensions['H'] = 15
+        
+        # Guardar archivo temporal
+        temp_dir = Path("temp")
+        temp_dir.mkdir(exist_ok=True)
+        import re
+        filename = f"{re.sub(r'[^a-z0-9]', '_', budget.name.lower())}.xlsx"
+        file_path = temp_dir / filename
+        
+        wb.save(file_path)
+        
+        return FileResponse(path=str(file_path), filename=filename)
+    except Exception as e:
+        import traceback
+        print(f"Error exportando Excel: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error al exportar: {str(e)}")
 
 @router.post("/{budget_id}/upload-logo")
 async def upload_budget_logo(budget_id: str, logo: UploadFile = File(...), db: Session = Depends(get_db)):
