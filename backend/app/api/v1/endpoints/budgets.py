@@ -489,11 +489,10 @@ async def export_budget_excel(budget_id: str, db: Session = Depends(get_db)):
         # Header
         ws.merge_cells("B1:H1")
         ws["B1"] = budget.project_name or "PRESUPUESTO"
-        ws["B1"].fill = header_style
-        ws["B1"].font = header_font
+        ws["B1"].font = Font(bold=True, size=14)
         
         ws.merge_cells("B2:H2")
-        ws["B2"] = f"Obra: {budget.project_name or 'N/A'}"
+        ws["B2"] = f"Obra: {budget.project_name or ''}"
         
         if budget.client_name:
             ws.merge_cells("B3:H3")
@@ -508,8 +507,7 @@ async def export_budget_excel(budget_id: str, db: Session = Depends(get_db)):
         for i, header in enumerate(headers):
             cell = ws.cell(6, i + 2)
             cell.value = header
-            cell.fill = header_style
-            cell.font = header_font
+            cell.font = Font(bold=True, size=11)
             cell.alignment = Alignment(horizontal="center")
         
         # Filas de datos
@@ -519,9 +517,27 @@ async def export_budget_excel(budget_id: str, db: Session = Depends(get_db)):
         
         for item in items:
             if not item.is_chapter:
-                # Calcular precio unitario usando la lógica del presupuesto
-                # Simplificado: usar un valor base o calcular desde APU si existe
-                pu = 0  # Valor por defecto, se puede mejorar calculando desde materiales/equipos/mano_obra
+                # Calcular precio unitario desde el APU del item
+                pu = 0
+                try:
+                    # Intentar obtener APU para calcular precio unitario
+                    from app.crud.crud_cost360 import get_apu_materials, get_apu_equipments, get_apu_labors
+                    mat_rows = get_apu_materials(db, item.cod_par)
+                    eq_rows = get_apu_equipments(db, item.cod_par)
+                    mo_rows = get_apu_labors(db, item.cod_par)
+                    
+                    # Calcular precio unitario sumando materiales, equipos y mano de obra
+                    total_mat = sum((mat.CosMat or 0) * (apu_mat.CanIns or 0) * (1 + (apu_mat.Desper or 0) / 100) 
+                                  for apu_mat, mat in mat_rows)
+                    total_eq = sum((eq.CosDia or 0) * (apu_eq.CanIns or 0) * (apu_eq.Deprec or 0) 
+                                 for apu_eq, eq in eq_rows)
+                    total_mo = sum((mo.Jornal or 0) * (apu_mo.CanIns or 0) + (mo.Bono or 0) * (apu_mo.CanIns or 0) 
+                                 for apu_mo, mo in mo_rows)
+                    
+                    pu = round(total_mat + total_eq + total_mo, 2)
+                except:
+                    pu = 0
+                
                 total = pu * item.quantity
                 
                 ws.cell(row_num, 2, part_number)
@@ -530,7 +546,7 @@ async def export_budget_excel(budget_id: str, db: Session = Depends(get_db)):
                 ws.cell(row_num, 5, item.unit)
                 ws.cell(row_num, 6, item.quantity)
                 ws.cell(row_num, 7, pu).number_format = currency_format
-                ws.cell(row_num, 8, f"=RC[-1]*RC[-2]").number_format = currency_format
+                ws.cell(row_num, 8, f"=G{row_num}*F{row_num}").number_format = currency_format
                 
                 part_number += 1
                 row_num += 1
@@ -548,16 +564,23 @@ async def export_budget_excel(budget_id: str, db: Session = Depends(get_db)):
         iva_percent = budget.iva_percent or 16
         ws.cell(row_num, 2, f"I.V.A. ({iva_percent}%):")
         ws.cell(row_num, 2).font = total_font
-        ws.cell(row_num, 8, f"=R[-1]C*{iva_percent/100}").number_format = currency_format
-        ws.cell(row_num, 8).fill = total_style
+        ws.cell(row_num, 8, f"=H{row_num-1}*{iva_percent/100}").number_format = currency_format
         ws.cell(row_num, 8).font = total_font
         
         row_num += 1
         ws.cell(row_num, 2, "Total General:")
         ws.cell(row_num, 2).font = total_font
-        ws.cell(row_num, 8, "=R[-2]C+R[-1]C").number_format = currency_format
-        ws.cell(row_num, 8).fill = total_style
+        ws.cell(row_num, 8, f"=H{row_num-2}+H{row_num-1}").number_format = currency_format
         ws.cell(row_num, 8).font = total_font
+        
+        # Ajustar anchos de columnas
+        ws.column_dimensions['B'].width = 8
+        ws.column_dimensions['C'].width = 15
+        ws.column_dimensions['D'].width = 60  # Descripción más ancha
+        ws.column_dimensions['E'].width = 10
+        ws.column_dimensions['F'].width = 12
+        ws.column_dimensions['G'].width = 15
+        ws.column_dimensions['H'].width = 15
         
         # Guardar archivo temporal
         temp_dir = Path("temp")
