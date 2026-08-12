@@ -145,7 +145,13 @@ export default function AIApuGeneratorPage() {
       return;
     }
     if (!selectedSubcapitulo) {
-      toast.error("Debes seleccionar el Subcapítulo (Categoría) para guiar a la IA");
+      toast.error("Debes seleccionar al menos el Subcapítulo para guiar a la IA");
+      return;
+    }
+    const currentSub = coveninTree.find(c => c.code === selectedTipoObra)?.children?.find(c => c.code === selectedCapitulo)?.children?.find(c => c.code === selectedSubcapitulo);
+    const hasFourthLevel = currentSub?.children?.length > 0;
+    if (hasFourthLevel && !selectedPartida) {
+      toast.error("Debes seleccionar la Partida Base para guiar a la IA");
       return;
     }
     setLoading(true);
@@ -399,7 +405,12 @@ export default function AIApuGeneratorPage() {
         </div>
       )}
 
-      {creationMode === 'ia' && (
+      {creationMode === 'ia' && (() => {
+        const currentSub = coveninTree.find(c => c.code === selectedTipoObra)?.children?.find(c => c.code === selectedCapitulo)?.children?.find(c => c.code === selectedSubcapitulo);
+        const hasFourthLevel = currentSub?.children?.length > 0;
+        const isSelectorsComplete = selectedTipoObra && selectedCapitulo && selectedSubcapitulo && (!hasFourthLevel || selectedPartida);
+        
+        return (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8 animate-in fade-in slide-in-from-top-2 duration-300">
           
           {/* FILTERS */}
@@ -458,17 +469,17 @@ export default function AIApuGeneratorPage() {
               </select>
             </div>
             
-            {/* 4TO SELECTOR OPCIONAL */}
-            {selectedSubcapitulo && coveninTree.find(c => c.code === selectedTipoObra)?.children?.find(c => c.code === selectedCapitulo)?.children?.find(c => c.code === selectedSubcapitulo)?.children?.length > 0 && (
+            {/* 4TO SELECTOR OBLIGATORIO SI APLICA */}
+            {hasFourthLevel && (
               <div className="flex-1">
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Partida Base (Opcional)</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Partida Base</label>
                 <select 
                   value={selectedPartida}
                   onChange={(e) => setSelectedPartida(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
                 >
                   <option value="">Selecciona la Partida...</option>
-                  {coveninTree.find(c => c.code === selectedTipoObra)?.children?.find(c => c.code === selectedCapitulo)?.children?.find(c => c.code === selectedSubcapitulo)?.children?.map(par => (
+                  {currentSub.children.map(par => (
                     <option key={par.code} value={par.code}>{par.code} - {par.name}</option>
                   ))}
                 </select>
@@ -483,18 +494,28 @@ export default function AIApuGeneratorPage() {
             </code>
           </div>
 
-          <label className="block text-sm font-bold text-slate-700 mb-2">Describe la partida a generar</label>
+          <label className="block text-sm font-bold text-slate-700 mb-2">
+            {isSelectorsComplete ? "Describe la partida a generar" : "⚠️ Completa los selectores arriba para habilitar la descripción"}
+          </label>
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Ej: Fundición de losa de entrepiso de concreto f'c=210 kg/cm2, espesor 15 cm, con acero de refuerzo fy=4200 kg/cm2"
-            className="w-full h-24 p-4 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all text-sm mb-4"
-            disabled={loading}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (isSelectorsComplete && prompt.trim()) {
+                  handleGenerate();
+                }
+              }
+            }}
+            disabled={!isSelectorsComplete}
+            placeholder={isSelectorsComplete ? "Ej: Fundición de losa de entrepiso de concreto f'c=210 kg/cm2, espesor 15 cm, con acero de refuerzo fy=4200 kg/cm2. Presiona Enter para generar." : "Selecciona la categoría primero..."}
+            className="w-full h-24 p-4 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all text-sm mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
           />
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-3">
             <button
               onClick={handleGenerate}
-              disabled={loading}
+              disabled={loading || !prompt.trim() || !isSelectorsComplete}
               className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-3 rounded-xl hover:from-red-600 hover:to-red-700 transition-all shadow-sm font-bold disabled:opacity-50"
             >
               {loading ? <Loader className="animate-spin" size={18} /> : <Sparkles size={18} />}
