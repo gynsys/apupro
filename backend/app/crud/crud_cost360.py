@@ -121,16 +121,28 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
     if covenin:
         query = query.filter(CostItem.CovPar.ilike(f"%{covenin}%"))
     if chapter:
-        # Filtrar por capítulo: buscar en CodPar y verificar consistencia con CovPar
-        # Esto evita que partidas con CovPar de otra categoría aparezcan
-        query = query.filter(
-            (CostItem.CodPar.startswith(chapter)) & 
-            (CostItem.CovPar.like(f"{chapter}%"))
-        )
+        query_chap = query.filter(CostItem.CodPar.startswith(chapter))
+        total = query_chap.count()
+        
+        if total == 0 and len(chapter) > 3:
+            fallback_chap = chapter[:-1]
+            while len(fallback_chap) >= 3:
+                query_chap = query.filter(CostItem.CodPar.startswith(fallback_chap))
+                total = query_chap.count()
+                if total > 0:
+                    break
+                fallback_chap = fallback_chap[:-1]
+        
+        query = query_chap
+    else:
+        total = query.count()
+        
     if categoria:
         query = query.filter(CostItem.Categoria == categoria)
+        total = query.count() # re-count if categoria is applied
     if tipo_actividad:
         query = query.filter(CostItem.TipoActividad == tipo_actividad)
+        total = query.count() # re-count if tipo_actividad is applied
     
     # Priorizar partidas con COVENIN completo (formato [LETRA].[9 DÍGITOS] como C.110800300)
     # Usamos una función SQL nativa para mayor compatibilidad
@@ -140,7 +152,6 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
         else_=1  # Otros tienen prioridad 1
     )
     
-    total = query.count()
     items = query.order_by(covenin_priority, CostItem.CodPar).offset(skip).limit(limit).all()
     return total, items
 
