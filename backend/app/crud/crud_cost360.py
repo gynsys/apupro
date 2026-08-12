@@ -12,6 +12,15 @@ from app.schemas.cost360 import (
 )
 import uuid
 import json
+import unicodedata
+
+def strip_accents(s: str) -> str:
+    if not s:
+        return s
+    return ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
+
+def unaccent_col(column):
+    return func.translate(column, 'áéíóúÁÉÍÓÚäëïöüÄËÏÖÜ', 'aeiouAEIOUaeiouAEIOU')
 
 def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Optional[str] = None, chapter: Optional[str] = None, categoria: Optional[str] = None, tipo_actividad: Optional[str] = None, search_desc: bool = True, search_insumos: bool = False, covenin: Optional[str] = None, database_id: str = "master"):
     
@@ -27,11 +36,12 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
             words = search.split()
             all_filters = []
             for word in words:
+                clean_word = strip_accents(word)
                 word_filters = []
                 if search_desc:
-                    word_filters.append(CustomCostItem.description.ilike(f"%{word}%"))
+                    word_filters.append(unaccent_col(CustomCostItem.description).ilike(f"%{clean_word}%"))
                 if search_insumos:
-                    word_filters.append(CustomCostItem.apu_data.ilike(f"%{word}%"))
+                    word_filters.append(unaccent_col(CustomCostItem.apu_data).ilike(f"%{clean_word}%"))
                 if word_filters:
                     all_filters.append(or_(*word_filters))
             
@@ -87,18 +97,19 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
         words = search.split()
         all_filters = []
         for word in words:
+            clean_word = strip_accents(word)
             word_filters = []
             if search_desc:
                 word_filters.extend([
-                    CostItem.Descri.ilike(f"%{word}%"),
-                    CostItem.CodPar.ilike(f"%{word}%"),
-                    CostItem.CovPar.ilike(f"%{word}%")
+                    unaccent_col(CostItem.Descri).ilike(f"%{clean_word}%"),
+                    unaccent_col(CostItem.CodPar).ilike(f"%{clean_word}%"),
+                    unaccent_col(CostItem.CovPar).ilike(f"%{clean_word}%")
                 ])
             if search_insumos:
                 word_filters.extend([
-                    CostItem.apu_materials.any(CostAPUMaterial.material.has(CostMaterial.Descri.ilike(f"%{word}%"))),
-                    CostItem.apu_equipments.any(CostAPUEquipment.equipment.has(CostEquipment.Descri.ilike(f"%{word}%"))),
-                    CostItem.apu_labors.any(CostAPULabor.labor.has(CostLabor.Descri.ilike(f"%{word}%")))
+                    CostItem.apu_materials.any(CostAPUMaterial.material.has(unaccent_col(CostMaterial.Descri).ilike(f"%{clean_word}%"))),
+                    CostItem.apu_equipments.any(CostAPUEquipment.equipment.has(unaccent_col(CostEquipment.Descri).ilike(f"%{clean_word}%"))),
+                    CostItem.apu_labors.any(CostAPULabor.labor.has(unaccent_col(CostLabor.Descri).ilike(f"%{clean_word}%")))
                 ])
             if word_filters:
                 all_filters.append(or_(*word_filters))

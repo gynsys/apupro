@@ -11,7 +11,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from sqlalchemy import or_
+from sqlalchemy import or_, and_, case
 from sqlalchemy.orm import Session
 
 from app.db.models.cost360 import (
@@ -28,6 +28,14 @@ from app.db.models.cost360 import (
 # Configuración de logging
 # ---------------------------------------------------------------------------
 logger = logging.getLogger(__name__)
+
+def strip_accents(s: str) -> str:
+    if not s:
+        return s
+    return ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
+
+def unaccent_col(column):
+    return func.translate(column, 'áéíóúÁÉÍÓÚäëïöüÄËÏÖÜ', 'aeiouAEIOUaeiouAEIOU')
 
 # ---------------------------------------------------------------------------
 # Constantes de configuración
@@ -122,7 +130,7 @@ def _extract_keywords(description: str) -> List[str]:
         w.lower().strip(".,;:!?()")
         for w in words
         if len(w.strip(".,;:!?()")) > MIN_KEYWORD_LENGTH
-        and w.lower().strip(".,;:!?()") not in STOPWORDS
+        and strip_accents(w.lower().strip(".,;:!?()")) not in STOPWORDS
     ]
     return keywords
 
@@ -198,13 +206,13 @@ def _find_similar_items(
 
     # Si hay keywords, aplicar filtro de descripción
     if keywords:
-        from sqlalchemy import case
-        desc_filters = [CostItem.Descri.ilike(f"%{k}%") for k in keywords]
-        query = query.filter(or_(*desc_filters))
+        # Se requiere que todas las keywords coincidan
+        desc_filters = [unaccent_col(CostItem.Descri).ilike(f"%{strip_accents(k)}%") for k in keywords]
+        query = query.filter(and_(*desc_filters))
         
-        # Implementar Scoring SQL Condicional para traer las coincidencias múltiples primero
+        # Opcional: ordenar por relevancia (cantidad de keywords que coinciden)
         score_conditions = [
-            case((CostItem.Descri.ilike(f"%{k}%"), 1), else_=0)
+            case((unaccent_col(CostItem.Descri).ilike(f"%{strip_accents(k)}%"), 1), else_=0)
             for k in keywords
         ]
         relevance_score = sum(score_conditions)
