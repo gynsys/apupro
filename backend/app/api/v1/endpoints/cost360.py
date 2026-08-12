@@ -278,7 +278,8 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             }
 
     # 2. Generación con IA (LLM Router)
-    result = generate_apu_with_ai(payload_llm)
+    history_dicts = [msg.model_dump() for msg in payload.history] if payload.history else []
+    result = generate_apu_with_ai(payload_llm, history_dicts)
     
     return result
 

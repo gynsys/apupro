@@ -2,13 +2,27 @@ import json
 from typing import Dict, Any
 from app.services.llm_router import call_llm_json
 
-def generate_apu_with_ai(payload_llm: Dict[str, Any]) -> Dict[str, Any]:
+def generate_apu_with_ai(payload_llm: Dict[str, Any], history: list = None) -> Dict[str, Any]:
+    history_text = ""
+    if history and len(history) > 0:
+        history_text = "\n# HISTORIAL DE CONVERSACIÓN (PREGUNTAS Y RESPUESTAS PREVIAS)\n"
+        for msg in history:
+            role = "USUARIO" if msg.get("role") == "user" else "SISTEMA/IA"
+            history_text += f"{role}: {msg.get('content')}\n"
+
     prompt = f"""
 # ROL
 Eres un Ingeniero Civil especialista en Análisis de Precios Unitarios (APU). Vas a recibir un payload estructurado generado por el sistema de preprocesamiento, que contiene rendimientos históricos calculados a partir de partidas similares reales, un catálogo de insumos filtrado y advertencias. Tu trabajo es construir un APU técnico y completo basándote estrictamente en esta data.
 
+# CLARIFICACIÓN E INCONGRUENCIAS (¡MUY IMPORTANTE!)
+1. **Falta de Especificación Técnica:** Si la descripción original del usuario carece de datos CRÍTICOS para costear con precisión (ej. pide "pared" sin decir espesor o material, o "concreto" sin especificar resistencia), DEBES detenerte y hacer 1 a 3 preguntas de clarificación breves. No inventes datos críticos.
+2. **Incongruencia Total:** Revisa la categoría COVENIN seleccionada en el "covenin_context". Si la solicitud del usuario (ej. "acarreo") NO corresponde lógicamente con la categoría seleccionada (ej. "E011 - Estudios Preliminares"), DEBES detenerte, indicarle la incongruencia y preguntarle exactamente qué necesita hacer.
+3. Si necesitas clarificar, devuelve `status: "clarification_needed"` y la lista de preguntas en el campo `questions`. (Puedes dejar partida e insumos vacíos).
+4. Si la descripción es clara, no hay incongruencias, o si el usuario ya respondió en el HISTORIAL DE CONVERSACIÓN, genera el APU y devuelve `status: "completed"`.
+
 # PAYLOAD DEL SISTEMA
 {json.dumps(payload_llm, ensure_ascii=False)}
+{history_text}
 
 # REGLAS DE INTERPRETACIÓN DE HISTORIAL
 1. Si el payload contiene múltiples grupos en "rendimientos_historicos_por_unidad_partida" (ej. m2, m3, und), ELIGE la unidad base más lógica para la partida que vas a generar y utiliza EXCLUSIVAMENTE los rendimientos de ese grupo.
@@ -50,6 +64,8 @@ En el campo "description" de "partida", NO copies simplemente la solicitud del u
 # FORMATO DE SALIDA
 Devuelve un JSON estrictamente con la siguiente estructura (NO agregues texto extra antes o después, SOLO EL JSON VÁLIDO):
 {{
+    "status": "completed", 
+    "questions": [],
     "partida": {{"cod_par":"E340000000","description":"DESCRIPCIÓN TÉCNICA EN MAYÚSCULAS","unit":"m2","quantity":1.0, "performance": 10.5}},
     "materials": [
         {{"id":"m-1","codigo":"...","descripcion":"...","unidad":"...","cantidad":0.0,"desperdicio":5,"precio_unitario":0.0,"origen":"historico","nota_calculo":"..."}}
@@ -62,6 +78,9 @@ Devuelve un JSON estrictamente con la siguiente estructura (NO agregues texto ex
     result = call_llm_json(prompt, use_case="cost360")
     if "advertencias" not in result:
         result["advertencias"] = []
+    
+    if result.get("status") == "clarification_needed":
+        return result
     
     # Agregar las advertencias de preprocesamiento al resultado final
     if payload_llm.get("advertencias_preprocesamiento"):

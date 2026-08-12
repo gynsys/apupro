@@ -19,6 +19,11 @@ export default function AIApuGeneratorPage() {
   const [saving, setSaving] = useState(false);
   const [item, setItem] = useState(null);
   const searchTimeoutRef = useRef(null);
+  
+  // Conversational AI States
+  const [chatHistory, setChatHistory] = useState([]);
+  const [aiQuestions, setAiQuestions] = useState([]);
+  const [isClarifying, setIsClarifying] = useState(false);
 
   const [coveninTree] = useState(coveninTreeData);
   const [selectedTipoObra, setSelectedTipoObra] = useState('');
@@ -189,16 +194,31 @@ export default function AIApuGeneratorPage() {
       }
 
       const prefixToSend = selectedPartida || selectedSubcapitulo;
-      const response = await generateAIApu(prompt, prefixToSend, context);
-      // Map response to the format expected by the editor
-      setItem({
-        ...response.partida,
-        materials: response.materials || [],
-        equipments: response.equipments || [],
-        labors: response.labors || [],
-        advertencias: response.advertencias || []
-      });
-      toast.success("APU generado con IA");
+      
+      const newHistory = isClarifying ? [...chatHistory, { role: 'user', content: prompt }] : [{ role: 'user', content: prompt }];
+      
+      const response = await generateAIApu(prompt, prefixToSend, context, newHistory);
+      
+      if (response.status === 'clarification_needed') {
+        setChatHistory(newHistory);
+        setAiQuestions(response.questions || []);
+        setIsClarifying(true);
+        setPrompt('');
+        toast.error("La IA necesita más detalles para continuar", { icon: '🤔' });
+      } else {
+        setIsClarifying(false);
+        setChatHistory([]);
+        setAiQuestions([]);
+        // Map response to the format expected by the editor
+        setItem({
+          ...response.partida,
+          materials: response.materials || [],
+          equipments: response.equipments || [],
+          labors: response.labors || [],
+          advertencias: response.advertencias || []
+        });
+        toast.success("APU generado con IA");
+      }
     } catch (error) {
       console.error(error);
       toast.error("Error al generar APU con IA");
@@ -519,13 +539,25 @@ export default function AIApuGeneratorPage() {
           </div>
 
           <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-            {isSelectorsComplete ? "Describe la partida a generar" : (
+            {isSelectorsComplete ? (isClarifying ? "Responde a la IA para continuar" : "Describe la partida a generar") : (
               <>
                 <AlertTriangle className="text-amber-500" size={16} />
                 Completa los selectores arriba para habilitar la descripción
               </>
             )}
           </label>
+          
+          {isClarifying && aiQuestions.length > 0 && (
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl shadow-sm animate-in fade-in zoom-in duration-300">
+              <h4 className="text-blue-800 font-bold mb-2 flex items-center gap-2">🤔 La IA necesita clarificación:</h4>
+              <ul className="list-disc list-inside text-sm text-blue-700 space-y-2 font-medium">
+                {aiQuestions.map((q, idx) => (
+                  <li key={idx}>{q}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
@@ -538,17 +570,25 @@ export default function AIApuGeneratorPage() {
               }
             }}
             disabled={!isSelectorsComplete}
-            placeholder={isSelectorsComplete ? "Ej: Fundición de losa de entrepiso de concreto f'c=210 kg/cm2, espesor 15 cm, con acero de refuerzo fy=4200 kg/cm2. Presiona Enter para generar." : "Selecciona la categoría primero..."}
-            className="w-full h-24 p-4 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all text-sm mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
+            placeholder={isSelectorsComplete ? (isClarifying ? "Ej: El espesor es 15cm y el concreto de 210 kg/cm2..." : "Ej: Fundición de losa de entrepiso de concreto f'c=210 kg/cm2, espesor 15 cm, con acero de refuerzo fy=4200 kg/cm2. Presiona Enter para generar.") : "Selecciona la categoría primero..."}
+            className={`w-full h-24 p-4 border rounded-xl focus:outline-none focus:ring-2 transition-all text-sm mb-4 disabled:opacity-50 disabled:cursor-not-allowed ${isClarifying ? 'bg-blue-50/50 border-blue-300 focus:border-blue-500 focus:ring-blue-500/20' : 'bg-slate-50 border-slate-300 focus:bg-white focus:border-red-500 focus:ring-red-500/20'}`}
           />
           <div className="flex justify-end gap-3">
+            {isClarifying && (
+              <button
+                onClick={() => { setIsClarifying(false); setChatHistory([]); setAiQuestions([]); setPrompt(''); }}
+                className="px-4 py-2 text-slate-500 hover:text-slate-700 text-sm font-bold transition-colors"
+              >
+                Cancelar
+              </button>
+            )}
             <button
               onClick={handleGenerate}
               disabled={loading || !prompt.trim() || !isSelectorsComplete}
-              className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-3 rounded-xl hover:from-red-600 hover:to-red-700 transition-all shadow-sm font-bold disabled:opacity-50"
+              className={`flex items-center gap-2 text-white px-6 py-3 rounded-xl transition-all shadow-sm font-bold disabled:opacity-50 ${isClarifying ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'}`}
             >
-              {loading ? <Loader className="animate-spin" size={18} /> : <Sparkles size={18} />}
-              {loading ? 'Generando...' : 'Generar APU'}
+              {loading ? <Loader className="animate-spin" size={18} /> : (isClarifying ? <Check size={18} /> : <Sparkles size={18} />)}
+              {loading ? (isClarifying ? 'Pensando...' : 'Generando...') : (isClarifying ? 'Responder' : 'Generar APU')}
             </button>
           </div>
         </div>

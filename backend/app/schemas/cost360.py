@@ -93,16 +93,24 @@ class CustomCostItemResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class MessageContext(BaseModel):
+    role: str
+    content: str
+
 class AiApuGenerateRequest(BaseModel):
     description: str
     covenin_prefix: Optional[str] = None
     covenin_context: Optional[str] = None
+    history: Optional[List[MessageContext]] = []
 
 class AiApuResponse(BaseModel):
-    partida: dict
-    materials: List[dict]
-    equipments: List[dict]
-    labors: List[dict]
+    status: str = "completed"
+    questions: Optional[List[str]] = []
+    
+    partida: Optional[dict] = None
+    materials: Optional[List[dict]] = []
+    equipments: Optional[List[dict]] = []
+    labors: Optional[List[dict]] = []
     advertencias: Optional[List[str]] = []
 
 # Database Management Schemas
