@@ -203,7 +203,12 @@ def _find_similar_items(
         return [], 0.0
 
     try:
-        base_items = db.query(CostItem).filter(CostItem.CodPar.like(f"{covenin_prefix}%")).all()
+        base_items = db.query(CostItem).filter(
+            or_(
+                CostItem.CovPar.startswith(covenin_prefix),
+                CostItem.CodPar.startswith(covenin_prefix)
+            )
+        ).all()
     except Exception as exc:
         logger.error("Error al consultar partidas por prefijo COVENIN: %s", exc)
         return [], 0.0
