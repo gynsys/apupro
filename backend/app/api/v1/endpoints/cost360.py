@@ -24,7 +24,7 @@ from app.crud.crud_cost360 import (
     save_custom_apu,
     get_all_databases, get_database_by_id, create_database, update_database, delete_database
 )
-from app.services.preprocessing_service import preprocess_apu_data
+from app.services.preprocessing_service import preprocess_apu_data, fast_preprocess_debug
 from app.services.ai_apu_service import generate_apu_with_ai
 
 router = APIRouter()
@@ -206,17 +206,24 @@ def delete_labor_route(codigo: str, db: Session = Depends(get_db)):
 
 @router.post("/generate-ai-apu")
 def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(get_db)):
-    # 1. Preprocesamiento (BD + Estadísticas)
-    payload_llm = preprocess_apu_data(db, payload.description, payload.covenin_prefix, payload.covenin_context)
-    
+    # 0. Si es solo preproceso DEBUG, devolver resultado rapido SIN cargar IA
     if payload.only_preprocess:
+        debug_data = fast_preprocess_debug(
+            db,
+            payload.description,
+            payload.covenin_prefix,
+            payload.covenin_context
+        )
         return {
             "status": "clarification_needed",
-            "clarification_message": "MODO PREPROCESO: Resultados del motor de búsqueda (No se ha consumido saldo de IA)",
+            "clarification_message": f"MODO PREPROCESO (sin IA): {debug_data.get('total_partidas_en_categoria', 0)} partidas encontradas en la categoría COVENIN",
             "options": [],
             "questions": [],
-            "debug_preprocesamiento": payload_llm
+            "debug_preprocesamiento": debug_data
         }
+
+    # 1. Preprocesamiento (BD + Estadísticas) + IA semantica
+    payload_llm = preprocess_apu_data(db, payload.description, payload.covenin_prefix, payload.covenin_context)
     
     # 1.5. Cortocircuito si hay Match Exacto
     if payload_llm.get("modo") == "partida_exacta_encontrada":

@@ -703,6 +703,7 @@ def preprocess_apu_data(
         "detalle_partidas": [
             {
                 "codigo": p.CodPar,
+                "covenin": p.CovPar,
                 "descripcion": p.Descri,
                 "unidad": p.UniPar,
             }
@@ -717,3 +718,55 @@ def preprocess_apu_data(
                 payload["modo"], payload["partidas_encontradas"], len(advertencias))
 
     return payload
+
+
+def fast_preprocess_debug(
+    db: Session,
+    description: str,
+    covenin_prefix: Optional[str] = None,
+    covenin_context: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Version rapida del preproceso para DEBUG. Omite el motor de IA semantica
+    por completo y devuelve TODAS las partidas del prefijo COVENIN directamente.
+    No consume tokens de IA ni carga el modelo MiniLM.
+    """
+    if not covenin_prefix:
+        return {
+            "error": "Se requiere un prefijo COVENIN",
+            "covenin_prefix": covenin_prefix,
+            "partidas_encontradas": 0,
+            "todas_las_partidas_covenin": [],
+        }
+
+    try:
+        all_items = db.query(CostItem).filter(
+            or_(
+                CostItem.CovPar.startswith(covenin_prefix),
+                CostItem.CodPar.startswith(covenin_prefix)
+            )
+        ).order_by(CostItem.CovPar).all()
+    except Exception as exc:
+        logger.error("Error en fast_preprocess_debug: %s", exc)
+        all_items = []
+
+    keywords = _extract_keywords(description)
+
+    return {
+        "modo": "debug_rapido_sin_ia",
+        "solicitud_usuario": description,
+        "keywords_extraidas": keywords,
+        "covenin_prefix": covenin_prefix,
+        "covenin_context": covenin_context,
+        "total_partidas_en_categoria": len(all_items),
+        "todas_las_partidas_covenin": [
+            {
+                "codpar": p.CodPar,
+                "covenin": p.CovPar,
+                "descripcion": p.Descri,
+                "unidad": p.UniPar,
+            }
+            for p in all_items
+        ],
+        "nota": "Este es el modo DEBUG. La IA semantica NO fue activada. Las partidas listadas son TODAS las que coinciden con el codigo COVENIN seleccionado.",
+    }
