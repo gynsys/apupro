@@ -121,13 +121,14 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
     if covenin:
         query = query.filter(CostItem.CovPar.ilike(f"%{covenin}%"))
     if chapter:
-        query_chap = query.filter(CostItem.CovPar.startswith(chapter))
+        from sqlalchemy import or_
+        query_chap = query.filter(or_(CostItem.CovPar.startswith(chapter), CostItem.CodPar.startswith(chapter)))
         total = query_chap.count()
         
         if total == 0 and len(chapter) > 3:
             fallback_chap = chapter[:-1]
             while len(fallback_chap) >= 3:
-                query_chap = query.filter(CostItem.CovPar.startswith(fallback_chap))
+                query_chap = query.filter(or_(CostItem.CovPar.startswith(fallback_chap), CostItem.CodPar.startswith(fallback_chap)))
                 total = query_chap.count()
                 if total > 0:
                     break
