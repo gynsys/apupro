@@ -24,6 +24,7 @@ export default function AIApuGeneratorPage() {
   const [selectedTipoObra, setSelectedTipoObra] = useState('');
   const [selectedCapitulo, setSelectedCapitulo] = useState('');
   const [selectedSubcapitulo, setSelectedSubcapitulo] = useState('');
+  const [selectedPartida, setSelectedPartida] = useState('');
   
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDesc, setSearchDesc] = useState(true);
@@ -153,16 +154,24 @@ export default function AIApuGeneratorPage() {
       const tipo = coveninTree.find(c => c.code === selectedTipoObra);
       const cap = tipo?.children?.find(c => c.code === selectedCapitulo);
       const sub = cap?.children?.find(c => c.code === selectedSubcapitulo);
-      let context = `${tipo?.name || ''} > ${cap?.name || ''} > ${sub?.name || ''}`;
+      const par = sub?.children?.find(c => c.code === selectedPartida);
       
-      if (sub?.children && sub.children.length > 0) {
+      let context = `${tipo?.name || ''} > ${cap?.name || ''} > ${sub?.name || ''}`;
+      if (par) {
+        context += ` > ${par.name || ''}`;
+      }
+      
+      const nodeForChildren = par || sub;
+      
+      if (nodeForChildren?.children && nodeForChildren.children.length > 0) {
         context += `\n\nSubcategorías COVENIN disponibles para asignar el código:\n`;
-        sub.children.forEach(child => {
+        nodeForChildren.children.forEach(child => {
           context += `- ${child.code}: ${child.name}\n`;
         });
       }
 
-      const response = await generateAIApu(prompt, selectedSubcapitulo, context);
+      const prefixToSend = selectedPartida || selectedSubcapitulo;
+      const response = await generateAIApu(prompt, prefixToSend, context);
       // Map response to the format expected by the editor
       setItem({
         ...response.partida,
@@ -403,6 +412,7 @@ export default function AIApuGeneratorPage() {
                   setSelectedTipoObra(e.target.value);
                   setSelectedCapitulo('');
                   setSelectedSubcapitulo('');
+                  setSelectedPartida('');
                 }}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
               >
@@ -419,6 +429,7 @@ export default function AIApuGeneratorPage() {
                 onChange={(e) => {
                   setSelectedCapitulo(e.target.value);
                   setSelectedSubcapitulo('');
+                  setSelectedPartida('');
                 }}
                 disabled={!selectedTipoObra}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
@@ -433,7 +444,10 @@ export default function AIApuGeneratorPage() {
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Subcapítulo</label>
               <select 
                 value={selectedSubcapitulo}
-                onChange={(e) => setSelectedSubcapitulo(e.target.value)}
+                onChange={(e) => {
+                  setSelectedSubcapitulo(e.target.value);
+                  setSelectedPartida('');
+                }}
                 disabled={!selectedCapitulo}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
               >
@@ -443,12 +457,29 @@ export default function AIApuGeneratorPage() {
                 ))}
               </select>
             </div>
+            
+            {/* 4TO SELECTOR OPCIONAL */}
+            {selectedSubcapitulo && coveninTree.find(c => c.code === selectedTipoObra)?.children?.find(c => c.code === selectedCapitulo)?.children?.find(c => c.code === selectedSubcapitulo)?.children?.length > 0 && (
+              <div className="flex-1">
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Partida Base (Opcional)</label>
+                <select 
+                  value={selectedPartida}
+                  onChange={(e) => setSelectedPartida(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
+                >
+                  <option value="">Selecciona la Partida...</option>
+                  {coveninTree.find(c => c.code === selectedTipoObra)?.children?.find(c => c.code === selectedCapitulo)?.children?.find(c => c.code === selectedSubcapitulo)?.children?.map(par => (
+                    <option key={par.code} value={par.code}>{par.code} - {par.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className="mb-4 flex items-center gap-2">
             <span className="text-sm font-bold text-slate-700">Código Base COVENIN:</span>
             <code className="px-2 py-1 bg-slate-100 text-blue-700 rounded text-sm font-mono border border-slate-200">
-              {selectedSubcapitulo || selectedCapitulo || selectedTipoObra || '---'}
+              {selectedPartida || selectedSubcapitulo || selectedCapitulo || selectedTipoObra || '---'}
             </code>
           </div>
 
