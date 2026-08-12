@@ -153,7 +153,14 @@ export default function AIApuGeneratorPage() {
       const tipo = coveninTree.find(c => c.code === selectedTipoObra);
       const cap = tipo?.children?.find(c => c.code === selectedCapitulo);
       const sub = cap?.children?.find(c => c.code === selectedSubcapitulo);
-      const context = `${tipo?.name || ''} > ${cap?.name || ''} > ${sub?.name || ''}`;
+      let context = `${tipo?.name || ''} > ${cap?.name || ''} > ${sub?.name || ''}`;
+      
+      if (sub?.children && sub.children.length > 0) {
+        context += `\n\nSubcategorías COVENIN disponibles para asignar el código:\n`;
+        sub.children.forEach(child => {
+          context += `- ${child.code}: ${child.name}\n`;
+        });
+      }
 
       const response = await generateAIApu(prompt, selectedSubcapitulo, context);
       // Map response to the format expected by the editor

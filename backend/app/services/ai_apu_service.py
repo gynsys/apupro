@@ -44,7 +44,8 @@ En el campo "description" de "partida", NO copies simplemente la solicitud del u
 - Tu APU generado debe tener un código (`cod_par`) que cumpla estrictamente con la Norma COVENIN 2000:1992.
 - El código está conformado por 1 letra y 9 dígitos numéricos (ej. E123456789).
 - DEBES comenzar el código obligatoriamente con el `covenin_prefix` exacto.
-- Para las posiciones restantes (dígitos vacantes) correspondientes a componentes no listados o no especificados, debes rellenar con ceros (0) hasta completar la longitud total de 1 letra + 9 dígitos numéricos. (Ej. Si el prefijo es E34, el código debe ser E340000000, o si identificas un componente específico, E341000000, pero siempre manteniendo el prefijo inalterable y la longitud total).
+- MUY IMPORTANTE: En el `covenin_context` se te proporcionan las subcategorías exactas disponibles según la norma. Debes leer el contexto, identificar si la partida solicitada encaja en alguna de esas subcategorías (por ejemplo, si pide una Puerta y existe E44701 - PUERTAS, usa E44701 como base en lugar del prefijo corto).
+- Para las posiciones restantes (dígitos vacantes) correspondientes a variables no especificadas (como tipo de madera, espesor, etc), debes rellenar con ceros o números lógicos hasta completar la longitud total de 1 letra + 9 dígitos numéricos (Ej. E447012233 o E447010000). SIEMPRE deben ser 10 caracteres en total.
 
 # FORMATO DE SALIDA
 Devuelve un JSON estrictamente con la siguiente estructura (NO agregues texto extra antes o después, SOLO EL JSON VÁLIDO):
