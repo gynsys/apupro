@@ -23,12 +23,19 @@ Se ha implementado un flujo interactivo que impide la generación de APUs defici
 - **Clarificación de Especificaciones Técnicas:** Si faltan datos críticos (ej. no especifica resistencia del concreto o dimensiones del material), la IA devuelve opciones clickables obligando al usuario a especificar.
 - **UI Autocontenida:** Las opciones técnicas son botones rápidos que bloquean el ingreso manual de texto, evitando respuestas ambiguas y roturas en el flujo.
 
-## Tareas Pendientes / Próximos Pasos
+## Implementación del Motor Híbrido RAG V6 Finalizada 🚀
 
-- **[PENDIENTE] Implementación de "Portero" MiniLM para Incongruencias:**
-  - *Objetivo:* Ahorrar tokens y carga del LLM interceptando incongruencias obvias directamente en Python usando el resultado del modelo MiniLM.
-  - *Metodología de Pruebas:* 
-    1. Diseñar un set de variaciones de selectores (categorías).
-    2. Simular la entrada de palabras incongruentes.
-    3. Analizar la precisión (falsos positivos vs verdaderos positivos) de los resultados del MiniLM.
-    4. Implementar un umbral matemático en el endpoint de búsqueda que aborte la operación y devuelva un error si el Top 5 de resultados semánticos pertenece a una rama COVENIN totalmente ajena a la seleccionada por el usuario.
+Hemos integrado con éxito el motor semántico MiniLM y el LLM Generativo para que trabajen en equipo:
+
+1. **El Cerebro Matemático (`ai_search.py`)**:
+   - Implementamos la función `calculate_similarity_for_subset`.
+   - Ahora MiniLM solo extrae y compara las distancias matemáticas (similitud semántica) *estrictamente* dentro del grupo de partidas filtradas por los selectores COVENIN (ej. E43701). Nunca procesa la base de datos completa a la vez.
+
+2. **Preprocesamiento RAG (`preprocessing_service.py`)**:
+   - Eliminamos el antiguo "filtro ciego" que buscaba con consultas SQL puras (`LIKE %vidrio%`) y que arrojaba 0 resultados y obligaba a generar APUs de cero.
+   - Integramos la llamada directa a MiniLM. 
+   - **El Portero Matemático:** Activamos la validación por umbral (Score < 15%). Si pides algo ilógico para esa categoría (ej. Cerámica en Herrería), el proceso se detiene en seco con el error `incongruencia_matematica`.
+
+3. **El Analista LLM (`ai_apu_service.py`)**:
+   - **Cero Tokens Perdidos:** Se configuró el cortocircuito para que, si el "portero" manda una alerta de incongruencia, devuelva la advertencia directamente al usuario sin hacer llamadas a Gemini/OpenAI.
+   - **Confirmación Interactiva (Híbrido):** Se modificó el prompt de instrucciones del LLM. Ahora, cuando recibe el "Top 3" de partidas históricas más parecidas desde MiniLM (ej. Puertas de hierro con vidrio), el LLM no genera el APU a lo loco. Primero detiene el flujo, saluda al usuario, le dice qué encontró, y le presenta las partidas exactas en botones interactivos para que el usuario sea quien apruebe y decida cuál es la base histórica definitiva.
