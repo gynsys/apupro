@@ -209,6 +209,15 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
     # 1. Preprocesamiento (BD + Estadísticas)
     payload_llm = preprocess_apu_data(db, payload.description, payload.covenin_prefix, payload.covenin_context)
     
+    if payload.only_preprocess:
+        return {
+            "status": "clarification_needed",
+            "clarification_message": "MODO PREPROCESO: Resultados del motor de búsqueda (No se ha consumido saldo de IA)",
+            "options": [],
+            "questions": [],
+            "debug_preprocesamiento": payload_llm
+        }
+    
     # 1.5. Cortocircuito si hay Match Exacto
     if payload_llm.get("modo") == "partida_exacta_encontrada":
         cod_par = payload_llm.get("partida_exacta_codigo")

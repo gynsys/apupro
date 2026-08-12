@@ -50,12 +50,14 @@ export const fetchCategoriesTree = async () => {
   return response.data;
 };
 
-export const generateAIApu = async (description, covenin_prefix = null, covenin_context = null, history = []) => {
-  const payload = { description, history };
-  if (covenin_prefix) payload.covenin_prefix = covenin_prefix;
-  if (covenin_context) payload.covenin_context = covenin_context;
-  
-  const response = await cost360ApiClient.post('/generate-ai-apu', payload);
+export const generateAIApu = async (description, coveninPrefix = '', coveninContext = '', history = [], onlyPreprocess = false) => {
+  const response = await cost360ApiClient.post('/generate-ai-apu', {
+    description,
+    covenin_prefix: coveninPrefix,
+    covenin_context: coveninContext,
+    history,
+    only_preprocess: onlyPreprocess
+  });
   return response.data;
 };
 

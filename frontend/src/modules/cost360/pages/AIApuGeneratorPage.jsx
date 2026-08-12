@@ -186,7 +186,11 @@ export default function AIApuGeneratorPage() {
     }
   };
 
-  const handleGenerate = async (overridePrompt = null) => {
+  const handleGeneratePreprocess = () => {
+    handleGenerate(null, true);
+  };
+
+  const handleGenerate = async (overridePrompt = null, onlyPreprocess = false) => {
     const textToSubmit = overridePrompt !== null ? overridePrompt : prompt;
     if (!textToSubmit.trim()) {
       toast.error("Ingresa una descripción para generar el APU");
@@ -228,7 +232,7 @@ export default function AIApuGeneratorPage() {
       
       const newHistory = isClarifying ? [...chatHistory, { role: 'user', content: textToSubmit }] : [{ role: 'user', content: textToSubmit }];
       
-      const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory);
+      const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory, onlyPreprocess);
       
       if (response.debug_preprocesamiento) {
         setDebugInfo(response.debug_preprocesamiento);
@@ -692,6 +696,15 @@ export default function AIApuGeneratorPage() {
                 Cancelar
               </button>
             )}
+            <button
+              onClick={() => handleGeneratePreprocess()}
+              disabled={loading || !prompt.trim() || !isSelectorsComplete || isClarifying}
+              className="flex items-center gap-2 text-slate-600 bg-slate-100 px-4 py-3 rounded-xl hover:bg-slate-200 transition-all font-bold disabled:opacity-50 text-sm border border-slate-200"
+              title="Muestra cómo la IA buscará en la base de datos sin consumir saldo"
+            >
+              <Search size={18} />
+              Preproceso
+            </button>
             <button
               onClick={() => handleGenerate()}
               disabled={loading || !prompt.trim() || !isSelectorsComplete}

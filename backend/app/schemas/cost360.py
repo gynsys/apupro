@@ -102,6 +102,7 @@ class AiApuGenerateRequest(BaseModel):
     covenin_prefix: Optional[str] = None
     covenin_context: Optional[str] = None
     history: Optional[List[MessageContext]] = []
+    only_preprocess: Optional[bool] = False
 
 class AiApuResponse(BaseModel):
     status: str = "completed"
