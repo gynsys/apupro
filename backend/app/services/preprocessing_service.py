@@ -203,11 +203,14 @@ def _find_similar_items(
         return [], 0.0
 
     try:
+        # Excluir partidas con CovPar = 'S/C' (Sin Clasificar): no aportan contexto COVENIN
         base_items = db.query(CostItem).filter(
             or_(
                 CostItem.CovPar.startswith(covenin_prefix),
                 CostItem.CodPar.startswith(covenin_prefix)
             )
+        ).filter(
+            ~CostItem.CovPar.like('% S/C%')  # Excluir "E131 S/C", "E13 S/C", etc.
         ).all()
     except Exception as exc:
         logger.error("Error al consultar partidas por prefijo COVENIN: %s", exc)
@@ -740,15 +743,27 @@ def fast_preprocess_debug(
         }
 
     try:
+        # Excluir partidas Sin Clasificar (S/C)
         all_items = db.query(CostItem).filter(
             or_(
                 CostItem.CovPar.startswith(covenin_prefix),
                 CostItem.CodPar.startswith(covenin_prefix)
             )
+        ).filter(
+            ~CostItem.CovPar.like('% S/C%')
         ).order_by(CostItem.CovPar).all()
+
+        # Conteo de total incluyendo S/C para informar al usuario
+        total_con_sc = db.query(CostItem).filter(
+            or_(
+                CostItem.CovPar.startswith(covenin_prefix),
+                CostItem.CodPar.startswith(covenin_prefix)
+            )
+        ).count()
     except Exception as exc:
         logger.error("Error en fast_preprocess_debug: %s", exc)
         all_items = []
+        total_con_sc = 0
 
     keywords = _extract_keywords(description)
 
@@ -759,6 +774,7 @@ def fast_preprocess_debug(
         "covenin_prefix": covenin_prefix,
         "covenin_context": covenin_context,
         "total_partidas_en_categoria": len(all_items),
+        "total_con_sc_excluidas": total_con_sc - len(all_items),
         "todas_las_partidas_covenin": [
             {
                 "codpar": p.CodPar,
@@ -768,5 +784,9 @@ def fast_preprocess_debug(
             }
             for p in all_items
         ],
-        "nota": "Este es el modo DEBUG. La IA semantica NO fue activada. Las partidas listadas son TODAS las que coinciden con el codigo COVENIN seleccionado.",
+        "nota": (
+            f"DEBUG sin IA. Se listan {len(all_items)} partidas clasificadas "
+            f"(se excluyeron {total_con_sc - len(all_items)} partidas S/C sin clasificar). "
+            "Busca en las descripciones si tu tipo de partida está disponible."
+        ),
     }

@@ -39,26 +39,59 @@ export default function AIApuGeneratorPage() {
   
   useEffect(() => {
     if (currentPrefix) {
-      fetchItems(0, 50, '', currentPrefix)
+      fetchItems(0, 100, '', currentPrefix)
         .then(res => {
           setMatchCount(res.total);
-          if (res.items && res.items.length > 0) {
-            const stopWords = ['de', 'la', 'el', 'en', 'con', 'sin', 'para', 'y', 'o', 'los', 'las', 'del', 'a', 'un', 'una', 'segun', 'se', 'su', 'por', 'uso', 'que', 'al'];
-            const wordCounts = {};
-            res.items.forEach(item => {
+          const items = res.items || [];
+          if (items.length > 0) {
+            // Stopwords generales + dominio de la construcción
+            const stopWords = new Set([
+              'de','la','el','en','con','sin','para','y','o','los','las','del',
+              'a','un','una','segun','se','su','por','uso','que','al','sus','este',
+              'esta','como','no','mas','pero','son','fue','han','ha','me','te','mi',
+              // Palabras técnicas genéricas (aparecen en casi todo)
+              'area','medido','medida','incluye','incluir','incluyen','incluyendo',
+              'utilizando','utilizando','materiales','material','construccion',
+              'infraestructura','recuperacion','correspondiente','dimensiones',
+              'nivel','segun','area','piso','tipo','clase','diametro','espesor',
+              'metros','metro','largo','ancho','alto','total','general',
+            ]);
+
+            const totalDocs = items.length;
+            // Contar en cuántos documentos aparece cada palabra (document frequency)
+            const docFreq = {};
+            items.forEach(item => {
               if (!item.Descri) return;
-              const words = item.Descri.toLowerCase().replace(/[^a-zñáéíóú]/g, ' ').split(/\s+/);
-              words.forEach(w => {
-                if (w.length > 3 && !stopWords.includes(w)) {
-                  wordCounts[w] = (wordCounts[w] || 0) + 1;
-                }
+              const uniqueWords = new Set(
+                item.Descri.toLowerCase()
+                  .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quitar acentos
+                  .replace(/[^a-z]/g, ' ')
+                  .split(/\s+/)
+                  .filter(w => w.length > 3 && !stopWords.has(w))
+              );
+              uniqueWords.forEach(w => {
+                docFreq[w] = (docFreq[w] || 0) + 1;
               });
             });
-            const topWords = Object.entries(wordCounts)
-              .sort((a, b) => b[1] - a[1])
-              .slice(0, 6)
+
+            // Calcular IDF-like score: palabras que aparecen en 10%-75% de los docs
+            // son las más distintivas. Las que aparecen en el 100% son genéricas.
+            const minDocs = Math.max(1, Math.ceil(totalDocs * 0.10)); // al menos 10%
+            const maxDocs = Math.ceil(totalDocs * 0.75);              // máximo 75%
+
+            const keywords = Object.entries(docFreq)
+              .filter(([, count]) => count >= minDocs && count <= maxDocs)
+              .sort((a, b) => {
+                // Favorece palabras en rango óptimo (~33% de docs)
+                const idealRatio = 0.33;
+                const ratioA = a[1] / totalDocs;
+                const ratioB = b[1] / totalDocs;
+                return Math.abs(ratioA - idealRatio) - Math.abs(ratioB - idealRatio);
+              })
+              .slice(0, 8)
               .map(entry => entry[0]);
-            setCategoryHints(topWords);
+
+            setCategoryHints(keywords);
           } else {
             setCategoryHints([]);
           }
@@ -584,7 +617,7 @@ export default function AIApuGeneratorPage() {
             {categoryHints.length > 0 && (
               <span className="text-xs font-medium text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200 animate-in fade-in zoom-in duration-300 shadow-sm flex items-center gap-1">
                 <Sparkles size={12} />
-                Pistas: {categoryHints.join(', ')}...
+                Keywords: {categoryHints.join(', ')}
               </span>
             )}
           </div>
