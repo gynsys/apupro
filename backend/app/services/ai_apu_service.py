@@ -3,6 +3,14 @@ from typing import Dict, Any
 from app.services.llm_router import call_llm_json
 
 def generate_apu_with_ai(payload_llm: Dict[str, Any], history: list = None) -> Dict[str, Any]:
+    if payload_llm.get("modo") == "incongruencia_matematica":
+        return {
+            "status": "clarification_needed",
+            "clarification_message": "Lo que buscas no tiene relación a las categorías COVENIN seleccionadas. Por favor, corrige tu descripción o cambia la categoría.",
+            "options": [],
+            "questions": []
+        }
+
     history_text = ""
     if history and len(history) > 0:
         history_text = "\n# HISTORIAL DE CONVERSACIÓN (PREGUNTAS Y RESPUESTAS PREVIAS)\n"
@@ -19,8 +27,9 @@ REGLA DE ORO: Dirígete SIEMPRE al usuario directamente en segunda persona (ej. 
 
 1. **Incongruencia Total (PRIORIDAD 1):** Revisa la categoría COVENIN seleccionada en el "covenin_context". Si la solicitud del usuario (ej. "cerámica") NO corresponde lógicamente con la categoría seleccionada (ej. "Herrería"), TIENES PROHIBIDO INTENTAR GENERAR EL APU. Debes detenerte inmediatamente, indicarle al usuario el error de forma directa (ej. "Estás pidiendo cerámica en la categoría de herrería, lo cual es una incongruencia") y pedirle que corrija su descripción o cambie de categoría.
 2. **Falta de Especificación Técnica:** Si no hay incongruencia pero la descripción carece de datos CRÍTICOS para costear con precisión (ej. pide "pared" sin decir espesor o material), DEBES detenerte y hacer 1 a 3 preguntas de clarificación breves. No inventes datos críticos.
-3. Si necesitas clarificar (ya sea por incongruencia o falta de datos), devuelve `status: "clarification_needed"`, un `clarification_message` directo al usuario que explique el problema, y OPCIONALMENTE una lista de `options` (strings cortos) con alternativas seleccionables escritas desde la perspectiva del usuario. IMPORTANTE: Las `options` SOLO deben ser técnicas (ej. ["Muro de 15cm", "Muro de 10cm", "Bloque de arcilla"]). NUNCA devuelvas opciones administrativas como "Cambiar categoría" o "Me equivoqué en la descripción", de eso se encarga la interfaz gráfica automáticamente. (Puedes dejar partida e insumos vacíos).
-4. Si la descripción es clara, no hay incongruencias, o si el usuario ya respondió en el HISTORIAL DE CONVERSACIÓN, genera el APU y devuelve `status: "completed"`.
+3. **Confirmación de Partidas Históricas (HÍBRIDO):** Si el payload indica `partidas_encontradas > 0` y la descripción del usuario NO es ya 100% clara y exacta a una de ellas, DEBES devolver `status: "clarification_needed"`, decirle amistosamente que encontraste esas opciones históricas relacionadas en la base de datos, y poner como `options` EXACTAMENTE los nombres de esas partidas (del campo `detalle_partidas`) para que el usuario confirme con un clic cuál es la correcta.
+4. Si necesitas clarificar (ya sea por falta de datos o confirmación de partidas), devuelve `status: "clarification_needed"`, un `clarification_message` directo, y OPCIONALMENTE una lista de `options` (strings cortos). NUNCA devuelvas opciones administrativas como "Cambiar categoría", solo alternativas técnicas.
+5. Si la descripción es clara y el usuario ya confirmó la partida o dio los detalles (revisa el HISTORIAL DE CONVERSACIÓN), genera el APU y devuelve `status: "completed"`.
 
 # PAYLOAD DEL SISTEMA
 {json.dumps(payload_llm, ensure_ascii=False)}

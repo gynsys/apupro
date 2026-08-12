@@ -72,4 +72,45 @@ class AISearchEngine:
         similarities = dot_product / (norm_embeddings * norm_query + 1e-10)
         return similarities
 
+    def calculate_similarity_for_subset(self, query: str, valid_ids: List[str]) -> List[Dict[str, Any]]:
+        """
+        Calcula la similitud semántica solo para un subconjunto de IDs.
+        Retorna una lista ordenada de diccionarios con {'id': ..., 'score': ...}.
+        """
+        if not self.is_loaded or self.embeddings is None or self.model is None:
+            return []
+
+        # Vectorizar query
+        query_embedding = self.model.encode([query])
+
+        # Obtener índices del subconjunto (usamos un set para búsqueda rápida)
+        valid_ids_set = set(valid_ids)
+        valid_indices = []
+        valid_id_map = []
+        for i, id_val in enumerate(self.ids_mapping):
+            if id_val in valid_ids_set:
+                valid_indices.append(i)
+                valid_id_map.append(id_val)
+
+        if not valid_indices:
+            return []
+
+        # Extraer embeddings del subconjunto
+        subset_embeddings = self.embeddings[valid_indices]
+
+        # Calcular similitud coseno
+        norm_query = np.linalg.norm(query_embedding)
+        norm_embeddings = np.linalg.norm(subset_embeddings, axis=1)
+        
+        dot_product = np.dot(subset_embeddings, query_embedding.T).flatten()
+        similarities = dot_product / (norm_embeddings * norm_query + 1e-10)
+
+        # Armar y ordenar resultados
+        results = [
+            {"id": valid_id_map[i], "score": float(similarities[i])}
+            for i in range(len(valid_indices))
+        ]
+        results.sort(key=lambda x: x["score"], reverse=True)
+        return results
+
 ai_engine = AISearchEngine()

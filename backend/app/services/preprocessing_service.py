@@ -191,88 +191,52 @@ def _calculate_similarity_score(item: CostItem, keywords: List[str]) -> float:
 
 def _find_similar_items(
     db: Session,
-    keywords: List[str],
+    description: str,
     covenin_prefix: Optional[str],
-) -> List[CostItem]:
-    """
-    Busca partidas similares aplicando el filtro COVENIN.
-    Si no hay keywords, busca por prefijo directamente.
-    """
-    query = db.query(CostItem)
-
-    desc_filters = None
-    relevance_score = None
-    if keywords:
-        desc_filters = [unaccent_col(CostItem.Descri).ilike(f"%{strip_accents(k)}%") for k in keywords]
-        score_conditions = [
-            case((unaccent_col(CostItem.Descri).ilike(f"%{strip_accents(k)}%"), 1), else_=0)
-            for k in keywords
-        ]
-        relevance_score = sum(score_conditions)
-
-    def _execute_query(prefix: Optional[str]):
-        q = db.query(CostItem)
-        if prefix:
-            q = q.filter(CostItem.CodPar.like(f"{prefix}%"))
-        if desc_filters is not None:
-            q = q.filter(and_(*desc_filters))
-            q = q.order_by(relevance_score.desc())
-        return q.limit(SEARCH_LIMIT).all()
-
-    try:
-        results = _execute_query(covenin_prefix)
-
-        # Fallback relax: Si no se encuentran resultados y el prefijo es estricto, 
-        # reducir el prefijo para intentar atrapar partidas mal codificadas (ej: E447 S/C en vez de E44701)
-        if not results and covenin_prefix and len(covenin_prefix) > 3:
-            fallback_prefix = covenin_prefix[:-1]
-            while len(fallback_prefix) >= 3 and not results:
-                logger.info("0 resultados con prefijo original. Intentando fallback: %s", fallback_prefix)
-                results = _execute_query(fallback_prefix)
-                fallback_prefix = fallback_prefix[:-1]
-
-        logger.info("Partidas encontradas con filtros: covenin=%s, keywords=%s", covenin_prefix, keywords)
-        logger.info("Partidas encontradas cantidad: %d", len(results))
-        return results
-    except Exception as exc:
-        logger.error("Error al consultar partidas similares: %s", exc)
-        return []
-
-
-def _score_and_filter_items(
-    items: List[CostItem],
-    keywords: List[str],
 ) -> Tuple[List[CostItem], float]:
     """
-    Puntúa las partidas encontradas y aplica un corte dinámico basado en el mejor score.
-    Retorna (lista_de_partidas, mejor_score).
+    Busca partidas filtrando ESTRICTAMENTE por el prefijo COVENIN seleccionado,
+    y luego utiliza el motor RAG V6 (MiniLM) para calcular la similitud semántica.
+    Devuelve las partidas encontradas y el score más alto.
     """
-    if not items or not keywords:
-        return (items[:TOP_ITEMS_LIMIT] if items else []), 0.0
-
-    scored = []
-    for item in items:
-        similarity = _calculate_similarity_score(item, keywords)
-        if similarity >= SIMILARITY_THRESHOLD:
-            scored.append((similarity, item))
-
-    if not scored:
+    if not covenin_prefix:
         return [], 0.0
 
-    # Ordenar por score descendente
-    scored.sort(key=lambda x: x[0], reverse=True)
-    
-    # Corte dinámico: rechazar partidas con score muy por debajo del mejor
-    best_score = scored[0][0]
-    cutoff_score = max(SIMILARITY_THRESHOLD, best_score - 0.20) # Margen de 20%
-    
-    filtered_scored = [
-        (score, item) for score, item in scored 
-        if score >= cutoff_score
-    ]
-    
-    final_items = [item for _, item in filtered_scored[:TOP_ITEMS_LIMIT]]
-    return final_items, best_score
+    try:
+        base_items = db.query(CostItem).filter(CostItem.CodPar.like(f"{covenin_prefix}%")).all()
+    except Exception as exc:
+        logger.error("Error al consultar partidas por prefijo COVENIN: %s", exc)
+        return [], 0.0
+
+    if not base_items:
+        return [], 0.0
+
+    from app.services.ai_search import ai_engine
+    if not ai_engine.is_loaded:
+        ai_engine.load_brain()
+
+    best_score = 0.0
+    similar_items = []
+
+    if ai_engine.is_loaded and description.strip():
+        valid_ids = [item.CodPar for item in base_items]
+        results = ai_engine.calculate_similarity_for_subset(description, valid_ids)
+        
+        if results:
+            best_score = results[0]["score"]
+            top_ids = [res["id"] for res in results[:3]]
+            
+            # Mapear IDs a objetos de SQLAlchemy
+            item_map = {item.CodPar: item for item in base_items}
+            similar_items = [item_map[pid] for pid in top_ids if pid in item_map]
+    else:
+        # Fallback: Solo devolver hasta 3 de las base si falla la IA
+        similar_items = base_items[:3]
+
+    return similar_items, best_score
+
+
+
 
 
 def _fetch_insumos(
@@ -670,21 +634,30 @@ def preprocess_apu_data(
     if not description:
         logger.warning("Descripción vacía recibida")
 
-    # 1. Extraer keywords
+    # 1. Extraer keywords (solo para fallback de catalogos)
     keywords = _extract_keywords(description)
     logger.info("Keywords extraídas: %s", keywords)
 
-    # 2. Buscar partidas similares
-    raw_items = _find_similar_items(db, keywords, covenin_prefix)
+    # 2. Buscar partidas similares usando RAG V6 acotado
+    similar_items, best_score = _find_similar_items(db, description, covenin_prefix)
+    
+    # PORTERO MATEMÁTICO: Bloqueo de incongruencia total
+    if best_score < 0.15 and len(similar_items) > 0:
+        logger.warning("PORTERO MATEMÁTICO: Incongruencia detectada. Score máximo = %f", best_score)
+        return {
+            "modo": "incongruencia_matematica",
+            "solicitud_usuario": description,
+            "covenin_prefix": covenin_prefix,
+            "covenin_context": covenin_context,
+            "advertencias_preprocesamiento": [],
+            "partidas_encontradas": 0
+        }
 
-    # 3. Puntuar y filtrar
-    similar_items, best_score = _score_and_filter_items(raw_items, keywords)
     modo_fallback = len(similar_items) == 0
-
     partida_exacta_codigo = None
     modo = "sin_datos_historicos" if modo_fallback else "con_datos_historicos"
 
-    if best_score > 0.95:
+    if best_score > 0.85:
         modo = "partida_exacta_encontrada"
         partida_exacta_codigo = similar_items[0].CodPar
         logger.info("Partida exacta detectada: %s con score %f", partida_exacta_codigo, best_score)
