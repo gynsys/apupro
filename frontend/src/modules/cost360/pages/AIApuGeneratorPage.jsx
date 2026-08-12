@@ -158,8 +158,9 @@ export default function AIApuGeneratorPage() {
     }
   };
 
-  const handleGenerate = async () => {
-    if (!prompt.trim()) {
+  const handleGenerate = async (overridePrompt = null) => {
+    const textToSubmit = overridePrompt !== null ? overridePrompt : prompt;
+    if (!textToSubmit.trim()) {
       toast.error("Ingresa una descripción para generar el APU");
       return;
     }
@@ -197,9 +198,9 @@ export default function AIApuGeneratorPage() {
 
       const prefixToSend = selectedPartida || selectedSubcapitulo;
       
-      const newHistory = isClarifying ? [...chatHistory, { role: 'user', content: prompt }] : [{ role: 'user', content: prompt }];
+      const newHistory = isClarifying ? [...chatHistory, { role: 'user', content: textToSubmit }] : [{ role: 'user', content: textToSubmit }];
       
-      const response = await generateAIApu(prompt, prefixToSend, context, newHistory);
+      const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory);
       
       if (response.status === 'clarification_needed') {
         setChatHistory(newHistory);
@@ -572,8 +573,7 @@ export default function AIApuGeneratorPage() {
                       key={idx}
                       onClick={() => {
                         setPrompt(opt);
-                        // Permitir que el estado de react se actualice antes de enviar
-                        setTimeout(() => handleGenerate(), 0);
+                        handleGenerate(opt);
                       }}
                       className="px-3 py-1.5 bg-white border border-blue-300 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors shadow-sm"
                     >
@@ -632,7 +632,7 @@ export default function AIApuGeneratorPage() {
               </button>
             )}
             <button
-              onClick={handleGenerate}
+              onClick={() => handleGenerate()}
               disabled={loading || !prompt.trim() || !isSelectorsComplete}
               className={`flex items-center gap-2 text-white px-6 py-3 rounded-xl transition-all shadow-sm font-bold disabled:opacity-50 ${isClarifying ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'}`}
             >
