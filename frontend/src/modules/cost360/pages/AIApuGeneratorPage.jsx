@@ -22,6 +22,8 @@ export default function AIApuGeneratorPage() {
   
   // Conversational AI States
   const [chatHistory, setChatHistory] = useState([]);
+  const [aiClarificationMessage, setAiClarificationMessage] = useState("");
+  const [aiOptions, setAiOptions] = useState([]);
   const [aiQuestions, setAiQuestions] = useState([]);
   const [isClarifying, setIsClarifying] = useState(false);
 
@@ -201,13 +203,17 @@ export default function AIApuGeneratorPage() {
       
       if (response.status === 'clarification_needed') {
         setChatHistory(newHistory);
+        setAiClarificationMessage(response.clarification_message || "La IA necesita clarificación:");
+        setAiOptions(response.options || []);
         setAiQuestions(response.questions || []);
         setIsClarifying(true);
         setPrompt('');
-        toast.error("La IA necesita más detalles para continuar", { icon: '🤔' });
+        toast.error("La IA detectó un problema o necesita más detalles", { icon: '🤔' });
       } else {
         setIsClarifying(false);
         setChatHistory([]);
+        setAiClarificationMessage("");
+        setAiOptions([]);
         setAiQuestions([]);
         // Map response to the format expected by the editor
         setItem({
@@ -547,14 +553,31 @@ export default function AIApuGeneratorPage() {
             )}
           </label>
           
-          {isClarifying && aiQuestions.length > 0 && (
+          {isClarifying && (aiQuestions.length > 0 || aiClarificationMessage) && (
             <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl shadow-sm animate-in fade-in zoom-in duration-300">
-              <h4 className="text-blue-800 font-bold mb-2 flex items-center gap-2">🤔 La IA necesita clarificación:</h4>
-              <ul className="list-disc list-inside text-sm text-blue-700 space-y-2 font-medium">
-                {aiQuestions.map((q, idx) => (
-                  <li key={idx}>{q}</li>
-                ))}
-              </ul>
+              <h4 className="text-blue-800 font-bold mb-2 flex items-center gap-2">🤔 {aiClarificationMessage || "La IA necesita clarificación:"}</h4>
+              
+              {aiQuestions.length > 0 && (
+                <ul className="list-disc list-inside text-sm text-blue-700 space-y-2 font-medium mb-3">
+                  {aiQuestions.map((q, idx) => (
+                    <li key={idx}>{q}</li>
+                  ))}
+                </ul>
+              )}
+              
+              {aiOptions.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-blue-200">
+                  {aiOptions.map((opt, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setPrompt(opt)}
+                      className="px-3 py-1.5 bg-white border border-blue-300 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors shadow-sm"
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           
@@ -576,7 +599,7 @@ export default function AIApuGeneratorPage() {
           <div className="flex justify-end gap-3">
             {isClarifying && (
               <button
-                onClick={() => { setIsClarifying(false); setChatHistory([]); setAiQuestions([]); setPrompt(''); }}
+                onClick={() => { setIsClarifying(false); setChatHistory([]); setAiClarificationMessage(""); setAiOptions([]); setAiQuestions([]); setPrompt(''); }}
                 className="px-4 py-2 text-slate-500 hover:text-slate-700 text-sm font-bold transition-colors"
               >
                 Cancelar

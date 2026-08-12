@@ -105,6 +105,8 @@ class AiApuGenerateRequest(BaseModel):
 
 class AiApuResponse(BaseModel):
     status: str = "completed"
+    clarification_message: Optional[str] = None
+    options: Optional[List[str]] = []
     questions: Optional[List[str]] = []
     
     partida: Optional[dict] = None
