@@ -597,6 +597,19 @@ export default function AIApuGeneratorPage() {
                   >
                     Elegir otra Categoría
                   </button>
+                  <button
+                    onClick={() => {
+                      setIsClarifying(false);
+                      setChatHistory([]);
+                      setAiClarificationMessage("");
+                      setAiOptions([]);
+                      setAiQuestions([]);
+                      setPrompt('');
+                    }}
+                    className="px-3 py-1.5 bg-slate-100 border border-slate-300 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors shadow-sm"
+                  >
+                    Corregir Descripción
+                  </button>
                 </div>
               )}
             </div>
