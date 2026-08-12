@@ -26,6 +26,7 @@ export default function AIApuGeneratorPage() {
   const [aiOptions, setAiOptions] = useState([]);
   const [aiQuestions, setAiQuestions] = useState([]);
   const [isClarifying, setIsClarifying] = useState(false);
+  const [debugInfo, setDebugInfo] = useState(null);
 
   const [coveninTree] = useState(coveninTreeData);
   const [selectedTipoObra, setSelectedTipoObra] = useState('');
@@ -201,6 +202,12 @@ export default function AIApuGeneratorPage() {
       const newHistory = isClarifying ? [...chatHistory, { role: 'user', content: textToSubmit }] : [{ role: 'user', content: textToSubmit }];
       
       const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory);
+      
+      if (response.debug_preprocesamiento) {
+        setDebugInfo(response.debug_preprocesamiento);
+      } else {
+        setDebugInfo(null);
+      }
       
       if (response.status === 'clarification_needed') {
         setChatHistory(newHistory);
@@ -635,6 +642,14 @@ export default function AIApuGeneratorPage() {
             }
             className={`w-full h-24 p-4 border rounded-xl focus:outline-none focus:ring-2 transition-all text-sm mb-4 disabled:opacity-50 disabled:cursor-not-allowed ${isClarifying ? 'bg-blue-50/50 border-blue-300 focus:border-blue-500 focus:ring-blue-500/20' : 'bg-slate-50 border-slate-300 focus:bg-white focus:border-red-500 focus:ring-red-500/20'}`}
           />
+          
+          {debugInfo && (
+            <div className="mb-4 p-4 bg-slate-800 rounded-xl shadow-sm overflow-x-auto text-xs text-green-400 font-mono">
+              <h4 className="text-white font-bold mb-2">🔍 Debug de Preprocesamiento</h4>
+              <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+            </div>
+          )}
+          
           <div className="flex justify-end gap-3">
             {isClarifying && (
               <button

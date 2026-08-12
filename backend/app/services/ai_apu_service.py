@@ -92,6 +92,9 @@ Devuelve un JSON estrictamente con la siguiente estructura (NO agregues texto ex
     if "advertencias" not in result:
         result["advertencias"] = []
     
+    # Inject debug info for frontend
+    result["debug_preprocesamiento"] = payload_llm
+    
     if result.get("status") == "clarification_needed":
         return result
     
