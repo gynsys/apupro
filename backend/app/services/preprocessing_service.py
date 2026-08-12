@@ -7,6 +7,8 @@ de rendimiento de insumos y estructura un payload para consumo por un LLM.
 
 import logging
 import statistics
+import unicodedata
+from sqlalchemy import func
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set, Tuple
