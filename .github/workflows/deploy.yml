@@ -82,7 +82,7 @@ jobs:
             docker compose pull
             
             # Restart containers with the new images or build them if missing
-            docker compose up -d --build
+            docker compose up -d
             
             # Clean up again just in case
             docker image prune -af
