@@ -50,10 +50,10 @@ export const fetchCategoriesTree = async () => {
   return response.data;
 };
 
-export const generateAIApu = async (description, categoria = null, tipo_actividad = null) => {
+export const generateAIApu = async (description, covenin_prefix = null, covenin_context = null) => {
   const payload = { description };
-  if (categoria) payload.categoria = categoria;
-  if (tipo_actividad) payload.tipo_actividad = tipo_actividad;
+  if (covenin_prefix) payload.covenin_prefix = covenin_prefix;
+  if (covenin_context) payload.covenin_context = covenin_context;
   
   const response = await cost360ApiClient.post('/generate-ai-apu', payload);
   return response.data;

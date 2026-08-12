@@ -39,10 +39,17 @@ Si el "modo" es "sin_datos_historicos":
 # DESCRIPCIÓN DE LA PARTIDA
 En el campo "description" de "partida", NO copies simplemente la solicitud del usuario. MEJORA Y EXPANDE la solicitud para crear una descripción técnica profesional, detallada y completa, propia de una norma de medición de ingeniería civil, todo en MAYÚSCULAS (ej. incluir características, acabados, e indicar "INCLUYE MATERIALES, EQUIPOS Y MANO DE OBRA").
 
+# REGLAS DE CODIFICACIÓN COVENIN
+- El payload incluye un "covenin_prefix" y un "covenin_context".
+- Tu APU generado debe tener un código (`cod_par`) que cumpla estrictamente con la Norma COVENIN 2000:1992.
+- El código está conformado por 1 letra y 9 dígitos numéricos (ej. E123456789).
+- DEBES comenzar el código obligatoriamente con el `covenin_prefix` exacto.
+- Para las posiciones restantes (dígitos vacantes) correspondientes a componentes no listados o no especificados, debes rellenar con ceros (0) hasta completar la longitud total de 1 letra + 9 dígitos numéricos. (Ej. Si el prefijo es E34, el código debe ser E340000000, o si identificas un componente específico, E341000000, pero siempre manteniendo el prefijo inalterable y la longitud total).
+
 # FORMATO DE SALIDA
 Devuelve un JSON estrictamente con la siguiente estructura (NO agregues texto extra antes o después, SOLO EL JSON VÁLIDO):
 {{
-    "partida": {{"cod_par":"AI-GEN","description":"DESCRIPCIÓN TÉCNICA EN MAYÚSCULAS","unit":"m2","quantity":1.0, "performance": 10.5}},
+    "partida": {{"cod_par":"E340000000","description":"DESCRIPCIÓN TÉCNICA EN MAYÚSCULAS","unit":"m2","quantity":1.0, "performance": 10.5}},
     "materials": [
         {{"id":"m-1","codigo":"...","descripcion":"...","unidad":"...","cantidad":0.0,"desperdicio":5,"precio_unitario":0.0,"origen":"historico","nota_calculo":"..."}}
     ],

@@ -207,7 +207,7 @@ def delete_labor_route(codigo: str, db: Session = Depends(get_db)):
 @router.post("/generate-ai-apu")
 def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(get_db)):
     # 1. Preprocesamiento (BD + Estadísticas)
-    payload_llm = preprocess_apu_data(db, payload.description, payload.categoria, payload.tipo_actividad)
+    payload_llm = preprocess_apu_data(db, payload.description, payload.covenin_prefix, payload.covenin_context)
     
     # 1.5. Cortocircuito si hay Match Exacto
     if payload_llm.get("modo") == "partida_exacta_encontrada":

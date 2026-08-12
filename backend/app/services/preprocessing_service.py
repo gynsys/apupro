@@ -182,23 +182,19 @@ def _calculate_similarity_score(item: CostItem, keywords: List[str]) -> float:
 def _find_similar_items(
     db: Session,
     keywords: List[str],
-    categoria: Optional[str],
-    tipo_actividad: Optional[str],
+    covenin_prefix: Optional[str],
 ) -> List[CostItem]:
     """
-    Busca partidas similares aplicando filtros de categoría y tipo de actividad.
-    Si no hay keywords, busca por categoría/tipo_actividad directamente.
+    Busca partidas similares aplicando el filtro COVENIN.
+    Si no hay keywords, busca por prefijo directamente.
     """
     query = db.query(CostItem)
 
-    # Aplicar filtros de categoría SIEMPRE, no solo cuando hay keywords
+    # Aplicar filtros COVENIN SIEMPRE
     filters_applied = []
-    if categoria:
-        query = query.filter(CostItem.Categoria == categoria)
-        filters_applied.append(f"categoria={categoria}")
-    if tipo_actividad:
-        query = query.filter(CostItem.TipoActividad == tipo_actividad)
-        filters_applied.append(f"tipo_actividad={tipo_actividad}")
+    if covenin_prefix:
+        query = query.filter(CostItem.CodPar.like(f"{covenin_prefix}%"))
+        filters_applied.append(f"covenin={covenin_prefix}")
 
     # Si hay keywords, aplicar filtro de descripción
     if keywords:
@@ -634,8 +630,8 @@ def _format_rendimientos(
 def preprocess_apu_data(
     db: Session,
     description: str,
-    categoria: Optional[str] = None,
-    tipo_actividad: Optional[str] = None,
+    covenin_prefix: Optional[str] = None,
+    covenin_context: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Preprocesa datos de APU para generar un payload estructurado para un LLM.
@@ -643,8 +639,8 @@ def preprocess_apu_data(
     Args:
         db: Sesión de SQLAlchemy.
         description: Descripción de la partida de obra.
-        categoria: Filtro opcional por categoría.
-        tipo_actividad: Filtro opcional por tipo de actividad.
+        covenin_prefix: Prefijo COVENIN seleccionado por el usuario (ej. E34).
+        covenin_context: Texto del contexto (ej. Edificaciones > Estructuras > Encofrados).
 
     Returns:
         Diccionario con modo, partidas encontradas, rendimientos, catálogo y advertencias.
@@ -662,8 +658,8 @@ def preprocess_apu_data(
     keywords = _extract_keywords(description)
     logger.info("Keywords extraídas: %s", keywords)
 
-    # 2. Buscar partidas similares (ahora categoría se aplica siempre)
-    raw_items = _find_similar_items(db, keywords, categoria, tipo_actividad)
+    # 2. Buscar partidas similares
+    raw_items = _find_similar_items(db, keywords, covenin_prefix)
 
     # 3. Puntuar y filtrar
     similar_items, best_score = _score_and_filter_items(raw_items, keywords)
@@ -707,6 +703,8 @@ def preprocess_apu_data(
         "modo": modo,
         "partida_exacta_codigo": partida_exacta_codigo,
         "solicitud_usuario": description,
+        "covenin_prefix": covenin_prefix,
+        "covenin_context": covenin_context,
         "partidas_encontradas": len(similar_items),
         "detalle_partidas": [
             {
@@ -717,7 +715,7 @@ def preprocess_apu_data(
             for p in similar_items
         ],
         "rendimientos_historicos_por_unidad_partida": rendimientos_formateados,
-        "catalogo_insumos": catalogo,
+        "catalogo_insumos_disponibles": catalogo,
         "advertencias_preprocesamiento": advertencias,
     }
 

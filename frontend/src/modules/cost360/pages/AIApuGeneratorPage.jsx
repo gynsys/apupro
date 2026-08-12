@@ -6,6 +6,7 @@ import { generateAIApu, saveCustomApu, fetchCategoriesTree, fetchItems, fetchApu
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
 import Cost360SearchBar from '../components/Cost360SearchBar';
 import ApuEditorUI from '../../../components/ApuEditorUI';
+import coveninTreeData from '../data/covenin_tree.json';
 
 export default function AIApuGeneratorPage() {
   const navigate = useNavigate();
@@ -19,9 +20,10 @@ export default function AIApuGeneratorPage() {
   const [item, setItem] = useState(null);
   const searchTimeoutRef = useRef(null);
 
-  const [categoriesTree, setCategoriesTree] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedActivity, setSelectedActivity] = useState('');
+  const [coveninTree] = useState(coveninTreeData);
+  const [selectedTipoObra, setSelectedTipoObra] = useState('');
+  const [selectedCapitulo, setSelectedCapitulo] = useState('');
+  const [selectedSubcapitulo, setSelectedSubcapitulo] = useState('');
   
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDesc, setSearchDesc] = useState(true);
@@ -35,7 +37,6 @@ export default function AIApuGeneratorPage() {
   const [selectedDatabase, setSelectedDatabase] = useState('master');
 
   useEffect(() => {
-    fetchCategoriesTree().then(setCategoriesTree).catch(console.error);
     const loadDatabases = async () => {
       try {
         const dbs = await cost360DatabaseService.getAll();
@@ -142,10 +143,19 @@ export default function AIApuGeneratorPage() {
       toast.error("Ingresa una descripción para generar el APU");
       return;
     }
+    if (!selectedSubcapitulo) {
+      toast.error("Debes seleccionar el Subcapítulo (Categoría) para guiar a la IA");
+      return;
+    }
     setLoading(true);
     setItem(null);
     try {
-      const response = await generateAIApu(prompt, selectedCategory, selectedActivity);
+      const tipo = coveninTree.find(c => c.code === selectedTipoObra);
+      const cap = tipo?.children?.find(c => c.code === selectedCapitulo);
+      const sub = cap?.children?.find(c => c.code === selectedSubcapitulo);
+      const context = `${tipo?.name || ''} > ${cap?.name || ''} > ${sub?.name || ''}`;
+
+      const response = await generateAIApu(prompt, selectedSubcapitulo, context);
       // Map response to the format expected by the editor
       setItem({
         ...response.partida,
@@ -379,35 +389,60 @@ export default function AIApuGeneratorPage() {
           {/* FILTERS */}
           <div className="flex flex-col md:flex-row gap-4 mb-4">
             <div className="flex-1">
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Categoría de Obra</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de Obra</label>
               <select 
-                value={selectedCategory}
+                value={selectedTipoObra}
                 onChange={(e) => {
-                  setSelectedCategory(e.target.value);
-                  setSelectedActivity('');
+                  setSelectedTipoObra(e.target.value);
+                  setSelectedCapitulo('');
+                  setSelectedSubcapitulo('');
                 }}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
               >
-                <option value="">Todas las categorías...</option>
-                {categoriesTree.map(cat => (
-                  <option key={cat.categoria} value={cat.categoria}>{cat.categoria}</option>
+                <option value="">Selecciona el Tipo...</option>
+                {coveninTree.map(cat => (
+                  <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
                 ))}
               </select>
             </div>
             <div className="flex-1">
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de Actividad</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Capítulo</label>
               <select 
-                value={selectedActivity}
-                onChange={(e) => setSelectedActivity(e.target.value)}
-                disabled={!selectedCategory}
+                value={selectedCapitulo}
+                onChange={(e) => {
+                  setSelectedCapitulo(e.target.value);
+                  setSelectedSubcapitulo('');
+                }}
+                disabled={!selectedTipoObra}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
               >
-                <option value="">Todas las actividades...</option>
-                {selectedCategory && categoriesTree.find(c => c.categoria === selectedCategory)?.actividades.map(act => (
-                  <option key={act} value={act}>{act}</option>
+                <option value="">Selecciona el Capítulo...</option>
+                {selectedTipoObra && coveninTree.find(c => c.code === selectedTipoObra)?.children?.map(cap => (
+                  <option key={cap.code} value={cap.code}>{cap.code} - {cap.name}</option>
                 ))}
               </select>
             </div>
+            <div className="flex-1">
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Subcapítulo</label>
+              <select 
+                value={selectedSubcapitulo}
+                onChange={(e) => setSelectedSubcapitulo(e.target.value)}
+                disabled={!selectedCapitulo}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
+              >
+                <option value="">Selecciona el Subcapítulo...</option>
+                {selectedCapitulo && coveninTree.find(c => c.code === selectedTipoObra)?.children?.find(c => c.code === selectedCapitulo)?.children?.map(sub => (
+                  <option key={sub.code} value={sub.code}>{sub.code} - {sub.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="mb-4 flex items-center gap-2">
+            <span className="text-sm font-bold text-slate-700">Código Base COVENIN:</span>
+            <code className="px-2 py-1 bg-slate-100 text-blue-700 rounded text-sm font-mono border border-slate-200">
+              {selectedSubcapitulo || selectedCapitulo || selectedTipoObra || '---'}
+            </code>
           </div>
 
           <label className="block text-sm font-bold text-slate-700 mb-2">Describe la partida a generar</label>
