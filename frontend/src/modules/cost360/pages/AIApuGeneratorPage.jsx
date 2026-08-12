@@ -570,12 +570,33 @@ export default function AIApuGeneratorPage() {
                   {aiOptions.map((opt, idx) => (
                     <button
                       key={idx}
-                      onClick={() => setPrompt(opt)}
+                      onClick={() => {
+                        setPrompt(opt);
+                        // Permitir que el estado de react se actualice antes de enviar
+                        setTimeout(() => handleGenerate(), 0);
+                      }}
                       className="px-3 py-1.5 bg-white border border-blue-300 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors shadow-sm"
                     >
                       {opt}
                     </button>
                   ))}
+                  <button
+                    onClick={() => {
+                      setIsClarifying(false);
+                      setChatHistory([]);
+                      setAiClarificationMessage("");
+                      setAiOptions([]);
+                      setAiQuestions([]);
+                      setPrompt('');
+                      setSelectedTipoObra('');
+                      setSelectedCapitulo('');
+                      setSelectedSubcapitulo('');
+                      setSelectedPartida('');
+                    }}
+                    className="px-3 py-1.5 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs font-bold hover:bg-red-100 transition-colors shadow-sm"
+                  >
+                    Elegir otra Categoría
+                  </button>
                 </div>
               )}
             </div>
@@ -592,8 +613,13 @@ export default function AIApuGeneratorPage() {
                 }
               }
             }}
-            disabled={!isSelectorsComplete}
-            placeholder={isSelectorsComplete ? (isClarifying ? "Ej: El espesor es 15cm y el concreto de 210 kg/cm2..." : "Ej: Fundición de losa de entrepiso de concreto f'c=210 kg/cm2, espesor 15 cm, con acero de refuerzo fy=4200 kg/cm2. Presiona Enter para generar.") : "Selecciona la categoría primero..."}
+            disabled={!isSelectorsComplete || (isClarifying && aiOptions.length > 0)}
+            placeholder={
+              !isSelectorsComplete ? "Selecciona la categoría primero..." : 
+              (isClarifying && aiOptions.length > 0) ? "Por favor selecciona una de las opciones arriba..." : 
+              isClarifying ? "Ej: El espesor es 15cm y el concreto de 210 kg/cm2..." : 
+              "Ej: Fundición de losa de entrepiso de concreto f'c=210 kg/cm2, espesor 15 cm..."
+            }
             className={`w-full h-24 p-4 border rounded-xl focus:outline-none focus:ring-2 transition-all text-sm mb-4 disabled:opacity-50 disabled:cursor-not-allowed ${isClarifying ? 'bg-blue-50/50 border-blue-300 focus:border-blue-500 focus:ring-blue-500/20' : 'bg-slate-50 border-slate-300 focus:bg-white focus:border-red-500 focus:ring-red-500/20'}`}
           />
           <div className="flex justify-end gap-3">
