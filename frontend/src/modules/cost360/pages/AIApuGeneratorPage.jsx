@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Save, Sparkles, Check, Filter, Plus, Search, FileText, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Save, Sparkles, Check, Filter, Plus, Search, FileText, Trash2, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { generateAIApu, saveCustomApu, fetchCategoriesTree, fetchItems, fetchApuDetails } from '../services/cost360Service';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
@@ -469,22 +469,29 @@ export default function AIApuGeneratorPage() {
               </select>
             </div>
             
-            {/* 4TO SELECTOR OBLIGATORIO SI APLICA */}
-            {hasFourthLevel && (
-              <div className="flex-1">
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Partida Base</label>
-                <select 
-                  value={selectedPartida}
-                  onChange={(e) => setSelectedPartida(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
-                >
-                  <option value="">Selecciona la Partida...</option>
-                  {currentSub.children.map(par => (
-                    <option key={par.code} value={par.code}>{par.code} - {par.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {/* 4TO SELECTOR SIEMPRE VISIBLE */}
+            <div className="flex-1">
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Partida Base</label>
+              <select 
+                value={selectedPartida}
+                onChange={(e) => setSelectedPartida(e.target.value)}
+                disabled={!selectedSubcapitulo || !hasFourthLevel}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
+              >
+                {!selectedSubcapitulo ? (
+                  <option value="">Selecciona el Subcapítulo...</option>
+                ) : !hasFourthLevel ? (
+                  <option value="">No aplica (sin desglose)</option>
+                ) : (
+                  <>
+                    <option value="">Selecciona la Partida...</option>
+                    {currentSub.children.map(par => (
+                      <option key={par.code} value={par.code}>{par.code} - {par.name}</option>
+                    ))}
+                  </>
+                )}
+              </select>
+            </div>
           </div>
 
           <div className="mb-4 flex items-center gap-2">
@@ -494,8 +501,13 @@ export default function AIApuGeneratorPage() {
             </code>
           </div>
 
-          <label className="block text-sm font-bold text-slate-700 mb-2">
-            {isSelectorsComplete ? "Describe la partida a generar" : "⚠️ Completa los selectores arriba para habilitar la descripción"}
+          <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+            {isSelectorsComplete ? "Describe la partida a generar" : (
+              <>
+                <AlertTriangle className="text-amber-500" size={16} />
+                Completa los selectores arriba para habilitar la descripción
+              </>
+            )}
           </label>
           <textarea
             value={prompt}
