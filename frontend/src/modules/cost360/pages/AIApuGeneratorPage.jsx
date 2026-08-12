@@ -34,15 +34,42 @@ export default function AIApuGeneratorPage() {
   const [selectedSubcapitulo, setSelectedSubcapitulo] = useState('');
   const [selectedPartida, setSelectedPartida] = useState('');
   const [matchCount, setMatchCount] = useState(null);
+  const [categoryHints, setCategoryHints] = useState([]);
   const currentPrefix = selectedPartida || selectedSubcapitulo || selectedCapitulo || selectedTipoObra;
   
   useEffect(() => {
     if (currentPrefix) {
-      fetchItems(0, 1, '', currentPrefix)
-        .then(res => setMatchCount(res.total))
-        .catch(() => setMatchCount(0));
+      fetchItems(0, 50, '', currentPrefix)
+        .then(res => {
+          setMatchCount(res.total);
+          if (res.items && res.items.length > 0) {
+            const stopWords = ['de', 'la', 'el', 'en', 'con', 'sin', 'para', 'y', 'o', 'los', 'las', 'del', 'a', 'un', 'una', 'segun', 'se', 'su', 'por', 'uso', 'que', 'al'];
+            const wordCounts = {};
+            res.items.forEach(item => {
+              if (!item.Descri) return;
+              const words = item.Descri.toLowerCase().replace(/[^a-zñáéíóú]/g, ' ').split(/\s+/);
+              words.forEach(w => {
+                if (w.length > 3 && !stopWords.includes(w)) {
+                  wordCounts[w] = (wordCounts[w] || 0) + 1;
+                }
+              });
+            });
+            const topWords = Object.entries(wordCounts)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 6)
+              .map(entry => entry[0]);
+            setCategoryHints(topWords);
+          } else {
+            setCategoryHints([]);
+          }
+        })
+        .catch(() => {
+          setMatchCount(0);
+          setCategoryHints([]);
+        });
     } else {
       setMatchCount(null);
+      setCategoryHints([]);
     }
   }, [currentPrefix]);
   
@@ -540,7 +567,7 @@ export default function AIApuGeneratorPage() {
             </div>
           </div>
 
-          <div className="mb-4 flex items-center gap-2">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
             <span className="text-sm font-bold text-slate-700">Código Base COVENIN:</span>
             <code className="px-2 py-1 bg-slate-100 text-blue-700 rounded text-sm font-mono border border-slate-200">
               {currentPrefix || '---'}
@@ -548,6 +575,12 @@ export default function AIApuGeneratorPage() {
             {matchCount !== null && (
               <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-full border border-slate-200 animate-in fade-in zoom-in duration-300">
                 {matchCount} {matchCount === 1 ? 'partida' : 'partidas'} en BD
+              </span>
+            )}
+            {categoryHints.length > 0 && (
+              <span className="text-xs font-medium text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200 animate-in fade-in zoom-in duration-300 shadow-sm flex items-center gap-1">
+                <Sparkles size={12} />
+                Pistas: {categoryHints.join(', ')}...
               </span>
             )}
           </div>
