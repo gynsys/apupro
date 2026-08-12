@@ -200,33 +200,39 @@ def _find_similar_items(
     """
     query = db.query(CostItem)
 
-    # Aplicar filtros COVENIN SIEMPRE
-    filters_applied = []
-    if covenin_prefix:
-        query = query.filter(CostItem.CodPar.like(f"{covenin_prefix}%"))
-        filters_applied.append(f"covenin={covenin_prefix}")
-
-    # Si hay keywords, aplicar filtro de descripción
+    desc_filters = None
+    relevance_score = None
     if keywords:
-        # Se requiere que todas las keywords coincidan
         desc_filters = [unaccent_col(CostItem.Descri).ilike(f"%{strip_accents(k)}%") for k in keywords]
-        query = query.filter(and_(*desc_filters))
-        
-        # Opcional: ordenar por relevancia (cantidad de keywords que coinciden)
         score_conditions = [
             case((unaccent_col(CostItem.Descri).ilike(f"%{strip_accents(k)}%"), 1), else_=0)
             for k in keywords
         ]
         relevance_score = sum(score_conditions)
-        query = query.order_by(relevance_score.desc())
-        
-        filters_applied.append(f"keywords={keywords}")
 
-    logger.info("Buscando partidas con filtros: %s", ", ".join(filters_applied))
+    def _execute_query(prefix: Optional[str]):
+        q = db.query(CostItem)
+        if prefix:
+            q = q.filter(CostItem.CodPar.like(f"{prefix}%"))
+        if desc_filters is not None:
+            q = q.filter(and_(*desc_filters))
+            q = q.order_by(relevance_score.desc())
+        return q.limit(SEARCH_LIMIT).all()
 
     try:
-        results = query.limit(SEARCH_LIMIT).all()
-        logger.info("Partidas encontradas: %d", len(results))
+        results = _execute_query(covenin_prefix)
+
+        # Fallback relax: Si no se encuentran resultados y el prefijo es estricto, 
+        # reducir el prefijo para intentar atrapar partidas mal codificadas (ej: E447 S/C en vez de E44701)
+        if not results and covenin_prefix and len(covenin_prefix) > 3:
+            fallback_prefix = covenin_prefix[:-1]
+            while len(fallback_prefix) >= 3 and not results:
+                logger.info("0 resultados con prefijo original. Intentando fallback: %s", fallback_prefix)
+                results = _execute_query(fallback_prefix)
+                fallback_prefix = fallback_prefix[:-1]
+
+        logger.info("Partidas encontradas con filtros: covenin=%s, keywords=%s", covenin_prefix, keywords)
+        logger.info("Partidas encontradas cantidad: %d", len(results))
         return results
     except Exception as exc:
         logger.error("Error al consultar partidas similares: %s", exc)
