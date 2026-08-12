@@ -25,6 +25,18 @@ export default function AIApuGeneratorPage() {
   const [selectedCapitulo, setSelectedCapitulo] = useState('');
   const [selectedSubcapitulo, setSelectedSubcapitulo] = useState('');
   const [selectedPartida, setSelectedPartida] = useState('');
+  const [matchCount, setMatchCount] = useState(null);
+  const currentPrefix = selectedPartida || selectedSubcapitulo || selectedCapitulo || selectedTipoObra;
+  
+  useEffect(() => {
+    if (currentPrefix) {
+      fetchItems(0, 1, '', currentPrefix)
+        .then(res => setMatchCount(res.total))
+        .catch(() => setMatchCount(0));
+    } else {
+      setMatchCount(null);
+    }
+  }, [currentPrefix]);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDesc, setSearchDesc] = useState(true);
@@ -497,8 +509,13 @@ export default function AIApuGeneratorPage() {
           <div className="mb-4 flex items-center gap-2">
             <span className="text-sm font-bold text-slate-700">Código Base COVENIN:</span>
             <code className="px-2 py-1 bg-slate-100 text-blue-700 rounded text-sm font-mono border border-slate-200">
-              {selectedPartida || selectedSubcapitulo || selectedCapitulo || selectedTipoObra || '---'}
+              {currentPrefix || '---'}
             </code>
+            {matchCount !== null && (
+              <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-full border border-slate-200 animate-in fade-in zoom-in duration-300">
+                {matchCount} {matchCount === 1 ? 'partida' : 'partidas'} en BD
+              </span>
+            )}
           </div>
 
           <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
