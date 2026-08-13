@@ -83,6 +83,11 @@ export const generateAIApuFromBase = async (description, coveninPrefix, coveninC
   return response.data;
 };
 
+export const saveCustomApu = async (payload) => {
+  const response = await cost360ApiClient.post('/custom-apus', payload);
+  return response.data;
+};
+
 export default {
   fetchItems,
   fetchApuDetails,
