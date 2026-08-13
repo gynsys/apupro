@@ -73,11 +73,11 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     row = mat_start + 2
     for i, m in enumerate(mat_rows):
         ws[f"B{row}"] = i + 1
-        ws[f"C{row}"] = m.get("Descri", '')
-        ws[f"D{row}"] = m.get("UniMat", '')
-        ws[f"E{row}"] = float(m.get("CanIns", 0) or 0)
-        ws[f"F{row}"] = float(m.get("Desper", 0) or 0)
-        ws[f"G{row}"] = float(m.get("CosMat", 0) or 0)
+        ws[f"C{row}"] = m.get("Descri") or m.get("descripcion", "")
+        ws[f"D{row}"] = m.get("UniMat") or m.get("unidad", "")
+        ws[f"E{row}"] = float(m.get("CanIns") or m.get("cantidad") or 0)
+        ws[f"F{row}"] = float(m.get("Desper") or m.get("desperdicio") or 0)
+        ws[f"G{row}"] = float(m.get("CosMat") or m.get("precio_unitario") or m.get("precio") or 0)
         ws[f"H{row}"] = f"=ROUND((G{row}*E{row})*((F{row}/100)+1),2)"
         style_cell(ws[f"H{row}"], number_format='#,##0.00')
         row += 1
@@ -104,10 +104,10 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     row = eq_start + 2
     for i, e in enumerate(eq_rows):
         ws[f"B{row}"] = i + 1
-        ws[f"C{row}"] = e.get("Descri", '')
-        ws[f"E{row}"] = float(e.get("CanIns", 0) or 0)
-        ws[f"F{row}"] = float(e.get("Deprec", 0) or 0)
-        ws[f"G{row}"] = float(e.get("CosDia", 0) or 0)
+        ws[f"C{row}"] = e.get("Descri") or e.get("descripcion", "")
+        ws[f"E{row}"] = float(e.get("CanIns") or e.get("cantidad") or 0)
+        ws[f"F{row}"] = float(e.get("Deprec") or e.get("depreciacion") or 1)
+        ws[f"G{row}"] = float(e.get("CosDia") or e.get("precio_unitario") or e.get("precio") or 0)
         ws[f"H{row}"] = f"=ROUND((G{row}*E{row})*(F{row}),2)"
         style_cell(ws[f"H{row}"], number_format='#,##0.00')
         row += 1
@@ -139,10 +139,10 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     row = mo_start + 2
     for i, l in enumerate(mo_rows):
         ws[f"B{row}"] = i + 1
-        ws[f"C{row}"] = l.get("Descri", '')
-        ws[f"D{row}"] = float(l.get("CanIns", 0) or 0)
-        ws[f"E{row}"] = float(l.get("Jornal", 0) or 0)
-        ws[f"F{row}"] = float(l.get("Bono", 0) or 0)
+        ws[f"C{row}"] = l.get("Descri") or l.get("descripcion", "")
+        ws[f"D{row}"] = float(l.get("CanIns") or l.get("cantidad") or 0)
+        ws[f"E{row}"] = float(l.get("Jornal") or l.get("jornal") or 0)
+        ws[f"F{row}"] = float(l.get("Bono") or l.get("bono") or 0)
         ws[f"G{row}"] = f"=ROUND((D{row}*E{row}),2)"
         ws[f"H{row}"] = f"=ROUND((D{row}*F{row}),2)"
         style_cell(ws[f"G{row}"], number_format='#,##0.00')
