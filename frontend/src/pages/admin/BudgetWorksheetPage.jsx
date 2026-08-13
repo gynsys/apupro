@@ -52,7 +52,6 @@ export default function BudgetWorksheetPage() {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCovenin, setSearchCovenin] = useState('');
-  const [searchChapter, setSearchChapter] = useState('');
   const [searchDesc, setSearchDesc] = useState(true);
   const [searchInsumos, setSearchInsumos] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
@@ -60,6 +59,16 @@ export default function BudgetWorksheetPage() {
   const [searching, setSearching] = useState(false);
   const [searchSkip, setSearchSkip] = useState(0);
   const [hasMoreSearchResults, setHasMoreSearchResults] = useState(false);
+  const searchTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    if (showSearchModal) {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = setTimeout(() => {
+        searchDatabase(null, false);
+      }, 400);
+    }
+  }, [searchQuery, searchCovenin, searchDesc, searchInsumos, showSearchModal]);
   const SEARCH_LIMIT = 30;
 
   // Row selection & Reordering
@@ -161,7 +170,10 @@ export default function BudgetWorksheetPage() {
       
       if (searchQuery.trim()) params.append('search', searchQuery.trim());
       if (searchCovenin.trim()) params.append('covenin', searchCovenin.trim());
-      if (searchChapter.trim()) params.append('chapter', searchChapter.trim());
+      
+      if (window.ARKO_SITE_CONFIG?.only_coded_items) {
+        params.append('only_coded', 'true');
+      }
       
       const url = `${API_URL}/cost360/items?${params.toString()}`;
       const res = await fetch(url);
@@ -188,9 +200,7 @@ export default function BudgetWorksheetPage() {
     setShowSearchModal(true);
     setSearchSkip(0);
     setHasMoreSearchResults(false);
-    if (searchResults.length === 0) {
-      searchDatabase();
-    }
+    // Remove searchDatabase() here since useEffect handles it
   };
 
   const handleAddItem = async (item) => {
@@ -827,8 +837,6 @@ export default function BudgetWorksheetPage() {
                 setSearchQuery={setSearchQuery}
                 searchCovenin={searchCovenin}
                 setSearchCovenin={setSearchCovenin}
-                searchChapter={searchChapter}
-                setSearchChapter={setSearchChapter}
                 searchDesc={searchDesc}
                 setSearchDesc={setSearchDesc}
                 searchInsumos={searchInsumos}
@@ -840,7 +848,7 @@ export default function BudgetWorksheetPage() {
               {totalSearchResults > 0 && (
                 <p className="mt-3 text-xs text-slate-500 font-medium">
                   <span className="font-bold text-slate-700">{new Intl.NumberFormat('es-VE').format(totalSearchResults)}</span>{' '}
-                  {(searchQuery || searchCovenin || searchChapter) ? 'coincidencias' : 'Total Partidas'}
+                  {(searchQuery || searchCovenin) ? 'coincidencias' : 'Total Partidas'}
                 </p>
               )}
             </div>
