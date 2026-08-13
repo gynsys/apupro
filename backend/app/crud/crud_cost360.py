@@ -121,7 +121,6 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
     if covenin:
         query = query.filter(CostItem.CovPar.startswith(covenin))
     if chapter:
-        from sqlalchemy import or_
         query_chap = query.filter(or_(CostItem.CovPar.startswith(chapter), CostItem.CodPar.startswith(chapter)))
         total = query_chap.count()
         
@@ -145,7 +144,7 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
         query = query.filter(CostItem.TipoActividad == tipo_actividad)
         total = query.count() # re-count if tipo_actividad is applied
     if only_coded:
-        query = query.filter(CostItem.CovPar.op('~')('^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$'))
+        query = query.filter(CostItem.CovPar.op('~')(r'^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$'))
         total = query.count()
     
     # Priorizar partidas con COVENIN completo (formato [LETRA].[9 DÍGITOS] como C.110800300)
