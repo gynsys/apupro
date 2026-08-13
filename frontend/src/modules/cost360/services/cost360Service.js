@@ -18,9 +18,13 @@ const cost360ApiClient = axios.create({
  * @param {string} chapter - Chapter prefix filter (e.g., 'E', 'I')
  * @returns {Promise<Array>} List of items
  */
-export const fetchItems = async (skip = 0, limit = 50, search = '', chapter = '', database_id = 'master', search_desc = true, search_insumos = false, covenin = '', only_coded = false) => {
+export const fetchItems = async (skip = 0, limit = 50, search = '', chapter = '', database_id = 'master', search_desc = true, search_insumos = false, covenin = '', only_coded = null) => {
   try {
-    const params = { skip, limit, database_id, search_desc, search_insumos, only_coded };
+    let final_only_coded = only_coded;
+    if (final_only_coded === null && database_id === 'master') {
+      final_only_coded = window.ARKO_SITE_CONFIG?.forceOnlyCodedMaster === true;
+    }
+    const params = { skip, limit, database_id, search_desc, search_insumos, only_coded: final_only_coded };
     if (search) params.search = search;
     if (chapter) params.chapter = chapter;
     if (covenin) params.covenin = covenin;

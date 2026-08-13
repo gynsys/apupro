@@ -42,6 +42,7 @@ function App() {
       if (response.ok) {
         const siteConfig = await response.json();
         setConfig(siteConfig);
+        window.ARKO_SITE_CONFIG = siteConfig; // Expose to non-React services
         // Aplicar el color primario a las variables CSS
         if (siteConfig.branding?.primaryColor) {
           applyThemeColor(siteConfig.branding.primaryColor);
