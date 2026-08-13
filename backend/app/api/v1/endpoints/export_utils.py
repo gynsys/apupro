@@ -37,11 +37,10 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     style_cell(ws["B1"], bold=True, size=14, align="center")
     
     ws.merge_cells("B2:H2")
-    ws["B2"] = "ANÁLISIS DE PRECIO UNITARIO"
-    style_cell(ws["B2"], bold=True, size=12, align="center")
+    ws["B2"] = ""
     
-    ws["B3"] = f"Obra: {item.get('Descri', 'N/A')}"
-    ws["B4"] = f"Contratante: N/A"
+    ws["B3"] = f"Obra: {settings.get('project_name') or ''}"
+    ws["B4"] = f"Contratante: {settings.get('client_name') or ''}"
     ws["E5"] = "Part. No.:"
     ws["F5"] = "1"
     ws["G5"] = "Fecha:"
@@ -159,7 +158,8 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     style_cell(ws[f"H{sub_row}"], bold=True, number_format='#,##0.00')
     
     ps_row = sub_row + 1
-    ws[f"C{ps_row}"] = f"{prestaciones},00"
+    ws[f"C{ps_row}"] = prestaciones
+    style_cell(ws[f"C{ps_row}"], number_format='#,##0.00')
     ws[f"D{ps_row}"] = "Prestaciones Sociales:"
     ws[f"G{ps_row}"] = f"=ROUND((C{ps_row}/100)*G{sub_row},2)"
     ws[f"H{ps_row}"] = 0
@@ -183,7 +183,8 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     style_cell(ws[f"H{cd_row}"], bold=True, number_format='#,##0.00')
     
     ad_row = cd_row + 1
-    ws[f"C{ad_row}"] = f"{admin_gg},00"
+    ws[f"C{ad_row}"] = admin_gg
+    style_cell(ws[f"C{ad_row}"], number_format='#,##0.00')
     ws[f"D{ad_row}"] = "Administración y Gastos Generales:"
     ws[f"H{ad_row}"] = f"=ROUND((H{cd_row}*C{ad_row})/100,2)"
     style_cell(ws[f"H{ad_row}"], number_format='#,##0.00')
@@ -195,7 +196,8 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     
     iu_row = sb_row + 1
     ws[f"B{iu_row}"] = ""
-    ws[f"E{iu_row}"] = f"{imprevisto_ut},00"
+    ws[f"E{iu_row}"] = imprevisto_ut
+    style_cell(ws[f"E{iu_row}"], number_format='#,##0.00')
     ws[f"F{iu_row}"] = "Imprevisto Utilidad:"
     ws[f"H{iu_row}"] = f"=ROUND((H{sb_row}*E{iu_row})/100,2)"
     style_cell(ws[f"H{iu_row}"], number_format='#,##0.00')
@@ -206,7 +208,8 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     style_cell(ws[f"H{sc_row}"], bold=True, number_format='#,##0.00')
     
     fin_row = sc_row + 1
-    ws[f"E{fin_row}"] = f"{financiamiento},00"
+    ws[f"E{fin_row}"] = financiamiento
+    style_cell(ws[f"E{fin_row}"], number_format='#,##0.00')
     ws[f"F{fin_row}"] = "Financiamiento:"
     ws[f"H{fin_row}"] = f"=ROUND((H{sc_row}*E{fin_row})/100,2)"
     style_cell(ws[f"H{fin_row}"], number_format='#,##0.00')
@@ -217,13 +220,15 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     style_cell(ws[f"H{ps_row2}"], bold=True, number_format='#,##0.00')
     
     iva_row = ps_row2 + 1
-    ws[f"E{iva_row}"] = f"{iva},00"
+    ws[f"E{iva_row}"] = iva
+    style_cell(ws[f"E{iva_row}"], number_format='#,##0.00')
     ws[f"F{iva_row}"] = "Impuesto (I.V.A.):"
     ws[f"H{iva_row}"] = f"=ROUND((H{ps_row2}*E{iva_row})/100,2)"
     style_cell(ws[f"H{iva_row}"], number_format='#,##0.00')
     
     oi_row = iva_row + 1
-    ws[f"E{oi_row}"] = f"{otros_imp},00"
+    ws[f"E{oi_row}"] = otros_imp
+    style_cell(ws[f"E{oi_row}"], number_format='#,##0.00')
     ws[f"F{oi_row}"] = "Otros Impuestos:"
     ws[f"H{oi_row}"] = f"=ROUND((H{ps_row2}*E{oi_row})/100,2)"
     style_cell(ws[f"H{oi_row}"], number_format='#,##0.00')
@@ -233,6 +238,12 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     ws[f"H{pf_row}"] = f"=H{ps_row2}+H{iva_row}+H{oi_row}"
     style_cell(ws[f"H{pf_row}"], bold=True, number_format='#,##0.00')
     
+    ws.column_dimensions['A'].width = 3
+    ws.column_dimensions['B'].width = 6
+    ws.column_dimensions['C'].width = 45
+    ws.column_dimensions['D'].width = 12
+    ws.column_dimensions['E'].width = 12
+    ws.column_dimensions['F'].width = 12
     ws.column_dimensions['G'].width = 16
     ws.column_dimensions['H'].width = 18
 
