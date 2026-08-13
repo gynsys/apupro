@@ -8,7 +8,8 @@ from app.db.base import get_db
 from app.schemas.cost360 import (
     CostItemListResponse, APUResponse, APUComponent,
     CostMaterialUpdate, CostEquipmentUpdate, CostLaborUpdate,
-    AiApuGenerateRequest, CustomCostItemCreate, CustomCostItemResponse,
+    AiApuGenerateRequest, SmartSelectRequest,
+    CustomCostItemCreate, CustomCostItemResponse,
     Cost360DatabaseCreate, Cost360DatabaseUpdate, Cost360DatabaseListResponse
 )
 
@@ -25,7 +26,7 @@ from app.crud.crud_cost360 import (
     get_all_databases, get_database_by_id, create_database, update_database, delete_database
 )
 from app.services.preprocessing_service import preprocess_apu_data, fast_preprocess_debug
-from app.services.ai_apu_service import generate_apu_with_ai
+from app.services.ai_apu_service import generate_apu_with_ai, generate_apu_with_ai_from_base
 
 router = APIRouter()
 
@@ -209,10 +210,7 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
     # 0. Si es solo preproceso DEBUG, devolver resultado rapido SIN cargar IA
     if payload.only_preprocess:
         debug_data = fast_preprocess_debug(
-            db,
-            payload.description,
-            payload.covenin_prefix,
-            payload.covenin_context
+            db, payload.description, payload.covenin_prefix, payload.covenin_context
         )
         return {
             "status": "clarification_needed",
@@ -221,6 +219,21 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             "questions": [],
             "debug_preprocesamiento": debug_data
         }
+
+    # 0.5. MODO SMART SELECTOR: el usuario ya eligió una partida base -> generar con base real
+    if payload.base_partida_code:
+        from app.services.smart_selector_service import fetch_base_apu_for_prompt
+        base_apu = fetch_base_apu_for_prompt(db, payload.base_partida_code)
+        history_dicts = [msg.model_dump() for msg in payload.history] if payload.history else []
+        result = generate_apu_with_ai_from_base(
+            base_apu=base_apu,
+            user_description=payload.description,
+            covenin_prefix=payload.covenin_prefix or "",
+            covenin_context=payload.covenin_context or "",
+            smart_answers=payload.smart_answers or {},
+            history=history_dicts,
+        )
+        return result
 
     # 1. Preprocesamiento (BD + Estadísticas) + IA semantica
     payload_llm = preprocess_apu_data(db, payload.description, payload.covenin_prefix, payload.covenin_context)
@@ -298,6 +311,20 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
     result = generate_apu_with_ai(payload_llm, history_dicts)
     
     return result
+
+
+@router.post("/smart-select")
+def smart_select_route(payload: SmartSelectRequest, db: Session = Depends(get_db)):
+    """Selección guiada de partida base mediante preguntas discriminantes. Sin LLM."""
+    from app.services.smart_selector_service import get_smart_selector_data
+    return get_smart_selector_data(
+        db=db,
+        description=payload.description,
+        covenin_prefix=payload.covenin_prefix,
+        covenin_context=payload.covenin_context,
+        answers=payload.answers or {},
+    )
+
 
 @router.post("/custom-apus", response_model=CustomCostItemResponse)
 def save_custom_apu_route(payload: CustomCostItemCreate, db: Session = Depends(get_db)):

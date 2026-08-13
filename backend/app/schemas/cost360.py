@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Dict, List, Optional
 from datetime import datetime
 
 class CostItemBase(BaseModel):
@@ -103,6 +103,16 @@ class AiApuGenerateRequest(BaseModel):
     covenin_context: Optional[str] = None
     history: Optional[List[MessageContext]] = []
     only_preprocess: Optional[bool] = False
+    # Smart Selector: partida base seleccionada por el usuario
+    base_partida_code: Optional[str] = None
+    smart_answers: Optional[Dict] = {}
+
+
+class SmartSelectRequest(BaseModel):
+    description: str
+    covenin_prefix: str
+    covenin_context: Optional[str] = None
+    answers: Optional[Dict] = {}
 
 class AiApuResponse(BaseModel):
     status: str = "completed"

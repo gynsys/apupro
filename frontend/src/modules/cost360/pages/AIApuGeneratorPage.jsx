@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Save, Sparkles, Check, Filter, Plus, Search, FileText, Trash2, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { generateAIApu, saveCustomApu, fetchCategoriesTree, fetchItems, fetchApuDetails } from '../services/cost360Service';
+import { generateAIApu, saveCustomApu, fetchCategoriesTree, fetchItems, fetchApuDetails, smartSelect, generateAIApuFromBase } from '../services/cost360Service';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
 import Cost360SearchBar from '../components/Cost360SearchBar';
 import ApuEditorUI from '../../../components/ApuEditorUI';
@@ -27,6 +27,12 @@ export default function AIApuGeneratorPage() {
   const [aiQuestions, setAiQuestions] = useState([]);
   const [isClarifying, setIsClarifying] = useState(false);
   const [debugInfo, setDebugInfo] = useState(null);
+
+  // Smart Selector States
+  const [isSmartMode, setIsSmartMode] = useState(false);
+  const [smartData, setSmartData] = useState(null);
+  const [smartAnswers, setSmartAnswers] = useState({});
+  const [basePrompt, setBasePrompt] = useState("");
 
   const [coveninTree] = useState(coveninTreeData);
   const [selectedTipoObra, setSelectedTipoObra] = useState('');
@@ -88,7 +94,7 @@ export default function AIApuGeneratorPage() {
                 const ratioB = b[1] / totalDocs;
                 return Math.abs(ratioA - idealRatio) - Math.abs(ratioB - idealRatio);
               })
-              .slice(0, 8)
+              .slice(0, 10)
               .map(entry => entry[0]);
 
             setCategoryHints(keywords);
@@ -223,7 +229,7 @@ export default function AIApuGeneratorPage() {
     handleGenerate(null, true);
   };
 
-  const handleGenerate = async (overridePrompt = null, onlyPreprocess = false) => {
+  const handleGenerate = async (overridePrompt = null, onlyPreprocess = false, bypassSmart = false) => {
     const textToSubmit = overridePrompt !== null ? overridePrompt : prompt;
     if (!textToSubmit.trim()) {
       toast.error("Ingresa una descripción para generar el APU");
@@ -262,44 +268,108 @@ export default function AIApuGeneratorPage() {
       }
 
       const prefixToSend = selectedPartida || selectedSubcapitulo;
+
+      // ---- SMART SELECTOR LOGIC ----
+      if (!onlyPreprocess && !bypassSmart && !isClarifying && !isSmartMode) {
+        const smartRes = await smartSelect(textToSubmit, prefixToSend, context, smartAnswers);
+        
+        if (!smartRes.ready_to_generate && smartRes.questions && smartRes.questions.length > 0) {
+          setSmartData(smartRes);
+          setIsSmartMode(true);
+          setBasePrompt(textToSubmit);
+          setLoading(false);
+          return; // Pausar para esperar respuesta del usuario
+        }
+        
+        // Si ya está listo (porque hubo match o respondio todo) y hay un best_match
+        if (smartRes.ready_to_generate && smartRes.best_match) {
+          const response = await generateAIApuFromBase(textToSubmit, prefixToSend, context, smartRes.best_match.codpar, smartAnswers);
+          processAIResponse(response, textToSubmit);
+          setIsSmartMode(false);
+          setSmartData(null);
+          return;
+        }
+      }
       
       const newHistory = isClarifying ? [...chatHistory, { role: 'user', content: textToSubmit }] : [{ role: 'user', content: textToSubmit }];
       
+      // Llamada normal (sin partida base o bypass)
       const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory, onlyPreprocess);
+      processAIResponse(response, textToSubmit);
       
-      if (response.debug_preprocesamiento) {
-        setDebugInfo(response.debug_preprocesamiento);
-      } else {
-        setDebugInfo(null);
-      }
-      
-      if (response.status === 'clarification_needed') {
-        setChatHistory(newHistory);
-        setAiClarificationMessage(response.clarification_message || "La IA necesita clarificación:");
-        setAiOptions(response.options || []);
-        setAiQuestions(response.questions || []);
-        setIsClarifying(true);
-        setPrompt('');
-        toast.error("La IA detectó un problema o necesita más detalles", { icon: '🤔' });
-      } else {
-        setIsClarifying(false);
-        setChatHistory([]);
-        setAiClarificationMessage("");
-        setAiOptions([]);
-        setAiQuestions([]);
-        // Map response to the format expected by the editor
-        setItem({
-          ...response.partida,
-          materials: response.materials || [],
-          equipments: response.equipments || [],
-          labors: response.labors || [],
-          advertencias: response.advertencias || []
-        });
-        toast.success("APU generado con IA");
-      }
     } catch (error) {
       console.error(error);
       toast.error("Error al generar APU con IA");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const processAIResponse = (response, textToSubmit) => {
+    if (response.debug_preprocesamiento) {
+      setDebugInfo(response.debug_preprocesamiento);
+    } else if (response.debug_base_apu) {
+      setDebugInfo({ message: "APU adaptado desde partida base (Smart Selector)", base_apu: response.debug_base_apu });
+    } else {
+      setDebugInfo(null);
+    }
+    
+    if (response.status === 'clarification_needed') {
+      const newHistory = isClarifying ? [...chatHistory, { role: 'user', content: textToSubmit }] : [{ role: 'user', content: textToSubmit }];
+      setChatHistory(newHistory);
+      setAiClarificationMessage(response.clarification_message || "La IA necesita clarificación:");
+      setAiOptions(response.options || []);
+      setAiQuestions(response.questions || []);
+      setIsClarifying(true);
+      setPrompt('');
+      toast.error("La IA detectó un problema o necesita más detalles", { icon: '🤔' });
+    } else {
+      setIsClarifying(false);
+      setChatHistory([]);
+      setAiClarificationMessage("");
+      setAiOptions([]);
+      setAiQuestions([]);
+      // Map response to the format expected by the editor
+      setItem({
+        ...response.partida,
+        materials: response.materials || [],
+        equipments: response.equipments || [],
+        labors: response.labors || [],
+        advertencias: response.advertencias || []
+      });
+      toast.success("APU generado con IA");
+    }
+  };
+
+  const handleSmartAnswer = async (questionId, optionValue) => {
+    const newAnswers = { ...smartAnswers, [questionId]: optionValue };
+    setSmartAnswers(newAnswers);
+    
+    // Disparar validación de nuevo
+    setLoading(true);
+    try {
+      const prefixToSend = selectedPartida || selectedSubcapitulo;
+      const smartRes = await smartSelect(basePrompt, prefixToSend, "", newAnswers);
+      
+      if (!smartRes.ready_to_generate && smartRes.questions && smartRes.questions.length > 0) {
+        setSmartData(smartRes);
+      } else {
+        // Listo para generar!
+        if (smartRes.best_match) {
+          const response = await generateAIApuFromBase(basePrompt, prefixToSend, "", smartRes.best_match.codpar, newAnswers);
+          processAIResponse(response, basePrompt);
+        } else {
+          // Fallback a generación normal
+          const response = await generateAIApu(basePrompt, prefixToSend, "", [], false);
+          processAIResponse(response, basePrompt);
+        }
+        setIsSmartMode(false);
+        setSmartData(null);
+        setSmartAnswers({});
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al procesar respuesta");
     } finally {
       setLoading(false);
     }
@@ -623,7 +693,11 @@ export default function AIApuGeneratorPage() {
           </div>
 
           <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-            {isSelectorsComplete ? (isClarifying ? "Responde a la IA para continuar" : "Describe la partida a generar") : (
+            {isSelectorsComplete ? (
+              isSmartMode ? "Smart Selector: Selecciona las características" :
+              isClarifying ? "Responde a la IA para continuar" : 
+              "Describe la partida a generar"
+            ) : (
               <>
                 <AlertTriangle className="text-amber-500" size={16} />
                 Completa los selectores arriba para habilitar la descripción
@@ -631,7 +705,53 @@ export default function AIApuGeneratorPage() {
             )}
           </label>
           
-          {isClarifying && (aiQuestions.length > 0 || aiClarificationMessage) && (
+          {isSmartMode && smartData && !smartData.ready_to_generate && (
+            <div className="mb-4 p-5 bg-indigo-50 border border-indigo-200 rounded-xl shadow-sm animate-in fade-in zoom-in duration-300">
+              <h4 className="text-indigo-800 font-bold mb-3 flex items-center gap-2">
+                <Sparkles size={18} />
+                Filtro Inteligente: Selecciona para encontrar la mejor partida base
+              </h4>
+              <p className="text-indigo-600 text-sm mb-4">
+                El sistema detectó {smartData.candidates_count} partidas en esta categoría. Responde para elegir la más parecida:
+              </p>
+              
+              <div className="space-y-4">
+                {smartData.questions.map((q) => (
+                  <div key={q.id} className="bg-white p-4 rounded-lg shadow-sm border border-indigo-100">
+                    <p className="font-semibold text-slate-700 mb-3">{q.question}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {q.options.map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => handleSmartAnswer(q.id, opt.value)}
+                          className="px-4 py-2 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 font-medium rounded-lg transition-colors border border-indigo-200 hover:border-indigo-600"
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-5 flex justify-between items-center border-t border-indigo-200 pt-4">
+                <button 
+                  onClick={() => { setIsSmartMode(false); setSmartData(null); setSmartAnswers({}); }} 
+                  className="text-sm text-slate-500 font-bold hover:text-slate-700"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={() => handleGenerate(basePrompt, false, true)} 
+                  className="text-sm text-indigo-600 font-bold hover:text-indigo-800 flex items-center gap-1"
+                >
+                  Omitir y generar APU desde cero
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!isSmartMode && isClarifying && (aiQuestions.length > 0 || aiClarificationMessage) && (
             <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl shadow-sm animate-in fade-in zoom-in duration-300">
               <h4 className="text-blue-800 font-bold mb-2 flex items-center gap-2">🤔 {aiClarificationMessage || "La IA necesita clarificación:"}</h4>
               
@@ -698,19 +818,20 @@ export default function AIApuGeneratorPage() {
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                if (isSelectorsComplete && prompt.trim()) {
+                if (isSelectorsComplete && prompt.trim() && !isSmartMode) {
                   handleGenerate();
                 }
               }
             }}
-            disabled={!isSelectorsComplete || (isClarifying && aiOptions.length > 0)}
+            disabled={!isSelectorsComplete || (isClarifying && aiOptions.length > 0) || isSmartMode}
             placeholder={
               !isSelectorsComplete ? "Selecciona la categoría primero..." : 
+              isSmartMode ? "Responde las preguntas del filtro inteligente arriba..." :
               (isClarifying && aiOptions.length > 0) ? "Por favor selecciona una de las opciones arriba..." : 
               isClarifying ? "Ej: El espesor es 15cm y el concreto de 210 kg/cm2..." : 
               "Ej: Fundición de losa de entrepiso de concreto f'c=210 kg/cm2, espesor 15 cm..."
             }
-            className={`w-full h-24 p-4 border rounded-xl focus:outline-none focus:ring-2 transition-all text-sm mb-4 disabled:opacity-50 disabled:cursor-not-allowed ${isClarifying ? 'bg-blue-50/50 border-blue-300 focus:border-blue-500 focus:ring-blue-500/20' : 'bg-slate-50 border-slate-300 focus:bg-white focus:border-red-500 focus:ring-red-500/20'}`}
+            className={`w-full h-24 p-4 border rounded-xl focus:outline-none focus:ring-2 transition-all text-sm mb-4 disabled:opacity-50 disabled:cursor-not-allowed ${isClarifying || isSmartMode ? 'bg-blue-50/50 border-blue-300 focus:border-blue-500 focus:ring-blue-500/20' : 'bg-slate-50 border-slate-300 focus:bg-white focus:border-red-500 focus:ring-red-500/20'}`}
           />
           
           {debugInfo && (
@@ -731,7 +852,7 @@ export default function AIApuGeneratorPage() {
             )}
             <button
               onClick={() => handleGeneratePreprocess()}
-              disabled={loading || !prompt.trim() || !isSelectorsComplete || isClarifying}
+              disabled={loading || !prompt.trim() || !isSelectorsComplete || isClarifying || isSmartMode}
               className="flex items-center gap-2 text-slate-600 bg-slate-100 px-4 py-3 rounded-xl hover:bg-slate-200 transition-all font-bold disabled:opacity-50 text-sm border border-slate-200"
               title="Muestra cómo la IA buscará en la base de datos sin consumir saldo"
             >
@@ -740,7 +861,7 @@ export default function AIApuGeneratorPage() {
             </button>
             <button
               onClick={() => handleGenerate()}
-              disabled={loading || !prompt.trim() || !isSelectorsComplete}
+              disabled={loading || !prompt.trim() || !isSelectorsComplete || isSmartMode}
               className={`flex items-center gap-2 text-white px-6 py-3 rounded-xl transition-all shadow-sm font-bold disabled:opacity-50 ${isClarifying ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'}`}
             >
               {loading ? <Loader className="animate-spin" size={18} /> : (isClarifying ? <Check size={18} /> : <Sparkles size={18} />)}

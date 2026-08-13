@@ -1,105 +1,215 @@
 import json
-from typing import Dict, Any
+from typing import Any, Dict, List, Optional
 from app.services.llm_router import call_llm_json
 
+
+# ---------------------------------------------------------------------------
+# Prompt base reutilizable: reglas COVENIN, insumos, formato de salida
+# ---------------------------------------------------------------------------
+_FORMATO_SALIDA = """
+# FORMATO DE SALIDA OBLIGATORIO
+Devuelve ÚNICAMENTE un JSON válido con esta estructura (sin texto extra antes o después):
+{
+    "status": "completed",
+    "clarification_message": "mensaje si aplica, si no null",
+    "options": [],
+    "questions": [],
+    "partida": {
+        "cod_par": "E340000000",
+        "description": "DESCRIPCIÓN TÉCNICA COMPLETA EN MAYÚSCULAS. INCLUYE MATERIALES, EQUIPOS Y MANO DE OBRA.",
+        "unit": "m2",
+        "quantity": 1.0,
+        "performance": 10.5
+    },
+    "materials": [
+        {"id":"m-1","codigo":"...","descripcion":"...","unidad":"...","cantidad":0.0,"desperdicio":5,"precio_unitario":0.0,"origen":"historico","nota_calculo":"..."}
+    ],
+    "equipments": [
+        {"id":"e-1","codigo":"...","descripcion":"...","unidad":"día","cantidad":0.0,"depreciacion":1.0,"precio_unitario":0.0,"origen":"historico","nota_calculo":"..."}
+    ],
+    "labors": [
+        {"id":"l-1","codigo":"...","descripcion":"...","unidad":"día","cantidad":0.0,"jornal":0.0,"bono":0.0,"origen":"historico","nota_calculo":"..."}
+    ],
+    "advertencias": ["lista de advertencias que generes"]
+}
+"""
+
+_REGLAS_COVENIN = """
+# REGLAS DE CODIFICACIÓN COVENIN
+- El campo `cod_par` debe seguir la Norma COVENIN 2000:1992: 1 letra + 9 dígitos numéricos (total 10 caracteres).
+- DEBE comenzar exactamente con el `covenin_prefix` indicado.
+- Usa el `covenin_context` para elegir el subcódigo correcto; completa con ceros los dígitos restantes.
+- Ejemplo correcto: E131110000 (letra E + 9 dígitos).
+"""
+
+_REGLAS_DESCRIPCION = """
+# DESCRIPCIÓN DE LA PARTIDA
+En el campo `description` de `partida`, NO copies la solicitud del usuario literalmente.
+MEJORA Y EXPANDE para crear una descripción técnica profesional completa, en MAYÚSCULAS,
+similar a las normas de medición de ingeniería civil.
+Incluye: características del material, método de ejecución, qué incluye/excluye, unidad de medida.
+"""
+
+_REGLAS_ORIGEN = """
+# CAMPO "origen" (OBLIGATORIO en cada insumo)
+- "historico": cantidad tomada del APU base sin ajustes mayores.
+- "ia": cantidad estimada/ajustada por ti, o insumo añadido por criterio técnico.
+"""
+
+
 def generate_apu_with_ai(payload_llm: Dict[str, Any], history: list = None) -> Dict[str, Any]:
+    """
+    Generación de APU usando el flujo clásico de preprocesamiento estadístico.
+    Se usa cuando NO hay una partida base seleccionada por el usuario.
+    """
     if payload_llm.get("modo") == "incongruencia_matematica":
         return {
             "status": "clarification_needed",
-            "clarification_message": "Lo que buscas no tiene relación a las categorías COVENIN seleccionadas. Por favor, corrige tu descripción o cambia la categoría.",
+            "clarification_message": (
+                "Lo que buscas no tiene relación con las categorías COVENIN seleccionadas. "
+                "Por favor, corrige tu descripción o cambia la categoría."
+            ),
             "options": [],
-            "questions": []
+            "questions": [],
         }
 
     history_text = ""
-    if history and len(history) > 0:
-        history_text = "\n# HISTORIAL DE CONVERSACIÓN (PREGUNTAS Y RESPUESTAS PREVIAS)\n"
+    if history:
+        history_text = "\n# HISTORIAL DE CONVERSACIÓN\n"
         for msg in history:
             role = "USUARIO" if msg.get("role") == "user" else "SISTEMA/IA"
             history_text += f"{role}: {msg.get('content')}\n"
 
     prompt = f"""
 # ROL
-Eres un Ingeniero Civil especialista en Análisis de Precios Unitarios (APU). Vas a recibir un payload estructurado generado por el sistema de preprocesamiento, que contiene rendimientos históricos calculados a partir de partidas similares reales, un catálogo de insumos filtrado y advertencias. Tu trabajo es construir un APU técnico y completo basándote estrictamente en esta data.
+Eres un Ingeniero Civil especialista en Análisis de Precios Unitarios (APU).
+Recibes un payload con rendimientos históricos calculados a partir de partidas similares
+reales de la base de datos, un catálogo de insumos filtrado y advertencias.
+Tu trabajo es construir un APU técnico y completo basándote estrictamente en esta data.
 
-# CLARIFICACIÓN E INCONGRUENCIAS (¡MUY IMPORTANTE!)
-REGLA DE ORO: Dirígete SIEMPRE al usuario directamente en segunda persona (ej. "Tu solicitud es acarreo", "Estás pidiendo cerámica"). NUNCA uses tercera persona ("la solicitud del usuario").
+# REGLAS DE CLARIFICACIÓN (¡MUY IMPORTANTE!)
+Dirígete SIEMPRE al usuario en segunda persona ("Tu solicitud", "Estás pidiendo").
 
-1. **Incongruencia Total (PRIORIDAD 1):** Revisa la categoría COVENIN seleccionada en el "covenin_context". Si la solicitud del usuario (ej. "cerámica") NO corresponde lógicamente con la categoría seleccionada (ej. "Herrería"), TIENES PROHIBIDO INTENTAR GENERAR EL APU. Debes detenerte inmediatamente, indicarle al usuario el error de forma directa (ej. "Estás pidiendo cerámica en la categoría de herrería, lo cual es una incongruencia") y pedirle que corrija su descripción o cambie de categoría.
-2. **Falta de Especificación Técnica:** Si no hay incongruencia pero la descripción carece de datos CRÍTICOS para costear con precisión (ej. pide "pared" sin decir espesor o material), DEBES detenerte y hacer 1 a 3 preguntas de clarificación breves. No inventes datos críticos.
-3. **Confirmación de Partidas Históricas (HÍBRIDO):** Si el payload indica `partidas_encontradas > 0` y la descripción del usuario NO es ya 100% clara y exacta a una de ellas, DEBES devolver `status: "clarification_needed"`, decirle amistosamente que encontraste esas opciones históricas relacionadas en la base de datos, y poner como `options` EXACTAMENTE los nombres de esas partidas (del campo `detalle_partidas`) para que el usuario confirme con un clic cuál es la correcta.
-4. Si necesitas clarificar (ya sea por falta de datos o confirmación de partidas), devuelve `status: "clarification_needed"`, un `clarification_message` directo, y OPCIONALMENTE una lista de `options` (strings cortos). NUNCA devuelvas opciones administrativas como "Cambiar categoría", solo alternativas técnicas.
-5. Si la descripción es clara y el usuario ya confirmó la partida o dio los detalles (revisa el HISTORIAL DE CONVERSACIÓN), genera el APU y devuelve `status: "completed"`.
+1. **Incongruencia Total (PRIORIDAD 1):** Si la solicitud NO corresponde lógicamente con
+   el `covenin_context`, prohíbete generar el APU. Informa al usuario y pídele que corrija.
+2. **Falta de datos críticos:** Si faltan datos clave (espesor, material, dimensiones),
+   haz 1-3 preguntas de clarificación. No inventes datos críticos.
+3. **Confirmación de partidas históricas:** Si `partidas_encontradas > 0` y la descripción
+   no es exactamente una de ellas, devuelve `status: "clarification_needed"` con las
+   partidas históricas como `options` para que el usuario confirme.
+4. Si el usuario ya respondió (ver historial), genera el APU directamente con `status: "completed"`.
 
-# PAYLOAD DEL SISTEMA
+# PAYLOAD DEL SISTEMA (datos históricos y catálogo)
 {json.dumps(payload_llm, ensure_ascii=False)}
 {history_text}
 
-# REGLAS DE INTERPRETACIÓN DE HISTORIAL
-1. Si el payload contiene múltiples grupos en "rendimientos_historicos_por_unidad_partida" (ej. m2, m3, und), ELIGE la unidad base más lógica para la partida que vas a generar y utiliza EXCLUSIVAMENTE los rendimientos de ese grupo.
-2. Usa la "cantidad_promedio" del grupo seleccionado como cantidad base para cada insumo.
-3. Si la solicitud del usuario difiere de las partidas históricas, AJUSTA proporcionalmente y explica en "nota_calculo".
-4. Presta especial atención a las "advertencias_preprocesamiento". Si hay advertencias de variabilidad, el promedio puede ser engañoso, usa tu criterio técnico para ajustarlo.
-4. Si un insumo es "obligatorio" (presencia > 70%), DEBE incluirse en el APU final. Si es "opcional" (presencia < 30%), inclúyelo solo si es estrictamente necesario para esta partida en particular.
-5. Si el historial no tiene datos para un insumo que tú consideras indispensable (ej: no hay clavos para un encofrado), agrégalo con origen "ia" y explica el criterio técnico en la nota de cálculo.
+# REGLAS DE INTERPRETACIÓN
+1. Si hay múltiples unidades en `rendimientos_historicos_por_unidad_partida`, elige la más lógica.
+2. Usa `cantidad_promedio` como base para cada insumo.
+3. Ajusta proporcionalmente si la solicitud difiere de las partidas históricas.
+4. Insumos "obligatorio: true" (presencia > 70%) DEBEN incluirse.
+5. Insumos "opcional" (presencia < 30%) solo si son estrictamente necesarios.
+6. Si necesitas un insumo no listado, agrégalo con origen "ia" y explica en `nota_calculo`.
 
 # REGLAS DE INSUMOS
-- Usa ÚNICAMENTE insumos del CATÁLOGO proporcionado en el payload.
-- PROHIBICIÓN ABSOLUTA: Tienes ESTRICTAMENTE PROHIBIDO inventar o "crear" insumos con precios estimados. El origen "faltante" NO ESTÁ PERMITIDO. Todos los insumos del APU deben extraerse del catálogo.
-- SUSTITUCIÓN INTELIGENTE: Si el insumo exacto que pide el usuario no existe en el catálogo provisto (ej. pide concreto FC=100 y no hay), DEBES seleccionar el sustituto más cercano y razonable disponible en el catálogo (ej. concreto FC=150) para no distorsionar groseramente el costo.
-- ADVERTENCIA OBLIGATORIA: Cada vez que realices una sustitución de este tipo, es OBLIGATORIO que agregues una nota en la matriz de "advertencias" del JSON final, indicando: "No se encontró [Insumo Pedido] en la base de datos. Se utilizó [Insumo Seleccionado] como sustituto temporal para el costeo".
-- Herramientas menores y equipos de protección personal: inclúyelos SOLO si representan un impacto medible (>2% del costo directo) o si aparecen consistentemente en el historial.
+- USA ÚNICAMENTE insumos del catálogo provisto.
+- PROHIBIDO inventar precios. Si no existe el insumo exacto, usa el sustituto más cercano.
+- Cada sustitución DEBE anotarse en `advertencias`.
 
-# REGLAS DE ORIGEN (OBLIGATORIO en cada insumo)
-- "historico": Cantidad = tomada directamente del promedio del backend (sin ajustes mayores). Insumo extraído del historial.
-- "ia": Cantidad ajustada/estimada significativamente por ti, o insumo agregado por tu criterio/sustitución desde el catálogo.
-
-# MODO FALLBACK
-Si el "modo" es "sin_datos_historicos":
-- Debes generar el APU por metodología teórica estándar, basándote en tu conocimiento técnico.
-- Toda la mano de obra y equipo debe llevar origen "ia". Asegúrate de incluir una cuadrilla completa y realista (ej. maestro, albañiles, peones) y los equipos básicos necesarios, buscándolos EXCLUSIVAMENTE en el catálogo.
-- Materiales: busca en el catálogo, usa origen "ia". Aplica la regla de SUSTITUCIÓN INTELIGENTE si no está el exacto.
-- DEBES agregar obligatoriamente una advertencia principal en el JSON final indicando que es un cálculo 100% estimado por falta de datos históricos.
-
-# DESCRIPCIÓN DE LA PARTIDA
-En el campo "description" de "partida", NO copies simplemente la solicitud del usuario. MEJORA Y EXPANDE la solicitud para crear una descripción técnica profesional, detallada y completa, propia de una norma de medición de ingeniería civil, todo en MAYÚSCULAS (ej. incluir características, acabados, e indicar "INCLUYE MATERIALES, EQUIPOS Y MANO DE OBRA").
-
-# REGLAS DE CODIFICACIÓN COVENIN
-- El payload incluye un "covenin_prefix" y un "covenin_context".
-- Tu APU generado debe tener un código (`cod_par`) que cumpla estrictamente con la Norma COVENIN 2000:1992.
-- El código está conformado por 1 letra y 9 dígitos numéricos (ej. E123456789).
-- DEBES comenzar el código obligatoriamente con el `covenin_prefix` exacto.
-- MUY IMPORTANTE: En el `covenin_context` se te proporcionan las subcategorías exactas disponibles según la norma. Debes leer el contexto, identificar si la partida solicitada encaja en alguna de esas subcategorías (por ejemplo, si pide una Puerta y existe E44701 - PUERTAS, usa E44701 como base en lugar del prefijo corto).
-- Para las posiciones restantes (dígitos vacantes) correspondientes a variables no especificadas (como tipo de madera, espesor, etc), debes rellenar con ceros o números lógicos hasta completar la longitud total de 1 letra + 9 dígitos numéricos (Ej. E447012233 o E447010000). SIEMPRE deben ser 10 caracteres en total.
-
-# FORMATO DE SALIDA
-Devuelve un JSON estrictamente con la siguiente estructura (NO agregues texto extra antes o después, SOLO EL JSON VÁLIDO):
-{{
-    "status": "completed", 
-    "clarification_message": "mensaje...",
-    "options": [],
-    "questions": [],
-    "partida": {{"cod_par":"E340000000","description":"DESCRIPCIÓN TÉCNICA EN MAYÚSCULAS","unit":"m2","quantity":1.0, "performance": 10.5}},
-    "materials": [
-        {{"id":"m-1","codigo":"...","descripcion":"...","unidad":"...","cantidad":0.0,"desperdicio":5,"precio_unitario":0.0,"origen":"historico","nota_calculo":"..."}}
-    ],
-    "equipments": [],
-    "labors": [],
-    "advertencias": ["string con advertencias que generes o que vengan del preprocesamiento"]
-}}
+{_REGLAS_COVENIN}
+{_REGLAS_DESCRIPCION}
+{_REGLAS_ORIGEN}
+{_FORMATO_SALIDA}
 """
     result = call_llm_json(prompt, use_case="cost360")
     if "advertencias" not in result:
         result["advertencias"] = []
-    
-    # Inject debug info for frontend
+
     result["debug_preprocesamiento"] = payload_llm
-    
+
     if result.get("status") == "clarification_needed":
         return result
-    
-    # Agregar las advertencias de preprocesamiento al resultado final
+
     if payload_llm.get("advertencias_preprocesamiento"):
         result["advertencias"].extend(payload_llm["advertencias_preprocesamiento"])
-        
+
+    return result
+
+
+def generate_apu_with_ai_from_base(
+    base_apu: Dict[str, Any],
+    user_description: str,
+    covenin_prefix: str,
+    covenin_context: str,
+    smart_answers: Optional[Dict[str, str]] = None,
+    history: Optional[List[Dict]] = None,
+) -> Dict[str, Any]:
+    """
+    Generación de APU usando una partida base seleccionada por el usuario
+    a través del Smart Selector. El LLM ADAPTA el APU base, no lo inventa.
+
+    Este modo:
+    - Proporciona al LLM el APU completo de la partida histórica (insumos, precios, cantidades reales)
+    - Le pide ADAPTAR (no crear desde cero)
+    - Reduce drásticamente el riesgo de alucinaciones
+    """
+    history_text = ""
+    if history:
+        history_text = "\n# HISTORIAL DE CONVERSACIÓN\n"
+        for msg in history:
+            role = "USUARIO" if msg.get("role") == "user" else "SISTEMA/IA"
+            history_text += f"{role}: {msg.get('content')}\n"
+
+    answers_text = ""
+    if smart_answers:
+        answers_text = "\n# CARACTERÍSTICAS SELECCIONADAS POR EL USUARIO (respuestas del asistente)\n"
+        for qid, answer in smart_answers.items():
+            answers_text += f"- {answer}\n"
+
+    base_json = json.dumps(base_apu, ensure_ascii=False, indent=2) if base_apu else "No disponible"
+
+    prompt = f"""
+# ROL
+Eres un Ingeniero Civil especialista en Análisis de Precios Unitarios (APU).
+El sistema ha seleccionado una partida histórica de la base de datos como BASE DE ADAPTACIÓN.
+Tu tarea es ADAPTAR ese APU base para la nueva partida solicitada por el usuario.
+NO debes inventar desde cero. Usa los insumos, precios y cantidades del APU base como referencia principal.
+
+# SOLICITUD DEL USUARIO
+Descripción: {user_description}
+Categoría COVENIN: {covenin_context}
+Prefijo COVENIN: {covenin_prefix}
+{answers_text}
+
+# APU BASE SELECCIONADO (partida histórica real de la base de datos)
+{base_json}
+{history_text}
+
+# INSTRUCCIONES DE ADAPTACIÓN
+1. El APU base es para una partida SIMILAR, no idéntica. Tu trabajo es adaptarlo para "{user_description}".
+2. CONSERVA todos los insumos que sigan siendo relevantes para la nueva partida. Márcalos como `"origen": "historico"`.
+3. ELIMINA los insumos que claramente no aplican a la nueva partida.
+4. AJUSTA cantidades cuando la nueva partida lo requiera (ej: distinta área, espesor, complejidad).
+   Marca los insumos ajustados como `"origen": "ia"` y explica el ajuste en `nota_calculo`.
+5. AGREGA insumos nuevos que la nueva partida requiera y no estén en la base. Márcalos como `"origen": "ia"`.
+6. NUNCA cambies los precios unitarios de los insumos del APU base. Son precios reales de la BD.
+7. Si detectas una incongruencia grave entre el APU base y la solicitud, indícalo en `advertencias`.
+8. Agrega SIEMPRE una advertencia indicando que el APU fue adaptado desde la partida base [{base_apu.get('codpar', 'N/A')}].
+
+# FALTA DE DATOS
+Si la descripción del usuario es ambigua o le faltan datos críticos para adaptar correctamente,
+devuelve `status: "clarification_needed"` con las preguntas específicas que necesitas.
+Si tienes suficiente información, genera el APU y devuelve `status: "completed"`.
+
+{_REGLAS_COVENIN}
+{_REGLAS_DESCRIPCION}
+{_REGLAS_ORIGEN}
+{_FORMATO_SALIDA}
+"""
+    result = call_llm_json(prompt, use_case="cost360")
+    if "advertencias" not in result:
+        result["advertencias"] = []
+
+    result["debug_base_apu"] = base_apu
+
     return result

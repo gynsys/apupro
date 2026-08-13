@@ -61,8 +61,25 @@ export const generateAIApu = async (description, coveninPrefix = '', coveninCont
   return response.data;
 };
 
-export const saveCustomApu = async (payload) => {
-  const response = await cost360ApiClient.post('/custom-apus', payload);
+export const smartSelect = async (description, coveninPrefix, coveninContext, answers = {}) => {
+  const response = await cost360ApiClient.post('/smart-select', {
+    description,
+    covenin_prefix: coveninPrefix,
+    covenin_context: coveninContext,
+    answers,
+  });
+  return response.data;
+};
+
+export const generateAIApuFromBase = async (description, coveninPrefix, coveninContext, basePartidaCode, smartAnswers = {}) => {
+  const response = await cost360ApiClient.post('/generate-ai-apu', {
+    description,
+    covenin_prefix: coveninPrefix,
+    covenin_context: coveninContext,
+    base_partida_code: basePartidaCode,
+    smart_answers: smartAnswers,
+    history: [],
+  });
   return response.data;
 };
 
@@ -71,5 +88,7 @@ export default {
   fetchApuDetails,
   fetchCategoriesTree,
   generateAIApu,
+  smartSelect,
+  generateAIApuFromBase,
   saveCustomApu,
 };
