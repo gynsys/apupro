@@ -108,6 +108,34 @@ export const deleteMasterItem = async (itemCode) => {
   return response.data;
 };
 
+export const exportApuExcelCustom = async (payload) => {
+  const response = await cost360ApiClient.post('/apu/export-excel-custom', payload, {
+    responseType: 'blob'
+  });
+  
+  // Download the file
+  const blob = response.data;
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  
+  // Get filename from headers if possible, otherwise fallback
+  let filename = `APU_${payload.item?.CodPar || payload.item?.cod_par || 'Export'}.xlsx`;
+  const contentDisposition = response.headers['content-disposition'];
+  if (contentDisposition && contentDisposition.includes('filename=')) {
+    filename = contentDisposition.split('filename=')[1].replace(/"/g, '');
+  }
+  
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  
+  return true;
+};
+
 export default {
   fetchItems,
   fetchApuDetails,
@@ -117,5 +145,6 @@ export default {
   smartSelect,
   saveCustomApu,
   updateMasterItem,
-  deleteMasterItem
+  deleteMasterItem,
+  exportApuExcelCustom
 };

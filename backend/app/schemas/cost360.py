@@ -99,6 +99,17 @@ class CustomCostItemResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class ApuHistoryEntry(BaseModel):
+    role: str
+    content: str
+
+class CustomApuExportRequest(BaseModel):
+    item: Dict
+    materials: List[Dict] = []
+    equipments: List[Dict] = []
+    labors: List[Dict] = []
+    settings: Optional[Dict] = None
+
 class MessageContext(BaseModel):
     role: str
     content: str

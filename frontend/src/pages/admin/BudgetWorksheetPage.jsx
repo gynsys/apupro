@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { 
@@ -15,6 +15,7 @@ import BudgetPrintModal from '../../components/modals/BudgetPrintModal';
 import BudgetPrintLayout from '../../components/print/BudgetPrintLayout';
 import { useCost360Search } from '../../modules/cost360/hooks/useCost360Search';
 import Cost360SearchBar from '../../modules/cost360/components/Cost360SearchBar';
+import { SiteConfigContext } from '../../App';
 
 export default function BudgetWorksheetPage() {
   const { id } = useParams();
@@ -24,6 +25,7 @@ export default function BudgetWorksheetPage() {
   const [loading, setLoading] = useState(true);
   const [headerDbDropdownOpen, setHeaderDbDropdownOpen] = useState(false);
   const { activeDatabase, setActiveDatabase, databases } = useDatabaseContext();
+  const { config } = useContext(SiteConfigContext);
   
   // Settings Panel
   const [showSettings, setShowSettings] = useState(false);
@@ -59,10 +61,12 @@ export default function BudgetWorksheetPage() {
     results: searchResults,
     totalResults: totalSearchResults,
     isSearching: searching,
-    forceSearch: searchDatabase
+    forceSearch: searchDatabase,
+    hasMore: hasMoreSearchResults,
+    loadMore: loadMoreSearchResults
   } = useCost360Search({
     databaseId: activeDatabase?.id || 'master',
-    onlyCoded: window.ARKO_SITE_CONFIG?.only_coded_items || false,
+    onlyCoded: config?.forceOnlyCodedMaster === true,
     limit: 30,
     autoSearch: showSearchModal
   });
@@ -844,7 +848,7 @@ export default function BudgetWorksheetPage() {
               {hasMoreSearchResults && !searching && (
                 <div className="text-center pt-4">
                   <button
-                    onClick={(e) => searchDatabase(e, true)}
+                    onClick={() => loadMoreSearchResults()}
                     className="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2 rounded-xl text-sm font-semibold shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:-translate-y-[1px]"
                   >
                     Cargar más...

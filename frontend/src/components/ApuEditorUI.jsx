@@ -1,5 +1,6 @@
 import React from 'react';
 import { Package, Wrench, Users, Plus, Search, Trash2, Loader, Sparkles } from 'lucide-react';
+import ExportApuExcelButton from '../modules/cost360/components/ExportApuExcelButton';
 
 export default function ApuEditorUI({
   item,
@@ -122,6 +123,14 @@ export default function ApuEditorUI({
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end mb-2">
+        <ExportApuExcelButton 
+          item={item} 
+          settings={settings}
+          className="p-1.5 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 hover:text-green-600 transition-colors shadow-sm flex items-center gap-1 text-xs font-bold text-slate-600"
+          title="Exportar este APU a Excel"
+        />
+      </div>
       <div className="bg-white border-2 border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="md:col-span-1">

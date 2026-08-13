@@ -3,7 +3,7 @@ import cost360Service from '../services/cost360Service';
 
 export const useCost360Search = ({
   databaseId = 'master',
-  onlyCoded = false,
+  onlyCoded = null,
   limit = 50,
   autoSearch = true,
   debounceMs = 400

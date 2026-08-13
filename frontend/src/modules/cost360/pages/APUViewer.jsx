@@ -4,6 +4,7 @@ import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Printer, FileSpr
 import cost360Service from '../services/cost360Service';
 import PrintAPUModal from '../../../components/PrintAPUModal';
 import PrintAPULayout from '../../../components/PrintAPULayout';
+import ExportApuExcelButton from '../components/ExportApuExcelButton';
 
 export default function APUViewer() {
   const { id } = useParams();
@@ -89,39 +90,11 @@ export default function APUViewer() {
   const utilCost = subtotalB * (utilPercent / 100);
   const unitPrice = subtotalB + utilCost;
 
-  const handleExportToExcel = async () => {
-    try {
-      // Llamar al backend para generar el Excel con fórmulas
-      const API_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') 
-        ? 'http://localhost:8010' 
-        : window.location.origin;
-      
-      const response = await fetch(`${API_URL}/api/v1/cost360/apu/${id}/export-excel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Error al generar el Excel');
-      }
-      
-      // Descargar el archivo generado
-      const blob = await response.blob();
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `APU_${partida.CovPar || partida.CodPar}.xlsx`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      console.log('APU exportado exitosamente');
-    } catch (error) {
-      console.error('Error al exportar APU:', error);
-    }
+  const settings = {
+    admin_percent: adminPercent,
+    profit_percent: utilPercent,
+    fcas_percent: fcasFactor * 100, // FCAS comes as a factor (e.g. 9.88) but export utils expect percentage (988) or maybe just 417. We can send 988. 
+    iva_percent: 16
   };
 
   return (
@@ -166,13 +139,13 @@ export default function APUViewer() {
             >
               <Printer size={20} />
             </button>
-            <button 
-              onClick={() => handleExportToExcel()}
-              className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-green-600 transition-colors shadow-sm flex items-center gap-2"
-              title="Exportar a Excel"
-            >
-              <FileSpreadsheet size={20} />
-            </button>
+            <ExportApuExcelButton 
+              item={partida} 
+              materials={materiales} 
+              equipments={equipos} 
+              labors={mano_obra} 
+              settings={settings} 
+            />
           </div>
         </div>
       </div>

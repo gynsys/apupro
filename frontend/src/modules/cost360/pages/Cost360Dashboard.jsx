@@ -49,6 +49,7 @@ const Cost360Dashboard = () => {
   } = useCost360Search({
     databaseId: selectedDatabase,
     limit: 1000,
+    onlyCoded: window.ARKO_SITE_CONFIG?.forceOnlyCodedMaster === true,
     autoSearch: true
   });
 
