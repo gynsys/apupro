@@ -8,6 +8,7 @@ import { SiteConfigContext } from '../../../App';
 import { API_URL } from '../../../services/api';
 import CatalogResourceTab from '../components/CatalogResourceTab';
 import Cost360SearchBar from '../components/Cost360SearchBar';
+import { useCost360Search } from '../hooks/useCost360Search';
 
 /* ── Shared glass style ─────────────────────────────────── */
 const glass = {
@@ -28,60 +29,30 @@ const glassStrong = {
 
 const AdminDatabasePage = () => {
   const [activeTab, setActiveTab] = useState('partidas');
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState('');
-  const [searchDesc, setSearchDesc] = useState(true);
-  const [searchInsumos, setSearchInsumos] = useState(false);
-  const [searchCovenin, setSearchCovenin] = useState('');
-  const [skip, setSkip] = useState(0);
-  const [totalItems, setTotalItems] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
   const [onlyCoded, setOnlyCoded] = useState(true);
   const [editingItem, setEditingItem] = useState(null);
   
-  const LIMIT = 100;
   const navigate = useNavigate();
   const { config, setConfig } = useContext(SiteConfigContext);
-  const searchTimeoutRef = useRef(null);
-
-  const fetchPartidas = async (searchQuery = '', currentSkip = 0, append = false, sDesc = searchDesc, sInsumos = searchInsumos, sCovenin = searchCovenin) => {
-    try {
-      setLoading(true);
-      const response = await cost360Service.fetchItems(currentSkip, LIMIT, searchQuery, '', 'master', sDesc, sInsumos, sCovenin, onlyCoded);
-      if (append) {
-        setItems(prev => [...prev, ...response.items]);
-      } else {
-        setItems(response.items);
-      }
-      setTotalItems(response.total);
-      setHasMore(response.items.length === LIMIT && (currentSkip + LIMIT) < response.total);
-    } catch (error) {
-      toast.error('Error al cargar la base de datos de CostBase');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    
-    searchTimeoutRef.current = setTimeout(() => {
-      fetchPartidas(search, 0, false, searchDesc, searchInsumos, searchCovenin);
-    }, 400);
-  }, [search, onlyCoded, searchDesc, searchInsumos, searchCovenin]);
-
-  const handleSearch = (e) => {
-    if (e) e.preventDefault();
-    setSkip(0);
-    fetchPartidas(search, 0, false, searchDesc, searchInsumos, searchCovenin);
-  };
-
-  const handleLoadMore = () => {
-    const newSkip = skip + LIMIT;
-    setSkip(newSkip);
-    fetchPartidas(search, newSkip, true, searchDesc, searchInsumos, searchCovenin);
-  };
+  
+  const {
+    searchQuery: search,
+    setSearchQuery: setSearch,
+    searchCovenin, setSearchCovenin,
+    searchDesc, setSearchDesc,
+    searchInsumos, setSearchInsumos,
+    results: items,
+    totalResults: totalItems,
+    isSearching: loading,
+    hasMore,
+    loadMore: handleLoadMore,
+    forceSearch: handleSearch
+  } = useCost360Search({
+    databaseId: 'master',
+    limit: 100,
+    onlyCoded: onlyCoded,
+    autoSearch: true
+  });
 
   const handleToggleGlobalCoded = async (e) => {
     const isChecked = e.target.checked;

@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { generateAIApu, saveCustomApu, fetchCategoriesTree, fetchItems, fetchApuDetails, smartSelect, generateAIApuFromBase } from '../services/cost360Service';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
 import Cost360SearchBar from '../components/Cost360SearchBar';
+import { useCost360Search } from '../hooks/useCost360Search';
 import ApuEditorUI from '../../../components/ApuEditorUI';
 import coveninTreeData from '../data/covenin_tree.json';
 
@@ -112,15 +113,24 @@ export default function AIApuGeneratorPage() {
     }
   }, [currentPrefix]);
   
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchDesc, setSearchDesc] = useState(true);
-  const [searchInsumos, setSearchInsumos] = useState(false);
-  const [searchCovenin, setSearchCovenin] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [totalMatches, setTotalMatches] = useState(0);
-  const [isSearching, setIsSearching] = useState(false);
   const [databases, setDatabases] = useState([]);
   const [selectedDatabase, setSelectedDatabase] = useState('master');
+  
+  const {
+    searchQuery, setSearchQuery,
+    searchCovenin, setSearchCovenin,
+    searchDesc, setSearchDesc,
+    searchInsumos, setSearchInsumos,
+    results: searchResults,
+    totalResults: totalMatches,
+    isSearching,
+    forceSearch: triggerSearch
+  } = useCost360Search({
+    databaseId: selectedDatabase,
+    onlyCoded: window.ARKO_SITE_CONFIG?.only_coded_items || false,
+    limit: 50,
+    autoSearch: creationMode === 'import'
+  });
 
   useEffect(() => {
     const loadDatabases = async () => {
@@ -174,30 +184,7 @@ export default function AIApuGeneratorPage() {
     }
   }, [modeParam]);
 
-  const triggerSearch = async (query = searchQuery, db = selectedDatabase, cov = searchCovenin) => {
-    setIsSearching(true);
-    try {
-      const data = await fetchItems(0, 50, query, '', db, searchDesc, searchInsumos, cov);
-      setSearchResults(data.items || []);
-      setTotalMatches(data.total || (data.items || []).length);
-    } catch (error) {
-      toast.error('Error al buscar partidas');
-      console.error(error);
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  // Al cambiar la base de datos o el tipo de búsqueda, disparamos la búsqueda automáticamente
-  useEffect(() => {
-    if (creationMode === 'import') {
-      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-      searchTimeoutRef.current = setTimeout(() => {
-        triggerSearch(searchQuery, selectedDatabase, searchCovenin);
-      }, 400);
-    }
-  }, [searchQuery, selectedDatabase, searchDesc, searchInsumos, searchCovenin, creationMode]);
-
+  // Removed manual triggerSearch and useEffect since useCost360Search handles it
   const handleImportApu = async (itemCode) => {
     try {
       setLoading(true);

@@ -7,6 +7,7 @@ import { cost360DatabaseService } from '../../../services/cost360DatabaseService
 import { SiteConfigContext } from '../../../App';
 import CatalogResourceTab from '../components/CatalogResourceTab';
 import Cost360SearchBar from '../components/Cost360SearchBar';
+import { useCost360Search } from '../hooks/useCost360Search';
 
 /* ── Shared glass style ─────────────────────────────────── */
 const glass = {
@@ -27,39 +28,29 @@ const glassStrong = {
 
 const Cost360Dashboard = () => {
   const [activeTab, setActiveTab] = useState('partidas');
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState('');
-  const [searchDesc, setSearchDesc] = useState(true);
-  const [searchInsumos, setSearchInsumos] = useState(false);
-  const [searchCovenin, setSearchCovenin] = useState('');
-  const [skip, setSkip] = useState(0);
-  const [totalItems, setTotalItems] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
   const [databases, setDatabases] = useState([]);
   const [selectedDatabase, setSelectedDatabase] = useState('master');
-  const LIMIT = 1000;
+  
   const navigate = useNavigate();
   const { config } = useContext(SiteConfigContext);
-  const searchTimeoutRef = useRef(null);
 
-  const fetchPartidas = async (searchQuery = '', currentSkip = 0, append = false, sDesc = searchDesc, sInsumos = searchInsumos, sCovenin = searchCovenin) => {
-    try {
-      setLoading(true);
-      const response = await cost360Service.fetchItems(currentSkip, LIMIT, searchQuery, '', selectedDatabase, sDesc, sInsumos, sCovenin);
-      if (append) {
-        setItems(prev => [...prev, ...response.items]);
-      } else {
-        setItems(response.items);
-      }
-      setTotalItems(response.total);
-      setHasMore(response.items.length === LIMIT && (currentSkip + LIMIT) < response.total);
-    } catch (error) {
-      toast.error('Error al cargar la base de datos de CostBase');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    searchQuery: search,
+    setSearchQuery: setSearch,
+    searchCovenin, setSearchCovenin,
+    searchDesc, setSearchDesc,
+    searchInsumos, setSearchInsumos,
+    results: items,
+    totalResults: totalItems,
+    isSearching: loading,
+    hasMore,
+    loadMore: handleLoadMore,
+    forceSearch: handleSearch
+  } = useCost360Search({
+    databaseId: selectedDatabase,
+    limit: 1000,
+    autoSearch: true
+  });
 
   useEffect(() => {
     const loadDatabases = async () => {
@@ -76,26 +67,6 @@ const Cost360Dashboard = () => {
     };
     loadDatabases();
   }, []);
-
-  useEffect(() => {
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    
-    searchTimeoutRef.current = setTimeout(() => {
-      fetchPartidas(search, 0, false, searchDesc, searchInsumos, searchCovenin);
-    }, 400);
-  }, [search, selectedDatabase, searchDesc, searchInsumos, searchCovenin]);
-
-  const handleSearch = (e) => {
-    if (e) e.preventDefault();
-    setSkip(0);
-    fetchPartidas(search, 0, false, searchDesc, searchInsumos, searchCovenin);
-  };
-
-  const handleLoadMore = () => {
-    const newSkip = skip + LIMIT;
-    setSkip(newSkip);
-    fetchPartidas(search, newSkip, true, searchDesc, searchInsumos, searchCovenin);
-  };
 
   const TABS = [
     { key: 'partidas',   label: 'Partidas (APU)', Icon: FiLayers },

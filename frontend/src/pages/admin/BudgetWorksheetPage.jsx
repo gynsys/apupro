@@ -13,6 +13,7 @@ import { useDatabaseContext } from '../../contexts/DatabaseContext';
 import BudgetSettingsModal from '../../components/modals/BudgetSettingsModal';
 import BudgetPrintModal from '../../components/modals/BudgetPrintModal';
 import BudgetPrintLayout from '../../components/print/BudgetPrintLayout';
+import { useCost360Search } from '../../modules/cost360/hooks/useCost360Search';
 import Cost360SearchBar from '../../modules/cost360/components/Cost360SearchBar';
 
 export default function BudgetWorksheetPage() {
@@ -50,26 +51,21 @@ export default function BudgetWorksheetPage() {
 
   // Search DB Modal
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchCovenin, setSearchCovenin] = useState('');
-  const [searchDesc, setSearchDesc] = useState(true);
-  const [searchInsumos, setSearchInsumos] = useState(false);
-  const [searchResults, setSearchResults] = useState([]);
-  const [totalSearchResults, setTotalSearchResults] = useState(0);
-  const [searching, setSearching] = useState(false);
-  const [searchSkip, setSearchSkip] = useState(0);
-  const [hasMoreSearchResults, setHasMoreSearchResults] = useState(false);
-  const searchTimeoutRef = useRef(null);
-
-  useEffect(() => {
-    if (showSearchModal) {
-      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-      searchTimeoutRef.current = setTimeout(() => {
-        searchDatabase(null, false);
-      }, 400);
-    }
-  }, [searchQuery, searchCovenin, searchDesc, searchInsumos, showSearchModal]);
-  const SEARCH_LIMIT = 30;
+  const {
+    searchQuery, setSearchQuery,
+    searchCovenin, setSearchCovenin,
+    searchDesc, setSearchDesc,
+    searchInsumos, setSearchInsumos,
+    results: searchResults,
+    totalResults: totalSearchResults,
+    isSearching: searching,
+    forceSearch: searchDatabase
+  } = useCost360Search({
+    databaseId: activeDatabase?.id || 'master',
+    onlyCoded: window.ARKO_SITE_CONFIG?.only_coded_items || false,
+    limit: 30,
+    autoSearch: showSearchModal
+  });
 
   // Row selection & Reordering
   const [selectedItemId, setSelectedItemId] = useState(null);
@@ -155,52 +151,8 @@ export default function BudgetWorksheetPage() {
     }
   };
 
-  const searchDatabase = async (e, append = false) => {
-    if (e) e.preventDefault();
-    try {
-      setSearching(true);
-      const currentSkip = append ? searchSkip : 0;
-      const params = new URLSearchParams({
-        skip: currentSkip.toString(),
-        limit: SEARCH_LIMIT.toString(),
-        database_id: activeDatabase.id,
-        search_desc: searchDesc,
-        search_insumos: searchInsumos
-      });
-      
-      if (searchQuery.trim()) params.append('search', searchQuery.trim());
-      if (searchCovenin.trim()) params.append('covenin', searchCovenin.trim());
-      
-      if (window.ARKO_SITE_CONFIG?.only_coded_items) {
-        params.append('only_coded', 'true');
-      }
-      
-      const url = `${API_URL}/cost360/items?${params.toString()}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      
-      if (append) {
-        setSearchResults(prev => [...prev, ...(data.items || [])]);
-        setSearchSkip(currentSkip + SEARCH_LIMIT);
-      } else {
-        setSearchResults(data.items || []);
-        setSearchSkip(SEARCH_LIMIT);
-      }
-      
-      setTotalSearchResults(data.total || 0);
-      setHasMoreSearchResults((data.items || []).length === SEARCH_LIMIT && (currentSkip + SEARCH_LIMIT) < (data.total || 0));
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setSearching(false);
-    }
-  };
-
   const handleOpenSearchModal = () => {
     setShowSearchModal(true);
-    setSearchSkip(0);
-    setHasMoreSearchResults(false);
-    // Remove searchDatabase() here since useEffect handles it
   };
 
   const handleAddItem = async (item) => {
