@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FileSpreadsheet, Loader2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { exportApuExcelCustom } from '../services/cost360Service';
 
 export default function ExportApuExcelButton({ 
@@ -29,7 +30,7 @@ export default function ExportApuExcelButton({
       
     } catch (error) {
       console.error('Error al exportar APU a Excel:', error);
-      alert('Hubo un error al exportar el APU a Excel. Revisa la consola para más detalles.');
+      toast.error('Hubo un error al exportar el APU a Excel.');
     } finally {
       setIsExporting(false);
     }

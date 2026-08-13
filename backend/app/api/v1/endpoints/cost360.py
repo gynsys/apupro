@@ -483,17 +483,41 @@ async def export_apu_excel(item_id: str, db: Session = Depends(get_db)):
         print(f"Error exportando APU Excel: {str(e)}")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error al exportar APU: {str(e)}")
-    ws.column_dimensions['G'].width = 16
-    ws.column_dimensions['H'].width = 18
+@router.post("/apu/export-excel-custom")
+async def export_apu_excel_custom(payload: CustomApuExportRequest):
+    """Genera un archivo Excel desde la memoria enviada por el frontend (APU dinámico o en edición)"""
+    try:
+        # Extraer data
+        item_data = payload.item
+        mats = [m.dict() for m in payload.materials]
+        eqs = [e.dict() for e in payload.equipments]
+        mos = [l.dict() for l in payload.labors]
+        
+        # Mapear a las llaves que espera export_utils
+        item_dict = {
+            "CodPar": item_data.get("CodPar") or item_data.get("cod_par", "Custom"),
+            "Descri": item_data.get("Descri") or item_data.get("description", "Custom APU"),
+            "UniPar": item_data.get("UniPar") or item_data.get("unit", "UND"),
+            "RenPar": item_data.get("RenPar") or item_data.get("performance", 1.0)
+        }
+        
+        settings = payload.settings or {}
+        
+        file_path, filename = generate_excel_workbook(item_dict, mats, eqs, mos, settings)
+        
+        return FileResponse(
+            path=str(file_path), 
+            filename=filename, 
+            media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+        
+    except Exception as e:
+        import traceback
+        print(f"Error exportando APU custom a Excel: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error al exportar APU: {str(e)}")
 
-    # ── 10. Guardar y retornar ────────────────────────────────────────────
-    temp_dir = Path("temp")
-    temp_dir.mkdir(exist_ok=True)
-    filename  = f"APU_{item.CovPar or item.CodPar}.xlsx"
-    file_path = temp_dir / filename
-    wb.save(file_path)
-
-    return FileResponse(path=str(file_path), filename=filename)
 
 @router.delete("/databases/{database_id}")
 def delete_database_route(database_id: str, db: Session = Depends(get_db)):
