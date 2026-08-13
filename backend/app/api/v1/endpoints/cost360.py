@@ -489,9 +489,9 @@ async def export_apu_excel_custom(payload: CustomApuExportRequest):
     try:
         # Extraer data
         item_data = payload.item
-        mats = [m.dict() for m in payload.materials]
-        eqs = [e.dict() for e in payload.equipments]
-        mos = [l.dict() for l in payload.labors]
+        mats = payload.materials
+        eqs = payload.equipments
+        mos = payload.labors
         
         # Mapear a las llaves que espera export_utils
         item_dict = {
