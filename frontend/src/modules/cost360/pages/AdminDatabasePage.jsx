@@ -34,7 +34,6 @@ const AdminDatabasePage = () => {
   const [searchDesc, setSearchDesc] = useState(true);
   const [searchInsumos, setSearchInsumos] = useState(false);
   const [searchCovenin, setSearchCovenin] = useState('');
-  const [chapter, setChapter] = useState('');
   const [skip, setSkip] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -46,10 +45,10 @@ const AdminDatabasePage = () => {
   const { config, setConfig } = useContext(SiteConfigContext);
   const searchTimeoutRef = useRef(null);
 
-  const fetchPartidas = async (searchQuery = '', chapterQuery = '', currentSkip = 0, append = false, sDesc = searchDesc, sInsumos = searchInsumos, sCovenin = searchCovenin) => {
+  const fetchPartidas = async (searchQuery = '', currentSkip = 0, append = false, sDesc = searchDesc, sInsumos = searchInsumos, sCovenin = searchCovenin) => {
     try {
       setLoading(true);
-      const response = await cost360Service.fetchItems(currentSkip, LIMIT, searchQuery, chapterQuery, 'master', sDesc, sInsumos, sCovenin, onlyCoded);
+      const response = await cost360Service.fetchItems(currentSkip, LIMIT, searchQuery, '', 'master', sDesc, sInsumos, sCovenin, onlyCoded);
       if (append) {
         setItems(prev => [...prev, ...response.items]);
       } else {
@@ -68,20 +67,20 @@ const AdminDatabasePage = () => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     
     searchTimeoutRef.current = setTimeout(() => {
-      fetchPartidas(search, chapter, 0, false, searchDesc, searchInsumos, searchCovenin);
+      fetchPartidas(search, 0, false, searchDesc, searchInsumos, searchCovenin);
     }, 400);
-  }, [chapter, onlyCoded, searchDesc, searchInsumos, searchCovenin]);
+  }, [search, onlyCoded, searchDesc, searchInsumos, searchCovenin]);
 
   const handleSearch = (e) => {
     if (e) e.preventDefault();
     setSkip(0);
-    fetchPartidas(search, chapter, 0, false, searchDesc, searchInsumos, searchCovenin);
+    fetchPartidas(search, 0, false, searchDesc, searchInsumos, searchCovenin);
   };
 
   const handleLoadMore = () => {
     const newSkip = skip + LIMIT;
     setSkip(newSkip);
-    fetchPartidas(search, chapter, newSkip, true, searchDesc, searchInsumos, searchCovenin);
+    fetchPartidas(search, newSkip, true, searchDesc, searchInsumos, searchCovenin);
   };
 
   const handleToggleGlobalCoded = async (e) => {
@@ -200,8 +199,6 @@ const AdminDatabasePage = () => {
               setSearchQuery={setSearch}
               searchCovenin={searchCovenin}
               setSearchCovenin={setSearchCovenin}
-              searchChapter={chapter}
-              setSearchChapter={setChapter}
               searchDesc={searchDesc}
               setSearchDesc={setSearchDesc}
               searchInsumos={searchInsumos}
@@ -213,7 +210,7 @@ const AdminDatabasePage = () => {
             {totalItems > 0 && (
               <p className="mt-3 text-xs text-slate-500 font-medium">
                 <span className="font-bold text-slate-700">{new Intl.NumberFormat('es-VE').format(totalItems)}</span>{' '}
-                {(search || chapter) ? 'coincidencias' : 'Total Partidas'}
+                {search ? 'coincidencias' : 'Total Partidas'}
               </p>
             )}
           </div>

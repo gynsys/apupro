@@ -116,7 +116,6 @@ export default function AIApuGeneratorPage() {
   const [searchDesc, setSearchDesc] = useState(true);
   const [searchInsumos, setSearchInsumos] = useState(false);
   const [searchCovenin, setSearchCovenin] = useState('');
-  const [searchChapter, setSearchChapter] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [totalMatches, setTotalMatches] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
@@ -175,10 +174,10 @@ export default function AIApuGeneratorPage() {
     }
   }, [modeParam]);
 
-  const triggerSearch = async (query = searchQuery, chapter = searchChapter, db = selectedDatabase, cov = searchCovenin) => {
+  const triggerSearch = async (query = searchQuery, db = selectedDatabase, cov = searchCovenin) => {
     setIsSearching(true);
     try {
-      const data = await fetchItems(0, 50, query, chapter, db, searchDesc, searchInsumos, cov);
+      const data = await fetchItems(0, 50, query, '', db, searchDesc, searchInsumos, cov);
       setSearchResults(data.items || []);
       setTotalMatches(data.total || (data.items || []).length);
     } catch (error) {
@@ -194,10 +193,10 @@ export default function AIApuGeneratorPage() {
     if (creationMode === 'import') {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
       searchTimeoutRef.current = setTimeout(() => {
-        triggerSearch(searchQuery, searchChapter, selectedDatabase, searchCovenin);
+        triggerSearch(searchQuery, selectedDatabase, searchCovenin);
       }, 400);
     }
-  }, [selectedDatabase, searchDesc, searchInsumos, searchCovenin, creationMode]);
+  }, [searchQuery, selectedDatabase, searchDesc, searchInsumos, searchCovenin, creationMode]);
 
   const handleImportApu = async (itemCode) => {
     try {
@@ -546,8 +545,6 @@ export default function AIApuGeneratorPage() {
               setSearchQuery={setSearchQuery}
               searchCovenin={searchCovenin}
               setSearchCovenin={setSearchCovenin}
-              searchChapter={searchChapter}
-              setSearchChapter={setSearchChapter}
               searchDesc={searchDesc}
               setSearchDesc={setSearchDesc}
               searchInsumos={searchInsumos}
