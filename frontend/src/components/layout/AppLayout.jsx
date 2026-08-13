@@ -25,13 +25,22 @@ const NAV_ITEMS = [
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, logout } = useContext(AuthContext);
+  const { isAuthenticated, user, logout } = useContext(AuthContext);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => { logout(); navigate('/'); };
 
   const isActive = (item) =>
     item.exact ? location.pathname === item.href : location.pathname.startsWith(item.href);
+
+  // Extend NAV_ITEMS conditionally based on admin status
+  const getNavItems = () => {
+    let items = [...NAV_ITEMS];
+    if (user?.email === 'admin@arko360.net') {
+      items.push({ name: 'Mantenimiento BD', href: '/cost360/admin-db', Icon: Database });
+    }
+    return items;
+  };
 
   /* ── Sidebar nav list ───────────────────────────────────────── */
   const SidebarContent = () => (
@@ -46,9 +55,8 @@ export default function AppLayout() {
         </span>
       </div>
 
-
       <div className="space-y-0.5 px-3 flex-1 pb-4 overflow-y-auto">
-        {NAV_ITEMS.map(({ name, href, Icon, exact, subItems }) => {
+        {getNavItems().map(({ name, href, Icon, exact, subItems }) => {
           const active = exact ? location.pathname === href : location.pathname.startsWith(href);
           return (
             <div key={href} className="group relative">

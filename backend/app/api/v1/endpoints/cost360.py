@@ -10,7 +10,8 @@ from app.schemas.cost360 import (
     CostMaterialUpdate, CostEquipmentUpdate, CostLaborUpdate,
     AiApuGenerateRequest, SmartSelectRequest,
     CustomCostItemCreate, CustomCostItemResponse,
-    Cost360DatabaseCreate, Cost360DatabaseUpdate, Cost360DatabaseListResponse
+    Cost360DatabaseCreate, Cost360DatabaseUpdate, Cost360DatabaseListResponse,
+    MasterItemUpdate
 )
 
 # Import Services and CRUD
@@ -23,7 +24,8 @@ from app.crud.crud_cost360 import (
     update_equipment, delete_equipment,
     update_labor, delete_labor,
     save_custom_apu,
-    get_all_databases, get_database_by_id, create_database, update_database, delete_database
+    get_all_databases, get_database_by_id, create_database, update_database, delete_database,
+    update_master_item, delete_master_item
 )
 from app.services.preprocessing_service import preprocess_apu_data, fast_preprocess_debug
 from app.services.ai_apu_service import generate_apu_with_ai, generate_apu_with_ai_from_base
@@ -31,8 +33,8 @@ from app.services.ai_apu_service import generate_apu_with_ai, generate_apu_with_
 router = APIRouter()
 
 @router.get("/items", response_model=CostItemListResponse)
-def get_items(skip: int = 0, limit: int = 50, search: Optional[str] = None, chapter: Optional[str] = None, categoria: Optional[str] = None, tipo_actividad: Optional[str] = None, search_desc: bool = True, search_insumos: bool = False, covenin: Optional[str] = None, database_id: str = "master", db: Session = Depends(get_db)):
-    total, items = get_items_paginated(db, skip, limit, search, chapter, categoria, tipo_actividad, search_desc, search_insumos, covenin, database_id)
+def get_items(skip: int = 0, limit: int = 50, search: Optional[str] = None, chapter: Optional[str] = None, categoria: Optional[str] = None, tipo_actividad: Optional[str] = None, search_desc: bool = True, search_insumos: bool = False, covenin: Optional[str] = None, database_id: str = "master", only_coded: bool = False, db: Session = Depends(get_db)):
+    total, items = get_items_paginated(db, skip, limit, search, chapter, categoria, tipo_actividad, search_desc, search_insumos, covenin, database_id, only_coded)
     return {"total": total, "items": items}
 
 
@@ -130,6 +132,19 @@ def get_apu(item_code: str, database_id: str = "master", db: Session = Depends(g
     return APUResponse(
         partida=item, materiales=materiales, equipos=equipos, mano_obra=mano_obra, total_directo=round(total_directo, 2)
     )
+
+@router.put("/items/{item_code}")
+def update_master_item_route(item_code: str, payload: MasterItemUpdate, db: Session = Depends(get_db)):
+    updated_item = update_master_item(db, item_code, payload.Descri, payload.UniPar, payload.RenPar)
+    if not updated_item:
+        raise HTTPException(status_code=404, detail="Partida no encontrada")
+    return updated_item
+
+@router.delete("/items/{item_code}")
+def delete_master_item_route(item_code: str, db: Session = Depends(get_db)):
+    if not delete_master_item(db, item_code):
+        raise HTTPException(status_code=404, detail="Partida no encontrada")
+    return {"status": "ok"}
 
 @router.get("/materials")
 def search_materials_route(skip: int = 0, limit: int = 50, search: str = "", database_id: str = "master", db: Session = Depends(get_db)):

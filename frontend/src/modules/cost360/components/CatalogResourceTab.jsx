@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { FiSearch, FiEdit2, FiTrash2, FiCheck, FiX } from 'react-icons/fi';
 import { API_URL } from '../../../services/api';
 
-const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase }) => {
+const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adminMode = false }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -77,7 +77,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase }) =
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${adminMode ? localStorage.getItem('arko_admin_token') : localStorage.getItem('token')}`
         },
         body: JSON.stringify(editForm)
       });
@@ -100,7 +100,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase }) =
     try {
       const res = await fetch(`${API_URL}/cost360/${resourceType}/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${adminMode ? localStorage.getItem('arko_admin_token') : localStorage.getItem('token')}` }
       });
       if (res.ok) {
         toast.success(`${title} eliminado`);
@@ -180,7 +180,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase }) =
                 {config.editableFields.map(f => (
                   <th key={f.key} className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">{f.label}</th>
                 ))}
-                {selectedDatabase !== 'master' && (
+                {(selectedDatabase !== 'master' || adminMode) && (
                   <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                 )}
               </tr>
@@ -224,7 +224,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase }) =
                       </td>
                     ))}
 
-                    {selectedDatabase !== 'master' && (
+                    {(selectedDatabase !== 'master' || adminMode) && (
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         {editingId === item[config.idKey] ? (
                           <div className="flex justify-end gap-2">

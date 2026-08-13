@@ -16,6 +16,7 @@ import Cost360Dashboard from './modules/cost360/pages/Cost360Dashboard.jsx';
 import APUViewer from './modules/cost360/pages/APUViewer.jsx';
 import AIApuGeneratorPage from './modules/cost360/pages/AIApuGeneratorPage.jsx';
 import DatabaseManagementPage from './modules/cost360/pages/DatabaseManagementPage.jsx';
+import AdminDatabasePage from './modules/cost360/pages/AdminDatabasePage.jsx';
 import AppLayout from './components/layout/AppLayout.jsx';
 import { API_URL } from './services/api';
 import { Toaster } from 'react-hot-toast';
@@ -104,6 +105,7 @@ function App() {
               <Route path="apu/:id" element={<APUViewer />} />
               <Route path="ai-generator" element={<AIApuGeneratorPage />} />
               <Route path="databases" element={<DatabaseManagementPage />} />
+              <Route path="admin-db" element={<AdminDatabasePage />} />
             </Route>
 
             {/* RUTAS DE PRESUPUESTOS (APP - Protegidas) */}

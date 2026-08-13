@@ -18,9 +18,9 @@ const cost360ApiClient = axios.create({
  * @param {string} chapter - Chapter prefix filter (e.g., 'E', 'I')
  * @returns {Promise<Array>} List of items
  */
-export const fetchItems = async (skip = 0, limit = 50, search = '', chapter = '', database_id = 'master', search_desc = true, search_insumos = false, covenin = '') => {
+export const fetchItems = async (skip = 0, limit = 50, search = '', chapter = '', database_id = 'master', search_desc = true, search_insumos = false, covenin = '', only_coded = false) => {
   try {
-    const params = { skip, limit, database_id, search_desc, search_insumos };
+    const params = { skip, limit, database_id, search_desc, search_insumos, only_coded };
     if (search) params.search = search;
     if (chapter) params.chapter = chapter;
     if (covenin) params.covenin = covenin;
@@ -88,12 +88,30 @@ export const saveCustomApu = async (payload) => {
   return response.data;
 };
 
+export const updateMasterItem = async (itemCode, data) => {
+  const token = localStorage.getItem('arko_admin_token');
+  const response = await cost360ApiClient.put(`/items/${itemCode}`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return response.data;
+};
+
+export const deleteMasterItem = async (itemCode) => {
+  const token = localStorage.getItem('arko_admin_token');
+  const response = await cost360ApiClient.delete(`/items/${itemCode}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return response.data;
+};
+
 export default {
   fetchItems,
   fetchApuDetails,
   fetchCategoriesTree,
   generateAIApu,
-  smartSelect,
   generateAIApuFromBase,
+  smartSelect,
   saveCustomApu,
+  updateMasterItem,
+  deleteMasterItem
 };

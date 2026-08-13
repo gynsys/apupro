@@ -97,18 +97,36 @@ Estos parámetros se configuran desde la pestaña de Configuración (engranaje) 
 ## 5. Roadmap a Futuro (Cost360 V2)
 
 ### Corto Plazo (1-2 Semanas)
-- [ ] **Exportación a Excel/PDF:** Permitir que los ingenieros descarguen el APU de una partida formateado listo para presentarse en licitaciones.
+- [x] **Exportación a Excel/PDF:** Permitir que los ingenieros descarguen el APU de una partida formateado listo para presentarse en licitaciones.
 - [x] **Actualización Masiva de Precios:** (Desde Panel Admin) Opción para aplicar factor de inflación a materiales y mano de obra sin necesidad de re-correr el ETL completo. (Completado: `material_inflation`, `labor_inflation`, `equipment_inflation`).
 - [ ] **Caché en Redis:** Cachear las respuestas de la tabla de Partidas para acelerar la carga del dashboard cuando hay múltiples usuarios concurrentes.
 
 ### Mediano Plazo (1 Mes)
 - [x] **Armado de Presupuestos:** Funcionalidad para que el usuario pueda "Añadir partida al carrito/presupuesto", indicando metrajes (cantidades de obra), generando un Presupuesto Total. (Implementado a través del sistema global de Presupuestos y la unificación de Plantillas).
 - [x] **Modificación "On-The-Fly" (Modo Simulador):** Permitir al usuario duplicar una partida y alterar el rendimiento o los costos de los materiales temporalmente para analizar escenarios. (Completado: Posibilidad de clonar y guardar como base personalizada desde `AIApuGeneratorPage` y editar con `ApuEditorUI`).
-- [ ] **Integración con ARKO3D:** Conectar los cómputos métricos obtenidos del modelo 3D (ej. volumen de concreto de la losa) y enviarlos directamente al módulo Cost360 para obtener el presupuesto estructural automático.
 
 ### Largo Plazo (3+ Meses)
 - [ ] **Análisis de Dispersión de Precios:** IA predictiva que analice las fluctuaciones históricas de precios de materiales (acero, cemento) y genere alertas o pronósticos.
-- [ ] **Multitenancy Completo:** Cada tenant (empresa de construcción) puede subir su propia base de datos Lulowin personalizada para Cost360, aislada de la pública.
+- [ ] **Soporte Multiusuario y Depuración:** La base de datos maestra Lulowin ya se encuentra subida en el sistema, el objetivo actual es enfocarse en el soporte multiusuario y continuar con la depuración y limpieza de dicha base de datos.
+
+---
+
+## 6. Auditoría y Depuración de Base de Datos (Julio 2026)
+
+Durante el proceso de sincronización de datos con los archivos Excel (Mano de Obra, Equipos y Materiales), se realizaron auditorías de integridad de datos:
+
+### 6.1. Problema con el Jornal (Mano de Obra)
+Se detectó que varios registros de la tabla de Mano de Obra (Labor) tenían valores en cero (0.00) tanto en *Jornal* como en *Bono*.
+- **Diagnóstico:** Los datos base del servidor importados de LuloWin/Maprex contenían códigos antiguos (824 registros) que no existían en el Excel oficial del cliente (785 registros). 
+- **Solución:** Se corrió un script para limpiar la base de datos eliminando de forma segura los 39 códigos obsoletos (huérfanos) no utilizados, dejando la BD en perfecta sincronía (785 registros válidos con Jornal y Bono actualizados).
+
+### 6.2. Auditoría de Equipos y Materiales
+- **Equipos:** Se cruzó el Excel contra la BD. Habían 13 equipos excedentes en BD sin precio (.00). Se comprobó que no tenían uso en ningún APU y fueron depurados.
+- **Materiales:** Se validaron 12.106 materiales con 100% de precisión en precios. Se encontraron 53 materiales excedentes en BD. 34 se conservaron por estar anclados a la receta de las APUs, y 19 se eliminaron.
+
+---
+
+## 7. Notas Conocidas / Problemas Actuales (Julio 2026)
 
 ---
 
@@ -136,3 +154,22 @@ Se detectó que varios registros de la tabla de Mano de Obra (Labor) tenían val
 
 ### 7.2. Problemas con los Botones Pegajosos (Sticky Buttons)
 - **Descripción:** Se ha documentado la presencia de comportamientos anómalos (glitches visuales) con botones que poseen posicionamiento sticky o ixed a lo largo de las vistas de edición y el Dashboard. Estos botones tienden a solaparse o no fijarse correctamente al hacer scroll bajo ciertas condiciones de layout.
+
+---
+
+## 8. Generador de APU con IA (Agosto 2026)
+
+### 8.1. Filtro Inteligente (Smart Selector) sin Consumo de LLM
+Para optimizar el uso de tokens y reducir la latencia, se implementó el **Filtro Inteligente**:
+- **Problema:** Anteriormente, buscar términos genéricos como "jardinera" dentro de una categoría amplia (ej. E132 - Demoliciones) consumía muchos tokens porque el LLM intentaba procesar o clarificar decenas de partidas.
+- **Solución Matemática:** Se desarrolló un servicio en el backend (`smart_selector_service.py`) basado en **TF-IDF y Distancia Jaccard** que analiza matemáticamente las partidas de la base de datos y genera automáticamente preguntas discriminantes (ej. "¿mano o equipo?", "¿concreto o mampostería?").
+- **Flujo de Usuario:** 
+  1. Si no hay coincidencia exacta de inicio, la UI pausa el llamado al LLM.
+  2. Despliega un "wizard" interactivo que presenta opciones basadas en keywords dinámicas.
+  3. Cada clic filtra el conjunto de partidas candidatas localmente y en milisegundos.
+  4. Solo cuando se alcanza un alto nivel de confianza o se acaban las preguntas, el sistema selecciona la "Partida Base" y avanza al LLM.
+
+### 8.2. Cambio a "Adaptative Prompting" (Menos Alucinaciones)
+- El endpoint `/generate-ai-apu` se rediseñó para soportar el flujo del Smart Selector.
+- Ahora, cuando el Filtro Inteligente selecciona una base, el sistema carga el APU completo (incluyendo los rendimientos, insumos exactos y precios) y se lo entrega al LLM con instrucciones estrictas de **ADAPTACIÓN** en lugar de generación desde cero.
+- **Resultado:** Reducción drástica del riesgo de alucinación (inventar insumos inexistentes o con precios incorrectos) ya que la mayor parte del APU se toma directamente del histórico certificado.

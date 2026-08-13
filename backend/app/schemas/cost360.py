@@ -62,6 +62,12 @@ class APUResponse(BaseModel):
     mano_obra: List[APUComponent]
     total_directo: float
 
+class MasterItemUpdate(BaseModel):
+    Descri: Optional[str] = None
+    UniPar: Optional[str] = None
+    RenPar: Optional[float] = None
+
+
 class CostMaterialUpdate(BaseModel):
     CosMat: Optional[float] = None
     Descri: Optional[str] = None

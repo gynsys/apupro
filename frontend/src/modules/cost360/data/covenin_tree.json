@@ -13502,5 +13502,15 @@
         "children": []
       }
     ]
+  },
+  {
+    "code": "V",
+    "name": "TELECOMUNICACIONES",
+    "children": []
+  },
+  {
+    "code": "H",
+    "name": "HIDRÁULICA",
+    "children": []
   }
 ]

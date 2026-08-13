@@ -36,6 +36,10 @@ Hemos integrado con éxito el motor semántico MiniLM y el LLM Generativo para q
    - Integramos la llamada directa a MiniLM. 
    - **El Portero Matemático:** Activamos la validación por umbral (Score < 15%). Si pides algo ilógico para esa categoría (ej. Cerámica en Herrería), el proceso se detiene en seco con el error `incongruencia_matematica`.
 
-3. **El Analista LLM (`ai_apu_service.py`)**:
-   - **Cero Tokens Perdidos:** Se configuró el cortocircuito para que, si el "portero" manda una alerta de incongruencia, devuelva la advertencia directamente al usuario sin hacer llamadas a Gemini/OpenAI.
-   - **Confirmación Interactiva (Híbrido):** Se modificó el prompt de instrucciones del LLM. Ahora, cuando recibe el "Top 3" de partidas históricas más parecidas desde MiniLM (ej. Puertas de hierro con vidrio), el LLM no genera el APU a lo loco. Primero detiene el flujo, saluda al usuario, le dice qué encontró, y le presenta las partidas exactas en botones interactivos para que el usuario sea quien apruebe y decida cuál es la base histórica definitiva.
+3. **Filtro Inteligente (Smart Selector - `smart_selector_service.py`)**:
+   - **Cero Tokens en Decisiones Técnicas:** En lugar de que el LLM trate de adivinar o haga preguntas consumiendo saldo, este nuevo servicio analiza matemáticamente las partidas de la categoría COVENIN filtrada.
+   - **Árbol de Decisión Dinámico (TF-IDF):** Detecta variables discriminantes (ej: concreto vs mampostería, mano vs equipo) basándose en las frecuencias de palabras y le genera al usuario botones de respuesta. Cada clic filtra la base de datos hasta encontrar la "Partida Base Histórica" más parecida, todo de manera local y ultrarrápida.
+
+4. **El Analista LLM (`ai_apu_service.py`)**:
+   - **Adaptación sobre Base Real (Menos Alucinaciones):** Una vez que el Filtro Inteligente selecciona una partida base, el sistema recupera el APU completo (con todos sus insumos, cantidades y precios reales) y se lo entrega al LLM con un prompt estricto: *No inventes un APU desde cero, ADAPTA este APU real para que cumpla con la solicitud del usuario, conservando los precios intactos y ajustando solo lo necesario*.
+   - **Cero Tokens Perdidos:** Se configuró el cortocircuito para el modo "Preproceso" y para las validaciones tempranas. Si el sistema detecta incongruencias matemáticas desde el inicio (ej. el score de MiniLM es casi 0), detiene el proceso sin llamar a Gemini/OpenAI.

@@ -22,7 +22,7 @@ def strip_accents(s: str) -> str:
 def unaccent_col(column):
     return func.translate(column, 'áéíóúÁÉÍÓÚäëïöüÄËÏÖÜ', 'aeiouAEIOUaeiouAEIOU')
 
-def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Optional[str] = None, chapter: Optional[str] = None, categoria: Optional[str] = None, tipo_actividad: Optional[str] = None, search_desc: bool = True, search_insumos: bool = False, covenin: Optional[str] = None, database_id: str = "master"):
+def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Optional[str] = None, chapter: Optional[str] = None, categoria: Optional[str] = None, tipo_actividad: Optional[str] = None, search_desc: bool = True, search_insumos: bool = False, covenin: Optional[str] = None, database_id: str = "master", only_coded: bool = False):
     
     # Failsafe: Si ambos están apagados, forzar búsqueda por descripción por defecto
     if not search_desc and not search_insumos:
@@ -119,7 +119,7 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
             query = query.filter(and_(*all_filters))
             
     if covenin:
-        query = query.filter(CostItem.CovPar.ilike(f"%{covenin}%"))
+        query = query.filter(CostItem.CovPar.startswith(covenin))
     if chapter:
         from sqlalchemy import or_
         query_chap = query.filter(or_(CostItem.CovPar.startswith(chapter), CostItem.CodPar.startswith(chapter)))
@@ -144,6 +144,9 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
     if tipo_actividad:
         query = query.filter(CostItem.TipoActividad == tipo_actividad)
         total = query.count() # re-count if tipo_actividad is applied
+    if only_coded:
+        query = query.filter(CostItem.CovPar.op('~')('^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$'))
+        total = query.count()
     
     # Priorizar partidas con COVENIN completo (formato [LETRA].[9 DÍGITOS] como C.110800300)
     # Usamos una función SQL nativa para mayor compatibilidad
@@ -366,3 +369,35 @@ def delete_database(db: Session, database_id: str):
     db.delete(db_obj)
     db.commit()
     return True
+
+def update_master_item(db: Session, item_code: str, descri: str, unipar: str, renpar: float):
+    item = db.query(CostItem).filter(CostItem.CodPar == item_code).first()
+    if not item:
+        return None
+    
+    if descri is not None:
+        item.Descri = descri
+    if unipar is not None:
+        item.UniPar = unipar
+    if renpar is not None:
+        item.RenPar = renpar
+        
+    db.commit()
+    db.refresh(item)
+    return item
+
+def delete_master_item(db: Session, item_code: str):
+    item = db.query(CostItem).filter(CostItem.CodPar == item_code).first()
+    if not item:
+        return False
+    
+    # Cascade delete child relations manually to avoid FK constraint errors
+    db.query(CostAPUMaterial).filter(CostAPUMaterial.CodPar == item_code).delete(synchronize_session=False)
+    db.query(CostAPUEquipment).filter(CostAPUEquipment.CodPar == item_code).delete(synchronize_session=False)
+    db.query(CostAPULabor).filter(CostAPULabor.CodPar == item_code).delete(synchronize_session=False)
+    
+    # Delete the main item
+    db.delete(item)
+    db.commit()
+    return True
+
