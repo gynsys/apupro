@@ -661,6 +661,7 @@ export default function BudgetWorksheetPage() {
                               }
 
                               itemNumber++;
+                              const currentNumber = itemNumber;
                               return (
                                 <Draggable key={item.id} draggableId={item.id} index={idx}>
                                   {(provided, snapshot) => (
@@ -672,7 +673,7 @@ export default function BudgetWorksheetPage() {
                                     >
                                       <td className="p-4 text-center">
                                         <div {...provided.dragHandleProps} className="inline-flex items-center justify-center p-1.5 rounded-lg cursor-grab active:cursor-grabbing hover:bg-slate-200/50 transition-colors w-8 h-8">
-                                          <span className="text-slate-500 font-bold text-sm group-hover:hidden">{itemNumber}</span>
+                                          <span className="text-slate-500 font-bold text-sm group-hover:hidden">{currentNumber}</span>
                                           <GripVertical size={16} className="hidden group-hover:block text-slate-400 hover:text-blue-600" />
                                         </div>
                                       </td>
