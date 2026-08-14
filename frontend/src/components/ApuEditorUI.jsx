@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Package, Wrench, Users, Plus, Search, Trash2, Loader, Sparkles } from 'lucide-react';
+import { numeroALetras } from '../utils/numberToLetters';
 import ExportApuExcelButton from '../modules/cost360/components/ExportApuExcelButton';
 
 export default function ApuEditorUI({
@@ -760,6 +761,11 @@ export default function ApuEditorUI({
                   <td className="p-3 text-right uppercase font-black text-blue-900 text-sm">Precio Unitario ({currency}):</td>
                   <td className="p-3 w-36 text-right font-black text-sm border-l border-slate-300 bg-white shadow-inner text-blue-800">
                     {costos.unitPrice.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                </tr>
+                <tr className="bg-slate-50">
+                  <td colSpan={2} className="p-3 text-center text-[11px] font-bold text-slate-500 border-t border-slate-200">
+                    SON: ( {numeroALetras(costos.unitPrice)} {String(currency).toUpperCase().includes('USD') ? 'DÓLARES' : 'Bs.'} ctms )
                   </td>
                 </tr>
               </tbody>

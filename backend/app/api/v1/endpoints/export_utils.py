@@ -5,51 +5,7 @@ from pathlib import Path
 from datetime import datetime
 import uuid
 
-def numero_a_letras(numero):
-    unidades = ["", "UN", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE"]
-    decenas = ["", "DIEZ", "VEINTE", "TREINTA", "CUARENTA", "CINCUENTA", "SESENTA", "SETENTA", "OCHENTA", "NOVENTA"]
-    diez_diecinueve = ["DIEZ", "ONCE", "DOCE", "TRECE", "CATORCE", "QUINCE", "DIECISEIS", "DIECISIETE", "DIECIOCHO", "DIECINUEVE"]
-    veintes = ["VEINTE", "VEINTIUN", "VEINTIDOS", "VEINTITRES", "VEINTICUATRO", "VEINTICINCO", "VEINTISEIS", "VEINTISIETE", "VEINTIOCHO", "VEINTINUEVE"]
-    centenas = ["", "CIENTO", "DOSCIENTOS", "TRESCIENTOS", "CUATROCIENTOS", "QUINIENTOS", "SEISCIENTOS", "SETECIENTOS", "OCHOCIENTOS", "NOVECIENTOS"]
-
-    def leer_decenas(n):
-        if n < 10: return unidades[n]
-        if n < 20: return diez_diecinueve[n - 10]
-        if n < 30: return veintes[n - 20]
-        u = n % 10
-        if u == 0: return decenas[n // 10]
-        return decenas[n // 10] + " Y " + unidades[u]
-
-    def leer_centenas(n):
-        if n == 100: return "CIEN"
-        return (centenas[n // 100] + " " + leer_decenas(n % 100)).strip()
-
-    def leer_miles(n):
-        if n == 0: return ""
-        if n == 1: return "MIL"
-        return leer_centenas(n) + " MIL"
-
-    def leer_millones(n):
-        if n == 0: return ""
-        if n == 1: return "UN MILLON"
-        if n > 1: return leer_centenas(n) + " MILLONES"
-        return ""
-
-    entero = int(numero)
-    decimales = int(round((numero - entero) * 100))
-    if entero == 0:
-        letras = "CERO"
-    else:
-        millones = entero // 1000000
-        miles = (entero // 1000) % 1000
-        cientos = entero % 1000
-        letras_parts = []
-        if millones > 0: letras_parts.append(leer_millones(millones))
-        if miles > 0: letras_parts.append(leer_miles(miles))
-        if cientos > 0: letras_parts.append(leer_centenas(cientos))
-        letras = " ".join(filter(bool, letras_parts))
-    
-    return f"{letras} CON {decimales:02d}/100"
+# Eliminamos numero_a_letras ya que vendrá del frontend
 
 def style_cell(cell, bold=False, size=11, align="left", valign="center", border=False, number_format=None):
     cell.font = Font(bold=bold, size=size, name="Calibri")
@@ -68,7 +24,7 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     rendimiento = float(item.get("RenPar") or item.get("rendimiento") or item.get("performance") or 1.0)
     cantidad = float(item.get("CanPar") or item.get("cantidad") or item.get("quantity") or 1.0)
     descripcion = item.get("DesPar") or item.get("descripcion") or item.get("description") or ""
-    codigo = item.get("CodPar") or item.get("codigo") or item.get("code") or "s/c"
+    codigo = item.get("cov_par") or item.get("codigo_covenin") or item.get("CodPar") or item.get("codigo") or item.get("code") or "s/c"
     unidad = item.get("UniPar") or item.get("unidad") or item.get("unit") or ""
     admin_gg = float(settings.get("admin_percent", 15.0))
     imprevisto_ut = float(settings.get("profit_percent", 10.0))
@@ -318,13 +274,18 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     oi_val = round((ps_val * otros_imp)/100, 2)
     precio_final = ps_val + iva_val + oi_val
 
-    currency = settings.get("currency", "Bs.")
-    currency_word = "DÓLARES" if currency == "USD" else "Bs."
-    son_letras = f"SON: ( {numero_a_letras(precio_final)} {currency_word} ctms )"
+    # El texto ya viene calculado desde el frontend en settings
+    son_letras = settings.get("son_letras", "SON: ( NO DISPONIBLE )")
 
-    ws.merge_cells(f"B{cd_row}:C{pf_row-1}")
-    ws[f"B{cd_row}"] = son_letras
-    style_cell(ws[f"B{cd_row}"], align="center", valign="bottom", bold=True)
+    ws.merge_cells(f"B{iva_row}:C{pf_row-1}")
+    ws[f"B{iva_row}"] = son_letras
+    style_cell(ws[f"B{iva_row}"], align="center", valign="bottom", bold=True)
+
+    # Alinear al centro toda la columna H (valores y totales)
+    for r in range(1, pf_row + 1):
+        cell = ws[f"H{r}"]
+        if cell.value is not None:
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
     # Guardar
     temp_dir = Path("temp")
