@@ -8,6 +8,7 @@ import ComponentSearchModal from '../../components/ComponentSearchModal';
 import PrintAPUModal from '../../components/PrintAPUModal';
 import PrintAPULayout from '../../components/PrintAPULayout';
 import ApuEditorUI from '../../components/ApuEditorUI';
+import ExportApuExcelButton from '../../modules/cost360/components/ExportApuExcelButton';
 
 
 export default function BudgetAPUEditorPage() {
@@ -291,6 +292,22 @@ export default function BudgetAPUEditorPage() {
             >
               <Printer size={20} />
             </button>
+            <ExportApuExcelButton
+              item={item}
+              materials={item.materials || []}
+              equipments={item.equipments || []}
+              labors={item.labors || []}
+              settings={{
+                currency: budget.currency,
+                exchange_rate: budget.exchange_rate,
+                fcas_percent: budget.fcas_percent,
+                admin_percent: budget.admin_percent,
+                profit_percent: budget.util_percent,
+                iva_percent: budget.iva_percent,
+                project_name: budget.name,
+                client_name: budget.client_name
+              }}
+            />
           </div>
         </div>
 
