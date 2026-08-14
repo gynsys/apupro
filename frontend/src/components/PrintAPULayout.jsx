@@ -48,8 +48,31 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
 
   const numFormat = (val) => Number(val).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const obra = options?.obra ?? partida.obra ?? 'C/S/C';
-  const contratante = options?.contratante ?? partida.contratante ?? 'C/S/C';
+  // Opciones del modal
+  const showColor    = options?.color !== false;     // default: true
+  const showLines    = options?.format !== 'no-lines'; // default: true
+  const showCompany  = options?.showCompany === true;
+  const companyName  = options?.companyName ?? '';
+  const dateType     = options?.dateType ?? 'none';
+  const showManHours = options?.showManHours === true;
+
+  // Fecha según opción
+  const now = new Date();
+  const dateStr = dateType === 'current'
+    ? now.toLocaleDateString('es-VE')
+    : (dateType === 'db' ? (partida.fecha ?? '') : '');
+
+  // Código COVENIN: probar todas las variantes snake_case y PascalCase
+  const codigoCovenin = partida.cov_par || partida.CovPar || partida.codigo_covenin || partida.CodPar || partida.codigo || '';
+
+  // Obra y Contratante: en blanco si no viene
+  const obra        = options?.obra        || partida.obra        || '';
+  const contratante = options?.contratante || partida.contratante || '';
+
+  // Colores condicionales
+  const headerBg  = showColor ? '#e5e7eb' : '#ffffff';  // gray-200 o blanco
+  const totalBg   = showColor ? '#dbeafe' : '#ffffff';  // blue-100 o blanco
+  const border    = showLines ? '1px solid black' : '1px solid transparent';
 
   return createPortal(
     <div
@@ -74,36 +97,47 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
       </h1>
 
       {/* Encabezado estilo Excel */}
-      <table className="w-full border-collapse border border-black text-[11px] mb-4">
+      <table className="w-full border-collapse text-[11px] mb-4" style={{ border }}>
         <tbody>
+          {showCompany && (
+            <tr>
+              <td style={{ border, backgroundColor: headerBg }} className="px-2 py-1 font-bold w-[15%]">Empresa:</td>
+              <td style={{ border }} className="px-2 py-1 uppercase" colSpan={3}>{companyName}</td>
+            </tr>
+          )}
           <tr>
-            <td className="border border-black px-2 py-1 font-bold w-[15%] bg-gray-50">Obra:</td>
-            <td className="border border-black px-2 py-1 uppercase" colSpan={3}>{obra}</td>
+            <td style={{ border, backgroundColor: headerBg }} className="px-2 py-1 font-bold w-[15%]">Obra:</td>
+            <td style={{ border }} className="px-2 py-1 uppercase" colSpan={3}>{obra}</td>
           </tr>
           <tr>
-            <td className="border border-black px-2 py-1 font-bold bg-gray-50">Contratante:</td>
-            <td className="border border-black px-2 py-1 uppercase" colSpan={3}>{contratante}</td>
+            <td style={{ border, backgroundColor: headerBg }} className="px-2 py-1 font-bold">Contratante:</td>
+            <td style={{ border }} className="px-2 py-1 uppercase" colSpan={3}>{contratante}</td>
           </tr>
           <tr>
-            {/* Se combina la celda de descripción con rowSpan para emular la celda C6 y la de abajo */}
-            <td className="border border-black px-2 py-1 font-bold bg-gray-50" rowSpan={2}>Descripción:</td>
-            <td className="border border-black px-2 py-1 uppercase align-top" rowSpan={2} colSpan={3}>
+            <td style={{ border, backgroundColor: headerBg }} className="px-2 py-1 font-bold" rowSpan={2}>Descripción:</td>
+            <td style={{ border }} className="px-2 py-1 uppercase align-top" rowSpan={2} colSpan={3}>
               {partida.Descri ?? partida.descripcion ?? partida.description ?? ''}
             </td>
           </tr>
           <tr></tr>
           <tr>
-            <td className="border border-black px-2 py-1 font-bold bg-gray-50">Unidad:</td>
-            <td className="border border-black px-2 py-1 uppercase w-[35%]">{partida.UniPar ?? partida.unidad ?? partida.unit ?? ''}</td>
-            <td className="border border-black px-2 py-1 font-bold w-[15%] bg-gray-50">Cantidad:</td>
-            <td className="border border-black px-2 py-1 w-[35%]">{numFormat(partida.CanPar ?? partida.cantidad ?? partida.quantity ?? 1)}</td>
+            <td style={{ border, backgroundColor: headerBg }} className="px-2 py-1 font-bold">Unidad:</td>
+            <td style={{ border }} className="px-2 py-1 uppercase w-[35%]">{partida.UniPar ?? partida.unidad ?? partida.unit ?? ''}</td>
+            <td style={{ border, backgroundColor: headerBg }} className="px-2 py-1 font-bold w-[15%]">Cantidad:</td>
+            <td style={{ border }} className="px-2 py-1 w-[35%]">{numFormat(partida.CanPar ?? partida.cantidad ?? partida.quantity ?? 1)}</td>
           </tr>
           <tr>
-            <td className="border border-black px-2 py-1 font-bold bg-gray-50">Rendimiento:</td>
-            <td className="border border-black px-2 py-1">{numFormat(rendimiento)}</td>
-            <td className="border border-black px-2 py-1 font-bold bg-gray-50">Código:</td>
-            <td className="border border-black px-2 py-1">{partida.CovPar ?? partida.CodPar ?? partida.codigo ?? partida.code ?? 'C/S/C'}</td>
+            <td style={{ border, backgroundColor: headerBg }} className="px-2 py-1 font-bold">Rendimiento:</td>
+            <td style={{ border }} className="px-2 py-1">{numFormat(rendimiento)}</td>
+            <td style={{ border, backgroundColor: headerBg }} className="px-2 py-1 font-bold">Código:</td>
+            <td style={{ border }} className="px-2 py-1">{codigoCovenin}</td>
           </tr>
+          {dateStr && (
+            <tr>
+              <td style={{ border, backgroundColor: headerBg }} className="px-2 py-1 font-bold">Fecha:</td>
+              <td style={{ border }} className="px-2 py-1" colSpan={3}>{dateStr}</td>
+            </tr>
+          )}
         </tbody>
       </table>
 

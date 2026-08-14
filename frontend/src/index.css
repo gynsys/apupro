@@ -9,7 +9,9 @@ html, body, #root {
 
 @media print {
   @page {
-    margin: 1cm;
+    margin: 0;
+    /* Eliminar URL, titulo y fecha del navegador */
+    size: A4;
   }
   body {
     padding: 0;
@@ -29,6 +31,7 @@ html, body, #root {
     top: 0 !important;
     width: 100% !important;
     z-index: 9999 !important;
+    padding: 10mm !important;
   }
   .no-print {
     display: none !important;
