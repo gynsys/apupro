@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Plus, Printer, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Plus, Printer, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { budgetService } from '../../services/budgetService';
 import { API_URL } from '../../services/api';
@@ -239,6 +239,10 @@ export default function BudgetAPUEditorPage() {
     }
   };
 
+  const currentIndex = budget ? budget.items.findIndex(i => i.id === itemId) : -1;
+  const prevItem = currentIndex > 0 ? budget.items[currentIndex - 1] : null;
+  const nextItem = currentIndex !== -1 && currentIndex < budget.items.length - 1 ? budget.items[currentIndex + 1] : null;
+
   if (loading || !item || !budget) {
     return (
       <div className="flex items-center justify-center min-h-screen text-slate-400">
@@ -278,10 +282,31 @@ export default function BudgetAPUEditorPage() {
             >
               <ArrowLeft size={20} />
             </button>
-            <div>
+            <div className="flex items-center gap-6">
               <h2 className="text-sm font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
                 <Calculator size={16} className="text-blue-500" /> APU PRESUPUESTADO
               </h2>
+              
+              {/* Navegación APUs */}
+              <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
+                <button
+                  onClick={() => navigate(`/budgets/${id}/item/${prevItem.id}`)}
+                  disabled={!prevItem}
+                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                  title={prevItem ? "APU Anterior" : "Este es el primer APU"}
+                >
+                  <ChevronLeft size={20} className="text-slate-700" />
+                </button>
+                <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                <button
+                  onClick={() => navigate(`/budgets/${id}/item/${nextItem.id}`)}
+                  disabled={!nextItem}
+                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                  title={nextItem ? "Siguiente APU" : "Este es el último APU"}
+                >
+                  <ChevronRight size={20} className="text-slate-700" />
+                </button>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
