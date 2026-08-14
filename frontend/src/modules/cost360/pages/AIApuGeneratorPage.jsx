@@ -8,6 +8,9 @@ import Cost360SearchBar from '../components/Cost360SearchBar';
 import { useCost360Search } from '../hooks/useCost360Search';
 import ApuEditorUI from '../../../components/ApuEditorUI';
 import coveninTreeData from '../data/covenin_tree.json';
+import ExportApuExcelButton from '../components/ExportApuExcelButton';
+import PrintAPUModal from '../../../components/PrintAPUModal';
+import PrintAPULayout from '../../../components/PrintAPULayout';
 
 export default function AIApuGeneratorPage() {
   const navigate = useNavigate();
@@ -34,6 +37,19 @@ export default function AIApuGeneratorPage() {
   const [smartData, setSmartData] = useState(null);
   const [smartAnswers, setSmartAnswers] = useState({});
   const [basePrompt, setBasePrompt] = useState("");
+
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [printOptions, setPrintOptions] = useState(null);
+
+  useEffect(() => {
+    if (printOptions) {
+      setTimeout(() => {
+        window.print();
+        setPrintOptions(null);
+        setPrintModalOpen(false);
+      }, 300);
+    }
+  }, [printOptions]);
 
   const [coveninTree] = useState(coveninTreeData);
   const [selectedTipoObra, setSelectedTipoObra] = useState('');
@@ -856,8 +872,45 @@ export default function AIApuGeneratorPage() {
         );
       })()}
 
+      {printOptions && item && (
+        <PrintAPULayout 
+          partida={item} 
+          materiales={item.materials || []} 
+          equipos={item.equipments || []} 
+          mano_obra={item.labors || []} 
+          options={printOptions} 
+        />
+      )}
+      
+      {printModalOpen && (
+        <PrintAPUModal 
+          isOpen={printModalOpen}
+          onClose={() => setPrintModalOpen(false)} 
+          onPrint={(options) => setPrintOptions(options)} 
+        />
+      )}
+
       {item && (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200">
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <Calculator size={20} className="text-blue-500" />
+              APU EN EDICIÓN
+            </h3>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setPrintModalOpen(true)}
+                className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 hover:border-blue-400 hover:shadow-md transition-all duration-200 shadow-sm"
+                title="Imprimir"
+              >
+                <Printer size={20} />
+              </button>
+              <ExportApuExcelButton
+                item={item}
+                settings={settings}
+              />
+            </div>
+          </div>
           
           {item.advertencias && item.advertencias.length > 0 && (
             <div className="mb-6 p-4 bg-amber-50 border border-amber-300 rounded-xl shadow-sm">
