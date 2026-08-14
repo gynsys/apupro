@@ -45,6 +45,9 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     ws.merge_cells("B2:H2")
     ws["B2"] = ""
     
+    # Ajustar ancho de la columna B para que quepa "Descripción"
+    ws.column_dimensions['B'].width = 12
+    
     ws["B3"] = f"Obra: {settings.get('project_name') or ''}"
     ws["B4"] = f"Contratante: {settings.get('client_name') or ''}"
     ws["E5"] = "Part. No.:"
@@ -52,8 +55,9 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     ws["G5"] = "Fecha:"
     ws["H5"] = datetime.now().strftime("%d/%m/%Y")
     ws["B6"] = "Descripción:"
-    ws.merge_cells("C6:H6")
+    ws.merge_cells("C6:H7")
     ws["C6"] = item.get("Descri", 'N/A')
+    style_cell(ws["C6"], align="left", valign="top")
     ws["G8"] = "Rendimiento:"
     ws["H8"] = rendimiento
     ws["B9"] = "Código:"
