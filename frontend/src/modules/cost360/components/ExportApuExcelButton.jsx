@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { exportApuExcelCustom } from '../services/cost360Service';
-import { numeroALetras } from '../../utils/numberToLetters';
+import { numeroALetras } from '../../../utils/numberToLetters';
 
 const ExcelIcon = ({ size = 20, className = "" }) => (
   <svg 

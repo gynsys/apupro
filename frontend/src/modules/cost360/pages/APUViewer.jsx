@@ -99,42 +99,6 @@ export default function APUViewer() {
 
   const { partida, materiales = [], equipos = [], mano_obra = [] } = data;
 
-  const rendimiento = partida.RenPar || 1;
-  const adminPercent = 15;
-  const utilPercent = 10;
-  const fcasFactor = 9.88; 
-
-  const calculateMaterialTotal = () => materiales.reduce((acc, item) => acc + (item.subtotal || 0), 0);
-  const calculateEquipmentTotalDay = () => equipos.reduce((acc, item) => acc + (item.subtotal || 0), 0);
-  const calculateLaborTotalJornalDay = () => mano_obra.reduce((acc, item) => acc + (item.tot_jornal || 0), 0);
-  const calculateLaborTotalBonoDay = () => mano_obra.reduce((acc, item) => acc + (item.tot_bono || 0), 0);
-  
-  const calculateLaborTotalDay = () => {
-    const totalJornal = calculateLaborTotalJornalDay();
-    const totalFCAS = totalJornal * fcasFactor;
-    const totalBono = calculateLaborTotalBonoDay();
-    return totalJornal + totalFCAS + totalBono;
-  };
-
-  const calculateDirectCost = () => {
-    const mat = calculateMaterialTotal();
-    const eq = calculateEquipmentTotalDay() / rendimiento;
-    const lab = calculateLaborTotalDay() / rendimiento;
-    return mat + eq + lab;
-  };
-
-  const subtotalA = calculateDirectCost();
-  const adminCost = subtotalA * (adminPercent / 100);
-  const subtotalB = subtotalA + adminCost;
-  const utilCost = subtotalB * (utilPercent / 100);
-  const unitPrice = subtotalB + utilCost;
-
-  const settings = {
-    admin_percent: adminPercent,
-    profit_percent: utilPercent,
-    fcas_percent: fcasFactor * 100, // FCAS comes as a factor (e.g. 9.88) but export utils expect percentage (988) or maybe just 417. We can send 988. 
-    iva_percent: 16
-  };
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto min-h-screen pb-20 print:p-0 print:m-0 print:max-w-none print:bg-white print:w-full">
