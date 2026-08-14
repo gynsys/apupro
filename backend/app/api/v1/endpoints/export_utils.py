@@ -5,6 +5,52 @@ from pathlib import Path
 from datetime import datetime
 import uuid
 
+def numero_a_letras(numero):
+    unidades = ["", "UN", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE"]
+    decenas = ["", "DIEZ", "VEINTE", "TREINTA", "CUARENTA", "CINCUENTA", "SESENTA", "SETENTA", "OCHENTA", "NOVENTA"]
+    diez_diecinueve = ["DIEZ", "ONCE", "DOCE", "TRECE", "CATORCE", "QUINCE", "DIECISEIS", "DIECISIETE", "DIECIOCHO", "DIECINUEVE"]
+    veintes = ["VEINTE", "VEINTIUN", "VEINTIDOS", "VEINTITRES", "VEINTICUATRO", "VEINTICINCO", "VEINTISEIS", "VEINTISIETE", "VEINTIOCHO", "VEINTINUEVE"]
+    centenas = ["", "CIENTO", "DOSCIENTOS", "TRESCIENTOS", "CUATROCIENTOS", "QUINIENTOS", "SEISCIENTOS", "SETECIENTOS", "OCHOCIENTOS", "NOVECIENTOS"]
+
+    def leer_decenas(n):
+        if n < 10: return unidades[n]
+        if n < 20: return diez_diecinueve[n - 10]
+        if n < 30: return veintes[n - 20]
+        u = n % 10
+        if u == 0: return decenas[n // 10]
+        return decenas[n // 10] + " Y " + unidades[u]
+
+    def leer_centenas(n):
+        if n == 100: return "CIEN"
+        return (centenas[n // 100] + " " + leer_decenas(n % 100)).strip()
+
+    def leer_miles(n):
+        if n == 0: return ""
+        if n == 1: return "MIL"
+        return leer_centenas(n) + " MIL"
+
+    def leer_millones(n):
+        if n == 0: return ""
+        if n == 1: return "UN MILLON"
+        if n > 1: return leer_centenas(n) + " MILLONES"
+        return ""
+
+    entero = int(numero)
+    decimales = int(round((numero - entero) * 100))
+    if entero == 0:
+        letras = "CERO"
+    else:
+        millones = entero // 1000000
+        miles = (entero // 1000) % 1000
+        cientos = entero % 1000
+        letras_parts = []
+        if millones > 0: letras_parts.append(leer_millones(millones))
+        if miles > 0: letras_parts.append(leer_miles(miles))
+        if cientos > 0: letras_parts.append(leer_centenas(cientos))
+        letras = " ".join(filter(bool, letras_parts))
+    
+    return f"{letras} CON {decimales:02d}/100"
+
 def style_cell(cell, bold=False, size=11, align="left", border=False, number_format=None):
     cell.font = Font(bold=bold, size=size, name="Calibri")
     cell.alignment = Alignment(horizontal=align, vertical="center", wrap_text=True)
@@ -120,7 +166,7 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     
     cuo_row = total_eq_row + 1
     ws[f"E{cuo_row}"] = "Costo Unitarios Equipos:"
-    ws[f"H{cuo_row}"] = f"=ROUND(H{total_eq_row}/H9,2)"
+    ws[f"H{cuo_row}"] = f"=ROUND(H{total_eq_row}/H8,2)"
     style_cell(ws[f"H{cuo_row}"], bold=True, number_format='#,##0.00')
 
     # MANO DE OBRA
@@ -159,7 +205,7 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     
     ps_row = sub_row + 1
     ws[f"C{ps_row}"] = prestaciones
-    style_cell(ws[f"C{ps_row}"], number_format='#,##0.00')
+    style_cell(ws[f"C{ps_row}"], number_format='#,##0.00', align="right")
     ws[f"D{ps_row}"] = "Prestaciones Sociales:"
     ws[f"G{ps_row}"] = f"=ROUND((C{ps_row}/100)*G{sub_row},2)"
     ws[f"H{ps_row}"] = 0
@@ -172,7 +218,7 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     
     cuo_mo_row = tg_row + 1
     ws[f"D{cuo_mo_row}"] = "Costo Unitario de Mano de Obra:"
-    ws[f"H{cuo_mo_row}"] = f"=ROUND(H{tg_row}/H9,2)"
+    ws[f"H{cuo_mo_row}"] = f"=ROUND(H{tg_row}/H8,2)"
     style_cell(ws[f"H{cuo_mo_row}"], bold=True, number_format='#,##0.00')
 
     # RESUMEN
@@ -184,7 +230,7 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     
     ad_row = cd_row + 1
     ws[f"C{ad_row}"] = admin_gg
-    style_cell(ws[f"C{ad_row}"], number_format='#,##0.00')
+    style_cell(ws[f"C{ad_row}"], number_format='#,##0.00', align="right")
     ws[f"D{ad_row}"] = "Administración y Gastos Generales:"
     ws[f"H{ad_row}"] = f"=ROUND((H{cd_row}*C{ad_row})/100,2)"
     style_cell(ws[f"H{ad_row}"], number_format='#,##0.00')
@@ -195,9 +241,8 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     style_cell(ws[f"H{sb_row}"], bold=True, number_format='#,##0.00')
     
     iu_row = sb_row + 1
-    ws[f"B{iu_row}"] = ""
     ws[f"E{iu_row}"] = imprevisto_ut
-    style_cell(ws[f"E{iu_row}"], number_format='#,##0.00')
+    style_cell(ws[f"E{iu_row}"], number_format='#,##0.00', align="right")
     ws[f"F{iu_row}"] = "Imprevisto Utilidad:"
     ws[f"H{iu_row}"] = f"=ROUND((H{sb_row}*E{iu_row})/100,2)"
     style_cell(ws[f"H{iu_row}"], number_format='#,##0.00')
@@ -209,7 +254,7 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     
     fin_row = sc_row + 1
     ws[f"E{fin_row}"] = financiamiento
-    style_cell(ws[f"E{fin_row}"], number_format='#,##0.00')
+    style_cell(ws[f"E{fin_row}"], number_format='#,##0.00', align="right")
     ws[f"F{fin_row}"] = "Financiamiento:"
     ws[f"H{fin_row}"] = f"=ROUND((H{sc_row}*E{fin_row})/100,2)"
     style_cell(ws[f"H{fin_row}"], number_format='#,##0.00')
@@ -221,14 +266,14 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     
     iva_row = ps_row2 + 1
     ws[f"E{iva_row}"] = iva
-    style_cell(ws[f"E{iva_row}"], number_format='#,##0.00')
+    style_cell(ws[f"E{iva_row}"], number_format='#,##0.00', align="right")
     ws[f"F{iva_row}"] = "Impuesto (I.V.A.):"
     ws[f"H{iva_row}"] = f"=ROUND((H{ps_row2}*E{iva_row})/100,2)"
     style_cell(ws[f"H{iva_row}"], number_format='#,##0.00')
     
     oi_row = iva_row + 1
     ws[f"E{oi_row}"] = otros_imp
-    style_cell(ws[f"E{oi_row}"], number_format='#,##0.00')
+    style_cell(ws[f"E{oi_row}"], number_format='#,##0.00', align="right")
     ws[f"F{oi_row}"] = "Otros Impuestos:"
     ws[f"H{oi_row}"] = f"=ROUND((H{ps_row2}*E{oi_row})/100,2)"
     style_cell(ws[f"H{oi_row}"], number_format='#,##0.00')
@@ -246,6 +291,36 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     ws.column_dimensions['F'].width = 12
     ws.column_dimensions['G'].width = 16
     ws.column_dimensions['H'].width = 18
+
+    # Convertir el precio total a letras en B{cd_row}:C{pf_row-1}
+    total_mat = round(sum( round((float(m.get("CosMat") or m.get("precio_unitario") or m.get("precio") or 0) * float(m.get("CanIns") or m.get("cantidad") or 0)) * (float(m.get("Desper") or m.get("desperdicio") or 0)/100.0 + 1), 2) for m in mat_rows ), 2)
+    total_eq = round(sum( round((float(e.get("CosDia") or e.get("precio_unitario") or e.get("precio") or 0) * float(e.get("CanIns") or e.get("cantidad") or 0)) * float(e.get("Deprec") or e.get("depreciacion") or 1), 2) for e in eq_rows ), 2)
+    total_mo_jornal = sum( round(float(l.get("CanIns") or l.get("cantidad") or 0) * float(l.get("Jornal") or l.get("jornal") or 0), 2) for l in mo_rows )
+    total_mo_bono = sum( round(float(l.get("CanIns") or l.get("cantidad") or 0) * float(l.get("Bono") or l.get("bono") or 0), 2) for l in mo_rows )
+    mo_ps = round((prestaciones/100.0) * total_mo_jornal, 2)
+    total_mo = total_mo_jornal + total_mo_bono + mo_ps
+    
+    cuo_eq = round(total_eq / rendimiento, 2)
+    cuo_mo = round(total_mo / rendimiento, 2)
+    
+    cd_val = round(total_mat + cuo_eq + cuo_mo, 2)
+    ad_val = round((cd_val * admin_gg)/100, 2)
+    sb_val = cd_val + ad_val
+    iu_val = round((sb_val * imprevisto_ut)/100, 2)
+    sc_val = sb_val + iu_val
+    fin_val = round((sc_val * financiamiento)/100, 2)
+    ps_val = sc_val + fin_val
+    iva_val = round((ps_val * iva)/100, 2)
+    oi_val = round((ps_val * otros_imp)/100, 2)
+    precio_final = ps_val + iva_val + oi_val
+
+    currency = settings.get("currency", "Bs.")
+    currency_word = "DÓLARES" if currency == "USD" else "Bs."
+    son_letras = f"SON: ( {numero_a_letras(precio_final)} {currency_word} ctms )"
+
+    ws.merge_cells(f"B{cd_row}:C{pf_row-1}")
+    ws[f"B{cd_row}"] = son_letras
+    style_cell(ws[f"B{cd_row}"], align="center", bold=True)
 
     # Guardar
     temp_dir = Path("temp")
