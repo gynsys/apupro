@@ -336,29 +336,31 @@ export default function BudgetAPUEditorPage() {
           </div>
         </div>
 
-        <ApuEditorUI
-          item={item}
-          settings={{
-            currency: budget.currency,
-            exchange_rate: budget.exchange_rate || 1.0,
-            material_inflation: budget.material_inflation || 0,
-            equipment_inflation: budget.equipment_inflation || 0,
-            labor_inflation: budget.labor_inflation || 0,
-            labor_bonus: budget.labor_bonus || 0,
-            fcas_percent: budget.fcas_percent || 417,
-            admin_percent: budget.admin_percent || 15,
-            profit_percent: budget.profit_percent || 10,
-            iva_percent: budget.iva_percent || 0
-          }}
-          onHeaderChange={handleApuEditorComponentChange}
-          onHeaderBlur={handleApuEditorComponentBlur}
-          onComponentChange={handleApuEditorComponentChange}
-          onComponentBlur={handleApuEditorComponentBlur}
-          onRemoveRow={handleRemoveRow}
-          onAddBlankRow={handleAddBlankRow}
-          onAddSearchRow={(type) => setSearchModal({ isOpen: true, type, title: `Buscar ${type}` })}
-          deletingId={deletingId}
-        />
+        <div key={item.id} className="animate-in fade-in zoom-in-95 duration-300">
+          <ApuEditorUI
+            item={item}
+            settings={{
+              currency: budget.currency,
+              exchange_rate: budget.exchange_rate || 1.0,
+              material_inflation: budget.material_inflation || 0,
+              equipment_inflation: budget.equipment_inflation || 0,
+              labor_inflation: budget.labor_inflation || 0,
+              labor_bonus: budget.labor_bonus || 0,
+              fcas_percent: budget.fcas_percent || 417,
+              admin_percent: budget.admin_percent || 15,
+              profit_percent: budget.profit_percent || 10,
+              iva_percent: budget.iva_percent || 0
+            }}
+            onHeaderChange={handleApuEditorComponentChange}
+            onHeaderBlur={handleApuEditorComponentBlur}
+            onComponentChange={handleApuEditorComponentChange}
+            onComponentBlur={handleApuEditorComponentBlur}
+            onRemoveRow={handleRemoveRow}
+            onAddBlankRow={handleAddBlankRow}
+            onAddSearchRow={(type) => setSearchModal({ isOpen: true, type, title: `Buscar ${type}` })}
+            deletingId={deletingId}
+          />
+        </div>
       </div>
       <ComponentSearchModal
         isOpen={searchModal.isOpen}

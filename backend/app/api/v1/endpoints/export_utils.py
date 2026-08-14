@@ -46,7 +46,7 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     ws["B2"] = ""
     
     # Ajustar ancho de la columna B para que quepa "Descripción"
-    ws.column_dimensions['B'].width = 12
+    ws.column_dimensions['B'].width = 10
     
     ws["B3"] = f"Obra: {settings.get('project_name') or ''}"
     ws["B4"] = f"Contratante: {settings.get('client_name') or ''}"

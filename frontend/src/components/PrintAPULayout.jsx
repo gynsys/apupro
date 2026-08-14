@@ -51,7 +51,7 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
   const contratante = options?.contratante ?? partida.contratante ?? 'C/S/C';
 
   return (
-    <div className="hidden print:block w-full bg-white text-black font-sans text-[11px] leading-tight print-apu-container">
+    <div className="absolute left-[-9999px] top-[-9999px] print:static print:block w-full bg-white text-black font-sans text-[11px] leading-tight print-apu-container">
       {/* Título principal */}
       <h1 className="text-center text-lg font-bold uppercase tracking-wide mb-4 mt-2">
         Análisis de Precio Unitario
@@ -97,7 +97,7 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
         <table className="w-full border-collapse border border-black text-[11px]">
           <thead>
             <tr className="bg-gray-50">
-              <th className="border border-black px-1 py-1 text-center font-bold w-[10px]">Nº</th>
+              <th className="border border-black px-1 py-1 text-center font-bold w-8">Nº</th>
               {/* Columna B ajustada a lo solicitado */}
               <th className="border border-black px-1 py-1 text-left font-bold w-auto">Descripción</th>
               <th className="border border-black px-1 py-1 text-center font-bold w-10">Und.</th>
@@ -144,7 +144,7 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
         <table className="w-full border-collapse border border-black text-[11px]">
           <thead>
             <tr className="bg-gray-50">
-              <th className="border border-black px-1 py-1 text-center font-bold w-[10px]">Nº</th>
+              <th className="border border-black px-1 py-1 text-center font-bold w-8">Nº</th>
               {/* Columna B con ancho asegurado */}
               <th className="border border-black px-1 py-1 text-left font-bold w-auto">Descripción</th>
               <th className="border border-black px-1 py-1 text-right font-bold">Cantidad</th>
@@ -189,7 +189,7 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
         <table className="w-full border-collapse border border-black text-[11px]">
           <thead>
             <tr className="bg-gray-50">
-              <th className="border border-black px-1 py-1 text-center font-bold w-[10px]">Nº</th>
+              <th className="border border-black px-1 py-1 text-center font-bold w-8">Nº</th>
               {/* Columna B con ancho asegurado */}
               <th className="border border-black px-1 py-1 text-left font-bold w-auto">Descripción</th>
               <th className="border border-black px-1 py-1 text-right font-bold">Cantidad</th>
