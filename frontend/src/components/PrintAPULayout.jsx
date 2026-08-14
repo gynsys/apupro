@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 export default function PrintAPULayout({ partida, materiales, equipos, mano_obra, options }) {
   if (!partida) return null;
@@ -50,8 +51,23 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
   const obra = options?.obra ?? partida.obra ?? 'C/S/C';
   const contratante = options?.contratante ?? partida.contratante ?? 'C/S/C';
 
-  return (
-    <div className="absolute left-[-9999px] top-[-9999px] print:static print:block w-full bg-white text-black font-sans text-[11px] leading-tight print-apu-container">
+  return createPortal(
+    <div
+      id="print-apu-layout"
+      style={{
+        position: 'fixed',
+        left: '-9999px',
+        top: 0,
+        width: '210mm',
+        backgroundColor: 'white',
+        color: 'black',
+        fontSize: '11px',
+        lineHeight: '1.2',
+        fontFamily: 'Arial, sans-serif',
+        padding: '10mm',
+        zIndex: -1,
+      }}
+    >
       {/* Título principal */}
       <h1 className="text-center text-lg font-bold uppercase tracking-wide mb-4 mt-2">
         Análisis de Precio Unitario
@@ -274,6 +290,7 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
           </tbody>
         </table>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

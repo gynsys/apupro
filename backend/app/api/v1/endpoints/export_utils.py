@@ -189,7 +189,7 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     resumen_start = cuo_mo_row + 2
     cd_row = resumen_start + 1
     ws[f"E{cd_row}"] = "COSTO DIRECTO SUBTOTAL A:"
-    ws[f"H{cd_row}"] = f"=ROUND(H{total_mat_row}+H{total_eq_row}+H{cuo_mo_row},2)"
+    ws[f"H{cd_row}"] = f"=ROUND(H{total_mat_row}+H{cuo_row}+H{cuo_mo_row},2)"
     style_cell(ws[f"H{cd_row}"], bold=True, number_format='#,##0.00')
     
     ad_row = cd_row + 1
