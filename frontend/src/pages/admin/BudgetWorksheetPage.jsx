@@ -170,7 +170,8 @@ export default function BudgetWorksheetPage() {
       // Cargar el APU completo con los factores de inflación de la base activa
       let materials = [], equipments = [], labors = [];
       try {
-        const apuRes = await fetch(`${API_URL}/cost360/items/${item.CodPar}/apu?database_id=${activeDatabase.id}`);
+        const apuCode = item.CodPar || item.codigo;
+        const apuRes = await fetch(`${API_URL}/cost360/items/${apuCode}/apu?database_id=${activeDatabase.id}`);
         if (apuRes.ok) {
           const apuData = await apuRes.json();
           materials = (apuData.materiales || []).map(m => ({
@@ -210,12 +211,12 @@ export default function BudgetWorksheetPage() {
       }
 
       await budgetService.addItem(id, {
-        cod_par: item.CodPar,
+        cod_par: item.CodPar || item.codigo || '',
         cov_par: item.CovPar || '',
-        description: item.Descri,
-        unit: item.UniPar || 'UND',
+        description: item.Descri || item.descripcion || '',
+        unit: item.UniPar || item.unidad || 'UND',
         quantity: 1.0,
-        performance: item.RenPar || 1.0,
+        performance: item.RenPar || item.rendimiento || 1.0,
         order: targetOrder,
         is_chapter: false,
         materials,
@@ -232,7 +233,8 @@ export default function BudgetWorksheetPage() {
           : `Partida agregada con precios de “${activeDatabase.name}”`
       );
     } catch (error) {
-      toast.error('Error agregando partida');
+      console.error('Error agregando partida:', error);
+      toast.error(error.message || 'Error agregando partida');
     }
   };
 

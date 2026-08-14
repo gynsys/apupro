@@ -130,7 +130,10 @@ export const budgetService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    if (!response.ok) throw new Error('Error al agregar partida al presupuesto');
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.detail || 'Error al agregar partida al presupuesto');
+    }
     return response.json();
   },
 
