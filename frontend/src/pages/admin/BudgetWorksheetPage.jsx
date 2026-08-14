@@ -478,7 +478,6 @@ export default function BudgetWorksheetPage() {
                         </button>
                         <div>
                           <h1 className="text-2xl font-bold text-slate-800 leading-tight">{budget.name}</h1>
-                          <p className="text-sm text-slate-500 font-medium font-normal">Hoja de Presupuesto</p>
                         </div>
                       </div>
                       <div className="hidden md:flex items-center">
@@ -738,21 +737,21 @@ export default function BudgetWorksheetPage() {
         {budget.items?.length > 0 && (
           <div className="mt-4 flex-none flex justify-end">
             <div className="bg-slate-50 px-4 py-2 rounded-2xl border-2 border-slate-300 shadow-sm min-w-[300px]">
-              <div className="flex justify-between items-center pb-3">
+              <div className="flex justify-between items-center py-1">
                 <span className="text-slate-500 font-medium text-sm leading-none">SUBTOTAL</span>
-                <span className="text-lg font-semibold text-slate-700 leading-none mt-1">
+                <span className="text-lg font-semibold text-slate-700 leading-none">
                   {subtotalPresupuesto.toLocaleString('es-VE', {minimumFractionDigits: 2})}
                 </span>
               </div>
-              <div className="flex justify-between items-center pb-1.5 border-b border-slate-200">
+              <div className="flex justify-between items-center py-1 border-b border-slate-200">
                 <span className="text-slate-500 font-medium text-sm leading-none">I.V.A. ({budget.iva_percent ?? 16}%)</span>
-                <span className="text-lg font-semibold text-slate-700 leading-none mt-1">
+                <span className="text-lg font-semibold text-slate-700 leading-none">
                   {ivaAmount.toLocaleString('es-VE', {minimumFractionDigits: 2})}
                 </span>
               </div>
-              <div className="flex justify-between items-center pt-1.5">
+              <div className="flex justify-between items-center py-1">
                 <span className="text-slate-500 font-medium text-sm leading-none">TOTAL ({budget.currency})</span>
-                <span className="text-lg font-semibold text-slate-700 leading-none mt-1">
+                <span className="text-lg font-semibold text-slate-700 leading-none">
                   {totalGeneral.toLocaleString('es-VE', {minimumFractionDigits: 2})}
                 </span>
               </div>
