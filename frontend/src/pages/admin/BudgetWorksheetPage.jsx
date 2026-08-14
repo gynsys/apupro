@@ -481,6 +481,11 @@ export default function BudgetWorksheetPage() {
                           <p className="text-sm text-slate-500 font-medium font-normal">Hoja de Presupuesto</p>
                         </div>
                       </div>
+                      <div className="hidden md:flex items-center">
+                        <span className="text-sm text-green-700 font-bold bg-green-50 px-4 py-1.5 rounded-xl border border-green-200 shadow-sm">
+                          Total Partidas: {budget.items.filter(item => !item.is_chapter).length}
+                        </span>
+                      </div>
                       <div className="flex gap-3">
                         {headerPortalTarget && createPortal(
                           <div className="flex gap-2 mx-2">
@@ -666,9 +671,9 @@ export default function BudgetWorksheetPage() {
                                       className={`hover:bg-blue-50/50 transition-colors cursor-pointer group ${isSelected ? 'bg-blue-50 ring-inset ring-2 ring-blue-400' : ''} ${snapshot.isDragging ? 'shadow-xl ring-1 ring-blue-500 bg-white z-50 relative' : ''}`}
                                     >
                                       <td className="p-4 text-center">
-                                        <div {...provided.dragHandleProps} className="inline-flex items-center justify-center p-1.5 text-slate-400 hover:text-blue-600 rounded-lg cursor-grab active:cursor-grabbing hover:bg-slate-200/50 transition-colors">
-                                          <span className="mr-1 text-slate-400 font-medium text-sm hidden group-hover:hidden">{itemNumber}</span>
-                                          <GripVertical size={16} className="hidden group-hover:block" />
+                                        <div {...provided.dragHandleProps} className="inline-flex items-center justify-center p-1.5 rounded-lg cursor-grab active:cursor-grabbing hover:bg-slate-200/50 transition-colors w-8 h-8">
+                                          <span className="text-slate-500 font-bold text-sm group-hover:hidden">{itemNumber}</span>
+                                          <GripVertical size={16} className="hidden group-hover:block text-slate-400 hover:text-blue-600" />
                                         </div>
                                       </td>
                                       <td className="p-4 text-sm font-mono text-slate-600">{item.cov_par || item.cod_par}</td>
