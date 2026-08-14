@@ -224,8 +224,6 @@ export default function BudgetWorksheetPage() {
         labors
       });
       setShowSearchModal(false);
-      setSearchQuery('');
-      setSearchResults([]);
       loadBudget();
       toast.success(
         activeDatabase.is_master

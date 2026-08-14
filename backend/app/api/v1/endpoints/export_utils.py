@@ -248,7 +248,7 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     style_cell(ws[f"H{pf_row}"], bold=True, number_format='#,##0.00')
     
     ws.column_dimensions['A'].width = 3
-    ws.column_dimensions['B'].width = 6
+    ws.column_dimensions['B'].width = 12
     ws.column_dimensions['C'].width = 45
     ws.column_dimensions['D'].width = 12
     ws.column_dimensions['E'].width = 12

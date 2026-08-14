@@ -53,11 +53,15 @@ export default function APUViewer() {
 
   useEffect(() => {
     if (printOptions) {
-      setTimeout(() => {
-        window.print();
+      const handleAfterPrint = () => {
         setPrintOptions(null);
         setPrintModalOpen(false);
+      };
+      window.addEventListener('afterprint', handleAfterPrint);
+      setTimeout(() => {
+        window.print();
       }, 300);
+      return () => window.removeEventListener('afterprint', handleAfterPrint);
     }
   }, [printOptions]);
 
