@@ -51,9 +51,9 @@ def numero_a_letras(numero):
     
     return f"{letras} CON {decimales:02d}/100"
 
-def style_cell(cell, bold=False, size=11, align="left", border=False, number_format=None):
+def style_cell(cell, bold=False, size=11, align="left", valign="center", border=False, number_format=None):
     cell.font = Font(bold=bold, size=size, name="Calibri")
-    cell.alignment = Alignment(horizontal=align, vertical="center", wrap_text=True)
+    cell.alignment = Alignment(horizontal=align, vertical=valign, wrap_text=True)
     if border:
         thin = Side(style='thin')
         cell.border = Border(left=thin, right=thin, top=thin, bottom=thin)
@@ -65,7 +65,11 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     if settings is None:
         settings = {}
         
-    rendimiento = float(item.get("RenPar", 1.0) or 1.0)
+    rendimiento = float(item.get("RenPar") or item.get("rendimiento") or item.get("performance") or 1.0)
+    cantidad = float(item.get("CanPar") or item.get("cantidad") or item.get("quantity") or 1.0)
+    descripcion = item.get("DesPar") or item.get("descripcion") or item.get("description") or ""
+    codigo = item.get("CodPar") or item.get("codigo") or item.get("code") or "s/c"
+    unidad = item.get("UniPar") or item.get("unidad") or item.get("unit") or ""
     admin_gg = float(settings.get("admin_percent", 15.0))
     imprevisto_ut = float(settings.get("profit_percent", 10.0))
     financiamiento = float(settings.get("financiamiento", 0.0))
@@ -320,7 +324,7 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
 
     ws.merge_cells(f"B{cd_row}:C{pf_row-1}")
     ws[f"B{cd_row}"] = son_letras
-    style_cell(ws[f"B{cd_row}"], align="center", bold=True)
+    style_cell(ws[f"B{cd_row}"], align="center", valign="bottom", bold=True)
 
     # Guardar
     temp_dir = Path("temp")
