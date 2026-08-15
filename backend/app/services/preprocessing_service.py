@@ -187,8 +187,6 @@ def _calculate_similarity_score(item: CostItem, keywords: List[str]) -> float:
                 break  # Cuenta una vez por keyword
 
     return score / len(keywords_set)
-
-
 def _find_similar_items(
     db: Session,
     description: str,

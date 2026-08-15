@@ -59,6 +59,18 @@ def _normalize(text: str) -> str:
     nfkd = unicodedata.normalize("NFD", text.lower())
     return "".join(c for c in nfkd if not unicodedata.combining(c))
 
+def _get_prefix_variations(prefix: str) -> List[str]:
+    """Generates variations of a prefix to support dots if needed (e.g., M1 -> M.1)"""
+    if not prefix:
+        return []
+    variations = [prefix]
+    # Si el prefijo empieza por una letra seguida de número (ej. M1), 
+    # generamos la variante con punto (ej. M.1)
+    if len(prefix) > 1 and prefix[0].isalpha() and prefix[1].isdigit():
+        variations.append(f"{prefix[0]}.{prefix[1:]}")
+    return variations
+
+
 
 def _tokenize(description: str) -> Set[str]:
     """Tokeniza una descripción eliminando stopwords y palabras cortas."""
@@ -242,13 +254,16 @@ def get_smart_selector_data(
 
     # --- Cargar partidas ---
     try:
+        prefixes = _get_prefix_variations(covenin_prefix)
+        prefix_conditions = []
+        for p in prefixes:
+            prefix_conditions.append(CostItem.CovPar.startswith(p))
+            prefix_conditions.append(CostItem.CodPar.startswith(p))
+
         all_items: List[CostItem] = (
             db.query(CostItem)
             .filter(
-                or_(
-                    CostItem.CovPar.startswith(covenin_prefix),
-                    CostItem.CodPar.startswith(covenin_prefix),
-                )
+                or_(*prefix_conditions)
             )
             .filter(~CostItem.CovPar.like("% S/C%"))
             .all()
