@@ -46,7 +46,6 @@ export default function BudgetWorksheetPage() {
   const { activeDatabase, setActiveDatabase, databases } = useDatabaseContext();
   const { config } = useContext(SiteConfigContext);
   const [showSettings, setShowSettings] = useState(false);
-  const [showSearchModal, setShowSearchModal] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printConfig, setPrintConfig] = useState(null);
   
