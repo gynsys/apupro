@@ -13,6 +13,9 @@ import { useDatabaseContext } from '../../contexts/DatabaseContext';
 import BudgetSettingsModal from '../../components/modals/BudgetSettingsModal';
 import BudgetPrintModal from '../../components/modals/BudgetPrintModal';
 import BudgetPrintLayout from '../../components/print/BudgetPrintLayout';
+import PrintAPUModal from '../../components/PrintAPUModal';
+import PrintAPULayout from '../../components/PrintAPULayout';
+import ExportApuExcelButton from '../../modules/cost360/components/ExportApuExcelButton';
 import { useCost360Search } from '../../modules/cost360/hooks/useCost360Search';
 import Cost360SearchBar from '../../modules/cost360/components/Cost360SearchBar';
 import { SiteConfigContext } from '../../App';
@@ -42,11 +45,15 @@ export default function BudgetWorksheetPage() {
   const [headerDbDropdownOpen, setHeaderDbDropdownOpen] = useState(false);
   const { activeDatabase, setActiveDatabase, databases } = useDatabaseContext();
   const { config } = useContext(SiteConfigContext);
-  
-  // Settings Panel
   const [showSettings, setShowSettings] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printConfig, setPrintConfig] = useState(null);
+  
+  // APU Print State
+  const [apuToPrint, setApuToPrint] = useState(null);
+  const [showApuPrintModal, setShowApuPrintModal] = useState(false);
+  const [apuPrintOptions, setApuPrintOptions] = useState(null);
   const [configTab, setConfigTab] = useState('general'); // 'general' or 'params'
   const [settings, setSettings] = useState({
     currency: 'USD',
@@ -118,6 +125,25 @@ export default function BudgetWorksheetPage() {
       }, 500);
     }
   }, [id, location.search]);
+
+  // Handle APU printing
+  useEffect(() => {
+    if (apuPrintOptions && apuToPrint) {
+      const handleAfterPrint = () => {
+        setApuPrintOptions(null);
+        setApuToPrint(null);
+      };
+      window.addEventListener('afterprint', handleAfterPrint);
+      
+      setTimeout(() => {
+        window.print();
+      }, 300);
+
+      return () => {
+        window.removeEventListener('afterprint', handleAfterPrint);
+      };
+    }
+  }, [apuPrintOptions, apuToPrint]);
 
   const loadBudget = async () => {
     try {
@@ -475,6 +501,37 @@ export default function BudgetWorksheetPage() {
         />
       )}
 
+      {/* APU PRINT MODAL */}
+      {showApuPrintModal && apuToPrint && (
+        <PrintAPUModal
+          isOpen={showApuPrintModal}
+          onClose={() => { setShowApuPrintModal(false); setApuToPrint(null); }}
+          onPrint={(options) => {
+            setShowApuPrintModal(false);
+            setApuPrintOptions(options);
+          }}
+          budgetName={budget.name}
+        />
+      )}
+
+      {/* APU PRINT LAYOUT */}
+      {apuPrintOptions && apuToPrint && (
+        <PrintAPULayout
+          partida={{ 
+            ...apuToPrint, 
+            fcas_percent: budget.fcas_percent, 
+            admin_percent: budget.admin_percent, 
+            util_percent: budget.profit_percent, 
+            rendimiento: apuToPrint.performance, 
+            cantidad: apuToPrint.quantity 
+          }}
+          materiales={apuToPrint.materials || []}
+          equipos={apuToPrint.equipments || []}
+          mano_obra={apuToPrint.labors || []}
+          options={{ ...apuPrintOptions, companyName: budget.company_name || budget.name }}
+        />
+      )}
+
       {/* WORKSHEET TABLE */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex-1 flex flex-col relative overflow-hidden">
         <div className="flex-1 overflow-y-auto min-h-0 relative">
@@ -726,12 +783,18 @@ export default function BudgetWorksheetPage() {
                                           <button onClick={(e) => { e.stopPropagation(); navigate(`/budgets/${budget.id}/item/${item.id}`); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg border border-transparent hover:border-slate-200 transition-colors" title="Editar APU">
                                             <Settings size={16} />
                                           </button>
-                                          <button onClick={(e) => { e.stopPropagation(); /* TODO: print APU */ }} className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-slate-100 rounded-lg border border-transparent hover:border-slate-200 transition-colors" title="Imprimir APU">
+                                          <button onClick={(e) => { e.stopPropagation(); setApuToPrint(item); setShowApuPrintModal(true); }} className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-slate-100 rounded-lg border border-transparent hover:border-slate-200 transition-colors" title="Imprimir APU">
                                             <Printer size={16} />
                                           </button>
-                                          <button onClick={(e) => { e.stopPropagation(); /* TODO: export to Excel */ }} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded-lg border border-transparent hover:border-slate-200 transition-colors" title="Exportar a Excel">
-                                            <ExcelIcon size={16} />
-                                          </button>
+                                          <ExportApuExcelButton 
+                                            item={item} 
+                                            materials={item.materials || []}
+                                            equipments={item.equipments || []}
+                                            labors={item.labors || []}
+                                            settings={budget.settings}
+                                            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded-lg border border-transparent hover:border-slate-200 transition-colors"
+                                            iconSize={16}
+                                          />
                                           <button onClick={(e) => { e.stopPropagation(); handleDeleteItem(item.id); }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 transition-colors" title="Eliminar">
                                             <Trash2 size={16} />
                                           </button>

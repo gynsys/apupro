@@ -27,7 +27,8 @@ export default function ExportApuExcelButton({
   labors = [], 
   settings = {},
   className = "p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-green-600 transition-colors shadow-sm flex items-center gap-2",
-  title = "Exportar a Excel"
+  title = "Exportar a Excel",
+  iconSize = 20
 }) {
   const [isExporting, setIsExporting] = useState(false);
 
@@ -120,12 +121,12 @@ export default function ExportApuExcelButton({
 
   return (
     <button 
-      onClick={handleExport}
+      onClick={(e) => { e.stopPropagation(); handleExport(); }}
       disabled={isExporting}
       className={`${className} ${isExporting ? 'opacity-70 cursor-not-allowed' : ''}`}
       title={title}
     >
-      {isExporting ? <Loader2 size={20} className="animate-spin" /> : <ExcelIcon size={20} />}
+      {isExporting ? <Loader2 size={iconSize} className="animate-spin" /> : <ExcelIcon size={iconSize} />}
     </button>
   );
 }
