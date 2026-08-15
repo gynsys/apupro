@@ -1673,356 +1673,356 @@
     ]
   },
   {
-    "code": "C.",
+    "code": "C",
     "name": "CARRETERAS",
     "children": [
       {
-        "code": "C.02",
+        "code": "C02",
         "name": "ACTIVIDADES PREPARATORIAS",
         "children": [
           {
-            "code": "C.0201",
+            "code": "C0201",
             "name": "CONDICIONES GENERALES (NO SE RECONOCE PAGO)",
             "children": []
           },
           {
-            "code": "C.0202",
+            "code": "C0202",
             "name": "CONSTRUCCIONES PROVISIONALES",
             "children": []
           },
           {
-            "code": "C.0204",
+            "code": "C0204",
             "name": "SELECCIÓN Y COLOCACIÓN DEL PERSONAL",
             "children": []
           },
           {
-            "code": "C.0205",
+            "code": "C0205",
             "name": "EQUIPOS Y MATERIALES (COMBUSTIBLES Y LUBRICANTES) PARA LA EJECUCIÓN DE LOS TRABAJOS",
             "children": []
           },
           {
-            "code": "C.0206",
+            "code": "C0206",
             "name": " AVANZADA: APERTURA DE TROCHAS Y VÍAS DE EXPLORACIÓN Y PROVISIONALES",
             "children": []
           },
           {
-            "code": "C.0207",
+            "code": "C0207",
             "name": "REPLANTEO. DEFINICIÓN TOPOGRÁFICA DEL EJE DE LA VÍA, OBRAS DE ARTE, DISTRIBUIDORES, NIVELACIONES, ETC.",
             "children": []
           },
           {
-            "code": "C.0282",
+            "code": "C0282",
             "name": "TRANSPORTE DE MAQUINARIA PESADA",
             "children": []
           }
         ]
       },
       {
-        "code": "C.03",
+        "code": "C03",
         "name": "PREPARACION DEL SITIO",
         "children": [
           {
-            "code": "C.0301",
+            "code": "C0301",
             "name": "DEFORESTACION Y LIMPIEZA",
             "children": []
           },
           {
-            "code": "C.0302",
+            "code": "C0302",
             "name": "DEMOLICION DE EDIFICIOS, CASAS, RANCHOS Y OBRAS DE ARTE",
             "children": []
           },
           {
-            "code": "C.0303",
+            "code": "C0303",
             "name": "REMOCION DE ESTRUCTURAS METALICAS",
             "children": []
           },
           {
-            "code": "C.0305",
+            "code": "C0305",
             "name": "DEMOLICION DE PAVIMENTO",
             "children": []
           },
           {
-            "code": "C.0306",
+            "code": "C0306",
             "name": "REMOCION DE TUBERIAS METALICAS Y ALCANTARILLAS METALICAS",
             "children": []
           },
           {
-            "code": "C.0307",
+            "code": "C0307",
             "name": "REMOCION DE CERCAS",
             "children": []
           },
           {
-            "code": "C.0380",
+            "code": "C0380",
             "name": "EXCAVACION PARA ESTRUCTURAS DE PREPARACIÓN, ENTIBADO, ACHICAMIENTO",
             "children": []
           },
           {
-            "code": "C.0381",
+            "code": "C0381",
             "name": "COMPACTACION CON APISONADORES DE PERCUSION",
             "children": []
           },
           {
-            "code": "C.0382",
+            "code": "C0382",
             "name": "TRANSPORTE ASOCIADO A LA PREPARACION DEL SITIO",
             "children": []
           }
         ]
       },
       {
-        "code": "C.05",
+        "code": "C05",
         "name": "DRENAJES",
         "children": [
           {
-            "code": "C.0502",
+            "code": "C0502",
             "name": "ALCANTARILLAS TUBULARES DE CONCRETO CON JUNTA DE MORTERO",
             "children": []
           },
           {
-            "code": "C.0503",
+            "code": "C0503",
             "name": "ALCANTARILLAS TUBULARES DE CONCRETO CON JUNTA DE GOMA",
             "children": []
           },
           {
-            "code": "C.0504",
+            "code": "C0504",
             "name": "CONCRETO PARA ALCANTARILLAS DE CAJON O DE PLACA",
             "children": []
           },
           {
-            "code": "C.0507",
+            "code": "C0507",
             "name": "SUB-DRENAJES",
             "children": []
           },
           {
-            "code": "C.0509",
+            "code": "C0509",
             "name": "EXCAVACION PARA CANALES O ZANJAS DE DRENAJES. PIEDRA BRUTA",
             "children": []
           },
           {
-            "code": "C.5100",
+            "code": "C5100",
             "name": "RECTIFICACION DE CANALES O ZANJAS, ROCAS PARA ROMPEOLAS Y SU TRANSPORTE",
             "children": []
           },
           {
-            "code": "C.0511",
+            "code": "C0511",
             "name": "ALCANTARILLAS METALICAS TUBULARES GALVANIZADAS",
             "children": []
           },
           {
-            "code": "C.0512",
+            "code": "C0512",
             "name": "ALCANTARILLAS METALICAS ABOVEDADAS GALVANIZADAS",
             "children": []
           },
           {
-            "code": "C.0515",
+            "code": "C0515",
             "name": "ALCANTARILLAS METALICAS TUBULARES GALVANIZADAS CON REVESTIMIENTO EPOXICO",
             "children": []
           },
           {
-            "code": "C.0516",
+            "code": "C0516",
             "name": "ALCANTARILLAS METALICAS ABOVEDADAS GALVANIZADAS CON REVESTIMIENTO EPOXICO",
             "children": []
           },
           {
-            "code": "C.0580",
+            "code": "C0580",
             "name": "EXCAVACION PARA ESTRUCTURAS DE DRENAJES, ENTIBADO Y ACHICAMIENTO",
             "children": []
           },
           {
-            "code": "C.0581",
+            "code": "C0581",
             "name": "COMPACTACION CON APISONADORES DE PERCUSION",
             "children": []
           },
           {
-            "code": "C.0582",
+            "code": "C0582",
             "name": "TRANSPORTE DE ALCANTARILLAS, CEMENTO Y AGREGADOS",
             "children": []
           },
           {
-            "code": "C.0583",
+            "code": "C0583",
             "name": "CONCRETO PARA OBRAS DE DRENAJE",
             "children": []
           },
           {
-            "code": "C.0587",
+            "code": "C0587",
             "name": "ACERO DE REFUERZO PARA OBRAS DE DRENAJE",
             "children": []
           }
         ]
       },
       {
-        "code": "C.06",
+        "code": "C06",
         "name": "PUENTES Y PONTONES",
         "children": [
           {
-            "code": "C.0680",
+            "code": "C0680",
             "name": "EXCAVACION, ENTIBADO Y ACHICAMIENTO EN ESTRUCTURAS DE PUENTES Y PONTONES",
             "children": []
           },
           {
-            "code": "C.0681",
+            "code": "C0681",
             "name": "COMPACTACION CON APISONADORES DE PERCUSION",
             "children": []
           },
           {
-            "code": "C.0682",
+            "code": "C0682",
             "name": "BASE DE PIEDRA PICADA, TRANSPORTE DE CEMENTO Y AGREGADOS",
             "children": []
           },
           {
-            "code": "C.0683",
+            "code": "C0683",
             "name": "CONCRETO PARA PUENTES Y PONTONES",
             "children": []
           },
           {
-            "code": "C.0687",
+            "code": "C0687",
             "name": "ACERO Y MALLA DE REFUERZO",
             "children": []
           }
         ]
       },
       {
-        "code": "C.07",
+        "code": "C07",
         "name": "OBRAS PARA LA CONTENCION DE TIERRAS",
         "children": [
           {
-            "code": "C.0701",
+            "code": "C0701",
             "name": "MUROS DE SOSTENIMIENTO DE CONCRETO",
             "children": []
           },
           {
-            "code": "C.0702",
+            "code": "C0702",
             "name": "MUROS DE SOSTENIMIENTO DE PIEDRA",
             "children": []
           },
           {
-            "code": "C.0703",
+            "code": "C0703",
             "name": "CAPA IMPERMEABILIZANTE EN MUROS CON ASFALTO",
             "children": []
           },
           {
-            "code": "C.0704",
+            "code": "C0704",
             "name": "TRANSPORTE Y ELEMENTOS PARA SUELO ARMADO",
             "children": []
           },
           {
-            "code": "C.0714",
+            "code": "C0714",
             "name": "GAVIONES METALICOS",
             "children": []
           },
           {
-            "code": "C.0780",
+            "code": "C0780",
             "name": "EXCAVACIONES, ACHICAMINETO Y ENTIBADO EN ESTRUCTURAS",
             "children": []
           },
           {
-            "code": "C.0781",
+            "code": "C0781",
             "name": "COMPACTACION CON APISONADORES DE PERCUSION",
             "children": []
           },
           {
-            "code": "C.0782",
+            "code": "C0782",
             "name": "TRANSPORTE DE CEMENTO PARA OBRAS DE CONTENCION DE TIERRA",
             "children": []
           },
           {
-            "code": "C.0787",
+            "code": "C0787",
             "name": "ACERO Y MALLA DE REFUERZO",
             "children": []
           }
         ]
       },
       {
-        "code": "C.10",
+        "code": "C10",
         "name": "MOVIMIENTO DE TIERRAS",
         "children": [
           {
-            "code": "C.1001",
+            "code": "C1001",
             "name": "REMOCION DE TIERRA EN BASE DE TERRAPLÉN Y DERRUMBES, EXCAVACIÓN P/SANEAMIENTO DE BOMBAS",
             "children": []
           },
           {
-            "code": "C.1002",
+            "code": "C1002",
             "name": "EXCAVACION PARA BANQUEOS. RECTIFICACIÓN DE TALUDES",
             "children": []
           },
           {
-            "code": "C.1003",
+            "code": "C1003",
             "name": "EXCAVACION EN PRESTAMO",
             "children": []
           },
           {
-            "code": "C.1004",
+            "code": "C1004",
             "name": "CONSTRUCCIÓN DE TERRAPLENES. RELLENOS A PASO DE MAQUINA Y ARRIME DE CAPA VEGETAL",
             "children": []
           },
           {
-            "code": "C.1082",
+            "code": "C1082",
             "name": "TRANSPORTE RELATIVO A MOVIMIENTO DE TIERRA",
             "children": []
           }
         ]
       },
       {
-        "code": "C.11",
+        "code": "C11",
         "name": "SUB-BASE Y BASES",
         "children": [
           {
-            "code": "C.1101",
+            "code": "C1101",
             "name": "SUB-BASE DE MEZCLA DE SUELO Y AGREGADO",
             "children": []
           },
           {
-            "code": "C.1102",
+            "code": "C1102",
             "name": "SUB-BASE DE GRANZON NATURAL",
             "children": []
           },
           {
-            "code": "C.1103",
+            "code": "C1103",
             "name": "SUB-BASE Y BASES DE GRANZON MEZCLADO",
             "children": []
           },
           {
-            "code": "C.1104",
+            "code": "C1104",
             "name": "SUB-BASE Y BASES DE GRAVA ESTABILIZADA",
             "children": []
           },
           {
-            "code": "C.1105",
+            "code": "C1105",
             "name": "BASES DE PIEDRA PICADA",
             "children": []
           },
           {
-            "code": "C.1106",
+            "code": "C1106",
             "name": "BASES DE MACADAM HIDRAULICO",
             "children": []
           },
           {
-            "code": "C.1107",
+            "code": "C1107",
             "name": "SUB-BASE Y BASES DE SUELO ASFALTO Y MATERIAL ASFALTICO",
             "children": []
           },
           {
-            "code": "C.1108",
+            "code": "C1108",
             "name": "SUB-BASE Y BASES DE SUELO CEMENTO. SUMINISTRO DEL CEMENTO Y SU TRANSPORTE",
             "children": []
           },
           {
-            "code": "C.1109",
+            "code": "C1109",
             "name": "SUB-BASE Y BASES DE SUELO CAL. SUMINISTRO DE LA CAL Y SU TRANSPORTE",
             "children": []
           },
           {
-            "code": "C.1125",
+            "code": "C1125",
             "name": "BACHEO DE SUB-BASES Y DE BASES. TRANSPORTE PARA BACHEOS DE BASES Y SUB-BASES",
             "children": []
           },
           {
-            "code": "C.1150",
+            "code": "C1150",
             "name": "ACONDICIONAMIENTO DE LA SUPERFICIE DE APOYO",
             "children": []
           },
           {
-            "code": "C.1182",
+            "code": "C1182",
             "name": "TRANSPORTE PARA CONSTRUCCION DE BASES Y SUB-BASES",
             "children": []
           },
@@ -2034,81 +2034,81 @@
         ]
       },
       {
-        "code": "C.12",
+        "code": "C12",
         "name": "PAVIMENTOS ASFALTICOS",
         "children": [
           {
-            "code": "C.1201",
+            "code": "C1201",
             "name": "IMPRIMACION ASFALTICA",
             "children": []
           },
           {
-            "code": "C.1202",
+            "code": "C1202",
             "name": "RIEGO DE ADHERENCIA",
             "children": []
           },
           {
-            "code": "C.1203",
+            "code": "C1203",
             "name": "ACONDICIONAMIENTO DE LA SUPERFICIE DE APOYO",
             "children": []
           },
           {
-            "code": "C.1204",
+            "code": "C1204",
             "name": "CONSTRUCCIÓN DE PAVIMENTOS DE ARENA-ASFALTO EN FRIO",
             "children": []
           },
           {
-            "code": "C.1210",
+            "code": "C1210",
             "name": "PAVIMENTOS DE CONCRETO ASFALTICO EN CALIENTE Y MATERIAL ASFALTICO 60-70",
             "children": []
           },
           {
-            "code": "C.1211",
+            "code": "C1211",
             "name": "BASES ASFALTICA EN CALIENTE Y MATERIAL ASFALTICO 60-70 PARA BAC",
             "children": []
           },
           {
-            "code": "C.1218",
+            "code": "C1218",
             "name": "PAVIMENTOS DE ARENA-ASFALTO EN CALIENTE Y MATERIAL ASFALTICO 60-70",
             "children": []
           },
           {
-            "code": "C.1220",
+            "code": "C1220",
             "name": "CAPA DE SELLO CON AGREGADO Y MATERIAL ASFALTICO",
             "children": []
           },
           {
-            "code": "C.1221",
+            "code": "C1221",
             "name": "SELLO DE LECHADA ASFALTICA",
             "children": []
           },
           {
-            "code": "C.1225",
+            "code": "C1225",
             "name": "BACHEOS CON MEZCLAS ASFÁLTICAS EN FRIO Y EN CALIENTE",
             "children": []
           },
           {
-            "code": "C.1226",
+            "code": "C1226",
             "name": "COLOCACIÓN DE MEZCLA MEZCLAS ASFÁLTICAS EN CALIENTE PARA BACHEOS",
             "children": []
           },
           {
-            "code": "C.1230",
+            "code": "C1230",
             "name": "SUMINISTRO EN BOCA DE PLANTA DE MEZCLA ASFALTICA. COLOCACION DE MEZCLA ASFALTICA",
             "children": []
           },
           {
-            "code": "C.1231",
+            "code": "C1231",
             "name": "CONSTRUCCION DE CAPAS ASFÁLTICAS DE ESPESOR VARIABLE. MATERIAL ASFALTICO 60-70 / RC-250",
             "children": []
           },
           {
-            "code": "C.1235",
+            "code": "C1235",
             "name": "TRANSPORTE DE MEZCLAS ASFALTICAS",
             "children": []
           },
           {
-            "code": "C.1282",
+            "code": "C1282",
             "name": "TRANSPORTE DE AGREGADOS PARA PAVIMENTOS ASFALTICOS",
             "children": []
           },
@@ -2120,20 +2120,20 @@
         ]
       },
       {
-        "code": "C.13",
+        "code": "C13",
         "name": "PAVIMENTO DE CONCRETO",
         "children": [
           {
-            "code": "C.1301",
+            "code": "C1301",
             "name": "PAVIMENTO DE CONCRETO",
             "children": [
               {
-                "code": "C.1382",
+                "code": "C1382",
                 "name": "TRANSPORTE DE CEMENTO O AGREGADOS PARA PAVIMENTO DE CONCRETO",
                 "children": []
               },
               {
-                "code": "C.1387",
+                "code": "C1387",
                 "name": "ACERO DE REFUERZO O MALLAS",
                 "children": []
               },
@@ -2187,131 +2187,131 @@
         ]
       },
       {
-        "code": "C.20",
+        "code": "C20",
         "name": "BROCALES, CUNETAS, ACERAS",
         "children": [
           {
-            "code": "C.2001",
+            "code": "C2001",
             "name": "BROCALES DE CONCRETO",
             "children": []
           },
           {
-            "code": "C.2002",
+            "code": "C2002",
             "name": "REVESTIMENTO DE CUNETAS CON CONCRETO",
             "children": []
           },
           {
-            "code": "C.2003",
+            "code": "C2003",
             "name": "CONSTRUCCION DE ACERAS DE CONCRETO",
             "children": []
           },
           {
-            "code": "C.2004",
+            "code": "C2004",
             "name": "BOCAS DE VISITA: CILINDRO, CONO, BASE, TAPA DE HIERRO FUNDIDO Y REJAS",
             "children": []
           },
           {
-            "code": "C.2082",
+            "code": "C2082",
             "name": "TRANSPORTE DE CEMENTO O AGREGADOS PARA BROCALES CUNETAS O BOCAS DE VISITA",
             "children": []
           },
           {
-            "code": "C.2087",
+            "code": "C2087",
             "name": "ACERO DE REFUERZO O MALLAS PARA BROCALES CUNETAS O BOCAS DE VISITA",
             "children": []
           }
         ]
       },
       {
-        "code": "C.21",
+        "code": "C21",
         "name": "BARANDAS",
         "children": [
           {
-            "code": "C.2101",
+            "code": "C2101",
             "name": "BARANDAS DE CONCRETO TIPO NORMAL",
             "children": []
           },
           {
-            "code": "C.2102",
+            "code": "C2102",
             "name": "BARANDAS METALICAS TIPO A, B Y C",
             "children": []
           }
         ]
       },
       {
-        "code": "C.22",
+        "code": "C22",
         "name": "DEFENSAS",
         "children": [
           {
-            "code": "C.2201",
+            "code": "C2201",
             "name": "DEFENSAS DE CONCRETO",
             "children": []
           },
           {
-            "code": "C.2202",
+            "code": "C2202",
             "name": "DEFENSAS METALICAS",
             "children": []
           },
           {
-            "code": "C.2204",
+            "code": "C2204",
             "name": "DEMARCACION HORIZONTAL, PASOS, FLECHADOS Y BROCALES",
             "children": []
           },
           {
-            "code": "C.2280",
+            "code": "C2280",
             "name": "EXCAVACION A MANO PARA DEFENSAS",
             "children": []
           },
           {
-            "code": "C.2282",
+            "code": "C2282",
             "name": "TRANSPORTE DE CEMENTO O AGREGADOS PARA DEFENSAS",
             "children": []
           },
           {
-            "code": "C.2287",
+            "code": "C2287",
             "name": "ACERO DE REFUERZO O MALLAS PARA DEFENSAS DE CONCRETO",
             "children": []
           },
           {
-            "code": "C.22-80",
+            "code": "C22-80",
             "name": " Excavación (FONDONORMA NTF 3967:2009)",
             "children": []
           },
           {
-            "code": "C.22-82",
+            "code": "C22-82",
             "name": " Transporte (FONDONORMA NTF 3967:2009)",
             "children": []
           },
           {
-            "code": "C.22-87",
+            "code": "C22-87",
             "name": " Acero para refuerzo (FONDONORMA NTF 3967:2009)",
             "children": []
           }
         ]
       },
       {
-        "code": "C.24",
+        "code": "C24",
         "name": "CERCAS",
         "children": [
           {
-            "code": "C.2401",
+            "code": "C2401",
             "name": "REMOCION DE CERCAS. CONSTRUCCION DE CERCAS CON MATERIALES DE RECUPERACION",
             "children": []
           },
           {
-            "code": "C.2402",
+            "code": "C2402",
             "name": "CONSTRUCCION DE CERCAS DE ALAMBRE DE PUAS",
             "children": []
           },
           {
-            "code": "C.2405",
+            "code": "C2405",
             "name": "CONSTRUCCION DE CERCAS DE MALLA CICLON",
             "children": []
           }
         ]
       },
       {
-        "code": "C.25",
+        "code": "C25",
         "name": " DEMARCACION (FONDONORMA NTF 3967:2009)",
         "children": []
       }
@@ -10734,89 +10734,89 @@
     ]
   },
   {
-    "code": "PE.",
+    "code": "PE",
     "name": "EDIFICACIONES",
     "children": [
       {
-        "code": "PE.0",
+        "code": "PE0",
         "name": "ESTUDIOS Y PROYECTOS DE EDIFICACIONES",
         "children": [
           {
-            "code": "PE.01",
+            "code": "PE01",
             "name": "DESARROLLO DE PROYECTOS",
             "children": [
               {
-                "code": "PE.011",
+                "code": "PE011",
                 "name": "ESTUDIOS PRELIMINARES",
                 "children": []
               },
               {
-                "code": "PE.012",
+                "code": "PE012",
                 "name": "TOPOGRAFÍA, CATASTRO Y AVALÚOS",
                 "children": [
                   {
-                    "code": "PE.0121",
+                    "code": "PE0121",
                     "name": "LEVANTAMIENTO TOPOGRÁFICO",
                     "children": []
                   },
                   {
-                    "code": "PE.0122",
+                    "code": "PE0122",
                     "name": "CATASTRO",
                     "children": []
                   },
                   {
-                    "code": "PE.0123",
+                    "code": "PE0123",
                     "name": "AVALÚO",
                     "children": []
                   }
                 ]
               },
               {
-                "code": "PE.013",
+                "code": "PE013",
                 "name": "ESTUDIOS GEOTÉCNICOS Y DE SUELOS",
                 "children": []
               },
               {
-                "code": "PE.014",
+                "code": "PE014",
                 "name": "ANTEPROYECTO",
                 "children": []
               },
               {
-                "code": "PE.015",
+                "code": "PE015",
                 "name": "PROYECTO",
                 "children": [
                   {
-                    "code": "PE.01501",
+                    "code": "PE01501",
                     "name": "PROYECTO DE ARQUITECTURA",
                     "children": []
                   },
                   {
-                    "code": "PE.01502",
+                    "code": "PE01502",
                     "name": "PROYECTO DE ESTRUCTURA",
                     "children": []
                   },
                   {
-                    "code": "PE.01503",
+                    "code": "PE01503",
                     "name": "PROYECTO DE INSTALACIONES SANITARIAS",
                     "children": []
                   },
                   {
-                    "code": "PE.01504",
+                    "code": "PE01504",
                     "name": "PROYECTO DE INSTALACIONES ELÉCTRICAS",
                     "children": []
                   },
                   {
-                    "code": "PE.01505",
+                    "code": "PE01505",
                     "name": "PROYECTO DE INSTALACIONES MECÁNICAS",
                     "children": []
                   },
                   {
-                    "code": "PE.01506",
+                    "code": "PE01506",
                     "name": "PROYECTO DE AREAS DE SERVICIO",
                     "children": []
                   },
                   {
-                    "code": "PE.01507",
+                    "code": "PE01507",
                     "name": "PROYECTOS ESPECIALES",
                     "children": []
                   }
@@ -10825,120 +10825,120 @@
             ]
           },
           {
-            "code": "PE.02",
+            "code": "PE02",
             "name": "ESTUDIOS ESPECIALES",
             "children": []
           }
         ]
       },
       {
-        "code": "PE.1",
+        "code": "PE1",
         "name": "OBRAS PRELIMINARES",
         "children": [
           {
-            "code": "PE.11",
+            "code": "PE11",
             "name": "INSTALACIONES PROVISIONALES",
             "children": [
               {
-                "code": "PE.111",
+                "code": "PE111",
                 "name": "CONSTRUCCIONES CONVENCIONALES",
                 "children": []
               },
               {
-                "code": "PE.112",
+                "code": "PE112",
                 "name": "CONSTRUCCIONES PREFABRICADAS",
                 "children": []
               },
               {
-                "code": "PE.113",
+                "code": "PE113",
                 "name": "CERCAS Y PORTONES",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.12",
+            "code": "PE12",
             "name": "LIMPIEZA DEL TERRENO",
             "children": [
               {
-                "code": "PE.121",
+                "code": "PE121",
                 "name": "DEFORESTACIÓN",
                 "children": []
               },
               {
-                "code": "PE.122",
+                "code": "PE122",
                 "name": "TALA DE VEGETACIÓN HERBÁCEA",
                 "children": []
               },
               {
-                "code": "PE.123",
+                "code": "PE123",
                 "name": "TALA Y DESRAIZAMIENTO DE ÁRBOLES INDIVIDUALES",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.13",
+            "code": "PE13",
             "name": "DEMOLICIONES",
             "children": [
               {
-                "code": "PE.131",
+                "code": "PE131",
                 "name": "DEMOLICIONES DE CONSTRUCCIONES",
                 "children": []
               },
               {
-                "code": "PE.132",
+                "code": "PE132",
                 "name": "DEMOLICIONES DE ELEMENTOS AISLADOS",
                 "children": []
               },
               {
-                "code": "PE.133",
+                "code": "PE133",
                 "name": "DEMOLICIONES DE PAVIMENTOS Y SIMILARES",
                 "children": []
               },
               {
-                "code": "PE.134",
+                "code": "PE134",
                 "name": "CARGA DE MATERIAL PROCEDENTE DE LA DEMOLICIÓN",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.14",
+            "code": "PE14",
             "name": "REMOCIONES",
             "children": [
               {
-                "code": "PE.141",
+                "code": "PE141",
                 "name": "REMOCIONES DE ELEMENTOS METÁLICOS",
                 "children": []
               },
               {
-                "code": "PE.142",
+                "code": "PE142",
                 "name": "REMOCIONES DE ELEMENTOS DE MADERA",
                 "children": []
               },
               {
-                "code": "PE.143",
+                "code": "PE143",
                 "name": "REMOCIONES DE ELEMENTOS DE MAMPOSTERÍA",
                 "children": []
               },
               {
-                "code": "PE.144",
+                "code": "PE144",
                 "name": "REMOCIONES DE ELEMENTOS COMBINADOS",
                 "children": []
               },
               {
-                "code": "PE.145",
+                "code": "PE145",
                 "name": "REMOCIONES DE ARTEFACTOS",
                 "children": []
               },
               {
-                "code": "PE.146",
+                "code": "PE146",
                 "name": "REMOCIONES DE MONUMENTOS",
                 "children": []
               },
               {
-                "code": "PE.147",
+                "code": "PE147",
                 "name": "CARGA DE ELEMENTOS PROCEDENTES DE REMOCIONES",
                 "children": []
               }
@@ -10947,340 +10947,340 @@
         ]
       },
       {
-        "code": "PE.2",
+        "code": "PE2",
         "name": "MOVIMIENTO DE TIERRA Y URBANISMO",
         "children": [
           {
-            "code": "PE.21",
+            "code": "PE21",
             "name": "  EXCAVACIONES",
             "children": [
               {
-                "code": "PE.211",
+                "code": "PE211",
                 "name": "  BANQUEOS",
                 "children": []
               },
               {
-                "code": "PE.212",
+                "code": "PE212",
                 "name": "  PRÉSTAMOS",
                 "children": []
               },
               {
-                "code": "PE.213",
+                "code": "PE213",
                 "name": "  REMOCIÓN DE LA CAPA VEGETAL O TIERRA DESECHABLE",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.22",
+            "code": "PE22",
             "name": "  CONSTRUCCIÓN DE TERRAPLENES PARA TERRAZAS",
             "children": []
           },
           {
-            "code": "PE.23",
+            "code": "PE23",
             "name": "  CONSTRUCCIÓN DE RELLENO COMPACTADO CON PASA DE MAQUINA",
             "children": []
           },
           {
-            "code": "PE.24",
+            "code": "PE24",
             "name": "  MUROS DE SUELO ARMADO",
             "children": [
               {
-                "code": "PE.242",
+                "code": "PE242",
                 "name": " PANELES PREFABRICADOS DE CONCRETO ARMADO",
                 "children": []
               },
               {
-                "code": "PE.243",
+                "code": "PE243",
                 "name": " CONEXIONES",
                 "children": []
               },
               {
-                "code": "PE.244",
+                "code": "PE244",
                 "name": " TIRAS DE ANCLAJE",
                 "children": []
               },
               {
-                "code": "PE.245",
+                "code": "PE245",
                 "name": " RELLENO COMPACTADO",
                 "children": []
               },
               {
-                "code": "PE.246",
+                "code": "PE246",
                 "name": "CONCRETO PARA EL ASIENTO DE LOS ELEMENTOS PREFABRICADOS Y LAS  VIGAS DE CORONAMIENTO DE LOS MUROS DE SUELO ARMADO",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.25",
+            "code": "PE25",
             "name": "  MUROS DE GAVIONES",
             "children": []
           }
         ]
       },
       {
-        "code": "PE.3",
+        "code": "PE3",
         "name": "ESTRUCTURAS",
         "children": [
           {
-            "code": "PE.31",
+            "code": "PE31",
             "name": "  OBRAS PREPARATORIA PARA ESTRUCTURAS",
             "children": [
               {
-                "code": "PE.311",
+                "code": "PE311",
                 "name": " EXCAVACIÓN EN CORTE PARA ASIENTO DE FUNDACIONES Y ZANJAS",
                 "children": []
               },
               {
-                "code": "PE.312",
+                "code": "PE312",
                 "name": " EXCAVACIÓN EN PRÉSTAMO PARA RELLENO DE ZANJAS Y FUNDACIONES",
                 "children": []
               },
               {
-                "code": "PE.313",
+                "code": "PE313",
                 "name": " CARGA DEL MATERIAL PROVENIENTE DE LAS EXCAVACIONES Y SITIOS DE PRESTAMOS",
                 "children": []
               },
               {
-                "code": "PE.315",
+                "code": "PE315",
                 "name": " ENTIBADO DE LAS PAREDES DE LA EXCAVACIÓN",
                 "children": []
               },
               {
-                "code": "PE.316",
+                "code": "PE316",
                 "name": " ACHICAMIENTO DE LAS EXCAVACIONES PARA ESTRUCTURAS",
                 "children": []
               },
               {
-                "code": "PE.317",
+                "code": "PE317",
                 "name": " COMPACTACIONES",
                 "children": []
               },
               {
-                "code": "PE.318",
+                "code": "PE318",
                 "name": " CONCRETO EN OBRAS PREPARATORIAS",
                 "children": []
               },
               {
-                "code": "PE.319",
+                "code": "PE319",
                 "name": " BASES GRANULARES EN OBRAS PREPARATORIAS",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.32",
+            "code": "PE32",
             "name": "  INFRAESTRUCTURA DE CONCRETO",
             "children": [
               {
-                "code": "PE.321",
+                "code": "PE321",
                 "name": "  PILOTES, MUROS ESPECIALES Y OBRAS AFINES",
                 "children": []
               },
               {
-                "code": "PE.322",
+                "code": "PE322",
                 "name": "  CABEZALES DE PILOTES",
                 "children": []
               },
               {
-                "code": "PE.323",
+                "code": "PE323",
                 "name": "  BASES Y ESCALONES DE FUNDACIONES",
                 "children": []
               },
               {
-                "code": "PE.324",
+                "code": "PE324",
                 "name": "  PEDESTALES",
                 "children": []
               },
               {
-                "code": "PE.325",
+                "code": "PE325",
                 "name": "  VIGAS DE RIOSTRA, TIRANTES Y FUNDACIONES PARA PAREDES",
                 "children": []
               },
               {
-                "code": "PE.326",
+                "code": "PE326",
                 "name": "  LOSAS DE FUNDACIÓN",
                 "children": []
               },
               {
-                "code": "PE.327",
+                "code": "PE327",
                 "name": "  VIGAS DE FUNDACIÓN",
                 "children": []
               },
               {
-                "code": "PE.328",
+                "code": "PE328",
                 "name": "  BASES DE PAVIMENTO",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.33",
+            "code": "PE33",
             "name": "  SUPERESTRUCTURA DE CONCRETO",
             "children": [
               {
-                "code": "PE.331",
+                "code": "PE331",
                 "name": "  COLUMNAS",
                 "children": []
               },
               {
-                "code": "PE.332",
+                "code": "PE332",
                 "name": "  VIGAS Y MACIZADOS",
                 "children": []
               },
               {
-                "code": "PE.333",
+                "code": "PE333",
                 "name": "  LOSAS, PLACAS Y PÉRGOLAS",
                 "children": []
               },
               {
-                "code": "PE.334",
+                "code": "PE334",
                 "name": "  MACHONES, VIGAS DE CORONA Y APOYOS DE LOSAS, DINTELES Y ARRIOSTRAMIENTO DE PAREDES",
                 "children": []
               },
               {
-                "code": "PE.335",
+                "code": "PE335",
                 "name": "  ESCALERAS",
                 "children": []
               },
               {
-                "code": "PE.336",
+                "code": "PE336",
                 "name": "  GRADERÍAS Y TRIBUNAS",
                 "children": []
               },
               {
-                "code": "PE.337",
+                "code": "PE337",
                 "name": "  ELEMENTOS ARQUITECTÓNICOS",
                 "children": []
               },
               {
-                "code": "PE.339",
+                "code": "PE339",
                 "name": "  MUROS ESTRUCTURALES",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.34",
+            "code": "PE34",
             "name": "  ENCOFRADOS",
             "children": [
               {
-                "code": "PE.341",
+                "code": "PE341",
                 "name": " ENCOFRADOS EN INFRAESTRUCTURA",
                 "children": []
               },
               {
-                "code": "PE.342",
+                "code": "PE342",
                 "name": " ENCOFRADOS EN SUPERESTRUCTURA",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.35",
+            "code": "PE35",
             "name": "  ARMADURA DE REFUERZO",
             "children": [
               {
-                "code": "PE.351",
+                "code": "PE351",
                 "name": "  ARMADURA DE REFUERZO PARA INFRAESTRUCTURA",
                 "children": []
               },
               {
-                "code": "PE.352",
+                "code": "PE352",
                 "name": "  ARMADURA DE REFUERZO PARA SUPERESTRUCTURA",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.36",
+            "code": "PE36",
             "name": "  ESTRUCTURAS METÁLICAS",
             "children": [
               {
-                "code": "PE.361",
+                "code": "PE361",
                 "name": " ESTRUCTURAS METÁLICAS DE ACERO",
                 "children": []
               },
               {
-                "code": "PE.362",
+                "code": "PE362",
                 "name": " ESTRUCTURAS METÁLICAS DE ALUMINIO",
                 "children": []
               },
               {
-                "code": "PE.36X1",
+                "code": "PE36X1",
                 "name": "  SUMINISTRO",
                 "children": []
               },
               {
-                "code": "PE.36X2",
+                "code": "PE36X2",
                 "name": "  FABRICACIÓN",
                 "children": []
               },
               {
-                "code": "PE.36X3",
+                "code": "PE36X3",
                 "name": "  LIMPIEZA Y PREPARACIÓN DE SUPERFICIES",
                 "children": []
               },
               {
-                "code": "PE.36X4",
+                "code": "PE36X4",
                 "name": "  SISTEMA DE PROTECCIÓN",
                 "children": []
               },
               {
-                "code": "PE.36X5",
+                "code": "PE36X5",
                 "name": "  MONTAJE",
                 "children": []
               },
               {
-                "code": "PE.36X6",
+                "code": "PE36X6",
                 "name": "  SUMINISTRO, FABRICACIÓN LIMPIEZA Y PREPARACIÓN DE SUPERFICIES,  SISTEMA DE PROTECCIÓN",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.37",
+            "code": "PE37",
             "name": "  ESTRUCTURAS DE MADERA",
             "children": [
               {
-                "code": "PE.371",
+                "code": "PE371",
                 "name": "  ESTRUCTURAS DE MADERA PARA INFRAESTRUCTURA",
                 "children": []
               },
               {
-                "code": "PE.372",
+                "code": "PE372",
                 "name": "  ESTRUCTURAS DE MADERAS PARA SUPERESTRUCTURA",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.39",
+            "code": "PE39",
             "name": "  CUBIERTAS DE TECHO",
             "children": [
               {
-                "code": "PE.391",
+                "code": "PE391",
                 "name": "  CUBIERTAS DE TECHO TIPO LÁMINA",
                 "children": []
               },
               {
-                "code": "PE.392",
+                "code": "PE392",
                 "name": "  CUBIERTAS DE TECHO TIPO PANEL",
                 "children": []
               },
               {
-                "code": "PE.393",
+                "code": "PE393",
                 "name": "  CABALLETES",
                 "children": []
               },
               {
-                "code": "PE.394",
+                "code": "PE394",
                 "name": "  CANALES Y BAJANTES",
                 "children": []
               },
               {
-                "code": "PE.395",
+                "code": "PE395",
                 "name": "  ELEMENTOS COMPLEMENTARIOS DE VENTILACIÓN E ILUMINACIÓN NATURAL",
                 "children": []
               }
@@ -11289,322 +11289,322 @@
         ]
       },
       {
-        "code": "PE.4",
+        "code": "PE4",
         "name": "OBRAS ARQUITECTÓNICAS",
         "children": [
           {
-            "code": "PE.41",
+            "code": "PE41",
             "name": "  ALBAÑILERÍA",
             "children": [
               {
-                "code": "PE.411",
+                "code": "PE411",
                 "name": "  CONSTRUCCIÓN DE PAREDES Y TABIQUES",
                 "children": []
               },
               {
-                "code": "PE.412",
+                "code": "PE412",
                 "name": "REVESTIMIENTOS DE PAREDES Y TABIQUES, ESCALERAS, COLUMNAS Y MUROS",
                 "children": []
               },
               {
-                "code": "PE.413",
+                "code": "PE413",
                 "name": "  REVESTIMIENTOS DE TECHOS",
                 "children": []
               },
               {
-                "code": "PE.414",
+                "code": "PE414",
                 "name": "  REVESTIMIENTOS DE PISOS",
                 "children": []
               },
               {
-                "code": "PE.415",
+                "code": "PE415",
                 "name": "  REVESTIMIENTOS DE ESCALONES",
                 "children": []
               },
               {
-                "code": "PE.416",
+                "code": "PE416",
                 "name": "  CONSTRUCCIÓN DE PENDIENTES EN LOSAS Y PLACAS HORIZONTALES",
                 "children": []
               },
               {
-                "code": "PE.417",
+                "code": "PE417",
                 "name": "  RASEO EN LOSAS Y PLACAS INCLINADAS",
                 "children": []
               },
               {
-                "code": "PE.418",
+                "code": "PE418",
                 "name": "  ACABADO DE PISOS Y ESCALONES",
                 "children": []
               },
               {
-                "code": "PE.419",
+                "code": "PE419",
                 "name": "  CIELOS RASOS",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.42",
+            "code": "PE42",
             "name": "  IMPERMEABILIZACIÓN",
             "children": [
               {
-                "code": "PE.421",
+                "code": "PE421",
                 "name": "  CAPA IMPERMEABILIZANTE ASFÁLTICA",
                 "children": []
               },
               {
-                "code": "PE.422",
+                "code": "PE422",
                 "name": "  RECUBRIMIENTO DE LA CAPA IMPERMEABILIZANTE",
                 "children": []
               },
               {
-                "code": "PE.423",
+                "code": "PE423",
                 "name": "  JUNTAS",
                 "children": []
               },
               {
-                "code": "PE.424",
+                "code": "PE424",
                 "name": "  CUBREJUNTAS",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.43",
+            "code": "PE43",
             "name": "  HERRERÍA",
             "children": [
               {
-                "code": "PE.43701",
+                "code": "PE43701",
                 "name": "  PUERTAS METÁLICAS",
                 "children": []
               },
               {
-                "code": "PE.43702",
+                "code": "PE43702",
                 "name": "  VENTANAS METÁLICAS",
                 "children": []
               },
               {
-                "code": "PE.43703",
+                "code": "PE43703",
                 "name": "  TABIQUES METÁLICOS",
                 "children": []
               },
               {
-                "code": "PE.43704",
+                "code": "PE43704",
                 "name": "  REJAS METÁLICAS",
                 "children": []
               },
               {
-                "code": "PE.43705",
+                "code": "PE43705",
                 "name": "  BARANDAS METÁLICAS",
                 "children": []
               },
               {
-                "code": "PE.43706",
+                "code": "PE43706",
                 "name": "  PASAMANOS METÁLICOS",
                 "children": []
               },
               {
-                "code": "PE.43707",
+                "code": "PE43707",
                 "name": "  MARCOS METÁLICOS DE CHAPA DOBLADA",
                 "children": []
               },
               {
-                "code": "PE.43708",
+                "code": "PE43708",
                 "name": "  MARCOS METÁLICOS TUBULARES",
                 "children": []
               },
               {
-                "code": "PE.43709",
+                "code": "PE43709",
                 "name": "  LAMINAS METÁLICAS DE REVESTIMIENTOS",
                 "children": []
               },
               {
-                "code": "PE.43710",
+                "code": "PE43710",
                 "name": "  GUARDACANTOS",
                 "children": []
               },
               {
-                "code": "PE.43711",
+                "code": "PE43711",
                 "name": "  CERRAMIENTOS LAMINADOS DE FACHADAS",
                 "children": []
               },
               {
-                "code": "PE.43712",
+                "code": "PE43712",
                 "name": "  RODAPIÉ",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.44",
+            "code": "PE44",
             "name": "  CARPINTERÍA",
             "children": [
               {
-                "code": "PE.44701",
+                "code": "PE44701",
                 "name": "  PUERTAS DE MADERA",
                 "children": []
               },
               {
-                "code": "PE.44702",
+                "code": "PE44702",
                 "name": "  VENTANAS DE MADERA",
                 "children": []
               },
               {
-                "code": "PE.44703",
+                "code": "PE44703",
                 "name": "  TABIQUES DE MADERA",
                 "children": []
               },
               {
-                "code": "PE.44704",
+                "code": "PE44704",
                 "name": "  REJAS DE MADERA",
                 "children": []
               },
               {
-                "code": "PE.44705",
+                "code": "PE44705",
                 "name": "  BARANDAS DE MADERA",
                 "children": []
               },
               {
-                "code": "PE.44706",
+                "code": "PE44706",
                 "name": "  PASAMANOS DE MADERA",
                 "children": []
               },
               {
-                "code": "PE.44707",
+                "code": "PE44707",
                 "name": "  MARCOS DE MADERA",
                 "children": []
               },
               {
-                "code": "PE.44708",
+                "code": "PE44708",
                 "name": "  ESCALONES DE MADERA",
                 "children": []
               },
               {
-                "code": "PE.44709",
+                "code": "PE44709",
                 "name": "  REVESTIMIENTOS DE MADERA",
                 "children": []
               },
               {
-                "code": "PE.44710",
+                "code": "PE44710",
                 "name": "  RODAPIÉS DE MADERA",
                 "children": []
               },
               {
-                "code": "PE.44711",
+                "code": "PE44711",
                 "name": "  CLOSETS DE MADERA",
                 "children": []
               },
               {
-                "code": "PE.44713",
+                "code": "PE44713",
                 "name": "  MUEBLES",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.45",
+            "code": "PE45",
             "name": "  VIDRIOS, PLÁSTICOS Y SIMILARES",
             "children": [
               {
-                "code": "PE.451",
+                "code": "PE451",
                 "name": "  VIDRIOS",
                 "children": []
               },
               {
-                "code": "PE.452",
+                "code": "PE452",
                 "name": "  PUERTAS DE VIDRIO",
                 "children": []
               },
               {
-                "code": "PE.453",
+                "code": "PE453",
                 "name": "  CLARABOYAS",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.46",
+            "code": "PE46",
             "name": "  PINTURAS",
             "children": [
               {
-                "code": "PE.461",
+                "code": "PE461",
                 "name": "  PINTURAS DE ESMALTE",
                 "children": []
               },
               {
-                "code": "PE.462",
+                "code": "PE462",
                 "name": "  PINTURAS DE BARNIZ",
                 "children": []
               },
               {
-                "code": "PE.463",
+                "code": "PE463",
                 "name": "  PINTURAS DE CAUCHO O ACROVINILICAS",
                 "children": []
               },
               {
-                "code": "PE.464",
+                "code": "PE464",
                 "name": "  PINTURAS ANTICORROSIVAS",
                 "children": []
               },
               {
-                "code": "PE.465",
+                "code": "PE465",
                 "name": "  PINTURAS EPÓXICAS",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.47",
+            "code": "PE47",
             "name": "  CERRADURAS",
             "children": [
               {
-                "code": "PE.471",
+                "code": "PE471",
                 "name": "  CERRADURAS DE POMO",
                 "children": []
               },
               {
-                "code": "PE.472",
+                "code": "PE472",
                 "name": "  CERRADURAS DE MANILLA",
                 "children": []
               },
               {
-                "code": "PE.473",
+                "code": "PE473",
                 "name": "  CERRADURAS EMBUTIDAS",
                 "children": []
               },
               {
-                "code": "PE.474",
+                "code": "PE474",
                 "name": "  CERRADURAS SOBREPUESTAS",
                 "children": []
               },
               {
-                "code": "PE.475",
+                "code": "PE475",
                 "name": "  CERRADURAS ANTIPÁNICO",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.49",
+            "code": "PE49",
             "name": "  ACCESORIOS PARA PUERTAS Y VENTANAS",
             "children": [
               {
-                "code": "PE.491",
+                "code": "PE491",
                 "name": "  CIERRAPUERTAS",
                 "children": []
               },
               {
-                "code": "PE.492",
+                "code": "PE492",
                 "name": "  PASADORES",
                 "children": []
               },
               {
-                "code": "PE.493",
+                "code": "PE493",
                 "name": "  PLACAS DE EMPUJE",
                 "children": []
               },
               {
-                "code": "PE.494",
+                "code": "PE494",
                 "name": "  TOPES",
                 "children": []
               }
@@ -11613,218 +11613,218 @@
         ]
       },
       {
-        "code": "PE.5",
+        "code": "PE5",
         "name": "INSTALACIONES ELÉCTRICAS",
         "children": [
           {
-            "code": "PE.51",
+            "code": "PE51",
             "name": "  TUBERÍAS",
             "children": [
               {
-                "code": "PE.511",
+                "code": "PE511",
                 "name": "  TUBERÍA PLÁSTICA",
                 "children": []
               },
               {
-                "code": "PE.512",
+                "code": "PE512",
                 "name": "  TUBERÍA DE HIERRO",
                 "children": []
               },
               {
-                "code": "PE.513",
+                "code": "PE513",
                 "name": "  TUBERÍA DE ALUMINIO",
                 "children": []
               },
               {
-                "code": "PE.514",
+                "code": "PE514",
                 "name": "  TUBERÍA DE ASBESTO CEMENTO",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.52",
+            "code": "PE52",
             "name": "  CABLES",
             "children": [
               {
-                "code": "PE.521",
+                "code": "PE521",
                 "name": "  CABLES DE COBRE",
                 "children": []
               },
               {
-                "code": "PE.522",
+                "code": "PE522",
                 "name": "  CABLES DE ALUMINIO",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.53",
+            "code": "PE53",
             "name": "  CAJAS DE CONEXIÓN",
             "children": [
               {
-                "code": "PE.531",
+                "code": "PE531",
                 "name": "  CAJETINES METÁLICOS",
                 "children": []
               },
               {
-                "code": "PE.532",
+                "code": "PE532",
                 "name": "  CAJETINES DE PLÁSTICOS",
                 "children": []
               },
               {
-                "code": "PE.533",
+                "code": "PE533",
                 "name": "  CAJAS DE PASO",
                 "children": []
               },
               {
-                "code": "PE.534",
+                "code": "PE534",
                 "name": "  CONDULET DE ALUMINIO",
                 "children": []
               },
               {
-                "code": "PE.535",
+                "code": "PE535",
                 "name": "  CAJAS PARA INTERRUPTORES",
                 "children": []
               },
               {
-                "code": "PE.536",
+                "code": "PE536",
                 "name": "  CAJAS PARA MEDIDORES",
                 "children": []
               },
               {
-                "code": "PE.537",
+                "code": "PE537",
                 "name": "  CAJAS PARA TELEFONÍA, SONIDO, INTERCOMUNICACIÓN Y SIMILARES",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.54",
+            "code": "PE54",
             "name": "  TOMAS Y CONTROLES",
             "children": [
               {
-                "code": "PE.541",
+                "code": "PE541",
                 "name": "  INTERRUPTORES",
                 "children": []
               },
               {
-                "code": "PE.542",
+                "code": "PE542",
                 "name": "  TOMACORRIENTES",
                 "children": []
               },
               {
-                "code": "PE.543",
+                "code": "PE543",
                 "name": "  CUCHILLAS",
                 "children": []
               },
               {
-                "code": "PE.544",
+                "code": "PE544",
                 "name": "  REGLETAS TELEFÓNICAS",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.55",
+            "code": "PE55",
             "name": "  TABLEROS METÁLICOS PARA ELECTRICIDAD",
             "children": [
               {
-                "code": "PE.551",
+                "code": "PE551",
                 "name": "  TABLEROS METÁLICOS EMBUTIDOS",
                 "children": []
               },
               {
-                "code": "PE.552",
+                "code": "PE552",
                 "name": "  TABLEROS METÁLICOS SUPERFICIALES",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.56",
+            "code": "PE56",
             "name": "  INTERRUPTORES TERMOMAGNÉTICOS (BREAKERS)",
             "children": [
               {
-                "code": "PE.561",
+                "code": "PE561",
                 "name": "  INTERRUPTORES TERMOMAGNÉTICOS CON ENCHUFE",
                 "children": []
               },
               {
-                "code": "PE.562",
+                "code": "PE562",
                 "name": "  INTERRUPTORES TERMOMAGNÉTICOS CON GANCHOS (UÑAS)",
                 "children": []
               },
               {
-                "code": "PE.563",
+                "code": "PE563",
                 "name": "  INTERRUPTORES TERMOMAGNÉTICOS CON TORNILLOS",
                 "children": []
               },
               {
-                "code": "PE.564",
+                "code": "PE564",
                 "name": "  INTERRUPTORES TERMOMAGNÉTICOS TERMINALES FRONTALES",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.57",
+            "code": "PE57",
             "name": "  TRANSFORMADORES",
             "children": [
               {
-                "code": "PE.571",
+                "code": "PE571",
                 "name": "  TRANSFORMADORES SECOS",
                 "children": []
               },
               {
-                "code": "PE.572",
+                "code": "PE572",
                 "name": "  TRANSFORMADORES EN ACEITE",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.58",
+            "code": "PE58",
             "name": "  LUMINARIAS",
             "children": [
               {
-                "code": "PE.581",
+                "code": "PE581",
                 "name": "  LÁMPARAS",
                 "children": []
               },
               {
-                "code": "PE.582",
+                "code": "PE582",
                 "name": "  REFLECTORES",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.59",
+            "code": "PE59",
             "name": "  VARIOS",
             "children": [
               {
-                "code": "PE.591",
+                "code": "PE591",
                 "name": " DISPOSITIVOS DE LOS SISTEMAS DE DETECCIÓN DE INCENDIOS",
                 "children": []
               },
               {
-                "code": "PE.592",
+                "code": "PE592",
                 "name": " DISPOSITIVOS DE LOS SISTEMAS DE INTERCOMUNICACIÓN, TELEFONÍA Y SONIDO",
                 "children": []
               },
               {
-                "code": "PE.593",
+                "code": "PE593",
                 "name": " DISPOSITIVOS DE LOS SISTEMAS DE ALARMA",
                 "children": []
               },
               {
-                "code": "PE.594",
+                "code": "PE594",
                 "name": " DISPOSITIVOS PARA LOS SISTEMAS DE CIRCUITOS CERRADOS DE   TELEVISIÓN",
                 "children": []
               },
               {
-                "code": "PE.595",
+                "code": "PE595",
                 "name": " DISPOSITIVOS PARA LOS SISTEMAS DE ANTENAS, LUCES DE OBSTRUCCIÓN Y PARARRAYOS",
                 "children": []
               }
@@ -11833,197 +11833,197 @@
         ]
       },
       {
-        "code": "PE.6",
+        "code": "PE6",
         "name": "INSTALACIONES SANITARIAS Y ESPECIALES",
         "children": [
           {
-            "code": "PE.61",
+            "code": "PE61",
             "name": " TUBERÍAS",
             "children": [
               {
-                "code": "PE.611",
+                "code": "PE611",
                 "name": "TUBERÍAS PARA AGUAS CLARAS Y ESPECIALES",
                 "children": []
               },
               {
-                "code": "PE.612",
+                "code": "PE612",
                 "name": "TUBERÍAS PARA AGUAS RESIDUALES",
                 "children": []
               },
               {
-                "code": "PE.613",
+                "code": "PE613",
                 "name": "TUBERÍAS PARA VENTILACIÓN",
                 "children": []
               },
               {
-                "code": "PE.614",
+                "code": "PE614",
                 "name": "TUBERÍAS PARA AGUAS PLUVIALES",
                 "children": []
               },
               {
-                "code": "PE.615",
+                "code": "PE615",
                 "name": "TUBERÍAS PARA GASES",
                 "children": []
               },
               {
-                "code": "PE.616",
+                "code": "PE616",
                 "name": "TUBERÍAS PARA INCENDIO",
                 "children": []
               },
               {
-                "code": "PE.617",
+                "code": "PE617",
                 "name": "TUBERÍAS PARA RESIDUOS SÓLIDOS",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.62",
+            "code": "PE62",
             "name": "   PUNTOS SANITARIOS",
             "children": [
               {
-                "code": "PE.621",
+                "code": "PE621",
                 "name": "PUNTOS SANITARIOS DE AGUAS CLARAS",
                 "children": []
               },
               {
-                "code": "PE.622",
+                "code": "PE622",
                 "name": "PUNTOS SANITARIOS DE AGUAS RESIDUALES",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.63",
+            "code": "PE63",
             "name": "   LLAVES DE PASO",
             "children": [
               {
-                "code": "PE.631",
+                "code": "PE631",
                 "name": "LLAVES DE PASO TIPO COMPUERTA",
                 "children": []
               },
               {
-                "code": "PE.632",
+                "code": "PE632",
                 "name": "LLAVES DE PASO TIPO ESFERICA O DE BOLA",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.64",
+            "code": "PE64",
             "name": "   OTRAS PIEZAS ESPECIALES: VÁLVULAS, GRIFOS, MEDIDORES",
             "children": [
               {
-                "code": "PE.642",
+                "code": "PE642",
                 "name": "VÁLVULA DE RETENCION HORIZONTAL (CHECK VALVE), DE BRONCE",
                 "children": []
               },
               {
-                "code": "PE.643",
+                "code": "PE643",
                 "name": "VÁLVULA DE RETENCION VERTICAL (MARACA-CHECKVALVE), DE BRONCE",
                 "children": []
               },
               {
-                "code": "PE.644",
+                "code": "PE644",
                 "name": "VÁLVULA TIPO FLOTANTE, DE BRONCE",
                 "children": []
               },
               {
-                "code": "PE.645",
+                "code": "PE645",
                 "name": "GRIFO DE BRONCE",
                 "children": []
               },
               {
-                "code": "PE.646",
+                "code": "PE646",
                 "name": "MEDIDOR DE BRONCE",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.65",
+            "code": "PE65",
             "name": "  REGISTROS",
             "children": [
               {
-                "code": "PE.651",
+                "code": "PE651",
                 "name": "TAPÓN DE REGISTRO, PARA TUBERÍA COLGANTE",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.66",
+            "code": "PE66",
             "name": "   ARTEFACTOS SANITARIOS",
             "children": [
               {
-                "code": "PE.661",
+                "code": "PE661",
                 "name": "LAVAMANOS",
                 "children": []
               },
               {
-                "code": "PE.662",
+                "code": "PE662",
                 "name": "WC DE ASIENTO",
                 "children": []
               },
               {
-                "code": "PE.663",
+                "code": "PE663",
                 "name": "URINARIO",
                 "children": []
               },
               {
-                "code": "PE.664",
+                "code": "PE664",
                 "name": "BIDET",
                 "children": []
               },
               {
-                "code": "PE.665",
+                "code": "PE665",
                 "name": "ACCESORIOS",
                 "children": []
               },
               {
-                "code": "PE.666",
+                "code": "PE666",
                 "name": "VARIOS",
                 "children": [
                   {
-                    "code": "PE.6661",
+                    "code": "PE6661",
                     "name": "DUCHAS",
                     "children": []
                   },
                   {
-                    "code": "PE.6662",
+                    "code": "PE6662",
                     "name": "CALENTADORES",
                     "children": []
                   },
                   {
-                    "code": "PE.6663",
+                    "code": "PE6663",
                     "name": "DRENES DE PISO CIRCULARES",
                     "children": []
                   }
                 ]
               },
               {
-                "code": "PE.667",
+                "code": "PE667",
                 "name": "SISTEMAS DE PRESIÓN PARA DISTRIBUCIÓN DE AGUA",
                 "children": [
                   {
-                    "code": "PE.6671",
+                    "code": "PE6671",
                     "name": "HIDRONEUMATICOS PEQUEÑOS",
                     "children": []
                   },
                   {
-                    "code": "PE.6672",
+                    "code": "PE6672",
                     "name": "HIDRONEUMATICOS GRANDES",
                     "children": []
                   }
                 ]
               },
               {
-                "code": "PE.668",
+                "code": "PE668",
                 "name": "ACCESORIOA PARA BAÑOS: TOALLERA, JABONERA, PORTARROLLO DE PAPEL, GANCHO COLGADOR",
                 "children": []
               },
               {
-                "code": "PE.669",
+                "code": "PE669",
                 "name": "DREN DE PISO",
                 "children": []
               }
@@ -12032,290 +12032,290 @@
         ]
       },
       {
-        "code": "PE.7",
+        "code": "PE7",
         "name": "INSTALACIONES ELECTROMECÁNICAS",
         "children": []
       },
       {
-        "code": "PE.8",
+        "code": "PE8",
         "name": "OBRAS DE SERVICIOS Y VARIAS",
         "children": [
           {
-            "code": "PE.801",
+            "code": "PE801",
             "name": "  BASES Y SUB-BASES",
             "children": [
               {
-                "code": "PE.8011",
+                "code": "PE8011",
                 "name": "  BASES Y SUB-BASES DE GRANZÓN NATURAL",
                 "children": []
               },
               {
-                "code": "PE.8012",
+                "code": "PE8012",
                 "name": "  BASES Y SUB-BASES DE PIEDRA PICADA",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.802",
+            "code": "PE802",
             "name": "  OBRAS DE CONCRETO",
             "children": [
               {
-                "code": "PE.8021",
+                "code": "PE8021",
                 "name": "  MATERIALES DE REFUERZO",
                 "children": []
               },
               {
-                "code": "PE.8022",
+                "code": "PE8022",
                 "name": "  ENCOFRADO",
                 "children": []
               },
               {
-                "code": "PE.8023",
+                "code": "PE8023",
                 "name": "  CONCRETO MEZCLADO EN SITIO",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.803",
+            "code": "PE803",
             "name": "  PAVIMENTOS ASFALTICOS",
             "children": [
               {
-                "code": "PE.8031",
+                "code": "PE8031",
                 "name": "  MEZCLAS ASFÁLTICAS EN FRIO",
                 "children": []
               },
               {
-                "code": "PE.8032",
+                "code": "PE8032",
                 "name": "  MEZCLAS ASFÁLTICAS EN CALIENTE",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.804",
+            "code": "PE804",
             "name": "  BOCAS DE VISITA PREFABRICADAS",
             "children": [
               {
-                "code": "PE.8041",
+                "code": "PE8041",
                 "name": "  MARCOS Y TAPAS DE HIERRO FUNDIDO PARA BOCAS DE VISITA",
                 "children": []
               },
               {
-                "code": "PE.8042",
+                "code": "PE8042",
                 "name": "  REJAS METÁLICAS PARA BOCAS DE VISITA",
                 "children": []
               },
               {
-                "code": "PE.8043",
+                "code": "PE8043",
                 "name": "  CILINDROS PARA BOCAS DE VISITA",
                 "children": []
               },
               {
-                "code": "PE.8044",
+                "code": "PE8044",
                 "name": "  CONOS PARA BOCAS DE VISITA",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.806",
+            "code": "PE806",
             "name": "  CERCAS",
             "children": [
               {
-                "code": "PE.8061",
+                "code": "PE8061",
                 "name": "  CERCAS DE MALLA",
                 "children": []
               },
               {
-                "code": "PE.8062",
+                "code": "PE8062",
                 "name": "  CERCAS DE MAMPOSTERÍA",
                 "children": []
               },
               {
-                "code": "PE.8063",
+                "code": "PE8063",
                 "name": "  CERCAS DE MADERA",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.807",
+            "code": "PE807",
             "name": "  POSTES PARA ALUMBRADO",
             "children": [
               {
-                "code": "PE.8071",
+                "code": "PE8071",
                 "name": "  POSTES METÁLICOS",
                 "children": []
               },
               {
-                "code": "PE.8072",
+                "code": "PE8072",
                 "name": "  POSTES DE CONCRETO",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.808",
+            "code": "PE808",
             "name": "  INSTALACIONES DEPORTIVAS",
             "children": [
               {
-                "code": "PE.8081",
+                "code": "PE8081",
                 "name": " ATLETISMO",
                 "children": []
               },
               {
-                "code": "PE.8082",
+                "code": "PE8082",
                 "name": " BASQUETBOL",
                 "children": []
               },
               {
-                "code": "PE.8083",
+                "code": "PE8083",
                 "name": " VOLEIBO",
                 "children": []
               },
               {
-                "code": "PE.8084",
+                "code": "PE8084",
                 "name": " FUTBO",
                 "children": []
               },
               {
-                "code": "PE.8085",
+                "code": "PE8085",
                 "name": " FUTBOLITO",
                 "children": []
               },
               {
-                "code": "PE.8086",
+                "code": "PE8086",
                 "name": " BEISBOL",
                 "children": []
               },
               {
-                "code": "PE.8087",
+                "code": "PE8087",
                 "name": " GIMNASIA RECREACIONAL",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.809",
+            "code": "PE809",
             "name": "  INSTALACIONES RECREATIVAS",
             "children": [
               {
-                "code": "PE.80901",
+                "code": "PE80901",
                 "name": "  SUBE Y BAJA",
                 "children": []
               },
               {
-                "code": "PE.80902",
+                "code": "PE80902",
                 "name": "  TOBOGÁN",
                 "children": []
               },
               {
-                "code": "PE.80903",
+                "code": "PE80903",
                 "name": "  COLUMPIOS",
                 "children": []
               },
               {
-                "code": "PE.80904",
+                "code": "PE80904",
                 "name": "  ESCALERAS",
                 "children": []
               },
               {
-                "code": "PE.80905",
+                "code": "PE80905",
                 "name": "  RUEDAS",
                 "children": []
               },
               {
-                "code": "PE.80906",
+                "code": "PE80906",
                 "name": "  LABERINTOS",
                 "children": []
               },
               {
-                "code": "PE.80907",
+                "code": "PE80907",
                 "name": "  ARTEFACTOS PARA EJERCICIOS",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.810",
+            "code": "PE810",
             "name": "  INSTALACIONES ORNAMENTALES",
             "children": [
               {
-                "code": "PE.81001",
+                "code": "PE81001",
                 "name": "  BANCOS",
                 "children": []
               },
               {
-                "code": "PE.81002",
+                "code": "PE81002",
                 "name": "  FUENTES",
                 "children": []
               },
               {
-                "code": "PE.81003",
+                "code": "PE81003",
                 "name": "  OBRAS ARTÍSTICAS",
                 "children": []
               },
               {
-                "code": "PE.81004",
+                "code": "PE81004",
                 "name": "  VARIOS",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.811",
+            "code": "PE811",
             "name": "  JARDINERÍA",
             "children": [
               {
-                "code": "PE.8111",
+                "code": "PE8111",
                 "name": "  ARBOLES",
                 "children": []
               },
               {
-                "code": "PE.8112",
+                "code": "PE8112",
                 "name": "  PALMAS",
                 "children": []
               },
               {
-                "code": "PE.8113",
+                "code": "PE8113",
                 "name": "  ARBUSTOS",
                 "children": []
               },
               {
-                "code": "PE.8114",
+                "code": "PE8114",
                 "name": "  HIERBAS Y AFINES",
                 "children": []
               },
               {
-                "code": "PE.8115",
+                "code": "PE8115",
                 "name": "  PLANTAS ACUÁTICAS",
                 "children": []
               },
               {
-                "code": "PE.8116",
+                "code": "PE8116",
                 "name": "  PLANTAS XERÓFILAS",
                 "children": []
               },
               {
-                "code": "PE.8117",
+                "code": "PE8117",
                 "name": "  TIERRA ABONADA",
                 "children": []
               }
             ]
           },
           {
-            "code": "PE.812",
+            "code": "PE812",
             "name": "  DISPOSICIÓN FINAL DE AGUAS RESIDUALES",
             "children": [
               {
-                "code": "PE.8121",
+                "code": "PE8121",
                 "name": "  SUMIDEROS Y LAGUNAS DE OXIDACIÓN",
                 "children": []
               },
               {
-                "code": "PE.8122",
+                "code": "PE8122",
                 "name": "  TANQUE SÉPTICO",
                 "children": []
               }
@@ -12324,81 +12324,81 @@
         ]
       },
       {
-        "code": "PE.9",
+        "code": "PE9",
         "name": "TRANSPORTE",
         "children": [
           {
-            "code": "PE.900",
+            "code": "PE900",
             "name": "  TRANSPORTE DE MAQUINARIA LIVIANA CON PESO HASTA 10 TF",
             "children": []
           },
           {
-            "code": "PE.901",
+            "code": "PE901",
             "name": "  TRANSPORTE DE MAQUINARIA PESADA CON PESO DE 10 A 30 TF",
             "children": []
           },
           {
-            "code": "PE.902",
+            "code": "PE902",
             "name": "  TRANSPORTE DE MAQUINARIA PESADA CON PESO MAYOR DE 30 TF",
             "children": []
           },
           {
-            "code": "PE.903",
+            "code": "PE903",
             "name": "  TRANSPORTE DE TIERRA, AGREGADOS Y ESCOMBROS",
             "children": []
           },
           {
-            "code": "PE.904",
+            "code": "PE904",
             "name": "  TRANSP. DE MATERIAL PROV. DE MOVIMIENTO DE TIERRA Y URBANISMO, BASES Y SUB-BASES, AGREG. P/CONCRETO Y MORTEROS, PAVIMENTOS ASFALTICOS, MUROS DE GAVIONES",
             "children": []
           },
           {
-            "code": "PE.905",
+            "code": "PE905",
             "name": "  TRANSPORTE DE CEMENTOS",
             "children": []
           },
           {
-            "code": "PE.906",
+            "code": "PE906",
             "name": "  TRANSPORTE DE BLOQUES DE ARCILLA",
             "children": []
           },
           {
-            "code": "PE.907",
+            "code": "PE907",
             "name": "  TRANSPORTE DE BLOQUES DE CONCRETO",
             "children": []
           },
           {
-            "code": "PE.908",
+            "code": "PE908",
             "name": "  TRANSPORTE DE LADRILLO Y OTROS ELEMENTOS MACIZOS DE ARCILLA",
             "children": []
           },
           {
-            "code": "PE.909",
+            "code": "PE909",
             "name": "  TRANSPORTE DE ESTRUCTURAS METÁLICAS",
             "children": []
           },
           {
-            "code": "PE.910",
+            "code": "PE910",
             "name": "  TRANSPORTE DE ESTRUCTURAS DE MADERA",
             "children": []
           },
           {
-            "code": "PE.911",
+            "code": "PE911",
             "name": "  TRANSPORTE DE LOS ELEMENTOS PARA LA CONSTRUCCIÓN DE MUROS DE SUELO ARMADO",
             "children": []
           },
           {
-            "code": "PE.913",
+            "code": "PE913",
             "name": "  TRANSPORTE DE MEZCLAS ASFÁLTICAS EN CALIENTE",
             "children": []
           },
           {
-            "code": "PE.914",
+            "code": "PE914",
             "name": "  TRANSPORTE DE MEZCLAS ASFÁLTICAS EN FRIO",
             "children": []
           },
           {
-            "code": "PE.915",
+            "code": "PE915",
             "name": "  TRANSPORTE DE ELEMENTOS PREFABRICADOS DE CONCRETO ARMADO, TABLESTACAS, PERFILES Y TUBOS METÁLICOS",
             "children": []
           }
@@ -12407,324 +12407,324 @@
     ]
   },
   {
-    "code": "PT.",
+    "code": "PT",
     "name": "PARTIDAS PTTROLERAS E INSTALACIONES",
     "children": [
       {
-        "code": "PT.1",
+        "code": "PT1",
         "name": "OBRAS PRELIMINARES",
         "children": [
           {
-            "code": "PT.14",
+            "code": "PT14",
             "name": "REMOCIONES",
             "children": []
           }
         ]
       },
       {
-        "code": "PT.2",
+        "code": "PT2",
         "name": "MOVIMIENTO DE TIERRA Y URBANISMO",
         "children": [
           {
-            "code": "PT.21",
+            "code": "PT21",
             "name": "  EXCAVACIONES",
             "children": [
               {
-                "code": "PT.211",
+                "code": "PT211",
                 "name": "  BANQUEOS",
                 "children": []
               },
               {
-                "code": "PT.212",
+                "code": "PT212",
                 "name": "  PRÉSTAMOS",
                 "children": []
               },
               {
-                "code": "PT.213",
+                "code": "PT213",
                 "name": "  REMOCIÓN DE LA CAPA VEGETAL O TIERRA DESECHABLE",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.22",
+            "code": "PT22",
             "name": "  CONSTRUCCIÓN DE TERRAPLENES PARA TERRAZAS",
             "children": []
           },
           {
-            "code": "PT.23",
+            "code": "PT23",
             "name": "  CONSTRUCCIÓN DE RELLENO COMPACTADO CON PASA DE MAQUINA",
             "children": []
           },
           {
-            "code": "PT.24",
+            "code": "PT24",
             "name": "  MUROS",
             "children": []
           }
         ]
       },
       {
-        "code": "PT.3",
+        "code": "PT3",
         "name": "ESTRUCTURAS",
         "children": [
           {
-            "code": "PT.31",
+            "code": "PT31",
             "name": "  OBRAS PREPARATORIA PARA ESTRUCTURAS",
             "children": [
               {
-                "code": "PT.311",
+                "code": "PT311",
                 "name": " EXCAVACIÓN EN CORTE PARA ASIENTO DE FUNDACIONES Y ZANJAS",
                 "children": []
               },
               {
-                "code": "PT.312",
+                "code": "PT312",
                 "name": " EXCAVACIÓN EN PRÉSTAMO PARA RELLENO DE ZANJAS Y FUNDACIONES",
                 "children": []
               },
               {
-                "code": "PT.313",
+                "code": "PT313",
                 "name": " CARGA DEL MATERIAL PROVENIENTE DE LAS EXCAVACIONES Y SITIOS DE PRESTAMOS",
                 "children": []
               },
               {
-                "code": "PT.315",
+                "code": "PT315",
                 "name": " ENTIBADO DE LAS PAREDES DE LA EXCAVACIÓN",
                 "children": []
               },
               {
-                "code": "PT.316",
+                "code": "PT316",
                 "name": " ACHICAMIENTO DE LAS EXCAVACIONES PARA ESTRUCTURAS",
                 "children": []
               },
               {
-                "code": "PT.317",
+                "code": "PT317",
                 "name": " COMPACTACIONES",
                 "children": []
               },
               {
-                "code": "PT.318",
+                "code": "PT318",
                 "name": " CONCRETO EN OBRAS PREPARATORIAS",
                 "children": []
               },
               {
-                "code": "PT.319",
+                "code": "PT319",
                 "name": " BASES GRANULARES EN OBRAS PREPARATORIAS",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.32",
+            "code": "PT32",
             "name": "  INFRAESTRUCTURA DE CONCRETO",
             "children": [
               {
-                "code": "PT.321",
+                "code": "PT321",
                 "name": "  PILOTES, MUROS ESPTCIALES Y OBRAS AFINES",
                 "children": []
               },
               {
-                "code": "PT.322",
+                "code": "PT322",
                 "name": "  CABEZALES DE PILOTES",
                 "children": []
               },
               {
-                "code": "PT.323",
+                "code": "PT323",
                 "name": "  BASES Y ESCALONES DE FUNDACIONES",
                 "children": []
               },
               {
-                "code": "PT.324",
+                "code": "PT324",
                 "name": "  PTDESTALES",
                 "children": []
               },
               {
-                "code": "PT.325",
+                "code": "PT325",
                 "name": "  VIGAS DE RIOSTRA, TIRANTES Y FUNDACIONES PARA PAREDES",
                 "children": []
               },
               {
-                "code": "PT.326",
+                "code": "PT326",
                 "name": "  LOSAS DE FUNDACIÓN",
                 "children": []
               },
               {
-                "code": "PT.327",
+                "code": "PT327",
                 "name": "  VIGAS DE FUNDACIÓN",
                 "children": []
               },
               {
-                "code": "PT.328",
+                "code": "PT328",
                 "name": "  BASES DE PAVIMENTO",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.33",
+            "code": "PT33",
             "name": "  SUPTRESTRUCTURA DE CONCRETO",
             "children": [
               {
-                "code": "PT.331",
+                "code": "PT331",
                 "name": "  COLUMNAS",
                 "children": []
               },
               {
-                "code": "PT.332",
+                "code": "PT332",
                 "name": "  VIGAS Y MACIZADOS",
                 "children": []
               },
               {
-                "code": "PT.333",
+                "code": "PT333",
                 "name": "  LOSAS, PLACAS Y PÉRGOLAS",
                 "children": []
               },
               {
-                "code": "PT.334",
+                "code": "PT334",
                 "name": "  MACHONES, VIGAS DE CORONA Y APOYOS DE LOSAS, DINTELES Y ARRIOSTRAMIENTO DE PAREDES",
                 "children": []
               },
               {
-                "code": "PT.335",
+                "code": "PT335",
                 "name": "  ESCALERAS",
                 "children": []
               },
               {
-                "code": "PT.336",
+                "code": "PT336",
                 "name": "  GRADERÍAS Y TRIBUNAS",
                 "children": []
               },
               {
-                "code": "PT.337",
+                "code": "PT337",
                 "name": "  ELEMENTOS ARQUITECTÓNICOS",
                 "children": []
               },
               {
-                "code": "PT.339",
+                "code": "PT339",
                 "name": "  MUROS ESTRUCTURALES",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.34",
+            "code": "PT34",
             "name": "  ENCOFRADOS",
             "children": [
               {
-                "code": "PT.341",
+                "code": "PT341",
                 "name": " ENCOFRADOS EN INFRAESTRUCTURA",
                 "children": []
               },
               {
-                "code": "PT.342",
+                "code": "PT342",
                 "name": " ENCOFRADOS EN SUPTRESTRUCTURA",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.35",
+            "code": "PT35",
             "name": "  ARMADURA DE REFUERZO",
             "children": [
               {
-                "code": "PT.351",
+                "code": "PT351",
                 "name": "  ARMADURA DE REFUERZO PARA INFRAESTRUCTURA",
                 "children": []
               },
               {
-                "code": "PT.352",
+                "code": "PT352",
                 "name": "  ARMADURA DE REFUERZO PARA SUPTRESTRUCTURA",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.36",
+            "code": "PT36",
             "name": "  ESTRUCTURAS METÁLICAS",
             "children": [
               {
-                "code": "PT.361",
+                "code": "PT361",
                 "name": " ESTRUCTURAS METÁLICAS DE ACERO",
                 "children": []
               },
               {
-                "code": "PT.362",
+                "code": "PT362",
                 "name": " ESTRUCTURAS METÁLICAS DE ALUMINIO",
                 "children": []
               },
               {
-                "code": "PT.36X1",
+                "code": "PT36X1",
                 "name": "  SUMINISTRO",
                 "children": []
               },
               {
-                "code": "PT.36X2",
+                "code": "PT36X2",
                 "name": "  FABRICACIÓN",
                 "children": []
               },
               {
-                "code": "PT.36X3",
+                "code": "PT36X3",
                 "name": "  LIMPIEZA Y PREPARACIÓN DE SUPTRFICIES",
                 "children": []
               },
               {
-                "code": "PT.36X4",
+                "code": "PT36X4",
                 "name": "  SISTEMA DE PROTECCIÓN",
                 "children": []
               },
               {
-                "code": "PT.36X5",
+                "code": "PT36X5",
                 "name": "  MONTAJE",
                 "children": []
               },
               {
-                "code": "PT.36X6",
+                "code": "PT36X6",
                 "name": "  SUMINISTRO, FABRICACIÓN LIMPIEZA Y PREPARACIÓN DE SUPTRFICIES,  SISTEMA DE PROTECCIÓN",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.37",
+            "code": "PT37",
             "name": "  ESTRUCTURAS DE MADERA",
             "children": [
               {
-                "code": "PT.371",
+                "code": "PT371",
                 "name": "  ESTRUCTURAS DE MADERA PARA INFRAESTRUCTURA",
                 "children": []
               },
               {
-                "code": "PT.372",
+                "code": "PT372",
                 "name": "  ESTRUCTURAS DE MADERAS PARA SUPTRESTRUCTURA",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.39",
+            "code": "PT39",
             "name": "  CUBIERTAS DE TECHO",
             "children": [
               {
-                "code": "PT.391",
+                "code": "PT391",
                 "name": "  CUBIERTAS DE TECHO TIPO LÁMINA",
                 "children": []
               },
               {
-                "code": "PT.392",
+                "code": "PT392",
                 "name": "  CUBIERTAS DE TECHO TIPO PANEL",
                 "children": []
               },
               {
-                "code": "PT.393",
+                "code": "PT393",
                 "name": "  CABALLETES",
                 "children": []
               },
               {
-                "code": "PT.394",
+                "code": "PT394",
                 "name": "  CANALES Y BAJANTES",
                 "children": []
               },
               {
-                "code": "PT.395",
+                "code": "PT395",
                 "name": "  ELEMENTOS COMPLEMENTARIOS DE VENTILACIÓN E ILUMINACIÓN NATURAL",
                 "children": []
               }
@@ -12733,296 +12733,296 @@
         ]
       },
       {
-        "code": "PT.4",
+        "code": "PT4",
         "name": "OBRAS ARQUITECTÓNICAS",
         "children": [
           {
-            "code": "PT.41",
+            "code": "PT41",
             "name": "  ALBAÑILERÍA",
             "children": [
               {
-                "code": "PT.411",
+                "code": "PT411",
                 "name": "  CONSTRUCCIÓN DE PAREDES Y TABIQUES",
                 "children": []
               },
               {
-                "code": "PT.412",
+                "code": "PT412",
                 "name": "REVESTIMIENTOS DE PAREDES Y TABIQUES, ESCALERAS, COLUMNAS Y MUROS",
                 "children": []
               },
               {
-                "code": "PT.413",
+                "code": "PT413",
                 "name": "  REVESTIMIENTOS DE TECHOS",
                 "children": []
               },
               {
-                "code": "PT.414",
+                "code": "PT414",
                 "name": "  REVESTIMIENTOS DE PISOS",
                 "children": []
               },
               {
-                "code": "PT.415",
+                "code": "PT415",
                 "name": "  REVESTIMIENTOS DE ESCALONES",
                 "children": []
               },
               {
-                "code": "PT.416",
+                "code": "PT416",
                 "name": "  CONSTRUCCIÓN DE PTNDIENTES EN LOSAS Y PLACAS HORIZONTALES",
                 "children": []
               },
               {
-                "code": "PT.417",
+                "code": "PT417",
                 "name": "  RASEO EN LOSAS Y PLACAS INCLINADAS",
                 "children": []
               },
               {
-                "code": "PT.418",
+                "code": "PT418",
                 "name": "  ACABADO DE PISOS Y ESCALONES",
                 "children": []
               },
               {
-                "code": "PT.419",
+                "code": "PT419",
                 "name": "  CIELOS RASOS",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.42",
+            "code": "PT42",
             "name": "  IMPTRMEABILIZACIÓN",
             "children": [
               {
-                "code": "PT.421",
+                "code": "PT421",
                 "name": "  CAPA IMPTRMEABILIZANTE ASFÁLTICA",
                 "children": []
               },
               {
-                "code": "PT.422",
+                "code": "PT422",
                 "name": "  RECUBRIMIENTO DE LA CAPA IMPTRMEABILIZANTE",
                 "children": []
               },
               {
-                "code": "PT.423",
+                "code": "PT423",
                 "name": "  JUNTAS",
                 "children": []
               },
               {
-                "code": "PT.424",
+                "code": "PT424",
                 "name": "  CUBREJUNTAS",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.43",
+            "code": "PT43",
             "name": "  HERRERÍA",
             "children": [
               {
-                "code": "PT.43701",
+                "code": "PT43701",
                 "name": "  PUERTAS METÁLICAS",
                 "children": []
               },
               {
-                "code": "PT.43702",
+                "code": "PT43702",
                 "name": "  VENTANAS METÁLICAS",
                 "children": []
               },
               {
-                "code": "PT.43703",
+                "code": "PT43703",
                 "name": "  TABIQUES METÁLICOS",
                 "children": []
               },
               {
-                "code": "PT.43704",
+                "code": "PT43704",
                 "name": "  REJAS METÁLICAS",
                 "children": []
               },
               {
-                "code": "PT.43705",
+                "code": "PT43705",
                 "name": "  BARANDAS METÁLICAS",
                 "children": []
               },
               {
-                "code": "PT.43706",
+                "code": "PT43706",
                 "name": "  PASAMANOS METÁLICOS",
                 "children": []
               },
               {
-                "code": "PT.43707",
+                "code": "PT43707",
                 "name": "  MARCOS METÁLICOS DE CHAPA DOBLADA",
                 "children": []
               },
               {
-                "code": "PT.43708",
+                "code": "PT43708",
                 "name": "  MARCOS METÁLICOS TUBULARES",
                 "children": []
               },
               {
-                "code": "PT.43709",
+                "code": "PT43709",
                 "name": "  LAMINAS METÁLICAS DE REVESTIMIENTOS",
                 "children": []
               },
               {
-                "code": "PT.43710",
+                "code": "PT43710",
                 "name": "  GUARDACANTOS",
                 "children": []
               },
               {
-                "code": "PT.43711",
+                "code": "PT43711",
                 "name": "  CERRAMIENTOS LAMINADOS DE FACHADAS",
                 "children": []
               },
               {
-                "code": "PT.43712",
+                "code": "PT43712",
                 "name": "  RODAPIÉ",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.44",
+            "code": "PT44",
             "name": "  CARPINTERÍA",
             "children": [
               {
-                "code": "PT.44701",
+                "code": "PT44701",
                 "name": "  PUERTAS DE MADERA",
                 "children": []
               },
               {
-                "code": "PT.44702",
+                "code": "PT44702",
                 "name": "  VENTANAS DE MADERA",
                 "children": []
               },
               {
-                "code": "PT.44703",
+                "code": "PT44703",
                 "name": "  TABIQUES DE MADERA",
                 "children": []
               },
               {
-                "code": "PT.44704",
+                "code": "PT44704",
                 "name": "  REJAS DE MADERA",
                 "children": []
               },
               {
-                "code": "PT.44705",
+                "code": "PT44705",
                 "name": "  BARANDAS DE MADERA",
                 "children": []
               },
               {
-                "code": "PT.44706",
+                "code": "PT44706",
                 "name": "  PASAMANOS DE MADERA",
                 "children": []
               },
               {
-                "code": "PT.44707",
+                "code": "PT44707",
                 "name": "  MARCOS DE MADERA",
                 "children": []
               },
               {
-                "code": "PT.44708",
+                "code": "PT44708",
                 "name": "  ESCALONES DE MADERA",
                 "children": []
               },
               {
-                "code": "PT.44709",
+                "code": "PT44709",
                 "name": "  REVESTIMIENTOS DE MADERA",
                 "children": []
               },
               {
-                "code": "PT.44710",
+                "code": "PT44710",
                 "name": "  RODAPIÉS DE MADERA",
                 "children": []
               },
               {
-                "code": "PT.44711",
+                "code": "PT44711",
                 "name": "  CLOSETS DE MADERA",
                 "children": []
               },
               {
-                "code": "PT.44713",
+                "code": "PT44713",
                 "name": "  MUEBLES",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.45",
+            "code": "PT45",
             "name": "  VIDRIOS, PLÁSTICOS Y SIMILARES",
             "children": [
               {
-                "code": "PT.451",
+                "code": "PT451",
                 "name": "  VIDRIOS",
                 "children": []
               },
               {
-                "code": "PT.452",
+                "code": "PT452",
                 "name": "  PUERTAS DE VIDRIO",
                 "children": []
               },
               {
-                "code": "PT.453",
+                "code": "PT453",
                 "name": "  CLARABOYAS",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.46",
+            "code": "PT46",
             "name": "  PINTURAS",
             "children": [
               {
-                "code": "PT.461",
+                "code": "PT461",
                 "name": "  PINTURAS DE ESMALTE",
                 "children": []
               },
               {
-                "code": "PT.462",
+                "code": "PT462",
                 "name": "  PINTURAS DE BARNIZ",
                 "children": []
               },
               {
-                "code": "PT.463",
+                "code": "PT463",
                 "name": "  PINTURAS DE CAUCHO O ACROVINILICAS",
                 "children": []
               },
               {
-                "code": "PT.464",
+                "code": "PT464",
                 "name": "  PINTURAS ANTICORROSIVAS",
                 "children": []
               },
               {
-                "code": "PT.465",
+                "code": "PT465",
                 "name": "  PINTURAS EPÓXICAS",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.47",
+            "code": "PT47",
             "name": "  CERRADURAS",
             "children": []
           },
           {
-            "code": "PT.49",
+            "code": "PT49",
             "name": "  ACCESORIOS PARA PUERTAS Y VENTANAS",
             "children": [
               {
-                "code": "PT.491",
+                "code": "PT491",
                 "name": "  CIERRAPUERTAS",
                 "children": []
               },
               {
-                "code": "PT.492",
+                "code": "PT492",
                 "name": "  PASADORES",
                 "children": []
               },
               {
-                "code": "PT.493",
+                "code": "PT493",
                 "name": "  PLACAS DE EMPUJE",
                 "children": []
               },
               {
-                "code": "PT.494",
+                "code": "PT494",
                 "name": "  TOPTS",
                 "children": []
               }
@@ -13031,228 +13031,228 @@
         ]
       },
       {
-        "code": "PT.5",
+        "code": "PT5",
         "name": "INSTALACIONES ELÉCTRICAS",
         "children": [
           {
-            "code": "PT.51",
+            "code": "PT51",
             "name": "  TUBERÍAS",
             "children": [
               {
-                "code": "PT.511",
+                "code": "PT511",
                 "name": "  TUBERÍA PLÁSTICA",
                 "children": []
               },
               {
-                "code": "PT.512",
+                "code": "PT512",
                 "name": "  TUBERÍA DE HIERRO",
                 "children": []
               },
               {
-                "code": "PT.513",
+                "code": "PT513",
                 "name": "  TUBERÍA DE ALUMINIO",
                 "children": []
               },
               {
-                "code": "PT.514",
+                "code": "PT514",
                 "name": "  TUBERÍA DE ASBESTO CEMENTO",
                 "children": []
               },
               {
-                "code": "PT.515",
+                "code": "PT515",
                 "name": "  TUBERÍA PARA CONDUCCION DE FLUIDOS PTTROLEROS, COMBUSTIBLE",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.52",
+            "code": "PT52",
             "name": "  CABLES",
             "children": [
               {
-                "code": "PT.521",
+                "code": "PT521",
                 "name": "  CABLES DE COBRE",
                 "children": []
               },
               {
-                "code": "PT.522",
+                "code": "PT522",
                 "name": "  CABLES DE ALUMINIO",
                 "children": []
               },
               {
-                "code": "PT.523",
+                "code": "PT523",
                 "name": "  CABLES ESPECIALES",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.53",
+            "code": "PT53",
             "name": "  CAJAS DE CONEXIÓN",
             "children": [
               {
-                "code": "PT.531",
+                "code": "PT531",
                 "name": "  CAJETINES METÁLICOS",
                 "children": []
               },
               {
-                "code": "PT.532",
+                "code": "PT532",
                 "name": "  CAJETINES DE PLÁSTICOS",
                 "children": []
               },
               {
-                "code": "PT.533",
+                "code": "PT533",
                 "name": "  CAJAS DE PASO",
                 "children": []
               },
               {
-                "code": "PT.534",
+                "code": "PT534",
                 "name": "  CONDULET DE ALUMINIO",
                 "children": []
               },
               {
-                "code": "PT.535",
+                "code": "PT535",
                 "name": "  CAJAS PARA INTERRUPTORES",
                 "children": []
               },
               {
-                "code": "PT.536",
+                "code": "PT536",
                 "name": "  CAJAS PARA MEDIDORES",
                 "children": []
               },
               {
-                "code": "PT.537",
+                "code": "PT537",
                 "name": "  CAJAS PARA TELEFONÍA, SONIDO, INTERCOMUNICACIÓN Y SIMILARES",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.54",
+            "code": "PT54",
             "name": "  TOMAS Y CONTROLES",
             "children": [
               {
-                "code": "PT.541",
+                "code": "PT541",
                 "name": "  INTERRUPTORES",
                 "children": []
               },
               {
-                "code": "PT.542",
+                "code": "PT542",
                 "name": "  TOMACORRIENTES",
                 "children": []
               },
               {
-                "code": "PT.543",
+                "code": "PT543",
                 "name": "  CUCHILLAS",
                 "children": []
               },
               {
-                "code": "PT.544",
+                "code": "PT544",
                 "name": "  REGLETAS TELEFÓNICAS",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.55",
+            "code": "PT55",
             "name": "  TABLEROS METÁLICOS PARA ELECTRICIDAD",
             "children": [
               {
-                "code": "PT.551",
+                "code": "PT551",
                 "name": "  TABLEROS METÁLICOS EMBUTIDOS",
                 "children": []
               },
               {
-                "code": "PT.552",
+                "code": "PT552",
                 "name": "  TABLEROS METÁLICOS SUPTRFICIALES",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.56",
+            "code": "PT56",
             "name": "  INTERRUPTORES TERMOMAGNÉTICOS (BREAKERS)",
             "children": [
               {
-                "code": "PT.561",
+                "code": "PT561",
                 "name": "  INTERRUPTORES TERMOMAGNÉTICOS CON ENCHUFE",
                 "children": []
               },
               {
-                "code": "PT.562",
+                "code": "PT562",
                 "name": "  INTERRUPTORES TERMOMAGNÉTICOS CON GANCHOS (UÑAS)",
                 "children": []
               },
               {
-                "code": "PT.563",
+                "code": "PT563",
                 "name": "  INTERRUPTORES TERMOMAGNÉTICOS CON TORNILLOS",
                 "children": []
               },
               {
-                "code": "PT.564",
+                "code": "PT564",
                 "name": "  INTERRUPTORES TERMOMAGNÉTICOS TERMINALES FRONTALES",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.57",
+            "code": "PT57",
             "name": "  TRANSFORMADORES",
             "children": [
               {
-                "code": "PT.571",
+                "code": "PT571",
                 "name": "  TRANSFORMADORES SECOS",
                 "children": []
               },
               {
-                "code": "PT.572",
+                "code": "PT572",
                 "name": "  TRANSFORMADORES EN ACEITE",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.58",
+            "code": "PT58",
             "name": "  LUMINARIAS",
             "children": [
               {
-                "code": "PT.581",
+                "code": "PT581",
                 "name": "  LÁMPARAS",
                 "children": []
               },
               {
-                "code": "PT.582",
+                "code": "PT582",
                 "name": "  REFLECTORES",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.59",
+            "code": "PT59",
             "name": "  VARIOS",
             "children": [
               {
-                "code": "PT.591",
+                "code": "PT591",
                 "name": " DISPOSITIVOS DE LOS SISTEMAS DE DETECCIÓN DE INCENDIOS",
                 "children": []
               },
               {
-                "code": "PT.592",
+                "code": "PT592",
                 "name": " DISPOSITIVOS DE LOS SISTEMAS DE INTERCOMUNICACIÓN, TELEFONÍA Y SONIDO",
                 "children": []
               },
               {
-                "code": "PT.593",
+                "code": "PT593",
                 "name": " DISPOSITIVOS DE LOS SISTEMAS DE ALARMA",
                 "children": []
               },
               {
-                "code": "PT.594",
+                "code": "PT594",
                 "name": " DISPOSITIVOS PARA LOS SISTEMAS DE CIRCUITOS CERRADOS DE   TELEVISIÓN",
                 "children": []
               },
               {
-                "code": "PT.595",
+                "code": "PT595",
                 "name": " DISPOSITIVOS PARA LOS SISTEMAS DE ANTENAS, LUCES DE OBSTRUCCIÓN Y PARARRAYOS",
                 "children": []
               }
@@ -13261,243 +13261,243 @@
         ]
       },
       {
-        "code": "PT.6",
+        "code": "PT6",
         "name": "INSTALACIONES SANITARIAS Y ESPTCIALES",
         "children": [
           {
-            "code": "PT.61",
+            "code": "PT61",
             "name": " TUBERÍAS",
             "children": [
               {
-                "code": "PT.611",
+                "code": "PT611",
                 "name": "TUBERÍAS PARA AGUAS CLARAS Y ESPTCIALES",
                 "children": []
               },
               {
-                "code": "PT.612",
+                "code": "PT612",
                 "name": "TUBERÍAS PARA AGUAS RESIDUALES",
                 "children": []
               },
               {
-                "code": "PT.613",
+                "code": "PT613",
                 "name": "TUBERÍAS PARA VENTILACIÓN",
                 "children": []
               },
               {
-                "code": "PT.614",
+                "code": "PT614",
                 "name": "TUBERÍAS PARA AGUAS PLUVIALES",
                 "children": []
               },
               {
-                "code": "PT.615",
+                "code": "PT615",
                 "name": "TUBERÍAS PARA GASES",
                 "children": []
               },
               {
-                "code": "PT.616",
+                "code": "PT616",
                 "name": "TUBERÍAS PARA INCENDIO",
                 "children": []
               },
               {
-                "code": "PT.617",
+                "code": "PT617",
                 "name": "TUBERÍAS PARA RESIDUOS SÓLIDOS",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.62",
+            "code": "PT62",
             "name": "   PUNTOS SANITARIOS",
             "children": [
               {
-                "code": "PT.621",
+                "code": "PT621",
                 "name": "PUNTOS SANITARIOS DE AGUAS CLARAS",
                 "children": []
               },
               {
-                "code": "PT.622",
+                "code": "PT622",
                 "name": "PUNTOS SANITARIOS DE AGUAS RESIDUALES",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.63",
+            "code": "PT63",
             "name": "   LLAVES DE PASO",
             "children": []
           },
           {
-            "code": "PT.65",
+            "code": "PT65",
             "name": "  REGISTROS",
             "children": [
               {
-                "code": "PT.651",
+                "code": "PT651",
                 "name": "TAPÓN DE REGISTRO, PARA TUBERÍA COLGANTE",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.66",
+            "code": "PT66",
             "name": "   ARTEFACTOS SANITARIOS",
             "children": []
           }
         ]
       },
       {
-        "code": "PT.7",
+        "code": "PT7",
         "name": "INSTALACIONES ELECTROMECÁNICAS",
         "children": []
       },
       {
-        "code": "PT.8",
+        "code": "PT8",
         "name": "OBRAS DE SERVICIOS Y VARIAS",
         "children": [
           {
-            "code": "PT.801",
+            "code": "PT801",
             "name": "  BASES Y SUB-BASES",
             "children": [
               {
-                "code": "PT.8011",
+                "code": "PT8011",
                 "name": "  BASES Y SUB-BASES DE GRANZÓN NATURAL",
                 "children": []
               },
               {
-                "code": "PT.8012",
+                "code": "PT8012",
                 "name": "  BASES Y SUB-BASES DE PIEDRA PICADA",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.802",
+            "code": "PT802",
             "name": "  OBRAS DE CONCRETO",
             "children": [
               {
-                "code": "PT.8021",
+                "code": "PT8021",
                 "name": "  MATERIALES DE REFUERZO",
                 "children": []
               },
               {
-                "code": "PT.8022",
+                "code": "PT8022",
                 "name": "  ENCOFRADO",
                 "children": []
               },
               {
-                "code": "PT.8023",
+                "code": "PT8023",
                 "name": "  CONCRETO MEZCLADO EN SITIO",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.803",
+            "code": "PT803",
             "name": "  PAVIMENTOS ASFALTICOS",
             "children": [
               {
-                "code": "PT.8031",
+                "code": "PT8031",
                 "name": "  MEZCLAS ASFÁLTICAS EN FRIO",
                 "children": []
               },
               {
-                "code": "PT.8032",
+                "code": "PT8032",
                 "name": "  MEZCLAS ASFÁLTICAS EN CALIENTE",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.804",
+            "code": "PT804",
             "name": "  BOCAS DE VISITA PREFABRICADAS",
             "children": [
               {
-                "code": "PT.8041",
+                "code": "PT8041",
                 "name": "  MARCOS Y TAPAS DE HIERRO FUNDIDO PARA BOCAS DE VISITA",
                 "children": []
               },
               {
-                "code": "PT.8042",
+                "code": "PT8042",
                 "name": "  REJAS METÁLICAS PARA BOCAS DE VISITA",
                 "children": []
               },
               {
-                "code": "PT.8043",
+                "code": "PT8043",
                 "name": "  CILINDROS PARA BOCAS DE VISITA",
                 "children": []
               },
               {
-                "code": "PT.8044",
+                "code": "PT8044",
                 "name": "  CONOS PARA BOCAS DE VISITA",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.806",
+            "code": "PT806",
             "name": "  CERCAS",
             "children": [
               {
-                "code": "PT.8061",
+                "code": "PT8061",
                 "name": "  CERCAS DE MALLA",
                 "children": []
               },
               {
-                "code": "PT.8062",
+                "code": "PT8062",
                 "name": "  CERCAS DE MAMPOSTERÍA",
                 "children": []
               },
               {
-                "code": "PT.8063",
+                "code": "PT8063",
                 "name": "  CERCAS DE MADERA",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.807",
+            "code": "PT807",
             "name": "  POSTES PARA ALUMBRADO",
             "children": [
               {
-                "code": "PT.8071",
+                "code": "PT8071",
                 "name": "  POSTES METÁLICOS",
                 "children": []
               },
               {
-                "code": "PT.8072",
+                "code": "PT8072",
                 "name": "  POSTES DE CONCRETO",
                 "children": []
               }
             ]
           },
           {
-            "code": "PT.808",
+            "code": "PT808",
             "name": "  INSTALACIONES DEPORTIVAS",
             "children": []
           },
           {
-            "code": "PT.809",
+            "code": "PT809",
             "name": "  INSTALACIONES RECREATIVAS",
             "children": []
           },
           {
-            "code": "PT.810",
+            "code": "PT810",
             "name": "  INSTALACIONES ORNAMENTALES",
             "children": []
           },
           {
-            "code": "PT.811",
+            "code": "PT811",
             "name": "  JARDINERÍA",
             "children": []
           },
           {
-            "code": "PT.812",
+            "code": "PT812",
             "name": "  DISPOSICIÓN FINAL DE AGUAS RESIDUALES",
             "children": []
           }
         ]
       },
       {
-        "code": "PT.9",
+        "code": "PT9",
         "name": "TRANSPORTE",
         "children": []
       }
