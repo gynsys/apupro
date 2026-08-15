@@ -17,6 +17,22 @@ import { useCost360Search } from '../../modules/cost360/hooks/useCost360Search';
 import Cost360SearchBar from '../../modules/cost360/components/Cost360SearchBar';
 import { SiteConfigContext } from '../../App';
 
+const ExcelIcon = ({ size = 20, className = "" }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M14 2V8H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M9.5 12L14.5 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M14.5 12L9.5 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
 export default function BudgetWorksheetPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -668,22 +684,22 @@ export default function BudgetWorksheetPage() {
                                       ref={provided.innerRef}
                                       {...provided.draggableProps}
                                       onClick={() => setSelectedItemId(isSelected ? null : item.id)}
-                                      className={`hover:bg-slate-50 transition-all duration-200 cursor-pointer group ${isSelected ? 'bg-blue-50 ring-inset ring-2 ring-blue-400' : ''} ${snapshot.isDragging ? 'shadow-xl ring-1 ring-blue-500 bg-white z-50 relative' : ''}`}
+                                      className={`transition-all duration-200 cursor-pointer group ${isSelected ? 'bg-blue-50 ring-inset ring-2 ring-blue-400' : ''} ${snapshot.isDragging ? 'shadow-xl ring-1 ring-blue-500 bg-white z-50 relative' : ''}`}
                                     >
-                                      <td className="p-4 text-center">
+                                      <td className="p-4 text-center group-hover:bg-slate-50 transition-colors rounded-l-xl">
                                         <div {...provided.dragHandleProps} className="inline-flex items-center justify-center p-1.5 rounded-lg cursor-grab active:cursor-grabbing hover:bg-slate-200/50 transition-colors w-8 h-8">
                                           <span className="text-slate-500 font-bold text-sm group-hover:hidden">{currentNumber}</span>
                                           <GripVertical size={16} className="hidden group-hover:block text-slate-400 hover:text-blue-600" />
                                         </div>
                                       </td>
-                                      <td className="p-4 text-sm font-mono text-slate-600">{item.cov_par || item.cod_par}</td>
-                                    <td className="p-4 text-sm text-slate-800">
+                                      <td className="p-4 text-sm font-mono text-slate-600 group-hover:bg-slate-50 transition-colors">{item.cov_par || item.cod_par}</td>
+                                    <td className="p-4 text-sm text-slate-800 group-hover:bg-slate-50 transition-colors">
                                       <div className="line-clamp-2 leading-relaxed" title={item.description}>
                                         {item.description}
                                       </div>
                                     </td>
-                                    <td className="p-4 text-center text-sm font-medium text-slate-500">{item.unit}</td>
-                                    <td className="p-4 text-right" onClick={e => e.stopPropagation()}>
+                                    <td className="p-4 text-center text-sm font-medium text-slate-500 group-hover:bg-slate-50 transition-colors">{item.unit}</td>
+                                    <td className="p-4 text-right group-hover:bg-slate-50 transition-colors" onClick={e => e.stopPropagation()}>
                                       <input 
                                         type="number"
                                         min="0"
@@ -699,13 +715,13 @@ export default function BudgetWorksheetPage() {
                                         }}
                                       />
                                     </td>
-                                    <td className="p-4 text-right text-sm font-medium text-slate-700">
+                                    <td className="p-4 text-right text-sm font-medium text-slate-700 group-hover:bg-slate-50 transition-colors">
                                       {calculatePU(item).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </td>
-                                    <td className="p-4 text-right text-sm font-bold text-slate-900">
+                                    <td className="p-4 text-right text-sm font-bold text-slate-900 group-hover:bg-slate-50 transition-colors">
                                       {(calculatePU(item) * item.quantity).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </td>
-                                    <td className="p-4 text-center">
+                                    <td className="p-4 text-center group-hover:bg-slate-50 transition-colors rounded-r-xl">
                                         <div className="flex items-center justify-center gap-1">
                                           <button onClick={(e) => { e.stopPropagation(); navigate(`/budgets/${budget.id}/item/${item.id}`); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg border border-transparent hover:border-slate-200 transition-colors" title="Editar APU">
                                             <Settings size={16} />
@@ -714,7 +730,7 @@ export default function BudgetWorksheetPage() {
                                             <Printer size={16} />
                                           </button>
                                           <button onClick={(e) => { e.stopPropagation(); /* TODO: export to Excel */ }} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded-lg border border-transparent hover:border-slate-200 transition-colors" title="Exportar a Excel">
-                                            <Download size={16} />
+                                            <ExcelIcon size={16} />
                                           </button>
                                           <button onClick={(e) => { e.stopPropagation(); handleDeleteItem(item.id); }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 transition-colors" title="Eliminar">
                                             <Trash2 size={16} />
