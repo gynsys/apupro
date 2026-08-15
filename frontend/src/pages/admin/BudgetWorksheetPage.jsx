@@ -626,7 +626,7 @@ export default function BudgetWorksheetPage() {
                                         ref={provided.innerRef}
                                         {...provided.draggableProps}
                                         onClick={() => setSelectedItemId(isSelected ? null : item.id)}
-                                        className={`hover:bg-[#E6EDFD] transition-colors cursor-pointer group ${isSelected ? 'bg-blue-50/50 ring-inset ring-2 ring-blue-500/50' : 'bg-slate-100/50'} ${snapshot.isDragging ? 'shadow-lg ring-1 ring-blue-400 bg-white z-50 relative' : ''}`}
+                                        className={`hover:bg-[#FEF3C7] transition-colors cursor-pointer group ${isSelected ? 'bg-blue-50/50 ring-inset ring-2 ring-blue-500/50' : 'bg-slate-100/50'} ${snapshot.isDragging ? 'shadow-lg ring-1 ring-blue-400 bg-white z-50 relative' : ''}`}
                                       >
                                         <td className="p-4 text-center">
                                           <div {...provided.dragHandleProps} className="inline-flex items-center justify-center p-1.5 text-slate-400 hover:text-blue-600 rounded-lg cursor-grab active:cursor-grabbing hover:bg-slate-200/50 transition-colors">
@@ -684,7 +684,7 @@ export default function BudgetWorksheetPage() {
                                       ref={provided.innerRef}
                                       {...provided.draggableProps}
                                       onClick={() => setSelectedItemId(isSelected ? null : item.id)}
-                                      className={`hover:bg-[#E6EDFD] transition-colors duration-200 cursor-pointer group ${isSelected ? 'bg-blue-50 ring-inset ring-2 ring-blue-400' : ''} ${snapshot.isDragging ? 'shadow-xl ring-1 ring-blue-500 bg-white z-50 relative' : ''}`}
+                                      className={`hover:bg-[#FEF3C7] transition-colors duration-200 cursor-pointer group ${isSelected ? 'bg-blue-50 ring-inset ring-2 ring-blue-400' : ''} ${snapshot.isDragging ? 'shadow-xl ring-1 ring-blue-500 bg-white z-50 relative' : ''}`}
                                     >
                                       <td className="p-4 text-center">
                                         <div {...provided.dragHandleProps} className="inline-flex items-center justify-center p-1.5 rounded-lg cursor-grab active:cursor-grabbing hover:bg-slate-200/50 transition-colors w-8 h-8">
