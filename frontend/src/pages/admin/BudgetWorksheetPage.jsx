@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { 
   ArrowLeft, Settings, Plus, Search, Layers, FileText, Printer,
-  DollarSign, Hash, Percent, Loader, X, Trash2, ArrowUp, ArrowDown, FolderPlus, RefreshCw, ChevronDown, Database, GripVertical
+  DollarSign, Hash, Percent, Loader, X, Trash2, ArrowUp, ArrowDown, FolderPlus, RefreshCw, ChevronDown, Database, GripVertical, Download
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { toast } from 'react-hot-toast';
@@ -647,7 +647,7 @@ export default function BudgetWorksheetPage() {
                                           )}
                                         </td>
                                         <td className="p-4 text-center">
-                                          <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <div className="flex items-center justify-center gap-1">
                                             <button onClick={(e) => { e.stopPropagation(); handleDeleteItem(item.id); }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 transition-colors" title="Eliminar">
                                               <Trash2 size={16} />
                                             </button>
@@ -668,7 +668,7 @@ export default function BudgetWorksheetPage() {
                                       ref={provided.innerRef}
                                       {...provided.draggableProps}
                                       onClick={() => setSelectedItemId(isSelected ? null : item.id)}
-                                      className={`hover:bg-blue-50/50 transition-colors cursor-pointer group ${isSelected ? 'bg-blue-50 ring-inset ring-2 ring-blue-400' : ''} ${snapshot.isDragging ? 'shadow-xl ring-1 ring-blue-500 bg-white z-50 relative' : ''}`}
+                                      className={`hover:bg-slate-50 transition-all duration-200 cursor-pointer group ${isSelected ? 'bg-blue-50 ring-inset ring-2 ring-blue-400' : ''} ${snapshot.isDragging ? 'shadow-xl ring-1 ring-blue-500 bg-white z-50 relative' : ''}`}
                                     >
                                       <td className="p-4 text-center">
                                         <div {...provided.dragHandleProps} className="inline-flex items-center justify-center p-1.5 rounded-lg cursor-grab active:cursor-grabbing hover:bg-slate-200/50 transition-colors w-8 h-8">
@@ -706,15 +706,21 @@ export default function BudgetWorksheetPage() {
                                       {(calculatePU(item) * item.quantity).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </td>
                                     <td className="p-4 text-center">
-                                      <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={(e) => { e.stopPropagation(); navigate(`/budgets/${budget.id}/item/${item.id}`); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 transition-colors" title="Editar APU">
-                                          <Settings size={16} />
-                                        </button>
-                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteItem(item.id); }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 transition-colors" title="Eliminar">
-                                          <Trash2 size={16} />
-                                        </button>
-                                      </div>
-                                    </td>
+                                        <div className="flex items-center justify-center gap-1">
+                                          <button onClick={(e) => { e.stopPropagation(); navigate(`/budgets/${budget.id}/item/${item.id}`); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg border border-transparent hover:border-slate-200 transition-colors" title="Editar APU">
+                                            <Settings size={16} />
+                                          </button>
+                                          <button onClick={(e) => { e.stopPropagation(); /* TODO: print APU */ }} className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-slate-100 rounded-lg border border-transparent hover:border-slate-200 transition-colors" title="Imprimir APU">
+                                            <Printer size={16} />
+                                          </button>
+                                          <button onClick={(e) => { e.stopPropagation(); /* TODO: export to Excel */ }} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded-lg border border-transparent hover:border-slate-200 transition-colors" title="Exportar a Excel">
+                                            <Download size={16} />
+                                          </button>
+                                          <button onClick={(e) => { e.stopPropagation(); handleDeleteItem(item.id); }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 transition-colors" title="Eliminar">
+                                            <Trash2 size={16} />
+                                          </button>
+                                        </div>
+                                      </td>
                                   </tr>
                                   )}
                                 </Draggable>
