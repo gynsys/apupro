@@ -173,7 +173,7 @@ const Cost360Dashboard = () => {
                 {items.map((item) => (
                   <li
                     key={item.CodPar}
-                    onClick={() => navigate(`/cost360/apu/${item.CodPar}`)}
+                    onClick={() => navigate(`/cost360/apu/${item.CodPar}?db=${selectedDatabase}`)}
                     className="group cursor-pointer transition-all duration-200 border-l-4 border-transparent hover:border-blue-600 hover:bg-blue-50/90 hover:shadow-md hover:translate-x-1"
                   >
                     <div className="px-5 py-4 flex items-center justify-between gap-4">

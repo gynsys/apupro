@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Printer, FileSpreadsheet } from 'lucide-react';
 import cost360Service from '../services/cost360Service';
 import PrintAPUModal from '../../../components/PrintAPUModal';
@@ -10,6 +10,8 @@ import ApuEditorUI from '../../../components/ApuEditorUI';
 export default function APUViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const dbId = searchParams.get('db') || 'master';
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -30,7 +32,7 @@ export default function APUViewer() {
     const fetchAPU = async () => {
       try {
         setLoading(true);
-        const apuData = await cost360Service.fetchApuDetails(id);
+        const apuData = await cost360Service.fetchApuDetails(id, dbId);
         setData(apuData);
         setItem({
           cod_par: apuData.partida.CodPar,
