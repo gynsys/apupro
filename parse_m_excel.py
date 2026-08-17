@@ -1,5 +1,10 @@
 import pandas as pd
 import math
+import re
+
+def normalize(text):
+    if pd.isna(text): return ""
+    return re.sub(r'[^a-z0-9]', '', str(text).lower())
 
 def escape_sql(val):
     if pd.isna(val):
@@ -33,6 +38,16 @@ def main():
                 'RenPar': get_float(row['Unnamed: 5'], 1.0),
                 'PreUni': get_float(row['Unnamed: 6'], 0.0)
             }
+            
+    desc_to_code = {}
+    for idx, row in df_partidas.iterrows():
+        cod = str(row['Unnamed: 2']).strip()
+        desc = normalize(row['Unnamed: 3'])
+        if cod.startswith('M'):
+            cod = cod.replace('.', '')
+            if desc not in desc_to_code:
+                desc_to_code[desc] = []
+            desc_to_code[desc].append(cod)
 
     current_apu = None
     current_section = None
@@ -54,7 +69,13 @@ def main():
         col6 = str(row['Unnamed: 6']).strip()
         
         if col5 == 'Código:':
-            current_apu = col6.replace('.', '')
+            desc_norm = normalize(col1)
+            if desc_norm in desc_to_code and desc_to_code[desc_norm]:
+                current_apu = desc_to_code[desc_norm].pop(0)
+            else:
+                # Fallback to RRM code if not found, or None to skip
+                current_apu = col6.replace('.', '')
+                
             current_section = None
             continue
             

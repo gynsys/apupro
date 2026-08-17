@@ -67,8 +67,18 @@ export default function APUViewer() {
     }
   }, [printOptions]);
 
-  const handleComponentChange = (type, updatedList) => {
-    setItem(prev => ({ ...prev, [type]: updatedList }));
+  const handleComponentChange = (type, compId, field, value) => {
+    setItem(prev => {
+      const updated = { ...prev };
+      updated[type] = updated[type].map(c => {
+        if (c.id === compId) {
+          const isNumeric = ['cantidad', 'precio_unitario', 'desperdicio', 'depreciacion', 'jornal'].includes(field);
+          return { ...c, [field]: isNumeric ? (parseFloat(value) || 0) : value };
+        }
+        return c;
+      });
+      return updated;
+    });
   };
 
   const handleHeaderChange = (field, value) => {
