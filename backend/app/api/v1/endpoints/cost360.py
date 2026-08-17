@@ -13,6 +13,15 @@ from app.schemas.cost360 import (
     Cost360DatabaseCreate, Cost360DatabaseUpdate, Cost360DatabaseListResponse,
     MasterItemUpdate, CustomApuExportRequest
 )
+import re
+from sqlalchemy import text
+
+def set_schema_for_db(db: Session, database_id: str):
+    if database_id and database_id not in ["master", "personalizada"] and re.match(r'^[a-zA-Z0-9_]+$', database_id):
+        try:
+            db.execute(text(f"SET LOCAL search_path TO {database_id}, public"))
+        except:
+            pass
 
 # Import Services and CRUD
 from app.crud.crud_cost360 import (
@@ -35,6 +44,7 @@ router = APIRouter()
 
 @router.get("/items", response_model=CostItemListResponse)
 def get_items(skip: int = 0, limit: int = 50, search: Optional[str] = None, chapter: Optional[str] = None, categoria: Optional[str] = None, tipo_actividad: Optional[str] = None, search_desc: bool = True, search_insumos: bool = False, covenin: Optional[str] = None, database_id: str = "master", only_coded: bool = False, db: Session = Depends(get_db)):
+    set_schema_for_db(db, database_id)
     total, items = get_items_paginated(db, skip, limit, search, chapter, categoria, tipo_actividad, search_desc, search_insumos, covenin, database_id, only_coded)
     return {"total": total, "items": items}
 
@@ -54,6 +64,7 @@ def _get_db_factors(db: Session, database_id: str) -> dict:
 
 @router.get("/items/{item_code}/apu", response_model=APUResponse)
 def get_apu(item_code: str, database_id: str = "master", db: Session = Depends(get_db)):
+    set_schema_for_db(db, database_id)
     if item_code.startswith("CUST-"):
         from app.db.models.cost360 import CustomCostItem
         import json
@@ -149,6 +160,7 @@ def delete_master_item_route(item_code: str, db: Session = Depends(get_db)):
 
 @router.get("/materials")
 def search_materials_route(skip: int = 0, limit: int = 50, search: str = "", database_id: str = "master", db: Session = Depends(get_db)):
+    set_schema_for_db(db, database_id)
     total, items = search_materials_paginated(db, skip, limit, search)
     # Aplicar factor de inflación de materiales si la base no es maestra
     if database_id and database_id != "master":
@@ -161,6 +173,7 @@ def search_materials_route(skip: int = 0, limit: int = 50, search: str = "", dat
 
 @router.get("/equipments")
 def search_equipments_route(skip: int = 0, limit: int = 50, search: str = "", database_id: str = "master", db: Session = Depends(get_db)):
+    set_schema_for_db(db, database_id)
     total, items = search_equipments_paginated(db, skip, limit, search)
     # Aplicar factor de inflación de equipos si la base no es maestra
     if database_id and database_id != "master":
@@ -173,6 +186,7 @@ def search_equipments_route(skip: int = 0, limit: int = 50, search: str = "", da
 
 @router.get("/labors")
 def search_labors_route(skip: int = 0, limit: int = 50, search: str = "", database_id: str = "master", db: Session = Depends(get_db)):
+    set_schema_for_db(db, database_id)
     total, items = search_labors_paginated(db, skip, limit, search)
     # Aplicar factor de inflación de mano de obra si la base no es maestra
     if database_id and database_id != "master":
