@@ -218,7 +218,7 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
                   <td className="border border-black px-1 py-0.5 text-right">{numFormat(d)}</td>
                   <td className="border border-black px-1 py-0.5 text-right">{numFormat(p)}</td>
                   <td className="border border-black px-1 py-0.5 text-right">{numFormat(sub)}</td>
-                  <td className="border border-black px-1 py-0.5 text-right bg-gray-50"></td>
+                  <td className="border border-black px-1 py-0.5 text-right bg-gray-50">{numFormat(sub / rendimiento)}</td>
                 </tr>
               );
             })}
@@ -266,7 +266,7 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
                   <td className="border border-black px-1 py-0.5 text-right">{numFormat(b)}</td>
                   <td className="border border-black px-1 py-0.5 text-right">{numFormat(tb)}</td>
                   <td className="border border-black px-1 py-0.5 text-right">{numFormat(tj)}</td>
-                  <td className="border border-black px-1 py-0.5 text-right bg-gray-50"></td>
+                  <td className="border border-black px-1 py-0.5 text-right bg-gray-50">{numFormat((tj + tb) / rendimiento)}</td>
                 </tr>
               );
             })}

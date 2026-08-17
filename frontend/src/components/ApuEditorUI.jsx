@@ -344,6 +344,7 @@ export default function ApuEditorUI({
                   <th className="p-2 w-24 text-right border-r border-slate-200">Deprec.</th>
                   <th className="p-2 w-32 text-right border-r border-slate-200">Precio</th>
                   <th className="p-2 w-32 text-right border-r border-slate-200">Total Día</th>
+                  <th className="p-2 w-32 text-right border-r border-slate-200">Unitario</th>
                   <th className="p-2 w-10 text-center"></th>
                 </tr>
               </thead>
@@ -406,6 +407,9 @@ export default function ApuEditorUI({
                     <td className="p-2 text-right font-semibold text-slate-700 bg-slate-50 text-xs border-r border-slate-200">
                       {((eq.cantidad * (eq.depreciacion ?? 1.0) * (eq.precio_unitario * exRate)) * (1 + (equipment_inflation/100))).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
+                    <td className="p-2 text-right font-bold text-slate-800 bg-white text-xs border-r border-slate-200">
+                      {(((eq.cantidad * (eq.depreciacion ?? 1.0) * (eq.precio_unitario * exRate)) * (1 + (equipment_inflation/100))) / (item.performance || item.rendimiento || 1)).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
+                    </td>
                     <td className="p-2 text-center">
                       <button
                         onClick={() => safeFn(onRemoveRow)('equipments', eq.id)}
@@ -462,6 +466,7 @@ export default function ApuEditorUI({
                   <th className="p-2 w-28 text-right border-r border-slate-200">Bono</th>
                   <th className="p-2 w-32 text-right border-r border-slate-200">Total Jornal</th>
                   <th className="p-2 w-32 text-right border-r border-slate-200">Total Bono</th>
+                  <th className="p-2 w-32 text-right border-r border-slate-200">Unitario</th>
                   <th className="p-2 w-10 text-center"></th>
                 </tr>
               </thead>
@@ -520,11 +525,14 @@ export default function ApuEditorUI({
                         disabled
                       />
                     </td>
-                    <td className="p-2 text-right font-semibold text-slate-700 bg-slate-50 border-r border-slate-200 text-xs">
+                    <td className="p-2 text-right font-semibold text-slate-700 bg-slate-50 text-xs border-r border-slate-200">
                       {((lab.cantidad * (lab.jornal * exRate)) * (1 + (labor_inflation/100))).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
                     <td className="p-2 text-right font-semibold text-slate-700 bg-slate-50 text-xs border-r border-slate-200">
                       {((lab.cantidad * ((lab.bono || labor_bonus || 0) * exRate)) * (1 + (labor_inflation/100))).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
+                    </td>
+                    <td className="p-2 text-right font-bold text-slate-800 bg-white text-xs border-r border-slate-200">
+                      {((((lab.cantidad * (lab.jornal * exRate)) * (1 + (labor_inflation/100))) * (1 + (fcas_percent/100)) + ((lab.cantidad * ((lab.bono || labor_bonus || 0) * exRate)) * (1 + (labor_inflation/100)))) / (item.performance || item.rendimiento || 1)).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
                     <td className="p-2 text-center">
                       <button
