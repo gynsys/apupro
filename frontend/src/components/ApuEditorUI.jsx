@@ -130,9 +130,9 @@ export default function ApuEditorUI({
             <input 
               type="text" 
               className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-sm font-bold font-mono text-slate-800 focus:outline-none focus:border-blue-500"
-              value={item.cov_par || item.cod_par || item.codigo || ''}
-              onChange={e => safeFn(onHeaderChange)(item.cov_par !== undefined ? 'cov_par' : 'cod_par', e.target.value)}
-              onBlur={e => safeFn(onHeaderBlur)(item.cov_par !== undefined ? 'cov_par' : 'cod_par', e.target.value)}
+              value={item.CovPar || item.CodPar || item.cov_par || item.cod_par || item.codigo || ''}
+              onChange={e => safeFn(onHeaderChange)(item.CovPar !== undefined ? 'CovPar' : (item.cov_par !== undefined ? 'cov_par' : 'cod_par'), e.target.value)}
+              onBlur={e => safeFn(onHeaderBlur)(item.CovPar !== undefined ? 'CovPar' : (item.cov_par !== undefined ? 'cov_par' : 'cod_par'), e.target.value)}
               placeholder="Ej. CUST-001"
             />
           </div>
