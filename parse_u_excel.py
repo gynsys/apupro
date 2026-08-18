@@ -88,23 +88,29 @@ def main():
         if current_apu and current_section:
             if current_section == 'MATERIALES' and col1 != 'nan' and len(col1) > 2:
                 if not (col1.startswith('Total') or col1.startswith('Unitario')):
+                    descri = str(row['Unnamed: 2'])
+                    if descri == 'nan': descri = col1
                     materials[col1] = {
-                        'Descri': str(row['Unnamed: 2']),
+                        'Descri': descri,
                         'UniMat': str(row['Unnamed: 3']),
                         'CosMat': get_float(row['Unnamed: 5'])
                     }
                     apu_materials.append((current_apu, col1, get_float(row['Unnamed: 4']), 0.0))
             elif current_section == 'EQUIPOS' and col1 != 'nan' and len(col1) > 2:
                 if not (col1.startswith('Total') or col1.startswith('Unitario')):
+                    descri_eq = str(row['Unnamed: 2'])
+                    if descri_eq == 'nan': descri_eq = col1
                     equipments[col1] = {
-                        'Descri': str(row['Unnamed: 2']),
+                        'Descri': descri_eq,
                         'CosDia': get_float(row['Unnamed: 5'])
                     }
                     apu_equipments.append((current_apu, col1, get_float(row['Unnamed: 3']), get_float(row['Unnamed: 4'], 1.0)))
             elif current_section == 'MANO DE OBRA' and col1 != 'nan' and len(col1) > 2:
                 if not (col1.startswith('Total') or col1.startswith('Sub') or col1.startswith('Unitario') or col1.startswith('Factor') or col1.startswith('Calculado') or col1.startswith('Uso') or col1.startswith('Bono')):
+                    descri_lab = str(row['Unnamed: 2'])
+                    if descri_lab == 'nan': descri_lab = col1
                     labors[col1] = {
-                        'Descri': str(row['Unnamed: 2']),
+                        'Descri': descri_lab,
                         'Jornal': get_float(row['Unnamed: 5']),
                         'Bono': 0.0
                     }

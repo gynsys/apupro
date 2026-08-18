@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiSearch, FiLayers, FiArrowRight, FiBox, FiTool, FiUsers, FiDatabase, FiEdit2, FiTrash2, FiSave, FiX } from 'react-icons/fi';
+import { FiSearch, FiLayers, FiArrowRight, FiBox, FiTool, FiUsers, FiDatabase, FiEdit2, FiTrash2, FiSave, FiX, FiDownload } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import cost360Service from '../services/cost360Service';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
@@ -79,6 +79,30 @@ const AdminDatabasePage = () => {
     } catch(err) {
        toast.error("Error de red");
     }
+  };
+
+  const handleExportToCsv = () => {
+    if (!items || items.length === 0) {
+      toast.error('No hay datos para exportar');
+      return;
+    }
+
+    const headers = ['Código', 'Descripción', 'Unidad'];
+    const csvContent = [
+      headers.join(','),
+      ...items.map(item => `"${item.CodPar}","${item.Descri?.replace(/"/g, '""')}","${item.Unidad || ''}"`)
+    ].join('\n');
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Listado_Partidas_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('Listado exportado correctamente a Excel (CSV)');
   };
 
   const TABS = [
@@ -179,10 +203,19 @@ const AdminDatabasePage = () => {
             />
 
             {totalItems > 0 && (
-              <p className="mt-3 text-xs text-slate-500 font-medium">
-                <span className="font-bold text-slate-700">{new Intl.NumberFormat('es-VE').format(totalItems)}</span>{' '}
-                {search ? 'coincidencias' : 'Total Partidas'}
-              </p>
+              <div className="mt-3 flex items-center justify-between">
+                <p className="text-xs text-slate-500 font-medium">
+                  <span className="font-bold text-slate-700">{new Intl.NumberFormat('es-VE').format(totalItems)}</span>{' '}
+                  {search ? 'coincidencias' : 'Total Partidas'}
+                </p>
+                <button
+                  onClick={handleExportToCsv}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors"
+                >
+                  <FiDownload size={12} />
+                  Exportar a Excel
+                </button>
+              </div>
             )}
           </div>
 
