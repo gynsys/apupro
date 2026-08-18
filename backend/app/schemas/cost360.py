@@ -148,11 +148,11 @@ class Cost360DatabaseBase(BaseModel):
     id: str
     name: str
     description: Optional[str] = None
-    is_master: bool
-    is_active: bool
-    material_inflation: float
-    labor_inflation: float
-    equipment_inflation: float
+    is_master: Optional[bool] = False
+    is_active: Optional[bool] = True
+    material_inflation: Optional[float] = 0.0
+    labor_inflation: Optional[float] = 0.0
+    equipment_inflation: Optional[float] = 0.0
     source_database_id: Optional[str] = None
     created_at: Optional[datetime] = None
     created_by: Optional[str] = None
