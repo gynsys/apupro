@@ -225,7 +225,6 @@ export default function AIApuGeneratorPage() {
         advertencias: []
       });
       toast.success('APU importado correctamente. Ahora puedes editarlo.');
-      setSearchResults([]);
       setSearchQuery('');
     } catch(err) {
       console.error(err);
