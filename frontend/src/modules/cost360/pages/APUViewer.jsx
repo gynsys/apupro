@@ -36,6 +36,7 @@ export default function APUViewer() {
         setData(apuData);
         setItem({
           cod_par: apuData.partida.CodPar,
+          cov_par: apuData.partida.CovPar,
           description: apuData.partida.Descri,
           unit: apuData.partida.UniPar,
           performance: apuData.partida.RenPar || 1,

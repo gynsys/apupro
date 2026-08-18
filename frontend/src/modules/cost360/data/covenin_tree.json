@@ -2375,7 +2375,7 @@
   },
   {
     "code": "M",
-    "name": "REPARACIONES, REFORMAS y MEJORAS",
+    "name": "Obras Menores / Mantenimiento",
     "children": [
       {
         "code": "M0",
@@ -5716,7 +5716,7 @@
   },
   {
     "code": "R",
-    "name": "REPARACIONES GENERALES DE EDIFICACIONES EXISTENTES, INCLUYENDO REPARACIÓN DE LA ESTRUCTURA",
+    "name": "Reparaciones Generales - Reforzamiento Estructural",
     "children": [
       {
         "code": "R0",
