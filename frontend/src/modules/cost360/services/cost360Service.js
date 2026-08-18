@@ -24,7 +24,8 @@ export const fetchItems = async (skip = 0, limit = 50, search = '', chapter = ''
     if (final_only_coded === null && database_id === 'master') {
       final_only_coded = window.ARKO_SITE_CONFIG?.forceOnlyCodedMaster === true;
     }
-    const params = { skip, limit, database_id, search_desc, search_insumos, only_coded: final_only_coded };
+    const hidden_categories = window.ARKO_SITE_CONFIG?.hiddenCategories?.join(',') || '';
+    const params = { skip, limit, database_id, search_desc, search_insumos, only_coded: final_only_coded, hidden_categories };
     if (search) params.search = search;
     if (chapter) params.chapter = chapter;
     if (covenin) params.covenin = covenin;

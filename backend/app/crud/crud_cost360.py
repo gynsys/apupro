@@ -22,7 +22,7 @@ def strip_accents(s: str) -> str:
 def unaccent_col(column):
     return func.translate(column, 'áéíóúÁÉÍÓÚäëïöüÄËÏÖÜ', 'aeiouAEIOUaeiouAEIOU')
 
-def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Optional[str] = None, chapter: Optional[str] = None, categoria: Optional[str] = None, tipo_actividad: Optional[str] = None, search_desc: bool = True, search_insumos: bool = False, covenin: Optional[str] = None, database_id: str = "master", only_coded: bool = False):
+def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Optional[str] = None, chapter: Optional[str] = None, categoria: Optional[str] = None, tipo_actividad: Optional[str] = None, search_desc: bool = True, search_insumos: bool = False, covenin: Optional[str] = None, database_id: str = "master", only_coded: bool = False, hidden_categories: Optional[str] = None):
     
     # Failsafe: Si ambos están apagados, forzar búsqueda por descripción por defecto
     if not search_desc and not search_insumos:
@@ -145,6 +145,13 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
         total = query.count() # re-count if tipo_actividad is applied
     if only_coded:
         query = query.filter(CostItem.CovPar.op('~')(r'^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$'))
+        total = query.count()
+
+    if hidden_categories and not covenin and not chapter:
+        hc_list = [hc.strip() for hc in hidden_categories.split(',')]
+        for hc in hc_list:
+            if hc:
+                query = query.filter(or_(CostItem.CovPar == None, ~CostItem.CovPar.startswith(hc)))
         total = query.count()
     
     # Priorizar partidas con COVENIN completo (formato [LETRA].[9 DÍGITOS] como C.110800300)
