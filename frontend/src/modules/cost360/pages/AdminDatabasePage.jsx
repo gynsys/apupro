@@ -32,6 +32,18 @@ const AdminDatabasePage = () => {
   const [activeTab, setActiveTab] = useState('partidas');
   const [onlyCoded, setOnlyCoded] = useState(true);
   const [editingItem, setEditingItem] = useState(null);
+  const [isCatMenuOpen, setIsCatMenuOpen] = useState(false);
+  const catMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (catMenuRef.current && !catMenuRef.current.contains(event.target)) {
+        setIsCatMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   
   const navigate = useNavigate();
   const { config, setConfig } = useContext(SiteConfigContext);
@@ -282,27 +294,39 @@ const AdminDatabasePage = () => {
           )}
         </div>
         {activeTab === 'partidas' && (
-          <div className="px-6 pb-3 pt-2 bg-slate-50/50 border-t border-slate-200/50 flex flex-col gap-2">
-            <span className="text-xs font-bold text-slate-500 uppercase">Gestión de Categorías Visibles (Buscador Público):</span>
-            <div className="flex flex-wrap gap-2">
-              {coveninTreeData.map(cat => {
-                const isVisible = !(config?.hiddenCategories || []).includes(cat.code);
-                return (
-                  <div key={cat.code} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-colors ${isVisible ? 'bg-white border-blue-200 shadow-sm' : 'bg-slate-100 border-slate-200 opacity-70'}`}>
-                    <input 
-                      type="checkbox" 
-                      id={`cat_${cat.code}`}
-                      checked={isVisible}
-                      onChange={(e) => handleToggleCategory(cat.code, e.target.checked)}
-                      className="w-3.5 h-3.5 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-                    />
-                    <label htmlFor={`cat_${cat.code}`} className="text-xs font-bold text-slate-700 cursor-pointer select-none" title={cat.name}>
-                      {cat.code}
-                    </label>
-                  </div>
-                );
-              })}
+          <div className="px-6 pb-3 pt-2 bg-slate-50/50 border-t border-slate-200/50 flex flex-col gap-2 relative" ref={catMenuRef}>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-500 uppercase">Gestión de Categorías:</span>
+              <button 
+                onClick={() => setIsCatMenuOpen(!isCatMenuOpen)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 rounded-lg shadow-sm text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <span>Configurar Visibilidad</span>
+                <svg className={`w-4 h-4 transition-transform ${isCatMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
             </div>
+            
+            {isCatMenuOpen && (
+              <div className="absolute top-full left-6 mt-1 w-[400px] z-50 bg-white border border-slate-200 rounded-xl shadow-xl p-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {coveninTreeData.map(cat => {
+                  const isVisible = !(config?.hiddenCategories || []).includes(cat.code);
+                  return (
+                    <div key={cat.code} className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border transition-colors ${isVisible ? 'bg-slate-50 border-blue-200' : 'bg-white border-slate-100 opacity-60 hover:opacity-100'}`}>
+                      <input 
+                        type="checkbox" 
+                        id={`cat_${cat.code}`}
+                        checked={isVisible}
+                        onChange={(e) => handleToggleCategory(cat.code, e.target.checked)}
+                        className="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                      />
+                      <label htmlFor={`cat_${cat.code}`} className="text-xs font-bold text-slate-700 cursor-pointer select-none leading-tight" title={cat.name}>
+                        {cat.code} <span className="font-normal block truncate w-full max-w-[80px]" title={cat.name}>{cat.name}</span>
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
         <div className="h-px" style={{ background: 'linear-gradient(90deg,rgba(148,163,255,0.4),transparent)' }} />
