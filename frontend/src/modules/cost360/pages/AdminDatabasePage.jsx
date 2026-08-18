@@ -9,6 +9,7 @@ import { API_URL } from '../../../services/api';
 import CatalogResourceTab from '../components/CatalogResourceTab';
 import Cost360SearchBar from '../components/Cost360SearchBar';
 import { useCost360Search } from '../hooks/useCost360Search';
+import coveninTreeData from '../data/covenin_tree.json';
 
 /* ── Shared glass style ─────────────────────────────────── */
 const glass = {
@@ -81,16 +82,53 @@ const AdminDatabasePage = () => {
     }
   };
 
+  const handleToggleCategory = async (code, isVisible) => {
+    const hiddenCategories = config?.hiddenCategories || [];
+    let newHidden = [...hiddenCategories];
+    
+    if (isVisible) {
+      newHidden = newHidden.filter(c => c !== code);
+    } else {
+      if (!newHidden.includes(code)) {
+        newHidden.push(code);
+      }
+    }
+    
+    const newConfig = { ...config, hiddenCategories: newHidden };
+    try {
+      const token = localStorage.getItem('arko_admin_token');
+      const response = await fetch(`${API_URL}/arko/admin/config`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(newConfig)
+      });
+      if (response.ok) {
+        const result = await response.json();
+        const updatedConfig = result.config || newConfig;
+        setConfig(updatedConfig);
+        window.ARKO_SITE_CONFIG = updatedConfig;
+        toast.success(`Categoría ${code} ${isVisible ? 'ACTIVADA' : 'OCULTADA'} en el Buscador Público`);
+      } else {
+        toast.error("Error al actualizar la configuración de categorías");
+      }
+    } catch(err) {
+       toast.error("Error de red");
+    }
+  };
+
   const handleExportToCsv = () => {
     if (!items || items.length === 0) {
       toast.error('No hay datos para exportar');
       return;
     }
 
-    const headers = ['Código', 'Descripción', 'Unidad'];
+    const headers = ['Código Covenin', 'Descripción', 'Unidad'];
     const csvContent = [
-      headers.join(','),
-      ...items.map(item => `"${item.CodPar}","${item.Descri?.replace(/"/g, '""')}","${item.Unidad || ''}"`)
+      headers.join(';'),
+      ...items.map(item => `"${item.CovPar || item.CodPar || ''}";"${item.Descri?.replace(/"/g, '""')}";"${item.UniPar || item.Unidad || ''}"`)
     ].join('\n');
 
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -183,6 +221,30 @@ const AdminDatabasePage = () => {
             </div>
           )}
         </div>
+        {activeTab === 'partidas' && (
+          <div className="px-6 pb-3 pt-2 bg-slate-50/50 border-t border-slate-200/50 flex flex-col gap-2">
+            <span className="text-xs font-bold text-slate-500 uppercase">Gestión de Categorías Visibles (Buscador Público):</span>
+            <div className="flex flex-wrap gap-2">
+              {coveninTreeData.map(cat => {
+                const isVisible = !(config?.hiddenCategories || []).includes(cat.code);
+                return (
+                  <div key={cat.code} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-colors ${isVisible ? 'bg-white border-blue-200 shadow-sm' : 'bg-slate-100 border-slate-200 opacity-70'}`}>
+                    <input 
+                      type="checkbox" 
+                      id={`cat_${cat.code}`}
+                      checked={isVisible}
+                      onChange={(e) => handleToggleCategory(cat.code, e.target.checked)}
+                      className="w-3.5 h-3.5 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                    />
+                    <label htmlFor={`cat_${cat.code}`} className="text-xs font-bold text-slate-700 cursor-pointer select-none" title={cat.name}>
+                      {cat.code}
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div className="h-px" style={{ background: 'linear-gradient(90deg,rgba(148,163,255,0.4),transparent)' }} />
       </div>
 

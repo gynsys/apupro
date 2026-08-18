@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiSearch } from 'react-icons/fi';
 import { Loader } from 'lucide-react';
 import coveninTreeData from '../data/covenin_tree.json';
+import { SiteConfigContext } from '../../../App';
 
 const Cost360SearchBar = ({
   searchQuery,
@@ -21,6 +22,14 @@ const Cost360SearchBar = ({
   const [selectedCapitulo, setSelectedCapitulo] = useState('');
   const [selectedSubcapitulo, setSelectedSubcapitulo] = useState('');
   const [selectedPartida, setSelectedPartida] = useState('');
+
+  const configContext = React.useContext(SiteConfigContext);
+  const hiddenCategories = configContext?.config?.hiddenCategories || [];
+  
+  // Filtrar el árbol principal para ocultar las categorías desactivadas
+  const visibleTree = React.useMemo(() => {
+    return coveninTree.filter(c => !hiddenCategories.includes(c.code));
+  }, [coveninTree, hiddenCategories]);
 
   // Sincronizar el prefijo hacia el padre
   useEffect(() => {
@@ -50,7 +59,7 @@ const Cost360SearchBar = ({
             className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
           >
             <option value="">Todos los Tipos...</option>
-            {coveninTree.map(cat => (
+            {visibleTree.map(cat => (
               <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
             ))}
           </select>
