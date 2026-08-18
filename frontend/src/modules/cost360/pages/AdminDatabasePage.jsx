@@ -119,11 +119,22 @@ const AdminDatabasePage = () => {
     }
   };
 
-  const handleExportToCsv = () => {
-    if (!items || items.length === 0) {
+  const handleExportToCsv = async () => {
+    if (totalItems === 0) {
       toast.error('No hay datos para exportar');
       return;
     }
+
+    const toastId = toast.loading('Obteniendo todas las partidas para exportar...');
+    let exportItems = [];
+    try {
+      const response = await cost360Service.fetchItems(0, 10000, search, '', 'master', searchDesc, searchInsumos, searchCovenin, onlyCoded);
+      exportItems = response.items || [];
+    } catch (err) {
+      toast.error('Error al obtener los datos completos', { id: toastId });
+      return;
+    }
+    toast.success('Datos obtenidos, generando Excel...', { id: toastId });
 
     const xmlContent = `<?xml version="1.0"?>
 <?mso-application progid="Excel.Sheet"?>
@@ -165,7 +176,7 @@ const AdminDatabasePage = () => {
     <Cell ss:StyleID="sHeader"><Data ss:Type="String">Descripción</Data></Cell>
     <Cell ss:StyleID="sHeader"><Data ss:Type="String">Unidad</Data></Cell>
    </Row>
-   ${items.map((item, index) => {
+   ${exportItems.map((item, index) => {
      const descri = (item.Descri || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
      const cov = (item.CovPar || item.CodPar || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
      const uni = (item.UniPar || item.Unidad || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
