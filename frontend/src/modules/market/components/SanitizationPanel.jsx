@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { Loader, Play, CheckCircle, Database } from 'lucide-react';
 import { marketService } from '../services/marketService';
+import { API_URL } from '../../../services/api';
 
 export default function SanitizationPanel() {
   const [unsanitized, setUnsanitized] = useState([]);
@@ -74,9 +75,15 @@ export default function SanitizationPanel() {
           <button 
             onClick={async () => {
               toast.loading('Actualizando Base de Datos...', {id: 'db-upg'});
-              await fetch('http://localhost:8000/api/v1/market/upgrade-db');
-              toast.success('BD Actualizada', {id: 'db-upg'});
-              fetchUnsanitized();
+              try {
+                await fetch(`${API_URL}/market/upgrade-db`, {
+                  headers: { 'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}` }
+                });
+                toast.success('BD Actualizada', {id: 'db-upg'});
+                fetchUnsanitized();
+              } catch (e) {
+                toast.error('Error de red', {id: 'db-upg'});
+              }
             }}
             className="px-3 py-2 text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-bold"
           >
