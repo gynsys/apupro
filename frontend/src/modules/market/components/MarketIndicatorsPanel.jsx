@@ -234,12 +234,15 @@ export default function MarketIndicatorsPanel() {
       {showLeaderModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[85vh]">
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-              <div>
+            <div className="p-4 border-b border-slate-100 flex flex-shrink-0 items-start justify-between bg-slate-50">
+              <div className="pr-4">
                 <h3 className="font-bold text-slate-800">Cambiar Insumo Líder</h3>
                 <p className="text-sm text-slate-500 mt-0.5">Familia: {selectedFamily?.family_name}</p>
               </div>
-              <button onClick={() => setShowLeaderModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button 
+                onClick={() => setShowLeaderModal(false)} 
+                className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-200 rounded-lg transition-colors flex-shrink-0"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
