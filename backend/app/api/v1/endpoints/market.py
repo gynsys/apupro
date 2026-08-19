@@ -100,13 +100,73 @@ def apply_sanitization(approved_items: List[Dict[str, Any]], db: Session = Depen
     result = apply_sanitization_batch(db, approved_items)
     return result
 
+from pydantic import BaseModel
+class LeaderPriceUpdate(BaseModel):
+    leader_id: str
+    new_price: float
+
+@router.post("/update-leader-price")
+def update_leader_price(payload: LeaderPriceUpdate, db: Session = Depends(get_db)):
+    """
+    Actualiza el precio de un Insumo Líder (Material Fuerte) y aplica en cascada
+    la fórmula de dispersión (precio_hijo = precio_líder * factor) a toda su familia.
+    """
+    from app.db.models.cost360 import CostMaterial
+    leader = db.query(CostMaterial).filter(CostMaterial.CodMat == payload.leader_id).first()
+    if not leader:
+        raise HTTPException(status_code=404, detail="Insumo líder no encontrado")
+        
+    leader.CosMat = payload.new_price
+    
+    children = db.query(CostMaterial).filter(CostMaterial.market_indicator_id == payload.leader_id).all()
+    count = 0
+    for child in children:
+        if child.CodMat != payload.leader_id:
+            factor = child.market_factor or 1.0
+            child.CosMat = payload.new_price * factor
+            count += 1
+            
+    db.commit()
+    return {
+        "status": "success", 
+        "updated_children": count, 
+        "leader_id": payload.leader_id, 
+        "new_price": payload.new_price
+    }
+
+
 # Aquí irán los endpoints para el CRUD de Insumos Líderes (Web Scraping)
 @router.get("/indicators")
 def list_market_indicators(db: Session = Depends(get_db)):
-    # Placeholder for indicators logic
-    return {"items": []}
+    from app.db.models.cost360 import CostMaterial
+    from sqlalchemy import func
+    
+    counts = db.query(CostMaterial.market_indicator_id, func.count(CostMaterial.CodMat)).group_by(CostMaterial.market_indicator_id).all()
+    count_map = {c[0]: c[1] for c in counts if c[0]}
+    
+    indicator_ids = list(count_map.keys())
+    if not indicator_ids:
+        return {"items": []}
+        
+    leaders = db.query(CostMaterial).filter(CostMaterial.CodMat.in_(indicator_ids)).all()
+    
+    results = []
+    for leader in leaders:
+        results.append({
+            "id": leader.CodMat,
+            "description": leader.Descri,
+            "price": leader.CosMat,
+            "unit": leader.UniMat,
+            "children_count": count_map.get(leader.CodMat, 0) - 1,
+            "family_id": leader.family_id
+        })
+        
+    # Sort by children count descending
+    results.sort(key=lambda x: x["children_count"], reverse=True)
+    return {"items": results}
 
 @router.put("/indicators/{indicator_id}/apply")
-def apply_market_indicator_prices(indicator_id: str, new_price: float, db: Session = Depends(get_db)):
-    # Placeholder for cascade update logic
-    return {"status": "success", "updated_count": 0}
+def apply_market_indicator_prices(indicator_id: str, payload: LeaderPriceUpdate, db: Session = Depends(get_db)):
+    # Redirigir al nuevo endpoint update_leader_price
+    payload.leader_id = indicator_id
+    return update_leader_price(payload, db)
