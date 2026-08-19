@@ -11,18 +11,21 @@ from app.db.base import engine
 router = APIRouter()
 
 @router.get("/upgrade-db")
-def upgrade_db_endpoint(db: Session = Depends(get_db)):
+def upgrade_db_endpoint():
     Base.metadata.create_all(bind=engine)
-    try:
-        db.execute(text("ALTER TABLE cost360_materials ADD COLUMN family_id VARCHAR"))
-    except: pass
-    try:
-        db.execute(text("ALTER TABLE cost360_materials ADD COLUMN market_indicator_id VARCHAR"))
-    except: pass
-    try:
-        db.execute(text("ALTER TABLE cost360_materials ADD COLUMN market_factor FLOAT DEFAULT 1.0"))
-    except: pass
-    db.commit()
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE cost360_materials ADD COLUMN family_id VARCHAR"))
+            conn.commit()
+        except: pass
+        try:
+            conn.execute(text("ALTER TABLE cost360_materials ADD COLUMN market_indicator_id VARCHAR"))
+            conn.commit()
+        except: pass
+        try:
+            conn.execute(text("ALTER TABLE cost360_materials ADD COLUMN market_factor FLOAT DEFAULT 1.0"))
+            conn.commit()
+        except: pass
     return {"status": "Database upgraded successfully"}
 
 @router.post("/sanitize/batch")

@@ -38,16 +38,8 @@ def sanitize_materials_batch(materials_batch: List[Dict[str, str]], override_pro
     input_data = json.dumps(materials_batch, ensure_ascii=False, indent=2)
     prompt_text += f"\n\nMATERIALES A SANEAR:\n{input_data}"
     
-    payload = {
-        "model": "gpt-4o", # O el modelo que use la arquitectura actual (gemini, claude)
-        "messages": [
-            {"role": "system", "content": prompt_text}
-        ],
-        "temperature": 0.1
-    }
-    
     try:
-        response = call_llm_json(payload)
+        response = call_llm_json(prompt_text)
         return response
     except Exception as e:
         return {"error": str(e)}
