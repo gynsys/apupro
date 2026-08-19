@@ -30,19 +30,57 @@ export default function SanitizationPanel() {
     if (unsanitized.length === 0) return;
     try {
       setIsProcessing(true);
-      const batchToProcess = unsanitized.slice(0, 50); // Manda de a 50
+      const batchToProcess = unsanitized.slice(0, 50);
       toast.loading('La IA está analizando los nombres...', { id: 'ai-run' });
       
       const response = await marketService.sanitizeBatch(batchToProcess);
       
       if (response && response.results) {
-        setProposals(response.results);
-        toast.success('Análisis completado', { id: 'ai-run' });
+        setProposals(response.results.map(r => ({...r, method: 'AI'})));
+        toast.success('Análisis IA completado', { id: 'ai-run' });
       } else {
         toast.error('Error en formato de respuesta', { id: 'ai-run' });
       }
     } catch (err) {
       toast.error(err.message || 'Error al conectar con la IA', { id: 'ai-run' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRunRules = async () => {
+    if (unsanitized.length === 0) return;
+    try {
+      setIsProcessing(true);
+      const batchToProcess = unsanitized.slice(0, 50).map(m => ({
+        id: m.code,
+        description: m.description
+      }));
+      toast.loading('Aplicando reglas de limpieza...', { id: 'rules-run' });
+      
+      const token = localStorage.getItem('arko_admin_token');
+      const resp = await fetch(`${API_URL}/market/sanitize/rules`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(batchToProcess)
+      });
+      if (!resp.ok) throw new Error('Error en saneamiento por reglas');
+      const data = await resp.json();
+      
+      // Convert to proposals format
+      const normalized = data.map(item => ({
+        original_code: item.id,
+        clean_description: item.clean,
+        family: item.family,
+        method: 'Reglas'
+      }));
+      setProposals(normalized);
+      toast.success(`${normalized.length} descripciones limpiadas por reglas`, { id: 'rules-run' });
+    } catch (err) {
+      toast.error(err.message || 'Error en limpieza por reglas', { id: 'rules-run' });
     } finally {
       setIsProcessing(false);
     }
@@ -96,12 +134,20 @@ export default function SanitizationPanel() {
             <span className="text-sm">por sanear</span>
           </div>
           <button 
+            onClick={handleRunRules}
+            disabled={isProcessing || unsanitized.length === 0}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg font-semibold transition-colors disabled:opacity-50"
+          >
+            {isProcessing ? <Loader className="animate-spin" size={18} /> : <Play size={18} />}
+            Limpiar por Reglas (50)
+          </button>
+          <button 
             onClick={handleRunAI}
             disabled={isProcessing || unsanitized.length === 0}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold transition-colors disabled:opacity-50"
           >
             {isProcessing ? <Loader className="animate-spin" size={18} /> : <Play size={18} />}
-            Analizar Lote (50)
+            Analizar con IA (50)
           </button>
         </div>
       </div>
@@ -115,8 +161,9 @@ export default function SanitizationPanel() {
                   <tr>
                     <th className="px-4 py-3">Código</th>
                     <th className="px-4 py-3 w-1/3">Descripción Original</th>
-                    <th className="px-4 py-3 w-1/3 text-blue-700 bg-blue-50/50">Propuesta IA (Limpia)</th>
-                    <th className="px-4 py-3 text-blue-700 bg-blue-50/50">Familia Detectada</th>
+                    <th className="px-4 py-3 w-1/3 text-blue-700 bg-blue-50/50">Descripción Limpia</th>
+                    <th className="px-4 py-3 text-blue-700 bg-blue-50/50">Familia</th>
+                    <th className="px-4 py-3 text-slate-500 bg-slate-50">Método</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -133,6 +180,13 @@ export default function SanitizationPanel() {
                         <td className="px-4 py-3">
                           <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-md text-xs font-bold">
                             {prop.family}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded-md text-xs font-bold ${
+                            prop.method === 'AI' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
+                          }`}>
+                            {prop.method || 'Reglas'}
                           </span>
                         </td>
                       </tr>
@@ -160,8 +214,8 @@ export default function SanitizationPanel() {
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-8">
             <Database size={48} className="mb-4 opacity-20" />
-            <p className="text-lg">No hay propuestas de la IA actualmente.</p>
-            <p className="text-sm mt-1">Haz clic en "Analizar Lote" para comenzar el saneamiento de {unsanitized.length > 0 ? 50 : 0} insumos.</p>
+            <p className="text-lg">Sin propuestas todavía.</p>
+            <p className="text-sm mt-1">Usa <strong className="text-emerald-700">"Limpiar por Reglas"</strong> (instantáneo) o <strong className="text-blue-700">"Analizar con IA"</strong> para procesar {unsanitized.length > 0 ? 50 : 0} insumos.</p>
           </div>
         )}
       </div>

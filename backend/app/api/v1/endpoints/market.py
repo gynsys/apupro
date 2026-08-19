@@ -4,6 +4,7 @@ from sqlalchemy import text
 from typing import List, Dict, Any
 from app.db.base import get_db
 from app.services.ai_sanitization_service import sanitize_materials_batch
+from app.services.rule_sanitizer import sanitize_batch_rules
 from app.crud.crud_market import get_unsanitized_materials, apply_sanitization_batch
 from app.db.models.market import Base
 from app.db.base import engine
@@ -35,11 +36,10 @@ from app.crud.llm import encrypt_api_key
 def update_key_endpoint(new_key: str, db: Session = Depends(get_db)):
     providers = db.query(LLMProvider).filter(LLMProvider.provider_key == "gemini").all()
     if not providers:
-        # Create it if it doesn't exist
         provider = LLMProvider(
             provider_key="gemini",
             display_name="Google Gemini",
-            model_name="gemini-1.5-pro",
+            model_name="gemini-3.6-flash",
             api_key_enc=encrypt_api_key(new_key),
             is_active=True,
             priority=1,
@@ -49,6 +49,7 @@ def update_key_endpoint(new_key: str, db: Session = Depends(get_db)):
     else:
         for p in providers:
             p.api_key_enc = encrypt_api_key(new_key)
+            p.model_name = "gemini-3.6-flash"  # Always update to latest
     db.commit()
     
     # Invalidate cache
@@ -60,8 +61,7 @@ def update_key_endpoint(new_key: str, db: Session = Depends(get_db)):
 @router.post("/sanitize/batch")
 def sanitize_batch(materials: List[Dict[str, str]], db: Session = Depends(get_db)):
     """
-    Recibe un lote de materiales [{code, description, unit}]
-    y devuelve la propuesta de la IA con nombres limpios y familias asignadas.
+    Recibe un lote de materiales y devuelve propuesta IA con nombres limpios y familias.
     """
     if not materials:
         raise HTTPException(status_code=400, detail="El lote está vacío")
@@ -71,6 +71,16 @@ def sanitize_batch(materials: List[Dict[str, str]], db: Session = Depends(get_db
         raise HTTPException(status_code=500, detail=result["error"])
         
     return result
+
+@router.post("/sanitize/rules")
+def sanitize_batch_rules_endpoint(materials: List[Dict[str, str]], db: Session = Depends(get_db)):
+    """
+    Saneamiento sin IA - basado en reglas (gratuito, instantáneo).
+    Limpia formato, mayúsculas, abreviaturas y detecta familias.
+    """
+    if not materials:
+        raise HTTPException(status_code=400, detail="El lote está vacío")
+    return sanitize_batch_rules(materials)
 
 @router.get("/unsanitized")
 def list_unsanitized(limit: int = 50, db: Session = Depends(get_db)):
