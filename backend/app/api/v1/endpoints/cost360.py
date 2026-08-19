@@ -17,9 +17,9 @@ import re
 from sqlalchemy import text
 
 def set_schema_for_db(db: Session, database_id: str):
-    if database_id and database_id not in ["master", "personalizada"] and re.match(r'^[a-zA-Z0-9_]+$', database_id):
+    if database_id and database_id not in ["master", "personalizada"] and re.match(r'^[a-zA-Z0-9_\-]+$', database_id):
         try:
-            db.execute(text(f"SET LOCAL search_path TO {database_id}, public"))
+            db.execute(text(f'SET LOCAL search_path TO "{database_id}", public'))
         except:
             pass
 

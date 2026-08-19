@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, and_
+from sqlalchemy import func, or_, and_, text
 from typing import Optional, List, Tuple
 from app.db.models.cost360 import (
     CostItem, CostMaterial, CostEquipment, CostLabor,
@@ -322,7 +322,9 @@ def create_database(db: Session, payload: Cost360DatabaseCreate, created_by: Opt
     if not source_db and source_id != 'master':
         raise ValueError(f"Base de datos origen '{source_id}' no encontrada")
 
-    new_db_id = f"{payload.name.lower().replace(' ', '_')}_{str(uuid.uuid4())[:8]}"
+    import re
+    clean_name = re.sub(r'[^a-z0-9_]', '', payload.name.lower().replace(' ', '_'))
+    new_db_id = f"{clean_name}_{str(uuid.uuid4())[:8]}"
 
     new_database = Cost360Database(
         id=new_db_id,
@@ -338,6 +340,39 @@ def create_database(db: Session, payload: Cost360DatabaseCreate, created_by: Opt
     )
     db.add(new_database)
     db.commit()
+    
+    # Clonación Física vía Esquemas de PostgreSQL
+    try:
+        # 1. Crear el esquema
+        db.execute(text(f'CREATE SCHEMA "{new_db_id}"'))
+        
+        source_schema = "public" if source_id == "master" else source_id
+        
+        # 2. Copiar tablas
+        tables_to_clone = [
+            "cost360_materials",
+            "cost360_equipment",
+            "cost360_labor",
+            "cost360_items",
+            "cost360_apu_materials",
+            "cost360_apu_equipment",
+            "cost360_apu_labor"
+        ]
+        
+        for table in tables_to_clone:
+            # Crear estructura e índices (INCLUDING ALL)
+            db.execute(text(f'CREATE TABLE "{new_db_id}"."{table}" (LIKE "{source_schema}"."{table}" INCLUDING ALL)'))
+            # Copiar datos físicos
+            db.execute(text(f'INSERT INTO "{new_db_id}"."{table}" SELECT * FROM "{source_schema}"."{table}"'))
+            
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # Si falla la clonación física, revertimos la creación del registro
+        db.delete(new_database)
+        db.commit()
+        raise ValueError(f"Error al clonar la base de datos físicamente: {str(e)}")
+
     db.refresh(new_database)
     return new_database
 
@@ -374,6 +409,15 @@ def delete_database(db: Session, database_id: str):
     
     db.delete(db_obj)
     db.commit()
+    
+    # Eliminar el esquema físico en PostgreSQL
+    try:
+        db.execute(text(f'DROP SCHEMA IF EXISTS "{database_id}" CASCADE'))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Advertencia: No se pudo eliminar el esquema físico {database_id}: {e}")
+        
     return True
 
 def update_master_item(db: Session, item_code: str, descri: str, unipar: str, renpar: float):
