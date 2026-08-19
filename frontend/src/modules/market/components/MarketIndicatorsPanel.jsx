@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { marketService } from '../services/marketService';
-import { Layers, Activity, TrendingUp, Save, Search, RefreshCw } from 'lucide-react';
+import { Layers, Activity, TrendingUp, Save, Search, RefreshCw, Edit3, X } from 'lucide-react';
 
 export default function MarketIndicatorsPanel() {
   const [indicators, setIndicators] = useState([]);
@@ -8,6 +8,13 @@ export default function MarketIndicatorsPanel() {
   const [updating, setUpdating] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [editPrices, setEditPrices] = useState({});
+
+  // Leader Modal State
+  const [showLeaderModal, setShowLeaderModal] = useState(false);
+  const [selectedFamily, setSelectedFamily] = useState(null);
+  const [familyMaterials, setFamilyMaterials] = useState([]);
+  const [loadingFamily, setLoadingFamily] = useState(false);
+  const [savingNewLeader, setSavingNewLeader] = useState(false);
 
   useEffect(() => {
     fetchIndicators();
@@ -50,6 +57,34 @@ export default function MarketIndicatorsPanel() {
       alert("Hubo un error al actualizar el precio en cascada.");
     } finally {
       setUpdating(null);
+    }
+  };
+
+  const openLeaderModal = async (indicator) => {
+    setSelectedFamily(indicator);
+    setShowLeaderModal(true);
+    setLoadingFamily(true);
+    try {
+      const res = await marketService.getFamilyMaterials(indicator.family_id);
+      setFamilyMaterials(res.items || []);
+    } catch (error) {
+      console.error("Error fetching family materials:", error);
+    } finally {
+      setLoadingFamily(false);
+    }
+  };
+
+  const handleChangeLeader = async (newLeaderId) => {
+    setSavingNewLeader(true);
+    try {
+      await marketService.changeFamilyLeader(selectedFamily.family_id, newLeaderId);
+      setShowLeaderModal(false);
+      await fetchIndicators();
+    } catch (error) {
+      console.error("Error changing leader:", error);
+      alert(error.message || "Error al cambiar de líder");
+    } finally {
+      setSavingNewLeader(false);
     }
   };
 
@@ -111,8 +146,9 @@ export default function MarketIndicatorsPanel() {
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
                 <tr>
-                  <th className="py-4 px-6">Referencia</th>
+                  <th className="py-4 px-6 w-1/4">Familia / Referencia</th>
                   <th className="py-4 px-6 w-1/3">Descripción del Líder</th>
+                  <th className="py-4 px-6">Unidad</th>
                   <th className="py-4 px-6">Impacto (Familia)</th>
                   <th className="py-4 px-6">Precio Actual ($)</th>
                   <th className="py-4 px-6 text-right">Acción</th>
@@ -121,18 +157,30 @@ export default function MarketIndicatorsPanel() {
               <tbody className="divide-y divide-slate-100">
                 {filtered.map(indicator => (
                   <tr key={indicator.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="py-4 px-6 text-slate-500 font-mono text-xs">
-                      {indicator.id}
+                    <td className="py-4 px-6">
+                      <div className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-1">
+                        {indicator.family_name}
+                      </div>
+                      <div className="text-slate-500 font-mono text-xs flex items-center gap-2">
+                        {indicator.id}
+                        <button 
+                          onClick={() => openLeaderModal(indicator)}
+                          className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-600 transition-colors"
+                          title="Cambiar insumo líder para esta familia"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                     <td className="py-4 px-6">
                       <div className="font-medium text-slate-800 line-clamp-2" title={indicator.description}>
                         {indicator.description}
                       </div>
-                      <div className="text-xs text-slate-400 mt-1 flex items-center gap-1">
-                        <span className="px-2 py-0.5 bg-slate-100 rounded-md">
-                          {indicator.unit}
-                        </span>
-                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-medium uppercase">
+                        {indicator.unit}
+                      </span>
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-2">
@@ -181,6 +229,84 @@ export default function MarketIndicatorsPanel() {
           </div>
         )}
       </div>
+
+      {/* Change Leader Modal */}
+      {showLeaderModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div>
+                <h3 className="font-bold text-slate-800">Cambiar Insumo Líder</h3>
+                <p className="text-sm text-slate-500 mt-0.5">Familia: {selectedFamily?.family_name}</p>
+              </div>
+              <button onClick={() => setShowLeaderModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-4 overflow-auto flex-1">
+              {loadingFamily ? (
+                <div className="flex justify-center items-center h-32">
+                  <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
+                </div>
+              ) : (
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 text-slate-500 sticky top-0">
+                    <tr>
+                      <th className="py-2 px-3">Insumo</th>
+                      <th className="py-2 px-3 text-center">Usos (APUs)</th>
+                      <th className="py-2 px-3">Precio</th>
+                      <th className="py-2 px-3 text-right"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {familyMaterials.map(mat => (
+                      <tr key={mat.id} className={mat.id === selectedFamily?.id ? 'bg-indigo-50/50' : 'hover:bg-slate-50'}>
+                        <td className="py-3 px-3">
+                          <div className="font-medium text-slate-700">{mat.description}</div>
+                          <div className="text-xs text-slate-400 font-mono mt-0.5">{mat.id} • {mat.unit}</div>
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs font-medium">
+                            {mat.usages}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-slate-600 font-medium">
+                          ${mat.price}
+                        </td>
+                        <td className="py-3 px-3 text-right">
+                          <button
+                            onClick={() => handleChangeLeader(mat.id)}
+                            disabled={savingNewLeader || mat.id === selectedFamily?.id || mat.price <= 0}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                              mat.id === selectedFamily?.id
+                                ? 'bg-indigo-100 text-indigo-700 cursor-default'
+                                : mat.price <= 0 
+                                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                  : 'bg-white border border-slate-300 hover:border-indigo-500 hover:text-indigo-600 shadow-sm'
+                            }`}
+                          >
+                            {mat.id === selectedFamily?.id ? 'Líder Actual' : mat.price <= 0 ? 'Precio 0' : 'Elegir'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-slate-100 bg-slate-50 text-right">
+              <button 
+                onClick={() => setShowLeaderModal(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

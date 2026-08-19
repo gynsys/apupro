@@ -53,5 +53,23 @@ export const marketService = {
     });
     if (!response.ok) throw new Error('Error al actualizar precio líder');
     return response.json();
+  },
+
+  getFamilyMaterials: async (familyId) => {
+    const response = await fetch(`${API_URL}/market/families/${familyId}/materials`, {
+      headers: getAuthHeaders()
+    });
+    if (!response.ok) throw new Error('Error al obtener materiales de la familia');
+    return response.json();
+  },
+
+  changeFamilyLeader: async (familyId, newLeaderId) => {
+    const response = await fetch(`${API_URL}/market/families/${familyId}/change-leader`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ new_leader_id: newLeaderId })
+    });
+    if (!response.ok) throw new Error('Error al cambiar el líder de la familia');
+    return response.json();
   }
 };

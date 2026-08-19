@@ -150,6 +150,9 @@ def list_market_indicators(db: Session = Depends(get_db)):
         
     leaders = db.query(CostMaterial).filter(CostMaterial.CodMat.in_(indicator_ids)).all()
     
+    from app.db.models.market import CostMaterialFamily
+    families = {f.id: f.name for f in db.query(CostMaterialFamily).all()}
+    
     results = []
     for leader in leaders:
         results.append({
@@ -158,7 +161,8 @@ def list_market_indicators(db: Session = Depends(get_db)):
             "price": leader.CosMat,
             "unit": leader.UniMat,
             "children_count": count_map.get(leader.CodMat, 0) - 1,
-            "family_id": leader.family_id
+            "family_id": leader.family_id,
+            "family_name": families.get(leader.family_id, leader.family_id)
         })
         
     # Sort by children count descending
@@ -170,3 +174,59 @@ def apply_market_indicator_prices(indicator_id: str, payload: LeaderPriceUpdate,
     # Redirigir al nuevo endpoint update_leader_price
     payload.leader_id = indicator_id
     return update_leader_price(payload, db)
+
+class ChangeLeaderRequest(BaseModel):
+    new_leader_id: str
+
+@router.get("/families/{family_id}/materials")
+def get_family_materials(family_id: str, db: Session = Depends(get_db)):
+    from app.db.models.cost360 import CostMaterial, CostAPUMaterial
+    from sqlalchemy import func
+    
+    mats = db.query(CostMaterial).filter(CostMaterial.family_id == family_id).all()
+    if not mats:
+        return {"items": []}
+        
+    usage_counts = dict(
+        db.query(CostAPUMaterial.CodIns, func.count(CostAPUMaterial.CodPar))
+        .filter(CostAPUMaterial.CodIns.in_([m.CodMat for m in mats]))
+        .group_by(CostAPUMaterial.CodIns)
+        .all()
+    )
+    
+    results = []
+    for m in mats:
+        results.append({
+            "id": m.CodMat,
+            "description": m.Descri,
+            "price": m.CosMat,
+            "unit": m.UniMat,
+            "usages": usage_counts.get(m.CodMat, 0)
+        })
+        
+    results.sort(key=lambda x: x["usages"], reverse=True)
+    return {"items": results}
+
+@router.post("/families/{family_id}/change-leader")
+def change_family_leader(family_id: str, payload: ChangeLeaderRequest, db: Session = Depends(get_db)):
+    from app.db.models.cost360 import CostMaterial
+    
+    new_leader = db.query(CostMaterial).filter(CostMaterial.CodMat == payload.new_leader_id, CostMaterial.family_id == family_id).first()
+    if not new_leader:
+        raise HTTPException(status_code=404, detail="Nuevo líder no encontrado en esta familia")
+        
+    if not new_leader.CosMat or new_leader.CosMat <= 0:
+        raise HTTPException(status_code=400, detail="El insumo seleccionado tiene precio 0 y no puede ser líder")
+        
+    mats = db.query(CostMaterial).filter(CostMaterial.family_id == family_id).all()
+    count = 0
+    leader_price = new_leader.CosMat
+    
+    for mat in mats:
+        factor = (mat.CosMat or 0) / leader_price
+        mat.market_indicator_id = new_leader.CodMat
+        mat.market_factor = factor
+        count += 1
+        
+    db.commit()
+    return {"status": "success", "new_leader": new_leader.CodMat, "updated_count": count}
