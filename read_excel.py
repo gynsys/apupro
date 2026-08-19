@@ -1,18 +1,19 @@
 import pandas as pd
+import json
 
-def read_excel():
+def extract_codes():
     try:
-        df_all = pd.read_excel(r"C:\Users\pablo\Desktop\BD_COST360\codificacion de partidas.xlsx", header=None)
+        df = pd.read_excel(r'C:\Users\pablo\Desktop\partidas_M2.xlsx')
+        col_name = df.columns[2] # 3rd column
+        codes = df[col_name].dropna().astype(str).tolist()
         
-        # Encuentra el indice de 'U7 VIALIDAD'
-        mask = df_all.astype(str).apply(lambda x: x.str.contains('U7  VIALIDAD', case=False, na=False))
-        idx = df_all[mask.any(axis=1)].index[0]
-        
-        # Imprime 30 filas siguientes
-        print(df_all.iloc[idx:idx+30, 2:4])
-        
+        with open('m2_codes.json', 'w') as f:
+            json.dump(codes, f)
+            
+        print(f"Extraídos {len(codes)} códigos.")
+        print("Primeros 5 códigos:", codes[:5])
     except Exception as e:
-        print("Error:", e)
+        print(f"Error leyendo excel: {e}")
 
-if __name__ == "__main__":
-    read_excel()
+if __name__ == '__main__':
+    extract_codes()
