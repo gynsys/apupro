@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../../../services/api';
+import { marketService } from '../services/marketService';
 import { Layers, Activity, TrendingUp, Save, Search, RefreshCw } from 'lucide-react';
 
 export default function MarketIndicatorsPanel() {
@@ -16,12 +16,12 @@ export default function MarketIndicatorsPanel() {
   const fetchIndicators = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/market/indicators');
-      setIndicators(res.data.items || []);
+      const res = await marketService.getIndicators();
+      setIndicators(res.items || []);
       
       // Initialize edit state
       const initialPrices = {};
-      (res.data.items || []).forEach(item => {
+      (res.items || []).forEach(item => {
         initialPrices[item.id] = item.price;
       });
       setEditPrices(initialPrices);
@@ -42,9 +42,7 @@ export default function MarketIndicatorsPanel() {
     
     setUpdating(indicator.id);
     try {
-      await api.put(`/market/indicators/${indicator.id}/apply`, {
-        new_price: newPrice
-      });
+      await marketService.updateLeaderPrice(indicator.id, newPrice);
       // Refresh to show it applied correctly
       await fetchIndicators();
     } catch (error) {

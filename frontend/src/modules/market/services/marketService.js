@@ -33,7 +33,25 @@ export const marketService = {
       headers: getAuthHeaders(),
       body: JSON.stringify(approvedItems)
     });
-    if (!response.ok) throw new Error('Error al guardar datos saneados');
+    if (!response.ok) throw new Error('Error al aplicar saneamiento');
+    return response.json();
+  },
+  
+  getIndicators: async () => {
+    const response = await fetch(`${API_URL}/market/indicators`, {
+      headers: getAuthHeaders()
+    });
+    if (!response.ok) throw new Error('Error al obtener indicadores');
+    return response.json();
+  },
+
+  updateLeaderPrice: async (indicatorId, newPrice) => {
+    const response = await fetch(`${API_URL}/market/indicators/${indicatorId}/apply`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ new_price: newPrice, leader_id: indicatorId })
+    });
+    if (!response.ok) throw new Error('Error al actualizar precio líder');
     return response.json();
   }
 };
