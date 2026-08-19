@@ -16,7 +16,13 @@ import logging
 from typing import List, Optional
 from datetime import datetime, timedelta
 
-import google.generativeai as genai
+import google.generativeai as genai  # kept for now, SDK updated via requirements
+try:
+    from google import genai as genai_new
+    from google.genai import types as genai_types
+    GENAI_NEW = True
+except ImportError:
+    GENAI_NEW = False
 import requests
 
 from app.db.base import SessionLocal
@@ -78,36 +84,47 @@ def invalidate_llm_cache() -> None:
 # ---------------------------------------------------------------------------
 
 def _call_gemini(provider: LLMProvider, prompt: str, expect_json: bool) -> str:
-    """Call Google Gemini using the google-generativeai SDK."""
+    """Call Google Gemini using the new google.genai SDK."""
     api_key = decrypt_api_key(provider.api_key_enc)
-    genai.configure(api_key=api_key)
-
-    extra = provider.extra_params or {}
-    gen_config_kwargs = {}
-    if expect_json:
-        gen_config_kwargs["response_mime_type"] = "application/json"
+    model_name = provider.model_name
 
     system_instruction = (
-        "Eres un ingeniero civil experto y creador de contenido arquitectónico. "
-        "Debes responder SIEMPRE en formato JSON cuando se te pida. "
-        "IMPORTANTE: NUNCA alucines información y RESPONDE SIEMPRE 100% EN ESPAÑOL."
-    ) if expect_json else (
-        "Eres un experto en redacción sobre arquitectura e ingeniería. "
-        "IMPORTANTE: NUNCA alucines información y RESPONDE SIEMPRE 100% EN ESPAÑOL."
+        "Eres un ingeniero civil experto. Responde SIEMPRE en JSON válido cuando se te pida. "
+        "NUNCA alucines. RESPONDE SIEMPRE EN ESPAÑOL."
+        if expect_json else
+        "Eres un experto en arquitectura e ingeniería. RESPONDE SIEMPRE EN ESPAÑOL."
     )
 
-    model_name = provider.model_name
-        
-    model = genai.GenerativeModel(
-        model_name,
-        system_instruction=system_instruction,
-        generation_config=genai.GenerationConfig(**gen_config_kwargs) if gen_config_kwargs else None,
-    )
-    response = model.generate_content(prompt)
-
-    if not response or not hasattr(response, "text") or not response.text:
-        raise ValueError("Gemini returned empty or blocked response.")
-    return response.text.strip()
+    # Prefer new SDK (supports AQ. key format)
+    if GENAI_NEW:
+        client = genai_new.Client(api_key=api_key)
+        config = genai_types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            response_mime_type="application/json" if expect_json else "text/plain"
+        )
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=config
+        )
+        if not response or not response.text:
+            raise ValueError("Gemini returned empty or blocked response.")
+        return response.text.strip()
+    else:
+        # Fallback to old SDK
+        genai.configure(api_key=api_key)
+        gen_config_kwargs = {}
+        if expect_json:
+            gen_config_kwargs["response_mime_type"] = "application/json"
+        model = genai.GenerativeModel(
+            model_name,
+            system_instruction=system_instruction,
+            generation_config=genai.GenerationConfig(**gen_config_kwargs) if gen_config_kwargs else None,
+        )
+        response = model.generate_content(prompt)
+        if not response or not hasattr(response, "text") or not response.text:
+            raise ValueError("Gemini returned empty or blocked response.")
+        return response.text.strip()
 
 
 def _call_openai_compatible(provider: LLMProvider, prompt: str, expect_json: bool) -> str:
