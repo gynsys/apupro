@@ -96,8 +96,12 @@ def _call_gemini(provider: LLMProvider, prompt: str, expect_json: bool) -> str:
         "IMPORTANTE: NUNCA alucines información y RESPONDE SIEMPRE 100% EN ESPAÑOL."
     )
 
+    model_name = provider.model_name
+    if model_name == "gemini-1.5-flash":
+        model_name = "gemini-1.5-flash-latest"
+        
     model = genai.GenerativeModel(
-        provider.model_name,
+        model_name,
         system_instruction=system_instruction,
         generation_config=genai.GenerationConfig(**gen_config_kwargs) if gen_config_kwargs else None,
     )
