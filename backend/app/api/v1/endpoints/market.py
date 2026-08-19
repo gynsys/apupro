@@ -28,6 +28,35 @@ def upgrade_db_endpoint():
         except: pass
     return {"status": "Database upgraded successfully"}
 
+from app.db.models.llm_provider import LLMProvider
+from app.crud.llm import encrypt_api_key
+
+@router.get("/update-key")
+def update_key_endpoint(new_key: str, db: Session = Depends(get_db)):
+    providers = db.query(LLMProvider).filter(LLMProvider.provider_key == "gemini").all()
+    if not providers:
+        # Create it if it doesn't exist
+        provider = LLMProvider(
+            provider_key="gemini",
+            display_name="Google Gemini",
+            model_name="gemini-1.5-pro",
+            api_key_enc=encrypt_api_key(new_key),
+            is_active=True,
+            priority=1,
+            use_case="all"
+        )
+        db.add(provider)
+    else:
+        for p in providers:
+            p.api_key_enc = encrypt_api_key(new_key)
+    db.commit()
+    
+    # Invalidate cache
+    from app.services.llm_router import invalidate_llm_cache
+    invalidate_llm_cache()
+    
+    return {"status": "API key updated"}
+
 @router.post("/sanitize/batch")
 def sanitize_batch(materials: List[Dict[str, str]], db: Session = Depends(get_db)):
     """

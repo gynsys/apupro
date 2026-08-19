@@ -74,20 +74,21 @@ export default function SanitizationPanel() {
         <div className="flex gap-3">
           <button 
             onClick={async () => {
-              toast.loading('Actualizando Base de Datos...', {id: 'db-upg'});
+              const newKey = window.prompt("Por favor, pega aquí tu nueva clave de Gemini (API Key):");
+              if (!newKey) return;
+              toast.loading('Inyectando nueva API Key...', {id: 'db-upg'});
               try {
-                await fetch(`${API_URL}/market/upgrade-db`, {
+                await fetch(`${API_URL}/market/update-key?new_key=${encodeURIComponent(newKey)}`, {
                   headers: { 'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}` }
                 });
-                toast.success('BD Actualizada', {id: 'db-upg'});
-                fetchUnsanitized();
+                toast.success('Clave de IA Actualizada', {id: 'db-upg'});
               } catch (e) {
                 toast.error('Error de red', {id: 'db-upg'});
               }
             }}
             className="px-3 py-2 text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-bold"
           >
-            [Dev] Upgrade DB
+            [Dev] Inyectar Key
           </button>
           <div className="bg-orange-50 text-orange-700 px-4 py-2 rounded-lg border border-orange-200 flex items-center gap-2">
             <Database size={16} />

@@ -98,7 +98,7 @@ def _call_gemini(provider: LLMProvider, prompt: str, expect_json: bool) -> str:
 
     model_name = provider.model_name
     if "flash" in model_name.lower():
-        model_name = "gemini-1.5-pro" # Fallback to Pro since Flash is returning 404
+        model_name = "gemini-pro" # Fallback to 1.0 Pro since Flash is returning 404
         
     model = genai.GenerativeModel(
         model_name,
