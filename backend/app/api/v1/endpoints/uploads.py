@@ -5,7 +5,7 @@ from pathlib import Path
 import shutil
 
 from app.db.base import get_db
-from app.blog.models import SocialAudio
+# from app.blog.models import SocialAudio
 from app.api.v1.endpoints.arko import get_current_arko_admin as get_current_user
 from app.core.config import settings
 
@@ -36,23 +36,23 @@ async def upload_social_audio(
         relative_path = file_path.relative_to(UPLOAD_DIR)
         url_path = f"/uploads/{relative_path.as_posix()}"
         
-        # Guardar en base de datos
-        db_audio = SocialAudio(
-            name=file.filename,
-            url=url_path,
-            admin_id=current_user.id
-        )
-        db.add(db_audio)
-        db.commit()
-        db.refresh(db_audio)
+        # Guardar en base de datos (TEMPORALMENTE DESHABILITADO POR app.blog faltante)
+        # db_audio = SocialAudio(
+        #     name=file.filename,
+        #     url=url_path,
+        #     admin_id=current_user.id
+        # )
+        # db.add(db_audio)
+        # db.commit()
+        # db.refresh(db_audio)
         
         # Enviar esquema compatible con SocialAudioResponse (o solo el dict)
         return {
-            "id": db_audio.id,
-            "name": db_audio.name,
-            "url": db_audio.url,
-            "created_at": db_audio.created_at,
-            "admin_id": db_audio.admin_id
+            "id": 0, # db_audio.id,
+            "name": file.filename, # db_audio.name,
+            "url": url_path, # db_audio.url,
+            "created_at": datetime.utcnow(), # db_audio.created_at,
+            "admin_id": current_user.id # db_audio.admin_id
         }
     except Exception as e:
         import logging
