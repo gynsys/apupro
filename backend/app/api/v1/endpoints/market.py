@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
-from app.db.session import get_db
+from app.db.base import get_db
 from app.services.ai_sanitization_service import sanitize_materials_batch
 from app.crud.crud_market import get_unsanitized_materials, apply_sanitization_batch
 
