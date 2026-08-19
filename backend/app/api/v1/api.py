@@ -9,6 +9,7 @@ from app.api.v1.endpoints import cost360
 from app.api.v1.endpoints import search_v6
 from app.api.v1.endpoints import uploads
 from app.api.v1.endpoints import arko
+from app.api.v1.endpoints import market
 
 api_router = APIRouter()
 
@@ -19,3 +20,4 @@ api_router.include_router(search_v6.router, prefix="/cost360/v6", tags=["cost360
 api_router.include_router(budgets.router, prefix="/budgets", tags=["budgets"])
 api_router.include_router(materials.router, prefix="/materials", tags=["materials"])
 api_router.include_router(uploads.router, prefix="/uploads", tags=["uploads"])
+api_router.include_router(market.router, prefix="/market", tags=["market"])

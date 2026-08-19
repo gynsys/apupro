@@ -33,6 +33,11 @@ class CostMaterial(Base):
     Descri = Column(String)
     UniMat = Column(String)
     CosMat = Column(Float)
+    
+    # Automatización y Scraping
+    family_id = Column(String, index=True)
+    market_indicator_id = Column(String, index=True)
+    market_factor = Column(Float, default=1.0)
 
 class CostLabor(Base):
     __tablename__ = "cost360_labor"
