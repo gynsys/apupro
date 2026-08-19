@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import SanitizationPanel from '../components/SanitizationPanel';
 import MarketIndicatorsPanel from '../components/MarketIndicatorsPanel';
-import ItemMergerPanel from '../components/ItemMergerPanel';
-
 const glassStrong = {
   background: 'rgba(255,255,255,0.88)',
   backdropFilter: 'blur(20px)',
@@ -45,21 +43,12 @@ export default function MarketAdminPage() {
           >
             Insumos Líderes
           </button>
-          <button
-            onClick={() => setActiveTab('merger')}
-            className={`px-4 py-2 text-sm font-semibold rounded-t-xl border-b-2 transition-colors ${
-              activeTab === 'merger' ? 'text-blue-700 border-blue-600 bg-blue-50/60' : 'text-slate-500 border-transparent'
-            }`}
-          >
-            Unificador
-          </button>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto rounded-2xl" style={glassStrong}>
         {activeTab === 'sanitization' && <SanitizationPanel />}
         {activeTab === 'indicators' && <MarketIndicatorsPanel />}
-        {activeTab === 'merger' && <ItemMergerPanel />}
       </div>
     </div>
   );

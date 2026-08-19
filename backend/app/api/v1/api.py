@@ -10,8 +10,6 @@ from app.api.v1.endpoints import search_v6
 from app.api.v1.endpoints import uploads
 from app.api.v1.endpoints import arko
 from app.api.v1.endpoints import market
-from app.api.v1.endpoints import merger
-
 api_router = APIRouter()
 
 # APUpro Endpoints
@@ -22,4 +20,3 @@ api_router.include_router(budgets.router, prefix="/budgets", tags=["budgets"])
 api_router.include_router(materials.router, prefix="/materials", tags=["materials"])
 api_router.include_router(uploads.router, prefix="/uploads", tags=["uploads"])
 api_router.include_router(market.router, prefix="/market", tags=["market"])
-api_router.include_router(merger.router, prefix="/market", tags=["merger"])
