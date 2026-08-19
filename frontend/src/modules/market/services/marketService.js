@@ -20,7 +20,10 @@ export const marketService = {
       headers: getAuthHeaders(),
       body: JSON.stringify(materials)
     });
-    if (!response.ok) throw new Error('Error de la IA al sanear lote');
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.detail || 'Error de la IA al sanear lote');
+    }
     return response.json();
   },
 
