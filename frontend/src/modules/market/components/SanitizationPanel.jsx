@@ -71,6 +71,17 @@ export default function SanitizationPanel() {
         </div>
         
         <div className="flex gap-3">
+          <button 
+            onClick={async () => {
+              toast.loading('Actualizando Base de Datos...', {id: 'db-upg'});
+              await fetch('http://localhost:8000/api/v1/market/upgrade-db');
+              toast.success('BD Actualizada', {id: 'db-upg'});
+              fetchUnsanitized();
+            }}
+            className="px-3 py-2 text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-bold"
+          >
+            [Dev] Upgrade DB
+          </button>
           <div className="bg-orange-50 text-orange-700 px-4 py-2 rounded-lg border border-orange-200 flex items-center gap-2">
             <Database size={16} />
             <span className="font-bold">{loading ? '...' : unsanitized.length}+</span>

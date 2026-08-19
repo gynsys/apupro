@@ -1,11 +1,29 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from typing import List, Dict, Any
 from app.db.base import get_db
 from app.services.ai_sanitization_service import sanitize_materials_batch
 from app.crud.crud_market import get_unsanitized_materials, apply_sanitization_batch
+from app.db.models.market import Base
+from app.db.base import engine
 
 router = APIRouter()
+
+@router.get("/upgrade-db")
+def upgrade_db_endpoint(db: Session = Depends(get_db)):
+    Base.metadata.create_all(bind=engine)
+    try:
+        db.execute(text("ALTER TABLE cost360_materials ADD COLUMN family_id VARCHAR"))
+    except: pass
+    try:
+        db.execute(text("ALTER TABLE cost360_materials ADD COLUMN market_indicator_id VARCHAR"))
+    except: pass
+    try:
+        db.execute(text("ALTER TABLE cost360_materials ADD COLUMN market_factor FLOAT DEFAULT 1.0"))
+    except: pass
+    db.commit()
+    return {"status": "Database upgraded successfully"}
 
 @router.post("/sanitize/batch")
 def sanitize_batch(materials: List[Dict[str, str]], db: Session = Depends(get_db)):
