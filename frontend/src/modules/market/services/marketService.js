@@ -71,5 +71,33 @@ export const marketService = {
     });
     if (!response.ok) throw new Error('Error al cambiar el líder de la familia');
     return response.json();
+  },
+
+  getItemDetails: async (itemType, code) => {
+    const response = await fetch(`${API_URL}/market/items/${itemType}/${encodeURIComponent(code)}`, {
+      headers: getAuthHeaders()
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || 'Item no encontrado');
+    }
+    return response.json();
+  },
+
+  mergeItems: async (itemType, oldCode, newCode) => {
+    const response = await fetch(`${API_URL}/market/merge-items`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        item_type: itemType,
+        old_code: oldCode,
+        new_code: newCode
+      })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al unificar insumos');
+    }
+    return response.json();
   }
 };
