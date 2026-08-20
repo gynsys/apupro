@@ -98,6 +98,9 @@ export default function BudgetWorksheetPage() {
 
   // Custom modals state
   const [showChapterModal, setShowChapterModal] = useState(false);
+  const [modalDbDropdownOpen, setModalDbDropdownOpen] = useState(false);
+  const [modalBudgetDropdownOpen, setModalBudgetDropdownOpen] = useState(false);
+  const [availableBudgets, setAvailableBudgets] = useState([]);
   const [chapterName, setChapterName] = useState("");
   const [itemToDelete, setItemToDelete] = useState(null);
 
@@ -123,6 +126,9 @@ export default function BudgetWorksheetPage() {
         }
       }, 500);
     }
+
+    // Cargar presupuestos disponibles para el dropdown del modal
+    budgetService.getAll().then(data => setAvailableBudgets(data)).catch(console.error);
   }, [id, location.search]);
 
   // Handle APU printing
@@ -854,18 +860,82 @@ export default function BudgetWorksheetPage() {
                 <h2 className="m-0 text-xl font-bold text-amber-900 flex items-center gap-2">
                   <Search className="text-sky-600" /> Buscar Partidas
                 </h2>
-                {/* Database badge with active factors */}
-                <div className="flex items-center gap-2 px-3 py-1 bg-sky-50 border border-sky-200 text-sky-700 rounded-lg text-xs font-medium shadow-sm">
-                  <Database size={14} />
-                  <span>{activeDatabase.name}</span>
-                  {!activeDatabase.is_master && (
-                    <span className="ml-1 text-[10px] text-emerald-700 bg-emerald-100/50 border border-emerald-200 px-1.5 py-0.5 rounded">
-                      {[activeDatabase.material_inflation ? `Mat +${activeDatabase.material_inflation}%` : null,
-                        activeDatabase.labor_inflation ? `MO +${activeDatabase.labor_inflation}%` : null,
-                        activeDatabase.equipment_inflation ? `Eq +${activeDatabase.equipment_inflation}%` : null
-                      ].filter(Boolean).join(' • ') || 'Personalizada'}
-                    </span>
-                  )}
+                
+                <div className="flex gap-2">
+                  {/* Dropdown Base de Datos */}
+                  <div 
+                    className="relative"
+                    onMouseEnter={() => setModalDbDropdownOpen(true)}
+                    onMouseLeave={() => setModalDbDropdownOpen(false)}
+                  >
+                    <button
+                      className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm text-sm"
+                    >
+                      <Database size={16} />
+                      {activeDatabase.name || 'Base de Datos'}
+                      <ChevronDown size={14} className={modalDbDropdownOpen ? 'rotate-180 transition-transform duration-200' : 'transition-transform duration-200'} />
+                    </button>
+                    {modalDbDropdownOpen && (
+                      <div className="absolute top-full left-0 pt-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="bg-white border border-slate-200 rounded-lg shadow-xl min-w-[200px] overflow-hidden py-1">
+                          {databases.map(db => (
+                            <button
+                              key={db.id}
+                              onClick={() => {
+                                setActiveDatabase(db);
+                                setModalDbDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors flex items-center gap-2 ${
+                                activeDatabase.id === db.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'
+                              }`}
+                            >
+                              <Database size={14} />
+                              {db.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dropdown Presupuestos */}
+                  <div 
+                    className="relative"
+                    onMouseEnter={() => setModalBudgetDropdownOpen(true)}
+                    onMouseLeave={() => setModalBudgetDropdownOpen(false)}
+                  >
+                    <button
+                      className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm text-sm"
+                    >
+                      <FileText size={16} />
+                      Presupuestos
+                      <ChevronDown size={14} className={modalBudgetDropdownOpen ? 'rotate-180 transition-transform duration-200' : 'transition-transform duration-200'} />
+                    </button>
+                    {modalBudgetDropdownOpen && (
+                      <div className="absolute top-full left-0 pt-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="bg-white border border-slate-200 rounded-lg shadow-xl min-w-[200px] overflow-hidden py-1 max-h-60 overflow-y-auto">
+                          {availableBudgets.filter(b => b.id !== id).map(b => (
+                            <button
+                              key={b.id}
+                              onClick={() => {
+                                toast('Búsqueda en presupuestos próximamente', { icon: '🚧' });
+                                setModalBudgetDropdownOpen(false);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
+                            >
+                              <FileText size={14} className="text-slate-400" />
+                              <span className="truncate">{b.name}</span>
+                            </button>
+                          ))}
+                          {availableBudgets.length <= 1 && (
+                            <div className="px-4 py-3 text-sm text-slate-500 italic text-center">
+                              No hay otros presupuestos
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               <button 
