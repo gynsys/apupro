@@ -101,9 +101,7 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
             word_filters = []
             if search_desc:
                 word_filters.extend([
-                    unaccent_col(CostItem.Descri).ilike(f"%{clean_word}%"),
-                    unaccent_col(CostItem.CodPar).ilike(f"%{clean_word}%"),
-                    unaccent_col(CostItem.CovPar).ilike(f"%{clean_word}%")
+                    unaccent_col(CostItem.Descri).ilike(f"%{clean_word}%")
                 ])
             if search_insumos:
                 word_filters.extend([

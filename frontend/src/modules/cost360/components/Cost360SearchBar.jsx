@@ -156,7 +156,7 @@ const Cost360SearchBar = ({
               border: '1px solid rgba(148,163,255,0.35)',
               boxShadow: 'inset 0 1px 4px rgba(80,100,200,0.06)',
             }}
-            placeholder="Buscar partida por código o descripción..."
+            placeholder="Ej: excavación a maquina..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -178,7 +178,7 @@ const Cost360SearchBar = ({
             <div className={`block w-10 h-6 rounded-full transition-colors ${searchDesc ? 'bg-blue-500' : 'bg-slate-300'}`}></div>
             <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${searchDesc ? 'transform translate-x-4' : ''}`}></div>
           </div>
-          <span className="text-slate-700 select-none">Título y Código</span>
+          <span className="text-slate-700 select-none">Descripción</span>
         </label>
 
         <label className="flex items-center cursor-pointer gap-2" title="Busca dentro de los Materiales, Equipos y Mano de Obra de las partidas">
