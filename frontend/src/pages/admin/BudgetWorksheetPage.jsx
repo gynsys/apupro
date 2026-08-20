@@ -918,7 +918,8 @@ export default function BudgetWorksheetPage() {
                             <button
                               key={b.id}
                               onClick={() => {
-                                toast('Búsqueda en presupuestos próximamente', { icon: '🚧' });
+                                setActiveDatabase({ id: 'budget_' + b.id, name: b.name, is_budget: true });
+                                setSearchQuery('');
                                 setModalBudgetDropdownOpen(false);
                               }}
                               className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"

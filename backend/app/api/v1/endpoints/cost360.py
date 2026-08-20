@@ -44,6 +44,38 @@ router = APIRouter()
 
 @router.get("/items", response_model=CostItemListResponse)
 def get_items(skip: int = 0, limit: int = 50, search: Optional[str] = None, chapter: Optional[str] = None, categoria: Optional[str] = None, tipo_actividad: Optional[str] = None, search_desc: bool = True, search_insumos: bool = False, covenin: Optional[str] = None, database_id: str = "master", only_coded: bool = False, hidden_categories: Optional[str] = None, db: Session = Depends(get_db)):
+    if database_id.startswith("budget_"):
+        budget_id = database_id.replace("budget_", "")
+        from app.db.models.budget import BudgetItem
+        from sqlalchemy import or_, func
+        
+        query = db.query(BudgetItem).filter(BudgetItem.budget_id == budget_id, BudgetItem.is_chapter == False)
+        
+        if search:
+            search_term = f"%{search.lower()}%"
+            query = query.filter(
+                or_(
+                    func.lower(BudgetItem.cod_par).like(search_term),
+                    func.lower(BudgetItem.description).like(search_term)
+                )
+            )
+            
+        total = query.count()
+        budget_items = query.order_by(BudgetItem.order).offset(skip).limit(limit).all()
+        
+        items = []
+        for bi in budget_items:
+            items.append({
+                "CodPar": bi.cod_par,
+                "Descri": bi.description,
+                "CovPar": bi.cov_par,
+                "UniPar": bi.unit,
+                "PreUni": 0.0,
+                "RenPar": bi.performance
+            })
+            
+        return {"total": total, "items": items}
+
     set_schema_for_db(db, database_id)
     total, items = get_items_paginated(db, skip, limit, search, chapter, categoria, tipo_actividad, search_desc, search_insumos, covenin, database_id, only_coded, hidden_categories)
     return {"total": total, "items": items}
@@ -64,6 +96,35 @@ def _get_db_factors(db: Session, database_id: str) -> dict:
 
 @router.get("/items/{item_code}/apu", response_model=APUResponse)
 def get_apu(item_code: str, database_id: str = "master", db: Session = Depends(get_db)):
+    if database_id.startswith("budget_"):
+        budget_id = database_id.replace("budget_", "")
+        from app.db.models.budget import BudgetItem
+        bi = db.query(BudgetItem).filter(BudgetItem.budget_id == budget_id, BudgetItem.cod_par == item_code).first()
+        if not bi:
+            raise HTTPException(status_code=404, detail="Partida de presupuesto no encontrada")
+            
+        partida = {
+            "CodPar": bi.cod_par,
+            "Descri": bi.description,
+            "CovPar": bi.cov_par,
+            "UniPar": bi.unit,
+            "PreUni": 0.0,
+            "RenPar": bi.performance
+        }
+        
+        materials = [
+            APUComponent(codigo=m.codigo, descripcion=m.descripcion, unidad=m.unidad, cantidad=m.cantidad, precio_unitario=m.precio_unitario, subtotal=m.cantidad*m.precio_unitario*(1+m.desperdicio/100), desperdicio=m.desperdicio) for m in bi.materials
+        ]
+        equipments = [
+            APUComponent(codigo=e.codigo, descripcion=e.descripcion, unidad=e.unidad, cantidad=e.cantidad, precio_unitario=e.precio_unitario, subtotal=e.cantidad*e.precio_unitario*(e.depreciacion), depreciacion=e.depreciacion) for e in bi.equipments
+        ]
+        labors = [
+            APUComponent(codigo=l.codigo, descripcion=l.descripcion, unidad="Día", cantidad=l.cantidad, precio_unitario=l.jornal+l.bono, subtotal=l.cantidad*(l.jornal+l.bono), jornal=l.jornal, bono=l.bono, tot_jornal=l.cantidad*l.jornal, tot_bono=l.cantidad*l.bono) for l in bi.labors
+        ]
+        
+        total_directo = sum(c.subtotal for c in materials) + sum(c.subtotal for c in equipments) + sum(c.subtotal for c in labors)
+        return {"partida": partida, "materiales": materials, "equipos": equipments, "mano_obra": labors, "total_directo": total_directo}
+
     set_schema_for_db(db, database_id)
     if item_code.startswith("CUST-"):
         from app.db.models.cost360 import CustomCostItem
