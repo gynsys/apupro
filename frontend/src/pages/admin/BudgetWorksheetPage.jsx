@@ -947,27 +947,29 @@ export default function BudgetWorksheetPage() {
               </button>
             </div>
             
-            <div className="px-6 py-4 border-b border-amber-600/15 bg-white/40">
-              <Cost360SearchBar
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                searchCovenin={searchCovenin}
-                setSearchCovenin={setSearchCovenin}
-                searchDesc={searchDesc}
-                setSearchDesc={setSearchDesc}
-                searchInsumos={searchInsumos}
-                setSearchInsumos={setSearchInsumos}
-                isSearching={searching}
-                onSearch={searchDatabase}
-              />
+            {!activeDatabase.is_budget && (
+              <div className="px-6 py-4 border-b border-amber-600/15 bg-white/40">
+                <Cost360SearchBar
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  searchCovenin={searchCovenin}
+                  setSearchCovenin={setSearchCovenin}
+                  searchDesc={searchDesc}
+                  setSearchDesc={setSearchDesc}
+                  searchInsumos={searchInsumos}
+                  setSearchInsumos={setSearchInsumos}
+                  isSearching={searching}
+                  onSearch={searchDatabase}
+                />
 
-              {totalSearchResults > 0 && (
-                <p className="mt-3 text-xs text-slate-500 font-medium">
-                  <span className="font-bold text-slate-700">{new Intl.NumberFormat('es-VE').format(totalSearchResults)}</span>{' '}
-                  {(searchQuery || searchCovenin) ? 'coincidencias' : 'Total Partidas'}
-                </p>
-              )}
-            </div>
+                {totalSearchResults > 0 && (
+                  <p className="mt-3 text-xs text-slate-500 font-medium">
+                    <span className="font-bold text-slate-700">{new Intl.NumberFormat('es-VE').format(totalSearchResults)}</span>{' '}
+                    {(searchQuery || searchCovenin) ? 'coincidencias' : 'Total Partidas'}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="overflow-y-auto p-4 flex-1 bg-white/20">
               {searchResults.length === 0 && !searching ? (

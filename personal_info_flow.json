@@ -1,0 +1,499 @@
+{
+  "start_node": "ASK_FULL_NAME",
+  "nodes": {
+    "ASK_FULL_NAME": { "type": "text_input", "text_key": "preconsulta.ask_full_name", "save_to": "full_name", "next_node": "ASK_AGE" },
+    "ASK_AGE": {
+      "type": "numeric_input",
+      "text_key": "preconsulta.ask_age",
+      "save_to": "age",
+      "next_node": "ASK_CI"
+    },
+    "ASK_CI": {
+      "type": "numeric_input",
+      "text_key": "preconsulta.ask_ci",
+      "save_to": "ci",
+      "next_node": "ASK_PHONE"
+    },
+    "ASK_PHONE": {
+      "type": "numeric_input",
+      "text_key": "preconsulta.ask_phone",
+      "save_to": "phone",
+      "next_node": "ASK_ADDRESS"
+    },
+    "ASK_ADDRESS": { "type": "text_input", "text_key": "preconsulta.ask_address", "save_to": "address", "next_node": "ASK_OCCUPATION" },
+    "ASK_OCCUPATION": { "type": "text_input", "text_key": "preconsulta.ask_occupation", "save_to": "occupation", "next_node": "ASK_REASON_FOR_VISIT" },
+    "ASK_REASON_FOR_VISIT": { "type": "text_input", "text_key": "preconsulta.ask_gyn_reason", "save_to": "reason_for_visit", "next_node": "SHOW_SUMMARY" },
+    "SHOW_SUMMARY": { "type": "action", "handler": "show_personal_info_summary", "next_node": "ASK_PERSONAL_HISTORY_BOOL" },
+
+    "ASK_MOTHER_HISTORY_BOOL": { "type": "yes_no", "section_header_key": "preconsulta.section_medical_history", "text_key": "preconsulta.ask_mother_history", "save_to": "family_history_mother", "value_on_no": "No", "next_on_yes": "ASK_MOTHER_CHECKLIST", "next_on_no": "ASK_FATHER_HISTORY_BOOL" },
+    "ASK_MOTHER_CHECKLIST": { "type": "checklist", "text_key": "preconsulta.checklist_title_mother", "keyboard_type": "pathologies", "save_to": "family_history_mother", "other_prompt_key": "preconsulta.other_prompt_mother", "next_node": "ASK_FATHER_HISTORY_BOOL" },
+    "ASK_FATHER_HISTORY_BOOL": { "type": "yes_no", "text_key": "preconsulta.ask_father_history", "save_to": "family_history_father", "value_on_no": "No", "next_on_yes": "ASK_FATHER_CHECKLIST", "next_on_no": "ASK_PERSONAL_HISTORY_BOOL" },
+    "ASK_FATHER_CHECKLIST": { "type": "checklist", "text_key": "preconsulta.checklist_title_father", "keyboard_type": "pathologies", "save_to": "family_history_father", "other_prompt_key": "preconsulta.other_prompt_father", "next_node": "ASK_PERSONAL_HISTORY_BOOL" },
+    "ASK_PERSONAL_HISTORY_BOOL": { "type": "yes_no", "section_header_key": "preconsulta.section_medical_history", "text_key": "preconsulta.ask_personal_history", "save_to": "personal_history", "value_on_no": "No", "next_on_yes": "ASK_PERSONAL_CHECKLIST", "next_on_no": "ASK_SUPPLEMENTS" },
+    "ASK_PERSONAL_CHECKLIST": { "type": "checklist", "text_key": "preconsulta.checklist_title_personal", "keyboard_type": "pathologies", "save_to": "personal_history", "other_prompt_key": "preconsulta.other_prompt_personal","next_node": "ASK_SUPPLEMENTS" },
+    "ASK_SUPPLEMENTS": { "type": "yes_no", "text_key": "preconsulta.ask_supplements", "save_to": "supplements", "value_on_no": "No", "next_on_yes": "ASK_SUPPLEMENTS_TEXT", "next_on_no": "ASK_SURGICAL_HISTORY" },
+    "ASK_SUPPLEMENTS_TEXT": { "type": "text_input", "text_key": "preconsulta.supplements_prompt", "save_to": "supplements", "next_node": "ASK_SURGICAL_HISTORY" },
+    "ASK_SURGICAL_HISTORY": { "type": "yes_no", "text_key": "preconsulta.ask_surgical_history", "save_to": "surgical_history", "value_on_no": "No", "next_on_yes": "ASK_SURGICAL_HISTORY_TEXT", "next_on_no": "ASK_MENARCHE" },
+    "ASK_SURGICAL_HISTORY_TEXT": { "type": "text_input", "text_key": "preconsulta.surgical_history_prompt", "save_to": "surgical_history", "next_node": "ASK_SURGERY_YEAR" },
+    "ASK_SURGERY_YEAR": { "type": "text_input", "text_key": "preconsulta.ask_surgery_year", "save_to": "surgery_year", "next_node": "ASK_MENARCHE" },
+
+    "DECIDE_OBSTETRIC_FLOW": {
+        "type": "action",
+        "handler": "decide_obstetric_flow",
+        "next_if_needed": "ASK_HO_TABLE",
+        "next_if_skip": "ASK_SEXUALLY_ACTIVE"
+
+    },
+
+
+
+    "ASK_MENARCHE": { "type": "number_grid","section_header_key": "preconsulta.section_gyn_history", "text_key": "preconsulta.ask_menarche", "save_to": "gyn_menarche", "start": 8, "end": 23, "cols": 4, "next_node": "ASK_SEXARCHE" },
+    "ASK_SEXARCHE": { "type": "sexarche_picker", "text_key": "preconsulta.ask_sexarche", "save_to": "gyn_sexarche", "next_node": "DECIDE_OBSTETRIC_FLOW" },
+    "PREPARE_OBSTETRIC_FLOW": {
+        "type": "action",
+        "handler": "prepare_obstetric_flow",
+        "next_if_prenatal": "ASK_OTHER_PREGNANCIES",
+        "next_if_gyn": "ASK_PREGNANCY_BOOL_NEW"
+    },
+
+    "ASK_OTHER_PREGNANCIES": {
+        "type": "yes_no",
+        "text_key": "preconsulta.ask_other_pregnancies",
+        "save_to": "prenatal_has_other_pregnancies",
+        "next_on_yes": "ASK_HO_TABLE",
+        "next_on_no": "PREPARE_SINGLE_PRENATAL_RECORD"
+    },
+    "PREPARE_SINGLE_PRENATAL_RECORD": {
+        "type": "action",
+        "handler": "prepare_single_prenatal_record",
+        "next_node": "ASK_CURRENT_WEEKS_SIMPLE"
+    },
+    "ASK_CURRENT_WEEKS_SIMPLE": {
+        "type": "numeric_input",
+        "text_key": "preconsulta.ask_gestational_weeks",
+        "save_to": "current_pregnancy_weeks",
+        "next_node": "FINALIZE_SINGLE_PRENATAL_RECORD"
+    },
+    "FINALIZE_SINGLE_PRENATAL_RECORD": {
+        "type": "action",
+        "handler": "finalize_single_prenatal_record",
+        "next_node": "ASK_SEXUALLY_ACTIVE"
+    },
+
+    "ASK_PREGNANCY_BOOL_NEW": {
+        "type": "yes_no",
+        "text_key": "preconsulta.ask_pregnancy_bool",
+        "save_to": "gyn_has_been_pregnant",
+        "value_on_no": "No",
+        "next_on_yes": "ASK_HO_TABLE",
+        "next_on_no": "ASK_SEXUALLY_ACTIVE"
+    },
+
+    "ASK_HO_TABLE": {
+        "type": "ho_table",
+        "text_key": "preconsulta.ask_ho_table_v2",
+        "save_to": "ho_table_results",
+        "next_node": "PREPARE_BIRTH_DETAILS_LOOP"
+    },
+    "PREPARE_BIRTH_DETAILS_LOOP": {
+        "type": "action",
+        "handler": "prepare_birth_details_loop",
+        "loop_variable": "birth_details",
+        "next_node_in_loop": "ASK_CHILD_BIRTH_YEAR",
+        "next_node_after_loop": "CALCULATE_HO"
+    },
+    "CALCULATE_HO": {
+        "type": "action",
+        "handler": "calculate_ho_action",
+        "next_node": "ASK_SEXUALLY_ACTIVE"
+    },
+    "ASK_CHILD_BIRTH_YEAR": { "type": "year_picker", "text_template": "👶 **Datos del bebé #{ordinal}**\n\n¿En qué año nació?", "save_to": "birth_year", "next_node": "ASK_CHILD_WEIGHT" },
+    "ASK_CHILD_WEIGHT": { "type": "loop_numeric_input", "text_key": "preconsulta.ask_child_weight", "save_to": "weight", "next_node": "ASK_CHILD_HEIGHT" },
+    "ASK_CHILD_HEIGHT": { "type": "loop_numeric_input", "text_key": "preconsulta.ask_child_height", "save_to": "height", "next_node": "ASK_CHILD_BIRTH_TYPE" },
+    "ASK_CHILD_BIRTH_TYPE": { "type": "loop_buttons", "text_key": "preconsulta.ask_child_birth_type", "save_to": "birth_type", "options": [{"label": "A término", "next_node": "ASK_BIRTH_RESOLUTION"}, {"label": "Prematuro", "next_node": "ASK_BIRTH_RESOLUTION"}] },
+    "ASK_BIRTH_RESOLUTION": { "type": "loop_buttons", "text_key": "preconsulta.ask_birth_resolution", "save_to": "resolution", "options": [{"label": "Parto Vaginal", "next_node": "ASK_CHILD_BIRTH_CONDITION"}, {"label": "Cesárea", "next_node": "ASK_CHILD_BIRTH_CONDITION"}] },
+    "ASK_CHILD_BIRTH_CONDITION": {
+        "type": "loop_buttons",
+        "text_key": "preconsulta.ask_child_birth_condition",
+        "save_to": "condition",
+        "options": [
+            {"label": "Vivo", "next_node": "ASK_CHILD_COMPLICATIONS"},
+            {"label": "Fallecido", "next_node": "ASK_CHILD_COMPLICATIONS"}
+        ]
+    },
+    "ASK_CHILD_COMPLICATIONS": {
+        "type": "loop_checklist",
+        "text_key": "preconsulta.ask_child_complications",
+        "keyboard_type": "birth_complications",
+        "save_to": "complications",
+        "next_node": "LOOP_STEP_CHILD_DETAILS"
+    },
+    "LOOP_STEP_CHILD_DETAILS": { "type": "action", "handler": "loop_step" },
+
+    "ASK_SEXUALLY_ACTIVE": {
+        "type": "yes_no",
+        "text_key": "preconsulta.ask_sexually_active",
+        "save_to": "sexually_active",
+
+        "next_node": "CHECK_IF_PREGNANT_FOR_FERTILITY_QUESTION"
+    },
+   "CHECK_IF_PREGNANT_FOR_FERTILITY_QUESTION": {
+        "type": "action",
+        "handler": "check_if_pregnant_for_fertility",
+
+        "next_if_ask_fertility": "ASK_FERTILITY_INTENT",
+        "next_if_skip_fertility": "ASK_CYCLES_REGULAR"
+    },
+    "ASK_FERTILITY_INTENT": {
+      "type": "buttons",
+      "text_key": "preconsulta.ask_fertility_intent",
+      "save_to": "gyn_fertility_intent",
+      "options": [
+        {"label": "👍 Sí, pero no ha sucedido", "value": "Con deseo de fertilidad por más de un año", "next_node": "ASK_CYCLES_REGULAR"},
+        {"label": "🙅 No, no lo he estado buscando", "value": "No tiene deseo de fertilidad", "next_node": "ASK_CYCLES_REGULAR"},
+        {"label": "🤫 Prefiero no responder", "value": "Prefiere no responder", "next_node": "ASK_CYCLES_REGULAR"}
+      ]
+    },
+
+    "ASK_CYCLES_REGULAR": {
+        "type": "yes_no",
+        "text_key": "preconsulta.ask_cycles_regular",
+        "save_to": "gyn_cycles",
+        "value_on_yes": "Regulares",
+        "value_on_no": "Irregulares",
+        "next_on_yes": "ASK_CYCLES_DURATION",
+        "next_on_no": "ASK_CYCLES_DURATION"
+    },
+
+   "ASK_CYCLES_DURATION": {
+        "type": "text_input",
+        "text_key": "preconsulta.ask_cycles_duration",
+        "save_to": "gyn_cycles_duration",
+        "next_node": "DECIDE_IF_ASK_FREQUENCY"
+    },
+
+    "DECIDE_IF_ASK_FREQUENCY": {
+        "type": "action",
+        "handler": "decide_if_ask_frequency",
+        "next_if_regular": "ASK_CYCLES_FREQUENCY",
+        "next_if_irregular": "COMBINE_IRREGULAR_CYCLE_INFO"
+    },
+    "ASK_CYCLES_FREQUENCY": {
+        "type": "text_input",
+        "text_key": "preconsulta.ask_cycles_frequency",
+        "save_to": "gyn_cycles_frequency",
+        "next_node": "COMBINE_REGULAR_CYCLE_INFO"
+    },
+
+
+    "COMBINE_IRREGULAR_CYCLE_INFO": {
+        "type": "action",
+        "handler": "combine_irregular_cycle_info",
+        "next_node": "ASK_DYSMENORRHEA_BOOL"
+    },
+    "COMBINE_REGULAR_CYCLE_INFO": {
+        "type": "action",
+        "handler": "combine_regular_cycle_info",
+        "next_node": "ASK_DYSMENORRHEA_BOOL"
+    },
+    "ASK_DYSMENORRHEA_BOOL": {
+        "type": "yes_no",
+        "text_key": "preconsulta.ask_dismenorrhea_bool",
+        "save_to": "gyn_dysmenorrhea",
+        "value_on_yes": "Sí",
+        "value_on_no": "No",
+        "next_on_yes": "SHOW_DYSMENORRHEA_SCALE",
+        "next_on_no": "ASK_FUM"
+    },
+    "SHOW_DYSMENORRHEA_SCALE": {
+        "type": "scale",
+        "text_key": "preconsulta.dismenorrhea_scale_intro",
+        "save_to": "gyn_dysmenorrhea_scale_value",
+        "next_node": "COMBINE_DYSMENORRHEA_INFO"
+    },
+    "COMBINE_DYSMENORRHEA_INFO": {
+        "type": "action",
+        "handler": "combine_dysmenorrhea_info",
+        "next_node": "ASK_FUM"
+    },
+
+    "ASK_FUM": { "type": "calendar", "text_key": "preconsulta.ask_fum", "save_to": "gyn_fum", "next_node": "ASK_MAC" },
+    "ASK_MAC": { "type": "yes_no", "text_key": "preconsulta.ask_mac", "save_to": "gyn_mac", "value_on_no": "No", "next_on_yes": "ASK_MAC_CHECKLIST", "next_on_no": "ASK_PREVIOUS_CHECKUPS" },
+    "ASK_MAC_CHECKLIST": { "type": "checklist", "text_key": "preconsulta.mac_prompt", "keyboard_type": "mac", "save_to": "gyn_mac", "next_node": "ASK_PREVIOUS_CHECKUPS" },
+    "ASK_PREVIOUS_CHECKUPS": { "type": "month_year_picker", "text_key": "preconsulta.ask_prev_checkups", "save_to": "gyn_previous_checkups", "next_node": "ASK_LAST_PAP_SMEAR", "allow_text": "Nunca" },
+    "ASK_LAST_PAP_SMEAR": { "type": "month_year_picker", "text_key": "preconsulta.ask_last_pap_smear", "save_to": "gyn_last_pap_smear", "next_node": "CHECK_FUNCTIONAL_EXAM_ENABLED", "allow_text": "Nunca" },
+    "CHECK_FUNCTIONAL_EXAM_ENABLED": {
+        "type": "action",
+        "handler": "check_functional_exam_enabled",
+        "next_if_enabled": "ASK_DISPAREUNIA_BOOL",
+        "next_if_disabled": "ASK_PHYSICAL_ACTIVITY_BOOL"
+    },
+
+    "ASK_DISPAREUNIA_BOOL": {
+        "type": "yes_no",
+        "section_header_key": "preconsulta.section_functional_exam",
+        "text_key": "preconsulta.ask_dispareunia",
+        "save_to": "functional_dispareunia",
+        "value_on_no": "No",
+        "next_on_yes": "ASK_PAIN_TYPE",
+        "next_on_no": "ASK_LEG_PAIN_BOOL"
+    },
+    "ASK_PAIN_TYPE": {
+        "type": "buttons",
+        "text_key": "preconsulta.ask_pain_type",
+        "save_to": "functional_dispareunia_type",
+        "options": [
+            {"label": "Superficial", "next_node": "ASK_LEG_PAIN_BOOL"},
+            {"label": "Profunda", "next_node": "ASK_DEEP_PAIN_SCALE"}
+        ]
+    },
+    "ASK_DEEP_PAIN_SCALE": {
+        "type": "scale",
+        "text_key": "preconsulta.ask_deep_pain_scale",
+        "save_to": "functional_dispareunia_deep_scale",
+        "next_node": "COMBINE_DISPAREUNIA_INFO"
+    },
+    "COMBINE_DISPAREUNIA_INFO": {
+        "type": "action",
+        "handler": "combine_dispareunia_info",
+        "next_node": "ASK_LEG_PAIN_BOOL"
+    },
+    "ASK_LEG_PAIN_BOOL": {
+        "type": "yes_no",
+        "text_key": "preconsulta.ask_leg_pain_bool",
+        "save_to": "functional_leg_pain",
+        "value_on_no": "No",
+        "next_on_yes": "ASK_LEG_PAIN_TYPE",
+        "next_on_no": "ASK_GASTRO_BEFORE_BOOL"
+    },
+    "ASK_LEG_PAIN_TYPE": {
+        "type": "checklist",
+        "text_key": "preconsulta.leg_pain_type_prompt",
+        "keyboard_type": "leg_pain_type",
+        "save_to": "functional_leg_pain_type",
+        "next_node": "ASK_LEG_PAIN_ZONE"
+    },
+    "ASK_LEG_PAIN_ZONE": {
+        "type": "checklist",
+        "text_key": "preconsulta.leg_pain_zone_prompt",
+        "keyboard_type": "leg_pain_zone",
+        "save_to": "functional_leg_pain_zone",
+        "next_node": "COMBINE_LEG_PAIN_INFO"
+    },
+    "COMBINE_LEG_PAIN_INFO": {
+        "type": "action",
+        "handler": "combine_leg_pain_info",
+        "next_node": "ASK_GASTRO_BEFORE_BOOL"
+    },
+    "ASK_GASTRO_BEFORE_BOOL": {
+        "type": "yes_no",
+        "section_header_key": "preconsulta.section_habits_and_functional_cont",
+        "text_key": "preconsulta.ask_gastro_before",
+        "save_to": "functional_gastro_before",
+        "value_on_no": "No",
+        "next_on_yes": "ASK_GASTRO_BEFORE_CHECKLIST",
+        "next_on_no": "ASK_GASTRO_DURING_BOOL"
+    },
+    "ASK_GASTRO_BEFORE_CHECKLIST": {
+        "type": "checklist",
+        "text_key": "preconsulta.gastro_checklist_title",
+        "keyboard_type": "gastro_symptoms",
+        "save_to": "functional_gastro_before",
+        "next_node": "ASK_GASTRO_DURING_BOOL"
+    },
+    "ASK_GASTRO_DURING_BOOL": {
+        "type": "yes_no",
+        "text_key": "preconsulta.ask_gastro_during",
+        "save_to": "functional_gastro_during",
+        "value_on_no": "No",
+        "next_on_yes": "ASK_GASTRO_DURING_CHECKLIST",
+        "next_on_no": "ASK_DISCHEZIA_BOOL"
+    },
+    "ASK_GASTRO_DURING_CHECKLIST": {
+        "type": "checklist",
+        "text_key": "preconsulta.gastro_checklist_title",
+        "keyboard_type": "gastro_symptoms",
+        "save_to": "functional_gastro_during",
+        "next_node": "ASK_DISCHEZIA_BOOL"
+    },
+    "ASK_DISCHEZIA_BOOL": {
+        "type": "buttons",
+        "text_key": "preconsulta.ask_dischezia",
+        "save_to": "functional_dischezia",
+        "options": [
+            {"label": "👍 Sí", "value": "Sí", "next_node": "ASK_DISCHEZIA_SCALE"},
+            {"label": "👎 No", "value": "No", "next_node": "ASK_BOWEL_FREQUENCY"},
+            {"label": "+/- Eventual", "value": "Eventual", "next_node": "ASK_BOWEL_FREQUENCY"}
+        ]
+    },
+    "ASK_DISCHEZIA_SCALE": {
+        "type": "scale",
+        "text_key": "preconsulta.dischezia_scale_prompt",
+        "save_to": "functional_dischezia_scale",
+        "next_node": "COMBINE_DISCHEZIA_INFO"
+    },
+    "COMBINE_DISCHEZIA_INFO": {
+        "type": "action",
+        "handler": "combine_dischezia_info",
+        "next_node": "ASK_BOWEL_FREQUENCY"
+    },
+    "ASK_BOWEL_FREQUENCY": {
+        "type": "buttons",
+        "text_key": "preconsulta.ask_bowel_frequency",
+        "save_to": "functional_bowel_freq",
+        "options": [
+            {"label": "Diario", "next_node": "ASK_URINARY_PROBLEM_BOOL"},
+            {"label": "Cada 1 día", "next_node": "ASK_URINARY_PROBLEM_BOOL"},
+            {"label": "Cada 2 días", "next_node": "ASK_URINARY_PROBLEM_BOOL"},
+            {"label": "Cada 3 días", "next_node": "ASK_URINARY_PROBLEM_BOOL"},
+            {"label": "Cada 4 días", "next_node": "ASK_URINARY_PROBLEM_BOOL"},
+            {"label": "Cada 5 días", "next_node": "ASK_URINARY_PROBLEM_BOOL"},
+            {"label": "Semanal", "next_node": "ASK_URINARY_PROBLEM_BOOL"}
+        ]
+    },
+    "ASK_URINARY_PROBLEM_BOOL": {
+        "type": "yes_no",
+        "text_key": "preconsulta.ask_urinary_problem",
+        "value_on_no": "No",
+        "save_to": "functional_urinary_problem",
+        "next_on_yes": "ASK_URINARY_PAIN_BOOL",
+        "next_on_no": "ASK_PHYSICAL_ACTIVITY_BOOL"
+    },
+    "ASK_URINARY_PAIN_BOOL": {
+        "type": "yes_no",
+        "text_key": "preconsulta.ask_urinary_pain",
+        "save_to": "functional_urinary_pain",
+        "value_on_no": "No",
+        "next_on_yes": "ASK_URINARY_PAIN_SCALE",
+        "next_on_no": "ASK_URINARY_IRRITATION"
+    },
+    "ASK_URINARY_PAIN_SCALE": {
+        "type": "scale",
+        "text_key": "preconsulta.urinary_pain_scale_prompt",
+        "save_to": "functional_urinary_pain_scale",
+        "next_node": "COMBINE_URINARY_PAIN_INFO"
+    },
+    "COMBINE_URINARY_PAIN_INFO": {
+        "type": "action",
+        "handler": "combine_urinary_pain_info",
+        "next_node": "ASK_URINARY_IRRITATION"
+    },
+    "ASK_URINARY_IRRITATION": {
+        "type": "yes_no",
+        "text_key": "preconsulta.ask_urinary_irritation",
+        "save_to": "functional_urinary_irritation",
+        "next_node": "ASK_URINARY_INCONTINENCE"
+    },
+    "ASK_URINARY_INCONTINENCE": {
+        "type": "yes_no",
+        "text_key": "preconsulta.ask_urinary_incontinence",
+        "save_to": "functional_urinary_incontinence",
+        "next_node": "ASK_URINARY_NOCTURIA"
+    },
+    "ASK_URINARY_NOCTURIA": {
+        "type": "yes_no",
+        "text_key": "preconsulta.ask_urinary_nocturia",
+        "save_to": "functional_urinary_nocturia",
+        "next_node": "ASK_PHYSICAL_ACTIVITY_BOOL"
+    },
+    "ASK_PHYSICAL_ACTIVITY_BOOL": {
+        "type": "yes_no",
+        "section_header_key": "preconsulta.section_lifestyle_habits",
+        "text_key": "preconsulta.ask_physical_activity_bool",
+        "save_to": "habits_physical_activity",
+        "value_on_no": "No",
+        "next_on_yes": "ASK_ACTIVITY_DAYS",
+        "next_on_no": "ASK_SMOKING"
+    },
+    "ASK_ACTIVITY_DAYS": {
+        "type": "buttons",
+        "section_header_key": "preconsulta.activity_intro",
+        "text_key": "preconsulta.ask_activity_days",
+        "save_to": "habits_activity_days",
+        "options": [
+            {"label": "1", "next_node": "ASK_ACTIVITY_DURATION"}, {"label": "2", "next_node": "ASK_ACTIVITY_DURATION"},
+            {"label": "3", "next_node": "ASK_ACTIVITY_DURATION"}, {"label": "4", "next_node": "ASK_ACTIVITY_DURATION"},
+            {"label": "5", "next_node": "ASK_ACTIVITY_DURATION"}, {"label": "6", "next_node": "ASK_ACTIVITY_DURATION"},
+            {"label": "7", "next_node": "ASK_ACTIVITY_DURATION"}
+        ]
+    },
+    "ASK_ACTIVITY_DURATION": {
+        "type": "buttons",
+        "text_key": "preconsulta.ask_activity_duration",
+        "save_to": "habits_activity_duration",
+        "options": [
+            {"label": "30 min", "value": "30", "next_node": "ASK_ACTIVITY_HABIT_DURATION"},
+            {"label": "45 min", "value": "45", "next_node": "ASK_ACTIVITY_HABIT_DURATION"},
+            {"label": "60 min", "value": "60", "next_node": "ASK_ACTIVITY_HABIT_DURATION"},
+            {"label": "Más de 1 hora", "value": ">60", "next_node": "ASK_ACTIVITY_HABIT_DURATION"}
+        ]
+    },
+
+    "ASK_ACTIVITY_HABIT_DURATION": {
+        "type": "buttons",
+        "text_key": "preconsulta.ask_activity_habit_duration",
+        "save_to": "habits_activity_habit_duration",
+        "options": [
+            {"label": "Menos de 1 mes", "next_node": "ASK_ACTIVITY_GOAL"},
+            {"label": "1-3 meses", "next_node": "ASK_ACTIVITY_GOAL"},
+            {"label": "3-6 meses", "next_node": "ASK_ACTIVITY_GOAL"},
+            {"label": "6-12 meses", "next_node": "ASK_ACTIVITY_GOAL"},
+            {"label": "Más de 1 año", "next_node": "ASK_ACTIVITY_GOAL"}
+        ]
+    },
+    "ASK_ACTIVITY_GOAL": {
+        "type": "buttons",
+        "text_key": "preconsulta.ask_activity_goal",
+        "save_to": "habits_activity_goal",
+        "options": [
+            {"label": "❤️ Salud", "next_node": "COMBINE_ACTIVITY_INFO"},
+            {"label": "⚖️ Control de peso", "next_node": "COMBINE_ACTIVITY_INFO"},
+            {"label": "🏆 Competencia", "next_node": "COMBINE_ACTIVITY_INFO"},
+            {"label": "🦾 Rehabilitación", "next_node": "COMBINE_ACTIVITY_INFO"}
+        ]
+    },
+    "COMBINE_ACTIVITY_INFO": {
+        "type": "action",
+        "handler": "combine_activity_info",
+        "next_node": "ASK_SMOKING"
+    },
+
+    "ASK_SMOKING": {
+        "type": "yes_no",
+        "section_header_key": "preconsulta.section_lifestyle_habits",
+        "text_key": "preconsulta.ask_smoking",
+        "save_to": "habits_smoking",
+        "next_node": "ASK_ALCOHOL"
+    },
+    "ASK_ALCOHOL": {
+        "type": "buttons",
+        "text_key": "preconsulta.ask_alcohol",
+        "save_to": "habits_alcohol",
+        "options": [
+            {"label": "👍 Sí", "value": "Sí", "next_node": "ASK_SUBSTANCE_USE"},
+            {"label": "👎 No", "value": "No", "next_node": "ASK_SUBSTANCE_USE"},
+            {"label": "🥂 Ocasional", "value": "Ocasional", "next_node": "ASK_SUBSTANCE_USE"}
+        ]
+    },
+    "ASK_SUBSTANCE_USE": {
+        "type": "buttons",
+        "text_key": "preconsulta.ask_substance_use",
+        "save_to": "habits_substance_use",
+        "options": [
+            {"label": "👍 Sí", "value": "Sí", "next_node": "GENERATE_SUMMARIES"},
+            {"label": "👎 No", "value": "No", "next_node": "GENERATE_SUMMARIES"}
+        ]
+    },
+
+    "GENERATE_SUMMARIES": {
+        "type": "action",
+        "handler": "generate_summaries",
+        "next_node": "END_OF_PRECONSULTA"
+    },
+
+    "END_OF_PRECONSULTA": {
+        "type": "action",
+        "handler": "finish_preconsultation"
+    }
+  }
+}

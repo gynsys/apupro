@@ -1,0 +1,1357 @@
+/root/bot/features/branding/handlers.py:109: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  branding_conv = ConversationHandler(
+/root/bot/main.py:221: PTBDeprecationWarning: Deprecated since version 21.10: Support for pytz timezones is deprecated and will be removed in future versions.
+  defaults = Defaults(tzinfo=tz)
+2026-08-20 12:19:18,596 - features.preconsulta.main_handler - INFO - Registrando ConversationHandler con 2 estados. Estados conocidos: [0, 1]
+/root/bot/features/preconsulta/main_handler.py:159: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  preconsultation_conv = ConversationHandler(
+/root/bot/features/galeria/__init__.py:35: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  sa_add_conv = ConversationHandler(
+/root/bot/features/galeria/__init__.py:46: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  sa_modify_conv = ConversationHandler(
+/root/bot/features/galeria/__init__.py:57: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  sa_edit_header_conv = ConversationHandler(
+/root/bot/features/galeria/__init__.py:89: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  tn_add_conv = ConversationHandler(
+/root/bot/features/galeria/__init__.py:100: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  tn_modify_conv = ConversationHandler(
+/root/bot/features/galeria/__init__.py:111: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  tn_edit_header_conv = ConversationHandler(
+/root/bot/features/ubicaciones/admin_handlers.py:350: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  edit_header_conv = ConversationHandler(
+/root/bot/features/ubicaciones/admin_handlers.py:356: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  add_conv = ConversationHandler(
+/root/bot/features/ubicaciones/admin_handlers.py:370: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  modify_conv = ConversationHandler(
+/root/bot/features/faqs/admin_handlers.py:254: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  add_conv = ConversationHandler(
+/root/bot/features/faqs/admin_handlers.py:263: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  mod_conv = ConversationHandler(
+/root/bot/features/precios/admin_handlers.py:170: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  edit_header_conv = ConversationHandler(entry_points=[CallbackQueryHandler(start_header_edit, pattern=f"^{CONFIG['prefix']}_edit_header$")], states={AWAITING_HEADER_TEXT: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_modified_header)]}, fallbacks=cancel_handlers)
+/root/bot/features/precios/admin_handlers.py:171: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  add_conv = ConversationHandler(entry_points=[CallbackQueryHandler(add_item_start, pattern=f"^{CONFIG['prefix']}_add_start$")], states={AWAITING_TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_title)], AWAITING_CONTENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_new_item)],}, fallbacks=cancel_handlers)
+/root/bot/features/precios/admin_handlers.py:172: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  modify_conv = ConversationHandler(entry_points=[CallbackQueryHandler(modify_item_start, pattern=f"^{CONFIG['prefix']}_modify_\\d+$")], states={AWAITING_MOD_TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_modified_title)], AWAITING_MOD_CONTENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_modified_item)],}, fallbacks=cancel_handlers)
+/root/bot/features/test/admin_handlers.py:220: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  add_conv = ConversationHandler(entry_points=[CallbackQueryHandler(add_item_start, pattern=f"^{CONFIG['prefix']}_add_start$")], states={AWAITING_NEW_QUESTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_new_question)]}, fallbacks=cancel_handlers)
+/root/bot/features/test/admin_handlers.py:221: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  modify_conv = ConversationHandler(entry_points=[CallbackQueryHandler(modify_item_start, pattern=f"^{CONFIG['prefix']}_modify_\\d+$")], states={AWAITING_MODIFIED_QUESTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_modified_question)]}, fallbacks=cancel_handlers)
+/root/bot/features/test/user_handlers.py:508: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  test_conv = ConversationHandler(
+/root/bot/features/quiz/user_handlers.py:595: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  quiz_conv = ConversationHandler(
+/root/bot/features/welcome_message/handlers.py:277: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  edit_welcome_conv = ConversationHandler(
+/root/bot/features/team/admin_handlers.py:270: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  team_add_conv = ConversationHandler(
+/root/bot/handlers/registration.py:118: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  add_doctor_conv_handler = ConversationHandler(
+/root/bot/handlers/registration.py:144: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  request_bot_conv = ConversationHandler(
+/root/bot/handlers/registration.py:176: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  contact_conv_handler = ConversationHandler(
+/root/bot/handlers/registration.py:194: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  booking_conv = ConversationHandler(
+/root/bot/features/citas/admin_manual_booking.py:276: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  add_manual_appt_conv = ConversationHandler(
+/root/bot/features/preconsultas_admin/admin_handlers.py:935: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  consultation_conv = ConversationHandler(
+2026-08-20 12:19:19,096 - features.preconsulta.components.logger - INFO - ℹ️ [patient_archive] Registrando handlers de patient_archive
+/root/bot/features/preconsulta/patient_archive/admin_handlers.py:536: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  search_conv = ConversationHandler(
+/root/bot/features/preconsulta/patient_archive/admin_handlers.py:542: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  edit_conv = ConversationHandler(
+2026-08-20 12:19:19,098 - features.preconsulta.components.logger - INFO - ✅ [patient_archive] SUCCESS [register] - Todos los handlers de patient_archive registrados
+/root/bot/features/pdf_configuration/handlers.py:529: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  text_edit_conv = ConversationHandler(
+/root/bot/features/pdf_configuration/handlers.py:549: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  logo_upload_conv = ConversationHandler(
+2026-08-20 12:19:19,101 - features.pdf_configuration.handlers - INFO - Módulo PDF Configuration registrado correctamente
+2026-08-20 12:19:19,141 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-08-20 12:19:19,141 - utils.scheduler - INFO - ✅ Trabajo programado 'daily_db_backup' configurado para las 09:30:00 diariamente.
+2026-08-20 12:19:19,145 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-08-20 12:19:19,145 - utils.scheduler - INFO - ✅ Recordatorio mañana configurado para las 07:00:00 diariamente.
+2026-08-20 12:19:19,146 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-08-20 12:19:19,146 - utils.scheduler - INFO - ✅ Recordatorio tarde configurado para las 13:00:00 diariamente.
+2026-08-20 12:19:19,150 - database.connection - INFO - Base de datos inicializada/verificada correctamente.
+2026-08-20 12:19:19,171 - database.engine - INFO - Engine SQLAlchemy inicializado correctamente
+2026-08-20 12:19:19,171 - database.engine - INFO - Tablas de SQLAlchemy creadas/verificadas
+2026-08-20 12:19:19,617 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getMe "HTTP/1.1 200 OK"
+2026-08-20 12:19:19,776 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteWebhook "HTTP/1.1 200 OK"
+2026-08-20 12:19:19,779 - apscheduler.scheduler - INFO - Added job "daily_db_backup" to job store "default"
+2026-08-20 12:19:19,779 - apscheduler.scheduler - INFO - Added job "morning_appointment_reminders" to job store "default"
+2026-08-20 12:19:19,779 - apscheduler.scheduler - INFO - Added job "afternoon_appointment_reminders" to job store "default"
+2026-08-20 12:19:19,779 - apscheduler.scheduler - INFO - Scheduler started
+2026-08-20 12:19:19,779 - telegram.ext.Application - INFO - Application started
+2026-08-20 12:19:30,233 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:19:40,386 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:19:50,530 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:20:00,677 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:20:10,825 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:20:20,977 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:20:31,126 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:20:41,281 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:20:51,441 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:21:01,591 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:21:11,740 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:21:21,900 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:21:32,048 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:21:42,197 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:21:52,348 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:22:02,500 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:22:12,648 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:22:22,795 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:22:32,941 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:22:43,090 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:22:53,246 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:23:03,394 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:23:13,539 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:23:23,691 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:23:33,840 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:23:43,986 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:23:54,146 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:24:04,294 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:24:14,446 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:24:24,597 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:24:34,767 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:24:44,921 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:24:55,082 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:25:05,239 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:25:15,392 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:25:25,546 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:25:35,705 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:25:45,852 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:25:56,027 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:26:06,186 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:26:16,345 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:26:26,494 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:26:36,641 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:26:46,791 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:26:56,939 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:27:07,094 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:27:17,247 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:27:27,398 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:27:37,550 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:27:47,696 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:27:57,845 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:28:07,999 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:28:18,158 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:28:28,306 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:28:38,471 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:28:48,620 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:28:58,768 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:29:08,916 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:29:19,069 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:29:29,226 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:29:39,373 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:29:49,525 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:29:59,670 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:30:09,823 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:30:19,973 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:30:30,123 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:30:40,280 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:30:50,433 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:31:00,588 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:31:10,741 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:31:20,903 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:31:31,050 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:31:41,205 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:31:51,353 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:32:01,503 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:32:11,660 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:32:21,807 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:32:31,955 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:32:42,105 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:32:52,266 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:33:02,417 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:33:12,567 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:33:22,715 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:33:32,885 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:33:43,032 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:33:53,187 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:34:03,338 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:34:13,493 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:34:23,641 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:34:33,792 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:34:43,943 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:34:54,094 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:35:04,247 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:35:14,393 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:35:24,554 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:35:34,701 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:35:44,848 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:35:54,995 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:36:05,145 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:36:15,301 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:36:25,464 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:36:35,623 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:36:45,775 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:36:55,930 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:37:06,082 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:37:16,238 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:37:26,394 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:37:36,544 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:37:46,694 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:37:56,844 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:38:06,992 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:38:17,140 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:38:27,291 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:38:37,436 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:38:47,588 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:38:57,734 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:39:07,888 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:39:18,040 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:39:28,195 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:39:38,346 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:39:48,495 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:39:58,645 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:40:08,797 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:40:18,944 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:40:29,095 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:40:39,251 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:40:49,402 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:40:59,576 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:41:09,728 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:41:19,878 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:41:30,034 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:41:40,186 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:41:50,339 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:42:00,484 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:42:10,637 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:42:20,790 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:42:30,941 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:42:41,089 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:42:51,252 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:43:01,403 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:43:11,551 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:43:21,704 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:43:31,851 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:43:41,997 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:43:52,145 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:44:02,313 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:44:12,466 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:44:22,615 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:44:32,762 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:44:42,909 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:44:53,060 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:45:03,212 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:45:13,372 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:45:23,524 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:45:33,674 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:45:43,823 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:45:53,971 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:46:04,120 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:46:14,271 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:46:24,443 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:46:34,591 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:46:44,741 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:46:54,887 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:47:05,044 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:47:15,195 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:47:25,348 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:47:35,497 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:47:45,646 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:47:55,792 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:48:05,955 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:48:16,108 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:48:26,264 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:48:36,415 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:48:46,575 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:48:56,729 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:49:06,877 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:49:17,024 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:49:27,170 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:49:37,334 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:49:47,483 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:49:57,642 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:50:07,794 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:50:17,939 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:50:28,092 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:50:38,244 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:50:48,397 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:50:58,552 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:51:08,699 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:51:18,849 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:51:29,003 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:51:39,151 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:51:49,301 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:51:59,453 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:52:09,606 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:52:19,752 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:52:29,900 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:52:40,066 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:52:50,285 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:53:00,435 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:53:10,586 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:53:20,763 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:53:30,912 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:53:41,065 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:53:51,212 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:54:01,362 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:54:11,518 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:54:21,667 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:54:31,812 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:54:41,971 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:54:52,125 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:55:02,275 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:55:12,422 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:55:22,576 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:55:32,724 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:55:42,877 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:55:53,035 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:56:03,193 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:56:13,348 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:56:23,505 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:56:33,661 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:56:43,811 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:56:53,963 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:57:04,111 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:57:14,258 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:57:24,412 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:57:34,560 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:57:44,717 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:57:54,868 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:58:05,017 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:58:15,167 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:58:17,521 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:58:17,558 - features.preconsulta.patient_flow.generic_flow_engine - INFO - Iniciando preconsulta para cita #None con doctor_id 1...
+2026-08-20 12:58:18,124 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 12:58:18,406 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/sendMessage "HTTP/1.1 200 OK"
+2026-08-20 12:58:27,671 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:58:37,821 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:58:47,967 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:58:58,116 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:59:05,687 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:59:06,261 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 12:59:06,544 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 12:59:15,839 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:59:16,829 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:59:17,387 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 12:59:17,667 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 12:59:26,981 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:59:35,135 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:59:35,710 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 12:59:35,991 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 12:59:45,299 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:59:49,809 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 12:59:50,387 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 12:59:50,672 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 12:59:59,963 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:00:10,116 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:00:18,256 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:00:18,821 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:00:19,099 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:00:28,409 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:00:32,674 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:00:33,229 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:00:33,509 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:00:42,825 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:00:52,972 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:01:03,119 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:01:12,465 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:01:13,036 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:01:13,326 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:01:22,632 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:01:32,783 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:01:33,957 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:01:34,523 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:01:34,801 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:01:44,139 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:01:50,192 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:01:50,817 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:02:00,357 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:02:08,171 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:02:08,747 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:02:09,047 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageReplyMarkup "HTTP/1.1 200 OK"
+2026-08-20 13:02:18,339 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:02:20,333 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:02:20,910 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:02:21,194 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageReplyMarkup "HTTP/1.1 200 OK"
+2026-08-20 13:02:30,485 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:02:40,638 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:02:50,788 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:03:00,948 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:03:06,067 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:03:06,632 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:03:06,925 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:03:16,227 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:03:24,229 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:03:24,774 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:03:25,046 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:03:31,923 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:03:32,511 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:03:42,093 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:03:52,243 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:03:56,397 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+🧹 Limpiadas 1 asociaciones incorrectas al iniciar
+[DB] Inicializando base de datos...
+[OK] Base de datos inicializada.
+[DB] Inicializando SQLAlchemy engine...
+[OK] SQLAlchemy engine inicializado.
+[i] Inicializando sistema de métricas de salud...
+[OK] Métricas inicializadas.
+[RUN] Bot médico iniciado en modo POLLING...
+[AUTH] SuperAdmin ID: 1035216286
+
+==================== CONTEXTO CARGADO AL INICIAR PRECONSULTA ====================
+  - Cita ID: None
+  - Tipo de Consulta: Ginecología
+  - Motivo de Visita: Consulta Directa (Sin Cita)
+  - ¿Es Primer Embarazo?: None
+  - ¿Ha Estado Embarazada?: None
+======================================================================
+
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_FULL_NAME' ---
+--- 3. [ENGINE] Tipo de nodo es: 'text_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'text_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_AGE' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_AGE'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_AGE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'numeric_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'numeric_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_CI' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_CI'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_CI' ---
+--- 3. [ENGINE] Tipo de nodo es: 'numeric_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'numeric_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_PHONE' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_PHONE'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_PHONE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'numeric_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'numeric_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_ADDRESS' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_ADDRESS'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_ADDRESS' ---
+--- 3. [ENGINE] Tipo de nodo es: 'text_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'text_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_OCCUPATION' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_OCCUPATION'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_OCCUPATION' ---
+--- 3. [ENGINE] Tipo de nodo es: 'text_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'text_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_REASON_FOR_VISIT' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_REASON_FOR_VISIT'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_REASON_FOR_VISIT' ---
+--- 3. [ENGINE] Tipo de nodo es: 'text_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'text_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'SHOW_SUMMARY' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'SHOW_SUMMARY'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: SHOW_SUMMARY_continue ---
+--- [ENGINE] Acción especial: CONTINUAR. Próximo nodo: 'ASK_PERSONAL_HISTORY_BOOL' ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_PERSONAL_HISTORY_BOOL_yes ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_PERSONAL_HISTORY_BOOL' ---
+--- 3. [ENGINE] Tipo de nodo es: 'yes_no' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'yes_no' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.yes_no.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_PERSONAL_CHECKLIST' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_PERSONAL_CHECKLIST'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_PERSONAL_CHECKLIST_inmunologicas ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_PERSONAL_CHECKLIST' ---
+--- 3. [ENGINE] Tipo de nodo es: 'checklist' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'checklist' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.checklist.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'None' (Tipo: <class 'NoneType'>) ---
+--- 8. [ENGINE] No hay próximo nodo (o es None). La conversación espera en AWAITING_GENERIC_INPUT. ---
+==================================================
+
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_PERSONAL_CHECKLIST_inmunologicas ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_PERSONAL_CHECKLIST' ---
+--- 3. [ENGINE] Tipo de nodo es: 'checklist' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'checklist' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.checklist.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'None' (Tipo: <class 'NoneType'>) ---
+--- 8. [ENGINE] No hay próximo nodo (o es None). La conversación espera en AWAITING_GENERIC_INPUT. ---
+==================================================
+
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_PERSONAL_CHECKLIST_other ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_PERSONAL_CHECKLIST' ---
+--- 3. [ENGINE] Tipo de nodo es: 'checklist' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'checklist' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.checklist.process'... ---
+--- 6. [ENGINE] El procesador devolvió: '1' (Tipo: <class 'int'>) ---
+--- 7. [ENGINE] El procesador devolvió un ESTADO: 1. Transicionando estado. ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_SUPPLEMENTS_yes ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_SUPPLEMENTS' ---
+--- 3. [ENGINE] Tipo de nodo es: 'yes_no' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'yes_no' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.yes_no.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_SUPPLEMENTS_TEXT' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_SUPPLEMENTS_TEXT'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_SUPPLEMENTS_TEXT' ---
+--- 3. [ENGINE] Tipo de nodo es: 'text_input' ---2026-08-20 13:03:56,955 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:03:57,477 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:04:00,351 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:04:00,635 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:04:10,504 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:04:20,651 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:04:30,798 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:04:40,948 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:04:51,103 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:05:01,263 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:05:02,833 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:05:03,427 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:05:03,721 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:05:12,990 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:05:23,138 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:05:33,292 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:05:43,441 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:05:53,603 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:06:03,753 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:06:13,907 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:06:24,061 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:06:34,224 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:06:35,097 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:06:35,118 - features.preconsulta.patient_flow.generic_flow_engine - INFO - Iniciando preconsulta para cita #None con doctor_id 1...
+2026-08-20 13:06:35,659 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:06:35,999 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/sendMessage "HTTP/1.1 200 OK"
+2026-08-20 13:06:45,254 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:06:55,409 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:06:57,701 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:06:58,244 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:06:58,526 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:07:07,853 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:07:15,395 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:07:15,416 - features.preconsulta.patient_flow.generic_flow_engine - INFO - Iniciando preconsulta para cita #None con doctor_id 1...
+2026-08-20 13:07:15,969 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:07:16,250 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/sendMessage "HTTP/1.1 200 OK"
+2026-08-20 13:07:18,121 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:07:18,388 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:07:18,665 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:07:28,275 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:07:34,971 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:07:35,532 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:07:35,821 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:07:45,121 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:07:55,278 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:07:57,465 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:07:58,025 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:07:58,300 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:08:07,633 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:08:17,459 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:08:18,014 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:08:18,292 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:08:27,610 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:08:30,654 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:08:31,211 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:08:31,485 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:08:40,807 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:08:45,890 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:08:46,450 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:08:46,732 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:08:53,026 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:08:53,594 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:08:53,872 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:09:03,195 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:09:13,347 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:09:21,701 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:09:22,278 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:09:31,855 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:09:42,005 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:09:52,162 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:10:02,310 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:10:12,464 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:10:22,186 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:10:22,780 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:10:23,073 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:10:26,183 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:10:26,495 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:10:36,334 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:10:46,482 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:10:56,633 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:11:06,785 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:11:16,938 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:11:27,096 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:11:37,251 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:11:43,531 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+
+--- 4. [ENGINE] Buscando un procesador para el tipo 'text_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_SURGICAL_HISTORY' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_SURGICAL_HISTORY'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_SURGICAL_HISTORY_yes ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_SURGICAL_HISTORY' ---
+--- 3. [ENGINE] Tipo de nodo es: 'yes_no' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'yes_no' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.yes_no.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_SURGICAL_HISTORY_TEXT' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_SURGICAL_HISTORY_TEXT'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_SURGICAL_HISTORY_TEXT' ---
+--- 3. [ENGINE] Tipo de nodo es: 'text_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'text_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_SURGERY_YEAR' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_SURGERY_YEAR'... ---
+
+==================== CONTEXTO CARGADO AL INICIAR PRECONSULTA ====================
+  - Cita ID: None
+  - Tipo de Consulta: Ginecología
+  - Motivo de Visita: Consulta Directa (Sin Cita)
+  - ¿Es Primer Embarazo?: None
+  - ¿Ha Estado Embarazada?: None
+======================================================================
+
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_FULL_NAME' ---
+--- 3. [ENGINE] Tipo de nodo es: 'text_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'text_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_AGE' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_AGE'... ---
+
+==================== CONTEXTO CARGADO AL INICIAR PRECONSULTA ====================
+  - Cita ID: None
+  - Tipo de Consulta: Ginecología
+  - Motivo de Visita: Consulta Directa (Sin Cita)
+  - ¿Es Primer Embarazo?: None
+  - ¿Ha Estado Embarazada?: None
+======================================================================
+
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_AGE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'numeric_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'numeric_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_CI' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_CI'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_CI' ---
+--- 3. [ENGINE] Tipo de nodo es: 'numeric_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'numeric_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_PHONE' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_PHONE'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_PHONE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'numeric_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'numeric_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_ADDRESS' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_ADDRESS'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_ADDRESS' ---
+--- 3. [ENGINE] Tipo de nodo es: 'text_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'text_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_OCCUPATION' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_OCCUPATION'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_OCCUPATION' ---
+--- 3. [ENGINE] Tipo de nodo es: 'text_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'text_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_REASON_FOR_VISIT' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_REASON_FOR_VISIT'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_REASON_FOR_VISIT' ---
+--- 3. [ENGINE] Tipo de nodo es: 'text_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'text_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'SHOW_SUMMARY' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'SHOW_SUMMARY'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: SHOW_SUMMARY_continue ---
+--- [ENGINE] Acción especial: CONTINUAR. Próximo nodo: 'ASK_PERSONAL_HISTORY_BOOL' ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_PERSONAL_HISTORY_BOOL_yes ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_PERSONAL_HISTORY_BOOL' ---
+--- 3. [ENGINE] Tipo de nodo es: 'yes_no' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'yes_no' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.yes_no.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_PERSONAL_CHECKLIST' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_PERSONAL_CHECKLIST'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_PERSONAL_CHECKLIST_done ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_PERSONAL_CHECKLIST' ---
+--- 3. [ENGINE] Tipo de nodo es: 'checklist' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'checklist' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.checklist.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_SUPPLEMENTS' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_SUPPLEMENTS'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_SUPPLEMENTS_yes ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_SUPPLEMENTS' ---
+--- 3. [ENGINE] Tipo de nodo es: 'yes_no' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'yes_no' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.yes_no.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_SUPPLEMENTS_TEXT' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_SUPPLEMENTS_TEXT'... ---
+
+==================================================2026-08-20 13:11:44,105 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:11:44,389 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:11:46,712 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:11:46,996 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:11:56,863 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:12:07,012 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:12:17,160 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:12:27,313 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:12:37,460 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:12:47,607 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:12:57,768 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:13:07,925 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:13:18,075 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:13:28,227 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:13:38,375 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:13:48,528 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:13:58,683 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:14:08,836 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:14:18,993 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:14:20,447 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:14:20,998 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:14:21,273 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:14:30,601 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:14:35,766 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:14:36,344 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:14:36,631 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:14:42,585 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:14:43,148 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:14:43,432 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:14:48,677 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:14:49,246 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:14:49,247 - features.preconsulta.flow_actions.handlers.obstetric_handlers - INFO - Decidiendo flujo obstétrico: Tipo='ginecología', is_first=None, has_been=None
+2026-08-20 13:14:49,248 - features.preconsulta.flow_actions.handlers.obstetric_handlers - INFO - Caso Link Directo: Forzando pregunta de embarazo manual.
+2026-08-20 13:14:49,526 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:14:55,903 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:14:55,905 - common.texts - WARNING - Clave de texto no encontrada: 'Abortos'
+2026-08-20 13:14:56,477 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:15:06,058 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:15:14,940 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:15:15,516 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:15:15,519 - features.preconsulta.flow_actions.handlers.obstetric_handlers - INFO - Ejecutando acción para calcular HO...
+2026-08-20 13:15:15,520 - features.preconsulta.flow_actions.services.formula_calculator - INFO - Fórmula HO calculada: G0 P0 A0 C0. Hijos vivos: 0.
+2026-08-20 13:15:15,804 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:15:19,944 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:15:20,224 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:15:30,097 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:15:32,250 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:15:32,824 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:15:37,634 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:15:37,911 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:15:47,794 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:15:48,310 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:15:48,854 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:15:49,131 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:15:58,480 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:16:06,865 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:16:07,427 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:16:07,709 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:16:13,526 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_SUPPLEMENTS_TEXT' ---
+--- 3. [ENGINE] Tipo de nodo es: 'text_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'text_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_SURGICAL_HISTORY' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_SURGICAL_HISTORY'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_SURGICAL_HISTORY_yes ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_SURGICAL_HISTORY' ---
+--- 3. [ENGINE] Tipo de nodo es: 'yes_no' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'yes_no' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.yes_no.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_SURGICAL_HISTORY_TEXT' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_SURGICAL_HISTORY_TEXT'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_SURGICAL_HISTORY_TEXT' ---
+--- 3. [ENGINE] Tipo de nodo es: 'text_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'text_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_SURGERY_YEAR' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_SURGERY_YEAR'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_SURGERY_YEAR' ---
+--- 3. [ENGINE] Tipo de nodo es: 'text_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'text_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_MENARCHE' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_MENARCHE'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_MENARCHE_select_13 ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_MENARCHE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'number_grid' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'number_grid' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.number_grid.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_SEXARCHE' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_SEXARCHE'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_SEXARCHE_select_17 ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_SEXARCHE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'sexarche_picker' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'sexarche_picker' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.sexarche_picker.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'DECIDE_OBSTETRIC_FLOW' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'DECIDE_OBSTETRIC_FLOW'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_PREGNANCY_BOOL_NEW_yes ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_PREGNANCY_BOOL_NEW' ---
+--- 3. [ENGINE] Tipo de nodo es: 'yes_no' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'yes_no' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.yes_no.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_HO_TABLE' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_HO_TABLE'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_HO_TABLE_done ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_HO_TABLE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'ho_table' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'ho_table' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.ho_table.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'PREPARE_BIRTH_DETAILS_LOOP' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'PREPARE_BIRTH_DETAILS_LOOP'... ---
+DEBUG - Historial Obstétrico Calculado: G0 P0 A0 C0. Hijos vivos: 0.
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_SEXUALLY_ACTIVE_yes ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_SEXUALLY_ACTIVE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'yes_no' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'yes_no' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.yes_no.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'CHECK_IF_PREGNANT_FOR_FERTILITY_QUESTION' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'CHECK_IF_PREGNANT_FOR_FERTILITY_QUESTION'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_FERTILITY_INTENT_1 ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_FERTILITY_INTENT' ---
+--- 3. [ENGINE] Tipo de nodo es: 'buttons' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'buttons' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.buttons.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_CYCLES_REGULAR' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_CYCLES_REGULAR'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_CYCLES_REGULAR_yes ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_CYCLES_REGULAR' ---
+--- 3. [ENGINE] Tipo de nodo es: 'yes_no' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'yes_no' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.yes_no.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_CYCLES_DURATION' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_CYCLES_DURATION'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_CYCLES_DURATION' ---
+--- 3. [ENGINE] Tipo de nodo es: 'text_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'text_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'DECIDE_IF_ASK_FREQUENCY' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'DECIDE_IF_ASK_FREQUENCY'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_CYCLES_FREQUENCY' ---
+--- 3. [ENGINE] Tipo de nodo es: 'text_input' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'text_input' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.text_input.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'COMBINE_REGULAR_CYCLE_INFO' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'COMBINE_REGULAR_CYCLE_INFO'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_DYSMENORRHEA_BOOL_yes ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_DYSMENORRHEA_BOOL' ---
+--- 3. [ENGINE] Tipo de nodo es: 'yes_no' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'yes_no' ---2026-08-20 13:16:14,108 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:16:22,000 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:16:22,591 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:16:32,164 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:16:35,737 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:16:36,284 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:16:36,557 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:16:39,095 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:16:39,371 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:16:49,255 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:16:52,751 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:16:53,353 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:16:53,681 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:16:58,075 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:16:58,350 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:16:58,373 - features.preconsulta.flow_actions.handlers.functional_handlers - INFO - Examen funcional HABILITADO para doctor 1, continuando con examen funcional
+2026-08-20 13:16:58,660 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:17:08,233 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:17:10,194 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:17:10,778 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:17:16,131 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:17:16,715 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:17:22,895 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:17:23,457 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:17:29,401 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:17:29,987 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:17:35,287 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:17:35,845 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:17:36,124 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageReplyMarkup "HTTP/1.1 200 OK"
+2026-08-20 13:17:42,280 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:17:42,854 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:17:43,150 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageReplyMarkup "HTTP/1.1 200 OK"
+2026-08-20 13:17:44,343 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:17:44,623 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:17:44,971 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageReplyMarkup "HTTP/1.1 200 OK"
+2026-08-20 13:17:46,605 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.yes_no.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'SHOW_DYSMENORRHEA_SCALE' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'SHOW_DYSMENORRHEA_SCALE'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: SHOW_DYSMENORRHEA_SCALE_4 ---
+--- 2. [ENGINE] Nodo actual es: 'SHOW_DYSMENORRHEA_SCALE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'scale' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'scale' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.scale.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'COMBINE_DYSMENORRHEA_INFO' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'COMBINE_DYSMENORRHEA_INFO'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_FUM_day_2026-08-20 ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_FUM' ---
+--- 3. [ENGINE] Tipo de nodo es: 'calendar' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'calendar' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.calendar.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_MAC' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_MAC'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_MAC_no ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_MAC' ---
+--- 3. [ENGINE] Tipo de nodo es: 'yes_no' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'yes_no' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.yes_no.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_PREVIOUS_CHECKUPS' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_PREVIOUS_CHECKUPS'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_PREVIOUS_CHECKUPS_select_2026-05 ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_PREVIOUS_CHECKUPS' ---
+--- 3. [ENGINE] Tipo de nodo es: 'month_year_picker' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'month_year_picker' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.month_year_picker.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_LAST_PAP_SMEAR' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_LAST_PAP_SMEAR'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_LAST_PAP_SMEAR_select_2026-05 ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_LAST_PAP_SMEAR' ---
+--- 3. [ENGINE] Tipo de nodo es: 'month_year_picker' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'month_year_picker' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.month_year_picker.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'CHECK_FUNCTIONAL_EXAM_ENABLED' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'CHECK_FUNCTIONAL_EXAM_ENABLED'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_DISPAREUNIA_BOOL_yes ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_DISPAREUNIA_BOOL' ---
+--- 3. [ENGINE] Tipo de nodo es: 'yes_no' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'yes_no' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.yes_no.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_PAIN_TYPE' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_PAIN_TYPE'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_PAIN_TYPE_1 ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_PAIN_TYPE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'buttons' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'buttons' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.buttons.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_DEEP_PAIN_SCALE' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_DEEP_PAIN_SCALE'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_DEEP_PAIN_SCALE_4 ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_DEEP_PAIN_SCALE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'scale' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'scale' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.scale.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'COMBINE_DISPAREUNIA_INFO' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'COMBINE_DISPAREUNIA_INFO'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_LEG_PAIN_BOOL_yes ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_LEG_PAIN_BOOL' ---
+--- 3. [ENGINE] Tipo de nodo es: 'yes_no' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'yes_no' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.yes_no.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_LEG_PAIN_TYPE' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_LEG_PAIN_TYPE'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_LEG_PAIN_TYPE_punzante ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_LEG_PAIN_TYPE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'checklist' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'checklist' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.checklist.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'None' (Tipo: <class 'NoneType'>) ---
+--- 8. [ENGINE] No hay próximo nodo (o es None). La conversación espera en AWAITING_GENERIC_INPUT. ---
+==================================================
+
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_LEG_PAIN_TYPE_punzante ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_LEG_PAIN_TYPE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'checklist' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'checklist' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.checklist.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'None' (Tipo: <class 'NoneType'>) ---
+--- 8. [ENGINE] No hay próximo nodo (o es None). La conversación espera en AWAITING_GENERIC_INPUT. ---
+==================================================
+
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_LEG_PAIN_TYPE_punzante ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_LEG_PAIN_TYPE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'checklist' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'checklist' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.checklist.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'None' (Tipo: <class 'NoneType'>) ---
+--- 8. [ENGINE] No hay próximo nodo (o es None). La conversación espera en AWAITING_GENERIC_INPUT. ---
+==================================================
+
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_LEG_PAIN_TYPE_done ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_LEG_PAIN_TYPE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'checklist' ---2026-08-20 13:17:46,938 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:17:47,233 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:17:51,700 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:17:51,981 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:17:52,261 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageReplyMarkup "HTTP/1.1 200 OK"
+2026-08-20 13:17:54,214 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:17:54,495 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:17:54,896 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageReplyMarkup "HTTP/1.1 200 OK"
+2026-08-20 13:17:58,863 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:17:59,155 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:17:59,465 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageReplyMarkup "HTTP/1.1 200 OK"
+2026-08-20 13:18:03,042 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:18:03,321 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:18:03,619 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:18:11,687 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:18:12,315 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:18:18,962 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:18:19,543 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:18:19,823 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageReplyMarkup "HTTP/1.1 200 OK"
+2026-08-20 13:18:29,133 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:18:39,285 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:18:49,432 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:18:58,908 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:18:59,498 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:18:59,781 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageReplyMarkup "HTTP/1.1 200 OK"
+2026-08-20 13:19:00,611 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:19:00,890 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:19:01,182 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageReplyMarkup "HTTP/1.1 200 OK"
+2026-08-20 13:19:07,306 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:19:07,879 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:19:08,158 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:19:15,568 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:19:16,157 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:19:19,357 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:19:19,629 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:19:19,944 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageReplyMarkup "HTTP/1.1 200 OK"
+2026-08-20 13:19:21,479 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+
+--- 4. [ENGINE] Buscando un procesador para el tipo 'checklist' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.checklist.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_LEG_PAIN_ZONE' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_LEG_PAIN_ZONE'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_LEG_PAIN_ZONE_posterior ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_LEG_PAIN_ZONE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'checklist' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'checklist' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.checklist.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'None' (Tipo: <class 'NoneType'>) ---
+--- 8. [ENGINE] No hay próximo nodo (o es None). La conversación espera en AWAITING_GENERIC_INPUT. ---
+==================================================
+
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_LEG_PAIN_ZONE_gluteos ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_LEG_PAIN_ZONE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'checklist' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'checklist' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.checklist.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'None' (Tipo: <class 'NoneType'>) ---
+--- 8. [ENGINE] No hay próximo nodo (o es None). La conversación espera en AWAITING_GENERIC_INPUT. ---
+==================================================
+
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_LEG_PAIN_ZONE_posterior ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_LEG_PAIN_ZONE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'checklist' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'checklist' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.checklist.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'None' (Tipo: <class 'NoneType'>) ---
+--- 8. [ENGINE] No hay próximo nodo (o es None). La conversación espera en AWAITING_GENERIC_INPUT. ---
+==================================================
+
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_LEG_PAIN_ZONE_done ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_LEG_PAIN_ZONE' ---
+--- 3. [ENGINE] Tipo de nodo es: 'checklist' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'checklist' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.checklist.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'COMBINE_LEG_PAIN_INFO' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'COMBINE_LEG_PAIN_INFO'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_GASTRO_BEFORE_BOOL_yes ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_GASTRO_BEFORE_BOOL' ---
+--- 3. [ENGINE] Tipo de nodo es: 'yes_no' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'yes_no' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.yes_no.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_GASTRO_BEFORE_CHECKLIST' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_GASTRO_BEFORE_CHECKLIST'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_GASTRO_BEFORE_CHECKLIST_flatulencias ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_GASTRO_BEFORE_CHECKLIST' ---
+--- 3. [ENGINE] Tipo de nodo es: 'checklist' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'checklist' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.checklist.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'None' (Tipo: <class 'NoneType'>) ---
+--- 8. [ENGINE] No hay próximo nodo (o es None). La conversación espera en AWAITING_GENERIC_INPUT. ---
+==================================================
+
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_GASTRO_BEFORE_CHECKLIST_distension ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_GASTRO_BEFORE_CHECKLIST' ---
+--- 3. [ENGINE] Tipo de nodo es: 'checklist' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'checklist' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.checklist.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'None' (Tipo: <class 'NoneType'>) ---
+--- 8. [ENGINE] No hay próximo nodo (o es None). La conversación espera en AWAITING_GENERIC_INPUT. ---
+==================================================
+
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_GASTRO_BEFORE_CHECKLIST_inflamacion ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_GASTRO_BEFORE_CHECKLIST' ---
+--- 3. [ENGINE] Tipo de nodo es: 'checklist' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'checklist' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.checklist.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'None' (Tipo: <class 'NoneType'>) ---
+--- 8. [ENGINE] No hay próximo nodo (o es None). La conversación espera en AWAITING_GENERIC_INPUT. ---
+==================================================
+
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_GASTRO_BEFORE_CHECKLIST_done ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_GASTRO_BEFORE_CHECKLIST' ---
+--- 3. [ENGINE] Tipo de nodo es: 'checklist' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'checklist' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.checklist.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_GASTRO_DURING_BOOL' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_GASTRO_DURING_BOOL'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_GASTRO_DURING_BOOL_yes ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_GASTRO_DURING_BOOL' ---
+--- 3. [ENGINE] Tipo de nodo es: 'yes_no' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'yes_no' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.yes_no.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'ASK_GASTRO_DURING_CHECKLIST' (Tipo: <class 'str'>) ---
+--- 7. [ENGINE] Hay un próximo nodo. Transicionando a 'ASK_GASTRO_DURING_CHECKLIST'... ---
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_GASTRO_DURING_CHECKLIST_inflamacion ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_GASTRO_DURING_CHECKLIST' ---
+--- 3. [ENGINE] Tipo de nodo es: 'checklist' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'checklist' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.checklist.process'... ---
+--- 6. [ENGINE] El procesador devolvió: 'None' (Tipo: <class 'NoneType'>) ---
+--- 8. [ENGINE] No hay próximo nodo (o es None). La conversación espera en AWAITING_GENERIC_INPUT. ---
+==================================================
+
+
+==================================================
+--- 1. [ENGINE] Iniciando process_input ---
+--- Callback Data Recibido: ASK_GASTRO_DURING_CHECKLIST_flatulencias ---
+--- 2. [ENGINE] Nodo actual es: 'ASK_GASTRO_DURING_CHECKLIST' ---
+--- 3. [ENGINE] Tipo de nodo es: 'checklist' ---
+--- 4. [ENGINE] Buscando un procesador para el tipo 'checklist' ---
+--- 5. [ENGINE] Procesador encontrado. Llamando a 'features.preconsulta.patient_flow.flow_actions.checklist.process'... ---2026-08-20 13:19:21,807 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:19:22,089 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageReplyMarkup "HTTP/1.1 200 OK"
+2026-08-20 13:19:23,631 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:19:23,905 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/answerCallbackQuery "HTTP/1.1 200 OK"
+2026-08-20 13:19:24,186 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:19:28,842 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:19:29,135 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:19:38,991 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:19:39,869 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:19:40,441 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:19:45,181 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:19:45,460 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:19:48,501 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:19:48,791 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:19:51,950 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:19:52,229 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:19:54,044 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:19:54,322 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:19:56,713 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:19:56,715 - features.preconsulta.flow_actions.router - INFO - 
+!!!!!!!!!!!!!!!!!!!! PRUEBA PRECISA !!!!!!!!!!!!!!!!!!!!
+Momento: Justo ANTES de llamar a generate_summaries.
+Contenido de 'gyn_ho': G0 P0 A0 C0. Hijos vivos: 0.
+Contenido de 'prenatal_details': None
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+2026-08-20 13:19:56,715 - features.preconsulta.patient_flow.flow_actions.summaries - INFO - Generando resúmenes de texto finales...
+
+[DEBUG LOUD] finish_preconsultation START for user 1702097115
+2026-08-20 13:19:56,716 - features.preconsulta.flow_actions.handlers.lifecycle_handlers - CRITICAL - CRITICAL DEBUG: finish_preconsultation START for user 1702097115
+2026-08-20 13:19:56,716 - features.preconsulta.flow_actions.services.history_saver - INFO - Historia construida para usuario 1702097115 con doctor 1
+[DEBUG LOUD] history_data built for CI 19528203
+2026-08-20 13:19:56,744 - database.repositories.medical_repository - INFO - Nueva historia médica guardada con ID: 56 para el usuario 1702097115
+[DEBUG LOUD] history_id received: 56
+2026-08-20 13:19:56,749 - features.preconsulta.flow_actions.handlers.lifecycle_handlers - CRITICAL - CRITICAL DEBUG: history_id=56
+[DEBUG LOUD] INVOKING sync_to_webapp...
+2026-08-20 13:19:56,749 - features.preconsulta.flow_actions.handlers.lifecycle_handlers - CRITICAL - CRITICAL DEBUG: INVOKING sync_to_webapp...
+2026-08-20 13:19:56,864 - httpx - INFO - HTTP Request: POST https://api.gynsys.net/api/v1/consultations/sync-bot "HTTP/1.1 200 OK"
+2026-08-20 13:19:56,868 - utils.sync_service - INFO - Successfully synced history for CI 19528203 to Web App
+[DEBUG LOUD] sync_to_webapp RESULT: True
+2026-08-20 13:19:56,868 - features.preconsulta.flow_actions.handlers.lifecycle_handlers - CRITICAL - CRITICAL DEBUG: sync_to_webapp RESULT: True
+2026-08-20 13:19:57,135 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:19:57,416 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/sendMessage "HTTP/1.1 200 OK"
+2026-08-20 13:19:57,708 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/sendMessage "HTTP/1.1 200 OK"
+2026-08-20 13:20:01,980 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:20:02,005 - common.texts - INFO - get_mensaje_bienvenida: bot_id=4, usando contenido personalizado: '👋 Bienvenida a mi Bot 🤖. Estoy aquí para ayudarte ...'
+2026-08-20 13:20:02,005 - common.texts - INFO - get_mensaje_bienvenida: mensaje_completo_length=306
+2026-08-20 13:20:02,007 - common.texts - INFO - get_mensaje_bienvenida: mensaje_completo (primeros 100 chars): 👋 Bienvenida a mi Bot 🤖. Estoy aquí para ayudarte con tus necesidades de salud ginecológica. Puedes ...
+2026-08-20 13:20:02,344 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/sendMessage "HTTP/1.1 200 OK"
+[DEBUG LOUD] finish_preconsultation END
+2026-08-20 13:20:06,874 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:20:17,020 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:20:27,166 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:20:37,311 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:20:47,457 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:20:57,603 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:21:07,748 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:21:17,894 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:21:28,039 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:21:38,184 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:21:48,329 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:21:58,474 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:22:03,815 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:22:04,377 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/deleteMessage "HTTP/1.1 200 OK"
+2026-08-20 13:22:04,662 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/editMessageText "HTTP/1.1 200 OK"
+2026-08-20 13:22:13,965 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:22:24,110 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
+2026-08-20 13:22:34,257 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8195044674:AAHJSoyBdz9rI9YYuulS0yNGsgFAPXaCWq4/getUpdates "HTTP/1.1 200 OK"
