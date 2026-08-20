@@ -193,52 +193,26 @@ def _find_similar_items(
     covenin_prefix: Optional[str],
 ) -> Tuple[List[CostItem], float]:
     """
-    Busca partidas filtrando ESTRICTAMENTE por el prefijo COVENIN seleccionado,
-    y luego utiliza el motor RAG V6 (MiniLM) para calcular la similitud semántica.
-    Devuelve las partidas encontradas y el score más alto.
+    Busca partidas usando la lógica de expansión dinámica (cascada) y devuelve
+    las partidas junto con el mejor score semántico.
     """
-    if not covenin_prefix:
-        return [], 0.0
-
-    try:
-        # Excluir partidas con CovPar = 'S/C' (Sin Clasificar): no aportan contexto COVENIN
-        base_items = db.query(CostItem).filter(
-            or_(
-                CostItem.CovPar.startswith(covenin_prefix),
-                CostItem.CodPar.startswith(covenin_prefix)
-            )
-        ).filter(
-            ~CostItem.CovPar.like('% S/C%')  # Excluir "E131 S/C", "E13 S/C", etc.
-        ).all()
-    except Exception as exc:
-        logger.error("Error al consultar partidas por prefijo COVENIN: %s", exc)
-        return [], 0.0
-
-    if not base_items:
-        return [], 0.0
-
-    from app.services.ai_search import ai_engine
-    if not ai_engine.is_loaded:
-        ai_engine.load_brain()
-
-    best_score = 0.0
-    similar_items = []
-
-    if ai_engine.is_loaded and description.strip():
-        valid_ids = [item.CodPar for item in base_items]
-        results = ai_engine.calculate_similarity_for_subset(description, valid_ids)
-        
-        if results:
-            best_score = results[0]["score"]
-            top_ids = [res["id"] for res in results[:3]]
+    from app.services.smart_selector_service import _get_dynamic_candidates
+    
+    similar_items, best_score = _get_dynamic_candidates(db, description, covenin_prefix or "", limit=15)
+    
+    if not similar_items and covenin_prefix:
+        # Fallback si no hay nada
+        try:
+            base_items = db.query(CostItem).filter(
+                or_(
+                    CostItem.CovPar.startswith(covenin_prefix),
+                    CostItem.CodPar.startswith(covenin_prefix)
+                )
+            ).filter(~CostItem.CovPar.like('% S/C%')).limit(3).all()
+            return base_items, 0.0
+        except:
+            return [], 0.0
             
-            # Mapear IDs a objetos de SQLAlchemy
-            item_map = {item.CodPar: item for item in base_items}
-            similar_items = [item_map[pid] for pid in top_ids if pid in item_map]
-    else:
-        # Fallback: Solo devolver hasta 3 de las base si falla la IA
-        similar_items = base_items[:3]
-
     return similar_items, best_score
 
 
@@ -741,15 +715,23 @@ def fast_preprocess_debug(
         }
 
     try:
-        # Excluir partidas Sin Clasificar (S/C)
-        all_items = db.query(CostItem).filter(
-            or_(
-                CostItem.CovPar.startswith(covenin_prefix),
-                CostItem.CodPar.startswith(covenin_prefix)
-            )
-        ).filter(
-            ~CostItem.CovPar.like('% S/C%')
-        ).order_by(CostItem.CovPar).all()
+        from app.services.smart_selector_service import _get_dynamic_candidates
+        
+        if description:
+            all_items, _ = _get_dynamic_candidates(db, description, covenin_prefix, limit=15)
+        else:
+            all_items = []
+            
+        if not all_items:
+            # Excluir partidas Sin Clasificar (S/C)
+            all_items = db.query(CostItem).filter(
+                or_(
+                    CostItem.CovPar.startswith(covenin_prefix),
+                    CostItem.CodPar.startswith(covenin_prefix)
+                )
+            ).filter(
+                ~CostItem.CovPar.like('% S/C%')
+            ).order_by(CostItem.CovPar).all()
 
         # Conteo de total incluyendo S/C para informar al usuario
         total_con_sc = db.query(CostItem).filter(
@@ -783,8 +765,7 @@ def fast_preprocess_debug(
             for p in all_items
         ],
         "nota": (
-            f"DEBUG sin IA. Se listan {len(all_items)} partidas clasificadas "
-            f"(se excluyeron {total_con_sc - len(all_items)} partidas S/C sin clasificar). "
-            "Busca en las descripciones si tu tipo de partida está disponible."
+            f"DEBUG con RAG V6. Se listan {len(all_items)} partidas candidatas usando la nueva expansión dinámica (cascada). "
+            f"(Se buscó prioritariamente en la categoría seleccionada, luego en el tipo de obra, y por último globalmente)."
         ),
     }

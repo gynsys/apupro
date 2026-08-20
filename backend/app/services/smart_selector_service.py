@@ -233,21 +233,22 @@ def _score_candidates(
     return scored
 
 
-def _get_dynamic_candidates(db: Session, description: str, covenin_prefix: str, limit: int = 15) -> List[CostItem]:
+def _get_dynamic_candidates(db: Session, description: str, covenin_prefix: str, limit: int = 15) -> Tuple[List[CostItem], float]:
     if not description:
-        return []
+        return [], 0.0
     try:
         from app.services.ai_search import ai_engine
         if not getattr(ai_engine, "is_loaded", False):
-            return []
+            return [], 0.0
             
         query_emb = ai_engine.model.encode([description])[0]
         semantic_scores = ai_engine.calculate_cosine_similarity(query_emb)
         if len(semantic_scores) == 0:
-            return []
+            return [], 0.0
             
         MIN_SCORE = 0.35
         top_indices = semantic_scores.argsort()[::-1]
+        best_score = float(semantic_scores[top_indices[0]]) if len(top_indices) > 0 else 0.0
         
         strict_candidates = []
         family_candidates = []
@@ -290,14 +291,15 @@ def _get_dynamic_candidates(db: Session, description: str, covenin_prefix: str, 
             final_ids.append(id)
             
         if not final_ids:
-            return []
+            return [], best_score
             
         items = db.query(CostItem).filter(CostItem.CodPar.in_(final_ids)).filter(~CostItem.CovPar.like("% S/C%")).all()
         item_map = {i.CodPar: i for i in items}
-        return [item_map[i] for i in final_ids if i in item_map]
+        sorted_items = [item_map[i] for i in final_ids if i in item_map]
+        return sorted_items, best_score
     except Exception as e:
         logger.error(f"Error in dynamic candidates: {e}")
-        return []
+        return [], 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -335,7 +337,7 @@ def get_smart_selector_data(
     try:
         all_items: List[CostItem] = []
         if description:
-            all_items = _get_dynamic_candidates(db, description, covenin_prefix, limit=15)
+            all_items, _ = _get_dynamic_candidates(db, description, covenin_prefix, limit=15)
             
         if not all_items:
             prefixes = _get_prefix_variations(covenin_prefix)
