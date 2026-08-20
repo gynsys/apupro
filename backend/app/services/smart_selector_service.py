@@ -150,19 +150,30 @@ def _find_discriminating_pairs(
     return pairs
 
 
+def _get_stem(word: str) -> str:
+    """Retorna una raíz simplificada para evitar duplicados como tractor/tractores."""
+    if len(word) > 5 and word.endswith("es"):
+        return word[:-2]
+    if len(word) > 4 and word.endswith("s"):
+        return word[:-1]
+    return word
+
 def _pairs_to_questions(
     pairs: List[Tuple[str, str, float]],
     max_questions: int = 4,
 ) -> List[Dict[str, Any]]:
     """
     Convierte pares discriminantes en preguntas con opciones.
-    Evita reutilizar palabras ya usadas en preguntas anteriores.
+    Evita reutilizar raíces (stems) ya usadas en preguntas anteriores.
     """
     questions: List[Dict[str, Any]] = []
-    used_words: Set[str] = set()
+    used_stems: Set[str] = set()
 
     for word_a, word_b, score in pairs:
-        if word_a in used_words or word_b in used_words:
+        stem_a = _get_stem(word_a)
+        stem_b = _get_stem(word_b)
+        
+        if stem_a in used_stems or stem_b in used_stems:
             continue
         if len(questions) >= max_questions:
             break
@@ -176,8 +187,8 @@ def _pairs_to_questions(
             ],
             "score": round(score, 3),
         })
-        used_words.add(word_a)
-        used_words.add(word_b)
+        used_stems.add(stem_a)
+        used_stems.add(stem_b)
 
     return questions
 
@@ -222,6 +233,73 @@ def _score_candidates(
     return scored
 
 
+def _get_dynamic_candidates(db: Session, description: str, covenin_prefix: str, limit: int = 15) -> List[CostItem]:
+    if not description:
+        return []
+    try:
+        from app.services.ai_search import ai_engine
+        if not getattr(ai_engine, "is_loaded", False):
+            return []
+            
+        query_emb = ai_engine.model.encode([description])[0]
+        semantic_scores = ai_engine.calculate_cosine_similarity(query_emb)
+        if len(semantic_scores) == 0:
+            return []
+            
+        MIN_SCORE = 0.35
+        top_indices = semantic_scores.argsort()[::-1]
+        
+        strict_candidates = []
+        family_candidates = []
+        global_candidates = []
+        
+        tipo_obra = covenin_prefix[0] if covenin_prefix else ""
+        prefixes = _get_prefix_variations(covenin_prefix)
+        
+        for idx in top_indices:
+            if idx >= len(ai_engine.ids_mapping):
+                continue
+            sem_score = float(semantic_scores[idx])
+            if sem_score < MIN_SCORE:
+                break
+                
+            item_id = ai_engine.ids_mapping[idx]
+            
+            is_strict = any(item_id.startswith(p) for p in prefixes)
+            is_family = item_id.startswith(tipo_obra)
+            
+            if is_strict:
+                strict_candidates.append(item_id)
+            elif is_family:
+                family_candidates.append(item_id)
+            else:
+                global_candidates.append(item_id)
+                
+            if len(strict_candidates) >= limit:
+                break
+                
+        final_ids = []
+        for id in strict_candidates:
+            if len(final_ids) >= limit: break
+            final_ids.append(id)
+        for id in family_candidates:
+            if len(final_ids) >= limit: break
+            final_ids.append(id)
+        for id in global_candidates:
+            if len(final_ids) >= limit: break
+            final_ids.append(id)
+            
+        if not final_ids:
+            return []
+            
+        items = db.query(CostItem).filter(CostItem.CodPar.in_(final_ids)).filter(~CostItem.CovPar.like("% S/C%")).all()
+        item_map = {i.CodPar: i for i in items}
+        return [item_map[i] for i in final_ids if i in item_map]
+    except Exception as e:
+        logger.error(f"Error in dynamic candidates: {e}")
+        return []
+
+
 # ---------------------------------------------------------------------------
 # Función pública principal
 # ---------------------------------------------------------------------------
@@ -240,8 +318,9 @@ def get_smart_selector_data(
     3. Genera nuevas preguntas discriminantes sobre los candidatos actuales.
     4. Devuelve: questions, candidates, best_match, confidence.
 
-    No llama a ningún LLM.
+    No llama a ningún LLM generativo (solo embeddings locales).
     """
+
     if not covenin_prefix:
         return {
             "error": "Se requiere un prefijo COVENIN",
@@ -254,20 +333,25 @@ def get_smart_selector_data(
 
     # --- Cargar partidas ---
     try:
-        prefixes = _get_prefix_variations(covenin_prefix)
-        prefix_conditions = []
-        for p in prefixes:
-            prefix_conditions.append(CostItem.CovPar.startswith(p))
-            prefix_conditions.append(CostItem.CodPar.startswith(p))
+        all_items: List[CostItem] = []
+        if description:
+            all_items = _get_dynamic_candidates(db, description, covenin_prefix, limit=15)
+            
+        if not all_items:
+            prefixes = _get_prefix_variations(covenin_prefix)
+            prefix_conditions = []
+            for p in prefixes:
+                prefix_conditions.append(CostItem.CovPar.startswith(p))
+                prefix_conditions.append(CostItem.CodPar.startswith(p))
 
-        all_items: List[CostItem] = (
-            db.query(CostItem)
-            .filter(
-                or_(*prefix_conditions)
+            all_items = (
+                db.query(CostItem)
+                .filter(
+                    or_(*prefix_conditions)
+                )
+                .filter(~CostItem.CovPar.like("% S/C%"))
+                .all()
             )
-            .filter(~CostItem.CovPar.like("% S/C%"))
-            .all()
-        )
     except Exception as exc:
         logger.error("Error en get_smart_selector_data (query): %s", exc, exc_info=True)
         return {
