@@ -854,7 +854,7 @@ export default function BudgetWorksheetPage() {
       {/* SEARCH MODAL */}
       {showSearchModal && createPortal(
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-20">
-          <div className="w-full max-w-4xl bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-full max-w-4xl bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col h-[80vh] animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center px-6 py-4 bg-white/40 border-b border-amber-600/15">
               <div className="flex items-center gap-4">
                 <h2 className="m-0 text-xl font-bold text-amber-900 flex items-center gap-2">
