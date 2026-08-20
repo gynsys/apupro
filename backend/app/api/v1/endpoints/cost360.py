@@ -298,14 +298,21 @@ def delete_labor_route(codigo: str, db: Session = Depends(get_db)):
 
 @router.post("/generate-ai-apu")
 def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(get_db)):
-    # 0. Si es solo preproceso DEBUG, devolver resultado rapido SIN cargar IA
+    # 0. Si es solo preproceso DEBUG, devolver resultado rapido
     if payload.only_preprocess:
+        from app.services.ai_search import ai_engine
         debug_data = fast_preprocess_debug(
             db, payload.description, payload.covenin_prefix, payload.covenin_context
         )
+        # Inyectar estado real del motor IA para diagnóstico
+        debug_data["motor_ia_estado"] = {
+            "is_loaded": ai_engine.is_loaded,
+            "total_ids_mapeados": len(ai_engine.ids_mapping),
+            "embeddings_forma": str(ai_engine.embeddings.shape) if ai_engine.embeddings is not None else "No cargado",
+        }
         return {
             "status": "clarification_needed",
-            "clarification_message": f"MODO PREPROCESO (sin IA): {debug_data.get('total_partidas_en_categoria', 0)} partidas encontradas en la categoría COVENIN",
+            "clarification_message": f"MODO DEBUG: {len(debug_data.get('todas_las_partidas_covenin', []))} candidatas encontradas tras expansión dinámica",
             "options": [],
             "questions": [],
             "debug_preprocesamiento": debug_data
