@@ -239,7 +239,11 @@ def _get_dynamic_candidates(db: Session, description: str, covenin_prefix: str, 
     try:
         from app.services.ai_search import ai_engine
         if not getattr(ai_engine, "is_loaded", False):
-            return [], 0.0
+            try:
+                ai_engine.load_brain()
+            except Exception as e:
+                logger.error(f"Error loading AI brain: {e}")
+                return [], 0.0
             
         query_emb = ai_engine.model.encode([description])[0]
         semantic_scores = ai_engine.calculate_cosine_similarity(query_emb)
