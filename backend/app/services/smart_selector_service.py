@@ -246,7 +246,7 @@ def _get_dynamic_candidates(db: Session, description: str, covenin_prefix: str, 
         if len(semantic_scores) == 0:
             return [], 0.0
             
-        MIN_SCORE = 0.35
+        MIN_SCORE = 0.15
         top_indices = semantic_scores.argsort()[::-1]
         best_score = float(semantic_scores[top_indices[0]]) if len(top_indices) > 0 else 0.0
         
