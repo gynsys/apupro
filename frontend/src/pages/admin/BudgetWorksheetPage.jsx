@@ -883,6 +883,8 @@ export default function BudgetWorksheetPage() {
                               key={db.id}
                               onClick={() => {
                                 setActiveDatabase(db);
+                                setSearchQuery('');
+                                setSearchCovenin('');
                                 setModalDbDropdownOpen(false);
                               }}
                               className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors flex items-center gap-2 ${
@@ -920,6 +922,7 @@ export default function BudgetWorksheetPage() {
                               onClick={() => {
                                 setActiveDatabase({ id: 'budget_' + b.id, name: b.name, is_budget: true });
                                 setSearchQuery('');
+                                setSearchCovenin('');
                                 setModalBudgetDropdownOpen(false);
                               }}
                               className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
@@ -940,7 +943,11 @@ export default function BudgetWorksheetPage() {
                 </div>
               </div>
               <button 
-                onClick={() => setShowSearchModal(false)}
+                onClick={() => {
+                  setSearchQuery('');
+                  setSearchCovenin('');
+                  setShowSearchModal(false);
+                }}
                 className="text-amber-700 hover:text-amber-900 bg-transparent transition-colors p-1"
               >
                 <X size={24} />
@@ -950,6 +957,7 @@ export default function BudgetWorksheetPage() {
             {!activeDatabase.is_budget && (
               <div className="px-6 py-4 border-b border-amber-600/15 bg-white/40">
                 <Cost360SearchBar
+                  key={activeDatabase.id}
                   searchQuery={searchQuery}
                   setSearchQuery={setSearchQuery}
                   searchCovenin={searchCovenin}
