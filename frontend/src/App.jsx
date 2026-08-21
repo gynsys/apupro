@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage.jsx';
 import Login from './pages/Login.jsx';
+import Register from './pages/Register.jsx';
 import ForgotPassword from './pages/ForgotPassword.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
@@ -78,6 +79,7 @@ function App() {
           <BrowserRouter basename={window.location.pathname.startsWith('/app') ? '/app' : ''}>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/" element={<LandingPage />} />

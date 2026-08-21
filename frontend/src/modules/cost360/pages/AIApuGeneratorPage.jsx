@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Loader, Loader2, Package, Wrench, Users, Calculator, Save, Sparkles, Check, Filter, Plus, Search, FileText, Trash2, AlertTriangle, Database, Layers, Printer, Bot } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { AuthContext } from '../../../context/AuthContext';
 import { generateAIApu, saveCustomApu, fetchCategoriesTree, fetchItems, fetchApuDetails, smartSelect, generateAIApuFromBase } from '../services/cost360Service';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
 import Cost360SearchBar from '../components/Cost360SearchBar';
@@ -168,9 +169,9 @@ export default function AIApuGeneratorPage() {
   const [guidedStep, setGuidedStep] = useState(0);
   const [chatbotLoadingStage, setChatbotLoadingStage] = useState(0);
   
-  // TODO: Obtener del contexto de autenticación cuando se implemente el registro
-  const userName = "Usuario";
-
+  // Obtenemos el usuario del contexto de autenticación
+  const { user } = React.useContext(AuthContext);
+  const userName = user?.username || (user?.email ? user.email.split('@')[0] : "Usuario");
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [printOptions, setPrintOptions] = useState(null);
 
