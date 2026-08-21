@@ -180,7 +180,7 @@ export default function AIApuGeneratorPage() {
     const userName = user?.full_name || user?.email?.split('@')[0] || '';
     const greetingName = userName ? ` ${userName}` : '';
     setGuidedMessages([
-      { id: 'msg-bot0', sender: 'bot', text: `¡Hola${greetingName}! Construir una descripción detallada de una partida es lo esencial para evitar ambigüedades al momento de la ejecución en campo, y es la clave para que la Inteligencia Artificial encuentre exactamente lo que necesitas.\n\nEn 4 pasos rápidos armaremos la frase ideal basándonos en la información suministrada. ¿Comenzamos?`, chips: ["Sí, comenzar"] }
+      { id: 'msg-bot0', sender: 'bot', text: `¡Hola${greetingName}! Construir una descripción detallada de una partida es lo esencial para evitar ambigüedades al momento de la ejecución en campo, y es la clave para que la Inteligencia Artificial encuentre exactamente lo que necesitas.\n\nEn 4 pasos rápidos armaremos la mejor descripcion basándonos en la información suministrada. ¿Comenzamos?`, chips: ["Sí, comenzar"] }
     ]);
   }, [user]);
 
@@ -494,7 +494,6 @@ export default function AIApuGeneratorPage() {
     } else {
       setDebugInfo(null);
     }
-    setGuidedStep(5); // Show results
     if (response.status === 'clarification_needed') {
       const newHistory = isClarifying ? [...chatHistory, { role: 'user', content: textToSubmit }] : [{ role: 'user', content: textToSubmit }];
       setChatHistory(newHistory);
@@ -782,7 +781,7 @@ export default function AIApuGeneratorPage() {
             {!isSmartMode && !isClarifying && (
               <div className="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
                 <button
-                  onClick={() => { setIsGuidedMode(true); setGuidedStep(0); setPrompt(''); }}
+                  onClick={() => { setIsGuidedMode(true); setCurrentChatStep(0); setPrompt(''); }}
                   className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${isGuidedMode ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                   Asistente IA
@@ -974,8 +973,8 @@ export default function AIApuGeneratorPage() {
                           <Bot size={18} />
                         </div>
                       )}
-                      <div className={`${msg.sender === 'bot' ? 'bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none' : 'bg-blue-600 text-white rounded-2xl rounded-br-none'} p-4 shadow-sm max-w-[85%]`}>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                      <div className={`${msg.sender === 'bot' ? 'bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4' : 'bg-blue-600 text-white rounded-2xl rounded-br-none px-4 py-2.5 w-fit'} shadow-sm max-w-[85%]`}>
+                        <p className={`text-sm leading-relaxed ${msg.sender === 'user' ? 'break-words' : 'whitespace-pre-wrap'}`}>{msg.text}</p>
                       </div>
                     </div>
                     {msg.sender === 'bot' && msg.chips && currentChatStep === (msg.id.includes('bot') ? parseInt(msg.id.replace(/\D/g, '')) || 0 : 0) && (
