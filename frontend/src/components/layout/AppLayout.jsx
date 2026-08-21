@@ -7,19 +7,13 @@ import {
 import { AuthContext } from '../../context/AuthContext';
 
 const NAV_ITEMS = [
-  { name: 'Presupuestos', href: '/budgets',              Icon: FileText },
-  { name: 'Visor Bases de Datos', href: '/cost360',              Icon: Database, exact: true  },
-  { name: 'Gestion Bases de Datos', href: '/cost360/databases',    Icon: Server   },
-  { 
-    name: 'Crear APU', 
-    href: '/cost360/ai-generator', 
-    Icon: Cpu,
-    subItems: [
-      { name: 'Nuevo (Desde Cero)', href: '/cost360/ai-generator?mode=manual' },
-      { name: 'Importar / Clonar', href: '/cost360/ai-generator?mode=import' },
-      { name: 'Crear con IA', href: '/cost360/ai-generator?mode=ia' }
-    ]
-  },
+  { name: 'Dashboard', href: '/budgets',              Icon: Home },
+  { name: 'Presupuestos', href: '/budgets',           Icon: FileText },
+  { name: 'Visor Bases de Datos', href: '/cost360',   Icon: Database, exact: true  },
+  { name: 'Gestion Bases de Datos', href: '/cost360/databases', Icon: Server   },
+  { name: 'Nuevo (Desde Cero)', href: '/cost360/ai-generator?mode=manual', Icon: FileText },
+  { name: 'Importar / Clonar', href: '/cost360/ai-generator?mode=import', Icon: Copy },
+  { name: 'Crear con IA', href: '/cost360/ai-generator?mode=ia', Icon: Cpu }
 ];
 
 export default function AppLayout() {
@@ -44,60 +38,39 @@ export default function AppLayout() {
 
   /* ── Sidebar nav list ───────────────────────────────────────── */
   const SidebarContent = () => (
-    <nav className="flex flex-col h-full py-5">
+    <nav className="flex flex-col h-full py-5 items-center w-full">
       {/* Mobile logo */}
-      <div className="flex items-center gap-2.5 px-5 mb-6 lg:hidden">
+      <div className="flex items-center gap-2.5 px-5 mb-6 lg:hidden w-full justify-center">
         <div className="bg-blue-600 text-white p-1.5 rounded-xl shadow">
           <Layout size={18} />
         </div>
-        <span className="text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-600">
-          CostBase
-        </span>
       </div>
 
-      <div className="space-y-0.5 px-3 flex-1 pb-4 overflow-y-auto">
-        {getNavItems().map(({ name, href, Icon, exact, subItems }) => {
+      <div className="space-y-3 px-2 flex-1 pb-4 overflow-y-auto w-full flex flex-col items-center">
+        {getNavItems().map(({ name, href, Icon, exact }) => {
           const active = exact ? location.pathname === href : location.pathname.startsWith(href);
           return (
-            <div key={href} className="group relative">
+            <div key={href} className="group relative w-full flex justify-center">
               <Link
                 to={href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 btn-borde-azul-redondeado ${
+                className={`flex items-center justify-center p-3 rounded-xl transition-all duration-200 ${
                   active
                     ? 'bg-blue-600/10 text-blue-700 shadow-sm border border-blue-200/60'
-                    : 'text-slate-500 hover:bg-slate-50'
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
                 }`}
               >
                 <Icon
-                  size={17}
+                  size={24}
                   className={active ? 'text-blue-600' : 'text-slate-400'}
                 />
-                <span className="flex-1 text-left">{name}</span>
-                {subItems && (
-                  <ChevronRight size={14} className={`transition-transform duration-200 ${active ? 'text-blue-600' : 'text-slate-400'} group-hover:rotate-90`} />
-                )}
               </Link>
               
-              {subItems && (
-                <div className="overflow-hidden transition-all duration-300 max-h-0 group-hover:max-h-40 ml-4 mt-1 border-l-2 border-slate-100 flex flex-col gap-1 pl-2">
-                  {subItems.map(sub => {
-                    const isSubActive = location.search === sub.href.split('?')[1] || (!location.search && sub.href.includes('mode=ia') && location.pathname === href);
-                    return (
-                      <Link
-                        key={sub.name}
-                        to={sub.href}
-                        onClick={() => setSidebarOpen(false)}
-                        className={`text-xs py-1.5 px-2 rounded-lg transition-colors font-semibold btn-borde-azul-redondeado block ${
-                          isSubActive ? 'text-blue-600 bg-blue-50/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-                        }`}
-                      >
-                        {sub.name}
-                      </Link>
-                    )
-                  })}
-                </div>
-              )}
+              {/* Tooltip */}
+              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-slate-800 text-white text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                {name}
+                <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-slate-800"></div>
+              </div>
             </div>
           );
         })}
@@ -189,7 +162,7 @@ export default function AppLayout() {
 
         {/* ── ZONE 1: SIDEBAR — glass panel (lg+) ────────────── */}
         <aside
-          className="print:hidden hidden lg:flex lg:flex-col w-60 shrink-0 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto"
+          className="print:hidden hidden lg:flex lg:flex-col w-[80px] shrink-0 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto"
           style={{
             background: 'rgba(255,255,255,0.65)',
             backdropFilter: 'blur(20px)',

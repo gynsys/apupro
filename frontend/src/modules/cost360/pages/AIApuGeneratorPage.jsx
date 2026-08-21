@@ -952,7 +952,7 @@ export default function AIApuGeneratorPage() {
           )}
           
           {isGuidedMode && !isSmartMode && !isClarifying ? (
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 mb-4 relative flex flex-col" style={{ minHeight: '400px', maxHeight: '600px' }}>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 md:p-6 mb-4 relative flex flex-col max-w-2xl mx-auto w-full shadow-sm" style={{ minHeight: '400px', maxHeight: '600px' }}>
               <div className="flex items-center gap-3 mb-4 border-b border-slate-200 pb-4 flex-shrink-0">
                 <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
                   <Sparkles size={20} />
@@ -1076,9 +1076,89 @@ export default function AIApuGeneratorPage() {
           )}
           
           {debugInfo && (
-            <div className="mb-4 p-4 bg-slate-800 rounded-xl shadow-sm overflow-x-auto text-xs text-green-400 font-mono">
-              <h4 className="text-white font-bold mb-2">🔍 Debug de Preprocesamiento</h4>
-              <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+            <div className="mb-6 bg-slate-900 border border-slate-700 rounded-xl shadow-lg overflow-hidden flex flex-col max-w-4xl mx-auto w-full">
+              <div className="bg-slate-800 px-4 py-3 border-b border-slate-700 flex items-center justify-between">
+                <h4 className="text-white font-bold flex items-center gap-2 text-sm">
+                  <Database size={16} className="text-blue-400" />
+                  Debug de Preprocesamiento
+                </h4>
+                <span className="text-[10px] uppercase tracking-wider font-bold font-mono bg-blue-500/20 text-blue-300 px-2.5 py-1 rounded-full border border-blue-500/30">
+                  {debugInfo.modo || 'Automático'}
+                </span>
+              </div>
+              
+              <div className="p-5 space-y-5">
+                {/* 1. Descripción */}
+                <div>
+                  <h5 className="text-slate-400 font-bold mb-1.5 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="text-emerald-400">📝</span> Descripción de la Consulta
+                  </h5>
+                  <div className="bg-slate-800/80 border border-slate-700/50 p-3 rounded-lg text-emerald-400 font-mono text-xs leading-relaxed break-words">
+                    {debugInfo.solicitud_usuario || debugInfo.busqueda || 'No disponible'}
+                  </div>
+                </div>
+                
+                {/* 2. Partida Ganadora */}
+                {debugInfo.auto_fusion_trace && debugInfo.auto_fusion_trace["1_partida_base_ganadora"] && (
+                  <div>
+                    <h5 className="text-slate-400 font-bold mb-1.5 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="text-yellow-400">🏆</span> Partida Base Ganadora
+                    </h5>
+                    <div className="bg-blue-900/20 border border-blue-800/50 p-3 rounded-lg hover:border-blue-700/50 transition-colors">
+                      <p className="text-blue-300 font-mono font-bold mb-1 text-xs">{debugInfo.auto_fusion_trace["1_partida_base_ganadora"].CovPar || debugInfo.auto_fusion_trace["1_partida_base_ganadora"].CodPar}</p>
+                      <p className="text-slate-300 text-xs leading-relaxed">{debugInfo.auto_fusion_trace["1_partida_base_ganadora"].Descri}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {/* 3. Complementarias */}
+                {debugInfo.auto_fusion_trace && debugInfo.auto_fusion_trace["2_partidas_complementarias"] && debugInfo.auto_fusion_trace["2_partidas_complementarias"].length > 0 && (
+                  <div>
+                    <h5 className="text-slate-400 font-bold mb-1.5 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="text-purple-400">🧩</span> Partidas Complementarias
+                    </h5>
+                    <div className="space-y-2">
+                      {debugInfo.auto_fusion_trace["2_partidas_complementarias"].map((p, i) => (
+                        <div key={i} className="bg-slate-800/40 border border-slate-700/50 p-3 rounded-lg flex items-start gap-3 hover:bg-slate-800/60 transition-colors">
+                          <span className="text-[10px] font-bold text-slate-500 mt-0.5 bg-slate-800 px-1.5 py-0.5 rounded">#{i + 1}</span>
+                          <div>
+                            <p className="text-purple-300 font-mono font-bold mb-0.5 text-xs">{p.CovPar || p.CodPar}</p>
+                            <p className="text-slate-300 text-xs leading-relaxed">{p.Descri}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. Top Candidatas */}
+                {debugInfo.auto_fusion_trace && debugInfo.auto_fusion_trace["3_candidatas_top_40"] && debugInfo.auto_fusion_trace["3_candidatas_top_40"].length > 0 && (
+                  <div>
+                    <h5 className="text-slate-400 font-bold mb-1.5 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="text-orange-400">🎯</span> Top Candidatas RAG ({debugInfo.auto_fusion_trace["3_candidatas_top_40"].length})
+                    </h5>
+                    <div className="bg-slate-900 border border-slate-700/50 rounded-lg max-h-56 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800/50 p-1">
+                      {debugInfo.auto_fusion_trace["3_candidatas_top_40"].map((c, i) => (
+                        <div key={i} className="p-2.5 flex items-center justify-between gap-3 hover:bg-slate-800/50 rounded-md transition-colors border-b border-slate-800/50 last:border-0">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-blue-300 font-mono font-bold text-xs truncate">{c.CovPar || c.CodPar}</p>
+                            <p className="text-slate-400 text-[11px] truncate">{c.Descri || 'Sin descripción'}</p>
+                          </div>
+                          {c.calificacion !== undefined && (
+                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded flex-shrink-0 ${
+                              c.calificacion > 0.8 ? 'bg-emerald-500/10 text-emerald-400' :
+                              c.calificacion > 0.5 ? 'bg-yellow-500/10 text-yellow-400' :
+                              'bg-rose-500/10 text-rose-400'
+                            }`}>
+                              {(c.calificacion * 100).toFixed(1)}%
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
           
