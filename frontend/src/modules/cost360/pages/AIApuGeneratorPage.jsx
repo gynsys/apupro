@@ -180,7 +180,7 @@ export default function AIApuGeneratorPage() {
     const userName = user?.full_name || user?.email?.split('@')[0] || '';
     const greetingName = userName ? ` ${userName}` : '';
     setGuidedMessages([
-      { id: 1, sender: 'bot', text: `¡Hola${greetingName}! Construir una descripción detallada de una partida es lo esencial para evitar ambigüedades al momento de la ejecución en campo, y es la clave para que la Inteligencia Artificial encuentre exactamente lo que necesitas.\n\nEn 4 pasos rápidos armaremos la frase ideal basándonos en la información suministrada. ¿Comenzamos?`, chips: ["Sí, comenzar"] }
+      { id: 'msg-bot0', sender: 'bot', text: `¡Hola${greetingName}! Construir una descripción detallada de una partida es lo esencial para evitar ambigüedades al momento de la ejecución en campo, y es la clave para que la Inteligencia Artificial encuentre exactamente lo que necesitas.\n\nEn 4 pasos rápidos armaremos la frase ideal basándonos en la información suministrada. ¿Comenzamos?`, chips: ["Sí, comenzar"] }
     ]);
   }, [user]);
 
