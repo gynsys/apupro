@@ -726,9 +726,13 @@ def fast_preprocess_debug(
         estrategia_lexica = []
         
         if description:
-            # 1. Búsqueda Híbrida (La nueva y mejorada)
-            all_items, _ = _get_dynamic_candidates(db, description, covenin_prefix, limit=15)
+            # 1. Búsqueda Híbrida (La nueva y mejorada) - Traer 40 para debug
+            all_items, _ = _get_dynamic_candidates(db, description, [covenin_prefix] if covenin_prefix else [], limit=40)
             estrategia_hibrida = [{"codpar": p.CodPar, "descripcion": p.Descri} for p in all_items]
+            
+            # Ganadora y Complementarias
+            ganadora = estrategia_hibrida[0] if len(estrategia_hibrida) > 0 else None
+            complementarias = estrategia_hibrida[1:3] if len(estrategia_hibrida) > 1 else []
             
             # 2. Búsqueda Semántica Pura (La anterior)
             query_emb = ai_engine.model.encode([description])[0]
@@ -751,6 +755,8 @@ def fast_preprocess_debug(
                     estrategia_lexica.append({"codpar": item.CodPar, "descripcion": item.Descri})
         else:
             all_items = []
+            ganadora = None
+            complementarias = []
             
         # Conteo de total incluyendo S/C para informar al usuario
         total_con_sc = db.query(CostItem).filter(
@@ -758,28 +764,35 @@ def fast_preprocess_debug(
                 CostItem.CovPar.startswith(covenin_prefix),
                 CostItem.CodPar.startswith(covenin_prefix)
             )
-        ).count()
+        ).count() if covenin_prefix else 0
     except Exception as exc:
         logger.error("Error en fast_preprocess_debug: %s", exc)
         all_items = []
         estrategia_hibrida = []
         estrategia_semantica = []
         estrategia_lexica = []
+        ganadora = None
+        complementarias = []
         total_con_sc = 0
 
     keywords = _extract_keywords(description)
 
     return {
-        "modo": "debug_comparador_3_vias",
+        "modo": "debug_auto_fusion",
         "solicitud_usuario": description,
         "keywords_extraidas": keywords,
         "covenin_prefix": covenin_prefix,
         "covenin_context": covenin_context,
         "total_en_categoria": total_con_sc,
-        "comparador_estrategias": {
-            "1_hibrida_recomendada": estrategia_hibrida,
-            "2_semantica_pura_anterior": estrategia_semantica,
-            "3_lexica_tradicional": estrategia_lexica
+        "auto_fusion_trace": {
+            "1_partida_base_ganadora": ganadora,
+            "2_partidas_complementarias": complementarias,
+            "3_candidatas_top_40": estrategia_hibrida,
         },
-        "nota": "Modo Debug activado. Se muestran las 3 estrategias para comparar resultados.",
+        "comparador_estrategias": {
+            "hibrida_top15": estrategia_hibrida[:15],
+            "semantica_pura_top15": estrategia_semantica,
+            "lexica_tradicional_top15": estrategia_lexica
+        },
+        "nota": "Modo Debug de Auto-Fusión activado. Muestra la base, los complementos y el pool de 40 candidatas del RAG Híbrido.",
     }
