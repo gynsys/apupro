@@ -245,14 +245,11 @@ def _get_dynamic_candidates(db: Session, description: str, covenin_prefix: str, 
                 logger.error(f"Error loading AI brain: {e}")
                 return [], 0.0
             
-        query_emb = ai_engine.model.encode([description])[0]
-        semantic_scores = ai_engine.calculate_cosine_similarity(query_emb)
-        if len(semantic_scores) == 0:
+        hybrid_results = ai_engine.hybrid_search(db, description, limit=limit*3)
+        if not hybrid_results:
             return [], 0.0
             
-        MIN_SCORE = 0.15
-        top_indices = semantic_scores.argsort()[::-1]
-        best_score = float(semantic_scores[top_indices[0]]) if len(top_indices) > 0 else 0.0
+        best_score = hybrid_results[0]["score"]
         
         strict_candidates = []
         family_candidates = []
@@ -261,24 +258,27 @@ def _get_dynamic_candidates(db: Session, description: str, covenin_prefix: str, 
         tipo_obra = covenin_prefix[0] if covenin_prefix else ""
         prefixes = _get_prefix_variations(covenin_prefix)
         
-        for idx in top_indices:
-            if idx >= len(ai_engine.ids_mapping):
-                continue
-            sem_score = float(semantic_scores[idx])
-            if sem_score < MIN_SCORE:
+        for result in hybrid_results:
+            item_id = result["id"]
+            score = result["score"]
+            
+            # Penalizar fuertemente si el score híbrido es muy bajo y ni siquiera está en el prefix
+            if score < 0.20:
                 break
                 
-            item_id = ai_engine.ids_mapping[idx]
-            
             is_strict = any(item_id.startswith(p) for p in prefixes)
             is_family = item_id.startswith(tipo_obra)
             
             if is_strict:
                 strict_candidates.append(item_id)
             elif is_family:
-                family_candidates.append(item_id)
+                # Si es familia pero su score híbrido es basura (e.g. < 0.35), lo saltamos
+                if score >= 0.35:
+                    family_candidates.append(item_id)
             else:
-                global_candidates.append(item_id)
+                # Si es global, debe tener un score muy alto para colar (e.g. > 0.45)
+                if score >= 0.45:
+                    global_candidates.append(item_id)
                 
             if len(strict_candidates) >= limit:
                 break
@@ -338,10 +338,11 @@ def get_smart_selector_data(
         }
 
     # --- Cargar partidas ---
+    best_hybrid_score = 0.0
     try:
         all_items: List[CostItem] = []
         if description:
-            all_items, _ = _get_dynamic_candidates(db, description, covenin_prefix, limit=15)
+            all_items, best_hybrid_score = _get_dynamic_candidates(db, description, covenin_prefix, limit=40)
             
         if not all_items:
             prefixes = _get_prefix_variations(covenin_prefix)
@@ -404,13 +405,23 @@ def get_smart_selector_data(
     if scored:
         best_item, best_score = scored[0]
         confidence = best_score
+        
+        # Combinar la confianza híbrida con la semántica pura
+        if best_hybrid_score > confidence:
+            confidence = best_hybrid_score
+            
         best_match = {
             "codpar": best_item.CodPar,
             "covenin": best_item.CovPar,
             "descripcion": best_item.Descri,
             "unidad": best_item.UniPar,
-            "score": round(best_score, 3),
+            "score": round(confidence, 3),
         }
+
+    # Cortocircuito: Si hay un "Exact Match" brutal (>0.85), eliminamos las preguntas
+    # para no fastidiar al usuario y forzar la autogeneración directa.
+    if confidence > 0.85:
+        questions = []
 
     # Lista limpia de top candidatos para mostrar en UI
     candidates_out = [
@@ -421,14 +432,14 @@ def get_smart_selector_data(
             "unidad": item.UniPar,
             "score": round(score, 3),
         }
-        for item, score in scored[:12]
+        for item, score in scored[:15]
     ]
 
     # Listo para generar cuando: sin más preguntas útiles O confianza alta O
     # el usuario respondió ≥ 2 preguntas
     ready = (
         len(questions) == 0
-        or confidence > 0.35
+        or confidence > 0.85
         or len(answers) >= 2
     )
 

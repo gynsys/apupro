@@ -2,7 +2,9 @@ import os
 import re
 import numpy as np
 from sentence_transformers import SentenceTransformer
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
+from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 class AISearchEngine:
     _instance = None
@@ -127,5 +129,116 @@ class AISearchEngine:
         ]
         results.sort(key=lambda x: x["score"], reverse=True)
         return results
+
+    def extract_main_chunk(self, query: str) -> str:
+        """
+        Divide la consulta y extrae solo la parte principal ignorando modificadores
+        como 'sin incluir', 'no incluye', 'utilizando', 'con'.
+        Esto evita que la IA se distraiga con palabras secundarias.
+        """
+        # Expresión regular para separar la frase en base a palabras clave de exclusión/condición
+        splitters = re.compile(r'\b(sin incluir|no incluye|utilizando|con empleo de|empleando)\b', re.IGNORECASE)
+        parts = splitters.split(query)
+        if parts:
+            # La primera parte suele ser la intención principal de búsqueda
+            main_chunk = parts[0].strip()
+            return main_chunk if len(main_chunk) > 5 else query
+        return query
+
+    def lexical_search(self, db: Session, query: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Búsqueda Tradicional (Full-Text Search) usando PostgreSQL.
+        Busca coincidencias exactas de las palabras en el campo Descri.
+        """
+        # Convertir query a formato "palabra | palabra | palabra" para tsquery flexibilizado
+        words = [w for w in query.split() if len(w) > 2]
+        if not words:
+            return []
+        
+        tsquery_str = " | ".join(words)
+        
+        sql = text('''
+            SELECT "CodPar", "CovPar", "Descri",
+                   ts_rank(to_tsvector('spanish', "Descri"), to_tsquery('spanish', :tsquery)) as rank
+            FROM public.cost360_items
+            WHERE "CovPar" NOT LIKE '% S/C%'
+              AND to_tsvector('spanish', "Descri") @@ to_tsquery('spanish', :tsquery)
+            ORDER BY rank DESC
+            LIMIT :limit
+        ''')
+        
+        results = db.execute(sql, {"tsquery": tsquery_str, "limit": limit}).fetchall()
+        
+        return [
+            {"id": row.CodPar, "score": float(row.rank), "desc": row.Descri}
+            for row in results
+        ]
+
+    def hybrid_search(self, db: Session, query: str, valid_ids: List[str] = None, limit: int = 40) -> List[Dict[str, Any]]:
+        """
+        Búsqueda Híbrida que combina el score Semántico (SentenceTransformers)
+        con el score Léxico (PostgreSQL ts_rank).
+        Si valid_ids se proporciona, solo busca en esos IDs.
+        """
+        if not self.is_loaded or self.embeddings is None or self.model is None:
+            return []
+
+        # 1. Puntaje Semántico (RAG)
+        # Usamos chunking para no distraer al modelo con "sin incluir"
+        main_query = self.extract_main_chunk(query)
+        query_embedding = self.model.encode([main_query])
+        
+        norm_query = np.linalg.norm(query_embedding)
+        norm_embeddings = np.linalg.norm(self.embeddings, axis=1)
+        dot_product = np.dot(self.embeddings, query_embedding.T).flatten()
+        sem_similarities = dot_product / (norm_embeddings * norm_query + 1e-10)
+
+        # Si hay limitación de IDs (Ej. filtrado por categoría), filtramos los semánticos
+        valid_indices = []
+        if valid_ids is not None:
+            valid_ids_set = set(valid_ids)
+            for i, id_val in enumerate(self.ids_mapping):
+                if id_val in valid_ids_set:
+                    valid_indices.append(i)
+        else:
+            valid_indices = list(range(len(self.ids_mapping)))
+
+        semantic_scores = {
+            self.ids_mapping[i]: float(sem_similarities[i])
+            for i in valid_indices
+        }
+
+        # 2. Puntaje Léxico (Traditional)
+        lexical_results = self.lexical_search(db, main_query, limit=1000)
+        lexical_scores = {r['id']: r['score'] for r in lexical_results}
+
+        # Normalizar scores léxicos (max rank puede ser > 1.0, lo normalizamos a 0-1)
+        max_lex_score = max(lexical_scores.values()) if lexical_scores else 1.0
+        if max_lex_score == 0: max_lex_score = 1.0
+
+        # 3. Fusión Híbrida
+        # Fórmula: 70% Semántico + 30% Léxico (si existe)
+        # Si la palabra exacta no existe, el score léxico es 0, penalizando ligeramente pero no eliminando.
+        hybrid_results = []
+        for item_id, sem_score in semantic_scores.items():
+            lex_score = lexical_scores.get(item_id, 0.0) / max_lex_score
+            
+            # Penalización fuerte si la frase tiene coincidencia semántica pero 0 palabras clave
+            # y el puntaje semántico no es abrumadoramente alto.
+            if lex_score == 0.0 and sem_score < 0.60:
+                final_score = sem_score * 0.70
+            else:
+                final_score = (sem_score * 0.70) + (lex_score * 0.30)
+                
+            hybrid_results.append({
+                "id": item_id,
+                "score": final_score,
+                "sem_score": sem_score,
+                "lex_score": lex_score
+            })
+
+        # Ordenar por el score híbrido
+        hybrid_results.sort(key=lambda x: x["score"], reverse=True)
+        return hybrid_results[:limit]
 
 ai_engine = AISearchEngine()

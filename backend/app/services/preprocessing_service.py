@@ -716,23 +716,42 @@ def fast_preprocess_debug(
 
     try:
         from app.services.smart_selector_service import _get_dynamic_candidates
+        from app.services.ai_search import ai_engine
+        
+        if not getattr(ai_engine, "is_loaded", False):
+            ai_engine.load_brain()
+            
+        estrategia_hibrida = []
+        estrategia_semantica = []
+        estrategia_lexica = []
         
         if description:
+            # 1. Búsqueda Híbrida (La nueva y mejorada)
             all_items, _ = _get_dynamic_candidates(db, description, covenin_prefix, limit=15)
+            estrategia_hibrida = [{"codpar": p.CodPar, "descripcion": p.Descri} for p in all_items]
+            
+            # 2. Búsqueda Semántica Pura (La anterior)
+            query_emb = ai_engine.model.encode([description])[0]
+            semantic_scores = ai_engine.calculate_cosine_similarity(query_emb)
+            if len(semantic_scores) > 0:
+                top_indices = semantic_scores.argsort()[::-1][:15]
+                for idx in top_indices:
+                    if idx < len(ai_engine.ids_mapping):
+                        item_id = ai_engine.ids_mapping[idx]
+                        item = db.query(CostItem).filter(CostItem.CodPar == item_id).first()
+                        if item:
+                            estrategia_semantica.append({"codpar": item.CodPar, "descripcion": item.Descri})
+                            
+            # 3. Búsqueda Lexica Pura (PostgreSQL FTS)
+            main_chunk = ai_engine.extract_main_chunk(description)
+            lex_results = ai_engine.lexical_search(db, main_chunk, limit=15)
+            for r in lex_results:
+                item = db.query(CostItem).filter(CostItem.CodPar == r["id"]).first()
+                if item:
+                    estrategia_lexica.append({"codpar": item.CodPar, "descripcion": item.Descri})
         else:
             all_items = []
             
-        if not all_items:
-            # Excluir partidas Sin Clasificar (S/C)
-            all_items = db.query(CostItem).filter(
-                or_(
-                    CostItem.CovPar.startswith(covenin_prefix),
-                    CostItem.CodPar.startswith(covenin_prefix)
-                )
-            ).filter(
-                ~CostItem.CovPar.like('% S/C%')
-            ).order_by(CostItem.CovPar).all()
-
         # Conteo de total incluyendo S/C para informar al usuario
         total_con_sc = db.query(CostItem).filter(
             or_(
@@ -743,29 +762,24 @@ def fast_preprocess_debug(
     except Exception as exc:
         logger.error("Error en fast_preprocess_debug: %s", exc)
         all_items = []
+        estrategia_hibrida = []
+        estrategia_semantica = []
+        estrategia_lexica = []
         total_con_sc = 0
 
     keywords = _extract_keywords(description)
 
     return {
-        "modo": "debug_rapido_sin_ia",
+        "modo": "debug_comparador_3_vias",
         "solicitud_usuario": description,
         "keywords_extraidas": keywords,
         "covenin_prefix": covenin_prefix,
         "covenin_context": covenin_context,
-        "total_partidas_en_categoria": len(all_items),
-        "total_con_sc_excluidas": total_con_sc - len(all_items),
-        "todas_las_partidas_covenin": [
-            {
-                "codpar": p.CodPar,
-                "covenin": p.CovPar,
-                "descripcion": p.Descri,
-                "unidad": p.UniPar,
-            }
-            for p in all_items
-        ],
-        "nota": (
-            f"DEBUG con RAG V6. Se listan {len(all_items)} partidas candidatas usando la nueva expansión dinámica (cascada). "
-            f"(Se buscó prioritariamente en la categoría seleccionada, luego en el tipo de obra, y por último globalmente)."
-        ),
+        "total_en_categoria": total_con_sc,
+        "comparador_estrategias": {
+            "1_hibrida_recomendada": estrategia_hibrida,
+            "2_semantica_pura_anterior": estrategia_semantica,
+            "3_lexica_tradicional": estrategia_lexica
+        },
+        "nota": "Modo Debug activado. Se muestran las 3 estrategias para comparar resultados.",
     }
