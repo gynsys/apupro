@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Loader, Loader2, Package, Wrench, Users, Calculator, Save, Sparkles, Check, Filter, Plus, Search, FileText, Trash2, AlertTriangle, Database, Layers, Printer } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader, Loader2, Package, Wrench, Users, Calculator, Save, Sparkles, Check, Filter, Plus, Search, FileText, Trash2, AlertTriangle, Database, Layers, Printer, Bot } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { generateAIApu, saveCustomApu, fetchCategoriesTree, fetchItems, fetchApuDetails, smartSelect, generateAIApuFromBase } from '../services/cost360Service';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
@@ -900,40 +900,53 @@ export default function AIApuGeneratorPage() {
               </div>
 
               {guidedStep === 0 && (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <div className="bg-white border border-blue-100 rounded-2xl rounded-tl-none p-4 shadow-sm max-w-[80%] mb-4">
-                    <p className="text-sm text-slate-700 leading-relaxed">
-                      ¡Hola, {userName}! Construir una descripción detallada es la clave para que la Inteligencia Artificial encuentre exactamente lo que necesitas. 
-                      En 4 pasos rápidos armaremos la frase ideal basándonos en los 4 pilares COVENIN. ¿Comenzamos?
-                    </p>
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-4">
+                  <div className="flex items-end gap-2">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 mb-1">
+                      <Bot size={18} />
+                    </div>
+                    <div className="bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4 shadow-sm max-w-[85%]">
+                      <p className="text-sm text-slate-800 leading-relaxed">
+                        ¡Hola, {userName}! Construir una descripción detallada de una partida es fundamental para evitar ambigüedades al momento de la ejecución en campo, y es la clave para que la Inteligencia Artificial encuentre exactamente lo que necesitas.
+                        <br/><br/>
+                        En 4 pasos rápidos armaremos la frase ideal basándonos en la información suministrada. ¿Comenzamos?
+                      </p>
+                    </div>
                   </div>
-                  <button 
-                    onClick={() => setGuidedStep(1)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-xl shadow-sm flex items-center gap-2 transition-all active:scale-95"
-                  >
-                    Sí, comenzar <ArrowRight size={16} />
-                  </button>
+                  <div className="pl-10">
+                    <button 
+                      onClick={() => setGuidedStep(1)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full shadow-sm flex items-center gap-2 transition-all active:scale-95"
+                    >
+                      Sí, comenzar <ArrowRight size={16} />
+                    </button>
+                  </div>
                 </div>
               )}
 
               {guidedStep > 0 && (
                 <div className="space-y-6">
                   {/* Step 1 */}
-                  <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 ${guidedStep > 1 ? 'opacity-60' : ''}`}>
-                    <div className="bg-white border border-blue-100 rounded-2xl rounded-tl-none p-4 shadow-sm max-w-[80%] mb-2">
-                      <p className="text-sm font-bold text-slate-700 mb-1">Paso 1 de 4: La Acción</p>
-                      <p className="text-sm text-slate-600">¿Qué acción o proceso constructivo se va a realizar? (ej. Excavación a mano, Vaciado, Colocación)</p>
+                  <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-3 ${guidedStep > 1 ? 'opacity-60' : ''}`}>
+                    <div className="flex items-end gap-2">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 mb-1">
+                        <Bot size={18} />
+                      </div>
+                      <div className="bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4 shadow-sm max-w-[85%]">
+                        <p className="text-sm font-bold text-slate-800 mb-1">Paso 1 de 4: La Acción</p>
+                        <p className="text-sm text-slate-700">¿Qué acción o proceso constructivo se va a realizar? (ej. Excavación a mano, Vaciado, Colocación)</p>
+                      </div>
                     </div>
                     {guidedStep === 1 ? (
-                      <div className="flex gap-2 items-center">
-                        <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-200">
+                      <div className="flex gap-2 items-center pl-10">
+                        <div className="flex-1 bg-white rounded-full shadow-sm border border-slate-200 px-2 py-1">
                           <CreatableSelect
                             isClearable
                             options={ACCIONES_OPCIONES}
                             value={guidedAccion}
                             onChange={(val) => { setGuidedAccion(val); }}
                             styles={{
-                              control: (base) => ({ ...base, border: 'none', boxShadow: 'none', minHeight: '44px', borderRadius: '0.75rem' }),
+                              control: (base) => ({ ...base, border: 'none', boxShadow: 'none', minHeight: '38px', borderRadius: '9999px', backgroundColor: 'transparent' }),
                               input: (base) => ({ ...base, 'input:focus': { boxShadow: 'none' } })
                             }}
                             placeholder="Escribe o selecciona la acción..."
@@ -943,7 +956,7 @@ export default function AIApuGeneratorPage() {
                         <button 
                           onClick={() => { if(guidedAccion) setGuidedStep(2); }}
                           disabled={!guidedAccion}
-                          className="bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-all"
+                          className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white p-3 rounded-full transition-all flex-shrink-0"
                         >
                           <ArrowRight size={20} />
                         </button>
@@ -959,28 +972,33 @@ export default function AIApuGeneratorPage() {
 
                   {/* Step 2 */}
                   {guidedStep >= 2 && (
-                    <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 ${guidedStep > 2 ? 'opacity-60' : ''}`}>
-                      <div className="bg-white border border-blue-100 rounded-2xl rounded-tl-none p-4 shadow-sm max-w-[80%] mb-2">
-                        <p className="text-sm font-bold text-slate-700 mb-1">Paso 2 de 4: El Material</p>
-                        <p className="text-sm text-slate-600">¿Con qué material, resistencia o especificación técnica? (ej. Concreto f'c=210, Tubería PVC)</p>
+                    <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-3 ${guidedStep > 2 ? 'opacity-60' : ''}`}>
+                      <div className="flex items-end gap-2">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 mb-1">
+                          <Bot size={18} />
+                        </div>
+                        <div className="bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4 shadow-sm max-w-[85%]">
+                          <p className="text-sm font-bold text-slate-800 mb-1">Paso 2 de 4: El Material</p>
+                          <p className="text-sm text-slate-700">¿Con qué material, resistencia o especificación técnica? (ej. Concreto f'c=210, Tubería PVC)</p>
+                        </div>
                       </div>
                       {guidedStep === 2 ? (
-                        <div className="flex gap-2 items-center">
-                          <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-200">
+                        <div className="flex gap-2 items-center pl-10">
+                          <div className="flex-1 bg-white rounded-full shadow-sm border border-slate-200 px-2 py-1">
                             <CreatableSelect
                               isClearable
                               options={MATERIALES_OPCIONES}
                               value={guidedMaterial}
                               onChange={setGuidedMaterial}
                               styles={{
-                                control: (base) => ({ ...base, border: 'none', boxShadow: 'none', minHeight: '44px', borderRadius: '0.75rem' })
+                                control: (base) => ({ ...base, border: 'none', boxShadow: 'none', minHeight: '38px', borderRadius: '9999px', backgroundColor: 'transparent' })
                               }}
                               placeholder="Escribe o selecciona el material..."
                             />
                           </div>
                           <button 
                             onClick={() => { if(guidedMaterial) setGuidedStep(3); else setGuidedStep(3); }}
-                            className="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 font-bold rounded-xl transition-all"
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 font-bold rounded-full transition-all flex-shrink-0 text-sm"
                           >
                             {guidedMaterial ? 'Siguiente' : 'Omitir'}
                           </button>
@@ -999,28 +1017,33 @@ export default function AIApuGeneratorPage() {
 
                   {/* Step 3 */}
                   {guidedStep >= 3 && (
-                    <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 ${guidedStep > 3 ? 'opacity-60' : ''}`}>
-                      <div className="bg-white border border-blue-100 rounded-2xl rounded-tl-none p-4 shadow-sm max-w-[80%] mb-2">
-                        <p className="text-sm font-bold text-slate-700 mb-1">Paso 3 de 4: La Ubicación</p>
-                        <p className="text-sm text-slate-600">¿Dónde se aplicará o en qué elemento estructural? (ej. En zapatas, En muros exteriores)</p>
+                    <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-3 ${guidedStep > 3 ? 'opacity-60' : ''}`}>
+                      <div className="flex items-end gap-2">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 mb-1">
+                          <Bot size={18} />
+                        </div>
+                        <div className="bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4 shadow-sm max-w-[85%]">
+                          <p className="text-sm font-bold text-slate-800 mb-1">Paso 3 de 4: La Ubicación</p>
+                          <p className="text-sm text-slate-700">¿Dónde se aplicará o en qué elemento estructural? (ej. En zapatas, En muros exteriores)</p>
+                        </div>
                       </div>
                       {guidedStep === 3 ? (
-                        <div className="flex gap-2 items-center">
-                          <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-200">
+                        <div className="flex gap-2 items-center pl-10">
+                          <div className="flex-1 bg-white rounded-full shadow-sm border border-slate-200 px-2 py-1">
                             <CreatableSelect
                               isClearable
                               options={UBICACION_OPCIONES}
                               value={guidedUbicacion}
                               onChange={setGuidedUbicacion}
                               styles={{
-                                control: (base) => ({ ...base, border: 'none', boxShadow: 'none', minHeight: '44px', borderRadius: '0.75rem' })
+                                control: (base) => ({ ...base, border: 'none', boxShadow: 'none', minHeight: '38px', borderRadius: '9999px', backgroundColor: 'transparent' })
                               }}
                               placeholder="Escribe o selecciona la ubicación..."
                             />
                           </div>
                           <button 
                             onClick={() => { if(guidedUbicacion) setGuidedStep(4); else setGuidedStep(4); }}
-                            className="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 font-bold rounded-xl transition-all"
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 font-bold rounded-full transition-all flex-shrink-0 text-sm"
                           >
                             {guidedUbicacion ? 'Siguiente' : 'Omitir'}
                           </button>
@@ -1039,44 +1062,44 @@ export default function AIApuGeneratorPage() {
 
                   {/* Step 4 */}
                   {guidedStep >= 4 && (
-                    <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 ${guidedStep > 4 ? 'opacity-60' : ''}`}>
-                      <div className="bg-white border border-blue-100 rounded-2xl rounded-tl-none p-4 shadow-sm max-w-[80%] mb-2">
-                        <p className="text-sm font-bold text-slate-700 mb-1">Paso 4 de 4: Condición de Entrega</p>
-                        <p className="text-sm text-slate-600">¿Hay alguna condición crítica incluida que afecte el costo? (ej. Incluye acarreo, andamios, pintura)</p>
+                    <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-3 ${guidedStep > 4 ? 'opacity-60' : ''}`}>
+                      <div className="flex items-end gap-2">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 mb-1">
+                          <Bot size={18} />
+                        </div>
+                        <div className="bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4 shadow-sm max-w-[85%]">
+                          <p className="text-sm font-bold text-slate-800 mb-1">Paso 4 de 4: Condición de Entrega</p>
+                          <p className="text-sm text-slate-700">¿Hay alguna condición crítica incluida que afecte el costo? (ej. Incluye acarreo, andamios, pintura)</p>
+                        </div>
                       </div>
                       {guidedStep === 4 ? (
-                        <div className="flex gap-2 items-center flex-col sm:flex-row">
-                          <div className="flex-1 w-full bg-white rounded-xl shadow-sm border border-slate-200">
+                        <div className="flex gap-2 items-center flex-col sm:flex-row pl-10">
+                          <div className="flex-1 w-full bg-white rounded-full shadow-sm border border-slate-200 px-2 py-1">
                             <CreatableSelect
                               isClearable
                               options={INCLUYE_OPCIONES}
                               value={guidedIncluye}
                               onChange={setGuidedIncluye}
                               styles={{
-                                control: (base) => ({ ...base, border: 'none', boxShadow: 'none', minHeight: '44px', borderRadius: '0.75rem' })
+                                control: (base) => ({ ...base, border: 'none', boxShadow: 'none', minHeight: '38px', borderRadius: '9999px', backgroundColor: 'transparent' })
                               }}
                               placeholder="Escribe o selecciona la condición..."
                             />
                           </div>
                           <button 
                             onClick={() => {
-                              // Arrancamos la simulación visual de trabajo
                               setChatbotLoadingStage(1);
                               setGuidedStep(5);
-                              
-                              // Simulamos una secuencia de mensajes
                               setTimeout(() => setChatbotLoadingStage(2), 1500);
                               setTimeout(() => setChatbotLoadingStage(3), 3000);
                               setTimeout(() => setChatbotLoadingStage(4), 4500);
-                              
-                              // Luego de la secuencia visual, se hace la llamada real (la llamada setea loading=true y al final lo quita)
                               setTimeout(() => {
                                 handleGenerate();
                               }, 5000);
                             }}
-                            className="bg-red-500 hover:bg-red-600 w-full sm:w-auto text-white px-6 py-3 font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                            className="bg-red-500 hover:bg-red-600 w-full sm:w-auto text-white px-6 py-2.5 font-bold rounded-full transition-all flex items-center justify-center gap-2 flex-shrink-0"
                           >
-                            <Sparkles size={18} /> ✨ Generar APU
+                            <Sparkles size={18} /> Generar
                           </button>
                         </div>
                       ) : (
@@ -1093,21 +1116,28 @@ export default function AIApuGeneratorPage() {
 
                   {/* Loading Animations */}
                   {guidedStep === 5 && chatbotLoadingStage > 0 && (
-                    <div className="flex flex-col gap-2 items-center mt-6 animate-in fade-in zoom-in duration-300">
-                      <div className="flex items-center gap-2 text-blue-600 font-bold">
-                        <Loader2 className="animate-spin" size={24} />
-                        <span>
-                          {chatbotLoadingStage === 1 && "Working..."}
-                          {chatbotLoadingStage === 2 && "Iniciando preproceso semántico..."}
-                          {chatbotLoadingStage === 3 && "Buscando en la BD Maestra con RAG Híbrido..."}
-                          {chatbotLoadingStage >= 4 && "Construyendo y adaptando APU con IA a toda máquina..."}
-                        </span>
+                    <div className="flex items-end gap-2 mt-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 mb-1">
+                        <Bot size={18} />
                       </div>
-                      <div className="w-64 h-2 bg-slate-200 rounded-full overflow-hidden mt-2">
-                        <div 
-                          className="h-full bg-blue-600 transition-all duration-500 ease-out" 
-                          style={{ width: `${(chatbotLoadingStage / 4) * 100}%` }}
-                        />
+                      <div className="bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4 shadow-sm max-w-[85%]">
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-3 text-blue-600 font-bold">
+                            <Loader2 className="animate-spin flex-shrink-0" size={20} />
+                            <span className="text-sm">
+                              {chatbotLoadingStage === 1 && "Working..."}
+                              {chatbotLoadingStage === 2 && "Iniciando preproceso semántico..."}
+                              {chatbotLoadingStage === 3 && "Buscando en la BD Maestra con RAG Híbrido..."}
+                              {chatbotLoadingStage === 4 && "Construyendo y adaptando APU con IA a toda máquina..."}
+                            </span>
+                          </div>
+                          <div className="w-full h-2 bg-pink-200/50 rounded-full overflow-hidden mt-1">
+                            <div 
+                              className="h-full bg-blue-600 transition-all duration-500 ease-out" 
+                              style={{ width: `${(chatbotLoadingStage / 4) * 100}%` }}
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
