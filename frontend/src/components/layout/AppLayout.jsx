@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Layout, LogOut, Menu, X, Home, Settings,
-  FileText, Database, Server, Cpu, ChevronRight
+  FileText, Database, Server, Cpu, ChevronRight, Copy
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 
