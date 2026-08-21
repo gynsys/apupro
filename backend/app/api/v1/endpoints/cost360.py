@@ -329,7 +329,7 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
         complementary_apus = []
         try:
             candidates, _ = _get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=4)
-            comp_items = [c for c in candidates if c.CodPar != payload.base_partida_code][:2]
+            comp_items = [c["item"] for c in candidates if c["item"].CodPar != payload.base_partida_code][:2]
             for item in comp_items:
                 comp_apu = fetch_base_apu_for_prompt(db, item.CodPar)
                 if comp_apu:

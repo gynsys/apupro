@@ -233,7 +233,7 @@ def _score_candidates(
     return scored
 
 
-def _get_dynamic_candidates(db: Session, description: str, covenin_prefix: str, limit: int = 15) -> Tuple[List[CostItem], float]:
+def _get_dynamic_candidates(db: Session, description: str, covenin_prefix: str, limit: int = 15) -> Tuple[List[Dict[str, Any]], float]:
     if not description:
         return [], 0.0
     try:
@@ -283,7 +283,7 @@ def _get_dynamic_candidates(db: Session, description: str, covenin_prefix: str, 
             
         items = db.query(CostItem).filter(CostItem.CodPar.in_(final_ids)).filter(~CostItem.CovPar.like("% S/C%")).all()
         item_map = {i.CodPar: i for i in items}
-        sorted_items = [item_map[i] for i in final_ids if i in item_map]
+        sorted_items = [{"item": item_map[i], "score": round(score, 3)} for i, score in candidates_with_scores[:limit] if i in item_map]
         return sorted_items, best_score
     except Exception as e:
         logger.error(f"Error in dynamic candidates: {e}")
@@ -326,7 +326,8 @@ def get_smart_selector_data(
     try:
         all_items: List[CostItem] = []
         if description:
-            all_items, best_hybrid_score = _get_dynamic_candidates(db, description, covenin_prefix, limit=40)
+            scored_items, best_hybrid_score = _get_dynamic_candidates(db, description, covenin_prefix, limit=40)
+            all_items = [d["item"] for d in scored_items]
             
         if not all_items:
             prefixes = _get_prefix_variations(covenin_prefix)

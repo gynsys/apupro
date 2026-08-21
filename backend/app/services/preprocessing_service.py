@@ -727,8 +727,8 @@ def fast_preprocess_debug(
         
         if description:
             # 1. Búsqueda Híbrida (La nueva y mejorada) - Traer 40 para debug
-            all_items, _ = _get_dynamic_candidates(db, description, covenin_prefix or "", limit=40)
-            estrategia_hibrida = [{"codpar": p.CodPar, "descripcion": p.Descri} for p in all_items]
+            scored_items, _ = _get_dynamic_candidates(db, description, covenin_prefix or "", limit=40)
+            estrategia_hibrida = [{"codpar": p["item"].CodPar, "descripcion": p["item"].Descri, "puntaje_hibrido": p["score"]} for p in scored_items]
             
             # Ganadora y Complementarias
             ganadora = estrategia_hibrida[0] if len(estrategia_hibrida) > 0 else None
@@ -744,7 +744,7 @@ def fast_preprocess_debug(
                         item_id = ai_engine.ids_mapping[idx]
                         item = db.query(CostItem).filter(CostItem.CodPar == item_id).first()
                         if item:
-                            estrategia_semantica.append({"codpar": item.CodPar, "descripcion": item.Descri})
+                            estrategia_semantica.append({"codpar": item.CodPar, "descripcion": item.Descri, "puntaje_semantico": round(float(semantic_scores[idx]), 3)})
                             
             # 3. Búsqueda Lexica Pura (PostgreSQL FTS)
             main_chunk = ai_engine.extract_main_chunk(description)
@@ -752,7 +752,7 @@ def fast_preprocess_debug(
             for r in lex_results:
                 item = db.query(CostItem).filter(CostItem.CodPar == r["id"]).first()
                 if item:
-                    estrategia_lexica.append({"codpar": item.CodPar, "descripcion": item.Descri})
+                    estrategia_lexica.append({"codpar": item.CodPar, "descripcion": item.Descri, "puntaje_lexico": r.get("score", 0)})
         else:
             all_items = []
             ganadora = None
