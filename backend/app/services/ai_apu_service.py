@@ -139,9 +139,10 @@ Dirígete SIEMPRE al usuario en segunda persona ("Tu solicitud", "Estás pidiend
 
 def generate_apu_with_ai_from_base(
     base_apu: Dict[str, Any],
-    user_description: str,
-    covenin_prefix: str,
-    covenin_context: str,
+    complementary_apus: Optional[List[Dict[str, Any]]] = None,
+    user_description: str = "",
+    covenin_prefix: str = "",
+    covenin_context: str = "",
     smart_answers: Optional[Dict[str, str]] = None,
     history: Optional[List[Dict]] = None,
 ) -> Dict[str, Any]:
@@ -168,6 +169,15 @@ def generate_apu_with_ai_from_base(
             answers_text += f"- {answer}\n"
 
     base_json = json.dumps(base_apu, ensure_ascii=False, indent=2) if base_apu else "No disponible"
+    
+    comp_text = ""
+    if complementary_apus:
+        comp_text = "\n# PARTIDAS COMPLEMENTARIAS DE APOYO\n"
+        comp_text += "Si la solicitud del usuario incluye elementos que NO están en el APU BASE (ej. andamios, transporte, bote), puedes 'robar' insumos, equipos o rendimientos de estas partidas complementarias.\n\n"
+        for i, comp in enumerate(complementary_apus):
+            comp_text += f"## Complementaria {i+1} [{comp.get('codpar', 'N/A')}]\n"
+            comp_text += json.dumps(comp, ensure_ascii=False, indent=2)
+            comp_text += "\n"
 
     prompt = f"""
 # ROL
@@ -184,6 +194,7 @@ Prefijo COVENIN: {covenin_prefix}
 
 # APU BASE SELECCIONADO (partida histórica real de la base de datos)
 {base_json}
+{comp_text}
 {history_text}
 
 # INSTRUCCIONES DE ADAPTACIÓN
@@ -192,15 +203,16 @@ Prefijo COVENIN: {covenin_prefix}
 3. ELIMINA los insumos que claramente no aplican a la nueva partida.
 4. AJUSTA cantidades cuando la nueva partida lo requiera (ej: distinta área, espesor, complejidad).
    Marca los insumos ajustados como `"origen": "ia"` y explica el ajuste en `nota_calculo`.
-5. AGREGA insumos nuevos que la nueva partida requiera y no estén en la base. Márcalos como `"origen": "ia"`.
-6. REGLA ESTRICTA DE MAQUINARIA: Si la descripción del usuario especifica o insinúa trabajo "A MANO" o con "EQUIPO LIVIANO", ESTÁ TOTAL Y ESTRICTAMENTE PROHIBIDO incluir o conservar maquinaria pesada (Tractores, Retroexcavadoras, Payloader, Jumbo, Excavadoras, Mototraillas, etc) en el APU. Solo permite herramientas menores o equipos ligeros. Elimínalos si venían en el APU base.
-7. NUNCA cambies los precios unitarios de los insumos del APU base. Son precios reales de la BD.
-8. Si detectas una incongruencia grave entre el APU base y la solicitud, indícalo en `advertencias`.
-9. Agrega SIEMPRE una advertencia indicando que el APU fue adaptado desde la partida base [{base_apu.get('codpar', 'N/A')}].
+5. AUTO-FUSIÓN: Si la descripción del usuario exige algo que falta en la Base (ej. Bote de material, Pintura, Andamios, Encofrado) pero que sí existe en las Partidas Complementarias, "róbalo" e intégralo.
+6. AGREGA insumos nuevos que la nueva partida requiera y no estén ni en la base ni en las complementarias. Márcalos como `"origen": "ia"`.
+7. REGLA ESTRICTA DE MAQUINARIA: Si la descripción del usuario especifica o insinúa trabajo "A MANO" o con "EQUIPO LIVIANO", ESTÁ TOTAL Y ESTRICTAMENTE PROHIBIDO incluir o conservar maquinaria pesada (Tractores, Retroexcavadoras, Payloader, Jumbo, Excavadoras, Mototraillas, etc) en el APU. Solo permite herramientas menores o equipos ligeros. Elimínalos si venían en el APU base.
+8. NUNCA cambies los precios unitarios de los insumos del APU base. Son precios reales de la BD.
+9. Si detectas una incongruencia grave entre el APU base y la solicitud, indícalo en `advertencias`.
+10. Agrega SIEMPRE una advertencia indicando que el APU fue adaptado desde la partida base [{base_apu.get('codpar', 'N/A')}].
 
-# FALTA DE DATOS
-Si la descripción del usuario es ambigua o le faltan datos críticos para adaptar correctamente,
-devuelve `status: "clarification_needed"` con las preguntas específicas que necesitas.
+# FALTA DE DATOS (NO CIERRES LA PUERTA A PREGUNTAR)
+Si a pesar de tener la partida Base y las Complementarias sientes que la descripción del usuario es demasiado ambigua y te faltan datos CRÍTICOS para tomar una decisión técnica (ej. resistencia del concreto, tipo de tubería, altura del andamio), NO INVENTES.
+Devuelve `status: "clarification_needed"` con las preguntas específicas que necesitas hacerle al usuario para mejorar el APU.
 Si tienes suficiente información, genera el APU y devuelve `status: "completed"`.
 
 {_REGLAS_COVENIN}

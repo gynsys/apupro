@@ -369,18 +369,6 @@ def get_smart_selector_data(
     answers = answers or {}
     filtered = _filter_candidates(all_items, answers)
 
-    # --- Generar preguntas sobre los candidatos restantes ---
-    index = _build_inverted_index(filtered)
-    pairs = _find_discriminating_pairs(index, len(filtered))
-    questions = _pairs_to_questions(pairs, max_questions=4)
-
-    # Eliminar preguntas cuyas palabras ya fueron respondidas
-    answered_words: Set[str] = {_normalize(v) for v in answers.values()}
-    questions = [
-        q for q in questions
-        if not any(_normalize(opt["value"]) in answered_words for opt in q["options"])
-    ]
-
     # --- Puntuar candidatos ---
     scored = _score_candidates(filtered, description)
 
@@ -402,10 +390,9 @@ def get_smart_selector_data(
             "score": round(confidence, 3),
         }
 
-    # Cortocircuito: Si hay un "Exact Match" brutal (>0.85), eliminamos las preguntas
-    # para no fastidiar al usuario y forzar la autogeneración directa.
-    if confidence > 0.85:
-        questions = []
+    # Desactivamos el cuestionario ciego del Smart Selector para dar paso 
+    # a la Auto-Fusión. Si hay dudas reales, el LLM final hará las preguntas.
+    questions = []
 
     # Lista limpia de top candidatos para mostrar en UI
     candidates_out = [
@@ -419,13 +406,7 @@ def get_smart_selector_data(
         for item, score in scored[:15]
     ]
 
-    # Listo para generar cuando: sin más preguntas útiles O confianza alta O
-    # el usuario respondió ≥ 2 preguntas
-    ready = (
-        len(questions) == 0
-        or confidence > 0.85
-        or len(answers) >= 2
-    )
+    ready = True
 
     return {
         "covenin_prefix": covenin_prefix,

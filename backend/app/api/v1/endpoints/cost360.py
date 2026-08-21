@@ -320,11 +320,27 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
 
     # 0.5. MODO SMART SELECTOR: el usuario ya eligió una partida base -> generar con base real
     if payload.base_partida_code:
-        from app.services.smart_selector_service import fetch_base_apu_for_prompt
+        from app.services.smart_selector_service import fetch_base_apu_for_prompt, _get_dynamic_candidates
+        import logging
+        logger = logging.getLogger(__name__)
+        
         base_apu = fetch_base_apu_for_prompt(db, payload.base_partida_code)
+        
+        complementary_apus = []
+        try:
+            candidates, _ = _get_dynamic_candidates(db, payload.description, [payload.covenin_prefix] if payload.covenin_prefix else [], limit=4)
+            comp_items = [c for c in candidates if c.CodPar != payload.base_partida_code][:2]
+            for item in comp_items:
+                comp_apu = fetch_base_apu_for_prompt(db, item.CodPar)
+                if comp_apu:
+                    complementary_apus.append(comp_apu)
+        except Exception as e:
+            logger.warning(f"Error fetching complementary APUs: {e}")
+
         history_dicts = [msg.model_dump() for msg in payload.history] if payload.history else []
         result = generate_apu_with_ai_from_base(
             base_apu=base_apu,
+            complementary_apus=complementary_apus,
             user_description=payload.description,
             covenin_prefix=payload.covenin_prefix or "",
             covenin_context=payload.covenin_context or "",
