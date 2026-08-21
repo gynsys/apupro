@@ -31,29 +31,44 @@ class AISearchEngine:
             print(f"Error cargando el modelo de IA: {e}")
 
         # 2. Cargar matriz NumPy
-        npy_path = os.path.join(os.path.dirname(__file__), '..', '..', 'embeddings_partidas.npy')
+        # Orden de búsqueda: producción Docker (/app/) -> relativa -> local Windows
+        npy_docker_path = '/app/embeddings_partidas.npy'
+        npy_relative_path = os.path.join(os.path.dirname(__file__), '..', '..', 'embeddings_partidas.npy')
+        npy_local_path = r'C:\Users\pablo\Desktop\BD_COST360\embeddings_partidas.npy'
         
-        # Path fallback para entorno local (escritorio) si no existe en producción
-        fallback_path = r'C:\Users\pablo\Desktop\BD_COST360\embeddings_partidas.npy'
+        npy_path = None
+        for candidate in [npy_docker_path, npy_relative_path, npy_local_path]:
+            if os.path.exists(candidate):
+                npy_path = candidate
+                break
 
-        if os.path.exists(npy_path):
+        if npy_path:
             self.embeddings = np.load(npy_path)
             print(f"Matriz de embeddings cargada desde {npy_path} con forma {self.embeddings.shape}")
-        elif os.path.exists(fallback_path):
-            self.embeddings = np.load(fallback_path)
-            print(f"Matriz de embeddings cargada desde fallback {fallback_path} con forma {self.embeddings.shape}")
         else:
-            print(f"ADVERTENCIA: No se encontró el archivo de embeddings en {npy_path} ni en {fallback_path}.")
+            print(f"ERROR CRITICO: No se encontró embeddings_partidas.npy en ninguna ruta buscada.")
             
         # 3. Cargar mapeo de IDs desde el CSV
-        csv_path = r'C:\Users\pablo\Desktop\BD_COST360\Base_Datos_IA.csv'
-        if os.path.exists(csv_path):
+        # Orden de búsqueda: producción Docker (/app/) -> relativa -> local Windows
+        csv_docker_path = '/app/Base_Datos_IA.csv'
+        csv_relative_path = os.path.join(os.path.dirname(__file__), '..', '..', 'Base_Datos_IA.csv')
+        csv_local_path = r'C:\Users\pablo\Desktop\BD_COST360\Base_Datos_IA.csv'
+        
+        csv_path_to_use = None
+        for candidate in [csv_docker_path, csv_relative_path, csv_local_path]:
+            if os.path.exists(candidate):
+                csv_path_to_use = candidate
+                break
+            
+        if csv_path_to_use:
             import pandas as pd
-            df = pd.read_csv(csv_path, usecols=['Referencia'])
+            df = pd.read_csv(csv_path_to_use, usecols=['Referencia'])
             self.ids_mapping = df['Referencia'].astype(str).tolist()
-            print(f"Cargados {len(self.ids_mapping)} IDs de mapeo.")
+            print(f"Cargados {len(self.ids_mapping)} IDs de mapeo desde {csv_path_to_use}.")
         else:
-            print(f"ADVERTENCIA: No se encontró {csv_path} para el mapeo de IDs.")
+            print(f"ERROR CRITICO: No se encontró Base_Datos_IA.csv en ninguna ruta:")
+            print(f"  - Relativa: {os.path.abspath(csv_relative_path)}")
+            print(f"  - Local: {csv_local_path}")
 
         if self.model is not None and self.embeddings is not None and self.ids_mapping:
             self.is_loaded = True

@@ -215,6 +215,29 @@ const AdminDatabasePage = () => {
     toast.success('Listado exportado correctamente a Excel con formato');
   };
 
+  const handleUpdateRAGBrain = async () => {
+    const confirm = window.confirm("¿Estás seguro de que deseas actualizar el Cerebro RAG? Este proceso toma de 5 a 15 minutos en segundo plano y consumirá CPU del servidor.");
+    if (!confirm) return;
+    
+    const toastId = toast.loading('Iniciando actualización del Cerebro IA...');
+    try {
+      const token = localStorage.getItem('arko_admin_token');
+      const response = await fetch(`${API_URL}/cost360/rag/update-brain`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        toast.success('El Cerebro RAG se está actualizando en el servidor. Estará listo en unos minutos.', { id: toastId, duration: 8000 });
+      } else {
+        toast.error('Error al iniciar la actualización del Cerebro RAG', { id: toastId });
+      }
+    } catch(err) {
+      toast.error('Error de conexión al servidor', { id: toastId });
+    }
+  };
+
   const TABS = [
     { key: 'partidas',   label: 'Partidas (APU)', Icon: FiLayers },
     { key: 'materiales', label: 'Materiales',      Icon: FiBox   },
@@ -242,13 +265,20 @@ const AdminDatabasePage = () => {
           <div className="flex-1">
             <h1 className="text-xl font-extrabold text-slate-800 tracking-tight leading-none">Explora las Bases de Datos, Insumos, Materiales o Personal</h1>
           </div>
-          <div>
+          <div className="flex gap-2">
+            <button 
+              onClick={handleUpdateRAGBrain}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-lg shadow-sm hover:shadow-md transition-all hover:scale-[1.02]"
+            >
+              <FiDatabase className="w-4 h-4" />
+              Actualizar Cerebro RAG
+            </button>
             <button 
               onClick={() => navigate('/cost360/market-admin')}
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold rounded-lg shadow-sm hover:shadow-md transition-all hover:scale-[1.02]"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-              Automatización IA y Web Scraping
+              Automatización IA
             </button>
           </div>
         </div>

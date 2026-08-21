@@ -611,3 +611,34 @@ def delete_database_route(database_id: str, db: Session = Depends(get_db)):
         return {"status": "ok", "message": "Base de datos eliminada correctamente"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/rag/update-brain")
+def update_rag_brain(background_tasks: BackgroundTasks):
+    """
+    Ejecuta la actualización del Cerebro RAG (generación de embeddings y CSV) en segundo plano.
+    Este proceso lee las partidas de PostgreSQL, calcula los embeddings con MiniLM y 
+    los guarda en la carpeta /app para que el AISearchEngine los cargue en el proximo restart.
+    """
+    import subprocess
+    
+    def run_generation():
+        try:
+            # Ejecutamos el script que ya existe en el contenedor
+            subprocess.run(
+                ["python3", "/app/generate_embeddings.py"], 
+                capture_output=True, 
+                text=True, 
+                check=True
+            )
+            print("Generación de Cerebro RAG finalizada con éxito.")
+            # Reiniciar la aplicacion para cargar los nuevos archivos (opcional)
+        except subprocess.CalledProcessError as e:
+            from app.core.logging import logger
+            logger.error(f"Error generando Cerebro RAG: {e.stderr}", exc_info=True)
+            
+    background_tasks.add_task(run_generation)
+    
+    return {
+        "status": "success", 
+        "message": "Actualización del Cerebro RAG iniciada en segundo plano. Esto tomará de 5 a 15 minutos."
+    }
