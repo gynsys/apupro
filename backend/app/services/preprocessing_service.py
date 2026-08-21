@@ -706,14 +706,6 @@ def fast_preprocess_debug(
     por completo y devuelve TODAS las partidas del prefijo COVENIN directamente.
     No consume tokens de IA ni carga el modelo MiniLM.
     """
-    if not covenin_prefix:
-        return {
-            "error": "Se requiere un prefijo COVENIN",
-            "covenin_prefix": covenin_prefix,
-            "partidas_encontradas": 0,
-            "todas_las_partidas_covenin": [],
-        }
-
     try:
         from app.services.smart_selector_service import _get_dynamic_candidates
         from app.services.ai_search import ai_engine

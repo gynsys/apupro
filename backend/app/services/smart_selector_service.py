@@ -311,16 +311,6 @@ def get_smart_selector_data(
     No llama a ningún LLM generativo (solo embeddings locales).
     """
 
-    if not covenin_prefix:
-        return {
-            "error": "Se requiere un prefijo COVENIN",
-            "questions": [],
-            "candidates": [],
-            "best_match": None,
-            "confidence": 0.0,
-            "ready_to_generate": False,
-        }
-
     # --- Cargar partidas ---
     best_hybrid_score = 0.0
     try:
