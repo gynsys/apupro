@@ -167,6 +167,9 @@ export default function AIApuGeneratorPage() {
   // Guided Mode Wizard States
   const [guidedStep, setGuidedStep] = useState(0);
   const [chatbotLoadingStage, setChatbotLoadingStage] = useState(0);
+  
+  // TODO: Obtener del contexto de autenticación cuando se implemente el registro
+  const userName = "Usuario";
 
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [printOptions, setPrintOptions] = useState(null);
@@ -900,7 +903,7 @@ export default function AIApuGeneratorPage() {
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="bg-white border border-blue-100 rounded-2xl rounded-tl-none p-4 shadow-sm max-w-[80%] mb-4">
                     <p className="text-sm text-slate-700 leading-relaxed">
-                      ¡Hola! Construir una descripción detallada es la clave para que la Inteligencia Artificial encuentre exactamente lo que necesitas. 
+                      ¡Hola, {userName}! Construir una descripción detallada es la clave para que la Inteligencia Artificial encuentre exactamente lo que necesitas. 
                       En 4 pasos rápidos armaremos la frase ideal basándonos en los 4 pilares COVENIN. ¿Comenzamos?
                     </p>
                   </div>
