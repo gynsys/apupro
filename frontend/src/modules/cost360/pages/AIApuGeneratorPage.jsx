@@ -11,6 +11,111 @@ import coveninTreeData from '../data/covenin_tree.json';
 import ExportApuExcelButton from '../components/ExportApuExcelButton';
 import PrintAPUModal from '../../../components/PrintAPUModal';
 import PrintAPULayout from '../../../components/PrintAPULayout';
+import CreatableSelect from 'react-select/creatable';
+
+const ACCIONES_OPCIONES = [
+  { value: 'Limpieza de terreno', label: 'Limpieza de terreno' },
+  { value: 'Trazo y replanteo', label: 'Trazo y replanteo' },
+  { value: 'Demolición de', label: 'Demolición de' },
+  { value: 'Desmontaje de', label: 'Desmontaje de' },
+  { value: 'Acarreo de', label: 'Acarreo de' },
+  { value: 'Eliminación de', label: 'Eliminación de' },
+  { value: 'Excavación manual de', label: 'Excavación manual de' },
+  { value: 'Excavación mecánica de', label: 'Excavación mecánica de' },
+  { value: 'Perfilar y nivelar', label: 'Perfilar y nivelar' },
+  { value: 'Relleno con material propio', label: 'Relleno con material propio' },
+  { value: 'Relleno con material de préstamo', label: 'Relleno con material de préstamo' },
+  { value: 'Compactación de', label: 'Compactación de' },
+  { value: 'Vaciado de concreto', label: 'Vaciado de concreto' },
+  { value: 'Encofrar y desencofrar', label: 'Encofrar y desencofrar' },
+  { value: 'Habilitación y colocación de acero', label: 'Habilitación y colocación de acero' },
+  { value: 'Construcción de estructuras de', label: 'Construcción de estructuras de' },
+  { value: 'Construcción de paredes de', label: 'Construcción de paredes de' },
+  { value: 'Asentado de muro de', label: 'Asentado de muro de' },
+  { value: 'Tarrajeo de', label: 'Tarrajeo de' },
+  { value: 'Revoque de', label: 'Revoque de' },
+  { value: 'Enlucido de', label: 'Enlucido de' },
+  { value: 'Pintura en', label: 'Pintura en' },
+  { value: 'Suministro e instalación de pisos de', label: 'Suministro e instalación de pisos de' },
+  { value: 'Revestimiento de', label: 'Revestimiento de' },
+  { value: 'Suministro e instalación de', label: 'Suministro e instalación de' },
+  { value: 'Canalización de tuberías para', label: 'Canalización de tuberías para' },
+  { value: 'Cableado de conductores para', label: 'Cableado de conductores para' },
+  { value: 'Conexión y empalme de', label: 'Conexión y empalme de' },
+  { value: 'Pruebas hidráulicas de', label: 'Pruebas hidráulicas de' },
+  { value: 'Pruebas eléctricas de', label: 'Pruebas eléctricas de' }
+];
+
+const MATERIALES_OPCIONES = [
+  { value: "Concreto simple f'c=100 kg/cm²", label: "Concreto simple f'c=100 kg/cm²" },
+  { value: "Concreto armado f'c=210 kg/cm²", label: "Concreto armado f'c=210 kg/cm²" },
+  { value: "Concreto armado f'c=280 kg/cm²", label: "Concreto armado f'c=280 kg/cm²" },
+  { value: 'Acero corrugado grado 60', label: 'Acero corrugado grado 60' },
+  { value: 'Alambre negro recocido #16', label: 'Alambre negro recocido #16' },
+  { value: 'Bloques de concreto de 15x20x40 cm', label: 'Bloques de concreto de 15x20x40 cm' },
+  { value: 'Bloques de concreto de 10x20x40 cm', label: 'Bloques de concreto de 10x20x40 cm' },
+  { value: 'Ladrillo de arcilla de 18 huecos', label: 'Ladrillo de arcilla de 18 huecos' },
+  { value: 'Ladrillo pandereta', label: 'Ladrillo pandereta' },
+  { value: 'Mortero cemento-arena proporción 1:4', label: 'Mortero cemento-arena proporción 1:4' },
+  { value: 'Mortero cemento-arena proporción 1:5', label: 'Mortero cemento-arena proporción 1:5' },
+  { value: 'Yeso de construcción', label: 'Yeso de construcción' },
+  { value: 'Pasta fina acrílica para interiores', label: 'Pasta fina acrílica para interiores' },
+  { value: 'Porcelanato de 60x60 cm alto tráfico', label: 'Porcelanato de 60x60 cm alto tráfico' },
+  { value: 'Cerámica de 30x30 cm antideslizante', label: 'Cerámica de 30x30 cm antideslizante' },
+  { value: 'Pintura látex lavable', label: 'Pintura látex lavable' },
+  { value: 'Pintura esmalte anticorrosivo', label: 'Pintura esmalte anticorrosivo' },
+  { value: 'Tubería PVC SAP clase 10 para agua', label: 'Tubería PVC SAP clase 10 para agua' },
+  { value: 'Tubería PVC SAL para desagüe', label: 'Tubería PVC SAL para desagüe' },
+  { value: 'Conductor de cobre tipo TW de 2.5 mm²', label: 'Conductor de cobre tipo TW de 2.5 mm²' },
+  { value: 'Tablero de distribución eléctrica', label: 'Tablero de distribución eléctrica' }
+];
+
+const UBICACION_OPCIONES = [
+  { value: 'En zapatas', label: 'En zapatas' },
+  { value: 'En cimientos corridos', label: 'En cimientos corridos' },
+  { value: 'En sobrecimientos', label: 'En sobrecimientos' },
+  { value: 'En vigas de cimentación', label: 'En vigas de cimentación' },
+  { value: 'En losa de cimentación', label: 'En losa de cimentación' },
+  { value: 'En columnas', label: 'En columnas' },
+  { value: 'En vigas peraltadas', label: 'En vigas peraltadas' },
+  { value: 'En losas aligeradas', label: 'En losas aligeradas' },
+  { value: 'En losas macizas', label: 'En losas macizas' },
+  { value: 'En escaleras', label: 'En escaleras' },
+  { value: 'En muros interiores', label: 'En muros interiores' },
+  { value: 'En muros exteriores (fachadas)', label: 'En muros exteriores (fachadas)' },
+  { value: 'En vigas y columnas aisladas', label: 'En vigas y columnas aisladas' },
+  { value: 'En techos y cielorrasos', label: 'En techos y cielorrasos' },
+  { value: 'En pisos y rampas', label: 'En pisos y rampas' },
+  { value: 'Empotrado en piso', label: 'Empotrado en piso' },
+  { value: 'Empotrado en pared', label: 'Empotrado en pared' },
+  { value: 'A la vista sobre bandejas', label: 'A la vista sobre bandejas' },
+  { value: 'Enterrado en zanjas externas', label: 'Enterrado en zanjas externas' },
+  { value: 'En ductos técnicos', label: 'En ductos técnicos' }
+];
+
+const INCLUYE_OPCIONES = [
+  { value: 'Incluye vibrado mecánico, curado con agua y aditivo desencofrante', label: 'Incluye vibrado mecánico, curado con agua y aditivo desencofrante' },
+  { value: 'Incluye andamiaje certificado, limpieza de superficie y protección de áreas adyacentes', label: 'Incluye andamiaje certificado, limpieza de superficie y protección de áreas adyacentes' },
+  { value: 'Incluye preparación de la mezcla, humedecido previo y juntas de dilatación', label: 'Incluye preparación de la mezcla, humedecido previo y juntas de dilatación' },
+  { value: 'Incluye acarreo interno de materiales, herramientas menores y mano de obra calificada', label: 'Incluye acarreo interno de materiales, herramientas menores y mano de obra calificada' },
+  { value: 'Incluye accesorios de conexión, pegamento especial, pruebas de presión y certificación técnica', label: 'Incluye accesorios de conexión, pegamento especial, pruebas de presión y certificación técnica' },
+  { value: 'Incluye clasificación de residuos, carguío y transporte hacia el botadero autorizado', label: 'Incluye clasificación de residuos, carguío y transporte hacia el botadero autorizado' }
+];
+
+const customSelectStyles = {
+  control: (provided, state) => ({
+    ...provided,
+    borderRadius: '0.75rem',
+    border: state.isFocused ? '1px solid #3b82f6' : '1px solid #cbd5e1',
+    boxShadow: state.isFocused ? '0 0 0 1px #3b82f6' : 'none',
+    backgroundColor: '#f8fafc',
+    padding: '0.1rem',
+    fontSize: '0.875rem',
+    '&:hover': {
+      border: '1px solid #94a3b8'
+    }
+  })
+};
 
 export default function AIApuGeneratorPage() {
   const navigate = useNavigate();
@@ -23,6 +128,25 @@ export default function AIApuGeneratorPage() {
   const [saving, setSaving] = useState(false);
   const [item, setItem] = useState(null);
   const searchTimeoutRef = useRef(null);
+  
+  // Guided Builder States
+  const [isGuidedMode, setIsGuidedMode] = useState(true);
+  const [guidedAccion, setGuidedAccion] = useState(null);
+  const [guidedMaterial, setGuidedMaterial] = useState(null);
+  const [guidedUbicacion, setGuidedUbicacion] = useState(null);
+  const [guidedIncluye, setGuidedIncluye] = useState(null);
+  
+  // Actualizar el prompt oculto cuando cambia el builder
+  useEffect(() => {
+    if (isGuidedMode) {
+      const parts = [];
+      if (guidedAccion) parts.push(guidedAccion.value);
+      if (guidedMaterial) parts.push(guidedMaterial.value);
+      if (guidedUbicacion) parts.push(guidedUbicacion.value);
+      if (guidedIncluye) parts.push(guidedIncluye.value);
+      setPrompt(parts.join(' ').trim());
+    }
+  }, [guidedAccion, guidedMaterial, guidedUbicacion, guidedIncluye, isGuidedMode]);
   
   // Conversational AI States
   const [chatHistory, setChatHistory] = useState([]);
@@ -701,18 +825,37 @@ export default function AIApuGeneratorPage() {
             )}
           </div>
 
-          <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-            {isSelectorsComplete ? (
-              isSmartMode ? "Smart Selector: Selecciona las características" :
-              isClarifying ? "Responde a la IA para continuar" : 
-              "Describe la partida a generar"
-            ) : (
-              <>
-                <AlertTriangle className="text-amber-500" size={16} />
-                Completa los selectores arriba para habilitar la descripción
-              </>
+          <div className="flex items-center justify-between mb-4">
+            <label className="block text-sm font-bold text-slate-700 flex items-center gap-2">
+              {isSelectorsComplete ? (
+                isSmartMode ? "Smart Selector: Selecciona las características" :
+                isClarifying ? "Responde a la IA para continuar" : 
+                "Descripción Estructurada (APU Builder)"
+              ) : (
+                <>
+                  <AlertTriangle className="text-amber-500" size={16} />
+                  Completa los selectores arriba para habilitar la descripción
+                </>
+              )}
+            </label>
+            
+            {isSelectorsComplete && !isSmartMode && !isClarifying && (
+              <div className="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
+                <button
+                  onClick={() => setIsGuidedMode(true)}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${isGuidedMode ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Modo Guiado
+                </button>
+                <button
+                  onClick={() => setIsGuidedMode(false)}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${!isGuidedMode ? 'bg-white shadow-sm text-red-600' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Modo Libre
+                </button>
+              </div>
             )}
-          </label>
+          </div>
           
           {isSmartMode && smartData && !smartData.ready_to_generate && (
             <div className="mb-4 p-5 bg-indigo-50 border border-indigo-200 rounded-xl shadow-sm animate-in fade-in zoom-in duration-300">
@@ -870,27 +1013,85 @@ export default function AIApuGeneratorPage() {
             </div>
           )}
           
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                if (isSelectorsComplete && prompt.trim() && !isSmartMode) {
-                  handleGenerate();
+          {isGuidedMode && !isSmartMode && !isClarifying && isSelectorsComplete ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 animate-in fade-in slide-in-from-top-2">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Acción o Proceso (Qué)</label>
+                <CreatableSelect
+                  isClearable
+                  options={ACCIONES_OPCIONES}
+                  value={guidedAccion}
+                  onChange={setGuidedAccion}
+                  styles={customSelectStyles}
+                  placeholder="Ej: Excavación manual..."
+                  formatCreateLabel={(val) => `Usar "${val}"`}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Material y Especificación (Con Qué)</label>
+                <CreatableSelect
+                  isClearable
+                  options={MATERIALES_OPCIONES}
+                  value={guidedMaterial}
+                  onChange={setGuidedMaterial}
+                  styles={customSelectStyles}
+                  placeholder="Ej: Concreto f'c=210..."
+                  formatCreateLabel={(val) => `Usar "${val}"`}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Elemento o Ubicación (Dónde)</label>
+                <CreatableSelect
+                  isClearable
+                  options={UBICACION_OPCIONES}
+                  value={guidedUbicacion}
+                  onChange={setGuidedUbicacion}
+                  styles={customSelectStyles}
+                  placeholder="Ej: En zapatas..."
+                  formatCreateLabel={(val) => `Usar "${val}"`}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Condición de Entrega (Incluye)</label>
+                <CreatableSelect
+                  isClearable
+                  options={INCLUYE_OPCIONES}
+                  value={guidedIncluye}
+                  onChange={setGuidedIncluye}
+                  styles={customSelectStyles}
+                  placeholder="Ej: Incluye acarreo..."
+                  formatCreateLabel={(val) => `Usar "${val}"`}
+                />
+              </div>
+            </div>
+          ) : (
+            <textarea
+              value={prompt}
+              onChange={(e) => {
+                if (!isGuidedMode) {
+                  setPrompt(e.target.value);
                 }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (isSelectorsComplete && prompt.trim() && !isSmartMode) {
+                    handleGenerate();
+                  }
+                }
+              }}
+              disabled={!isSelectorsComplete || (isClarifying && aiOptions.length > 0) || isSmartMode || isGuidedMode}
+              placeholder={
+                !isSelectorsComplete ? "Selecciona la categoría primero..." : 
+                isSmartMode ? "Responde las preguntas del filtro inteligente arriba..." :
+                (isClarifying && aiOptions.length > 0) ? "Por favor selecciona una de las opciones arriba..." : 
+                isClarifying ? "Ej: El espesor es 15cm y el concreto de 210 kg/cm2..." : 
+                isGuidedMode ? "Usa los selectores de arriba para formar la descripción..." :
+                "Modo experto: Escribe la partida libremente..."
               }
-            }}
-            disabled={!isSelectorsComplete || (isClarifying && aiOptions.length > 0) || isSmartMode}
-            placeholder={
-              !isSelectorsComplete ? "Selecciona la categoría primero..." : 
-              isSmartMode ? "Responde las preguntas del filtro inteligente arriba..." :
-              (isClarifying && aiOptions.length > 0) ? "Por favor selecciona una de las opciones arriba..." : 
-              isClarifying ? "Ej: El espesor es 15cm y el concreto de 210 kg/cm2..." : 
-              "Ej: Fundición de losa de entrepiso de concreto f'c=210 kg/cm2, espesor 15 cm..."
-            }
-            className={`w-full h-24 p-4 border rounded-xl focus:outline-none focus:ring-2 transition-all text-sm mb-4 disabled:opacity-50 disabled:cursor-not-allowed ${isClarifying || isSmartMode ? 'bg-blue-50/50 border-blue-300 focus:border-blue-500 focus:ring-blue-500/20' : 'bg-slate-50 border-slate-300 focus:bg-white focus:border-red-500 focus:ring-red-500/20'}`}
-          />
+              className={`w-full h-24 p-4 border rounded-xl focus:outline-none focus:ring-2 transition-all text-sm mb-4 disabled:opacity-50 disabled:cursor-not-allowed ${isClarifying || isSmartMode ? 'bg-blue-50/50 border-blue-300 focus:border-blue-500 focus:ring-blue-500/20' : 'bg-slate-50 border-slate-300 focus:bg-white focus:border-red-500 focus:ring-red-500/20'}`}
+            />
+          )}
           
           {debugInfo && (
             <div className="mb-4 p-4 bg-slate-800 rounded-xl shadow-sm overflow-x-auto text-xs text-green-400 font-mono">

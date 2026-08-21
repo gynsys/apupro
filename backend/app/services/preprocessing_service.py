@@ -722,8 +722,6 @@ def fast_preprocess_debug(
             ai_engine.load_brain()
             
         estrategia_hibrida = []
-        estrategia_semantica = []
-        estrategia_lexica = []
         
         if description:
             # 1. Búsqueda Híbrida (La nueva y mejorada) - Traer 40 para debug
@@ -734,25 +732,7 @@ def fast_preprocess_debug(
             ganadora = estrategia_hibrida[0] if len(estrategia_hibrida) > 0 else None
             complementarias = estrategia_hibrida[1:3] if len(estrategia_hibrida) > 1 else []
             
-            # 2. Búsqueda Semántica Pura (La anterior)
-            query_emb = ai_engine.model.encode([description])[0]
-            semantic_scores = ai_engine.calculate_cosine_similarity(query_emb)
-            if len(semantic_scores) > 0:
-                top_indices = semantic_scores.argsort()[::-1][:15]
-                for idx in top_indices:
-                    if idx < len(ai_engine.ids_mapping):
-                        item_id = ai_engine.ids_mapping[idx]
-                        item = db.query(CostItem).filter(CostItem.CodPar == item_id).first()
-                        if item:
-                            estrategia_semantica.append({"codpar": item.CodPar, "descripcion": item.Descri, "puntaje_semantico": round(float(semantic_scores[idx]), 3)})
-                            
-            # 3. Búsqueda Lexica Pura (PostgreSQL FTS)
-            main_chunk = ai_engine.extract_main_chunk(description)
-            lex_results = ai_engine.lexical_search(db, main_chunk, limit=15)
-            for r in lex_results:
-                item = db.query(CostItem).filter(CostItem.CodPar == r["id"]).first()
-                if item:
-                    estrategia_lexica.append({"codpar": item.CodPar, "descripcion": item.Descri, "puntaje_lexico": r.get("score", 0)})
+
         else:
             all_items = []
             ganadora = None
@@ -769,30 +749,26 @@ def fast_preprocess_debug(
         logger.error("Error en fast_preprocess_debug: %s", exc)
         all_items = []
         estrategia_hibrida = []
-        estrategia_semantica = []
-        estrategia_lexica = []
         ganadora = None
         complementarias = []
         total_con_sc = 0
 
-    keywords = _extract_keywords(description)
-
     return {
         "modo": "debug_auto_fusion",
         "solicitud_usuario": description,
-        "keywords_extraidas": keywords,
+        "keywords_extraidas": ai_engine.extract_main_chunk(description).split(),
         "covenin_prefix": covenin_prefix,
         "covenin_context": covenin_context,
         "total_en_categoria": total_con_sc,
         "auto_fusion_trace": {
             "1_partida_base_ganadora": ganadora,
             "2_partidas_complementarias": complementarias,
-            "3_candidatas_top_40": estrategia_hibrida,
-        },
-        "comparador_estrategias": {
-            "hibrida_top15": estrategia_hibrida[:15],
-            "semantica_pura_top15": estrategia_semantica,
-            "lexica_tradicional_top15": estrategia_lexica
+            "3_candidatas_top_40": estrategia_hibrida
         },
         "nota": "Modo Debug de Auto-Fusión activado. Muestra la base, los complementos y el pool de 40 candidatas del RAG Híbrido.",
+        "motor_ia_estado": {
+            "is_loaded": getattr(ai_engine, "is_loaded", False),
+            "total_ids_mapeados": len(ai_engine.ids_mapping) if getattr(ai_engine, "is_loaded", False) else 0,
+            "embeddings_forma": str(ai_engine.embeddings.shape) if getattr(ai_engine, "is_loaded", False) and ai_engine.embeddings is not None else "N/A"
+        }
     }
