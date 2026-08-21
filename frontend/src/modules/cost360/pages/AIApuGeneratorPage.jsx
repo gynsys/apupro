@@ -137,14 +137,16 @@ export default function AIApuGeneratorPage() {
   const [guidedUbicacion, setGuidedUbicacion] = useState(null);
   const [guidedIncluye, setGuidedIncluye] = useState(null);
   
+  const chatEndRef = useRef(null);
+  
   // Actualizar el prompt oculto cuando cambia el builder
   useEffect(() => {
     if (isGuidedMode) {
       const parts = [];
-      if (guidedAccion) parts.push(guidedAccion.value);
-      if (guidedMaterial) parts.push(guidedMaterial.value);
-      if (guidedUbicacion) parts.push(guidedUbicacion.value);
-      if (guidedIncluye) parts.push(guidedIncluye.value);
+      if (guidedAccion && guidedAccion !== 'Omitir') parts.push(guidedAccion);
+      if (guidedMaterial && guidedMaterial !== 'Omitir') parts.push(guidedMaterial);
+      if (guidedUbicacion && guidedUbicacion !== 'Omitir') parts.push(guidedUbicacion);
+      if (guidedIncluye && guidedIncluye !== 'Omitir') parts.push(guidedIncluye);
       setPrompt(parts.join(' ').trim());
     }
   }, [guidedAccion, guidedMaterial, guidedUbicacion, guidedIncluye, isGuidedMode]);
@@ -165,13 +167,27 @@ export default function AIApuGeneratorPage() {
   const [smartCustomInput, setSmartCustomInput] = useState("");
   const [showSmartCustomInput, setShowSmartCustomInput] = useState(false);
 
-  // Guided Mode Wizard States
-  const [guidedStep, setGuidedStep] = useState(0);
   const [chatbotLoadingStage, setChatbotLoadingStage] = useState(0);
+
   
   // Obtenemos el usuario del contexto de autenticación
   const { user } = React.useContext(AuthContext);
   const userName = user?.username || (user?.email ? user.email.split('@')[0] : "Usuario");
+
+  const [guidedMessages, setGuidedMessages] = useState([
+    {
+      id: 'msg-bot0',
+      sender: 'bot',
+      text: `¡Hola, ${userName}! Construir una descripción detallada de una partida es lo esencial para evitar ambigüedades al momento de la ejecución en campo, y es la clave para que la Inteligencia Artificial encuentre exactamente lo que necesitas.\n\nEn 4 pasos rápidos armaremos la frase ideal basándonos en la información suministrada. ¿Comenzamos?`,
+      chips: ["Sí, comenzar"]
+    }
+  ]);
+  const [currentChatStep, setCurrentChatStep] = useState(0);
+  const [chatInputValue, setChatInputValue] = useState("");
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [guidedMessages, chatbotLoadingStage]);
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [printOptions, setPrintOptions] = useState(null);
 
@@ -366,6 +382,53 @@ export default function AIApuGeneratorPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleChatSubmit = (text) => {
+    if (!text.trim()) return;
+    
+    const newUserMsg = { id: Date.now().toString(), sender: 'user', text };
+    
+    if (currentChatStep === 1) setGuidedAccion(text);
+    if (currentChatStep === 2) setGuidedMaterial(text);
+    if (currentChatStep === 3) setGuidedUbicacion(text);
+    if (currentChatStep === 4) setGuidedIncluye(text);
+    
+    const nextStep = currentChatStep === 0 ? 1 : currentChatStep + 1;
+    setCurrentChatStep(nextStep);
+    
+    let nextBotMsg = null;
+    if (nextStep === 1) {
+      nextBotMsg = { id: Date.now().toString() + 'bot1', sender: 'bot', text: 'Paso 1 de 4: La Acción\n¿Qué acción o proceso constructivo se va a realizar?', chips: ['Excavación a mano', 'Vaciado de concreto', 'Limpieza de terreno'] };
+    } else if (nextStep === 2) {
+      nextBotMsg = { id: Date.now().toString() + 'bot2', sender: 'bot', text: 'Paso 2 de 4: El Material\n¿Con qué material, resistencia o especificación técnica?', chips: ["Concreto f'c=210", 'Acero Fy=4200', 'Bloque de arcilla', 'Omitir'] };
+    } else if (nextStep === 3) {
+      nextBotMsg = { id: Date.now().toString() + 'bot3', sender: 'bot', text: 'Paso 3 de 4: La Ubicación\n¿Dónde se aplicará o en qué elemento estructural?', chips: ['En zapatas', 'En losas', 'En columnas', 'Omitir'] };
+    } else if (nextStep === 4) {
+      nextBotMsg = { id: Date.now().toString() + 'bot4', sender: 'bot', text: 'Paso 4 de 4: Condición de Entrega\n¿Hay alguna condición crítica incluida que afecte el costo?', chips: ['Incluye acarreo', 'Incluye andamios', 'Omitir'] };
+    } else if (nextStep === 5) {
+      setChatbotLoadingStage(1);
+      setTimeout(() => setChatbotLoadingStage(2), 1500);
+      setTimeout(() => setChatbotLoadingStage(3), 3000);
+      setTimeout(() => setChatbotLoadingStage(4), 4500);
+      setTimeout(() => {
+        const finalPrompt = [
+          currentChatStep === 1 ? text : guidedAccion,
+          currentChatStep === 2 ? text : guidedMaterial,
+          currentChatStep === 3 ? text : guidedUbicacion,
+          currentChatStep === 4 ? text : guidedIncluye
+        ].filter(p => p && p !== 'Omitir').join(' ').trim();
+        
+        handleGenerate(finalPrompt);
+      }, 5000);
+    }
+    
+    if (nextBotMsg) {
+      setGuidedMessages(prev => [...prev, newUserMsg, nextBotMsg]);
+    } else {
+      setGuidedMessages(prev => [...prev, newUserMsg]);
+    }
+    setChatInputValue("");
   };
 
   const handleGeneratePreprocess = () => {
@@ -889,8 +952,8 @@ export default function AIApuGeneratorPage() {
           )}
           
           {isGuidedMode && !isSmartMode && !isClarifying ? (
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 mb-4 relative">
-              <div className="flex items-center gap-3 mb-6 border-b border-slate-200 pb-4">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 mb-4 relative flex flex-col" style={{ minHeight: '400px', maxHeight: '600px' }}>
+              <div className="flex items-center gap-3 mb-4 border-b border-slate-200 pb-4 flex-shrink-0">
                 <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
                   <Sparkles size={20} />
                 </div>
@@ -900,248 +963,86 @@ export default function AIApuGeneratorPage() {
                 </div>
               </div>
 
-              {guidedStep === 0 && (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-4">
-                  <div className="flex items-end gap-2">
+              <div className="flex-1 overflow-y-auto pr-2 space-y-6 flex flex-col pb-4 scrollbar-thin scrollbar-thumb-slate-200">
+                {guidedMessages.map((msg, idx) => (
+                  <div key={msg.id || idx} className={`animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-3 ${msg.sender === 'user' ? 'items-end' : ''}`}>
+                    <div className={`flex items-end gap-2 ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}>
+                      {msg.sender === 'bot' && (
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 mb-1">
+                          <Bot size={18} />
+                        </div>
+                      )}
+                      <div className={`${msg.sender === 'bot' ? 'bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none' : 'bg-blue-600 text-white rounded-2xl rounded-br-none'} p-4 shadow-sm max-w-[85%]`}>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                      </div>
+                    </div>
+                    {msg.sender === 'bot' && msg.chips && currentChatStep === (msg.id.includes('bot') ? parseInt(msg.id.replace(/\D/g, '')) || 0 : 0) && (
+                      <div className="pl-10 flex flex-wrap gap-2">
+                        {msg.chips.map(chip => (
+                          <button 
+                            key={chip}
+                            onClick={() => handleChatSubmit(chip)}
+                            className="bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-700 text-xs px-3 py-1.5 rounded-full transition-all shadow-sm"
+                          >
+                            {chip}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                {chatbotLoadingStage > 0 && (
+                  <div className="flex items-end gap-2 mt-2 animate-in fade-in slide-in-from-bottom-4 duration-300">
                     <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 mb-1">
                       <Bot size={18} />
                     </div>
                     <div className="bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4 shadow-sm max-w-[85%]">
-                      <p className="text-sm text-slate-800 leading-relaxed">
-                        ¡Hola, {userName}! Construir una descripción detallada de una partida es fundamental para evitar ambigüedades al momento de la ejecución en campo, y es la clave para que la Inteligencia Artificial encuentre exactamente lo que necesitas.
-                        <br/><br/>
-                        En 4 pasos rápidos armaremos la frase ideal basándonos en la información suministrada. ¿Comenzamos?
-                      </p>
-                    </div>
-                  </div>
-                  <div className="pl-10">
-                    <button 
-                      onClick={() => setGuidedStep(1)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full shadow-sm flex items-center gap-2 transition-all active:scale-95"
-                    >
-                      Sí, comenzar <ArrowRight size={16} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {guidedStep > 0 && (
-                <div className="space-y-6">
-                  {/* Step 1 */}
-                  <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-3 ${guidedStep > 1 ? 'opacity-60' : ''}`}>
-                    <div className="flex items-end gap-2">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 mb-1">
-                        <Bot size={18} />
-                      </div>
-                      <div className="bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4 shadow-sm max-w-[85%]">
-                        <p className="text-sm font-bold text-slate-800 mb-1">Paso 1 de 4: La Acción</p>
-                        <p className="text-sm text-slate-700">¿Qué acción o proceso constructivo se va a realizar? (ej. Excavación a mano, Vaciado, Colocación)</p>
-                      </div>
-                    </div>
-                    {guidedStep === 1 ? (
-                      <div className="flex gap-2 items-center pl-10">
-                        <div className="flex-1 bg-white rounded-full shadow-sm border border-slate-200 px-2 py-1">
-                          <CreatableSelect
-                            isClearable
-                            options={ACCIONES_OPCIONES}
-                            value={guidedAccion}
-                            onChange={(val) => { setGuidedAccion(val); }}
-                            styles={{
-                              control: (base) => ({ ...base, border: 'none', boxShadow: 'none', minHeight: '38px', borderRadius: '9999px', backgroundColor: 'transparent' }),
-                              input: (base) => ({ ...base, 'input:focus': { boxShadow: 'none' } })
-                            }}
-                            placeholder="Escribe o selecciona la acción..."
-                            formatCreateLabel={(val) => `Usar "${val}"`}
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-3 text-blue-600 font-bold">
+                          <Loader2 className="animate-spin flex-shrink-0" size={20} />
+                          <span className="text-sm">
+                            {chatbotLoadingStage === 1 && "Working..."}
+                            {chatbotLoadingStage === 2 && "Iniciando preproceso semántico..."}
+                            {chatbotLoadingStage === 3 && "Buscando en la BD Maestra con RAG Híbrido..."}
+                            {chatbotLoadingStage === 4 && "Construyendo y adaptando APU con IA a toda máquina..."}
+                          </span>
+                        </div>
+                        <div className="w-full h-2 bg-pink-200/50 rounded-full overflow-hidden mt-1">
+                          <div 
+                            className="h-full bg-blue-600 transition-all duration-500 ease-out" 
+                            style={{ width: `${(chatbotLoadingStage / 4) * 100}%` }}
                           />
                         </div>
-                        <button 
-                          onClick={() => { if(guidedAccion) setGuidedStep(2); }}
-                          disabled={!guidedAccion}
-                          className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white p-3 rounded-full transition-all flex-shrink-0"
-                        >
-                          <ArrowRight size={20} />
-                        </button>
                       </div>
-                    ) : (
-                      <div className="flex justify-end">
-                        <div className="bg-blue-600 text-white rounded-2xl rounded-tr-none py-2 px-4 shadow-sm max-w-[80%]">
-                          <p className="text-sm">{guidedAccion?.label}</p>
-                        </div>
-                      </div>
-                    )}
+                    </div>
                   </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
 
-                  {/* Step 2 */}
-                  {guidedStep >= 2 && (
-                    <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-3 ${guidedStep > 2 ? 'opacity-60' : ''}`}>
-                      <div className="flex items-end gap-2">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 mb-1">
-                          <Bot size={18} />
-                        </div>
-                        <div className="bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4 shadow-sm max-w-[85%]">
-                          <p className="text-sm font-bold text-slate-800 mb-1">Paso 2 de 4: El Material</p>
-                          <p className="text-sm text-slate-700">¿Con qué material, resistencia o especificación técnica? (ej. Concreto f'c=210, Tubería PVC)</p>
-                        </div>
-                      </div>
-                      {guidedStep === 2 ? (
-                        <div className="flex gap-2 items-center pl-10">
-                          <div className="flex-1 bg-white rounded-full shadow-sm border border-slate-200 px-2 py-1">
-                            <CreatableSelect
-                              isClearable
-                              options={MATERIALES_OPCIONES}
-                              value={guidedMaterial}
-                              onChange={setGuidedMaterial}
-                              styles={{
-                                control: (base) => ({ ...base, border: 'none', boxShadow: 'none', minHeight: '38px', borderRadius: '9999px', backgroundColor: 'transparent' })
-                              }}
-                              placeholder="Escribe o selecciona el material..."
-                            />
-                          </div>
-                          <button 
-                            onClick={() => { if(guidedMaterial) setGuidedStep(3); else setGuidedStep(3); }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 font-bold rounded-full transition-all flex-shrink-0 text-sm"
-                          >
-                            {guidedMaterial ? 'Siguiente' : 'Omitir'}
-                          </button>
-                        </div>
-                      ) : (
-                        guidedMaterial && (
-                          <div className="flex justify-end">
-                            <div className="bg-blue-600 text-white rounded-2xl rounded-tr-none py-2 px-4 shadow-sm max-w-[80%]">
-                              <p className="text-sm">{guidedMaterial.label}</p>
-                            </div>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  )}
-
-                  {/* Step 3 */}
-                  {guidedStep >= 3 && (
-                    <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-3 ${guidedStep > 3 ? 'opacity-60' : ''}`}>
-                      <div className="flex items-end gap-2">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 mb-1">
-                          <Bot size={18} />
-                        </div>
-                        <div className="bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4 shadow-sm max-w-[85%]">
-                          <p className="text-sm font-bold text-slate-800 mb-1">Paso 3 de 4: La Ubicación</p>
-                          <p className="text-sm text-slate-700">¿Dónde se aplicará o en qué elemento estructural? (ej. En zapatas, En muros exteriores)</p>
-                        </div>
-                      </div>
-                      {guidedStep === 3 ? (
-                        <div className="flex gap-2 items-center pl-10">
-                          <div className="flex-1 bg-white rounded-full shadow-sm border border-slate-200 px-2 py-1">
-                            <CreatableSelect
-                              isClearable
-                              options={UBICACION_OPCIONES}
-                              value={guidedUbicacion}
-                              onChange={setGuidedUbicacion}
-                              styles={{
-                                control: (base) => ({ ...base, border: 'none', boxShadow: 'none', minHeight: '38px', borderRadius: '9999px', backgroundColor: 'transparent' })
-                              }}
-                              placeholder="Escribe o selecciona la ubicación..."
-                            />
-                          </div>
-                          <button 
-                            onClick={() => { if(guidedUbicacion) setGuidedStep(4); else setGuidedStep(4); }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 font-bold rounded-full transition-all flex-shrink-0 text-sm"
-                          >
-                            {guidedUbicacion ? 'Siguiente' : 'Omitir'}
-                          </button>
-                        </div>
-                      ) : (
-                        guidedUbicacion && (
-                          <div className="flex justify-end">
-                            <div className="bg-blue-600 text-white rounded-2xl rounded-tr-none py-2 px-4 shadow-sm max-w-[80%]">
-                              <p className="text-sm">{guidedUbicacion.label}</p>
-                            </div>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  )}
-
-                  {/* Step 4 */}
-                  {guidedStep >= 4 && (
-                    <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-3 ${guidedStep > 4 ? 'opacity-60' : ''}`}>
-                      <div className="flex items-end gap-2">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 mb-1">
-                          <Bot size={18} />
-                        </div>
-                        <div className="bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4 shadow-sm max-w-[85%]">
-                          <p className="text-sm font-bold text-slate-800 mb-1">Paso 4 de 4: Condición de Entrega</p>
-                          <p className="text-sm text-slate-700">¿Hay alguna condición crítica incluida que afecte el costo? (ej. Incluye acarreo, andamios, pintura)</p>
-                        </div>
-                      </div>
-                      {guidedStep === 4 ? (
-                        <div className="flex gap-2 items-center flex-col sm:flex-row pl-10">
-                          <div className="flex-1 w-full bg-white rounded-full shadow-sm border border-slate-200 px-2 py-1">
-                            <CreatableSelect
-                              isClearable
-                              options={INCLUYE_OPCIONES}
-                              value={guidedIncluye}
-                              onChange={setGuidedIncluye}
-                              styles={{
-                                control: (base) => ({ ...base, border: 'none', boxShadow: 'none', minHeight: '38px', borderRadius: '9999px', backgroundColor: 'transparent' })
-                              }}
-                              placeholder="Escribe o selecciona la condición..."
-                            />
-                          </div>
-                          <button 
-                            onClick={() => {
-                              setChatbotLoadingStage(1);
-                              setGuidedStep(5);
-                              setTimeout(() => setChatbotLoadingStage(2), 1500);
-                              setTimeout(() => setChatbotLoadingStage(3), 3000);
-                              setTimeout(() => setChatbotLoadingStage(4), 4500);
-                              setTimeout(() => {
-                                handleGenerate();
-                              }, 5000);
-                            }}
-                            className="bg-red-500 hover:bg-red-600 w-full sm:w-auto text-white px-6 py-2.5 font-bold rounded-full transition-all flex items-center justify-center gap-2 flex-shrink-0"
-                          >
-                            <Sparkles size={18} /> Generar
-                          </button>
-                        </div>
-                      ) : (
-                        guidedIncluye && (
-                          <div className="flex justify-end">
-                            <div className="bg-blue-600 text-white rounded-2xl rounded-tr-none py-2 px-4 shadow-sm max-w-[80%]">
-                              <p className="text-sm">{guidedIncluye.label}</p>
-                            </div>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  )}
-
-                  {/* Loading Animations */}
-                  {guidedStep === 5 && chatbotLoadingStage > 0 && (
-                    <div className="flex items-end gap-2 mt-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 mb-1">
-                        <Bot size={18} />
-                      </div>
-                      <div className="bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4 shadow-sm max-w-[85%]">
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center gap-3 text-blue-600 font-bold">
-                            <Loader2 className="animate-spin flex-shrink-0" size={20} />
-                            <span className="text-sm">
-                              {chatbotLoadingStage === 1 && "Working..."}
-                              {chatbotLoadingStage === 2 && "Iniciando preproceso semántico..."}
-                              {chatbotLoadingStage === 3 && "Buscando en la BD Maestra con RAG Híbrido..."}
-                              {chatbotLoadingStage === 4 && "Construyendo y adaptando APU con IA a toda máquina..."}
-                            </span>
-                          </div>
-                          <div className="w-full h-2 bg-pink-200/50 rounded-full overflow-hidden mt-1">
-                            <div 
-                              className="h-full bg-blue-600 transition-all duration-500 ease-out" 
-                              style={{ width: `${(chatbotLoadingStage / 4) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+              {/* Chat Input */}
+              {chatbotLoadingStage === 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-200 flex-shrink-0">
+                  <div className="flex gap-2">
+                    <input 
+                      type="text"
+                      value={chatInputValue}
+                      onChange={e => setChatInputValue(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleChatSubmit(chatInputValue);
+                      }}
+                      placeholder="Escribe tu respuesta..."
+                      className="flex-1 bg-white border border-slate-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                    <button 
+                      onClick={() => handleChatSubmit(chatInputValue)}
+                      disabled={!chatInputValue.trim()}
+                      className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2.5 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ArrowRight size={18} />
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

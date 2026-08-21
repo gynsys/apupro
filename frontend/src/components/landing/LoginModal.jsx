@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { Eye, EyeOff, X } from 'lucide-react';
 
-export default function LoginModal({ isOpen, onClose }) {
+export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -119,9 +119,9 @@ export default function LoginModal({ isOpen, onClose }) {
         <div className="text-center mt-4 pb-2">
           <p className="text-sm text-gray-600">
             ¿No tienes una cuenta?{' '}
-            <Link to="/register" onClick={onClose} className="font-medium text-blue-600 hover:text-blue-800">
+            <button type="button" onClick={onSwitchToRegister} className="font-medium text-blue-600 hover:text-blue-800">
               Regístrate aquí
-            </Link>
+            </button>
           </p>
         </div>
       </div>
