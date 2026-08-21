@@ -251,48 +251,32 @@ def _get_dynamic_candidates(db: Session, description: str, covenin_prefix: str, 
             
         best_score = hybrid_results[0]["score"]
         
-        strict_candidates = []
-        family_candidates = []
-        global_candidates = []
-        
         tipo_obra = covenin_prefix[0] if covenin_prefix else ""
         prefixes = _get_prefix_variations(covenin_prefix)
+        
+        candidates_with_scores = []
         
         for result in hybrid_results:
             item_id = result["id"]
             score = result["score"]
             
-            # Penalizar fuertemente si el score híbrido es muy bajo y ni siquiera está en el prefix
-            if score < 0.20:
-                break
-                
             is_strict = any(item_id.startswith(p) for p in prefixes)
             is_family = item_id.startswith(tipo_obra)
             
+            # Bonus suave para preferir la categoría del usuario sin que sea una camisa de fuerza
             if is_strict:
-                strict_candidates.append(item_id)
+                score += 0.15
             elif is_family:
-                # Si es familia pero su score híbrido es basura (e.g. < 0.35), lo saltamos
-                if score >= 0.35:
-                    family_candidates.append(item_id)
-            else:
-                # Si es global, debe tener un score muy alto para colar (e.g. > 0.45)
-                if score >= 0.45:
-                    global_candidates.append(item_id)
+                score += 0.05
                 
-            if len(strict_candidates) >= limit:
-                break
+            # Filtro base: no traer basura pura (aunque sea de la familia)
+            if score >= 0.30:
+                candidates_with_scores.append((item_id, score))
                 
-        final_ids = []
-        for id in strict_candidates:
-            if len(final_ids) >= limit: break
-            final_ids.append(id)
-        for id in family_candidates:
-            if len(final_ids) >= limit: break
-            final_ids.append(id)
-        for id in global_candidates:
-            if len(final_ids) >= limit: break
-            final_ids.append(id)
+        # Ordenar por el score unificado final (de mayor a menor)
+        candidates_with_scores.sort(key=lambda x: x[1], reverse=True)
+        
+        final_ids = [c[0] for c in candidates_with_scores[:limit]]
             
         if not final_ids:
             return [], best_score

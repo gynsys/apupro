@@ -108,8 +108,9 @@ Dirígete SIEMPRE al usuario en segunda persona ("Tu solicitud", "Estás pidiend
 2. Usa `cantidad_promedio` como base para cada insumo.
 3. Ajusta proporcionalmente si la solicitud difiere de las partidas históricas.
 4. Insumos "obligatorio: true" (presencia > 70%) DEBEN incluirse.
-5. Insumos "opcional" (presencia < 30%) solo si son estrictamente necesarios.
-6. Si necesitas un insumo no listado, agrégalo con origen "ia" y explica en `nota_calculo`.
+5. REGLA ESTRICTA DE MAQUINARIA: Si la descripción del usuario especifica o insinúa trabajo "A MANO" o con "EQUIPO LIVIANO", ESTÁ TOTAL Y ESTRICTAMENTE PROHIBIDO incluir maquinaria pesada (Tractores, Retroexcavadoras, Payloader, Jumbo, Excavadoras, Mototraillas, etc) en el APU. Solo permite herramientas menores o equipos ligeros.
+6. Insumos "opcional" (presencia < 30%) solo si son estrictamente necesarios.
+7. Si necesitas un insumo no listado, agrégalo con origen "ia" y explica en `nota_calculo`.
 
 # REGLAS DE INSUMOS
 - USA ÚNICAMENTE insumos del catálogo provisto.
@@ -192,9 +193,10 @@ Prefijo COVENIN: {covenin_prefix}
 4. AJUSTA cantidades cuando la nueva partida lo requiera (ej: distinta área, espesor, complejidad).
    Marca los insumos ajustados como `"origen": "ia"` y explica el ajuste en `nota_calculo`.
 5. AGREGA insumos nuevos que la nueva partida requiera y no estén en la base. Márcalos como `"origen": "ia"`.
-6. NUNCA cambies los precios unitarios de los insumos del APU base. Son precios reales de la BD.
-7. Si detectas una incongruencia grave entre el APU base y la solicitud, indícalo en `advertencias`.
-8. Agrega SIEMPRE una advertencia indicando que el APU fue adaptado desde la partida base [{base_apu.get('codpar', 'N/A')}].
+6. REGLA ESTRICTA DE MAQUINARIA: Si la descripción del usuario especifica o insinúa trabajo "A MANO" o con "EQUIPO LIVIANO", ESTÁ TOTAL Y ESTRICTAMENTE PROHIBIDO incluir o conservar maquinaria pesada (Tractores, Retroexcavadoras, Payloader, Jumbo, Excavadoras, Mototraillas, etc) en el APU. Solo permite herramientas menores o equipos ligeros. Elimínalos si venían en el APU base.
+7. NUNCA cambies los precios unitarios de los insumos del APU base. Son precios reales de la BD.
+8. Si detectas una incongruencia grave entre el APU base y la solicitud, indícalo en `advertencias`.
+9. Agrega SIEMPRE una advertencia indicando que el APU fue adaptado desde la partida base [{base_apu.get('codpar', 'N/A')}].
 
 # FALTA DE DATOS
 Si la descripción del usuario es ambigua o le faltan datos críticos para adaptar correctamente,
