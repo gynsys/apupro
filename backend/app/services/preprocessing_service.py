@@ -727,7 +727,7 @@ def fast_preprocess_debug(
         
         if description:
             # 1. Búsqueda Híbrida (La nueva y mejorada) - Traer 40 para debug
-            all_items, _ = _get_dynamic_candidates(db, description, [covenin_prefix] if covenin_prefix else [], limit=40)
+            all_items, _ = _get_dynamic_candidates(db, description, covenin_prefix or "", limit=40)
             estrategia_hibrida = [{"codpar": p.CodPar, "descripcion": p.Descri} for p in all_items]
             
             # Ganadora y Complementarias
