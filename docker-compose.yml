@@ -25,6 +25,8 @@ services:
       - SECRET_KEY=changethisinproduction
     depends_on:
       - apupro-db
+    volumes:
+      - apupro_ai_brain:/app/ai_brain
 
   apupro-frontend:
     image: ghcr.io/gynsys/apupro/apupro-frontend:latest
@@ -38,3 +40,4 @@ services:
 
 volumes:
   apupro_db_data:
+  apupro_ai_brain:

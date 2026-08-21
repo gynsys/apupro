@@ -33,8 +33,8 @@ class AISearchEngine:
             print(f"Error cargando el modelo de IA: {e}")
 
         # 2. Cargar matriz NumPy
-        # Orden de búsqueda: producción Docker (/app/) -> relativa -> local Windows
-        npy_docker_path = '/app/embeddings_partidas.npy'
+        # Orden de búsqueda: producción Docker (/app/ai_brain/) -> relativa -> local Windows
+        npy_docker_path = '/app/ai_brain/embeddings_partidas.npy'
         npy_relative_path = os.path.join(os.path.dirname(__file__), '..', '..', 'embeddings_partidas.npy')
         npy_local_path = r'C:\Users\pablo\Desktop\BD_COST360\embeddings_partidas.npy'
         
@@ -51,8 +51,8 @@ class AISearchEngine:
             print(f"ERROR CRITICO: No se encontró embeddings_partidas.npy en ninguna ruta buscada.")
             
         # 3. Cargar mapeo de IDs desde el CSV
-        # Orden de búsqueda: producción Docker (/app/) -> relativa -> local Windows
-        csv_docker_path = '/app/Base_Datos_IA.csv'
+        # Orden de búsqueda: producción Docker (/app/ai_brain/) -> relativa -> local Windows
+        csv_docker_path = '/app/ai_brain/Base_Datos_IA.csv'
         csv_relative_path = os.path.join(os.path.dirname(__file__), '..', '..', 'Base_Datos_IA.csv')
         csv_local_path = r'C:\Users\pablo\Desktop\BD_COST360\Base_Datos_IA.csv'
         

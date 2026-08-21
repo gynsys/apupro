@@ -1,7 +1,7 @@
 """
 Script que se ejecuta DENTRO del contenedor apupro-backend.
 Lee todas las partidas de cost360_items (todos los schemas),
-genera embeddings con MiniLM y guarda /app/embeddings_partidas.npy y /app/Base_Datos_IA.csv
+genera embeddings con MiniLM y guarda /app/ai_brain/embeddings_partidas.npy y /app/ai_brain/Base_Datos_IA.csv
 """
 import os
 import sys
@@ -78,12 +78,12 @@ embeddings_matrix = np.vstack(all_embeddings)
 print(f"Matriz final: {embeddings_matrix.shape}")
 
 # Guardar .npy
-npy_path = '/app/embeddings_partidas.npy'
+npy_path = '/app/ai_brain/embeddings_partidas.npy'
 np.save(npy_path, embeddings_matrix)
 print(f"Guardado: {npy_path} ({os.path.getsize(npy_path) // 1024 // 1024} MB)")
 
 # Guardar CSV
-csv_path = '/app/Base_Datos_IA.csv'
+csv_path = '/app/ai_brain/Base_Datos_IA.csv'
 with open(csv_path, 'w', newline='', encoding='utf-8') as f:
     writer = csv.writer(f)
     writer.writerow(['Referencia', 'Descripcion'])
