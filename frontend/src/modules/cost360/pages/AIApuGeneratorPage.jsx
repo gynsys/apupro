@@ -895,7 +895,7 @@ export default function AIApuGeneratorPage() {
                   <Sparkles size={20} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800">Asistente APUPro</h3>
+                  <h3 className="font-bold text-slate-800">Asistente CostBase</h3>
                   <p className="text-xs text-slate-500">Te guiaré paso a paso para crear un APU perfecto.</p>
                 </div>
               </div>
@@ -1181,33 +1181,35 @@ export default function AIApuGeneratorPage() {
             </div>
           )}
           
-          <div className="flex justify-end gap-3">
-            {isClarifying && (
+          {!(isGuidedMode && !isSmartMode && !isClarifying) && (
+            <div className="flex justify-end gap-3">
+              {isClarifying && (
+                <button
+                  onClick={() => { setIsClarifying(false); setChatHistory([]); setAiClarificationMessage(""); setAiOptions([]); setAiQuestions([]); setPrompt(''); }}
+                  className="px-4 py-2 text-slate-500 hover:text-slate-700 text-sm font-bold transition-colors"
+                >
+                  Cancelar
+                </button>
+              )}
               <button
-                onClick={() => { setIsClarifying(false); setChatHistory([]); setAiClarificationMessage(""); setAiOptions([]); setAiQuestions([]); setPrompt(''); }}
-                className="px-4 py-2 text-slate-500 hover:text-slate-700 text-sm font-bold transition-colors"
+                onClick={() => handleGeneratePreprocess()}
+                disabled={loading || !prompt.trim() || !isSelectorsComplete || isClarifying || isSmartMode}
+                className="flex items-center gap-2 text-slate-600 bg-slate-100 px-4 py-3 rounded-xl hover:bg-slate-200 transition-all font-bold disabled:opacity-50 text-sm border border-slate-200"
+                title="Muestra cómo la IA buscará en la base de datos sin consumir saldo"
               >
-                Cancelar
+                <Search size={18} />
+                Preproceso
               </button>
-            )}
-            <button
-              onClick={() => handleGeneratePreprocess()}
-              disabled={loading || !prompt.trim() || !isSelectorsComplete || isClarifying || isSmartMode}
-              className="flex items-center gap-2 text-slate-600 bg-slate-100 px-4 py-3 rounded-xl hover:bg-slate-200 transition-all font-bold disabled:opacity-50 text-sm border border-slate-200"
-              title="Muestra cómo la IA buscará en la base de datos sin consumir saldo"
-            >
-              <Search size={18} />
-              Preproceso
-            </button>
-            <button
-              onClick={() => handleGenerate()}
-              disabled={loading || !prompt.trim() || !isSelectorsComplete || isSmartMode}
-              className={`flex items-center gap-2 text-white px-6 py-3 rounded-xl transition-all shadow-sm font-bold disabled:opacity-50 ${isClarifying ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'}`}
-            >
-              {loading ? <Loader className="animate-spin" size={18} /> : (isClarifying ? <Check size={18} /> : <Sparkles size={18} />)}
-              {loading ? (isClarifying ? 'Pensando...' : 'Generando...') : (isClarifying ? 'Responder' : 'Generar APU')}
-            </button>
-          </div>
+              <button
+                onClick={() => handleGenerate()}
+                disabled={loading || !prompt.trim() || !isSelectorsComplete || isSmartMode}
+                className={`flex items-center gap-2 text-white px-6 py-3 rounded-xl transition-all shadow-sm font-bold disabled:opacity-50 ${isClarifying ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'}`}
+              >
+                {loading ? <Loader className="animate-spin" size={18} /> : (isClarifying ? <Check size={18} /> : <Sparkles size={18} />)}
+                {loading ? (isClarifying ? 'Pensando...' : 'Generando...') : (isClarifying ? 'Responder' : 'Generar APU')}
+              </button>
+            </div>
+          )}
         </div>
         );
       })()}
