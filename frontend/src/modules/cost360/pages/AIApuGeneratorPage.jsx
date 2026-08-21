@@ -172,16 +172,18 @@ export default function AIApuGeneratorPage() {
   
   // Obtenemos el usuario del contexto de autenticación
   const { user } = React.useContext(AuthContext);
-  const userName = user?.username || (user?.email ? user.email.split('@')[0] : "Usuario");
 
-  const [guidedMessages, setGuidedMessages] = useState([
-    {
-      id: 'msg-bot0',
-      sender: 'bot',
-      text: `¡Hola, ${userName}! Construir una descripción detallada de una partida es lo esencial para evitar ambigüedades al momento de la ejecución en campo, y es la clave para que la Inteligencia Artificial encuentre exactamente lo que necesitas.\n\nEn 4 pasos rápidos armaremos la frase ideal basándonos en la información suministrada. ¿Comenzamos?`,
-      chips: ["Sí, comenzar"]
-    }
-  ]);
+  const [guidedMessages, setGuidedMessages] = useState([]);
+  
+  // Initialize greeting with user name when component mounts or user changes
+  useEffect(() => {
+    const userName = user?.full_name || user?.email?.split('@')[0] || '';
+    const greetingName = userName ? ` ${userName}` : '';
+    setGuidedMessages([
+      { id: 1, sender: 'bot', text: `¡Hola${greetingName}! Construir una descripción detallada de una partida es lo esencial para evitar ambigüedades al momento de la ejecución en campo, y es la clave para que la Inteligencia Artificial encuentre exactamente lo que necesitas.\n\nEn 4 pasos rápidos armaremos la frase ideal basándonos en la información suministrada. ¿Comenzamos?`, chips: ["Sí, comenzar"] }
+    ]);
+  }, [user]);
+
   const [currentChatStep, setCurrentChatStep] = useState(0);
   const [chatInputValue, setChatInputValue] = useState("");
 
