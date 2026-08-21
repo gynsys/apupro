@@ -191,14 +191,15 @@ def _find_similar_items(
     db: Session,
     description: str,
     covenin_prefix: Optional[str],
-) -> Tuple[List[CostItem], float]:
+) -> Tuple[List[CostItem], float, List[Dict[str, Any]]]:
     """
     Busca partidas usando la lógica de expansión dinámica (cascada) y devuelve
-    las partidas junto con el mejor score semántico.
+    las partidas junto con el mejor score semántico y la traza de los scores.
     """
     from app.services.smart_selector_service import _get_dynamic_candidates
     
-    similar_items, best_score = _get_dynamic_candidates(db, description, covenin_prefix or "", limit=15)
+    scored_items, best_score = _get_dynamic_candidates(db, description, covenin_prefix or "", limit=15)
+    similar_items = [p["item"] for p in scored_items] if scored_items else []
     
     if not similar_items and covenin_prefix:
         # Fallback si no hay nada
@@ -209,11 +210,11 @@ def _find_similar_items(
                     CostItem.CodPar.startswith(covenin_prefix)
                 )
             ).filter(~CostItem.CovPar.like('% S/C%')).limit(3).all()
-            return base_items, 0.0
+            return base_items, 0.0, []
         except:
-            return [], 0.0
+            return [], 0.0, []
             
-    return similar_items, best_score
+    return similar_items, best_score, scored_items
 
 
 
@@ -619,7 +620,7 @@ def preprocess_apu_data(
     logger.info("Keywords extraídas: %s", keywords)
 
     # 2. Buscar partidas similares usando RAG V6 acotado
-    similar_items, best_score = _find_similar_items(db, description, covenin_prefix)
+    similar_items, best_score, scored_items = _find_similar_items(db, description, covenin_prefix)
     
     # PORTERO MATEMÁTICO: Bloqueo de incongruencia total
     if best_score < 0.15 and len(similar_items) > 0:
@@ -687,6 +688,11 @@ def preprocess_apu_data(
         "rendimientos_historicos_por_unidad_partida": rendimientos_formateados,
         "catalogo_insumos_disponibles": catalogo,
         "advertencias_preprocesamiento": advertencias,
+        "auto_fusion_trace": {
+            "1_partida_base_ganadora": {"CodPar": scored_items[0]["item"].CodPar, "CovPar": scored_items[0]["item"].CovPar, "Descri": scored_items[0]["item"].Descri, "calificacion": scored_items[0]["score"]} if scored_items and len(scored_items) > 0 else None,
+            "2_partidas_complementarias": [{"CodPar": p["item"].CodPar, "CovPar": p["item"].CovPar, "Descri": p["item"].Descri, "calificacion": p["score"]} for p in scored_items[1:3]] if scored_items and len(scored_items) > 1 else [],
+            "3_candidatas_top_40": [{"CodPar": p["item"].CodPar, "CovPar": p["item"].CovPar, "Descri": p["item"].Descri, "calificacion": p["score"]} for p in scored_items] if scored_items else []
+        }
     }
 
     logger.info("Payload generado: modo=%s, partidas=%d, advertencias=%d",

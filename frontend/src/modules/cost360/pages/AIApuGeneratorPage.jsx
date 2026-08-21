@@ -953,7 +953,7 @@ export default function AIApuGeneratorPage() {
           )}
           
           {isGuidedMode && !isSmartMode && !isClarifying ? (
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 md:p-6 mb-4 relative flex flex-col max-w-2xl mx-auto w-full shadow-sm" style={{ minHeight: '400px', maxHeight: '600px' }}>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 md:p-6 mb-4 relative flex flex-col max-w-lg mx-auto w-full shadow-sm" style={{ minHeight: '400px', maxHeight: '600px' }}>
               <div className="flex items-center gap-3 mb-4 border-b border-slate-200 pb-4 flex-shrink-0">
                 <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
                   <Sparkles size={20} />
@@ -973,8 +973,8 @@ export default function AIApuGeneratorPage() {
                           <Bot size={18} />
                         </div>
                       )}
-                      <div className={`${msg.sender === 'bot' ? 'bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4' : 'bg-blue-600 text-white rounded-2xl rounded-br-none px-4 py-2.5 w-fit'} shadow-sm max-w-[85%]`}>
-                        <p className={`text-sm leading-relaxed ${msg.sender === 'user' ? 'break-words' : 'whitespace-pre-wrap'}`}>{msg.text}</p>
+                      <div className={`${msg.sender === 'bot' ? 'bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4' : 'bg-blue-600 text-white rounded-2xl rounded-br-none px-4 py-2.5 inline-block'} shadow-sm max-w-[85%]`}>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
                       </div>
                     </div>
                     {msg.sender === 'bot' && msg.chips && currentChatStep === (msg.id.includes('bot') ? parseInt(msg.id.replace(/\D/g, '')) || 0 : 0) && (

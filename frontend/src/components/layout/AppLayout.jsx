@@ -46,7 +46,7 @@ export default function AppLayout() {
         </div>
       </div>
 
-      <div className="space-y-3 px-2 flex-1 pb-4 overflow-y-auto w-full flex flex-col items-center">
+      <div className="space-y-3 px-2 flex-1 pb-4 w-full flex flex-col items-center">
         {getNavItems().map(({ name, href, Icon, exact }) => {
           const active = exact ? location.pathname === href : location.pathname.startsWith(href);
           return (
@@ -57,7 +57,7 @@ export default function AppLayout() {
                 className={`flex items-center justify-center p-3 rounded-xl transition-all duration-200 ${
                   active
                     ? 'bg-blue-600/10 text-blue-700 shadow-sm border border-blue-200/60'
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                    : 'text-slate-500 hover:bg-[#FEF3C7] hover:text-slate-800'
                 }`}
               >
                 <Icon
@@ -162,7 +162,7 @@ export default function AppLayout() {
 
         {/* ── ZONE 1: SIDEBAR — glass panel (lg+) ────────────── */}
         <aside
-          className="print:hidden hidden lg:flex lg:flex-col w-[80px] shrink-0 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto"
+          className="print:hidden hidden lg:flex lg:flex-col w-[80px] shrink-0 sticky top-14 h-[calc(100vh-3.5rem)]"
           style={{
             background: 'rgba(255,255,255,0.65)',
             backdropFilter: 'blur(20px)',
