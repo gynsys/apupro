@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-import { loginArkoAdmin, loginLandingSite } from '../services/api';
+import { loginArkoAdmin, loginLandingSite, loginGoogleArkoAdmin } from '../services/api';
 
 export const AuthContext = createContext(null);
 
@@ -57,8 +57,21 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
   };
 
+  const loginWithGoogle = async (token) => {
+    try {
+      const response = await loginGoogleArkoAdmin(token);
+      if (response.access_token) {
+        setToken(response.access_token);
+        return { success: true };
+      }
+      return { success: false, error: 'Token no recibido' };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ token, isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={{ token, isAuthenticated, user, login, logout, loginWithGoogle }}>
       {children}
     </AuthContext.Provider>
   );

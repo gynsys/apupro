@@ -71,6 +71,29 @@ export async function loginArkoAdmin(email, password) {
 }
 
 /**
+ * Login with Google for admin/users
+ * @param {string} token - Google OAuth Token
+ * @returns {Promise<Object>}
+ */
+export async function loginGoogleArkoAdmin(token) {
+  const response = await fetch(`${API_URL}/arko/auth/login/google`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({ token }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'Error al autenticar con Google');
+  }
+
+  return response.json();
+}
+
+/**
  * Login for Landing Sites (Cloned Templates)
  * @param {string} email
  * @param {string} password

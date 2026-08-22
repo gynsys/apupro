@@ -187,4 +187,4 @@ matplotlib
 sentence-transformers
 scikit-learn
 pandas
-openpyxl==3.1.2
+openpyxl==3.1.2google-auth

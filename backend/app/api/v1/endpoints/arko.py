@@ -123,6 +123,76 @@ def login_arko_admin(form_data: OAuth2PasswordRequestForm = Depends()):
         logger.error(f"Error in Arko login: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
+class GoogleLoginRequest(BaseModel):
+    token: str
+
+@router.post("/auth/login/google")
+def login_google(login_data: GoogleLoginRequest):
+    try:
+        from google.oauth2 import id_token
+        import google.auth.transport.requests
+        import requests
+
+        if not settings.GOOGLE_CLIENT_ID:
+            logger.error("GOOGLE_CLIENT_ID not configured")
+            raise HTTPException(status_code=500, detail="Google OAuth no configurado")
+
+        request_session = requests.Session()
+        req = google.auth.transport.requests.Request(session=request_session)
+        
+        try:
+            id_info = id_token.verify_oauth2_token(
+                login_data.token, req, settings.GOOGLE_CLIENT_ID
+            )
+        except ValueError:
+            # Maybe it's an access token instead of id_token (implicit flow)
+            resp = request_session.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {login_data.token}"}
+            )
+            if resp.status_code == 200:
+                id_info = resp.json()
+            else:
+                raise HTTPException(status_code=400, detail="Token de Google inválido")
+
+        email = id_info.get("email")
+        if not email:
+            raise HTTPException(status_code=400, detail="No se pudo obtener el email de Google")
+
+        full_name = id_info.get("name") or id_info.get("given_name") or ""
+
+        with get_db_session() as db:
+            user = db.query(ArkoAdmin).filter(ArkoAdmin.email == email).first()
+            if not user:
+                # Registro automático
+                import secrets
+                import string
+                alphabet = string.ascii_letters + string.digits
+                temp_pwd = ''.join(secrets.choice(alphabet) for i in range(16))
+                
+                user = ArkoAdmin(
+                    email=email,
+                    hashed_password=get_password_hash(temp_pwd),
+                    full_name=full_name,
+                    is_active=True
+                )
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+            elif not user.is_active:
+                raise HTTPException(status_code=400, detail="Usuario inactivo")
+            
+            # Use same structure as normal login
+            access_token = create_access_token(
+                data={"sub": user.email, "type": "arko_admin"}
+            )
+            return {"access_token": access_token, "token_type": "bearer"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in Google login: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 # --- Dependencia Arko ---
 from fastapi.security import OAuth2PasswordBearer
 import jwt
