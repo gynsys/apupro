@@ -953,28 +953,28 @@ export default function AIApuGeneratorPage() {
           )}
           
           {isGuidedMode && !isSmartMode && !isClarifying ? (
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 md:p-6 mb-4 relative flex flex-col max-w-lg mx-auto w-full shadow-sm" style={{ minHeight: '400px', maxHeight: '600px' }}>
-              <div className="flex items-center gap-3 mb-4 border-b border-slate-200 pb-4 flex-shrink-0">
-                <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+            <div className="bg-amber-50 border-2 border-amber-500 rounded-xl p-4 md:p-6 mb-4 relative flex flex-col max-w-lg mx-auto w-full shadow-[0_20px_25px_-5px_rgba(217,119,6,0.15),0_10px_10px_-5px_rgba(0,0,0,0.1)]" style={{ minHeight: '400px', maxHeight: '600px' }}>
+              <div className="flex items-center gap-3 mb-4 border-b border-amber-200 pb-4 flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold shadow-md shadow-amber-500/30">
                   <Sparkles size={20} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800">Asistente CostBase</h3>
-                  <p className="text-xs text-slate-500">Te guiaré paso a paso para crear un APU perfecto.</p>
+                  <h3 className="font-bold text-amber-900">Asistente CostBase</h3>
+                  <p className="text-xs text-amber-700/80">Te guiaré paso a paso para crear un APU perfecto.</p>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto pr-2 space-y-6 flex flex-col pb-4 scrollbar-thin scrollbar-thumb-slate-200">
+              <div className="flex-1 overflow-y-auto pr-2 space-y-6 flex flex-col pb-4 scrollbar-thin scrollbar-thumb-amber-200">
                 {guidedMessages.map((msg, idx) => (
                   <div key={msg.id || idx} className={`animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-3 ${msg.sender === 'user' ? 'items-end' : ''}`}>
                     <div className={`flex items-end gap-2 ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}>
                       {msg.sender === 'bot' && (
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 mb-1">
+                        <div className="w-8 h-8 rounded-full bg-amber-500 flex-shrink-0 flex items-center justify-center text-white mb-1 shadow-sm shadow-amber-500/20">
                           <Bot size={18} />
                         </div>
                       )}
-                      <div className={`${msg.sender === 'bot' ? 'bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4' : 'bg-blue-600 text-white rounded-2xl rounded-br-none px-4 py-2.5'} shadow-sm w-fit max-w-[280px] sm:max-w-[400px]`}>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                      <div className={`${msg.sender === 'bot' ? 'bg-white border border-amber-200 rounded-2xl rounded-bl-none p-4' : 'bg-amber-600 text-white rounded-2xl rounded-br-none px-4 py-2.5'} shadow-sm w-fit max-w-[280px] sm:max-w-[400px]`}>
+                        <p className={`text-sm leading-relaxed whitespace-pre-wrap ${msg.sender === 'bot' ? 'text-amber-950' : 'text-white'}`}>{msg.text}</p>
                       </div>
                     </div>
                     {msg.sender === 'bot' && msg.chips && currentChatStep === (msg.id.includes('bot') ? parseInt(msg.id.replace(/\D/g, '')) || 0 : 0) && (
@@ -983,7 +983,7 @@ export default function AIApuGeneratorPage() {
                           <button 
                             key={chip}
                             onClick={() => handleChatSubmit(chip)}
-                            className="bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-700 text-xs px-3 py-1.5 rounded-full transition-all shadow-sm"
+                            className="bg-white border border-amber-300 hover:border-amber-500 hover:bg-amber-100 text-amber-900 font-medium text-xs px-3 py-1.5 rounded-full transition-all shadow-sm"
                           >
                             {chip}
                           </button>
@@ -995,12 +995,12 @@ export default function AIApuGeneratorPage() {
                 
                 {chatbotLoadingStage > 0 && (
                   <div className="flex items-end gap-2 mt-2 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 mb-1">
+                    <div className="w-8 h-8 rounded-full bg-amber-500 flex-shrink-0 flex items-center justify-center text-white mb-1 shadow-sm shadow-amber-500/20">
                       <Bot size={18} />
                     </div>
-                    <div className="bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4 shadow-sm w-fit max-w-[280px] sm:max-w-[400px]">
+                    <div className="bg-white border border-amber-200 rounded-2xl rounded-bl-none p-4 shadow-sm w-fit max-w-[280px] sm:max-w-[400px]">
                       <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-3 text-blue-600 font-bold">
+                        <div className="flex items-center gap-3 text-amber-700 font-bold">
                           <Loader2 className="animate-spin flex-shrink-0" size={20} />
                           <span className="text-sm">
                             {chatbotLoadingStage === 1 && "Working..."}
@@ -1009,9 +1009,9 @@ export default function AIApuGeneratorPage() {
                             {chatbotLoadingStage === 4 && "Construyendo y adaptando APU con IA a toda máquina..."}
                           </span>
                         </div>
-                        <div className="w-full h-2 bg-pink-200/50 rounded-full overflow-hidden mt-1">
+                        <div className="w-full h-2 bg-amber-100 rounded-full overflow-hidden mt-1">
                           <div 
-                            className="h-full bg-blue-600 transition-all duration-500 ease-out" 
+                            className="h-full bg-amber-500 transition-all duration-500 ease-out" 
                             style={{ width: `${(chatbotLoadingStage / 4) * 100}%` }}
                           />
                         </div>
@@ -1024,7 +1024,7 @@ export default function AIApuGeneratorPage() {
 
               {/* Chat Input */}
               {chatbotLoadingStage === 0 && (
-                <div className="mt-4 pt-4 border-t border-slate-200 flex-shrink-0">
+                <div className="mt-4 pt-4 border-t border-amber-200 flex-shrink-0">
                   <div className="flex gap-2">
                     <input 
                       type="text"
@@ -1034,12 +1034,12 @@ export default function AIApuGeneratorPage() {
                         if (e.key === 'Enter') handleChatSubmit(chatInputValue);
                       }}
                       placeholder="Escribe tu respuesta..."
-                      className="flex-1 bg-white border border-slate-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      className="flex-1 bg-white border-2 border-amber-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-amber-900 placeholder:text-amber-700/50"
                     />
                     <button 
                       onClick={() => handleChatSubmit(chatInputValue)}
                       disabled={!chatInputValue.trim()}
-                      className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2.5 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="bg-amber-500 hover:bg-amber-600 text-white rounded-full p-2.5 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <ArrowRight size={18} />
                     </button>
