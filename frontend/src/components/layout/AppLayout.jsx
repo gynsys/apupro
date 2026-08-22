@@ -158,7 +158,7 @@ export default function AppLayout() {
 
         {/* ── ZONE 1: SIDEBAR — glass panel (lg+) ────────────── */}
         <aside
-          className="print:hidden hidden lg:flex lg:flex-col w-[80px] shrink-0 sticky top-14 h-[calc(100vh-3.5rem)]"
+          className="print:hidden hidden lg:flex lg:flex-col w-[80px] shrink-0 sticky top-14 h-[calc(100vh-3.5rem)] z-40"
           style={{
             background: 'rgba(255,255,255,0.65)',
             backdropFilter: 'blur(20px)',
