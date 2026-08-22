@@ -973,7 +973,7 @@ export default function AIApuGeneratorPage() {
                           <Bot size={18} />
                         </div>
                       )}
-                      <div className={`${msg.sender === 'bot' ? 'bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4' : 'bg-blue-600 text-white rounded-2xl rounded-br-none px-4 py-2.5 inline-block'} shadow-sm max-w-[85%]`}>
+                      <div className={`${msg.sender === 'bot' ? 'bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4' : 'bg-blue-600 text-white rounded-2xl rounded-br-none px-4 py-2.5'} shadow-sm w-fit max-w-[280px] sm:max-w-[400px]`}>
                         <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
                       </div>
                     </div>
@@ -998,7 +998,7 @@ export default function AIApuGeneratorPage() {
                     <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 mb-1">
                       <Bot size={18} />
                     </div>
-                    <div className="bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4 shadow-sm max-w-[85%]">
+                    <div className="bg-pink-50 border border-pink-100 rounded-2xl rounded-bl-none p-4 shadow-sm w-fit max-w-[280px] sm:max-w-[400px]">
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-3 text-blue-600 font-bold">
                           <Loader2 className="animate-spin flex-shrink-0" size={20} />
