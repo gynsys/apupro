@@ -19,3 +19,18 @@ Si en el futuro se despliega la plataforma en un nuevo dominio (o subdominio), e
 4. Editar la credencial en la sección **IDs de clientes de OAuth 2.0**.
 5. Agregar el nuevo dominio (sin barra `/` al final) tanto en **Orígenes autorizados de JavaScript** como en **URIs de redireccionamiento autorizados**.
 6. Guardar y esperar ~5 minutos a que se propague el cambio.
+
+## Solución de Problemas (Troubleshooting Avanzado)
+
+Durante la implementación inicial nos encontramos con varios problemas silenciosos importantes. Si el login de Google deja de funcionar, revisa los siguientes puntos:
+
+### 1. Variables de Entorno en Producción (Docker)
+Para que el cliente web (Vite) tenga acceso a `VITE_GOOGLE_CLIENT_ID` durante la compilación en **GitHub Actions**:
+- **En `deploy.yml`**: La variable debe ser pasada en `build-args`.
+- **En `Dockerfile` (frontend)**: La variable **DEBE** ser declarada usando `ARG VITE_GOOGLE_CLIENT_ID` y `ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID`. Si esto se omite, Docker ignora la variable que le manda Github Actions y el botón queda inerte (no se abre la ventana de Google).
+
+### 2. Bloqueo Silencioso por Encabezados de Seguridad (COOP)
+Si la ventana de Google **sí se abre** y te permite elegir la cuenta, pero al cerrarse la pantalla **se queda cargando y no ocurre nada** (y no muestra ningún error en consola):
+- Verifica que el archivo `nginx.conf` del frontend tenga configurado el encabezado de seguridad a:
+  `add_header Cross-Origin-Opener-Policy "same-origin-allow-popups";`
+- Si la política está configurada de forma estricta (`same-origin`), el navegador por seguridad bloqueará la comunicación (vía `postMessage`) entre la ventana emergente de Google y la página principal de CostBase, resultando en un fallo silencioso donde el token jamás llega a la aplicación.
