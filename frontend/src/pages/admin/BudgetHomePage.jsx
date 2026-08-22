@@ -223,13 +223,13 @@ export default function BudgetHomePage() {
       </div>
 
       {/* SEARCH AND FILTER BAR */}
-      <div className="bg-white rounded-2xl p-2 shadow-sm border border-slate-200/60 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-75">
+      <div className="bg-white rounded-2xl p-1.5 shadow-sm border-2 border-slate-300 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-75">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
           <input
             type="text"
             placeholder="Buscar presupuestos por nombre..."
-            className="w-full bg-transparent outline-none py-3 pl-12 pr-4 text-slate-700 placeholder:text-slate-400"
+            className="w-full bg-transparent outline-none py-2 pl-12 pr-4 text-slate-700 placeholder:text-slate-400"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />

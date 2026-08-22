@@ -82,7 +82,7 @@ html, body, #root {
 /* --- TARJETAS DE PRESUPUESTO ÁMBAR --- */
 .tarjeta-presupuesto-ambar {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 2px solid #cbd5e1;
   border-radius: 16px;
   padding: 20px;
   display: flex;
