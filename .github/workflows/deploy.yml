@@ -50,7 +50,7 @@ jobs:
           context: ./frontend
           build-args: |
             VITE_API_URL=https://costbase.arko360.net/api/v1
-            VITE_GOOGLE_CLIENT_ID=836443681186-o642l26c5f47oml9atblo8m73cc0i0hv.apps.googleusercontent.com
+            VITE_GOOGLE_CLIENT_ID=1045179846103-2a275nbfnok0ln3691bblgjm8mt7vg83.apps.googleusercontent.com
           push: true
           provenance: false
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/apupro-frontend:latest

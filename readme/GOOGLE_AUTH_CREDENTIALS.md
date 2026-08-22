@@ -7,7 +7,7 @@ El inicio de sesión y registro mediante Google en **CostBase** (y en GynSys) co
 - **Cuenta administradora:** Las credenciales fueron creadas/administradas utilizando la cuenta de correo principal del desarrollador (usualmente `dramarielh@gmail.com`).
 
 ## ID de Cliente (Client ID)
-- El `GOOGLE_CLIENT_ID` utilizado en las variables de entorno (`.env` tanto en frontend como backend) termina en `...m73cc0i0hv.apps.googleusercontent.com`.
+- El `GOOGLE_CLIENT_ID` utilizado en las variables de entorno (`.env` tanto en frontend como backend) termina en `...mt7vg83.apps.googleusercontent.com`.
 
 ## Mantenimiento y Nuevos Dominios
 Si en el futuro se despliega la plataforma en un nuevo dominio (o subdominio), es estrictamente necesario autorizar ese origen en Google Cloud para evitar el error `400: origin_mismatch`.
