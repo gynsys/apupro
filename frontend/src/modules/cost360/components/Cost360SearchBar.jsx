@@ -56,7 +56,7 @@ const Cost360SearchBar = ({
               setSelectedSubcapitulo('');
               setSelectedPartida('');
             }}
-            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
+            className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
           >
             <option value="">Todos los Tipos...</option>
             {visibleTree.map(cat => (
@@ -74,7 +74,7 @@ const Cost360SearchBar = ({
               setSelectedPartida('');
             }}
             disabled={!selectedTipoObra}
-            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
+            className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
           >
             <option value="">Todos los Capítulos...</option>
             {selectedTipoObra && coveninTree.find(c => c.code === selectedTipoObra)?.children?.map(cap => (
@@ -91,7 +91,7 @@ const Cost360SearchBar = ({
               setSelectedPartida('');
             }}
             disabled={!selectedCapitulo}
-            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
+            className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
           >
             <option value="">Todos los Subcapítulos...</option>
             {selectedCapitulo && coveninTree.find(c => c.code === selectedTipoObra)?.children?.find(c => c.code === selectedCapitulo)?.children?.map(sub => (
@@ -106,7 +106,7 @@ const Cost360SearchBar = ({
             value={selectedPartida}
             onChange={(e) => setSelectedPartida(e.target.value)}
             disabled={!selectedSubcapitulo || !hasFourthLevel}
-            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
+            className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
           >
             {!selectedSubcapitulo ? (
               <option value="">Selecciona el Subcapítulo...</option>
@@ -135,7 +135,7 @@ const Cost360SearchBar = ({
             className="block w-full pl-11 pr-4 py-3 rounded-xl text-sm text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-medium"
             style={{
               background: 'rgba(255,255,255,0.8)',
-              border: '1px solid rgba(148,163,255,0.35)',
+              border: '2px solid #cbd5e1',
               boxShadow: 'inset 0 1px 4px rgba(80,100,200,0.06)',
             }}
             placeholder="Cód. COVENIN"
@@ -153,7 +153,7 @@ const Cost360SearchBar = ({
             className="block w-full pl-11 pr-4 py-3 rounded-xl text-sm text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-medium"
             style={{
               background: 'rgba(255,255,255,0.8)',
-              border: '1px solid rgba(148,163,255,0.35)',
+              border: '2px solid #cbd5e1',
               boxShadow: 'inset 0 1px 4px rgba(80,100,200,0.06)',
             }}
             placeholder="Ej: excavación a maquina..."

@@ -14,7 +14,7 @@ const glass = {
   background: 'rgba(255,255,255,0.72)',
   backdropFilter: 'blur(18px)',
   WebkitBackdropFilter: 'blur(18px)',
-  border: '1px solid rgba(255,255,255,0.65)',
+  border: '2px solid #cbd5e1',
   boxShadow: '0 4px 32px 0 rgba(80,100,200,0.08)',
 };
 
@@ -22,7 +22,7 @@ const glassStrong = {
   background: 'rgba(255,255,255,0.88)',
   backdropFilter: 'blur(20px)',
   WebkitBackdropFilter: 'blur(20px)',
-  border: '1px solid rgba(255,255,255,0.7)',
+  border: '2px solid #cbd5e1',
   boxShadow: '0 8px 40px 0 rgba(80,100,200,0.10)',
 };
 
@@ -122,7 +122,7 @@ const Cost360Dashboard = () => {
             <select
               value={selectedDatabase}
               onChange={(e) => setSelectedDatabase(e.target.value)}
-              className="bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg px-4 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm transition-all w-64 appearance-none"
+              className="bg-white border-2 border-slate-300 text-slate-700 text-sm font-medium rounded-lg px-4 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm transition-all w-64 appearance-none"
               style={{
                 backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3e%3c/svg%3e")',
                 backgroundPosition: 'right 0.5rem center',
