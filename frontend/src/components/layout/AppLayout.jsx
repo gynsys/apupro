@@ -54,11 +54,7 @@ export default function AppLayout() {
               <Link
                 to={href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center justify-center p-3 rounded-xl transition-all duration-200 ${
-                  active
-                    ? 'bg-blue-600/10 text-blue-700 shadow-sm border border-blue-200/60'
-                    : 'text-slate-500 hover:bg-[#FEF3C7] hover:text-slate-800'
-                }`}
+                className="flex items-center justify-center p-3 rounded-xl transition-all duration-200 text-slate-500 hover:bg-[#FEF3C7] hover:text-slate-800"
               >
                 <Icon
                   size={24}
@@ -67,9 +63,9 @@ export default function AppLayout() {
               </Link>
               
               {/* Tooltip */}
-              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-slate-800 text-white text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
                 {name}
-                <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-slate-800"></div>
+                <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
               </div>
             </div>
           );
