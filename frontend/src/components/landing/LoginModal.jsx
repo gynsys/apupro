@@ -17,18 +17,20 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
     setIsLoading(true);
     setError('');
     try {
+      console.log("Google token response:", tokenResponse);
       const token = tokenResponse.access_token;
-      if (!token) throw new Error("No token received");
+      if (!token) throw new Error("No se recibió token. Info: " + JSON.stringify(tokenResponse));
 
       const result = await loginWithGoogle(token);
       if (result.success) {
         navigate('/budgets');
         onClose();
       } else {
-        setError(result.error || 'Error al iniciar sesión con Google');
+        setError(result.error || 'Error del backend al iniciar sesión');
       }
     } catch (err) {
-      setError('Error al iniciar sesión con Google');
+      console.error("Google login error:", err);
+      setError(err.message || 'Error al iniciar sesión con Google');
     } finally {
       setIsLoading(false);
     }

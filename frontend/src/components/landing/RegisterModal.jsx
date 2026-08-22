@@ -19,8 +19,9 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
     setIsLoading(true);
     setError('');
     try {
+      console.log("Google token response:", tokenResponse);
       const token = tokenResponse.access_token;
-      if (!token) throw new Error("No token received");
+      if (!token) throw new Error("No se recibió token. Info: " + JSON.stringify(tokenResponse));
 
       // El backend auto-registra al usuario si no existe
       const result = await loginWithGoogle(token);
@@ -28,10 +29,11 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
         navigate('/budgets');
         onClose();
       } else {
-        setError(result.error || 'Error al registrarse con Google');
+        setError(result.error || 'Error del backend al registrarse');
       }
     } catch (err) {
-      setError('Error al registrarse con Google');
+      console.error("Google login error:", err);
+      setError(err.message || 'Error al registrarse con Google');
     } finally {
       setIsLoading(false);
     }
