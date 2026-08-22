@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { Eye, EyeOff, X } from 'lucide-react';
+import { useGoogleLogin } from '@react-oauth/google';
 
 export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
   const [username, setUsername] = useState('');
@@ -12,6 +13,34 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
   const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate();
+  const { loginWithGoogle } = useContext(AuthContext);
+
+  const handleGoogleSuccess = async (tokenResponse) => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const token = tokenResponse.access_token;
+      if (!token) throw new Error("No token received");
+
+      // El backend auto-registra al usuario si no existe
+      const result = await loginWithGoogle(token);
+      if (result.success) {
+        navigate('/budgets');
+        onClose();
+      } else {
+        setError(result.error || 'Error al registrarse con Google');
+      }
+    } catch (err) {
+      setError('Error al registrarse con Google');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const googleLogin = useGoogleLogin({
+    onSuccess: handleGoogleSuccess,
+    onError: () => setError('Error al registrarse con Google'),
+  });
 
   if (!isOpen) return null;
 
@@ -139,7 +168,9 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
             <div className="mt-6">
               <button
                 type="button"
-                className="w-full flex justify-center items-center gap-3 py-2.5 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 transition-colors"
+                onClick={() => googleLogin()}
+                disabled={isLoading}
+                className={`w-full flex justify-center items-center gap-3 py-2.5 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 transition-colors ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 <svg className="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24">
                   <path
