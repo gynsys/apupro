@@ -13,8 +13,6 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
   const { login, loginWithGoogle } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  if (!isOpen) return null;
-
   const handleGoogleSuccess = async (tokenResponse) => {
     setIsLoading(true);
     setError('');
@@ -40,6 +38,8 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
     onSuccess: handleGoogleSuccess,
     onError: () => setError('Error al iniciar sesión con Google'),
   });
+
+  if (!isOpen) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
