@@ -953,14 +953,14 @@ export default function AIApuGeneratorPage() {
           )}
           
           {isGuidedMode && !isSmartMode && !isClarifying ? (
-            <div className="bg-amber-50 border-2 border-amber-500 rounded-xl p-4 md:p-6 mb-4 relative flex flex-col max-w-lg mx-auto w-full shadow-[0_20px_25px_-5px_rgba(217,119,6,0.15),0_10px_10px_-5px_rgba(0,0,0,0.1)]" style={{ minHeight: '400px', maxHeight: '600px' }}>
+            <div className="bg-amber-50 border-2 border-amber-400/70 rounded-xl p-4 md:p-6 mb-4 relative flex flex-col max-w-lg mx-auto w-full shadow-[0_20px_25px_-5px_rgba(217,119,6,0.15),0_10px_10px_-5px_rgba(0,0,0,0.1)]" style={{ minHeight: '400px', maxHeight: '600px' }}>
               <div className="flex items-center gap-3 mb-4 border-b border-amber-200 pb-4 flex-shrink-0">
                 <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold shadow-md shadow-amber-500/30">
                   <Sparkles size={20} />
                 </div>
                 <div>
                   <h3 className="font-bold text-amber-900">Asistente CostBase</h3>
-                  <p className="text-xs text-amber-700/80">Te guiaré paso a paso para crear un APU perfecto.</p>
+                  <p className="text-xs text-amber-800">Te guiaré paso a paso para crear tu APU.</p>
                 </div>
               </div>
 
