@@ -50,7 +50,7 @@ jobs:
           context: ./frontend
           build-args: |
             VITE_API_URL=https://costbase.net/api/v1
-            VITE_GOOGLE_CLIENT_ID=1045179846103-2a275nbfnok0ln3691bblgjm8mt7vg83.apps.googleusercontent.com
+            VITE_GOOGLE_CLIENT_ID=937416226275-bpkbct35f9ftercdj2nm4l9ugbnj1dhs.apps.googleusercontent.com
           push: true
           provenance: false
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/apupro-frontend:latest
