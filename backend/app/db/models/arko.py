@@ -29,6 +29,7 @@ class ArkoAdmin(ArkoBase):
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True)
+    is_email_verified = Column(Boolean, default=False)
     site_config = Column(JSONB, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -40,6 +41,7 @@ class ArkoUser(ArkoBase):
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True)
+    is_email_verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     projects_3d = relationship("ArkoProject3D", back_populates="user")

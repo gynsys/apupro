@@ -232,3 +232,68 @@ export async function deleteMyLandingSitePost(token, postId) {
   }
   return response.json();
 }
+
+export async function registerArkoAdmin(email, password, fullName) {
+  const response = await fetch(`${API_URL}/arko/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, full_name: fullName })
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || "Error al registrarse");
+  }
+  return response.json();
+}
+
+export async function forgotPassword(email) {
+  const response = await fetch(`${API_URL}/arko/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email })
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || "Error al solicitar recuperación");
+  }
+  return response.json();
+}
+
+export async function resetPassword(token, newPassword) {
+  const response = await fetch(`${API_URL}/arko/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, new_password: newPassword })
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || "Error al restablecer contraseña");
+  }
+  return response.json();
+}
+
+export async function verifyEmail(token) {
+  const response = await fetch(`${API_URL}/arko/auth/verify-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token })
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || "Error al verificar correo");
+  }
+  return response.json();
+}
+
+export async function resendVerification(email) {
+  const response = await fetch(`${API_URL}/arko/auth/resend-verification`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email })
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || "Error al reenviar correo");
+  }
+  return response.json();
+}

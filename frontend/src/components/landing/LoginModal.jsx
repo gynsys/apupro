@@ -43,6 +43,21 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
 
   if (!isOpen) return null;
 
+  const [resending, setResending] = useState(false);
+
+  const handleResend = async () => {
+    setResending(true);
+    try {
+      const { resendVerification } = await import('../../services/api');
+      await resendVerification(email);
+      alert('Se ha enviado un nuevo enlace de verificación a tu correo.');
+    } catch (err) {
+      alert(err.message || 'Error al reenviar el correo');
+    } finally {
+      setResending(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -129,8 +144,18 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
           </div>
 
           {error && (
-            <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">
-              {error}
+            <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded flex flex-col gap-2 items-center">
+              <span>{error === "Email not verified" ? "Tu correo no ha sido verificado aún." : error}</span>
+              {error === "Email not verified" && (
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  className="text-[#1A6BB5] hover:text-[#134F8A] font-semibold text-xs underline"
+                >
+                  {resending ? "Reenviando..." : "Reenviar correo de verificación"}
+                </button>
+              )}
             </div>
           )}
 

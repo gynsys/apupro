@@ -13,18 +13,8 @@ const ForgotPassword = () => {
     setMessage('');
 
     try {
-      const response = await fetch(`${API_URL}/auth/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      
-      const data = await response.json().catch(() => ({}));
-      
-      if (!response.ok) {
-        throw new Error(data.detail || 'Ocurrió un error al procesar tu solicitud.');
-      }
-      
+      const { forgotPassword } = await import('../services/api');
+      const data = await forgotPassword(email);
       setStatus('success');
       setMessage(data.message || 'Te hemos enviado un correo con las instrucciones.');
     } catch (err) {

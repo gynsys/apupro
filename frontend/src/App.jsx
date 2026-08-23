@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import ForgotPassword from './pages/ForgotPassword.jsx';
+import VerifyEmail from './pages/VerifyEmail.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
@@ -81,6 +82,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/" element={<LandingPage />} />
             <Route 

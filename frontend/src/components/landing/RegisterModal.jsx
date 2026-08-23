@@ -52,13 +52,14 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
     setIsLoading(true);
 
     try {
-      // Para el flujo actual simplemente redirigimos al login tras una pausa
-      setTimeout(() => {
-        setIsLoading(false);
-        onSwitchToLogin();
-      }, 1500);
+      // Usamos el servicio de registro
+      const { registerArkoAdmin } = await import('../../services/api');
+      await registerArkoAdmin(email, password, username);
+      setIsLoading(false);
+      alert('Registro exitoso. Hemos enviado un correo de verificación. Por favor revisa tu bandeja de entrada.');
+      onSwitchToLogin();
     } catch (err) {
-      setError('Ocurrió un error al registrarse');
+      setError(err.message || 'Ocurrió un error al registrarse');
       setIsLoading(false);
     }
   };
