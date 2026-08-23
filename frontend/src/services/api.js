@@ -82,7 +82,7 @@ export async function loginGoogleArkoAdmin(token) {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     },
-    body: JSON.stringify({ email, code }),
+    body: JSON.stringify({ token }),
   });
 
   if (!response.ok) {
@@ -276,7 +276,7 @@ export async function verifyEmail(email, code) {
   const response = await fetch(`${API_URL}/arko/auth/verify-email`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, code })
+    body: JSON.stringify({ token })
   });
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
