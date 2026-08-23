@@ -47,7 +47,7 @@ class Settings(BaseSettings):
 
     # Resend Email Configuration
     RESEND_API_KEY: Optional[str] = None
-    RESEND_FROM_EMAIL: str = "Arko360 <info@arko360.net>"
+    RESEND_FROM_EMAIL: str = "CostBase <info@costbase.net>"
 
     # Google OAuth
     GOOGLE_CLIENT_ID: Optional[str] = None
@@ -147,8 +147,8 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str | None = "tu_password"
     
     # Force verified domain sender
-    EMAILS_FROM_EMAIL: str | None = "info@gynsys.net" 
-    EMAILS_FROM_NAME: str = "GynSys Notificaciones"
+    EMAILS_FROM_EMAIL: str | None = "info@costbase.net" 
+    EMAILS_FROM_NAME: str = "CostBase Notificaciones"
     
     # MinIO / S3
     MINIO_ENDPOINT: str = "minio:9000" # Internal Docker URL
