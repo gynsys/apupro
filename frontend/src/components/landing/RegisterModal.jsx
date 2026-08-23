@@ -1,4 +1,5 @@
 import React, { useState, useContext } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { Eye, EyeOff, X } from 'lucide-react';
@@ -56,7 +57,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
       const { registerArkoAdmin } = await import('../../services/api');
       await registerArkoAdmin(email, password, username);
       setIsLoading(false);
-      alert('Registro exitoso. Hemos enviado un correo de verificación. Por favor revisa tu bandeja de entrada.');
+      toast.success('Registro exitoso. Revisa tu correo para verificar tu cuenta.');
       onSwitchToLogin();
     } catch (err) {
       setError(err.message || 'Ocurrió un error al registrarse');

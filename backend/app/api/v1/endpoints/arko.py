@@ -175,16 +175,16 @@ def forgot_password(data: ForgotPasswordRequest):
             user = db.query(ArkoAdmin).filter(ArkoAdmin.email == data.email).first()
             if not user:
                 # No revelar que el usuario no existe por seguridad, retornar OK silenciosamente
-                return {"message": "Si tu correo estÃ¡ registrado, recibirÃ¡s un enlace de recuperaciÃ³n."}
+                return {"message": "Si tu correo está registrado, recibirás un enlace de recuperación."}
             
-            # Token vÃ¡lido por 1 hora
+            # Token válido por 1 hora
             token = create_access_token(
                 data={"sub": user.email, "type": "reset_password"},
                 expires_delta=timedelta(hours=1)
             )
             send_reset_password_email(user.email, token)
             
-            return {"message": "Si tu correo estÃ¡ registrado, recibirÃ¡s un enlace de recuperaciÃ³n."}
+            return {"message": "Si tu correo está registrado, recibirás un enlace de recuperación."}
     except Exception as e:
         logger.error(f"Error in forgot password: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -204,7 +204,7 @@ def reset_password(data: ResetPasswordRequest):
         token_type: str = payload.get("type")
         
         if email is None or token_type != "reset_password":
-            raise HTTPException(status_code=400, detail="Token invÃ¡lido o expirado")
+            raise HTTPException(status_code=400, detail="Token inválido o expirado")
             
         with get_db_session() as db:
             user = db.query(ArkoAdmin).filter(ArkoAdmin.email == email).first()
@@ -213,12 +213,12 @@ def reset_password(data: ResetPasswordRequest):
                 
             user.hashed_password = get_password_hash(data.new_password)
             db.commit()
-            return {"message": "ContraseÃ±a actualizada exitosamente"}
+            return {"message": "Contraseña actualizada exitosamente"}
             
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=400, detail="El enlace ha expirado")
     except jwt.JWTError:
-        raise HTTPException(status_code=400, detail="Token invÃ¡lido")
+        raise HTTPException(status_code=400, detail="Token inválido")
     except HTTPException:
         raise
     except Exception as e:
@@ -239,7 +239,7 @@ def verify_email(data: VerifyEmailRequest):
         token_type: str = payload.get("type")
         
         if email is None or token_type != "verify_email":
-            raise HTTPException(status_code=400, detail="Token invÃ¡lido")
+            raise HTTPException(status_code=400, detail="Token inválido")
             
         with get_db_session() as db:
             user = db.query(ArkoAdmin).filter(ArkoAdmin.email == email).first()
@@ -253,7 +253,7 @@ def verify_email(data: VerifyEmailRequest):
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=400, detail="El enlace ha expirado")
     except jwt.JWTError:
-        raise HTTPException(status_code=400, detail="Token invÃ¡lido")
+        raise HTTPException(status_code=400, detail="Token inválido")
     except HTTPException:
         raise
     except Exception as e:
@@ -269,10 +269,10 @@ def resend_verification(data: ResendVerificationRequest):
         with get_db_session() as db:
             user = db.query(ArkoAdmin).filter(ArkoAdmin.email == data.email).first()
             if not user:
-                return {"message": "Si tu correo estÃ¡ registrado, recibirÃ¡s un nuevo enlace."}
+                return {"message": "Si tu correo está registrado, recibirás un nuevo enlace."}
                 
             if getattr(user, "is_email_verified", False):
-                return {"message": "El correo ya estÃ¡ verificado."}
+                return {"message": "El correo ya está verificado."}
             
             token = create_access_token(
                 data={"sub": user.email, "type": "verify_email"},
