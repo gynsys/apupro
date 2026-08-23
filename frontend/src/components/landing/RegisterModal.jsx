@@ -114,7 +114,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
             CostBase
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            {view === 'register' ? 'Crea tu cuenta para acceder al panel' : 'Verifica tu correo electrónico'}
+            {view === 'register' ? 'Crea tu cuenta para acceder a la aplicacion' : 'Verifica tu correo electrónico'}
           </p>
         </div>
         

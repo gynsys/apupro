@@ -262,6 +262,9 @@ def resend_verification(data: ResendVerificationRequest):
         logger.error(f"Error resending verification: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
+class GoogleLoginRequest(BaseModel):
+    token: str
+
 @router.post("/auth/login/google")
 def login_google(login_data: GoogleLoginRequest):
     try:
