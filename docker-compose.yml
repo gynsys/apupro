@@ -36,6 +36,7 @@ services:
       context: ./frontend
       args:
         - VITE_API_URL=https://costbase.net/api/v1
+        - VITE_GOOGLE_CLIENT_ID=937416226275-bpkbct35f9ftercdj2nm4l9ugbnj1dhs.apps.googleusercontent.com
     restart: always
     ports:
       - "3010:80"
