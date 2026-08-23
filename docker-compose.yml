@@ -20,6 +20,8 @@ services:
     restart: always
     ports:
       - "8010:8001"
+    env_file:
+      - ./backend/.env
     environment:
       - DATABASE_URL=postgresql://apupro_user:apupro_password@apupro-db:5432/apupro_db
       - SECRET_KEY=changethisinproduction
