@@ -119,8 +119,7 @@ function App() {
               <Route path=":id/item/:itemId" element={<BudgetAPUEditorPage />} />
             </Route>
 
-            {/* Rutas para sitios clonados usando el slug */}
-            <Route path="/:slug/login" element={<Login />} />
+            {/* Rutas para sitios clonados usando el slug (Obsoleto /login retirado) */}
             <Route path="/:slug" element={<Navigate to="admin" replace />} />
             <Route 
               path="/:slug/admin/*" 
