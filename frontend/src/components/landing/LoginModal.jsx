@@ -41,9 +41,9 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
     onError: () => setError('Error al iniciar sesión con Google'),
   });
 
-  if (!isOpen) return null;
-
   const [resending, setResending] = useState(false);
+
+  if (!isOpen) return null;
 
   const handleResend = async () => {
     setResending(true);
