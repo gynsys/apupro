@@ -6,38 +6,38 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Configuración por defecto para Resend SMTP
-SMTP_HOST = "smtp.resend.com"
-SMTP_PORT = 587
-SMTP_USER = "resend"
-SMTP_PASSWORD = settings.RESEND_API_KEY
+import requests
 
 def send_email(to_email: str, subject: str, html_content: str):
-    if not SMTP_PASSWORD:
-        logger.warning(f"SIMULACIÓN DE CORREO (Sin RESEND_API_KEY)")
+    if not settings.RESEND_API_KEY or settings.RESEND_API_KEY.startswith("re_") is False:
+        logger.warning(f"SIMULACIÓN DE CORREO (Sin RESEND_API_KEY válido)")
         logger.warning(f"Para: {to_email}")
         logger.warning(f"Asunto: {subject}")
         logger.warning(f"Contenido:\n{html_content}\n")
         return True
         
     try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = settings.RESEND_FROM_EMAIL
-        msg["To"] = to_email
-
-        part = MIMEText(html_content, "html")
-        msg.attach(part)
-
-        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
-        server.starttls()
-        server.login(SMTP_USER, SMTP_PASSWORD)
-        server.sendmail(settings.RESEND_FROM_EMAIL, to_email, msg.as_string())
-        server.quit()
-        logger.info(f"Correo enviado exitosamente a {to_email}")
+        headers = {
+            "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "from": settings.RESEND_FROM_EMAIL,
+            "to": [to_email],
+            "subject": subject,
+            "html": html_content
+        }
+        
+        response = requests.post("https://api.resend.com/emails", json=data, headers=headers, timeout=10)
+        
+        if response.status_code >= 400:
+            logger.error(f"Error HTTP de Resend al enviar correo a {to_email}: {response.text}")
+            return False
+            
+        logger.info(f"Correo enviado exitosamente a {to_email} vía Resend API")
         return True
     except Exception as e:
-        logger.error(f"Error al enviar correo a {to_email}: {str(e)}", exc_info=True)
+        logger.error(f"Error de conexión al enviar correo a {to_email}: {str(e)}", exc_info=True)
         return False
 
 def send_reset_password_email(email_to: str, code: str):
