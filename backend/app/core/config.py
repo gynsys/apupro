@@ -105,6 +105,9 @@ class Settings(BaseSettings):
             "https://admin.arko360.net",
             "https://superadmin.arko360.net",
             "https://api.arko360.net",
+            
+            "https://costbase.net",
+            "https://www.costbase.net",
            
             "http://localhost",
             "capacitor://localhost"
