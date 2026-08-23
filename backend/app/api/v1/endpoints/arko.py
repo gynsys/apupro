@@ -127,6 +127,11 @@ def login_arko_admin(form_data: OAuth2PasswordRequestForm = Depends()):
 
 
 from app.services.email import send_reset_password_email, send_verification_email
+import random
+import string
+
+def generate_verification_code(length=6):
+    return ''.join(random.choices(string.digits, k=length))
 
 class RegisterRequest(BaseModel):
     email: str
@@ -141,24 +146,21 @@ def register_arko_admin(data: RegisterRequest):
             if user:
                 raise HTTPException(status_code=400, detail="Email already registered")
             
+            code = generate_verification_code()
             new_user = ArkoAdmin(
                 email=data.email,
                 hashed_password=get_password_hash(data.password),
                 full_name=data.full_name,
                 is_active=True,
-                is_email_verified=False
+                is_email_verified=False,
+                verification_code=code
             )
             db.add(new_user)
             db.commit()
             
-            # Crear token de verificacion
-            token = create_access_token(
-                data={"sub": new_user.email, "type": "verify_email"},
-                expires_delta=timedelta(hours=24)
-            )
-            send_verification_email(new_user.email, token)
+            send_verification_email(new_user.email, code)
             
-            return {"message": "User registered successfully"}
+            return {"message": "User registered successfully", "email": new_user.email}
     except HTTPException:
         raise
     except Exception as e:
@@ -174,51 +176,37 @@ def forgot_password(data: ForgotPasswordRequest):
         with get_db_session() as db:
             user = db.query(ArkoAdmin).filter(ArkoAdmin.email == data.email).first()
             if not user:
-                # No revelar que el usuario no existe por seguridad, retornar OK silenciosamente
-                return {"message": "Si tu correo está registrado, recibirás un enlace de recuperación."}
+                return {"message": "Si tu correo está registrado, recibirás un correo con tu código."}
             
-            # Token válido por 1 hora
-            token = create_access_token(
-                data={"sub": user.email, "type": "reset_password"},
-                expires_delta=timedelta(hours=1)
-            )
-            send_reset_password_email(user.email, token)
+            code = generate_verification_code()
+            user.verification_code = code
+            db.commit()
             
-            return {"message": "Si tu correo está registrado, recibirás un enlace de recuperación."}
+            send_reset_password_email(user.email, code)
+            
+            return {"message": "Si tu correo está registrado, recibirás un correo con tu código."}
     except Exception as e:
         logger.error(f"Error in forgot password: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 class ResetPasswordRequest(BaseModel):
-    token: str
+    email: str
+    code: str
     new_password: str
 
 @router.post("/auth/reset-password")
 def reset_password(data: ResetPasswordRequest):
     try:
-        import jwt
-        from app.core.config import settings
-        
-        payload = jwt.decode(data.token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        email: str = payload.get("sub")
-        token_type: str = payload.get("type")
-        
-        if email is None or token_type != "reset_password":
-            raise HTTPException(status_code=400, detail="Token inválido o expirado")
-            
         with get_db_session() as db:
-            user = db.query(ArkoAdmin).filter(ArkoAdmin.email == email).first()
-            if not user:
-                raise HTTPException(status_code=404, detail="User not found")
+            user = db.query(ArkoAdmin).filter(ArkoAdmin.email == data.email).first()
+            if not user or user.verification_code != data.code:
+                raise HTTPException(status_code=400, detail="Código inválido o expirado")
                 
             user.hashed_password = get_password_hash(data.new_password)
+            user.verification_code = None
             db.commit()
             return {"message": "Contraseña actualizada exitosamente"}
             
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=400, detail="El enlace ha expirado")
-    except jwt.JWTError:
-        raise HTTPException(status_code=400, detail="Token inválido")
     except HTTPException:
         raise
     except Exception as e:
@@ -226,34 +214,24 @@ def reset_password(data: ResetPasswordRequest):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 class VerifyEmailRequest(BaseModel):
-    token: str
+    email: str
+    code: str
 
 @router.post("/auth/verify-email")
 def verify_email(data: VerifyEmailRequest):
     try:
-        import jwt
-        from app.core.config import settings
-        
-        payload = jwt.decode(data.token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        email: str = payload.get("sub")
-        token_type: str = payload.get("type")
-        
-        if email is None or token_type != "verify_email":
-            raise HTTPException(status_code=400, detail="Token inválido")
-            
         with get_db_session() as db:
-            user = db.query(ArkoAdmin).filter(ArkoAdmin.email == email).first()
+            user = db.query(ArkoAdmin).filter(ArkoAdmin.email == data.email).first()
             if not user:
                 raise HTTPException(status_code=404, detail="Usuario no encontrado")
                 
+            if user.verification_code != data.code:
+                raise HTTPException(status_code=400, detail="Código inválido")
+                
             user.is_email_verified = True
+            user.verification_code = None
             db.commit()
             return {"message": "Correo verificado exitosamente"}
-            
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=400, detail="El enlace ha expirado")
-    except jwt.JWTError:
-        raise HTTPException(status_code=400, detail="Token inválido")
     except HTTPException:
         raise
     except Exception as e:
@@ -269,24 +247,20 @@ def resend_verification(data: ResendVerificationRequest):
         with get_db_session() as db:
             user = db.query(ArkoAdmin).filter(ArkoAdmin.email == data.email).first()
             if not user:
-                return {"message": "Si tu correo está registrado, recibirás un nuevo enlace."}
+                return {"message": "Si tu correo está registrado, recibirás un nuevo código."}
                 
             if getattr(user, "is_email_verified", False):
                 return {"message": "El correo ya está verificado."}
+                
+            code = generate_verification_code()
+            user.verification_code = code
+            db.commit()
             
-            token = create_access_token(
-                data={"sub": user.email, "type": "verify_email"},
-                expires_delta=timedelta(hours=24)
-            )
-            send_verification_email(user.email, token)
-            
-            return {"message": "Enlace reenviado exitosamente."}
+            send_verification_email(user.email, code)
+            return {"message": "Si tu correo está registrado, recibirás un nuevo código."}
     except Exception as e:
         logger.error(f"Error resending verification: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
-
-class GoogleLoginRequest(BaseModel):
-    token: str
 
 @router.post("/auth/login/google")
 def login_google(login_data: GoogleLoginRequest):

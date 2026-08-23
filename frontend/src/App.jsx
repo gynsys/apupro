@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage.jsx';
-import VerifyEmail from './pages/VerifyEmail.jsx';
-import ResetPassword from './pages/ResetPassword.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import AdminLayout from './components/layout/AdminLayout.jsx';
@@ -76,9 +74,7 @@ function App() {
         <SiteConfigContext.Provider value={{ config, setConfig, fetchSiteConfig }}>
           <BrowserRouter basename={window.location.pathname.startsWith('/app') ? '/app' : ''}>
           <Routes>
-                                                <Route path="/verify-email" element={<VerifyEmail />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/" element={<LandingPage />} />
+                                                <Route path="/" element={<LandingPage />} />
             <Route 
               path="/admin/*" 
               element={

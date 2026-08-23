@@ -82,7 +82,7 @@ export async function loginGoogleArkoAdmin(token) {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     },
-    body: JSON.stringify({ token }),
+    body: JSON.stringify({ email, code }),
   });
 
   if (!response.ok) {
@@ -259,11 +259,11 @@ export async function forgotPassword(email) {
   return response.json();
 }
 
-export async function resetPassword(token, newPassword) {
+export async function resetPassword(email, code, newPassword) {
   const response = await fetch(`${API_URL}/arko/auth/reset-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, new_password: newPassword })
+    body: JSON.stringify({ email, code, new_password: newPassword })
   });
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -272,11 +272,11 @@ export async function resetPassword(token, newPassword) {
   return response.json();
 }
 
-export async function verifyEmail(token) {
+export async function verifyEmail(email, code) {
   const response = await fetch(`${API_URL}/arko/auth/verify-email`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token })
+    body: JSON.stringify({ email, code })
   });
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));

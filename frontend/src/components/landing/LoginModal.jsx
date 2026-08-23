@@ -11,8 +11,10 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  const [view, setView] = useState('login'); // 'login' | 'verify' | 'forgotPassword' | 'resetPassword'
+  const [code, setCode] = useState('');
   const [resending, setResending] = useState(false);
-  const [view, setView] = useState('login'); // 'login' or 'forgotPassword'
   
   const { login, loginWithGoogle } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -49,11 +51,34 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
     try {
       const { resendVerification } = await import('../../services/api');
       await resendVerification(email);
-      toast.success('Se ha enviado un nuevo enlace de verificación a tu correo.');
+      toast.success('Se ha enviado un nuevo código de verificación a tu correo.');
     } catch (err) {
       toast.error(err.message || 'Error al reenviar el correo');
     } finally {
       setResending(false);
+    }
+  };
+  
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+    try {
+      const { verifyEmail } = await import('../../services/api');
+      await verifyEmail(email, code);
+      toast.success('Correo verificado exitosamente. Iniciando sesión...');
+      
+      const result = await login(email, password, false);
+      if (result.success) {
+        navigate('/budgets');
+        onClose();
+      } else {
+        setView('login');
+      }
+    } catch (err) {
+      setError(err.message || 'Código inválido o error al verificar');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -64,10 +89,28 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
     try {
       const { forgotPassword } = await import('../../services/api');
       const data = await forgotPassword(email);
-      toast.success(data.message || 'Te hemos enviado un correo con las instrucciones.');
-      setView('login');
+      toast.success(data.message || 'Te hemos enviado un código de recuperación.');
+      setView('resetPassword');
     } catch (err) {
       toast.error(err.message || 'Ocurrió un error al procesar tu solicitud.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+    try {
+      const { resetPassword } = await import('../../services/api');
+      const data = await resetPassword(email, code, password);
+      toast.success(data.message || 'Contraseña actualizada exitosamente. Inicia sesión.');
+      setView('login');
+      setPassword('');
+      setCode('');
+    } catch (err) {
+      setError(err.message || 'Código inválido o error al restablecer la contraseña.');
     } finally {
       setIsLoading(false);
     }
@@ -83,7 +126,17 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
       navigate('/budgets');
       onClose();
     } else {
-      setError(result.error || 'Ocurrió un error al iniciar sesión');
+      if (result.error === "Email not verified" || result.error === "Tu correo no ha sido verificado aún.") {
+        setView('verify');
+        // Lanzamos el envío del código automáticamente
+        try {
+          const { resendVerification } = await import('../../services/api');
+          await resendVerification(email);
+          toast.success('Te enviamos un código para verificar tu correo.');
+        } catch (err) {}
+      } else {
+        setError(result.error || 'Ocurrió un error al iniciar sesión');
+      }
     }
     
     setIsLoading(false);
@@ -106,13 +159,55 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
             CostBase
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            {view === 'login' ? 'Ingresa tus credenciales para acceder al panel' : 'Recuperar contraseña'}
+            {view === 'login' && 'Ingresa tus credenciales para acceder al panel'}
+            {view === 'verify' && 'Verifica tu correo electrónico'}
+            {view === 'forgotPassword' && 'Recuperar contraseña'}
+            {view === 'resetPassword' && 'Crea una nueva contraseña'}
           </p>
         </div>
 
-        {view === 'forgotPassword' ? (
+        {view === 'verify' ? (
+          <form className="mt-8 space-y-5" onSubmit={handleVerify}>
+            <p className="text-sm text-gray-600 text-center">
+              Hemos enviado un código de 6 dígitos a <strong>{email}</strong>. Ingrésalo a continuación:
+            </p>
+            <div>
+              <label htmlFor="verify-code" className="sr-only">Código de verificación</label>
+              <input
+                id="verify-code"
+                name="code"
+                type="text"
+                required
+                className="appearance-none block w-full px-3 py-4 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#1A6BB5] focus:border-[#1A6BB5] text-center text-2xl tracking-widest sm:text-2xl"
+                placeholder="000000"
+                maxLength="6"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+              />
+            </div>
+            {error && (
+              <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">
+                {error}
+              </div>
+            )}
+            <div>
+              <button
+                type="submit"
+                disabled={isLoading || code.length !== 6}
+                className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-[#1A6BB5] hover:bg-[#134F8A] focus:outline-none transition-colors ${isLoading || code.length !== 6 ? 'opacity-70 cursor-not-allowed' : ''}`}
+              >
+                {isLoading ? 'Verificando...' : 'Verificar'}
+              </button>
+            </div>
+            <div className="text-center mt-4">
+              <button type="button" onClick={handleResend} disabled={resending} className="text-sm font-medium text-[#1A6BB5] hover:text-[#134F8A]">
+                {resending ? 'Reenviando...' : 'Reenviar código'}
+              </button>
+            </div>
+          </form>
+        ) : view === 'forgotPassword' ? (
           <form className="mt-8 space-y-6" onSubmit={handleForgotPassword}>
-            <p className="text-sm text-gray-600 text-center mb-4">Ingresa tu correo y te enviaremos un enlace para recuperar tu contraseña.</p>
+            <p className="text-sm text-gray-600 text-center mb-4">Ingresa tu correo y te enviaremos un código para recuperar tu contraseña.</p>
             <div className="rounded-md shadow-sm">
               <div>
                 <label htmlFor="email-address-forgot" className="sr-only">Correo electrónico</label>
@@ -135,12 +230,75 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
                 disabled={isLoading}
                 className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-[#1A6BB5] hover:bg-[#134F8A] focus:outline-none transition-colors ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
-                {isLoading ? 'Enviando...' : 'Enviar enlace'}
+                {isLoading ? 'Enviando...' : 'Enviar código'}
               </button>
             </div>
             <div className="text-center mt-4">
               <button type="button" onClick={() => { setView('login'); setError(''); }} className="text-sm font-medium text-gray-600 hover:text-gray-900">
                 Volver a Iniciar Sesión
+              </button>
+            </div>
+          </form>
+        ) : view === 'resetPassword' ? (
+          <form className="mt-8 space-y-5" onSubmit={handleResetPassword}>
+            <p className="text-sm text-gray-600 text-center mb-4">
+              Ingresa el código que enviamos a <strong>{email}</strong> y tu nueva contraseña.
+            </p>
+            <div className="rounded-md shadow-sm space-y-3">
+              <div>
+                <label htmlFor="reset-code" className="sr-only">Código</label>
+                <input
+                  id="reset-code"
+                  name="code"
+                  type="text"
+                  required
+                  className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#1A6BB5] focus:border-[#1A6BB5] text-center text-xl tracking-widest sm:text-xl"
+                  placeholder="000000"
+                  maxLength="6"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                />
+              </div>
+              <div className="relative">
+                <label htmlFor="new-password" className="sr-only">Nueva Contraseña</label>
+                <input
+                  id="new-password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  className="appearance-none block w-full px-3 py-3 pr-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#1A6BB5] focus:border-[#1A6BB5] sm:text-sm"
+                  placeholder="Nueva contraseña"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center z-20 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+            
+            {error && (
+              <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <button
+                type="submit"
+                disabled={isLoading || code.length !== 6 || password.length < 4}
+                className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-[#1A6BB5] hover:bg-[#134F8A] focus:outline-none transition-colors ${isLoading || code.length !== 6 ? 'opacity-70 cursor-not-allowed' : ''}`}
+              >
+                {isLoading ? 'Restableciendo...' : 'Restablecer contraseña'}
+              </button>
+            </div>
+            <div className="text-center mt-4">
+              <button type="button" onClick={() => { setView('login'); setError(''); setPassword(''); setCode(''); }} className="text-sm font-medium text-gray-600 hover:text-gray-900">
+                Cancelar
               </button>
             </div>
           </form>
@@ -199,17 +357,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
 
               {error && (
                 <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded flex flex-col gap-2 items-center">
-                  <span>{error === "Email not verified" ? "Tu correo no ha sido verificado aún." : error}</span>
-                  {error === "Email not verified" && (
-                    <button
-                      type="button"
-                      onClick={handleResend}
-                      disabled={resending}
-                      className="text-[#1A6BB5] hover:text-[#134F8A] font-semibold text-xs underline"
-                    >
-                      {resending ? "Reenviando..." : "Reenviar correo de verificación"}
-                    </button>
-                  )}
+                  <span>{error}</span>
                 </div>
               )}
 

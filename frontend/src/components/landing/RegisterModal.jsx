@@ -1,9 +1,8 @@
 import React, { useState, useContext } from 'react';
-import toast from 'react-hot-toast';
-import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { Eye, EyeOff, X } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
+import toast from 'react-hot-toast';
 
 export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
   const [username, setUsername] = useState('');
@@ -13,21 +12,20 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const navigate = useNavigate();
-  const { loginWithGoogle } = useContext(AuthContext);
+  const [view, setView] = useState('register'); // 'register' or 'verify'
+  const [code, setCode] = useState('');
+
+  const { loginWithGoogle, login } = useContext(AuthContext);
 
   const handleGoogleSuccess = async (tokenResponse) => {
     setIsLoading(true);
     setError('');
     try {
-      console.log("Google token response:", tokenResponse);
       const token = tokenResponse.access_token;
-      if (!token) throw new Error("No se recibió token. Info: " + JSON.stringify(tokenResponse));
+      if (!token) throw new Error("No se recibió token");
 
-      // El backend auto-registra al usuario si no existe
       const result = await loginWithGoogle(token);
       if (result.success) {
-        navigate('/budgets');
         onClose();
       } else {
         setError(result.error || 'Error del backend al registrarse');
@@ -45,25 +43,61 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
     onError: () => setError('Error al registrarse con Google'),
   });
 
-  if (!isOpen) return null;
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
     try {
-      // Usamos el servicio de registro
       const { registerArkoAdmin } = await import('../../services/api');
       await registerArkoAdmin(email, password, username);
-      setIsLoading(false);
-      toast.success('Registro exitoso. Revisa tu correo para verificar tu cuenta.');
-      onSwitchToLogin();
+      toast.success('Registro exitoso. Te hemos enviado un código de verificación al correo.');
+      setView('verify');
     } catch (err) {
       setError(err.message || 'Ocurrió un error al registrarse');
+    } finally {
       setIsLoading(false);
     }
   };
+
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const { verifyEmail } = await import('../../services/api');
+      await verifyEmail(email, code);
+      toast.success('Correo verificado exitosamente. Iniciando sesión...');
+      
+      const result = await login(email, password, false);
+      if (result.success) {
+        onClose();
+      } else {
+        onSwitchToLogin();
+      }
+    } catch (err) {
+      setError(err.message || 'Código inválido o error al verificar');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const { resendVerification } = await import('../../services/api');
+      await resendVerification(email);
+      toast.success('Se ha enviado un nuevo código a tu correo.');
+    } catch (err) {
+      setError(err.message || 'Error al reenviar el código');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
@@ -76,138 +110,185 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
         </button>
 
         <div>
-          <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+          <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900" style={{ fontFamily: '"Barlow Condensed", sans-serif' }}>
             CostBase
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Crea tu cuenta para acceder al panel
+            {view === 'register' ? 'Crea tu cuenta para acceder al panel' : 'Verifica tu correo electrónico'}
           </p>
         </div>
         
-        <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
-          
-          <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">Nombre de usuario</label>
-            <input
-              id="username"
-              name="username"
-              type="text"
-              required
-              className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
-              placeholder="Tu nombre de usuario"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="email-address" className="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
-            <input
-              id="email-address"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
-              placeholder="correo@ejemplo.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-            <div className="relative">
+        {view === 'verify' ? (
+          <form className="mt-8 space-y-5" onSubmit={handleVerify}>
+            <p className="text-sm text-gray-600 text-center">
+              Hemos enviado un código de 6 dígitos a <strong>{email}</strong>. Ingrésalo a continuación:
+            </p>
+            
+            <div>
+              <label htmlFor="code" className="sr-only">Código de verificación</label>
               <input
-                id="password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="new-password"
+                id="code"
+                name="code"
+                type="text"
                 required
-                className="appearance-none block w-full px-3 py-3 pr-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                className="appearance-none block w-full px-3 py-4 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#1A6BB5] focus:border-[#1A6BB5] text-center text-2xl tracking-widest sm:text-2xl"
+                placeholder="000000"
+                maxLength="6"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
               />
+            </div>
+
+            {error && (
+              <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">
+                {error}
+              </div>
+            )}
+
+            <div>
               <button
-                type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center z-20 text-gray-400 hover:text-gray-600 focus:outline-none"
-                onClick={() => setShowPassword(!showPassword)}
+                type="submit"
+                disabled={isLoading || code.length !== 6}
+                className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-[#1A6BB5] hover:bg-[#134F8A] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1A6BB5] transition-colors ${isLoading || code.length !== 6 ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
-                {showPassword ? (
-                  <EyeOff className="h-5 w-5" aria-hidden="true" />
-                ) : (
-                  <Eye className="h-5 w-5" aria-hidden="true" />
-                )}
+                {isLoading ? 'Verificando...' : 'Verificar y Entrar'}
               </button>
             </div>
-          </div>
-          
-          {error && (
-            <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">
-              {error}
-            </div>
-          )}
-
-          <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 transition-colors ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
-            >
-              {isLoading ? 'Registrando...' : 'Registrarse'}
-            </button>
-          </div>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">O continúa con</span>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <button
-                type="button"
-                onClick={() => googleLogin()}
-                disabled={isLoading}
-                className={`w-full flex justify-center items-center gap-3 py-2.5 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 transition-colors ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
-              >
-                <svg className="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24">
-                  <path
-                    d="M12.0003 4.75C13.7703 4.75 15.3553 5.36002 16.6053 6.54998L20.0303 3.125C17.9502 1.19 15.2353 0 12.0003 0C7.31028 0 3.25527 2.69 1.28027 6.60998L5.27028 9.70498C6.21525 6.86002 8.87028 4.75 12.0003 4.75Z"
-                    fill="#EA4335"
-                  />
-                  <path
-                    d="M23.49 12.275C23.49 11.49 23.415 10.73 23.3 10H12V14.51H18.47C18.18 15.99 17.34 17.25 16.08 18.1L19.945 21.1C22.2 19.01 23.49 15.92 23.49 12.275Z"
-                    fill="#4285F4"
-                  />
-                  <path
-                    d="M5.26498 14.2949C5.02498 13.5699 4.88501 12.7999 4.88501 11.9999C4.88501 11.1999 5.01998 10.4299 5.26498 9.7049L1.275 6.60986C0.46 8.22986 0 10.0599 0 11.9999C0 13.9399 0.46 15.7699 1.28 17.3899L5.26498 14.2949Z"
-                    fill="#FBBC05"
-                  />
-                  <path
-                    d="M12.0004 24.0001C15.2404 24.0001 17.9654 22.935 19.9454 21.095L16.0804 18.095C15.0054 18.82 13.6204 19.245 12.0004 19.245C8.8704 19.245 6.21537 17.135 5.26537 14.29L1.27539 17.385C3.25539 21.31 7.3104 24.0001 12.0004 24.0001Z"
-                    fill="#34A853"
-                  />
-                </svg>
-                Google
+            
+            <div className="text-center mt-4">
+              <button type="button" onClick={handleResend} disabled={isLoading} className="text-sm font-medium text-[#1A6BB5] hover:text-[#134F8A]">
+                Reenviar código
               </button>
             </div>
-          </div>
-        </form>
+          </form>
+        ) : (
+          <>
+            <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+              
+              <div>
+                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">Nombre de usuario</label>
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  required
+                  className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#1A6BB5] focus:border-[#1A6BB5] sm:text-sm"
+                  placeholder="Tu nombre de usuario"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
 
-        <div className="text-center mt-4 pb-2">
-          <p className="text-sm text-gray-600">
-            ¿Ya tienes una cuenta?{' '}
-            <button type="button" onClick={onSwitchToLogin} className="font-medium text-blue-600 hover:text-blue-800">
-              Inicia sesión aquí
-            </button>
-          </p>
-        </div>
+              <div>
+                <label htmlFor="email-address" className="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
+                <input
+                  id="email-address"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#1A6BB5] focus:border-[#1A6BB5] sm:text-sm"
+                  placeholder="correo@ejemplo.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    required
+                    className="appearance-none block w-full px-3 py-3 pr-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#1A6BB5] focus:border-[#1A6BB5] sm:text-sm"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center z-20 text-gray-400 hover:text-gray-600 focus:outline-none"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" aria-hidden="true" />
+                    ) : (
+                      <Eye className="h-5 w-5" aria-hidden="true" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              
+              {error && (
+                <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">
+                  {error}
+                </div>
+              )}
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-[#1A6BB5] hover:bg-[#134F8A] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1A6BB5] transition-colors ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                >
+                  {isLoading ? 'Registrando...' : 'Registrarse'}
+                </button>
+              </div>
+
+              <div className="mt-6">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white text-gray-500">O continúa con</span>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <button
+                    type="button"
+                    onClick={() => googleLogin()}
+                    disabled={isLoading}
+                    className={`w-full flex justify-center items-center gap-3 py-2.5 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1A6BB5] transition-colors ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  >
+                    <svg className="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24">
+                      <path
+                        d="M12.0003 4.75C13.7703 4.75 15.3553 5.36002 16.6053 6.54998L20.0303 3.125C17.9502 1.19 15.2353 0 12.0003 0C7.31028 0 3.25527 2.69 1.28027 6.60998L5.27028 9.70498C6.21525 6.86002 8.87028 4.75 12.0003 4.75Z"
+                        fill="#EA4335"
+                      />
+                      <path
+                        d="M23.49 12.275C23.49 11.49 23.415 10.73 23.3 10H12V14.51H18.47C18.18 15.99 17.34 17.25 16.08 18.1L19.945 21.1C22.2 19.01 23.49 15.92 23.49 12.275Z"
+                        fill="#4285F4"
+                      />
+                      <path
+                        d="M5.26498 14.2949C5.02498 13.5699 4.88501 12.7999 4.88501 11.9999C4.88501 11.1999 5.01998 10.4299 5.26498 9.7049L1.275 6.60986C0.46 8.22986 0 10.0599 0 11.9999C0 13.9399 0.46 15.7699 1.28 17.3899L5.26498 14.2949Z"
+                        fill="#FBBC05"
+                      />
+                      <path
+                        d="M12.0004 24.0001C15.2404 24.0001 17.9654 22.935 19.9454 21.095L16.0804 18.095C15.0054 18.82 13.6204 19.245 12.0004 19.245C8.8704 19.245 6.21537 17.135 5.26537 14.29L1.27539 17.385C3.25539 21.31 7.3104 24.0001 12.0004 24.0001Z"
+                        fill="#34A853"
+                      />
+                    </svg>
+                    Google
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            <div className="text-center mt-4 pb-2">
+              <p className="text-sm text-gray-600">
+                ¿Ya tienes una cuenta?{' '}
+                <button type="button" onClick={onSwitchToLogin} className="font-medium text-[#1A6BB5] hover:text-[#134F8A]">
+                  Inicia sesión aquí
+                </button>
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
