@@ -254,7 +254,7 @@ export async function forgotPassword(email) {
   });
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || "Error al solicitar recuperación");
+    throw new Error(errorData.detail || "Error al solicitar recuperaciï¿½n");
   }
   return response.json();
 }
@@ -267,7 +267,7 @@ export async function resetPassword(email, code, newPassword) {
   });
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || "Error al restablecer contraseña");
+    throw new Error(errorData.detail || "Error al restablecer contraseï¿½a");
   }
   return response.json();
 }
@@ -276,7 +276,7 @@ export async function verifyEmail(email, code) {
   const response = await fetch(`${API_URL}/arko/auth/verify-email`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token })
+    body: JSON.stringify({ email, code })
   });
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
