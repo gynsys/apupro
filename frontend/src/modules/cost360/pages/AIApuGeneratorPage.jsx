@@ -953,7 +953,7 @@ export default function AIApuGeneratorPage() {
           )}
           
           {isGuidedMode && !isSmartMode && !isClarifying ? (
-            <div className="bg-amber-50/30 border-2 border-[#FEF3C7] rounded-xl p-4 md:p-6 mb-4 relative flex flex-col max-w-lg mx-auto w-full shadow-[0_8px_20px_-5px_rgba(254,243,199,0.5),0_4px_10px_-5px_rgba(0,0,0,0.05)]" style={{ minHeight: '400px', maxHeight: '600px' }}>
+            <div className="bg-[#FEF3C7] border-2 border-[#FEF3C7] rounded-xl p-4 md:p-6 mb-4 relative flex flex-col max-w-lg mx-auto w-full shadow-[0_8px_20px_-5px_rgba(254,243,199,0.5),0_4px_10px_-5px_rgba(0,0,0,0.05)]" style={{ minHeight: '400px', maxHeight: '600px' }}>
               <div className="flex items-center gap-3 mb-4 border-b border-[#FEF3C7] pb-4 flex-shrink-0">
                 <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold shadow-md shadow-amber-500/30">
                   <Sparkles size={20} />
