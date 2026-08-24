@@ -1,7 +1,7 @@
 # Bitácora de Desarrollo: Creación de APUs y Base de Datos Personalizada
 
 **Fecha:** 5 de Agosto de 2026
-**Módulo:** Cost360 (Visor de Bases de Datos y Generador de APU)
+**Módulo:** Cost360 (Visor de Bases de Datos y Generador de APU) - Plataforma Costbase
 
 ## 1. Contexto y Problema
 El sistema contaba con un visor de partidas (la Base Maestra original) y un módulo de "Generación de APU con IA". 

@@ -51,10 +51,10 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
     try {
       const { registerArkoAdmin } = await import('../../services/api');
       await registerArkoAdmin(email, password, username);
-      toast.success('Registro exitoso. Te hemos enviado un código de verificación al correo.');
+      toast.success('Registro iniciado. Te hemos enviado un código de verificación al correo. Tu cuenta se creará después de verificar.');
       setView('verify');
     } catch (err) {
-      setError(err.message || 'Ocurrió un error al registrarse');
+      setError(err.message || 'Ocurrió un error al iniciar el registro');
     } finally {
       setIsLoading(false);
     }
@@ -68,7 +68,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
     try {
       const { verifyEmail } = await import('../../services/api');
       await verifyEmail(email, code);
-      toast.success('Correo verificado exitosamente. Iniciando sesión...');
+      toast.success('¡Cuenta creada exitosamente! Iniciando sesión...');
       
       const result = await login(email, password, false);
       if (result.success) {
@@ -77,7 +77,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
         onSwitchToLogin();
       }
     } catch (err) {
-      setError(err.message || 'Código inválido o error al verificar');
+      setError(err.message || 'Código inválido, expirado o error al verificar');
     } finally {
       setIsLoading(false);
     }

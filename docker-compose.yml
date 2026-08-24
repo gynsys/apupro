@@ -13,6 +13,15 @@ services:
     ports:
       - "5440:5432"
 
+  apupro-redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - apupro_redis_data:/data
+    command: redis-server --appendonly yes
+
   apupro-backend:
     image: ghcr.io/gynsys/apupro/apupro-backend:latest
     build: 
@@ -24,9 +33,13 @@ services:
       - ./backend/.env
     environment:
       - DATABASE_URL=postgresql://apupro_user:apupro_password@apupro-db:5432/apupro_db
+      - REDIS_URL=redis://apupro-redis:6379/0
+      - CELERY_BROKER_URL=redis://apupro-redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://apupro-redis:6379/0
       - SECRET_KEY=changethisinproduction
     depends_on:
       - apupro-db
+      - apupro-redis
     volumes:
       - apupro_ai_brain:/app/ai_brain
 
@@ -44,3 +57,4 @@ services:
 volumes:
   apupro_db_data:
   apupro_ai_brain:
+  apupro_redis_data:

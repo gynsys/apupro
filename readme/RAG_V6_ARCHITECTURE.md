@@ -1,6 +1,6 @@
-# Arquitectura RAG V6 - Búsqueda con Inteligencia Artificial (APUpro)
+# Arquitectura RAG V6 - Búsqueda con Inteligencia Artificial (Costbase)
 
-Esta documentación detalla la implementación técnica del motor de búsqueda V6 con Inteligencia Artificial, también conocido como "Cerebro de IA", para la plataforma APUpro (cost360).
+Esta documentación detalla la implementación técnica del motor de búsqueda V6 con Inteligencia Artificial, también conocido como "Cerebro de IA", para la plataforma Costbase (anteriormente APUpro, módulo cost360).
 
 ## 1. Concepto y Visión General
 

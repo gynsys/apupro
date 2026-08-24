@@ -13,7 +13,7 @@
 
 ## Síntoma
 
-El dropdown de bases de datos en `costbase.arko360.net/cost360` solo muestra **"Base Maestra (Defecto)"** y no lista las demás bases aunque existan en la tabla `cost360_databases`.
+El dropdown de bases de datos en `costbase.net/cost360` solo muestra **"Base Maestra (Defecto)"** y no lista las demás bases aunque existan en la tabla `cost360_databases`.
 
 En la consola del navegador aparece:
 ```
@@ -21,7 +21,7 @@ api/v1/cost360/databases:1  Failed to load resource: the server responded with a
 Error al cargar bases de datos: Error: Error al cargar bases de datos
 ```
 
-En los logs del backend (`docker logs apupro_platform-apupro-backend-1`):
+En los logs del backend (`docker logs costbase_platform-costbase-backend-1`):
 ```
 fastapi.exceptions.ResponseValidationError: 3 validation errors:
   {'type': 'float_type', 'loc': ('response', 'databases', 0, 'material_inflation'), 'msg': 'Input should be a valid number', 'input': None}
@@ -74,7 +74,7 @@ WHERE
 Ejecutar vía `ssh_runner.py`:
 ```bash
 python ssh_runner.py --upload fix_inflation.sql /root/fix_inflation.sql
-python ssh_runner.py "docker exec -i apupro_platform-apupro-db-1 psql -U apupro_user -d apupro_db < /root/fix_inflation.sql"
+python ssh_runner.py "docker exec -i costbase_platform-costbase-db-1 psql -U apupro_user -d apupro_db < /root/fix_inflation.sql"
 ```
 
 ### Paso 2 — Aplicar el Fix al Schema de Pydantic
@@ -102,8 +102,8 @@ class Cost360DatabaseBase(BaseModel):
 
 Subir al servidor y reiniciar:
 ```bash
-python ssh_runner.py --upload backend/app/schemas/cost360.py /root/apupro_platform/backend/app/schemas/cost360.py
-python ssh_runner.py "docker restart apupro_platform-apupro-backend-1"
+python ssh_runner.py --upload backend/app/schemas/cost360.py /root/costbase_platform/backend/app/schemas/cost360.py
+python ssh_runner.py "docker restart costbase_platform-costbase-backend-1"
 ```
 
 ### Paso 3 — Verificar

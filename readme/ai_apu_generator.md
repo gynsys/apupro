@@ -1,7 +1,7 @@
-# Generador de APU con Inteligencia Artificial (Cost360)
+# Generador de APU con Inteligencia Artificial (Cost360 - Costbase)
 
 ## Descripción General
-El Generador de APU con IA es una herramienta que combina dos tecnologías de Inteligencia Artificial para crear Análisis de Precios Unitarios (APU) técnicos y precisos, basándose en la normativa COVENIN 2000:1992 y los antecedentes históricos de la base de datos de APUPro.
+El Generador de APU con IA es una herramienta que combina dos tecnologías de Inteligencia Artificial para crear Análisis de Precios Unitarios (APU) técnicos y precisos, basándose en la normativa COVENIN 2000:1992 y los antecedentes históricos de la base de datos de Costbase (anteriormente APUPro).
 
 ## Arquitectura Híbrida (Doble IA)
 

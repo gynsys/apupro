@@ -1,6 +1,6 @@
-# Documentación Técnica: Separación de APUpro de Arko360
+# Documentación Técnica: Separación de Costbase de Arko360
 
-Este documento detalla los pasos técnicos, comandos, configuraciones y rutas utilizadas para separar exitosamente el módulo "Cost360/Presupuestos" (ahora APUpro) del monolito original de Arko360, convirtiéndolo en una plataforma 100% independiente alojada en `apupro.arko360.net`.
+Este documento detalla los pasos técnicos, comandos, configuraciones y rutas utilizadas para separar exitosamente el módulo "Cost360/Presupuestos" (evolucionando primero como APUpro y finalmente como Costbase) del monolito original de Arko360, convirtiéndolo en una plataforma 100% independiente alojada en `costbase.net`.
 
 ---
 
@@ -10,7 +10,7 @@ Se creó un nuevo directorio y repositorio Git para aislar el código:
 
 - **Ruta original:** `C:\Users\pablo\Documents\arko360_platform`
 - **Nueva ruta:** `C:\Users\pablo\Documents\apupro_platform`
-- **Repositorio remoto:** `https://github.com/gynsys/apupro.git`
+- **Repositorio remoto:** `https://github.com/gynsys/apupro.git` (actualmente costbase_platform)
 
 Se inicializó el nuevo repositorio en local y se enlazó con GitHub.
 
@@ -18,9 +18,9 @@ Se inicializó el nuevo repositorio en local y se enlazó con GitHub.
 
 ## 2. Aislamiento de la Base de Datos
 
-Para independizar los datos, se extrajo la base de datos de Arko360 y se montó un contenedor exclusivo para APUpro en el servidor de producción.
+Para independizar los datos, se extrajo la base de datos de Arko360 y se montó un contenedor exclusivo para Costbase en el servidor de producción.
 
-- **Contenedor:** `apupro_platform-apupro-db-1`
+- **Contenedor:** `apupro_platform-apupro-db-1` (actualmente costbase_platform-costbase-db-1)
 - **Puerto expuesto (Host):** `5440` (Interno de Docker: `5432`)
 - **Variables de entorno:**
   - `POSTGRES_USER`: apupro_user
@@ -48,7 +48,7 @@ Se procedió a eliminar todo el código innecesario heredado de Arko360.
 - **Ruta principal del router:** `backend/app/api/v1/api.py`
 
 **Variable de conexión a BD (`docker-compose.yml`):**
-`DATABASE_URL=postgresql://apupro_user:apupro_password@apupro-db:5432/apupro_db`
+`DATABASE_URL=postgresql://apupro_user:apupro_password@apupro-db:5432/apupro_db` (actualmente costbase-db)
 
 ---
 
@@ -71,25 +71,25 @@ Dado que Vite compila las variables en tiempo de construcción, el `.env` no es 
 2. Se pasó como argumento en el `docker-compose.yml`:
    ```yaml
    args:
-     - VITE_API_URL=https://apupro.arko360.net/api/v1
+     - VITE_API_URL=https://costbase.net/api/v1
    ```
 
 ---
 
 ## 5. Infraestructura, Nginx y Certificados SSL
 
-Se configuró un bloque de servidor (Server Block) de Nginx en Ubuntu de forma nativa para enrutar el subdominio y asegurar la conexión.
+Se configuró un bloque de servidor (Server Block) de Nginx en Ubuntu de forma nativa para enrutar el dominio y asegurar la conexión.
 
-- **Ruta del archivo Nginx:** `/etc/nginx/sites-available/apupro.arko360.net` (simbolizado en `sites-enabled`)
+- **Ruta del archivo Nginx:** `/etc/nginx/sites-available/costbase.net` (simbolizado en `sites-enabled`)
 - **Contenido del Proxy Nginx (`apupro.conf`):**
   - Tráfico raíz (`/`) mapeado al contenedor del Frontend en el puerto `3010`.
   - Tráfico API (`/api/`) mapeado al contenedor Backend en el puerto `8010`.
-- **Dominio:** `apupro.arko360.net` (Resolviendo a IP: `167.172.115.154`)
+- **Dominio:** `costbase.net` (Resolviendo a IP: `167.172.115.154`)
 
 ### Comandos SSL de Certbot:
 Se instaló el certificado Let's Encrypt para forzar HTTPS:
 ```bash
-certbot install --cert-name apupro.arko360.net --nginx -n
+certbot install --cert-name costbase.net --nginx -n
 systemctl reload nginx
 ```
 
@@ -97,15 +97,15 @@ systemctl reload nginx
 
 ## 6. Estado Actual de Contenedores en Producción
 
-La plataforma APUpro corre enteramente bajo el stack `apupro_platform`:
+La plataforma Costbase corre enteramente bajo el stack `costbase_platform`:
 
-1. `apupro_platform-apupro-frontend-1` (Puerto: `3010`)
-2. `apupro_platform-apupro-backend-1` (Puerto: `8010`)
-3. `apupro_platform-apupro-db-1` (Puerto: `5440`)
+1. `costbase_platform-costbase-frontend-1` (Puerto: `3010`)
+2. `costbase_platform-costbase-backend-1` (Puerto: `8010`)
+3. `costbase_platform-costbase-db-1` (Puerto: `5440`)
 
 ---
 
 ## 7. Próximos Pasos (Deuda Técnica)
 
-1. **Limpieza del monolito original:** El código de `cost360` y `budgets` sigue presente en el repositorio original de `arko360_platform`. Es seguro proceder a eliminarlo ahora que APUpro es autosuficiente.
-2. **Refactorización de Autenticación:** Se debería cambiar el nombre interno del modelo de usuarios de `ArkoAdmin` a algo como `User` o `ApuUser` en la base de datos de APUpro y en el backend, adaptando la URL de login (`/api/v1/auth/login`).
+1. **Limpieza del monolito original:** El código de `cost360` y `budgets` sigue presente en el repositorio original de `arko360_platform`. Es seguro proceder a eliminarlo ahora que Costbase es autosuficiente.
+2. **Refactorización de Autenticación:** Se debería cambiar el nombre interno del modelo de usuarios de `ArkoAdmin` a algo como `User` o `CostbaseUser` en la base de datos de Costbase y en el backend, adaptando la URL de login (`/api/v1/auth/login`).

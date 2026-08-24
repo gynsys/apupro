@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, text
 
 def main():
     print("Conectando a la base de datos...")
-    engine = create_engine('postgresql://apupro_user:apupro_password@costbase.arko360.net:5440/apupro_db')
+    engine = create_engine('postgresql://apupro_user:apupro_password@costbase.net:5440/apupro_db')
     
     # Cargar las categorías exactas de la interfaz
     tree_path = r'c:\Users\pablo\Documents\apupro_platform\frontend\src\modules\cost360\data\covenin_tree.json'

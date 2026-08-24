@@ -3,7 +3,7 @@
 
 ## Resumen de Cambios
 
-Se ha refactorizado por completo el flujo de autenticación, verificación de correos y recuperación de contraseñas para la plataforma `apupro_platform`. El objetivo principal ha sido mejorar la experiencia de usuario (UX) manteniendo a la persona en la misma ventana modal sin redirigirla a URLs externas, y reemplazar los "Enlaces Mágicos" (JWT) por códigos de verificación de 6 dígitos que son mucho más amigables.
+Se ha refactorizado por completo el flujo de autenticación, verificación de correos y recuperación de contraseñas para la plataforma `costbase_platform` (anteriormente apupro_platform). El objetivo principal ha sido mejorar la experiencia de usuario (UX) manteniendo a la persona en la misma ventana modal sin redirigirla a URLs externas, y reemplazar los "Enlaces Mágicos" (JWT) por códigos de verificación de 6 dígitos que son mucho más amigables.
 
 ## Modificaciones en Base de Datos
 
@@ -33,10 +33,10 @@ Se agregó una nueva columna de forma nativa en la base de datos de producción 
 
 ## Corrección de Variables de Entorno y Configuración
 
-Durante la implementación se detectó que el backend no estaba enviando los correos porque faltaba la variable `RESEND_API_KEY` en el archivo `.env` del contenedor en producción de `apupro_platform`.
+Durante la implementación se detectó que el backend no estaba enviando los correos porque faltaba la variable `RESEND_API_KEY` en el archivo `.env` del contenedor en producción de `costbase_platform` (anteriormente apupro_platform).
 - Se extrajo la clave de la API leyendo las variables de entorno del contenedor hermano de Arko360 (`arko360_platform-backend-1`).
-- Se insertó la clave en el archivo `.env` local y remoto de Apupro.
-- Se reinició el contenedor `apupro_platform-apupro-backend-1` en producción para que tome la configuración y comience a enviar correos reales (dejando de "simularlos" en los logs).
+- Se insertó la clave en el archivo `.env` local y remoto de Costbase.
+- Se reinició el contenedor `costbase_platform-costbase-backend-1` en producción para que tome la configuración y comience a enviar correos reales (dejando de "simularlos" en los logs).
 
 ## Corrección de Codificación de Caracteres (UTF-8)
 

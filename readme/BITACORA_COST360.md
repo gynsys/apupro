@@ -1,7 +1,7 @@
 # Documentación Módulo Cost360
 
 ## 1. Visión General
-**Cost360** es el módulo de estimación de costos y Análisis de Precio Unitario (APU) integrado en la plataforma Arko360. Permite a los ingenieros y arquitectos acceder a una extensa base de datos de partidas constructivas (Extraída de Lulowin/Access) y calcular presupuestos precisos.
+**Cost360** es el módulo de estimación de costos y Análisis de Precio Unitario (APU) integrado en la plataforma Costbase (anteriormente Arko360, luego APUpro). Permite a los ingenieros y arquitectos acceder a una extensa base de datos de partidas constructivas (Extraída de Lulowin/Access) y calcular presupuestos precisos.
 
 ## 2. Base de Datos (PostgreSQL)
 

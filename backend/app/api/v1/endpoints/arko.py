@@ -15,6 +15,8 @@ from contextlib import contextmanager
 from app.db.models.arko import ArkoPost, ArkoProject, ArkoAdmin
 from app.core.security import create_access_token
 from app.core.config import settings
+from app.services.redis_cache_service import redis_cache
+from app.services.email import send_verification_email
 
 @contextmanager
 def get_db_session() -> Generator[Session, None, None]:
@@ -142,25 +144,43 @@ class RegisterRequest(BaseModel):
 def register_arko_admin(data: RegisterRequest):
     try:
         with get_db_session() as db:
+            # Verificar si el email ya está registrado y verificado
             user = db.query(ArkoAdmin).filter(ArkoAdmin.email == data.email).first()
-            if user:
+            
+            if user and getattr(user, "is_email_verified", False):
                 raise HTTPException(status_code=400, detail="Email already registered")
             
+            # Generar código de verificación
             code = generate_verification_code()
-            new_user = ArkoAdmin(
-                email=data.email,
-                hashed_password=get_password_hash(data.password),
-                full_name=data.full_name,
-                is_active=True,
-                is_email_verified=False,
-                verification_code=code
-            )
-            db.add(new_user)
-            db.commit()
             
-            send_verification_email(new_user.email, code)
+            # Si existe un usuario no verificado, eliminarlo primero
+            if user and not getattr(user, "is_email_verified", False):
+                db.delete(user)
+                db.commit()
             
-            return {"message": "User registered successfully", "email": new_user.email}
+            # Almacenar datos temporalmente en Redis (NO en base de datos)
+            registration_data = {
+                "email": data.email,
+                "password": data.password,  # Se hashearán al crear el usuario final
+                "full_name": data.full_name
+            }
+            
+            # Guardar en Redis con expiración de 15 minutos
+            if not redis_cache.store_pending_registration(data.email, registration_data, expiry_seconds=900):
+                raise HTTPException(status_code=500, detail="Error storing registration data")
+            
+            # Guardar código de verificación separadamente
+            if not redis_cache.store_verification_code(data.email, code, expiry_seconds=900):
+                raise HTTPException(status_code=500, detail="Error storing verification code")
+            
+            # Enviar correo de verificación
+            send_verification_email(data.email, code)
+            
+            return {
+                "message": "Registration initiated. Please check your email for verification code.",
+                "email": data.email,
+                "requires_verification": True
+            }
     except HTTPException:
         raise
     except Exception as e:
@@ -220,18 +240,51 @@ class VerifyEmailRequest(BaseModel):
 @router.post("/auth/verify-email")
 def verify_email(data: VerifyEmailRequest):
     try:
+        # Verificar código contra Redis
+        if not redis_cache.verify_code(data.email, data.code):
+            raise HTTPException(status_code=400, detail="Código inválido o expirado")
+        
+        # Recuperar datos de registro pendiente
+        registration_data = redis_cache.get_pending_registration(data.email)
+        if not registration_data:
+            raise HTTPException(status_code=400, detail="Registro expirado. Por favor regístrate nuevamente.")
+        
+        # Verificar si el usuario ya existe en BD (por si acaso)
         with get_db_session() as db:
-            user = db.query(ArkoAdmin).filter(ArkoAdmin.email == data.email).first()
-            if not user:
-                raise HTTPException(status_code=404, detail="Usuario no encontrado")
-                
-            if user.verification_code != data.code:
-                raise HTTPException(status_code=400, detail="Código inválido")
-                
-            user.is_email_verified = True
-            user.verification_code = None
+            existing_user = db.query(ArkoAdmin).filter(ArkoAdmin.email == data.email).first()
+            if existing_user:
+                if getattr(existing_user, "is_email_verified", False):
+                    raise HTTPException(status_code=400, detail="Email ya registrado y verificado")
+                else:
+                    # Eliminar usuario no verificado anterior
+                    db.delete(existing_user)
+                    db.commit()
+            
+            # Crear el usuario en la base de datos con email verificado
+            new_user = ArkoAdmin(
+                email=registration_data["email"],
+                hashed_password=get_password_hash(registration_data["password"]),
+                full_name=registration_data["full_name"],
+                is_active=True,
+                is_email_verified=True,  # Ya verificado desde el inicio
+                verification_code=None
+            )
+            db.add(new_user)
             db.commit()
-            return {"message": "Correo verificado exitosamente"}
+            
+            # Limpiar datos de Redis
+            redis_cache.delete_pending_registration(data.email)
+            
+            return {
+                "message": "Correo verificado exitosamente. Usuario creado.",
+                "email": new_user.email,
+                "is_email_verified": True
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verifying email: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
     except HTTPException:
         raise
     except Exception as e:
@@ -244,20 +297,26 @@ class ResendVerificationRequest(BaseModel):
 @router.post("/auth/resend-verification")
 def resend_verification(data: ResendVerificationRequest):
     try:
-        with get_db_session() as db:
-            user = db.query(ArkoAdmin).filter(ArkoAdmin.email == data.email).first()
-            if not user:
-                return {"message": "Si tu correo está registrado, recibirás un nuevo código."}
-                
-            if getattr(user, "is_email_verified", False):
-                return {"message": "El correo ya está verificado."}
-                
-            code = generate_verification_code()
-            user.verification_code = code
-            db.commit()
-            
-            send_verification_email(user.email, code)
-            return {"message": "Si tu correo está registrado, recibirás un nuevo código."}
+        # Verificar si hay un registro pendiente en Redis
+        registration_data = redis_cache.get_pending_registration(data.email)
+        
+        if not registration_data:
+            # Verificar si el usuario ya existe y está verificado en BD
+            with get_db_session() as db:
+                user = db.query(ArkoAdmin).filter(ArkoAdmin.email == data.email).first()
+                if user and getattr(user, "is_email_verified", False):
+                    return {"message": "El correo ya está verificado."}
+                else:
+                    return {"message": "No hay registro pendiente. Por favor regístrate nuevamente."}
+        
+        # Generar nuevo código y actualizar en Redis
+        code = generate_verification_code()
+        if not redis_cache.store_verification_code(data.email, code, expiry_seconds=900):
+            raise HTTPException(status_code=500, detail="Error storing new verification code")
+        
+        # Enviar nuevo correo
+        send_verification_email(data.email, code)
+        return {"message": "Nuevo código enviado. Por favor revisa tu correo."}
     except Exception as e:
         logger.error(f"Error resending verification: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
