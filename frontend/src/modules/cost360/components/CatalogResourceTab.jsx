@@ -176,9 +176,11 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
             <thead className="sticky top-0 z-10" style={{ background: '#f8fafc' }}>
               <tr style={{ background: 'linear-gradient(90deg,rgba(37,99,235,0.06),rgba(99,102,241,0.03))' }}>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+                {!config.editableFields.some(f => f.key === config.descKey) && (
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+                )}
                 {config.editableFields.map(f => (
-                  <th key={f.key} className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">{f.label}</th>
+                  <th key={f.key} className={`px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider ${f.type === 'text' || f.key === config.descKey ? 'text-left' : 'text-right'}`}>{f.label}</th>
                 ))}
                 {(selectedDatabase !== 'master' || adminMode) && (
                   <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -206,15 +208,17 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                     }}
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-blue-700 font-mono">{item[config.idKey]}</td>
-                    <td className="px-6 py-4 text-xs text-slate-600 group-hover:text-slate-800">{item[config.descKey]}</td>
+                    {!config.editableFields.some(f => f.key === config.descKey) && (
+                      <td className="px-6 py-4 text-xs text-slate-600 group-hover:text-slate-800">{item[config.descKey]}</td>
+                    )}
                     
                     {config.editableFields.map(f => (
-                      <td key={f.key} className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
+                      <td key={f.key} className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${f.type === 'text' || f.key === config.descKey ? 'text-left' : 'text-right'}`}>
                         {editingId === item[config.idKey] ? (
-                          f.key === 'Descri' ? (
+                          f.type === 'text' || f.key === config.descKey ? (
                             <input
                               type="text"
-                              className="w-64 text-left border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-2 py-1"
+                              className="w-full min-w-[120px] text-left border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-2 py-1"
                               value={editForm[f.key] || ''}
                               onChange={(e) => setEditForm({ ...editForm, [f.key]: e.target.value })}
                             />
@@ -228,8 +232,8 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                             />
                           )
                         ) : (
-                          <span className={f.key === 'Descri' ? 'text-gray-900 text-left' : 'text-gray-900'}>
-                            {f.key === 'Descri' ? (item[f.key] || '') : `$${(item[f.key] || 0).toFixed(2)}`}
+                          <span className={f.type === 'text' || f.key === config.descKey ? 'text-gray-900 text-left whitespace-normal' : 'text-gray-900'}>
+                            {f.type === 'text' || f.key === config.descKey ? (item[f.key] || '') : `$${(item[f.key] || 0).toFixed(2)}`}
                           </span>
                         )}
                       </td>

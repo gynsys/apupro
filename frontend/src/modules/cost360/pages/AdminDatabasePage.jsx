@@ -527,7 +527,8 @@ const AdminDatabasePage = () => {
             config={{
               idKey: 'CodMat', descKey: 'Descri',
               editableFields: [
-                { key: 'Descri', label: 'Descripción' },
+                { key: 'Descri', label: 'Descripción', type: 'text' },
+                { key: 'UniMat', label: 'Unidad', type: 'text' },
                 { key: 'CosMat', label: 'Precio Unitario ($)' }
               ]
             }}
