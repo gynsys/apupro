@@ -269,6 +269,39 @@ def update_material_route(codigo: str, payload: CostMaterialUpdate, db: Session 
     if not mat: raise HTTPException(status_code=404, detail="Material no encontrado")
     return mat
 
+@router.post("/materials/bulk-update")
+def bulk_update_materials(payload: dict, db: Session = Depends(get_db)):
+    try:
+        updates = payload.get('updates', [])
+        updated_count = 0
+        errors = []
+        
+        for update in updates:
+            codigo = update.get('codigo')
+            precio = update.get('precio')
+            
+            if codigo and precio is not None:
+                try:
+                    mat = db.query(CostMaterial).filter(CostMaterial.CodMat == codigo).first()
+                    if mat:
+                        mat.CosMat = precio
+                        updated_count += 1
+                    else:
+                        errors.append(f"Material {codigo} no encontrado")
+                except Exception as e:
+                    errors.append(f"Error actualizando {codigo}: {str(e)}")
+        
+        db.commit()
+        
+        return {
+            "updated": updated_count,
+            "errors": errors,
+            "total": len(updates)
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error en actualización masiva: {str(e)}")
+
 @router.delete("/materials/{codigo}")
 def delete_material_route(codigo: str, db: Session = Depends(get_db)):
     if not delete_material(db, codigo): raise HTTPException(status_code=404, detail="Material no encontrado")

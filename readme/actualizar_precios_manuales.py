@@ -8,13 +8,20 @@ def main():
     
     # Precios a actualizar
     precios_actualizar = {
-        'MAT0975': 1400,
-        'MAT0976': 6800,
-        'MAT0977': 9500,
-        'MAT0978': 2100,
-        'MAT0979': 2800,
-        'MAT0980': 3400,
-        'MAT0981': 5200
+        'MAT1347': 950,
+        'MAT1348': 1350,
+        'MAT1349': 1700,
+        'MAT1350': 2100,
+        'MAT1351': 3600,
+        'MAT1352': 4500,
+        'MAT1353': 2900,
+        'MAT1355': 95,
+        'MAT1356': 160,
+        'MAT1357': 240,
+        'MAT1358': 310,
+        'MAT1359': 390,
+        'MAT1360': 165,
+        'MAT1361': 45
     }
     
     print(f"\nMateriales a actualizar: {len(precios_actualizar)}")

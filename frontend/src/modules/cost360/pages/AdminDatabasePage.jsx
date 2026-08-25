@@ -33,6 +33,8 @@ const AdminDatabasePage = () => {
   const [onlyCoded, setOnlyCoded] = useState(true);
   const [editingItem, setEditingItem] = useState(null);
   const [isCatMenuOpen, setIsCatMenuOpen] = useState(false);
+  const [showBulkPriceModal, setShowBulkPriceModal] = useState(false);
+  const [bulkPriceText, setBulkPriceText] = useState('');
   const catMenuRef = useRef(null);
 
   useEffect(() => {
@@ -500,20 +502,121 @@ const AdminDatabasePage = () => {
       )}
 
       {activeTab === 'materiales' && (
-        <CatalogResourceTab
-          key={`mat-master`}
-          title="Materiales"
-          resourceType="materials"
-          selectedDatabase="master"
-          adminMode={true}
-          config={{
-            idKey: 'CodMat', descKey: 'Descri',
-            editableFields: [
-              { key: 'Descri', label: 'Descripción' },
-              { key: 'CosMat', label: 'Precio Unitario ($)' }
-            ]
-          }}
-        />
+        <>
+          <div className="rounded-2xl p-4 flex flex-col gap-3" style={glass}>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-slate-600 font-medium">
+                Actualización en masa de precios
+              </p>
+              <button
+                onClick={() => setShowBulkPriceModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold rounded-lg shadow-sm hover:shadow-md transition-all hover:scale-[1.02]"
+              >
+                <FiDownload size={16} />
+                Actualizar Precios en Masa
+              </button>
+            </div>
+          </div>
+
+          <CatalogResourceTab
+            key={`mat-master`}
+            title="Materiales"
+            resourceType="materials"
+            selectedDatabase="master"
+            adminMode={true}
+            config={{
+              idKey: 'CodMat', descKey: 'Descri',
+              editableFields: [
+                { key: 'Descri', label: 'Descripción' },
+                { key: 'CosMat', label: 'Precio Unitario ($)' }
+              ]
+            }}
+          />
+
+          {showBulkPriceModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+                <div className="p-6 border-b border-gray-200">
+                  <h2 className="text-xl font-bold text-slate-800">Actualizar Precios en Masa</h2>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Pega los precios en formato: MAT1234: $1000 (uno por línea)
+                  </p>
+                </div>
+                <div className="p-6 flex-1 flex flex-col gap-4">
+                  <textarea
+                    value={bulkPriceText}
+                    onChange={(e) => setBulkPriceText(e.target.value)}
+                    placeholder="MAT1347: $950 USD&#10;MAT1348: $1,350 USD&#10;MAT1349: $1,700 USD"
+                    className="w-full h-64 p-4 border border-gray-300 rounded-lg text-sm font-mono resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={() => {
+                        setShowBulkPriceModal(false);
+                        setBulkPriceText('');
+                      }}
+                      className="px-4 py-2 text-slate-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={async () => {
+                        // Procesar el texto
+                        const lines = bulkPriceText.split('\n').filter(line => line.trim());
+                        const updates = [];
+                        
+                        for (const line of lines) {
+                          // Match format: MATXXXX: $YYYY USD
+                          const match = line.match(/([A-Z]+\d+):\s*\$?([\d,\.]+)/);
+                          if (match) {
+                            const codigo = match[1];
+                            const precio = parseFloat(match[2].replace(/,/g, ''));
+                            if (!isNaN(precio)) {
+                              updates.push({ codigo, precio });
+                            }
+                          }
+                        }
+
+                        if (updates.length === 0) {
+                          toast.error('No se encontraron precios válidos para actualizar');
+                          return;
+                        }
+
+                        try {
+                          const token = localStorage.getItem('arko_admin_token');
+                          const response = await fetch(`${API_URL}/cost360/materials/bulk-update`, {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ updates })
+                          });
+
+                          if (response.ok) {
+                            const result = await response.json();
+                            toast.success(`${result.updated || updates.length} precios actualizados correctamente`);
+                            setShowBulkPriceModal(false);
+                            setBulkPriceText('');
+                            // Recargar la lista de materiales
+                            window.location.reload();
+                          } else {
+                            toast.error('Error al actualizar precios en masa');
+                          }
+                        } catch (err) {
+                          toast.error('Error de conexión al servidor');
+                        }
+                      }}
+                      className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Actualizar {bulkPriceText.split('\n').filter(line => line.trim()).length} Precios
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {activeTab === 'equipos' && (

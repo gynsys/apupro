@@ -211,15 +211,26 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                     {config.editableFields.map(f => (
                       <td key={f.key} className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
                         {editingId === item[config.idKey] ? (
-                          <input
-                            type="number"
-                            step="0.01"
-                            className="w-24 text-right border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-2 py-1"
-                            value={editForm[f.key]}
-                            onChange={(e) => setEditForm({ ...editForm, [f.key]: parseFloat(e.target.value) || 0 })}
-                          />
+                          f.key === 'Descri' ? (
+                            <input
+                              type="text"
+                              className="w-64 text-left border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-2 py-1"
+                              value={editForm[f.key] || ''}
+                              onChange={(e) => setEditForm({ ...editForm, [f.key]: e.target.value })}
+                            />
+                          ) : (
+                            <input
+                              type="number"
+                              step="0.01"
+                              className="w-24 text-right border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-2 py-1"
+                              value={editForm[f.key]}
+                              onChange={(e) => setEditForm({ ...editForm, [f.key]: parseFloat(e.target.value) || 0 })}
+                            />
+                          )
                         ) : (
-                          <span className="text-gray-900">${(item[f.key] || 0).toFixed(2)}</span>
+                          <span className={f.key === 'Descri' ? 'text-gray-900 text-left' : 'text-gray-900'}>
+                            {f.key === 'Descri' ? (item[f.key] || '') : `$${(item[f.key] || 0).toFixed(2)}`}
+                          </span>
                         )}
                       </td>
                     ))}
