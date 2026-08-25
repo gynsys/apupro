@@ -271,25 +271,40 @@ def update_material_route(codigo: str, payload: CostMaterialUpdate, db: Session 
 
 @router.post("/materials/bulk-update")
 def bulk_update_materials(payload: dict, db: Session = Depends(get_db)):
+    """
+    Actualización masiva de precios - NO consume tokens de IA
+    Actualización directa en base de datos para máxima eficiencia
+    """
     try:
         updates = payload.get('updates', [])
+        if not updates:
+            return {"updated": 0, "errors": [], "total": 0}
+        
+        # Optimización: usar UPDATE directo en lugar de queries individuales
         updated_count = 0
         errors = []
         
+        # Preparar datos para actualización en lote
+        codigos_precio = {}
         for update in updates:
             codigo = update.get('codigo')
             precio = update.get('precio')
-            
             if codigo and precio is not None:
-                try:
-                    mat = db.query(CostMaterial).filter(CostMaterial.CodMat == codigo).first()
-                    if mat:
-                        mat.CosMat = precio
-                        updated_count += 1
-                    else:
-                        errors.append(f"Material {codigo} no encontrado")
-                except Exception as e:
-                    errors.append(f"Error actualizando {codigo}: {str(e)}")
+                codigos_precio[codigo] = precio
+        
+        # Actualización en lote para mejor rendimiento
+        for codigo, precio in codigos_precio.items():
+            try:
+                result = db.execute(
+                    text('UPDATE cost360_materials SET "CosMat" = :precio WHERE "CodMat" = :codigo'),
+                    {"precio": precio, "codigo": codigo}
+                )
+                if result.rowcount > 0:
+                    updated_count += result.rowcount
+                else:
+                    errors.append(f"Material {codigo} no encontrado")
+            except Exception as e:
+                errors.append(f"Error actualizando {codigo}: {str(e)}")
         
         db.commit()
         

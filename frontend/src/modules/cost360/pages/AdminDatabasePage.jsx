@@ -566,7 +566,7 @@ const AdminDatabasePage = () => {
                         const updates = [];
                         
                         for (const line of lines) {
-                          // Match format: MATXXXX: $YYYY USD
+                          // Match format: MATXXXX: $YYYY USD o MATXXXX: $YYYY
                           const match = line.match(/([A-Z]+\d+):\s*\$?([\d,\.]+)/);
                           if (match) {
                             const codigo = match[1];
@@ -584,6 +584,7 @@ const AdminDatabasePage = () => {
 
                         try {
                           const token = localStorage.getItem('arko_admin_token');
+                          
                           const response = await fetch(`${API_URL}/cost360/materials/bulk-update`, {
                             method: 'POST',
                             headers: {
@@ -601,7 +602,8 @@ const AdminDatabasePage = () => {
                             // Recargar la lista de materiales
                             window.location.reload();
                           } else {
-                            toast.error('Error al actualizar precios en masa');
+                            const errorText = await response.text();
+                            toast.error(`Error al actualizar precios: ${response.status}`);
                           }
                         } catch (err) {
                           toast.error('Error de conexión al servidor');
