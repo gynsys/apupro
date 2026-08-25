@@ -596,11 +596,22 @@ const AdminDatabasePage = () => {
 
                           if (response.ok) {
                             const result = await response.json();
-                            toast.success(`${result.updated || updates.length} precios actualizados correctamente`);
+                            
+                            // Mostrar toast de éxito
+                            toast.success(`${result.updated || updates.length} precios actualizados correctamente`, {
+                              duration: 3000, // 3 segundos para que el usuario pueda verlo
+                            position: 'top-center'
+                            });
+                            
+                            // Cerrar modal y limpiar texto
                             setShowBulkPriceModal(false);
                             setBulkPriceText('');
-                            // Recargar la lista de materiales
-                            window.location.reload();
+                            
+                            // Recargar solo los datos de materiales, no la página completa
+                            setTimeout(() => {
+                              handleSearch(); // Recargar búsqueda de materiales
+                            }, 1000); // Retraso de 1 segundo para que el usuario vea el toast
+                            
                           } else {
                             const errorText = await response.text();
                             toast.error(`Error al actualizar precios: ${response.status}`);

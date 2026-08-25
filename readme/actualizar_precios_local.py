@@ -1,107 +1,64 @@
 """
-Script local para actualización masiva de precios - SIN CONSUMO DE TOKENS
-Uso: python actualizar_precios_local.py
-Pega los precios en formato: MAT1234: $1000
+Script de prueba para búsqueda de precios usando web scraping
 """
+import requests
+from bs4 import BeautifulSoup
 import re
-from sqlalchemy import create_engine, text
 
-def procesar_texto_precios(texto):
-    """Procesa texto de precios y extrae códigos y precios"""
-    updates = []
-    lineas = texto.strip().split('\n')
+def buscar_precio_mercadolibre(producto):
+    """
+    Busca precio en MercadoLibre Venezuela usando web scraping
+    """
+    # URL de búsqueda de MercadoLibre Venezuela
+    url = f"https://www.mercadolibre.com.ve/search?q={producto}"
     
-    for linea in lineas:
-        # Match format: MATXXXX: $YYYY USD o MATXXXX: $YYYY
-        match = re.match(r'([A-Z]+\d+):\s*\$?([\d,\.]+)', linea.strip())
-        if match:
-            codigo = match.group(1)
-            precio_str = match.group(2).replace(',', '').replace('$', '')
-            try:
-                precio = float(precio_str)
-                updates.append((codigo, precio))
-            except ValueError:
-                print(f"Error procesando línea: {linea}")
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
     
-    return updates
-
-def actualizar_precios(updates):
-    """Actualiza precios directamente en base de datos"""
-    engine = create_engine('postgresql://apupro_user:apupro_password@costbase.net:5440/apupro_db')
-    
-    with engine.connect() as conn:
-        actualizados = 0
-        errores = []
-        
-        for codigo, precio in updates:
-            try:
-                result = conn.execute(text('''
-                    UPDATE cost360_materials 
-                    SET "CosMat" = :precio
-                    WHERE "CodMat" = :codigo
-                '''), {"precio": precio, "codigo": codigo})
-                
-                if result.rowcount > 0:
-                    actualizados += 1
-                    print(f"✓ {codigo}: ${precio}")
-                else:
-                    errores.append(f"{codigo}: No encontrado")
-                    print(f"✗ {codigo}: No encontrado")
-                    
-            except Exception as e:
-                errores.append(f"{codigo}: {str(e)}")
-                print(f"✗ {codigo}: Error - {str(e)}")
-        
-        conn.commit()
-        
-        print(f"\n{'='*50}")
-        print(f"RESUMEN:")
-        print(f"Actualizados: {actualizados}")
-        print(f"Errores: {len(errores)}")
-        if errores:
-            print(f"Detalles errores: {errores}")
-        print(f"{'='*50}")
-
-def main():
-    print("="*50)
-    print("ACTUALIZACIÓN MASIVA DE PRECIOS - LOCAL")
-    print("="*50)
-    print("\nEste script NO consume tokens de IA")
-    print("Actualización directa en base de datos\n")
-    
-    print("Pega los precios (formato: MAT1234: $1000):")
-    print("Presiona Ctrl+D (Windows) o Ctrl+D (Linux/Mac) para terminar\n")
-    
-    # Leer entrada del usuario
-    lineas = []
     try:
-        while True:
-            linea = input()
-            if linea.strip():
-                lineas.append(linea)
-    except EOFError:
-        pass
-    
-    if not lineas:
-        print("No se ingresaron datos")
-        return
-    
-    texto = '\n'.join(lineas)
-    updates = procesar_texto_precios(texto)
-    
-    if not updates:
-        print("No se encontraron precios válidos")
-        return
-    
-    print(f"\n{len(updates)} precios encontrados para actualizar:")
-    for codigo, precio in updates:
-        print(f"  {codigo}: ${precio}")
-    
-    confirm = input(f"\n¿Confirmar actualización de {len(updates)} precios? (s/n): ")
-    if confirm.lower() == 's':
-        actualizar_precios(updates)
-    else:
-        print("Actualización cancelada")
+        respuesta = requests.get(url, headers=headers)
+        
+        if respuesta.status_code == 200:
+            soup = BeautifulSoup(respuesta.text, 'html.parser')
+            
+            # Buscar items de producto
+            items = soup.find_all('li', class_='ui-search-layout__item')
+            
+            if items:
+                print(f"Resultados para: {producto}")
+                print("="*50)
+                
+                for i, item in enumerate(items[:3], 1):
+                    # Extraer título
+                    titulo_elem = item.find('h2', class_='ui-search-item__title')
+                    titulo = titulo_elem.text.strip() if titulo_elem else "Sin título"
+                    
+                    # Extraer precio
+                    precio_elem = item.find('span', class_='price-tag-fraction')
+                    if precio_elem:
+                        precio_texto = precio_elem.text.strip()
+                        # Extraer valor numérico
+                        precio_match = re.search(r'[\d.,]+', precio_texto)
+                        precio = precio_match.group() if precio_match else "N/A"
+                    else:
+                        precio = "N/A"
+                    
+                    # Extraer link
+                    link_elem = item.find('a', class_='ui-search-item__group__link')
+                    link = link_elem['href'] if link_elem else "Sin link"
+                    
+                    print(f"{i}. {titulo[:60]}...")
+                    print(f"   Precio: {precio} VES")
+                    print(f"   Link: {link}\n")
+            else:
+                print(f"No se encontraron resultados para: {producto}")
+        else:
+            print(f"Error en la consulta: {respuesta.status_code}")
+            
+    except Exception as e:
+        print(f"Error: {e}")
 
+# Prueba desde terminal
 if __name__ == '__main__':
-    main()
+    buscar_precio_mercadolibre("Extintor CO2 10 lbs")
