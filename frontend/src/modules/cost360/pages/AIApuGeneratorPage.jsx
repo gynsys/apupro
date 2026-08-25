@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Loader, Loader2, Package, Wrench, Users, Calculator, Save, Sparkles, Check, Filter, Plus, Search, FileText, Trash2, AlertTriangle, Database, Layers, Printer, Bot } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader, Loader2, Package, Wrench, Users, Calculator, Save, Sparkles, Check, Filter, Plus, Search, FileText, Trash2, AlertTriangle, Database, Layers, Printer, Bot, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { AuthContext } from '../../../context/AuthContext';
 import { generateAIApu, saveCustomApu, fetchCategoriesTree, fetchItems, fetchApuDetails, smartSelect, generateAIApuFromBase } from '../services/cost360Service';
@@ -953,8 +953,15 @@ export default function AIApuGeneratorPage() {
           )}
           
           {isGuidedMode && !isSmartMode && !isClarifying ? (
-            <div className="bg-[#FEF3C7] border-2 border-[#FEF3C7] rounded-xl p-4 md:p-6 mb-4 relative flex flex-col max-w-lg mx-auto w-full shadow-[0_8px_20px_-5px_rgba(254,243,199,0.5),0_4px_10px_-5px_rgba(0,0,0,0.05)]" style={{ minHeight: '400px', maxHeight: '600px' }}>
-              <div className="flex items-center gap-3 mb-4 border-b border-[#FEF3C7] pb-4 flex-shrink-0">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-hidden animate-in fade-in duration-200">
+              <div className="bg-[#FEF3C7] border-2 border-[#FEF3C7] rounded-xl p-4 md:p-6 relative flex flex-col max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200" style={{ minHeight: '400px', maxHeight: '80vh' }}>
+                <button 
+                  onClick={() => setIsGuidedMode(false)}
+                  className="absolute top-4 right-4 text-amber-700 hover:text-amber-900 hover:bg-amber-200/50 rounded-full p-1.5 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+                <div className="flex items-center gap-3 mb-4 border-b border-amber-200/50 pb-4 flex-shrink-0">
                 <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold shadow-md shadow-amber-500/30">
                   <Sparkles size={20} />
                 </div>
@@ -988,6 +995,14 @@ export default function AIApuGeneratorPage() {
                             {chip}
                           </button>
                         ))}
+                        {currentChatStep === 0 && (
+                          <button 
+                            onClick={() => setIsGuidedMode(false)}
+                            className="bg-transparent border border-amber-300 hover:bg-amber-100 text-amber-700/80 font-medium text-xs px-3 py-1.5 rounded-full transition-all"
+                          >
+                            Escribir libremente
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1046,6 +1061,7 @@ export default function AIApuGeneratorPage() {
                   </div>
                 </div>
               )}
+            </div>
             </div>
           ) : (
             <textarea
