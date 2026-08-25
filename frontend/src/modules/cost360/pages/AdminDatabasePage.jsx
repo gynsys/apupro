@@ -508,7 +508,10 @@ const AdminDatabasePage = () => {
           adminMode={true}
           config={{
             idKey: 'CodMat', descKey: 'Descri',
-            editableFields: [{ key: 'CosMat', label: 'Precio Unitario ($)' }]
+            editableFields: [
+              { key: 'Descri', label: 'Descripción' },
+              { key: 'CosMat', label: 'Precio Unitario ($)' }
+            ]
           }}
         />
       )}
