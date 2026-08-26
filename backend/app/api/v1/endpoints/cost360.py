@@ -148,9 +148,10 @@ def get_apu(item_code: str, database_id: str = "master", db: Session = Depends(g
                         APUComponent(codigo=e.get('id',''), descripcion=e.get('descripcion',''), unidad=e.get('unidad',''), cantidad=e.get('cantidad',0), precio_unitario=e.get('precio_unitario',0), subtotal=e.get('cantidad',0)*e.get('precio_unitario',0)*(e.get('depreciacion',1.0)), depreciacion=e.get('depreciacion',1.0)) for e in data.get('equipments', [])
                     ]
                     labors = [
-                        APUComponent(codigo=l.get('id',''), descripcion=l.get('descripcion',''), unidad=l.get('unidad',''), cantidad=l.get('cantidad',0), precio_unitario=l.get('jornal',0), subtotal=l.get('cantidad',0)*l.get('jornal',0), jornal=l.get('jornal',0), bono=l.get('bono',0)) for l in data.get('labors', [])
+                        APUComponent(codigo=l.get('id',''), descripcion=l.get('descripcion',''), unidad=l.get('unidad',''), cantidad=l.get('cantidad',0), precio_unitario=l.get('jornal',0), subtotal=l.get('cantidad',0)*l.get('jornal',0), jornal=l.get('jornal',0), bono=l.get('bono',0)) for l in data.get('labor', data.get('labors', []))
                     ]
-                    return {"partida": partida, "materiales": materials, "equipos": equipments, "manoObra": labors}
+                    total_directo = sum(c.subtotal for c in materials) + sum(c.subtotal for c in equipments) + sum(c.subtotal for c in labors)
+                    return {"partida": partida, "materiales": materials, "equipos": equipments, "mano_obra": labors, "total_directo": total_directo}
             except:
                 continue
         raise HTTPException(status_code=404, detail="Partida personalizada no encontrada")

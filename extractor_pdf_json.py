@@ -1,31 +1,12 @@
-"""
-Extractor Completo de APU - Colegio de Ingenieros de Venezuela
-Extrae TODO: partida, insumos, totales, porcentajes, FCAS, admin, utilidad, IVA.
-Genera Excel y un archivo JSON estructurado (compatible con CostBase).
-
-Requisitos:
-    pip install pdfplumber pandas pdf2image pytesseract pillow openpyxl
-    sudo apt-get install tesseract-ocr poppler-utils
-"""
-
 import pdfplumber
 import pandas as pd
 import re
 import json
 from pathlib import Path
-from datetime import datetime
-
-try:
-    from pdf2image import convert_from_path
-    import pytesseract
-    OCR_DISPONIBLE = True
-except ImportError:
-    OCR_DISPONIBLE = False
 
 # ==============================================================================
 # CONFIGURACIÓN
 # ==============================================================================
-
 UNIDADES_VALIDAS = {
     "M", "M2", "M3", "KGF", "KG", "GLB", "UND", "H", "HM", "HA", "ML", "L",
     "G", "GL", "LT", "HR", "MIN", "SEG", "MES", "VIAJE", "PZA", "PAR", "JGO",
@@ -39,10 +20,6 @@ SECCIONES = {
     "MANO DE OBRAS": "Mano de Obra",
     "TRANSPORTE": "Transporte",
 }
-
-# ==============================================================================
-# FUNCIONES AUXILIARES
-# ==============================================================================
 
 def limpiar_numero(valor):
     if valor is None or str(valor).strip() == "":
@@ -76,14 +53,6 @@ def corregir_ocr(texto):
     texto = re.sub(r"(\d)\s+\.\s*(\d)", r"\1.\2", texto)
     texto = texto.replace(";", ",")
     return texto
-
-def extraer_campo(texto, patron, grupo=1):
-    m = re.search(patron, texto, re.IGNORECASE)
-    return m.group(grupo).strip() if m else None
-
-# ==============================================================================
-# EXTRACTORES
-# ==============================================================================
 
 def extraer_datos_partida(texto):
     match = re.search(r"COVENIN\s+\w+.*?\n\s*([A-Z]\.[\d\.]+)", texto, re.IGNORECASE | re.DOTALL)
@@ -201,33 +170,40 @@ def extraer_insumos(texto):
 
     return registros
 
-# ==============================================================================
-# EJECUCIÓN
-# ==============================================================================
-
 if __name__ == "__main__":
-    PDF_ENTRADA = "partidas_R.pdf"          # <-- Cambia por tu archivo
-    SALIDA_EXCEL = "apu_completo.xlsx"
-    SALIDA_JSON = "apu_completo.json"
+    import pytesseract
+    import sys
+    
+    # IMPORTANTE: Ruta de Tesseract en Windows
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
+    # Tomar el PDF de los argumentos de consola o usar uno por defecto
+    if len(sys.argv) > 1:
+        PDF_ENTRADA = sys.argv[1]
+    else:
+        PDF_ENTRADA = r"C:\Users\pablo\Documents\pdf.pdf"
 
     pdf_path = Path(PDF_ENTRADA)
     if not pdf_path.exists():
-        raise FileNotFoundError(f"No se encontró: {pdf_path}")
+        raise FileNotFoundError(f"No se encontró el archivo: {pdf_path}")
 
-    # Extraer texto
+    # El archivo JSON tendrá el mismo nombre que el PDF
+    SALIDA_JSON = str(pdf_path.with_suffix('.json'))
+
+    # Extraer texto usando pdfplumber de forma nativa para EVITAR POPPLER-UTILS (pdf2image)
     with pdfplumber.open(pdf_path) as pdf:
-        texto_prueba = pdf.pages[0].extract_text() or ""
-        necesita_ocr = len(texto_prueba.strip()) < 50
-
-        if necesita_ocr:
-            if not OCR_DISPONIBLE:
-                raise RuntimeError("OCR no disponible. Instala pdf2image + pytesseract + tesseract-ocr")
-            print("📄 PDF escaneado detectado. Usando OCR...")
-            imagenes = convert_from_path(str(pdf_path), dpi=300)
-            textos = [pytesseract.image_to_string(img, lang="eng") for img in imagenes]
-        else:
-            print("📄 PDF con texto nativo. Usando pdfplumber...")
-            textos = [p.extract_text() or "" for p in pdf.pages]
+        textos = []
+        for p in pdf.pages:
+            texto_prueba = p.extract_text() or ""
+            # Si el texto es muy corto, es una imagen escaneada
+            if len(texto_prueba.strip()) < 50:
+                print(f"Pagina {p.page_number} escaneada detectada. Usando OCR directamente...")
+                # to_image de pdfplumber convierte a imagen usando PyMuPDF, sin requerir poppler-utils
+                img = p.to_image(resolution=300).original
+                texto_ocr = pytesseract.image_to_string(img, lang="spa+eng")
+                textos.append(texto_ocr)
+            else:
+                textos.append(texto_prueba)
 
     todas_partidas = []
     todos_insumos = []
@@ -247,27 +223,12 @@ if __name__ == "__main__":
         todos_insumos.extend(insumos)
 
     if not todas_partidas:
-        print("⚠️ No se extrajo ninguna partida.")
+        print("Precaución: No se extrajo ninguna partida. Revisa el OCR o el archivo.")
         exit()
 
-    # 1. EXPORTAR EXCEL
-    df_partidas = pd.DataFrame(todas_partidas)
-    df_insumos = pd.DataFrame(todos_insumos)
-
-    with pd.ExcelWriter(SALIDA_EXCEL, engine="openpyxl") as writer:
-        df_partidas.to_excel(writer, sheet_name="Partidas", index=False)
-        df_insumos.to_excel(writer, sheet_name="Insumos", index=False)
-    
-    print(f"\n✅ Excel: {SALIDA_EXCEL}")
-    print(f"   Hoja 'Partidas': {len(df_partidas)} fila(s)")
-    print(f"   Hoja 'Insumos': {len(df_insumos)} fila(s)")
-
-    # 2. EXPORTAR JSON (Corregido y Estructurado)
     datos_json = []
     for p in todas_partidas:
         ins_de_partida = [i for i in todos_insumos if i["partida_covenin"] == p["codigo_covenin"]]
-        
-        # Mapear los insumos al formato que espera CostBase (CustomCostItemCreate)
         apu_data = {
             "materials": [
                 {
@@ -291,24 +252,21 @@ if __name__ == "__main__":
                     "CodMan": i["codigo_insumo"] or f"MAN-{str(hash(i['descripcion']))[:6]}",
                     "Descri": i["descripcion"],
                     "cantidad": i["cantidad"],
-                    "precio_unitario": i["costo_unitario"] # (Jornal Base)
+                    "precio_unitario": i["costo_unitario"]
                 } for i in ins_de_partida if i["tipo"] == "Mano de Obra"
             ]
         }
         
-        # Construir el payload del CustomCostItem
         item_data = {
             "description": p["descripcion"],
             "unit": p["unidad"] or "UND",
             "performance": p["rendimiento"] or 1.0,
-            "apu_data": json.dumps(apu_data) # Convertimos la estructura de insumos a JSON string
+            "apu_data": json.dumps(apu_data)
         }
         
         datos_json.append(item_data)
 
-    # Escribir el archivo JSON con toda la lista final
     with open(SALIDA_JSON, "w", encoding="utf-8") as f:
         json.dump(datos_json, f, ensure_ascii=False, indent=4)
         
-    print(f"✅ JSON estructurado generado en: {SALIDA_JSON}")
-    print("   (Listo para ser consumido por CostBase)")
+    print(f"\n✅ JSON generado exitosamente con {len(datos_json)} partidas en {SALIDA_JSON}")
