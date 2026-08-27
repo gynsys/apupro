@@ -342,7 +342,7 @@ const AdminDatabasePage = () => {
     const toastId = toast.loading('Obteniendo todas las partidas para exportar...');
     let exportItems = [];
     try {
-      const response = await cost360Service.fetchItems(0, 10000, search, '', 'master', searchDesc, searchInsumos, searchCovenin, onlyCoded);
+      const response = await cost360Service.fetchItems(0, 50000, search, '', 'master', searchDesc, searchInsumos, searchCovenin, onlyCoded);
       exportItems = response.items || [];
     } catch (err) {
       toast.error('Error al obtener los datos completos', { id: toastId });

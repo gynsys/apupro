@@ -123,7 +123,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
     let exportItems = [];
     try {
       const dbParam = selectedDatabase && selectedDatabase !== 'master' ? `&database_id=${selectedDatabase}` : '';
-      const res = await fetch(`${API_URL}/cost360/${resourceType}?search=${encodeURIComponent(search)}&skip=0&limit=10000${dbParam}`, {
+      const res = await fetch(`${API_URL}/cost360/${resourceType}?search=${encodeURIComponent(search)}&skip=0&limit=50000${dbParam}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       if (res.ok) {
