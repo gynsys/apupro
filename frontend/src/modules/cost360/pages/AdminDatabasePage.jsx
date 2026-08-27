@@ -11,16 +11,36 @@ import Cost360SearchBar from '../components/Cost360SearchBar';
 import { useCost360Search } from '../hooks/useCost360Search';
 import coveninTreeData from '../data/covenin_tree.json';
 
-// Componente de Sincronización de Costos
 const ModuloSincronizacionCostos = () => {
   const [estaProcesando, setEstaProcesando] = useState(false);
+  const [pendingItems, setPendingItems] = useState([]);
+  const [loadingPending, setLoadingPending] = useState(false);
+
+  const loadPendingItems = async () => {
+    setLoadingPending(true);
+    try {
+      const response = await fetch(`${API_URL}/scraping/pending`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPendingItems(data);
+      }
+    } catch (error) {
+      console.error("Error loading pending items", error);
+    } finally {
+      setLoadingPending(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPendingItems();
+  }, []);
 
   const desencadenarVersionamientoDB = async () => {
     setEstaProcesando(true);
-    
     try {
       const urlAPI = `${API_URL}/scraping/versionar-precios-db`;
-      
       const consulta = await fetch(urlAPI, {
         method: 'POST',
         headers: {
@@ -31,55 +51,162 @@ const ModuloSincronizacionCostos = () => {
       });
       
       const respuestaJson = await consulta.json();
-      
       if (respuestaJson.status === 'processing') {
-        toast.success("⚡ ¡Sincronización en curso! El servidor ha comenzado el proceso de scraping distribuido. Los precios históricos se están insertando en la base de datos de fondo.", {
+        toast.success("⚡ ¡El bot ha iniciado el escaneo de 25 materiales! Los resultados aparecerán aquí al recargar la página más tarde.", {
           duration: 5000,
           position: 'top-center'
         });
       }
     } catch (error) {
-      console.error("Error activando el servicio de scraping desde React:", error);
-      toast.error("❌ Error de comunicación: No se pudo conectar con el servidor de base de datos.");
+      toast.error("❌ Error de comunicación con el servidor.");
     } finally {
       setEstaProcesando(false);
     }
   };
 
+  const handleAction = async (id, action, price = null) => {
+    try {
+      const url = `${API_URL}/scraping/${action}/${id}`;
+      const options = {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}`
+        }
+      };
+      
+      if (action === 'approve') {
+        options.body = JSON.stringify({ price: price });
+      }
+
+      const response = await fetch(url, options);
+      if (response.ok) {
+        toast.success(action === 'approve' ? "✅ Precio aprobado y actualizado en la base maestra" : "❌ Precio descartado");
+        setPendingItems(prev => prev.filter(item => item.id !== id));
+      } else {
+        toast.error("Error al procesar la acción");
+      }
+    } catch (error) {
+      toast.error("Error de red");
+    }
+  };
+
   return (
-    <div style={{
-      border: '2px solid #dc2626', 
-      padding: '20px', 
-      borderRadius: '6px', 
-      backgroundColor: '#0f172a',
-      margin: '20px 0'
-    }}>
-      <div style={{ marginBottom: '12px' }}>
-        <h4 style={{ color: '#ffffff', margin: '0 0 4px 0', fontSize: '15px', fontWeight: '600' }}>
-          Módulo de Indexación Comercial Automática
-        </h4>
-        <p style={{ color: '#94a3b8', margin: 0, fontSize: '12px' }}>
-          Genera una nueva versión temporal de precios en la base de datos distribuyendo consultas entre MercadoLibre y Encuentra24 con mitigaciones anti-bloqueo.
-        </p>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
+      <div className="p-5 border-b border-gray-200 bg-slate-50 flex justify-between items-center flex-wrap gap-4">
+        <div>
+          <h4 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <FiBox className="text-blue-600" />
+            Cola de Aprobación del Bot (Scraping Inteligente)
+          </h4>
+          <p className="text-sm text-slate-500 mt-1">
+            El bot escanea los materiales en EPA y MercadoLibre. Revisa y aprueba las coincidencias para actualizar tu base de datos maestra.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={loadPendingItems}
+            className="px-4 py-2 bg-white border border-slate-300 text-slate-700 font-semibold rounded-lg text-sm hover:bg-slate-50 transition-colors"
+          >
+            ↻ Refrescar Cola
+          </button>
+          <button
+            onClick={desencadenarVersionamientoDB}
+            disabled={estaProcesando}
+            className={`px-4 py-2 font-bold rounded-lg text-sm text-white transition-colors flex items-center gap-2 ${estaProcesando ? 'bg-amber-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+          >
+            {estaProcesando ? '⏳ Ejecutando...' : '🚀 Lanzar Tanda (25 Materiales)'}
+          </button>
+        </div>
       </div>
 
-      <button
-        onClick={desencadenarVersionamientoDB}
-        disabled={estaProcesando}
-        style={{
-          backgroundColor: estaProcesando ? '#d97706' : '#dc2626',
-          color: '#ffffff',
-          fontWeight: '700',
-          padding: '8px 16px',
-          borderRadius: '4px',
-          fontSize: '13px',
-          cursor: estaProcesando ? 'not-allowed' : 'pointer',
-          border: 'none',
-          transition: 'background-color 0.2s'
-        }}
-      >
-        {estaProcesando ? '⏳ Ejecutando procesos asíncronos...' : '🚀 Versionar Precios con Mercado Libre y E24'}
-      </button>
+      <div className="p-0">
+        {loadingPending ? (
+          <div className="p-8 text-center text-slate-500">Cargando resultados...</div>
+        ) : pendingItems.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="text-4xl mb-3">🤖</div>
+            <h5 className="text-slate-700 font-bold mb-1">¡Todo al día!</h5>
+            <p className="text-slate-500 text-sm">No hay precios pendientes de aprobación.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-slate-600 font-semibold">
+                <tr>
+                  <th className="p-4 border-b">Material Original (BD)</th>
+                  <th className="p-4 border-b">Producto Encontrado (Bot)</th>
+                  <th className="p-4 border-b text-center">Precio DB</th>
+                  <th className="p-4 border-b text-center">Nuevo Precio</th>
+                  <th className="p-4 border-b text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingItems.map((item) => (
+                  <tr key={item.id} className="border-b hover:bg-slate-50 transition-colors group">
+                    <td className="p-4">
+                      <div className="font-mono text-xs text-blue-600 mb-1">{item.material_id}</div>
+                      <div className="font-medium text-slate-800 line-clamp-2" title={item.db_desc}>{item.db_desc}</div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.fuente === 'mercadolibre' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                          {item.fuente.toUpperCase()}
+                        </span>
+                        <span className="text-xs text-slate-400">{item.fecha}</span>
+                      </div>
+                      <div className="font-medium text-slate-700 line-clamp-2" title={item.titulo_scraped}>{item.titulo_scraped || 'Sin título'}</div>
+                    </td>
+                    <td className="p-4 text-center font-semibold text-slate-500">
+                      ${item.db_price.toFixed(2)}
+                    </td>
+                    <td className="p-4 text-center">
+                      <div className="flex items-center justify-center">
+                        <span className="text-emerald-600 font-bold text-base mr-2">${item.scraped_price.toFixed(2)}</span>
+                        {item.scraped_price > item.db_price ? (
+                          <span className="text-red-500 text-xs font-bold" title="El precio subió">↑</span>
+                        ) : item.scraped_price < item.db_price ? (
+                          <span className="text-green-500 text-xs font-bold" title="El precio bajó">↓</span>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="p-4 text-center">
+                      <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleAction(item.id, 'approve', item.scraped_price)}
+                          className="p-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded transition-colors"
+                          title="Aprobar y guardar"
+                        >
+                          <FiSave size={16} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            const editedPrice = prompt("Edita el precio antes de aprobarlo:", item.scraped_price);
+                            if (editedPrice !== null && !isNaN(parseFloat(editedPrice))) {
+                              handleAction(item.id, 'approve', parseFloat(editedPrice));
+                            }
+                          }}
+                          className="p-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded transition-colors"
+                          title="Editar precio y guardar"
+                        >
+                          <FiEdit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleAction(item.id, 'reject')}
+                          className="p-1.5 bg-red-100 text-red-700 hover:bg-red-200 rounded transition-colors"
+                          title="Rechazar y descartar"
+                        >
+                          <FiX size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -643,7 +770,7 @@ const AdminDatabasePage = () => {
                         
                         for (const line of lines) {
                           // Match format: MATXXXX: $YYYY USD o MATXXXX: $YYYY
-                          const match = line.match(/([A-Z]+\d+):\s*\$?([\d,\.]+)/);
+                          const match = line.match(/([A-Z]+\d+):\s*\$?([\d,.]+)/);
                           if (match) {
                             const codigo = match[1];
                             const precio = parseFloat(match[2].replace(/,/g, ''));

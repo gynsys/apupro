@@ -2,125 +2,171 @@ import time
 import random
 import re
 from datetime import datetime
-import requests
+import cloudscraper
+from sqlalchemy import create_engine, text
 
-# Prueba del sistema de scraping con requests
+def extract_numbers_and_dims(text):
+    text = text.replace('"', '').replace("'", "")
+    pattern = r'\b(\d+(?:/\d+)?(?:[\.,]\d+)?)\b'
+    matches = re.findall(pattern, text)
+    return set(matches)
+
+def get_keywords(text):
+    text = text.lower().replace('"', '').replace("'", "")
+    words = re.findall(r'\b[a-z]{3,}\b', text)
+    stop_words = {'para', 'con', 'sin', 'los', 'las', 'del', 'por', 'que', 'una', 'uso', 'tipo'}
+    return set([w for w in words if w not in stop_words])
+
+def clean_search_term(desc):
+    desc_upper = desc.upper()
+    medida = re.search(r'\d+(?:/\d+)?(?:[\.,]\d+)?\s*(?:MM|CM|M|PULG|\"|KG|G|L|ML)', desc_upper)
+    medida_str = medida.group() if medida else ''
+    palabras = re.findall(r'\b[A-Z]{3,}\b', desc_upper)
+    stop_words = {'PARA', 'CON', 'SIN', 'LOS', 'LAS', 'DEL', 'POR'}
+    palabras = [p for p in palabras if p not in stop_words]
+    core = ' '.join(palabras[:3])
+    return f'{core} {medida_str}'.strip()
+
+def is_valid_product(db_desc, scraped_desc):
+    if not scraped_desc: return False
+    db_desc = db_desc.lower()
+    scraped_desc = scraped_desc.lower()
+    
+    nums_db = extract_numbers_and_dims(db_desc)
+    scraped_desc_clean = scraped_desc.replace('"', '').replace("'", "")
+    
+    for num in nums_db:
+        pattern = r'(?<!\d)' + re.escape(num) + r'(?!\d)'
+        if not re.search(pattern, scraped_desc_clean):
+            return False
+            
+    kw_db = get_keywords(db_desc)
+    kw_scraped = get_keywords(scraped_desc)
+    
+    if kw_db:
+        intersection = kw_db.intersection(kw_scraped)
+        if len(intersection) == 0:
+            return False
+        ratio = len(intersection) / len(kw_db)
+        required_ratio = 0.3 if nums_db else 0.6
+        if ratio < required_ratio:
+            return False
+            
+    return True
+
 def test_scraping():
-    print("Iniciando prueba de scraping con requests...")
-    fecha_version = datetime.now().strftime("%Y-%m-%d")
+    print("Iniciando prueba de scraping con CLOUDSCRAPER y CLEAN_SEARCH...")
     
-    # Lista de User-Agents reales para rotación gratuita
+    engine = create_engine('postgresql://apupro_user:apupro_password@costbase.net:5440/apupro_db')
+    with engine.connect() as conn:
+        result = conn.execute(text('''
+            SELECT "CodMat", "Descri", "CosMat" 
+            FROM cost360_materials 
+            WHERE "CodMat" LIKE 'MAT%'
+            ORDER BY RANDOM()
+            LIMIT 5
+        ''')).fetchall()
+        materiales_test = [{"codigo": row[0], "descripcion": row[1], "precio_bd": row[2]} for row in result]
+    conn.close()
+    
+    scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False})
     lista_navegadores = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     ]
+    portales = ["epa", "mercadolibre"]
     
-    # Materiales de prueba
-    materiales_test = [
-        {"codigo": "MAT1402", "descripcion": "FLOTANTE DE BRONCE D=2 1/2"},
-        {"codigo": "MAT1766", "descripcion": "MANGUERA C/INCENDIO 1.1/2"},
-        {"codigo": "MAT1793", "descripcion": "MASTIQUE DRY WALL"}
-    ]
-    
-    portales = ["mercadolibre", "encuentra24"]
-    
-    print(f"Procesando {len(materiales_test)} materiales de prueba...")
+    print("-" * 80)
     
     for indice, mat in enumerate(materiales_test):
         agente_aleatorio = random.choice(lista_navegadores)
-        headers = {
-            'User-Agent': agente_aleatorio,
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'es-VE,es;q=0.9,en;q=0.8'
-        }
-        
         portal_actual = portales[indice % len(portales)]
         precio_detectado = 0
         
+        termino_limpio = clean_search_term(mat['descripcion'])
+        descripcion_url = termino_limpio.replace(' ', '+').replace('/', '')
+        
         try:
             if portal_actual == "mercadolibre":
-                # Probar diferentes estructuras de URL para MercadoLibre
-                descripcion_simple = mat['descripcion'].replace(' ', '+').replace('/', '')
-                url = f"https://mercadolibre.com.ve/search?q={descripcion_simple}"
-                print(f"Consultando: {url}")
-                response = requests.get(url, headers=headers, timeout=15)
+                url = f"https://listado.mercadolibre.com.ve/{descripcion_url}"
+                print(f"[{indice+1}/5] ML - ORIGINAL: {mat['descripcion']}")
+                print(f"       -> BUSCANDO: {termino_limpio}")
+                
+                response = scraper.get(url, headers={'User-Agent': agente_aleatorio}, timeout=15)
                 
                 if response.status_code == 200:
                     html_content = response.text
-                    print(f"Response OK ({len(html_content)} caracteres)")
-                    
-                    # Usar regex para encontrar precios - patrones mejorados
+                    titulo_detectado = ""
+                    title_matches = re.findall(r'class="ui-search-item__title"[^>]*>(.*?)<', html_content)
+                    if title_matches:
+                        titulo_detectado = title_matches[0].strip()
+
                     precio_patterns = [
-                        # Patrones específicos de MercadoLibre
-                        r'(\d{1,3}(?:[\.,]\d{3})*(?:[\.,]\d{2}))',  # Formato: 1.000,00 o 1,000.00
-                        r'(\d+[\.,]\d+)\s*(?:Bs|USD|US\$)',
-                        r'US\s*\$\s*(\d+[\.,]\d+)',
-                        r'\$\s*(\d+[\.,]\d+)',
-                        r'price["\']\s*:\s*["\'](\d+[\.,]\d+)',
-                        # Patrones numéricos comunes
-                        r'(\d+\.?\d*)'
+                        r'class="andes-money-amount__fraction">([\d\.,]+)<',
+                        r'<meta itemprop="price" content="([\d\.,]+)">',
+                        r'USD\s*\$\s*(\d{1,3}(?:[\.,]\d{3})*(?:[\.,]\d{2}))',
+                        r'\$\s*(\d{1,3}(?:[\.,]\d{3})*(?:[\.,]\d{2}))'
                     ]
                     
                     for pattern in precio_patterns:
                         matches = re.findall(pattern, html_content)
                         if matches:
                             try:
-                                precio_str = matches[0].replace(',', '.')
-                                precio_detectado = float(precio_str)
-                                if precio_detectado > 0:
-                                    print(f"Precio detectado: ${precio_detectado}")
+                                precio_candidato = float(matches[0].replace(',', '.'))
+                                if precio_candidato > 0:
+                                    if titulo_detectado and not is_valid_product(mat['descripcion'], titulo_detectado):
+                                        print(f"  -> DESCARTADO. Encontró: '{titulo_detectado}'")
+                                        break
+                                    precio_detectado = precio_candidato
+                                    print(f"  -> ACEPTADO. Título: '{titulo_detectado}'")
                                     break
                             except:
                                 continue
-                else:
-                    print(f"Error HTTP: {response.status_code}")
                         
-            elif portal_actual == "encuentra24":
-                # Probar estructura más simple para Encuentra24
-                descripcion_simple = mat['descripcion'].replace(' ', '+').replace('/', '')
-                url = f"https://encuentra24.com/panama/search?q={descripcion_simple}"
-                print(f"Consultando: {url}")
-                response = requests.get(url, headers=headers, timeout=15)
+            elif portal_actual == "epa":
+                url = f"https://ve.epaenlinea.com/catalogsearch/result/?q={descripcion_url}"
+                print(f"[{indice+1}/5] EPA - ORIGINAL: {mat['descripcion']}")
+                print(f"       -> BUSCANDO: {termino_limpio}")
+                
+                response = scraper.get(url, headers={'User-Agent': agente_aleatorio}, timeout=15)
                 
                 if response.status_code == 200:
                     html_content = response.text
-                    print(f"Response OK ({len(html_content)} caracteres)")
-                    
+                    titulo_detectado = ""
+                    title_matches = re.findall(r'class="product-item-link"[^>]*>(.*?)</a>', html_content, re.DOTALL)
+                    if title_matches:
+                        titulo_detectado = title_matches[0].strip()
+
                     precio_patterns = [
-                        r'(\d+[\.,]\d+)\s*(?:Bs|USD|US\$)',
-                        r'US\s*\$\s*(\d+[\.,]\d+)',
-                        r'\$\s*(\d+[\.,]\d+)',
-                        r'price["\']\s*:\s*["\'](\d+[\.,]\d+)'
+                        r'data-price-amount="([\d\.,]+)"',
+                        r'class="price"[^>]*>\s*(?:US\s*\$|\$)?\s*([\d\.,]+)',
                     ]
                     
                     for pattern in precio_patterns:
                         matches = re.findall(pattern, html_content)
                         if matches:
                             try:
-                                precio_str = matches[0].replace(',', '.')
-                                precio_detectado = float(precio_str)
-                                if precio_detectado > 0:
-                                    print(f"Precio detectado: ${precio_detectado}")
+                                precio_candidato = float(matches[0].replace(',', '.'))
+                                if precio_candidato > 0:
+                                    if titulo_detectado and not is_valid_product(mat['descripcion'], titulo_detectado):
+                                        print(f"  -> DESCARTADO. Encontró: '{titulo_detectado}'")
+                                        break
+                                    precio_detectado = precio_candidato
+                                    print(f"  -> ACEPTADO. Título: '{titulo_detectado}'")
                                     break
                             except:
                                 continue
-                else:
-                    print(f"Error HTTP: {response.status_code}")
 
             if precio_detectado > 0:
-                print(f"[EXITO] {mat['codigo']} | Versión: {fecha_version} | Precio: ${precio_detectado} | Fuente: {portal_actual}")
+                print(f"  -> PRECIO BD: ${mat['precio_bd']:.2f} | SCRAPING: ${precio_detectado:.2f}")
             else:
-                print(f"[SIN PRECIO] {mat['codigo']} | Fuente: {portal_actual}")
+                print(f"  -> PRECIO BD: ${mat['precio_bd']:.2f} | SCRAPING: No detectado o descartado")
                 
         except Exception as e:
-            print(f"Error procesando {mat['codigo']} en {portal_actual}: {str(e)}")
+            print("Error:", e)
         
-        # Tiempo de espera más corto para prueba
-        tiempo_espera = random.uniform(5.0, 10.0)
-        print(f"Esperando {round(tiempo_espera, 1)} segundos...")
-        time.sleep(tiempo_espera)
-    
+        time.sleep(2)
+        
+    print("=" * 80)
     print("Prueba finalizada.")
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { FiSearch, FiEdit2, FiTrash2, FiCheck, FiX } from 'react-icons/fi';
+import { FiSearch, FiEdit2, FiTrash2, FiCheck, FiX, FiDownload } from 'react-icons/fi';
 import { API_URL } from '../../../services/api';
 
 const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adminMode = false }) => {
@@ -113,6 +113,110 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
     }
   };
 
+  const handleExportToExcel = async () => {
+    if (totalItems === 0) {
+      toast.error('No hay datos para exportar');
+      return;
+    }
+
+    const toastId = toast.loading(`Obteniendo datos de ${title} para exportar...`);
+    let exportItems = [];
+    try {
+      const dbParam = selectedDatabase && selectedDatabase !== 'master' ? `&database_id=${selectedDatabase}` : '';
+      const res = await fetch(`${API_URL}/cost360/${resourceType}?search=${encodeURIComponent(search)}&skip=0&limit=10000${dbParam}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        exportItems = Array.isArray(data) ? data : (data.items || []);
+      } else {
+        throw new Error('Failed to fetch');
+      }
+    } catch (err) {
+      toast.error('Error al obtener los datos completos', { id: toastId });
+      return;
+    }
+    toast.success('Datos obtenidos, generando Excel...', { id: toastId });
+
+    const xmlContent = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Bottom"/>
+   <Borders/>
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#000000"/>
+  </Style>
+  <Style ss:ID="sHeader">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#000000" ss:Bold="1"/>
+  </Style>
+  <Style ss:ID="sDesc">
+   <Alignment ss:Horizontal="Left" ss:Vertical="Center" ss:WrapText="1"/>
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="9" ss:Color="#000000"/>
+  </Style>
+  <Style ss:ID="sNormal">
+   <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>
+  </Style>
+  <Style ss:ID="sNumber">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="${title}">
+  <Table>
+   <Column ss:Width="40"/>
+   <Column ss:Width="100"/>
+   ${!config.editableFields.some(f => f.key === config.descKey) ? '<Column ss:Width="450"/>' : ''}
+   ${config.editableFields.map(f => f.type === 'text' || f.key === config.descKey ? '<Column ss:Width="450"/>' : '<Column ss:Width="80"/>').join('\n   ')}
+   <Row ss:Height="20">
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">N°</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">Código</Data></Cell>
+    ${!config.editableFields.some(f => f.key === config.descKey) ? '<Cell ss:StyleID="sHeader"><Data ss:Type="String">Descripción</Data></Cell>' : ''}
+    ${config.editableFields.map(f => `<Cell ss:StyleID="sHeader"><Data ss:Type="String">${f.label}</Data></Cell>`).join('\n    ')}
+   </Row>
+   ${exportItems.map((item, index) => {
+     const cod = (item[config.idKey] || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+     
+     let rowHtml = `<Row ss:Height="24">
+    <Cell ss:StyleID="sNumber"><Data ss:Type="Number">${index + 1}</Data></Cell>
+    <Cell ss:StyleID="sNormal"><Data ss:Type="String">${cod}</Data></Cell>`;
+    
+     if (!config.editableFields.some(f => f.key === config.descKey)) {
+        const desc = (item[config.descKey] || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        rowHtml += `\n    <Cell ss:StyleID="sDesc"><Data ss:Type="String">${desc}</Data></Cell>`;
+     }
+     
+     config.editableFields.forEach(f => {
+         const val = item[f.key];
+         if (f.type === 'text' || f.key === config.descKey) {
+            const strVal = (val || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            rowHtml += `\n    <Cell ss:StyleID="sDesc"><Data ss:Type="String">${strVal}</Data></Cell>`;
+         } else {
+            rowHtml += `\n    <Cell ss:StyleID="sNumber"><Data ss:Type="Number">${val || 0}</Data></Cell>`;
+         }
+     });
+     
+     rowHtml += `\n   </Row>`;
+     return rowHtml;
+   }).join('\n   ')}
+  </Table>
+ </Worksheet>
+</Workbook>`;
+
+    const blob = new Blob(['\uFEFF' + xmlContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Listado_${title}_${new Date().toISOString().slice(0, 10)}.xls`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="flex flex-col flex-1 min-h-0 gap-4">
       {/* Glass search */}
@@ -153,10 +257,20 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
           </button>
         </form>
         {totalItems > 0 && (
-          <p className="mt-3 text-xs text-slate-500 font-medium">
-            <span className="font-bold text-slate-700">{new Intl.NumberFormat('es-VE').format(totalItems)}</span>{' '}
-            {search ? 'coincidencias' : `Total ${title}`}
-          </p>
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-xs text-slate-500 font-medium">
+              <span className="font-bold text-slate-700">{new Intl.NumberFormat('es-VE').format(totalItems)}</span>{' '}
+              {search ? 'coincidencias' : `Total ${title}`}
+            </p>
+            <button
+              onClick={handleExportToExcel}
+              type="button"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors"
+            >
+              <FiDownload size={12} />
+              Exportar a Excel
+            </button>
+          </div>
         )}
       </div>
 
