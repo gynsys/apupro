@@ -408,6 +408,13 @@ def delete_database(db: Session, database_id: str):
     db.delete(db_obj)
     db.commit()
     
+    # NUEVA LÓGICA: Si es la personalizada, limpiar la tabla nativa
+    if database_id == "personalizada":
+        from app.db.models.cost360 import CustomCostItem
+        db.query(CustomCostItem).delete()
+        db.commit()
+        return True
+    
     # Eliminar el esquema físico en PostgreSQL
     try:
         db.execute(text(f'DROP SCHEMA IF EXISTS "{database_id}" CASCADE'))

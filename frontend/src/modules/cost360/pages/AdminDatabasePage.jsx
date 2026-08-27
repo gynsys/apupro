@@ -11,6 +11,79 @@ import Cost360SearchBar from '../components/Cost360SearchBar';
 import { useCost360Search } from '../hooks/useCost360Search';
 import coveninTreeData from '../data/covenin_tree.json';
 
+// Componente de Sincronización de Costos
+const ModuloSincronizacionCostos = () => {
+  const [estaProcesando, setEstaProcesando] = useState(false);
+
+  const desencadenarVersionamientoDB = async () => {
+    setEstaProcesando(true);
+    
+    try {
+      const urlAPI = `${API_URL}/scraping/versionar-precios-db`;
+      
+      const consulta = await fetch(urlAPI, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}`
+        },
+        body: JSON.stringify({ limit: 25 })
+      });
+      
+      const respuestaJson = await consulta.json();
+      
+      if (respuestaJson.status === 'processing') {
+        toast.success("⚡ ¡Sincronización en curso! El servidor ha comenzado el proceso de scraping distribuido. Los precios históricos se están insertando en la base de datos de fondo.", {
+          duration: 5000,
+          position: 'top-center'
+        });
+      }
+    } catch (error) {
+      console.error("Error activando el servicio de scraping desde React:", error);
+      toast.error("❌ Error de comunicación: No se pudo conectar con el servidor de base de datos.");
+    } finally {
+      setEstaProcesando(false);
+    }
+  };
+
+  return (
+    <div style={{
+      border: '2px solid #dc2626', 
+      padding: '20px', 
+      borderRadius: '6px', 
+      backgroundColor: '#0f172a',
+      margin: '20px 0'
+    }}>
+      <div style={{ marginBottom: '12px' }}>
+        <h4 style={{ color: '#ffffff', margin: '0 0 4px 0', fontSize: '15px', fontWeight: '600' }}>
+          Módulo de Indexación Comercial Automática
+        </h4>
+        <p style={{ color: '#94a3b8', margin: 0, fontSize: '12px' }}>
+          Genera una nueva versión temporal de precios en la base de datos distribuyendo consultas entre MercadoLibre y Encuentra24 con mitigaciones anti-bloqueo.
+        </p>
+      </div>
+
+      <button
+        onClick={desencadenarVersionamientoDB}
+        disabled={estaProcesando}
+        style={{
+          backgroundColor: estaProcesando ? '#d97706' : '#dc2626',
+          color: '#ffffff',
+          fontWeight: '700',
+          padding: '8px 16px',
+          borderRadius: '4px',
+          fontSize: '13px',
+          cursor: estaProcesando ? 'not-allowed' : 'pointer',
+          border: 'none',
+          transition: 'background-color 0.2s'
+        }}
+      >
+        {estaProcesando ? '⏳ Ejecutando procesos asíncronos...' : '🚀 Versionar Precios con Mercado Libre y E24'}
+      </button>
+    </div>
+  );
+};
+
 /* ── Shared glass style ─────────────────────────────────── */
 const glass = {
   background: 'rgba(255,255,255,0.72)',
@@ -503,6 +576,8 @@ const AdminDatabasePage = () => {
 
       {activeTab === 'materiales' && (
         <>
+          <ModuloSincronizacionCostos />
+          
           <div className="rounded-2xl p-4 flex flex-col gap-3" style={glass}>
             <div className="flex items-center justify-between">
               <p className="text-sm text-slate-600 font-medium">
