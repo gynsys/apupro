@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiSearch, FiLayers, FiArrowRight, FiBox, FiTool, FiUsers, FiDatabase, FiEdit2, FiTrash2, FiSave, FiX, FiDownload } from 'react-icons/fi';
+import { FiSearch, FiLayers, FiArrowRight, FiBox, FiTool, FiUsers, FiDatabase, FiEdit2, FiTrash2, FiSave, FiX, FiDownload, FiCpu } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import cost360Service from '../services/cost360Service';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
@@ -445,6 +445,7 @@ const AdminDatabasePage = () => {
     { key: 'materiales', label: 'Materiales',      Icon: FiBox   },
     { key: 'equipos',    label: 'Equipos',         Icon: FiTool  },
     { key: 'mano_obra',  label: 'Mano de Obra',    Icon: FiUsers },
+    { key: 'scraping',   label: 'Bot Scraping',    Icon: FiCpu   },
   ];
 
   return (
@@ -703,8 +704,6 @@ const AdminDatabasePage = () => {
 
       {activeTab === 'materiales' && (
         <>
-          <ModuloSincronizacionCostos />
-          
           <div className="rounded-2xl p-4 flex flex-col gap-3" style={glass}>
             <div className="flex items-center justify-between">
               <p className="text-sm text-slate-600 font-medium">
@@ -864,6 +863,10 @@ const AdminDatabasePage = () => {
             ]
           }}
         />
+      )}
+
+      {activeTab === 'scraping' && (
+        <ModuloSincronizacionCostos />
       )}
 
       {/* Edit Item Modal */}
