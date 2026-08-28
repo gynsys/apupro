@@ -11,8 +11,46 @@ import PDFUpdaterTab from '../components/PDFUpdaterTab';
 import Cost360SearchBar from '../components/Cost360SearchBar';
 import { useCost360Search } from '../hooks/useCost360Search';
 import coveninTreeData from '../data/covenin_tree.json';
+import { ScrapingDashboardProvider } from '../context/ScrapingDashboardContext';
+import { ControlBar } from '../components/scraping/ControlBar';
+import { LogConsole } from '../components/scraping/LogConsole';
+import { ConfigPanel } from '../components/scraping/ConfigPanel';
+
+const ScrapingDashboard = () => {
+  const [botStatus, setBotStatus] = useState('idle');
+
+  return (
+    <div className="flex flex-col gap-4 h-full">
+      <ControlBar status={botStatus} onStatusChange={setBotStatus} />
+      <div className="flex gap-4 flex-1 min-h-0">
+        <div className="flex-1">
+          <LogConsole />
+        </div>
+        <div className="w-80">
+          <ConfigPanel />
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ModuloSincronizacionCostos = () => {
+  const [botStatus, setBotStatus] = useState('idle');
+
+  return (
+    <div className="flex flex-col gap-4 h-full">
+      <ControlBar status={botStatus} onStatusChange={setBotStatus} />
+      <div className="flex gap-4 flex-1 min-h-0">
+        <div className="flex-1">
+          <LogConsole />
+        </div>
+        <div className="w-80">
+          <ConfigPanel />
+        </div>
+      </div>
+    </div>
+  );
+};
   const [estaProcesando, setEstaProcesando] = useState(false);
   const [pendingItems, setPendingItems] = useState([]);
   const [loadingPending, setLoadingPending] = useState(false);
@@ -868,7 +906,9 @@ const AdminDatabasePage = () => {
       )}
 
       {activeTab === 'scraping' && (
-        <ModuloSincronizacionCostos />
+        <ScrapingDashboardProvider>
+          <ScrapingDashboard />
+        </ScrapingDashboardProvider>
       )}
 
       {activeTab === 'pdfs' && (

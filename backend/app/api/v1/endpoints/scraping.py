@@ -9,7 +9,10 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 import requests
-import cloudscraper
+try:
+    import cloudscraper
+except ImportError:
+    cloudscraper = None
 
 router = APIRouter()
 
