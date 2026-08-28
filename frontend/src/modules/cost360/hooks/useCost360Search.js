@@ -27,7 +27,7 @@ export const useCost360Search = ({
       const response = await cost360Service.fetchItems(
         currentSkip,
         limit,
-        searchQuery,
+        searchQuery ? searchQuery.trim() : '',
         '', // chapter (obsoleto)
         databaseId,
         searchDesc,

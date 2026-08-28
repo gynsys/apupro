@@ -70,7 +70,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
 
   const handleSearch = (e) => {
     e.preventDefault();
-    fetchItems(search, 0, false);
+    fetchItems(search.trim(), 0, false);
   };
 
   const handleLoadMore = () => {
