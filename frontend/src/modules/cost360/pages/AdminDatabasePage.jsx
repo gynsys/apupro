@@ -257,9 +257,28 @@ const AdminDatabasePage = () => {
   const [onlyCoded, setOnlyCoded] = useState(true);
   const [editingItem, setEditingItem] = useState(null);
   const [isCatMenuOpen, setIsCatMenuOpen] = useState(false);
+  const [databases, setDatabases] = useState([]);
+  const [selectedDatabase, setSelectedDatabase] = useState('master');
   const [showBulkPriceModal, setShowBulkPriceModal] = useState(false);
   const [bulkPriceText, setBulkPriceText] = useState('');
   const catMenuRef = useRef(null);
+
+  // Cargar bases de datos disponibles
+  useEffect(() => {
+    const loadDatabases = async () => {
+      try {
+        const dbs = await cost360DatabaseService.getAll();
+        const loadedDbs = dbs.databases || [];
+        if (!loadedDbs.find(db => db.id === 'personalizada')) {
+          loadedDbs.push({ id: 'personalizada', name: 'Base Personalizada', is_master: false });
+        }
+        setDatabases(loadedDbs);
+      } catch (error) {
+        console.error("Error al cargar bases de datos:", error);
+      }
+    };
+    loadDatabases();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -501,6 +520,31 @@ const AdminDatabasePage = () => {
               <FiDatabase className="w-4 h-4" />
               Actualizar Cerebro RAG
             </button>
+          </div>
+        </div>
+
+        {/* Selector de Bases de Datos - Parte Inferior Derecha */}
+        <div className="absolute bottom-4 right-4">
+          <select
+            value={selectedDatabase}
+            onChange={(e) => setSelectedDatabase(e.target.value)}
+            className="bg-white border-2 border-slate-300 text-slate-700 text-sm font-medium rounded-lg px-4 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm transition-all w-48 appearance-none"
+            style={{
+              backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3e%3c/svg%3e")',
+              backgroundPosition: 'right 0.5rem center',
+              backgroundRepeat: 'no-repeat',
+              backgroundSize: '1.5em 1.5em',
+              paddingRight: '2.5rem',
+            }}
+          >
+            <option value="master">Base Maestra</option>
+            <option value="personalizada">Base Personalizada</option>
+            <option value="provisional">Base Provisional</option>
+            {databases.filter(db => db.id !== 'master' && db.is_master !== true).map(db => (
+              <option key={db.id} value={db.id}>{db.name}</option>
+            ))}
+          </select>
+        </div>
             <button 
               onClick={() => navigate('/cost360/market-admin')}
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold rounded-lg shadow-sm hover:shadow-md transition-all hover:scale-[1.02]"
@@ -745,10 +789,10 @@ const AdminDatabasePage = () => {
           </div>
 
           <CatalogResourceTab
-            key={`mat-master`}
+            key={`mat-${selectedDatabase}`}
             title="Materiales"
             resourceType="materials"
-            selectedDatabase="master"
+            selectedDatabase={selectedDatabase}
             adminMode={true}
             config={{
               idKey: 'CodMat', descKey: 'Descri',
@@ -861,10 +905,10 @@ const AdminDatabasePage = () => {
 
       {activeTab === 'equipos' && (
         <CatalogResourceTab
-          key={`eq-master`}
+          key={`eq-${selectedDatabase}`}
           title="Equipos"
           resourceType="equipments"
-          selectedDatabase="master"
+          selectedDatabase={selectedDatabase}
           adminMode={true}
           config={{
             idKey: 'CodEqu', descKey: 'Descri',
@@ -875,10 +919,10 @@ const AdminDatabasePage = () => {
 
       {activeTab === 'mano_obra' && (
         <CatalogResourceTab
-          key={`mo-master`}
+          key={`mo-${selectedDatabase}`}
           title="Mano de Obra"
           resourceType="labors"
-          selectedDatabase="master"
+          selectedDatabase={selectedDatabase}
           adminMode={true}
           config={{
             idKey: 'CodMan', descKey: 'Descri',
