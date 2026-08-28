@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.db.models.cost360 import CostMaterial, MaterialSynonym
 from app.core.config import settings
+from app.db.models.llm import LLMProvider
+from app.core.security import decrypt_api_key
 import fitz  # PyMuPDF
 import json
 import io
@@ -25,12 +27,14 @@ class ApproveQuoteRequest(BaseModel):
 
 @router.post('/analyze-quote')
 async def analyze_quote(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    api_key = settings.GEMINI_API_KEY
-    if not api_key:
-        raise HTTPException(status_code=500, detail="No hay GEMINI_API_KEY configurada.")
-
+    provider = db.query(LLMProvider).filter(LLMProvider.provider_key == "gemini", LLMProvider.is_active == True).first()
+    if not provider:
+        raise HTTPException(status_code=500, detail="No hay proveedor Gemini activo en la Base de Datos.")
+    
+    api_key = decrypt_api_key(provider.api_key_enc)
+    model_name = provider.model_name
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel(model_name)
 
     file_bytes = await file.read()
     parts = []
