@@ -108,19 +108,65 @@ RESPONDE ÚNICAMENTE CON UN JSON ARRAY VÁLIDO. NO USES MARKDOWN (SIN ```json). 
                 temperature=0.1
             )
         )
-        
         raw_json = response.text.strip()
+    except Exception as e:
+        logger.warning(f"Gemini falló ({str(e)}). Intentando respaldo con Groq Vision...")
+        
+        provider_groq = db.query(LLMProvider).filter(LLMProvider.provider_key == "groq").first()
+        if not provider_groq:
+            raise HTTPException(status_code=500, detail=f"Gemini falló y no hay Groq configurado. Error Gemini: {str(e)}")
+            
+        api_key_groq = decrypt_api_key(provider_groq.api_key_enc)
+        import base64
+        import requests
+        
+        content_arr = [{"type": "text", "text": prompt_text}]
+        for item in parts:
+            if isinstance(item, PIL.Image.Image):
+                buffered = io.BytesIO()
+                item.save(buffered, format="JPEG")
+                img_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+                content_arr.append({
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}
+                })
+                
+        payload = {
+            "model": "llama-3.2-90b-vision-preview",
+            "messages": [{"role": "user", "content": content_arr}],
+            "temperature": 0.1,
+            "response_format": {"type": "json_object"}
+        }
+        
+        headers = {
+            "Authorization": f"Bearer {api_key_groq}",
+            "Content-Type": "application/json"
+        }
+        
+        resp = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=500, detail=f"Gemini excedió límite y Groq falló: {resp.text}")
+            
+        raw_json = resp.json()["choices"][0]["message"]["content"].strip()
+
+    try:
         if raw_json.startswith('```json'):
             raw_json = raw_json[7:-3].strip()
         elif raw_json.startswith('```'):
             raw_json = raw_json[3:-3].strip()
             
         parsed_data = json.loads(raw_json)
+        if isinstance(parsed_data, dict):
+            for key in parsed_data.keys():
+                if isinstance(parsed_data[key], list):
+                    parsed_data = parsed_data[key]
+                    break
+                    
         return {"status": "success", "items": parsed_data}
         
     except Exception as e:
-        logger.error(f"Error en Gemini Vision: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error procesando documento con IA: {str(e)}")
+        logger.error(f"Error parseando JSON de IA: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error parseando JSON de IA: {str(e)}")
 
 @router.post('/approve-quote')
 async def approve_quote(request: ApproveQuoteRequest, db: Session = Depends(get_db)):
