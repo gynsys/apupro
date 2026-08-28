@@ -55,3 +55,31 @@ Ejecuta el script unificado:
 python readme/db_stats.py
 ```
 *Esto generará automáticamente el archivo `reporte_base_datos_cost360.csv` en la carpeta raíz del proyecto.*
+
+## Arquitectura de Conexión y Espejos Locales (Agosto 2026)
+
+Esta sección explica a cualquier técnico o IA cómo interactuar con la base de datos de Producción de forma segura y cómo funciona el entorno de desarrollo local.
+
+### 1. Servidor de Producción (DigitalOcean)
+- **Host:** `167.172.115.154`
+- **Proyecto:** Ubicado en `/root/apupro_platform/`
+- **Docker Compose:** La plataforma corre nativamente en Docker. El contenedor de la base de datos se llama `apupro_platform-apupro-db-1` y expone el puerto `5440` hacia el host de producción.
+- **Credenciales DB:** `postgresql://apupro_user:apupro_password@localhost:5440/apupro_db`
+
+### 2. Uso del `ssh_runner.py` (La Llave Maestra)
+Si un Agente (IA) necesita hacer consultas a Producción durante el desarrollo para verificar la integridad de los datos, **no debe intentar conectarse por puertos públicos de forma insegura**. Debe usar el script `ssh_runner.py` que se encuentra en la raíz del proyecto.
+Este script tiene 3 modos:
+1. **Ejecutar comandos:** `python ssh_runner.py "docker exec apupro_platform-apupro-db-1 psql -U apupro_user -d apupro_db -c 'SELECT...'"`
+2. **Subir scripts (SCP):** `python ssh_runner.py --upload script_local.py /root/script_remoto.py`
+3. **Descargar data (SCP):** `python ssh_runner.py --download /root/dump.sql local_dump.sql`
+
+*Estrategia Recomendada para Consultas Complejas:* En lugar de lidiar con escapes de comillas en bash, es mejor escribir un script `.py` local, usar `--upload` para subirlo al servidor, y ejecutarlo en el backend remoto mediante `docker exec apupro_platform-apupro-backend-1 python /app/script.py`.
+
+### 3. Espejo Local Nativo (PostgreSQL for Windows)
+Debido a que correr Docker Desktop en Windows puede consumir demasiada memoria o fallar, el entorno de desarrollo local utiliza un **PostgreSQL Instalado Nativamente en Windows**.
+- **Ventaja:** Velocidad instantánea de consultas, servicio ligero de fondo y 100% compatible.
+- **Sincronización:** Cuando se requiere auditar datos masivos (ej: deduplicación de 14.000 materiales), se recomienda usar `ssh_runner.py` para invocar un `pg_dump` en el servidor, descargarlo y usar `pg_restore` en el Postgres nativo local.
+- **Credenciales Locales:** Al instalar Postgres, siempre se debe usar la clave `apupro_password` y el puerto por defecto `5432` para que coincida con el `.env` del backend local y no romper el código.
+
+### 4. Alternativa Ultra-Ligera (SQLite)
+Si la IA solo necesita cruzar datos rápidamente (Data Science) sin encender el Backend, puede hacer un volcado de las tablas `cost360_materials` y `cost360_items` desde producción hacia un archivo `.sqlite3` local utilizando un script de Python. Esto permite hacer queries complejas (Fuzzy Matching, Levenshtein) usando librerías nativas sin retraso de red.

@@ -93,6 +93,16 @@ class CustomCostItem(Base):
     # Store the fully nested APU data (materials, labors, equipments) for easy export and retrieval
     apu_data = Column(String) # JSON encoded string
     
+    
     from sqlalchemy.sql import func
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class MaterialSynonym(Base):
+    """Tabla de aprendizaje para Update desde PDFs. Asocia descripciones comerciales con códigos internos."""
+    __tablename__ = "cost360_material_synonyms"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    provider_text = Column(String, unique=True, index=True) # Lo que lee el OCR
+    CodMat = Column(String, ForeignKey("cost360_materials.CodMat")) # A qué material interno equivale
+    confidence = Column(Float, default=1.0) # 1.0 = Aprobado por humano
+
 

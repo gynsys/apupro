@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiSearch, FiLayers, FiArrowRight, FiBox, FiTool, FiUsers, FiDatabase, FiEdit2, FiTrash2, FiSave, FiX, FiDownload, FiCpu } from 'react-icons/fi';
+import { FiSearch, FiLayers, FiArrowRight, FiBox, FiTool, FiUsers, FiDatabase, FiEdit2, FiTrash2, FiSave, FiX, FiDownload, FiCpu, FiUpload, FiFileText } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import cost360Service from '../services/cost360Service';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
@@ -446,6 +446,7 @@ const AdminDatabasePage = () => {
     { key: 'equipos',    label: 'Equipos',         Icon: FiTool  },
     { key: 'mano_obra',  label: 'Mano de Obra',    Icon: FiUsers },
     { key: 'scraping',   label: 'Bot Scraping',    Icon: FiCpu   },
+    { key: 'pdfs',       label: 'Update desde PDFs', Icon: FiFileText },
   ];
 
   return (
@@ -867,6 +868,22 @@ const AdminDatabasePage = () => {
 
       {activeTab === 'scraping' && (
         <ModuloSincronizacionCostos />
+      )}
+
+      {activeTab === 'pdfs' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden flex flex-col items-center justify-center p-12 text-center">
+          <div className="bg-blue-50 text-blue-500 p-6 rounded-full mb-4">
+            <FiUpload size={48} />
+          </div>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">Lector de PDFs y Facturas con IA</h3>
+          <p className="text-slate-500 max-w-md">
+            Sube un PDF o imagen del listado de precios de tu proveedor. La Inteligencia Artificial extraerá los datos, cruzará las descripciones comerciales con tu base de datos interna y te propondrá los precios actualizados.
+          </p>
+          <button className="mt-6 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-not-allowed opacity-80" disabled>
+            <FiUpload />
+            Subir Archivo (Próximamente)
+          </button>
+        </div>
       )}
 
       {/* Edit Item Modal */}
