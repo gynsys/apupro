@@ -133,7 +133,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
           const { resendVerification } = await import('../../services/api');
           await resendVerification(email);
           toast.success('Te enviamos un código para verificar tu correo.');
-        } catch (err) {}
+        } catch (err) { /* silently ignore resend errors */ }
       } else {
         setError(result.error || 'Ocurrió un error al iniciar sesión');
       }

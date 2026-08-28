@@ -27,6 +27,34 @@ def _normalize_key(description: str) -> str:
     return cleaned
 
 
+def _extract_numeric_tokens(text: str) -> set:
+    """
+    Extrae todos los valores numéricos y fracciones de un texto.
+    Incluye: enteros, decimales, fracciones (1/2, 3/4), pulgadas (1"), dimensiones (DN50, D=200)
+    """
+    # Fracciones tipo 1/2, 3/4, 1 1/2
+    fractions = re.findall(r'\d+\s*/\s*\d+', text)
+    # Números con unidad pegada: 200MM, 4", 1/2", DN50
+    with_units = re.findall(r'\d+(?:[.,]\d+)?(?:\s*(?:MM|CM|M|PLG|"))?', text.upper())
+    # Valores tipo D=200, DN=50
+    dim_values = re.findall(r'(?:D|DN|DI|DE)\s*[=]?\s*(\d+(?:[.,]\d+)?)', text.upper())
+    return set(fractions + with_units + dim_values)
+
+
+def _are_dimensionally_distinct(a: str, b: str) -> bool:
+    """
+    Retorna True si dos descripciones difieren en algún valor numérico/dimensional.
+    En ese caso NO deben considerarse duplicados, aunque el texto sea similar.
+    Ej: 'ABRAZADERA D=1"' vs 'ABRAZADERA D=1/2"' → True (son distintas)
+    """
+    nums_a = _extract_numeric_tokens(a)
+    nums_b = _extract_numeric_tokens(b)
+    # Si tienen algún número que el otro NO tiene, son productos distintos
+    only_in_a = nums_a - nums_b
+    only_in_b = nums_b - nums_a
+    return bool(only_in_a or only_in_b)
+
+
 def _similarity(a: str, b: str) -> float:
     """Retorna similitud entre dos strings (0.0 a 1.0)."""
     return SequenceMatcher(None, a, b).ratio()
@@ -205,6 +233,10 @@ def get_similar_duplicates(
                 kj, codj, descj, unij, precioj = candidates[j]
                 sim = _similarity(ki, kj)
                 if sim >= threshold:
+                    # FILTRO CRÍTICO: si difieren en valores numéricos/dimensionales
+                    # (ej: D=1" vs D=1/2") NO son duplicados aunque el texto sea similar
+                    if _are_dimensionally_distinct(desci, descj):
+                        continue
                     group_members.append((codj, descj, unij, precioj))
                     visited.add(codj)
 
@@ -245,3 +277,111 @@ def get_similar_duplicates(
     except Exception as e:
         logger.error("Error detectando duplicados similares", exc_info=True)
         raise
+
+
+from pydantic import BaseModel
+from typing import List as PyList
+
+
+class MergeGroup(BaseModel):
+    winner_code: str
+    loser_codes: PyList[str]
+
+
+class MergeRequest(BaseModel):
+    grupos: PyList[MergeGroup]
+
+
+@router_dedup.post("/merge")
+def merge_duplicates(payload: MergeRequest, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Fusiona grupos de duplicados:
+    - Redirige todas las referencias APU de los perdedores al ganador
+    - Maneja conflictos de clave primaria (si el ganador ya existe en la misma APU)
+    - Elimina los materiales perdedores de la BD
+    IRREVERSIBLE — requiere confirmación explícita del usuario.
+    """
+    total_apus_redirigidas = 0
+    total_eliminados = 0
+    errores = []
+
+    for grupo in payload.grupos:
+        winner = grupo.winner_code
+        losers = [c for c in grupo.loser_codes if c != winner]
+
+        if not losers:
+            continue
+
+        # Validar que el ganador existe
+        winner_exists = db.execute(
+            text('SELECT 1 FROM cost360_materials WHERE "CodMat" = :cod'),
+            {"cod": winner}
+        ).scalar()
+        if not winner_exists:
+            errores.append(f"Ganador '{winner}' no existe en la BD")
+            continue
+
+        for loser in losers:
+            try:
+                # 1. Obtener todas las APUs que usan el loser
+                apu_rows = db.execute(
+                    text('SELECT "CodPar", "CanIns", "Desper" FROM cost360_apu_materials WHERE "CodIns" = :loser'),
+                    {"loser": loser}
+                ).fetchall()
+
+                for apu_row in apu_rows:
+                    cod_par = apu_row[0]
+                    can_ins = apu_row[1]
+                    desper = apu_row[2]
+
+                    # Verificar si el ganador ya existe en esta misma APU (conflicto PK)
+                    winner_in_apu = db.execute(
+                        text('SELECT 1 FROM cost360_apu_materials WHERE "CodPar" = :par AND "CodIns" = :winner'),
+                        {"par": cod_par, "winner": winner}
+                    ).scalar()
+
+                    if winner_in_apu:
+                        # Conflicto: la APU ya tiene el ganador — simplemente borramos la fila del loser
+                        db.execute(
+                            text('DELETE FROM cost360_apu_materials WHERE "CodPar" = :par AND "CodIns" = :loser'),
+                            {"par": cod_par, "loser": loser}
+                        )
+                    else:
+                        # No hay conflicto — redirigir la referencia al ganador
+                        db.execute(
+                            text('UPDATE cost360_apu_materials SET "CodIns" = :winner WHERE "CodPar" = :par AND "CodIns" = :loser'),
+                            {"winner": winner, "par": cod_par, "loser": loser}
+                        )
+                        total_apus_redirigidas += 1
+
+                # 2. También redirigir en equipos y mano de obra si tuvieran tablas similares
+                # (por si acaso, intentamos — no falla si no existe)
+                try:
+                    db.execute(
+                        text('DELETE FROM historial_precios WHERE material_id = :loser'),
+                        {"loser": loser}
+                    )
+                except Exception:
+                    pass  # tabla puede no tener este registro
+
+                # 3. Eliminar el material perdedor
+                db.execute(
+                    text('DELETE FROM cost360_materials WHERE "CodMat" = :loser'),
+                    {"loser": loser}
+                )
+                total_eliminados += 1
+
+            except Exception as e:
+                logger.error(f"Error fusionando {loser} → {winner}: {e}", exc_info=True)
+                db.rollback()
+                errores.append(f"Error en {loser} → {winner}: {str(e)}")
+                continue
+
+        db.commit()
+
+    return {
+        "status": "success" if not errores else "partial",
+        "materiales_eliminados": total_eliminados,
+        "apus_redirigidas": total_apus_redirigidas,
+        "errores": errores,
+    }
