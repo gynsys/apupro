@@ -61,13 +61,13 @@ async def analyze_quote(file: UploadFile = File(...), db: Session = Depends(get_
     materials = db.query(CostMaterial).all()
     synonyms = db.query(MaterialSynonym).all()
     
-    cat_lines = [f\"{m.CodMat} | {m.Descri}\" for m in materials]
-    cat_text = \"\\n\".join(cat_lines)
+    cat_lines = [f"{m.CodMat} | {m.Descri}" for m in materials]
+    cat_text = "\n".join(cat_lines)
     
-    syn_lines = [f\"Sinonimo '{s.synonym}' -> {s.codmat}\" for s in synonyms]
-    syn_text = \"\\n\".join(syn_lines)
+    syn_lines = [f"Sinonimo '{s.synonym}' -> {s.codmat}" for s in synonyms]
+    syn_text = "\n".join(syn_lines)
     
-    prompt_text = f\"\"\"
+    prompt_text = f"""
     Eres un experto analista de costos y presupuestos de obra civil.
     He subido imágenes de una lista de precios o cotización de un profeedor.
 
@@ -92,15 +92,15 @@ async def analyze_quote(file: UploadFile = File(...), db: Session = Depends(get_
     RESPONDE ÚNICAMENTE CON UN JSON ARRAY VÁLIDO. EL FORMATO DEBE SER:
     [
       {{
-        \"original_desc\": \"string\",
-        \"original_price\": float,
-        \"unit\": \"string\",
-        \"matched_codmat\": \"string o null\",
-        \"matched_descri\": \"string o null\",
-        \"match_reason\": \"string\"
+        "original_desc": "string",
+        "original_price": float,
+        "unit": "string",
+        "matched_codmat": "string o null",
+        "matched_descri": "string o null",
+        "match_reason": "string"
       }}
     ]
-    \"\"\"
+    """
     parts.append(prompt_text)
 
     config = genai_types.GenerateContentConfig(
@@ -122,11 +122,11 @@ async def analyze_quote(file: UploadFile = File(...), db: Session = Depends(get_
             raw_json = raw_json[3:-3].strip()
             
         parsed_data = json.loads(raw_json)
-        return {\"status\": \"success\", \"items\": parsed_data}
+        return {"status": "success", "items": parsed_data}
         
     except Exception as e:
-        logger.error(f\"Error en Gemini Vision: {str(e)}\")
-        raise HTTPException(status_code=500, detail=f\"Error procesando documento con IA: {str(e)}\")
+        logger.error(f"Error en Gemini Vision: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error procesando documento con IA: {str(e)}")
 
 class ApproveItem(BaseModel):
     original_desc: str
@@ -155,7 +155,7 @@ async def approve_quote(request: ApproveQuoteRequest, db: Session = Depends(get_
                 db.add(new_syn)
         
         db.commit()
-        return {\"status\": \"success\", \"message\": f\"{len(request.items)} materiales actualizados exitosamente.\"}
+        return {"status": "success", "message": f"{len(request.items)} materiales actualizados exitosamente."}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
