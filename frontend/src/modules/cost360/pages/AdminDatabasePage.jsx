@@ -7,6 +7,7 @@ import { cost360DatabaseService } from '../../../services/cost360DatabaseService
 import { SiteConfigContext } from '../../../App';
 import { API_URL } from '../../../services/api';
 import CatalogResourceTab from '../components/CatalogResourceTab';
+import PDFUpdaterTab from '../components/PDFUpdaterTab';
 import Cost360SearchBar from '../components/Cost360SearchBar';
 import { useCost360Search } from '../hooks/useCost360Search';
 import coveninTreeData from '../data/covenin_tree.json';
@@ -871,19 +872,7 @@ const AdminDatabasePage = () => {
       )}
 
       {activeTab === 'pdfs' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden flex flex-col items-center justify-center p-12 text-center">
-          <div className="bg-blue-50 text-blue-500 p-6 rounded-full mb-4">
-            <FiUpload size={48} />
-          </div>
-          <h3 className="text-xl font-bold text-slate-800 mb-2">Lector de PDFs y Facturas con IA</h3>
-          <p className="text-slate-500 max-w-md">
-            Sube un PDF o imagen del listado de precios de tu proveedor. La Inteligencia Artificial extraerá los datos, cruzará las descripciones comerciales con tu base de datos interna y te propondrá los precios actualizados.
-          </p>
-          <button className="mt-6 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-not-allowed opacity-80" disabled>
-            <FiUpload />
-            Subir Archivo (Próximamente)
-          </button>
-        </div>
+        <PDFUpdaterTab />
       )}
 
       {/* Edit Item Modal */}

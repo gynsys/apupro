@@ -11,6 +11,7 @@ from app.api.v1.endpoints import uploads
 from app.api.v1.endpoints import arko
 from app.api.v1.endpoints import market
 from app.api.v1.endpoints import scraping
+from app.api.v1.endpoints import pdf_updater
 from app.api.v1.endpoints.dedup import router_dedup
 api_router = APIRouter()
 
@@ -23,4 +24,5 @@ api_router.include_router(materials.router, prefix="/materials", tags=["material
 api_router.include_router(uploads.router, prefix="/uploads", tags=["uploads"])
 api_router.include_router(market.router, prefix="/market", tags=["market"])
 api_router.include_router(scraping.router, prefix="/scraping", tags=["scraping"])
+api_router.include_router(pdf_updater.router, prefix="/pdf-updater", tags=["pdf_updater"])
 api_router.include_router(router_dedup, prefix="/dedup", tags=["dedup"])
