@@ -1,34 +1,13 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
-from sqlalchemy.orm import Session
-from app.db.base import get_db
-from app.db.models.cost360 import CostMaterial, MaterialSynonym
-from app.core.config import settings
-from app.db.models.llm_provider import LLMProvider
-from app.crud.llm import decrypt_api_key
-import fitz  # PyMuPDF
-import json
-import io
-import PIL.Image
-from typing import List
-from pydantic import BaseModel
-import logging
-import google.generativeai as genai
+import re
 
-router = APIRouter()
-logger = logging.getLogger(__name__)
+with open("app/api/v1/endpoints/pdf_updater.py", "r", encoding="utf-8") as f:
+    content = f.read()
 
-class ApproveItem(BaseModel):
-    original_desc: str
-    matched_codmat: str
-    new_price: float
-
-class ApproveQuoteRequest(BaseModel):
-    items: List[ApproveItem]
-
-
+# Create the new code block
+new_code = """
 from app.services.llm_router import call_llm_json
 from sqlalchemy import text
-
+import pytesseract
 
 def lexical_search_materials(db: Session, query: str, limit: int = 5):
     words = [w for w in query.split() if len(w) > 2]
@@ -58,35 +37,21 @@ async def analyze_quote(file: UploadFile = File(...), db: Session = Depends(get_
             for page in doc:
                 raw_text += page.get_text() + "\\n"
             
-            # Si el PDF era escaneado (sin texto) usamos Gemini Vision como OCR
+            # Si el PDF era escaneado (sin texto) usamos Tesseract OCR
             if len(raw_text.strip()) < 50:
-                provider = db.query(LLMProvider).filter(LLMProvider.provider_key == 'gemini').first()
-                if provider:
-                    genai.configure(api_key=decrypt_api_key(provider.api_key_enc))
-                
                 raw_text = ""
                 for page in doc:
                     pix = page.get_pixmap(dpi=150)
                     img = PIL.Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                    
-                    # Llamar a Gemini Vision solo para OCR
-                    model = genai.GenerativeModel('gemini-1.5-flash')
-                    resp = model.generate_content([img, "Extrae todo el texto de esta imagen exactamente como aparece. Solo devuelve el texto plano, sin formato adicional."])
-                    raw_text += resp.text + "\\n"
+                    raw_text += pytesseract.image_to_string(img, lang='spa') + "\\n"
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Error leyendo PDF: {str(e)}")
     elif file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
         try:
-            provider = db.query(LLMProvider).filter(LLMProvider.provider_key == 'gemini').first()
-            if provider:
-                genai.configure(api_key=decrypt_api_key(provider.api_key_enc))
-                
             img = PIL.Image.open(io.BytesIO(file_bytes))
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            resp = model.generate_content([img, "Extrae todo el texto de esta imagen exactamente como aparece. Solo devuelve el texto plano, sin formato adicional."])
-            raw_text = resp.text
+            raw_text = pytesseract.image_to_string(img, lang='spa')
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Error en OCR con IA: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Error leyendo Imagen OCR: {str(e)}")
     else:
         raise HTTPException(status_code=400, detail="Formato no soportado.")
 
@@ -174,3 +139,11 @@ async def approve_quote(request: ApproveQuoteRequest, db: Session = Depends(get_
     
     db.commit()
     return {"status": "success", "updated_count": updated_count}
+"""
+
+# Find everything from @router.post('/analyze-quote') downwards and replace it
+pattern = re.compile(r'@router\.post\(\'/analyze-quote\'\).*', re.DOTALL)
+new_content = pattern.sub(new_code, content)
+
+with open("app/api/v1/endpoints/pdf_updater.py", "w", encoding="utf-8") as f:
+    f.write(new_content)
