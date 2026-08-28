@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import SanitizationPanel from '../components/SanitizationPanel';
 import MarketIndicatorsPanel from '../components/MarketIndicatorsPanel';
+import DeduplicatePanel from '../components/DeduplicatePanel';
+
 const glassStrong = {
   background: 'rgba(255,255,255,0.88)',
   backdropFilter: 'blur(20px)',
@@ -11,6 +13,12 @@ const glassStrong = {
 
 export default function MarketAdminPage() {
   const [activeTab, setActiveTab] = useState('sanitization');
+
+  const TABS = [
+    { key: 'sanitization', label: 'Saneamiento IA' },
+    { key: 'indicators',   label: 'Insumos Líderes' },
+    { key: 'dedup',        label: '🔍 Deduplicar Materiales' },
+  ];
 
   return (
     <div className="absolute inset-0 p-4 md:p-6 flex flex-col overflow-hidden gap-4 bg-slate-50">
@@ -27,28 +35,24 @@ export default function MarketAdminPage() {
         </div>
         
         <div className="px-4 flex gap-1 pt-2">
-          <button
-            onClick={() => setActiveTab('sanitization')}
-            className={`px-4 py-2 text-sm font-semibold rounded-t-xl border-b-2 transition-colors ${
-              activeTab === 'sanitization' ? 'text-blue-700 border-blue-600 bg-blue-50/60' : 'text-slate-500 border-transparent'
-            }`}
-          >
-            Saneamiento IA
-          </button>
-          <button
-            onClick={() => setActiveTab('indicators')}
-            className={`px-4 py-2 text-sm font-semibold rounded-t-xl border-b-2 transition-colors ${
-              activeTab === 'indicators' ? 'text-blue-700 border-blue-600 bg-blue-50/60' : 'text-slate-500 border-transparent'
-            }`}
-          >
-            Insumos Líderes
-          </button>
+          {TABS.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-4 py-2 text-sm font-semibold rounded-t-xl border-b-2 transition-colors ${
+                activeTab === tab.key ? 'text-blue-700 border-blue-600 bg-blue-50/60' : 'text-slate-500 border-transparent'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
       <div className="flex-1 overflow-auto rounded-2xl" style={glassStrong}>
         {activeTab === 'sanitization' && <SanitizationPanel />}
         {activeTab === 'indicators' && <MarketIndicatorsPanel />}
+        {activeTab === 'dedup' && <DeduplicatePanel />}
       </div>
     </div>
   );
