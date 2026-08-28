@@ -520,11 +520,18 @@ const AdminDatabasePage = () => {
               <FiDatabase className="w-4 h-4" />
               Actualizar Cerebro RAG
             </button>
+            <button 
+              onClick={() => navigate('/cost360/market-admin')}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold rounded-lg shadow-sm hover:shadow-md transition-all hover:scale-[1.02]"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              Automatización IA
+            </button>
           </div>
         </div>
 
-        {/* Selector de Bases de Datos - Parte Inferior Derecha */}
-        <div className="absolute bottom-4 right-4">
+        {/* Selector de Bases de Datos - Justo antes de las pestañas */}
+        <div className="px-4 flex justify-end">
           <select
             value={selectedDatabase}
             onChange={(e) => setSelectedDatabase(e.target.value)}
@@ -544,15 +551,6 @@ const AdminDatabasePage = () => {
               <option key={db.id} value={db.id}>{db.name}</option>
             ))}
           </select>
-        </div>
-            <button 
-              onClick={() => navigate('/cost360/market-admin')}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold rounded-lg shadow-sm hover:shadow-md transition-all hover:scale-[1.02]"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-              Automatización IA
-            </button>
-          </div>
         </div>
 
         <div className="px-4 flex justify-between items-end pt-2 pb-0">
