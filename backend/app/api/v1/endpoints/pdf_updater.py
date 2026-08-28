@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.db.models.cost360 import CostMaterial, MaterialSynonym
 from app.core.config import settings
-from app.db.models.llm import LLMProvider
-from app.core.security import decrypt_api_key
+from app.db.models.llm_provider import LLMProvider
+from app.crud.llm import decrypt_api_key
 import fitz  # PyMuPDF
 import json
 import io
