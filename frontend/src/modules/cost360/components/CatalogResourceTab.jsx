@@ -13,6 +13,26 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
   const [skip, setSkip] = useState(0);
   const limit = 50;
   const [hasMore, setHasMore] = useState(false);
+  
+  const [usesModal, setUsesModal] = useState({ isOpen: false, item: null, apus: [], loading: false });
+
+  const handleViewUses = async (item) => {
+    setUsesModal({ isOpen: true, item, apus: [], loading: true });
+    try {
+      const res = await fetch(`${API_URL}/cost360/${resourceType}/${item[config.idKey]}/apus`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (res.ok) {
+        const apus = await res.json();
+        setUsesModal(prev => ({ ...prev, apus, loading: false }));
+      } else {
+        throw new Error('Error al obtener datos');
+      }
+    } catch (e) {
+      toast.error('Error cargando usos en APUs');
+      setUsesModal(prev => ({ ...prev, loading: false }));
+    }
+  };
 
   const fetchItems = async (searchQuery = '', currentSkip = 0, append = false) => {
     setLoading(true);
@@ -296,6 +316,9 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                 {config.editableFields.map(f => (
                   <th key={f.key} className={`px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider ${f.type === 'text' || f.key === config.descKey ? 'text-left' : 'text-right'}`}>{f.label}</th>
                 ))}
+                {resourceType !== 'items' && (
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Uso en Partidas</th>
+                )}
                 {(selectedDatabase !== 'master' || adminMode) && (
                   <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                 )}
@@ -352,6 +375,16 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                         )}
                       </td>
                     ))}
+                    {resourceType !== 'items' && (
+                      <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                        <button 
+                          onClick={() => handleViewUses(item)}
+                          className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-semibold rounded-full hover:bg-blue-100 transition-colors"
+                        >
+                          Ver Partidas
+                        </button>
+                      </td>
+                    )}
 
                     {(selectedDatabase !== 'master' || adminMode) && (
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -390,7 +423,68 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
               </div>
             )}
           </div>
-        </div>
+
+        {/* Modal de Uso en Partidas */}
+        {usesModal.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl flex flex-col max-h-[85vh] overflow-hidden">
+              <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50">
+                <div>
+                  <h3 className="font-bold text-slate-800 text-lg">Partidas que utilizan este recurso</h3>
+                  <p className="text-sm text-slate-500 mt-0.5">
+                    {usesModal.item && (
+                      <>
+                        <span className="font-mono font-bold text-blue-600">{usesModal.item[config.idKey]}</span> — {usesModal.item[config.descKey]}
+                      </>
+                    )}
+                  </p>
+                </div>
+                <button onClick={() => setUsesModal({ isOpen: false, item: null, apus: [], loading: false })} className="text-slate-400 hover:text-slate-600 p-2">
+                  <FiX size={20} />
+                </button>
+              </div>
+              
+              <div className="p-4 flex-1 overflow-y-auto bg-white">
+                {usesModal.loading ? (
+                  <div className="text-center py-8 text-slate-500">Cargando partidas...</div>
+                ) : usesModal.apus.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="bg-slate-50 text-slate-400 p-4 rounded-full inline-block mb-3">
+                      <FiSearch size={24} />
+                    </div>
+                    <p className="text-slate-600 font-medium">Este recurso no está siendo utilizado</p>
+                    <p className="text-sm text-slate-400">Puede ser eliminado sin afectar ninguna partida.</p>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="mb-3 px-1 text-sm text-slate-600">
+                      Se encontró en <strong>{usesModal.apus.length}</strong> partida{usesModal.apus.length !== 1 ? 's' : ''}:
+                    </div>
+                    <div className="border border-slate-200 rounded-lg overflow-hidden">
+                      <table className="min-w-full divide-y divide-slate-200 text-sm">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            <th className="px-4 py-2 text-left font-semibold text-slate-600">Código</th>
+                            <th className="px-4 py-2 text-left font-semibold text-slate-600">Descripción de la Partida</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {usesModal.apus.map(apu => (
+                            <tr key={apu.CodPar} className="hover:bg-slate-50">
+                              <td className="px-4 py-2.5 font-mono text-blue-600 font-medium whitespace-nowrap">{apu.CodPar}</td>
+                              <td className="px-4 py-2.5 text-slate-700">{apu.Descri}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
   );
 };
 
