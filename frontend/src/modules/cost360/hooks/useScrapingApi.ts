@@ -1,0 +1,102 @@
+import { useState, useCallback } from 'react';
+import { API_URL } from '../../../services/api';
+
+export interface ScrapingConfig {
+  max_concurrency: number;
+  headless: boolean;
+  bypass_cloudflare: boolean;
+  request_delay_ms: number;
+  active_portals: string[];
+  batch_size: number;
+}
+
+export const useScrapingApi = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const apiCall = useCallback(async (endpoint: string, method: string = 'GET', body?: any) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const token = localStorage.getItem('arko_admin_token');
+      const url = `${API_URL}/scraping${endpoint}`;
+      
+      const options: RequestInit = {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      };
+
+      if (body) {
+        options.body = JSON.stringify(body);
+      }
+
+      const response = await fetch(url, options);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const startScraping = useCallback(async () => {
+    return apiCall('/start', 'POST');
+  }, [apiCall]);
+
+  const pauseScraping = useCallback(async () => {
+    return apiCall('/pause', 'POST');
+  }, [apiCall]);
+
+  const resumeScraping = useCallback(async () => {
+    return apiCall('/resume', 'POST');
+  }, [apiCall]);
+
+  const killScraping = useCallback(async () => {
+    return apiCall('/kill', 'POST');
+  }, [apiCall]);
+
+  const getConfig = useCallback(async (): Promise<ScrapingConfig> => {
+    return apiCall('/config', 'GET');
+  }, [apiCall]);
+
+  const updateConfig = useCallback(async (config: ScrapingConfig) => {
+    return apiCall('/config', 'PUT', config);
+  }, [apiCall]);
+
+  const getStatus = useCallback(async () => {
+    return apiCall('/status', 'GET');
+  }, [apiCall]);
+
+  const getLogs = useCallback(async (limit: number = 100) => {
+    return apiCall(`/logs?limit=${limit}`, 'GET');
+  }, [apiCall]);
+
+  const clearLogs = useCallback(async () => {
+    return apiCall('/logs', 'DELETE');
+  }, [apiCall]);
+
+  return {
+    loading,
+    error,
+    startScraping,
+    pauseScraping,
+    resumeScraping,
+    killScraping,
+    getConfig,
+    updateConfig,
+    getStatus,
+    getLogs,
+    clearLogs
+  };
+};

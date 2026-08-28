@@ -46,7 +46,7 @@ async def analyze_quote(file: UploadFile = File(...), db: Session = Depends(get_
                     )
                 )
         except Exception as e:
-            raise HTTPException(status_code=400, detail=d"Error leyendo PDF: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Error leyendo PDF: {str(e)}")
     elif file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
         mime = 'image/png' if file.filename.lower().endswith('.png') else 'image/jpeg'
         parts.append(

@@ -132,7 +132,7 @@ const PDFUpdaterTab = () => {
         </div>
       )}
 
-      {ifile && results.length === 0 && (
+      {file && results.length === 0 && (
         <div className="text-center p-8 border border-slate-200 rounded-2xl">
           <h3 className="text-xl font-bold text-slate-800 mb-2">{file.name}</h3>
           <p className="text-slate-500 mb-6">Archivo listo para ser analizado.</p>
