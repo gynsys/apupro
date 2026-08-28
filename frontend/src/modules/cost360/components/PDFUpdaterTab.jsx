@@ -9,7 +9,7 @@ const PDFUpdaterTab = () => {
   const [file, setFile] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState([]);
-  const [selectedItems, selectedItems] = useState({});
+  const [selectedItems, setSelectedItems] = useState({});
   const fileInputRef = useRef(null);
 
   const handleFileSelect = (e) => {
@@ -191,7 +191,7 @@ const PDFUpdaterTab = () => {
                           checked={selectedItems[idx] || false}
                           onChange={() => toggleSelection(idx)}
                         />
-                      })
+                      )}
                     </td>
                     <td className="px-4 py-3 font-medium text-slate-800">
                       {item.original_desc}
