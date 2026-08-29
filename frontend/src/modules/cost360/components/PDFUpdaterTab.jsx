@@ -196,8 +196,8 @@ const PDFUpdaterTab = () => {
                   <tr>
                     <th className="px-4 py-3 text-center">✔</th>
                     <th className="px-4 py-3">Texto Original (Factura)</th>
-                    <th className="px-4 py-3">Precio Orig.</th>
-                    <th className="px-4 py-3">Precio en $</th>
+                    <th className="px-4 py-3">Precio Orig. Factura</th>
+                    <th className="px-4 py-3">Precio Calculado DB ($)</th>
                     <th className="px-4 py-3">Precio DB Actual</th>
                     <th className="px-4 py-3">Cruce Semántico IA (Catálogo)</th>
                   </tr>
@@ -218,8 +218,8 @@ const PDFUpdaterTab = () => {
                       <td className="px-4 py-3">
                         {item.original_desc}
                       </td>
-                      <td className="px-4 py-3 font-bold text-blue-600 whitespace-nowrap">
-                        $ {Number(item.new_price).toFixed(2)}
+                      <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
+                        $ {Number(item.original_price || item.new_price).toFixed(2)}
                       </td>
                       <td className="px-4 py-3 font-bold text-green-600 whitespace-nowrap">
                         $ {(Number(item.new_price) / (exchangeRate || 1)).toFixed(2)}

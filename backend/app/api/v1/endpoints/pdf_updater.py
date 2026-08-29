@@ -36,7 +36,7 @@ def lexical_search_materials(db: Session, query: str, limit: int = 5):
         return []
     tsquery_str = " | ".join(words)
     sql = text('''
-        SELECT "CodMat", "Descri", "CosMat",
+        SELECT "CodMat", "Descri", "CosMat", "UniMat",
                ts_rank(to_tsvector('spanish', "Descri"), to_tsquery('spanish', :tsquery)) as rank
         FROM public.cost360_materials
         WHERE to_tsvector('spanish', "Descri") @@ to_tsquery('spanish', :tsquery)
@@ -44,7 +44,7 @@ def lexical_search_materials(db: Session, query: str, limit: int = 5):
         LIMIT :limit
     ''')
     results = db.execute(sql, {"tsquery": tsquery_str, "limit": limit}).fetchall()
-    return [{"id": r.CodMat, "desc": r.Descri, "current_price": r.CosMat} for r in results]
+    return [{"id": r.CodMat, "desc": r.Descri, "current_price": r.CosMat, "db_unit": r.UniMat} for r in results]
 
 @router.post('/analyze-quote')
 async def analyze_quote(file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -100,7 +100,7 @@ async def analyze_quote(file: UploadFile = File(...), db: Session = Depends(get_
     prompt_paso1 = f'''
 Eres un extractor de datos. Extrae todos los insumos y precios del siguiente texto (proveniente de OCR de una cotización).
 Ignora basura o ruido del texto. Devuelve un arreglo JSON estricto con este formato:
-[{{ "codigo_proveedor": "si aparece", "descripcion": "nombre del material", "precio": 15.5 }}]
+[{{ "codigo_proveedor": "si aparece", "descripcion": "nombre del material", "unidad_cotizada": "PZA, UND, KG, M2, etc", "precio": 15.5 }}]
 Texto OCR:
 {raw_text}
 '''
@@ -118,33 +118,31 @@ Texto OCR:
                 break
 
     # 3. Búsqueda Semántica / Léxica y 4. Emparejamiento Final (IA Paso 2)
-    # Buscamos los top 5 candidatos para cada item
     items_para_prompt = []
     items_finales = []
     for idx, item in enumerate(items_extraidos):
         cod_prov = item.get('codigo_proveedor', '')
         desc = item.get('descripcion', '')
         precio = item.get('precio', 0.0)
+        unidad_cotizada = item.get('unidad_cotizada', '')
         
-        # El sinónimo será el código del proveedor + la descripción (para ser más únicos)
         syn_str = f"[{cod_prov}] {desc}" if cod_prov else desc
 
         # Verificar memoria (sinónimos guardados previamente)
         syn = db.query(MaterialSynonym).filter(MaterialSynonym.provider_text == syn_str).first()
         if syn:
             mat = db.query(CostMaterial).filter(CostMaterial.CodMat == syn.CodMat).first()
-            items_finales.append({
-                "original_desc": syn_str,
-                "matched_codmat": syn.CodMat,
-                "new_price": precio,
-                "db_price": mat.CosMat if mat else None
-            })
-            continue
+            if mat:
+                candidatos = [{"id": mat.CodMat, "desc": mat.Descri, "current_price": mat.CosMat, "db_unit": mat.UniMat}]
+            else:
+                candidatos = lexical_search_materials(db, desc, limit=5)
+        else:
+            candidatos = lexical_search_materials(db, desc, limit=5)
 
-        candidatos = lexical_search_materials(db, desc, limit=5)
         items_para_prompt.append({
             "id_temporal": idx,
             "descripcion_cotizada": syn_str,
+            "unidad_cotizada": unidad_cotizada,
             "precio_cotizado": precio,
             "candidatos_db": candidatos
         })
@@ -152,11 +150,14 @@ Texto OCR:
     if items_para_prompt:
         prompt_paso2 = f'''
 Eres un experto analista de costos. Tienes una lista de ítems extraídos de una cotización y, para cada uno, 5 posibles candidatos de nuestra base de datos.
-Selecciona el 'id' (código) del candidato de la base de datos que sea EXACTAMENTE el mismo material cotizado. Si ninguno se parece, devuelve null para ese ítem.
-Devuelve un JSON estrictamente con este formato (un diccionario que mapee el id_temporal al id del candidato seleccionado):
+Selecciona el 'id' (código) del candidato de la base de datos que sea EXACTAMENTE el mismo material cotizado. 
+ATENCIÓN A LAS UNIDADES: Si la 'unidad_cotizada' (ej. UND, PZA, Saco) es diferente a la 'db_unit' (ej. KG, M3), DEBES calcular el precio equivalente para la unidad de la base de datos usando tu conocimiento del peso o volumen estándar del material. 
+Por ejemplo, si la cotización es por 'PZA' de cabilla de 1/2 y la DB es 'KG', averigua cuánto pesa una cabilla y divide el precio entre el peso.
+
+Devuelve un JSON estrictamente con este formato (un diccionario que mapee el id_temporal a tu resultado):
 {{
-    "0": "id_del_candidato_seleccionado_o_null",
-    "1": "id_del_candidato_seleccionado_o_null"
+    "0": {{"id_seleccionado": "código_del_candidato_o_null", "precio_convertido": 12.5, "explicacion": "Se dividió el precio entre 11.9 kg que pesa una cabilla"}},
+    "1": {{"id_seleccionado": "código_del_candidato_o_null", "precio_convertido": 15.0, "explicacion": "Misma unidad, no se convirtió"}}
 }}
 
 Datos a analizar:
@@ -168,9 +169,23 @@ Datos a analizar:
             logger.error(f"Error en Paso 2 (Matching IA): {e}")
             raise HTTPException(status_code=500, detail="Fallo al hacer el cruce de materiales con IA.")
 
-        # Reconstruimos la lista final basándonos en el dict devuelto
         for item in items_para_prompt:
-            matched_id = resultado_final.get(str(item["id_temporal"])) if isinstance(resultado_final, dict) else None
+            res_item = resultado_final.get(str(item["id_temporal"])) if isinstance(resultado_final, dict) else None
+            
+            matched_id = None
+            precio_final = item["precio_cotizado"]
+            
+            if isinstance(res_item, dict):
+                matched_id = res_item.get("id_seleccionado")
+                precio_convertido = res_item.get("precio_convertido")
+                if precio_convertido is not None:
+                    try:
+                        precio_final = float(precio_convertido)
+                    except:
+                        pass
+            elif isinstance(res_item, str):
+                matched_id = res_item
+                
             db_price = None
             if matched_id:
                 for c in item["candidatos_db"]:
@@ -181,7 +196,8 @@ Datos a analizar:
             items_finales.append({
                 "original_desc": item["descripcion_cotizada"],
                 "matched_codmat": matched_id,
-                "new_price": item["precio_cotizado"],
+                "original_price": item["precio_cotizado"],
+                "new_price": precio_final,
                 "db_price": db_price
             })
 
