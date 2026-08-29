@@ -198,8 +198,8 @@ const PDFUpdaterTab = () => {
                     <th className="px-4 py-3">Texto Original (Factura)</th>
                     <th className="px-4 py-3">Precio Orig.</th>
                     <th className="px-4 py-3">Precio en $</th>
+                    <th className="px-4 py-3">Precio DB Actual</th>
                     <th className="px-4 py-3">Cruce Semántico IA (Catálogo)</th>
-                    <th className="px-4 py-3">Precisión</th>
                   </tr>
                 </thead>
               <tbody className="divide-y divide-slate-100">
@@ -224,6 +224,9 @@ const PDFUpdaterTab = () => {
                       <td className="px-4 py-3 font-bold text-green-600 whitespace-nowrap">
                         $ {(Number(item.new_price) / (exchangeRate || 1)).toFixed(2)}
                       </td>
+                      <td className="px-4 py-3 font-bold text-gray-500 whitespace-nowrap">
+                        {item.db_price ? `$ ${Number(item.db_price).toFixed(2)}` : '-'}
+                      </td>
                       <td className="px-4 py-3">
                       {item.matched_codmat ? (
                         <div>
@@ -235,9 +238,6 @@ const PDFUpdaterTab = () => {
                           <FiAlertCircle /> Sin Coincidencia Segura
                         </span>
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-xs italic text-slate-400">
-                      {item.match_reason}
                     </td>
                   </tr>
                 ))}

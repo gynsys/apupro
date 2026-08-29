@@ -36,7 +36,7 @@ def lexical_search_materials(db: Session, query: str, limit: int = 5):
         return []
     tsquery_str = " | ".join(words)
     sql = text('''
-        SELECT "CodMat", "Descri",
+        SELECT "CodMat", "Descri", "CosMat",
                ts_rank(to_tsvector('spanish', "Descri"), to_tsquery('spanish', :tsquery)) as rank
         FROM public.cost360_materials
         WHERE to_tsvector('spanish', "Descri") @@ to_tsquery('spanish', :tsquery)
@@ -44,7 +44,7 @@ def lexical_search_materials(db: Session, query: str, limit: int = 5):
         LIMIT :limit
     ''')
     results = db.execute(sql, {"tsquery": tsquery_str, "limit": limit}).fetchall()
-    return [{"id": r.CodMat, "desc": r.Descri} for r in results]
+    return [{"id": r.CodMat, "desc": r.Descri, "current_price": r.CosMat} for r in results]
 
 @router.post('/analyze-quote')
 async def analyze_quote(file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -100,7 +100,7 @@ async def analyze_quote(file: UploadFile = File(...), db: Session = Depends(get_
     prompt_paso1 = f'''
 Eres un extractor de datos. Extrae todos los insumos y precios del siguiente texto (proveniente de OCR de una cotización).
 Ignora basura o ruido del texto. Devuelve un arreglo JSON estricto con este formato:
-[{{ "descripcion": "nombre del material", "precio": 15.5 }}]
+[{{ "codigo_proveedor": "si aparece", "descripcion": "nombre del material", "precio": 15.5 }}]
 Texto OCR:
 {raw_text}
 '''
@@ -120,18 +120,37 @@ Texto OCR:
     # 3. Búsqueda Semántica / Léxica y 4. Emparejamiento Final (IA Paso 2)
     # Buscamos los top 5 candidatos para cada item
     items_para_prompt = []
+    items_finales = []
     for idx, item in enumerate(items_extraidos):
+        cod_prov = item.get('codigo_proveedor', '')
         desc = item.get('descripcion', '')
         precio = item.get('precio', 0.0)
+        
+        # El sinónimo será el código del proveedor + la descripción (para ser más únicos)
+        syn_str = f"[{cod_prov}] {desc}" if cod_prov else desc
+
+        # Verificar memoria (sinónimos guardados previamente)
+        syn = db.query(MaterialSynonym).filter(MaterialSynonym.synonym == syn_str).first()
+        if syn:
+            mat = db.query(CostMaterial).filter(CostMaterial.CodMat == syn.codmat).first()
+            items_finales.append({
+                "original_desc": syn_str,
+                "matched_codmat": syn.codmat,
+                "new_price": precio,
+                "db_price": mat.CosMat if mat else None
+            })
+            continue
+
         candidatos = lexical_search_materials(db, desc, limit=5)
         items_para_prompt.append({
             "id_temporal": idx,
-            "descripcion_cotizada": desc,
+            "descripcion_cotizada": syn_str,
             "precio_cotizado": precio,
             "candidatos_db": candidatos
         })
 
-    prompt_paso2 = f'''
+    if items_para_prompt:
+        prompt_paso2 = f'''
 Eres un experto analista de costos. Tienes una lista de ítems extraídos de una cotización y, para cada uno, 5 posibles candidatos de nuestra base de datos.
 Selecciona el 'id' (código) del candidato de la base de datos que sea EXACTAMENTE el mismo material cotizado. Si ninguno se parece, devuelve null para ese ítem.
 Devuelve un JSON estrictamente con este formato (un diccionario que mapee el id_temporal al id del candidato seleccionado):
@@ -143,21 +162,28 @@ Devuelve un JSON estrictamente con este formato (un diccionario que mapee el id_
 Datos a analizar:
 {json.dumps(items_para_prompt, indent=2, ensure_ascii=False)}
 '''
-    try:
-        resultado_final = call_llm_json(prompt_paso2)
-    except Exception as e:
-        logger.error(f"Error en Paso 2 (Matching IA): {e}")
-        raise HTTPException(status_code=500, detail="Fallo al hacer el cruce de materiales con IA.")
+        try:
+            resultado_final = call_llm_json(prompt_paso2)
+        except Exception as e:
+            logger.error(f"Error en Paso 2 (Matching IA): {e}")
+            raise HTTPException(status_code=500, detail="Fallo al hacer el cruce de materiales con IA.")
 
-    # Reconstruimos la lista final basándonos en el dict devuelto
-    items_finales = []
-    for item in items_para_prompt:
-        matched = resultado_final.get(str(item["id_temporal"])) if isinstance(resultado_final, dict) else None
-        items_finales.append({
-            "original_desc": item["descripcion_cotizada"],
-            "matched_codmat": matched,
-            "new_price": item["precio_cotizado"]
-        })
+        # Reconstruimos la lista final basándonos en el dict devuelto
+        for item in items_para_prompt:
+            matched_id = resultado_final.get(str(item["id_temporal"])) if isinstance(resultado_final, dict) else None
+            db_price = None
+            if matched_id:
+                for c in item["candidatos_db"]:
+                    if c["id"] == matched_id:
+                        db_price = c["current_price"]
+                        break
+            
+            items_finales.append({
+                "original_desc": item["descripcion_cotizada"],
+                "matched_codmat": matched_id,
+                "new_price": item["precio_cotizado"],
+                "db_price": db_price
+            })
 
     return {"status": "success", "items": items_finales}
 
