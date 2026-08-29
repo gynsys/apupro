@@ -1,5 +1,5 @@
 import React from "react";
-import { Settings, Gauge, Eye, ShieldCheck, Timer } from "lucide-react";
+import { Settings, Gauge, Eye, ShieldCheck, Timer, Globe } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/Card";
 import { Label, Input } from "../ui/Input";
 import { Switch } from "../ui/Switch";
@@ -157,6 +157,44 @@ export const ConfigPanel: React.FC<{ className?: string }> = ({ className }) => 
             }
             className="font-mono tabular-nums"
           />
+        </div>
+
+        {/* Portal URLs */}
+        <div className="space-y-3">
+          <Label className="flex items-center gap-1.5 text-zinc-300">
+            <Globe className="h-3.5 w-3.5 text-zinc-500" />
+            Portal URLs
+          </Label>
+          <div className="space-y-2">
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-zinc-500">Mercado Libre</label>
+              <Input
+                type="text"
+                value={config.portal_urls.mercadolibre || ''}
+                onChange={(e) =>
+                  handleConfigChange({
+                    portal_urls: { ...config.portal_urls, mercadolibre: e.target.value }
+                  })
+                }
+                placeholder="https://listado.mercadolibre.com.ve/{query}"
+                className="text-xs font-mono"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-zinc-500">EPA</label>
+              <Input
+                type="text"
+                value={config.portal_urls.epa || ''}
+                onChange={(e) =>
+                  handleConfigChange({
+                    portal_urls: { ...config.portal_urls, epa: e.target.value }
+                  })
+                }
+                placeholder="https://ve.epaenlinea.com/catalogsearch/result/?q={query}"
+                className="text-xs font-mono"
+              />
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

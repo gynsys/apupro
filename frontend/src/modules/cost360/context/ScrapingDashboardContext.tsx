@@ -19,7 +19,11 @@ export const ScrapingDashboardProvider: React.FC<{ children: ReactNode }> = ({ c
     bypass_cloudflare: true,
     request_delay_ms: 20000,
     active_portals: ['mercadolibre', 'epa'],
-    batch_size: 10
+    batch_size: 10,
+    portal_urls: {
+      mercadolibre: 'https://listado.mercadolibre.com.ve/{query}',
+      epa: 'https://ve.epaenlinea.com/catalogsearch/result/?q={query}'
+    }
   });
   
   const [isConfigDirty, setIsConfigDirty] = useState(false);

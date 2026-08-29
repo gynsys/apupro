@@ -65,14 +65,17 @@ async def analyze_quote(file: UploadFile = File(...), db: Session = Depends(get_
                     genai.configure(api_key=decrypt_api_key(provider.api_key_enc))
                 
                 raw_text = ""
+                images = []
                 for page in doc:
                     pix = page.get_pixmap(dpi=150)
                     img = PIL.Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                    
-                    # Llamar a Gemini Vision solo para OCR
+                    images.append(img)
+                
+                if images:
                     model = genai.GenerativeModel('gemini-1.5-flash')
-                    resp = model.generate_content([img, "Extrae todo el texto de esta imagen exactamente como aparece. Solo devuelve el texto plano, sin formato adicional."])
-                    raw_text += resp.text + "\\n"
+                    prompt_content = images + ["Extrae todo el texto de estas imágenes exactamente como aparece. Solo devuelve el texto plano, sin formato adicional, concatenando todo."]
+                    resp = model.generate_content(prompt_content)
+                    raw_text = resp.text
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Error leyendo PDF: {str(e)}")
     elif file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
@@ -131,12 +134,11 @@ Texto OCR:
     prompt_paso2 = f'''
 Eres un experto analista de costos. Tienes una lista de ítems extraídos de una cotización y, para cada uno, 5 posibles candidatos de nuestra base de datos.
 Selecciona el 'id' (código) del candidato de la base de datos que sea EXACTAMENTE el mismo material cotizado. Si ninguno se parece, devuelve null para ese ítem.
-Devuelve un JSON estrictamente con este formato:
-[{{
-    "original_desc": "descripcion_cotizada",
-    "matched_codmat": "id_del_candidato_seleccionado_o_null",
-    "new_price": precio_cotizado
-}}]
+Devuelve un JSON estrictamente con este formato (un diccionario que mapee el id_temporal al id del candidato seleccionado):
+{{
+    "0": "id_del_candidato_seleccionado_o_null",
+    "1": "id_del_candidato_seleccionado_o_null"
+}}
 
 Datos a analizar:
 {json.dumps(items_para_prompt, indent=2, ensure_ascii=False)}
@@ -147,13 +149,17 @@ Datos a analizar:
         logger.error(f"Error en Paso 2 (Matching IA): {e}")
         raise HTTPException(status_code=500, detail="Fallo al hacer el cruce de materiales con IA.")
 
-    if isinstance(resultado_final, dict):
-        for key in resultado_final.keys():
-            if isinstance(resultado_final[key], list):
-                resultado_final = resultado_final[key]
-                break
+    # Reconstruimos la lista final basándonos en el dict devuelto
+    items_finales = []
+    for item in items_para_prompt:
+        matched = resultado_final.get(str(item["id_temporal"])) if isinstance(resultado_final, dict) else None
+        items_finales.append({
+            "original_desc": item["descripcion_cotizada"],
+            "matched_codmat": matched,
+            "new_price": item["precio_cotizado"]
+        })
 
-    return {"status": "success", "items": resultado_final}
+    return {"status": "success", "items": items_finales}
 
 @router.post('/approve-quote')
 async def approve_quote(request: ApproveQuoteRequest, db: Session = Depends(get_db)):

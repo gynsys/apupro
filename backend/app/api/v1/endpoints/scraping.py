@@ -24,6 +24,10 @@ class ScrapingConfig(BaseModel):
     request_delay_ms: int = 20000
     active_portals: List[str] = ["mercadolibre", "epa"]
     batch_size: int = 10
+    portal_urls: Dict[str, str] = {
+        "mercadolibre": "https://listado.mercadolibre.com.ve/{query}",
+        "epa": "https://ve.epaenlinea.com/catalogsearch/result/?q={query}"
+    }
 
 # --- ESTADO GLOBAL DEL BOT ---
 class BotState:
@@ -187,9 +191,16 @@ def scraping_seguro_configurable():
                 for portal_actual in portales:
                     if precio_detectado > 0:
                         break
-                        
+
+                    # Obtener URL del portal desde la configuración
+                    url_template = config.portal_urls.get(portal_actual)
+                    if not url_template:
+                        bot_state.add_log("WARN", f"Portal '{portal_actual}' no tiene URL configurada, saltando...")
+                        continue
+
+                    url = url_template.replace('{query}', descripcion_url)
+
                     if portal_actual == 'epa':
-                        url = f'https://ve.epaenlinea.com/catalogsearch/result/?q={descripcion_url}'
                         headers = {'User-Agent': agente_aleatorio, 'Referer': 'https://ve.epaenlinea.com/'}
                         response = scraper.get(url, headers=headers, timeout=15)
                         
@@ -222,7 +233,6 @@ def scraping_seguro_configurable():
                                         continue
                                         
                     elif portal_actual == 'mercadolibre':
-                        url = f'https://listado.mercadolibre.com.ve/{descripcion_url}'
                         headers = {'User-Agent': agente_aleatorio, 'Referer': 'https://www.mercadolibre.com.ve/'}
                         response = scraper.get(url, headers=headers, timeout=15)
                         
