@@ -465,14 +465,16 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                         <thead className="bg-slate-50">
                           <tr>
                             <th className="px-4 py-2 text-left font-semibold text-slate-600">Código</th>
-                            <th className="px-4 py-2 text-left font-semibold text-slate-600">Descripción de la Partida</th>
+                            <th className="px-4 py-2 text-left font-semibold text-slate-600">CovPar</th>
+                              <th className="px-4 py-2 text-left font-semibold text-slate-600">Descripción de la Partida</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {usesModal.apus.map(apu => (
                             <tr key={apu.CodPar} className="hover:bg-slate-50">
                               <td className="px-4 py-2.5 font-mono text-blue-600 font-medium whitespace-nowrap">{apu.CodPar}</td>
-                              <td className="px-4 py-2.5 text-slate-700">{apu.Descri}</td>
+                              <td className="px-4 py-2.5 font-mono text-slate-500 whitespace-nowrap">{apu.CovPar || "-"}</td>
+                                <td className="px-4 py-2.5 text-slate-700">{apu.Descri}</td>
                             </tr>
                           ))}
                         </tbody>

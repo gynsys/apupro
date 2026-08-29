@@ -713,35 +713,35 @@ def update_rag_brain(background_tasks: BackgroundTasks):
 def get_material_apus(material_id: str, db: Session = Depends(get_db)):
     """Devuelve las partidas (APUs) donde se usa este material."""
     query = text('''
-        SELECT a."CodPar", i."Descri" 
+        SELECT a."CodPar", i."Descri", i."CovPar"
         FROM cost360_apu_materials a 
         JOIN cost360_items i ON a."CodPar" = i."CodPar" 
         WHERE a."CodIns" = :cod
     ''')
     rows = db.execute(query, {"cod": material_id}).fetchall()
-    return [{"CodPar": r[0], "Descri": r[1]} for r in rows]
+    return [{"CodPar": r[0], "Descri": r[1], "CovPar": r[2]} for r in rows]
 
 @router.get("/equipments/{equipment_id}/apus")
 def get_equipment_apus(equipment_id: str, db: Session = Depends(get_db)):
     """Devuelve las partidas (APUs) donde se usa este equipo."""
     query = text('''
-        SELECT a."CodPar", i."Descri" 
+        SELECT a."CodPar", i."Descri", i."CovPar"
         FROM cost360_apu_equipment a 
         JOIN cost360_items i ON a."CodPar" = i."CodPar" 
         WHERE a."CodEqu" = :cod
     ''')
     rows = db.execute(query, {"cod": equipment_id}).fetchall()
-    return [{"CodPar": r[0], "Descri": r[1]} for r in rows]
+    return [{"CodPar": r[0], "Descri": r[1], "CovPar": r[2]} for r in rows]
 
 @router.get("/labors/{labor_id}/apus")
 def get_labor_apus(labor_id: str, db: Session = Depends(get_db)):
     """Devuelve las partidas (APUs) donde se usa esta mano de obra."""
     query = text('''
-        SELECT a."CodPar", i."Descri" 
+        SELECT a."CodPar", i."Descri", i."CovPar"
         FROM cost360_apu_labor a 
         JOIN cost360_items i ON a."CodPar" = i."CodPar" 
         WHERE a."CodMan" = :cod
     ''')
     rows = db.execute(query, {"cod": labor_id}).fetchall()
-    return [{"CodPar": r[0], "Descri": r[1]} for r in rows]
+    return [{"CodPar": r[0], "Descri": r[1], "CovPar": r[2]} for r in rows]
 
