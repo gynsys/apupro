@@ -182,7 +182,10 @@ def get_apu_labors(db: Session, item_code: str):
         .filter(CostAPULabor.CodPar == item_code).all()
 
 def search_materials_paginated(db: Session, skip: int, limit: int, search: str):
-    query = db.query(CostMaterial)
+    valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$'))
+    used_materials = db.query(CostAPUMaterial.CodIns).filter(CostAPUMaterial.CodPar.in_(valid_apu_query))
+    
+    query = db.query(CostMaterial).filter(CostMaterial.CodMat.in_(used_materials))
     if search:
         search_term = f"%{search}%"
         query = query.filter(CostMaterial.CodMat.ilike(search_term) | CostMaterial.Descri.ilike(search_term))
@@ -191,7 +194,10 @@ def search_materials_paginated(db: Session, skip: int, limit: int, search: str):
     return total, items
 
 def search_equipments_paginated(db: Session, skip: int, limit: int, search: str):
-    query = db.query(CostEquipment)
+    valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$'))
+    used_equipments = db.query(CostAPUEquipment.CodEqu).filter(CostAPUEquipment.CodPar.in_(valid_apu_query))
+    
+    query = db.query(CostEquipment).filter(CostEquipment.CodEqu.in_(used_equipments))
     if search:
         search_term = f"%{search}%"
         query = query.filter(CostEquipment.CodEqu.ilike(search_term) | CostEquipment.Descri.ilike(search_term))
@@ -200,7 +206,10 @@ def search_equipments_paginated(db: Session, skip: int, limit: int, search: str)
     return total, items
 
 def search_labors_paginated(db: Session, skip: int, limit: int, search: str):
-    query = db.query(CostLabor)
+    valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$'))
+    used_labors = db.query(CostAPULabor.CodMan).filter(CostAPULabor.CodPar.in_(valid_apu_query))
+    
+    query = db.query(CostLabor).filter(CostLabor.CodMan.in_(used_labors))
     if search:
         search_term = f"%{search}%"
         query = query.filter(CostLabor.CodMan.ilike(search_term) | CostLabor.Descri.ilike(search_term))
