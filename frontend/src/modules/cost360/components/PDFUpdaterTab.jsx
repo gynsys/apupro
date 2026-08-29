@@ -10,6 +10,7 @@ const PDFUpdaterTab = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState([]);
   const [selectedItems, setSelectedItems] = useState({});
+  const [exchangeRate, setExchangeRate] = useState(1);
   const fileInputRef = useRef(null);
 
   const handleFileSelect = (e) => {
@@ -69,7 +70,7 @@ const PDFUpdaterTab = () => {
     const itemsToApprove = results.filter((item, idx) => selectedItems[idx] && item.matched_codmat).map(item => ({
       original_desc: item.original_desc,
       matched_codmat: item.matched_codmat,
-      new_price: parseFloat(item.original_price)
+      new_price: parseFloat(item.new_price) / parseFloat(exchangeRate || 1)
     }));
 
     if (itemsToApprove.length === 0) {
@@ -158,28 +159,49 @@ const PDFUpdaterTab = () => {
       )}
 
       {results.length > 0 && (
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-bold text-slate-800">Resultados del Análisis ({results.length} items)</h3>
-            <button 
-              onClick={handleApprove}
-              className="px-6 py-2.5 bg-green-600 text-white font-bold rounded-xl shadow-md hover:bg-green-700 transition-colors flex items-center gap-2"
-            >
-              <FiCheck /> Actualizar Precios Seleccionados
-            </button>
-          </div>
-          
-          <div className="overflow-x-auto border border-slate-200 rounded-xl">
-            <table className="w-full text-left text-sm text-slate-600">
-              <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 uppercase text-xs">
-                <tr>
-                  <th className="px-4 py-3 text-center">✔</th>
-                  <th className="px-4 py-3">Texto Original (Factura)</th>
-                  <th className="px-4 py-3">Precio Orig.</th>
-                  <th className="px-4 py-3">Cruce Semántico IA (Catálogo)</th>
-                  <th className="px-4 py-3">Precisión</th>
-                </tr>
-              </thead>
+        <div className="flex-1 overflow-auto bg-gray-50 p-6">
+          <div className="max-w-5xl mx-auto space-y-6">
+            <div className="flex items-center gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+              <div className="flex-1">
+                <label className="block text-sm font-bold text-gray-700 mb-1">Tasa de Cambio (Si está en Bs)</label>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="number" 
+                    className="w-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+                    value={exchangeRate} 
+                    onChange={(e) => setExchangeRate(e.target.value)} 
+                    placeholder="Ej: 36.5" 
+                  />
+                  <span className="text-sm text-gray-500 font-medium">VES/USD</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Deja en 1 si la cotización ya está en dólares.</p>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold text-slate-800">
+                Resultados del Análisis ({results.length} items)
+              </h2>
+              <button 
+                onClick={handleApprove}
+                className="px-6 py-2.5 bg-green-600 text-white font-bold rounded-xl shadow-md hover:bg-green-700 transition-colors flex items-center gap-2"
+              >
+                <FiCheck /> Actualizar Precios Seleccionados
+              </button>
+            </div>
+            
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-gray-50 text-gray-600 border-b border-gray-200 uppercase text-xs font-bold">
+                  <tr>
+                    <th className="px-4 py-3 text-center">✔</th>
+                    <th className="px-4 py-3">Texto Original (Factura)</th>
+                    <th className="px-4 py-3">Precio Orig.</th>
+                    <th className="px-4 py-3">Precio en $</th>
+                    <th className="px-4 py-3">Cruce Semántico IA (Catálogo)</th>
+                    <th className="px-4 py-3">Precisión</th>
+                  </tr>
+                </thead>
               <tbody className="divide-y divide-slate-100">
                 {results.map((item, idx) => (
                   <tr key={idx} className={selectedItems[idx] ? 'bg-blue-50/30' : ''}>
@@ -193,13 +215,16 @@ const PDFUpdaterTab = () => {
                         />
                       )}
                     </td>
-                    <td className="px-4 py-3 font-medium text-slate-800">
-                      {item.original_desc}
-                    </td>
-                    <td className="px-4 py-3 font-bold text-blue-600 whitespace-nowrap">
-                      $ {Number(item.original_price).toFixed(2)}
-                    </td>
-                    <td className="px-4 py-3">
+                      <td className="px-4 py-3">
+                        {item.original_desc}
+                      </td>
+                      <td className="px-4 py-3 font-bold text-blue-600 whitespace-nowrap">
+                        $ {Number(item.new_price).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 font-bold text-green-600 whitespace-nowrap">
+                        $ {(Number(item.new_price) / (exchangeRate || 1)).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3">
                       {item.matched_codmat ? (
                         <div>
                           <div className="font-bold text-indigo-700">{item.matched_codmat}</div>
@@ -219,6 +244,7 @@ const PDFUpdaterTab = () => {
               </tbody>
             </table>
           </div>
+        </div>
         </div>
       )}
     </div>
