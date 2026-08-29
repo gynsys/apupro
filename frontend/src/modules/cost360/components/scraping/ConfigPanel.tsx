@@ -1,5 +1,5 @@
 import React from "react";
-import { Settings, Gauge, Eye, ShieldCheck, Timer, Globe } from "lucide-react";
+import { Settings, Gauge, Eye, ShieldCheck, Timer, Globe, Plus, Trash2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/Card";
 import { Label, Input } from "../ui/Input";
 import { Switch } from "../ui/Switch";
@@ -161,39 +161,87 @@ export const ConfigPanel: React.FC<{ className?: string }> = ({ className }) => 
 
         {/* Portal URLs */}
         <div className="space-y-3">
-          <Label className="flex items-center gap-1.5 text-zinc-300">
-            <Globe className="h-3.5 w-3.5 text-zinc-500" />
-            Portal URLs
-          </Label>
+          <div className="flex items-center justify-between">
+            <Label className="flex items-center gap-1.5 text-zinc-300">
+              <Globe className="h-3.5 w-3.5 text-zinc-500" />
+              Portal URLs
+            </Label>
+            <button
+              onClick={() => {
+                const newPortalName = `portal_${Object.keys(config.portal_urls).length + 1}`;
+                handleConfigChange({
+                  portal_urls: { ...config.portal_urls, [newPortalName]: 'https://example.com/{query}' }
+                });
+              }}
+              className="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1 rounded flex items-center gap-1 transition-colors"
+            >
+              <Plus className="h-3 w-3" />
+              Agregar
+            </button>
+          </div>
           <div className="space-y-2">
-            <div className="space-y-1">
-              <label className="text-[11px] font-medium text-zinc-500">Mercado Libre</label>
-              <Input
-                type="text"
-                value={config.portal_urls.mercadolibre || ''}
-                onChange={(e) =>
-                  handleConfigChange({
-                    portal_urls: { ...config.portal_urls, mercadolibre: e.target.value }
-                  })
-                }
-                placeholder="https://listado.mercadolibre.com.ve/{query}"
-                className="text-xs font-mono"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] font-medium text-zinc-500">EPA</label>
-              <Input
-                type="text"
-                value={config.portal_urls.epa || ''}
-                onChange={(e) =>
-                  handleConfigChange({
-                    portal_urls: { ...config.portal_urls, epa: e.target.value }
-                  })
-                }
-                placeholder="https://ve.epaenlinea.com/catalogsearch/result/?q={query}"
-                className="text-xs font-mono"
-              />
-            </div>
+            {Object.entries(config.portal_urls).map(([portalName, url]) => (
+              <div key={portalName} className="space-y-1 p-2 rounded bg-zinc-800/50 border border-zinc-700">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-1">
+                    <input
+                      type="checkbox"
+                      id={`portal-${portalName}`}
+                      checked={config.active_portals.includes(portalName)}
+                      onChange={(e) => {
+                        const newActivePortals = e.target.checked
+                          ? [...config.active_portals, portalName]
+                          : config.active_portals.filter(p => p !== portalName);
+                        handleConfigChange({ active_portals: newActivePortals });
+                      }}
+                      className="w-4 h-4 rounded border-zinc-600 bg-zinc-700 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-zinc-900"
+                    />
+                    <Input
+                      type="text"
+                      value={portalName}
+                      onChange={(e) => {
+                        const newPortalUrls = { ...config.portal_urls };
+                        delete newPortalUrls[portalName];
+                        newPortalUrls[e.target.value] = url;
+                        const newActivePortals = config.active_portals.map(p =>
+                          p === portalName ? e.target.value : p
+                        );
+                        handleConfigChange({
+                          portal_urls: newPortalUrls,
+                          active_portals: newActivePortals
+                        });
+                      }}
+                      className="text-xs font-mono w-32 h-7"
+                    />
+                  </div>
+                  <button
+                    onClick={() => {
+                      const newPortalUrls = { ...config.portal_urls };
+                      delete newPortalUrls[portalName];
+                      const newActivePortals = config.active_portals.filter(p => p !== portalName);
+                      handleConfigChange({
+                        portal_urls: newPortalUrls,
+                        active_portals: newActivePortals
+                      });
+                    }}
+                    className="text-zinc-500 hover:text-red-500 transition-colors shrink-0"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <Input
+                  type="text"
+                  value={url}
+                  onChange={(e) =>
+                    handleConfigChange({
+                      portal_urls: { ...config.portal_urls, [portalName]: e.target.value }
+                    })
+                  }
+                  placeholder="https://example.com/{query}"
+                  className="text-xs font-mono h-7"
+                />
+              </div>
+            ))}
           </div>
         </div>
       </CardContent>

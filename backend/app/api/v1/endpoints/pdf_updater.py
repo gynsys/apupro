@@ -130,12 +130,12 @@ Texto OCR:
         syn_str = f"[{cod_prov}] {desc}" if cod_prov else desc
 
         # Verificar memoria (sinónimos guardados previamente)
-        syn = db.query(MaterialSynonym).filter(MaterialSynonym.synonym == syn_str).first()
+        syn = db.query(MaterialSynonym).filter(MaterialSynonym.provider_text == syn_str).first()
         if syn:
-            mat = db.query(CostMaterial).filter(CostMaterial.CodMat == syn.codmat).first()
+            mat = db.query(CostMaterial).filter(CostMaterial.CodMat == syn.CodMat).first()
             items_finales.append({
                 "original_desc": syn_str,
-                "matched_codmat": syn.codmat,
+                "matched_codmat": syn.CodMat,
                 "new_price": precio,
                 "db_price": mat.CosMat if mat else None
             })
@@ -197,9 +197,9 @@ async def approve_quote(request: ApproveQuoteRequest, db: Session = Depends(get_
                 mat.CosMat = item.new_price
                 
                 # Check for synonym
-                syn = db.query(MaterialSynonym).filter(MaterialSynonym.synonym == item.original_desc, MaterialSynonym.codmat == item.matched_codmat).first()
+                syn = db.query(MaterialSynonym).filter(MaterialSynonym.provider_text == item.original_desc, MaterialSynonym.CodMat == item.matched_codmat).first()
                 if not syn:
-                    new_syn = MaterialSynonym(synonym=item.original_desc, codmat=item.matched_codmat)
+                    new_syn = MaterialSynonym(provider_text=item.original_desc, CodMat=item.matched_codmat)
                     db.add(new_syn)
                 
                 updated_count += 1
