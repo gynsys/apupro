@@ -162,5 +162,33 @@ export const budgetService = {
     });
     if (!response.ok) throw new Error(`Error al eliminar componente de tipo ${type}`);
     return response.json();
+  },
+
+  // Backup functionality
+  exportBackup: async (budgetId) => {
+    const response = await fetch(`${API_URL}/budgets/${budgetId}/backup`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    if (!response.ok) throw new Error('Error al exportar backup');
+    return response.json();
+  },
+
+  importBackup: async (file) => {
+    const formData = new FormData();
+    formData.append('backup_file', file);
+
+    const response = await fetch(`${API_URL}/budgets/import-backup`, {
+      method: 'POST',
+      headers: {
+        'Authorization': getAuthHeaders()['Authorization']
+      },
+      body: formData
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Error al importar backup');
+    }
+    return response.json();
   }
 };

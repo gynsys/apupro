@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Folder, FolderOpen, Plus, FileText, Trash2, Edit3, Copy, Search, 
-  Settings, Printer, FileSpreadsheet,
+import {
+  Folder, FolderOpen, Plus, FileText, Trash2, Edit3, Copy, Search,
+  Settings, Printer, FileSpreadsheet, CloudDownload, Upload,
   MoreVertical, Clock, DollarSign, Loader
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -18,6 +18,8 @@ export default function BudgetHomePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingId, setDeletingId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [importingBackup, setImportingBackup] = useState(false);
+  const fileInputRef = useRef(null);
   const [newBudgetName, setNewBudgetName] = useState('');
   
   const [duplicatingBudget, setDuplicatingBudget] = useState(null);
@@ -160,6 +162,63 @@ export default function BudgetHomePage() {
     }
   };
 
+  const handleBackupExport = async (budget) => {
+    try {
+      const token = localStorage.getItem('arko_admin_token');
+      const API_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
+        ? 'http://localhost:8010'
+        : window.location.origin;
+
+      const response = await fetch(`${API_URL}/api/v1/budgets/${budget.id}/backup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al generar el backup');
+      }
+
+      const result = await response.json();
+      toast.success(result.message || 'Backup enviado exitosamente a tu correo');
+    } catch (error) {
+      console.error('Error al exportar backup:', error);
+      toast.error('Error al exportar el backup');
+    }
+  };
+
+  const handleBackupImport = async (file) => {
+    try {
+      setImportingBackup(true);
+      const result = await budgetService.importBackup(file);
+      toast.success(`Backup importado exitosamente: ${result.budget_name}`);
+      loadBudgets(); // Recargar presupuestos
+    } catch (error) {
+      console.error('Error al importar backup:', error);
+      toast.error(error.message || 'Error al importar el backup');
+    } finally {
+      setImportingBackup(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.name.endsWith('.cb')) {
+        toast.error('Solo se permiten archivos .cb');
+        return;
+      }
+      handleBackupImport(file);
+    }
+  };
+    }
+  };
+
   const handleDuplicate = async (e) => {
     e.preventDefault();
     if (!duplicateName.trim()) return;
@@ -212,12 +271,28 @@ export default function BudgetHomePage() {
             </h1>
             <p className="text-slate-500 mt-1">Administra, crea y organiza todos tus proyectos</p>
           </div>
-          <button 
+          <button
             onClick={() => setIsModalOpen(true)}
             className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out"
           >
             <Plus size={20} className="group-hover:scale-110 group-hover:rotate-90 transition-transform duration-300" />
             Nuevo Presupuesto
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importingBackup}
+            className="group flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Upload size={20} className="group-hover:scale-110 transition-transform duration-300" />
+            {importingBackup ? 'Importando...' : 'Importar Backup'}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".cb"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
           </button>
         </div>
       </div>
@@ -293,14 +368,21 @@ export default function BudgetHomePage() {
                   >
                     <Printer size={16} />
                   </button>
-                  <button 
+                  <button
                     onClick={(e) => { e.stopPropagation(); handleExportToExcel(budget); }}
                     className="btn-accion"
                     title="Exportar a Excel"
                   >
                     <FileSpreadsheet size={16} />
                   </button>
-                  <button 
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleBackupExport(budget); }}
+                    className="btn-accion"
+                    title="Exportar Backup"
+                  >
+                    <CloudDownload size={16} />
+                  </button>
+                  <button
                     onClick={(e) => { e.stopPropagation(); setRenamingBudget(budget); setRenameName(budget.name); }}
                     className="btn-accion"
                     title="Editar"
