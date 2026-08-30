@@ -4,6 +4,7 @@ import {
   Layout, LogOut, Menu, X, Home, Settings,
   FileText, Database, Server, Cpu, ChevronRight, Copy
 } from 'lucide-react';
+import { FaTools } from 'react-icons/fa';
 import { AuthContext } from '../../context/AuthContext';
 
 const NAV_ITEMS = [
@@ -30,7 +31,7 @@ export default function AppLayout() {
   const getNavItems = () => {
     let items = [...NAV_ITEMS];
     if (user?.email === 'admin@arko360.net') {
-      items.push({ name: 'Mantenimiento BD', href: '/cost360/admin-db', Icon: Database });
+      items.push({ name: 'Mantenimiento BD', href: '/cost360/admin-db', Icon: FaTools });
     }
     return items;
   };
@@ -55,10 +56,16 @@ export default function AppLayout() {
                 onClick={() => setSidebarOpen(false)}
                 className="flex items-center justify-center p-3 rounded-xl transition-all duration-200 text-slate-500 hover:bg-[#FEF3C7] hover:text-slate-800"
               >
-                <Icon
-                  size={24}
-                  className={active ? 'text-blue-600' : 'text-slate-400'}
-                />
+                {typeof Icon === 'function' ? (
+                  <Icon
+                    size={24}
+                    className={active ? 'text-blue-600' : 'text-slate-400'}
+                  />
+                ) : (
+                  <Icon
+                    className={`${active ? 'text-blue-600' : 'text-slate-400'} w-6 h-6`}
+                  />
+                )}
               </Link>
               
               {/* Tooltip */}
