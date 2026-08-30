@@ -132,11 +132,12 @@ export default function BudgetHomePage() {
       const API_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') 
         ? 'http://localhost:8010' 
         : window.location.origin;
-      
+
       const response = await fetch(`${API_URL}/api/v1/budgets/${budget.id}/export-excel`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
       });
       
