@@ -260,39 +260,39 @@ export default function BudgetHomePage() {
   return (
     <div className="h-full flex flex-col p-4 md:p-8 overflow-y-auto">
       <div className="max-w-6xl w-full mx-auto flex-1">
-      {/* HEADER SECTION */}
-      <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-600">
-              Gestor de Presupuestos
-            </h1>
-            <p className="text-slate-500 mt-1">Administra, crea y organiza todos tus proyectos</p>
+        {/* HEADER SECTION */}
+        <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-600">
+                Gestor de Presupuestos
+              </h1>
+              <p className="text-slate-500 mt-1">Administra, crea y organiza todos tus proyectos</p>
+            </div>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out"
+            >
+              <Plus size={20} className="group-hover:scale-110 group-hover:rotate-90 transition-transform duration-300" />
+              Nuevo Presupuesto
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importingBackup}
+              className="group flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Upload size={20} className="group-hover:scale-110 transition-transform duration-300" />
+              {importingBackup ? 'Importando...' : 'Importar Backup'}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".cb"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
           </div>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out"
-          >
-            <Plus size={20} className="group-hover:scale-110 group-hover:rotate-90 transition-transform duration-300" />
-            Nuevo Presupuesto
-          </button>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importingBackup}
-            className="group flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Upload size={20} className="group-hover:scale-110 transition-transform duration-300" />
-            {importingBackup ? 'Importando...' : 'Importar Backup'}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".cb"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
         </div>
-      </div>
 
       {/* SEARCH AND FILTER BAR */}
       <div className="bg-white rounded-2xl p-1.5 shadow-sm border-2 border-slate-300 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-75">
