@@ -425,7 +425,6 @@ export default function BudgetHomePage() {
         </div>
       )}
       </div>
-      </div>
 
       {/* NEW BUDGET MODAL */}
       {isModalOpen && (
