@@ -20,7 +20,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
     setUsesModal({ isOpen: true, item, apus: [], loading: true });
     try {
       const res = await fetch(`${API_URL}/cost360/${resourceType}/${item[config.idKey]}/apus`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${adminMode ? localStorage.getItem('arko_admin_token') : localStorage.getItem('token')}` }
       });
       if (res.ok) {
         const apus = await res.json();
@@ -39,7 +39,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
     try {
       const dbParam = selectedDatabase && selectedDatabase !== 'master' ? `&database_id=${selectedDatabase}` : '';
       const res = await fetch(`${API_URL}/cost360/${resourceType}?search=${encodeURIComponent(searchQuery)}&skip=${currentSkip}&limit=${limit}${dbParam}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${adminMode ? localStorage.getItem('arko_admin_token') : localStorage.getItem('token')}` }
       });
       if (res.ok) {
         const data = await res.json();
@@ -144,7 +144,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
     try {
       const dbParam = selectedDatabase && selectedDatabase !== 'master' ? `&database_id=${selectedDatabase}` : '';
       const res = await fetch(`${API_URL}/cost360/${resourceType}?search=${encodeURIComponent(search)}&skip=0&limit=50000${dbParam}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${adminMode ? localStorage.getItem('arko_admin_token') : localStorage.getItem('token')}` }
       });
       if (res.ok) {
         const data = await res.json();
