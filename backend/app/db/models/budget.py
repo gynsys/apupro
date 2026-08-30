@@ -9,12 +9,13 @@ def generate_uuid():
 
 class Budget(Base):
     __tablename__ = "budgets"
-    
+
     id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, nullable=False, index=True)  # ID del usuario propietario
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     client_name = Column(String, nullable=True)
-    
+
     # Datos Generales del Presupuesto
     currency = Column(String, default="USD") # USD o BS
     exchange_rate = Column(Float, default=1.0) # Tasa de cambio (e.g. 36.5)
@@ -23,21 +24,21 @@ class Budget(Base):
     profit_percent = Column(Float, default=10.0) # % de Utilidad e Imprevistos
     iva_percent = Column(Float, default=16.0) # % de I.V.A.
     labor_bonus = Column(Float, default=0.0) # Bono global para mano de obra
-    
+
     # Índices de Inflación
     material_inflation = Column(Float, default=0.0)
     labor_inflation = Column(Float, default=0.0)
     equipment_inflation = Column(Float, default=0.0)
-    
+
     # Datos de la Empresa y Obra
     company_name = Column(String, nullable=True)
     company_rif = Column(String, nullable=True)
     project_name = Column(Text, nullable=True)
-    
+
     # Fechas
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     items = relationship("BudgetItem", back_populates="budget", cascade="all, delete-orphan", order_by="BudgetItem.order")
 
 

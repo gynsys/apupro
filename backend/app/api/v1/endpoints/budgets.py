@@ -11,56 +11,61 @@ from app.db.base import get_db
 from app.db.models.budget import Budget, BudgetItem, BudgetAPUMaterial as DBMaterial, BudgetAPUEquipment as DBEquipment, BudgetAPULabor as DBLabor
 from app.db.models.cost360 import CostItem, CostAPUMaterial, CostAPUEquipment, CostAPULabor
 from app.schemas.budget import (
-    Budget as BudgetSchema, BudgetCreate, BudgetUpdate, BudgetSummary, 
-    BudgetItemCreate, BudgetItem as BudgetItemSchema, BudgetItemUpdate, 
+    Budget as BudgetSchema, BudgetCreate, BudgetUpdate, BudgetSummary,
+    BudgetItemCreate, BudgetItem as BudgetItemSchema, BudgetItemUpdate,
     BudgetAPUMaterialBase, BudgetAPUMaterial, BudgetAPUMaterialUpdate,
     BudgetAPUEquipmentBase, BudgetAPUEquipment, BudgetAPUEquipmentUpdate,
     BudgetAPULaborBase, BudgetAPULabor, BudgetAPULaborUpdate
 )
+from app.api.v1.endpoints.arko import get_current_arko_admin
 
 router = APIRouter()
 
 @router.post("/", response_model=BudgetSchema, status_code=status.HTTP_201_CREATED)
-def create_budget(budget_in: BudgetCreate, db: Session = Depends(get_db)):
-    db_budget = Budget(**budget_in.model_dump())
+def create_budget(budget_in: BudgetCreate, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
+    budget_data = budget_in.model_dump()
+    # Asignar automáticamente el user_id del usuario autenticado
+    budget_data["user_id"] = str(current_user.id)
+    db_budget = Budget(**budget_data)
     db.add(db_budget)
     db.commit()
     db.refresh(db_budget)
     return db_budget
 
 @router.get("/", response_model=List[BudgetSummary])
-def get_budgets(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    budgets = db.query(Budget).offset(skip).limit(limit).all()
+def get_budgets(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
+    # Solo mostrar presupuestos del usuario autenticado
+    budgets = db.query(Budget).filter(Budget.user_id == str(current_user.id)).offset(skip).limit(limit).all()
     return budgets
 
 @router.get("/{budget_id}", response_model=BudgetSchema)
-def get_budget(budget_id: str, db: Session = Depends(get_db)):
-    budget = db.query(Budget).filter(Budget.id == budget_id).first()
+def get_budget(budget_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
+    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
     if not budget:
         raise HTTPException(status_code=404, detail="Budget not found")
     return budget
 
 @router.put("/{budget_id}", response_model=BudgetSchema)
-def update_budget(budget_id: str, budget_in: BudgetUpdate, db: Session = Depends(get_db)):
-    budget = db.query(Budget).filter(Budget.id == budget_id).first()
+def update_budget(budget_id: str, budget_in: BudgetUpdate, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
+    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
     if not budget:
         raise HTTPException(status_code=404, detail="Budget not found")
-    
+
     update_data = budget_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(budget, field, value)
-    
+
     db.commit()
     db.refresh(budget)
     return budget
 
 @router.post("/{budget_id}/upload-logo")
-async def upload_budget_logo(budget_id: str, logo: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_budget_logo(budget_id: str, logo: UploadFile = File(...), db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     """Sube el logo de la empresa para un presupuesto específico"""
-    budget = db.query(Budget).filter(Budget.id == budget_id).first()
+    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
     if not budget:
         raise HTTPException(status_code=404, detail="Budget not found")
-    
+
     # Crear directorio para logos si no existe
     upload_dir = Path("public/company_logos")
     upload_dir.mkdir(parents=True, exist_ok=True)
@@ -88,8 +93,8 @@ async def upload_budget_logo(budget_id: str, logo: UploadFile = File(...), db: S
     return {"logo_url": logo_url}
 
 @router.post("/{budget_id}/items", response_model=BudgetItemSchema)
-def add_item_to_budget(budget_id: str, item_in: BudgetItemCreate, db: Session = Depends(get_db)):
-    budget = db.query(Budget).filter(Budget.id == budget_id).first()
+def add_item_to_budget(budget_id: str, item_in: BudgetItemCreate, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
+    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
     if not budget:
         raise HTTPException(status_code=404, detail="Budget not found")
         
@@ -204,7 +209,7 @@ def add_item_to_budget(budget_id: str, item_in: BudgetItemCreate, db: Session = 
     return db_item
 
 @router.delete("/{budget_id}/items/{item_id}")
-def delete_item_from_budget(budget_id: str, item_id: str, db: Session = Depends(get_db)):
+def delete_item_from_budget(budget_id: str, item_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     item = db.query(BudgetItem).filter(BudgetItem.id == item_id, BudgetItem.budget_id == budget_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -213,8 +218,8 @@ def delete_item_from_budget(budget_id: str, item_id: str, db: Session = Depends(
     return {"ok": True}
 
 @router.post("/{budget_id}/items/reorder")
-def reorder_budget_items(budget_id: str, item_ids: List[str], db: Session = Depends(get_db)):
-    budget = db.query(Budget).filter(Budget.id == budget_id).first()
+def reorder_budget_items(budget_id: str, item_ids: List[str], db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
+    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
     if not budget:
         raise HTTPException(status_code=404, detail="Budget not found")
         
@@ -228,13 +233,14 @@ def reorder_budget_items(budget_id: str, item_ids: List[str], db: Session = Depe
     return {"ok": True}
 
 @router.post("/{budget_id}/duplicate", response_model=BudgetSchema)
-def duplicate_budget(budget_id: str, new_name: str, db: Session = Depends(get_db)):
-    budget = db.query(Budget).filter(Budget.id == budget_id).first()
+def duplicate_budget(budget_id: str, new_name: str, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
+    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
     if not budget:
         raise HTTPException(status_code=404, detail="Budget not found")
     
     # 1. Duplicate Budget
     new_budget = Budget(
+        user_id=str(current_user.id),  # Asignar al mismo usuario
         name=new_name,
         currency=budget.currency,
         exchange_rate=budget.exchange_rate,
@@ -308,7 +314,7 @@ def duplicate_budget(budget_id: str, new_name: str, db: Session = Depends(get_db
     return new_budget
 
 @router.put("/{budget_id}/items/{item_id}", response_model=BudgetItemSchema)
-def update_item_in_budget(budget_id: str, item_id: str, item_in: BudgetItemUpdate, db: Session = Depends(get_db)):
+def update_item_in_budget(budget_id: str, item_id: str, item_in: BudgetItemUpdate, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     db_budget = db.query(Budget).filter(Budget.id == budget_id).first()
     if not db_budget:
         raise HTTPException(status_code=404, detail="Budget not found")
@@ -325,7 +331,7 @@ def update_item_in_budget(budget_id: str, item_id: str, item_in: BudgetItemUpdat
     return db_item
 
 @router.post("/{budget_id}/items/{item_id}/materials", response_model=BudgetAPUMaterial)
-def add_material_to_item(budget_id: str, item_id: str, material_in: BudgetAPUMaterialBase, db: Session = Depends(get_db)):
+def add_material_to_item(budget_id: str, item_id: str, material_in: BudgetAPUMaterialBase, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     db_item = db.query(BudgetItem).filter(BudgetItem.id == item_id, BudgetItem.budget_id == budget_id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -340,7 +346,7 @@ def add_material_to_item(budget_id: str, item_id: str, material_in: BudgetAPUMat
     return db_material
 
 @router.post("/{budget_id}/items/{item_id}/equipments", response_model=BudgetAPUEquipment)
-def add_equipment_to_item(budget_id: str, item_id: str, equipment_in: BudgetAPUEquipmentBase, db: Session = Depends(get_db)):
+def add_equipment_to_item(budget_id: str, item_id: str, equipment_in: BudgetAPUEquipmentBase, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     db_item = db.query(BudgetItem).filter(BudgetItem.id == item_id, BudgetItem.budget_id == budget_id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -355,7 +361,7 @@ def add_equipment_to_item(budget_id: str, item_id: str, equipment_in: BudgetAPUE
     return db_equipment
 
 @router.post("/{budget_id}/items/{item_id}/labors", response_model=BudgetAPULabor)
-def add_labor_to_item(budget_id: str, item_id: str, labor_in: BudgetAPULaborBase, db: Session = Depends(get_db)):
+def add_labor_to_item(budget_id: str, item_id: str, labor_in: BudgetAPULaborBase, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     db_item = db.query(BudgetItem).filter(BudgetItem.id == item_id, BudgetItem.budget_id == budget_id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -370,7 +376,7 @@ def add_labor_to_item(budget_id: str, item_id: str, labor_in: BudgetAPULaborBase
     return db_labor
 
 @router.put("/{budget_id}/items/{item_id}/materials/{component_id}", response_model=BudgetAPUMaterial)
-def update_material_in_item(budget_id: str, item_id: str, component_id: str, comp_in: BudgetAPUMaterialUpdate, db: Session = Depends(get_db)):
+def update_material_in_item(budget_id: str, item_id: str, component_id: str, comp_in: BudgetAPUMaterialUpdate, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     comp = db.query(DBMaterial).filter(DBMaterial.id == component_id, DBMaterial.budget_item_id == item_id).first()
     if not comp: raise HTTPException(status_code=404, detail="Material not found")
     for key, value in comp_in.dict(exclude_unset=True).items():
@@ -380,7 +386,7 @@ def update_material_in_item(budget_id: str, item_id: str, component_id: str, com
     return comp
 
 @router.put("/{budget_id}/items/{item_id}/equipments/{component_id}", response_model=BudgetAPUEquipment)
-def update_equipment_in_item(budget_id: str, item_id: str, component_id: str, comp_in: BudgetAPUEquipmentUpdate, db: Session = Depends(get_db)):
+def update_equipment_in_item(budget_id: str, item_id: str, component_id: str, comp_in: BudgetAPUEquipmentUpdate, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     comp = db.query(DBEquipment).filter(DBEquipment.id == component_id, DBEquipment.budget_item_id == item_id).first()
     if not comp: raise HTTPException(status_code=404, detail="Equipment not found")
     for key, value in comp_in.dict(exclude_unset=True).items():
@@ -390,7 +396,7 @@ def update_equipment_in_item(budget_id: str, item_id: str, component_id: str, co
     return comp
 
 @router.put("/{budget_id}/items/{item_id}/labors/{component_id}", response_model=BudgetAPULabor)
-def update_labor_in_item(budget_id: str, item_id: str, component_id: str, comp_in: BudgetAPULaborUpdate, db: Session = Depends(get_db)):
+def update_labor_in_item(budget_id: str, item_id: str, component_id: str, comp_in: BudgetAPULaborUpdate, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     comp = db.query(DBLabor).filter(DBLabor.id == component_id, DBLabor.budget_item_id == item_id).first()
     if not comp: raise HTTPException(status_code=404, detail="Labor not found")
     for key, value in comp_in.dict(exclude_unset=True).items():
@@ -400,7 +406,7 @@ def update_labor_in_item(budget_id: str, item_id: str, component_id: str, comp_i
     return comp
 
 @router.delete("/{budget_id}/items/{item_id}/materials/{component_id}")
-def delete_material_from_item(budget_id: str, item_id: str, component_id: str, db: Session = Depends(get_db)):
+def delete_material_from_item(budget_id: str, item_id: str, component_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     comp = db.query(DBMaterial).filter(DBMaterial.id == component_id, DBMaterial.budget_item_id == item_id).first()
     if not comp:
         raise HTTPException(status_code=404, detail="Material not found")
@@ -409,7 +415,7 @@ def delete_material_from_item(budget_id: str, item_id: str, component_id: str, d
     return {"ok": True}
 
 @router.delete("/{budget_id}/items/{item_id}/equipments/{component_id}")
-def delete_equipment_from_item(budget_id: str, item_id: str, component_id: str, db: Session = Depends(get_db)):
+def delete_equipment_from_item(budget_id: str, item_id: str, component_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     comp = db.query(DBEquipment).filter(DBEquipment.id == component_id, DBEquipment.budget_item_id == item_id).first()
     if not comp:
         raise HTTPException(status_code=404, detail="Equipment not found")
@@ -418,7 +424,7 @@ def delete_equipment_from_item(budget_id: str, item_id: str, component_id: str, 
     return {"ok": True}
 
 @router.delete("/{budget_id}/items/{item_id}/labors/{component_id}")
-def delete_labor_from_item(budget_id: str, item_id: str, component_id: str, db: Session = Depends(get_db)):
+def delete_labor_from_item(budget_id: str, item_id: str, component_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     comp = db.query(DBLabor).filter(DBLabor.id == component_id, DBLabor.budget_item_id == item_id).first()
     if not comp:
         raise HTTPException(status_code=404, detail="Labor not found")
@@ -427,10 +433,10 @@ def delete_labor_from_item(budget_id: str, item_id: str, component_id: str, db: 
     return {"ok": True}
 
 @router.post("/{budget_id}/sync_prices")
-def sync_budget_prices(budget_id: str, db: Session = Depends(get_db)):
+def sync_budget_prices(budget_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     from app.db.models.cost360 import CostMaterial, CostEquipment, CostLabor
     
-    budget = db.query(Budget).filter(Budget.id == budget_id).first()
+    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
     if not budget:
         raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
         
@@ -461,13 +467,13 @@ def sync_budget_prices(budget_id: str, db: Session = Depends(get_db)):
     return {"status": "ok", "message": "Precios sincronizados con la Base Maestra"}
 
 @router.post("/{budget_id}/export-excel")
-async def export_budget_excel(budget_id: str, db: Session = Depends(get_db)):
+async def export_budget_excel(budget_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     """Genera un archivo Excel con fórmulas para el presupuesto"""
     try:
         from openpyxl import Workbook
         from openpyxl.styles import Font, Alignment, PatternFill
         
-        budget = db.query(Budget).filter(Budget.id == budget_id).first()
+        budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
         if not budget:
             raise HTTPException(status_code=404, detail="Budget not found")
         
@@ -601,7 +607,7 @@ async def export_budget_excel(budget_id: str, db: Session = Depends(get_db)):
 @router.post("/{budget_id}/upload-logo")
 async def upload_budget_logo(budget_id: str, logo: UploadFile = File(...), db: Session = Depends(get_db)):
     """Sube el logo de la empresa para un presupuesto específico"""
-    budget = db.query(Budget).filter(Budget.id == budget_id).first()
+    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
     if not budget:
         raise HTTPException(status_code=404, detail="Budget not found")
     

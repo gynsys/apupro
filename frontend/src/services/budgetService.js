@@ -1,15 +1,27 @@
 import { API_URL } from './api';
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('arko_admin_token');
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': token ? `Bearer ${token}` : ''
+  };
+};
+
 export const budgetService = {
   // BUDGETS
   getAll: async () => {
-    const response = await fetch(`${API_URL}/budgets/`);
+    const response = await fetch(`${API_URL}/budgets/`, {
+      headers: getAuthHeaders()
+    });
     if (!response.ok) throw new Error('Error al cargar presupuestos');
     return response.json();
   },
 
   generateAPUReport: async (id) => {
-    const response = await fetch(`${API_URL}/budgets/${id}/report`);
+    const response = await fetch(`${API_URL}/budgets/${id}/report`, {
+      headers: getAuthHeaders()
+    });
     if (!response.ok) throw new Error('Error al generar reporte');
     return response.blob();
   },
@@ -26,7 +38,7 @@ export const budgetService = {
     // type is 'materials', 'equipments', or 'labors'
     const response = await fetch(`${API_URL}/budgets/${budgetId}/items/${itemId}/${type}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(data)
     });
     if (!response.ok) throw new Error(`Error al agregar componente`);
@@ -37,7 +49,7 @@ export const budgetService = {
     // type is 'materials', 'equipments', or 'labors'
     const response = await fetch(`${API_URL}/budgets/${budgetId}/items/${itemId}/${type}/${componentId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(data)
     });
     if (!response.ok) throw new Error(`Error al actualizar componente`);
@@ -47,14 +59,16 @@ export const budgetService = {
   syncPrices: async (budgetId) => {
     const response = await fetch(`${API_URL}/budgets/${budgetId}/sync_prices`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: getAuthHeaders()
     });
     if (!response.ok) throw new Error('Error al sincronizar precios');
     return response.json();
   },
 
   getById: async (id) => {
-    const response = await fetch(`${API_URL}/budgets/${id}`);
+    const response = await fetch(`${API_URL}/budgets/${id}`, {
+      headers: getAuthHeaders()
+    });
     if (!response.ok) throw new Error('Error al cargar el presupuesto');
     return response.json();
   },
@@ -62,7 +76,7 @@ export const budgetService = {
   create: async (data) => {
     const response = await fetch(`${API_URL}/budgets/`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(data)
     });
     if (!response.ok) throw new Error('Error al crear el presupuesto');
@@ -72,7 +86,7 @@ export const budgetService = {
   updateItem: async (budgetId, itemId, data) => {
     const response = await fetch(`${API_URL}/budgets/${budgetId}/items/${itemId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(data)
     });
     if (!response.ok) throw new Error('Error al actualizar item');
@@ -81,7 +95,8 @@ export const budgetService = {
 
   deleteItem: async (budgetId, itemId) => {
     const response = await fetch(`${API_URL}/budgets/${budgetId}/items/${itemId}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: getAuthHeaders()
     });
     if (!response.ok) throw new Error('Error al eliminar partida');
     return response.json();
@@ -90,7 +105,7 @@ export const budgetService = {
   reorderItems: async (budgetId, itemIds) => {
     const response = await fetch(`${API_URL}/budgets/${budgetId}/items/reorder`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(itemIds)
     });
     if (!response.ok) throw new Error('Error al reordenar partidas');
@@ -100,7 +115,7 @@ export const budgetService = {
   update: async (id, data) => {
     const response = await fetch(`${API_URL}/budgets/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(data)
     });
     if (!response.ok) throw new Error('Error al actualizar el presupuesto');
@@ -109,7 +124,8 @@ export const budgetService = {
 
   delete: async (id) => {
     const response = await fetch(`${API_URL}/budgets/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: getAuthHeaders()
     });
     if (!response.ok) throw new Error('Error al eliminar el presupuesto');
     return response.json();
@@ -117,7 +133,8 @@ export const budgetService = {
 
   duplicateBudget: async (id, newName) => {
     const response = await fetch(`${API_URL}/budgets/${id}/duplicate?new_name=${encodeURIComponent(newName)}`, {
-      method: 'POST'
+      method: 'POST',
+      headers: getAuthHeaders()
     });
     if (!response.ok) throw new Error('Error al duplicar el presupuesto');
     return response.json();
@@ -127,7 +144,7 @@ export const budgetService = {
   addItem: async (budgetId, data) => {
     const response = await fetch(`${API_URL}/budgets/${budgetId}/items`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(data)
     });
     if (!response.ok) {
@@ -140,7 +157,8 @@ export const budgetService = {
   // DELETE a single APU component (material, equipment or labor)
   deleteComponent: async (budgetId, itemId, type, componentId) => {
     const response = await fetch(`${API_URL}/budgets/${budgetId}/items/${itemId}/${type}/${componentId}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: getAuthHeaders()
     });
     if (!response.ok) throw new Error(`Error al eliminar componente de tipo ${type}`);
     return response.json();
