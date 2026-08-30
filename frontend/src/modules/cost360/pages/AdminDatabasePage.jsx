@@ -1104,34 +1104,86 @@ Devuelve ÚNICAMENTE un JSON válido con esta estructura (sin texto extra antes 
       )}
 
       {activeTab === 'equipos' && (
-        <CatalogResourceTab
-          key={`eq-${selectedDatabase}`}
-          title="Equipos"
-          resourceType="equipments"
-          selectedDatabase={selectedDatabase}
-          adminMode={true}
-          config={{
-            idKey: 'CodEqu', descKey: 'Descri',
-            editableFields: [{ key: 'CosDia', label: 'Costo Diario ($)' }]
-          }}
-        />
+        <>
+          <div className="rounded-2xl p-4 flex flex-col gap-3" style={glass}>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-slate-600 font-medium">
+                Actualización en masa
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowBulkPriceModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold rounded-lg shadow-sm hover:shadow-md transition-all hover:scale-[1.02]"
+                >
+                  <FiDownload size={16} />
+                  Actualizar Precios
+                </button>
+                <button
+                  onClick={() => setShowBulkDescModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold rounded-lg shadow-sm hover:shadow-md transition-all hover:scale-[1.02]"
+                >
+                  <FiUpload size={16} />
+                  Actualizar Descripciones
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <CatalogResourceTab
+            key={`eq-${selectedDatabase}`}
+            title="Equipos"
+            resourceType="equipments"
+            selectedDatabase={selectedDatabase}
+            adminMode={true}
+            config={{
+              idKey: 'CodEqu', descKey: 'Descri',
+              editableFields: [{ key: 'CosDia', label: 'Costo Diario ($)' }]
+            }}
+          />
+        </>
       )}
 
       {activeTab === 'mano_obra' && (
-        <CatalogResourceTab
-          key={`mo-${selectedDatabase}`}
-          title="Mano de Obra"
-          resourceType="labors"
-          selectedDatabase={selectedDatabase}
-          adminMode={true}
-          config={{
-            idKey: 'CodMan', descKey: 'Descri',
-            editableFields: [
-              { key: 'Jornal', label: 'Jornal Base ($)' },
-              { key: 'Bono', label: 'Bono ($)' }
-            ]
-          }}
-        />
+        <>
+          <div className="rounded-2xl p-4 flex flex-col gap-3" style={glass}>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-slate-600 font-medium">
+                Actualización en masa
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowBulkPriceModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold rounded-lg shadow-sm hover:shadow-md transition-all hover:scale-[1.02]"
+                >
+                  <FiDownload size={16} />
+                  Actualizar Precios
+                </button>
+                <button
+                  onClick={() => setShowBulkDescModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold rounded-lg shadow-sm hover:shadow-md transition-all hover:scale-[1.02]"
+                >
+                  <FiUpload size={16} />
+                  Actualizar Descripciones
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <CatalogResourceTab
+            key={`mo-${selectedDatabase}`}
+            title="Mano de Obra"
+            resourceType="labors"
+            selectedDatabase={selectedDatabase}
+            adminMode={true}
+            config={{
+              idKey: 'CodMan', descKey: 'Descri',
+              editableFields: [
+                { key: 'Jornal', label: 'Jornal Base ($)' },
+                { key: 'Bono', label: 'Bono ($)' }
+              ]
+            }}
+          />
+        </>
       )}
 
       {activeTab === 'scraping' && (

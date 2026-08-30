@@ -207,8 +207,8 @@ def search_equipments_paginated(db: Session, skip: int, limit: int, search: str)
 
 def search_labors_paginated(db: Session, skip: int, limit: int, search: str):
     valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$'))
-    used_labors = db.query(CostAPULabor.CodMan).filter(CostAPULabor.CodPar.in_(valid_apu_query))
-    
+    used_labors = db.query(CostAPULabor.CodIns).filter(CostAPULabor.CodPar.in_(valid_apu_query))
+
     query = db.query(CostLabor).filter(CostLabor.CodMan.in_(used_labors))
     if search:
         search_term = f"%{search}%"
