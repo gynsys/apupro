@@ -193,3 +193,27 @@ def create_demo_budget(current_user = Depends(get_current_arko_admin)):
             "budget_id": demo_budget.id,
             "budget_name": demo_budget.name
         }
+
+@router.delete("/{user_id}")
+def delete_user(user_id: int, current_user = Depends(get_current_arko_admin)):
+    """Eliminar usuario (solo admin)"""
+    with ArkoSessionLocal() as db:
+        user = db.query(ArkoAdmin).filter(ArkoAdmin.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+        # Prevenir eliminación del usuario actual
+        if user.id == current_user.id:
+            raise HTTPException(status_code=400, detail="No puedes eliminar tu propio usuario")
+
+        # Eliminar presupuestos del usuario primero
+        from app.db.models.budget import Budget
+        budgets = db.query(Budget).filter(Budget.user_id == str(user_id)).all()
+        for budget in budgets:
+            db.delete(budget)
+
+        # Eliminar usuario
+        db.delete(user)
+        db.commit()
+
+        return {"status": "success", "message": "Usuario eliminado exitosamente"}

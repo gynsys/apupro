@@ -21,7 +21,7 @@
 
 ## 📝 Resumen General
 
-El sistema de gestión de usuarios y planes implementa un modelo de SaaS con múltiples niveles de servicio que controla el acceso a funcionalidades clave de la plataforma Cost360/APUpro.
+El sistema de gestión de usuarios y planes implementa un modelo de SaaS con múltiples niveles de servicio que controla el acceso a funcionalidades clave de la plataforma costbase.
 
 ### Funcionalidades Principales
 
@@ -833,6 +833,40 @@ const createDemoBudget = async () => {
 
 #### Modal de Edición
 
+**Cambio en ubicación del modal (2024-08-30):**
+
+**Antes (dentro del contenedor):**
+```jsx
+<div className="rounded-2xl p-6 flex flex-col gap-4 overflow-y-auto max-h-full" style={glass}>
+  {/* ... contenido de la tabla ... */}
+
+  {editingUser && (
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      {/* Modal */}
+    </div>
+  )}
+</div>
+```
+
+**Después (fuera del contenedor):**
+```jsx
+<div className="rounded-2xl p-6 flex flex-col gap-4 overflow-y-auto max-h-full" style={glass}>
+  {/* ... contenido de la tabla ... */}
+</div>
+
+{editingUser && (
+  <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    {/* Modal */}
+  </div>
+)}
+```
+
+**Razón del cambio:**
+- El modal dentro del contenedor con `overflow-y-auto` y `max-h-full` no se mostraba completamente
+- Al mover el modal fuera del contenedor, se renderiza en `fixed inset-0` (toda la pantalla)
+- Esto permite que el modal se vea completo sin restricciones del contenedor padre
+
+**Estructura JSX del modal:**
 ```javascript
 {editingUser && (
   <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -1404,6 +1438,45 @@ Content-Type: application/json
 }
 ```
 
+### DELETE /api/v1/users/{user_id}
+
+**Descripción:** Eliminar usuario (solo admin).
+
+**Autenticación:** Requiere token JWT admin.
+
+**Request:**
+```http
+DELETE /api/v1/users/2
+Authorization: Bearer YOUR_TOKEN
+```
+
+**Response (200 OK):**
+```json
+{
+  "status": "success",
+  "message": "Usuario eliminado exitosamente"
+}
+```
+
+**Response (400 Bad Request - Auto-eliminación):**
+```json
+{
+  "detail": "No puedes eliminar tu propio usuario"
+}
+```
+
+**Response (404 Not Found):**
+```json
+{
+  "detail": "Usuario no encontrado"
+}
+```
+
+**Notas:**
+- Previene eliminación del usuario actual (auto-eliminación)
+- Elimina todos los presupuestos del usuario antes de eliminar el usuario
+- Operación destructiva, no reversible
+
 ### POST /api/v1/users/demo-budget
 
 **Descripción:** Crear presupuesto de ejemplo con 2 partidas para demostración.
@@ -1559,6 +1632,51 @@ Content-Type: application/json
 - `toggleUserStatus(userId, currentStatus)`: Activa/desactiva usuario
 - `updateUserPlan(userId, planData)`: Actualiza plan y límites
 - `createDemoBudget()`: Crea presupuesto de ejemplo
+- `deleteUser(userId)`: Elimina usuario (agregado 2024-08-30)
+
+**Cambios en Columna de Acciones (2024-08-30):**
+
+**Antes:**
+```jsx
+<td className="py-3 px-4">
+  <button onClick={() => setEditingUser(user)} className="text-blue-600 hover:text-blue-800 text-sm">
+    Editar
+  </button>
+</td>
+```
+
+**Después:**
+```jsx
+<td className="py-3 px-4">
+  <div className="flex gap-2">
+    <button
+      onClick={() => setEditingUser(user)}
+      className="text-blue-600 hover:text-blue-800"
+      title="Editar"
+    >
+      <FiEdit2 size={16} />
+    </button>
+    <button
+      onClick={() => {
+        if (window.confirm(`¿Estás seguro de eliminar el usuario ${user.email}?`)) {
+          deleteUser(user.id);
+        }
+      }}
+      className="text-red-600 hover:text-red-800"
+      title="Eliminar"
+    >
+      <FiTrash2 size={16} />
+    </button>
+  </div>
+</td>
+```
+
+**Cambios realizados:**
+1. Texto "Editar" reemplazado por icono de lápiz (`FiEdit2`)
+2. Agregado icono de papelera (`FiTrash2`) para eliminar usuarios
+3. Confirmación de eliminación con `window.confirm()`
+4. Agrupados en `div` con `flex gap-2` para mejor alineación
+5. Agregados tooltips con `title` attribute
 
 **Estructura JSX:**
 ```jsx
@@ -2181,10 +2299,13 @@ Para problemas o preguntas sobre esta implementación:
 
 ## 📅 Historial de Cambios
 
-- **2024-XX-XX:** Implementación inicial del sistema de planes
-- **2024-XX-XX:** Agregado modal de pago
-- **2024-XX-XX:** Agregado presupuesto de ejemplo
-- **2024-XX-XX:** Documentación completa
+- **2024-08-30:** Implementación inicial del sistema de planes
+- **2024-08-30:** Agregado modal de pago
+- **2024-08-30:** Agregado presupuesto de ejemplo
+- **2024-08-30:** Agregado iconos de editar (lápiz) y eliminar (papelera) en columna de acciones
+- **2024-08-30:** Corregido modal de edición para mostrar fuera del contenedor
+- **2024-08-30:** Agregado endpoint DELETE /users/{user_id} para eliminar usuarios
+- **2024-08-30:** Documentación completa
 
 ---
 
