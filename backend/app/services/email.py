@@ -120,8 +120,7 @@ def send_backup_email(to_email: str, budget_name: str, backup_file_path: str, ba
         return True
 
     try:
-        # Para Resend API necesitamos una solución diferente ya que no soporta adjuntos directamente
-        # Usaremos SMTP estándar para adjuntos
+        # Como Resend no soporta adjuntos directamente, usaremos SMTP estándar
         msg = MIMEMultipart()
         msg['From'] = settings.RESEND_FROM_EMAIL
         msg['To'] = to_email
@@ -154,6 +153,7 @@ def send_backup_email(to_email: str, budget_name: str, backup_file_path: str, ba
             logger.warning(f"SIMULACIÓN DE CORREO CON ADJUNTO (Sin SMTP configurado)")
             logger.warning(f"Para: {to_email}")
             logger.warning(f"Archivo: {backup_filename}")
+            logger.warning(f"Tamaño del archivo: {os.path.getsize(backup_file_path)} bytes")
 
         return True
 

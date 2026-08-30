@@ -182,7 +182,23 @@ export default function BudgetHomePage() {
       }
 
       const result = await response.json();
-      toast.success(result.message || 'Backup enviado exitosamente a tu correo');
+
+      // Convertir hex string a bytes y descargar
+      const backupData = new Uint8Array(result.backup_data.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+      const blob = new Blob([backupData], { type: 'application/octet-stream' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${budget.name.replace(/[^a-z0-9]/gi, '_')}_backup.cb`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success(result.message || 'Backup descargado exitosamente', {
+        duration: 2000
+      });
     } catch (error) {
       console.error('Error al exportar backup:', error);
       toast.error('Error al exportar el backup');

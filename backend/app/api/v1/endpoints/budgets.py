@@ -624,7 +624,7 @@ async def export_budget_excel(budget_id: str, db: Session = Depends(get_db), cur
 
 @router.post("/{budget_id}/backup")
 async def export_budget_backup(budget_id: str, request: Request, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
-    """Exporta un backup encriptado del presupuesto enviado por correo"""
+    """Exporta un backup encriptado del presupuesto para descarga directa"""
     client_ip = request.client.host if request else None
     try:
         budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
@@ -710,35 +710,14 @@ async def export_budget_backup(budget_id: str, request: Request, db: Session = D
         # Encriptar backup
         encrypted_backup = encryption_service.encrypt_backup(backup_package, current_user.email)
 
-        # Crear archivo temporal
-        temp_dir = Path("temp")
-        temp_dir.mkdir(exist_ok=True)
-        import re
-        filename = f"{re.sub(r'[^a-z0-9]', '_', budget.name.lower())}_backup.cb"
-        file_path = temp_dir / filename
-
-        with open(file_path, "wb") as f:
-            f.write(encrypted_backup)
-
-        # Enviar correo con el backup adjunto
-        send_backup_email(
-            to_email=current_user.email,
-            budget_name=budget.name,
-            backup_file_path=str(file_path),
-            backup_filename=filename
-        )
-
-        # Limpiar archivo temporal después de enviar
-        import os
-        os.remove(file_path)
-
         # Registrar éxito en auditoría
         log_backup_action(db, str(current_user.id), current_user.email, budget_id, budget.name, "export", "success", None, client_ip)
 
         return {
             "status": "success",
-            "message": f"Backup enviado a {current_user.email}",
-            "budget_name": budget.name
+            "message": f"Backup generado exitosamente para {budget.name}",
+            "budget_name": budget.name,
+            "backup_data": encrypted_backup.hex()  # Enviar como hex string
         }
 
     except Exception as e:
