@@ -355,10 +355,6 @@ export default function BudgetHomePage() {
               className="tarjeta-presupuesto-ambar cursor-pointer group"
             >
               <div className="tarjeta-header">
-                <div className="icono-archivo-ambar">
-                  <FileText size={20} strokeWidth={2} />
-                </div>
-                
                 <div className="acciones-rapidas">
                   <button 
                     onClick={(e) => { e.stopPropagation(); setDuplicatingBudget(budget); setDuplicateName(budget.name + ' (Copia)'); }}
