@@ -37,8 +37,9 @@ async def websocket_logs(websocket: WebSocket):
             "type": "initial_logs",
             "logs": initial_logs
         })
-        
+
         # Mantener conexión abierta y enviar nuevos logs
+        last_log_count = len(bot_state.logs)
         while True:
             # Enviar estado actual periódicamente
             await asyncio.sleep(1)
@@ -47,7 +48,18 @@ async def websocket_logs(websocket: WebSocket):
                 "status": bot_state.status,
                 "config": bot_state.config.dict() if hasattr(bot_state.config, 'dict') else bot_state.config
             })
-            
+
+            # Enviar nuevos logs si hay
+            current_log_count = len(bot_state.logs)
+            if current_log_count > last_log_count:
+                new_logs = bot_state.logs[last_log_count:]
+                for log in new_logs:
+                    await websocket.send_json({
+                        "type": "log",
+                        "log": log
+                    })
+                last_log_count = current_log_count
+
     except WebSocketDisconnect:
         manager.disconnect(websocket)
     except Exception as e:

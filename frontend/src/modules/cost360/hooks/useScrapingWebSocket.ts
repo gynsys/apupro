@@ -26,7 +26,7 @@ export const useScrapingWebSocket = () => {
 
     const token = localStorage.getItem('arko_admin_token');
     const wsUrl = `${API_URL.replace('http', 'ws')}/scraping/ws/logs`;
-    
+
     try {
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
@@ -39,7 +39,7 @@ export const useScrapingWebSocket = () => {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          
+
           if (data.type === 'initial_logs') {
             setLogs(data.logs);
           } else if (data.type === 'status') {
