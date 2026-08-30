@@ -18,11 +18,11 @@ export const useScrapingApi = () => {
   const apiCall = useCallback(async (endpoint: string, method: string = 'GET', body?: any) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const token = localStorage.getItem('arko_admin_token');
-      const url = `${API_URL}/scraping${endpoint}`;
-      
+      const url = `${API_URL}/api/v1/scraping${endpoint}`;
+
       const options: RequestInit = {
         method,
         headers: {
@@ -36,7 +36,7 @@ export const useScrapingApi = () => {
       }
 
       const response = await fetch(url, options);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
