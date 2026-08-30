@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import Optional
 from pathlib import Path
-import pandas as pd
+import openpyxl
 
 from app.db.base import get_db
 from app.schemas.cost360 import (
@@ -326,27 +326,39 @@ async def bulk_update_descriptions(file: UploadFile = File(...), db: Session = D
     Formato esperado: columnas "Código" y "Descripción"
     """
     try:
-        # Leer el archivo Excel
+        # Leer el archivo Excel con openpyxl
         import io
         contents = await file.read()
-        df = pd.read_excel(io.BytesIO(contents))
+        wb = openpyxl.load_workbook(io.BytesIO(contents))
+        ws = wb.active
 
-        # Verificar columnas requeridas
-        required_columns = ['Código', 'Descripción']
-        for col in required_columns:
-            if col not in df.columns:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Columna requerida no encontrada: {col}. Columnas disponibles: {list(df.columns)}"
-                )
+        # Encontrar índices de columnas requeridas
+        header_row = list(ws.iter_rows(min_row=1, max_row=1, values_only=True))[0]
+        codigo_col_idx = None
+        descripcion_col_idx = None
+
+        for idx, header in enumerate(header_row):
+            if 'Código' in str(header) or 'Codigo' in str(header):
+                codigo_col_idx = idx
+            elif 'Descripción' in str(header) or 'Descripcion' in str(header) or 'Descri' in str(header):
+                descripcion_col_idx = idx
+
+        if codigo_col_idx is None or descripcion_col_idx is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Columnas requeridas no encontradas. Se necesita 'Código' y 'Descripción'. Encabezados encontrados: {header_row}"
+            )
 
         # Procesar actualizaciones
         updated_count = 0
         errors = []
 
-        for _, row in df.iterrows():
-            codigo = str(row['Código']).strip()
-            descripcion = str(row['Descripción']).strip()
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if len(row) <= max(codigo_col_idx, descripcion_col_idx):
+                continue
+
+            codigo = str(row[codigo_col_idx]).strip() if row[codigo_col_idx] else ""
+            descripcion = str(row[descripcion_col_idx]).strip() if row[descripcion_col_idx] else ""
 
             if not codigo or not descripcion:
                 continue
@@ -368,7 +380,7 @@ async def bulk_update_descriptions(file: UploadFile = File(...), db: Session = D
         return {
             "updated": updated_count,
             "errors": errors,
-            "total": len(df)
+            "total": ws.max_row - 1  # Excluyendo header
         }
     except Exception as e:
         db.rollback()

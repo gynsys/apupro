@@ -846,11 +846,19 @@ const AdminDatabasePage = () => {
                         const updates = [];
 
                         for (const line of lines) {
-                          // Match format: MATXXXX: $YYYY USD o MATXXXX: $YYYY
-                          const match = line.match(/([A-Z]+\d+):\s*\$?([\d,.]+)/);
+                          // Match format: MATXXXX: $YYYY USD o MATXXXX: $YYYY o TAB format: MATXXXX	$YYYY
+                          // Soporta formato europeo ($3.214,06) y americano ($3,214.06)
+                          const match = line.match(/([A-Z]+\d+)[:\t]\s*\$?([\d.,]+)/);
                           if (match) {
                             const codigo = match[1];
-                            const precio = parseFloat(match[2].replace(/,/g, ''));
+                            let precioStr = match[2];
+                            // Convertir formato europeo a americano: 3.214,06 -> 3214.06
+                            if (precioStr.includes('.') && precioStr.includes(',')) {
+                              precioStr = precioStr.replace(/\./g, '').replace(',', '.');
+                            } else {
+                              precioStr = precioStr.replace(/,/g, '');
+                            }
+                            const precio = parseFloat(precioStr);
                             if (!isNaN(precio)) {
                               updates.push({ codigo, precio });
                             }
@@ -986,8 +994,8 @@ const AdminDatabasePage = () => {
                             }, 1000);
 
                           } else {
-                            const errorText = await response.text();
-                            toast.error(`Error al actualizar descripciones: ${response.status}`);
+                            const errorData = await response.json();
+                            toast.error(errorData.detail || `Error al actualizar descripciones: ${response.status}`);
                           }
                         } catch (err) {
                           toast.error('Error de conexión al servidor');
