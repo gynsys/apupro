@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import Optional
 from pathlib import Path
+import pandas as pd
 
 from app.db.base import get_db
 from app.schemas.cost360 import (
@@ -317,6 +318,61 @@ def bulk_update_materials(payload: dict, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error en actualización masiva: {str(e)}")
+
+@router.post("/materials/bulk-update-descriptions")
+async def bulk_update_descriptions(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """
+    Actualización masiva de descripciones desde archivo Excel
+    Formato esperado: columnas "Código" y "Descripción"
+    """
+    try:
+        # Leer el archivo Excel
+        import io
+        contents = await file.read()
+        df = pd.read_excel(io.BytesIO(contents))
+
+        # Verificar columnas requeridas
+        required_columns = ['Código', 'Descripción']
+        for col in required_columns:
+            if col not in df.columns:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Columna requerida no encontrada: {col}. Columnas disponibles: {list(df.columns)}"
+                )
+
+        # Procesar actualizaciones
+        updated_count = 0
+        errors = []
+
+        for _, row in df.iterrows():
+            codigo = str(row['Código']).strip()
+            descripcion = str(row['Descripción']).strip()
+
+            if not codigo or not descripcion:
+                continue
+
+            try:
+                result = db.execute(
+                    text('UPDATE cost360_materials SET "Descri" = :descripcion WHERE "CodMat" = :codigo'),
+                    {"descripcion": descripcion, "codigo": codigo}
+                )
+                if result.rowcount > 0:
+                    updated_count += result.rowcount
+                else:
+                    errors.append(f"Material {codigo} no encontrado")
+            except Exception as e:
+                errors.append(f"Error actualizando {codigo}: {str(e)}")
+
+        db.commit()
+
+        return {
+            "updated": updated_count,
+            "errors": errors,
+            "total": len(df)
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error en actualización masiva de descripciones: {str(e)}")
 
 @router.delete("/materials/{codigo}")
 def delete_material_route(codigo: str, db: Session = Depends(get_db)):
