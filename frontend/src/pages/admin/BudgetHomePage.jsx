@@ -216,8 +216,6 @@ export default function BudgetHomePage() {
       handleBackupImport(file);
     }
   };
-    }
-  };
 
   const handleDuplicate = async (e) => {
     e.preventDefault();
