@@ -14,6 +14,7 @@ from app.api.v1.endpoints import scraping
 from app.api.v1.endpoints import scraping_ws
 from app.api.v1.endpoints import pdf_updater
 from app.api.v1.endpoints.dedup import router_dedup
+from app.api.v1.endpoints import users as users_module
 api_router = APIRouter()
 
 # APUpro Endpoints
@@ -28,3 +29,4 @@ api_router.include_router(scraping.router, prefix="/scraping", tags=["scraping"]
 api_router.include_router(scraping_ws.router, prefix="/scraping", tags=["scraping_ws"])
 api_router.include_router(pdf_updater.router, prefix="/pdf-updater", tags=["pdf_updater"])
 api_router.include_router(router_dedup, prefix="/dedup", tags=["dedup"])
+api_router.include_router(users_module.router, prefix="/users", tags=["users"])

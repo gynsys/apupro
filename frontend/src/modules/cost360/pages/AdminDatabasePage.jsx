@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiSearch, FiLayers, FiArrowRight, FiBox, FiTool, FiUsers, FiDatabase, FiEdit2, FiTrash2, FiSave, FiX, FiDownload, FiCpu, FiUpload, FiFileText } from 'react-icons/fi';
+import { FiSearch, FiLayers, FiArrowRight, FiBox, FiTool, FiUsers, FiDatabase, FiEdit2, FiTrash2, FiSave, FiX, FiDownload, FiCpu, FiUpload, FiFileText, FiToggleLeft, FiToggleRight } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import cost360Service from '../services/cost360Service';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
@@ -581,6 +581,7 @@ Devuelve ÚNICAMENTE un JSON válido con esta estructura (sin texto extra antes 
     { key: 'scraping',   label: 'Scraping',        Icon: FiCpu   },
     { key: 'pdfs',       label: 'Update PDFs',      Icon: FiFileText },
     { key: 'prompt',     label: 'Prompt IA - APU', Icon: FiCpu   },
+    { key: 'usuarios',   label: 'Usuarios',        Icon: FiUsers },
   ];
 
   return (
@@ -1344,6 +1345,291 @@ Devuelve ÚNICAMENTE un JSON válido con esta estructura (sin texto extra antes 
                 <FiSave size={16} />
                 Guardar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'usuarios' && (
+        <UsersTab />
+      )}
+    </div>
+  );
+};
+
+const UsersTab = () => {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editingUser, setEditingUser] = useState(null);
+  const siteConfig = useContext(SiteConfigContext);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem('arko_admin_token');
+      const API_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
+        ? 'http://localhost:8010'
+        : window.location.origin;
+
+      const response = await fetch(`${API_URL}/api/v1/users/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast.error('Error al cargar usuarios');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleUserStatus = async (userId, currentStatus) => {
+    try {
+      const token = localStorage.getItem('arko_admin_token');
+      const API_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
+        ? 'http://localhost:8010'
+        : window.location.origin;
+
+      const response = await fetch(`${API_URL}/api/v1/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ is_active: !currentStatus })
+      });
+
+      if (response.ok) {
+        toast.success('Usuario actualizado');
+        fetchUsers();
+      } else {
+        toast.error('Error al actualizar usuario');
+      }
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast.error('Error al actualizar usuario');
+    }
+  };
+
+  const updateUserPlan = async (userId, planData) => {
+    try {
+      const token = localStorage.getItem('arko_admin_token');
+      const API_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
+        ? 'http://localhost:8010'
+        : window.location.origin;
+
+      const response = await fetch(`${API_URL}/api/v1/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(planData)
+      });
+
+      if (response.ok) {
+        toast.success('Plan actualizado');
+        fetchUsers();
+        setEditingUser(null);
+      } else {
+        toast.error('Error al actualizar plan');
+      }
+    } catch (error) {
+      console.error('Error updating plan:', error);
+      toast.error('Error al actualizar plan');
+    }
+  };
+
+  const createDemoBudget = async () => {
+    try {
+      const token = localStorage.getItem('arko_admin_token');
+      const API_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
+        ? 'http://localhost:8010'
+        : window.location.origin;
+
+      const response = await fetch(`${API_URL}/api/v1/users/demo-budget`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message);
+      } else {
+        toast.error('Error al crear presupuesto de ejemplo');
+      }
+    } catch (error) {
+      console.error('Error creating demo budget:', error);
+      toast.error('Error al crear presupuesto de ejemplo');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl p-6 flex items-center justify-center" style={glass}>
+        <div className="text-slate-600">Cargando usuarios...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl p-6 flex flex-col gap-4 overflow-y-auto max-h-full" style={glass}>
+      <div className="flex items-center justify-between shrink-0">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">Usuarios</h2>
+          <p className="text-sm text-slate-600 mt-1">
+            Gestiona los usuarios, planes y límites del sistema
+          </p>
+        </div>
+        <button
+          onClick={createDemoBudget}
+          className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm"
+        >
+          Crear Presupuesto Ejemplo
+        </button>
+      </div>
+
+      <div className="flex-1 flex flex-col gap-4 min-h-0">
+        <div className="bg-white rounded-lg p-4 border border-gray-200 overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Email</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Nombre</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Plan</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Límites</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">IA</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Estado</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(user => (
+                <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4 text-sm text-slate-800">{user.email}</td>
+                  <td className="py-3 px-4 text-sm text-slate-600">{user.full_name || '-'}</td>
+                  <td className="py-3 px-4">
+                    <select
+                      value={user.plan}
+                      onChange={(e) => updateUserPlan(user.id, { plan: e.target.value })}
+                      className="text-sm border border-gray-300 rounded px-2 py-1"
+                    >
+                      <option value="free">Free</option>
+                      <option value="basic">Básico</option>
+                      <option value="pro">Pro</option>
+                      <option value="enterprise">Enterprise</option>
+                    </select>
+                  </td>
+                  <td className="py-3 px-4 text-sm text-slate-600">
+                    {user.max_budgets} presup • {user.max_items_per_budget} partidas
+                  </td>
+                  <td className="py-3 px-4">
+                    {user.has_ai_access ? (
+                      <span className="text-emerald-600 text-sm">✓ Sí</span>
+                    ) : (
+                      <span className="text-slate-400 text-sm">✗ No</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    <button
+                      onClick={() => toggleUserStatus(user.id, user.is_active)}
+                      className="text-sm"
+                    >
+                      {user.is_active ? (
+                        <span className="text-emerald-600">Activo</span>
+                      ) : (
+                        <span className="text-red-600">Inactivo</span>
+                      )}
+                    </button>
+                  </td>
+                  <td className="py-3 px-4">
+                    <button
+                      onClick={() => setEditingUser(user)}
+                      className="text-blue-600 hover:text-blue-800 text-sm"
+                    >
+                      Editar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {editingUser && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-slate-800 mb-4">Editar Usuario</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={editingUser.email}
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-slate-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Límite de Presupuestos</label>
+                  <input
+                    type="number"
+                    value={editingUser.max_budgets}
+                    onChange={(e) => setEditingUser({...editingUser, max_budgets: parseInt(e.target.value)})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Límite de Partidas</label>
+                  <input
+                    type="number"
+                    value={editingUser.max_items_per_budget}
+                    onChange={(e) => setEditingUser({...editingUser, max_items_per_budget: parseInt(e.target.value)})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="ai-access"
+                    checked={editingUser.has_ai_access}
+                    onChange={(e) => setEditingUser({...editingUser, has_ai_access: e.target.checked})}
+                    className="w-4 h-4 text-blue-600 rounded"
+                  />
+                  <label htmlFor="ai-access" className="text-sm text-slate-700">Acceso a IA</label>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setEditingUser(null)}
+                  className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => updateUserPlan(editingUser.id, {
+                    max_budgets: editingUser.max_budgets,
+                    max_items_per_budget: editingUser.max_items_per_budget,
+                    has_ai_access: editingUser.has_ai_access
+                  })}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Guardar
+                </button>
+              </div>
             </div>
           </div>
         </div>

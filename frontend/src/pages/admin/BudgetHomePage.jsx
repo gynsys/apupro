@@ -19,7 +19,9 @@ export default function BudgetHomePage() {
   const [deletingId, setDeletingId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [importingBackup, setImportingBackup] = useState(false);
-  const fileInputRef = useRef(null);
+  const [fileInputRef, fileInputRef] = useRef(null);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [limitReachedReason, setLimitReachedReason] = useState('');
   const [newBudgetName, setNewBudgetName] = useState('');
   
   const [duplicatingBudget, setDuplicatingBudget] = useState(null);
@@ -203,6 +205,25 @@ export default function BudgetHomePage() {
     } catch (error) {
       console.error('Error al exportar backup:', error);
       toast.error('Error al exportar el backup');
+    }
+  };
+
+  const handleCreateBudget = async () => {
+    try {
+      const newBudget = await budgetService.create({
+        name: 'Nuevo Presupuesto',
+        currency: 'USD',
+        exchange_rate: 1.0
+      });
+      setIsModalOpen(false);
+      navigate(`/budgets/${newBudget.id}`);
+    } catch (error) {
+      if (error.isLimitError) {
+        setLimitReachedReason('budgets');
+        setPaymentModalOpen(true);
+      } else {
+        toast.error(error.message || 'Error al crear presupuesto');
+      }
     }
   };
 
@@ -596,10 +617,74 @@ export default function BudgetHomePage() {
       
       {/* Layout de impresión */}
       {printConfig && printBudgetData && (
-        <BudgetPrintLayout 
+        <BudgetPrintLayout
           budget={printBudgetData}
           config={printConfig}
         />
+      )}
+
+      {/* Modal de Pago */}
+      {paymentModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-slate-800 mb-2">Actualiza tu Plan</h2>
+              <p className="text-sm text-slate-600 mb-6">
+                {limitReachedReason === 'budgets' ? 'Has alcanzado el límite de presupuestos de tu plan.' : 'Has alcanzado el límite de partidas de tu presupuesto.'}
+              </p>
+
+              <div className="space-y-3 mb-6">
+                <div className="p-4 border border-slate-200 rounded-lg hover:border-blue-300 transition-colors cursor-pointer">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-semibold text-slate-800">Plan Básico</h3>
+                      <p className="text-xs text-slate-500">5 presupuestos • 10 partidas • Sin IA</p>
+                    </div>
+                    <span className="text-blue-600 font-bold">$9.99/mes</span>
+                  </div>
+                </div>
+
+                <div className="p-4 border border-slate-200 rounded-lg hover:border-emerald-300 transition-colors cursor-pointer">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-semibold text-slate-800">Plan Pro</h3>
+                      <p className="text-xs text-slate-500">20 presupuestos • 50 partidas • IA incluida</p>
+                    </div>
+                    <span className="text-emerald-600 font-bold">$29.99/mes</span>
+                  </div>
+                </div>
+
+                <div className="p-4 border border-slate-200 rounded-lg hover:border-purple-300 transition-colors cursor-pointer">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-semibold text-slate-800">Plan Enterprise</h3>
+                      <p className="text-xs text-slate-500">Ilimitado • IA completa • Soporte 24/7</p>
+                    </div>
+                    <span className="text-purple-600 font-bold">$99.99/mes</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setPaymentModalOpen(false)}
+                  className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    setPaymentModalOpen(false);
+                    toast.success('Proceso de pago simulado. En producción se redirigiría a pasarela.');
+                  }}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-blue-500/30"
+                >
+                  Proceder al Pago
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

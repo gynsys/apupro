@@ -79,7 +79,13 @@ export const budgetService = {
       headers: getAuthHeaders(),
       body: JSON.stringify(data)
     });
-    if (!response.ok) throw new Error('Error al crear el presupuesto');
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      if (response.status === 403) {
+        throw { detail: errorData.detail || 'Límite alcanzado', isLimitError: true };
+      }
+      throw new Error(errorData.detail || 'Error al crear el presupuesto');
+    }
     return response.json();
   },
 
@@ -149,6 +155,9 @@ export const budgetService = {
     });
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
+      if (response.status === 403) {
+        throw { detail: errData.detail || 'Límite alcanzado', isLimitError: true };
+      }
       throw new Error(errData.detail || 'Error al agregar partida al presupuesto');
     }
     return response.json();

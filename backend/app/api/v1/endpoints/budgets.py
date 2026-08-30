@@ -21,6 +21,7 @@ from app.schemas.budget import (
 from app.api.v1.endpoints.arko import get_current_arko_admin
 from app.services.encryption_service import encryption_service
 from app.services.email import send_backup_email
+from app.middleware.plan_limits import check_budget_limit, check_items_limit, check_ai_access
 
 def log_backup_action(db: Session, user_id: str, user_email: str, budget_id: str, budget_name: str, action: str, status: str, error_message: str = None, ip_address: str = None):
     """Registra acciones de backup para auditoría"""
@@ -41,6 +42,9 @@ router = APIRouter()
 
 @router.post("/", response_model=BudgetSchema, status_code=status.HTTP_201_CREATED)
 def create_budget(budget_in: BudgetCreate, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
+    # Verificar límite de presupuestos
+    check_budget_limit(current_user)
+
     budget_data = budget_in.model_dump()
     # Asignar automáticamente el user_id del usuario autenticado
     budget_data["user_id"] = str(current_user.id)
@@ -115,6 +119,9 @@ def add_item_to_budget(budget_id: str, item_in: BudgetItemCreate, db: Session = 
     budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
     if not budget:
         raise HTTPException(status_code=404, detail="Budget not found")
+
+    # Verificar límite de partidas
+    check_items_limit(current_user, budget_id)
         
     target_order = item_in.order
     if target_order <= 0:

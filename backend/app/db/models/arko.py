@@ -34,6 +34,13 @@ class ArkoAdmin(ArkoBase):
     site_config = Column(JSONB, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # Campos de plan y límites
+    plan = Column(String(50), default='free')  # 'free', 'basic', 'pro', 'enterprise'
+    max_budgets = Column(Integer, default=1)  # Límite de presupuestos según plan
+    max_items_per_budget = Column(Integer, default=2)  # Límite de partidas por presupuesto
+    has_ai_access = Column(Boolean, default=False)  # Acceso a generador APU con IA
+    plan_expires_at = Column(DateTime, nullable=True)  # Fecha de expiración del plan
+
 class ArkoUser(ArkoBase):
     __tablename__ = "arko_users"
 

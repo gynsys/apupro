@@ -6,6 +6,8 @@ from pathlib import Path
 import openpyxl
 
 from app.db.base import get_db
+from app.api.v1.endpoints.arko import get_current_arko_admin
+from app.middleware.plan_limits import check_ai_access
 from app.schemas.cost360 import (
     CostItemListResponse, APUResponse, APUComponent,
     CostMaterialUpdate, CostEquipmentUpdate, CostLaborUpdate,
@@ -414,7 +416,10 @@ def delete_labor_route(codigo: str, db: Session = Depends(get_db)):
     return {"status": "ok"}
 
 @router.post("/generate-ai-apu")
-def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(get_db)):
+def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
+    # Verificar acceso a IA
+    check_ai_access(current_user)
+
     # 0. Si es solo preproceso DEBUG, devolver resultado rapido
     if payload.only_preprocess:
         from app.services.ai_search import ai_engine
