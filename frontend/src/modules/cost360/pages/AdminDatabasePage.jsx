@@ -1510,7 +1510,8 @@ const UsersTab = () => {
   }
 
   return (
-    <div className="rounded-2xl p-6 flex flex-col gap-4 overflow-y-auto max-h-full" style={glass}>
+    <>
+      <div className="rounded-2xl p-6 flex flex-col gap-4 overflow-y-auto max-h-full" style={glass}>
       <div className="flex items-center justify-between shrink-0">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Usuarios</h2>
@@ -1609,7 +1610,7 @@ const UsersTab = () => {
       </div>
     </div>
 
-    {editingUser && (
+      {editingUser && (
       <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           <div className="p-6">
