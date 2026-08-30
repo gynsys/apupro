@@ -263,6 +263,7 @@ const AdminDatabasePage = () => {
   const [bulkPriceText, setBulkPriceText] = useState('');
   const [showBulkDescModal, setShowBulkDescModal] = useState(false);
   const [bulkDescFile, setBulkDescFile] = useState(null);
+  const [promptText, setPromptText] = useState('');
   const catMenuRef = useRef(null);
 
   // Cargar bases de datos disponibles
@@ -280,6 +281,39 @@ const AdminDatabasePage = () => {
       }
     };
     loadDatabases();
+  }, []);
+
+  // Cargar prompt guardado
+  useEffect(() => {
+    const savedPrompt = localStorage.getItem('apu_prompt');
+    if (savedPrompt) {
+      setPromptText(savedPrompt);
+    } else {
+      // Prompt por defecto
+      setPromptText(`Eres un experto en construcción y análisis de Partidas (APU).
+
+Tu tarea es generar una Partida APU completa basada en la descripción proporcionada.
+
+INSTRUCCIONES:
+1. Analiza la descripción de la partida
+2. Determina los materiales, equipos y mano de obra necesarios
+3. Calcula cantidades, desperdicios y costos
+4. Devuelve el resultado en formato JSON
+
+FORMATO DE RESPUESTA JSON:
+{
+  "descripcion": "Descripción de la partida",
+  "materiales": [
+    {"codigo": "MATXXXX", "descripcion": "...", "unidad": "...", "cantidad": 0, "precio_unitario": 0}
+  ],
+  "equipos": [
+    {"codigo": "EQXXXX", "descripcion": "...", "unidad": "...", "cantidad": 0, "precio_unitario": 0}
+  ],
+  "mano_obra": [
+    {"codigo": "MOXXXX", "descripcion": "...", "unidad": "...", "cantidad": 0, "jornal": 0}
+  ]
+}`);
+    }
   }, []);
 
   useEffect(() => {
@@ -492,6 +526,7 @@ const AdminDatabasePage = () => {
     { key: 'mano_obra',  label: 'Mano de Obra',    Icon: FiUsers },
     { key: 'scraping',   label: 'Bot Scraping',    Icon: FiCpu   },
     { key: 'pdfs',       label: 'Update desde PDFs', Icon: FiFileText },
+    { key: 'prompt',     label: 'Prompt IA - APU', Icon: FiCpu   },
   ];
 
   return (
@@ -1052,6 +1087,85 @@ const AdminDatabasePage = () => {
 
       {activeTab === 'pdfs' && (
         <PDFUpdaterTab />
+      )}
+
+      {activeTab === 'prompt' && (
+        <div className="rounded-2xl p-6 flex flex-col gap-4" style={glass}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-800">Prompt IA - APU</h2>
+              <p className="text-sm text-slate-600 mt-1">
+                Configura el prompt que usa la IA para generar Partidas APU
+              </p>
+            </div>
+          </div>
+
+          <div className="flex-1 flex flex-col gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-slate-700">Prompt para generación de APU:</label>
+              <button
+                onClick={() => {
+                  const defaultPrompt = `Eres un experto en construcción y análisis de Partidas (APU).
+
+Tu tarea es generar una Partida APU completa basada en la descripción proporcionada.
+
+INSTRUCCIONES:
+1. Analiza la descripción de la partida
+2. Determina los materiales, equipos y mano de obra necesarios
+3. Calcula cantidades, desperdicios y costos
+4. Devuelve el resultado en formato JSON
+
+FORMATO DE RESPUESTA JSON:
+{
+  "descripcion": "Descripción de la partida",
+  "materiales": [
+    {"codigo": "MATXXXX", "descripcion": "...", "unidad": "...", "cantidad": 0, "precio_unitario": 0}
+  ],
+  "equipos": [
+    {"codigo": "EQXXXX", "descripcion": "...", "unidad": "...", "cantidad": 0, "precio_unitario": 0}
+  ],
+  "mano_obra": [
+    {"codigo": "MOXXXX", "descripcion": "...", "unidad": "...", "cantidad": 0, "jornal": 0}
+  ]
+}`;
+                  setPromptText(defaultPrompt);
+                  toast.success('Prompt restaurado al valor por defecto');
+                }}
+                className="text-xs bg-gray-100 hover:bg-gray-200 text-slate-700 px-3 py-1 rounded transition-colors"
+              >
+                Restaurar Default
+              </button>
+            </div>
+
+            <textarea
+              value={promptText}
+              onChange={(e) => setPromptText(e.target.value)}
+              className="w-full h-96 p-4 border border-gray-300 rounded-lg text-sm font-mono resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Escribe tu prompt aquí..."
+            />
+
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => {
+                  localStorage.setItem('apu_prompt', promptText);
+                  toast.success('Prompt guardado exitosamente');
+                }}
+                className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Guardar Prompt
+              </button>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(promptText);
+                  toast.success('Prompt copiado al portapapeles');
+                }}
+                className="px-4 py-2 text-slate-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Copiar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Edit Item Modal */}
