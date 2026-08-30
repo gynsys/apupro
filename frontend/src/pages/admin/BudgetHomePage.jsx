@@ -19,7 +19,7 @@ export default function BudgetHomePage() {
   const [deletingId, setDeletingId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [importingBackup, setImportingBackup] = useState(false);
-  const [fileInputRef, fileInputRef] = useRef(null);
+  const fileInputRef = useRef(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [limitReachedReason, setLimitReachedReason] = useState('');
   const [newBudgetName, setNewBudgetName] = useState('');
