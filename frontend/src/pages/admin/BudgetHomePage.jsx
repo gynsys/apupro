@@ -291,7 +291,6 @@ export default function BudgetHomePage() {
             onChange={handleFileSelect}
             className="hidden"
           />
-          </button>
         </div>
       </div>
 
@@ -425,6 +424,7 @@ export default function BudgetHomePage() {
           ))}
         </div>
       )}
+      </div>
       </div>
 
       {/* NEW BUDGET MODAL */}
