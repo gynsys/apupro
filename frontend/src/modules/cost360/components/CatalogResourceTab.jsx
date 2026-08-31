@@ -30,18 +30,12 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
       { key: 'CosDia', label: 'Costo Diario ($)', type: 'number' }
     ] : [
       { key: 'Descri', label: 'Descripción', type: 'text' },
-      { key: 'UniMan', label: 'Unidad', type: 'text' },
       { key: 'Jornal', label: 'Jornal ($)', type: 'number' },
       { key: 'Bono', label: 'Bono ($)', type: 'number' }
     ]
   };
 
   const safeConfig = config && config.editableFields ? config : defaultConfig;
-
-  // Debug logging
-  console.log('CatalogResourceTab config:', config);
-  console.log('CatalogResourceTab safeConfig:', safeConfig);
-  console.log('CatalogResourceTab resourceType:', resourceType);
 
   const handleViewUses = async (item) => {
     setUsesModal({ isOpen: true, item, apus: [], loading: true });
@@ -73,12 +67,6 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
         // Since backend was updated to return { total, items }
         const newItems = Array.isArray(data) ? data : data.items;
         const total = Array.isArray(data) ? data.length : data.total;
-        
-        console.log('CatalogResourceTab items loaded:', newItems);
-        if (newItems.length > 0) {
-          console.log('CatalogResourceTab first item keys:', Object.keys(newItems[0]));
-          console.log('CatalogResourceTab first item:', newItems[0]);
-        }
         
         if (append) {
           setItems(prev => [...prev, ...newItems]);
