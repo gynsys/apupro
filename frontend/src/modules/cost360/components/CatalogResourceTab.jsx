@@ -22,15 +22,15 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
     descKey: 'Descri',
     editableFields: resourceType === 'materials' ? [
       { key: 'Descri', label: 'Descripción', type: 'text' },
-      { key: 'Uni', label: 'Unidad', type: 'text' },
+      { key: 'UniMat', label: 'Unidad', type: 'text' },
       { key: 'CosMat', label: 'Precio Unitario ($)', type: 'number' }
     ] : resourceType === 'equipments' ? [
       { key: 'Descri', label: 'Descripción', type: 'text' },
-      { key: 'Uni', label: 'Unidad', type: 'text' },
+      { key: 'UniEqu', label: 'Unidad', type: 'text' },
       { key: 'CosDia', label: 'Costo Diario ($)', type: 'number' }
     ] : [
       { key: 'Descri', label: 'Descripción', type: 'text' },
-      { key: 'Uni', label: 'Unidad', type: 'text' },
+      { key: 'UniMan', label: 'Unidad', type: 'text' },
       { key: 'Jornal', label: 'Jornal ($)', type: 'number' },
       { key: 'Bono', label: 'Bono ($)', type: 'number' }
     ]
