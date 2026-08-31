@@ -9,6 +9,9 @@ const CatalogTab = ({ title, resourceType, selectedDatabase, config }) => {
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [showDescModal, setShowDescModal] = useState(false);
 
+  // Ensure config is always an object
+  const safeConfig = config || {};
+
   return (
     <>
       <GlassCard className="rounded-2xl p-4 flex flex-col gap-3">
@@ -41,7 +44,7 @@ const CatalogTab = ({ title, resourceType, selectedDatabase, config }) => {
         resourceType={resourceType}
         selectedDatabase={selectedDatabase}
         adminMode={true}
-        config={config}
+        config={safeConfig}
       />
 
       {showPriceModal && (

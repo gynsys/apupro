@@ -32,6 +32,9 @@ export const useBulkUpdate = () => {
   const [descFile, setDescFile] = useState(null);
 
   const parsePriceLines = useCallback((text) => {
+    if (!text || typeof text !== 'string') {
+      return [];
+    }
     const lines = text.split('\n').filter(line => line.trim());
     const updates = [];
 
@@ -55,13 +58,13 @@ export const useBulkUpdate = () => {
   }, []);
 
   const submitBulkPrices = useCallback(async (onSuccess) => {
-    const updates = parsePriceLines(priceText);
-    if (updates.length === 0) {
-      toast.error('No se encontraron precios validos para actualizar');
-      return;
-    }
-
     try {
+      const updates = parsePriceLines(priceText);
+      if (updates.length === 0) {
+        toast.error('No se encontraron precios validos para actualizar');
+        return;
+      }
+
       const response = await apiPost('/cost360/materials/bulk-update', { updates });
       if (response.ok) {
         const result = await response.json();
@@ -76,6 +79,7 @@ export const useBulkUpdate = () => {
         toast.error(`Error al actualizar precios: ${response.status}`);
       }
     } catch (err) {
+      console.error('Error en submitBulkPrices:', err);
       toast.error('Error de conexion al servidor');
     }
   }, [priceText, parsePriceLines]);
