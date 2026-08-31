@@ -81,6 +81,22 @@ def update_budget(budget_id: str, budget_in: BudgetUpdate, db: Session = Depends
     db.refresh(budget)
     return budget
 
+@router.delete("/{budget_id}", status_code=204)
+def delete_budget(
+    budget_id: str,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_arko_admin),
+) -> None:
+    """Elimina un presupuesto y todos sus items (cascade)."""
+    budget = db.query(Budget).filter(
+        Budget.id == budget_id,
+        Budget.user_id == str(current_user.id),
+    ).first()
+    if not budget:
+        raise HTTPException(status_code=404, detail="Budget not found")
+    db.delete(budget)
+    db.commit()
+
 @router.post("/{budget_id}/upload-logo")
 async def upload_budget_logo(budget_id: str, logo: UploadFile = File(...), db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     """Sube el logo de la empresa para un presupuesto específico"""
