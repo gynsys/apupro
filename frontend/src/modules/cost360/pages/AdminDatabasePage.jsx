@@ -38,7 +38,73 @@ const AdminDatabasePage = () => {
   const [selectedDatabase, setSelectedDatabase] = useState('master');
   const [promptText, setPromptText] = useState(DEFAULT_APU_PROMPT);
   
-  const { config, toggleGlobalCoded, toggleCategory } = useAdminConfig();
+  const siteConfig = React.useContext(SiteConfigContext);
+  const config = siteConfig?.config || {};
+  
+  const toggleGlobalCoded = async (isChecked) => {
+    try {
+      const newConfig = { ...config, forceOnlyCodedMaster: isChecked };
+      const response = await fetch(`${siteConfig?.API_URL || process.env.VITE_API_URL}/admin/config`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}`
+        },
+        body: JSON.stringify(newConfig)
+      });
+      if (response.ok) {
+        const result = await response.json();
+        const updatedConfig = result.config || newConfig;
+        if (siteConfig?.setConfig) {
+          siteConfig.setConfig(updatedConfig);
+        }
+        if (window.ARKO_SITE_CONFIG) {
+          window.ARKO_SITE_CONFIG = updatedConfig;
+        }
+        toast.success(isChecked ? "Filtro publico ACTIVADO" : "Filtro publico DESACTIVADO");
+      }
+    } catch (err) {
+      toast.error("Error al actualizar la configuracion publica");
+    }
+  };
+
+  const toggleCategory = async (code, isVisible) => {
+    try {
+      const hiddenCategories = config?.hiddenCategories || [];
+      let newHidden = [...hiddenCategories];
+
+      if (isVisible) {
+        newHidden = newHidden.filter(c => c !== code);
+      } else {
+        if (!newHidden.includes(code)) {
+          newHidden.push(code);
+        }
+      }
+
+      const newConfig = { ...config, hiddenCategories: newHidden };
+      const response = await fetch(`${siteConfig?.API_URL || process.env.VITE_API_URL}/admin/config`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}`
+        },
+        body: JSON.stringify(newConfig)
+      });
+      if (response.ok) {
+        const result = await response.json();
+        const updatedConfig = result.config || newConfig;
+        if (siteConfig?.setConfig) {
+          siteConfig.setConfig(updatedConfig);
+        }
+        if (window.ARKO_SITE_CONFIG) {
+          window.ARKO_SITE_CONFIG = updatedConfig;
+        }
+        toast.success(`Categoria ${code} ${isVisible ? 'ACTIVADA' : 'OCULTADA'}`);
+      }
+    } catch (err) {
+      toast.error("Error al actualizar categorias");
+    }
+  };
 
   const showPartidasFilters = activeTab === 'partidas';
 
