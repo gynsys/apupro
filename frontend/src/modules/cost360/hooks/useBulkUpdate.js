@@ -1,6 +1,29 @@
 import { useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { apiPost, apiPostFormData } from '../lib/apiClient';
+import { API_URL } from '../../../services/api';
+
+const apiPost = async (endpoint, body) => {
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}`
+    },
+    body: JSON.stringify(body)
+  });
+  return response;
+};
+
+const apiPostFormData = async (endpoint, formData) => {
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}`
+    },
+    body: formData
+  });
+  return response;
+};
 
 export const useBulkUpdate = () => {
   const [showPriceModal, setShowPriceModal] = useState(false);
