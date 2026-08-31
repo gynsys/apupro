@@ -107,7 +107,7 @@ def get_public_post(slug: str):
 
 @router.post("/auth/login")
 @limiter.limit("5/minute")
-def login_arko_admin(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), response: Response):
+def login_arko_admin(request: Request, response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
     try:
         with get_db_session() as db:
             user = db.query(ArkoAdmin).filter(ArkoAdmin.email == form_data.username).first()
