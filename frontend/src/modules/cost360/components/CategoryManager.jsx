@@ -30,10 +30,11 @@ const CategoryManager = ({ config, onToggleCategory }) => {
         </button>
       </div>
 
-      {isOpen && (
+      {isOpen && coveninTreeData && (
         <div className="absolute top-full left-6 mt-1 w-[400px] z-50 bg-white border border-slate-200 rounded-xl shadow-xl p-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
           {coveninTreeData.map(cat => {
-            const isVisible = !(config?.hiddenCategories || []).includes(cat.code);
+            const hiddenCategories = config?.hiddenCategories || [];
+            const isVisible = !hiddenCategories.includes(cat.code);
             return (
               <div key={cat.code} className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border transition-colors ${isVisible ? 'bg-slate-50 border-blue-200' : 'bg-white border-slate-100 opacity-60 hover:opacity-100'}`}>
                 <input
