@@ -48,7 +48,7 @@ export const useUsers = () => {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await apiFetch('/api/v1/users/');
+      const response = await apiFetch('/users/');
       if (response.ok) {
         const data = await response.json();
         setUsers(data);
@@ -67,7 +67,7 @@ export const useUsers = () => {
 
   const toggleUserStatus = useCallback(async (userId, currentStatus) => {
     try {
-      const response = await apiPut(`/api/v1/users/${userId}`, { is_active: !currentStatus });
+      const response = await apiPut(`/users/${userId}`, { is_active: !currentStatus });
       if (response.ok) {
         toast.success('Usuario actualizado');
         fetchUsers();
@@ -81,7 +81,7 @@ export const useUsers = () => {
 
   const updateUserPlan = useCallback(async (userId, planData) => {
     try {
-      const response = await apiPut(`/api/v1/users/${userId}`, planData);
+      const response = await apiPut(`/users/${userId}`, planData);
       if (response.ok) {
         toast.success('Plan actualizado');
         fetchUsers();
@@ -98,7 +98,7 @@ export const useUsers = () => {
 
   const deleteUser = useCallback(async (userId) => {
     try {
-      const response = await apiDelete(`/api/v1/users/${userId}`);
+      const response = await apiDelete(`/users/${userId}`);
       if (response.ok) {
         toast.success('Usuario eliminado exitosamente');
         fetchUsers();
@@ -112,7 +112,7 @@ export const useUsers = () => {
 
   const createDemoBudget = useCallback(async () => {
     try {
-      const response = await apiPost('/api/v1/users/demo-budget');
+      const response = await apiPost('/users/demo-budget');
       if (response.ok) {
         const data = await response.json();
         toast.success(data.message);
