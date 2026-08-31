@@ -20,25 +20,19 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
   const defaultConfig = {
     idKey: resourceType === 'materials' ? 'CodMat' : resourceType === 'equipments' ? 'CodEqu' : 'CodMan',
     descKey: resourceType === 'materials' ? 'Descri' : resourceType === 'equipments' ? 'Descri' : 'Descri',
-    editableFields: resourceType === 'materials' ? [
+    editableFields: [
       { key: 'Descri', label: 'Descripción', type: 'text' },
       { key: 'Uni', label: 'Unidad', type: 'text' },
-      { key: 'Cantidad', label: 'Cantidad', type: 'number' },
-      { key: 'Precio', label: 'Precio', type: 'number' }
-    ] : resourceType === 'equipments' ? [
-      { key: 'Descri', label: 'Descripción', type: 'text' },
-      { key: 'Uni', label: 'Unidad', type: 'text' },
-      { key: 'Cantidad', label: 'Cantidad', type: 'number' },
-      { key: 'Precio', label: 'Precio', type: 'number' }
-    ] : [
-      { key: 'Descri', label: 'Descripción', type: 'text' },
-      { key: 'Uni', label: 'Unidad', type: 'text' },
-      { key: 'Cantidad', label: 'Cantidad', type: 'number' },
       { key: 'Precio', label: 'Precio', type: 'number' }
     ]
   };
 
   const safeConfig = config && config.editableFields ? config : defaultConfig;
+
+  // Debug logging
+  console.log('CatalogResourceTab config:', config);
+  console.log('CatalogResourceTab safeConfig:', safeConfig);
+  console.log('CatalogResourceTab resourceType:', resourceType);
 
   const handleViewUses = async (item) => {
     setUsesModal({ isOpen: true, item, apus: [], loading: true });
