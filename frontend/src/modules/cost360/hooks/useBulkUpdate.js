@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { apiPost, apiPostFormData } from '../../../lib/apiClient';
+import { apiPost, apiPostFormData } from '../lib/apiClient';
 
 export const useBulkUpdate = () => {
   const [showPriceModal, setShowPriceModal] = useState(false);

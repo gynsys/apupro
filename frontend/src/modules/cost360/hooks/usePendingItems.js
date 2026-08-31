@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { apiFetch, apiPost } from '../../../lib/apiClient';
+import { apiFetch, apiPost } from '../lib/apiClient';
 
 export const usePendingItems = () => {
   const [pendingItems, setPendingItems] = useState([]);

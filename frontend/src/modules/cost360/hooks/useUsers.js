@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { apiFetch, apiPut, apiDelete, apiPost } from '../../../lib/apiClient';
+import { apiFetch, apiPut, apiDelete, apiPost } from '../lib/apiClient';
 
 export const useUsers = () => {
   const [users, setUsers] = useState([]);

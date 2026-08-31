@@ -42,6 +42,9 @@ frontend/src/modules/cost360/
 │   ├── useUsers.js             # Hook para gestión de usuarios
 │   ├── useBulkUpdate.js        # Hook para actualizaciones masivas
 │   └── usePendingItems.js     # Hook para scraping pendiente
+├── lib/
+│   ├── apiClient.js            # Cliente API centralizado con auth
+│   └── exportUtils.js          # Utilidades de exportación
 ├── components/
 │   ├── layout/
 │   │   ├── AdminHeader.jsx     # Header con botones de acción
@@ -72,9 +75,6 @@ frontend/src/modules/cost360/
 ### Directorios Compartidos
 ```
 frontend/src/
-├── lib/
-│   ├── apiClient.js            # Cliente API centralizado con auth
-│   └── exportUtils.js          # Utilidades de exportación
 └── components/shared/
     └── GlassCard.jsx           # Componente reutilizable de cards
 ```
@@ -95,16 +95,18 @@ frontend/src/
 - **Contenido:** Template de prompt para IA
 - **Beneficio:** Mantenimiento centralizado de prompts
 
-#### `lib/apiClient.js`
+#### `lib/apiClient.js` (ubicado en `cost360/lib/`)
 - **Propósito:** Cliente API centralizado con autenticación
 - **Funciones:** `apiFetch`, `apiPost`, `apiPut`, `apiDelete`, `apiPostFormData`
 - **Auth:** Automáticamente agrega header `Authorization: Bearer {arko_admin_token}`
 - **Beneficio:** Elimina código duplicado de autenticación
+- **Nota:** Ubicado en `cost360/lib/` para evitar problemas de rutas en Docker
 
-#### `lib/exportUtils.js`
+#### `lib/exportUtils.js` (ubicado en `cost360/lib/`)
 - **Propósito:** Utilidades de exportación
 - **Funciones:** `generatePartidasExcel` - Genera Excel en formato XML
 - **Beneficio:** Reutilización de lógica de exportación
+- **Nota:** Ubicado en `cost360/lib/` para evitar problemas de rutas en Docker
 
 ### Fase 2: Hooks Customizados
 
@@ -383,10 +385,11 @@ frontend/src/
 
 ## ⚠️ Problemas Conocidos y Soluciones
 
-### Rutas Relativas
-- **Problema:** Las rutas relativas deben ajustarse según la ubicación del componente
-- **Solución:** Verificar rutas al copiar componentes de `archivos_refactorizacion`
-- **Patrón:** Desde `components/layout/` usar `../../../../` para llegar a `src/`
+### Rutas Relativas en Docker
+- **Problema:** Las rutas relativas no funcionan correctamente en el entorno Docker
+- **Solución:** Archivos de utilidades (`apiClient.js`, `exportUtils.js`) ubicados en `cost360/lib/` en lugar de `src/lib/`
+- **Verificación:** Los imports ahora usan rutas más cortas desde el módulo cost360
+- **Patrón:** Importar desde `../lib/apiClient` en lugar de `../../../lib/apiClient`
 
 ### Auth Tokens
 - **Problema:** Algunos componentes usaban `token` en lugar de `arko_admin_token`
@@ -402,6 +405,11 @@ frontend/src/
 - **Problema:** Hooks customizados pueden tener dependencias faltantes
 - **Solución:** Verificar imports de hooks y servicios
 - **Verificación:** Build error de "Could not resolve" indica dependencia faltante
+
+### Build Docker vs Local
+- **Problema:** Build Docker puede fallar por rutas que funcionan localmente
+- **Solución:** Utilizar estructura de archivos dentro del módulo cost360
+- **Verificación:** Testear builds en ambos entornos
 
 ---
 

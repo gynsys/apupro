@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import GlassCard from '../../../../components/shared/GlassCard';
 import Cost360SearchBar from '../Cost360SearchBar';
 import { useCost360Search } from '../../hooks/useCost360Search';
-import { generatePartidasExcel } from '../../../../lib/exportUtils';
+import { generatePartidasExcel } from '../../lib/exportUtils';
 import cost360Service from '../../services/cost360Service';
 import EditPartidaModal from '../modals/EditPartidaModal';
 
