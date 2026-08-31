@@ -65,6 +65,12 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
         const newItems = Array.isArray(data) ? data : data.items;
         const total = Array.isArray(data) ? data.length : data.total;
         
+        console.log('CatalogResourceTab items loaded:', newItems);
+        if (newItems.length > 0) {
+          console.log('CatalogResourceTab first item keys:', Object.keys(newItems[0]));
+          console.log('CatalogResourceTab first item:', newItems[0]);
+        }
+        
         if (append) {
           setItems(prev => [...prev, ...newItems]);
         } else {
