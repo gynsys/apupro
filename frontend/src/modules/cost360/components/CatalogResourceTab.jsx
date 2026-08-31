@@ -16,14 +16,23 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
   
   const [usesModal, setUsesModal] = useState({ isOpen: false, item: null, apus: [], loading: false });
 
-  // Default config values based on resource type
+  // Default config values based on resource type - matching backend keys
   const defaultConfig = {
     idKey: resourceType === 'materials' ? 'CodMat' : resourceType === 'equipments' ? 'CodEqu' : 'CodMan',
-    descKey: resourceType === 'materials' ? 'Descri' : resourceType === 'equipments' ? 'Descri' : 'Descri',
-    editableFields: [
+    descKey: 'Descri',
+    editableFields: resourceType === 'materials' ? [
       { key: 'Descri', label: 'Descripción', type: 'text' },
       { key: 'Uni', label: 'Unidad', type: 'text' },
-      { key: 'Precio', label: 'Precio', type: 'number' }
+      { key: 'CosMat', label: 'Precio Unitario ($)', type: 'number' }
+    ] : resourceType === 'equipments' ? [
+      { key: 'Descri', label: 'Descripción', type: 'text' },
+      { key: 'Uni', label: 'Unidad', type: 'text' },
+      { key: 'CosDia', label: 'Costo Diario ($)', type: 'number' }
+    ] : [
+      { key: 'Descri', label: 'Descripción', type: 'text' },
+      { key: 'Uni', label: 'Unidad', type: 'text' },
+      { key: 'Jornal', label: 'Jornal ($)', type: 'number' },
+      { key: 'Bono', label: 'Bono ($)', type: 'number' }
     ]
   };
 
