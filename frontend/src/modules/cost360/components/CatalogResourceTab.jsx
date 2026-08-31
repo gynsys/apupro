@@ -16,6 +16,16 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
   
   const [usesModal, setUsesModal] = useState({ isOpen: false, item: null, apus: [], loading: false });
 
+  // Guard: si config no tiene lo necesario, no renderizar nada útil aún
+  if (!config || !Array.isArray(config.editableFields) || !config.idKey) {
+    return (
+      <div className="flex flex-col flex-1 items-center justify-center gap-3 text-slate-400">
+        <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full" />
+        <span className="text-sm font-medium">Cargando configuración del catálogo...</span>
+      </div>
+    );
+  }
+
   const handleViewUses = async (item) => {
     setUsesModal({ isOpen: true, item, apus: [], loading: true });
     try {
@@ -190,13 +200,13 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
   <Table>
    <Column ss:Width="40"/>
    <Column ss:Width="100"/>
-   ${!config.editableFields.some(f => f.key === config.descKey) ? '<Column ss:Width="450"/>' : ''}
-   ${config.editableFields.map(f => f.type === 'text' || f.key === config.descKey ? '<Column ss:Width="450"/>' : '<Column ss:Width="80"/>').join('\n   ')}
+   ${!config.editableFields?.some(f => f.key === config.descKey) ? '<Column ss:Width="450"/>' : ''}
+   ${config.editableFields?.map(f => f.type === 'text' || f.key === config.descKey ? '<Column ss:Width="450"/>' : '<Column ss:Width="80"/>').join('\n   ')}
    <Row ss:Height="20">
     <Cell ss:StyleID="sHeader"><Data ss:Type="String">N°</Data></Cell>
     <Cell ss:StyleID="sHeader"><Data ss:Type="String">Código</Data></Cell>
-    ${!config.editableFields.some(f => f.key === config.descKey) ? '<Cell ss:StyleID="sHeader"><Data ss:Type="String">Descripción</Data></Cell>' : ''}
-    ${config.editableFields.map(f => `<Cell ss:StyleID="sHeader"><Data ss:Type="String">${f.label}</Data></Cell>`).join('\n    ')}
+    ${!config.editableFields?.some(f => f.key === config.descKey) ? '<Cell ss:StyleID="sHeader"><Data ss:Type="String">Descripción</Data></Cell>' : ''}
+    ${config.editableFields?.map(f => `<Cell ss:StyleID="sHeader"><Data ss:Type="String">${f.label}</Data></Cell>`).join('\n    ')}
    </Row>
    ${exportItems.map((item, index) => {
      const cod = (item[config.idKey] || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -205,7 +215,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
     <Cell ss:StyleID="sNumber"><Data ss:Type="Number">${index + 1}</Data></Cell>
     <Cell ss:StyleID="sNormal"><Data ss:Type="String">${cod}</Data></Cell>`;
     
-     if (!config.editableFields.some(f => f.key === config.descKey)) {
+     if (!config.editableFields?.some(f => f.key === config.descKey)) {
         const desc = (item[config.descKey] || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         rowHtml += `\n    <Cell ss:StyleID="sDesc"><Data ss:Type="String">${desc}</Data></Cell>`;
      }
@@ -310,10 +320,10 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
             <thead className="sticky top-0 z-10" style={{ background: '#f8fafc' }}>
               <tr style={{ background: 'linear-gradient(90deg,rgba(37,99,235,0.06),rgba(99,102,241,0.03))' }}>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
-                {!config.editableFields.some(f => f.key === config.descKey) && (
+                {!config.editableFields?.some(f => f.key === config.descKey) && (
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
                 )}
-                {config.editableFields.map(f => (
+                {config.editableFields?.map(f => (
                   <th key={f.key} className={`px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider ${f.type === 'text' || f.key === config.descKey ? 'text-left' : 'text-right'}`}>{f.label}</th>
                 ))}
                 {resourceType !== 'items' && (
@@ -345,11 +355,11 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                     }}
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-blue-700 font-mono">{item[config.idKey]}</td>
-                    {!config.editableFields.some(f => f.key === config.descKey) && (
+                    {!config.editableFields?.some(f => f.key === config.descKey) && (
                       <td className="px-6 py-4 text-xs text-slate-600 group-hover:text-slate-800">{item[config.descKey]}</td>
                     )}
                     
-                    {config.editableFields.map(f => (
+                    {config.editableFields?.map(f => (
                       <td key={f.key} className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${f.type === 'text' || f.key === config.descKey ? 'text-left' : 'text-right'}`}>
                         {editingId === item[config.idKey] ? (
                           f.type === 'text' || f.key === config.descKey ? (
