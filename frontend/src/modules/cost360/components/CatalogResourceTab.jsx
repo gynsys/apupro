@@ -20,9 +20,20 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
   const defaultConfig = {
     idKey: resourceType === 'materials' ? 'CodMat' : resourceType === 'equipments' ? 'CodEqu' : 'CodMan',
     descKey: resourceType === 'materials' ? 'Descri' : resourceType === 'equipments' ? 'Descri' : 'Descri',
-    editableFields: [
+    editableFields: resourceType === 'materials' ? [
       { key: 'Descri', label: 'Descripción', type: 'text' },
       { key: 'Uni', label: 'Unidad', type: 'text' },
+      { key: 'Cantidad', label: 'Cantidad', type: 'number' },
+      { key: 'Precio', label: 'Precio', type: 'number' }
+    ] : resourceType === 'equipments' ? [
+      { key: 'Descri', label: 'Descripción', type: 'text' },
+      { key: 'Uni', label: 'Unidad', type: 'text' },
+      { key: 'Cantidad', label: 'Cantidad', type: 'number' },
+      { key: 'Precio', label: 'Precio', type: 'number' }
+    ] : [
+      { key: 'Descri', label: 'Descripción', type: 'text' },
+      { key: 'Uni', label: 'Unidad', type: 'text' },
+      { key: 'Cantidad', label: 'Cantidad', type: 'number' },
       { key: 'Precio', label: 'Precio', type: 'number' }
     ]
   };
