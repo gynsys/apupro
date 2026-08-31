@@ -16,15 +16,18 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
   
   const [usesModal, setUsesModal] = useState({ isOpen: false, item: null, apus: [], loading: false });
 
-  // Guard: si config no tiene lo necesario, no renderizar nada útil aún
-  if (!config || !Array.isArray(config.editableFields) || !config.idKey) {
-    return (
-      <div className="flex flex-col flex-1 items-center justify-center gap-3 text-slate-400">
-        <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full" />
-        <span className="text-sm font-medium">Cargando configuración del catálogo...</span>
-      </div>
-    );
-  }
+  // Default config values based on resource type
+  const defaultConfig = {
+    idKey: resourceType === 'materials' ? 'CodMat' : resourceType === 'equipments' ? 'CodEqu' : 'CodMan',
+    descKey: resourceType === 'materials' ? 'Descri' : resourceType === 'equipments' ? 'Descri' : 'Descri',
+    editableFields: [
+      { key: 'Descri', label: 'Descripción', type: 'text' },
+      { key: 'Uni', label: 'Unidad', type: 'text' },
+      { key: 'Precio', label: 'Precio', type: 'number' }
+    ]
+  };
+
+  const safeConfig = config && config.editableFields ? config : defaultConfig;
 
   const handleViewUses = async (item) => {
     setUsesModal({ isOpen: true, item, apus: [], loading: true });
@@ -200,8 +203,8 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
   <Table>
    <Column ss:Width="40"/>
    <Column ss:Width="100"/>
-   ${!config.editableFields?.some(f => f.key === config.descKey) ? '<Column ss:Width="450"/>' : ''}
-   ${config.editableFields?.map(f => f.type === 'text' || f.key === config.descKey ? '<Column ss:Width="450"/>' : '<Column ss:Width="80"/>').join('\n   ')}
+   ${!safeConfig.editableFields?.some(f => f.key === safeConfig.descKey) ? '<Column ss:Width="450"/>' : ''}
+   ${safeConfig.editableFields?.map(f => f.type === 'text' || f.key === safeConfig.descKey ? '<Column ss:Width="450"/>' : '<Column ss:Width="80"/>').join('\n   ')}
    <Row ss:Height="20">
     <Cell ss:StyleID="sHeader"><Data ss:Type="String">N°</Data></Cell>
     <Cell ss:StyleID="sHeader"><Data ss:Type="String">Código</Data></Cell>
