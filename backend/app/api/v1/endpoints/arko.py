@@ -17,7 +17,7 @@ from app.core.security import create_access_token
 from app.core.config import settings
 from app.services.redis_cache_service import redis_cache
 from app.services.email import send_verification_email
-from app.main import limiter
+from app.core.limiter import limiter
 from app.core.html_sanitizer import sanitize_html
 
 @contextmanager
