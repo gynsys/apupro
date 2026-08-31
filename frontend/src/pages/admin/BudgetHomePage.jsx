@@ -130,24 +130,16 @@ export default function BudgetHomePage() {
 
   const handleExportToExcel = async (budget) => {
     try {
-      // Llamar al backend para generar el Excel con fórmulas
-      const API_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') 
-        ? 'http://localhost:8010' 
-        : window.location.origin;
-
-      const response = await fetch(`${API_URL}/api/v1/budgets/${budget.id}/export-excel`, {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api/v1';
+      const response = await fetch(`${apiUrl}/budgets/${budget.id}/export-excel`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        credentials: 'include',
       });
-      
+
       if (!response.ok) {
         throw new Error('Error al generar el Excel');
       }
-      
-      // Descargar el archivo generado
+
       const blob = await response.blob();
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
@@ -157,7 +149,8 @@ export default function BudgetHomePage() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+      URL.revokeObjectURL(url);
+
       toast.success('Presupuesto exportado exitosamente');
     } catch (error) {
       console.error('Error al exportar:', error);
@@ -167,15 +160,9 @@ export default function BudgetHomePage() {
 
   const handleBackupExport = async (budget) => {
     try {
-      const API_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
-        ? 'http://localhost:8010'
-        : window.location.origin;
-
-      const response = await fetch(`${API_URL}/api/v1/budgets/${budget.id}/backup`, {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api/v1';
+      const response = await fetch(`${apiUrl}/budgets/${budget.id}/backup`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         credentials: 'include',
       });
 
@@ -198,9 +185,7 @@ export default function BudgetHomePage() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast.success(result.message || 'Backup descargado exitosamente', {
-        duration: 2000
-      });
+      toast.success(result.message || 'Backup descargado exitosamente', { duration: 2000 });
     } catch (error) {
       console.error('Error al exportar backup:', error);
       toast.error('Error al exportar el backup');

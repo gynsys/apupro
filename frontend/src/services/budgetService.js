@@ -134,7 +134,8 @@ export const budgetService = {
       credentials: 'include'
     });
     if (!response.ok) throw new Error('Error al eliminar el presupuesto');
-    return response.json();
+    // 204 No Content — no body to parse
+    return response.status === 204 ? null : response.json();
   },
 
   duplicateBudget: async (id, newName) => {
