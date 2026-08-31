@@ -27,12 +27,12 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
     ]
   };
 
-  const safeConfig = config && config.editableFields ? config : defaultConfig;
+  const safeConfig = config && safeConfig.editableFields ? config : defaultConfig;
 
   const handleViewUses = async (item) => {
     setUsesModal({ isOpen: true, item, apus: [], loading: true });
     try {
-      const res = await fetch(`${API_URL}/cost360/${resourceType}/${item[config.idKey]}/apus`, {
+      const res = await fetch(`${API_URL}/cost360/${resourceType}/${item[safeConfig.idKey]}/apus`, {
         headers: { 'Authorization': `Bearer ${adminMode ? localStorage.getItem('arko_admin_token') : localStorage.getItem('token')}` }
       });
       if (res.ok) {
@@ -91,9 +91,9 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
   };
 
   const startEdit = (item) => {
-    setEditingId(item[config.idKey]);
+    setEditingId(item[safeConfig.idKey]);
     const form = {};
-    config.editableFields.forEach(f => {
+    safeConfig.editableFields.forEach(f => {
       form[f.key] = item[f.key] || 0;
     });
     setEditForm(form);
@@ -208,24 +208,24 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
    <Row ss:Height="20">
     <Cell ss:StyleID="sHeader"><Data ss:Type="String">N°</Data></Cell>
     <Cell ss:StyleID="sHeader"><Data ss:Type="String">Código</Data></Cell>
-    ${!config.editableFields?.some(f => f.key === config.descKey) ? '<Cell ss:StyleID="sHeader"><Data ss:Type="String">Descripción</Data></Cell>' : ''}
-    ${config.editableFields?.map(f => `<Cell ss:StyleID="sHeader"><Data ss:Type="String">${f.label}</Data></Cell>`).join('\n    ')}
+    ${!safeConfig.editableFields?.some(f => f.key === safeConfig.descKey) ? '<Cell ss:StyleID="sHeader"><Data ss:Type="String">Descripción</Data></Cell>' : ''}
+    ${safeConfig.editableFields?.map(f => `<Cell ss:StyleID="sHeader"><Data ss:Type="String">${f.label}</Data></Cell>`).join('\n    ')}
    </Row>
    ${exportItems.map((item, index) => {
-     const cod = (item[config.idKey] || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+     const cod = (item[safeConfig.idKey] || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
      
      let rowHtml = `<Row ss:Height="24">
     <Cell ss:StyleID="sNumber"><Data ss:Type="Number">${index + 1}</Data></Cell>
     <Cell ss:StyleID="sNormal"><Data ss:Type="String">${cod}</Data></Cell>`;
     
-     if (!config.editableFields?.some(f => f.key === config.descKey)) {
-        const desc = (item[config.descKey] || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+     if (!safeConfig.editableFields?.some(f => f.key === safeConfig.descKey)) {
+        const desc = (item[safeConfig.descKey] || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         rowHtml += `\n    <Cell ss:StyleID="sDesc"><Data ss:Type="String">${desc}</Data></Cell>`;
      }
      
-     config.editableFields.forEach(f => {
+     safeConfig.editableFields.forEach(f => {
          const val = item[f.key];
-         if (f.type === 'text' || f.key === config.descKey) {
+         if (f.type === 'text' || f.key === safeConfig.descKey) {
             const strVal = (val || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
             rowHtml += `\n    <Cell ss:StyleID="sDesc"><Data ss:Type="String">${strVal}</Data></Cell>`;
          } else {
@@ -323,11 +323,11 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
             <thead className="sticky top-0 z-10" style={{ background: '#f8fafc' }}>
               <tr style={{ background: 'linear-gradient(90deg,rgba(37,99,235,0.06),rgba(99,102,241,0.03))' }}>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
-                {!config.editableFields?.some(f => f.key === config.descKey) && (
+                {!safeConfig.editableFields?.some(f => f.key === safeConfig.descKey) && (
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
                 )}
-                {config.editableFields?.map(f => (
-                  <th key={f.key} className={`px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider ${f.type === 'text' || f.key === config.descKey ? 'text-left' : 'text-right'}`}>{f.label}</th>
+                {safeConfig.editableFields?.map(f => (
+                  <th key={f.key} className={`px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider ${f.type === 'text' || f.key === safeConfig.descKey ? 'text-left' : 'text-right'}`}>{f.label}</th>
                 ))}
                 {resourceType !== 'items' && (
                   <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Uso en Partidas</th>
@@ -345,7 +345,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
               ) : (
                 items.map((item) => (
                   <tr
-                    key={item[config.idKey]}
+                    key={item[safeConfig.idKey]}
                     className="group cursor-default transition-all duration-150"
                     style={{ borderLeft: '3px solid transparent' }}
                     onMouseEnter={e => {
@@ -357,15 +357,15 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                       e.currentTarget.style.borderLeftColor = 'transparent';
                     }}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-blue-700 font-mono">{item[config.idKey]}</td>
-                    {!config.editableFields?.some(f => f.key === config.descKey) && (
-                      <td className="px-6 py-4 text-xs text-slate-600 group-hover:text-slate-800">{item[config.descKey]}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-blue-700 font-mono">{item[safeConfig.idKey]}</td>
+                    {!safeConfig.editableFields?.some(f => f.key === safeConfig.descKey) && (
+                      <td className="px-6 py-4 text-xs text-slate-600 group-hover:text-slate-800">{item[safeConfig.descKey]}</td>
                     )}
                     
-                    {config.editableFields?.map(f => (
-                      <td key={f.key} className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${f.type === 'text' || f.key === config.descKey ? 'text-left' : 'text-right'}`}>
-                        {editingId === item[config.idKey] ? (
-                          f.type === 'text' || f.key === config.descKey ? (
+                    {safeConfig.editableFields?.map(f => (
+                      <td key={f.key} className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${f.type === 'text' || f.key === safeConfig.descKey ? 'text-left' : 'text-right'}`}>
+                        {editingId === item[safeConfig.idKey] ? (
+                          f.type === 'text' || f.key === safeConfig.descKey ? (
                             <input
                               type="text"
                               className="w-full min-w-[120px] text-left border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-2 py-1"
@@ -382,8 +382,8 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                             />
                           )
                         ) : (
-                          <span className={f.type === 'text' || f.key === config.descKey ? 'text-gray-900 text-left whitespace-normal' : 'text-gray-900'}>
-                            {f.type === 'text' || f.key === config.descKey ? (item[f.key] || '') : `$${(item[f.key] || 0).toFixed(2)}`}
+                          <span className={f.type === 'text' || f.key === safeConfig.descKey ? 'text-gray-900 text-left whitespace-normal' : 'text-gray-900'}>
+                            {f.type === 'text' || f.key === safeConfig.descKey ? (item[f.key] || '') : `$${(item[f.key] || 0).toFixed(2)}`}
                           </span>
                         )}
                       </td>
@@ -401,7 +401,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
 
                     {(selectedDatabase !== 'master' || adminMode) && (
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        {editingId === item[config.idKey] ? (
+                        {editingId === item[safeConfig.idKey] ? (
                           <div className="flex justify-end gap-2">
                             <button onClick={handleUpdate} className="text-green-600 hover:text-green-900 bg-green-50 p-2 rounded-full transition-colors" title="Guardar"><FiCheck size={16} /></button>
                             <button onClick={cancelEdit} className="text-gray-600 hover:text-gray-900 bg-gray-100 p-2 rounded-full transition-colors" title="Cancelar"><FiX size={16} /></button>
@@ -409,7 +409,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                         ) : (
                           <div className="flex justify-end gap-2">
                             <button onClick={() => startEdit(item)} className="text-blue-600 hover:text-blue-900 bg-blue-50 p-2 rounded-full transition-colors" title="Editar Precio"><FiEdit2 size={16} /></button>
-                            <button onClick={() => handleDelete(item[config.idKey])} className="text-red-600 hover:text-red-900 bg-red-50 p-2 rounded-full transition-colors" title="Eliminar"><FiTrash2 size={16} /></button>
+                            <button onClick={() => handleDelete(item[safeConfig.idKey])} className="text-red-600 hover:text-red-900 bg-red-50 p-2 rounded-full transition-colors" title="Eliminar"><FiTrash2 size={16} /></button>
                           </div>
                         )}
                       </td>
@@ -447,7 +447,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                   <p className="text-sm text-slate-500 mt-0.5">
                     {usesModal.item && (
                       <>
-                        <span className="font-mono font-bold text-blue-600">{usesModal.item[config.idKey]}</span> — {usesModal.item[config.descKey]}
+                        <span className="font-mono font-bold text-blue-600">{usesModal.item[safeConfig.idKey]}</span> — {usesModal.item[safeConfig.descKey]}
                       </>
                     )}
                   </p>
