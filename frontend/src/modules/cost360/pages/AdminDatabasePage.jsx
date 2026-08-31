@@ -15,6 +15,7 @@ import { DEFAULT_APU_PROMPT } from '../constants/prompts.default';
 import GlassCard from '../../../components/shared/GlassCard';
 import { FiCpu } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import { apiPut } from '../../../lib/apiHelper';
 
 const glass = {
   background: 'rgba(255,255,255,0.75)',
@@ -44,14 +45,7 @@ const AdminDatabasePage = () => {
   const toggleGlobalCoded = async (isChecked) => {
     try {
       const newConfig = { ...config, forceOnlyCodedMaster: isChecked };
-      const response = await fetch(`${siteConfig?.API_URL || process.env.VITE_API_URL}/admin/config`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}`
-        },
-        body: JSON.stringify(newConfig)
-      });
+      const response = await apiPut('/admin/config', newConfig);
       if (response.ok) {
         const result = await response.json();
         const updatedConfig = result.config || newConfig;

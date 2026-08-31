@@ -121,11 +121,10 @@ export default function ProfilePage() {
   const fetchSiteConfig = async () => {
     try {
       if (urlSlug) {
-        const token = localStorage.getItem('arko_admin_token');
-        const config = await getMyLandingSiteConfig(token);
+        const config = await getMyLandingSiteConfig(null); // Token will use cookies
         if (config) setSiteConfig(config);
       } else {
-        const response = await fetch(`${API_URL}/arko/config`);
+        const response = await fetch(`${API_URL}/arko/config`, { credentials: 'include' });
         if (response.ok) {
           const config = await response.json();
           setSiteConfig(config);
@@ -139,9 +138,8 @@ export default function ProfilePage() {
 
   const handleSaveConfig = async () => {
     setIsSaving(true);
-    
+
     try {
-      const token = localStorage.getItem('arko_admin_token');
       let result;
 
       if (urlSlug) {
@@ -208,26 +206,23 @@ export default function ProfilePage() {
     
     const formData = new FormData();
     formData.append('file', file);
-    
+
     try {
-      const token = localStorage.getItem('arko_admin_token');
-      const uploadEndpoint = urlSlug 
+      const uploadEndpoint = urlSlug
         ? `${API_URL}/arko/landing_sites/me/upload`
         : `${API_URL}/arko/admin/upload`;
-        
+
       const response = await fetch(uploadEndpoint, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        credentials: 'include',
         body: formData
       });
-      
+
       if (response.status === 401) {
         logout();
         return;
       }
-      
+
       if (response.ok) {
         const data = await response.json();
         updateConfigValue(path, data.image_url);
@@ -1572,13 +1567,12 @@ export default function ProfilePage() {
                             const formData = new FormData();
                             formData.append('file', file);
                             try {
-                              const token = localStorage.getItem('arko_admin_token');
-                              const uploadEndpoint = urlSlug 
+                              const uploadEndpoint = urlSlug
                                 ? `${API_URL}/arko/landing_sites/me/upload`
                                 : `${API_URL}/arko/admin/upload`;
                               const response = await fetch(uploadEndpoint, {
                                 method: 'POST',
-                                headers: { 'Authorization': `Bearer ${token}` },
+                                credentials: 'include',
                                 body: formData
                               });
                               if (response.status === 401) {
@@ -1686,11 +1680,10 @@ export default function ProfilePage() {
                               const formData = new FormData();
                               formData.append('file', file);
                               try {
-                                const token = localStorage.getItem('arko_admin_token');
                                 const uploadEndpoint = `${API_URL}/arko/landing_sites/me/upload`;
                                 const response = await fetch(uploadEndpoint, {
                                   method: 'POST',
-                                  headers: { 'Authorization': `Bearer ${token}` },
+                                  credentials: 'include',
                                   body: formData
                                 });
                                 if (response.ok) {

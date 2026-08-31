@@ -1,6 +1,18 @@
 export const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 const CONTACT_ENDPOINT = import.meta.env.VITE_CONTACT_ENDPOINT || '/arko360/contact';
 
+// Helper function to include credentials in all requests
+const fetchWithCredentials = (url, options = {}) => {
+  return fetch(url, {
+    ...options,
+    credentials: 'include', // Include httpOnly cookies
+    headers: {
+      ...options.headers,
+      'Content-Type': options.headers?.['Content-Type'] || 'application/json',
+    }
+  });
+};
+
 /**
  * @param {Object} data - Form data to submit
  * @param {string} data.name
@@ -11,12 +23,8 @@ const CONTACT_ENDPOINT = import.meta.env.VITE_CONTACT_ENDPOINT || '/arko360/cont
  * @returns {Promise<Object>}
  */
 export async function submitContactForm(data) {
-  const response = await fetch(`${API_URL}${CONTACT_ENDPOINT}`, {
+  const response = await fetchWithCredentials(`${API_URL}${CONTACT_ENDPOINT}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
     body: JSON.stringify(data),
   });
 
@@ -29,11 +37,8 @@ export async function submitContactForm(data) {
 }
 
 export async function getSiteConfig() {
-  const response = await fetch(`${API_URL}/arko/config`, {
+  const response = await fetchWithCredentials(`${API_URL}/arko/config`, {
     method: 'GET',
-    headers: {
-      'Accept': 'application/json',
-    }
   });
 
   if (!response.ok) {
@@ -53,11 +58,10 @@ export async function loginArkoAdmin(email, password) {
   formData.append('username', email);
   formData.append('password', password);
 
-  const response = await fetch(`${API_URL}/arko/auth/login`, {
+  const response = await fetchWithCredentials(`${API_URL}/arko/auth/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'Accept': 'application/json',
     },
     body: formData,
   });
@@ -76,12 +80,8 @@ export async function loginArkoAdmin(email, password) {
  * @returns {Promise<Object>}
  */
 export async function loginGoogleArkoAdmin(token) {
-  const response = await fetch(`${API_URL}/arko/auth/login/google`, {
+  const response = await fetchWithCredentials(`${API_URL}/arko/auth/login/google`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
     body: JSON.stringify({ token }),
   });
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { Loader, Play, CheckCircle, Database } from 'lucide-react';
 import { marketService } from '../services/marketService';
-import { API_URL } from '../../../services/api';
+import { apiPost } from '../../../lib/apiHelper';
 
 export default function SanitizationPanel() {
   const [unsanitized, setUnsanitized] = useState([]);
@@ -57,16 +57,8 @@ export default function SanitizationPanel() {
         description: m.description
       }));
       toast.loading('Aplicando reglas de limpieza...', { id: 'rules-run' });
-      
-      const token = localStorage.getItem('arko_admin_token');
-      const resp = await fetch(`${API_URL}/market/sanitize/rules`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(batchToProcess)
-      });
+
+      const resp = await apiPost('/market/sanitize/rules', batchToProcess);
       if (!resp.ok) throw new Error('Error en saneamiento por reglas');
       const data = await resp.json();
       

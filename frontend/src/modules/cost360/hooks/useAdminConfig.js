@@ -1,17 +1,10 @@
 import { useContext, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { SiteConfigContext } from '../../../App';
-import { API_URL } from '../../../services/api';
+import { apiPut } from '../../../lib/apiHelper';
 
 const updateAdminConfig = async (config) => {
-  const response = await fetch(`${API_URL}/admin/config`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}`
-    },
-    body: JSON.stringify(config)
-  });
+  const response = await apiPut('/admin/config', config);
   if (!response.ok) throw new Error('Failed to update config');
   return response.json();
 };

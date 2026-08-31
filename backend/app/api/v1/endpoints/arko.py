@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File, Response, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional, Any, Generator
 from pydantic import BaseModel
@@ -17,6 +17,8 @@ from app.core.security import create_access_token
 from app.core.config import settings
 from app.services.redis_cache_service import redis_cache
 from app.services.email import send_verification_email
+from app.main import limiter
+from app.core.html_sanitizer import sanitize_html
 
 @contextmanager
 def get_db_session() -> Generator[Session, None, None]:
@@ -104,7 +106,8 @@ def get_public_post(slug: str):
 # --- Autenticación Arko ---
 
 @router.post("/auth/login")
-def login_arko_admin(form_data: OAuth2PasswordRequestForm = Depends()):
+@limiter.limit("5/minute")
+def login_arko_admin(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), response: Response):
     try:
         with get_db_session() as db:
             user = db.query(ArkoAdmin).filter(ArkoAdmin.email == form_data.username).first()
@@ -114,11 +117,22 @@ def login_arko_admin(form_data: OAuth2PasswordRequestForm = Depends()):
                 raise HTTPException(status_code=400, detail="Inactive user")
             if not getattr(user, "is_email_verified", True):
                 raise HTTPException(status_code=403, detail="Email not verified")
-            
+
             access_token = create_access_token(
                 data={"sub": user.email, "type": "arko_admin"}
             )
-            return {"access_token": access_token, "token_type": "bearer"}
+
+            # Set httpOnly cookie for security
+            response.set_cookie(
+                key="arko_admin_token",
+                value=access_token,
+                httponly=settings.COOKIE_HTTPONLY,
+                secure=settings.COOKIE_SECURE,
+                samesite=settings.COOKIE_SAMESITE,
+                max_age=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES).total_seconds()
+            )
+
+            return {"token_type": "bearer", "success": True}
     except HTTPException:
         raise
     except Exception as e:
@@ -191,7 +205,8 @@ class ForgotPasswordRequest(BaseModel):
     email: str
 
 @router.post("/auth/forgot-password")
-def forgot_password(data: ForgotPasswordRequest):
+@limiter.limit("3/minute")
+def forgot_password(request: Request, data: ForgotPasswordRequest):
     try:
         with get_db_session() as db:
             user = db.query(ArkoAdmin).filter(ArkoAdmin.email == data.email).first()
@@ -325,7 +340,8 @@ class GoogleLoginRequest(BaseModel):
     token: str
 
 @router.post("/auth/login/google")
-def login_google(login_data: GoogleLoginRequest):
+@limiter.limit("10/minute")
+def login_google(request: Request, login_data: GoogleLoginRequest, response: Response):
     try:
         from google.oauth2 import id_token
         import google.auth.transport.requests
@@ -337,7 +353,7 @@ def login_google(login_data: GoogleLoginRequest):
 
         request_session = requests.Session()
         req = google.auth.transport.requests.Request(session=request_session)
-        
+
         try:
             id_info = id_token.verify_oauth2_token(
                 login_data.token, req, settings.GOOGLE_CLIENT_ID
@@ -367,7 +383,7 @@ def login_google(login_data: GoogleLoginRequest):
                 import string
                 alphabet = string.ascii_letters + string.digits
                 temp_pwd = ''.join(secrets.choice(alphabet) for i in range(16))
-                
+
                 user = ArkoAdmin(
                     email=email,
                     hashed_password=get_password_hash(temp_pwd),
@@ -379,17 +395,39 @@ def login_google(login_data: GoogleLoginRequest):
                 db.refresh(user)
             elif not user.is_active:
                 raise HTTPException(status_code=400, detail="Usuario inactivo")
-            
+
             # Use same structure as normal login
             access_token = create_access_token(
                 data={"sub": user.email, "type": "arko_admin"}
             )
-            return {"access_token": access_token, "token_type": "bearer"}
+
+            # Set httpOnly cookie for security
+            response.set_cookie(
+                key="arko_admin_token",
+                value=access_token,
+                httponly=settings.COOKIE_HTTPONLY,
+                secure=settings.COOKIE_SECURE,
+                samesite=settings.COOKIE_SAMESITE,
+                max_age=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES).total_seconds()
+            )
+
+            return {"token_type": "bearer", "success": True}
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error in Google login: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+
+@router.post("/auth/logout")
+def logout_arko_admin(response: Response):
+    """Logout endpoint - clears the httpOnly cookie"""
+    response.delete_cookie(
+        key="arko_admin_token",
+        httponly=settings.COOKIE_HTTPONLY,
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE
+    )
+    return {"message": "Logged out successfully"}
 
 # --- Dependencia Arko ---
 from fastapi.security import OAuth2PasswordBearer
@@ -441,10 +479,21 @@ def create_post(
             existing = db.query(ArkoPost).filter(ArkoPost.slug == post_in.slug).first()
             if existing:
                 raise HTTPException(status_code=400, detail="Slug already exists")
-            
+
+            # Sanitize HTML content to prevent XSS
+            sanitized_content = sanitize_html(post_in.content) if post_in.content else None
+            sanitized_excerpt = sanitize_html(post_in.excerpt) if post_in.excerpt else None
+
             post = ArkoPost(
-                **post_in.dict(),
-                author=post_in.author or current_admin.full_name
+                title=post_in.title,
+                slug=post_in.slug,
+                excerpt=sanitized_excerpt,
+                content=sanitized_content,
+                image_url=post_in.image_url,
+                category=post_in.category,
+                author=post_in.author or current_admin.full_name,
+                status=post_in.status,
+                seo_config=post_in.seo_config
             )
             db.add(post)
             db.commit()
@@ -469,16 +518,23 @@ def update_post(
             post = db.query(ArkoPost).filter(ArkoPost.id == post_id).first()
             if not post:
                 raise HTTPException(status_code=404, detail="Post not found")
-            
+
             # Check slug collision
             if post.slug != post_in.slug:
                 existing = db.query(ArkoPost).filter(ArkoPost.slug == post_in.slug).first()
                 if existing:
                     raise HTTPException(status_code=400, detail="Slug already exists")
 
-            for field, value in post_in.dict(exclude_unset=True).items():
+            # Sanitize HTML content if provided
+            update_data = post_in.dict(exclude_unset=True)
+            if 'content' in update_data:
+                update_data['content'] = sanitize_html(update_data['content'])
+            if 'excerpt' in update_data:
+                update_data['excerpt'] = sanitize_html(update_data['excerpt'])
+
+            for field, value in update_data.items():
                 setattr(post, field, value)
-            
+
             db.commit()
             db.refresh(post)
             return post

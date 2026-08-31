@@ -4,7 +4,7 @@ import { API_URL } from '../../../services/api';
 
 const apiFetch = async (endpoint) => {
   const response = await fetch(`${API_URL}${endpoint}`, {
-    headers: { 'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}` }
+    credentials: 'include' // Use httpOnly cookie
   });
   return response;
 };
@@ -14,8 +14,8 @@ const apiPut = async (endpoint, body) => {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}`
     },
+    credentials: 'include',
     body: JSON.stringify(body)
   });
   return response;
@@ -24,7 +24,7 @@ const apiPut = async (endpoint, body) => {
 const apiDelete = async (endpoint) => {
   const response = await fetch(`${API_URL}${endpoint}`, {
     method: 'DELETE',
-    headers: { 'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}` }
+    credentials: 'include'
   });
   return response;
 };
@@ -34,8 +34,8 @@ const apiPost = async (endpoint, body) => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}`
     },
+    credentials: 'include',
     body: JSON.stringify(body)
   });
   return response;

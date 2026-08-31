@@ -7,8 +7,8 @@ const apiPost = async (endpoint, body) => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}`
     },
+    credentials: 'include',
     body: JSON.stringify(body)
   });
   return response;
@@ -17,9 +17,7 @@ const apiPost = async (endpoint, body) => {
 const apiPostFormData = async (endpoint, formData) => {
   const response = await fetch(`${API_URL}${endpoint}`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}`
-    },
+    credentials: 'include',
     body: formData
   });
   return response;

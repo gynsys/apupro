@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiBox } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import { API_URL } from '../../../services/api';
+import { apiFetch, apiPost } from '../../../lib/apiHelper';
 
 const ModuloSincronizacionCostos = () => {
   const [estaProcesando, setEstaProcesando] = useState(false);
@@ -11,9 +11,7 @@ const ModuloSincronizacionCostos = () => {
   const loadPendingItems = async () => {
     setLoadingPending(true);
     try {
-      const response = await fetch(`${API_URL}/scraping/pending`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}` }
-      });
+      const response = await apiFetch('/scraping/pending');
       if (response.ok) {
         const data = await response.json();
         setPendingItems(data);
@@ -32,17 +30,8 @@ const ModuloSincronizacionCostos = () => {
   const desencadenarVersionamientoDB = async () => {
     setEstaProcesando(true);
     try {
-      const urlAPI = `${API_URL}/scraping/versionar-precios-db`;
-      const consulta = await fetch(urlAPI, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}`
-        },
-        body: JSON.stringify({ limit: 25 })
-      });
-      
-      const respuestaJson = await consulta.json();
+      const respuestaJson = await apiPost('/scraping/versionar-precios-db', { limit: 25 });
+
       if (respuestaJson.status === 'processing') {
         toast.success("⚡ ¡El bot ha iniciado el escaneo de 25 materiales! Los resultados aparecerán aquí al recargar la página más tarde.", {
           duration: 5000,

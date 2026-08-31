@@ -167,7 +167,6 @@ export default function BudgetHomePage() {
 
   const handleBackupExport = async (budget) => {
     try {
-      const token = localStorage.getItem('arko_admin_token');
       const API_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
         ? 'http://localhost:8010'
         : window.location.origin;
@@ -176,8 +175,8 @@ export default function BudgetHomePage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
+        credentials: 'include',
       });
 
       if (!response.ok) {

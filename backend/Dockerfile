@@ -6,7 +6,7 @@ WORKDIR /app
 # We just need to copy our modified codebase over the existing one.
 COPY . .
 
-# Install openpyxl for Excel export
-RUN pip install openpyxl==3.1.2
+# Install openpyxl for Excel export and bleach for HTML sanitization
+RUN pip install openpyxl==3.1.2 bleach==6.4.0
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]

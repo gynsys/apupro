@@ -5,10 +5,16 @@ from app.db.arko_base import ArkoBase, arko_engine
 from app.db.base import Base, engine
 from app.core.config import settings
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 import logging
 logger = logging.getLogger(__name__)
 
 import app.db.models
+
+# Rate limiting setup
+limiter = Limiter(key_func=get_remote_address)
 
 # Configurar Base de Datos para Arko
 logger.info("Initializing Arko360 database tables...")
@@ -26,6 +32,8 @@ app = FastAPI(
     docs_url="/api/v1/arko/docs",
     openapi_url="/api/v1/arko/openapi.json",
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 from app.services.ai_search import ai_engine
 

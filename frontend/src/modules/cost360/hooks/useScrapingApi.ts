@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { API_URL } from '../../../services/api';
+import { apiFetch, apiPost, apiPut, apiDelete } from '../../../lib/apiHelper';
 
 export interface ScrapingConfig {
   max_concurrency: number;
@@ -20,22 +20,22 @@ export const useScrapingApi = () => {
     setError(null);
 
     try {
-      const token = localStorage.getItem('arko_admin_token');
-      const url = `${API_URL}/api/v1/scraping${endpoint}`;
+      const url = `/scraping${endpoint}`;
+      let response;
 
-      const options: RequestInit = {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      };
-
-      if (body) {
-        options.body = JSON.stringify(body);
+      switch (method) {
+        case 'POST':
+          response = await apiPost(url, body || {});
+          break;
+        case 'PUT':
+          response = await apiPut(url, body || {});
+          break;
+        case 'DELETE':
+          response = await apiDelete(url);
+          break;
+        default:
+          response = await apiFetch(url);
       }
-
-      const response = await fetch(url, options);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

@@ -8,6 +8,7 @@ const cost360ApiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Include httpOnly cookies
 });
 
 /**
@@ -94,18 +95,12 @@ export const saveCustomApu = async (payload) => {
 };
 
 export const updateMasterItem = async (itemCode, data) => {
-  const token = localStorage.getItem('arko_admin_token');
-  const response = await cost360ApiClient.put(`/items/${itemCode}`, data, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const response = await cost360ApiClient.put(`/items/${itemCode}`, data);
   return response.data;
 };
 
 export const deleteMasterItem = async (itemCode) => {
-  const token = localStorage.getItem('arko_admin_token');
-  const response = await cost360ApiClient.delete(`/items/${itemCode}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const response = await cost360ApiClient.delete(`/items/${itemCode}`);
   return response.data;
 };
 

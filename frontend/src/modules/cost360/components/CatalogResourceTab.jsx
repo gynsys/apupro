@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { FiSearch, FiEdit2, FiTrash2, FiCheck, FiX, FiDownload } from 'react-icons/fi';
-import { API_URL } from '../../../services/api';
+import { apiFetch, apiPut, apiDelete, apiPatch } from '../../../lib/apiHelper';
 
 const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adminMode = false }) => {
   const [items, setItems] = useState([]);
@@ -39,9 +39,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
   const handleViewUses = async (item) => {
     setUsesModal({ isOpen: true, item, apus: [], loading: true });
     try {
-      const res = await fetch(`${API_URL}/cost360/${resourceType}/${item[safeConfig.idKey]}/apus`, {
-        headers: { 'Authorization': `Bearer ${adminMode ? localStorage.getItem('arko_admin_token') : localStorage.getItem('token')}` }
-      });
+      const res = await apiFetch(`/cost360/${resourceType}/${item[safeConfig.idKey]}/apus`);
       if (res.ok) {
         const apus = await res.json();
         setUsesModal(prev => ({ ...prev, apus, loading: false }));
@@ -58,9 +56,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
     setLoading(true);
     try {
       const dbParam = selectedDatabase && selectedDatabase !== 'master' ? `&database_id=${selectedDatabase}` : '';
-      const res = await fetch(`${API_URL}/cost360/${resourceType}?search=${encodeURIComponent(searchQuery)}&skip=${currentSkip}&limit=${limit}${dbParam}`, {
-        headers: { 'Authorization': `Bearer ${adminMode ? localStorage.getItem('arko_admin_token') : localStorage.getItem('token')}` }
-      });
+      const res = await apiFetch(`/cost360/${resourceType}?search=${encodeURIComponent(searchQuery)}&skip=${currentSkip}&limit=${limit}${dbParam}`);
       if (res.ok) {
         const data = await res.json();
         // Since backend was updated to return { total, items }
@@ -113,15 +109,8 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
 
   const handleUpdate = async () => {
     try {
-      const res = await fetch(`${API_URL}/cost360/${resourceType}/${editingId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminMode ? localStorage.getItem('arko_admin_token') : localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(editForm)
-      });
-      
+      const res = await apiPatch(`/cost360/${resourceType}/${editingId}`, editForm);
+
       if (res.ok) {
         toast.success(`${title} actualizado`);
         setEditingId(null);
@@ -138,10 +127,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
   const handleDelete = async (id) => {
     if (!window.confirm('¿Seguro que deseas eliminar este insumo de la Base Maestra? Esto es irreversible.')) return;
     try {
-      const res = await fetch(`${API_URL}/cost360/${resourceType}/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${adminMode ? localStorage.getItem('arko_admin_token') : localStorage.getItem('token')}` }
-      });
+      const res = await apiDelete(`/cost360/${resourceType}/${id}`);
       if (res.ok) {
         toast.success(`${title} eliminado`);
         fetchItems(search);
@@ -163,9 +149,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
     let exportItems = [];
     try {
       const dbParam = selectedDatabase && selectedDatabase !== 'master' ? `&database_id=${selectedDatabase}` : '';
-      const res = await fetch(`${API_URL}/cost360/${resourceType}?search=${encodeURIComponent(search)}&skip=0&limit=50000${dbParam}`, {
-        headers: { 'Authorization': `Bearer ${adminMode ? localStorage.getItem('arko_admin_token') : localStorage.getItem('token')}` }
-      });
+      const res = await apiFetch(`/cost360/${resourceType}?search=${encodeURIComponent(search)}&skip=0&limit=50000${dbParam}`);
       if (res.ok) {
         const data = await res.json();
         exportItems = Array.isArray(data) ? data : (data.items || []);

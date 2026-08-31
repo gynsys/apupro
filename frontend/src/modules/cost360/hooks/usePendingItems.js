@@ -1,25 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { API_URL } from '../../../services/api';
-
-const apiFetch = async (endpoint) => {
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    headers: { 'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}` }
-  });
-  return response;
-};
-
-const apiPost = async (endpoint, body) => {
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}`
-    },
-    body: JSON.stringify(body)
-  });
-  return response;
-};
+import { apiFetch, apiPost } from '../../../lib/apiHelper';
 
 export const usePendingItems = () => {
   const [pendingItems, setPendingItems] = useState([]);

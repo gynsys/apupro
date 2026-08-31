@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { Search, AlertTriangle, CheckCircle, Layers, ChevronDown, ChevronRight, Loader, Merge, Shield } from 'lucide-react';
-import { API_URL } from '../../../services/api';
+import { apiFetch, apiPost, apiDelete } from '../../../lib/apiHelper';
 
 const BADGE = ({ count, color }) => (
   <span className={`inline-flex items-center justify-center min-w-[22px] h-[22px] text-xs font-bold rounded-full px-1.5 ${color}`}>
@@ -217,14 +217,10 @@ export default function DeduplicatePanel() {
   const [winnerCodes, setWinnerCodes] = useState({});              // grupo_id → winner_code
   const [merging, setMerging] = useState(false);
 
-  const token = () => localStorage.getItem('arko_admin_token');
-
   const fetchStats = async () => {
     setLoadingStats(true);
     try {
-      const res = await fetch(`${API_URL}/dedup/duplicates/stats`, {
-        headers: { 'Authorization': `Bearer ${token()}` }
-      });
+      const res = await apiFetch('/dedup/duplicates/stats');
       if (!res.ok) throw new Error('Error al obtener estadísticas');
       setStats(await res.json());
     } catch (err) {
@@ -239,9 +235,7 @@ export default function DeduplicatePanel() {
     setSelectedGroups(new Set());
     setWinnerCodes({});
     try {
-      const res = await fetch(`${API_URL}/dedup/duplicates/exact?limit=300`, {
-        headers: { 'Authorization': `Bearer ${token()}` }
-      });
+      const res = await apiFetch('/dedup/duplicates/exact?limit=300');
       if (!res.ok) throw new Error('Error al obtener duplicados exactos');
       const data = await res.json();
       setExactGroups(data.grupos || []);
@@ -260,9 +254,7 @@ export default function DeduplicatePanel() {
     setWinnerCodes({});
     toast.loading('Analizando similitudes (10-30 segundos)...', { id: 'similar' });
     try {
-      const res = await fetch(`${API_URL}/dedup/duplicates/similar?threshold=0.85&limit=150`, {
-        headers: { 'Authorization': `Bearer ${token()}` }
-      });
+      const res = await apiFetch('/dedup/duplicates/similar?threshold=0.85&limit=150');
       if (!res.ok) throw new Error('Error al obtener duplicados similares');
       const data = await res.json();
       setSimilarGroups(data.grupos || []);
@@ -324,14 +316,7 @@ export default function DeduplicatePanel() {
     };
 
     try {
-      const res = await fetch(`${API_URL}/dedup/merge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token()}`
-        },
-        body: JSON.stringify(payload)
-      });
+      const res = await apiPost('/dedup/merge', payload);
       if (!res.ok) throw new Error('Error en la fusión');
       const result = await res.json();
 

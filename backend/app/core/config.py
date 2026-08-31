@@ -127,6 +127,20 @@ class Settings(BaseSettings):
     # Debug flag (read from .env; useful for local development)
     DEBUG: bool = False
 
+    # Cookie Security Settings
+    COOKIE_SECURE: bool = True  # HTTPS only in production
+    COOKIE_HTTPONLY: bool = True  # Prevent JavaScript access
+    COOKIE_SAMESITE: str = "lax"  # CSRF protection
+
+    @field_validator("COOKIE_SECURE", mode="before")
+    @classmethod
+    def set_cookie_secure_based_on_env(cls, v: bool) -> bool:
+        """In development, allow insecure cookies (HTTP)"""
+        env = os.getenv("ENVIRONMENT", "development")
+        if env == "development":
+            return False
+        return v
+
     # Celery & Redis
     REDIS_URL: str = "redis://localhost:6379/0"
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"

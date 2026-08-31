@@ -2,17 +2,11 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiDatabase } from 'react-icons/fi';
 import GlassCard from '../../../../components/shared/GlassCard';
-import { API_URL } from '../../../../services/api';
+import { apiPost } from '../../../../lib/apiHelper';
 import toast from 'react-hot-toast';
 
 const updateRAGBrain = async () => {
-  const response = await fetch(`${API_URL}/admin/update-rag-brain`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}`
-    }
-  });
+  const response = await apiPost('/admin/update-rag-brain', {});
   if (!response.ok) throw new Error('Failed to update RAG brain');
   return response.json();
 };

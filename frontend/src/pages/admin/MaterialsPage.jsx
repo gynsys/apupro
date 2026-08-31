@@ -11,7 +11,7 @@ export default function MaterialsPage() {
 
   const fetchMaterials = async () => {
     try {
-      const res = await fetch(`${API_URL}/materials/`);
+      const res = await fetch(`${API_URL}/materials/`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setMaterials(data);
