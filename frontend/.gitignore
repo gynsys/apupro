@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Override root .gitignore: root has `lib/` (Python) which blocks frontend/src/lib
+!src/lib/
+!src/lib/**
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
