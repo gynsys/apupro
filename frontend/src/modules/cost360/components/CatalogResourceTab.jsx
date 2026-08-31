@@ -27,7 +27,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
     ]
   };
 
-  const safeConfig = config && safeConfig.editableFields ? config : defaultConfig;
+  const safeConfig = config && config.editableFields ? config : defaultConfig;
 
   const handleViewUses = async (item) => {
     setUsesModal({ isOpen: true, item, apus: [], loading: true });
