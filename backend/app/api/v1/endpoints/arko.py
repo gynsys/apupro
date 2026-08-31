@@ -431,20 +431,31 @@ def logout_arko_admin(response: Response):
 
 # --- Dependencia Arko ---
 from fastapi.security import OAuth2PasswordBearer
+from fastapi import Cookie
 import jwt
 
-oauth2_scheme_arko = OAuth2PasswordBearer(tokenUrl="/api/v1/arko/auth/login")
+oauth2_scheme_arko = OAuth2PasswordBearer(tokenUrl="/api/v1/arko/auth/login", auto_error=False)
 
-def get_current_arko_admin(token: str = Depends(oauth2_scheme_arko)):
+def get_current_arko_admin(
+    request: Request,
+    bearer_token: Optional[str] = Depends(oauth2_scheme_arko),
+    arko_admin_token: Optional[str] = Cookie(default=None),
+) -> "ArkoAdmin":
+    # Cookie takes priority (set by login endpoint); fallback to Authorization header
+    token = arko_admin_token or bearer_token
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         email: str = payload.get("sub")
         token_type: str = payload.get("type")
         if email is None or token_type != "arko_admin":
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
-    
+
     with get_db_session() as db:
         user = db.query(ArkoAdmin).filter(ArkoAdmin.email == email).first()
         if user is None:
