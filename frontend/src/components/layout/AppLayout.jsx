@@ -8,7 +8,7 @@ import { FaTools } from 'react-icons/fa';
 import { AuthContext } from '../../context/AuthContext';
 import { UserCostosProvider, useUserCostos } from '../../context/UserCostosContext';
 import CalculadoraFCAS from '../tools/CalculadoraFCAS';
-
+import toast from 'react-hot-toast';
 
 const NAV_ITEMS = [
   { name: 'Presupuestos', href: '/budgets',           Icon: FileText },
@@ -267,10 +267,11 @@ function CalculadoraFCASWrapper({ onClose }) {
       onUseFCAS={async (fcasValue) => {
         try {
           await updateCostosConfig({ fcas: fcasValue });
+          toast.success('FCAS guardado en tu configuración');
         } catch {
-          // El error ya se maneja en el contexto — mostramos igual
+          toast.error('Error al guardar el FCAS');
         }
-        onClose();
+        // No cerramos el modal para que el usuario pueda seguir viendo la calculadora
       }}
     />
   );
