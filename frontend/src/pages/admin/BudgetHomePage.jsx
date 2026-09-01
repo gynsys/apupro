@@ -354,96 +354,89 @@ export default function BudgetHomePage() {
         </div>
       ) : (
         <div className="w-full" style={{ overflowY: 'auto' }}>
-          <div className="w-full overflow-x-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-              {filteredBudgets.map(budget => (
-                <div
-                  key={budget.id}
-                  onClick={() => navigate(`/budgets/${budget.id}`)}
-                  className="tarjeta-presupuesto-ambar cursor-pointer group"
-                  style={{ minWidth: '1152px' }}
-                >
-              <div className="tarjeta-header flex justify-between items-center">
-                <h3 className="tarjeta-titulo-ambar truncate flex-1" title={budget.name}>
-                  {budget.name}
-                </h3>
-                <div className="acciones-rapidas">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setDuplicatingBudget(budget); setDuplicateName(budget.name + ' (Copia)'); }}
-                    className="btn-accion"
-                    title="Duplicar"
-                  >
-                    <Copy size={16} />
-                  </button>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setSettingsBudget(budget); }}
-                    className="btn-accion"
-                    title="Configuración Global"
-                  >
-                    <Settings size={16} />
-                  </button>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setPrintBudget(budget); setPrintModalOpen(true); }}
-                    className="btn-accion"
-                    title="Imprimir"
-                  >
-                    <Printer size={16} />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleExportToExcel(budget); }}
-                    className="btn-accion"
-                    title="Exportar a Excel"
-                  >
-                    <FileSpreadsheet size={16} />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleBackupExport(budget); }}
-                    className="btn-accion"
-                    title="Exportar Backup"
-                  >
-                    <CloudDownload size={16} />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setRenamingBudget(budget); setRenameName(budget.name); }}
-                    className="btn-accion"
-                    title="Editar"
-                  >
-                    <Edit3 size={16} />
-                  </button>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); confirmDelete(budget.id); }}
-                    className="btn-accion"
-                    title="Eliminar"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-              
-              <div className="tarjeta-body">
-                <p className="text-xs text-amber-700 font-semibold mb-3">
-                  Total Partidas: {budgetTotals[budget.id] ? budgetTotals[budget.id].items : '...'}
-                </p>
-                
-                <div className="tarjeta-detalles flex justify-between items-center w-full mt-auto">
-                  <div className="flex items-center gap-2">
-                    <span className="detalle-fecha">
-                      <Clock size={13} className="mini-icono"/>
-                      {new Date(budget.created_at).toLocaleDateString()}
-                    </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {filteredBudgets.map(budget => (
+              <div
+                key={budget.id}
+                onClick={() => navigate(`/budgets/${budget.id}`)}
+                className="tarjeta-presupuesto-ambar cursor-pointer group"
+              >
+                <div className="tarjeta-header flex justify-between items-center">
+                  <h3 className="tarjeta-titulo-ambar truncate flex-1" title={budget.name}>
+                    {budget.name}
+                  </h3>
+                  <div className="flex items-center gap-4">
+                    <p className="text-xs text-amber-700 font-semibold">
+                      Partidas: {budgetTotals[budget.id] ? budgetTotals[budget.id].items : '...'}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Clock size={13} className="text-slate-400"/>
+                      <span className="text-xs text-slate-500">
+                        {new Date(budget.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    {budgetTotals[budget.id] ? (
+                      <span className="text-sm font-bold text-amber-900">
+                        {budget.currency === 'USD' ? '$' : 'Bs.'} {new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(budgetTotals[budget.id].amount)}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-amber-700/50">Calculando...</span>
+                    )}
                   </div>
-                  {budgetTotals[budget.id] ? (
-                    <span className="text-[13px] font-bold text-amber-900">
-                      {budget.currency === 'USD' ? '$' : 'Bs.'} {new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(budgetTotals[budget.id].amount)}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-amber-700/50">Calculando...</span>
-                  )}
+                  <div className="acciones-rapidas">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDuplicatingBudget(budget); setDuplicateName(budget.name + ' (Copia)'); }}
+                      className="btn-accion"
+                      title="Duplicar"
+                    >
+                      <Copy size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setSettingsBudget(budget); }}
+                      className="btn-accion"
+                      title="Configuración Global"
+                    >
+                      <Settings size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPrintBudget(budget); setPrintModalOpen(true); }}
+                      className="btn-accion"
+                      title="Imprimir"
+                    >
+                      <Printer size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleExportToExcel(budget); }}
+                      className="btn-accion"
+                      title="Exportar a Excel"
+                    >
+                      <FileSpreadsheet size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleBackupExport(budget); }}
+                      className="btn-accion"
+                      title="Exportar Backup"
+                    >
+                      <CloudDownload size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setRenamingBudget(budget); setRenameName(budget.name); }}
+                      className="btn-accion"
+                      title="Editar"
+                    >
+                      <Edit3 size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); confirmDelete(budget.id); }}
+                      className="btn-accion"
+                      title="Eliminar"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
-                </div>
-              ))}
-            </div>
+            ))}
           </div>
         </div>
       )}

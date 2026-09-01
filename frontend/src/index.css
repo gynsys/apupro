@@ -84,9 +84,10 @@ html, body, #root {
   background: #ffffff;
   border: 2px solid #cbd5e1;
   border-radius: 16px;
-  padding: 20px;
+  padding: 10px 20px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   gap: 16px;
   height: 60px;
   transition: transform 0.3s cubic-bezier(0.215, 0.610, 0.355, 1),
@@ -121,7 +122,8 @@ html, body, #root {
 .tarjeta-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
+  flex: 1;
 }
 
 .icono-archivo-ambar {
