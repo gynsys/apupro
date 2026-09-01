@@ -353,8 +353,8 @@ export default function BudgetHomePage() {
           )}
         </div>
       ) : (
-        <div className="w-full" style={{ overflowY: 'auto' }}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        <div className="w-full flex justify-center pb-8" style={{ overflowY: 'auto' }}>
+          <div className="flex flex-col gap-4 w-full" style={{ maxWidth: '1152px' }}>
             {filteredBudgets.map(budget => (
               <div
                 key={budget.id}
