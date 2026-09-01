@@ -6,12 +6,26 @@
 
 ---
 
+> ## ⚠️ POST-MORTEM — Caída de producción: 2026-08-31
+>
+> Devin AI marcó las vulnerabilidades críticas como completadas (✅) pero la implementación quedó rota en producción. Se requirió intervención manual para restaurar el servicio. Los 5 bugs encontrados y corregidos:
+>
+> | # | Bug | Archivo | Síntoma en producción |
+> |---|-----|---------|----------------------|
+> | 1 | `SyntaxError`: `response: Response` después de `form_data=Depends()` | `arko.py:110` | Backend crash loop (exit 1), 502 Bad Gateway |
+> | 2 | Circular import: `from app.main import limiter` | `arko.py:20` | `ImportError`, uvicorn no arrancaba |
+> | 3 | `frontend/src/lib/` excluida por `lib/` en `.gitignore` raíz | `frontend/.gitignore` | Build Docker: `Cannot resolve ../../../lib/apiHelper` |
+> | 4 | `get_current_arko_admin` usaba `OAuth2PasswordBearer` — ignoraba la cookie httpOnly | `arko.py:438` | 401 en todos los endpoints protegidos post-login |
+> | 5 | `SECRET_KEY=your_secret_key_here` en `.env` producción — clave regenerada en cada restart | Servidor `.env` | Todos los JWT invalidados tras cada reinicio |
+
+---
+
 ## 🔴 VULNERABILIDADES CRÍTICAS
 
 ### 1. ✅ JWT Token almacenado en localStorage (XSS Vulnerability)
-- **Estado:** COMPLETADO
+- **Estado:** COMPLETADO (con 5 correcciones post-mortem aplicadas el 2026-08-31)
 - **Severidad:** CRÍTICA
-- **Archivos modificados:**
+- **Archivos modificados por Devin:**
   - ✅ `backend/app/core/config.py` - Configuración de cookies seguras
   - ✅ `backend/app/api/v1/endpoints/arko.py` - Endpoints login/logout con cookies
   - ✅ `frontend/src/context/AuthContext.jsx` - Remover localStorage
@@ -26,16 +40,22 @@
   - ✅ `frontend/src/modules/cost360/components/CatalogResourceTab.jsx` - Migrado a apiHelper
   - ✅ `frontend/src/modules/cost360/components/scraping/ModuloSincronizacionCostos.jsx` - Migrado a apiHelper
   - ✅ `frontend/src/modules/cost360/hooks/useScrapingApi.ts` - Migrado a apiHelper
-  - ✅ `frontend/src/modules/cost360/hooks/useScrapingWebSocket.ts` - Removido token (WS usa cookies si backend soporta)
+  - ✅ `frontend/src/modules/cost360/hooks/useScrapingWebSocket.ts` - Removido token
   - ✅ `frontend/src/modules/market/components/DeduplicatePanel.jsx` - Migrado a apiHelper
   - ✅ `frontend/src/modules/market/services/marketService.js` - Migrado a apiHelper
   - ✅ `frontend/src/modules/market/components/SanitizationPanel.jsx` - Migrado a apiHelper
   - ✅ `frontend/src/modules/cost360/services/cost360Service.js` - Agregado withCredentials a axios
-  - ✅ `frontend/src/pages/admin/BudgetHomePage.jsx` - Agregado credentials: 'include'
-  - ✅ `frontend/src/pages/admin/ProfilePage.jsx` - Migrado a credentials: 'include'
-  - ✅ `frontend/src/services/budgetService.js` - Migrado a credentials: 'include'
-  - ✅ `frontend/src/pages/admin/MaterialsPage.jsx` - Agregado credentials: 'include'
-- **Archivos no migrados (no usan localStorage):**
+  - ✅ `frontend/src/pages/admin/BudgetHomePage.jsx` - credentials: include + fix token undefined en export Excel
+  - ✅ `frontend/src/pages/admin/ProfilePage.jsx` - Migrado a credentials: include
+  - ✅ `frontend/src/services/budgetService.js` - credentials: include + fix delete 204 response
+  - ✅ `frontend/src/pages/admin/MaterialsPage.jsx` - Agregado credentials: include
+- **Correcciones post-mortem (2026-08-31):**
+  - ✅ `backend/app/api/v1/endpoints/arko.py` - Fix SyntaxError argumento, fix circular import, fix auth dependency para leer cookie
+  - ✅ `backend/app/core/limiter.py` - Singleton limiter usado por main.py y arko.py
+  - ✅ `backend/app/main.py` - Importa limiter desde core.limiter (no lo redefine)
+  - ✅ `frontend/.gitignore` - Negación `!src/lib/` para que apiHelper.js llegue al Docker
+  - ✅ Servidor `.env` - SECRET_KEY fijada con valor real y permanente
+- **Archivos no migrados:**
   - 📝 `frontend/src/modules/cost360/pages/AdminDatabasePage.OLD.jsx` (backup, ignorado)
 
 ---
@@ -44,12 +64,14 @@
 - **Estado:** COMPLETADO
 - **Severidad:** CRÍTICA
 - **Archivos modificados:**
-  - ✅ `backend/app/main.py` - Configuración slowapi
+  - ✅ `backend/app/main.py` - Importa limiter desde `app.core.limiter` (fix circular import post-mortem)
+  - ✅ `backend/app/core/limiter.py` - Singleton Limiter compartido
   - ✅ `backend/app/api/v1/endpoints/arko.py` - Rate limiting en login, google login, forgot-password
 - **Implementación:**
   - `/auth/login`: 5 intentos/minuto
   - `/auth/login/google`: 10 intentos/minuto
   - `/auth/forgot-password`: 3 intentos/minuto
+
 
 ---
 
