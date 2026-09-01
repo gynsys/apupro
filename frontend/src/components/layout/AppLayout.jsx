@@ -7,7 +7,6 @@ import {
 import { FaTools } from 'react-icons/fa';
 import { AuthContext } from '../../context/AuthContext';
 import { UserCostosProvider, useUserCostos } from '../../context/UserCostosContext';
-import CalculadoraFCAS from '../tools/CalculadoraFCAS';
 import toast from 'react-hot-toast';
 
 const NAV_ITEMS = [
@@ -24,7 +23,6 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useContext(AuthContext);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showCalculadora, setShowCalculadora] = useState(false);
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -82,19 +80,20 @@ export default function AppLayout() {
         })}
 
         {/* Botón Calculadora FCAS movido justo debajo de los iconos de navegación */}
-        <button
-          onClick={() => setShowCalculadora(true)}
-          className="group relative w-full flex justify-center"
-        >
-          <div className="flex items-center justify-center p-3 rounded-xl transition-all duration-200 text-slate-500 hover:bg-[#FEF3C7] hover:text-slate-800 cursor-pointer">
-            <Calculator size={24} className="text-slate-400" />
-          </div>
+        <div className="group relative w-full flex justify-center">
+          <Link
+            to="/fcas"
+            onClick={() => setSidebarOpen(false)}
+            className="flex items-center justify-center p-3 rounded-xl transition-all duration-200 text-slate-500 hover:bg-[#FEF3C7] hover:text-slate-800"
+          >
+            <Calculator size={24} className={location.pathname.startsWith('/fcas') ? 'text-blue-600' : 'text-slate-400'} />
+          </Link>
           {/* Tooltip */}
           <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
             Calculo FCAS
             <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
           </div>
-        </button>
+        </div>
       </div>
 
 
@@ -230,33 +229,10 @@ export default function AppLayout() {
         <main className="flex-1 overflow-y-auto min-w-0 relative">
           <UserCostosProvider>
             <Outlet />
-            {/* Modal Calculadora FCAS — dentro del provider para acceder a updateCostosConfig */}
-            {showCalculadora && (
-              <CalculadoraFCASWrapper onClose={() => setShowCalculadora(false)} />
-            )}
           </UserCostosProvider>
         </main>
 
       </div>
     </div>
-  );
-}
-
-/** Wrapper interno para poder usar useUserCostos dentro del provider */
-function CalculadoraFCASWrapper({ onClose }) {
-  const { updateCostosConfig } = useUserCostos();
-  return (
-    <CalculadoraFCAS
-      onClose={onClose}
-      onUseFCAS={async (fcasValue) => {
-        try {
-          await updateCostosConfig({ fcas: fcasValue });
-          toast.success('FCAS guardado en tu configuración');
-        } catch {
-          toast.error('Error al guardar el FCAS');
-        }
-        // No cerramos el modal para que el usuario pueda seguir viendo la calculadora
-      }}
-    />
   );
 }

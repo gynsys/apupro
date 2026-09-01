@@ -5,10 +5,13 @@ import { AuthProvider } from './context/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import AdminLayout from './components/layout/AdminLayout.jsx';
 import ProfilePage from './pages/admin/ProfilePage.jsx';
+import DashboardPage from './pages/admin/DashboardPage.jsx';
 import MaterialsPage from './pages/admin/MaterialsPage.jsx';
 import BudgetHomePage from './pages/admin/BudgetHomePage.jsx';
 import BudgetWorksheetPage from './pages/admin/BudgetWorksheetPage.jsx';
 import BudgetAPUEditorPage from './pages/admin/BudgetAPUEditorPage.jsx';
+import CalculadoraFCASPage from './pages/tools/CalculadoraFCASPage.jsx';
+import TestConfigPage from './pages/admin/TestConfigPage.jsx';
 import Cost360Dashboard from './modules/cost360/pages/Cost360Dashboard.jsx';
 import APUViewer from './modules/cost360/pages/APUViewer.jsx';
 import AIApuGeneratorPage from './modules/cost360/pages/AIApuGeneratorPage.jsx';
@@ -86,6 +89,18 @@ function App() {
               <Route index element={<Navigate to="/admin/profile" replace />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="materials" element={<MaterialsPage />} />
+            </Route>
+
+            {/* FCAS Calculator Route */}
+            <Route
+              path="/fcas"
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<CalculadoraFCASPage />} />
             </Route>
             
             {/* RUTAS DE BASE MAESTRA (Protegidas) */}

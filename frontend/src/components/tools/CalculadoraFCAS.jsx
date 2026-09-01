@@ -2,56 +2,39 @@ import React, { useState, useMemo, useEffect } from 'react';
 
 // ============================================
 // CALCULADORA FCAS PROFESIONAL - VENEZUELA
+// VERSIÓN CORREGIDA (FÓRMULA ESTÁNDAR)
 // ============================================
 
-// CONCEPTOS NOMINALES (Ley / Convención)
-const CONCEPTOS_NOMINALES = [
-  { id: 'vacaciones', nombre: 'Vacaciones + Bono Vacacional', dias: 22, activo: true },
-  { id: 'utilidades', nombre: 'Utilidades Convención Colectiva', dias: 120, activo: true },
-  { id: 'prestaciones', nombre: 'Garantía Prestaciones (LOTTT)', dias: 60, activo: true },
-  { id: 'sso', nombre: 'Seguro Social Obligatorio (11%)', dias: 40, activo: true },
-  { id: 'ince', nombre: 'INCES (2%)', dias: 7, activo: true },
-  { id: 'lph', nombre: 'Ley Política Habitacional (2%)', dias: 7, activo: true },
-  { id: 'feriados', nombre: 'Feriados Nacionales', dias: 12, activo: true },
-  { id: 'permisos', nombre: 'Cláusulas / Permisos Construcción', dias: 15, activo: true },
+// Conceptos con días nominales reales (LOTTT + Convención Colectiva estándar)
+const CONCEPTOS_DEFAULT = [
+  { id: 'utilidades', nombre: 'Utilidades Anuales (Bono Fin de Año)', dias: 90, activo: true },
+  { id: 'vacaciones', nombre: 'Vacaciones Básicas (Días de Disfrute)', dias: 15, activo: true },
+  { id: 'bono_vac', nombre: 'Bono Vacacional Contractual', dias: 21, activo: true },
+  { id: 'prestaciones', nombre: 'Garantía de Prestaciones (LOTTT)', dias: 60, activo: true },
+  { id: 'sso', nombre: 'Seguro Social Obligatorio (Patronal 11%)', dias: 40, activo: true },
+  { id: 'faov', nombre: 'Fondo de Ahorro Obligatorio (FAOV 2%)', dias: 7, activo: true },
+  { id: 'inces', nombre: 'Aporte INCES Patronal (2%)', dias: 7, activo: true },
+  { id: 'permisos', nombre: 'Permisos Remunerados / Cláusulas', dias: 15, activo: true },
 ];
 
-// CONCEPTOS EQUIVALENTES (Días equivalentes en costo)
-const CONCEPTOS_EQUIVALENTES = [
-  { id: 'vacaciones', nombre: 'Vacaciones + Bono Vacacional', dias: 240, activo: true },
-  { id: 'utilidades', nombre: 'Utilidades Convención Colectiva', dias: 580, activo: true },
-  { id: 'prestaciones', nombre: 'Garantía Prestaciones (LOTTT)', dias: 650, activo: true },
-  { id: 'sso', nombre: 'Seguro Social Obligatorio (11%)', dias: 180, activo: true },
-  { id: 'ince', nombre: 'INCES (2%)', dias: 45, activo: true },
-  { id: 'lph', nombre: 'Ley Política Habitacional (2%)', dias: 45, activo: true },
-  { id: 'feriados', nombre: 'Feriados Nacionales', dias: 12, activo: true },
-  { id: 'permisos', nombre: 'Cláusulas / Permisos Construcción', dias: 1162, activo: true },
-];
-
-export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
-  // ── Estados Base ──────────────────────────────────────────
+export default function CalculadoraFCAS({ onClose, onUseFCAS, isPage = false }) {
+  // ── Estados ──────────────────────────────────────────────
   const [metodo, setMetodo] = useState('estandar'); // 'estandar' o 'indexado'
-  const [salarioBase, setSalarioBase] = useState(240); // $240 mensuales
-  const [bonoIndexado, setBonoIndexado] = useState(175); // Cestaticket $175 mensual
+  const [salarioBase, setSalarioBase] = useState(240);   // $ mensuales
+  const [bonoCestaticket, setBonoCestaticket] = useState(40); // $ mensuales (mínimo legal)
   const [diasContratados, setDiasContratados] = useState(365);
-  const [diasNoTrabajados, setDiasNoTrabajados] = useState(127); // 10 feriados + 52 sábados + 53 domingos + 12 permisos = 127
-  const [conceptos, setConceptos] = useState(CONCEPTOS_NOMINALES);
+  const [diasNoTrabajados, setDiasNoTrabajados] = useState(114); // se recalcula automáticamente
+  const [conceptos, setConceptos] = useState(CONCEPTOS_DEFAULT);
   const [calculoAutomatico, setCalculoAutomatico] = useState(true);
 
-  // ── Cambiar método: actualiza conceptos ──────────────────
-  useEffect(() => {
-    if (metodo === 'estandar') {
-      setConceptos(CONCEPTOS_NOMINALES.map(c => ({ ...c })));
-    } else {
-      setConceptos(CONCEPTOS_EQUIVALENTES.map(c => ({ ...c })));
-    }
-  }, [metodo]);
-
-  // ── Cálculo automático de días de descanso ──────────────
+  // ── Cálculo automático de días no laborados ────────────
   const diasDescansoAutomaticos = useMemo(() => {
     if (diasContratados <= 0) return 0;
+    // Fines de semana (2 de cada 7 días)
     const finesSemana = diasContratados * (2 / 7);
-    const feriados = 10 * (diasContratados / 365); // 10 feriados nacionales (aprox)
+    // Feriados nacionales (10 al año, proporcionales)
+    const feriados = 10 * (diasContratados / 365);
+    // Redondeamos hacia arriba
     return Math.ceil(finesSemana + feriados);
   }, [diasContratados]);
 
@@ -67,41 +50,45 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
   }, [salarioBase]);
 
   // ── Suma de días de conceptos activos ──────────────────
-  const diasPagadosAnuales = useMemo(() => {
+  const diasPrestaciones = useMemo(() => {
     return conceptos.filter(c => c.activo).reduce((sum, c) => sum + c.dias, 0);
   }, [conceptos]);
 
-  // ── Cálculo del FCAS según método ──────────────────────
+  // ── Cálculo del FCAS ────────────────────────────────────
   const fcasPorcentaje = useMemo(() => {
     const diasLaboradosReales = diasContratados - diasNoTrabajados;
     if (diasLaboradosReales <= 0 || salarioDiario <= 0) return 0;
 
+    // Proporción del período evaluado frente al año base
     const factorTemporal = diasContratados / 365;
-    const diasPagadosProporcionales = diasPagadosAnuales * factorTemporal;
+    const diasPrestacionesProporcionales = diasPrestaciones * factorTemporal;
 
     let numerador;
     if (metodo === 'estandar') {
-      // Método Estándar: solo días no trabajados + prestaciones nominales (sin bono)
-      numerador = diasNoTrabajados + diasPagadosProporcionales;
+      // FÓRMULA ESTÁNDAR: Ti + Días de Prestaciones
+      numerador = diasNoTrabajados + diasPrestacionesProporcionales;
     } else {
-      // Método Indexado: días contratados + prestaciones equivalentes + bono equivalente
-      let diasEquivalentesBono = 0;
-      if (bonoIndexado > 0) {
-        const costoBonoPeriodo = (bonoIndexado / 30) * diasContratados;
-        diasEquivalentesBono = costoBonoPeriodo / salarioDiario;
-      }
-      numerador = diasContratados + diasPagadosProporcionales + diasEquivalentesBono;
+      // MÉTODO INDEXADO: Ti + Prestaciones + Días equivalentes del Cestaticket
+      // Convertir el bono mensual en días equivalentes de salario diario
+      const costoBonoPeriodo = (bonoCestaticket / 30) * diasContratados;
+      const diasEquivalentesBono = costoBonoPeriodo / salarioDiario;
+      numerador = diasNoTrabajados + diasPrestacionesProporcionales + diasEquivalentesBono;
     }
 
     return (numerador / diasLaboradosReales) * 100;
-  }, [metodo, salarioDiario, bonoIndexado, diasContratados, diasNoTrabajados, diasPagadosAnuales]);
+  }, [metodo, salarioDiario, bonoCestaticket, diasContratados, diasNoTrabajados, diasPrestaciones]);
 
   // ── Costo real mensual ──────────────────────────────────
   const costoRealMensual = useMemo(() => {
-    // En ambos métodos, el costo real es salarioBase * (1 + FCAS/100)
-    // En el estándar, el bono no se incluye en el FCAS, va al APU.
-    return salarioBase * (1 + fcasPorcentaje / 100);
-  }, [salarioBase, fcasPorcentaje]);
+    const factor = 1 + fcasPorcentaje / 100;
+    if (metodo === 'estandar') {
+      // En el método estándar, el Cestaticket se añade como costo fijo aparte
+      return salarioBase * factor + bonoCestaticket;
+    } else {
+      // En el método indexado, el bono ya está diluido en el FCAS
+      return salarioBase * factor;
+    }
+  }, [salarioBase, fcasPorcentaje, metodo, bonoCestaticket]);
 
   // ── Handlers ──────────────────────────────────────────────
   const toggleConcepto = (idx) => {
@@ -110,27 +97,30 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
     );
   };
 
-  const resetear = () => {
-    if (metodo === 'estandar') {
-      setConceptos(CONCEPTOS_NOMINALES.map(c => ({ ...c })));
-    } else {
-      setConceptos(CONCEPTOS_EQUIVALENTES.map(c => ({ ...c })));
-    }
-  };
+  const resetear = () => setConceptos(CONCEPTOS_DEFAULT.map(c => ({ ...c })));
 
   const handlePrint = () => window.print();
 
+  // ── JSX ──────────────────────────────────────────────────
+  const containerClasses = isPage
+    ? "h-full w-full flex flex-col"
+    : "fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4";
+
+  const cardClasses = isPage
+    ? "bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl w-full max-w-5xl mx-auto flex flex-col h-full overflow-hidden border border-slate-200/60 print:border-none"
+    : "bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-slate-200/60 print:border-none";
+
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-slate-200/60 print:border-none">
+    <div className={containerClasses}>
+      <div className={cardClasses}>
         
         {/* Header */}
         <div className="sticky top-0 bg-white/80 backdrop-blur-sm border-b border-slate-200/60 px-6 py-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 z-10 print:bg-white print:shadow-none">
           <div>
             <h1 className="text-xl font-extrabold text-slate-800 tracking-tight leading-none">
-              Calculadora de Costos de Construcción
+              Calculadora de Costos de Construcción (FCAS)
             </h1>
-            <p className="text-xs text-slate-500 mt-1">Análisis Dinámico de Factor de Costos Asociados al Salario</p>
+            <p className="text-xs text-slate-500 mt-1">Factor de Costos Asociados al Salario según LOTTT y Convención Colectiva</p>
           </div>
           
           <div className="flex items-center gap-2 print:hidden">
@@ -151,15 +141,17 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
               </svg>
             </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600 hover:text-slate-900"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            {!isPage && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600 hover:text-slate-900"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
 
@@ -186,7 +178,7 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
               }`}
             >
-              Método Con Bonos Indexados
+              Método con Cestaticket en FCAS
             </button>
           </div>
 
@@ -202,8 +194,8 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
               </div>
               <p className="text-[11px] text-slate-500 mt-3 bg-slate-50 p-2 rounded-lg border border-slate-200">
                 {metodo === 'indexado'
-                  ? '💡 Método Indexado: Convierte bonos y prestaciones a días equivalentes de salario.'
-                  : '📋 Método Estándar: Usa días nominales de ley, sin incluir bono (va al APU).'}
+                  ? '⚠️ El Cestaticket se convierte en días equivalentes y se integra al FCAS.'
+                  : '📋 Método Estándar: El Cestaticket va al APU, no infla el FCAS.'}
               </p>
             </div>
 
@@ -237,16 +229,15 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Bono / Cestaticket Indexado</label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cestaticket Mensual (USD)</label>
               <input
                 type="number"
-                disabled={metodo !== 'indexado'}
-                value={bonoIndexado}
-                onChange={(e) => setBonoIndexado(Math.max(0, parseFloat(e.target.value) || 0))}
-                className="w-full bg-white rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                value={bonoCestaticket}
+                onChange={(e) => setBonoCestaticket(Math.max(0, parseFloat(e.target.value) || 0))}
+                className="w-full bg-white rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
               {metodo === 'estandar' && (
-                <p className="text-[10px] text-slate-400">El bono va al APU en este método</p>
+                <p className="text-[10px] text-slate-400">Se añade como costo fijo al APU</p>
               )}
             </div>
 
@@ -262,7 +253,7 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
 
             <div className="space-y-1">
               <div className="flex justify-between items-center">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Días de Descanso (Ti)</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Días No Laborados (Ti)</label>
                 <button
                   type="button"
                   onClick={() => setCalculoAutomatico(!calculoAutomatico)}
@@ -298,7 +289,7 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-xs font-bold tracking-widest uppercase text-slate-500">
-                {metodo === 'estandar' ? 'Matriz de Incidencias (Días nominales)' : 'Matriz de Incidencias (Días equivalentes)'}
+                Matriz de Beneficios y Prestaciones (Días nominales anuales)
               </span>
               <button
                 type="button"
