@@ -81,24 +81,7 @@ export default function AppLayout() {
           );
         })}
 
-        {/* Botón agregado: Cerrar Sesión (o genérico según el estilo solicitado) */}
-        <button
-          onClick={handleLogout}
-          className="group relative w-full flex justify-center mt-auto"
-        >
-          <div className="flex items-center justify-center p-3 rounded-xl transition-all duration-200 text-slate-500 hover:bg-[#FEF3C7] hover:text-slate-800 cursor-pointer">
-            <LogOut size={24} className="text-slate-400 group-hover:text-slate-800 transition-colors" />
-          </div>
-          {/* Tooltip */}
-          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
-            Cerrar Sesión
-            <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
-          </div>
-        </button>
-      </div>
-
-      {/* Botón Calculadora FCAS */}
-      <div className="px-2">
+        {/* Botón Calculadora FCAS movido justo debajo de los iconos de navegación */}
         <button
           onClick={() => setShowCalculadora(true)}
           className="group relative w-full flex justify-center"
@@ -113,6 +96,7 @@ export default function AppLayout() {
           </div>
         </button>
       </div>
+
 
     </nav>
   );
