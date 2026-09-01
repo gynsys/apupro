@@ -361,11 +361,67 @@ export default function BudgetHomePage() {
                 onClick={() => navigate(`/budgets/${budget.id}`)}
                 className="tarjeta-presupuesto-ambar cursor-pointer group"
               >
-                <div className="tarjeta-header flex justify-between items-center">
-                  <h3 className="tarjeta-titulo-ambar truncate flex-1" title={budget.name}>
-                    {budget.name}
-                  </h3>
-                  <div className="flex items-center gap-4">
+                <div className="tarjeta-header flex flex-col w-full gap-2 items-start justify-center">
+                  {/* Primera Fila: Nombre e Iconos */}
+                  <div className="flex justify-between items-center w-full">
+                    <h3 className="tarjeta-titulo-ambar truncate flex-1" title={budget.name}>
+                      {budget.name}
+                    </h3>
+                    <div className="acciones-rapidas">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDuplicatingBudget(budget); setDuplicateName(budget.name + ' (Copia)'); }}
+                        className="btn-accion"
+                        title="Duplicar"
+                      >
+                        <Copy size={16} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setSettingsBudget(budget); }}
+                        className="btn-accion"
+                        title="Configuración Global"
+                      >
+                        <Settings size={16} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setPrintBudget(budget); setPrintModalOpen(true); }}
+                        className="btn-accion"
+                        title="Imprimir"
+                      >
+                        <Printer size={16} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleExportToExcel(budget); }}
+                        className="btn-accion"
+                        title="Exportar a Excel"
+                      >
+                        <FileSpreadsheet size={16} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleBackupExport(budget); }}
+                        className="btn-accion"
+                        title="Exportar Backup"
+                      >
+                        <CloudDownload size={16} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setRenamingBudget(budget); setRenameName(budget.name); }}
+                        className="btn-accion"
+                        title="Editar"
+                      >
+                        <Edit3 size={16} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); confirmDelete(budget.id); }}
+                        className="btn-accion"
+                        title="Eliminar"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Segunda Fila: Métricas */}
+                  <div className="flex items-center gap-6">
                     <p className="text-xs text-amber-700 font-semibold">
                       Partidas: {budgetTotals[budget.id] ? budgetTotals[budget.id].items : '...'}
                     </p>
@@ -382,57 +438,6 @@ export default function BudgetHomePage() {
                     ) : (
                       <span className="text-xs text-amber-700/50">Calculando...</span>
                     )}
-                  </div>
-                  <div className="acciones-rapidas">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDuplicatingBudget(budget); setDuplicateName(budget.name + ' (Copia)'); }}
-                      className="btn-accion"
-                      title="Duplicar"
-                    >
-                      <Copy size={16} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setSettingsBudget(budget); }}
-                      className="btn-accion"
-                      title="Configuración Global"
-                    >
-                      <Settings size={16} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setPrintBudget(budget); setPrintModalOpen(true); }}
-                      className="btn-accion"
-                      title="Imprimir"
-                    >
-                      <Printer size={16} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleExportToExcel(budget); }}
-                      className="btn-accion"
-                      title="Exportar a Excel"
-                    >
-                      <FileSpreadsheet size={16} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleBackupExport(budget); }}
-                      className="btn-accion"
-                      title="Exportar Backup"
-                    >
-                      <CloudDownload size={16} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setRenamingBudget(budget); setRenameName(budget.name); }}
-                      className="btn-accion"
-                      title="Editar"
-                    >
-                      <Edit3 size={16} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); confirmDelete(budget.id); }}
-                      className="btn-accion"
-                      title="Eliminar"
-                    >
-                      <Trash2 size={16} />
-                    </button>
                   </div>
                 </div>
               </div>
