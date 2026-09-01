@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Settings, X, DollarSign, Hash, Percent, UploadCloud, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { budgetService } from '../../services/budgetService';
+import { useUserCostos } from '../../context/UserCostosContext';
 
 export default function BudgetSettingsModal({ budget, onClose, onSave }) {
+  const { costosConfig } = useUserCostos();
   const [configTab, setConfigTab] = useState('general');
   const [logoPreview, setLogoPreview] = useState(() => {
     // Cargar logo desde localStorage
@@ -15,7 +17,7 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
   const [settings, setSettings] = useState({
     currency: budget.currency || 'USD',
     exchange_rate: budget.exchange_rate || 1.0,
-    fcas_percent: budget.fcas_percent || 417.0,
+    fcas_percent: budget.fcas_percent ?? 417.0,
     admin_percent: budget.admin_percent ?? 15.0,
     profit_percent: budget.profit_percent ?? 10.0,
     iva_percent: budget.iva_percent ?? 16.0,
@@ -28,6 +30,17 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
     client_name: budget.client_name || '',
     project_name: budget.project_name || ''
   });
+
+  useEffect(() => {
+    // Si la calculadora de FCAS se usa mientras este modal está abierto,
+    // reflejamos el cambio aquí
+    if (costosConfig) {
+      setSettings(prev => ({
+        ...prev,
+        fcas_percent: costosConfig.fcas ?? prev.fcas_percent
+      }));
+    }
+  }, [costosConfig]);
 
   const handleLogoChange = async (e) => {
     const file = e.target.files[0];

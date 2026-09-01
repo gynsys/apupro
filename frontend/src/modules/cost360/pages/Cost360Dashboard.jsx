@@ -8,6 +8,7 @@ import { SiteConfigContext } from '../../../App';
 import CatalogResourceTab from '../components/CatalogResourceTab';
 import Cost360SearchBar from '../components/Cost360SearchBar';
 import { useCost360Search } from '../hooks/useCost360Search';
+import { useUserCostos } from '../../../context/UserCostosContext';
 
 /* ── Shared glass style ─────────────────────────────────── */
 const glass = {
@@ -33,6 +34,27 @@ const Cost360Dashboard = () => {
   
   const navigate = useNavigate();
   const { config } = useContext(SiteConfigContext);
+
+  // Costos desde contexto global
+  const { costosConfig, updateCostosConfig, loading: loadingCostos } = useUserCostos();
+  const [draft, setDraft] = useState(null);
+  const currentCostos = draft ?? costosConfig;
+
+  const handleCostoChange = (key, value) => {
+    const numValue = parseFloat(value) || 0;
+    setDraft(prev => ({ ...(prev ?? costosConfig), [key]: numValue }));
+  };
+
+  const handleSaveCostos = async () => {
+    if (!draft) return;
+    try {
+      await updateCostosConfig(draft);
+      setDraft(null);
+      toast.success('Configuración de costos guardada');
+    } catch (error) {
+      toast.error('Error al guardar la configuración de costos');
+    }
+  };
 
   const {
     searchQuery: search,
@@ -118,24 +140,74 @@ const Cost360Dashboard = () => {
               );
             })}
           </div>
-          <div className="pb-2">
-            <select
-              value={selectedDatabase}
-              onChange={(e) => setSelectedDatabase(e.target.value)}
-              className="bg-white border-2 border-slate-300 text-slate-700 text-sm font-medium rounded-lg px-4 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm transition-all w-64 appearance-none"
-              style={{
-                backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3e%3c/svg%3e")',
-                backgroundPosition: 'right 0.5rem center',
-                backgroundRepeat: 'no-repeat',
-                backgroundSize: '1.5em 1.5em',
-                paddingRight: '2.5rem',
-              }}
-            >
-              <option value="master">Base Maestra (Defecto)</option>
-              {databases.filter(db => db.id !== 'master' && db.is_master !== true).map(db => (
-                <option key={db.id} value={db.id}>{db.name}</option>
-              ))}
-            </select>
+
+          <div className="flex gap-4 items-end pb-2">
+            {/* Inputs de costos */}
+            <div className="flex gap-2 items-end">
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">% Utilidad</label>
+                <input
+                  type="number"
+                  value={currentCostos?.porcentajeUtilidad ?? 0}
+                  onChange={(e) => handleCostoChange('porcentajeUtilidad', e.target.value)}
+                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">% Admin</label>
+                <input
+                  type="number"
+                  value={currentCostos?.porcentajeAdministracion ?? 0}
+                  onChange={(e) => handleCostoChange('porcentajeAdministracion', e.target.value)}
+                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">IVA %</label>
+                <input
+                  type="number"
+                  value={currentCostos?.iva ?? 0}
+                  onChange={(e) => handleCostoChange('iva', e.target.value)}
+                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">F.C.A.S %</label>
+                <input
+                  type="number"
+                  value={currentCostos?.fcas ?? 0}
+                  onChange={(e) => handleCostoChange('fcas', e.target.value)}
+                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
+              <button
+                onClick={handleSaveCostos}
+                disabled={!draft || loadingCostos}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors"
+              >
+                {loadingCostos ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
+
+            <div>
+              <select
+                value={selectedDatabase}
+                onChange={(e) => setSelectedDatabase(e.target.value)}
+                className="bg-white border-2 border-slate-300 text-slate-700 text-sm font-medium rounded-lg px-4 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm transition-all w-64 appearance-none"
+                style={{
+                  backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3e%3c/svg%3e")',
+                  backgroundPosition: 'right 0.5rem center',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundSize: '1.5em 1.5em',
+                  paddingRight: '2.5rem',
+                }}
+              >
+                <option value="master">Base Maestra (Defecto)</option>
+                {databases.filter(db => db.id !== 'master' && db.is_master !== true).map(db => (
+                  <option key={db.id} value={db.id}>{db.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
         <div className="h-px" style={{ background: 'linear-gradient(90deg,rgba(148,163,255,0.4),transparent)' }} />

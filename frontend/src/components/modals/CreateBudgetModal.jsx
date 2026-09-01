@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, UploadCloud, DollarSign, Hash, Percent, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { budgetService } from '../../services/budgetService';
+import { useUserCostos } from '../../context/UserCostosContext';
 
 export default function CreateBudgetModal({ onClose, onSuccess }) {
+  const { costosConfig } = useUserCostos();
   const [loading, setLoading] = useState(false);
   const [logoPreview, setLogoPreview] = useState(null);
   const [formData, setFormData] = useState({
@@ -14,12 +16,26 @@ export default function CreateBudgetModal({ onClose, onSuccess }) {
     client_name: '',
     currency: 'USD',
     exchange_rate: 1.0,
-    fcas_percent: 417.0,
+    fcas_percent: costosConfig?.fcas ?? 417.0,
     labor_bonus: 0.0,
-    admin_percent: 15.0,
-    profit_percent: 10.0,
-    iva_percent: 16.0
+    admin_percent: costosConfig?.porcentajeAdministracion ?? 15.0,
+    profit_percent: costosConfig?.porcentajeUtilidad ?? 10.0,
+    iva_percent: costosConfig?.iva ?? 16.0
   });
+
+  useEffect(() => {
+    // Si la calculadora actualiza el config mientras el modal está abierto,
+    // reflejar el nuevo FCAS (u otros valores) en el formulario.
+    if (costosConfig) {
+      setFormData(prev => ({
+        ...prev,
+        fcas_percent: costosConfig.fcas ?? prev.fcas_percent,
+        admin_percent: costosConfig.porcentajeAdministracion ?? prev.admin_percent,
+        profit_percent: costosConfig.porcentajeUtilidad ?? prev.profit_percent,
+        iva_percent: costosConfig.iva ?? prev.iva_percent
+      }));
+    }
+  }, [costosConfig]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
