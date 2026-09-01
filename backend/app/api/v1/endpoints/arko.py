@@ -603,6 +603,12 @@ DEFAULT_SITE_CONFIG = {
             "twitter": "#"
         }
     },
+    "costos": {
+        "porcentajeUtilidad": 10,
+        "porcentajeAdministracion": 8,
+        "iva": 16,
+        "fcas": 0
+    },
     "sections": {
         "showAbout": True,
         "showServices": True,

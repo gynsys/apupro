@@ -38,9 +38,33 @@ const AdminDatabasePage = () => {
   const [onlyCoded, setOnlyCoded] = useState(true);
   const [selectedDatabase, setSelectedDatabase] = useState('master');
   const [promptText, setPromptText] = useState(DEFAULT_APU_PROMPT);
-  
+  const [costosConfig, setCostosConfig] = useState({
+    porcentajeUtilidad: 10,
+    porcentajeAdministracion: 8,
+    iva: 16,
+    fcas: 0
+  });
+
   const siteConfig = React.useContext(SiteConfigContext);
   const config = siteConfig?.config || {};
+
+  // Cargar costos desde config al montar
+  React.useEffect(() => {
+    if (config?.costos) {
+      setCostosConfig(config.costos);
+    }
+  }, [config]);
+
+  // Escuchar evento de actualización de FCAS desde la calculadora
+  React.useEffect(() => {
+    const handleUpdateFCAS = (event) => {
+      const fcasValue = event.detail;
+      setCostosConfig(prev => ({ ...prev, fcas: fcasValue }));
+    };
+
+    window.addEventListener('updateFCAS', handleUpdateFCAS);
+    return () => window.removeEventListener('updateFCAS', handleUpdateFCAS);
+  }, []);
   
   const toggleGlobalCoded = async (isChecked) => {
     try {
@@ -115,6 +139,8 @@ const AdminDatabasePage = () => {
           onToggleOnlyCoded={setOnlyCoded}
           config={config}
           onToggleGlobalCoded={toggleGlobalCoded}
+          costosConfig={costosConfig}
+          onCostosConfigChange={setCostosConfig}
         />
       </div>
 

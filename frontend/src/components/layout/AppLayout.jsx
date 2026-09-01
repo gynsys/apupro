@@ -234,7 +234,16 @@ export default function AppLayout() {
         </main>
 
         {/* Modal Calculadora FCAS */}
-        {showCalculadora && <CalculadoraFCAS onClose={() => setShowCalculadora(false)} />}
+        {showCalculadora && (
+          <CalculadoraFCAS
+            onClose={() => setShowCalculadora(false)}
+            onUseFCAS={(fcasValue) => {
+              // Emitir evento personalizado para actualizar FCAS
+              window.dispatchEvent(new CustomEvent('updateFCAS', { detail: fcasValue }));
+              setShowCalculadora(false);
+            }}
+          />
+        )}
       </div>
     </div>
   );

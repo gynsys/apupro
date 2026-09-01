@@ -15,7 +15,7 @@ const CONCEPTOS_DEFAULT = [
   { id: 'permisos', nombre: 'Cláusulas / Permisos Construcción', dias: 15, activo: true },
 ];
 
-export default function CalculadoraFCAS({ onClose }) {
+export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
   // ── Estados Base ──────────────────────────────────────────
   const [metodo, setMetodo] = useState('indexado');
   const [salarioBase, setSalarioBase] = useState(240); // $240 mensuales (8$/día)
@@ -86,6 +86,14 @@ export default function CalculadoraFCAS({ onClose }) {
           </div>
           
           <div className="flex items-center gap-2 print:hidden">
+            {/* Botón Usar FCAS */}
+            <button
+              type="button"
+              onClick={() => onUseFCAS && onUseFCAS(fcasPorcentaje)}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              Usar FCAS
+            </button>
             {/* Botón Imprimir */}
             <button
               type="button"
