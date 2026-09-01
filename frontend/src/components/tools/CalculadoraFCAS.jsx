@@ -1,28 +1,48 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 // ============================================
 // CALCULADORA FCAS PROFESIONAL - VENEZUELA
+// CON DÍAS EQUIVALENTES (COSTO REAL)
 // ============================================
 
 const CONCEPTOS_DEFAULT = [
-  { id: 'vacaciones', nombre: 'Vacaciones + Bono Vacacional', dias: 22, activo: true },
-  { id: 'utilidades', nombre: 'Utilidades Convención Colectiva', dias: 120, activo: true },
-  { id: 'prestaciones', nombre: 'Garantía Prestaciones (LOTTT)', dias: 60, activo: true },
-  { id: 'sso', nombre: 'Seguro Social Obligatorio (11%)', dias: 40, activo: true },
-  { id: 'ince', nombre: 'INCES (2%)', dias: 7, activo: true },
-  { id: 'lph', nombre: 'Ley Política Habitacional (2%)', dias: 7, activo: true },
+  { id: 'vacaciones', nombre: 'Vacaciones + Bono Vacacional', dias: 240, activo: true },
+  { id: 'utilidades', nombre: 'Utilidades Convención Colectiva', dias: 580, activo: true },
+  { id: 'prestaciones', nombre: 'Garantía Prestaciones (LOTTT)', dias: 650, activo: true },
+  { id: 'sso', nombre: 'Seguro Social Obligatorio (11%)', dias: 180, activo: true },
+  { id: 'ince', nombre: 'INCES (2%)', dias: 45, activo: true },
+  { id: 'lph', nombre: 'Ley Política Habitacional (2%)', dias: 45, activo: true },
   { id: 'feriados', nombre: 'Feriados Nacionales', dias: 12, activo: true },
-  { id: 'permisos', nombre: 'Cláusulas / Permisos Construcción', dias: 15, activo: true },
+  { id: 'permisos', nombre: 'Cláusulas / Permisos Construcción', dias: 1162, activo: true },
 ];
 
 export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
   // ── Estados Base ──────────────────────────────────────────
   const [metodo, setMetodo] = useState('indexado');
   const [salarioBase, setSalarioBase] = useState(240); // $240 mensuales (8$/día)
-  const [bonoIndexado, setBonoIndexado] = useState(175); // Cestaticket de $175 mensuales
-  const [diasContratados, setDiasContratados] = useState(30);
-  const [diasNoTrabajados, setDiasNoTrabajados] = useState(8);
+  const [bonoIndexado, setBonoIndexado] = useState(175); // Cestaticket $175 mensual
+  const [diasContratados, setDiasContratados] = useState(365); // Período anual por defecto
+  const [diasNoTrabajados, setDiasNoTrabajados] = useState(96); // Valor inicial (se recalculará)
   const [conceptos, setConceptos] = useState(CONCEPTOS_DEFAULT);
+  const [calculoAutomatico, setCalculoAutomatico] = useState(true);
+
+  // ── Cálculo automático de días de descanso ──────────────
+  const diasDescansoAutomaticos = useMemo(() => {
+    if (diasContratados <= 0) return 0;
+    // Fines de semana (2 de cada 7 días)
+    const finesSemana = diasContratados * (2 / 7);
+    // Feriados nacionales (12 al año, proporcionales)
+    const feriados = 12 * (diasContratados / 365);
+    // Redondeamos hacia arriba para no quedarnos cortos
+    return Math.ceil(finesSemana + feriados);
+  }, [diasContratados]);
+
+  // Sincronizar díasNoTrabajados con el cálculo automático
+  useEffect(() => {
+    if (calculoAutomatico) {
+      setDiasNoTrabajados(diasDescansoAutomaticos);
+    }
+  }, [calculoAutomatico, diasDescansoAutomaticos]);
 
   // ── Motores de Cálculo Reactivos ────────────────────────
   const salarioDiario = useMemo(() => {
@@ -33,22 +53,25 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
     return conceptos.filter((c) => c.activo).reduce((sum, c) => sum + c.dias, 0);
   }, [conceptos]);
 
+  // FÓRMULA CORREGIDA (suma diasContratados en el numerador)
   const fcasPorcentaje = useMemo(() => {
-    const denominador = diasContratados - diasNoTrabajados;
-    if (denominador <= 0 || salarioDiario <= 0) return 0;
+    const diasLaboradosReales = diasContratados - diasNoTrabajados;
+    if (diasLaboradosReales <= 0 || salarioDiario <= 0) return 0;
 
+    // Proporción del período frente al año base
     const factorTemporal = diasContratados / 365;
     const diasPagadosProporcionales = diasPagadosAnuales * factorTemporal;
 
     let diasEquivalentesBono = 0;
     if (metodo === 'indexado' && bonoIndexado > 0) {
-      const costoBonoEnLaObra = (bonoIndexado / 30) * diasContratados;
-      diasEquivalentesBono = costoBonoEnLaObra / salarioDiario;
+      const costoBonoPeriodo = (bonoIndexado / 30) * diasContratados;
+      diasEquivalentesBono = costoBonoPeriodo / salarioDiario;
     }
 
-    const totalNumeradorDias = diasNoTrabajados + diasPagadosProporcionales + diasEquivalentesBono;
+    // NUEVO: se suma diasContratados (salario base de todos los días del período)
+    const totalNumeradorDias = diasContratados + diasPagadosProporcionales + diasEquivalentesBono;
 
-    return (totalNumeradorDias * 100) / denominador;
+    return (totalNumeradorDias / diasLaboradosReales) * 100;
   }, [metodo, salarioBase, salarioDiario, bonoIndexado, diasContratados, diasNoTrabajados, diasPagadosAnuales]);
 
   const costoRealMensual = useMemo(() => {
@@ -58,7 +81,7 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
     return salarioBase * (1 + fcasPorcentaje / 100) + bonoIndexado;
   }, [salarioBase, fcasPorcentaje, metodo, bonoIndexado]);
 
-  // ── Handlers de Interfaz ──────────────────────────────────
+  // ── Handlers ──────────────────────────────────────────────
   const toggleConcepto = (idx) => {
     setConceptos((prev) =>
       prev.map((c, i) => (i === idx ? { ...c, activo: !c.activo } : c))
@@ -67,16 +90,13 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
 
   const resetear = () => setConceptos(CONCEPTOS_DEFAULT.map((c) => ({ ...c })));
 
-  // ── Impresión ─────────────────────────────────────────────
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = () => window.print();
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-slate-200/60 print:border-none">
         
-        {/* Header Modal */}
+        {/* Header */}
         <div className="sticky top-0 bg-white/80 backdrop-blur-sm border-b border-slate-200/60 px-6 py-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 z-10 print:bg-white print:shadow-none">
           <div>
             <h1 className="text-xl font-extrabold text-slate-800 tracking-tight leading-none">
@@ -86,7 +106,6 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
           </div>
           
           <div className="flex items-center gap-2 print:hidden">
-            {/* Botón Usar FCAS */}
             <button
               type="button"
               onClick={() => onUseFCAS && onUseFCAS(fcasPorcentaje)}
@@ -94,7 +113,6 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
             >
               Usar FCAS
             </button>
-            {/* Botón Imprimir */}
             <button
               type="button"
               onClick={handlePrint}
@@ -105,7 +123,6 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
               </svg>
             </button>
-            {/* Botón Cerrar */}
             <button
               type="button"
               onClick={onClose}
@@ -145,7 +162,7 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
             </button>
           </div>
 
-          {/* Bloque de Indicadores Principales */}
+          {/* Indicadores Principales */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-2xl p-5 bg-white/70 backdrop-blur-sm border border-slate-200/70 shadow-sm flex flex-col justify-between">
               <span className="text-xs font-bold tracking-widest uppercase text-slate-500">Factor F.C.A.S. Calculado</span>
@@ -213,20 +230,43 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Días de Descanso (Ti)</label>
+              <div className="flex justify-between items-center">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Días de Descanso (Ti)</label>
+                <button
+                  type="button"
+                  onClick={() => setCalculoAutomatico(!calculoAutomatico)}
+                  className={`text-[10px] px-2 py-0.5 rounded transition-colors ${
+                    calculoAutomatico ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'
+                  }`}
+                >
+                  {calculoAutomatico ? '🔒 Auto' : '✏️ Manual'}
+                </button>
+              </div>
               <input
                 type="number"
                 value={diasNoTrabajados}
-                onChange={(e) => setDiasNoTrabajados(Math.min(diasContratados, parseFloat(e.target.value) || 0))}
-                className="w-full bg-white rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                onChange={(e) => {
+                  setCalculoAutomatico(false);
+                  setDiasNoTrabajados(Math.min(diasContratados, parseFloat(e.target.value) || 0));
+                }}
+                className={`w-full bg-white rounded-xl border px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:ring-1 ${
+                  calculoAutomatico 
+                    ? 'border-emerald-300 bg-emerald-50/50 text-emerald-800' 
+                    : 'border-slate-300 focus:border-blue-500'
+                }`}
               />
+              {calculoAutomatico && (
+                <p className="text-[10px] text-emerald-600 mt-1">
+                  (Fines de semana + feriados)
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Listado de Beneficios y Carga Legal */}
+          {/* Matriz de Incidencias */}
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-bold tracking-widest uppercase text-slate-500">Matriz de Incidencias Laborales (Base Anual)</span>
+              <span className="text-xs font-bold tracking-widest uppercase text-slate-500">Matriz de Incidencias Laborales (Días Equivalentes)</span>
               <button
                 type="button"
                 onClick={resetear}
@@ -256,8 +296,8 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS }) {
             </div>
           </div>
 
-        </div> {/* cierre de p-6 */}
-      </div> {/* cierre del modal interior */}
-    </div> /* cierre del overlay */
+        </div>
+      </div>
+    </div>
   );
 }

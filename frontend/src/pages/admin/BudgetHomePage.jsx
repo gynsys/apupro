@@ -359,8 +359,12 @@ export default function BudgetHomePage() {
               key={budget.id}
               onClick={() => navigate(`/budgets/${budget.id}`)}
               className="tarjeta-presupuesto-ambar cursor-pointer group"
+              style={{ maxWidth: '1152px' }}
             >
-              <div className="tarjeta-header">
+              <div className="tarjeta-header flex justify-between items-center">
+                <h3 className="tarjeta-titulo-ambar truncate flex-1" title={budget.name}>
+                  {budget.name}
+                </h3>
                 <div className="acciones-rapidas">
                   <button 
                     onClick={(e) => { e.stopPropagation(); setDuplicatingBudget(budget); setDuplicateName(budget.name + ' (Copia)'); }}
@@ -415,9 +419,6 @@ export default function BudgetHomePage() {
               </div>
               
               <div className="tarjeta-body">
-                <h3 className="tarjeta-titulo-ambar truncate" title={budget.name}>
-                  {budget.name}
-                </h3>
                 <p className="text-xs text-amber-700 font-semibold mb-3">
                   Total Partidas: {budgetTotals[budget.id] ? budgetTotals[budget.id].items : '...'}
                 </p>
