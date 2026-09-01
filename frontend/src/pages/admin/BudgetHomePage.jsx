@@ -355,13 +355,13 @@ export default function BudgetHomePage() {
       ) : (
         <div className="w-full overflow-x-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {filteredBudgets.map(budget => (
-            <div 
-              key={budget.id}
-              onClick={() => navigate(`/budgets/${budget.id}`)}
-              className="tarjeta-presupuesto-ambar cursor-pointer group"
-              style={{ minWidth: '1152px' }}
-            >
+            {filteredBudgets.map(budget => (
+              <div 
+                key={budget.id}
+                onClick={() => navigate(`/budgets/${budget.id}`)}
+                className="tarjeta-presupuesto-ambar cursor-pointer group"
+                style={{ minWidth: '1152px' }}
+              >
               <div className="tarjeta-header flex justify-between items-center">
                 <h3 className="tarjeta-titulo-ambar truncate flex-1" title={budget.name}>
                   {budget.name}
@@ -443,8 +443,8 @@ export default function BudgetHomePage() {
             </div>
           ))}
         </div>
-      )}
       </div>
+      )}
 
       {/* NEW BUDGET MODAL */}
       {isModalOpen && (
@@ -672,6 +672,7 @@ export default function BudgetHomePage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
