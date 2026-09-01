@@ -88,9 +88,10 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  transition: transform 0.3s cubic-bezier(0.215, 0.610, 0.355, 1), 
-              background-color 0.3s ease, 
-              border-color 0.3s ease, 
+  height: 60px;
+  transition: transform 0.3s cubic-bezier(0.215, 0.610, 0.355, 1),
+              background-color 0.3s ease,
+              border-color 0.3s ease,
               box-shadow 0.3s ease;
 }
 
