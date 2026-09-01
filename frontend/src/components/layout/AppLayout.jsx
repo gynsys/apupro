@@ -103,7 +103,7 @@ export default function AppLayout() {
   return (
     /* ── Root: gradient mesh background ──────────────────────── */
     <div
-      className="h-screen overflow-hidden flex flex-col print:block animate-fade-in"
+      className="h-screen overflow-hidden flex flex-col print:block print:overflow-visible print:h-auto animate-fade-in"
       style={{
         background: 'linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 40%, #f5f3ff 100%)',
       }}
@@ -176,7 +176,7 @@ export default function AppLayout() {
       </header>
 
       {/* ── BODY ──────────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden print:h-auto print:block print:overflow-visible">
 
         {/* ── ZONE 1: SIDEBAR — glass panel (lg+) ────────────── */}
         <aside
@@ -226,7 +226,7 @@ export default function AppLayout() {
         )}
 
         {/* ── MAIN CONTENT ──────────────────────────────────── */}
-        <main className="flex-1 overflow-y-auto min-w-0 relative">
+        <main className="flex-1 overflow-y-auto print:h-auto print:block print:overflow-visible min-w-0 relative">
           <UserCostosProvider>
             <Outlet />
           </UserCostosProvider>

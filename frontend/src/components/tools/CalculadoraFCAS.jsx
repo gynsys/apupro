@@ -103,12 +103,12 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS, isPage = false }) 
 
   // ── JSX ──────────────────────────────────────────────────
   const containerClasses = isPage
-    ? "h-full w-full flex flex-col"
-    : "fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4";
+    ? "h-full w-full flex flex-col print:h-auto print:block print:overflow-visible"
+    : "fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:static print:h-auto print:block print:overflow-visible";
 
   const cardClasses = isPage
-    ? "bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl w-full max-w-5xl mx-auto flex flex-col h-full overflow-hidden border border-slate-200/60 print:border-none"
-    : "bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-slate-200/60 print:border-none";
+    ? "bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl w-full max-w-5xl mx-auto flex flex-col h-full overflow-hidden border border-slate-200/60 print:border-none print:shadow-none print:overflow-visible print:h-auto print:block"
+    : "bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200/60 print:border-none print:shadow-none print:max-h-none print:overflow-visible print:h-auto print:block";
 
   return (
     <div className={containerClasses}>
@@ -155,7 +155,7 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS, isPage = false }) 
           </div>
         </div>
 
-        <div className="p-6 space-y-6 print:p-4">
+        <div className="flex-1 overflow-y-auto px-6 pt-2 pb-8 space-y-5 print:p-4 print:overflow-visible">
           {/* Selector de Método */}
           <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 w-fit print:border print:bg-white">
             <button

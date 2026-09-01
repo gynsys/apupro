@@ -7,7 +7,7 @@ export default function CalculadoraFCASPage() {
   const { updateCostosConfig } = useUserCostos();
 
   return (
-    <div className="absolute inset-0 p-4 md:p-6 overflow-hidden flex flex-col bg-slate-50">
+    <div className="absolute inset-0 p-4 md:p-6 overflow-hidden flex flex-col bg-slate-50 print:static print:h-auto print:overflow-visible print:bg-white print:p-0">
       <CalculadoraFCAS
         isPage={true}
         onUseFCAS={async (fcasValue) => {
