@@ -41,6 +41,10 @@ class ArkoAdmin(ArkoBase):
     has_ai_access = Column(Boolean, default=False)  # Acceso a generador APU con IA
     plan_expires_at = Column(DateTime, nullable=True)  # Fecha de expiración del plan
 
+    # Configuración de costos por usuario (fallback a site_config.costos si es null)
+    costos_config = Column(JSONB, nullable=True)
+
+
 class ArkoUser(ArkoBase):
     __tablename__ = "arko_users"
 

@@ -1,38 +1,38 @@
-import React, { createContext, useState, useEffect } from 'react';
-import { loginArkoAdmin, loginLandingSite, loginGoogleArkoAdmin } from '../services/api';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
+import { loginArkoAdmin, loginLandingSite, loginGoogleArkoAdmin, API_URL } from '../services/api';
 
 export const AuthContext = createContext(null);
+
+/**
+ * Obtiene los datos reales del usuario autenticado desde /arko/me.
+ * Retorna null si no está autenticado o hay error.
+ */
+async function fetchCurrentUser() {
+  try {
+    const response = await fetch(`${API_URL}/arko/me`, {
+      credentials: 'include',
+    });
+    if (!response.ok) return null;
+    return response.json();
+  } catch {
+    return null;
+  }
+}
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Verificar autenticación al cargar (cookie ya está seteada por backend)
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     try {
-      const response = await fetch('/api/v1/arko/health');
-      if (response.ok) {
-        // If health check passes, try to get user info
-        const tokenResponse = await fetch('/api/v1/arko/admin/posts', {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include' // Important: include cookies
-        });
-
-        if (tokenResponse.ok) {
-          setIsAuthenticated(true);
-          // You might want to add an endpoint to get current user info
-          setUser({ email: 'authenticated' }); // Placeholder
-        } else {
-          setIsAuthenticated(false);
-          setUser(null);
-        }
+      const userData = await fetchCurrentUser();
+      if (userData) {
+        setIsAuthenticated(true);
+        setUser(userData);
+      } else {
+        setIsAuthenticated(false);
+        setUser(null);
       }
     } catch (error) {
       console.error('Auth check failed:', error);
@@ -41,7 +41,11 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const login = async (email, password, isLandingSite = false) => {
     try {
@@ -50,8 +54,10 @@ export const AuthProvider = ({ children }) => {
         : await loginArkoAdmin(email, password);
 
       if (response.success || response.token_type === 'bearer') {
+        // Cargar datos reales del usuario tras login exitoso
+        const userData = await fetchCurrentUser();
         setIsAuthenticated(true);
-        setUser({ email });
+        setUser(userData || { email });
         return { success: true };
       }
       return { success: false, error: 'Login failed' };
@@ -62,16 +68,13 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      // Call backend logout endpoint to clear cookie
-      await fetch('/api/v1/arko/auth/logout', {
+      await fetch(`${API_URL}/arko/auth/logout`, {
         method: 'POST',
-        credentials: 'include'
+        credentials: 'include',
       });
-      setIsAuthenticated(false);
-      setUser(null);
     } catch (error) {
       console.error('Logout error:', error);
-      // Even if backend call fails, clear local state
+    } finally {
       setIsAuthenticated(false);
       setUser(null);
     }
@@ -81,7 +84,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await loginGoogleArkoAdmin(token);
       if (response.success || response.token_type === 'bearer') {
+        const userData = await fetchCurrentUser();
         setIsAuthenticated(true);
+        setUser(userData || {});
         return { success: true };
       }
       return { success: false, error: 'Login failed' };
@@ -91,7 +96,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, loginWithGoogle, loading }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, loginWithGoogle, loading, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 from app.db.arko_base import ArkoSessionLocal
 from app.db.models.arko import ArkoAdmin
@@ -11,20 +11,20 @@ router = APIRouter()
 class UserListResponse(BaseModel):
     id: int
     email: str
-    full_name: str
+    full_name: Optional[str] = None
     is_active: bool
     plan: str
-    max_budgets: int
-    max_items_per_budget: int
+    max_budgets: Optional[int] = None
+    max_items_per_budget: Optional[int] = None
     has_ai_access: bool
     created_at: str
 
 class UserUpdateRequest(BaseModel):
-    is_active: bool = None
-    plan: str = None
-    max_budgets: int = None
-    max_items_per_budget: int = None
-    has_ai_access: bool = None
+    is_active: Optional[bool] = None
+    plan: Optional[str] = None
+    max_budgets: Optional[int] = None
+    max_items_per_budget: Optional[int] = None
+    has_ai_access: Optional[bool] = None
 
 @router.get("/", response_model=List[UserListResponse])
 def get_users(current_user = Depends(get_current_arko_admin)):
@@ -38,8 +38,8 @@ def get_users(current_user = Depends(get_current_arko_admin)):
                 "full_name": user.full_name,
                 "is_active": user.is_active,
                 "plan": user.plan or 'free',
-                "max_budgets": user.max_budgets or 1,
-                "max_items_per_budget": user.max_items_per_budget or 2,
+                "max_budgets": user.max_budgets,
+                "max_items_per_budget": user.max_items_per_budget,
                 "has_ai_access": user.has_ai_access or False,
                 "created_at": user.created_at.isoformat() if user.created_at else None
             }
@@ -59,9 +59,9 @@ def update_user(user_id: int, user_data: UserUpdateRequest, current_user = Depen
         if user_data.plan is not None:
             user.plan = user_data.plan
         if user_data.max_budgets is not None:
-            user.max_budgets = user.max_budgets
+            user.max_budgets = user_data.max_budgets  # FIX: era user.max_budgets = user.max_budgets
         if user_data.max_items_per_budget is not None:
-            user.max_items_per_budget = user.max_items_per_budget
+            user.max_items_per_budget = user_data.max_items_per_budget  # FIX: idem
         if user_data.has_ai_access is not None:
             user.has_ai_access = user_data.has_ai_access
 
@@ -74,11 +74,12 @@ def update_user(user_id: int, user_data: UserUpdateRequest, current_user = Depen
             "full_name": user.full_name,
             "is_active": user.is_active,
             "plan": user.plan or 'free',
-            "max_budgets": user.max_budgets or 1,
-            "max_items_per_budget": user.max_items_per_budget or 2,
+            "max_budgets": user.max_budgets,
+            "max_items_per_budget": user.max_items_per_budget,
             "has_ai_access": user.has_ai_access or False,
             "created_at": user.created_at.isoformat() if user.created_at else None
         }
+
 
 @router.post("/demo-budget")
 def create_demo_budget(current_user = Depends(get_current_arko_admin)):

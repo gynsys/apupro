@@ -1,23 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { TABS } from '../../constants/tabs.config';
-import { apiPut } from '../../../../lib/apiHelper';
+import { useUserCostos } from '../../../../context/UserCostosContext';
+import toast from 'react-hot-toast';
 
-const TabNavigation = ({ activeTab, onTabChange, showPartidasFilters, onlyCoded, onToggleOnlyCoded, config, onToggleGlobalCoded, costosConfig, onCostosConfigChange }) => {
+const TabNavigation = ({ activeTab, onTabChange, showPartidasFilters, onlyCoded, onToggleOnlyCoded, config, onToggleGlobalCoded }) => {
+  // Costos desde contexto global — persisten en BD por usuario
+  const { costosConfig, updateCostosConfig, loading } = useUserCostos();
+
+  // Estado local para edición en curso (antes de guardar)
+  const [draft, setDraft] = useState(null);
+  const currentCostos = draft ?? costosConfig;
+
   const handleCostoChange = (key, value) => {
     const numValue = parseFloat(value) || 0;
-    onCostosConfigChange({ ...costosConfig, [key]: numValue });
+    setDraft(prev => ({ ...(prev ?? costosConfig), [key]: numValue }));
   };
 
   const handleSaveCostos = async () => {
+    if (!draft) return;
     try {
-      await apiPut('/arko/admin/config', {
-        ...config,
-        costos: costosConfig
-      });
-      alert('Configuración de costos guardada exitosamente');
+      await updateCostosConfig(draft);
+      setDraft(null);
+      toast.success('Configuración de costos guardada');
     } catch (error) {
-      console.error('Error guardando costos:', error);
-      alert('Error al guardar la configuración de costos');
+      toast.error('Error al guardar la configuración de costos');
     }
   };
 
@@ -49,7 +55,7 @@ const TabNavigation = ({ activeTab, onTabChange, showPartidasFilters, onlyCoded,
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">% Utilidad</label>
           <input
             type="number"
-            value={costosConfig?.porcentajeUtilidad || 0}
+            value={currentCostos?.porcentajeUtilidad ?? 0}
             onChange={(e) => handleCostoChange('porcentajeUtilidad', e.target.value)}
             className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
@@ -58,7 +64,7 @@ const TabNavigation = ({ activeTab, onTabChange, showPartidasFilters, onlyCoded,
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">% Admin</label>
           <input
             type="number"
-            value={costosConfig?.porcentajeAdministracion || 0}
+            value={currentCostos?.porcentajeAdministracion ?? 0}
             onChange={(e) => handleCostoChange('porcentajeAdministracion', e.target.value)}
             className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
@@ -67,7 +73,7 @@ const TabNavigation = ({ activeTab, onTabChange, showPartidasFilters, onlyCoded,
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">IVA %</label>
           <input
             type="number"
-            value={costosConfig?.iva || 0}
+            value={currentCostos?.iva ?? 0}
             onChange={(e) => handleCostoChange('iva', e.target.value)}
             className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
@@ -76,16 +82,17 @@ const TabNavigation = ({ activeTab, onTabChange, showPartidasFilters, onlyCoded,
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">F.C.A.S %</label>
           <input
             type="number"
-            value={costosConfig?.fcas || 0}
+            value={currentCostos?.fcas ?? 0}
             onChange={(e) => handleCostoChange('fcas', e.target.value)}
             className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
           />
         </div>
         <button
           onClick={handleSaveCostos}
-          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
+          disabled={!draft || loading}
+          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors"
         >
-          Guardar
+          {loading ? 'Guardando…' : 'Guardar'}
         </button>
       </div>
 

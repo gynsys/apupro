@@ -6,7 +6,9 @@ import {
 } from 'lucide-react';
 import { FaTools } from 'react-icons/fa';
 import { AuthContext } from '../../context/AuthContext';
+import { UserCostosProvider, useUserCostos } from '../../context/UserCostosContext';
 import CalculadoraFCAS from '../tools/CalculadoraFCAS';
+
 
 const NAV_ITEMS = [
   { name: 'Presupuestos', href: '/budgets',           Icon: FileText },
@@ -230,21 +232,34 @@ export default function AppLayout() {
 
         {/* ── MAIN CONTENT ──────────────────────────────────── */}
         <main className="flex-1 overflow-y-auto min-w-0 relative">
-          <Outlet />
+          <UserCostosProvider>
+            <Outlet />
+            {/* Modal Calculadora FCAS — dentro del provider para acceder a updateCostosConfig */}
+            {showCalculadora && (
+              <CalculadoraFCASWrapper onClose={() => setShowCalculadora(false)} />
+            )}
+          </UserCostosProvider>
         </main>
 
-        {/* Modal Calculadora FCAS */}
-        {showCalculadora && (
-          <CalculadoraFCAS
-            onClose={() => setShowCalculadora(false)}
-            onUseFCAS={(fcasValue) => {
-              // Emitir evento personalizado para actualizar FCAS
-              window.dispatchEvent(new CustomEvent('updateFCAS', { detail: fcasValue }));
-              setShowCalculadora(false);
-            }}
-          />
-        )}
       </div>
     </div>
+  );
+}
+
+/** Wrapper interno para poder usar useUserCostos dentro del provider */
+function CalculadoraFCASWrapper({ onClose }) {
+  const { updateCostosConfig } = useUserCostos();
+  return (
+    <CalculadoraFCAS
+      onClose={onClose}
+      onUseFCAS={async (fcasValue) => {
+        try {
+          await updateCostosConfig({ fcas: fcasValue });
+        } catch {
+          // El error ya se maneja en el contexto — mostramos igual
+        }
+        onClose();
+      }}
+    />
   );
 }

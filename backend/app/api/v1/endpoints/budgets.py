@@ -48,11 +48,25 @@ def create_budget(budget_in: BudgetCreate, db: Session = Depends(get_db), curren
     budget_data = budget_in.model_dump()
     # Asignar automáticamente el user_id del usuario autenticado
     budget_data["user_id"] = str(current_user.id)
+
+    # Aplicar costos_config del usuario como defaults si no se enviaron valores explícitos
+    from app.api.v1.endpoints.arko import _get_costos_config
+    costos = _get_costos_config(current_user)
+    if budget_data.get("profit_percent") is None:
+        budget_data["profit_percent"] = costos.porcentajeUtilidad
+    if budget_data.get("admin_percent") is None:
+        budget_data["admin_percent"] = costos.porcentajeAdministracion
+    if budget_data.get("iva_percent") is None:
+        budget_data["iva_percent"] = costos.iva
+    if budget_data.get("fcas_percent") is None:
+        budget_data["fcas_percent"] = costos.fcas
+
     db_budget = Budget(**budget_data)
     db.add(db_budget)
     db.commit()
     db.refresh(db_budget)
     return db_budget
+
 
 @router.get("/", response_model=List[BudgetSummary])
 def get_budgets(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):

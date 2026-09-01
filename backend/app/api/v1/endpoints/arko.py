@@ -464,6 +464,95 @@ def get_current_arko_admin(
 
 # --- Endpoints Privados (Para el Dashboard Arko) ---
 
+# Schemas para /me
+class CostosConfigSchema(BaseModel):
+    porcentajeUtilidad: float = 10.0
+    porcentajeAdministracion: float = 15.0
+    iva: float = 16.0
+    fcas: float = 0.0
+
+class CostosConfigUpdate(BaseModel):
+    porcentajeUtilidad: Optional[float] = None
+    porcentajeAdministracion: Optional[float] = None
+    iva: Optional[float] = None
+    fcas: Optional[float] = None
+
+class ArkoMeResponse(BaseModel):
+    id: int
+    email: str
+    full_name: Optional[str] = None
+    plan: str
+    max_budgets: Optional[int] = None
+    max_items_per_budget: Optional[int] = None
+    has_ai_access: bool
+    costos_config: CostosConfigSchema
+
+    class Config:
+        from_attributes = True
+
+COSTOS_DEFAULTS = CostosConfigSchema()
+
+def _get_costos_config(user: ArkoAdmin) -> CostosConfigSchema:
+    """Devuelve costos_config del usuario con fallback a site_config.costos y luego defaults."""
+    if user.costos_config:
+        return CostosConfigSchema(**{
+            **COSTOS_DEFAULTS.model_dump(),
+            **user.costos_config,
+        })
+    # Fallback a config global del admin
+    if user.site_config and isinstance(user.site_config.get("costos"), dict):
+        return CostosConfigSchema(**{
+            **COSTOS_DEFAULTS.model_dump(),
+            **user.site_config["costos"],
+        })
+    return COSTOS_DEFAULTS
+
+@router.get("/me", response_model=ArkoMeResponse)
+def get_current_admin_me(
+    current_admin: ArkoAdmin = Depends(get_current_arko_admin),
+) -> ArkoMeResponse:
+    """Retorna datos completos del administrador autenticado, incluyendo costos_config."""
+    return ArkoMeResponse(
+        id=current_admin.id,
+        email=current_admin.email,
+        full_name=current_admin.full_name,
+        plan=current_admin.plan or "free",
+        max_budgets=current_admin.max_budgets,
+        max_items_per_budget=current_admin.max_items_per_budget,
+        has_ai_access=bool(current_admin.has_ai_access),
+        costos_config=_get_costos_config(current_admin),
+    )
+
+@router.put("/me/costos", response_model=CostosConfigSchema)
+def update_current_admin_costos(
+    costos_in: CostosConfigUpdate,
+    current_admin: ArkoAdmin = Depends(get_current_arko_admin),
+) -> CostosConfigSchema:
+    """Actualiza la configuración de costos del administrador autenticado."""
+    current = _get_costos_config(current_admin)
+    updated = current.model_dump()
+    patch = costos_in.model_dump(exclude_none=True)
+    # Validar rangos
+    for key, value in patch.items():
+        if value < 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"El valor de {key} no puede ser negativo.",
+            )
+        if key in ("porcentajeUtilidad", "porcentajeAdministracion", "iva") and value > 100:
+            raise HTTPException(
+                status_code=400,
+                detail=f"El porcentaje {key} no puede superar 100%.",
+            )
+    updated.update(patch)
+    with get_db_session() as db:
+        user = db.query(ArkoAdmin).filter(ArkoAdmin.id == current_admin.id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        user.costos_config = updated
+        db.commit()
+    return CostosConfigSchema(**updated)
+
 @router.get("/admin/posts", response_model=List[ArkoPostResponse])
 def get_admin_posts(
     skip: int = 0,

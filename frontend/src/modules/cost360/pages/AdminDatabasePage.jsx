@@ -16,6 +16,7 @@ import GlassCard from '../../../components/shared/GlassCard';
 import { FiCpu } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { apiPut } from '../../../lib/apiHelper';
+import { useUserCostos } from '../../../context/UserCostosContext';
 
 const glass = {
   background: 'rgba(255,255,255,0.75)',
@@ -38,34 +39,14 @@ const AdminDatabasePage = () => {
   const [onlyCoded, setOnlyCoded] = useState(true);
   const [selectedDatabase, setSelectedDatabase] = useState('master');
   const [promptText, setPromptText] = useState(DEFAULT_APU_PROMPT);
-  const [costosConfig, setCostosConfig] = useState({
-    porcentajeUtilidad: 10,
-    porcentajeAdministracion: 8,
-    iva: 16,
-    fcas: 0
-  });
+
+  // Costos desde contexto global (persiste en BD, compartido con Calculadora FCAS)
+  const { costosConfig, updateCostosConfig } = useUserCostos();
 
   const siteConfig = React.useContext(SiteConfigContext);
   const config = siteConfig?.config || {};
 
-  // Cargar costos desde config al montar
-  React.useEffect(() => {
-    if (config?.costos) {
-      setCostosConfig(config.costos);
-    }
-  }, [config]);
 
-  // Escuchar evento de actualización de FCAS desde la calculadora
-  React.useEffect(() => {
-    const handleUpdateFCAS = (event) => {
-      const fcasValue = event.detail;
-      setCostosConfig(prev => ({ ...prev, fcas: fcasValue }));
-    };
-
-    window.addEventListener('updateFCAS', handleUpdateFCAS);
-    return () => window.removeEventListener('updateFCAS', handleUpdateFCAS);
-  }, []);
-  
   const toggleGlobalCoded = async (isChecked) => {
     try {
       const newConfig = { ...config, forceOnlyCodedMaster: isChecked };
@@ -139,8 +120,6 @@ const AdminDatabasePage = () => {
           onToggleOnlyCoded={setOnlyCoded}
           config={config}
           onToggleGlobalCoded={toggleGlobalCoded}
-          costosConfig={costosConfig}
-          onCostosConfigChange={setCostosConfig}
         />
       </div>
 
