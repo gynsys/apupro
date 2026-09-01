@@ -115,20 +115,47 @@ const AdminDatabasePage = () => {
         <TabNavigation
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          showPartidasFilters={showPartidasFilters}
-          onlyCoded={onlyCoded}
-          onToggleOnlyCoded={setOnlyCoded}
-          config={config}
-          onToggleGlobalCoded={toggleGlobalCoded}
         />
       </div>
 
-      <DatabaseSelector
-        value={selectedDatabase}
-        onChange={setSelectedDatabase}
-      />
+      <div className="flex justify-between items-center px-4 -mt-2">
+        <div className="flex gap-4 items-center">
+          {showPartidasFilters && (
+            <>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg" title="Afecta a todos los usuarios del sistema">
+                <input
+                  type="checkbox"
+                  id="globalCoded"
+                  checked={config?.forceOnlyCodedMaster === true}
+                  onChange={(e) => toggleGlobalCoded(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 bg-white border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
+                />
+                <label htmlFor="globalCoded" className="text-sm font-bold text-indigo-900 cursor-pointer">
+                  Filtro Publico Global
+                </label>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="onlyCoded"
+                  checked={onlyCoded}
+                  onChange={(e) => setOnlyCoded(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                />
+                <label htmlFor="onlyCoded" className="text-sm font-medium text-slate-700 cursor-pointer">
+                  Filtro Local (Tu vista)
+                </label>
+              </div>
+            </>
+          )}
+        </div>
+        <DatabaseSelector
+          value={selectedDatabase}
+          onChange={setSelectedDatabase}
+        />
+      </div>
 
-      <div className="flex-1 flex flex-col gap-4 min-h-0">
+      <div className="flex-1 flex flex-col gap-4 min-h-0 mt-2">
         {activeTab === 'partidas' && (
           <>
             <PartidasTab onlyCoded={onlyCoded} />
