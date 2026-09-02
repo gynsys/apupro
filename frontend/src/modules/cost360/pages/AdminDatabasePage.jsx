@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Plus, X, Copy } from 'lucide-react';
+import { Plus, X, Copy, Database } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { SiteConfigContext } from '../../../App';
 import { useAdminConfig } from '../hooks/useAdminConfig';
 import AdminHeader from '../components/layout/AdminHeader';
@@ -43,15 +44,7 @@ const AdminDatabasePage = () => {
   const [selectedDatabase, setSelectedDatabase] = useState('master');
   const [promptText, setPromptText] = useState(DEFAULT_APU_PROMPT);
 
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    source_database_id: 'master',
-    material_inflation: 0,
-    labor_inflation: 0,
-    equipment_inflation: 0
-  });
+  const navigate = useNavigate();
 
   // Costos desde contexto global (persiste en BD, compartido con Calculadora FCAS)
   const { costosConfig, updateCostosConfig } = useUserCostos();
@@ -70,32 +63,6 @@ const AdminDatabasePage = () => {
       reloadDatabases(); // Update global context
     } catch (error) {
       toast.error('Error al cambiar visibilidad de la base de datos');
-      console.error(error);
-    }
-  };
-
-  const handleCreateDatabase = async (e) => {
-    e.preventDefault();
-    if (!formData.name.trim()) {
-      toast.error('El nombre es requerido');
-      return;
-    }
-
-    try {
-      await cost360DatabaseService.create(formData);
-      toast.success('Nueva versión creada como Borrador');
-      setShowCreateModal(false);
-      setFormData({
-        name: '',
-        description: '',
-        source_database_id: 'master',
-        material_inflation: 0,
-        labor_inflation: 0,
-        equipment_inflation: 0
-      });
-      reloadDatabases();
-    } catch (error) {
-      toast.error('Error al crear la nueva versión');
       console.error(error);
     }
   };
@@ -263,12 +230,12 @@ const AdminDatabasePage = () => {
           )}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => navigate('/cost360/databases')}
               className="text-xs font-medium px-3 py-1.5 rounded-lg border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 shadow-sm transition-all flex items-center gap-1"
-              title="Crear nueva versión de base de datos"
+              title="Ir a Gestión de Bases de Datos"
             >
-              <Copy size={14} />
-              Nueva
+              <Database size={14} />
+              Gestión BD
             </button>
             <DatabaseSelector
               value={selectedDatabase}

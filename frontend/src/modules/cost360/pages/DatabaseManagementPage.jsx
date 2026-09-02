@@ -176,7 +176,7 @@ export default function DatabaseManagementPage() {
                 className="tarjeta-presupuesto-ambar group cursor-default"
               >
                 {/* Header */}
-                <div className="tarjeta-header">
+                <div className="tarjeta-header flex justify-between items-start">
                   <div className="flex items-center gap-3">
                     <div className="icono-archivo-ambar">
                       <Database size={20} strokeWidth={2} />
