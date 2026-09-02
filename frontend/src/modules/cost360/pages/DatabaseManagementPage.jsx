@@ -8,6 +8,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
 import { useDatabaseContext } from '../../../contexts/DatabaseContext';
+import SubscriptionRequestModal from '../../../components/SubscriptionRequestModal';
 
 export default function DatabaseManagementPage() {
   const navigate = useNavigate();
@@ -19,6 +20,8 @@ export default function DatabaseManagementPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [databaseToDelete, setDatabaseToDelete] = useState(null);
   const [databaseToEdit, setDatabaseToEdit] = useState(null);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [limitType, setLimitType] = useState('database');
   
   // Form state for creating database
   const [formData, setFormData] = useState({
@@ -78,8 +81,14 @@ export default function DatabaseManagementPage() {
       loadDatabases();
       reloadDatabases(); // Actualizar el contexto global
     } catch (error) {
-      toast.error('Error al crear base de datos');
-      console.error(error);
+      if (error.message && (error.message.toLowerCase().includes('límite') || error.message.toLowerCase().includes('limit') || error.message.toLowerCase().includes('alcanzado'))) {
+        setLimitType('database');
+        setShowSubscriptionModal(true);
+        setShowCreateModal(false);
+      } else {
+        toast.error('Error al crear base de datos');
+        console.error(error);
+      }
     }
   };
 
@@ -516,6 +525,12 @@ export default function DatabaseManagementPage() {
           </div>
         </div>
       )}
+
+      <SubscriptionRequestModal 
+        isOpen={showSubscriptionModal} 
+        onClose={() => setShowSubscriptionModal(false)}
+        limitType={limitType}
+      />
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && databaseToDelete && (
