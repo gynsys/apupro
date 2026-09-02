@@ -33,16 +33,25 @@ def list_databases(db: Session = Depends(get_db), current_user = Depends(get_cur
     # Filtrar por bases maestras o bases que le pertenecen al usuario
     user_dbs = []
     user_email = current_user.email.lower() if current_user.email else ""
+    
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"[LIST_DB] user_email='{user_email}' total_dbs={len(databases)}")
+
     for db_obj in databases:
         # Mostrar si es maestra, si está publicada, o si le pertenece al usuario
         if getattr(db_obj, 'is_master', False):
             user_dbs.append(db_obj)
+            logger.warning(f"[LIST_DB] Included {db_obj.id} because is_master")
         elif getattr(db_obj, 'is_published', False):
             user_dbs.append(db_obj)
+            logger.warning(f"[LIST_DB] Included {db_obj.id} because is_published")
         else:
             db_owner = getattr(db_obj, 'owner_id', None)
+            logger.warning(f"[LIST_DB] Checking {db_obj.id} db_owner='{db_owner}' vs user_email='{user_email}'")
             if db_owner and db_owner.lower() == user_email:
                 user_dbs.append(db_obj)
+                logger.warning(f"[LIST_DB] Included {db_obj.id} because owner matches")
             
     return {"databases": user_dbs}
 
@@ -133,6 +142,10 @@ def create_database_route(payload: Cost360DatabaseCreate, db: Session = Depends(
             current_db_count = db.query(Cost360Database).filter(
                 Cost360Database.owner_id == current_user.email
             ).count()
+            
+            # TODO: Hardcoded to 20 temporarily so users are not blocked while testing
+            limit = 20
+            
             logger.warning(f"[CREATE_DB] current_db_count={current_db_count} limit={limit}")
             if current_db_count >= limit:
                 raise ValueError(f"Límite de bases de datos alcanzado ({limit} máximo por usuario).")
