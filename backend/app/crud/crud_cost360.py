@@ -396,6 +396,12 @@ def update_database(db: Session, database_id: str, payload: Cost360DatabaseUpdat
         db_obj.description = payload.description
     if payload.is_active is not None:
         db_obj.is_active = payload.is_active
+    if getattr(payload, 'material_inflation', None) is not None:
+        db_obj.material_inflation = payload.material_inflation
+    if getattr(payload, 'labor_inflation', None) is not None:
+        db_obj.labor_inflation = payload.labor_inflation
+    if getattr(payload, 'equipment_inflation', None) is not None:
+        db_obj.equipment_inflation = payload.equipment_inflation
     
     db.commit()
     db.refresh(db_obj)

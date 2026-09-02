@@ -33,7 +33,10 @@ export default function DatabaseManagementPage() {
   const [editFormData, setEditFormData] = useState({
     name: '',
     description: '',
-    is_active: true
+    is_active: true,
+    material_inflation: 0,
+    labor_inflation: 0,
+    equipment_inflation: 0
   });
 
   useEffect(() => {
@@ -105,7 +108,10 @@ export default function DatabaseManagementPage() {
     setEditFormData({
       name: database.name,
       description: database.description || '',
-      is_active: database.is_active
+      is_active: database.is_active,
+      material_inflation: database.material_inflation || 0,
+      labor_inflation: database.labor_inflation || 0,
+      equipment_inflation: database.equipment_inflation || 0
     });
     setShowEditModal(true);
   };
@@ -477,6 +483,31 @@ export default function DatabaseManagementPage() {
                 <label className="text-[13px] font-semibold text-slate-700">Descripción (opcional)</label>
                 <textarea value={editFormData.description} onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })} className="px-3 py-1 border border-slate-200 rounded-xl text-sm text-slate-700 bg-slate-50 outline-none transition-all focus:border-blue-500 focus:bg-blue-50 focus:ring-4 focus:ring-blue-500/10 resize-none" rows={2} />
               </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-slate-700">Inflación Materiales</label>
+                  <div className="relative">
+                    <input type="number" step="0.1" value={editFormData.material_inflation} onChange={(e) => setEditFormData({ ...editFormData, material_inflation: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white outline-none focus:border-blue-500" />
+                    <span className="absolute right-3 top-1 text-slate-400 font-bold">%</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-slate-700">Inflación Mano Obra</label>
+                  <div className="relative">
+                    <input type="number" step="0.1" value={editFormData.labor_inflation} onChange={(e) => setEditFormData({ ...editFormData, labor_inflation: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white outline-none focus:border-blue-500" />
+                    <span className="absolute right-3 top-1 text-slate-400 font-bold">%</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-slate-700">Inflación Equipos</label>
+                  <div className="relative">
+                    <input type="number" step="0.1" value={editFormData.equipment_inflation} onChange={(e) => setEditFormData({ ...editFormData, equipment_inflation: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white outline-none focus:border-blue-500" />
+                    <span className="absolute right-3 top-1 text-slate-400 font-bold">%</span>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex justify-end gap-4 mt-3">
                 <button type="button" onClick={() => setShowEditModal(false)} className="bg-transparent border-none text-slate-600 text-sm font-semibold px-6 py-2 cursor-pointer rounded-xl hover:bg-slate-100 transition-colors">Cancelar</button>
                 <button type="submit" className="bg-blue-600 text-white border-none text-sm font-semibold px-6 py-2 rounded-xl cursor-pointer shadow-[0_4px_6px_rgba(37,99,235,0.2)] transition-all hover:bg-blue-700 hover:-translate-y-[1px]">Guardar Cambios</button>

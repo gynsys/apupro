@@ -176,6 +176,9 @@ class Cost360DatabaseUpdate(BaseModel):
     description: Optional[str] = None
     is_active: Optional[bool] = None
     is_published: Optional[bool] = None
+    material_inflation: Optional[float] = None
+    labor_inflation: Optional[float] = None
+    equipment_inflation: Optional[float] = None
 
 class Cost360DatabaseResponse(Cost360DatabaseBase):
     pass
