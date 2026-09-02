@@ -17,15 +17,29 @@ const CONCEPTOS_DEFAULT = [
   { id: 'permisos', nombre: 'Permisos Remunerados / Cláusulas', dias: 15, activo: true },
 ];
 
-export default function CalculadoraFCAS({ onClose, onUseFCAS, isPage = false }) {
+export default function CalculadoraFCAS({ 
+  onClose, 
+  onUseFCAS, 
+  isPage = false,
+  initialSalarioBase = 240,
+  initialBonoCestaticket = 40,
+  initialMetodo = 'estandar'
+}) {
   // ── Estados ──────────────────────────────────────────────
-  const [metodo, setMetodo] = useState('estandar'); // 'estandar' o 'indexado'
-  const [salarioBase, setSalarioBase] = useState(240);   // $ mensuales
-  const [bonoCestaticket, setBonoCestaticket] = useState(40); // $ mensuales (mínimo legal)
+  const [metodo, setMetodo] = useState(initialMetodo); // 'estandar' o 'indexado'
+  const [salarioBase, setSalarioBase] = useState(initialSalarioBase);   // $ mensuales
+  const [bonoCestaticket, setBonoCestaticket] = useState(initialBonoCestaticket); // $ mensuales (mínimo legal)
   const [diasContratados, setDiasContratados] = useState(365);
   const [diasNoTrabajados, setDiasNoTrabajados] = useState(114); // se recalcula automáticamente
   const [conceptos, setConceptos] = useState(CONCEPTOS_DEFAULT);
   const [calculoAutomatico, setCalculoAutomatico] = useState(true);
+
+  // Sincronizar si cambian las props iniciales
+  useEffect(() => {
+    if (initialSalarioBase) setSalarioBase(initialSalarioBase);
+    if (initialBonoCestaticket) setBonoCestaticket(initialBonoCestaticket);
+    if (initialMetodo) setMetodo(initialMetodo);
+  }, [initialSalarioBase, initialBonoCestaticket, initialMetodo]);
 
   // ── Cálculo automático de días no laborados ────────────
   const diasDescansoAutomaticos = useMemo(() => {
@@ -126,7 +140,7 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS, isPage = false }) 
           <div className="flex items-center gap-2 print:hidden">
             <button
               type="button"
-              onClick={() => onUseFCAS && onUseFCAS(fcasPorcentaje)}
+              onClick={() => onUseFCAS && onUseFCAS(fcasPorcentaje, { salarioBase, bonoCestaticket, metodo })}
               className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors"
             >
               Usar FCAS
@@ -135,20 +149,20 @@ export default function CalculadoraFCAS({ onClose, onUseFCAS, isPage = false }) 
               type="button"
               onClick={handlePrint}
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600 hover:text-slate-900"
-              title="Imprimir o guardar como PDF"
+              title="Imprimir cálculo"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
               </svg>
             </button>
             {!isPage && (
               <button
                 type="button"
                 onClick={onClose}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600 hover:text-slate-900"
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             )}

@@ -5,7 +5,10 @@ const COSTOS_DEFAULTS = {
   porcentajeUtilidad: 10,
   porcentajeAdministracion: 15,
   iva: 16,
-  fcas: 0,
+  fcas: 417.0,
+  fcasSalarioBase: 240,
+  fcasBonoCestaticket: 40,
+  fcasMetodo: 'estandar',
 };
 
 const UserCostosContext = createContext(null);

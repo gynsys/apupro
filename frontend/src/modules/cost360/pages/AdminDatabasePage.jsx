@@ -70,17 +70,21 @@ const AdminDatabasePage = () => {
   const toggleCategory = async (code, isVisible) => {
     try {
       const hiddenCategories = config?.hiddenCategories || [];
-      let newHidden = [...hiddenCategories];
-
+      let newHidden;
+      
       if (isVisible) {
-        newHidden = newHidden.filter(c => c !== code);
+        newHidden = hiddenCategories.filter(c => c !== code);
       } else {
-        if (!newHidden.includes(code)) {
-          newHidden.push(code);
-        }
+        newHidden = [...hiddenCategories, code];
       }
 
       const newConfig = { ...config, hiddenCategories: newHidden };
+
+      // Optimistic UI update
+      if (siteConfig?.setConfig) {
+        siteConfig.setConfig(newConfig);
+      }
+
       const response = await fetch(`${siteConfig?.API_URL || process.env.VITE_API_URL}/admin/config`, {
         method: 'PUT',
         headers: {
@@ -89,6 +93,7 @@ const AdminDatabasePage = () => {
         },
         body: JSON.stringify(newConfig)
       });
+      
       if (response.ok) {
         const result = await response.json();
         const updatedConfig = result.config || newConfig;
@@ -99,9 +104,14 @@ const AdminDatabasePage = () => {
           window.ARKO_SITE_CONFIG = updatedConfig;
         }
         toast.success(`Categoria ${code} ${isVisible ? 'ACTIVADA' : 'OCULTADA'}`);
+      } else {
+        // Revert on failure
+        if (siteConfig?.setConfig) siteConfig.setConfig(config);
+        toast.error("Error al actualizar categorias en servidor");
       }
     } catch (err) {
-      toast.error("Error al actualizar categorias");
+      if (siteConfig?.setConfig) siteConfig.setConfig(config);
+      toast.error("Error de red al actualizar categorias");
     }
   };
 
