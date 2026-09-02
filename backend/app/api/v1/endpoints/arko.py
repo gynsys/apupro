@@ -345,27 +345,6 @@ def resend_verification(data: ResendVerificationRequest):
         logger.error(f"Error resending verification: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
-@router.post("/auth/test-email")
-def test_email_config(current_user = Depends(get_current_arko_admin)):
-    """Diagnóstico: prueba el envío de correo con Resend (solo superadmin)"""
-    from app.services.email import send_email
-    from app.core.config import settings
-    
-    api_key = settings.RESEND_API_KEY or ""
-    key_status = "configurada" if api_key.startswith("re_") else f"INVÁLIDA o vacía (valor: '{api_key[:10]}...')"
-    
-    test_sent = send_email(
-        to_email=current_user.email,
-        subject="[TEST] Diagnóstico de correo CostBase",
-        html_content=f"<p>Correo de prueba enviado a las {__import__('datetime').datetime.utcnow().isoformat()}Z</p>"
-    )
-    
-    return {
-        "resend_api_key_status": key_status,
-        "resend_from_email": settings.RESEND_FROM_EMAIL,
-        "test_email_sent": test_sent,
-        "sent_to": current_user.email
-    }
 
 class GoogleLoginRequest(BaseModel):
     token: str
@@ -495,6 +474,24 @@ def get_current_arko_admin(
         return user
 
 # --- Endpoints Privados (Para el Dashboard Arko) ---
+
+@router.post("/auth/test-email")
+def test_email_config(current_user = Depends(get_current_arko_admin)):
+    """Diagnóstico: prueba el envío de correo con Resend (solo superadmin)"""
+    from app.services.email import send_email
+    api_key = settings.RESEND_API_KEY or ""
+    key_status = "configurada" if api_key.startswith("re_") else f"INVALIDA o vacia (primeros chars: '{api_key[:8]}')"
+    test_sent = send_email(
+        to_email=current_user.email,
+        subject="[TEST] Diagnóstico de correo CostBase",
+        html_content=f"<p>Correo de prueba enviado correctamente.</p>"
+    )
+    return {
+        "resend_api_key_status": key_status,
+        "resend_from_email": settings.RESEND_FROM_EMAIL,
+        "test_email_sent": test_sent,
+        "sent_to": current_user.email
+    }
 
 # Schemas para /me
 class CostosConfigSchema(BaseModel):
