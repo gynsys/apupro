@@ -9,6 +9,7 @@ const COSTOS_DEFAULTS = {
   fcasSalarioBase: 240,
   fcasBonoCestaticket: 40,
   fcasMetodo: 'estandar',
+  fcasSavedProfiles: {}, // Almacena calculos con nombre
 };
 
 const UserCostosContext = createContext(null);

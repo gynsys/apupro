@@ -23,7 +23,9 @@ export default function CalculadoraFCAS({
   isPage = false,
   initialSalarioBase = 240,
   initialBonoCestaticket = 40,
-  initialMetodo = 'estandar'
+  initialMetodo = 'estandar',
+  savedProfiles = {},
+  onSaveProfile = null
 }) {
   // ── Estados ──────────────────────────────────────────────
   const [metodo, setMetodo] = useState(initialMetodo); // 'estandar' o 'indexado'
@@ -115,6 +117,15 @@ export default function CalculadoraFCAS({
 
   const handlePrint = () => window.print();
 
+  const handleSaveProfile = () => {
+    const name = window.prompt("Ingresa un nombre para guardar esta configuración (ej: Alcaldía, Gobernación):");
+    if (name && name.trim()) {
+      if (onSaveProfile) {
+        onSaveProfile(name.trim(), { salarioBase, bonoCestaticket, metodo });
+      }
+    }
+  };
+
   // ── JSX ──────────────────────────────────────────────────
   const containerClasses = isPage
     ? "h-full w-full flex flex-col print:h-auto print:block print:overflow-visible"
@@ -137,7 +148,38 @@ export default function CalculadoraFCAS({
             <p className="text-xs text-slate-500 mt-1">Factor de Costos Asociados al Salario según LOTTT y Convención Colectiva</p>
           </div>
           
-          <div className="flex items-center gap-2 print:hidden">
+          <div className="flex items-center flex-wrap gap-2 print:hidden">
+            {Object.keys(savedProfiles).length > 0 && (
+              <select
+                className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white text-slate-700 font-medium focus:outline-none focus:border-blue-500"
+                onChange={(e) => {
+                  if (e.target.value) {
+                    const p = savedProfiles[e.target.value];
+                    if (p) {
+                      setSalarioBase(p.salarioBase);
+                      setBonoCestaticket(p.bonoCestaticket);
+                      setMetodo(p.metodo);
+                    }
+                    e.target.value = "";
+                  }
+                }}
+              >
+                <option value="">📁 Cargar perfil...</option>
+                {Object.keys(savedProfiles).map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            )}
+
+            <button
+              type="button"
+              onClick={handleSaveProfile}
+              className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg transition-colors border border-blue-200"
+              title="Guardar como..."
+            >
+              Guardar Como
+            </button>
+
             {(salarioBase !== initialSalarioBase || bonoCestaticket !== initialBonoCestaticket || metodo !== initialMetodo) && (
               <button
                 type="button"
@@ -149,7 +191,7 @@ export default function CalculadoraFCAS({
                 className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition-colors border border-slate-300"
                 title="Restaurar tus cálculos guardados"
               >
-                Cargar Guardado
+                Deshacer
               </button>
             )}
             <button

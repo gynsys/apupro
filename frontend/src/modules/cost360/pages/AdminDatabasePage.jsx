@@ -85,7 +85,7 @@ const AdminDatabasePage = () => {
         siteConfig.setConfig(newConfig);
       }
 
-      const response = await fetch(`${siteConfig?.API_URL || process.env.VITE_API_URL}/admin/config`, {
+      const response = await fetch(`${siteConfig?.API_URL || process.env.VITE_API_URL}/arko/admin/config`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
