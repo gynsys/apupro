@@ -10,15 +10,13 @@ logger = logging.getLogger(__name__)
 
 import requests
 
-def send_email(to_email: str, subject: str, html_content: str):
-    if not settings.RESEND_API_KEY or settings.RESEND_API_KEY.startswith("re_") is False:
-        logger.warning(f"SIMULACIÓN DE CORREO (Sin RESEND_API_KEY válido)")
-        logger.warning(f"Para: {to_email}")
-        logger.warning(f"Asunto: {subject}")
-        logger.warning(f"Contenido:\n{html_content}\n")
+def send_email(to_email: str, subject: str, html_content: str) -> bool:
+    if not settings.RESEND_API_KEY or not settings.RESEND_API_KEY.startswith("re_"):
+        logger.warning(f"[EMAIL] SIMULACIÓN - RESEND_API_KEY no configurada o inválida. Para: {to_email} | Asunto: {subject}")
         return True
         
     try:
+        logger.info(f"[EMAIL] Enviando a {to_email} via Resend. From: {settings.RESEND_FROM_EMAIL}")
         headers = {
             "Authorization": f"Bearer {settings.RESEND_API_KEY}",
             "Content-Type": "application/json"
@@ -33,13 +31,13 @@ def send_email(to_email: str, subject: str, html_content: str):
         response = requests.post("https://api.resend.com/emails", json=data, headers=headers, timeout=10)
         
         if response.status_code >= 400:
-            logger.error(f"Error HTTP de Resend al enviar correo a {to_email}: {response.text}")
+            logger.error(f"[EMAIL] Resend rechazó el correo a {to_email}. Status={response.status_code} Body={response.text}")
             return False
             
-        logger.info(f"Correo enviado exitosamente a {to_email} vía Resend API")
+        logger.info(f"[EMAIL] Correo enviado exitosamente a {to_email}. Status={response.status_code} ID={response.json().get('id', 'N/A')}")
         return True
     except Exception as e:
-        logger.error(f"Error de conexión al enviar correo a {to_email}: {str(e)}", exc_info=True)
+        logger.error(f"[EMAIL] Error de conexión enviando a {to_email}: {str(e)}", exc_info=True)
         return False
 
 def send_reset_password_email(email_to: str, code: str):
