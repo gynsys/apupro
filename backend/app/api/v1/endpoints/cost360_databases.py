@@ -101,6 +101,9 @@ def create_database_route(payload: Cost360DatabaseCreate, db: Session = Depends(
     """
     Crear una nueva base de datos (copia aislada) para el usuario
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
     try:
         from app.db.models.arko import ArkoAdmin
         from app.db.models.cost360_database import Cost360Database
@@ -112,10 +115,10 @@ def create_database_route(payload: Cost360DatabaseCreate, db: Session = Depends(
             user_record = arko_session.query(ArkoAdmin).filter(
                 ArkoAdmin.email == current_user.email
             ).first()
+            logger.warning(f"[CREATE_DB] user={current_user.email} user_record_found={user_record is not None} max_budgets={getattr(user_record, 'max_budgets', 'N/A') if user_record else 'N/A'}")
             if user_record:
                 # max_budgets NULL = sin límite (superadmins)
                 if user_record.max_budgets is not None:
-                    # Reutilizamos max_budgets para el límite de DBs o leemos site_config
                     admin_root = arko_session.query(ArkoAdmin).filter(
                         ArkoAdmin.site_config.isnot(None)
                     ).first()
@@ -124,10 +127,13 @@ def create_database_route(payload: Cost360DatabaseCreate, db: Session = Depends(
                     else:
                         limit = 2
 
+        logger.warning(f"[CREATE_DB] limit={limit} payload={payload.dict()}")
+
         if limit is not None:
             current_db_count = db.query(Cost360Database).filter(
                 Cost360Database.owner_id == current_user.email
             ).count()
+            logger.warning(f"[CREATE_DB] current_db_count={current_db_count} limit={limit}")
             if current_db_count >= limit:
                 raise ValueError(f"Límite de bases de datos alcanzado ({limit} máximo por usuario).")
 
@@ -136,7 +142,11 @@ def create_database_route(payload: Cost360DatabaseCreate, db: Session = Depends(
 
         return new_database
     except ValueError as e:
+        logger.error(f"[CREATE_DB] ValueError: {str(e)}", exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"[CREATE_DB] Unexpected error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error interno al crear la base de datos: {str(e)}")
 
 @router.patch("/{database_id}")
 def update_database_route(database_id: str, payload: Cost360DatabaseUpdate, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
