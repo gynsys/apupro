@@ -173,36 +173,31 @@ export default function DatabaseManagementPage() {
             {databases.map((db) => (
               <div
                 key={db.id}
-                className="tarjeta-presupuesto-ambar group cursor-default"
+                className="tarjeta-presupuesto-ambar group cursor-default relative"
               >
                 {/* Header */}
-                <div className="tarjeta-header flex justify-between items-start">
+                <div className="tarjeta-header flex flex-col justify-center items-start">
                   <div className="flex items-center gap-3">
                     <div className="icono-archivo-ambar">
                       <Database size={20} strokeWidth={2} />
                     </div>
                     <div>
                       <h3 className="tarjeta-titulo-ambar">{db.name}</h3>
-                      {db.is_master && (
-                        <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full mt-1 inline-block">
-                          Base Maestra
-                        </span>
-                      )}
                     </div>
                   </div>
-                  
-                  {!db.is_master && (
-                    <div className="acciones-rapidas">
-                      <button
-                        onClick={() => confirmDelete(db)}
-                        className="btn-accion"
-                        title="Eliminar"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  )}
                 </div>
+                
+                {!db.is_master && (
+                  <div className="absolute top-2 right-2">
+                    <button
+                      onClick={() => confirmDelete(db)}
+                      className="btn-accion hover:bg-red-50 hover:text-red-600 transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                )}
 
                 {/* Body */}
                 <div className="tarjeta-body flex-1">
