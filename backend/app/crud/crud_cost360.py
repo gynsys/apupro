@@ -389,10 +389,6 @@ def update_database(db: Session, database_id: str, payload: Cost360DatabaseUpdat
     if not db_obj:
         return None
     
-    # No permitir modificar la base maestra
-    if db_obj.is_master:
-        raise ValueError("No se puede modificar la base de datos maestra")
-    
     if payload.name is not None:
         db_obj.name = payload.name
     if payload.description is not None:
