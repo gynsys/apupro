@@ -11,6 +11,7 @@ import BudgetSettingsModal from '../../components/modals/BudgetSettingsModal';
 import CreateBudgetModal from '../../components/modals/CreateBudgetModal';
 import BudgetPrintModal from '../../components/modals/BudgetPrintModal';
 import BudgetPrintLayout from '../../components/print/BudgetPrintLayout';
+import SubscriptionRequestModal from '../../components/SubscriptionRequestModal';
 
 export default function BudgetHomePage() {
   const [budgets, setBudgets] = useState([]);
@@ -23,6 +24,9 @@ export default function BudgetHomePage() {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [limitReachedReason, setLimitReachedReason] = useState('');
   const [newBudgetName, setNewBudgetName] = useState('');
+  
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [limitType, setLimitType] = useState('budget');
   
   const [duplicatingBudget, setDuplicatingBudget] = useState(null);
   const [duplicateName, setDuplicateName] = useState("");
@@ -455,8 +459,19 @@ export default function BudgetHomePage() {
             setIsModalOpen(false);
             navigate(`/budgets/${newBudget.id}`);
           }}
+          onLimitReached={() => {
+            setIsModalOpen(false);
+            setLimitType('budget');
+            setShowSubscriptionModal(true);
+          }}
         />
       )}
+
+      <SubscriptionRequestModal 
+        isOpen={showSubscriptionModal} 
+        onClose={() => setShowSubscriptionModal(false)}
+        limitType={limitType}
+      />
       {/* Delete Confirmation Modal */}
       {deletingId && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">

@@ -5,7 +5,7 @@ import { toast } from 'react-hot-toast';
 import { budgetService } from '../../services/budgetService';
 import { useUserCostos } from '../../context/UserCostosContext';
 
-export default function CreateBudgetModal({ onClose, onSuccess }) {
+export default function CreateBudgetModal({ onClose, onSuccess, onLimitReached }) {
   const { costosConfig } = useUserCostos();
   const [loading, setLoading] = useState(false);
   const [logoPreview, setLogoPreview] = useState(null);
@@ -61,8 +61,13 @@ export default function CreateBudgetModal({ onClose, onSuccess }) {
       }, 1500);
     } catch (error) {
       console.error(error);
-      toast.error('Error al crear el presupuesto');
       setLoading(false);
+      
+      if (error.isLimitError || (error.detail && error.detail.toLowerCase().includes('límite'))) {
+        if (onLimitReached) onLimitReached();
+      } else {
+        toast.error('Error al crear el presupuesto');
+      }
     }
   };
 

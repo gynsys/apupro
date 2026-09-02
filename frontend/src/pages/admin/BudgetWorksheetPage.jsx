@@ -49,6 +49,8 @@ export default function BudgetWorksheetPage() {
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printConfig, setPrintConfig] = useState(null);
   
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  
   // APU Print State
   const [apuToPrint, setApuToPrint] = useState(null);
   const [showApuPrintModal, setShowApuPrintModal] = useState(false);
@@ -279,7 +281,11 @@ export default function BudgetWorksheetPage() {
       );
     } catch (error) {
       console.error('Error agregando partida:', error);
-      toast.error(error.message || 'Error agregando partida');
+      if (error.isLimitError || (error.detail && error.detail.toLowerCase().includes('límite'))) {
+        setShowSubscriptionModal(true);
+      } else {
+        toast.error(error.message || 'Error agregando partida');
+      }
     }
   };
 
@@ -1030,6 +1036,11 @@ export default function BudgetWorksheetPage() {
         </div>,
         document.body
       )}
+      <SubscriptionRequestModal 
+        isOpen={showSubscriptionModal} 
+        onClose={() => setShowSubscriptionModal(false)}
+        limitType="apu"
+      />
       {/* CHAPTER MODAL */}
       {showChapterModal && createPortal(
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
