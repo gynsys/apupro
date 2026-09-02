@@ -19,8 +19,8 @@ html, body, #root {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  /* Ocultar toda la app en impresion */
-  body > * {
+  /* Ocultar la app principal SOLO cuando se esté imprimiendo un APU (modal activo) */
+  body:has(#print-apu-layout) > *:not(#print-apu-layout) {
     display: none !important;
   }
   /* Mostrar SOLO el contenedor de impresion APU */

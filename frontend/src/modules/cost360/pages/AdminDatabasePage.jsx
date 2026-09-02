@@ -149,18 +149,20 @@ const AdminDatabasePage = () => {
             </>
           )}
         </div>
-        <DatabaseSelector
-          value={selectedDatabase}
-          onChange={setSelectedDatabase}
-        />
+        <div className="flex gap-4 items-center">
+          {showPartidasFilters && (
+            <CategoryManager config={config} onToggleCategory={toggleCategory} />
+          )}
+          <DatabaseSelector
+            value={selectedDatabase}
+            onChange={setSelectedDatabase}
+          />
+        </div>
       </div>
 
       <div className="flex-1 flex flex-col gap-4 min-h-0 mt-2">
         {activeTab === 'partidas' && (
-          <>
-            <PartidasTab onlyCoded={onlyCoded} />
-            <CategoryManager config={config} onToggleCategory={toggleCategory} />
-          </>
+          <PartidasTab onlyCoded={onlyCoded} />
         )}
 
         {activeTab === 'materiales' && (

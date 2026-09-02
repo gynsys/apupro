@@ -16,22 +16,19 @@ const CategoryManager = ({ config, onToggleCategory }) => {
   }, []);
 
   return (
-    <div className="px-6 pb-3 pt-2 bg-slate-50/50 border-t border-slate-200/50 flex flex-col gap-2 relative" ref={menuRef}>
-      <div className="flex items-center gap-3">
-        <span className="text-xs font-bold text-slate-500 uppercase">Gestion de Categorias:</span>
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 rounded-lg shadow-sm text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-        >
-          <span>Configurar Visibilidad</span>
-          <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-      </div>
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 rounded-lg shadow-sm text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+      >
+        <span>Visibilidad de Capítulos</span>
+        <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
 
       {isOpen && coveninTreeData && (
-        <div className="absolute top-full left-6 mt-1 w-[400px] z-50 bg-white border border-slate-200 rounded-xl shadow-xl p-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="absolute top-full right-0 mt-1 w-[400px] z-[100] bg-white border border-slate-200 rounded-xl shadow-xl p-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
           {coveninTreeData.map(cat => {
             const hiddenCategories = config?.hiddenCategories || [];
             const isVisible = !hiddenCategories.includes(cat.code);
