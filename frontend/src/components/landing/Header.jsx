@@ -23,6 +23,12 @@ export default function Header({ onLoginClick }) {
               Funciones
             </button>
             <button 
+              onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
+              className="hidden sm:block px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors"
+            >
+              Planes
+            </button>
+            <button 
               onClick={onLoginClick}
               className="px-5 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all duration-300 shadow-[0_0_15px_-5px_rgba(37,99,235,0.5)]"
             >

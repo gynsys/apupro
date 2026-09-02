@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import HeroSection from '../components/landing/HeroSection';
 import FeaturesSection from '../components/landing/FeaturesSection';
 import PreviewSection from '../components/landing/PreviewSection';
+import PricingSection from '../components/landing/PricingSection';
 import Footer from '../components/landing/Footer';
 import Header from '../components/landing/Header';
 import LoginModal from '../components/landing/LoginModal';
@@ -29,6 +30,7 @@ export default function LandingPage() {
       <HeroSection onLoginClick={() => setIsLoginModalOpen(true)} />
       <FeaturesSection />
       <PreviewSection />
+      <PricingSection onRegisterClick={() => setIsRegisterModalOpen(true)} />
       <Footer />
       <LoginModal 
         isOpen={isLoginModalOpen} 
