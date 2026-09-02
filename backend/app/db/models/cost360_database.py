@@ -25,5 +25,10 @@ class Cost360Database(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     created_by = Column(String, nullable=True)  # Usuario que creó la base (opcional)
     
+    # Nuevos campos para Independencia de Usuarios y Versionamiento (Opción 1)
+    owner_id = Column(String, nullable=True, index=True)  # Si es null, es una base pública/global. Si tiene un ID, es privada del usuario.
+    is_published = Column(Boolean, default=False)  # Indica si una base global ya está visible para los suscriptores
+    published_at = Column(DateTime(timezone=True), nullable=True)
+    
     def __repr__(self):
-        return f"<Cost360Database(id={self.id}, name={self.name}, is_master={self.is_master})>"
+        return f"<Cost360Database(id={self.id}, name={self.name}, is_master={self.is_master}, owner={self.owner_id})>"

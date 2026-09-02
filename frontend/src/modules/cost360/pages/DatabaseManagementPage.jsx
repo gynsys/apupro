@@ -97,6 +97,18 @@ export default function DatabaseManagementPage() {
     setShowDeleteModal(true);
   };
 
+  const handleTogglePublish = async (database) => {
+    try {
+      await cost360DatabaseService.update(database.id, { is_published: !database.is_published });
+      toast.success(database.is_published ? 'Base de datos oculta' : 'Base de datos publicada');
+      loadDatabases();
+      reloadDatabases(); // Update global context if needed
+    } catch (error) {
+      toast.error('Error al cambiar visibilidad de la base de datos');
+      console.error(error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen text-slate-400">
@@ -188,6 +200,18 @@ export default function DatabaseManagementPage() {
                           Base Maestra
                         </span>
                       )}
+                      
+                      <button 
+                        onClick={() => handleTogglePublish(db)}
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full mt-1 inline-block ml-2 border transition-all ${
+                          db.is_published 
+                            ? 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100' 
+                            : 'text-slate-600 bg-slate-100 border-slate-200 hover:bg-slate-200'
+                        }`}
+                        title={db.is_published ? "Ocultar a usuarios" : "Publicar a usuarios"}
+                      >
+                        {db.is_published ? 'Publicada' : 'Borrador'}
+                      </button>
                     </div>
                   </div>
                   

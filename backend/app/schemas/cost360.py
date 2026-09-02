@@ -148,14 +148,17 @@ class Cost360DatabaseBase(BaseModel):
     id: str
     name: str
     description: Optional[str] = None
-    is_master: Optional[bool] = False
-    is_active: Optional[bool] = True
-    material_inflation: Optional[float] = 0.0
-    labor_inflation: Optional[float] = 0.0
-    equipment_inflation: Optional[float] = 0.0
+    is_master: bool
+    is_active: bool
+    material_inflation: float
+    labor_inflation: float
+    equipment_inflation: float
     source_database_id: Optional[str] = None
     created_at: Optional[datetime] = None
     created_by: Optional[str] = None
+    owner_id: Optional[str] = None
+    is_published: Optional[bool] = None
+    published_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True
@@ -163,15 +166,16 @@ class Cost360DatabaseBase(BaseModel):
 class Cost360DatabaseCreate(BaseModel):
     name: str
     description: Optional[str] = None
-    material_inflation: float = 0.0
-    labor_inflation: float = 0.0
-    equipment_inflation: float = 0.0
+    material_inflation: Optional[float] = 0.0
+    labor_inflation: Optional[float] = 0.0
+    equipment_inflation: Optional[float] = 0.0
     source_database_id: Optional[str] = None  # Si no se especifica, usa 'master'
 
 class Cost360DatabaseUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     is_active: Optional[bool] = None
+    is_published: Optional[bool] = None
 
 class Cost360DatabaseResponse(Cost360DatabaseBase):
     pass

@@ -67,6 +67,40 @@ const AdminDatabasePage = () => {
     }
   };
 
+  const handleLimitChange = async (newLimit) => {
+    try {
+      const parsedLimit = parseInt(newLimit, 10);
+      if (isNaN(parsedLimit) || parsedLimit < 1) return;
+      
+      const newConfig = { ...config, max_user_databases: parsedLimit };
+      // Optimistic
+      if (siteConfig?.setConfig) siteConfig.setConfig(newConfig);
+      
+      const response = await fetch(`${siteConfig?.API_URL || process.env.VITE_API_URL}/arko/admin/config`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}`
+        },
+        body: JSON.stringify(newConfig)
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        const updatedConfig = result.config || newConfig;
+        if (siteConfig?.setConfig) siteConfig.setConfig(updatedConfig);
+        if (window.ARKO_SITE_CONFIG) window.ARKO_SITE_CONFIG = updatedConfig;
+        toast.success(`Límite actualizado a ${parsedLimit}`);
+      } else {
+        if (siteConfig?.setConfig) siteConfig.setConfig(config);
+        toast.error("Error al actualizar límite");
+      }
+    } catch (err) {
+      if (siteConfig?.setConfig) siteConfig.setConfig(config);
+      toast.error("Error de red al actualizar límite");
+    }
+  };
+
   const toggleCategory = async (code, isVisible) => {
     try {
       const hiddenCategories = config?.hiddenCategories || [];
@@ -160,6 +194,17 @@ const AdminDatabasePage = () => {
           )}
         </div>
         <div className="flex gap-4 items-center">
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
+            <label className="text-xs font-semibold text-slate-600">Límite BD/Usuario:</label>
+            <input 
+              type="number"
+              min="1"
+              max="20"
+              value={config?.max_user_databases || 2}
+              onChange={(e) => handleLimitChange(e.target.value)}
+              className="w-12 text-center text-sm font-medium border border-slate-300 rounded focus:outline-none focus:border-blue-500 py-0.5"
+            />
+          </div>
           {showPartidasFilters && (
             <CategoryManager config={config} onToggleCategory={toggleCategory} />
           )}
