@@ -188,7 +188,13 @@ def register_arko_admin(data: RegisterRequest):
                 raise HTTPException(status_code=500, detail="Error storing verification code")
             
             # Enviar correo de verificación
-            send_verification_email(data.email, code)
+            email_sent = send_verification_email(data.email, code)
+            
+            if not email_sent:
+                # Si falló el envío, eliminamos el registro pendiente para que pueda reintentar
+                redis_cache.delete(f"registration:{data.email}")
+                redis_cache.delete(f"verification_code:{data.email}")
+                raise HTTPException(status_code=500, detail="No se pudo enviar el correo de verificación. Verifica la configuración de Resend.")
             
             return {
                 "message": "Registration initiated. Please check your email for verification code.",
@@ -330,7 +336,10 @@ def resend_verification(data: ResendVerificationRequest):
             raise HTTPException(status_code=500, detail="Error storing new verification code")
         
         # Enviar nuevo correo
-        send_verification_email(data.email, code)
+        email_sent = send_verification_email(data.email, code)
+        if not email_sent:
+            raise HTTPException(status_code=500, detail="No se pudo reenviar el correo. Verifica la configuración de Resend.")
+            
         return {"message": "Nuevo código enviado. Por favor revisa tu correo."}
     except Exception as e:
         logger.error(f"Error resending verification: {str(e)}", exc_info=True)
