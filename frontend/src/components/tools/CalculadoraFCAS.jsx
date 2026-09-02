@@ -138,6 +138,20 @@ export default function CalculadoraFCAS({
           </div>
           
           <div className="flex items-center gap-2 print:hidden">
+            {(salarioBase !== initialSalarioBase || bonoCestaticket !== initialBonoCestaticket || metodo !== initialMetodo) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSalarioBase(initialSalarioBase);
+                  setBonoCestaticket(initialBonoCestaticket);
+                  setMetodo(initialMetodo);
+                }}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition-colors border border-slate-300"
+                title="Restaurar tus cálculos guardados"
+              >
+                Cargar Guardado
+              </button>
+            )}
             <button
               type="button"
               onClick={() => onUseFCAS && onUseFCAS(fcasPorcentaje, { salarioBase, bonoCestaticket, metodo })}
