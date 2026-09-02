@@ -397,7 +397,8 @@ def login_google(request: Request, login_data: GoogleLoginRequest, response: Res
                     email=email,
                     hashed_password=get_password_hash(temp_pwd),
                     full_name=full_name,
-                    is_active=True
+                    is_active=True,
+                    is_email_verified=True  # Google ya verificó el email
                 )
                 db.add(user)
                 db.commit()

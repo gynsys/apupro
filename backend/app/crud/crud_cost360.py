@@ -324,6 +324,9 @@ def create_database(db: Session, payload: Cost360DatabaseCreate, created_by: Opt
     se guardan como metadatos. El precio con factor se calcula dinámicamente en los
     endpoints de consulta (estrategia de precio virtual), sin duplicar filas de datos.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
     source_id = payload.source_database_id or 'master'
     source_db = get_database_by_id(db, source_id)
     if not source_db and source_id != 'master':
@@ -331,7 +334,11 @@ def create_database(db: Session, payload: Cost360DatabaseCreate, created_by: Opt
 
     import re
     clean_name = re.sub(r'[^a-z0-9_]', '', payload.name.lower().replace(' ', '_'))
+    if not clean_name:
+        clean_name = 'db'
     new_db_id = f"{clean_name}_{str(uuid.uuid4())[:8]}"
+
+    logger.warning(f"[CREATE_DB_CRUD] Creating DB id={new_db_id} source={source_id} owner={created_by}")
 
     new_database = Cost360Database(
         id=new_db_id,
@@ -351,10 +358,11 @@ def create_database(db: Session, payload: Cost360DatabaseCreate, created_by: Opt
     
     # Clonación Física vía Esquemas de PostgreSQL
     try:
+        source_schema = "public" if source_id == "master" else source_id
+        logger.warning(f"[CREATE_DB_CRUD] Creating schema={new_db_id} from source_schema={source_schema}")
+        
         # 1. Crear el esquema
         db.execute(text(f'CREATE SCHEMA "{new_db_id}"'))
-        
-        source_schema = "public" if source_id == "master" else source_id
         
         # 2. Copiar tablas
         tables_to_clone = [
@@ -368,13 +376,16 @@ def create_database(db: Session, payload: Cost360DatabaseCreate, created_by: Opt
         ]
         
         for table in tables_to_clone:
+            logger.warning(f"[CREATE_DB_CRUD] Cloning table={table}")
             # Crear estructura e índices (INCLUDING ALL)
             db.execute(text(f'CREATE TABLE "{new_db_id}"."{table}" (LIKE "{source_schema}"."{table}" INCLUDING ALL)'))
             # Copiar datos físicos
             db.execute(text(f'INSERT INTO "{new_db_id}"."{table}" SELECT * FROM "{source_schema}"."{table}"'))
             
         db.commit()
+        logger.warning(f"[CREATE_DB_CRUD] Schema cloned successfully id={new_db_id}")
     except Exception as e:
+        logger.error(f"[CREATE_DB_CRUD] Schema clone FAILED: {str(e)}", exc_info=True)
         db.rollback()
         # Si falla la clonación física, revertimos la creación del registro
         db.delete(new_database)
