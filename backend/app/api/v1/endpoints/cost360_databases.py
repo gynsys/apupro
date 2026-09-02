@@ -17,8 +17,19 @@ router = APIRouter()
 @router.get("", response_model=Cost360DatabaseListResponse)
 def list_databases(db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     """Listar todas las bases de datos Cost360 disponibles para el usuario"""
-    databases = get_all_databases(db)
-    
+    try:
+        databases = get_all_databases(db)
+    except Exception as e:
+        # Si falla, es altamente probable que sea porque faltan las columnas nuevas en producción.
+        # Hacemos un parche automático (auto-migrate).
+        db.rollback()
+        db.execute(text("ALTER TABLE cost360_databases ADD COLUMN IF NOT EXISTS owner_id VARCHAR(255);"))
+        db.execute(text("ALTER TABLE cost360_databases ADD COLUMN IF NOT EXISTS is_published BOOLEAN DEFAULT FALSE;"))
+        db.execute(text("ALTER TABLE cost360_databases ADD COLUMN IF NOT EXISTS published_at TIMESTAMP WITH TIME ZONE;"))
+        db.commit()
+        # Reintentar la consulta
+        databases = get_all_databases(db)
+        
     # Filtrar por bases maestras o bases que le pertenecen al usuario
     user_dbs = []
     for db_obj in databases:

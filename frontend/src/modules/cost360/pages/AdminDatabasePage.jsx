@@ -4,6 +4,8 @@ import { useAdminConfig } from '../hooks/useAdminConfig';
 import AdminHeader from '../components/layout/AdminHeader';
 import TabNavigation from '../components/layout/TabNavigation';
 import DatabaseSelector from '../components/layout/DatabaseSelector';
+import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
+import { useDatabaseContext } from '../../../contexts/DatabaseContext';
 import PartidasTab from '../components/tabs/PartidasTab';
 import CatalogTab from '../components/tabs/CatalogTab';
 import ScrapingTab from '../components/tabs/ScrapingTab';
@@ -45,6 +47,21 @@ const AdminDatabasePage = () => {
 
   const siteConfig = React.useContext(SiteConfigContext);
   const config = siteConfig?.config || {};
+
+  const { databases, refreshDatabases: reloadDatabases } = useDatabaseContext();
+  const currentDbObj = databases.find(db => db.id === selectedDatabase);
+
+  const handleTogglePublish = async () => {
+    if (!currentDbObj) return;
+    try {
+      await cost360DatabaseService.update(currentDbObj.id, { is_published: !currentDbObj.is_published });
+      toast.success(currentDbObj.is_published ? 'Base de datos oculta a usuarios' : 'Base de datos publicada a usuarios');
+      reloadDatabases(); // Update global context
+    } catch (error) {
+      toast.error('Error al cambiar visibilidad de la base de datos');
+      console.error(error);
+    }
+  };
 
 
   const toggleGlobalCoded = async (isChecked) => {
@@ -208,10 +225,25 @@ const AdminDatabasePage = () => {
           {showPartidasFilters && (
             <CategoryManager config={config} onToggleCategory={toggleCategory} />
           )}
-          <DatabaseSelector
-            value={selectedDatabase}
-            onChange={setSelectedDatabase}
-          />
+          <div className="flex items-center gap-2">
+            <DatabaseSelector
+              value={selectedDatabase}
+              onChange={setSelectedDatabase}
+            />
+            {currentDbObj && (
+              <button 
+                onClick={handleTogglePublish}
+                className={`text-xs font-medium px-3 py-1.5 rounded-lg border shadow-sm transition-all whitespace-nowrap ${
+                  currentDbObj.is_published 
+                    ? 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100' 
+                    : 'text-slate-600 bg-slate-100 border-slate-200 hover:bg-slate-200'
+                }`}
+                title={currentDbObj.is_published ? "Ocultar esta base a los usuarios" : "Publicar esta base a los usuarios"}
+              >
+                {currentDbObj.is_published ? 'Publicada' : 'Borrador'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
