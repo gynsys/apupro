@@ -15,8 +15,10 @@ export default function DatabaseManagementPage() {
   const [databases, setDatabases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [databaseToDelete, setDatabaseToDelete] = useState(null);
+  const [databaseToEdit, setDatabaseToEdit] = useState(null);
   
   // Form state for creating database
   const [formData, setFormData] = useState({
@@ -26,6 +28,12 @@ export default function DatabaseManagementPage() {
     material_inflation: 0,
     labor_inflation: 0,
     equipment_inflation: 0
+  });
+
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    description: '',
+    is_active: true
   });
 
   useEffect(() => {
@@ -70,6 +78,36 @@ export default function DatabaseManagementPage() {
       toast.error('Error al crear base de datos');
       console.error(error);
     }
+  };
+
+  const handleEditDatabase = async (e) => {
+    e.preventDefault();
+    if (!editFormData.name.trim()) {
+      toast.error('El nombre es requerido');
+      return;
+    }
+    
+    try {
+      await cost360DatabaseService.update(databaseToEdit.id, editFormData);
+      toast.success('Base de datos actualizada exitosamente');
+      setShowEditModal(false);
+      setDatabaseToEdit(null);
+      loadDatabases();
+      reloadDatabases();
+    } catch (error) {
+      toast.error('Error al actualizar base de datos');
+      console.error(error);
+    }
+  };
+
+  const openEditModal = (database) => {
+    setDatabaseToEdit(database);
+    setEditFormData({
+      name: database.name,
+      description: database.description || '',
+      is_active: database.is_active
+    });
+    setShowEditModal(true);
   };
 
   const handleDeleteDatabase = async () => {
@@ -188,10 +226,17 @@ export default function DatabaseManagementPage() {
                 </div>
                 
                 {!db.is_master && (
-                  <div className="absolute top-2 right-2">
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    <button
+                      onClick={() => openEditModal(db)}
+                      className="btn-accion hover:bg-transparent hover:text-blue-600 transition-colors"
+                      title="Editar"
+                    >
+                      <Edit2 size={16} />
+                    </button>
                     <button
                       onClick={() => confirmDelete(db)}
-                      className="btn-accion hover:bg-red-50 hover:text-red-600 transition-colors"
+                      className="btn-accion hover:bg-transparent hover:text-red-600 transition-colors"
                       title="Eliminar"
                     >
                       <Trash2 size={16} />
@@ -405,6 +450,36 @@ export default function DatabaseManagementPage() {
                 >
                   Crear Base de Datos
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && databaseToEdit && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-[550px] bg-white rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col max-h-[90vh]">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100">
+              <h2 className="m-0 text-xl font-bold text-slate-800 flex items-center gap-2">
+                <Edit2 className="text-blue-600" /> Editar Base de Datos
+              </h2>
+              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600 bg-transparent transition-colors p-1">
+                <X size={24} />
+              </button>
+            </div>
+            <form onSubmit={handleEditDatabase} className="px-6 py-4 flex flex-col gap-4 overflow-y-auto">
+              <div className="flex flex-col gap-2 w-full">
+                <label className="text-[13px] font-semibold text-slate-700">Nombre de la Base de Datos <span className="text-red-500">*</span></label>
+                <input type="text" value={editFormData.name} onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} className="px-3 py-1 border border-slate-200 rounded-xl text-sm text-slate-700 bg-slate-50 outline-none transition-all focus:border-blue-500 focus:bg-blue-50 focus:ring-4 focus:ring-blue-500/10" required />
+              </div>
+              <div className="flex flex-col gap-2 w-full">
+                <label className="text-[13px] font-semibold text-slate-700">Descripción (opcional)</label>
+                <textarea value={editFormData.description} onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })} className="px-3 py-1 border border-slate-200 rounded-xl text-sm text-slate-700 bg-slate-50 outline-none transition-all focus:border-blue-500 focus:bg-blue-50 focus:ring-4 focus:ring-blue-500/10 resize-none" rows={2} />
+              </div>
+              <div className="flex justify-end gap-4 mt-3">
+                <button type="button" onClick={() => setShowEditModal(false)} className="bg-transparent border-none text-slate-600 text-sm font-semibold px-6 py-2 cursor-pointer rounded-xl hover:bg-slate-100 transition-colors">Cancelar</button>
+                <button type="submit" className="bg-blue-600 text-white border-none text-sm font-semibold px-6 py-2 rounded-xl cursor-pointer shadow-[0_4px_6px_rgba(37,99,235,0.2)] transition-all hover:bg-blue-700 hover:-translate-y-[1px]">Guardar Cambios</button>
               </div>
             </form>
           </div>

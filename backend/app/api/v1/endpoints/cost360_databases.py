@@ -32,17 +32,17 @@ def list_databases(db: Session = Depends(get_db), current_user = Depends(get_cur
         
     # Filtrar por bases maestras o bases que le pertenecen al usuario
     user_dbs = []
+    user_email = current_user.email.lower() if current_user.email else ""
     for db_obj in databases:
-        # Mostrar si es maestra, si estÃ¡ publicada, o si le pertenece al usuario
+        # Mostrar si es maestra, si está publicada, o si le pertenece al usuario
         if getattr(db_obj, 'is_master', False):
             user_dbs.append(db_obj)
         elif getattr(db_obj, 'is_published', False):
             user_dbs.append(db_obj)
-        elif getattr(db_obj, 'owner_id', None) == current_user.email:
-            user_dbs.append(db_obj)
-        elif not getattr(db_obj, 'owner_id', None):
-            # Si no tiene owner_id, asumimos que es global (legacy)
-            user_dbs.append(db_obj)
+        else:
+            db_owner = getattr(db_obj, 'owner_id', None)
+            if db_owner and db_owner.lower() == user_email:
+                user_dbs.append(db_obj)
             
     return {"databases": user_dbs}
 

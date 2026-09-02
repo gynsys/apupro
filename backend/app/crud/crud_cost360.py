@@ -343,7 +343,8 @@ def create_database(db: Session, payload: Cost360DatabaseCreate, created_by: Opt
         labor_inflation=payload.labor_inflation or 0.0,
         equipment_inflation=payload.equipment_inflation or 0.0,
         source_database_id=source_id,
-        created_by=created_by
+        created_by=created_by,
+        owner_id=created_by
     )
     db.add(new_database)
     db.commit()
