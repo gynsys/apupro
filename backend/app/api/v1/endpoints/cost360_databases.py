@@ -102,28 +102,38 @@ def create_database_route(payload: Cost360DatabaseCreate, db: Session = Depends(
     Crear una nueva base de datos (copia aislada) para el usuario
     """
     try:
-        # User max limit check
         from app.db.models.arko import ArkoAdmin
-        admin_config = db.query(ArkoAdmin).first()
-        limit = 2
-        if admin_config and admin_config.site_config:
-            limit = admin_config.site_config.get("max_user_databases", 2)
-            
-        current_db_count = db.query(get_all_databases.__globals__['Cost360Database']).filter(
-            get_all_databases.__globals__['Cost360Database'].owner_id == current_user.email
-        ).count()
-        
-        if current_db_count >= limit:
-            raise ValueError(f"LÃ­mite de bases de datos alcanzado ({limit} mÃ¡ximo por usuario).")
+        from app.db.models.cost360_database import Cost360Database
+        from app.db.arko_base import ArkoSessionLocal
+
+        # Obtener el límite del plan del usuario desde la DB correcta (Arko)
+        limit = None  # None = sin límite (superadmin)
+        with ArkoSessionLocal() as arko_session:
+            user_record = arko_session.query(ArkoAdmin).filter(
+                ArkoAdmin.email == current_user.email
+            ).first()
+            if user_record:
+                # max_budgets NULL = sin límite (superadmins)
+                if user_record.max_budgets is not None:
+                    # Reutilizamos max_budgets para el límite de DBs o leemos site_config
+                    admin_root = arko_session.query(ArkoAdmin).filter(
+                        ArkoAdmin.site_config.isnot(None)
+                    ).first()
+                    if admin_root and admin_root.site_config:
+                        limit = admin_root.site_config.get("max_user_databases", 2)
+                    else:
+                        limit = 2
+
+        if limit is not None:
+            current_db_count = db.query(Cost360Database).filter(
+                Cost360Database.owner_id == current_user.email
+            ).count()
+            if current_db_count >= limit:
+                raise ValueError(f"Límite de bases de datos alcanzado ({limit} máximo por usuario).")
 
         created_by = current_user.email
         new_database = create_database(db, payload, created_by=created_by)
-        
-        # Guardar owner
-        new_database.owner_id = created_by
-        db.commit()
-        db.refresh(new_database)
-        
+
         return new_database
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
