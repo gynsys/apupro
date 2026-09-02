@@ -191,15 +191,15 @@ def register_arko_admin(data: RegisterRequest):
             email_sent = send_verification_email(data.email, code)
             
             if not email_sent:
-                # Si falló el envío, eliminamos el registro pendiente para que pueda reintentar
-                redis_cache.delete(f"registration:{data.email}")
-                redis_cache.delete(f"verification_code:{data.email}")
-                raise HTTPException(status_code=500, detail="No se pudo enviar el correo de verificación. Verifica la configuración de Resend.")
+                # El correo falló pero NO bloqueamos el registro.
+                # El usuario puede usar "Reenviar código" desde la pantalla de verificación.
+                logger.error(f"[REGISTER] Falló el envío del correo de verificación a {data.email}. El registro continúa.")
             
             return {
                 "message": "Registration initiated. Please check your email for verification code.",
                 "email": data.email,
-                "requires_verification": True
+                "requires_verification": True,
+                "email_sent": email_sent
             }
     except HTTPException:
         raise
