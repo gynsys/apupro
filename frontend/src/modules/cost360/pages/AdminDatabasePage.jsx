@@ -96,12 +96,13 @@ const AdminDatabasePage = () => {
       // Optimistic
       if (siteConfig?.setConfig) siteConfig.setConfig(newConfig);
       
-      const response = await fetch(`${siteConfig?.API_URL || process.env.VITE_API_URL}/arko/admin/config`, {
+      const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
+      const response = await fetch(`${API_URL}/arko/admin/config`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}`
         },
+        credentials: 'include',
         body: JSON.stringify(newConfig)
       });
       
@@ -139,12 +140,13 @@ const AdminDatabasePage = () => {
         siteConfig.setConfig(newConfig);
       }
 
-      const response = await fetch(`${siteConfig?.API_URL || process.env.VITE_API_URL}/arko/admin/config`, {
+      const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
+      const response = await fetch(`${API_URL}/arko/admin/config`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('arko_admin_token')}`
         },
+        credentials: 'include',
         body: JSON.stringify(newConfig)
       });
       

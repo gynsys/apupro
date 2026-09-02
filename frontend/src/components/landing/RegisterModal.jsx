@@ -1,4 +1,5 @@
 import React, { useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { Eye, EyeOff, X } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
@@ -16,6 +17,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
   const [code, setCode] = useState('');
 
   const { loginWithGoogle, login } = useContext(AuthContext);
+  const navigate = useNavigate();
 
   const handleGoogleSuccess = async (tokenResponse) => {
     setIsLoading(true);
@@ -26,6 +28,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
 
       const result = await loginWithGoogle(token);
       if (result.success) {
+        navigate('/budgets');
         onClose();
       } else {
         setError(result.error || 'Error del backend al registrarse');
@@ -72,6 +75,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
       
       const result = await login(email, password, false);
       if (result.success) {
+        navigate('/budgets');
         onClose();
       } else {
         onSwitchToLogin();
