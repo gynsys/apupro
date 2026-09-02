@@ -1,21 +1,17 @@
 import { API_URL } from './api';
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('arko_admin_token') || localStorage.getItem('token');
   return {
     'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   };
 };
 
 export const cost360DatabaseService = {
   // Obtener todas las bases de datos
   getAll: async () => {
-    const token = localStorage.getItem('arko_admin_token') || localStorage.getItem('token');
-    if (!token) return { databases: [] }; // No intentar fetch si no hay sesion
-    
     const response = await fetch(`${API_URL}/cost360/databases`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Error al cargar bases de datos');
     return response.json();
@@ -24,7 +20,8 @@ export const cost360DatabaseService = {
   // Obtener una base de datos por ID
   getById: async (databaseId) => {
     const response = await fetch(`${API_URL}/cost360/databases/${databaseId}`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Error al cargar base de datos');
     return response.json();
@@ -35,6 +32,7 @@ export const cost360DatabaseService = {
     const response = await fetch(`${API_URL}/cost360/databases`, {
       method: 'POST',
       headers: getAuthHeaders(),
+      credentials: 'include',
       body: JSON.stringify(data)
     });
     if (!response.ok) throw new Error('Error al crear base de datos');
@@ -46,6 +44,7 @@ export const cost360DatabaseService = {
     const response = await fetch(`${API_URL}/cost360/databases/${databaseId}`, {
       method: 'PATCH',
       headers: getAuthHeaders(),
+      credentials: 'include',
       body: JSON.stringify(data)
     });
     if (!response.ok) throw new Error('Error al actualizar base de datos');
@@ -56,7 +55,8 @@ export const cost360DatabaseService = {
   delete: async (databaseId) => {
     const response = await fetch(`${API_URL}/cost360/databases/${databaseId}`, {
       method: 'DELETE',
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Error al eliminar base de datos');
     return response.json();
