@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Folder, FolderOpen, Plus, FileText, Trash2, Edit3, Copy, Search,
   Settings, Printer, FileSpreadsheet, CloudDownload, Upload,
-  MoreVertical, Clock, DollarSign, Loader, Share2
+  MoreVertical, Clock, DollarSign, Loader, Share2, Link2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { budgetService } from '../../services/budgetService';
@@ -13,6 +13,7 @@ import BudgetPrintModal from '../../components/modals/BudgetPrintModal';
 import BudgetPrintLayout from '../../components/print/BudgetPrintLayout';
 import SubscriptionRequestModal from '../../components/SubscriptionRequestModal';
 import ShareBudgetModal from '../../components/modals/ShareBudgetModal';
+import ImportSharedBudgetModal from '../../components/modals/ImportSharedBudgetModal';
 
 export default function BudgetHomePage() {
   const [budgets, setBudgets] = useState([]);
@@ -22,6 +23,7 @@ export default function BudgetHomePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [importingBackup, setImportingBackup] = useState(false);
   const [sharingBudget, setSharingBudget] = useState(null);
+  const [isImportSharedOpen, setIsImportSharedOpen] = useState(false);
   const fileInputRef = useRef(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [limitReachedReason, setLimitReachedReason] = useState('');
@@ -312,6 +314,13 @@ export default function BudgetHomePage() {
               >
                 <Upload size={20} className="group-hover:scale-110 transition-transform duration-300" />
                 {importingBackup ? 'Importando...' : 'Importar Backup'}
+              </button>
+              <button
+                onClick={() => setIsImportSharedOpen(true)}
+                className="group flex items-center gap-2 bg-[#B5DCB0] hover:bg-[#a1d39b] text-[#143d1a] border border-[#9ecc98] px-5 py-2.5 rounded-xl font-semibold shadow-md shadow-[#B5DCB0]/30 hover:shadow-lg hover:shadow-[#B5DCB0]/40 hover:-translate-y-0.5 transition-all duration-300 ease-out"
+              >
+                <Link2 size={20} className="group-hover:scale-110 transition-transform duration-300 text-[#143d1a]" />
+                Importar con Enlace
               </button>
             </div>
             <input
@@ -705,6 +714,19 @@ export default function BudgetHomePage() {
           isOpen={!!sharingBudget}
           budget={sharingBudget}
           onClose={() => setSharingBudget(null)}
+        />
+      )}
+
+      {isImportSharedOpen && (
+        <ImportSharedBudgetModal
+          isOpen={isImportSharedOpen}
+          onClose={() => setIsImportSharedOpen(false)}
+          onSuccess={(newBudgetId) => {
+            loadBudgets();
+            if (newBudgetId) {
+              navigate(`/budgets/${newBudgetId}`);
+            }
+          }}
         />
       )}
       </div>
