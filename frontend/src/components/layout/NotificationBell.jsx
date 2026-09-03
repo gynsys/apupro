@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Check, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import config from '../../config';
+import { API_URL } from '../../services/api';
 
 export default function NotificationBell() {
   const { token, user } = useAuth();
@@ -13,7 +13,7 @@ export default function NotificationBell() {
   const fetchNotifications = async () => {
     if (!token) return;
     try {
-      const res = await fetch(`${config.API_URL}/api/v1/notifications/`, {
+      const res = await fetch(`${API_URL}/api/v1/notifications/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -46,7 +46,7 @@ export default function NotificationBell() {
   const handleMarkAsRead = async (id, e) => {
     if (e) e.stopPropagation();
     try {
-      const res = await fetch(`${config.API_URL}/api/v1/notifications/${id}/read`, {
+      const res = await fetch(`${API_URL}/api/v1/notifications/${id}/read`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -61,7 +61,7 @@ export default function NotificationBell() {
 
   const handleMarkAllAsRead = async () => {
     try {
-      const res = await fetch(`${config.API_URL}/api/v1/notifications/read-all`, {
+      const res = await fetch(`${API_URL}/api/v1/notifications/read-all`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
