@@ -306,5 +306,61 @@ def send_plan_activated_email(user_email: str, plan_name: str, is_test_mode: boo
     try:
         return send_email(user_email, subject, html_content)
     except Exception as e:
-        logger.error(f"No se pudo enviar correo de activacion de plan a {user_email}: {e}")
+        logger.error(f"No se pudo enviar correo de activacion de plan a {user_email}: {e}", exc_info=True)
         return False
+
+
+def send_database_published_email(to_email: str, db_name: str, frequency: str, plan_name: str) -> bool:
+    """Envía notificación por correo cuando se publica una nueva base de datos de precios."""
+    if not to_email or not db_name:
+        raise ValueError("to_email y db_name son obligatorios")
+
+    subject = f"Nueva Base de Datos Disponible: {db_name} 📊"
+
+    if frequency == "quincenal":
+        freq_text = "actualización quincenal"
+    else:
+        freq_text = "actualización mensual"
+
+    frontend_base_url = getattr(settings, "FRONTEND_URL", "https://costbase.net")
+
+    html_content = f"""
+    <html>
+      <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #334155; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="color: #0284c7; font-size: 24px; margin-bottom: 5px;">¡Nueva Base de Datos Disponible!</h2>
+            <p style="font-size: 16px; color: #64748b; margin-top: 0;">Tu {freq_text} de precios de insumos y materiales ya está activa</p>
+        </div>
+
+        <p>Hola,</p>
+        <p>Te informamos que se ha publicado una nueva base de datos de costos en CostBase: <strong>{db_name}</strong>.</p>
+
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 25px 0;">
+            <h3 style="margin-top: 0; color: #0f172a; font-size: 18px;">Detalles de la Actualización</h3>
+            <ul style="margin: 0; padding-left: 20px; color: #334155;">
+                <li style="margin-bottom: 8px;"><strong>Base de datos:</strong> {db_name}</li>
+                <li style="margin-bottom: 8px;"><strong>Ciclo:</strong> {freq_text.capitalize()} (Plan {plan_name})</li>
+                <li style="margin-bottom: 8px;"><strong>Beneficio:</strong> Costos y análisis adaptados a las condiciones más recientes del mercado</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{frontend_base_url}/cost360/databases" style="background-color: #0284c7; color: #ffffff; padding: 12px 28px; font-weight: bold; text-decoration: none; border-radius: 8px; display: inline-block;">
+                Explorar Base de Datos
+            </a>
+        </div>
+
+        <p style="font-size: 14px; color: #64748b;">Puedes seleccionarla directamente en el creador de presupuestos o consultar sus partidas en el módulo Cost360.</p>
+
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 40px 0 20px 0;" />
+        <p style="font-size: 13px; color: #94a3b8; text-align: center;">El equipo de CostBase.</p>
+      </body>
+    </html>
+    """
+
+    try:
+        return send_email(to_email, subject, html_content)
+    except Exception as e:
+        logger.error(f"Error enviando correo de base publicada a {to_email}: {str(e)}", exc_info=True)
+        return False
+

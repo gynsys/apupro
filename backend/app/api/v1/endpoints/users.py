@@ -1,12 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import and_
 from typing import List, Optional
 from pydantic import BaseModel
 from app.db.arko_base import ArkoSessionLocal
 from app.db.models.arko import ArkoAdmin
 from app.api.v1.endpoints.arko import get_current_arko_admin
 
-from app.services.email import send_subscription_request_email, send_payment_instructions_email
+from datetime import datetime, timedelta
+import threading
+from app.db.models.notification import Notification
+from app.services.email import (
+    send_subscription_request_email, 
+    send_payment_instructions_email,
+    send_plan_activated_email
+)
 
 router = APIRouter()
 
@@ -73,10 +81,16 @@ def update_user(user_id: int, user_data: UserUpdateRequest, current_user = Depen
         if user_data.plan is not None:
             # If changing to a new plan, set the logic
             if user.plan != user_data.plan and user_data.plan != "free":
-                from datetime import datetime, timedelta
-                from app.services.email import send_plan_activated_email
-                import threading
                 threading.Thread(target=send_plan_activated_email, args=(user.email, user_data.plan, user_data.test_mode)).start()
+                
+                # Notificación en la campana para el usuario
+                notif = Notification(
+                    user_id=user.id,
+                    message=f"¡Felicidades! Tu suscripción al Plan {user_data.plan} ha sido activada con éxito. Ya puedes disfrutar de todos los beneficios y herramientas de Costbase.",
+                    type="plan_activated"
+                )
+                db.add(notif)
+
                 # Modo prueba: expira en 5 minutos para probar alertas
                 user.plan_started_at = datetime.utcnow()
                 if user_data.test_mode:
@@ -123,14 +137,6 @@ def update_user(user_id: int, user_data: UserUpdateRequest, current_user = Depen
 @router.post("/system/process-expirations")
 def process_plan_expirations(current_user = Depends(get_current_arko_admin)):
     """Verifica y vence los planes expirados, y genera alertas de 3 días."""
-    from datetime import datetime, timedelta
-    from sqlalchemy import and_
-    from app.db.models.notification import Notification
-
-    # Por seguridad, verificar que es super admin
-    if current_user.email != "costbaseia@gmail.com":
-        pass # Podríamos bloquearlo, pero para pruebas permitiremos que el admin lo ejecute
-
     processed_expired = 0
     processed_warnings = 0
     now = datetime.utcnow()

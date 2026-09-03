@@ -11,6 +11,16 @@ from app.crud.crud_cost360 import (
 )
 from sqlalchemy import text
 from typing import Optional
+import threading
+import logging
+from datetime import datetime
+
+from app.db.models.arko import ArkoAdmin
+from app.db.models.notification import Notification
+from app.db.arko_base import ArkoSessionLocal
+from app.services.email import send_database_published_email
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -58,8 +68,6 @@ def list_databases(db: Session = Depends(get_db), current_user = Depends(get_cur
 @router.post("/initialize")
 def initialize_master_database(db: Session = Depends(get_db)):
     """Inicializar la base de datos maestra si no existe"""
-    from app.db.models.cost360_database import Cost360Database
-    
     try:
         db.execute(text("SELECT 1 FROM cost360_databases LIMIT 1"))
     except:
@@ -110,14 +118,7 @@ def create_database_route(payload: Cost360DatabaseCreate, db: Session = Depends(
     """
     Crear una nueva base de datos (copia aislada) para el usuario
     """
-    import logging
-    logger = logging.getLogger(__name__)
-
     try:
-        from app.db.models.arko import ArkoAdmin
-        from app.db.models.cost360_database import Cost360Database
-        from app.db.arko_base import ArkoSessionLocal
-
         # Obtener el límite del plan del usuario desde la DB correcta (Arko)
         limit = None  # None = sin límite (superadmin)
         with ArkoSessionLocal() as arko_session:
@@ -177,8 +178,47 @@ def update_database_route(database_id: str, payload: Cost360DatabaseUpdate, db: 
         if hasattr(payload, 'is_published') and payload.is_published is not None:
             updated_database.is_published = payload.is_published
             if payload.is_published:
-                from datetime import datetime
                 updated_database.published_at = datetime.utcnow()
+
+                # Notificar a los usuarios según el alcance especificado (quincenal o mensual)
+                scope = getattr(payload, 'notification_scope', None)
+                if scope in ("quincenal", "mensual"):
+                    with ArkoSessionLocal() as arko_db:
+                        if scope == "quincenal":
+                            target_users = arko_db.query(ArkoAdmin).filter(
+                                ArkoAdmin.is_active == True,
+                                ArkoAdmin.plan.in_(["Profesional", "Experto"])
+                            ).all()
+                        else:  # mensual
+                            target_users = arko_db.query(ArkoAdmin).filter(
+                                ArkoAdmin.is_active == True,
+                                ArkoAdmin.plan.in_(["Básico", "Profesional", "Experto"])
+                            ).all()
+
+                        for target_user in target_users:
+                            if scope == "quincenal":
+                                msg = f"📢 Actualización Quincenal: Ya está disponible la base de datos '{updated_database.name}' con precios y costos actualizados."
+                            else:
+                                if target_user.plan == "Básico":
+                                    msg = f"📢 Actualización Mensual: Ya está disponible tu nueva base de datos '{updated_database.name}' con costos actualizados."
+                                else:
+                                    msg = f"📢 Actualización de Precios: Ya está disponible la base de datos '{updated_database.name}' con costos actualizados."
+
+                            notif = Notification(
+                                user_id=target_user.id,
+                                message=msg,
+                                type="database_published"
+                            )
+                            db.add(notif)
+
+                            try:
+                                threading.Thread(
+                                    target=send_database_published_email,
+                                    args=(target_user.email, updated_database.name, scope, target_user.plan or "Plan")
+                                ).start()
+                            except Exception as mail_err:
+                                logger.error(f"Error al iniciar hilo de correo para {target_user.email}: {mail_err}", exc_info=True)
+
             db.commit()
             db.refresh(updated_database)
             

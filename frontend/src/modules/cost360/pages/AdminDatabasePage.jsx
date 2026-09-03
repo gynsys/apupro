@@ -13,6 +13,7 @@ import ScrapingTab from '../components/tabs/ScrapingTab';
 import PDFsTab from '../components/tabs/PDFsTab';
 import UsuariosTab from '../components/tabs/UsuariosTab';
 import CategoryManager from '../components/CategoryManager';
+import PublishDatabaseModal from '../components/modals/PublishDatabaseModal';
 import { TABS } from '../constants/tabs.config';
 import { DEFAULT_APU_PROMPT } from '../constants/prompts.default';
 import GlassCard from '../../../components/shared/GlassCard';
@@ -54,15 +55,45 @@ const AdminDatabasePage = () => {
   const { databases, refreshDatabases: reloadDatabases } = useDatabaseContext();
   const currentDbObj = databases.find(db => db.id === selectedDatabase);
 
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+
   const handleTogglePublish = async () => {
     if (!currentDbObj) return;
+    
+    // Si ya está publicada, al hacer clic se despublica (vuelve a modo borrador)
+    if (currentDbObj.is_published) {
+      try {
+        await cost360DatabaseService.update(currentDbObj.id, { is_published: false });
+        toast.success('Base de datos oculta a usuarios (modo borrador)');
+        reloadDatabases();
+      } catch (error) {
+        toast.error('Error al cambiar visibilidad de la base de datos');
+        console.error(error);
+      }
+    } else {
+      // Si está en borrador, abrir modal para seleccionar ciclo y notificar
+      setIsPublishModalOpen(true);
+    }
+  };
+
+  const handleConfirmPublish = async (scope) => {
+    if (!currentDbObj) return;
+    setIsPublishing(true);
     try {
-      await cost360DatabaseService.update(currentDbObj.id, { is_published: !currentDbObj.is_published });
-      toast.success(currentDbObj.is_published ? 'Base de datos oculta a usuarios' : 'Base de datos publicada a usuarios');
-      reloadDatabases(); // Update global context
+      await cost360DatabaseService.update(currentDbObj.id, {
+        is_published: true,
+        notification_scope: scope
+      });
+      const scopeName = scope === 'quincenal' ? 'Quincenal' : 'Mensual';
+      toast.success(`Base de datos publicada exitosamente con notificación ${scopeName}`);
+      setIsPublishModalOpen(false);
+      reloadDatabases();
     } catch (error) {
-      toast.error('Error al cambiar visibilidad de la base de datos');
+      toast.error('Error al publicar la base de datos');
       console.error(error);
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -351,6 +382,14 @@ const AdminDatabasePage = () => {
 
         {activeTab === 'usuarios' && <UsuariosTab />}
       </div>
+
+      <PublishDatabaseModal
+        isOpen={isPublishModalOpen}
+        onClose={() => setIsPublishModalOpen(false)}
+        onConfirm={handleConfirmPublish}
+        databaseName={currentDbObj?.name}
+        isSubmitting={isPublishing}
+      />
     </div>
   );
 };

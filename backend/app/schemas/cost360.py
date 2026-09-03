@@ -179,6 +179,7 @@ class Cost360DatabaseUpdate(BaseModel):
     material_inflation: Optional[float] = None
     labor_inflation: Optional[float] = None
     equipment_inflation: Optional[float] = None
+    notification_scope: Optional[str] = None  # 'quincenal' o 'mensual'
 
 class Cost360DatabaseResponse(Cost360DatabaseBase):
     pass
