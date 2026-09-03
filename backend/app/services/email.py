@@ -188,8 +188,8 @@ def send_payment_instructions_email(user_email: str, plan_name: str):
     subject = f"Instrucciones para activar tu Plan {plan_name} en CostBase 🚀"
     
     # URL of logos
-    bdv_logo = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Banco_de_Venezuela_logo.svg/512px-Banco_de_Venezuela_logo.svg.png"
-    binance_logo = "https://public.bnbstatic.com/20190405/eb2349c3-b2f8-4a93-a286-8f86a62ea9d8.png"
+    bdv_logo = "https://upload.wikimedia.org/wikipedia/commons/7/70/Bdv2022logo.png"
+    binance_logo = "https://cryptologos.cc/logos/tether-usdt-logo.png"
 
     html_content = f"""
     <html>
