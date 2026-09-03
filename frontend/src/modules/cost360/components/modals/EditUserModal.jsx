@@ -91,7 +91,7 @@ const EditUserModal = ({ user, onClose, onSave }) => {
                     <input
                       type="checkbox"
                       id="testMode"
-                      checked={form.test_mode || False}
+                      checked={form.test_mode || false}
                       onChange={(e) => setForm({...form, test_mode: e.target.checked})}
                       className="w-4 h-4 text-amber-600 rounded border-amber-300 focus:ring-amber-500"
                     />
