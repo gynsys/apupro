@@ -62,11 +62,27 @@ def update_user(user_id: int, user_data: UserUpdateRequest, current_user = Depen
         if user_data.is_active is not None:
             user.is_active = user_data.is_active
         if user_data.plan is not None:
+            # If changing to a new plan, set the logic
+            if user.plan != user_data.plan and user_data.plan != "free":
+                from datetime import datetime, timedelta
+                user.plan_expires_at = datetime.utcnow() + timedelta(days=30)
+                user.ai_apus_generated = 0
+                if user_data.plan == "Básico":
+                    user.max_ai_apus = 10
+                elif user_data.plan == "Profesional":
+                    user.max_ai_apus = 25
+                elif user_data.plan == "Experto":
+                    user.max_ai_apus = 50
+                else:
+                    user.max_ai_apus = 0
+            elif user_data.plan == "free":
+                user.plan_expires_at = None
+                user.max_ai_apus = 0
             user.plan = user_data.plan
         if user_data.max_budgets is not None:
-            user.max_budgets = user_data.max_budgets  # FIX: era user.max_budgets = user.max_budgets
+            user.max_budgets = user_data.max_budgets
         if user_data.max_items_per_budget is not None:
-            user.max_items_per_budget = user_data.max_items_per_budget  # FIX: idem
+            user.max_items_per_budget = user_data.max_items_per_budget
         if user_data.has_ai_access is not None:
             user.has_ai_access = user_data.has_ai_access
 

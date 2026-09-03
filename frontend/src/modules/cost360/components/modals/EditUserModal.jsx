@@ -82,7 +82,6 @@ const EditUserModal = ({ user, onClose, onSave }) => {
                 <option value="Básico">Básico</option>
                 <option value="Profesional">Profesional</option>
                 <option value="Experto">Experto</option>
-                <option value="enterprise">Enterprise (Legacy)</option>
               </select>
             </div>
 

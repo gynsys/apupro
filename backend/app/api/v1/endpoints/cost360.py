@@ -469,6 +469,13 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             smart_answers=payload.smart_answers or {},
             history=history_dicts,
         )
+        if result.get("status") == "success" or "apu_data" in result or "apu" in result:
+            from app.db.arko_base import ArkoSessionLocal
+            with ArkoSessionLocal() as adb:
+                db_user = adb.query(current_user.__class__).filter_by(id=current_user.id).first()
+                if db_user:
+                    db_user.ai_apus_generated = getattr(db_user, 'ai_apus_generated', 0) + 1
+                    adb.commit()
         return result
 
     # 1. Preprocesamiento (BD + Estadísticas) + IA semantica
@@ -546,6 +553,14 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
     history_dicts = [msg.model_dump() for msg in payload.history] if payload.history else []
     result = generate_apu_with_ai(payload_llm, history_dicts)
     
+    if result.get("status") == "success" or "apu_data" in result or "apu" in result:
+        from app.db.arko_base import ArkoSessionLocal
+        with ArkoSessionLocal() as adb:
+            db_user = adb.query(current_user.__class__).filter_by(id=current_user.id).first()
+            if db_user:
+                db_user.ai_apus_generated = getattr(db_user, 'ai_apus_generated', 0) + 1
+                adb.commit()
+
     return result
 
 

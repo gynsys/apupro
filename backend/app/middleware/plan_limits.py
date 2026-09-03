@@ -43,3 +43,10 @@ def check_ai_access(current_user):
             status_code=403,
             detail="El acceso al generador APU con IA requiere un plan de pago."
         )
+    
+    if current_user.plan != "free" and getattr(current_user, 'max_ai_apus', 0) > 0:
+        if getattr(current_user, 'ai_apus_generated', 0) >= current_user.max_ai_apus:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Límite de APUs con IA alcanzado. Tu plan permite máximo {current_user.max_ai_apus} APUs por mes."
+            )
