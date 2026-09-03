@@ -73,10 +73,26 @@ def create_budget(budget_in: BudgetCreate, db: Session = Depends(get_db), curren
     return db_budget
 
 
+def ensure_budget_share_columns(db: Session) -> None:
+    """Asegura que existan las columnas de compartición en la tabla budgets."""
+    try:
+        db.execute(text("ALTER TABLE budgets ADD COLUMN IF NOT EXISTS share_token VARCHAR(255);"))
+        db.execute(text("ALTER TABLE budgets ADD COLUMN IF NOT EXISTS is_public_share BOOLEAN DEFAULT FALSE;"))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error asegurando columnas de compartición en budgets: {e}", exc_info=True)
+
+
 @router.get("/", response_model=List[BudgetSummary])
 def get_budgets(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     # Solo mostrar presupuestos del usuario autenticado
-    budgets = db.query(Budget).filter(Budget.user_id == str(current_user.id)).offset(skip).limit(limit).all()
+    try:
+        budgets = db.query(Budget).filter(Budget.user_id == str(current_user.id)).offset(skip).limit(limit).all()
+    except Exception:
+        db.rollback()
+        ensure_budget_share_columns(db)
+        budgets = db.query(Budget).filter(Budget.user_id == str(current_user.id)).offset(skip).limit(limit).all()
     return budgets
 
 @router.get("/{budget_id}", response_model=BudgetSchema)
@@ -958,17 +974,6 @@ async def upload_budget_logo(budget_id: str, logo: UploadFile = File(...), db: S
     db.commit()
     
     return {"logo_url": logo_url}
-
-
-def ensure_budget_share_columns(db: Session) -> None:
-    """Asegura que existan las columnas de compartición en la tabla budgets."""
-    try:
-        db.execute(text("ALTER TABLE budgets ADD COLUMN IF NOT EXISTS share_token VARCHAR(255);"))
-        db.execute(text("ALTER TABLE budgets ADD COLUMN IF NOT EXISTS is_public_share BOOLEAN DEFAULT FALSE;"))
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Error asegurando columnas de compartición en budgets: {e}", exc_info=True)
 
 
 @router.post("/{budget_id}/share")
