@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Folder, FolderOpen, Plus, FileText, Trash2, Edit3, Copy, Search,
   Settings, Printer, FileSpreadsheet, CloudDownload, Upload,
-  MoreVertical, Clock, DollarSign, Loader
+  MoreVertical, Clock, DollarSign, Loader, Share2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { budgetService } from '../../services/budgetService';
@@ -12,6 +12,7 @@ import CreateBudgetModal from '../../components/modals/CreateBudgetModal';
 import BudgetPrintModal from '../../components/modals/BudgetPrintModal';
 import BudgetPrintLayout from '../../components/print/BudgetPrintLayout';
 import SubscriptionRequestModal from '../../components/SubscriptionRequestModal';
+import ShareBudgetModal from '../../components/modals/ShareBudgetModal';
 
 export default function BudgetHomePage() {
   const [budgets, setBudgets] = useState([]);
@@ -20,6 +21,7 @@ export default function BudgetHomePage() {
   const [deletingId, setDeletingId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [importingBackup, setImportingBackup] = useState(false);
+  const [sharingBudget, setSharingBudget] = useState(null);
   const fileInputRef = useRef(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [limitReachedReason, setLimitReachedReason] = useState('');
@@ -295,21 +297,23 @@ export default function BudgetHomePage() {
               </h1>
               <p className="text-slate-500 mt-1">Administra, crea y organiza todos tus proyectos</p>
             </div>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out"
-            >
-              <Plus size={20} className="group-hover:scale-110 group-hover:rotate-90 transition-transform duration-300" />
-              Nuevo Presupuesto
-            </button>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={importingBackup}
-              className="group flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Upload size={20} className="group-hover:scale-110 transition-transform duration-300" />
-              {importingBackup ? 'Importando...' : 'Importar Backup'}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out"
+              >
+                <Plus size={20} className="group-hover:scale-110 group-hover:rotate-90 transition-transform duration-300" />
+                Nuevo Presupuesto
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importingBackup}
+                className="group flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Upload size={20} className="group-hover:scale-110 transition-transform duration-300" />
+                {importingBackup ? 'Importando...' : 'Importar Backup'}
+              </button>
+            </div>
             <input
               ref={fileInputRef}
               type="file"
@@ -428,6 +432,13 @@ export default function BudgetHomePage() {
                       title="Exportar Backup"
                     >
                       <CloudDownload size={18} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setSharingBudget(budget); }}
+                      className="btn-accion hover:text-amber-600 transition-colors"
+                      title="Compartir enlace en la nube"
+                    >
+                      <Share2 size={18} />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); setRenamingBudget(budget); setRenameName(budget.name); }}
@@ -687,6 +698,14 @@ export default function BudgetHomePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {sharingBudget && (
+        <ShareBudgetModal
+          isOpen={!!sharingBudget}
+          budget={sharingBudget}
+          onClose={() => setSharingBudget(null)}
+        />
       )}
       </div>
     </div>

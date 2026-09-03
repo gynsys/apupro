@@ -1,16 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import func
-from typing import List
+from sqlalchemy import func, text
+from typing import List, Dict, Any, Optional
 import os
 import uuid
 import shutil
+import secrets
 from pathlib import Path
 from fastapi.responses import FileResponse
 from app.db.base import get_db
 from app.db.models.budget import Budget, BudgetItem, BudgetAPUMaterial as DBMaterial, BudgetAPUEquipment as DBEquipment, BudgetAPULabor as DBLabor
 from app.db.models.cost360 import CostItem, CostAPUMaterial, CostAPUEquipment, CostAPULabor
 from app.db.models.backup_logs import BackupLog
+from app.db.arko_base import ArkoSessionLocal
+from app.db.models.arko import ArkoAdmin
+from app.core.config import settings
+from app.core.logging import logger
 from app.schemas.budget import (
     Budget as BudgetSchema, BudgetCreate, BudgetUpdate, BudgetSummary,
     BudgetItemCreate, BudgetItem as BudgetItemSchema, BudgetItemUpdate,
@@ -953,3 +958,254 @@ async def upload_budget_logo(budget_id: str, logo: UploadFile = File(...), db: S
     db.commit()
     
     return {"logo_url": logo_url}
+
+
+def ensure_budget_share_columns(db: Session) -> None:
+    """Asegura que existan las columnas de compartición en la tabla budgets."""
+    try:
+        db.execute(text("ALTER TABLE budgets ADD COLUMN IF NOT EXISTS share_token VARCHAR(255);"))
+        db.execute(text("ALTER TABLE budgets ADD COLUMN IF NOT EXISTS is_public_share BOOLEAN DEFAULT FALSE;"))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error asegurando columnas de compartición en budgets: {e}", exc_info=True)
+
+
+@router.post("/{budget_id}/share")
+def generate_share_link(
+    budget_id: str,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_arko_admin)
+) -> Dict[str, Any]:
+    """Genera o activa el enlace único de compartición para un presupuesto."""
+    if not budget_id:
+        raise ValueError("budget_id es obligatorio")
+
+    ensure_budget_share_columns(db)
+    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
+    if not budget:
+        raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
+
+    if not budget.share_token:
+        budget.share_token = f"cb_{secrets.token_urlsafe(12)}"
+
+    budget.is_public_share = True
+    db.commit()
+    db.refresh(budget)
+
+    frontend_base_url = getattr(settings, "FRONTEND_URL", "https://costbase.net")
+    share_url = f"{frontend_base_url}/budgets/shared/{budget.share_token}"
+
+    return {
+        "share_token": budget.share_token,
+        "share_url": share_url,
+        "is_public_share": budget.is_public_share
+    }
+
+
+@router.delete("/{budget_id}/share")
+def revoke_share_link(
+    budget_id: str,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_arko_admin)
+) -> Dict[str, Any]:
+    """Revoca el enlace de compartición de un presupuesto."""
+    if not budget_id:
+        raise ValueError("budget_id es obligatorio")
+
+    ensure_budget_share_columns(db)
+    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
+    if not budget:
+        raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
+
+    budget.is_public_share = False
+    db.commit()
+    return {"message": "Enlace de compartición revocado exitosamente", "is_public_share": False}
+
+
+@router.get("/shared/{share_token}")
+def get_shared_budget_preview(
+    share_token: str,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_arko_admin)
+) -> Dict[str, Any]:
+    """Obtiene vista previa de un presupuesto compartido mediante su token."""
+    if not share_token:
+        raise ValueError("share_token es obligatorio")
+
+    ensure_budget_share_columns(db)
+    budget = db.query(Budget).filter(
+        Budget.share_token == share_token,
+        Budget.is_public_share == True
+    ).first()
+    if not budget:
+        raise HTTPException(status_code=404, detail="Presupuesto no encontrado o el enlace ha sido revocado")
+
+    owner_name = "Usuario de CostBase"
+    with ArkoSessionLocal() as arko_db:
+        owner = arko_db.query(ArkoAdmin).filter(
+            ArkoAdmin.id == int(budget.user_id) if str(budget.user_id).isdigit() else None
+        ).first()
+        if owner:
+            owner_name = getattr(owner, "name", None) or owner.email
+
+    items = db.query(BudgetItem).filter(BudgetItem.budget_id == budget.id).all()
+    items_count = len(items)
+
+    total_amount = 0.0
+    mat_inf = budget.material_inflation or 0.0
+    lab_inf = budget.labor_inflation or 0.0
+    eq_inf = budget.equipment_inflation or 0.0
+    fcas = budget.fcas_percent or 0.0
+    bonus = budget.labor_bonus or 0.0
+
+    for it in items:
+        if getattr(it, "is_chapter", False):
+            continue
+        qty = it.quantity or 0.0
+        rend = it.performance or 1.0
+        if rend <= 0:
+            rend = 1.0
+
+        mat_sum = sum((m.cantidad or 0.0) * (m.precio_unitario or 0.0) * (1 + (m.desperdicio or 0.0) / 100.0) for m in it.materials)
+        mat_sum *= (1 + mat_inf / 100.0)
+
+        eq_sum = sum((e.cantidad or 0.0) * (e.precio_unitario or 0.0) * (1 + (e.depreciacion or 0.0) / 100.0) for e in it.equipments)
+        eq_sum *= (1 + eq_inf / 100.0)
+
+        lab_sum = sum((l.cantidad or 0.0) * (((l.jornal or 0.0) * (1 + fcas / 100.0)) + (l.bono or bonus or 0.0)) for l in it.labors)
+        lab_sum *= (1 + lab_inf / 100.0)
+
+        costo_unitario = (mat_sum + eq_sum + (lab_sum / rend))
+        total_amount += (costo_unitario * qty)
+
+    total_amount *= (1 + (budget.admin_percent or 0.0) / 100.0)
+    total_amount *= (1 + (budget.profit_percent or 0.0) / 100.0)
+    total_amount *= (1 + (budget.iva_percent or 0.0) / 100.0)
+
+    is_own_budget = str(current_user.id) == str(budget.user_id)
+
+    return {
+        "id": budget.id,
+        "name": budget.name,
+        "description": budget.description,
+        "client_name": budget.client_name,
+        "currency": budget.currency or "USD",
+        "created_at": budget.created_at.isoformat() if budget.created_at else None,
+        "items_count": items_count,
+        "total_amount": round(total_amount, 2),
+        "owner_name": owner_name,
+        "is_own_budget": is_own_budget
+    }
+
+
+@router.post("/shared/{share_token}/import")
+def import_shared_budget(
+    share_token: str,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_arko_admin)
+) -> Dict[str, Any]:
+    """Clona un presupuesto compartido hacia la cuenta del usuario actual."""
+    if not share_token:
+        raise ValueError("share_token es obligatorio")
+
+    ensure_budget_share_columns(db)
+    source_budget = db.query(Budget).filter(
+        Budget.share_token == share_token,
+        Budget.is_public_share == True
+    ).first()
+    if not source_budget:
+        raise HTTPException(status_code=404, detail="Presupuesto no encontrado o el enlace ha sido revocado")
+
+    check_budget_limit(current_user.email, db)
+
+    try:
+        new_budget = Budget(
+            user_id=str(current_user.id),
+            name=f"{source_budget.name} (Compartido)",
+            description=source_budget.description,
+            client_name=source_budget.client_name,
+            currency=source_budget.currency,
+            exchange_rate=source_budget.exchange_rate,
+            fcas_percent=source_budget.fcas_percent,
+            admin_percent=source_budget.admin_percent,
+            profit_percent=source_budget.profit_percent,
+            iva_percent=source_budget.iva_percent,
+            labor_bonus=source_budget.labor_bonus,
+            material_inflation=source_budget.material_inflation,
+            labor_inflation=source_budget.labor_inflation,
+            equipment_inflation=source_budget.equipment_inflation,
+            company_name=source_budget.company_name,
+            company_rif=source_budget.company_rif,
+            project_name=source_budget.project_name
+        )
+        db.add(new_budget)
+        db.flush()
+
+        source_items = db.query(BudgetItem).filter(BudgetItem.budget_id == source_budget.id).all()
+        for s_item in source_items:
+            new_item = BudgetItem(
+                budget_id=new_budget.id,
+                cod_par=s_item.cod_par,
+                cov_par=s_item.cov_par,
+                description=s_item.description,
+                unit=s_item.unit,
+                quantity=s_item.quantity,
+                performance=s_item.performance,
+                order=s_item.order,
+                is_chapter=s_item.is_chapter
+            )
+            db.add(new_item)
+            db.flush()
+
+            for mat in s_item.materials:
+                new_mat = DBMaterial(
+                    item_id=new_item.id,
+                    codigo=mat.codigo,
+                    descripcion=mat.descripcion,
+                    unidad=mat.unidad,
+                    precio_unitario=mat.precio_unitario,
+                    cantidad=mat.cantidad,
+                    desperdicio=mat.desperdicio
+                )
+                db.add(new_mat)
+
+            for eq in s_item.equipments:
+                new_eq = DBEquipment(
+                    item_id=new_item.id,
+                    codigo=eq.codigo,
+                    descripcion=eq.descripcion,
+                    unidad=eq.unidad,
+                    precio_unitario=eq.precio_unitario,
+                    cantidad=eq.cantidad,
+                    depreciacion=eq.depreciacion
+                )
+                db.add(new_eq)
+
+            for lab in s_item.labors:
+                new_lab = DBLabor(
+                    item_id=new_item.id,
+                    codigo=lab.codigo,
+                    descripcion=lab.descripcion,
+                    unidad=lab.unidad,
+                    jornal=lab.jornal,
+                    bono=lab.bono,
+                    cantidad=lab.cantidad
+                )
+                db.add(new_lab)
+
+        db.commit()
+        db.refresh(new_budget)
+
+        return {
+            "success": True,
+            "budget_id": new_budget.id,
+            "message": "Presupuesto importado exitosamente"
+        }
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as err:
+        db.rollback()
+        logger.error(f"Error al importar presupuesto compartido token={share_token}: {err}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error interno al importar presupuesto compartido")

@@ -9,6 +9,7 @@ import MaterialsPage from './pages/admin/MaterialsPage.jsx';
 import BudgetHomePage from './pages/admin/BudgetHomePage.jsx';
 import BudgetWorksheetPage from './pages/admin/BudgetWorksheetPage.jsx';
 import BudgetAPUEditorPage from './pages/admin/BudgetAPUEditorPage.jsx';
+import SharedBudgetPage from './pages/admin/SharedBudgetPage.jsx';
 import CalculadoraFCASPage from './pages/tools/CalculadoraFCASPage.jsx';
 import Cost360Dashboard from './modules/cost360/pages/Cost360Dashboard.jsx';
 import APUViewer from './modules/cost360/pages/APUViewer.jsx';
@@ -128,6 +129,7 @@ function App() {
               }
             >
               <Route index element={<BudgetHomePage />} />
+              <Route path="shared/:token" element={<SharedBudgetPage />} />
               <Route path=":id" element={<BudgetWorksheetPage />} />
               <Route path=":id/item/:itemId" element={<BudgetAPUEditorPage />} />
             </Route>

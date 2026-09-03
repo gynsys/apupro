@@ -35,6 +35,10 @@ class Budget(Base):
     company_rif = Column(String, nullable=True)
     project_name = Column(Text, nullable=True)
 
+    # Compartición de Presupuesto en la Nube
+    share_token = Column(String, nullable=True, unique=True, index=True)
+    is_public_share = Column(Boolean, default=False)
+
     # Fechas
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

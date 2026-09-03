@@ -265,8 +265,8 @@ export default function DatabaseManagementPage() {
                     <p className="text-sm text-slate-600 mb-2">{db.description}</p>
                   )}
 
-                  {/* Inflation Stats */}
-                  {(db.material_inflation > 0 || db.labor_inflation > 0 || db.equipment_inflation > 0) && (
+                  {/* Inflation Stats - Solo se muestra en bases personales de usuarios */}
+                  {!db.is_published && !db.is_master && (db.material_inflation > 0 || db.labor_inflation > 0 || db.equipment_inflation > 0) && (
                     <div className="rounded-xl p-3.5 space-y-2.5 mb-2 caja-inflacion">
                       <div className="text-xs font-medium text-slate-500 mb-2">Índices de Inflación Aplicados</div>
                       
