@@ -18,17 +18,17 @@ export default function ReportPaymentModal({ isOpen, onClose }) {
     e.preventDefault();
     
     if (!form.reference || !form.file) {
-      toast.error('Por favor ingresa el número de referencia y adjunta el comprobante.');
+      toast.error('Por favor ingresa el nÃºmero de referencia y adjunta el comprobante.');
       return;
     }
 
     setIsSubmitting(true);
     
-    // Simular el envío al servidor
+    // Simular el envÃ­o al servidor
     setTimeout(() => {
       setIsSubmitting(false);
       setSuccess(true);
-      toast.success('¡Pago reportado exitosamente!');
+      toast.success('Â¡Pago reportado exitosamente!');
     }, 2000);
   };
 
@@ -66,27 +66,27 @@ export default function ReportPaymentModal({ isOpen, onClose }) {
                   onChange={(e) => setForm({...form, plan: e.target.value})}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-sm"
                 >
-                  <option value="Básico">Plan Básico ($9.99)</option>
+                  <option value="BÃ¡sico">Plan BÃ¡sico ($9.99)</option>
                   <option value="Profesional">Plan Profesional ($19.99)</option>
                   <option value="Experto">Plan Experto ($34.99)</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Método de Pago</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">MÃ©todo de Pago</label>
                 <select 
                   value={form.method}
                   onChange={(e) => setForm({...form, method: e.target.value})}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-sm"
                 >
-                  <option value="Pago Movil">Pago Móvil (BDV)</option>
+                  <option value="Pago Movil">Pago MÃ³vil (BDV)</option>
                   <option value="Transferencia">Transferencia (BDV)</option>
                   <option value="Binance">Binance (USDT)</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Número de Referencia</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">NÃºmero de Referencia</label>
                 <input 
                   type="text"
                   placeholder="Ej: 123456789"
@@ -108,7 +108,7 @@ export default function ReportPaymentModal({ isOpen, onClose }) {
                   <div className="flex flex-col items-center gap-2">
                     <UploadCloud size={24} className={form.file ? "text-green-500" : "text-slate-400 group-hover:text-green-500"} />
                     <span className="text-sm font-medium text-slate-600">
-                      {form.file ? form.file.name : "Haz clic o arrastra tu archivo aquí"}
+                      {form.file ? form.file.name : "Haz clic o arrastra tu archivo aquÃ­"}
                     </span>
                   </div>
                 </div>
@@ -117,7 +117,7 @@ export default function ReportPaymentModal({ isOpen, onClose }) {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={w-full mt-2 py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg shadow-green-500/30 transition-all }
+                className={`w-full mt-2 py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg shadow-green-500/30 transition-all ${isSubmitting ? 'opacity-70 cursor-not-allowed' : 'active:scale-95'}`}
               >
                 {isSubmitting ? 'Enviando...' : 'Enviar Reporte'}
               </button>
@@ -128,9 +128,9 @@ export default function ReportPaymentModal({ isOpen, onClose }) {
             <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle size={40} />
             </div>
-            <h2 className="text-2xl font-bold text-slate-800 mb-2">¡Reporte Enviado!</h2>
+            <h2 className="text-2xl font-bold text-slate-800 mb-2">Â¡Reporte Enviado!</h2>
             <p className="text-slate-600 mb-8 text-sm">
-              Hemos recibido tu comprobante de pago exitosamente. Nuestro equipo lo verificará y activará tu plan en breve.
+              Hemos recibido tu comprobante de pago exitosamente. Nuestro equipo lo verificarÃ¡ y activarÃ¡ tu plan en breve.
             </p>
             <button
               onClick={onClose}
