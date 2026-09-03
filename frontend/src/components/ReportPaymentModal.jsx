@@ -34,7 +34,7 @@ export default function ReportPaymentModal({ isOpen, onClose }) {
       formData.append('reference', form.reference);
       formData.append('file', form.file);
 
-      const response = await fetch(`${API_URL}/api/v1/payments/report`, {
+      const response = await fetch(`${API_URL}/payments/report`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

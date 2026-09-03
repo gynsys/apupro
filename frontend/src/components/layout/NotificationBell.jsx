@@ -19,7 +19,7 @@ export default function NotificationBell() {
     const currentFetchId = ++fetchIdRef.current;
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/v1/notifications/`, {
+      const res = await fetch(`${API_URL}/notifications/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok && currentFetchId === fetchIdRef.current) {
@@ -92,7 +92,7 @@ export default function NotificationBell() {
   const handleMarkAsRead = async (id, e) => {
     if (e) e.stopPropagation();
     try {
-      const res = await fetch(`${API_URL}/api/v1/notifications/${id}/read`, {
+      const res = await fetch(`${API_URL}/notifications/${id}/read`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -114,7 +114,7 @@ export default function NotificationBell() {
   // Marcar todas como leídas
   const handleMarkAllAsRead = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/v1/notifications/read-all`, {
+      const res = await fetch(`${API_URL}/notifications/read-all`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
