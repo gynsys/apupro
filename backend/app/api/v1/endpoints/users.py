@@ -52,7 +52,10 @@ def get_users(current_user = Depends(get_current_arko_admin)):
                 "max_items_per_budget": user.max_items_per_budget,
                 "has_ai_access": user.has_ai_access or False,
                 "created_at": user.created_at.isoformat() if user.created_at else None,
-                "plan_expires_at": user.plan_expires_at.isoformat() if user.plan_expires_at else None
+                "plan_started_at": user.plan_started_at.isoformat() if user.plan_started_at else None,
+                "plan_expires_at": user.plan_expires_at.isoformat() if user.plan_expires_at else None,
+                "max_ai_apus": user.max_ai_apus or 0,
+                "ai_apus_generated": user.ai_apus_generated or 0
             }
             for user in users
         ]

@@ -47,5 +47,29 @@ async def report_payment(
         )
         db.add(notif)
         db.commit()
+        
+    # Send email to superadmin
+    try:
+        from app.services.email import send_email
+        import threading
+        
+        subject = f"¡Nuevo Pago Reportado! - Plan {plan}"
+        html = f"""
+        <html>
+            <body>
+                <h2>Nuevo Pago Reportado en la Plataforma</h2>
+                <p><strong>Usuario:</strong> {current_user.email}</p>
+                <p><strong>Plan solicitado:</strong> {plan}</p>
+                <p><strong>Método de pago:</strong> {method}</p>
+                <p><strong>Referencia:</strong> {reference}</p>
+                <p><strong>Archivo adjunto:</strong> {safe_filename}</p>
+                <p>Por favor revisa el comprobante y activa el plan desde el panel administrativo.</p>
+            </body>
+        </html>
+        """
+        threading.Thread(target=send_email, args=(superadmin.email, subject, html)).start()
+    except Exception as e:
+        import logging
+        logging.error(f"Error enviando correo al superadmin sobre pago: {e}")
 
     return {"status": "success", "message": "Pago reportado exitosamente"}
