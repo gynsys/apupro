@@ -226,9 +226,9 @@ def send_payment_instructions_email(user_email: str, plan_name: str):
                 <h3 style="margin: 0; color: #0f172a; font-size: 18px;">Pago Móvil (Banco de Venezuela)</h3>
             </div>
             <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>Banco:</strong> 0102 (Banco de Venezuela)</p>
-            <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>C.I:</strong> V-13.409.534</p>
-            <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>Teléfono:</strong> 0412-9972355</p>
-            <p style="margin: 10px 0 5px 0; font-family: monospace; font-size: 15px; color: #b91c1c;"><strong>Monto:</strong> {monto_bs_str} <span style="font-size: 12px; color: #64748b;">(Eqv. a {monto_usd_str} a tasa BCV)</span></p>
+            <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>C.I:</strong> V13409534 📋</p>
+            <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>Teléfono:</strong> 04129972355 📋</p>
+            <p style="margin: 10px 0 5px 0; font-family: monospace; font-size: 15px; color: #b91c1c;"><strong>Monto:</strong> {monto_bs_str} 📋 <span style="font-size: 12px; color: #64748b;">(Eqv. a {monto_usd_str} a tasa BCV)</span></p>
         </div>
 
         <!-- TRANSFERENCIA -->
@@ -238,10 +238,10 @@ def send_payment_instructions_email(user_email: str, plan_name: str):
                 <h3 style="margin: 0; color: #0f172a; font-size: 18px;">Transferencia Bancaria</h3>
             </div>
             <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>Banco:</strong> Banco de Venezuela</p>
-            <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>Cuenta:</strong> 0102 0278 7300 0005 2456</p>
+            <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>Cuenta:</strong> 01020278730000052456 📋</p>
             <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>Titular:</strong> Pablo Emilio Milano Carrillo</p>
-            <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>C.I:</strong> V-13.409.534</p>
-            <p style="margin: 10px 0 5px 0; font-family: monospace; font-size: 15px; color: #b91c1c;"><strong>Monto:</strong> {monto_bs_str} <span style="font-size: 12px; color: #64748b;">(Eqv. a {monto_usd_str} a tasa BCV)</span></p>
+            <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>C.I:</strong> V13409534 📋</p>
+            <p style="margin: 10px 0 5px 0; font-family: monospace; font-size: 15px; color: #b91c1c;"><strong>Monto:</strong> {monto_bs_str} 📋 <span style="font-size: 12px; color: #64748b;">(Eqv. a {monto_usd_str} a tasa BCV)</span></p>
         </div>
 
         <!-- BINANCE -->
@@ -252,13 +252,13 @@ def send_payment_instructions_email(user_email: str, plan_name: str):
             </div>
             <p style="margin: 5px 0; font-size: 15px;"><strong>Red:</strong> TRON (TRC20)</p>
             <p style="margin: 5px 0; font-family: monospace; font-size: 14px; word-break: break-all; background: #e2e8f0; padding: 8px; border-radius: 6px;">
-                TLDu8tGVfmydYVTCqefgsxrhwQ8H2tMgGs
+                TLDu8tGVfmydYVTCqefgsxrhwQ8H2tMgGs 📋
             </p>
             <p style="margin: 10px 0 5px 0; font-family: monospace; font-size: 15px; color: #16a34a;"><strong>Monto:</strong> {monto_usd_str} USDT</p>
         </div>
 
         <h3 style="color: #0f172a;">📩 Siguiente Paso: Reportar Pago</h3>
-        <p>Una vez realizado el pago, por favor <strong>responde directamente a este correo</strong> adjuntando el comprobante o captura de pantalla de la transacción.</p>
+        <p>Una vez realizado el pago, por favor <strong>reporta tu pago directamente en la plataforma</strong> (botón "Reportar Pago") adjuntando el número de referencia.</p>
         <p>Nuestro equipo verificará la transacción y activará los límites de tu <strong>Plan {plan_name}</strong> en tiempo récord.</p>
         
         <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 40px 0 20px 0;" />

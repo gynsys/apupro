@@ -107,7 +107,7 @@ const TabNavigation = ({ activeTab, onTabChange }) => {
             type="number"
             value={currentCostos?.porcentajeUtilidad ?? 0}
             onChange={(e) => handleCostoChange('porcentajeUtilidad', e.target.value)}
-            className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="w-14 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 text-center hide-spinners focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
         </div>
         <div className="flex flex-col">
@@ -116,7 +116,7 @@ const TabNavigation = ({ activeTab, onTabChange }) => {
             type="number"
             value={currentCostos?.porcentajeAdministracion ?? 0}
             onChange={(e) => handleCostoChange('porcentajeAdministracion', e.target.value)}
-            className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="w-14 px-2 py-1.5 text-center hide-spinners bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
         </div>
         <div className="flex flex-col">
@@ -125,7 +125,7 @@ const TabNavigation = ({ activeTab, onTabChange }) => {
             type="number"
             value={currentCostos?.iva ?? 0}
             onChange={(e) => handleCostoChange('iva', e.target.value)}
-            className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="w-14 px-2 py-1.5 text-center hide-spinners bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
         </div>
         <div className="flex flex-col">
@@ -134,7 +134,7 @@ const TabNavigation = ({ activeTab, onTabChange }) => {
             type="number"
             value={currentCostos?.fcas ?? 0}
             onChange={(e) => handleCostoChange('fcas', e.target.value)}
-            className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+            className="w-14 px-2 py-1.5 text-center hide-spinners bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
           />
         </div>
         <button
