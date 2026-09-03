@@ -67,6 +67,9 @@ def update_user(user_id: int, user_data: UserUpdateRequest, current_user = Depen
             # If changing to a new plan, set the logic
             if user.plan != user_data.plan and user_data.plan != "free":
                 from datetime import datetime, timedelta
+                from app.services.email import send_plan_activated_email
+                import threading
+                threading.Thread(target=send_plan_activated_email, args=(user.email, user_data.plan, user_data.test_mode)).start()
                 # Modo prueba: expira en 5 minutos para probar alertas
                 if user_data.test_mode:
                     user.plan_expires_at = datetime.utcnow() + timedelta(minutes=5)

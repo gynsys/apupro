@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 
 export default function ReportPaymentModal({ isOpen, onClose }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { token } = useContext(AuthContext);
   const [success, setSuccess] = useState(false);
   const [form, setForm] = useState({
     plan: 'Profesional',
@@ -14,7 +15,7 @@ export default function ReportPaymentModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!form.reference || !form.file) {
@@ -24,12 +25,33 @@ export default function ReportPaymentModal({ isOpen, onClose }) {
 
     setIsSubmitting(true);
     
-    // Simular el envío al servidor
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const formData = new FormData();
+      formData.append('plan', form.plan);
+      formData.append('method', form.method);
+      formData.append('reference', form.reference);
+      formData.append('file', form.file);
+
+      const response = await fetch(`${API_URL}/api/v1/payments/report`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al enviar el reporte');
+      }
+
       setSuccess(true);
       toast.success('¡Pago reportado exitosamente!');
-    }, 2000);
+    } catch (err) {
+      toast.error('Ocurrió un error al reportar el pago.');
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

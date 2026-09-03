@@ -271,3 +271,40 @@ def send_payment_instructions_email(user_email: str, plan_name: str):
     return send_email(user_email, subject, html_content)
 
 
+
+
+def send_plan_activated_email(user_email: str, plan_name: str, is_test_mode: bool = False):
+    subject = f"¡Tu Plan {plan_name} ha sido ACTIVADO exitosamente! 🎉"
+    
+    html_content = f"""
+    <html>
+      <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #334155; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="color: #16a34a; font-size: 24px; margin-bottom: 5px;">¡Plan Activado!</h2>
+            <p style="font-size: 16px; color: #64748b; margin-top: 0;">Tu cuenta ha sido actualizada al <strong>Plan {plan_name}</strong></p>
+        </div>
+
+        <p>¡Buenas noticias! Hemos verificado tu pago y tu cuenta ya cuenta con todos los límites desbloqueados.</p>
+        
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 25px 0;">
+            <h3 style="margin-top: 0; color: #0f172a; font-size: 18px;">¿Qué incluye tu plan?</h3>
+            <ul style="margin: 0; padding-left: 20px; color: #334155;">
+                <li style="margin-bottom: 8px;">Acceso sin límites al <strong>Generador de Partidas con Inteligencia Artificial</strong></li>
+                <li style="margin-bottom: 8px;">Límites de Presupuestos y Partidas ampliados a nivel {plan_name}</li>
+                <li style="margin-bottom: 8px;">Soporte prioritario</li>
+            </ul>
+        </div>
+        
+        <p>Inicia sesión en la plataforma para comenzar a disfrutar de todas estas herramientas.</p>
+        
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 40px 0 20px 0;" />
+        <p style="font-size: 13px; color: #94a3b8; text-align: center;">Gracias por confiar en el equipo de CostBase.</p>
+      </body>
+    </html>
+    """
+    
+    try:
+        return send_email(user_email, subject, html_content)
+    except Exception as e:
+        logger.error(f"No se pudo enviar correo de activacion de plan a {user_email}: {e}")
+        return False
