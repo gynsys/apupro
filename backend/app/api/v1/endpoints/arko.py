@@ -514,6 +514,8 @@ class ArkoMeResponse(BaseModel):
     max_budgets: Optional[int] = None
     max_items_per_budget: Optional[int] = None
     has_ai_access: bool
+    max_ai_apus: Optional[int] = 0
+    ai_apus_generated: Optional[int] = 0
     costos_config: CostosConfigSchema
 
     class Config:

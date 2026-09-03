@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { API_URL } from '../services/api';
+import { AuthContext } from '../context/AuthContext';
 import { X, Receipt, UploadCloud, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 

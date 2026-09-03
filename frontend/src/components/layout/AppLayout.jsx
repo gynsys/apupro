@@ -190,6 +190,15 @@ export default function AppLayout() {
         {/* Right controls */}
         {isAuthenticated ? (
           <div className="flex items-center gap-0.5">
+            {user?.plan !== 'free' && user?.has_ai_access && (
+              <div 
+                className={`px-3 py-1.5 rounded-full text-xs font-bold mr-3 border flex items-center gap-1.5 transition-colors ${user?.ai_apus_generated >= user?.max_ai_apus ? 'bg-red-50 text-red-600 border-red-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'}`}
+                title={`Has generado ${user?.ai_apus_generated || 0} de ${user?.max_ai_apus || 0} APUs en tu plan ${user?.plan}`}
+              >
+                <Cpu size={14} className={user?.ai_apus_generated >= user?.max_ai_apus ? 'text-red-500' : 'text-indigo-500'} />
+                <span>IA: {user?.ai_apus_generated || 0} / {user?.max_ai_apus || 0}</span>
+              </div>
+            )}
             <NotificationBell />
             <button
               onClick={() => navigate('/budgets')}
