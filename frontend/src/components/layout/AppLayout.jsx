@@ -8,6 +8,7 @@ import { FaTools } from 'react-icons/fa';
 import { AuthContext } from '../../context/AuthContext';
 import { UserCostosProvider, useUserCostos } from '../../context/UserCostosContext';
 import toast from 'react-hot-toast';
+import SubscriptionRequestModal from '../SubscriptionRequestModal';
 
 const NAV_ITEMS = [
   { name: 'Presupuestos', href: '/budgets',           Icon: FileText },
@@ -23,6 +24,7 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useContext(AuthContext);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -94,9 +96,30 @@ export default function AppLayout() {
             <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
           </div>
         </div>
+
+        {/* Separator to push the next item to bottom */}
+        <div className="flex-1"></div>
+
+        {/* Botón Mi Plan / Premium */}
+        <div className="group relative w-full flex justify-center mt-auto pb-4">
+          <button
+            onClick={() => {
+              setSidebarOpen(false);
+              setShowSubscriptionModal(true);
+            }}
+            className="flex items-center justify-center p-3 rounded-xl transition-all duration-200 text-slate-500 hover:bg-[#FEF3C7] hover:text-slate-800"
+          >
+            <div className="p-1.5 rounded-lg border-2 border-transparent hover:border-amber-400 transition-colors">
+              <span className="text-2xl">👑</span>
+            </div>
+          </button>
+          {/* Tooltip */}
+          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
+            Mi Plan / Reportar Pago
+            <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
+          </div>
+        </div>
       </div>
-
-
     </nav>
   );
 
@@ -233,6 +256,13 @@ export default function AppLayout() {
         </main>
 
       </div>
+      
+      {/* Modals Globales */}
+      <SubscriptionRequestModal 
+        isOpen={showSubscriptionModal} 
+        onClose={() => setShowSubscriptionModal(false)}
+        limitType="manual"
+      />
     </div>
   );
 }

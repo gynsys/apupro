@@ -182,3 +182,72 @@ def send_subscription_request_email(user_email: str, plan_name: str):
     # Enviar correo al equipo de soporte
     return send_email(support_email, subject, html_content)
 
+
+def send_payment_instructions_email(user_email: str, plan_name: str):
+    """Envía un correo al usuario con las instrucciones de pago"""
+    subject = f"Instrucciones para activar tu Plan {plan_name} en CostBase 🚀"
+    
+    # URL of logos
+    bdv_logo = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Banco_de_Venezuela_logo.svg/512px-Banco_de_Venezuela_logo.svg.png"
+    binance_logo = "https://public.bnbstatic.com/20190405/eb2349c3-b2f8-4a93-a286-8f86a62ea9d8.png"
+
+    html_content = f"""
+    <html>
+      <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #334155; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="color: #1A6BB5; font-size: 24px; margin-bottom: 5px;">¡Excelente elección!</h2>
+            <p style="font-size: 16px; color: #64748b; margin-top: 0;">Hemos recibido tu solicitud para el <strong>Plan {plan_name}</strong></p>
+        </div>
+
+        <p>Estás a un paso de desbloquear el poder de la Inteligencia Artificial y no tener límites en tus presupuestos.</p>
+        <p>Para completar la activación de tu plan, por favor realiza el pago a través de cualquiera de los siguientes métodos:</p>
+
+        <!-- PAGO MOVIL -->
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 25px 0;">
+            <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                <img src="{bdv_logo}" alt="BDV" width="30" style="margin-right: 15px; border-radius: 4px;" />
+                <h3 style="margin: 0; color: #0f172a; font-size: 18px;">Pago Móvil (Banco de Venezuela)</h3>
+            </div>
+            <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>Banco:</strong> 0102 (Banco de Venezuela)</p>
+            <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>C.I:</strong> V-13.409.534</p>
+            <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>Teléfono:</strong> 0412-9972355</p>
+        </div>
+
+        <!-- TRANSFERENCIA -->
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 25px 0;">
+            <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                <img src="{bdv_logo}" alt="BDV" width="30" style="margin-right: 15px; border-radius: 4px;" />
+                <h3 style="margin: 0; color: #0f172a; font-size: 18px;">Transferencia Bancaria</h3>
+            </div>
+            <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>Banco:</strong> Banco de Venezuela</p>
+            <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>Cuenta:</strong> 0102 0278 7300 0005 2456</p>
+            <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>Titular:</strong> Pablo Emilio Milano Carrillo</p>
+            <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>C.I:</strong> V-13.409.534</p>
+        </div>
+
+        <!-- BINANCE -->
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 25px 0;">
+            <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                <img src="{binance_logo}" alt="Binance" width="30" style="margin-right: 15px;" />
+                <h3 style="margin: 0; color: #0f172a; font-size: 18px;">Binance (USDT)</h3>
+            </div>
+            <p style="margin: 5px 0; font-size: 15px;"><strong>Red:</strong> TRON (TRC20)</p>
+            <p style="margin: 5px 0; font-family: monospace; font-size: 14px; word-break: break-all; background: #e2e8f0; padding: 8px; border-radius: 6px;">
+                TLDu8tGVfmydYVTCqefgsxrhwQ8H2tMgGs
+            </p>
+        </div>
+
+        <h3 style="color: #0f172a;">📩 Siguiente Paso: Reportar Pago</h3>
+        <p>Una vez realizado el pago, por favor <strong>responde directamente a este correo</strong> adjuntando el comprobante o captura de pantalla de la transacción.</p>
+        <p>Nuestro equipo verificará la transacción y activará los límites de tu <strong>Plan {plan_name}</strong> en tiempo récord.</p>
+        
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 40px 0 20px 0;" />
+        <p style="font-size: 13px; color: #94a3b8; text-align: center;">Gracias por confiar en el equipo de CostBase.</p>
+      </body>
+    </html>
+    """
+    
+    # Enviar correo al usuario
+    return send_email(user_email, subject, html_content)
+
+

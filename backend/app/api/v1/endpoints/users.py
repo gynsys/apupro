@@ -6,7 +6,7 @@ from app.db.arko_base import ArkoSessionLocal
 from app.db.models.arko import ArkoAdmin
 from app.api.v1.endpoints.arko import get_current_arko_admin
 
-from app.services.email import send_subscription_request_email
+from app.services.email import send_subscription_request_email, send_payment_instructions_email
 
 router = APIRouter()
 
@@ -228,9 +228,14 @@ def delete_user(user_id: int, current_user = Depends(get_current_arko_admin)):
 def request_subscription(request: SubscriptionRequest, current_user = Depends(get_current_arko_admin)):
     """El usuario solicita información o adquirir un plan"""
     try:
-        success = send_subscription_request_email(current_user.email, request.plan_name)
-        if not success:
-            raise HTTPException(status_code=500, detail="Error al enviar la solicitud")
-        return {"status": "success", "message": f"Solicitud de plan {request.plan_name} enviada"}
+        # Correo al Superadmin
+        success_admin = send_subscription_request_email(current_user.email, request.plan_name)
+        # Correo al Usuario con los datos de pago
+        success_user = send_payment_instructions_email(current_user.email, request.plan_name)
+        
+        if not success_admin and not success_user:
+            raise HTTPException(status_code=500, detail="Error al enviar los correos de solicitud")
+            
+        return {"status": "success", "message": f"Solicitud de plan {request.plan_name} enviada y correo con datos de pago enviado al usuario."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
