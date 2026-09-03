@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { 
   ArrowLeft, Settings, Plus, Search, Layers, FileText, Printer,
-  DollarSign, Hash, Percent, Loader, X, Trash2, ArrowUp, ArrowDown, FolderPlus, RefreshCw, ChevronDown, Database, GripVertical, Download
+  DollarSign, Hash, Percent, Loader, X, Trash2, ArrowUp, ArrowDown, FolderPlus, RefreshCw, ChevronDown, Database, GripVertical, Download, Calculator
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { toast } from 'react-hot-toast';
@@ -36,6 +36,93 @@ const ExcelIcon = ({ size = 20, className = "" }) => (
     <path d="M14.5 12L9.5 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
+
+function MathQuantityInput({ value, onChange, onSave, className }) {
+  const [localVal, setLocalVal] = useState(value ?? 0);
+  const [isFocused, setIsFocused] = useState(false);
+  const [previewVal, setPreviewVal] = useState(null);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setLocalVal(value ?? 0);
+    }
+  }, [value, isFocused]);
+
+  const evaluateExpression = (expr) => {
+    if (expr === '' || expr === null || expr === undefined) return 0;
+    const str = String(expr).replace(/,/g, '.').trim();
+    if (!/^[\d\s+\-*/().]+$/.test(str)) return null;
+    try {
+      const res = Function(`"use strict"; return (${str})`)();
+      if (typeof res === 'number' && !isNaN(res) && isFinite(res)) {
+        return Math.max(0, Math.round(res * 10000) / 10000);
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  };
+
+  const handleInputChange = (e) => {
+    const text = e.target.value;
+    setLocalVal(text);
+
+    if (/[+\-*/()]/.test(text)) {
+      const evalRes = evaluateExpression(text);
+      setPreviewVal(evalRes);
+    } else {
+      setPreviewVal(null);
+    }
+  };
+
+  const handleCommit = () => {
+    setIsFocused(false);
+    setPreviewVal(null);
+
+    const evaluated = evaluateExpression(localVal);
+    if (evaluated !== null) {
+      setLocalVal(evaluated);
+      if (onChange) onChange(evaluated);
+      if (onSave) onSave(evaluated);
+    } else {
+      setLocalVal(value ?? 0);
+      if (localVal && String(localVal).trim() !== '' && String(localVal).trim() !== String(value)) {
+        toast.error('Fórmula no válida. Se conservó el valor anterior.', { id: 'math-err', duration: 2000 });
+      }
+    }
+  };
+
+  return (
+    <div className="relative inline-flex items-center justify-end w-full">
+      <input
+        type="text"
+        value={localVal}
+        onFocus={() => setIsFocused(true)}
+        onChange={handleInputChange}
+        onBlur={handleCommit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            e.target.blur();
+          } else if (e.key === 'Escape') {
+            setLocalVal(value ?? 0);
+            setIsFocused(false);
+            setPreviewVal(null);
+            e.target.blur();
+          }
+        }}
+        title="Admite fórmulas matemáticas: ej. 12.5 * 3, (4.5+3.2)*2.6, 100/4. Pulsa Enter para resolver."
+        className={className}
+      />
+      {isFocused && previewVal !== null && (
+        <div className="absolute right-0 bottom-full mb-1.5 bg-slate-900 text-amber-300 text-[11px] font-mono font-bold px-2 py-0.5 rounded-lg shadow-xl z-30 pointer-events-none whitespace-nowrap flex items-center gap-1 border border-slate-700 animate-in fade-in zoom-in-95">
+          <span className="text-slate-400">=</span>
+          <span>{previewVal.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function BudgetWorksheetPage() {
   const { id } = useParams();
@@ -652,9 +739,29 @@ export default function BudgetWorksheetPage() {
                   <th className="p-4 w-16 text-center bg-slate-50 border-b border-slate-200">#</th>
                   <th className="p-4 w-32 bg-slate-50 border-b border-slate-200">Código</th>
                   <th className="p-4 bg-slate-50 border-b border-slate-200">Descripción</th>
-                  <th className="p-4 w-20 text-center bg-slate-50 border-b border-slate-200">Und</th>
-                  <th className="p-4 w-28 text-right bg-slate-50 border-b border-slate-200">Cantidad</th>
-                  <th className="p-4 w-32 text-right bg-slate-50 border-b border-slate-200">Precio Unit.</th>
+                  <th className="p-4 w-32 text-right bg-slate-50 border-b border-slate-200">
+                    <div className="flex items-center justify-end gap-1.5 group/th relative cursor-help">
+                      <span>Cantidad</span>
+                      <Calculator size={13} className="text-amber-600 hover:text-amber-700 transition-colors shrink-0" />
+                      
+                      {/* Tooltip flotante */}
+                      <div className="absolute bottom-full right-0 mb-2 hidden group-hover/th:flex flex-col w-64 p-3 bg-slate-900 text-white text-[11px] rounded-xl shadow-2xl z-50 pointer-events-none normal-case font-normal leading-relaxed border border-slate-700 animate-in fade-in zoom-in-95">
+                        <div className="flex items-center gap-1.5 font-bold text-amber-300 pb-1.5 border-b border-slate-700">
+                          <Calculator size={13} />
+                          <span>Fórmulas directas (Tipo ETABS)</span>
+                        </div>
+                        <p className="mt-1.5 text-slate-300 text-[11px]">
+                          Puedes escribir operaciones matemáticas básicas directamente:
+                        </p>
+                        <div className="mt-1.5 font-mono text-[10px] text-amber-200 bg-slate-800/90 p-2 rounded-lg space-y-1">
+                          <div>• 12.5 * 3</div>
+                          <div>• (4.5 + 3.2) * 2.60</div>
+                          <div>• 100 / 4 + 15</div>
+                        </div>
+                        <span className="text-[10px] text-slate-400 mt-1.5 italic">Pulsa Enter o sal del campo para resolver automáticamente.</span>
+                      </div>
+                    </div>
+                  </th>
                   <th className="p-4 w-32 text-right bg-slate-50 border-b border-slate-200">Total</th>
                   <th className="p-4 w-32 text-center bg-slate-50 border-b border-slate-200">Acciones</th>
                 </tr>
@@ -769,19 +876,11 @@ export default function BudgetWorksheetPage() {
                                     </td>
                                     <td className="p-4 text-center text-sm font-medium text-slate-500">{item.unit}</td>
                                     <td className="p-4 text-right" onClick={e => e.stopPropagation()}>
-                                      <input 
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        className="w-24 text-right bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                      <MathQuantityInput 
+                                        className="w-28 text-right bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none transition-colors font-mono text-sm font-semibold text-slate-800"
                                         value={item.quantity}
-                                        onChange={e => handleQuantityChange(item.id, e.target.value)}
-                                        onBlur={e => saveQuantity(item.id, e.target.value)}
-                                        onKeyDown={e => {
-                                          if (e.key === 'Enter') {
-                                            e.target.blur();
-                                          }
-                                        }}
+                                        onChange={val => handleQuantityChange(item.id, val)}
+                                        onSave={val => saveQuantity(item.id, val)}
                                       />
                                     </td>
                                     <td className="p-4 text-right text-sm font-medium text-slate-700">
