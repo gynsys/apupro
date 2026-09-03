@@ -32,6 +32,7 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+from app.services.ai_search import ai_engine
 import asyncio
 from app.api.v1.endpoints.users import process_plan_expirations
 from app.db.models.arko import ArkoAdmin
