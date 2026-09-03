@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, Copy, Database } from 'lucide-react';
+import { Plus, X, Copy, Database, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SiteConfigContext } from '../../../App';
 import { useAdminConfig } from '../hooks/useAdminConfig';
@@ -242,6 +242,19 @@ const AdminDatabasePage = () => {
               </div>
             </>
           )}
+
+          <button
+            onClick={() => setActiveTab('usuarios')}
+            className={`text-xs font-semibold px-3 py-1.5 rounded-lg border shadow-sm transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              activeTab === 'usuarios'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-blue-600'
+            }`}
+            title="Gestión de usuarios y suscripciones"
+          >
+            <Users size={14} />
+            <span>Usuarios</span>
+          </button>
         </div>
         <div className="flex gap-4 items-center">
           <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">

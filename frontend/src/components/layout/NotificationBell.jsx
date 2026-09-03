@@ -4,7 +4,7 @@ import { AuthContext } from '../../context/AuthContext';
 import { API_URL } from '../../services/api';
 
 export default function NotificationBell() {
-  const { token } = useContext(AuthContext); // Se usa useContext en lugar de useAuth porque no estaba exportado
+  const { token, isAuthenticated } = useContext(AuthContext);
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -15,12 +15,19 @@ export default function NotificationBell() {
 
   // Función para obtener notificaciones con manejo de concurrencia
   const fetchNotifications = useCallback(async () => {
-    if (!token) return;
+    if (!isAuthenticated) return;
     const currentFetchId = ++fetchIdRef.current;
     setLoading(true);
     try {
+      const storedToken = token || localStorage.getItem('token') || localStorage.getItem('access_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (storedToken) {
+        headers['Authorization'] = `Bearer ${storedToken}`;
+      }
+
       const res = await fetch(`${API_URL}/notifications/`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers,
+        credentials: 'include'
       });
       if (res.ok && currentFetchId === fetchIdRef.current) {
         const data = await res.json();
@@ -40,7 +47,7 @@ export default function NotificationBell() {
         setLoading(false);
       }
     }
-  }, [token]);
+  }, [token, isAuthenticated]);
 
   // Efecto para cargar notificaciones al inicio y configurar polling
   useEffect(() => {
@@ -92,9 +99,14 @@ export default function NotificationBell() {
   const handleMarkAsRead = async (id, e) => {
     if (e) e.stopPropagation();
     try {
+      const storedToken = token || localStorage.getItem('token') || localStorage.getItem('access_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (storedToken) headers['Authorization'] = `Bearer ${storedToken}`;
+
       const res = await fetch(`${API_URL}/notifications/${id}/read`, {
         method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers,
+        credentials: 'include'
       });
       if (res.ok) {
         setNotifications(prev => {
@@ -114,9 +126,14 @@ export default function NotificationBell() {
   // Marcar todas como leídas
   const handleMarkAllAsRead = async () => {
     try {
+      const storedToken = token || localStorage.getItem('token') || localStorage.getItem('access_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (storedToken) headers['Authorization'] = `Bearer ${storedToken}`;
+
       const res = await fetch(`${API_URL}/notifications/read-all`, {
         method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers,
+        credentials: 'include'
       });
       if (res.ok) {
         setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));

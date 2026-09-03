@@ -8,5 +8,4 @@ export const TABS = [
   { key: 'scraping',   label: 'Scraping',        Icon: FiCpu   },
   { key: 'pdfs',       label: 'Update PDFs',      Icon: FiFileText },
   { key: 'prompt',     label: 'Prompt IA - APU', Icon: FiCpu   },
-  { key: 'usuarios',   label: 'Usuarios',        Icon: FiUsers },
 ];

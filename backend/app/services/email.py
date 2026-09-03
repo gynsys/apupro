@@ -322,8 +322,6 @@ def send_database_published_email(to_email: str, db_name: str, frequency: str, p
     else:
         freq_text = "actualización mensual"
 
-    frontend_base_url = getattr(settings, "FRONTEND_URL", "https://costbase.net")
-
     html_content = f"""
     <html>
       <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #334155; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -344,13 +342,7 @@ def send_database_published_email(to_email: str, db_name: str, frequency: str, p
             </ul>
         </div>
 
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="{frontend_base_url}/cost360/databases" style="background-color: #0284c7; color: #ffffff; padding: 12px 28px; font-weight: bold; text-decoration: none; border-radius: 8px; display: inline-block;">
-                Explorar Base de Datos
-            </a>
-        </div>
-
-        <p style="font-size: 14px; color: #64748b;">Puedes seleccionarla directamente en el creador de presupuestos o consultar sus partidas en el módulo Cost360.</p>
+        <p style="font-size: 14px; color: #64748b; margin-top: 20px;">Puedes seleccionarla directamente en el creador de presupuestos o consultar sus partidas en el módulo Cost360.</p>
 
         <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 40px 0 20px 0;" />
         <p style="font-size: 13px; color: #94a3b8; text-align: center;">El equipo de CostBase.</p>
