@@ -6,11 +6,12 @@ import { useGoogleLogin } from '@react-oauth/google';
 import toast from 'react-hot-toast';
 
 export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('costbase_remember_email') || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem('costbase_remember_email'));
   
   const [view, setView] = useState('login'); // 'login' | 'verify' | 'forgotPassword' | 'resetPassword'
   const [code, setCode] = useState('');
@@ -123,6 +124,11 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
 
     const result = await login(email, password, false);
     if (result.success) {
+      if (rememberMe) {
+        localStorage.setItem('costbase_remember_email', email);
+      } else {
+        localStorage.removeItem('costbase_remember_email');
+      }
       navigate('/budgets');
       onClose();
     } else {
@@ -347,7 +353,20 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
                 </div>
               </div>
               
-              <div className="flex items-center justify-end">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-4 w-4 text-[#1A6BB5] focus:ring-[#1A6BB5] border-gray-300 rounded cursor-pointer"
+                  />
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900 cursor-pointer select-none">
+                    Recuérdame
+                  </label>
+                </div>
                 <div className="text-sm">
                   <button type="button" onClick={() => { setView('forgotPassword'); setError(''); }} className="font-medium text-[#1A6BB5] hover:text-[#134F8A]">
                     ¿Olvidaste tu contraseña?
