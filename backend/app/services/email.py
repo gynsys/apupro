@@ -158,3 +158,27 @@ def send_backup_email(to_email: str, budget_name: str, backup_file_path: str, ba
     except Exception as e:
         logger.error(f"Error al enviar correo con backup a {to_email}: {str(e)}", exc_info=True)
         return False
+
+def send_subscription_request_email(user_email: str, plan_name: str):
+    """Envía un correo a soporte/admin notificando que un usuario quiere adquirir un plan"""
+    support_email = "costbaseia@gmail.com"
+    subject = f"🚀 Nueva solicitud de suscripción: {plan_name}"
+    html_content = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+        <h2 style="color: #1A6BB5;">¡Nueva Solicitud de Plan Premium!</h2>
+        <p>Un usuario ha alcanzado el límite de su cuenta demo y desea adquirir un plan pago.</p>
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <p style="margin: 0 0 10px 0;"><strong>Usuario (Email):</strong> {user_email}</p>
+            <p style="margin: 0;"><strong>Plan de Interés:</strong> {plan_name}</p>
+        </div>
+        <p>Por favor, contacta a este usuario lo antes posible para gestionar el pago y activarle su nuevo plan desde el panel de administración.</p>
+        <hr style="border: 0; border-top: 1px solid #eaeaea; margin: 30px 0;" />
+        <p style="font-size: 12px; color: #888;">El equipo de CostBase.</p>
+      </body>
+    </html>
+    """
+    
+    # Enviar correo al equipo de soporte
+    return send_email(support_email, subject, html_content)
+

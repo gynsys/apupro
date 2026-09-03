@@ -6,7 +6,12 @@ from app.db.arko_base import ArkoSessionLocal
 from app.db.models.arko import ArkoAdmin
 from app.api.v1.endpoints.arko import get_current_arko_admin
 
+from app.services.email import send_subscription_request_email
+
 router = APIRouter()
+
+class SubscriptionRequest(BaseModel):
+    plan_name: str
 
 class UserListResponse(BaseModel):
     id: int
@@ -218,3 +223,14 @@ def delete_user(user_id: int, current_user = Depends(get_current_arko_admin)):
         db.commit()
 
         return {"status": "success", "message": "Usuario eliminado exitosamente"}
+
+@router.post("/subscription-request")
+def request_subscription(request: SubscriptionRequest, current_user = Depends(get_current_arko_admin)):
+    """El usuario solicita información o adquirir un plan"""
+    try:
+        success = send_subscription_request_email(current_user.email, request.plan_name)
+        if not success:
+            raise HTTPException(status_code=500, detail="Error al enviar la solicitud")
+        return {"status": "success", "message": f"Solicitud de plan {request.plan_name} enviada"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
