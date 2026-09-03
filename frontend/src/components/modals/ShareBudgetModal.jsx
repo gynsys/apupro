@@ -99,20 +99,20 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg bg-amber-50/95 border-2 border-amber-400 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Encabezado con paleta ámbar */}
-        <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-4 flex items-center justify-between text-white shadow-sm">
+        {/* Encabezado con color #B5DCB0 */}
+        <div className="px-6 py-4 flex items-center justify-between shadow-sm" style={{ backgroundColor: '#B5DCB0' }}>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-700/30 rounded-xl">
-              <Share2 size={20} className="text-white" />
+            <div className="p-2 bg-white/40 text-[#143d1a] rounded-xl">
+              <Share2 size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Compartir Presupuesto</h2>
-              <p className="text-xs text-amber-100">Portabilidad y clonación rápida en la nube</p>
+              <h2 className="text-lg font-bold text-[#143d1a]">Compartir Presupuesto</h2>
+              <p className="text-xs text-[#1e5229]">Portabilidad y clonación rápida en la nube</p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="text-amber-100 hover:text-white p-1 rounded-lg hover:bg-amber-700/30 transition-colors"
+            className="text-[#1e5229] hover:text-[#0d2a13] p-1 rounded-lg hover:bg-black/5 transition-colors"
           >
             <X size={20} />
           </button>
@@ -156,10 +156,11 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
                 />
                 <button
                   onClick={handleCopy}
-                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md ${
+                  style={!copied ? { backgroundColor: '#B5DCB0' } : {}}
+                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 ${
                     copied 
                       ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                      : 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-600/20 active:scale-95'
+                      : 'text-[#143d1a] hover:brightness-95 border border-[#9ecc98]'
                   }`}
                   title="Copiar enlace"
                 >

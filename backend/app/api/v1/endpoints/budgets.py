@@ -1063,38 +1063,59 @@ def get_shared_budget_preview(
             owner_name = getattr(owner, "name", None) or owner.email
 
     items = db.query(BudgetItem).filter(BudgetItem.budget_id == budget.id).all()
-    items_count = len(items)
+    items_count = len([i for i in items if not getattr(i, "is_chapter", False)])
 
-    total_amount = 0.0
-    mat_inf = budget.material_inflation or 0.0
-    lab_inf = budget.labor_inflation or 0.0
-    eq_inf = budget.equipment_inflation or 0.0
-    fcas = budget.fcas_percent or 0.0
-    bonus = budget.labor_bonus or 0.0
+    ex_rate = (budget.exchange_rate or 1.0) if budget.currency == "BS" else 1.0
+    fcas_percent = budget.fcas_percent if budget.fcas_percent is not None else 417.0
+    admin_percent = budget.admin_percent if budget.admin_percent is not None else 15.0
+    profit_percent = budget.profit_percent if budget.profit_percent is not None else 10.0
+    iva_percent = budget.iva_percent if budget.iva_percent is not None else 16.0
+
+    subtotal_presupuesto = 0.0
 
     for it in items:
         if getattr(it, "is_chapter", False):
             continue
-        qty = it.quantity or 0.0
-        rend = it.performance or 1.0
-        if rend <= 0:
-            rend = 1.0
+        qty = float(it.quantity or 0.0)
+        perf = float(it.performance or 1.0)
+        if perf <= 0:
+            perf = 1.0
 
-        mat_sum = sum((m.cantidad or 0.0) * (m.precio_unitario or 0.0) * (1 + (m.desperdicio or 0.0) / 100.0) for m in it.materials)
-        mat_sum *= (1 + mat_inf / 100.0)
+        mat_cost = 0.0
+        for m in it.materials:
+            q = float(m.cantidad or 0.0)
+            w = float(m.desperdicio or 0.0)
+            p = float(m.precio_unitario or 0.0) * ex_rate
+            mat_cost += (q * (1.0 + w / 100.0) * p)
 
-        eq_sum = sum((e.cantidad or 0.0) * (e.precio_unitario or 0.0) * (1 + (e.depreciacion or 0.0) / 100.0) for e in it.equipments)
-        eq_sum *= (1 + eq_inf / 100.0)
+        eq_day = 0.0
+        for e in it.equipments:
+            q = float(e.cantidad or 0.0)
+            d = float(e.depreciacion if e.depreciacion is not None else 1.0)
+            p = float(e.precio_unitario or 0.0) * ex_rate
+            eq_day += (q * d * p)
+        eq_cost = eq_day / perf
 
-        lab_sum = sum((l.cantidad or 0.0) * (((l.jornal or 0.0) * (1 + fcas / 100.0)) + (l.bono or bonus or 0.0)) for l in it.labors)
-        lab_sum *= (1 + lab_inf / 100.0)
+        tot_jornal = 0.0
+        tot_bono = 0.0
+        for l in it.labors:
+            q = float(l.cantidad or 0.0)
+            j = float(l.jornal or 0.0) * ex_rate
+            b = float(l.bono or 0.0) * ex_rate
+            tot_jornal += (q * j)
+            tot_bono += (q * b)
 
-        costo_unitario = (mat_sum + eq_sum + (lab_sum / rend))
-        total_amount += (costo_unitario * qty)
+        fcas_monto = tot_jornal * (fcas_percent / 100.0)
+        lab_cost = (tot_jornal + tot_bono + fcas_monto) / perf
 
-    total_amount *= (1 + (budget.admin_percent or 0.0) / 100.0)
-    total_amount *= (1 + (budget.profit_percent or 0.0) / 100.0)
-    total_amount *= (1 + (budget.iva_percent or 0.0) / 100.0)
+        subtotal = mat_cost + eq_cost + lab_cost
+        subtotal_b = subtotal + (subtotal * (admin_percent / 100.0))
+        pu = subtotal_b + (subtotal_b * (profit_percent / 100.0))
+
+        subtotal_presupuesto += (pu * qty)
+
+    iva_amount = subtotal_presupuesto * (iva_percent / 100.0)
+    total_amount = subtotal_presupuesto + iva_amount
 
     is_own_budget = (str(current_user.id) == str(budget.user_id)) if current_user else False
 
@@ -1130,7 +1151,7 @@ def import_shared_budget(
     if not source_budget:
         raise HTTPException(status_code=404, detail="Presupuesto no encontrado o el enlace ha sido revocado")
 
-    check_budget_limit(current_user.email, db)
+    check_budget_limit(current_user)
 
     try:
         new_budget = Budget(

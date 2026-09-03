@@ -128,17 +128,17 @@ export default function SharedBudgetPage() {
           /* Tarjeta principal con la paleta ámbar */
           <div className="bg-amber-50/95 border-2 border-amber-400 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
             
-            {/* Header del Presupuesto Compartido */}
-            <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-8 py-6 text-white flex items-center justify-between">
+            {/* Header del Presupuesto Compartido con color #B5DCB0 */}
+            <div className="px-8 py-6 flex items-center justify-between shadow-sm" style={{ backgroundColor: '#B5DCB0' }}>
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-amber-700/30 rounded-2xl shadow-inner">
-                  <FileText size={28} className="text-white" />
+                <div className="p-3 bg-white/40 text-[#143d1a] rounded-2xl shadow-sm">
+                  <FileText size={28} />
                 </div>
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-amber-100 block">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#1e5229] block">
                     Presupuesto Compartido
                   </span>
-                  <h1 className="text-2xl font-bold text-white tracking-tight mt-0.5">
+                  <h1 className="text-2xl font-bold text-[#143d1a] tracking-tight mt-0.5">
                     {preview.name}
                   </h1>
                 </div>
@@ -208,11 +208,12 @@ export default function SharedBudgetPage() {
                 </div>
               </div>
 
-              {/* Botón de importación principal */}
+              {/* Botón de importación principal con color #B5DCB0 */}
               <button
                 onClick={handleImport}
                 disabled={importing}
-                className="w-full py-3.5 px-6 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white text-base font-bold rounded-2xl shadow-xl shadow-amber-600/30 hover:shadow-2xl hover:shadow-amber-600/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: '#B5DCB0' }}
+                className="w-full py-3.5 px-6 text-[#143d1a] hover:brightness-95 text-base font-bold rounded-2xl shadow-xl shadow-[#B5DCB0]/30 hover:shadow-2xl hover:shadow-[#B5DCB0]/40 border border-[#9ecc98] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {importing ? (
                   <>
