@@ -42,7 +42,7 @@ class Settings(BaseSettings):
         return v
     
     # URLs
-    FRONTEND_URL: str = "https://www.gynsys.net"
+    FRONTEND_URL: str = "https://www.costbase.net"
     BACKEND_URL: str = "https://api.gynsys.net"
 
     # Resend Email Configuration

@@ -473,6 +473,26 @@ def get_current_arko_admin(
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
         return user
 
+
+def get_optional_arko_admin(
+    request: Request,
+    bearer_token: Optional[str] = Depends(oauth2_scheme_arko),
+    arko_admin_token: Optional[str] = Cookie(default=None),
+) -> Optional["ArkoAdmin"]:
+    token = arko_admin_token or bearer_token
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        email: str = payload.get("sub")
+        token_type: str = payload.get("type")
+        if email is None or token_type != "arko_admin":
+            return None
+        with get_db_session() as db:
+            return db.query(ArkoAdmin).filter(ArkoAdmin.email == email).first()
+    except Exception:
+        return None
+
 # --- Endpoints Privados (Para el Dashboard Arko) ---
 
 @router.post("/auth/test-email")

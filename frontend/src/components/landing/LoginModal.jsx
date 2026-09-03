@@ -1,13 +1,31 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { Eye, EyeOff, X } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import toast from 'react-hot-toast';
 
+const encodeStored = (str) => {
+  if (!str) return '';
+  try {
+    return btoa(encodeURIComponent(str));
+  } catch {
+    return str;
+  }
+};
+
+const decodeStored = (str) => {
+  if (!str) return '';
+  try {
+    return decodeURIComponent(atob(str));
+  } catch {
+    return '';
+  }
+};
+
 export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
   const [email, setEmail] = useState(() => localStorage.getItem('costbase_remember_email') || '');
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState(() => decodeStored(localStorage.getItem('costbase_remember_pass')));
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -19,6 +37,20 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
   
   const { login, loginWithGoogle } = useContext(AuthContext);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isOpen) {
+      const savedEmail = localStorage.getItem('costbase_remember_email') || '';
+      const savedPass = decodeStored(localStorage.getItem('costbase_remember_pass'));
+      if (savedEmail) {
+        setEmail(savedEmail);
+      }
+      if (savedPass) {
+        setPassword(savedPass);
+      }
+      setRememberMe(!!savedEmail && !!savedPass);
+    }
+  }, [isOpen]);
 
   const handleGoogleSuccess = async (tokenResponse) => {
     setIsLoading(true);
@@ -71,6 +103,13 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
       
       const result = await login(email, password, false);
       if (result.success) {
+        if (rememberMe) {
+          localStorage.setItem('costbase_remember_email', email);
+          localStorage.setItem('costbase_remember_pass', encodeStored(password));
+        } else {
+          localStorage.removeItem('costbase_remember_email');
+          localStorage.removeItem('costbase_remember_pass');
+        }
         navigate('/budgets');
         onClose();
       } else {
@@ -126,8 +165,10 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
     if (result.success) {
       if (rememberMe) {
         localStorage.setItem('costbase_remember_email', email);
+        localStorage.setItem('costbase_remember_pass', encodeStored(password));
       } else {
         localStorage.removeItem('costbase_remember_email');
+        localStorage.removeItem('costbase_remember_pass');
       }
       navigate('/budgets');
       onClose();
@@ -360,7 +401,14 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
                     name="remember-me"
                     type="checkbox"
                     checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
+                    onChange={(e) => {
+                      const isChecked = e.target.checked;
+                      setRememberMe(isChecked);
+                      if (!isChecked) {
+                        localStorage.removeItem('costbase_remember_email');
+                        localStorage.removeItem('costbase_remember_pass');
+                      }
+                    }}
                     className="h-4 w-4 text-[#1A6BB5] focus:ring-[#1A6BB5] border-gray-300 rounded cursor-pointer"
                   />
                   <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900 cursor-pointer select-none">

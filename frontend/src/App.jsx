@@ -119,6 +119,9 @@ function App() {
               <Route path="market-admin" element={<MarketAdminPage />} />
             </Route>
 
+            {/* RUTA DE VISTA PREVIA COMPARTIDA (Accesible con y sin sesión) */}
+            <Route path="/budgets/shared/:token" element={<SharedBudgetPage />} />
+
             {/* RUTAS DE PRESUPUESTOS (APP - Protegidas) */}
             <Route 
               path="/budgets" 
@@ -129,7 +132,6 @@ function App() {
               }
             >
               <Route index element={<BudgetHomePage />} />
-              <Route path="shared/:token" element={<SharedBudgetPage />} />
               <Route path=":id" element={<BudgetWorksheetPage />} />
               <Route path=":id/item/:itemId" element={<BudgetAPUEditorPage />} />
             </Route>

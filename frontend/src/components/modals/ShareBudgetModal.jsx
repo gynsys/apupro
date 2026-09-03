@@ -45,10 +45,18 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
     }
   };
 
+  const getFullShareUrl = () => {
+    if (shareData?.share_token) {
+      return `${window.location.origin}/budgets/shared/${shareData.share_token}`;
+    }
+    return shareData?.share_url || '';
+  };
+
   const handleCopy = async () => {
-    if (!shareData?.share_url) return;
+    const url = getFullShareUrl();
+    if (!url) return;
     try {
-      await navigator.clipboard.writeText(shareData.share_url);
+      await navigator.clipboard.writeText(url);
       setCopied(true);
       toast.success('¡Enlace copiado al portapapeles!');
       setTimeout(() => setCopied(false), 2500);
@@ -143,7 +151,7 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
                 <input
                   type="text"
                   readOnly
-                  value={shareData?.share_url || ''}
+                  value={getFullShareUrl()}
                   className="flex-1 bg-white border border-amber-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-mono select-all focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                 />
                 <button
@@ -192,9 +200,9 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
               >
                 Cerrar
               </button>
-              {shareData?.share_url && (
+              {getFullShareUrl() && (
                 <a
-                  href={shareData.share_url}
+                  href={getFullShareUrl()}
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center gap-1 text-xs font-bold text-amber-800 hover:text-amber-900 bg-amber-200/80 hover:bg-amber-200 px-3.5 py-2 rounded-xl transition-colors"

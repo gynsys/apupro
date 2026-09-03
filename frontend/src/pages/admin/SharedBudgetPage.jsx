@@ -1,20 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   FileText, Download, User, Calendar, DollarSign, 
-  Layers, ArrowLeft, Loader2, CheckCircle2, AlertCircle 
+  Layers, ArrowLeft, Loader2, CheckCircle2, AlertCircle, LogIn 
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { API_URL } from '../../services/api';
+import { AuthContext } from '../../context/AuthContext';
+import LoginModal from '../../components/landing/LoginModal';
 
 export default function SharedBudgetPage() {
   const { token } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useContext(AuthContext);
 
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -53,6 +57,10 @@ export default function SharedBudgetPage() {
 
   const handleImport = async () => {
     if (!token) return;
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
     setImporting(true);
     try {
       const storedToken = localStorage.getItem('token') || localStorage.getItem('access_token');
@@ -211,6 +219,11 @@ export default function SharedBudgetPage() {
                     <Loader2 size={20} className="animate-spin" />
                     <span>Importando y clonando presupuesto...</span>
                   </>
+                ) : !isAuthenticated ? (
+                  <>
+                    <LogIn size={20} />
+                    <span>Iniciar Sesión para Importar</span>
+                  </>
                 ) : (
                   <>
                     <Download size={20} />
@@ -224,6 +237,13 @@ export default function SharedBudgetPage() {
         ) : null}
 
       </div>
+
+      {showLoginModal && (
+        <LoginModal
+          isOpen={showLoginModal}
+          onClose={() => setShowLoginModal(false)}
+        />
+      )}
     </div>
   );
 }

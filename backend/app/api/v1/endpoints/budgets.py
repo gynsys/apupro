@@ -23,7 +23,7 @@ from app.schemas.budget import (
     BudgetAPUEquipmentBase, BudgetAPUEquipment, BudgetAPUEquipmentUpdate,
     BudgetAPULaborBase, BudgetAPULabor, BudgetAPULaborUpdate
 )
-from app.api.v1.endpoints.arko import get_current_arko_admin
+from app.api.v1.endpoints.arko import get_current_arko_admin, get_optional_arko_admin
 from app.services.encryption_service import encryption_service
 from app.services.email import send_backup_email
 from app.middleware.plan_limits import check_budget_limit, check_items_limit, check_ai_access
@@ -979,6 +979,7 @@ async def upload_budget_logo(budget_id: str, logo: UploadFile = File(...), db: S
 @router.post("/{budget_id}/share")
 def generate_share_link(
     budget_id: str,
+    request: Request,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_arko_admin)
 ) -> Dict[str, Any]:
@@ -998,7 +999,14 @@ def generate_share_link(
     db.commit()
     db.refresh(budget)
 
-    frontend_base_url = getattr(settings, "FRONTEND_URL", "https://costbase.net")
+    origin = request.headers.get("origin")
+    if origin and ("costbase.net" in origin or "localhost" in origin):
+        frontend_base_url = origin.rstrip("/")
+    else:
+        frontend_base_url = getattr(settings, "FRONTEND_URL", "https://www.costbase.net")
+        if "gynsys.net" in frontend_base_url:
+            frontend_base_url = "https://www.costbase.net"
+
     share_url = f"{frontend_base_url}/budgets/shared/{budget.share_token}"
 
     return {
@@ -1032,7 +1040,7 @@ def revoke_share_link(
 def get_shared_budget_preview(
     share_token: str,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_arko_admin)
+    current_user: Optional[ArkoAdmin] = Depends(get_optional_arko_admin)
 ) -> Dict[str, Any]:
     """Obtiene vista previa de un presupuesto compartido mediante su token."""
     if not share_token:
@@ -1088,7 +1096,7 @@ def get_shared_budget_preview(
     total_amount *= (1 + (budget.profit_percent or 0.0) / 100.0)
     total_amount *= (1 + (budget.iva_percent or 0.0) / 100.0)
 
-    is_own_budget = str(current_user.id) == str(budget.user_id)
+    is_own_budget = (str(current_user.id) == str(budget.user_id)) if current_user else False
 
     return {
         "id": budget.id,
