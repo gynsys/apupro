@@ -43,6 +43,9 @@ export default function SubscriptionRequestModal({ isOpen, onClose, limitType })
     if (limitType === 'apu') {
       return 'Has alcanzado el límite de generación de APUs con Inteligencia Artificial de tu cuenta demo.';
     }
+    if (limitType === 'manual') {
+      return 'Actualiza tu plan hoy para desbloquear herramientas avanzadas y quitar todos los límites.';
+    }
     return 'Has alcanzado el límite de tu cuenta demo.';
   };
 
