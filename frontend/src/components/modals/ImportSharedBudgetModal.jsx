@@ -24,7 +24,7 @@ export default function ImportSharedBudgetModal({ isOpen, onClose, onSuccess }) 
     if (!text) return '';
     const trimmed = text.trim();
     const match = trimmed.match(/cb_[a-zA-Z0-9_-]+/);
-    return match ? match[0] : trimmed;
+    return match ? match[0] : '';
   };
 
   const handleConsult = async (tokenToFetch) => {

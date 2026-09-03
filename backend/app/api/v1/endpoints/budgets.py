@@ -1194,34 +1194,33 @@ def import_shared_budget(
 
             for mat in s_item.materials:
                 new_mat = DBMaterial(
-                    item_id=new_item.id,
+                    budget_item_id=new_item.id,
                     codigo=mat.codigo,
                     descripcion=mat.descripcion,
                     unidad=mat.unidad,
                     precio_unitario=mat.precio_unitario,
                     cantidad=mat.cantidad,
-                    desperdicio=mat.desperdicio
+                    desperdicio=mat.desperdicio or 0.0
                 )
                 db.add(new_mat)
 
             for eq in s_item.equipments:
                 new_eq = DBEquipment(
-                    item_id=new_item.id,
+                    budget_item_id=new_item.id,
                     codigo=eq.codigo,
                     descripcion=eq.descripcion,
                     unidad=eq.unidad,
                     precio_unitario=eq.precio_unitario,
                     cantidad=eq.cantidad,
-                    depreciacion=eq.depreciacion
+                    depreciacion=eq.depreciacion if eq.depreciacion is not None else 1.0
                 )
                 db.add(new_eq)
 
             for lab in s_item.labors:
                 new_lab = DBLabor(
-                    item_id=new_item.id,
+                    budget_item_id=new_item.id,
                     codigo=lab.codigo,
                     descripcion=lab.descripcion,
-                    unidad=lab.unidad,
                     jornal=lab.jornal,
                     bono=lab.bono,
                     cantidad=lab.cantidad
