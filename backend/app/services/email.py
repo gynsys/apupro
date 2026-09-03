@@ -191,6 +191,23 @@ def send_payment_instructions_email(user_email: str, plan_name: str):
     bdv_logo = "https://costbase.net/images/bdv_logo.png"
     binance_logo = "https://cryptologos.cc/logos/tether-usdt-logo.png"
 
+    # Precios
+    prices = {
+        "Básico": 9.99,
+        "Profesional": 19.99,
+        "Experto": 34.99
+    }
+    usd_price = prices.get(plan_name, 9.99)
+    
+    # Obtener tasa BCV
+    from app.services.currency_service import get_bcv_rate
+    bcv_rate = get_bcv_rate()
+    monto_bs = usd_price * bcv_rate
+    
+    # Formateo
+    monto_bs_str = f"Bs. {monto_bs:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    monto_usd_str = f"${usd_price:,.2f}"
+
     html_content = f"""
     <html>
       <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #334155; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -205,24 +222,26 @@ def send_payment_instructions_email(user_email: str, plan_name: str):
         <!-- PAGO MOVIL -->
         <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 25px 0;">
             <div style="display: flex; align-items: center; margin-bottom: 15px;">
-                <img src="{bdv_logo}" alt="BDV" width="30" style="margin-right: 15px; border-radius: 4px;" />
+                <img src="{bdv_logo}" alt="BDV" height="24" style="margin-right: 15px; width: auto;" />
                 <h3 style="margin: 0; color: #0f172a; font-size: 18px;">Pago Móvil (Banco de Venezuela)</h3>
             </div>
             <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>Banco:</strong> 0102 (Banco de Venezuela)</p>
             <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>C.I:</strong> V-13.409.534</p>
             <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>Teléfono:</strong> 0412-9972355</p>
+            <p style="margin: 10px 0 5px 0; font-family: monospace; font-size: 15px; color: #b91c1c;"><strong>Monto:</strong> {monto_bs_str} <span style="font-size: 12px; color: #64748b;">(Eqv. a {monto_usd_str} a tasa BCV)</span></p>
         </div>
 
         <!-- TRANSFERENCIA -->
         <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 25px 0;">
             <div style="display: flex; align-items: center; margin-bottom: 15px;">
-                <img src="{bdv_logo}" alt="BDV" width="30" style="margin-right: 15px; border-radius: 4px;" />
+                <img src="{bdv_logo}" alt="BDV" height="24" style="margin-right: 15px; width: auto;" />
                 <h3 style="margin: 0; color: #0f172a; font-size: 18px;">Transferencia Bancaria</h3>
             </div>
             <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>Banco:</strong> Banco de Venezuela</p>
             <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>Cuenta:</strong> 0102 0278 7300 0005 2456</p>
             <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>Titular:</strong> Pablo Emilio Milano Carrillo</p>
             <p style="margin: 5px 0; font-family: monospace; font-size: 15px;"><strong>C.I:</strong> V-13.409.534</p>
+            <p style="margin: 10px 0 5px 0; font-family: monospace; font-size: 15px; color: #b91c1c;"><strong>Monto:</strong> {monto_bs_str} <span style="font-size: 12px; color: #64748b;">(Eqv. a {monto_usd_str} a tasa BCV)</span></p>
         </div>
 
         <!-- BINANCE -->
@@ -235,6 +254,7 @@ def send_payment_instructions_email(user_email: str, plan_name: str):
             <p style="margin: 5px 0; font-family: monospace; font-size: 14px; word-break: break-all; background: #e2e8f0; padding: 8px; border-radius: 6px;">
                 TLDu8tGVfmydYVTCqefgsxrhwQ8H2tMgGs
             </p>
+            <p style="margin: 10px 0 5px 0; font-family: monospace; font-size: 15px; color: #16a34a;"><strong>Monto:</strong> {monto_usd_str} USDT</p>
         </div>
 
         <h3 style="color: #0f172a;">📩 Siguiente Paso: Reportar Pago</h3>
