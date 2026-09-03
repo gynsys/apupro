@@ -2,6 +2,17 @@ import React, { useState } from 'react';
 import { TABS } from '../../constants/tabs.config';
 import { useUserCostos } from '../../../../context/UserCostosContext';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import { FiDatabase } from 'react-icons/fi';
+import { apiPost } from '../../../../lib/apiHelper';
+
+
+
+const updateRAGBrain = async () => {
+  const response = await apiPost('/admin/update-rag-brain', {});
+  if (!response.ok) throw new Error('Failed to update RAG brain');
+  return response.json();
+};
 
 const TabNavigation = ({ activeTab, onTabChange }) => {
   // Costos desde contexto global — persisten en BD por usuario
@@ -10,6 +21,22 @@ const TabNavigation = ({ activeTab, onTabChange }) => {
   // Estado local para edición en curso (antes de guardar)
   const [draft, setDraft] = useState(null);
   const currentCostos = draft ?? costosConfig;
+
+  const navigate = useNavigate();
+
+  const handleUpdateRAGBrain = async () => {
+    const confirm = window.confirm("¿Estas seguro de que deseas actualizar el Cerebro RAG? Este proceso toma de 5 a 15 minutos en segundo plano y consumira CPU del servidor.");
+    if (!confirm) return;
+
+    const toastId = toast.loading('Iniciando actualizacion del Cerebro IA...');
+    try {
+      await updateRAGBrain();
+      toast.success('El Cerebro RAG se esta actualizando en el servidor. Estara listo en unos minutos.', { id: toastId, duration: 8000 });
+    } catch (err) {
+      toast.error('Error al iniciar la actualizacion del Cerebro RAG', { id: toastId });
+    }
+  };
+
 
   const handleCostoChange = (key, value) => {
     const numValue = parseFloat(value) || 0;
@@ -47,6 +74,29 @@ const TabNavigation = ({ activeTab, onTabChange }) => {
             </button>
           );
         })}
+      </div>
+
+      
+      {/* Botones de Admin integrados */}
+      <div className="flex gap-2 items-center pb-2 ml-4 mr-auto">
+          <button
+            onClick={handleUpdateRAGBrain}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold rounded-lg shadow-sm hover:shadow-md transition-all hover:scale-[1.02]"
+            title="Actualizar Cerebro RAG"
+          >
+            <FiDatabase className="w-3.5 h-3.5" />
+            RAG
+          </button>
+          <button
+            onClick={() => navigate('/cost360/market-admin')}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold rounded-lg shadow-sm hover:shadow-md transition-all hover:scale-[1.02]"
+            title="Automatización IA"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Auto IA
+          </button>
       </div>
 
       {/* Inputs de costos */}

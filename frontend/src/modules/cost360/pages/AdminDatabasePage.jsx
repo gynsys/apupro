@@ -3,7 +3,6 @@ import { Plus, X, Copy, Database } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SiteConfigContext } from '../../../App';
 import { useAdminConfig } from '../hooks/useAdminConfig';
-import AdminHeader from '../components/layout/AdminHeader';
 import TabNavigation from '../components/layout/TabNavigation';
 import DatabaseSelector from '../components/layout/DatabaseSelector';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
@@ -175,8 +174,6 @@ const AdminDatabasePage = () => {
 
   return (
     <div className="absolute inset-0 p-4 md:p-6 flex flex-col overflow-hidden gap-4">
-      <AdminHeader />
-
       <div className="rounded-2xl relative z-10" style={glassStrong}>
         <TabNavigation
           activeTab={activeTab}

@@ -1,38 +1,83 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Check, Trash2 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
+import { Bell, Check, Loader2 } from 'lucide-react';
+import { AuthContext } from '../../context/AuthContext';
 import { API_URL } from '../../services/api';
 
 export default function NotificationBell() {
-  const { token, user } = useAuth();
+  const { token } = useContext(AuthContext); // Se usa useContext en lugar de useAuth porque no estaba exportado
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
   const dropdownRef = useRef(null);
+  const fetchIdRef = useRef(0);
+  const intervalRef = useRef(null);
 
-  const fetchNotifications = async () => {
+  // Función para obtener notificaciones con manejo de concurrencia
+  const fetchNotifications = useCallback(async () => {
     if (!token) return;
+    const currentFetchId = ++fetchIdRef.current;
+    setLoading(true);
     try {
       const res = await fetch(`${API_URL}/api/v1/notifications/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (res.ok) {
+      if (res.ok && currentFetchId === fetchIdRef.current) {
         const data = await res.json();
-        setNotifications(data);
-        setUnreadCount(data.filter(n => !n.is_read).length);
+        // Ordenar por fecha descendente (más recientes primero)
+        const sortedData = data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        setNotifications(sortedData);
+        setUnreadCount(sortedData.filter(n => !n.is_read).length);
+      } else if (!res.ok) {
+        console.error('Error fetching notifications:', res.status);
       }
     } catch (err) {
-      console.error('Error fetching notifications:', err);
+      if (currentFetchId === fetchIdRef.current) {
+        console.error('Error fetching notifications:', err);
+      }
+    } finally {
+      if (currentFetchId === fetchIdRef.current) {
+        setLoading(false);
+      }
     }
-  };
-
-  useEffect(() => {
-    fetchNotifications();
-    // Poll every 5 minutes
-    const interval = setInterval(fetchNotifications, 5 * 60 * 1000);
-    return () => clearInterval(interval);
   }, [token]);
 
+  // Efecto para cargar notificaciones al inicio y configurar polling
+  useEffect(() => {
+    fetchNotifications();
+
+    const startInterval = () => {
+      intervalRef.current = setInterval(fetchNotifications, 5 * 60 * 1000);
+    };
+
+    const stopInterval = () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+
+    // Pausar el intervalo cuando la pestaña no está visible
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopInterval();
+      } else {
+        // Al volver a estar visible, recargar inmediatamente y reiniciar intervalo
+        fetchNotifications();
+        startInterval();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    startInterval();
+
+    return () => {
+      stopInterval();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchNotifications]);
+
+  // Cerrar dropdown al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -43,6 +88,7 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Marcar una notificación como leída
   const handleMarkAsRead = async (id, e) => {
     if (e) e.stopPropagation();
     try {
@@ -51,14 +97,21 @@ export default function NotificationBell() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        setNotifications(prev => {
+          const updated = prev.map(n => n.id === id ? { ...n, is_read: true } : n);
+          // Recalcular el contador de no leídos basado en el estado actualizado
+          setUnreadCount(updated.filter(n => !n.is_read).length);
+          return updated;
+        });
+      } else {
+        console.error('Error marking notification as read:', res.status);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Error marking notification as read:', err);
     }
   };
 
+  // Marcar todas como leídas
   const handleMarkAllAsRead = async () => {
     try {
       const res = await fetch(`${API_URL}/api/v1/notifications/read-all`, {
@@ -68,23 +121,28 @@ export default function NotificationBell() {
       if (res.ok) {
         setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
         setUnreadCount(0);
+      } else {
+        console.error('Error marking all notifications as read:', res.status);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Error marking all notifications as read:', err);
     }
   };
 
+  // Formatear fecha
   const formatDate = (isoString) => {
     if (!isoString) return '';
     const date = new Date(isoString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button 
+      <button
         onClick={() => setIsOpen(!isOpen)}
         className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors relative"
+        aria-label="Notificaciones"
+        aria-expanded={isOpen}
       >
         <Bell size={20} />
         {unreadCount > 0 && (
@@ -93,29 +151,40 @@ export default function NotificationBell() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50">
+        <div
+          className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50"
+          role="menu"
+          aria-label="Panel de notificaciones"
+        >
           <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
             <h3 className="font-semibold text-slate-800">Notificaciones</h3>
             {unreadCount > 0 && (
-              <button 
+              <button
                 onClick={handleMarkAllAsRead}
                 className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                title="Marcar todas como leídas"
               >
                 <Check size={14} /> Marcar leídas
               </button>
             )}
           </div>
-          
+
           <div className="max-h-96 overflow-y-auto">
-            {notifications.length === 0 ? (
+            {loading ? (
+              <div className="p-6 flex justify-center items-center text-slate-500">
+                <Loader2 className="animate-spin" size={24} />
+                <span className="ml-2">Cargando...</span>
+              </div>
+            ) : notifications.length === 0 ? (
               <div className="p-6 text-center text-slate-500 text-sm">
                 No tienes notificaciones
               </div>
             ) : (
               notifications.map(notif => (
-                <div 
-                  key={notif.id} 
+                <div
+                  key={notif.id}
                   className={`p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors ${!notif.is_read ? 'bg-blue-50/30' : ''}`}
+                  role="menuitem"
                 >
                   <div className="flex gap-3">
                     <div className="flex-1">
@@ -127,10 +196,11 @@ export default function NotificationBell() {
                       </span>
                     </div>
                     {!notif.is_read && (
-                      <button 
+                      <button
                         onClick={(e) => handleMarkAsRead(notif.id, e)}
                         className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-100 transition-colors h-fit"
                         title="Marcar como leída"
+                        aria-label="Marcar notificación como leída"
                       >
                         <Check size={16} />
                       </button>
