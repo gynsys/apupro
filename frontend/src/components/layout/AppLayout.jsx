@@ -21,6 +21,8 @@ const NAV_ITEMS = [
   { name: 'Crear con IA', href: '/cost360/ai-generator?mode=ia', Icon: Cpu }
 ];
 
+import NotificationBell from './NotificationBell';
+
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -188,6 +190,7 @@ export default function AppLayout() {
         {/* Right controls */}
         {isAuthenticated ? (
           <div className="flex items-center gap-0.5">
+            <NotificationBell />
             <button
               onClick={() => navigate('/budgets')}
               className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50/70 transition-colors"

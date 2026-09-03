@@ -1,6 +1,7 @@
 import requests
 import logging
 import threading
+import time
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
@@ -10,8 +11,21 @@ _RATE_CACHE = None
 _CACHE_TIME = None
 _LAST_ALERT_TIME = None
 
-# Bloqueo (Lock) para evitar race conditions al enviar correos
+# Bloqueos (Locks) para evitar race conditions
 _alert_lock = threading.Lock()
+_cache_lock = threading.Lock()
+
+def _update_cache(rate: float):
+    """Actualiza la caché de forma segura entre hilos."""
+    global _RATE_CACHE, _CACHE_TIME
+    with _cache_lock:
+        _RATE_CACHE = rate
+        _CACHE_TIME = datetime.now()
+
+def _get_from_cache():
+    """Lee la caché de forma segura."""
+    with _cache_lock:
+        return _RATE_CACHE, _CACHE_TIME
 
 def _alert_superadmin(reason: str, critical: bool = False):
     """
@@ -22,14 +36,14 @@ def _alert_superadmin(reason: str, critical: bool = False):
     
     with _alert_lock:
         if _LAST_ALERT_TIME and datetime.now() - _LAST_ALERT_TIME < timedelta(hours=1):
-            return  # Evitar spam de correos si hay muchas solicitudes concurrentes fallidas
+            return  # Evitar spam de correos
             
         try:
             from app.services.email import send_email
             admin_email = "costbaseia@gmail.com"
             
-            nivel_str = "CRÍTICO (Sin caché)" if critical else "ADVERTENCIA (Usando caché)"
-            color = "#dc2626" if critical else "#ca8a04"  # Rojo o Amarillo/Naranja
+            nivel_str = "CRÍTICO (Sin caché)" if critical else "ADVERTENCIA (Usando caché antigua)"
+            color = "#dc2626" if critical else "#ca8a04"
             
             html = f"""
             <div style="font-family: sans-serif; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
@@ -43,102 +57,119 @@ def _alert_superadmin(reason: str, critical: bool = False):
                 <p><strong>Hora del fallo:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
             </div>
             """
-            subject = f"⚠️ ALERTA {nivel_str}: APIs de Dólar Caídas"
+            subject = f"⚠️ ALERTA {nivel_str}: APIs de Dólar"
             send_email(admin_email, subject, html)
-            
-            # Actualizamos atómicamente la variable de tiempo
             _LAST_ALERT_TIME = datetime.now()
         except Exception as e:
-            logger.error(f"No se pudo enviar alerta al superadmin: {e}")
+            # Fallback de envío de correo
+            logger.critical(f"ALERTA CRÍTICA: Fallo de APIs de dólar. Error original: {reason}")
+            logger.critical(f"Además, no se pudo enviar el correo de alerta al superadmin: {e}")
 
 def get_bcv_rate() -> float:
     """
     Obtiene la tasa oficial del BCV en tiempo real.
     SIEMPRE consulta las APIs primero. Si fallan, recurre a caché o fallback fijo.
     """
-    global _RATE_CACHE, _CACHE_TIME
+    from app.core.config import settings
     
     error_details = []
 
     # Intento 1: DolarApi
-    try:
-        response = requests.get("https://ve.dolarapi.com/v1/dolares", timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            encontrado = False
-            for item in data:
-                if item.get("fuente") == "oficial" or item.get("nombre", "").upper() == "BCV":
-                    encontrado = True
-                    rate = float(item.get("promedio", 0))
-                    if rate > 0:
-                        _RATE_CACHE = rate
-                        _CACHE_TIME = datetime.now()
-                        return rate
-            if not encontrado:
-                error_details.append("DolarApi: Formato JSON no esperado, no se encontró BCV.")
-        elif response.status_code == 429:
-            error_details.append("DolarApi: 429 Límite de peticiones alcanzado.")
-        else:
-            error_details.append(f"DolarApi Status: {response.status_code}")
-    except ValueError:
-        error_details.append("DolarApi: Respuesta no es un JSON válido.")
-        logger.warning("DolarApi devolvió contenido que no es JSON.")
-    except Exception as e:
-        error_details.append(f"DolarApi Exception: {type(e).__name__}")
-        logger.warning(f"Error consultando DolarApi: {e}")
+    for intento in range(2):
+        try:
+            response = requests.get("https://ve.dolarapi.com/v1/dolares", timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, list):
+                    encontrado = False
+                    for item in data:
+                        if isinstance(item, dict) and (item.get("fuente") == "oficial" or item.get("nombre", "").upper() == "BCV"):
+                            encontrado = True
+                            rate = float(item.get("promedio", 0))
+                            if rate > 0:
+                                logger.info(f"Tasa BCV obtenida exitosamente desde DolarApi: {rate}")
+                                _update_cache(rate)
+                                return rate
+                    if not encontrado:
+                        error_details.append("DolarApi: Formato JSON no esperado, no se encontró BCV.")
+                        break # No reintentar si el formato está mal
+                else:
+                    error_details.append("DolarApi: Se esperaba una lista JSON.")
+                    break
+            elif response.status_code == 429:
+                if intento == 0:
+                    time.sleep(2)
+                    continue
+                error_details.append("DolarApi: 429 Límite de peticiones alcanzado tras reintento.")
+            else:
+                error_details.append(f"DolarApi Status: {response.status_code}")
+                break
+        except ValueError:
+            error_details.append("DolarApi: Respuesta no es un JSON válido.")
+            break
+        except Exception as e:
+            error_details.append(f"DolarApi Exception: {type(e).__name__}")
+            break
 
     # Intento 2: CotizaVe (Respaldo)
-    try:
-        headers = {"X-API-Key": "ctz_live_67bV8npPYgRPxKyxNqPi6T5qIfGHTWC7e4pb2T"}
-        response = requests.get("https://api.cotizave.com/v1/fx/rates", headers=headers, timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            bcv_rate = None
-            
-            # Intento de extracción robusto
-            if isinstance(data, dict):
-                if "index" in data and isinstance(data["index"], dict) and "components" in data["index"]:
-                    bcv_rate = data["index"]["components"].get("bcv")
+    for intento in range(2):
+        try:
+            headers = {"X-API-Key": "ctz_live_67bV8npPYgRPxKyxNqPi6T5qIfGHTWC7e4pb2T"}
+            response = requests.get("https://api.cotizave.com/v1/fx/rates", headers=headers, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                bcv_rate = None
                 
-                if not bcv_rate and "rates" in data and isinstance(data["rates"], list):
-                    for rate_item in data["rates"]:
-                        if isinstance(rate_item, dict) and rate_item.get("market") in ["reference", "bcv"] or rate_item.get("type") == "reference":
-                            bcv_rate = rate_item.get("mid")
-                            break
-                            
-            if bcv_rate is not None:
-                val = float(bcv_rate)
-                if val > 0:
-                    _RATE_CACHE = val
-                    _CACHE_TIME = datetime.now()
-                    return val
-            error_details.append("CotizaVe: Estructura JSON no esperada, campo 'bcv' o 'reference' no encontrado.")
-        elif response.status_code == 429:
-            error_details.append("CotizaVe: 429 Límite de peticiones alcanzado (Revisa cuota de 1500 req).")
-        else:
-            error_details.append(f"CotizaVe Status: {response.status_code}")
-    except ValueError:
-        error_details.append("CotizaVe: Respuesta no es un JSON válido.")
-        logger.warning("CotizaVe devolvió contenido que no es JSON.")
-    except Exception as e:
-        error_details.append(f"CotizaVe Exception: {type(e).__name__}")
-        logger.warning(f"Error consultando CotizaVe: {e}")
+                if isinstance(data, dict):
+                    if "index" in data and isinstance(data["index"], dict) and "components" in data["index"]:
+                        bcv_rate = data["index"]["components"].get("bcv")
+                    
+                    if not bcv_rate and "rates" in data and isinstance(data["rates"], list):
+                        for rate_item in data["rates"]:
+                            if isinstance(rate_item, dict) and (rate_item.get("market") in ["reference", "bcv"] or rate_item.get("type") == "reference"):
+                                bcv_rate = rate_item.get("mid")
+                                break
+                                
+                if bcv_rate is not None:
+                    val = float(bcv_rate)
+                    if val > 0:
+                        logger.info(f"Tasa BCV obtenida exitosamente desde CotizaVe: {val}")
+                        _update_cache(val)
+                        return val
+                error_details.append("CotizaVe: Estructura JSON no esperada o campo no encontrado.")
+                break
+            elif response.status_code == 429:
+                if intento == 0:
+                    time.sleep(2)
+                    continue
+                error_details.append("CotizaVe: 429 Límite de peticiones alcanzado (Revisa cuota).")
+            else:
+                error_details.append(f"CotizaVe Status: {response.status_code}")
+                break
+        except ValueError:
+            error_details.append("CotizaVe: Respuesta no es un JSON válido.")
+            break
+        except Exception as e:
+            error_details.append(f"CotizaVe Exception: {type(e).__name__}")
+            break
 
-    # Consolidar errores
     error_reason = " | ".join(error_details)
+    cached_rate, cache_time = _get_from_cache()
 
-    # Fallback 3: Último valor conocido en caché de memoria (Emergencia)
-    if _RATE_CACHE is not None:
-        cache_age_hours = (datetime.now() - _CACHE_TIME).total_seconds() / 3600 if _CACHE_TIME else 0
-        logger.warning(f"Usando tasa BCV en caché (Antigüedad: {cache_age_hours:.1f}h). Errores: {error_reason}")
+    # Fallback 3: Caché
+    if cached_rate is not None:
+        cache_age_minutes = (datetime.now() - cache_time).total_seconds() / 60 if cache_time else 0
+        logger.warning(f"Usando tasa BCV en caché (Antigüedad: {cache_age_minutes:.1f} min). Errores: {error_reason}")
         
-        # Enviar alerta pero marcarla como advertencia (no crítica)
-        reason_with_cache = f"{error_reason}<br/><br/><i>Nota: El sistema operó con éxito usando un caché de {cache_age_hours:.1f} horas de antigüedad.</i>"
-        _alert_superadmin(reason_with_cache, critical=False)
-        return _RATE_CACHE
+        # Solo alertar si la caché es antigua (> 30 min)
+        if cache_age_minutes > 30:
+            reason_with_cache = f"{error_reason}<br/><br/><i>El sistema operó usando una caché de {cache_age_minutes:.1f} minutos de antigüedad.</i>"
+            _alert_superadmin(reason_with_cache, critical=False)
+            
+        return cached_rate
 
-    # Fallback 4 de emergencia final
+    # Fallback 4: Emergencia
     _alert_superadmin(error_reason, critical=True)
-    fallback_value = 36.65
-    logger.error(f"Fallo CRÍTICO de APIs de dólar. Sin caché. Retornando valor de emergencia fijo: {fallback_value}")
+    fallback_value = getattr(settings, "BCV_FALLBACK_RATE", 36.65)
+    logger.critical(f"Fallo CRÍTICO de APIs de dólar. Sin caché. Retornando valor de emergencia fijo: {fallback_value}")
     return fallback_value

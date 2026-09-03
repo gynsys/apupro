@@ -32,12 +32,30 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-from app.services.ai_search import ai_engine
+import asyncio
+from app.api.v1.endpoints.users import process_plan_expirations
+from app.db.models.arko import ArkoAdmin
+
+async def run_expiration_cron():
+    while True:
+        try:
+            # Fake current_user to pass dependency check
+            class FakeUser:
+                email = "system@costbase.net"
+            
+            logger.info("Corriendo cron de vencimientos de suscripciones...")
+            process_plan_expirations(current_user=FakeUser())
+        except Exception as e:
+            logger.error(f"Error en el cron de vencimientos: {e}")
+        # Run every 5 minutes
+        await asyncio.sleep(300)
 
 @app.on_event("startup")
 async def startup_event():
     logger.info("Application starting up... Loading AI brain")
     ai_engine.load_brain()
+    # Iniciar Cron Job ligero en segundo plano
+    asyncio.create_task(run_expiration_cron())
 
 # Set all CORS enabled origins
 if settings.CORS_ORIGINS:

@@ -6,6 +6,7 @@ const EditUserModal = ({ user, onClose, onSave }) => {
     max_budgets: 0,
     max_items_per_budget: 0,
     has_ai_access: false,
+    test_mode: false,
   });
 
   useEffect(() => {
@@ -15,6 +16,7 @@ const EditUserModal = ({ user, onClose, onSave }) => {
         max_budgets: user.max_budgets || 0,
         max_items_per_budget: user.max_items_per_budget || 0,
         has_ai_access: user.has_ai_access || false,
+        test_mode: false,
       });
     }
   }, [user]);
@@ -50,6 +52,7 @@ const EditUserModal = ({ user, onClose, onSave }) => {
       max_budgets: form.max_budgets,
       max_items_per_budget: form.max_items_per_budget,
       has_ai_access: form.has_ai_access,
+      test_mode: form.test_mode,
     });
   };
 
@@ -83,7 +86,21 @@ const EditUserModal = ({ user, onClose, onSave }) => {
                 <option value="Profesional">Profesional</option>
                 <option value="Experto">Experto</option>
               </select>
-            </div>
+                {form.plan !== 'free' && form.plan !== 'demo' && (
+                  <div className="mt-3 flex items-center p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <input
+                      type="checkbox"
+                      id="testMode"
+                      checked={form.test_mode || False}
+                      onChange={(e) => setForm({...form, test_mode: e.target.checked})}
+                      className="w-4 h-4 text-amber-600 rounded border-amber-300 focus:ring-amber-500"
+                    />
+                    <label htmlFor="testMode" className="ml-2 text-sm font-medium text-amber-800">
+                      Modo Prueba (Simula expiración rápida)
+                    </label>
+                  </div>
+                )}
+              </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>

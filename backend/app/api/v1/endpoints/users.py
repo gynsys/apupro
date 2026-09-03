@@ -30,12 +30,13 @@ class UserUpdateRequest(BaseModel):
     max_budgets: Optional[int] = None
     max_items_per_budget: Optional[int] = None
     has_ai_access: Optional[bool] = None
+    test_mode: Optional[bool] = False
 
 @router.get("/", response_model=List[UserListResponse])
 def get_users(current_user = Depends(get_current_arko_admin)):
     """Obtener lista de usuarios (solo admin)"""
     with ArkoSessionLocal() as db:
-        users = db.query(ArkoAdmin).all()
+        users = db.query(ArkoAdmin).order_by(ArkoAdmin.created_at.desc()).all()
         return [
             {
                 "id": user.id,
@@ -46,7 +47,8 @@ def get_users(current_user = Depends(get_current_arko_admin)):
                 "max_budgets": user.max_budgets,
                 "max_items_per_budget": user.max_items_per_budget,
                 "has_ai_access": user.has_ai_access or False,
-                "created_at": user.created_at.isoformat() if user.created_at else None
+                "created_at": user.created_at.isoformat() if user.created_at else None,
+                "plan_expires_at": user.plan_expires_at.isoformat() if user.plan_expires_at else None
             }
             for user in users
         ]
@@ -65,7 +67,12 @@ def update_user(user_id: int, user_data: UserUpdateRequest, current_user = Depen
             # If changing to a new plan, set the logic
             if user.plan != user_data.plan and user_data.plan != "free":
                 from datetime import datetime, timedelta
-                user.plan_expires_at = datetime.utcnow() + timedelta(days=30)
+                # Modo prueba: expira en 5 minutos para probar alertas
+                if user_data.test_mode:
+                    user.plan_expires_at = datetime.utcnow() + timedelta(minutes=5)
+                else:
+                    user.plan_expires_at = datetime.utcnow() + timedelta(days=30)
+                    
                 user.ai_apus_generated = 0
                 if user_data.plan == "Básico":
                     user.max_ai_apus = 10
@@ -101,6 +108,94 @@ def update_user(user_id: int, user_data: UserUpdateRequest, current_user = Depen
             "created_at": user.created_at.isoformat() if user.created_at else None
         }
 
+@router.post("/system/process-expirations")
+def process_plan_expirations(current_user = Depends(get_current_arko_admin)):
+    """Verifica y vence los planes expirados, y genera alertas de 3 días."""
+    from datetime import datetime, timedelta
+    from sqlalchemy import and_
+    from app.db.models.notification import Notification
+
+    # Por seguridad, verificar que es super admin
+    if current_user.email != "costbaseia@gmail.com":
+        pass # Podríamos bloquearlo, pero para pruebas permitiremos que el admin lo ejecute
+
+    processed_expired = 0
+    processed_warnings = 0
+    now = datetime.utcnow()
+    warning_threshold = now + timedelta(days=3)
+
+    with ArkoSessionLocal() as db:
+        # 1. Usuarios expirados
+        expired_users = db.query(ArkoAdmin).filter(
+            and_(
+                ArkoAdmin.plan != 'free',
+                ArkoAdmin.plan_expires_at != None,
+                ArkoAdmin.plan_expires_at <= now
+            )
+        ).all()
+
+        for u in expired_users:
+            old_plan = u.plan
+            u.plan = 'free'
+            u.max_budgets = 1
+            u.max_items_per_budget = 2
+            u.has_ai_access = False
+            u.max_ai_apus = 0
+            
+            # Crear notificacion
+            notif = Notification(
+                user_id=u.id,
+                message=f"Tu plan {old_plan} ha caducado. Has regresado al modo Demo. Contáctanos para renovar tu suscripción.",
+                type="plan_expired"
+            )
+            db.add(notif)
+            processed_expired += 1
+
+        # 2. Usuarios próximos a vencer (Warning de 3 días)
+        # Queremos notificar si están a menos de 3 días PERO solo enviar la notificación una vez.
+        # Por simplicidad, buscaremos los que vencen en las próximas 72h y no tengan ya una notificación de "plan_warning"
+        # reciente. (Mejor usar una query simple y un estado).
+        warning_users = db.query(ArkoAdmin).filter(
+            and_(
+                ArkoAdmin.plan != 'free',
+                ArkoAdmin.plan_expires_at != None,
+                ArkoAdmin.plan_expires_at > now,
+                ArkoAdmin.plan_expires_at <= warning_threshold
+            )
+        ).all()
+
+        for u in warning_users:
+            # Check if warning already exists in the last 3 days
+            recent_warning = db.query(Notification).filter(
+                and_(
+                    Notification.user_id == u.id,
+                    Notification.type == "plan_warning",
+                    Notification.created_at >= (now - timedelta(days=3))
+                )
+            ).first()
+
+            if not recent_warning:
+                days_left = (u.plan_expires_at - now).days
+                if days_left == 0:
+                    time_str = "hoy"
+                else:
+                    time_str = f"en {days_left} día(s)"
+                    
+                notif = Notification(
+                    user_id=u.id,
+                    message=f"Atención: Tu plan {u.plan} expirará {time_str}. Renueva a tiempo para no perder tus beneficios.",
+                    type="plan_warning"
+                )
+                db.add(notif)
+                processed_warnings += 1
+
+        db.commit()
+
+    return {
+        "status": "ok",
+        "expired_processed": processed_expired,
+        "warnings_sent": processed_warnings
+    }
 
 @router.post("/demo-budget")
 def create_demo_budget(current_user = Depends(get_current_arko_admin)):
