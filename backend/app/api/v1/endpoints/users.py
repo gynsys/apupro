@@ -22,6 +22,10 @@ class UserListResponse(BaseModel):
     max_budgets: Optional[int] = None
     max_items_per_budget: Optional[int] = None
     has_ai_access: bool
+    plan_started_at: Optional[str] = None
+    plan_expires_at: Optional[str] = None
+    max_ai_apus: int = 0
+    ai_apus_generated: int = 0
     created_at: str
 
 class UserUpdateRequest(BaseModel):
@@ -71,6 +75,7 @@ def update_user(user_id: int, user_data: UserUpdateRequest, current_user = Depen
                 import threading
                 threading.Thread(target=send_plan_activated_email, args=(user.email, user_data.plan, user_data.test_mode)).start()
                 # Modo prueba: expira en 5 minutos para probar alertas
+                user.plan_started_at = datetime.utcnow()
                 if user_data.test_mode:
                     user.plan_expires_at = datetime.utcnow() + timedelta(minutes=5)
                 else:
@@ -86,6 +91,7 @@ def update_user(user_id: int, user_data: UserUpdateRequest, current_user = Depen
                 else:
                     user.max_ai_apus = 0
             elif user_data.plan == "free":
+                user.plan_started_at = None
                 user.plan_expires_at = None
                 user.max_ai_apus = 0
             user.plan = user_data.plan

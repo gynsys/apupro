@@ -3,6 +3,18 @@ import { useUsers } from '../../hooks/useUsers';
 import EditUserModal from '../modals/EditUserModal';
 
 const UsuariosTab = () => {
+  const formatDate = (dateString) => {
+    const d = new Date(dateString);
+    return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+  };
+  
+  const getDaysElapsed = (startDate) => {
+    return Math.max(0, Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24)));
+  };
+  
+  const getTotalDays = (startDate, endDate) => {
+    return Math.floor((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
+  };
   const { users, loading, toggleUserStatus, updateUserPlan, deleteUser, createDemoBudget } = useUsers();
   const [editingUser, setEditingUser] = React.useState(null);
 
@@ -34,6 +46,9 @@ const UsuariosTab = () => {
             <tr>
               <th className="p-4 border-b">Email</th>
               <th className="p-4 border-b">Plan</th>
+              <th className="p-4 border-b text-center">APUs (IA)</th>
+              <th className="p-4 border-b">Período Plan</th>
+              <th className="p-4 border-b text-center">Días</th>
               <th className="p-4 border-b">Estado</th>
               <th className="p-4 border-b">Límites</th>
               <th className="p-4 border-b">Acciones</th>
@@ -47,6 +62,36 @@ const UsuariosTab = () => {
                   <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
                     {user.plan || 'free'}
                   </span>
+                </td>
+                <td className="p-4 text-center">
+                  {user.plan !== 'free' ? (
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${user.ai_apus_generated >= user.max_ai_apus ? 'bg-red-100 text-red-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                      {user.ai_apus_generated} / {user.max_ai_apus}
+                    </span>
+                  ) : (
+                    <span className="text-slate-400 text-xs">-</span>
+                  )}
+                </td>
+                <td className="p-4 text-xs text-slate-600 whitespace-nowrap">
+                  {user.plan !== 'free' && user.plan_started_at && user.plan_expires_at ? (
+                    <>
+                      <div>{formatDate(user.plan_started_at)}</div>
+                      <div className="text-slate-400">al {formatDate(user.plan_expires_at)}</div>
+                    </>
+                  ) : (
+                    <span className="text-slate-400">-</span>
+                  )}
+                </td>
+                <td className="p-4 text-center">
+                  {user.plan !== 'free' && user.plan_started_at && user.plan_expires_at ? (
+                    <div className="flex flex-col items-center">
+                      <span className="text-xs font-bold text-slate-700">
+                        {getDaysElapsed(user.plan_started_at)} / {getTotalDays(user.plan_started_at, user.plan_expires_at)}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-slate-400 text-xs">-</span>
+                  )}
                 </td>
                 <td className="p-4">
                   <button

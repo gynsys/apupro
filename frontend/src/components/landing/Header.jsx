@@ -8,7 +8,7 @@ export default function Header({ onLoginClick }) {
         <div className="flex items-center justify-between h-20">
           {/* Logo Section */}
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <img src="/logo-cb.png" alt="CostBase Logo" className="w-10 h-10 object-contain" />
+            <img src="/logo-cb-new.png" alt="CostBase Logo" className="w-10 h-10 object-contain" />
             <span className="text-2xl font-extrabold text-white tracking-tight" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
               Cost<span className="text-blue-500">Base</span>
             </span>

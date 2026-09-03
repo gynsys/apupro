@@ -39,6 +39,7 @@ class ArkoAdmin(ArkoBase):
     max_budgets = Column(Integer, default=1)  # Límite de presupuestos según plan
     max_items_per_budget = Column(Integer, default=2)  # Límite de partidas por presupuesto
     has_ai_access = Column(Boolean, default=False)  # Acceso a generador APU con IA
+    plan_started_at = Column(DateTime, nullable=True)  # Fecha de inicio del plan
     plan_expires_at = Column(DateTime, nullable=True)  # Fecha de expiración del plan
     max_ai_apus = Column(Integer, default=0)
     ai_apus_generated = Column(Integer, default=0)
