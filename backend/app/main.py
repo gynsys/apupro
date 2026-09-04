@@ -50,7 +50,8 @@ try:
             "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS notes TEXT;",
             "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS share_token VARCHAR(255);",
             "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS is_public_share BOOLEAN DEFAULT FALSE;",
-            "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS ubicacion VARCHAR(255);"
+            "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS ubicacion VARCHAR(255);",
+            "UPDATE budgets SET user_id = '1' WHERE user_id IS NULL;"
         ]
         for stmt in budget_schema_statements:
             try:

@@ -208,13 +208,6 @@ export default function AppLayout() {
               <Settings size={19} />
             </button>
             <button
-              onClick={() => setShowAccountModal(true)}
-              className="text-sm font-semibold text-slate-600 hover:text-slate-900 hidden sm:block mx-2 cursor-pointer transition-colors bg-transparent border-none"
-              title="Configuración de la Cuenta"
-            >
-              Mi Cuenta
-            </button>
-            <button
               onClick={handleLogout}
               className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50/70 transition-colors cursor-pointer"
               title="Cerrar Sesión"

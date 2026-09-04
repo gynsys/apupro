@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centro de Ayuda CostBase</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <h1>CostBase</h1>
+                <span class="badge">Centro de Ayuda</span>
+            </div>
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Buscar funcionalidad, guía o problema...">
+                <button id="searchBtn">🔍</button>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="nav">
+            <div class="nav-item active" data-category="all">
+                <span class="icon">🏠</span>
+                <span>Inicio</span>
+            </div>
+            <div class="nav-item" data-category="backup">
+                <span class="icon">💾</span>
+                <span>Backup</span>
+            </div>
+            <div class="nav-item" data-category="compartir">
+                <span class="icon">🔗</span>
+                <span>Compartir</span>
+            </div>
+            <div class="nav-item" data-category="costos">
+                <span class="icon">⚙️</span>
+                <span>Costos</span>
+            </div>
+            <div class="nav-item" data-category="bases">
+                <span class="icon">🗄️</span>
+                <span>Bases de Datos</span>
+            </div>
+            <div class="nav-item" data-category="apu">
+                <span class="icon">🤖</span>
+                <span>APU con IA</span>
+            </div>
+            <div class="nav-item" data-category="planes">
+                <span class="icon">📊</span>
+                <span>Planes</span>
+            </div>
+            <div class="nav-item" data-category="faq">
+                <span class="icon">❓</span>
+                <span>FAQ</span>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Hero Section -->
+            <section class="hero">
+                <h2>¿En qué podemos ayudarte hoy?</h2>
+                <p>Encuentra guías paso a paso, tutoriales y respuestas a tus preguntas sobre CostBase</p>
+            </section>
+
+            <!-- Quick Access Cards -->
+            <section class="quick-access">
+                <div class="card highlight" data-category="backup">
+                    <div class="card-icon">💾</div>
+                    <h3>Backup y Restauración</h3>
+                    <p>Aprende a crear y restaurar copias de seguridad de tus presupuestos</p>
+                    <button class="card-btn">Ver Guía</button>
+                </div>
+                <div class="card highlight" data-category="compartir">
+                    <div class="card-icon">🔗</div>
+                    <h3>Compartir Presupuestos</h3>
+                    <p>Genera enlaces para compartir y permite que otros importen tus presupuestos</p>
+                    <button class="card-btn">Ver Guía</button>
+                </div>
+                <div class="card highlight" data-category="costos">
+                    <div class="card-icon">⚙️</div>
+                    <h3>Configuración de Costos</h3>
+                    <p>Personaliza tus porcentajes de utilidad, administración, IVA y FCAS</p>
+                    <button class="card-btn">Ver Guía</button>
+                </div>
+            </section>
+
+            <!-- Guides Section -->
+            <section class="guides-section">
+                <h3>Guías Detalladas</h3>
+                <div class="guides-grid">
+                    <div class="guide-card" data-category="backup">
+                        <div class="guide-header">
+                            <span class="guide-badge">Prioridad Alta</span>
+                            <h4>Crear Backup de Presupuesto</h4>
+                        </div>
+                        <p>Paso a paso para generar archivos de seguridad .cb con encriptación AES-256</p>
+                        <div class="guide-meta">
+                            <span>⏱️ 5 min</span>
+                            <span>📱 Nivel: Principiante</span>
+                        </div>
+                    </div>
+                    <div class="guide-card" data-category="backup">
+                        <div class="guide-header">
+                            <span class="guide-badge">Prioridad Alta</span>
+                            <h4>Restaurar Backup</h4>
+                        </div>
+                        <p>Cómo importar archivos .cb para recuperar presupuestos completos</p>
+                        <div class="guide-meta">
+                            <span>⏱️ 3 min</span>
+                            <span>📱 Nivel: Principiante</span>
+                        </div>
+                    </div>
+                    <div class="guide-card" data-category="compartir">
+                        <div class="guide-header">
+                            <span class="guide-badge">Prioridad Alta</span>
+                            <h4>Generar Enlace de Compartición</h4>
+                        </div>
+                        <p>Crea enlaces temporales para que otros vean vista previa de tu presupuesto</p>
+                        <div class="guide-meta">
+                            <span>⏱️ 2 min</span>
+                            <span>📱 Nivel: Principiante</span>
+                        </div>
+                    </div>
+                    <div class="guide-card" data-category="compartir">
+                        <div class="guide-header">
+                            <span class="guide-badge">Prioridad Alta</span>
+                            <h4>Importar Presupuesto Compartido</h4>
+                        </div>
+                        <p>Cómo importar a tu cuenta un presupuesto que te compartieron</p>
+                        <div class="guide-meta">
+                            <span>⏱️ 3 min</span>
+                            <span>📱 Nivel: Principiante</span>
+                        </div>
+                    </div>
+                    <div class="guide-card" data-category="costos">
+                        <div class="guide-header">
+                            <span class="guide-badge">Prioridad Alta</span>
+                            <h4>Configurar Costos por Usuario</h4>
+                        </div>
+                        <p>Personaliza tus valores por defecto para nuevos presupuestos</p>
+                        <div class="guide-meta">
+                            <span>⏱️ 4 min</span>
+                            <span>📱 Nivel: Intermedio</span>
+                        </div>
+                    </div>
+                    <div class="guide-card" data-category="costos">
+                        <div class="guide-header">
+                            <span class="guide-badge">Calculadora FCAS</span>
+                            <h4>Usar la Calculadora FCAS</h4>
+                        </div>
+                        <p>Calcula el Factor de Costo Social según la legislación venezolana</p>
+                        <div class="guide-meta">
+                            <span>⏱️ 8 min</span>
+                            <span>📱 Nivel: Avanzado</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- FAQ Section -->
+            <section class="faq-section">
+                <h3>Preguntas Frecuentes</h3>
+                <div class="faq-list">
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>¿Qué es un archivo .cb de backup?</span>
+                            <span class="faq-toggle">+</span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Un archivo .cb es un backup encriptado de CostBase que contiene todo tu presupuesto: partidas, insumos, configuraciones y cálculos. Usa encriptación AES-256 para proteger tus datos y solo puede ser importado por tu cuenta.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>¿Los destinatarios pueden editar mi presupuesto compartido?</span>
+                            <span class="faq-toggle">+</span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>No. Cuando compartes un presupuesto, los destinatarios solo ven una vista previa limitada (nombre, propietario, métricas básicas). Para tener acceso completo, deben importar el presupuesto a su propia cuenta, lo que crea una copia independiente que pueden editar sin afectar tu original.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>¿Cuántos presupuestos puedo crear?</span>
+                            <span class="faq-toggle">+</span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Depende de tu plan: Free (5 presupuestos), Básico (20 presupuestos), Pro/Enterprise (ilimitado). Puedes ver tu límite actual en tu perfil.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>¿Qué diferencia hay entre la Base Maestra y las bases personalizadas?</span>
+                            <span class="faq-toggle">+</span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>La Base Maestra es global y de solo lectura. Las bases personalizadas son copias que puedes modificar según tus necesidades, aplicando índices de inflación específicos por materiales, mano de obra o equipos.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Video Tutorials -->
+            <section class="videos-section">
+                <h3>Tutoriales en Video</h3>
+                <div class="videos-grid">
+                    <div class="video-card">
+                        <div class="video-thumbnail">
+                            <span class="play-icon">▶️</span>
+                        </div>
+                        <h4>Crear tu Primer Presupuesto</h4>
+                        <p>Guía completa para principiantes</p>
+                        <span class="video-duration">12:34</span>
+                    </div>
+                    <div class="video-card">
+                        <div class="video-thumbnail">
+                            <span class="play-icon">▶️</span>
+                        </div>
+                        <h4>Backup y Restauración</h4>
+                        <p>Protege tus proyectos importantes</p>
+                        <span class="video-duration">8:15</span>
+                    </div>
+                    <div class="video-card">
+                        <div class="video-thumbnail">
+                            <span class="play-icon">▶️</span>
+                        </div>
+                        <h4>Generador de APU con IA</h4>
+                        <p>Crea análisis de precios inteligentes</p>
+                        <span class="video-duration">15:42</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>© 2026 CostBase. Todos los derechos reservados.</p>
+            <div class="footer-links">
+                <a href="#">Soporte</a>
+                <a href="#">Contacto</a>
+                <a href="#">Términos</a>
+            </div>
+        </footer>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
