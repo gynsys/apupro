@@ -9,7 +9,7 @@ import PrintAPUModal from '../../components/PrintAPUModal';
 import PrintAPULayout from '../../components/PrintAPULayout';
 import ApuEditorUI from '../../components/ApuEditorUI';
 import ExportApuExcelButton from '../../modules/cost360/components/ExportApuExcelButton';
-import { calculateBudgetTotals } from '../../utils/apuCalculations';
+import { calculateBudgetTotals, calculateItemPU } from '../../utils/apuCalculations';
 
 
 export default function BudgetAPUEditorPage() {
@@ -329,6 +329,17 @@ export default function BudgetAPUEditorPage() {
     return calculateBudgetTotals(currentBudget);
   }, [currentBudget]);
 
+  const pu = useMemo(() => {
+    if (!item || !budget) return 0;
+    return calculateItemPU(item, budget);
+  }, [item, budget]);
+
+  const totalPartida = useMemo(() => {
+    if (!item) return 0;
+    const qty = parseFloat(item.quantity) || 0;
+    return pu * qty;
+  }, [item, pu]);
+
   const currentIndex = budget ? budget.items.findIndex(i => i.id === itemId) : -1;
   const prevItem = currentIndex > 0 ? budget.items[currentIndex - 1] : null;
   const nextItem = currentIndex !== -1 && currentIndex < budget.items.length - 1 ? budget.items[currentIndex + 1] : null;
@@ -400,9 +411,25 @@ export default function BudgetAPUEditorPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Total Partida en vivo (P.U. x Cantidad) */}
+            <div 
+              className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-blue-200 shadow-sm"
+              title={`Total de esta partida: ${(parseFloat(item?.quantity) || 0).toLocaleString('es-VE')} ${item?.unit || 'und'} x ${pu.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            >
+              <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
+                Total Partida:
+              </span>
+              <span className="text-base md:text-lg font-bold text-blue-700 leading-none">
+                {totalPartida.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                {budget?.currency || 'USD'}
+              </span>
+            </div>
+
             {/* Total sin IVA en vivo */}
             <div 
-              className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-sm"
+              className="hidden sm:flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-sm"
               title="Total del presupuesto sin IVA (se recalcula automáticamente al modificar este APU)"
             >
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -411,7 +438,7 @@ export default function BudgetAPUEditorPage() {
               <span className="text-base md:text-lg font-bold text-slate-700 leading-none">
                 {subtotalPresupuesto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
-              <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+              <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
                 {budget?.currency || 'USD'}
               </span>
             </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Share2, Copy, Check, X, Globe, ShieldCheck, Trash2, ExternalLink } from 'lucide-react';
+import { Share2, Copy, Check, X, Globe, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { API_URL } from '../../services/api';
 
@@ -7,7 +7,6 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
   const [shareData, setShareData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [revoking, setRevoking] = useState(false);
 
   useEffect(() => {
     if (isOpen && budget?.id) {
@@ -65,85 +64,56 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
     }
   };
 
-  const handleRevoke = async () => {
-    if (!confirm('¿Deseas revocar este enlace? Quienes lo tengan ya no podrán importar el presupuesto.')) return;
-    setRevoking(true);
-    try {
-      const storedToken = localStorage.getItem('token') || localStorage.getItem('access_token');
-      const headers = { 'Content-Type': 'application/json' };
-      if (storedToken) headers['Authorization'] = `Bearer ${storedToken}`;
-
-      const res = await fetch(`${API_URL}/budgets/${budget.id}/share`, {
-        method: 'DELETE',
-        headers,
-        credentials: 'include'
-      });
-
-      if (res.ok) {
-        toast.success('Enlace de compartición revocado');
-        onClose();
-      } else {
-        toast.error('Error al revocar enlace');
-      }
-    } catch (err) {
-      console.error('Error revoking share link:', err);
-      toast.error('Error al revocar enlace');
-    } finally {
-      setRevoking(false);
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-amber-50/95 border-2 border-amber-400 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-lg bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] border border-amber-600/15 overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Encabezado con color #78350F */}
-        <div className="px-6 py-4 flex items-center justify-between shadow-sm" style={{ backgroundColor: '#78350F' }}>
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/10 text-white rounded-xl">
-              <Share2 size={20} />
-            </div>
+        {/* Encabezado con estilo del modal de impresión */}
+        <div className="flex justify-between items-center px-6 py-4 bg-white/40 border-b border-amber-600/15">
+          <div className="flex items-center gap-2.5">
+            <Share2 className="text-sky-600" size={22} />
             <div>
-              <h2 className="text-lg font-bold text-white">Compartir Presupuesto</h2>
-              <p className="text-xs text-amber-200">Portabilidad y clonación rápida en la nube</p>
+              <h2 className="m-0 text-xl font-bold text-amber-900 leading-tight">Compartir Presupuesto</h2>
+              <p className="text-xs text-amber-800/80 m-0">Portabilidad y clonación rápida en la nube</p>
             </div>
           </div>
           <button 
+            type="button"
             onClick={onClose}
-            className="text-amber-200 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+            className="text-amber-700 hover:text-amber-900 bg-transparent transition-colors p-1"
           >
-            <X size={20} />
+            <X size={22} />
           </button>
         </div>
 
         {/* Cuerpo del Modal */}
-        <div className="p-6 space-y-5">
-          {/* Tarjeta del proyecto en tonos ámbar */}
-          <div className="bg-white/90 border border-amber-200 rounded-xl p-4 shadow-sm">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800/70 block">
+        <div className="px-6 py-5 flex flex-col gap-4">
+          {/* Tarjeta del proyecto */}
+          <div className="bg-white/60 border border-amber-600/15 rounded-xl p-4 shadow-sm">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70 block">
               Proyecto a Compartir
             </span>
-            <h3 className="text-base font-bold text-amber-900 mt-0.5 truncate">
+            <h3 className="text-base font-bold text-amber-950 mt-0.5 truncate">
               {budget?.name}
             </h3>
             {budget?.client_name && (
-              <p className="text-xs text-slate-500 mt-1">
-                Cliente: <span className="font-medium text-slate-700">{budget.client_name}</span>
+              <p className="text-xs text-slate-600 mt-1">
+                Cliente: <span className="font-semibold text-slate-700">{budget.client_name}</span>
               </p>
             )}
           </div>
 
           {/* Estado de carga o Enlace */}
           {loading ? (
-            <div className="py-8 text-center text-amber-800/70 text-sm animate-pulse">
+            <div className="py-8 text-center text-amber-900/70 text-sm font-medium animate-pulse">
               Generando enlace seguro en la nube...
             </div>
           ) : (
-            <div className="space-y-3">
-              <label className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
-                <Globe size={14} className="text-amber-600" />
+            <div className="flex flex-col gap-2.5">
+              <label className="text-[13px] font-bold text-amber-900 uppercase tracking-wide flex items-center gap-1.5">
+                <Globe size={15} className="text-sky-600" />
                 Enlace Único de Importación
               </label>
 
@@ -152,15 +122,15 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
                   type="text"
                   readOnly
                   value={getFullShareUrl()}
-                  className="flex-1 bg-white border border-amber-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-mono select-all focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                  className="flex-1 px-3.5 py-2.5 border border-sky-200 rounded-xl text-xs text-slate-800 font-mono bg-white outline-none select-all focus:border-sky-600 focus:bg-sky-50/50 focus:ring-4 focus:ring-sky-700/10 shadow-sm"
                 />
                 <button
+                  type="button"
                   onClick={handleCopy}
-                  style={!copied ? { backgroundColor: '#78350F' } : {}}
-                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 ${
+                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all shadow-[0_4px_6px_rgba(2,132,199,0.2)] active:scale-95 ${
                     copied 
-                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                      : 'text-white hover:brightness-110 shadow-amber-900/20'
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white' 
+                      : 'bg-sky-600 hover:bg-sky-700 text-white hover:-translate-y-[1px]'
                   }`}
                   title="Copiar enlace"
                 >
@@ -170,49 +140,24 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
               </div>
 
               {/* Banner informativo */}
-              <div className="flex items-start gap-2.5 bg-amber-100/70 border border-amber-300/80 rounded-xl p-3 text-xs text-amber-950">
-                <ShieldCheck size={18} className="text-amber-700 shrink-0 mt-0.5" />
-                <p className="leading-relaxed">
+              <div className="flex items-start gap-2.5 bg-white/50 border border-amber-600/15 rounded-xl p-3 text-xs text-amber-950">
+                <ShieldCheck size={18} className="text-sky-600 shrink-0 mt-0.5" />
+                <p className="leading-relaxed m-0">
                   Cualquier compañero de oficina que tenga este enlace podrá <strong>importar y clonar</strong> una copia exacta e independiente en su propia cuenta de CostBase con un solo clic.
                 </p>
               </div>
             </div>
           )}
 
-          {/* Botones de acción inferior */}
-          <div className="flex items-center justify-between pt-2 border-t border-amber-200">
-            {shareData?.is_public_share && (
-              <button
-                type="button"
-                onClick={handleRevoke}
-                disabled={revoking}
-                className="text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
-              >
-                <Trash2 size={14} />
-                {revoking ? 'Revocando...' : 'Desactivar Enlace'}
-              </button>
-            )}
-
-            <div className="flex items-center gap-2 ml-auto">
-              <button
-                type="button"
-                onClick={onClose}
-                className="text-xs font-semibold px-4 py-2 text-slate-600 hover:bg-amber-100/60 rounded-xl transition-colors"
-              >
-                Cerrar
-              </button>
-              {getFullShareUrl() && (
-                <a
-                  href={getFullShareUrl()}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1 text-xs font-bold text-amber-800 hover:text-amber-900 bg-amber-200/80 hover:bg-amber-200 px-3.5 py-2 rounded-xl transition-colors"
-                >
-                  <ExternalLink size={14} />
-                  Ver Vista Previa
-                </a>
-              )}
-            </div>
+          {/* Footer del modal: solo botón Cerrar */}
+          <div className="flex items-center justify-end pt-3 border-t border-amber-600/15">
+            <button
+              type="button"
+              onClick={onClose}
+              className="bg-transparent border-none text-amber-700 text-sm font-semibold px-5 py-2 cursor-pointer rounded-xl hover:bg-white/40 transition-colors"
+            >
+              Cerrar
+            </button>
           </div>
         </div>
 

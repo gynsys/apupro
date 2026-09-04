@@ -109,34 +109,33 @@ export default function ImportSharedBudgetModal({ isOpen, onClose, onSuccess }) 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-amber-50/95 border-2 border-[#B5DCB0] rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-lg bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] border border-amber-600/15 overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Encabezado con color #B5DCB0 */}
-        <div className="px-6 py-4 flex items-center justify-between shadow-sm" style={{ backgroundColor: '#B5DCB0' }}>
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/40 text-[#143d1a] rounded-xl">
-              <Link2 size={20} />
-            </div>
+        {/* Encabezado con estilo del modal de impresión */}
+        <div className="flex justify-between items-center px-6 py-4 bg-white/40 border-b border-amber-600/15">
+          <div className="flex items-center gap-2.5">
+            <Link2 className="text-sky-600" size={22} />
             <div>
-              <h2 className="text-lg font-bold text-[#143d1a]">Importar con Enlace</h2>
-              <p className="text-xs text-[#1e5229]">Pega el link que te compartió un compañero</p>
+              <h2 className="m-0 text-xl font-bold text-amber-900 leading-tight">Importar con Enlace</h2>
+              <p className="text-xs text-amber-800/80 m-0">Pega el link que te compartió un compañero</p>
             </div>
           </div>
           <button 
+            type="button"
             onClick={onClose}
-            className="text-[#1e5229] hover:text-[#0d2a13] p-1 rounded-lg hover:bg-black/5 transition-colors"
+            className="text-amber-700 hover:text-amber-900 bg-transparent transition-colors p-1"
           >
-            <X size={20} />
+            <X size={22} />
           </button>
         </div>
 
         {/* Cuerpo del Modal */}
-        <div className="p-6 space-y-5">
+        <div className="px-6 py-5 flex flex-col gap-4">
           
           {/* Campo para ingresar el link */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+          <div className="flex flex-col gap-2">
+            <label className="text-[13px] font-bold text-amber-900 uppercase tracking-wide flex items-center gap-1.5">
               Enlace o Código Compartido
             </label>
             <div className="flex items-center gap-2">
@@ -152,14 +151,13 @@ export default function ImportSharedBudgetModal({ isOpen, onClose, onSuccess }) 
                     handleConsult();
                   }
                 }}
-                className="flex-1 bg-white border border-amber-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#B5DCB0]"
+                className="flex-1 px-3.5 py-2.5 border border-sky-200 rounded-xl text-xs text-slate-800 bg-white placeholder:text-slate-400 outline-none focus:border-sky-600 focus:bg-sky-50/50 focus:ring-4 focus:ring-sky-700/10 shadow-sm"
               />
               <button
                 type="button"
                 onClick={() => handleConsult()}
                 disabled={loadingPreview || !inputValue.trim()}
-                style={{ backgroundColor: '#B5DCB0' }}
-                className="px-4 py-2.5 rounded-xl text-xs font-bold text-[#143d1a] hover:brightness-95 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed border border-[#9ecc98]"
+                className="px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 transition-all shadow-[0_4px_6px_rgba(2,132,199,0.2)] hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loadingPreview ? <Loader2 size={16} className="animate-spin" /> : 'Consultar'}
               </button>
@@ -176,34 +174,34 @@ export default function ImportSharedBudgetModal({ isOpen, onClose, onSuccess }) 
 
           {/* Tarjeta de Vista Previa encontrada */}
           {preview && (
-            <div className="bg-white/95 border border-amber-200 rounded-2xl p-4 shadow-sm space-y-3 animate-in fade-in duration-200">
-              <div className="flex items-center justify-between border-b border-amber-100 pb-2.5">
+            <div className="bg-white/60 border border-amber-600/15 rounded-xl p-4 shadow-sm space-y-3 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between border-b border-amber-600/15 pb-2.5">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 block">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900/70 block">
                     Presupuesto Detectado
                   </span>
                   <h3 className="text-base font-bold text-amber-950 mt-0.5 truncate max-w-sm">
                     {preview.name}
                   </h3>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-[#B5DCB0]/50 text-[#143d1a] flex items-center justify-center font-bold">
+                <div className="w-8 h-8 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-bold">
                   <User size={16} />
                 </div>
               </div>
 
               {/* Métricas del proyecto */}
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="bg-amber-50/70 p-2 rounded-xl border border-amber-200/60">
+                <div className="bg-white/80 p-2 rounded-xl border border-amber-600/15">
                   <span className="text-[10px] text-slate-500 block">Emisor</span>
-                  <span className="font-semibold text-amber-900 truncate block text-[11px]">{preview.owner_name}</span>
+                  <span className="font-semibold text-amber-950 truncate block text-[11px]">{preview.owner_name}</span>
                 </div>
-                <div className="bg-amber-50/70 p-2 rounded-xl border border-amber-200/60">
+                <div className="bg-white/80 p-2 rounded-xl border border-amber-600/15">
                   <span className="text-[10px] text-slate-500 block">Partidas</span>
                   <span className="font-bold text-slate-800 block text-xs">{preview.items_count}</span>
                 </div>
-                <div className="bg-amber-50/70 p-2 rounded-xl border border-amber-200/60">
+                <div className="bg-white/80 p-2 rounded-xl border border-amber-600/15">
                   <span className="text-[10px] text-slate-500 block">Monto</span>
-                  <span className="font-bold text-emerald-700 block text-xs truncate">
+                  <span className="font-bold text-sky-700 block text-xs truncate">
                     {preview.currency === 'USD' ? '$' : 'Bs.'}{' '}
                     {new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(preview.total_amount)}
                   </span>
@@ -215,8 +213,7 @@ export default function ImportSharedBudgetModal({ isOpen, onClose, onSuccess }) 
                 type="button"
                 onClick={handleImport}
                 disabled={importing}
-                style={{ backgroundColor: '#B5DCB0' }}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-[#143d1a] hover:brightness-95 border border-[#9ecc98] shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 shadow-[0_4px_6px_rgba(2,132,199,0.2)] hover:-translate-y-[1px] transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {importing ? (
                   <>
@@ -226,7 +223,7 @@ export default function ImportSharedBudgetModal({ isOpen, onClose, onSuccess }) 
                 ) : (
                   <>
                     <Download size={16} />
-                    <span>📥 Clonar e Importar a Mis Presupuestos</span>
+                    <span>Clonar e Importar a Mis Presupuestos</span>
                   </>
                 )}
               </button>
@@ -234,11 +231,11 @@ export default function ImportSharedBudgetModal({ isOpen, onClose, onSuccess }) 
           )}
 
           {/* Footer modal */}
-          <div className="flex items-center justify-end pt-2 border-t border-amber-200/80">
+          <div className="flex items-center justify-end pt-3 border-t border-amber-600/15">
             <button
               type="button"
               onClick={onClose}
-              className="text-xs font-semibold px-4 py-2 text-slate-600 hover:bg-amber-100/60 rounded-xl transition-colors"
+              className="bg-transparent border-none text-amber-700 text-sm font-semibold px-5 py-2 cursor-pointer rounded-xl hover:bg-white/40 transition-colors"
             >
               Cancelar
             </button>
