@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Printer, X, CheckSquare, Square, Type, DollarSign, UploadCloud, Trash2 } from 'lucide-react';
+import { Printer, X, CheckSquare, Square, Type, DollarSign, UploadCloud, Trash2, MapPin } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function BudgetPrintModal({ onClose, onPrint, initialCurrency = 'USD', budgetId }) {
@@ -10,7 +10,8 @@ export default function BudgetPrintModal({ onClose, onPrint, initialCurrency = '
     includeRif: true,
     includeIva: true,
     currency: initialCurrency,
-    title: 'PRESUPUESTO'
+    title: 'PRESUPUESTO',
+    ubicacion: localStorage.getItem(`budget_ubicacion_${budgetId}`) || ''
   });
   
   const [logoPreview, setLogoPreview] = useState(() => {
@@ -22,6 +23,9 @@ export default function BudgetPrintModal({ onClose, onPrint, initialCurrency = '
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (config.ubicacion !== undefined) {
+      localStorage.setItem(`budget_ubicacion_${budgetId}`, config.ubicacion.trim());
+    }
     onPrint(config);
   };
 
@@ -209,6 +213,19 @@ export default function BudgetPrintModal({ onClose, onPrint, initialCurrency = '
                 <option value="USD">Dólares (USD)</option>
                 <option value="BS">Bolívares (BS)</option>
               </select>
+            </div>
+
+            <div className="flex flex-col gap-2 md:col-span-2">
+              <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1">
+                <MapPin size={14}/> Ubicación (Opcional)
+              </label>
+              <input 
+                type="text" 
+                value={config.ubicacion || ''}
+                onChange={e => setConfig({...config, ubicacion: e.target.value})}
+                placeholder="Ej. Barcelona, Anzoátegui"
+                className="px-3 py-1.5 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10 font-medium"
+              />
             </div>
           </div>
           

@@ -143,7 +143,7 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
               <div className="flex items-start gap-2.5 bg-white/50 border border-amber-600/15 rounded-xl p-3 text-xs text-amber-950">
                 <ShieldCheck size={18} className="text-sky-600 shrink-0 mt-0.5" />
                 <p className="leading-relaxed m-0">
-                  Cualquier compañero de oficina que tenga este enlace podrá <strong>importar y clonar</strong> una copia exacta e independiente en su propia cuenta de CostBase con un solo clic.
+                  Cualquier usuario de CostBase que tenga este enlace podrá <strong>importar y clonar</strong> una copia exacta e independiente en su propia cuenta con un solo clic.
                 </p>
               </div>
             </div>

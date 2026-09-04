@@ -28,7 +28,7 @@ export default function BudgetPrintLayout({ budget, config }) {
           rows.push({
             type: 'chapter-subtotal',
             chapterId: currentChapter.id,
-            description: `Total ${config.currency}. ${currentChapter.description}:`,
+            description: `Total ${currencyHeader} ${currentChapter.description}:`,
             amount: currentChapterSubtotal
           });
         }
@@ -62,20 +62,28 @@ export default function BudgetPrintLayout({ budget, config }) {
     }
   });
 
+  const currencyDisplay = (config?.currency === 'BS' || config?.currency === 'Bs' || config?.currency === 'Bs.') ? 'Bs.' : (config?.currency || 'USD');
+  const currencyHeader = currencyDisplay.endsWith('.') ? currencyDisplay : `${currencyDisplay}.`;
+  const ivaPercent = budget.iva_percent !== undefined && budget.iva_percent !== null ? Number(budget.iva_percent) : 16;
+
   if (shouldIncludeChapters && currentChapter) {
     rows.push({
       type: 'chapter-subtotal',
       chapterId: currentChapter.id,
-      description: `Total ${config.currency}. ${currentChapter.description}:`,
+      description: `Total ${currencyHeader} ${currentChapter.description}:`,
       amount: currentChapterSubtotal
     });
   }
 
   const subtotalPresupuesto = items.filter(i => !i.is_chapter).reduce((sum, i) => sum + (calculatePU(i) * i.quantity), 0);
-  const ivaAmount = subtotalPresupuesto * ((budget.iva_percent ?? 16.0) / 100);
+  const ivaAmount = subtotalPresupuesto * (ivaPercent / 100);
   const totalGeneral = subtotalPresupuesto + (config.includeIva ? ivaAmount : 0);
 
   const formatCurrency = (val) => val.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const obra = (budget.project_name || budget.name || '').trim();
+  const ubicacion = (config?.ubicacion || budget.ubicacion || budget.location || localStorage.getItem(`budget_ubicacion_${budget.id}`) || '').trim();
+  const contratante = (budget.client_name || config?.contratante || '').trim();
 
   return createPortal(
     <div 
@@ -107,20 +115,28 @@ export default function BudgetPrintLayout({ budget, config }) {
               </div>
             )}
             <div style={{ flex: 1 }}>
-              <p style={{ margin: '0 0 4px 0', fontSize: '15px', lineHeight: '1.3' }}>
-                <span style={{ fontWeight: 'bold', color: '#000' }}>Obra: </span>
-                <span style={{ fontWeight: 'bold', color: '#000' }}>{budget.project_name || budget.name || 'N/A'}</span>
-              </p>
-              {budget.client_name && (
-                <p style={{ margin: '2px 0', fontSize: '12px' }}>
-                  <span style={{ fontWeight: 'bold', color: '#000' }}>Contratante: </span>
-                  <span style={{ fontWeight: 'normal', color: '#000' }}>{budget.client_name}</span>
+              {obra && (
+                <p style={{ margin: '0 0 4px 0', fontSize: '15px', lineHeight: '1.3' }}>
+                  <span style={{ fontWeight: 'bold', color: '#000' }}>Obra: </span>
+                  <span style={{ fontWeight: 'normal', color: '#000' }}>{obra}</span>
                 </p>
               )}
-              {config.includeRif && budget.company_rif && (
+              {ubicacion && (
+                <p style={{ margin: '2px 0', fontSize: '12px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#000' }}>Ubicación: </span>
+                  <span style={{ fontWeight: 'normal', color: '#000' }}>{ubicacion}</span>
+                </p>
+              )}
+              {contratante && (
+                <p style={{ margin: '2px 0', fontSize: '12px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#000' }}>Contratante: </span>
+                  <span style={{ fontWeight: 'normal', color: '#000' }}>{contratante}</span>
+                </p>
+              )}
+              {config.includeRif && budget.company_rif && budget.company_rif.trim() && (
                 <p style={{ margin: '2px 0', fontSize: '12px' }}>
                   <span style={{ fontWeight: 'bold', color: '#000' }}>RIF: </span>
-                  <span style={{ fontWeight: 'normal', color: '#000' }}>{budget.company_rif}</span>
+                  <span style={{ fontWeight: 'normal', color: '#000' }}>{budget.company_rif.trim()}</span>
                 </p>
               )}
             </div>
@@ -139,7 +155,7 @@ export default function BudgetPrintLayout({ budget, config }) {
               <th style={{ ...thStyle, width: '45px' }}>Und.</th>
               <th style={{ ...thStyle, width: '75px' }}>Cantidad</th>
               <th style={{ ...thStyle, width: '90px' }}>Precio Unitario</th>
-              <th style={{ ...thStyle, width: '125px' }}>Total {config.currency}.</th>
+              <th style={{ ...thStyle, width: '125px' }}>Total {currencyHeader}</th>
             </tr>
           </thead>
           <tbody>
@@ -216,18 +232,18 @@ export default function BudgetPrintLayout({ budget, config }) {
           <table style={{ borderCollapse: 'collapse', flexShrink: 0, marginLeft: 'auto', tableLayout: 'fixed' }}>
             <tbody>
               <tr>
-                <td style={{ ...totalLabelStyle }}>Total Hoja (Sin I.V.A.):</td>
-                <td style={{ ...totalValueStyle, width: '125px', boxSizing: 'border-box' }}>{formatCurrency(subtotalPresupuesto)}</td>
+                <td style={{ ...totalLabelStyle }}>Subtotal ({currencyDisplay}):</td>
+                <td style={{ ...totalValueStyle }}>{formatCurrency(subtotalPresupuesto)}</td>
               </tr>
               {config.includeIva && (
                 <tr>
-                  <td style={{ ...totalLabelStyle }}>Total I.V.A. ({budget.iva_percent ?? 16}%):</td>
-                  <td style={{ ...totalValueStyle, width: '125px', boxSizing: 'border-box' }}>{formatCurrency(ivaAmount)}</td>
+                  <td style={{ ...totalLabelStyle }}>IVA {ivaPercent}% ({currencyDisplay}):</td>
+                  <td style={{ ...totalValueStyle }}>{formatCurrency(ivaAmount)}</td>
                 </tr>
               )}
               <tr>
-                <td style={{ ...totalLabelStyle, fontWeight: 'bold' }}>Total {config.currency}.:</td>
-                <td style={{ ...totalValueStyle, fontWeight: 'bold', width: '125px', boxSizing: 'border-box' }}>{formatCurrency(totalGeneral)}</td>
+                <td style={{ ...totalLabelStyle }}>Total Presupuesto ({currencyDisplay}):</td>
+                <td style={{ ...totalValueStyle }}>{formatCurrency(totalGeneral)}</td>
               </tr>
             </tbody>
           </table>
@@ -258,17 +274,19 @@ const tdStyle = {
 };
 
 const totalLabelStyle = {
+  border: '1px solid #000',
   textAlign: 'right',
   padding: '4px 8px',
-  border: 'none',
-  paddingRight: '12px',
-  whiteSpace: 'nowrap'
+  fontWeight: 'bold',
+  whiteSpace: 'nowrap',
+  boxSizing: 'border-box'
 };
 
 const totalValueStyle = {
   border: '1px solid #000',
   padding: '4px 8px',
   textAlign: 'right',
+  fontWeight: 'bold',
   width: '125px',
   boxSizing: 'border-box'
 };

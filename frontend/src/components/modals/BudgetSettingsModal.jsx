@@ -28,7 +28,8 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
     company_name: budget.company_name || '',
     company_rif: budget.company_rif || '',
     client_name: budget.client_name || '',
-    project_name: budget.project_name || ''
+    project_name: budget.project_name || '',
+    ubicacion: localStorage.getItem(`budget_ubicacion_${budget.id}`) || budget.ubicacion || budget.location || ''
   });
 
   useEffect(() => {
@@ -83,9 +84,11 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
 
   const handleSaveSettings = async () => {
     try {
-      await budgetService.update(budget.id, settings);
+      const { ubicacion, ...apiSettings } = settings;
+      await budgetService.update(budget.id, apiSettings);
+      localStorage.setItem(`budget_ubicacion_${budget.id}`, (ubicacion || '').trim());
       toast.success('Configuración guardada exitosamente');
-      onSave(settings);
+      onSave({ ...settings, ubicacion: (ubicacion || '').trim() });
     } catch (error) {
       toast.error('Error guardando configuración');
     }
@@ -160,6 +163,16 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                   type="text" 
                   value={settings.client_name}
                   onChange={e => setSettings({...settings, client_name: e.target.value})}
+                  className="px-3 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
+                />
+              </div>
+              <div className="flex flex-col gap-2 w-full">
+                <label className="text-[13px] font-semibold text-amber-900">Ubicación de la Obra (Opcional)</label>
+                <input 
+                  type="text" 
+                  value={settings.ubicacion || ''}
+                  onChange={e => setSettings({...settings, ubicacion: e.target.value})}
+                  placeholder="Ej. Barcelona, Anzoátegui"
                   className="px-3 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                 />
               </div>
