@@ -117,20 +117,31 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
             query = query.filter(and_(*all_filters))
             
     if covenin:
-        query = query.filter(CostItem.CovPar.startswith(covenin))
+        if covenin == "R":
+            query = query.filter(CostItem.CovPar.startswith("R"), ~CostItem.CovPar.endswith("RA"), ~CostItem.CovPar.startswith("RA"))
+        elif covenin == "RA":
+            query = query.filter(or_(CostItem.CovPar.endswith("RA"), CostItem.CovPar.startswith("RA"), CostItem.Categoria == "RA"))
+        else:
+            query = query.filter(CostItem.CovPar.startswith(covenin))
+
     if chapter:
-        query_chap = query.filter(or_(CostItem.CovPar.startswith(chapter), CostItem.CodPar.startswith(chapter)))
+        if chapter == "R":
+            query_chap = query.filter(CostItem.CovPar.startswith("R"), ~CostItem.CovPar.endswith("RA"), ~CostItem.CovPar.startswith("RA"))
+        elif chapter == "RA":
+            query_chap = query.filter(or_(CostItem.CovPar.endswith("RA"), CostItem.CovPar.startswith("RA"), CostItem.Categoria == "RA"))
+        else:
+            query_chap = query.filter(or_(CostItem.CovPar.startswith(chapter), CostItem.CodPar.startswith(chapter)))
+            total = query_chap.count()
+            
+            if total == 0 and len(chapter) > 3:
+                fallback_chap = chapter[:-1]
+                while len(fallback_chap) >= 3:
+                    query_chap = query.filter(or_(CostItem.CovPar.startswith(fallback_chap), CostItem.CodPar.startswith(fallback_chap)))
+                    total = query_chap.count()
+                    if total > 0:
+                        break
+                    fallback_chap = fallback_chap[:-1]
         total = query_chap.count()
-        
-        if total == 0 and len(chapter) > 3:
-            fallback_chap = chapter[:-1]
-            while len(fallback_chap) >= 3:
-                query_chap = query.filter(or_(CostItem.CovPar.startswith(fallback_chap), CostItem.CodPar.startswith(fallback_chap)))
-                total = query_chap.count()
-                if total > 0:
-                    break
-                fallback_chap = fallback_chap[:-1]
-        
         query = query_chap
     else:
         total = query.count()
@@ -142,7 +153,7 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
         query = query.filter(CostItem.TipoActividad == tipo_actividad)
         total = query.count() # re-count if tipo_actividad is applied
     if only_coded:
-        query = query.filter(CostItem.CovPar.op('~')(r'^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$'))
+        query = query.filter(CostItem.CovPar.op('~')(r'(^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$|^[0-9]+RA$)'))
         total = query.count()
 
     if hidden_categories and not covenin and not chapter:
@@ -182,7 +193,7 @@ def get_apu_labors(db: Session, item_code: str):
         .filter(CostAPULabor.CodPar == item_code).all()
 
 def search_materials_paginated(db: Session, skip: int, limit: int, search: str):
-    valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$'))
+    valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'(^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$|^[0-9]+RA$)'))
     used_materials = db.query(CostAPUMaterial.CodIns).filter(CostAPUMaterial.CodPar.in_(valid_apu_query))
     
     query = db.query(CostMaterial).filter(CostMaterial.CodMat.in_(used_materials))
@@ -194,7 +205,7 @@ def search_materials_paginated(db: Session, skip: int, limit: int, search: str):
     return total, items
 
 def search_equipments_paginated(db: Session, skip: int, limit: int, search: str):
-    valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$'))
+    valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'(^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$|^[0-9]+RA$)'))
     used_equipments = db.query(CostAPUEquipment.CodIns).filter(CostAPUEquipment.CodPar.in_(valid_apu_query))
 
     query = db.query(CostEquipment).filter(CostEquipment.CodEqu.in_(used_equipments))
@@ -206,7 +217,7 @@ def search_equipments_paginated(db: Session, skip: int, limit: int, search: str)
     return total, items
 
 def search_labors_paginated(db: Session, skip: int, limit: int, search: str):
-    valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$'))
+    valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'(^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$|^[0-9]+RA$)'))
     used_labors = db.query(CostAPULabor.CodIns).filter(CostAPULabor.CodPar.in_(valid_apu_query))
 
     query = db.query(CostLabor).filter(CostLabor.CodMan.in_(used_labors))

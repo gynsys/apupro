@@ -9,10 +9,22 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.core.limiter import limiter
 import logging
+import re
 logger = logging.getLogger(__name__)
 
 from sqlalchemy import text
 import app.db.models
+
+def clean_fcas_description(desc: str) -> str:
+    if not desc:
+        return ""
+    cleaned = desc
+    cleaned = re.sub(r'Precio Unitario\s+Bs\.?\s*[\d.,]+', ' ', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'Rendimiento\s+[\d.,]+', ' ', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'[\d.,]+\s*%', ' ', cleaned)
+    cleaned = re.sub(r'\bF\.?C\.?A\.?S\.?\b', ' ', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'Calculos por\s+Rendimiento', ' ', cleaned, flags=re.IGNORECASE)
+    return re.sub(r'\s+', ' ', cleaned).strip()
 
 # Configurar Base de Datos para Arko
 logger.info("Initializing Arko360 database tables...")
@@ -59,7 +71,47 @@ try:
             except Exception as ex:
                 logger.warning(f"Aviso en auto-migración de esquema budgets: {ex}")
         conn.commit()
-    logger.info("Schema migrations for budgets verified successfully.")
+
+        # Limpieza automatica en produccion de descripciones parasitarias (F.C.A.S., etc.)
+        try:
+            dirty_items = conn.execute(text("""
+                SELECT "CodPar", "Descri", "desc_limpia"
+                FROM cost360_items
+                WHERE "Descri" ILIKE '%F.C.A.S%' 
+                   OR "Descri" ILIKE '%FCAS%' 
+                   OR "Descri" ILIKE '%Calculos por Rendimiento%'
+                   OR "desc_limpia" ILIKE '%F.C.A.S%'
+                   OR "desc_limpia" ILIKE '%FCAS%'
+            """)).fetchall()
+            
+            if dirty_items:
+                for row in dirty_items:
+                    cod = row[0]
+                    new_desc = clean_fcas_description(row[1] or "")
+                    new_limpia = clean_fcas_description(row[2] or "") if row[2] else new_desc
+                    conn.execute(
+                        text('UPDATE cost360_items SET "Descri" = :d, "desc_limpia" = :l WHERE "CodPar" = :c'),
+                        {"d": new_desc, "l": new_limpia, "c": cod}
+                    )
+                conn.commit()
+                logger.info(f"Limpieza automatica de {len(dirty_items)} partidas con F.C.A.S. completada con exito.")
+        except Exception as ex_fcas:
+            logger.error(f"Error en auto-limpieza de descripciones F.C.A.S.: {ex_fcas}", exc_info=True)
+
+        # Auto-migracion de codigos de Redes Aereas (RA1000 -> 1000RA)
+        try:
+            res_ra = conn.execute(text("""
+                UPDATE cost360_items
+                SET "CovPar" = SUBSTRING("CovPar" FROM 3) || 'RA'
+                WHERE "CovPar" ~ '^RA[0-9]+'
+            """))
+            conn.commit()
+            if res_ra.rowcount > 0:
+                logger.info(f"Auto-migracion de {res_ra.rowcount} partidas de Redes Aereas a formato [numero]RA completada.")
+        except Exception as ex_ra:
+            logger.error(f"Error en auto-migracion de codigos RA: {ex_ra}", exc_info=True)
+
+    logger.info("Schema and data migrations for cost360 verified successfully.")
 except Exception as e:
     logger.error(f"Error creating Arko360 database tables: {e}", exc_info=True)
 
