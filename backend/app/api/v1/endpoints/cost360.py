@@ -218,7 +218,7 @@ def update_master_item_route(item_code: str, payload: MasterItemUpdate, db: Sess
     return updated_item
 
 @router.put("/items/{item_code}/apu")
-def update_master_apu_route(item_code: str, payload: MasterAPUUpdate, database_id: str = "master", db: Session = Depends(get_db)):
+def update_master_apu_route(item_code: str, payload: MasterAPUUpdate, database_id: str = "master", db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     set_schema_for_db(db, database_id)
     updated_item = update_master_apu_details(
         db=db,

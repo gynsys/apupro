@@ -156,6 +156,7 @@ export const getMasterItems = async (limit = 10000, search = '', database_id = '
 export default {
   fetchItems,
   fetchApuDetails,
+  updateApuDetails,
   fetchCategoriesTree,
   generateAIApu,
   generateAIApuFromBase,

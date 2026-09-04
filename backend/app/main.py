@@ -22,9 +22,11 @@ def clean_fcas_description(desc: str) -> str:
     cleaned = re.sub(r'Precio Unitario\s+Bs\.?\s*[\d.,]+', ' ', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'Rendimiento\s+[\d.,]+', ' ', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'[\d.,]+\s*%', ' ', cleaned)
-    cleaned = re.sub(r'\bF\.?C\.?A\.?S\.?\b', ' ', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\bF\.?\s*C\.?\s*A\.?\s*S\.?\b|\bFCAS\b|F\.C\.A\.S\.?', ' ', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'Calculos por\s+Rendimiento', ' ', cleaned, flags=re.IGNORECASE)
-    return re.sub(r'\s+', ' ', cleaned).strip()
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    cleaned = re.sub(r'^[.\s,;:\-]+', '', cleaned).strip()
+    return cleaned
 
 # Configurar Base de Datos para Arko
 logger.info("Initializing Arko360 database tables...")
@@ -80,8 +82,10 @@ try:
                 WHERE "Descri" ILIKE '%F.C.A.S%' 
                    OR "Descri" ILIKE '%FCAS%' 
                    OR "Descri" ILIKE '%Calculos por Rendimiento%'
+                   OR "Descri" ~ '^[.\\s,;:\\-]+'
                    OR "desc_limpia" ILIKE '%F.C.A.S%'
                    OR "desc_limpia" ILIKE '%FCAS%'
+                   OR "desc_limpia" ~ '^[.\\s,;:\\-]+'
             """)).fetchall()
             
             if dirty_items:

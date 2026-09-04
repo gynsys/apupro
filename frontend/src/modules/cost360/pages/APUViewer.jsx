@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Printer, FileSpreadsheet, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
-import cost360Service from '../services/cost360Service';
+import cost360Service, { updateApuDetails } from '../services/cost360Service';
 import PrintAPUModal from '../../../components/PrintAPUModal';
 import PrintAPULayout from '../../../components/PrintAPULayout';
 import ExportApuExcelButton from '../components/ExportApuExcelButton';
@@ -131,7 +131,8 @@ export default function APUViewer() {
         equipments: item.equipments,
         labors: item.labors
       };
-      await cost360Service.updateApuDetails(item.cod_par || id, payload, dbId);
+      const updateFn = cost360Service.updateApuDetails || updateApuDetails;
+      await updateFn(item.cod_par || id, payload, dbId);
       toast.success("APU guardado exitosamente");
       const apuData = await cost360Service.fetchApuDetails(id, dbId);
       setData(apuData);
@@ -198,7 +199,7 @@ export default function APUViewer() {
             </h2>
           </div>
           <div className="flex items-center gap-2">
-            {(isSuperAdmin || fromParam === 'admin-db') && (
+            {isSuperAdmin && (
               <button
                 onClick={handleSaveAPU}
                 disabled={saving}
