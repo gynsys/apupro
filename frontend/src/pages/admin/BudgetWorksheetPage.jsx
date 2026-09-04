@@ -922,19 +922,19 @@ export default function BudgetWorksheetPage() {
               <div className="flex justify-between items-center py-1">
                 <span className="text-slate-500 font-medium text-sm leading-none">SUBTOTAL</span>
                 <span className="text-lg font-semibold text-slate-700 leading-none">
-                  {subtotalPresupuesto.toLocaleString('es-VE', {minimumFractionDigits: 2})}
+                  {subtotalPresupuesto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               <div className="flex justify-between items-center py-1 border-b border-slate-200">
                 <span className="text-slate-500 font-medium text-sm leading-none">I.V.A. ({budget.iva_percent ?? 16}%)</span>
                 <span className="text-lg font-semibold text-slate-700 leading-none">
-                  {ivaAmount.toLocaleString('es-VE', {minimumFractionDigits: 2})}
+                  {ivaAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               <div className="flex justify-between items-center py-1">
                 <span className="text-slate-500 font-medium text-sm leading-none">TOTAL ({budget.currency})</span>
                 <span className="text-lg font-semibold text-slate-700 leading-none">
-                  {totalGeneral.toLocaleString('es-VE', {minimumFractionDigits: 2})}
+                  {totalGeneral.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             </div>

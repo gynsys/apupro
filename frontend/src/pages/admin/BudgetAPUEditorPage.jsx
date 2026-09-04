@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Plus, Printer, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -9,6 +9,7 @@ import PrintAPUModal from '../../components/PrintAPUModal';
 import PrintAPULayout from '../../components/PrintAPULayout';
 import ApuEditorUI from '../../components/ApuEditorUI';
 import ExportApuExcelButton from '../../modules/cost360/components/ExportApuExcelButton';
+import { calculateBudgetTotals } from '../../utils/apuCalculations';
 
 
 export default function BudgetAPUEditorPage() {
@@ -314,6 +315,20 @@ export default function BudgetAPUEditorPage() {
     }
   };
 
+  const currentBudget = useMemo(() => {
+    if (!budget) return null;
+    if (!item) return budget;
+    return {
+      ...budget,
+      items: (budget.items || []).map(i => i.id === item.id ? item : i)
+    };
+  }, [budget, item]);
+
+  const { subtotalPresupuesto } = useMemo(() => {
+    if (!currentBudget) return { subtotalPresupuesto: 0 };
+    return calculateBudgetTotals(currentBudget);
+  }, [currentBudget]);
+
   const currentIndex = budget ? budget.items.findIndex(i => i.id === itemId) : -1;
   const prevItem = currentIndex > 0 ? budget.items[currentIndex - 1] : null;
   const nextItem = currentIndex !== -1 && currentIndex < budget.items.length - 1 ? budget.items[currentIndex + 1] : null;
@@ -385,6 +400,22 @@ export default function BudgetAPUEditorPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Total sin IVA en vivo */}
+            <div 
+              className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-sm"
+              title="Total del presupuesto sin IVA (se recalcula automáticamente al modificar este APU)"
+            >
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Total sin IVA:
+              </span>
+              <span className="text-base md:text-lg font-bold text-slate-700 leading-none">
+                {subtotalPresupuesto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                {budget?.currency || 'USD'}
+              </span>
+            </div>
+
             <button
               onClick={() => setPrintModalOpen(true)}
               className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 hover:border-blue-400 hover:shadow-md transition-all duration-200 shadow-sm"
