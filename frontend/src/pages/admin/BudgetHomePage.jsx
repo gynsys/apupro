@@ -94,7 +94,10 @@ export default function BudgetHomePage() {
     }
   };
 
-  const filteredBudgets = budgets.filter(b => b.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredBudgets = budgets.filter(b => {
+    const query = searchTerm.toLowerCase();
+    return (b.name || '').toLowerCase().includes(query) || (b.project_name || '').toLowerCase().includes(query);
+  });
 
   const confirmDelete = (id) => {
     toast((t) => (
@@ -255,9 +258,13 @@ export default function BudgetHomePage() {
 
   const handleRename = async (e) => {
     e.preventDefault();
-    if (!renameName.trim()) return;
+    const cleanName = renameName.trim();
+    if (!cleanName) return;
     try {
-      await budgetService.update(renamingBudget.id, { name: renameName });
+      await budgetService.update(renamingBudget.id, { 
+        name: cleanName,
+        project_name: cleanName
+      });
       toast.success('Nombre actualizado');
       setRenamingBudget(null);
       setRenameName('');
@@ -372,8 +379,8 @@ export default function BudgetHomePage() {
                 <div className="tarjeta-header flex w-full justify-between items-center gap-4">
                   {/* Lado Izquierdo: Título y Métricas */}
                   <div className="flex flex-col gap-2 items-start justify-center flex-1 overflow-hidden">
-                    <h3 className="tarjeta-titulo-ambar truncate w-full" title={budget.name}>
-                      {budget.name}
+                    <h3 className="tarjeta-titulo-ambar truncate w-full" title={budget.project_name || budget.name}>
+                      {budget.project_name || budget.name}
                     </h3>
                     {/* Segunda Fila Interna: Métricas */}
                     <div className="flex items-center gap-6 justify-start">
@@ -399,7 +406,7 @@ export default function BudgetHomePage() {
                   {/* Lado Derecho: Iconos de Acción centrados verticalmente */}
                   <div className="acciones-rapidas flex items-center shrink-0">
                     <button
-                      onClick={(e) => { e.stopPropagation(); setDuplicatingBudget(budget); setDuplicateName(budget.name + ' (Copia)'); }}
+                      onClick={(e) => { e.stopPropagation(); setDuplicatingBudget(budget); setDuplicateName((budget.project_name || budget.name) + ' (Copia)'); }}
                       className="btn-accion"
                       title="Duplicar"
                     >
@@ -441,7 +448,7 @@ export default function BudgetHomePage() {
                       <Share2 size={18} />
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); setRenamingBudget(budget); setRenameName(budget.name); }}
+                      onClick={(e) => { e.stopPropagation(); setRenamingBudget(budget); setRenameName(budget.project_name || budget.name); }}
                       className="btn-accion"
                       title="Editar"
                     >
@@ -624,6 +631,7 @@ export default function BudgetHomePage() {
             }
           }}
           initialCurrency={printBudget.currency || 'USD'}
+          initialUbicacion={printBudget.ubicacion || ''}
           budgetId={printBudget.id}
         />
       )}

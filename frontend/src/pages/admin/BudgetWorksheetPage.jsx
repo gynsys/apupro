@@ -590,7 +590,12 @@ export default function BudgetWorksheetPage() {
             }
           }}
           onSave={(newSettings) => {
-            setBudget(prev => ({ ...prev, ...newSettings }));
+            setBudget(prev => ({ 
+              ...prev, 
+              ...newSettings,
+              name: newSettings.name || newSettings.project_name || prev.name,
+              project_name: newSettings.project_name || newSettings.name || prev.project_name
+            }));
             setShowSettings(false);
             if (new URLSearchParams(location.search).has('settings')) {
               navigate(`/budgets/${id}`, { replace: true });
@@ -608,6 +613,7 @@ export default function BudgetWorksheetPage() {
             setPrintConfig(config);
           }}
           initialCurrency={budget.currency || 'USD'}
+          initialUbicacion={budget.ubicacion || ''}
           budgetId={id}
         />
       )}
@@ -629,7 +635,7 @@ export default function BudgetWorksheetPage() {
             setShowApuPrintModal(false);
             setApuPrintOptions(options);
           }}
-          budgetName={budget.name}
+          budgetName={budget.project_name || budget.name}
         />
       )}
 
@@ -647,7 +653,7 @@ export default function BudgetWorksheetPage() {
           materiales={apuToPrint.materials || []}
           equipos={apuToPrint.equipments || []}
           mano_obra={apuToPrint.labors || []}
-          options={{ ...apuPrintOptions, companyName: budget.company_name || budget.name }}
+          options={{ ...apuPrintOptions, companyName: budget.company_name || budget.project_name || budget.name }}
         />
       )}
 
@@ -669,7 +675,7 @@ export default function BudgetWorksheetPage() {
                           <ArrowLeft size={20} className="text-slate-600" />
                         </button>
                         <div>
-                          <h1 className="text-2xl font-bold text-slate-800 leading-tight">{budget.name}</h1>
+                          <h1 className="text-2xl font-bold text-slate-800 leading-tight">{budget.project_name || budget.name}</h1>
                         </div>
                       </div>
                       <div className="hidden md:flex items-center">

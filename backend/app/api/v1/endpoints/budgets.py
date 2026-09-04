@@ -112,6 +112,12 @@ def update_budget(budget_id: str, budget_in: BudgetUpdate, db: Session = Depends
         raise HTTPException(status_code=404, detail="Budget not found")
 
     update_data = budget_in.model_dump(exclude_unset=True)
+    # Sincronizar name y project_name si solo uno de los dos fue enviado
+    if "project_name" in update_data and "name" not in update_data:
+        update_data["name"] = update_data["project_name"]
+    elif "name" in update_data and "project_name" not in update_data:
+        update_data["project_name"] = update_data["name"]
+
     for field, value in update_data.items():
         setattr(budget, field, value)
 
@@ -564,6 +570,8 @@ async def export_budget_excel(
         budget_dict: Dict[str, Any] = {
             "name": budget.name,
             "project_name": budget.project_name or budget.name,
+            "obra": budget.project_name or budget.name,
+            "ubicacion": getattr(budget, "ubicacion", "") or "",
             "client_name": budget.client_name or "",
             "company_rif": budget.company_rif or "",
             "currency": budget.currency or "USD",

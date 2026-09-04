@@ -15,8 +15,9 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
   });
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [settings, setSettings] = useState({
+    name: budget.project_name || budget.name || '',
     currency: budget.currency || 'USD',
-    exchange_rate: budget.exchange_rate || 1.0,
+    exchange_rate: budget.exchange_rate ?? 1.0,
     fcas_percent: budget.fcas_percent ?? 417.0,
     admin_percent: budget.admin_percent ?? 15.0,
     profit_percent: budget.profit_percent ?? 10.0,
@@ -28,9 +29,33 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
     company_name: budget.company_name || '',
     company_rif: budget.company_rif || '',
     client_name: budget.client_name || '',
-    project_name: budget.project_name || '',
-    ubicacion: localStorage.getItem(`budget_ubicacion_${budget.id}`) || budget.ubicacion || budget.location || ''
+    project_name: budget.project_name || budget.name || '',
+    ubicacion: budget.ubicacion || localStorage.getItem(`budget_ubicacion_${budget.id}`) || budget.location || ''
   });
+
+  useEffect(() => {
+    if (budget) {
+      setSettings(prev => ({
+        ...prev,
+        name: budget.project_name || budget.name || prev.name,
+        project_name: budget.project_name || budget.name || prev.project_name,
+        currency: budget.currency || prev.currency,
+        exchange_rate: budget.exchange_rate ?? prev.exchange_rate,
+        fcas_percent: budget.fcas_percent ?? prev.fcas_percent,
+        admin_percent: budget.admin_percent ?? prev.admin_percent,
+        profit_percent: budget.profit_percent ?? prev.profit_percent,
+        iva_percent: budget.iva_percent ?? prev.iva_percent,
+        labor_bonus: budget.labor_bonus ?? prev.labor_bonus,
+        material_inflation: budget.material_inflation ?? prev.material_inflation,
+        labor_inflation: budget.labor_inflation ?? prev.labor_inflation,
+        equipment_inflation: budget.equipment_inflation ?? prev.equipment_inflation,
+        company_name: budget.company_name || prev.company_name,
+        company_rif: budget.company_rif || prev.company_rif,
+        client_name: budget.client_name || prev.client_name,
+        ubicacion: budget.ubicacion || localStorage.getItem(`budget_ubicacion_${budget.id}`) || budget.location || prev.ubicacion
+      }));
+    }
+  }, [budget]);
 
   useEffect(() => {
     // Si la calculadora de FCAS se usa mientras este modal está abierto,
@@ -84,12 +109,32 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
 
   const handleSaveSettings = async () => {
     try {
-      const { ubicacion, ...apiSettings } = settings;
-      await budgetService.update(budget.id, apiSettings);
-      localStorage.setItem(`budget_ubicacion_${budget.id}`, (ubicacion || '').trim());
+      const projectName = (settings.project_name || settings.name || budget.project_name || budget.name || '').trim();
+      const payload = {
+        name: projectName,
+        project_name: projectName,
+        company_name: (settings.company_name || '').trim(),
+        company_rif: (settings.company_rif || '').trim(),
+        client_name: (settings.client_name || '').trim(),
+        ubicacion: (settings.ubicacion || '').trim(),
+        currency: settings.currency || 'USD',
+        exchange_rate: parseFloat(settings.exchange_rate) || 1.0,
+        fcas_percent: parseFloat(settings.fcas_percent) || 0.0,
+        admin_percent: parseFloat(settings.admin_percent) || 0.0,
+        profit_percent: parseFloat(settings.profit_percent) || 0.0,
+        iva_percent: parseFloat(settings.iva_percent) || 0.0,
+        labor_bonus: parseFloat(settings.labor_bonus) || 0.0,
+        material_inflation: parseFloat(settings.material_inflation) || 0.0,
+        labor_inflation: parseFloat(settings.labor_inflation) || 0.0,
+        equipment_inflation: parseFloat(settings.equipment_inflation) || 0.0,
+      };
+
+      const updated = await budgetService.update(budget.id, payload);
+      localStorage.setItem(`budget_ubicacion_${budget.id}`, payload.ubicacion);
       toast.success('Configuración guardada exitosamente');
-      onSave({ ...settings, ubicacion: (ubicacion || '').trim() });
+      onSave(updated || { ...budget, ...payload });
     } catch (error) {
+      console.error('Error guardando configuración:', error);
       toast.error('Error guardando configuración');
     }
   };
@@ -132,7 +177,7 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                 <input 
                   type="text" 
                   value={settings.project_name}
-                  onChange={e => setSettings({...settings, project_name: e.target.value})}
+                  onChange={e => setSettings({...settings, project_name: e.target.value, name: e.target.value})}
                   className="px-3 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                   placeholder="Ej. Construcción de Muro Perimetral"
                 />

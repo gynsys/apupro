@@ -43,6 +43,22 @@ try:
                 logger.warning(f"Aviso en auto-migración de esquema: {ex}")
         conn.commit()
     logger.info("Schema migrations for arko_admins verified successfully.")
+
+    with engine.connect() as conn:
+        budget_schema_statements = [
+            "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS user_id VARCHAR(255);",
+            "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS notes TEXT;",
+            "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS share_token VARCHAR(255);",
+            "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS is_public_share BOOLEAN DEFAULT FALSE;",
+            "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS ubicacion VARCHAR(255);"
+        ]
+        for stmt in budget_schema_statements:
+            try:
+                conn.execute(text(stmt))
+            except Exception as ex:
+                logger.warning(f"Aviso en auto-migración de esquema budgets: {ex}")
+        conn.commit()
+    logger.info("Schema migrations for budgets verified successfully.")
 except Exception as e:
     logger.error(f"Error creating Arko360 database tables: {e}", exc_info=True)
 

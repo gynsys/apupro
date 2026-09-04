@@ -35,6 +35,7 @@ class Budget(Base):
     company_name = Column(String, nullable=True)
     company_rif = Column(String, nullable=True)
     project_name = Column(Text, nullable=True)
+    ubicacion = Column(String, nullable=True)
 
     # Compartición de Presupuesto en la Nube
     share_token = Column(String, nullable=True, unique=True, index=True)

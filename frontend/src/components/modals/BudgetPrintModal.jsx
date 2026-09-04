@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Printer, X, CheckSquare, Square, Type, DollarSign, UploadCloud, Trash2, MapPin } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-export default function BudgetPrintModal({ onClose, onPrint, initialCurrency = 'USD', budgetId }) {
+export default function BudgetPrintModal({ onClose, onPrint, initialCurrency = 'USD', initialUbicacion = '', budgetId }) {
   const [config, setConfig] = useState({
     type: 'general', // 'general' or 'capitulos' - cambiado a 'general' por defecto
     includeLogo: true,
@@ -11,7 +11,7 @@ export default function BudgetPrintModal({ onClose, onPrint, initialCurrency = '
     includeIva: true,
     currency: initialCurrency,
     title: 'PRESUPUESTO',
-    ubicacion: localStorage.getItem(`budget_ubicacion_${budgetId}`) || ''
+    ubicacion: initialUbicacion || localStorage.getItem(`budget_ubicacion_${budgetId}`) || ''
   });
   
   const [logoPreview, setLogoPreview] = useState(() => {
