@@ -133,9 +133,10 @@ export default function AIApuGeneratorPage() {
   // Guided Builder States
   const [isGuidedMode, setIsGuidedMode] = useState(true);
   const [guidedAccion, setGuidedAccion] = useState(null);
-  const [guidedMaterial, setGuidedMaterial] = useState(null);
   const [guidedUbicacion, setGuidedUbicacion] = useState(null);
+  const [guidedMaterial, setGuidedMaterial] = useState(null);
   const [guidedIncluye, setGuidedIncluye] = useState(null);
+  const [guidedUnidad, setGuidedUnidad] = useState(null);
   
   const chatEndRef = useRef(null);
   
@@ -143,13 +144,14 @@ export default function AIApuGeneratorPage() {
   useEffect(() => {
     if (isGuidedMode) {
       const parts = [];
-      if (guidedAccion && guidedAccion !== 'Omitir') parts.push(guidedAccion);
-      if (guidedMaterial && guidedMaterial !== 'Omitir') parts.push(guidedMaterial);
-      if (guidedUbicacion && guidedUbicacion !== 'Omitir') parts.push(guidedUbicacion);
-      if (guidedIncluye && guidedIncluye !== 'Omitir') parts.push(guidedIncluye);
+      if (guidedAccion && guidedAccion !== 'Omitir' && guidedAccion !== 'Ninguno / Omitir') parts.push(guidedAccion);
+      if (guidedUbicacion && guidedUbicacion !== 'Omitir' && guidedUbicacion !== 'Ninguno / Omitir') parts.push(guidedUbicacion);
+      if (guidedMaterial && guidedMaterial !== 'Omitir' && guidedMaterial !== 'Ninguno / Omitir') parts.push(guidedMaterial);
+      if (guidedIncluye && guidedIncluye !== 'Omitir' && guidedIncluye !== 'Ninguno / Omitir') parts.push(guidedIncluye);
+      if (guidedUnidad && guidedUnidad !== 'Sugerir por IA' && guidedUnidad !== 'Omitir' && guidedUnidad !== 'Ninguno / Omitir') parts.push(`unidad ${guidedUnidad}`);
       setPrompt(parts.join(' ').trim());
     }
-  }, [guidedAccion, guidedMaterial, guidedUbicacion, guidedIncluye, isGuidedMode]);
+  }, [guidedAccion, guidedUbicacion, guidedMaterial, guidedIncluye, guidedUnidad, isGuidedMode]);
   
   // Conversational AI States
   const [chatHistory, setChatHistory] = useState([]);
@@ -180,7 +182,13 @@ export default function AIApuGeneratorPage() {
     const userName = user?.full_name || user?.email?.split('@')[0] || '';
     const greetingName = userName ? ` ${userName}` : '';
     setGuidedMessages([
-      { id: 'msg-bot0', sender: 'bot', text: `¡Hola${greetingName}! Construir una descripción detallada de una partida es lo esencial para evitar ambigüedades al momento de la ejecución en campo, y es la clave para que la Inteligencia Artificial encuentre exactamente lo que necesitas.\n\nEn 4 pasos rápidos armaremos la mejor descripcion basándonos en la información suministrada. ¿Comenzamos?`, chips: ["Sí, comenzar"] }
+      { 
+        id: 'msg-bot0', 
+        sender: 'bot', 
+        step: 0,
+        text: `¡Hola${greetingName}! Construir una descripción detallada de una partida es lo esencial para evitar ambigüedades al momento de la ejecución en campo, y es la clave para que la Inteligencia Artificial encuentre exactamente lo que necesitas.\n\nEn 5 pasos rápidos armaremos la mejor descripción basándonos en la información suministrada. ¿Comenzamos?`, 
+        chips: ["Sí, comenzar"] 
+      }
     ]);
   }, [user]);
 
@@ -387,40 +395,137 @@ export default function AIApuGeneratorPage() {
   };
 
   const handleChatSubmit = (text) => {
-    if (!text.trim()) return;
+    if (!text || !text.trim()) return;
+    const cleanText = text.trim();
     
-    const newUserMsg = { id: Date.now().toString(), sender: 'user', text };
+    const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText };
     
-    if (currentChatStep === 1) setGuidedAccion(text);
-    if (currentChatStep === 2) setGuidedMaterial(text);
-    if (currentChatStep === 3) setGuidedUbicacion(text);
-    if (currentChatStep === 4) setGuidedIncluye(text);
+    let currentAccion = guidedAccion;
+    let currentUbicacion = guidedUbicacion;
+    let currentMaterial = guidedMaterial;
+    let currentIncluye = guidedIncluye;
+    let currentUnidad = guidedUnidad;
+
+    if (currentChatStep === 1) {
+      setGuidedAccion(cleanText);
+      currentAccion = cleanText;
+    } else if (currentChatStep === 2) {
+      setGuidedUbicacion(cleanText);
+      currentUbicacion = cleanText;
+    } else if (currentChatStep === 3) {
+      setGuidedMaterial(cleanText);
+      currentMaterial = cleanText;
+    } else if (currentChatStep === 4) {
+      setGuidedIncluye(cleanText);
+      currentIncluye = cleanText;
+    } else if (currentChatStep === 5) {
+      setGuidedUnidad(cleanText);
+      currentUnidad = cleanText;
+    }
     
     const nextStep = currentChatStep === 0 ? 1 : currentChatStep + 1;
     setCurrentChatStep(nextStep);
     
     let nextBotMsg = null;
     if (nextStep === 1) {
-      nextBotMsg = { id: Date.now().toString() + 'bot1', sender: 'bot', text: 'Paso 1 de 4: La Acción\n¿Qué acción o proceso constructivo se va a realizar?', chips: ['Excavación a mano', 'Vaciado de concreto', 'Limpieza de terreno'] };
+      nextBotMsg = { 
+        id: `bot-step-1-${Date.now()}`, 
+        sender: 'bot', 
+        step: 1,
+        text: 'Paso 1 de 5: La Acción\n¿Qué acción o proceso constructivo se va a realizar?', 
+        chips: [
+          'Construcción de',
+          'Suministro de',
+          'Instalación / Colocación de',
+          'Suministro e instalación de',
+          'Excavación',
+          'Demolición',
+          'Carga y acarreo',
+          'Reparación / Mantenimiento'
+        ] 
+      };
     } else if (nextStep === 2) {
-      nextBotMsg = { id: Date.now().toString() + 'bot2', sender: 'bot', text: 'Paso 2 de 4: El Material\n¿Con qué material, resistencia o especificación técnica?', chips: ["Concreto f'c=210", 'Acero Fy=4200', 'Bloque de arcilla', 'Omitir'] };
+      nextBotMsg = { 
+        id: `bot-step-2-${Date.now()}`, 
+        sender: 'bot', 
+        step: 2,
+        text: 'Paso 2 de 5: El Elemento o Ubicación\n¿En qué elemento, estructura o lugar se aplicará?', 
+        chips: [
+          'En paredes',
+          'En losas',
+          'En columnas / vigas',
+          'En zapatas / fundaciones',
+          'En techos / cubiertas',
+          'En pisos',
+          'En exteriores',
+          'Ninguno / Omitir'
+        ] 
+      };
     } else if (nextStep === 3) {
-      nextBotMsg = { id: Date.now().toString() + 'bot3', sender: 'bot', text: 'Paso 3 de 4: La Ubicación\n¿Dónde se aplicará o en qué elemento estructural?', chips: ['En zapatas', 'En losas', 'En columnas', 'Omitir'] };
+      nextBotMsg = { 
+        id: `bot-step-3-${Date.now()}`, 
+        sender: 'bot', 
+        step: 3,
+        text: 'Paso 3 de 5: El Material y Especificación\n¿Con qué material, resistencia o tipo específico?', 
+        chips: [
+          "Concreto f'c=210 kg/cm²",
+          "Concreto f'c=250 kg/cm²",
+          "Acero Fy=4200 kg/cm²",
+          'Bloque de arcilla',
+          'Bloque de concreto',
+          'Tubería PVC',
+          'Ninguno / Omitir'
+        ] 
+      };
     } else if (nextStep === 4) {
-      nextBotMsg = { id: Date.now().toString() + 'bot4', sender: 'bot', text: 'Paso 4 de 4: Condición de Entrega\n¿Hay alguna condición crítica incluida que afecte el costo?', chips: ['Incluye acarreo', 'Incluye andamios', 'Omitir'] };
+      nextBotMsg = { 
+        id: `bot-step-4-${Date.now()}`, 
+        sender: 'bot', 
+        step: 4,
+        text: 'Paso 4 de 5: Alcance y Condiciones\n¿Qué incluye o excluye la partida?', 
+        chips: [
+          'Solo mano de obra',
+          'Incluye transporte / acarreo',
+          'No incluye suministro de materiales ni equipos',
+          'Todo incluido (Mat + MO + Eq)',
+          'Incluye encofrado',
+          'Incluye andamios',
+          'Ninguno / Omitir'
+        ] 
+      };
     } else if (nextStep === 5) {
+      nextBotMsg = { 
+        id: `bot-step-5-${Date.now()}`, 
+        sender: 'bot', 
+        step: 5,
+        text: 'Paso 5 de 5: Unidad de Medida\n¿En qué unidad de medida se computará la partida?', 
+        chips: [
+          'm³',
+          'm²',
+          'ml',
+          'kg',
+          'ton',
+          'und',
+          'pto',
+          'viaje',
+          'Sugerir por IA'
+        ] 
+      };
+    } else if (nextStep === 6) {
       setChatbotLoadingStage(1);
       setTimeout(() => setChatbotLoadingStage(2), 1500);
       setTimeout(() => setChatbotLoadingStage(3), 3000);
       setTimeout(() => setChatbotLoadingStage(4), 4500);
       setTimeout(() => {
-        const finalPrompt = [
-          currentChatStep === 1 ? text : guidedAccion,
-          currentChatStep === 2 ? text : guidedMaterial,
-          currentChatStep === 3 ? text : guidedUbicacion,
-          currentChatStep === 4 ? text : guidedIncluye
-        ].filter(p => p && p !== 'Omitir').join(' ').trim();
+        const parts = [
+          currentAccion,
+          currentUbicacion,
+          currentMaterial,
+          currentIncluye,
+          (cleanText && cleanText !== 'Sugerir por IA' && cleanText !== 'Ninguno / Omitir' && cleanText !== 'Omitir') ? `unidad ${cleanText}` : ''
+        ].filter(p => p && p !== 'Omitir' && p !== 'Ninguno / Omitir');
         
+        const finalPrompt = parts.join(' ').trim();
         handleGenerate(finalPrompt);
       }, 5000);
     }
@@ -781,7 +886,28 @@ export default function AIApuGeneratorPage() {
             {!isSmartMode && !isClarifying && (
               <div className="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
                 <button
-                  onClick={() => { setIsGuidedMode(true); setCurrentChatStep(0); setPrompt(''); }}
+                  onClick={() => { 
+                    setIsGuidedMode(true); 
+                    setCurrentChatStep(0); 
+                    setGuidedAccion(null);
+                    setGuidedUbicacion(null);
+                    setGuidedMaterial(null);
+                    setGuidedIncluye(null);
+                    setGuidedUnidad(null);
+                    setChatbotLoadingStage(0);
+                    setPrompt(''); 
+                    const userName = user?.full_name || user?.email?.split('@')[0] || '';
+                    const greetingName = userName ? ` ${userName}` : '';
+                    setGuidedMessages([
+                      { 
+                        id: 'msg-bot0', 
+                        sender: 'bot', 
+                        step: 0,
+                        text: `¡Hola${greetingName}! Construir una descripción detallada de una partida es lo esencial para evitar ambigüedades al momento de la ejecución en campo, y es la clave para que la Inteligencia Artificial encuentre exactamente lo que necesitas.\n\nEn 5 pasos rápidos armaremos la mejor descripción basándonos en la información suministrada. ¿Comenzamos?`, 
+                        chips: ["Sí, comenzar"] 
+                      }
+                    ]);
+                  }}
                   className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${isGuidedMode ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                   Asistente IA
@@ -984,21 +1110,23 @@ export default function AIApuGeneratorPage() {
                         <p className={`text-sm leading-relaxed whitespace-pre-wrap ${msg.sender === 'bot' ? 'text-amber-950' : 'text-white'}`}>{msg.text}</p>
                       </div>
                     </div>
-                    {msg.sender === 'bot' && msg.chips && currentChatStep === (msg.id.includes('bot') ? parseInt(msg.id.replace(/\D/g, '')) || 0 : 0) && (
-                      <div className="pl-10 flex flex-wrap gap-2">
+                    {msg.sender === 'bot' && msg.chips && (msg.step === currentChatStep || idx === guidedMessages.length - 1) && (
+                      <div className="pl-10 flex flex-wrap gap-2 pt-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
                         {msg.chips.map(chip => (
                           <button 
                             key={chip}
+                            type="button"
                             onClick={() => handleChatSubmit(chip)}
-                            className="bg-white border border-amber-300 hover:border-amber-500 hover:bg-amber-100 text-amber-900 font-medium text-xs px-3 py-1.5 rounded-full transition-all shadow-sm"
+                            className="bg-white border border-amber-300 hover:border-amber-600 hover:bg-amber-100 text-amber-950 font-semibold text-xs px-3.5 py-1.5 rounded-xl transition-all shadow-sm hover:shadow active:scale-95 cursor-pointer"
                           >
                             {chip}
                           </button>
                         ))}
                         {currentChatStep === 0 && (
                           <button 
+                            type="button"
                             onClick={() => setIsGuidedMode(false)}
-                            className="bg-transparent border border-amber-300 hover:bg-amber-100 text-amber-700/80 font-medium text-xs px-3 py-1.5 rounded-full transition-all"
+                            className="bg-transparent border border-amber-400 hover:bg-amber-200/60 text-amber-800 font-semibold text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer"
                           >
                             Escribir libremente
                           </button>
