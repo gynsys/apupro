@@ -526,6 +526,11 @@ class CostosConfigUpdate(BaseModel):
     iva: Optional[float] = None
     fcas: Optional[float] = None
 
+class ArkoMeUpdate(BaseModel):
+    full_name: Optional[str] = None
+    current_password: Optional[str] = None
+    new_password: Optional[str] = None
+
 class ArkoMeResponse(BaseModel):
     id: int
     email: str
@@ -571,8 +576,49 @@ def get_current_admin_me(
         max_budgets=current_admin.max_budgets,
         max_items_per_budget=current_admin.max_items_per_budget,
         has_ai_access=bool(current_admin.has_ai_access),
+        max_ai_apus=current_admin.max_ai_apus or 0,
+        ai_apus_generated=current_admin.ai_apus_generated or 0,
         costos_config=_get_costos_config(current_admin),
     )
+
+@router.put("/me", response_model=ArkoMeResponse)
+def update_current_admin_me(
+    profile_in: ArkoMeUpdate,
+    current_admin: ArkoAdmin = Depends(get_current_arko_admin),
+) -> ArkoMeResponse:
+    """Actualiza datos del perfil del usuario (nombre de usuario y/o contraseña)."""
+    with get_db_session() as db:
+        user = db.query(ArkoAdmin).filter(ArkoAdmin.id == current_admin.id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+        if profile_in.full_name is not None:
+            user.full_name = profile_in.full_name.strip()
+
+        if profile_in.new_password:
+            if not profile_in.current_password:
+                raise HTTPException(status_code=400, detail="Debes ingresar tu contraseña actual para cambiarla.")
+            if not verify_password(profile_in.current_password, user.hashed_password):
+                raise HTTPException(status_code=400, detail="La contraseña actual es incorrecta.")
+            if len(profile_in.new_password) < 6:
+                raise HTTPException(status_code=400, detail="La nueva contraseña debe tener al menos 6 caracteres.")
+            user.hashed_password = get_password_hash(profile_in.new_password)
+
+        db.commit()
+        db.refresh(user)
+
+        return ArkoMeResponse(
+            id=user.id,
+            email=user.email,
+            full_name=user.full_name,
+            plan=user.plan or "free",
+            max_budgets=user.max_budgets,
+            max_items_per_budget=user.max_items_per_budget,
+            has_ai_access=bool(user.has_ai_access),
+            max_ai_apus=user.max_ai_apus or 0,
+            ai_apus_generated=user.ai_apus_generated or 0,
+            costos_config=_get_costos_config(user),
+        )
 
 @router.put("/me/costos", response_model=CostosConfigSchema)
 def update_current_admin_costos(

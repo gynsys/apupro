@@ -10,6 +10,7 @@ import { UserCostosProvider, useUserCostos } from '../../context/UserCostosConte
 import toast from 'react-hot-toast';
 import SubscriptionRequestModal from '../SubscriptionRequestModal';
 import ReportPaymentModal from '../ReportPaymentModal';
+import AccountSettingsModal from '../modals/AccountSettingsModal';
 import { Crown, Receipt } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -26,10 +27,11 @@ import NotificationBell from './NotificationBell';
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, user, logout } = useContext(AuthContext);
+  const { isAuthenticated, user, logout, checkAuth } = useContext(AuthContext);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -190,15 +192,6 @@ export default function AppLayout() {
         {/* Right controls */}
         {isAuthenticated ? (
           <div className="flex items-center gap-0.5">
-            {user?.plan !== 'free' && user?.has_ai_access && (
-              <div 
-                className={`px-3 py-1.5 rounded-full text-xs font-bold mr-3 border flex items-center gap-1.5 transition-colors ${user?.ai_apus_generated >= user?.max_ai_apus ? 'bg-red-50 text-red-600 border-red-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'}`}
-                title={`Has generado ${user?.ai_apus_generated || 0} de ${user?.max_ai_apus || 0} APUs en tu plan ${user?.plan}`}
-              >
-                <Cpu size={14} className={user?.ai_apus_generated >= user?.max_ai_apus ? 'text-red-500' : 'text-indigo-500'} />
-                <span>IA: {user?.ai_apus_generated || 0} / {user?.max_ai_apus || 0}</span>
-              </div>
-            )}
             <NotificationBell />
             <button
               onClick={() => navigate('/budgets')}
@@ -208,15 +201,22 @@ export default function AppLayout() {
               <Home size={19} />
             </button>
             <button
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-white/80 transition-colors"
-              title="Configuración"
+              onClick={() => setShowAccountModal(true)}
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-white/80 transition-colors cursor-pointer"
+              title="Configuración de la Cuenta"
             >
               <Settings size={19} />
             </button>
-            <span className="text-sm font-semibold text-slate-600 hidden sm:block mx-2">Mi Cuenta</span>
+            <button
+              onClick={() => setShowAccountModal(true)}
+              className="text-sm font-semibold text-slate-600 hover:text-slate-900 hidden sm:block mx-2 cursor-pointer transition-colors bg-transparent border-none"
+              title="Configuración de la Cuenta"
+            >
+              Mi Cuenta
+            </button>
             <button
               onClick={handleLogout}
-              className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50/70 transition-colors"
+              className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50/70 transition-colors cursor-pointer"
               title="Cerrar Sesión"
             >
               <LogOut size={19} />
@@ -298,6 +298,14 @@ export default function AppLayout() {
       <ReportPaymentModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
+      />
+
+      <AccountSettingsModal
+        isOpen={showAccountModal}
+        onClose={() => setShowAccountModal(false)}
+        user={user}
+        onRefreshUser={checkAuth}
+        onOpenReportPayment={() => setShowPaymentModal(true)}
       />
     </div>
   );

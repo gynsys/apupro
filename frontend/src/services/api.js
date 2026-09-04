@@ -297,3 +297,17 @@ export async function resendVerification(email) {
   }
   return response.json();
 }
+
+export async function updateMyUserProfile(data) {
+  const response = await fetchWithCredentials(`${API_URL}/arko/me`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'Error al actualizar perfil');
+  }
+
+  return response.json();
+}
