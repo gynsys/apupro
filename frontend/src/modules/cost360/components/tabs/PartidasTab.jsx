@@ -74,7 +74,7 @@ const generatePartidasExcel = (items) => {
   document.body.removeChild(link);
 };
 
-const PartidasTab = ({ onlyCoded }) => {
+const PartidasTab = ({ onlyCoded, selectedDatabase = 'master' }) => {
   const navigate = useNavigate();
   const [editingItem, setEditingItem] = useState(null);
 
@@ -91,7 +91,7 @@ const PartidasTab = ({ onlyCoded }) => {
     loadMore: handleLoadMore,
     forceSearch: handleSearch,
   } = useCost360Search({
-    databaseId: 'master',
+    databaseId: selectedDatabase || 'master',
     limit: 100,
     onlyCoded: onlyCoded,
     autoSearch: true,
@@ -132,7 +132,18 @@ const PartidasTab = ({ onlyCoded }) => {
   return (
     <>
       <GlassCard className="rounded-2xl p-4 flex flex-col gap-3">
-        <Cost360SearchBar />
+        <Cost360SearchBar
+          searchQuery={search}
+          setSearchQuery={setSearch}
+          searchCovenin={searchCovenin}
+          setSearchCovenin={setSearchCovenin}
+          searchDesc={searchDesc}
+          setSearchDesc={setSearchDesc}
+          searchInsumos={searchInsumos}
+          setSearchInsumos={setSearchInsumos}
+          isSearching={loading}
+          onSearch={handleSearch}
+        />
 
         {totalItems > 0 && (
           <div className="mt-3 flex items-center justify-between">
