@@ -51,6 +51,20 @@ export default function BudgetHomePage() {
     loadBudgets();
   }, []);
 
+  // Handle Budget printing cleanup
+  useEffect(() => {
+    if (printConfig) {
+      const handleAfterPrint = () => {
+        setPrintConfig(null);
+        setPrintBudgetData(null);
+      };
+      window.addEventListener('afterprint', handleAfterPrint);
+      return () => {
+        window.removeEventListener('afterprint', handleAfterPrint);
+      };
+    }
+  }, [printConfig]);
+
   const calculatePU = (item, budget) => calculateItemPU(item, budget);
 
   const loadBudgets = async () => {
@@ -265,7 +279,7 @@ export default function BudgetHomePage() {
   };
 
   return (
-    <div className="h-full flex flex-col p-4 md:p-8 overflow-y-auto">
+    <div className="h-full flex flex-col p-4 md:p-8 overflow-y-auto no-print">
       <div className="max-w-6xl w-full mx-auto flex-1">
         {/* HEADER SECTION */}
         <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

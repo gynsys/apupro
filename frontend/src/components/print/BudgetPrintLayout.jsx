@@ -78,55 +78,76 @@ export default function BudgetPrintLayout({ budget, config }) {
   const formatCurrency = (val) => val.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return createPortal(
-    <div className="print-only" style={{ display: 'none', backgroundColor: '#fff', color: '#000', fontFamily: 'Arial, sans-serif' }}>
-      <div className="print-container">
+    <div 
+      id="print-budget-layout"
+      className="print-only" 
+      style={{ 
+        display: 'none', 
+        backgroundColor: '#fff', 
+        color: '#000', 
+        fontFamily: 'Arial, sans-serif',
+        width: '100%',
+        boxSizing: 'border-box',
+        padding: '12mm 15mm'
+      }}
+    >
+      <div className="print-container" style={{ width: '100%', boxSizing: 'border-box' }}>
         {/* ENCABEZADO */}
-        <div className="header" style={{ marginBottom: '20px' }}>
+        <div className="header" style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px' }}>
             {config.includeLogo && (
               <div className="logo" style={{ flexShrink: 0 }}>
                 {(() => {
                   const savedLogo = localStorage.getItem(`budget_logo_${budget.id}`);
                   if (savedLogo) {
-                    return <img src={savedLogo} alt="Logo Empresa" style={{ maxHeight: '60px' }} onError={(e) => e.target.style.display = 'none'} />;
+                    return <img src={savedLogo} alt="Logo Empresa" style={{ maxHeight: '65px' }} onError={(e) => e.target.style.display = 'none'} />;
                   }
-                  return <img src="/images/logo_aeko360.png" alt="Logo Default" style={{ maxHeight: '60px' }} onError={(e) => e.target.style.display = 'none'} />;
+                  return <img src="/images/logo_aeko360.png" alt="Logo Default" style={{ maxHeight: '65px' }} onError={(e) => e.target.style.display = 'none'} />;
                 })()}
               </div>
             )}
-            <div style={{ fontSize: '12px', fontWeight: 'bold', flex: 1 }}>
-              <p style={{ margin: '2px 0' }}>Obra: <span style={{fontWeight: 'normal'}}>{budget.project_name || 'N/A'}</span></p>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: '0 0 4px 0', fontSize: '15px', lineHeight: '1.3' }}>
+                <span style={{ fontWeight: 'bold', color: '#000' }}>Obra: </span>
+                <span style={{ fontWeight: 'bold', color: '#000' }}>{budget.project_name || budget.name || 'N/A'}</span>
+              </p>
               {budget.client_name && (
-                <p style={{ margin: '2px 0' }}>Contratante: <span style={{fontWeight: 'normal'}}>{budget.client_name}</span></p>
+                <p style={{ margin: '2px 0', fontSize: '12px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#000' }}>Contratante: </span>
+                  <span style={{ fontWeight: 'normal', color: '#000' }}>{budget.client_name}</span>
+                </p>
               )}
               {config.includeRif && budget.company_rif && (
-                <p style={{ margin: '2px 0' }}>RIF: <span style={{fontWeight: 'normal'}}>{budget.company_rif}</span></p>
+                <p style={{ margin: '2px 0', fontSize: '12px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#000' }}>RIF: </span>
+                  <span style={{ fontWeight: 'normal', color: '#000' }}>{budget.company_rif}</span>
+                </p>
               )}
             </div>
           </div>
-          <h2 style={{ textAlign: 'center', letterSpacing: '8px', marginTop: '20px', fontSize: '18px' }}>
+          <h2 style={{ textAlign: 'center', letterSpacing: '8px', marginTop: '16px', fontSize: '18px', fontWeight: 'bold' }}>
             {config.title || 'PRESUPUESTO'}
           </h2>
         </div>
 
         {/* TABLA DE PRESUPUESTO */}
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', borderBottom: '1px solid #000' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', borderBottom: '1px solid #000', tableLayout: 'fixed' }}>
           <thead>
             <tr>
-              <th style={thStyle}>Part. No</th>
-              <th style={{ ...thStyle, width: '45%' }}>Descripción</th>
-              <th style={thStyle}>Und.</th>
-              <th style={thStyle}>Cantidad</th>
-              <th style={thStyle}>Precio Unitario</th>
-              <th style={thStyle}>Total {config.currency}.</th>
+              <th style={{ ...thStyle, width: '45px' }}>Part. No</th>
+              <th style={{ ...thStyle, width: 'auto' }}>Descripción</th>
+              <th style={{ ...thStyle, width: '45px' }}>Und.</th>
+              <th style={{ ...thStyle, width: '75px' }}>Cantidad</th>
+              <th style={{ ...thStyle, width: '90px' }}>Precio Unitario</th>
+              <th style={{ ...thStyle, width: '125px' }}>Total {config.currency}.</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => {
               if (row.type === 'chapter') {
                 return (
-                  <tr key={`cap-${row.id}`}>
-                    <td style={{ ...tdStyle, borderLeft: '1px solid #000', borderTop: '1px solid #000', borderBottom: '1px solid #000' }}></td>
+                  <tr key={`cap-${row.id}`} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                    <td style={{ ...tdStyle, borderLeft: '1px solid #000', borderTop: '1px solid #000', borderBottom: '1px solid #000', width: '45px' }}></td>
                     <td colSpan="5" style={{ ...tdStyle, fontWeight: 'bold', paddingTop: '10px', borderRight: '1px solid #000', borderTop: '1px solid #000', borderBottom: '1px solid #000' }}>
                       {row.description}
                     </td>
@@ -136,12 +157,12 @@ export default function BudgetPrintLayout({ budget, config }) {
 
               if (row.type === 'chapter-subtotal') {
                 return (
-                  <tr key={`sub-${row.chapterId}`}>
+                  <tr key={`sub-${row.chapterId}`} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                     <td colSpan="2" style={{ ...tdStyle, textAlign: 'right', fontWeight: 'bold', paddingBottom: '10px', borderLeft: '1px solid #000', borderBottom: '1px solid #000' }}>
                       <span style={{ textDecoration: 'underline' }}>{row.description}</span>
                     </td>
                     <td colSpan="3" style={{ ...tdStyle, borderBottom: '1px solid #000' }}></td>
-                    <td style={{ ...tdStyle, fontWeight: 'bold', textAlign: 'right', textDecoration: 'underline', paddingBottom: '10px', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>
+                    <td style={{ ...tdStyle, fontWeight: 'bold', textAlign: 'right', textDecoration: 'underline', paddingBottom: '10px', borderRight: '1px solid #000', borderBottom: '1px solid #000', width: '125px' }}>
                       {formatCurrency(row.amount)}
                     </td>
                   </tr>
@@ -150,24 +171,24 @@ export default function BudgetPrintLayout({ budget, config }) {
 
               // Normal Item
               return (
-                <tr key={`item-${row.id}`}>
-                  <td style={{ ...tdStyle, textAlign: 'center', verticalAlign: 'top' }}>
+                <tr key={`item-${row.id}`} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                  <td style={{ ...tdStyle, textAlign: 'center', verticalAlign: 'top', width: '45px' }}>
                     {row.partNumber}
                   </td>
                   <td style={{ ...tdStyle, verticalAlign: 'top' }}>
                     <div style={{ fontWeight: 'bold', fontSize: '10px' }}>{row.cov_par || row.cod_par}</div>
                     <div>{row.description}</div>
                   </td>
-                  <td style={{ ...tdStyle, textAlign: 'center', verticalAlign: 'top' }}>
+                  <td style={{ ...tdStyle, textAlign: 'center', verticalAlign: 'top', width: '45px' }}>
                     {row.unit}
                   </td>
-                  <td style={{ ...tdStyle, textAlign: 'right', verticalAlign: 'top' }}>
+                  <td style={{ ...tdStyle, textAlign: 'right', verticalAlign: 'top', width: '75px' }}>
                     {formatCurrency(row.quantity)}
                   </td>
-                  <td style={{ ...tdStyle, textAlign: 'right', verticalAlign: 'top' }}>
+                  <td style={{ ...tdStyle, textAlign: 'right', verticalAlign: 'top', width: '90px' }}>
                     {formatCurrency(row.pu)}
                   </td>
-                  <td style={{ ...tdStyle, textAlign: 'right', verticalAlign: 'top' }}>
+                  <td style={{ ...tdStyle, textAlign: 'right', verticalAlign: 'top', width: '125px' }}>
                     {formatCurrency(row.total)}
                   </td>
                 </tr>
@@ -177,10 +198,10 @@ export default function BudgetPrintLayout({ budget, config }) {
         </table>
 
         {/* PIE DE TABLA / TOTALES Y NOTAS */}
-        <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '11px', gap: '20px' }}>
+        <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '11px', width: '100%', boxSizing: 'border-box' }}>
           {/* CUADRO DE NOTAS: Si está vacío NO coloca nada (ni la palabra nota ni el recuadro gris claro) */}
           {budget.notes && budget.notes.trim() !== '' ? (
-            <div style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: '4px', padding: '6px 10px', fontSize: '10px', backgroundColor: '#fff' }}>
+            <div style={{ flex: 1, marginRight: '20px', border: '1px solid #d1d5db', borderRadius: '4px', padding: '6px 10px', fontSize: '10px', backgroundColor: '#fff' }}>
               <div style={{ fontWeight: 'bold', marginBottom: '3px', textTransform: 'uppercase', color: '#111827', fontSize: '10px' }}>
                 Nota:
               </div>
@@ -192,25 +213,21 @@ export default function BudgetPrintLayout({ budget, config }) {
             <div style={{ flex: 1 }}></div>
           )}
 
-          <table style={{ width: '40%', borderCollapse: 'collapse', flexShrink: 0 }}>
+          <table style={{ borderCollapse: 'collapse', flexShrink: 0, marginLeft: 'auto', tableLayout: 'fixed' }}>
             <tbody>
               <tr>
                 <td style={{ ...totalLabelStyle }}>Total Hoja (Sin I.V.A.):</td>
-                <td style={{ ...totalValueStyle }}>{formatCurrency(subtotalPresupuesto)}</td>
-              </tr>
-              <tr>
-                <td style={{ ...totalLabelStyle }}>Total Acumulado (Sin I.V.A.):</td>
-                <td style={{ ...totalValueStyle }}>{formatCurrency(subtotalPresupuesto)}</td>
+                <td style={{ ...totalValueStyle, width: '125px', boxSizing: 'border-box' }}>{formatCurrency(subtotalPresupuesto)}</td>
               </tr>
               {config.includeIva && (
                 <tr>
                   <td style={{ ...totalLabelStyle }}>Total I.V.A. ({budget.iva_percent ?? 16}%):</td>
-                  <td style={{ ...totalValueStyle }}>{formatCurrency(ivaAmount)}</td>
+                  <td style={{ ...totalValueStyle, width: '125px', boxSizing: 'border-box' }}>{formatCurrency(ivaAmount)}</td>
                 </tr>
               )}
               <tr>
                 <td style={{ ...totalLabelStyle, fontWeight: 'bold' }}>Total {config.currency}.:</td>
-                <td style={{ ...totalValueStyle, fontWeight: 'bold' }}>{formatCurrency(totalGeneral)}</td>
+                <td style={{ ...totalValueStyle, fontWeight: 'bold', width: '125px', boxSizing: 'border-box' }}>{formatCurrency(totalGeneral)}</td>
               </tr>
             </tbody>
           </table>
@@ -227,7 +244,8 @@ const thStyle = {
   padding: '4px 6px',
   textAlign: 'center',
   fontWeight: 'bold',
-  backgroundColor: '#fff'
+  backgroundColor: '#fff',
+  boxSizing: 'border-box'
 };
 
 const tdStyle = {
@@ -235,19 +253,22 @@ const tdStyle = {
   borderRight: '1px solid #000',
   borderBottom: 'none',
   borderTop: 'none',
-  padding: '4px 6px'
+  padding: '4px 6px',
+  boxSizing: 'border-box'
 };
 
 const totalLabelStyle = {
   textAlign: 'right',
   padding: '4px 8px',
   border: 'none',
-  paddingRight: '12px'
+  paddingRight: '12px',
+  whiteSpace: 'nowrap'
 };
 
 const totalValueStyle = {
   border: '1px solid #000',
   padding: '4px 8px',
   textAlign: 'right',
-  width: '120px'
+  width: '125px',
+  boxSizing: 'border-box'
 };

@@ -242,6 +242,24 @@ export default function BudgetWorksheetPage() {
     }
   }, [apuPrintOptions, apuToPrint]);
 
+  // Handle Budget printing
+  useEffect(() => {
+    if (printConfig) {
+      const handleAfterPrint = () => {
+        setPrintConfig(null);
+      };
+      window.addEventListener('afterprint', handleAfterPrint);
+      
+      setTimeout(() => {
+        window.print();
+      }, 300);
+
+      return () => {
+        window.removeEventListener('afterprint', handleAfterPrint);
+      };
+    }
+  }, [printConfig]);
+
   const loadBudget = async () => {
     try {
       setLoading(true);
@@ -514,7 +532,7 @@ export default function BudgetWorksheetPage() {
   const { subtotalPresupuesto, ivaAmount, totalGeneral } = calculateBudgetTotal();
 
   return (
-    <div className="absolute inset-0 p-4 md:p-6 flex flex-col overflow-hidden w-full max-w-7xl mx-auto">
+    <div className="absolute inset-0 p-4 md:p-6 flex flex-col overflow-hidden w-full max-w-7xl mx-auto no-print">
       {/* WORKSHEET CONTENT */}
       <div className="flex-1 flex flex-col relative min-h-0">
 
@@ -545,9 +563,6 @@ export default function BudgetWorksheetPage() {
           onPrint={(config) => {
             setShowPrintModal(false);
             setPrintConfig(config);
-            setTimeout(() => {
-              window.print();
-            }, 300);
           }}
           initialCurrency={budget.currency || 'USD'}
           budgetId={id}
