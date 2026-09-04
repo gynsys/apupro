@@ -6,23 +6,29 @@ from app.services.llm_router import call_llm_json
 # ---------------------------------------------------------------------------
 # Prompt base reutilizable: reglas COVENIN, insumos, formato de salida
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Prompt base reutilizable: reglas COVENIN, insumos, formato de salida
+# ---------------------------------------------------------------------------
 _FORMATO_SALIDA = """
-# FORMATO DE SALIDA OBLIGATORIO
-Devuelve ÚNICAMENTE un JSON válido con esta estructura (sin texto extra antes o después):
+# FORMATO DE SALIDA OBLIGATORIO (JSON ESTRICTO)
+Devuelve ÚNICAMENTE un JSON válido (sin texto extra, sin markdown adicional fuera del bloque JSON) según uno de estos 2 casos:
+
+CASO 1: Si la solicitud es técnicamente comprensible y ejecutable, genera el APU completo:
 {
     "status": "completed",
-    "clarification_message": "mensaje si aplica, si no null",
+    "clarification_message": null,
     "options": [],
     "questions": [],
+    "guia_redaccion": null,
     "partida": {
-        "cod_par": "E340000000",
-        "description": "DESCRIPCIÓN TÉCNICA COMPLETA EN MAYÚSCULAS. INCLUYE MATERIALES, EQUIPOS Y MANO DE OBRA.",
+        "cod_par": "E313SC001",
+        "description": "DESCRIPCIÓN TÉCNICA COMPLETA EN MAYÚSCULAS CON NORMATIVA COVENIN.",
         "unit": "m2",
         "quantity": 1.0,
         "performance": 10.5
     },
     "materials": [
-        {"id":"m-1","codigo":"...","descripcion":"...","unidad":"...","cantidad":0.0,"desperdicio":5,"precio_unitario":0.0,"origen":"historico","nota_calculo":"..."}
+        {"id":"m-1","codigo":"...","descripcion":"...","unidad":"...","cantidad":0.0,"desperdicio":5.0,"precio_unitario":0.0,"origen":"historico","nota_calculo":"..."}
     ],
     "equipments": [
         {"id":"e-1","codigo":"...","descripcion":"...","unidad":"día","cantidad":0.0,"depreciacion":1.0,"precio_unitario":0.0,"origen":"historico","nota_calculo":"..."}
@@ -30,30 +36,79 @@ Devuelve ÚNICAMENTE un JSON válido con esta estructura (sin texto extra antes 
     "labors": [
         {"id":"l-1","codigo":"...","descripcion":"...","unidad":"día","cantidad":0.0,"jornal":0.0,"bono":0.0,"origen":"historico","nota_calculo":"..."}
     ],
-    "advertencias": ["lista de advertencias que generes"]
+    "advertencias": ["lista de advertencias técnicas o notas al usuario"]
+}
+
+CASO 2: ÚNICAMENTE si la entrada es ininteligible, contradictoria o un disparate que no describe una actividad técnica de construcción:
+{
+    "status": "clarification_needed",
+    "clarification_message": "No fue posible identificar una actividad constructiva ejecutable a partir de la descripción ingresada.",
+    "options": [],
+    "questions": [
+        "1. Acción principal: ¿Es demolición, bote/transporte, suministro, instalación o construcción?",
+        "2. Elemento constructivo: ¿Qué elemento exacto se va a intervenir (pared, losa, viga, piso, tubería)?",
+        "3. Material o especificación: ¿Qué material, espesor o resistencia tiene (ej: concreto 210 kg/cm², mortero 1:4)?",
+        "4. Entorno y alcance: ¿Se realiza de forma manual o con maquinaria? ¿Incluye acarreo y bote?"
+    ],
+    "guia_redaccion": "Estructura recomendada: [Acción] + [Elemento] + [Material/Especificación] + [Método o Ubicación]. Ejemplo: 'Construcción de pared de bloques de arcilla e=15 cm con mortero 1:4 en planta baja'.",
+    "partida": null,
+    "materials": [],
+    "equipments": [],
+    "labors": [],
+    "advertencias": ["Entrada ambigua o no técnica rechazada para evitar generar un presupuesto con costos erróneos."]
 }
 """
 
 _REGLAS_COVENIN = """
-# REGLAS DE CODIFICACIÓN COVENIN
-- El campo `cod_par` debe seguir la Norma COVENIN 2000:1992: 1 letra + 9 dígitos numéricos (total 10 caracteres).
-- DEBE comenzar exactamente con el `covenin_prefix` indicado.
-- Usa el `covenin_context` para elegir el subcódigo correcto; completa con ceros los dígitos restantes.
-- Ejemplo correcto: E131110000 (letra E + 9 dígitos).
+# REGLAS DE CODIFICACIÓN COVENIN Y PARTIDAS ESPECIALES NO TIPIFICADAS (CONVENCIÓN SC)
+1. Si la partida proviene de una partida base histórica existente, conserva su código `cod_par` oficial.
+2. Si la partida es NUEVA, ADAPTADA o GENERADA POR IA, debe seguir la convención formal de presupuestos y licitaciones en Venezuela para partidas no tipificadas en el tabulador (convención SC = Sin Código / Partida Especial):
+   - Prefijo de sector y capítulo según la actividad (ej. E1010 para obras preliminares, E313 para estructuras de concreto, E411 para albañilería, E511 para instalaciones, etc.). Si se proporciona `covenin_prefix`, úsalo como raíz eliminando ceros sobrantes.
+   - Seguido de 'SC' (que indica formalmente Partida Especial / Sin Código COVENIN).
+   - Seguido de un correlativo de tres dígitos '001'.
+   - Ejemplos obligatorios: 'E1010SC001', 'E313SC001', 'E411SC001', 'C311SC001'.
+   - PROHIBIDO inventar códigos puramente numéricos falsos que simulen ser normas oficiales tipificadas.
 """
 
 _REGLAS_DESCRIPCION = """
 # DESCRIPCIÓN DE LA PARTIDA
 En el campo `description` de `partida`, NO copies la solicitud del usuario literalmente.
 MEJORA Y EXPANDE para crear una descripción técnica profesional completa, en MAYÚSCULAS,
-similar a las normas de medición de ingeniería civil.
-Incluye: características del material, método de ejecución, qué incluye/excluye, unidad de medida.
+siguiendo las especificaciones de las normas COVENIN de construcción.
+Estructura: [ACCIÓN TÉCNICA] + [ELEMENTO ESPECÍFICO] + [MATERIALES Y ESPECIFICACIÓN] + [ALCANCES Y CONDICIONES].
 """
 
 _REGLAS_ORIGEN = """
 # CAMPO "origen" (OBLIGATORIO en cada insumo)
-- "historico": cantidad tomada del APU base sin ajustes mayores.
-- "ia": cantidad estimada/ajustada por ti, o insumo añadido por criterio técnico.
+- "historico": insumo y precio tomados del catálogo/partida base.
+- "ia": insumo técnico indispensable agregado o ajustado por ti que no estaba disponible en el catálogo.
+"""
+
+_REGLAS_EQUIPOS_ESCALA = """
+# REGLA ESTRICTA DE MAQUINARIA Y ESCALA DE OBRA (¡CRÍTICO!)
+1. PROPORCIONALIDAD DE ESCALA: Los equipos deben corresponder estrictamente al volumen, acceso y magnitud de la obra.
+2. PROHIBICIÓN DE MAQUINARIA PESADA EN TRABAJOS MANUALES O CONFINADOS: Si la descripción indica o implica trabajo 'a mano', 'manual', 'en sótano', 'reparación puntual', 'espacio confinado', 'acarreo interno' o 'equipo liviano', QUEDA TERMINANTEMENTE PROHIBIDO incluir maquinaria pesada (tractores, retroexcavadoras, payloader, jumbo, camiones roqueros, etc.). Usa únicamente herramientas menores o equipos manuales ligeros.
+3. PROHIBIDO SALTO DE CATEGORÍA DE EQUIPO:
+   - Está PROHIBIDO sustituir un trompo mezclador (1 saco / equipo liviano) por un camión mixer premezclado o planta de concreto.
+   - Está PROHIBIDO sustituir un camión grúa liviano (o polipasto) por una grúa telescópica de 50-100 toneladas para izajes menores.
+   - Si el catálogo no tiene el equipo liviano adecuado, AGRÉGALO con origen "ia", precio_unitario 0.00 y emite una advertencia para cotización manual.
+"""
+
+_REGLAS_NUMERICAS = """
+# DEFINICIONES NUMÉRICAS Y UNIDADES
+- `performance` (Rendimiento): Cantidad de la unidad_medida producida por la cuadrilla completa en 1 jornada diaria de 8 horas (ej: 12.5 m3/día).
+  * Si tienes partidas históricas de referencia, el rendimiento DEBE estar anclado a ellas o en el rango de los rendimientos históricos provistos.
+  * No inventes rendimientos ilógicos o desproporcionados.
+- `desperdicio`: Número que representa el porcentaje de merma del material (ejemplo: 5.0 representa 5%, 10.0 representa 10%).
+- `depreciacion`: Factor horario del equipo (ejemplo: 1.0 para el 100% del costo diario).
+- `jornal` y `bono`: Tarifas diarias de mano de obra en USD por jornada de 8 horas.
+- `precio_unitario`: Precio en USD de la unidad del insumo.
+"""
+
+_REGLAS_INSUMOS_PRECIOS = """
+# REGLAS DE INSUMOS Y PRECIOS
+1. Prioriza SIEMPRE insumos del catálogo provisto con sus precios históricos reales (`origen: "historico"`).
+2. PROHIBIDO INVENTAR PRECIOS: Si se requiere un insumo técnicamente indispensable que NO está en el catálogo, agrégalo con `origen: "ia"` pero coloca obligatoriamente su `precio_unitario: 0.0`. En `advertencias`, agrega una nota con el prefijo `[REQUIERE_COTIZACION]` indicando que dicho insumo debe ser cotizado por el usuario.
 """
 
 
@@ -66,11 +121,22 @@ def generate_apu_with_ai(payload_llm: Dict[str, Any], history: list = None) -> D
         return {
             "status": "clarification_needed",
             "clarification_message": (
-                "Lo que buscas no tiene relación con las categorías COVENIN seleccionadas. "
-                "Por favor, corrige tu descripción o cambia la categoría."
+                "La descripción ingresada no tiene relación técnica reconocible con la categoría COVENIN seleccionada. "
+                "Por favor, revisa la descripción técnica o ajusta la categoría."
             ),
             "options": [],
-            "questions": [],
+            "questions": [
+                "1. ¿Qué actividad constructiva específica deseas presupuestar?",
+                "2. ¿Cuál es el elemento principal a intervenir?",
+                "3. ¿Qué materiales y especificaciones técnicas aplican?",
+                "4. ¿En qué unidad de medida se computa la partida?"
+            ],
+            "guia_redaccion": "Estructura recomendada: [Acción] + [Elemento] + [Material/Especificación] + [Método o Ubicación].",
+            "partida": None,
+            "materials": [],
+            "equipments": [],
+            "labors": [],
+            "advertencias": ["Incongruencia técnica detectada entre la descripción y el contexto COVENIN."]
         }
 
     history_text = ""
@@ -82,41 +148,27 @@ def generate_apu_with_ai(payload_llm: Dict[str, Any], history: list = None) -> D
 
     prompt = f"""
 # ROL
-Eres un Ingeniero Civil especialista en Análisis de Precios Unitarios (APU).
-Recibes un payload con rendimientos históricos calculados a partir de partidas similares
-reales de la base de datos, un catálogo de insumos filtrado y advertencias.
-Tu trabajo es construir un APU técnico y completo basándote estrictamente en esta data.
+Eres un Ingeniero Civil especialista en Análisis de Precios Unitarios (APU) bajo normativa venezolana COVENIN.
+Recibes un payload con rendimientos históricos calculados a partir de partidas similares reales de la base de datos,
+un catálogo de insumos filtrado y advertencias. Tu trabajo es estructurar un APU técnico, robusto y profesional.
 
-# REGLAS DE CLARIFICACIÓN (¡MUY IMPORTANTE!)
-Dirígete SIEMPRE al usuario en segunda persona ("Tu solicitud", "Estás pidiendo").
-
-1. **Incongruencia Total (PRIORIDAD 1):** Si la solicitud NO corresponde lógicamente con
-   el `covenin_context`, prohíbete generar el APU. Informa al usuario y pídele que corrija.
-2. **Falta de datos críticos:** Si faltan datos clave (espesor, material, dimensiones),
-   haz 1-3 preguntas de clarificación. No inventes datos críticos.
-3. **Confirmación de partidas históricas:** Si `partidas_encontradas > 0` y la descripción
-   no es exactamente una de ellas, devuelve `status: "clarification_needed"` con las
-   partidas históricas como `options` para que el usuario confirme.
-4. Si el usuario ya respondió (ver historial), genera el APU directamente con `status: "completed"`.
+# CRITERIO DE CLARIFICACIÓN VS GENERACIÓN
+- Si la solicitud es inteligible y describe una actividad de construcción válida (aunque sea breve o le falte algún detalle secundario), DEBES GENERAR EL APU con `status: "completed"`. Asume la hipótesis técnica más estándar según la práctica COVENIN y documenta cualquier suposición en `advertencias`.
+- ÚNICAMENTE si la entrada es ininteligible, una secuencia de palabras sin sentido constructivo ("casa caucho tumbar", caracteres aleatorios) o una contradicción física insalvable, responde con `status: "clarification_needed"` siguiendo el CASO 2 del formato de salida.
 
 # PAYLOAD DEL SISTEMA (datos históricos y catálogo)
 {json.dumps(payload_llm, ensure_ascii=False)}
 {history_text}
 
 # REGLAS DE INTERPRETACIÓN
-1. Si hay múltiples unidades en `rendimientos_historicos_por_unidad_partida`, elige la más lógica.
+1. Si hay múltiples unidades en `rendimientos_historicos_por_unidad_partida`, elige la más lógica para la actividad.
 2. Usa `cantidad_promedio` como base para cada insumo.
-3. Ajusta proporcionalmente si la solicitud difiere de las partidas históricas.
-4. Insumos "obligatorio: true" (presencia > 70%) DEBEN incluirse.
-5. REGLA ESTRICTA DE MAQUINARIA: Si la descripción del usuario especifica o insinúa trabajo "A MANO" o con "EQUIPO LIVIANO", ESTÁ TOTAL Y ESTRICTAMENTE PROHIBIDO incluir maquinaria pesada (Tractores, Retroexcavadoras, Payloader, Jumbo, Excavadoras, Mototraillas, etc) en el APU. Solo permite herramientas menores o equipos ligeros.
-6. Insumos "opcional" (presencia < 30%) solo si son estrictamente necesarios.
-7. Si necesitas un insumo no listado, agrégalo con origen "ia" y explica en `nota_calculo`.
+3. Insumos con presencia alta (> 70%) en las partidas históricas deben conservarse si aplican a la partida.
+4. Ancla el rendimiento al promedio de las partidas históricas más similares.
 
-# REGLAS DE INSUMOS
-- USA ÚNICAMENTE insumos del catálogo provisto.
-- PROHIBIDO inventar precios. Si no existe el insumo exacto, usa el sustituto más cercano.
-- Cada sustitución DEBE anotarse en `advertencias`.
-
+{_REGLAS_EQUIPOS_ESCALA}
+{_REGLAS_INSUMOS_PRECIOS}
+{_REGLAS_NUMERICAS}
 {_REGLAS_COVENIN}
 {_REGLAS_DESCRIPCION}
 {_REGLAS_ORIGEN}
@@ -199,22 +251,23 @@ Prefijo COVENIN: {covenin_prefix}
 
 # INSTRUCCIONES DE ADAPTACIÓN
 1. El APU base es para una partida SIMILAR, no idéntica. Tu trabajo es adaptarlo para "{user_description}".
-2. CONSERVA todos los insumos que sigan siendo relevantes para la nueva partida. Márcalos como `"origen": "historico"`.
-3. ELIMINA los insumos que claramente no aplican a la nueva partida.
-4. AJUSTA cantidades cuando la nueva partida lo requiera (ej: distinta área, espesor, complejidad).
+2. ANCLAJE DE RENDIMIENTO: Conserva como ancla principal el rendimiento (`performance`) del APU base [{base_apu.get('performance') or base_apu.get('RenPar') or 'N/A'}]. Solo ajústalo si la geometría, altura o complejidad de la nueva partida lo justifica de forma evidente, y explica el motivo en notas.
+3. CONSERVA todos los insumos que sigan siendo relevantes para la nueva partida. Márcalos como `"origen": "historico"`.
+4. ELIMINA los insumos que claramente no aplican a la nueva partida.
+5. AJUSTA cantidades cuando la nueva partida lo requiera (ej: distinta área, espesor, proporción).
    Marca los insumos ajustados como `"origen": "ia"` y explica el ajuste en `nota_calculo`.
-5. AUTO-FUSIÓN: Si la descripción del usuario exige algo que falta en la Base (ej. Bote de material, Pintura, Andamios, Encofrado) pero que sí existe en las Partidas Complementarias, "róbalo" e intégralo.
-6. AGREGA insumos nuevos que la nueva partida requiera y no estén ni en la base ni en las complementarias. Márcalos como `"origen": "ia"`.
-7. REGLA ESTRICTA DE MAQUINARIA: Si la descripción del usuario especifica o insinúa trabajo "A MANO" o con "EQUIPO LIVIANO", ESTÁ TOTAL Y ESTRICTAMENTE PROHIBIDO incluir o conservar maquinaria pesada (Tractores, Retroexcavadoras, Payloader, Jumbo, Excavadoras, Mototraillas, etc) en el APU. Solo permite herramientas menores o equipos ligeros. Elimínalos si venían en el APU base.
-8. NUNCA cambies los precios unitarios de los insumos del APU base. Son precios reales de la BD.
-9. Si detectas una incongruencia grave entre el APU base y la solicitud, indícalo en `advertencias`.
-10. Agrega SIEMPRE una advertencia indicando que el APU fue adaptado desde la partida base [{base_apu.get('codpar', 'N/A')}].
+6. AUTO-FUSIÓN: Si la descripción del usuario exige algo que falta en la Base (ej. Bote de material, Pintura, Andamios, Encofrado) pero que sí existe en las Partidas Complementarias, "róbalo" e intégralo conservando sus precios históricos.
+7. AGREGA insumos nuevos que la nueva partida requiera estrictamente y no estén ni en la base ni en las complementarias. Márcalos como `"origen": "ia"` con `precio_unitario: 0.0`.
+8. NUNCA alteres los precios unitarios de los insumos del APU base ni de las complementarias. Son precios reales de la BD.
+9. Agrega SIEMPRE una advertencia indicando que el APU fue adaptado desde la partida base [{base_apu.get('codpar', 'N/A')}].
 
-# FALTA DE DATOS (NO CIERRES LA PUERTA A PREGUNTAR)
-Si a pesar de tener la partida Base y las Complementarias sientes que la descripción del usuario es demasiado ambigua y te faltan datos CRÍTICOS para tomar una decisión técnica (ej. resistencia del concreto, tipo de tubería, altura del andamio), NO INVENTES.
-Devuelve `status: "clarification_needed"` con las preguntas específicas que necesitas hacerle al usuario para mejorar el APU.
-Si tienes suficiente información, genera el APU y devuelve `status: "completed"`.
+# CRITERIO DE CLARIFICACIÓN VS GENERACIÓN
+- Si la solicitud es inteligible y describe una actividad técnica razonable, DEBES GENERAR EL APU con `status: "completed"`. Asume la hipótesis técnica más lógica basada en el APU base.
+- ÚNICAMENTE si la entrada es ininteligible, una secuencia de palabras incoherentes ("casa caucho tumbar") o una contradicción física insalvable, responde con `status: "clarification_needed"` siguiendo el CASO 2 del formato de salida.
 
+{_REGLAS_EQUIPOS_ESCALA}
+{_REGLAS_INSUMOS_PRECIOS}
+{_REGLAS_NUMERICAS}
 {_REGLAS_COVENIN}
 {_REGLAS_DESCRIPCION}
 {_REGLAS_ORIGEN}

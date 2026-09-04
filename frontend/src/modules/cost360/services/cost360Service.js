@@ -56,13 +56,23 @@ export const fetchCategoriesTree = async () => {
   return response.data;
 };
 
-export const generateAIApu = async (description, coveninPrefix = '', coveninContext = '', history = [], onlyPreprocess = false) => {
+export const generateAIApu = async (
+  description,
+  coveninPrefix = '',
+  coveninContext = '',
+  history = [],
+  onlyPreprocess = false,
+  bypassExactMatch = false,
+  acceptExactMatchCode = null
+) => {
   const response = await cost360ApiClient.post('/generate-ai-apu', {
     description,
     covenin_prefix: coveninPrefix,
     covenin_context: coveninContext,
     history,
-    only_preprocess: onlyPreprocess
+    only_preprocess: onlyPreprocess,
+    bypass_exact_match: bypassExactMatch,
+    accept_exact_match_code: acceptExactMatchCode
   });
   return response.data;
 };

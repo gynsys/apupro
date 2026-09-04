@@ -123,6 +123,9 @@ class AiApuGenerateRequest(BaseModel):
     # Smart Selector: partida base seleccionada por el usuario
     base_partida_code: Optional[str] = None
     smart_answers: Optional[Dict] = {}
+    # Control interactivo de Match Exacto
+    bypass_exact_match: Optional[bool] = False
+    accept_exact_match_code: Optional[str] = None
 
 
 class SmartSelectRequest(BaseModel):

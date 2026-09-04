@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Loader, Loader2, Package, Wrench, Users, Calculator, Save, Sparkles, Check, Filter, Plus, Search, FileText, Trash2, AlertTriangle, Database, Layers, Printer, Bot, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader, Loader2, Package, Wrench, Users, Calculator, Save, Sparkles, Check, CheckCircle2, Filter, Plus, Search, FileText, Trash2, AlertTriangle, Database, Layers, Printer, Bot, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { AuthContext } from '../../../context/AuthContext';
 import { generateAIApu, saveCustomApu, fetchCategoriesTree, fetchItems, fetchApuDetails, smartSelect, generateAIApuFromBase } from '../services/cost360Service';
@@ -158,8 +158,12 @@ export default function AIApuGeneratorPage() {
   const [aiClarificationMessage, setAiClarificationMessage] = useState("");
   const [aiOptions, setAiOptions] = useState([]);
   const [aiQuestions, setAiQuestions] = useState([]);
+  const [aiGuiaRedaccion, setAiGuiaRedaccion] = useState(null);
   const [isClarifying, setIsClarifying] = useState(false);
   const [debugInfo, setDebugInfo] = useState(null);
+
+  // Match Exacto Interactivo
+  const [exactMatchCandidate, setExactMatchCandidate] = useState(null);
 
   // Smart Selector States
   const [isSmartMode, setIsSmartMode] = useState(false);
@@ -542,7 +546,7 @@ export default function AIApuGeneratorPage() {
     handleGenerate(null, true);
   };
 
-  const handleGenerate = async (overridePrompt = null, onlyPreprocess = false, bypassSmart = false) => {
+  const handleGenerate = async (overridePrompt = null, onlyPreprocess = false, bypassSmart = false, bypassExactMatch = false, acceptExactMatchCode = null) => {
     const textToSubmit = overridePrompt !== null ? overridePrompt : prompt;
     if (!textToSubmit.trim()) {
       toast.error("Ingresa una descripción para generar el APU");
@@ -550,12 +554,20 @@ export default function AIApuGeneratorPage() {
     }
     setLoading(true);
     setItem(null);
+    setExactMatchCandidate(null);
     try {
       let context = "Generación Libre de APU (Búsqueda Híbrida Inteligente)";
       const prefixToSend = "";
 
+      // Si el usuario aceptó la partida de Match Exacto
+      if (acceptExactMatchCode) {
+        const response = await generateAIApu(textToSubmit, prefixToSend, context, [], false, false, acceptExactMatchCode);
+        processAIResponse(response, textToSubmit);
+        return;
+      }
+
       // ---- SMART SELECTOR LOGIC ----
-      if (!onlyPreprocess && !bypassSmart && !isClarifying && !isSmartMode) {
+      if (!onlyPreprocess && !bypassSmart && !isClarifying && !isSmartMode && !bypassExactMatch) {
         const smartRes = await smartSelect(textToSubmit, prefixToSend, context, smartAnswers);
         
         if (!smartRes.ready_to_generate && smartRes.questions && smartRes.questions.length > 0) {
@@ -578,8 +590,8 @@ export default function AIApuGeneratorPage() {
       
       const newHistory = isClarifying ? [...chatHistory, { role: 'user', content: textToSubmit }] : [{ role: 'user', content: textToSubmit }];
       
-      // Llamada normal (sin partida base o bypass)
-      const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory, onlyPreprocess);
+      // Llamada normal (con soporte para bypass_exact_match)
+      const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory, onlyPreprocess, bypassExactMatch);
       processAIResponse(response, textToSubmit);
       
     } catch (error) {
@@ -591,6 +603,21 @@ export default function AIApuGeneratorPage() {
     }
   };
 
+  const handleAcceptExactMatch = async () => {
+    if (!exactMatchCandidate) return;
+    const itemCode = exactMatchCandidate.cod_par;
+    const textPrompt = basePrompt || prompt;
+    setExactMatchCandidate(null);
+    await handleGenerate(textPrompt, false, true, false, itemCode);
+  };
+
+  const handleRejectExactMatch = async () => {
+    const textPrompt = basePrompt || prompt;
+    setExactMatchCandidate(null);
+    // Forzar generación con IA omitiendo el match exacto
+    await handleGenerate(textPrompt, false, true, true, null);
+  };
+
   const processAIResponse = (response, textToSubmit) => {
     if (response.debug_preprocesamiento) {
       setDebugInfo(response.debug_preprocesamiento);
@@ -599,21 +626,33 @@ export default function AIApuGeneratorPage() {
     } else {
       setDebugInfo(null);
     }
+
+    if (response.status === 'exact_match_candidate') {
+      setExactMatchCandidate(response.matched_item);
+      setBasePrompt(textToSubmit);
+      setIsClarifying(false);
+      toast("Existe una partida que coincide con tu descripción", { icon: '🎯' });
+      return;
+    }
+
     if (response.status === 'clarification_needed') {
       const newHistory = isClarifying ? [...chatHistory, { role: 'user', content: textToSubmit }] : [{ role: 'user', content: textToSubmit }];
       setChatHistory(newHistory);
-      setAiClarificationMessage(response.clarification_message || "La IA necesita clarificación:");
+      setAiClarificationMessage(response.clarification_message || "No se pudo interpretar una partida técnica válida.");
       setAiOptions(response.options || []);
       setAiQuestions(response.questions || []);
+      setAiGuiaRedaccion(response.guia_redaccion || null);
       setIsClarifying(true);
       setPrompt('');
-      toast.error("La IA detectó un problema o necesita más detalles", { icon: '🤔' });
+      toast.error("Descripción no válida o ambigua. Revisa las preguntas de clarificación.", { icon: '⚠️' });
     } else {
       setIsClarifying(false);
       setChatHistory([]);
       setAiClarificationMessage("");
       setAiOptions([]);
       setAiQuestions([]);
+      setAiGuiaRedaccion(null);
+      setExactMatchCandidate(null);
       // Map response to the format expected by the editor
       setItem({
         ...response.partida,
@@ -622,7 +661,7 @@ export default function AIApuGeneratorPage() {
         labors: response.labors || [],
         advertencias: response.advertencias || []
       });
-      toast.success("APU generado con IA");
+      toast.success("APU generado con éxito");
     }
   };
 
@@ -1017,20 +1056,106 @@ export default function AIApuGeneratorPage() {
             </div>
           )}
 
+          {/* MATCH EXACTO INTERACTIVO */}
+          {exactMatchCandidate && (
+            <div className="mb-6 p-5 bg-emerald-50/95 border-2 border-emerald-300 rounded-2xl shadow-md animate-in fade-in zoom-in-95 duration-300">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="p-2 bg-emerald-600 text-white rounded-xl shrink-0 shadow-sm shadow-emerald-600/30">
+                  <CheckCircle2 size={22} />
+                </div>
+                <div>
+                  <h4 className="text-emerald-950 font-bold text-base leading-tight">
+                    Existe una partida que coincide casi al 100% con tu descripción:
+                  </h4>
+                  <p className="text-xs text-emerald-800 mt-1 font-medium">
+                    Encontramos una partida certificada en la base de datos maestra con estructura técnica y costos comprobados.
+                  </p>
+                </div>
+              </div>
+
+              <div className="my-3 bg-white border border-emerald-200 rounded-xl p-4 shadow-xs">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg font-mono tracking-wide">
+                    {exactMatchCandidate.cov_par || exactMatchCandidate.cod_par}
+                  </span>
+                  <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                    Unidad: {exactMatchCandidate.unit}
+                  </span>
+                  <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                    Rendimiento: {exactMatchCandidate.performance || exactMatchCandidate.ren_par || 1.0} {exactMatchCandidate.unit}/día
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-slate-800 uppercase leading-snug">
+                  {exactMatchCandidate.description}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 mt-4 pt-3 border-t border-emerald-200/70">
+                <button
+                  onClick={handleAcceptExactMatch}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 transition-all transform active:scale-95 cursor-pointer"
+                >
+                  <Check size={18} /> Sí, es esa
+                </button>
+                <button
+                  onClick={handleRejectExactMatch}
+                  className="px-4 py-2.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <Sparkles size={16} className="text-amber-500" /> No es esa (Generar con IA)
+                </button>
+              </div>
+            </div>
+          )}
+
           {!isSmartMode && isClarifying && (aiQuestions.length > 0 || aiClarificationMessage) && (
-            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl shadow-sm animate-in fade-in zoom-in duration-300">
-              <h4 className="text-blue-800 font-bold mb-2 flex items-center gap-2">🤔 {aiClarificationMessage || "La IA necesita clarificación:"}</h4>
+            <div className="mb-6 p-5 bg-amber-50/90 border-2 border-amber-200 rounded-2xl shadow-sm animate-in fade-in zoom-in-95 duration-300">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="p-2 bg-amber-500 text-white rounded-xl shrink-0 shadow-sm shadow-amber-500/30">
+                  <Sparkles size={20} />
+                </div>
+                <div>
+                  <h4 className="text-amber-950 font-bold text-base leading-tight">
+                    {aiClarificationMessage || "No fue posible interpretar una partida técnica válida"}
+                  </h4>
+                  <p className="text-xs text-amber-800 mt-1 font-medium">
+                    Para asegurar que tu presupuesto sea confiable y no inventar costos erróneos, la IA necesita que definas estos puntos clave:
+                  </p>
+                </div>
+              </div>
               
               {aiQuestions.length > 0 && (
-                <ul className="list-disc list-inside text-sm text-blue-700 space-y-2 font-medium mb-3">
-                  {aiQuestions.map((q, idx) => (
-                    <li key={idx}>{q}</li>
-                  ))}
-                </ul>
+                <div className="my-3 bg-white/90 border border-amber-200 rounded-xl p-3.5 shadow-xs">
+                  <p className="text-xs font-bold text-amber-900 mb-2 uppercase tracking-wide">Puntos a verificar o aclarar:</p>
+                  <ul className="text-sm text-slate-700 space-y-1.5 font-medium">
+                    {aiQuestions.map((q, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <span className="text-amber-600 font-bold shrink-0">•</span>
+                        <span>{q}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
+
+              {/* GUÍA DIDÁCTICA DE REDACCIÓN */}
+              <div className="my-3 bg-gradient-to-br from-indigo-50/90 to-blue-50/90 border border-indigo-200/80 rounded-xl p-4 shadow-xs">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-base">💡</span>
+                  <h5 className="text-xs font-bold text-indigo-900 uppercase tracking-wide">Fórmula de redacción recomendada:</h5>
+                </div>
+                <div className="p-2 bg-white/80 rounded-lg border border-indigo-100 text-xs font-semibold text-indigo-950 mb-2.5">
+                  <code>[Acción] + [Elemento constructivo] + [Material / Especificación] + [Alcance o Ubicación]</code>
+                </div>
+                <div className="space-y-1 text-xs text-slate-600">
+                  <p className="font-semibold text-indigo-900">Ejemplos estándar según normas COVENIN:</p>
+                  <p className="italic">“Construcción de pared de bloques de arcilla e=15 cm con mortero 1:4 en planta baja.”</p>
+                  <p className="italic">“Excavación a mano para zanjas de fundación en tierra suelta hasta 1.50 m de profundidad.”</p>
+                  <p className="italic">“Demolición con martillo neumático de losa de concreto e=20 cm, incluye acarreo a mano.”</p>
+                </div>
+              </div>
               
               {aiOptions.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-blue-200">
+                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-amber-200">
                   {aiOptions.map((opt, idx) => (
                     <button
                       key={idx}
@@ -1038,43 +1163,59 @@ export default function AIApuGeneratorPage() {
                         setPrompt(opt);
                         handleGenerate(opt);
                       }}
-                      className="px-3 py-1.5 bg-white border border-blue-300 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors shadow-sm"
+                      className="px-3 py-1.5 bg-white border border-amber-300 text-amber-900 rounded-lg text-xs font-bold hover:bg-amber-100 transition-colors shadow-sm"
                     >
                       {opt}
                     </button>
                   ))}
-                  <button
-                    onClick={() => {
-                      setIsClarifying(false);
-                      setChatHistory([]);
-                      setAiClarificationMessage("");
-                      setAiOptions([]);
-                      setAiQuestions([]);
-                      setPrompt('');
-                      setSelectedTipoObra('');
-                      setSelectedCapitulo('');
-                      setSelectedSubcapitulo('');
-                      setSelectedPartida('');
-                    }}
-                    className="px-3 py-1.5 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs font-bold hover:bg-red-100 transition-colors shadow-sm"
-                  >
-                    Elegir otra Categoría
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsClarifying(false);
-                      setChatHistory([]);
-                      setAiClarificationMessage("");
-                      setAiOptions([]);
-                      setAiQuestions([]);
-                      setPrompt('');
-                    }}
-                    className="px-3 py-1.5 bg-slate-100 border border-slate-300 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors shadow-sm"
-                  >
-                    Corregir Descripción
-                  </button>
                 </div>
               )}
+
+              <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-amber-200/70 items-center justify-between">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => {
+                      setIsClarifying(false);
+                      setIsGuidedMode(true);
+                    }}
+                    className="px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-700 transition-colors shadow-sm flex items-center gap-1.5"
+                  >
+                    <Sparkles size={14} /> Usar Asistente Guiado Paso a Paso
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsClarifying(false);
+                      setChatHistory([]);
+                      setAiClarificationMessage("");
+                      setAiOptions([]);
+                      setAiQuestions([]);
+                      setAiGuiaRedaccion(null);
+                    }}
+                    className="px-3 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-100 transition-colors shadow-sm"
+                  >
+                    Editar Texto Libre
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setIsClarifying(false);
+                    setChatHistory([]);
+                    setAiClarificationMessage("");
+                    setAiOptions([]);
+                    setAiQuestions([]);
+                    setAiGuiaRedaccion(null);
+                    setPrompt('');
+                    setSelectedTipoObra('');
+                    setSelectedCapitulo('');
+                    setSelectedSubcapitulo('');
+                    setSelectedPartida('');
+                  }}
+                  className="px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors"
+                >
+                  Reiniciar Categorías
+                </button>
+              </div>
             </div>
           )}
           

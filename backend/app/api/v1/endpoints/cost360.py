@@ -469,7 +469,7 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             smart_answers=payload.smart_answers or {},
             history=history_dicts,
         )
-        if result.get("status") == "success" or "apu_data" in result or "apu" in result:
+        if (result.get("status") in ("success", "completed")) and result.get("partida"):
             from app.db.arko_base import ArkoSessionLocal
             with ArkoSessionLocal() as adb:
                 db_user = adb.query(current_user.__class__).filter_by(id=current_user.id).first()
@@ -481,18 +481,16 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
     # 1. Preprocesamiento (BD + Estadísticas) + IA semantica
     payload_llm = preprocess_apu_data(db, payload.description, payload.covenin_prefix, payload.covenin_context)
     
-    # 1.5. Cortocircuito si hay Match Exacto
-    if payload_llm.get("modo") == "partida_exacta_encontrada":
-        cod_par = payload_llm.get("partida_exacta_codigo")
-        item = get_item_by_code(db, cod_par)
+    # 0.8. Si el usuario aceptó la partida de Match Exacto ("Sí, es esa")
+    if payload.accept_exact_match_code:
+        item = get_item_by_code(db, payload.accept_exact_match_code)
         if item:
-            mat_results = get_apu_materials(db, cod_par)
-            eq_results = get_apu_equipments(db, cod_par)
-            mo_results = get_apu_labors(db, cod_par)
-            
-            materials = []
-            for rel, mat in mat_results:
-                materials.append({
+            mat_results = get_apu_materials(db, item.CodPar)
+            eq_results = get_apu_equipments(db, item.CodPar)
+            mo_results = get_apu_labors(db, item.CodPar)
+
+            materials = [
+                {
                     "id": f"m-{mat.CodMat}",
                     "codigo": mat.CodMat,
                     "descripcion": mat.Descri,
@@ -501,12 +499,12 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
                     "desperdicio": getattr(rel, 'Desper', 0.0) or 0.0,
                     "precio_unitario": mat.CosMat or 0.0,
                     "origen": "historico",
-                    "nota_calculo": "Extraído de la base de datos maestra."
-                })
-            
-            equipments = []
-            for rel, eq in eq_results:
-                equipments.append({
+                    "nota_calculo": "Extraído directamente de la base de datos certificada."
+                } for rel, mat in mat_results
+            ]
+
+            equipments = [
+                {
                     "id": f"e-{eq.CodEqu}",
                     "codigo": eq.CodEqu,
                     "descripcion": eq.Descri,
@@ -515,12 +513,12 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
                     "depreciacion": getattr(rel, 'Deprec', 1.0) or 1.0,
                     "precio_unitario": eq.CosDia or 0.0,
                     "origen": "historico",
-                    "nota_calculo": "Extraído de la base de datos maestra."
-                })
-                
-            labors = []
-            for rel, mo in mo_results:
-                labors.append({
+                    "nota_calculo": "Extraído directamente de la base de datos certificada."
+                } for rel, eq in eq_results
+            ]
+
+            labors = [
+                {
                     "id": f"l-{mo.CodMan}",
                     "codigo": mo.CodMan,
                     "descripcion": mo.Descri,
@@ -530,12 +528,15 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
                     "bono": mo.Bono or 0.0,
                     "precio_unitario": (mo.Jornal or 0.0) + (mo.Bono or 0.0),
                     "origen": "historico",
-                    "nota_calculo": "Extraído de la base de datos maestra."
-                })
+                    "nota_calculo": "Extraído directamente de la base de datos certificada."
+                } for rel, mo in mo_results
+            ]
 
             return {
+                "status": "completed",
                 "partida": {
                     "cod_par": item.CodPar,
+                    "cov_par": item.CovPar or item.CodPar,
                     "description": item.Descri,
                     "unit": item.UniPar,
                     "quantity": 1.0,
@@ -545,15 +546,36 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
                 "equipments": equipments,
                 "labors": labors,
                 "advertencias": [
-                    f"¡MATCH EXACTO! Ingresaste una descripción idéntica a la partida certificada [{item.CodPar}] de la base de datos. Para evitar distorsionar costos, te hemos entregado el APU original sin usar Inteligencia Artificial."
+                    f"Partida certificada [{item.CodPar}] importada directamente desde la base de datos maestra a solicitud del usuario."
                 ]
+            }
+
+    # 1. Preprocesamiento (BD + Estadísticas) + IA semantica
+    payload_llm = preprocess_apu_data(db, payload.description, payload.covenin_prefix, payload.covenin_context)
+    
+    # 1.5. Pregunta interactiva si hay Match Exacto y el usuario aún no ha omitido
+    if payload_llm.get("modo") == "partida_exacta_encontrada" and not payload.bypass_exact_match:
+        cod_par = payload_llm.get("partida_exacta_codigo")
+        item = get_item_by_code(db, cod_par)
+        if item:
+            return {
+                "status": "exact_match_candidate",
+                "matched_item": {
+                    "cod_par": item.CodPar,
+                    "cov_par": item.CovPar or item.CodPar,
+                    "description": item.Descri,
+                    "unit": item.UniPar,
+                    "pre_uni": item.PreUni or 0.0,
+                    "performance": getattr(item, 'RenPar', 1.0) or 1.0
+                },
+                "message": "Existe una partida que coincide casi al 100% con tu descripción:"
             }
 
     # 2. Generación con IA (LLM Router)
     history_dicts = [msg.model_dump() for msg in payload.history] if payload.history else []
     result = generate_apu_with_ai(payload_llm, history_dicts)
     
-    if result.get("status") == "success" or "apu_data" in result or "apu" in result:
+    if (result.get("status") in ("success", "completed")) and result.get("partida"):
         from app.db.arko_base import ArkoSessionLocal
         with ArkoSessionLocal() as adb:
             db_user = adb.query(current_user.__class__).filter_by(id=current_user.id).first()
