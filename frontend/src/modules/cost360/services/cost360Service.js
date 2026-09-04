@@ -51,6 +51,13 @@ export const fetchApuDetails = async (itemCode, database_id = 'master') => {
   return response.data;
 };
 
+export const updateApuDetails = async (itemCode, apuData, database_id = 'master') => {
+  const response = await cost360ApiClient.put(`/items/${itemCode}/apu`, apuData, {
+    params: { database_id }
+  });
+  return response.data;
+};
+
 export const fetchCategoriesTree = async () => {
   const response = await cost360ApiClient.get('/categories_tree');
   return response.data;

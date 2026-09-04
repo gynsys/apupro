@@ -1,19 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Printer, FileSpreadsheet } from 'lucide-react';
+import React, { useState, useEffect, useContext } from 'react';
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Printer, FileSpreadsheet, Save } from 'lucide-react';
+import toast from 'react-hot-toast';
 import cost360Service from '../services/cost360Service';
 import PrintAPUModal from '../../../components/PrintAPUModal';
 import PrintAPULayout from '../../../components/PrintAPULayout';
 import ExportApuExcelButton from '../components/ExportApuExcelButton';
 import ApuEditorUI from '../../../components/ApuEditorUI';
+import { AuthContext } from '../../../context/AuthContext';
 
 export default function APUViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const dbId = searchParams.get('db') || 'master';
+  const fromParam = searchParams.get('from') || location.state?.from;
+
+  const { user } = useContext(AuthContext) || {};
+  const isSuperAdmin = user?.is_superadmin === true || user?.email === 'admin@arko360.net' || user?.role === 'superadmin' || user?.is_admin === true;
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [item, setItem] = useState(null);
   const [settings, setSettings] = useState({
@@ -98,6 +107,42 @@ export default function APUViewer() {
     }));
   };
 
+  const handleBack = () => {
+    if (fromParam === 'admin-db' || fromParam === '/cost360/admin-db') {
+      navigate('/cost360/admin-db');
+    } else if (location.state?.from) {
+      navigate(location.state.from);
+    } else if (window.history.length > 2) {
+      navigate(-1);
+    } else {
+      navigate('/cost360');
+    }
+  };
+
+  const handleSaveAPU = async () => {
+    if (!item) return;
+    try {
+      setSaving(true);
+      const payload = {
+        description: item.description,
+        unit: item.unit,
+        performance: item.performance,
+        materials: item.materials,
+        equipments: item.equipments,
+        labors: item.labors
+      };
+      await cost360Service.updateApuDetails(item.cod_par || id, payload, dbId);
+      toast.success("APU guardado exitosamente");
+      const apuData = await cost360Service.fetchApuDetails(id, dbId);
+      setData(apuData);
+    } catch (err) {
+      console.error("Error saving APU:", err);
+      toast.error("Error al guardar los cambios del APU");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -142,8 +187,9 @@ export default function APUViewer() {
         <div className="flex items-center justify-between mb-4 sticky top-0 z-30 bg-gray-50/95 backdrop-blur py-3 px-4 md:px-6 border-b border-gray-200/50 shadow-sm">
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => navigate('/cost360')}
-              className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 transition-colors shrink-0 shadow-sm"
+              onClick={handleBack}
+              className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 transition-colors shrink-0 shadow-sm cursor-pointer"
+              title="Volver"
             >
               <ArrowLeft size={20} />
             </button>
@@ -152,9 +198,20 @@ export default function APUViewer() {
             </h2>
           </div>
           <div className="flex items-center gap-2">
+            {(isSuperAdmin || fromParam === 'admin-db') && (
+              <button
+                onClick={handleSaveAPU}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 rounded-xl transition-all shadow-sm cursor-pointer"
+                title="Guardar modificaciones del APU en la base de datos"
+              >
+                {saving ? <Loader className="animate-spin" size={14} /> : <Save size={14} />}
+                <span>{saving ? 'Guardando...' : 'Guardar APU'}</span>
+              </button>
+            )}
             <button 
               onClick={() => setPrintModalOpen(true)}
-              className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 transition-colors shadow-sm flex items-center gap-2"
+              className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 transition-colors shadow-sm flex items-center gap-2 cursor-pointer"
               title="Imprimir"
             >
               <Printer size={20} />

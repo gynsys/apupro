@@ -67,6 +67,26 @@ class MasterItemUpdate(BaseModel):
     UniPar: Optional[str] = None
     RenPar: Optional[float] = None
 
+class APUComponentItem(BaseModel):
+    id: Optional[str] = None
+    codigo: Optional[str] = None
+    descripcion: Optional[str] = None
+    unidad: Optional[str] = None
+    cantidad: float
+    precio_unitario: Optional[float] = 0.0
+    desperdicio: Optional[float] = 0.0
+    depreciacion: Optional[float] = 1.0
+    jornal: Optional[float] = 0.0
+    bono: Optional[float] = 0.0
+
+class MasterAPUUpdate(BaseModel):
+    description: Optional[str] = None
+    unit: Optional[str] = None
+    performance: Optional[float] = None
+    materials: Optional[List[APUComponentItem]] = None
+    equipments: Optional[List[APUComponentItem]] = None
+    labors: Optional[List[APUComponentItem]] = None
+
 
 class CostMaterialUpdate(BaseModel):
     CosMat: Optional[float] = None

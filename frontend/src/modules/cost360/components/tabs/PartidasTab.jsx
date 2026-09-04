@@ -180,7 +180,7 @@ const PartidasTab = ({ onlyCoded, selectedDatabase = 'master' }) => {
                   <div className="px-5 py-4 flex items-center justify-between gap-4">
                     <div
                       className="flex items-start gap-3 min-w-0 flex-1 cursor-pointer"
-                      onClick={() => navigate(`/cost360/apu/${item.CodPar}`)}
+                      onClick={() => navigate(`/cost360/apu/${item.CodPar}?from=admin-db&db=${selectedDatabase || 'master'}`, { state: { from: '/cost360/admin-db' } })}
                     >
                       <div
                         className="mt-0.5 p-2 rounded-lg shrink-0 transition-colors duration-150"

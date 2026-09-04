@@ -490,3 +490,140 @@ def delete_master_item(db: Session, item_code: str):
     db.commit()
     return True
 
+def update_master_apu_details(
+    db: Session,
+    item_code: str,
+    description: Optional[str] = None,
+    unit: Optional[str] = None,
+    performance: Optional[float] = None,
+    materials: Optional[List[dict]] = None,
+    equipments: Optional[List[dict]] = None,
+    labors: Optional[List[dict]] = None
+) -> Optional[CostItem]:
+    if not item_code:
+        raise ValueError("item_code is required")
+        
+    item = db.query(CostItem).filter(CostItem.CodPar == item_code).first()
+    if not item:
+        item = db.query(CostItem).filter(CostItem.CovPar == item_code).first()
+    if not item:
+        return None
+        
+    real_cod_par = item.CodPar
+
+    if description is not None:
+        item.Descri = description.strip()
+        item.desc_limpia = description.strip()
+    if unit is not None:
+        item.UniPar = unit.strip()
+    if performance is not None and performance > 0:
+        item.RenPar = performance
+
+    if equipments is not None:
+        db.query(CostAPUEquipment).filter(CostAPUEquipment.CodPar == real_cod_par).delete(synchronize_session=False)
+        for eq in equipments:
+            cod_ins = eq.get("codigo") or eq.get("id")
+            if not cod_ins or cod_ins == "s/c":
+                continue
+            can_ins = float(eq.get("cantidad") or 0.0)
+            if can_ins <= 0:
+                continue
+            deprec = float(eq.get("depreciacion") or 1.0)
+            eq_exists = db.query(CostEquipment).filter(CostEquipment.CodEqu == cod_ins).first()
+            if not eq_exists:
+                eq_exists = CostEquipment(
+                    CodEqu=cod_ins,
+                    Descri=eq.get("descripcion") or "Equipo",
+                    CosDia=float(eq.get("precio_unitario") or 0.0)
+                )
+                db.add(eq_exists)
+                db.flush()
+            db.add(CostAPUEquipment(
+                CodPar=real_cod_par,
+                CodIns=cod_ins,
+                CanIns=can_ins,
+                Deprec=deprec
+            ))
+
+    if materials is not None:
+        db.query(CostAPUMaterial).filter(CostAPUMaterial.CodPar == real_cod_par).delete(synchronize_session=False)
+        for mat in materials:
+            cod_ins = mat.get("codigo") or mat.get("id")
+            if not cod_ins or cod_ins == "s/c":
+                continue
+            can_ins = float(mat.get("cantidad") or 0.0)
+            if can_ins <= 0:
+                continue
+            desper = float(mat.get("desperdicio") or 0.0)
+            mat_exists = db.query(CostMaterial).filter(CostMaterial.CodMat == cod_ins).first()
+            if not mat_exists:
+                mat_exists = CostMaterial(
+                    CodMat=cod_ins,
+                    Descri=mat.get("descripcion") or "Material",
+                    UniMat=mat.get("unidad") or "und",
+                    CosMat=float(mat.get("precio_unitario") or 0.0)
+                )
+                db.add(mat_exists)
+                db.flush()
+            db.add(CostAPUMaterial(
+                CodPar=real_cod_par,
+                CodIns=cod_ins,
+                CanIns=can_ins,
+                Desper=desper
+            ))
+
+    if labors is not None:
+        db.query(CostAPULabor).filter(CostAPULabor.CodPar == real_cod_par).delete(synchronize_session=False)
+        for lab in labors:
+            cod_ins = lab.get("codigo") or lab.get("id")
+            if not cod_ins or cod_ins == "s/c":
+                continue
+            can_ins = float(lab.get("cantidad") or 0.0)
+            if can_ins <= 0:
+                continue
+            lab_exists = db.query(CostLabor).filter(CostLabor.CodMan == cod_ins).first()
+            if not lab_exists:
+                lab_exists = CostLabor(
+                    CodMan=cod_ins,
+                    Descri=lab.get("descripcion") or "Mano de Obra",
+                    Jornal=float(lab.get("jornal") or lab.get("precio_unitario") or 0.0),
+                    Bono=float(lab.get("bono") or 0.0)
+                )
+                db.add(lab_exists)
+                db.flush()
+            db.add(CostAPULabor(
+                CodPar=real_cod_par,
+                CodIns=cod_ins,
+                CanIns=can_ins
+            ))
+
+    # Recalcular PreUni
+    rendimiento = item.RenPar or 1.0
+    if rendimiento <= 0:
+        rendimiento = 1.0
+
+    mat_tot = 0.0
+    for rel, m in db.query(CostAPUMaterial, CostMaterial).join(CostMaterial, CostAPUMaterial.CodIns == CostMaterial.CodMat).filter(CostAPUMaterial.CodPar == real_cod_par).all():
+        desp = (rel.Desper or 0.0) / 100.0
+        mat_tot += (rel.CanIns or 0.0) * (m.CosMat or 0.0) * (1.0 + desp)
+
+    eq_tot = 0.0
+    for rel, e in db.query(CostAPUEquipment, CostEquipment).join(CostEquipment, CostAPUEquipment.CodIns == CostEquipment.CodEqu).filter(CostAPUEquipment.CodPar == real_cod_par).all():
+        depr = rel.Deprec if rel.Deprec is not None else 1.0
+        eq_tot += (rel.CanIns or 0.0) * (e.CosDia or 0.0) * depr
+    eq_unit = eq_tot / rendimiento
+
+    mo_tot = 0.0
+    for rel, l in db.query(CostAPULabor, CostLabor).join(CostLabor, CostAPULabor.CodIns == CostLabor.CodMan).filter(CostAPULabor.CodPar == real_cod_par).all():
+        jornal = l.Jornal or 0.0
+        bono = l.Bono or 0.0
+        mo_tot += (rel.CanIns or 0.0) * (jornal + bono + (jornal * 4.17))
+    mo_unit = mo_tot / rendimiento
+
+    subtotal_a = mat_tot + eq_unit + mo_unit
+    item.PreUni = round(subtotal_a * 1.15 * 1.10, 2)
+
+    db.commit()
+    db.refresh(item)
+    return item
+

@@ -14,7 +14,7 @@ from app.schemas.cost360 import (
     AiApuGenerateRequest, SmartSelectRequest,
     CustomCostItemCreate, CustomCostItemResponse,
     Cost360DatabaseCreate, Cost360DatabaseUpdate, Cost360DatabaseListResponse,
-    MasterItemUpdate, CustomApuExportRequest
+    MasterItemUpdate, MasterAPUUpdate, CustomApuExportRequest
 )
 import re
 from sqlalchemy import text
@@ -37,7 +37,7 @@ from app.crud.crud_cost360 import (
     update_labor, delete_labor,
     save_custom_apu,
     get_all_databases, get_database_by_id, create_database, update_database, delete_database,
-    update_master_item, delete_master_item
+    update_master_item, delete_master_item, update_master_apu_details
 )
 from app.services.preprocessing_service import preprocess_apu_data, fast_preprocess_debug
 from app.services.ai_apu_service import generate_apu_with_ai, generate_apu_with_ai_from_base
@@ -216,6 +216,34 @@ def update_master_item_route(item_code: str, payload: MasterItemUpdate, db: Sess
     if not updated_item:
         raise HTTPException(status_code=404, detail="Partida no encontrada")
     return updated_item
+
+@router.put("/items/{item_code}/apu")
+def update_master_apu_route(item_code: str, payload: MasterAPUUpdate, database_id: str = "master", db: Session = Depends(get_db)):
+    set_schema_for_db(db, database_id)
+    updated_item = update_master_apu_details(
+        db=db,
+        item_code=item_code,
+        description=payload.description,
+        unit=payload.unit,
+        performance=payload.performance,
+        materials=[m.model_dump() for m in payload.materials] if payload.materials is not None else None,
+        equipments=[e.model_dump() for e in payload.equipments] if payload.equipments is not None else None,
+        labors=[l.model_dump() for l in payload.labors] if payload.labors is not None else None
+    )
+    if not updated_item:
+        raise HTTPException(status_code=404, detail="Partida no encontrada")
+    return {
+        "status": "ok",
+        "message": "APU actualizado correctamente",
+        "item": {
+            "CodPar": updated_item.CodPar,
+            "CovPar": updated_item.CovPar,
+            "Descri": updated_item.Descri,
+            "UniPar": updated_item.UniPar,
+            "RenPar": updated_item.RenPar,
+            "PreUni": updated_item.PreUni
+        }
+    }
 
 @router.delete("/items/{item_code}")
 def delete_master_item_route(item_code: str, db: Session = Depends(get_db)):
