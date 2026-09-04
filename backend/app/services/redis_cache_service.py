@@ -3,6 +3,7 @@ import json
 import os
 from typing import Optional, Dict, Any
 from app.core.config import settings
+from app.core.logging import logger
 
 class RedisCacheService:
     """Servicio para manejar caché de Redis para registros pendientes de verificación."""
@@ -21,9 +22,9 @@ class RedisCacheService:
             )
             # Test connection
             self.redis_client.ping()
-            print("✅ Redis conectado exitosamente")
+            logger.info("Redis conectado exitosamente")
         except Exception as e:
-            print(f"❌ Error conectando a Redis: {e}")
+            logger.warning(f"No se pudo conectar a Redis: {e}")
             self.redis_client = None
     
     def store_pending_registration(self, email: str, registration_data: Dict[str, Any], expiry_seconds: int = 900) -> bool:

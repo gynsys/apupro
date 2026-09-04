@@ -1,15 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 from typing import List, Optional
 from pydantic import BaseModel
-from app.db.arko_base import ArkoSessionLocal
-from app.db.models.arko import ArkoAdmin
-from app.api.v1.endpoints.arko import get_current_arko_admin
-
 from datetime import datetime, timedelta
 import threading
+
+from app.db.arko_base import ArkoSessionLocal
+from app.db.models.arko import ArkoAdmin
 from app.db.models.notification import Notification
+from app.api.v1.endpoints.arko import get_current_arko_admin
+from app.core.config import settings
+from app.core.logging import logger
 from app.services.email import (
     send_subscription_request_email, 
     send_payment_instructions_email,
@@ -354,17 +356,64 @@ def delete_user(user_id: int, current_user = Depends(get_current_arko_admin)):
         return {"status": "success", "message": "Usuario eliminado exitosamente"}
 
 @router.post("/subscription-request")
-def request_subscription(request: SubscriptionRequest, current_user = Depends(get_current_arko_admin)):
+def request_subscription(
+    request: SubscriptionRequest, 
+    current_user: ArkoAdmin = Depends(get_current_arko_admin)
+) -> dict:
     """El usuario solicita información o adquirir un plan"""
+    if not request or not request.plan_name:
+        raise HTTPException(status_code=400, detail="El nombre del plan es requerido.")
+
+    # 1. Crear notificación interna para el Superadmin en la campanita
     try:
-        # Correo al Superadmin
-        success_admin = send_subscription_request_email(current_user.email, request.plan_name)
-        # Correo al Usuario con los datos de pago
-        success_user = send_payment_instructions_email(current_user.email, request.plan_name)
-        
-        if not success_admin and not success_user:
-            raise HTTPException(status_code=500, detail="Error al enviar los correos de solicitud")
-            
-        return {"status": "success", "message": f"Solicitud de plan {request.plan_name} enviada y correo con datos de pago enviado al usuario."}
+        with ArkoSessionLocal() as db:
+            target_admins = db.query(ArkoAdmin).filter(
+                or_(
+                    ArkoAdmin.email == "admin@arko360.net",
+                    ArkoAdmin.site_config.isnot(None),
+                    ArkoAdmin.email == (settings.ADMIN_EMAIL or "")
+                )
+            ).all()
+            admin_ids = {a.id for a in target_admins if a and a.id}
+
+            # Asegurar admin@arko360.net si existe en la base de datos
+            super_admin = db.query(ArkoAdmin).filter(ArkoAdmin.email == "admin@arko360.net").first()
+            if super_admin and super_admin.id:
+                admin_ids.add(super_admin.id)
+
+            if not admin_ids:
+                first_adm = db.query(ArkoAdmin).first()
+                if first_adm and first_adm.id:
+                    admin_ids.add(first_adm.id)
+
+            user_label = f"{current_user.full_name} ({current_user.email})" if current_user.full_name else current_user.email
+            notif_msg = f"El usuario {user_label} ha solicitado el Plan {request.plan_name}."
+
+            for a_id in admin_ids:
+                notif = Notification(
+                    user_id=a_id,
+                    message=notif_msg,
+                    type="plan_request"
+                )
+                db.add(notif)
+            db.commit()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error registrando notificación interna de solicitud de plan: {e}", exc_info=True)
+
+    # 2. Enviar correos al superadmin y al usuario en segundo plano
+    try:
+        threading.Thread(
+            target=send_subscription_request_email,
+            args=(current_user.email, request.plan_name)
+        ).start()
+        threading.Thread(
+            target=send_payment_instructions_email,
+            args=(current_user.email, request.plan_name)
+        ).start()
+    except Exception as e:
+        logger.error(f"Error iniciando hilos de correo para solicitud de plan: {e}", exc_info=True)
+
+    return {
+        "status": "success", 
+        "message": f"Solicitud del plan {request.plan_name} registrada y notificada exitosamente."
+    }

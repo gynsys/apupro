@@ -11,6 +11,7 @@ from app.core.limiter import limiter
 import logging
 logger = logging.getLogger(__name__)
 
+from sqlalchemy import text
 import app.db.models
 
 # Configurar Base de Datos para Arko
@@ -19,6 +20,29 @@ try:
     ArkoBase.metadata.create_all(bind=arko_engine)
     Base.metadata.create_all(bind=engine)
     logger.info("Database tables verified/created successfully.")
+
+    # Auto-migración segura de columnas de planes en arko_admins si no existen
+    with arko_engine.connect() as conn:
+        schema_statements = [
+            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS plan VARCHAR(50) DEFAULT 'free';",
+            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS max_budgets INTEGER DEFAULT 1;",
+            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS max_items_per_budget INTEGER DEFAULT 2;",
+            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS has_ai_access BOOLEAN DEFAULT FALSE;",
+            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS plan_started_at TIMESTAMP;",
+            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS plan_expires_at TIMESTAMP;",
+            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS max_ai_apus INTEGER DEFAULT 0;",
+            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS ai_apus_generated INTEGER DEFAULT 0;",
+            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS costos_config JSONB;",
+            "CREATE INDEX IF NOT EXISTS idx_arko_admins_plan ON arko_admins(plan);",
+            "CREATE INDEX IF NOT EXISTS idx_arko_admins_plan_expires ON arko_admins(plan_expires_at);"
+        ]
+        for stmt in schema_statements:
+            try:
+                conn.execute(text(stmt))
+            except Exception as ex:
+                logger.warning(f"Aviso en auto-migración de esquema: {ex}")
+        conn.commit()
+    logger.info("Schema migrations for arko_admins verified successfully.")
 except Exception as e:
     logger.error(f"Error creating Arko360 database tables: {e}", exc_info=True)
 

@@ -7,13 +7,13 @@ from typing import Optional, List
 
 from fastapi import APIRouter, Depends, Form, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from app.core.config import settings
 from app.core.logging import logger
 from app.api.v1.endpoints.arko import get_current_arko_admin
 from app.db.arko_base import ArkoSessionLocal
 from app.db.models.arko import ArkoAdmin
-from app.db.base import Base, SessionLocal
 from app.db.models.notification import Notification
 from app.services.email import send_email
 
@@ -49,53 +49,50 @@ async def report_payment(
     is_image = mime_type.startswith("image/")
 
     # Determinar superadmin(s) reales para notificación interna y correo
-    admin_users: List[ArkoAdmin] = []
+    admin_ids: List[int] = []
     admin_emails: List[str] = []
 
     with ArkoSessionLocal() as db_arko:
-        # 1. Superadmin por ADMIN_EMAIL configurado en backend (.env)
-        if settings.ADMIN_EMAIL:
-            admin_by_env = db_arko.query(ArkoAdmin).filter(ArkoAdmin.email == settings.ADMIN_EMAIL).first()
-            if admin_by_env and admin_by_env.email not in admin_emails:
-                admin_users.append(admin_by_env)
-                admin_emails.append(admin_by_env.email)
-            elif settings.ADMIN_EMAIL not in admin_emails:
-                admin_emails.append(settings.ADMIN_EMAIL)
-                
-        # 2. Superadmin con configuración de sitio (root admin: admin@arko360.net)
-        admin_root = db_arko.query(ArkoAdmin).filter(ArkoAdmin.site_config.isnot(None)).first()
-        if admin_root and admin_root.email not in admin_emails:
-            admin_users.append(admin_root)
-            admin_emails.append(admin_root.email)
-            
-        # 3. Cuentas administradoras estándar del sistema si existen
-        for default_admin_email in ["admin@arko360.net", "admin@arko360.com"]:
-            admin_def = db_arko.query(ArkoAdmin).filter(ArkoAdmin.email == default_admin_email).first()
-            if admin_def and admin_def.email not in admin_emails:
-                admin_users.append(admin_def)
-                admin_emails.append(admin_def.email)
+        target_admins = db_arko.query(ArkoAdmin).filter(
+            or_(
+                ArkoAdmin.email == "admin@arko360.net",
+                ArkoAdmin.site_config.isnot(None),
+                ArkoAdmin.email == (settings.ADMIN_EMAIL or "")
+            )
+        ).all()
+        for a in target_admins:
+            if a.id and a.id not in admin_ids:
+                admin_ids.append(a.id)
+            if a.email and a.email not in admin_emails:
+                admin_emails.append(a.email)
 
-        # Fallback de respaldo si no se encontró ninguno de los anteriores
-        if not admin_users:
+        # Siempre asegurar admin@arko360.net
+        if "admin@arko360.net" not in admin_emails:
+            admin_emails.append("admin@arko360.net")
+            super_admin = db_arko.query(ArkoAdmin).filter(ArkoAdmin.email == "admin@arko360.net").first()
+            if super_admin and super_admin.id and super_admin.id not in admin_ids:
+                admin_ids.append(super_admin.id)
+
+        if not admin_ids:
             first_admin = db_arko.query(ArkoAdmin).first()
-            if first_admin:
-                admin_users.append(first_admin)
-                if first_admin.email not in admin_emails:
+            if first_admin and first_admin.id:
+                admin_ids.append(first_admin.id)
+                if first_admin.email and first_admin.email not in admin_emails:
                     admin_emails.append(first_admin.email)
 
-    # Crear notificación interna en campana para los administradores
-    amount_str = f" por un monto de {amount}" if amount else ""
-    notif_msg = f"El usuario {current_user.email} ha reportado un pago{amount_str} por el Plan {plan}. Referencia: {reference}. Archivo: {safe_filename}"
-    
-    with SessionLocal() as db:
-        for a_user in admin_users:
+        # Crear notificación interna en campana para los administradores
+        amount_str = f" por un monto de {amount}" if amount else ""
+        user_name = current_user.full_name or current_user.email
+        notif_msg = f"El usuario {user_name} ({current_user.email}) ha reportado un pago{amount_str} por el Plan {plan}. Referencia: {reference}. Archivo: {safe_filename}"
+        
+        for a_id in admin_ids:
             notif = Notification(
-                user_id=a_user.id,
+                user_id=a_id,
                 message=notif_msg,
                 type="payment_report"
             )
-            db.add(notif)
-        db.commit()
+            db_arko.add(notif)
+        db_arko.commit()
         
     # Enviar correo a los administradores con el comprobante adjunto e incrustado visualmente
     try:

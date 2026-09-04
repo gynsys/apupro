@@ -10,6 +10,7 @@ import uuid
 import base64
 import io
 import re
+import math
 from app.core.logging import logger
 
 # Eliminamos numero_a_letras ya que vendrá del frontend
@@ -385,8 +386,13 @@ def generate_budget_excel_workbook(
     obra = (budget.get("obra") or budget.get("project_name") or budget.get("name") or "").strip()
     if obra:
         ws[f"{info_col}{header_row}"] = f"Obra: {obra}"
-        ws[f"{info_col}{header_row}"].font = Font(bold=True, size=11, name="Calibri")
+        ws[f"{info_col}{header_row}"].font = Font(bold=True, size=14, name="Calibri")
+        ws[f"{info_col}{header_row}"].alignment = Alignment(vertical="center")
+        ws.row_dimensions[header_row].height = 24
         header_row += 1
+    else:
+        ws["B2"].font = Font(bold=True, size=14, name="Calibri")
+        ws["B2"].alignment = Alignment(vertical="center")
 
     ubicacion = (budget.get("ubicacion") or settings.get("ubicacion") or "").strip()
     if ubicacion:
@@ -458,36 +464,50 @@ def generate_budget_excel_workbook(
             ws.merge_cells(f"B{curr_r}:H{curr_r}")
             cell = ws[f"B{curr_r}"]
             cell.value = desc.upper()
-            style_cell(cell, bold=True, size=11, align="left", border=True, fill=chap_fill, font_color="0F172A")
+            style_cell(cell, bold=True, size=11, align="left", valign="center", border=True, fill=chap_fill, font_color="0F172A")
             for c in ["C", "D", "E", "F", "G", "H"]:
-                style_cell(ws[f"{c}{curr_r}"], border=True, fill=chap_fill)
-            ws.row_dimensions[curr_r].height = 22
+                style_cell(ws[f"{c}{curr_r}"], valign="center", border=True, fill=chap_fill)
+            chap_lines = max(1, math.ceil(len(desc) / 90.0))
+            ws.row_dimensions[curr_r].height = max(24.0, float(chap_lines * 18.0 + 6.0))
         else:
-            style_cell(ws[f"B{curr_r}"], align="center", border=True)
+            style_cell(ws[f"B{curr_r}"], align="center", valign="center", border=True)
             ws[f"B{curr_r}"] = item_num
 
-            style_cell(ws[f"C{curr_r}"], align="center", border=True)
+            style_cell(ws[f"C{curr_r}"], align="center", valign="center", border=True)
             ws[f"C{curr_r}"] = str(it.get("cov_par") or it.get("cod_par") or "")
 
-            style_cell(ws[f"D{curr_r}"], align="left", border=True)
+            style_cell(ws[f"D{curr_r}"], align="left", valign="center", border=True)
             ws[f"D{curr_r}"] = desc
 
-            style_cell(ws[f"E{curr_r}"], align="center", border=True)
+            style_cell(ws[f"E{curr_r}"], align="center", valign="center", border=True)
             ws[f"E{curr_r}"] = str(it.get("unit") or "")
 
             qty = float(it.get("quantity") or 0.0)
-            style_cell(ws[f"F{curr_r}"], align="right", border=True, number_format="#,##0.00")
+            style_cell(ws[f"F{curr_r}"], align="right", valign="center", border=True, number_format="#,##0.00")
             ws[f"F{curr_r}"] = qty
 
             pu = float(it.get("pu") or it.get("unit_price") or 0.0)
-            style_cell(ws[f"G{curr_r}"], align="right", border=True, number_format="#,##0.00")
+            style_cell(ws[f"G{curr_r}"], align="right", valign="center", border=True, number_format="#,##0.00")
             ws[f"G{curr_r}"] = pu
 
-            style_cell(ws[f"H{curr_r}"], align="right", border=True, number_format="#,##0.00")
+            style_cell(ws[f"H{curr_r}"], align="right", valign="center", border=True, number_format="#,##0.00")
             ws[f"H{curr_r}"] = f"=ROUND(F{curr_r}*G{curr_r}, 2)"
 
             item_num += 1
-            ws.row_dimensions[curr_r].height = 20
+
+            # Calcular altura adecuada de la fila para que la descripción se vea completa sin superponerse
+            desc_lines = desc.split("\n")
+            total_desc_lines = 0
+            for dl in desc_lines:
+                clean_dl = dl.strip()
+                if not clean_dl:
+                    total_desc_lines += 1
+                else:
+                    # Con ancho de columna 60, caben aprox 45 caracteres por línea en 11pt Calibri
+                    total_desc_lines += max(1, math.ceil(len(clean_dl) / 45.0))
+            total_desc_lines = max(1, total_desc_lines)
+            row_h = max(24.0, float(total_desc_lines * 17.0 + 8.0))
+            ws.row_dimensions[curr_r].height = row_h
 
         curr_r += 1
 
@@ -501,12 +521,12 @@ def generate_budget_excel_workbook(
     sub_r = curr_r
     ws.merge_cells(f"B{sub_r}:G{sub_r}")
     ws[f"B{sub_r}"] = f"Subtotal ({currency_label}):"
-    style_cell(ws[f"B{sub_r}"], bold=True, size=11, align="right", border=True, fill=tot_fill)
+    style_cell(ws[f"B{sub_r}"], bold=True, size=11, align="right", valign="center", border=True, fill=tot_fill)
     for c in ["C", "D", "E", "F", "G"]:
-        style_cell(ws[f"{c}{sub_r}"], border=True, fill=tot_fill)
-    style_cell(ws[f"H{sub_r}"], bold=True, size=11, align="right", border=True, number_format="#,##0.00", fill=tot_fill)
+        style_cell(ws[f"{c}{sub_r}"], valign="center", border=True, fill=tot_fill)
+    style_cell(ws[f"H{sub_r}"], bold=True, size=11, align="right", valign="center", border=True, number_format="#,##0.00", fill=tot_fill)
     ws[f"H{sub_r}"] = f"=SUM(H{first_data_r}:H{last_data_r})"
-    ws.row_dimensions[sub_r].height = 22
+    ws.row_dimensions[sub_r].height = 24
 
     # IVA
     iva_r = sub_r + 1
@@ -514,21 +534,21 @@ def generate_budget_excel_workbook(
     iva_display = f"{int(iva_pct)}%" if iva_pct.is_integer() else f"{iva_pct}%"
     ws.merge_cells(f"B{iva_r}:G{iva_r}")
     ws[f"B{iva_r}"] = f"IVA {iva_display} ({currency_label}):"
-    style_cell(ws[f"B{iva_r}"], bold=True, size=11, align="right", border=True, fill=tot_fill)
+    style_cell(ws[f"B{iva_r}"], bold=True, size=11, align="right", valign="center", border=True, fill=tot_fill)
     for c in ["C", "D", "E", "F", "G"]:
-        style_cell(ws[f"{c}{iva_r}"], border=True, fill=tot_fill)
-    style_cell(ws[f"H{iva_r}"], bold=True, size=11, align="right", border=True, number_format="#,##0.00", fill=tot_fill)
+        style_cell(ws[f"{c}{iva_r}"], valign="center", border=True, fill=tot_fill)
+    style_cell(ws[f"H{iva_r}"], bold=True, size=11, align="right", valign="center", border=True, number_format="#,##0.00", fill=tot_fill)
     ws[f"H{iva_r}"] = f"=ROUND(H{sub_r}*({iva_pct}/100), 2)"
-    ws.row_dimensions[iva_r].height = 22
+    ws.row_dimensions[iva_r].height = 24
 
     # Total Presupuesto
     total_r = iva_r + 1
     ws.merge_cells(f"B{total_r}:G{total_r}")
     ws[f"B{total_r}"] = f"Total Presupuesto ({currency_label}):"
-    style_cell(ws[f"B{total_r}"], bold=True, size=12, align="right", border=True, fill=highlight_fill, font_color="0F172A")
+    style_cell(ws[f"B{total_r}"], bold=True, size=12, align="right", valign="center", border=True, fill=highlight_fill, font_color="0F172A")
     for c in ["C", "D", "E", "F", "G"]:
-        style_cell(ws[f"{c}{total_r}"], border=True, fill=highlight_fill)
-    style_cell(ws[f"H{total_r}"], bold=True, size=12, align="right", border=True, number_format="#,##0.00", fill=highlight_fill, font_color="0F172A")
+        style_cell(ws[f"{c}{total_r}"], valign="center", border=True, fill=highlight_fill)
+    style_cell(ws[f"H{total_r}"], bold=True, size=12, align="right", valign="center", border=True, number_format="#,##0.00", fill=highlight_fill, font_color="0F172A")
     ws[f"H{total_r}"] = f"=H{sub_r}+H{iva_r}"
 
     double_bottom = Border(
@@ -539,9 +559,45 @@ def generate_budget_excel_workbook(
     )
     for c in ["B", "C", "D", "E", "F", "G", "H"]:
         ws[f"{c}{total_r}"].border = double_bottom
-    ws.row_dimensions[total_r].height = 26
+    ws.row_dimensions[total_r].height = 28
 
-    # 8. GUARDAR ARCHIVO TEMPORAL
+    # 8. NOTAS DEL PRESUPUESTO (si existen)
+    notes_text = str(budget.get("notes") or "").strip()
+    if notes_text:
+        note_title_r = total_r + 2
+        ws[f"B{note_title_r}"] = "NOTAS:"
+        ws[f"B{note_title_r}"].font = Font(bold=True, size=11, name="Calibri", color="1E293B")
+        ws.row_dimensions[note_title_r].height = 20
+
+        note_box_r = note_title_r + 1
+        ws.merge_cells(f"B{note_box_r}:H{note_box_r}")
+        note_cell = ws[f"B{note_box_r}"]
+        note_cell.value = notes_text
+        note_cell.font = Font(size=10, name="Calibri", color="334155")
+        note_cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+
+        thin_border = Side(style='thin', color='CBD5E1')
+        box_border = Border(left=thin_border, right=thin_border, top=thin_border, bottom=thin_border)
+        note_fill = PatternFill(start_color="F8FAFC", end_color="F8FAFC", fill_type="solid")
+
+        for col in ["B", "C", "D", "E", "F", "G", "H"]:
+            c = ws[f"{col}{note_box_r}"]
+            c.border = box_border
+            c.fill = note_fill
+
+        # Altura dinámica para el recuadro de notas
+        note_lines = notes_text.split("\n")
+        total_note_lines = 0
+        for nl in note_lines:
+            clean_nl = nl.strip()
+            if not clean_nl:
+                total_note_lines += 1
+            else:
+                total_note_lines += max(1, math.ceil(len(clean_nl) / 100.0))
+        total_note_lines = max(1, total_note_lines)
+        ws.row_dimensions[note_box_r].height = max(36.0, float(total_note_lines * 16.0 + 12.0))
+
+    # 9. GUARDAR ARCHIVO TEMPORAL
     temp_dir = Path("temp")
     temp_dir.mkdir(exist_ok=True)
     raw_name = obra or budget.get("name") or "Presupuesto"

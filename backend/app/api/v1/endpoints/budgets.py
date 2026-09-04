@@ -568,7 +568,8 @@ async def export_budget_excel(
             "company_rif": budget.company_rif or "",
             "currency": budget.currency or "USD",
             "iva_percent": float(budget.iva_percent if budget.iva_percent is not None else 16.0),
-            "title": "PRESUPUESTO"
+            "title": "PRESUPUESTO",
+            "notes": budget.notes or ""
         }
 
         if payload:
@@ -588,6 +589,8 @@ async def export_budget_excel(
                 budget_dict["iva_percent"] = payload.iva_percent
             if payload.logo_base64:
                 budget_dict["logo_base64"] = payload.logo_base64
+            if payload.notes is not None:
+                budget_dict["notes"] = payload.notes
 
         items_data: List[Dict[str, Any]] = []
         if payload and payload.items:

@@ -54,7 +54,8 @@ export default function NotificationBell() {
     fetchNotifications();
 
     const startInterval = () => {
-      intervalRef.current = setInterval(fetchNotifications, 5 * 60 * 1000);
+      // Polling cada 30 segundos para recibir notificaciones oportunamente
+      intervalRef.current = setInterval(fetchNotifications, 30 * 1000);
     };
 
     const stopInterval = () => {
@@ -156,7 +157,12 @@ export default function NotificationBell() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          if (!isOpen) {
+            fetchNotifications();
+          }
+          setIsOpen(!isOpen);
+        }}
         className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors relative"
         aria-label="Notificaciones"
         aria-expanded={isOpen}

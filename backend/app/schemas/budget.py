@@ -179,4 +179,5 @@ class BudgetExportExcelRequest(BaseModel):
     currency: Optional[str] = "USD"
     iva_percent: Optional[float] = 16.0
     logo_base64: Optional[str] = None
+    notes: Optional[str] = None
     items: Optional[List[BudgetItemExportData]] = None

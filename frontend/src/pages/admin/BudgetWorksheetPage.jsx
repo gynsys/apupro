@@ -549,6 +549,7 @@ export default function BudgetWorksheetPage() {
         currency: budget.currency || 'USD',
         iva_percent: budget.iva_percent !== undefined && budget.iva_percent !== null ? Number(budget.iva_percent) : 16.0,
         logo_base64: savedLogo || null,
+        notes: (notesText !== undefined && notesText !== null ? notesText : budget.notes || '').trim(),
         items: itemsPayload
       };
 
