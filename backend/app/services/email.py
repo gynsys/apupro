@@ -3,32 +3,35 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
+from typing import Optional, List, Union
 import logging
+import requests
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-import requests
-
-def send_email(to_email: str, subject: str, html_content: str) -> bool:
+def send_email(to_email: Union[str, List[str]], subject: str, html_content: str, attachments: Optional[List[dict]] = None) -> bool:
     if not settings.RESEND_API_KEY or not settings.RESEND_API_KEY.startswith("re_"):
         logger.warning(f"[EMAIL] SIMULACIÓN - RESEND_API_KEY no configurada o inválida. Para: {to_email} | Asunto: {subject}")
         return True
         
     try:
-        logger.info(f"[EMAIL] Enviando a {to_email} via Resend. From: {settings.RESEND_FROM_EMAIL}")
+        recipient_list = [to_email] if isinstance(to_email, str) else to_email
+        logger.info(f"[EMAIL] Enviando a {recipient_list} via Resend. From: {settings.RESEND_FROM_EMAIL}")
         headers = {
             "Authorization": f"Bearer {settings.RESEND_API_KEY}",
             "Content-Type": "application/json"
         }
         data = {
             "from": settings.RESEND_FROM_EMAIL,
-            "to": [to_email],
+            "to": recipient_list,
             "subject": subject,
             "html": html_content
         }
+        if attachments:
+            data["attachments"] = attachments
         
-        response = requests.post("https://api.resend.com/emails", json=data, headers=headers, timeout=10)
+        response = requests.post("https://api.resend.com/emails", json=data, headers=headers, timeout=15)
         
         if response.status_code >= 400:
             logger.error(f"[EMAIL] Resend rechazó el correo a {to_email}. Status={response.status_code} Body={response.text}")

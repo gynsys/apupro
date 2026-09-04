@@ -1,4 +1,5 @@
 import React from 'react';
+import toast from 'react-hot-toast';
 import { useUsers } from '../../hooks/useUsers';
 import EditUserModal from '../modals/EditUserModal';
 
@@ -27,6 +28,38 @@ const UsuariosTab = () => {
     if (success) {
       setEditingUser(null);
     }
+  };
+
+  const confirmDeleteUser = (user) => {
+    toast((t) => (
+      <div className="flex flex-col gap-3 min-w-[280px]">
+        <div>
+          <p className="font-bold text-slate-800 text-sm m-0">¿Eliminar usuario?</p>
+          <p className="text-xs text-slate-600 mt-1 mb-0">
+            Se eliminará a <strong>{user.email}</strong> y todos sus presupuestos asociados de forma permanente.
+          </p>
+        </div>
+        <div className="flex gap-2 justify-end">
+          <button 
+            type="button"
+            onClick={() => toast.dismiss(t.id)} 
+            className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button 
+            type="button"
+            onClick={() => {
+              toast.dismiss(t.id);
+              deleteUser(user.id);
+            }} 
+            className="px-3 py-1.5 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors shadow-sm cursor-pointer"
+          >
+            Sí, eliminar
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity });
   };
 
   if (loading) {
@@ -117,7 +150,7 @@ const UsuariosTab = () => {
                       Editar
                     </button>
                     <button
-                      onClick={() => deleteUser(user.id)}
+                      onClick={() => confirmDeleteUser(user)}
                       className="px-3 py-1 bg-red-500 text-white rounded text-xs font-semibold hover:bg-red-600"
                     >
                       Eliminar

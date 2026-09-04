@@ -8,9 +8,16 @@ export default function ReportPaymentModal({ isOpen, onClose }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { token } = useContext(AuthContext);
   const [success, setSuccess] = useState(false);
+  const PLAN_PRICES = {
+    'Básico': '$9.99',
+    'Profesional': '$19.99',
+    'Experto': '$34.99'
+  };
+
   const [form, setForm] = useState({
     plan: 'Profesional',
     method: 'Pago Movil',
+    amount: '$19.99',
     reference: '',
     file: null
   });
@@ -31,6 +38,7 @@ export default function ReportPaymentModal({ isOpen, onClose }) {
       const formData = new FormData();
       formData.append('plan', form.plan);
       formData.append('method', form.method);
+      formData.append('amount', form.amount);
       formData.append('reference', form.reference);
       formData.append('file', form.file);
 
@@ -87,7 +95,7 @@ export default function ReportPaymentModal({ isOpen, onClose }) {
               </label>
               <select 
                 value={form.plan}
-                onChange={(e) => setForm({...form, plan: e.target.value})}
+                onChange={(e) => setForm({...form, plan: e.target.value, amount: PLAN_PRICES[e.target.value] || form.amount})}
                 className="w-full px-3.5 py-2 border border-sky-200 rounded-xl text-xs text-slate-800 bg-white outline-none focus:border-sky-600 focus:bg-sky-50/50 focus:ring-4 focus:ring-sky-700/10 shadow-sm font-semibold"
               >
                 <option value="Básico">Plan Básico ($9.99)</option>
@@ -109,6 +117,19 @@ export default function ReportPaymentModal({ isOpen, onClose }) {
                 <option value="Transferencia">Transferencia (BDV)</option>
                 <option value="Binance">Binance (USDT)</option>
               </select>
+            </div>
+
+            <div>
+              <label className="text-[13px] font-bold text-amber-900 uppercase tracking-wide block mb-1">
+                Monto Pagado
+              </label>
+              <input 
+                type="text"
+                placeholder="Ej: $19.99 o Bs. 1.250"
+                value={form.amount}
+                onChange={(e) => setForm({...form, amount: e.target.value})}
+                className="w-full px-3.5 py-2 border border-sky-200 rounded-xl text-xs text-slate-800 bg-white placeholder:text-slate-400 outline-none focus:border-sky-600 focus:bg-sky-50/50 focus:ring-4 focus:ring-sky-700/10 shadow-sm font-semibold"
+              />
             </div>
 
             <div>
