@@ -181,6 +181,40 @@ export default function BudgetAPUEditorPage() {
     }
   };
 
+  const handleSelectComponent = async (type, compId, selectedData) => {
+    try {
+      setLoading(true);
+      if (!compId) {
+        // Adding new component from modal
+        await budgetService.addComponent(id, itemId, type, selectedData);
+        toast.success('Insumo agregado con éxito');
+      } else if (String(compId).startsWith('NEW-')) {
+        // It was a newly added blank row
+        const existingRow = item[type]?.find(c => c.id === compId) || {};
+        const payload = {
+          ...selectedData,
+          cantidad: existingRow.cantidad || 1,
+          depreciacion: existingRow.depreciacion ?? 1.0
+        };
+        await budgetService.addComponent(id, itemId, type, payload);
+        toast.success('Insumo agregado con éxito');
+      } else {
+        // Replacing/updating an existing component
+        await budgetService.updateComponent(id, itemId, type, compId, {
+          codigo: selectedData.codigo,
+          descripcion: selectedData.descripcion,
+          precio_unitario: selectedData.precio_unitario
+        });
+        toast.success('Insumo actualizado');
+      }
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al actualizar insumo');
+      setLoading(false);
+    }
+  };
+
   // ── Handlers for Manual Blank Rows (to match AI logic) ─────────────
   const handleAddBlankRow = (type) => {
     setItem(prev => {
@@ -283,7 +317,7 @@ export default function BudgetAPUEditorPage() {
     <div className="p-4 md:p-6 max-w-7xl mx-auto pb-24 print:p-0 print:m-0 print:max-w-none print:bg-white print:w-full">
       {printOptions && (
         <PrintAPULayout
-          partida={{ ...item, fcas_percent: budget.fcas_percent, admin_percent: budget.admin_percent, util_percent: budget.util_percent, rendimiento: item.performance, cantidad: item.quantity }}
+          partida={{ ...item, fcas_percent: budget.fcas_percent, admin_percent: budget.admin_percent, util_percent: budget.profit_percent ?? budget.util_percent ?? 10, rendimiento: item.performance, cantidad: item.quantity }}
           materiales={item.materials || []}
           equipos={item.equipments || []}
           mano_obra={item.labors || []}
@@ -355,8 +389,8 @@ export default function BudgetAPUEditorPage() {
                 exchange_rate: budget.exchange_rate,
                 fcas_percent: budget.fcas_percent,
                 admin_percent: budget.admin_percent,
-                profit_percent: budget.util_percent,
-                iva_percent: budget.iva_percent,
+                profit_percent: budget.profit_percent ?? budget.util_percent ?? 10,
+                iva_percent: 0,
                 project_name: budget.name,
                 client_name: budget.client_name
               }}
@@ -377,7 +411,7 @@ export default function BudgetAPUEditorPage() {
               fcas_percent: budget.fcas_percent || 417,
               admin_percent: budget.admin_percent || 15,
               profit_percent: budget.profit_percent || 10,
-              iva_percent: budget.iva_percent || 0
+              iva_percent: 0
             }}
             onHeaderChange={handleHeaderFieldChange}
             onHeaderBlur={handleHeaderFieldBlur}
@@ -386,6 +420,7 @@ export default function BudgetAPUEditorPage() {
             onRemoveRow={handleRemoveRow}
             onAddBlankRow={handleAddBlankRow}
             onAddSearchRow={(type) => setSearchModal({ isOpen: true, type, title: `Buscar ${type}` })}
+            onSelectComponent={handleSelectComponent}
             deletingId={deletingId}
           />
         </div>

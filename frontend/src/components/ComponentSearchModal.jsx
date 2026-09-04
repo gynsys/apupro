@@ -28,7 +28,7 @@ export default function ComponentSearchModal({ isOpen, onClose, onAdd, type, tit
     try {
       setLoading(true);
       const data = await budgetService.searchComponents(type, query, activeDatabase.id);
-      setResults(data);
+      setResults(Array.isArray(data) ? data : (data.items || []));
     } catch (error) {
       console.error(error);
     } finally {

@@ -1,54 +1,14 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { calculateItemPU } from '../../utils/apuCalculations';
 
 export default function BudgetPrintLayout({ budget, config }) {
   if (!budget) return null;
 
-  // Derive the exchange rate for the print layout based on config currency
-  const exRate = config.currency === 'BS' ? (budget.exchange_rate || 1.0) : 1.0;
-
-  const calculatePU = (item) => {
-    const matCost = (item.materials || []).reduce((acc, curr) => {
-      const q = parseFloat(curr.cantidad || 0);
-      const w = parseFloat(curr.desperdicio || 0);
-      const p = parseFloat(curr.precio_unitario || 0) * exRate;
-      return acc + (q * (1 + w / 100) * p);
-    }, 0);
-    
-    const eqTotalDay = (item.equipments || []).reduce((acc, curr) => {
-      const q = parseFloat(curr.cantidad || 0);
-      const d = parseFloat(curr.depreciacion ?? 1.0);
-      const p = parseFloat(curr.precio_unitario || 0) * exRate;
-      return acc + (q * d * p);
-    }, 0);
-    const eqCost = eqTotalDay / (item.performance || 1);
-    
-    const totJornal = (item.labors || []).reduce((acc, curr) => {
-      const q = parseFloat(curr.cantidad || 0);
-      const j = parseFloat(curr.jornal || 0) * exRate;
-      return acc + (q * j);
-    }, 0);
-    const totBono = (item.labors || []).reduce((acc, curr) => {
-      const q = parseFloat(curr.cantidad || 0);
-      const b = parseFloat(curr.bono || 0) * exRate;
-      return acc + (q * b);
-    }, 0);
-    
-    const fcasPercent = budget.fcas_percent ?? 417;
-    const fcasMonto = totJornal * (fcasPercent / 100);
-    const labTotalDay = totJornal + totBono + fcasMonto;
-    const labCost = labTotalDay / (item.performance || 1);
-    
-    const subtotal = matCost + eqCost + labCost;
-    const adminPercent = budget.admin_percent ?? 15.0;
-    const utilPercent = budget.profit_percent ?? 10.0;
-    
-    const admin = subtotal * (adminPercent / 100);
-    const subtotalB = subtotal + admin;
-    const util = subtotalB * (utilPercent / 100);
-    
-    return subtotalB + util;
-  };
+  const calculatePU = (item) => calculateItemPU(item, {
+    ...budget,
+    currency: config?.currency || budget?.currency
+  });
 
   // Build the list of rows to render.
   const rows = [];

@@ -14,6 +14,7 @@ import BudgetPrintLayout from '../../components/print/BudgetPrintLayout';
 import SubscriptionRequestModal from '../../components/SubscriptionRequestModal';
 import ShareBudgetModal from '../../components/modals/ShareBudgetModal';
 import ImportSharedBudgetModal from '../../components/modals/ImportSharedBudgetModal';
+import { calculateItemPU, calculateBudgetTotals } from '../../utils/apuCalculations';
 
 export default function BudgetHomePage() {
   const [budgets, setBudgets] = useState([]);
@@ -50,29 +51,7 @@ export default function BudgetHomePage() {
     loadBudgets();
   }, []);
 
-  const calculatePU = (item, budget) => {
-    if (item.is_chapter) return 0;
-    const exRate = budget?.currency === 'BS' ? (budget?.exchange_rate || 1.0) : 1.0;
-    
-    const matCost = (item.materials || []).reduce((acc, curr) => {
-      const q = parseFloat(curr.cantidad || 0);
-      const w = parseFloat(curr.desperdicio || 0);
-      const p = parseFloat(curr.precio_unitario || 0) * exRate;
-      return acc + (q * (1 + w / 100) * p);
-    }, 0);
-    const eqCost = (item.equipments || []).reduce((acc, curr) => {
-      const q = parseFloat(curr.cantidad || 0);
-      const d = parseFloat(curr.depreciacion ?? 1.0);
-      const p = parseFloat(curr.precio_unitario || 0) * exRate;
-      return acc + (q * d * p);
-    }, 0) / (item.performance || 1);
-    const totJornal = (item.labors || []).reduce((acc, curr) => acc + (parseFloat(curr.cantidad || 0) * parseFloat(curr.jornal || 0) * exRate), 0);
-    const totBono = (item.labors || []).reduce((acc, curr) => acc + (parseFloat(curr.cantidad || 0) * parseFloat(curr.bono || 0) * exRate), 0);
-    const labCost = (totJornal + totBono + (totJornal * ((budget.fcas_percent ?? 417) / 100))) / (item.performance || 1);
-    const subtotal = matCost + eqCost + labCost;
-    const subtotalB = subtotal + (subtotal * ((budget.admin_percent ?? 15.0) / 100));
-    return subtotalB + (subtotalB * ((budget.profit_percent ?? 10.0) / 100));
-  };
+  const calculatePU = (item, budget) => calculateItemPU(item, budget);
 
   const loadBudgets = async () => {
     try {
@@ -84,9 +63,7 @@ export default function BudgetHomePage() {
         try {
           const fullBudget = await budgetService.getById(b.id);
           const totalItems = fullBudget.items?.filter(i => !i.is_chapter).length || 0;
-          const subtotalPresupuesto = fullBudget.items?.reduce((sum, item) => sum + (calculatePU(item, fullBudget) * item.quantity), 0) || 0;
-          const ivaAmount = subtotalPresupuesto * ((fullBudget.iva_percent ?? 16.0) / 100);
-          const totalGeneral = subtotalPresupuesto + ivaAmount;
+          const { totalGeneral } = calculateBudgetTotals(fullBudget);
           
           setBudgetTotals(prev => ({
             ...prev,

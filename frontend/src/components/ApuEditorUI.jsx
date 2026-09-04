@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Package, Wrench, Users, Plus, Search, Trash2, Loader, Sparkles } from 'lucide-react';
 import { numeroALetras } from '../utils/numberToLetters';
+import EquipmentSelectorModal from './EquipmentSelectorModal';
 
 export default function ApuEditorUI({
   item,
@@ -12,6 +13,7 @@ export default function ApuEditorUI({
   onRemoveRow,
   onAddBlankRow,
   onAddSearchRow,
+  onSelectComponent,
   deletingId,
   onSettingsChange
 }) {
@@ -93,7 +95,8 @@ export default function ApuEditorUI({
       profitCost,
       subtotalC,
       ivaCost,
-      unitPrice: subtotalC + ivaCost
+      unitPrice: subtotalC,
+      unitPriceWithIva: subtotalC + ivaCost
     };
   };
 
@@ -107,6 +110,35 @@ export default function ApuEditorUI({
 
   const costos = calculateCostosDirectos();
   const safeFn = (fn) => typeof fn === 'function' ? fn : () => {};
+
+  const [equipmentModal, setEquipmentModal] = useState({
+    isOpen: false,
+    targetRow: null
+  });
+
+  const handleSelectEquipment = (selectedData) => {
+    const target = equipmentModal.targetRow;
+    setEquipmentModal({ isOpen: false, targetRow: null });
+
+    if (target && target.id) {
+      if (onSelectComponent) {
+        onSelectComponent('equipments', target.id, selectedData);
+      } else {
+        safeFn(onComponentChange)('equipments', target.id, 'codigo', selectedData.codigo);
+        safeFn(onComponentBlur)('equipments', target.id, 'codigo', selectedData.codigo);
+        safeFn(onComponentChange)('equipments', target.id, 'descripcion', selectedData.descripcion);
+        safeFn(onComponentBlur)('equipments', target.id, 'descripcion', selectedData.descripcion);
+        safeFn(onComponentChange)('equipments', target.id, 'precio_unitario', selectedData.precio_unitario);
+        safeFn(onComponentBlur)('equipments', target.id, 'precio_unitario', selectedData.precio_unitario);
+      }
+    } else {
+      if (onSelectComponent) {
+        onSelectComponent('equipments', null, selectedData);
+      } else if (onAddSearchRow) {
+        onAddSearchRow('equipments', selectedData);
+      }
+    }
+  };
 
   const totJornal = calculateLaborTotalJornalDay();
   const totBono = calculateLaborTotalBonoDay();
@@ -321,12 +353,14 @@ export default function ApuEditorUI({
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => safeFn(onAddSearchRow)('equipments')}
-                className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-50 hover:text-blue-600 transition-colors shadow-sm"
+                type="button"
+                onClick={() => setEquipmentModal({ isOpen: true, targetRow: null })}
+                className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-50 hover:text-indigo-600 transition-colors shadow-sm"
               >
                 <Search size={14} /> Buscar
               </button>
               <button
+                type="button"
                 onClick={() => safeFn(onAddBlankRow)('equipments')}
                 className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-50 hover:text-indigo-600 transition-colors shadow-sm"
               >
@@ -345,7 +379,7 @@ export default function ApuEditorUI({
                   <th className="p-2 w-32 text-right border-r border-slate-200">Precio</th>
                   <th className="p-2 w-32 text-right border-r border-slate-200">Total Día</th>
                   <th className="p-2 w-32 text-right border-r border-slate-200">Unitario</th>
-                  <th className="p-2 w-10 text-center"></th>
+                  <th className="p-2 w-16 text-center"></th>
                 </tr>
               </thead>
               <tbody>
@@ -411,14 +445,25 @@ export default function ApuEditorUI({
                       {(((eq.cantidad * (eq.depreciacion ?? 1.0) * (eq.precio_unitario * exRate)) * (1 + (equipment_inflation/100))) / (item.performance || item.rendimiento || 1)).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
                     <td className="p-2 text-center">
-                      <button
-                        onClick={() => safeFn(onRemoveRow)('equipments', eq.id)}
-                        disabled={deletingId === eq.id}
-                        className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 opacity-0 group-hover:opacity-100 disabled:opacity-50"
-                        title="Eliminar equipo"
-                      >
-                        {deletingId === eq.id ? <Loader size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setEquipmentModal({ isOpen: true, targetRow: eq })}
+                          className="text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 p-1 rounded transition-colors"
+                          title="Buscar y seleccionar equipo del catálogo"
+                        >
+                          <Search size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => safeFn(onRemoveRow)('equipments', eq.id)}
+                          disabled={deletingId === eq.id}
+                          className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                          title="Eliminar equipo"
+                        >
+                          {deletingId === eq.id ? <Loader size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -721,58 +766,83 @@ export default function ApuEditorUI({
                     {0.00.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                 </tr>
-                <tr className="bg-slate-100">
-                  <td className="p-2 text-right border-b border-slate-300 text-red-700 uppercase font-black">Precio Unitario Sin Impuesto:</td>
-                  <td className="p-2 w-36 text-right border-b border-slate-300 bg-blue-50/50 border-l border-slate-200 font-bold text-blue-900">
-                    {costos.subtotalC.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="p-2 text-right border-b border-slate-200 flex items-center justify-end gap-2 uppercase">
-                    <span>%</span>
-                    {onSettingsChange ? (
-                      <input 
-                        type="number"
-                        className="w-16 text-center bg-amber-50 text-amber-900 border border-amber-200 rounded px-1 [appearance:textfield]"
-                        value={iva_percent}
-                        onChange={(e) => onSettingsChange('iva_percent', parseFloat(e.target.value) || 0)}
-                      />
-                    ) : (
-                      <span className="bg-amber-50 text-amber-900 px-2 py-0.5 border border-amber-200 rounded">{iva_percent}</span>
-                    )}
-                    <span>Impuesto IVA:</span>
-                  </td>
-                  <td className="p-2 w-36 text-right border-b border-slate-200 bg-white border-l border-slate-200 text-slate-500">
-                    {costos.ivaCost.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="p-2 text-right border-b border-slate-200 flex items-center justify-end gap-2 uppercase">
-                    <span>%</span>
-                    <span className="bg-slate-100 text-slate-600 px-2 py-0.5 border border-slate-200 rounded">0.00</span>
-                    <span>Otros Impuestos:</span>
-                  </td>
-                  <td className="p-2 w-36 text-right border-b border-slate-200 bg-white border-l border-slate-200 text-slate-500">
-                    {0.00.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                </tr>
-                <tr className="bg-blue-50">
-                  <td className="p-3 text-right uppercase font-black text-blue-900 text-sm">Precio Unitario ({currency}):</td>
-                  <td className="p-3 w-36 text-right font-black text-sm border-l border-slate-300 bg-white shadow-inner text-blue-800">
-                    {costos.unitPrice.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                </tr>
-                <tr className="bg-slate-50">
-                  <td colSpan={2} className="p-3 text-center text-[11px] font-bold text-slate-500 border-t border-slate-200">
-                    SON: ( {numeroALetras(costos.unitPrice)} {String(currency).toUpperCase().includes('USD') ? 'DÓLARES' : 'Bs.'} ctms )
-                  </td>
-                </tr>
+                {iva_percent > 0 ? (
+                  <>
+                    <tr className="bg-slate-100">
+                      <td className="p-2 text-right border-b border-slate-300 text-slate-700 uppercase font-black">Precio Unitario Sin Impuesto:</td>
+                      <td className="p-2 w-36 text-right border-b border-slate-300 bg-blue-50/50 border-l border-slate-200 font-bold text-blue-900">
+                        {costos.subtotalC.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 text-right border-b border-slate-200 flex items-center justify-end gap-2 uppercase">
+                        <span>%</span>
+                        {onSettingsChange ? (
+                          <input 
+                            type="number"
+                            className="w-16 text-center bg-amber-50 text-amber-900 border border-amber-200 rounded px-1 [appearance:textfield]"
+                            value={iva_percent}
+                            onChange={(e) => onSettingsChange('iva_percent', parseFloat(e.target.value) || 0)}
+                          />
+                        ) : (
+                          <span className="bg-amber-50 text-amber-900 px-2 py-0.5 border border-amber-200 rounded">{iva_percent}</span>
+                        )}
+                        <span>Impuesto IVA:</span>
+                      </td>
+                      <td className="p-2 w-36 text-right border-b border-slate-200 bg-white border-l border-slate-200 text-slate-500">
+                        {costos.ivaCost.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 text-right border-b border-slate-200 flex items-center justify-end gap-2 uppercase">
+                        <span>%</span>
+                        <span className="bg-slate-100 text-slate-600 px-2 py-0.5 border border-slate-200 rounded">0.00</span>
+                        <span>Otros Impuestos:</span>
+                      </td>
+                      <td className="p-2 w-36 text-right border-b border-slate-200 bg-white border-l border-slate-200 text-slate-500">
+                        {0.00.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                    <tr className="bg-blue-50">
+                      <td className="p-3 text-right uppercase font-black text-blue-900 text-sm">Precio Unitario con IVA ({currency}):</td>
+                      <td className="p-3 w-36 text-right font-black text-sm border-l border-slate-300 bg-white shadow-inner text-blue-800">
+                        {costos.unitPriceWithIva.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                    <tr className="bg-slate-50">
+                      <td colSpan={2} className="p-3 text-center text-[11px] font-bold text-slate-500 border-t border-slate-200">
+                        SON: ( {numeroALetras(costos.unitPriceWithIva)} {String(currency).toUpperCase().includes('USD') ? 'DÓLARES' : 'Bs.'} ctms )
+                      </td>
+                    </tr>
+                  </>
+                ) : (
+                  <>
+                    <tr className="bg-blue-50">
+                      <td className="p-3 text-right uppercase font-black text-blue-900 text-sm">Precio Unitario ({currency}):</td>
+                      <td className="p-3 w-36 text-right font-black text-sm border-l border-slate-300 bg-white shadow-inner text-blue-800">
+                        {costos.subtotalC.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                    <tr className="bg-slate-50">
+                      <td colSpan={2} className="p-3 text-center text-[11px] font-bold text-slate-500 border-t border-slate-200">
+                        SON: ( {numeroALetras(costos.subtotalC)} {String(currency).toUpperCase().includes('USD') ? 'DÓLARES' : 'Bs.'} ctms )
+                      </td>
+                    </tr>
+                  </>
+                )}
               </tbody>
             </table>
           </div>
         </div>
 
       </div>
+
+      <EquipmentSelectorModal
+        isOpen={equipmentModal.isOpen}
+        onClose={() => setEquipmentModal({ isOpen: false, targetRow: null })}
+        onSelect={handleSelectEquipment}
+        targetRow={equipmentModal.targetRow}
+      />
     </div>
   );
 }

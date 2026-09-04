@@ -20,6 +20,7 @@ import ExportApuExcelButton from '../../modules/cost360/components/ExportApuExce
 import { useCost360Search } from '../../modules/cost360/hooks/useCost360Search';
 import Cost360SearchBar from '../../modules/cost360/components/Cost360SearchBar';
 import { SiteConfigContext } from '../../App';
+import { calculateItemPU, calculateBudgetTotals } from '../../utils/apuCalculations';
 
 const ExcelIcon = ({ size = 20, className = "" }) => (
   <svg 
@@ -468,62 +469,9 @@ export default function BudgetWorksheetPage() {
     }
   };
 
-  const calculatePU = (item) => {
-    const exRate = budget?.currency === 'BS' ? (budget?.exchange_rate || 1.0) : 1.0;
+  const calculatePU = (item) => calculateItemPU(item, budget);
 
-    // 1. Materiales
-    const matCost = (item.materials || []).reduce((acc, curr) => {
-      const q = parseFloat(curr.cantidad || 0);
-      const w = parseFloat(curr.desperdicio || 0);
-      const p = parseFloat(curr.precio_unitario || 0) * exRate;
-      const quantityWithWaste = q * (1 + w / 100);
-      return acc + (quantityWithWaste * p);
-    }, 0);
-    
-    // 2. Equipos
-    const eqTotalDay = (item.equipments || []).reduce((acc, curr) => {
-      const q = parseFloat(curr.cantidad || 0);
-      const d = parseFloat(curr.depreciacion ?? 1.0);
-      const p = parseFloat(curr.precio_unitario || 0) * exRate;
-      return acc + (q * d * p);
-    }, 0);
-    const eqCost = eqTotalDay / (item.performance || 1);
-    
-    // 3. Mano de Obra
-    const totJornal = (item.labors || []).reduce((acc, curr) => {
-      const q = parseFloat(curr.cantidad || 0);
-      const j = parseFloat(curr.jornal || 0) * exRate;
-      return acc + (q * j);
-    }, 0);
-    const totBono = (item.labors || []).reduce((acc, curr) => {
-      const q = parseFloat(curr.cantidad || 0);
-      const b = parseFloat(curr.bono || 0) * exRate;
-      return acc + (q * b);
-    }, 0);
-    
-    const fcasPercent = budget?.fcas_percent ?? 417;
-    const fcasMonto = totJornal * (fcasPercent / 100);
-    const labTotalDay = totJornal + totBono + fcasMonto;
-    const labCost = labTotalDay / (item.performance || 1);
-    
-    // Add Administrative and Profit overheads from budget config
-    const subtotal = matCost + eqCost + labCost;
-    const adminPercent = budget?.admin_percent ?? 15.0;
-    const utilPercent = budget?.profit_percent ?? 10.0;
-    
-    const admin = subtotal * (adminPercent / 100);
-    const subtotalB = subtotal + admin;
-    const util = subtotalB * (utilPercent / 100);
-    
-    return subtotalB + util;
-  };
-
-  const calculateBudgetTotal = () => {
-    const subtotalPresupuesto = budget?.items?.reduce((sum, item) => sum + (calculatePU(item) * item.quantity), 0) || 0;
-    const ivaAmount = subtotalPresupuesto * ((budget?.iva_percent ?? 16.0) / 100);
-    const totalGeneral = subtotalPresupuesto + ivaAmount;
-    return { subtotalPresupuesto, ivaAmount, totalGeneral };
-  };
+  const calculateBudgetTotal = () => calculateBudgetTotals(budget);
 
   const handleQuantityChange = (itemId, newQuantity) => {
     // Optimistic UI update
@@ -753,6 +701,7 @@ export default function BudgetWorksheetPage() {
                   <th className="p-4 w-16 text-center bg-slate-50 border-b border-slate-200">#</th>
                   <th className="p-4 w-32 bg-slate-50 border-b border-slate-200">Código</th>
                   <th className="p-4 bg-slate-50 border-b border-slate-200">Descripción</th>
+                  <th className="p-4 w-20 text-center bg-slate-50 border-b border-slate-200">Unidad</th>
                   <th className="p-4 w-32 text-right bg-slate-50 border-b border-slate-200">
                     <div className="flex items-center justify-end gap-1.5 group/th relative cursor-help">
                       <span>Cantidad</span>
@@ -776,6 +725,7 @@ export default function BudgetWorksheetPage() {
                       </div>
                     </div>
                   </th>
+                  <th className="p-4 w-32 text-right bg-slate-50 border-b border-slate-200">P.U.</th>
                   <th className="p-4 w-32 text-right bg-slate-50 border-b border-slate-200">Total</th>
                   <th className="p-4 w-32 text-center bg-slate-50 border-b border-slate-200">Acciones</th>
                 </tr>
