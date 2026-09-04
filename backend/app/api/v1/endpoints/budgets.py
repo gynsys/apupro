@@ -74,14 +74,15 @@ def create_budget(budget_in: BudgetCreate, db: Session = Depends(get_db), curren
 
 
 def ensure_budget_share_columns(db: Session) -> None:
-    """Asegura que existan las columnas de compartición en la tabla budgets."""
+    """Asegura que existan las columnas necesarias en la tabla budgets."""
     try:
         db.execute(text("ALTER TABLE budgets ADD COLUMN IF NOT EXISTS share_token VARCHAR(255);"))
         db.execute(text("ALTER TABLE budgets ADD COLUMN IF NOT EXISTS is_public_share BOOLEAN DEFAULT FALSE;"))
+        db.execute(text("ALTER TABLE budgets ADD COLUMN IF NOT EXISTS notes TEXT;"))
         db.commit()
     except Exception as e:
         db.rollback()
-        logger.error(f"Error asegurando columnas de compartición en budgets: {e}", exc_info=True)
+        logger.error(f"Error asegurando columnas en budgets: {e}", exc_info=True)
 
 
 @router.get("/", response_model=List[BudgetSummary])
@@ -1158,6 +1159,7 @@ def import_shared_budget(
             user_id=str(current_user.id),
             name=f"{source_budget.name} (Compartido)",
             description=source_budget.description,
+            notes=source_budget.notes,
             client_name=source_budget.client_name,
             currency=source_budget.currency,
             exchange_rate=source_budget.exchange_rate,

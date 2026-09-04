@@ -216,9 +216,23 @@ export default function BudgetPrintLayout({ budget, config }) {
           </tbody>
         </table>
 
-        {/* PIE DE TABLA / TOTALES */}
-        <div style={{ marginTop: '0', display: 'flex', justifyContent: 'flex-end', fontSize: '11px' }}>
-          <table style={{ width: '40%', borderCollapse: 'collapse' }}>
+        {/* PIE DE TABLA / TOTALES Y NOTAS */}
+        <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '11px', gap: '20px' }}>
+          {/* CUADRO DE NOTAS: Si está vacío NO coloca nada (ni la palabra nota ni el recuadro gris claro) */}
+          {budget.notes && budget.notes.trim() !== '' ? (
+            <div style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: '4px', padding: '6px 10px', fontSize: '10px', backgroundColor: '#fff' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '3px', textTransform: 'uppercase', color: '#111827', fontSize: '10px' }}>
+                Nota:
+              </div>
+              <div style={{ whiteSpace: 'pre-wrap', color: '#374151', lineHeight: '1.4' }}>
+                {budget.notes}
+              </div>
+            </div>
+          ) : (
+            <div style={{ flex: 1 }}></div>
+          )}
+
+          <table style={{ width: '40%', borderCollapse: 'collapse', flexShrink: 0 }}>
             <tbody>
               <tr>
                 <td style={{ ...totalLabelStyle }}>Total Hoja (Sin I.V.A.):</td>

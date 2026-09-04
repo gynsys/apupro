@@ -139,13 +139,27 @@ export default function BudgetAPUEditorPage() {
   };
 
   const handleHeaderFieldChange = (field, value) => {
-    setItem(prev => ({ ...prev, [field]: value }));
+    let finalValue = value;
+    if (field === 'performance' || field === 'rendimiento') {
+      finalValue = parseFloat(value) || 0;
+      setItem(prev => ({ ...prev, performance: finalValue, rendimiento: finalValue }));
+      return;
+    }
+    setItem(prev => ({ ...prev, [field]: finalValue }));
   };
 
   const handleHeaderFieldBlur = async (field, value) => {
     try {
-      await budgetService.updateItem(id, itemId, { [field]: value });
-      toast.success('Actualizado');
+      let finalField = field;
+      let finalValue = value;
+      if (field === 'rendimiento' || field === 'performance') {
+        finalField = 'performance';
+        finalValue = parseFloat(value) || 1.0;
+        if (finalValue <= 0) finalValue = 1.0;
+        setItem(prev => ({ ...prev, performance: finalValue, rendimiento: finalValue }));
+      }
+      await budgetService.updateItem(id, itemId, { [finalField]: finalValue });
+      toast.success('Rendimiento actualizado');
       setEditingHeader(prev => ({ ...prev, [field === 'cov_par' ? 'code' : 'description']: false }));
     } catch (error) {
       toast.error('Error al actualizar');
@@ -216,6 +230,12 @@ export default function BudgetAPUEditorPage() {
   };
 
   const handleApuEditorComponentBlur = async (type, compId, field, value) => {
+    if (type === 'performance' || type === 'rendimiento') {
+      return handleHeaderFieldBlur('performance', compId);
+    }
+    if (!field && compId !== undefined && typeof type === 'string') {
+      return handleHeaderFieldBlur(type, compId);
+    }
     // We only send to API if it's NOT a new row
     if (String(compId).startsWith('NEW-')) {
       // If the user finishes editing a new row, and it has valid desc/price, we could auto-save it
@@ -359,8 +379,8 @@ export default function BudgetAPUEditorPage() {
               profit_percent: budget.profit_percent || 10,
               iva_percent: budget.iva_percent || 0
             }}
-            onHeaderChange={handleApuEditorComponentChange}
-            onHeaderBlur={handleApuEditorComponentBlur}
+            onHeaderChange={handleHeaderFieldChange}
+            onHeaderBlur={handleHeaderFieldBlur}
             onComponentChange={handleApuEditorComponentChange}
             onComponentBlur={handleApuEditorComponentBlur}
             onRemoveRow={handleRemoveRow}

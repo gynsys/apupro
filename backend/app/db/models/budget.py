@@ -15,6 +15,7 @@ class Budget(Base):
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     client_name = Column(String, nullable=True)
+    notes = Column(Text, nullable=True)
 
     # Datos Generales del Presupuesto
     currency = Column(String, default="USD") # USD o BS

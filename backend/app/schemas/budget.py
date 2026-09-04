@@ -106,6 +106,7 @@ class BudgetItem(BudgetItemBase):
 class BudgetBase(BaseModel):
     name: str
     description: Optional[str] = None
+    notes: Optional[str] = None
     company_name: Optional[str] = None
     company_rif: Optional[str] = None
     project_name: Optional[str] = None
@@ -127,6 +128,7 @@ class BudgetCreate(BudgetBase):
 class BudgetUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    notes: Optional[str] = None
     company_name: Optional[str] = None
     company_rif: Optional[str] = None
     project_name: Optional[str] = None

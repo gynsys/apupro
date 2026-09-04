@@ -138,6 +138,7 @@ export default function BudgetWorksheetPage() {
   const [printConfig, setPrintConfig] = useState(null);
   
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [notesText, setNotesText] = useState('');
   
   // APU Print State
   const [apuToPrint, setApuToPrint] = useState(null);
@@ -245,6 +246,7 @@ export default function BudgetWorksheetPage() {
       setLoading(true);
       const data = await budgetService.getById(id);
       setBudget(data);
+      setNotesText(data.notes || '');
       setSettings({
         currency: data.currency || 'USD',
         exchange_rate: data.exchange_rate || 1.0,
@@ -537,6 +539,18 @@ export default function BudgetWorksheetPage() {
     } catch (error) {
       console.error(error);
       toast.error('Error guardando la cantidad');
+    }
+  };
+
+  const handleSaveNotes = async () => {
+    if (!budget) return;
+    if ((budget.notes || '') === (notesText || '')) return;
+    try {
+      await budgetService.update(budget.id, { notes: notesText });
+      setBudget(prev => ({ ...prev, notes: notesText }));
+    } catch (err) {
+      console.error("Error guardando notas:", err);
+      toast.error('Error al guardar las notas');
     }
   };
 
@@ -929,10 +943,32 @@ export default function BudgetWorksheetPage() {
         </div>
         </div>
         
-        {/* FOOTER TOTAL */}
+        {/* FOOTER: NOTAS & TOTAL */}
         {budget.items?.length > 0 && (
-          <div className="mt-4 flex-none flex justify-end">
-            <div className="bg-slate-50 px-4 py-2 rounded-2xl border-2 border-slate-300 shadow-sm min-w-[300px]">
+          <div className="mt-4 flex-none flex flex-col md:flex-row items-stretch md:items-start justify-between gap-6">
+            {/* ÁREA DE NOTAS */}
+            <div className="flex-1 max-w-2xl bg-white p-3 rounded-2xl border border-slate-300 shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+              <div className="flex items-center justify-between mb-1.5 px-1">
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <FileText size={14} className="text-slate-400" />
+                  Notas del Presupuesto
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  (Se incluirá en la impresión solo si contiene texto)
+                </span>
+              </div>
+              <textarea
+                value={notesText}
+                onChange={(e) => setNotesText(e.target.value)}
+                onBlur={handleSaveNotes}
+                placeholder="Escribe notas, observaciones, términos de validez o condiciones de pago..."
+                rows={2}
+                className="w-full bg-transparent border-0 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed"
+              />
+            </div>
+
+            {/* TABLA DE TOTALES */}
+            <div className="bg-slate-50 px-4 py-2 rounded-2xl border-2 border-slate-300 shadow-sm min-w-[300px] shrink-0">
               <div className="flex justify-between items-center py-1">
                 <span className="text-slate-500 font-medium text-sm leading-none">SUBTOTAL</span>
                 <span className="text-lg font-semibold text-slate-700 leading-none">
