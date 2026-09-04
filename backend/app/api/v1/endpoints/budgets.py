@@ -21,8 +21,10 @@ from app.schemas.budget import (
     BudgetItemCreate, BudgetItem as BudgetItemSchema, BudgetItemUpdate,
     BudgetAPUMaterialBase, BudgetAPUMaterial, BudgetAPUMaterialUpdate,
     BudgetAPUEquipmentBase, BudgetAPUEquipment, BudgetAPUEquipmentUpdate,
-    BudgetAPULaborBase, BudgetAPULabor, BudgetAPULaborUpdate
+    BudgetAPULaborBase, BudgetAPULabor, BudgetAPULaborUpdate,
+    BudgetExportExcelRequest
 )
+from app.api.v1.endpoints.export_utils import generate_budget_excel_workbook
 from app.api.v1.endpoints.arko import get_current_arko_admin, get_optional_arko_admin
 from app.services.encryption_service import encryption_service
 from app.services.email import send_backup_email
@@ -544,142 +546,78 @@ def sync_budget_prices(budget_id: str, db: Session = Depends(get_db), current_us
     return {"status": "ok", "message": "Precios sincronizados con la Base Maestra"}
 
 @router.post("/{budget_id}/export-excel")
-async def export_budget_excel(budget_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
-    """Genera un archivo Excel con fórmulas para el presupuesto"""
+async def export_budget_excel(
+    budget_id: str,
+    payload: Optional[BudgetExportExcelRequest] = None,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin)
+) -> FileResponse:
+    """Genera un archivo Excel (.xlsx) con fórmulas, capítulos, logo y formato profesional para el presupuesto."""
+    if not budget_id:
+        raise HTTPException(status_code=400, detail="ID de presupuesto inválido")
+
     try:
-        from openpyxl import Workbook
-        from openpyxl.styles import Font, Alignment, PatternFill
-        
         budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
         if not budget:
-            raise HTTPException(status_code=404, detail="Budget not found")
-        
-        # Obtener items del presupuesto
-        items = db.query(BudgetItem).filter(BudgetItem.budget_id == budget_id).all()
-        
-        # Crear workbook de Excel
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Presupuesto"
-        
-        # Estilos
-        header_style = PatternFill(start_color="4CAF50", end_color="4CAF50", fill_type="solid")
-        header_font = Font(bold=True, color="FFFFFF", size=11)
-        total_style = PatternFill(start_color="E8F5E9", end_color="E8F5E9", fill_type="solid")
-        total_font = Font(bold=True, size=11)
-        currency_format = '#,##0.00'
-        
-        # Header
-        ws.merge_cells("B1:H1")
-        ws["B1"] = budget.project_name or "PRESUPUESTO"
-        ws["B1"].font = Font(bold=True, size=14)
-        
-        ws.merge_cells("B2:H2")
-        ws["B2"] = f"Obra: {budget.project_name or ''}"
-        
-        if budget.client_name:
-            ws.merge_cells("B3:H3")
-            ws["B3"] = f"Contratante: {budget.client_name}"
-        
-        if budget.company_rif:
-            ws.merge_cells("B4:H4")
-            ws["B4"] = f"RIF: {budget.company_rif}"
-        
-        # Encabezados de tabla
-        headers = ["Part. No", "Código COVENIN", "Descripción", "Unidad", "Cantidad", "Precio Unitario", "Total"]
-        for i, header in enumerate(headers):
-            cell = ws.cell(6, i + 2)
-            cell.value = header
-            cell.font = Font(bold=True, size=11)
-            cell.alignment = Alignment(horizontal="center")
-        
-        # Filas de datos
-        row_num = 7
-        part_number = 1
-        first_data_row = row_num
-        
-        for item in items:
-            if not item.is_chapter:
-                # Calcular precio unitario desde el APU del item
-                pu = 0
-                try:
-                    # Intentar obtener APU para calcular precio unitario
-                    from app.crud.crud_cost360 import get_apu_materials, get_apu_equipments, get_apu_labors
-                    mat_rows = get_apu_materials(db, item.cod_par)
-                    eq_rows = get_apu_equipments(db, item.cod_par)
-                    mo_rows = get_apu_labors(db, item.cod_par)
-                    
-                    # Calcular precio unitario sumando materiales, equipos y mano de obra
-                    total_mat = sum((mat.CosMat or 0) * (apu_mat.CanIns or 0) * (1 + (apu_mat.Desper or 0) / 100) 
-                                  for apu_mat, mat in mat_rows)
-                    total_eq = sum((eq.CosDia or 0) * (apu_eq.CanIns or 0) * (apu_eq.Deprec or 0) 
-                                 for apu_eq, eq in eq_rows)
-                    total_mo = sum((mo.Jornal or 0) * (apu_mo.CanIns or 0) + (mo.Bono or 0) * (apu_mo.CanIns or 0) 
-                                 for apu_mo, mo in mo_rows)
-                    
-                    pu = round(total_mat + total_eq + total_mo, 2)
-                except:
-                    pu = 0
-                
-                total = pu * item.quantity
-                
-                ws.cell(row_num, 2, part_number)
-                ws.cell(row_num, 3, item.cov_par or item.cod_par or '')
-                ws.cell(row_num, 4, item.description)
-                ws.cell(row_num, 5, item.unit)
-                ws.cell(row_num, 6, item.quantity)
-                ws.cell(row_num, 7, pu).number_format = currency_format
-                ws.cell(row_num, 8, f"=G{row_num}*F{row_num}").number_format = currency_format
-                
-                part_number += 1
-                row_num += 1
-        
-        last_data_row = row_num - 1
-        
-        # Totales
-        ws.cell(row_num, 2, "Total (Sin I.V.A.):")
-        ws.cell(row_num, 2).font = total_font
-        ws.cell(row_num, 8, f"=SUM(H{first_data_row}:H{last_data_row})").number_format = currency_format
-        ws.cell(row_num, 8).fill = total_style
-        ws.cell(row_num, 8).font = total_font
-        
-        row_num += 1
-        iva_percent = budget.iva_percent or 16
-        ws.cell(row_num, 2, f"I.V.A. ({iva_percent}%):")
-        ws.cell(row_num, 2).font = total_font
-        ws.cell(row_num, 8, f"=H{row_num-1}*{iva_percent/100}").number_format = currency_format
-        ws.cell(row_num, 8).font = total_font
-        
-        row_num += 1
-        ws.cell(row_num, 2, "Total General:")
-        ws.cell(row_num, 2).font = total_font
-        ws.cell(row_num, 8, f"=H{row_num-2}+H{row_num-1}").number_format = currency_format
-        ws.cell(row_num, 8).font = total_font
-        
-        # Ajustar anchos de columnas
-        ws.column_dimensions['B'].width = 8
-        ws.column_dimensions['C'].width = 15
-        ws.column_dimensions['D'].width = 60  # Descripción más ancha
-        ws.column_dimensions['E'].width = 10
-        ws.column_dimensions['F'].width = 12
-        ws.column_dimensions['G'].width = 15
-        ws.column_dimensions['H'].width = 15
-        
-        # Guardar archivo temporal
-        temp_dir = Path("temp")
-        temp_dir.mkdir(exist_ok=True)
-        import re
-        filename = f"{re.sub(r'[^a-z0-9]', '_', budget.name.lower())}.xlsx"
-        file_path = temp_dir / filename
-        
-        wb.save(file_path)
-        
-        return FileResponse(path=str(file_path), filename=filename)
+            raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
+
+        budget_dict: Dict[str, Any] = {
+            "name": budget.name,
+            "project_name": budget.project_name or budget.name,
+            "client_name": budget.client_name or "",
+            "company_rif": budget.company_rif or "",
+            "currency": budget.currency or "USD",
+            "iva_percent": float(budget.iva_percent if budget.iva_percent is not None else 16.0),
+            "title": "PRESUPUESTO"
+        }
+
+        if payload:
+            if payload.title:
+                budget_dict["title"] = payload.title
+            if payload.obra:
+                budget_dict["obra"] = payload.obra
+            if payload.ubicacion:
+                budget_dict["ubicacion"] = payload.ubicacion
+            if payload.contratante:
+                budget_dict["contratante"] = payload.contratante
+            if payload.company_rif:
+                budget_dict["company_rif"] = payload.company_rif
+            if payload.currency:
+                budget_dict["currency"] = payload.currency
+            if payload.iva_percent is not None:
+                budget_dict["iva_percent"] = payload.iva_percent
+            if payload.logo_base64:
+                budget_dict["logo_base64"] = payload.logo_base64
+
+        items_data: List[Dict[str, Any]] = []
+        if payload and payload.items:
+            items_data = [item.model_dump() for item in payload.items]
+        else:
+            db_items = db.query(BudgetItem).filter(BudgetItem.budget_id == budget_id).order_by(BudgetItem.order).all()
+            for db_item in db_items:
+                items_data.append({
+                    "id": db_item.id,
+                    "is_chapter": db_item.is_chapter,
+                    "cod_par": db_item.cov_par or db_item.cod_par or "",
+                    "description": db_item.description,
+                    "unit": db_item.unit or "",
+                    "quantity": float(db_item.quantity or 0.0),
+                    "pu": 0.0
+                })
+
+        file_path, filename = generate_budget_excel_workbook(budget_dict, items_data)
+
+        return FileResponse(
+            path=str(file_path),
+            filename=filename,
+            media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    except HTTPException:
+        raise
     except Exception as e:
-        import traceback
-        print(f"Error exportando Excel: {str(e)}")
-        print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error al exportar: {str(e)}")
+        logger.error(f"Error exportando presupuesto a Excel: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error al exportar presupuesto a Excel: {str(e)}")
 
 @router.post("/{budget_id}/backup")
 async def export_budget_backup(budget_id: str, request: Request, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):

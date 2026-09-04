@@ -160,3 +160,23 @@ class BudgetSummary(BudgetBase):
     updated_at: datetime
     class Config:
         from_attributes = True
+
+class BudgetItemExportData(BaseModel):
+    id: Optional[str] = None
+    is_chapter: bool = False
+    cod_par: Optional[str] = ""
+    description: str = ""
+    unit: Optional[str] = ""
+    quantity: float = 0.0
+    pu: float = 0.0
+
+class BudgetExportExcelRequest(BaseModel):
+    title: Optional[str] = "PRESUPUESTO"
+    obra: Optional[str] = None
+    ubicacion: Optional[str] = None
+    contratante: Optional[str] = None
+    company_rif: Optional[str] = None
+    currency: Optional[str] = "USD"
+    iva_percent: Optional[float] = 16.0
+    logo_base64: Optional[str] = None
+    items: Optional[List[BudgetItemExportData]] = None

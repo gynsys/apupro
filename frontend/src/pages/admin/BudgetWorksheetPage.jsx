@@ -195,6 +195,7 @@ export default function BudgetWorksheetPage() {
   const [availableBudgets, setAvailableBudgets] = useState([]);
   const [chapterName, setChapterName] = useState("");
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [exportingBudgetExcel, setExportingBudgetExcel] = useState(false);
 
   const [editingChapterId, setEditingChapterId] = useState(null);
   const [editingChapterName, setEditingChapterName] = useState("");
@@ -520,6 +521,47 @@ export default function BudgetWorksheetPage() {
     }
   };
 
+  const handleExportBudgetToExcel = async () => {
+    if (!budget) return;
+    try {
+      setExportingBudgetExcel(true);
+      toast.loading('Generando presupuesto en Excel...', { id: 'export-budget-excel' });
+
+      const savedLogo = localStorage.getItem(`budget_logo_${budget.id}`);
+      const savedUbicacion = localStorage.getItem(`budget_ubicacion_${budget.id}`) || budget.ubicacion || '';
+
+      const itemsPayload = (budget.items || []).map(item => ({
+        id: item.id,
+        is_chapter: !!item.is_chapter,
+        cod_par: item.cov_par || item.cod_par || '',
+        description: item.description || '',
+        unit: item.unit || '',
+        quantity: parseFloat(item.quantity) || 0,
+        pu: item.is_chapter ? 0 : calculatePU(item)
+      }));
+
+      const payload = {
+        title: 'PRESUPUESTO',
+        obra: (budget.project_name || budget.name || '').trim(),
+        ubicacion: savedUbicacion.trim(),
+        contratante: (budget.client_name || '').trim(),
+        company_rif: (budget.company_rif || '').trim(),
+        currency: budget.currency || 'USD',
+        iva_percent: budget.iva_percent !== undefined && budget.iva_percent !== null ? Number(budget.iva_percent) : 16.0,
+        logo_base64: savedLogo || null,
+        items: itemsPayload
+      };
+
+      await budgetService.exportExcel(budget.id, payload);
+      toast.success('Presupuesto exportado a Excel exitosamente', { id: 'export-budget-excel' });
+    } catch (err) {
+      console.error('Error al exportar presupuesto a Excel:', err);
+      toast.error(err.message || 'Error al exportar presupuesto a Excel', { id: 'export-budget-excel' });
+    } finally {
+      setExportingBudgetExcel(false);
+    }
+  };
+
   if (loading || !budget) {
     return (
       <div className="flex items-center justify-center min-h-screen text-slate-400">
@@ -695,6 +737,18 @@ export default function BudgetWorksheetPage() {
                           </div>,
                           headerPortalTarget
                         )}
+                        <button
+                          onClick={handleExportBudgetToExcel}
+                          disabled={exportingBudgetExcel}
+                          className="p-2 bg-white border border-slate-200 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 rounded-xl font-medium shadow-sm transition-all flex items-center justify-center disabled:opacity-50"
+                          title="Exportar presupuesto a Excel"
+                        >
+                          {exportingBudgetExcel ? (
+                            <Loader size={18} className="animate-spin text-emerald-600" />
+                          ) : (
+                            <ExcelIcon size={18} className="text-emerald-600" />
+                          )}
+                        </button>
                         <button  
                           onClick={() => { setChapterName(""); setShowChapterModal(true); }}
                           className="flex items-center gap-2 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 px-4 py-2 rounded-xl font-medium shadow-sm transition-all text-sm"

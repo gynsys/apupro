@@ -199,5 +199,34 @@ export const budgetService = {
       throw new Error(errorData.detail || 'Error al importar backup');
     }
     return response.json();
+  },
+
+  exportExcel: async (budgetId, payload = null) => {
+    const response = await fetch(`${API_URL}/budgets/${budgetId}/export-excel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload || {})
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Error al exportar presupuesto a Excel');
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    let filename = `Presupuesto_${budgetId}.xlsx`;
+    const contentDisposition = response.headers.get('content-disposition');
+    if (contentDisposition && contentDisposition.includes('filename=')) {
+      filename = contentDisposition.split('filename=')[1].replace(/["']/g, '').trim();
+    }
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return true;
   }
 };
