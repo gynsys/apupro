@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiLayers, FiEdit2, FiTrash2, FiDownload } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import GlassCard from '../../../../components/shared/GlassCard';
 import Cost360SearchBar from '../Cost360SearchBar';
 import { useCost360Search } from '../../hooks/useCost360Search';
-import cost360Service from '../../services/cost360Service';
+import cost360Service, { fetchItems } from '../../services/cost360Service';
 import EditPartidaModal from '../modals/EditPartidaModal';
+import { AuthContext } from '../../../../context/AuthContext';
 
 const generatePartidasExcel = (items) => {
   const xmlContent = `<?xml version="1.0"?>
@@ -78,6 +79,9 @@ const PartidasTab = ({ onlyCoded, selectedDatabase = 'master' }) => {
   const navigate = useNavigate();
   const [editingItem, setEditingItem] = useState(null);
 
+  const { user } = useContext(AuthContext);
+  const isSuperAdmin = user?.is_superadmin === true || user?.email === 'admin@arko360.net';
+
   const {
     searchQuery: search,
     setSearchQuery: setSearch,
@@ -103,10 +107,10 @@ const PartidasTab = ({ onlyCoded, selectedDatabase = 'master' }) => {
       return;
     }
 
-    const toastId = toast.loading('Obteniendo todas las partidas para exportar...');
+    const toastId = toast.loading('Obteniendo partidas para exportar...');
     let exportItems = [];
     try {
-      const response = await cost360Service.getMasterItems(10000);
+      const response = await fetchItems(0, 50000, search, '', selectedDatabase, searchDesc, searchInsumos, searchCovenin, onlyCoded);
       exportItems = response.items || [];
     } catch (err) {
       toast.error('Error al obtener los datos completos', { id: toastId });
@@ -151,13 +155,15 @@ const PartidasTab = ({ onlyCoded, selectedDatabase = 'master' }) => {
               <span className="font-bold text-slate-700">{new Intl.NumberFormat('es-VE').format(totalItems)}</span>{' '}
               {search ? 'coincidencias' : 'Total Partidas'}
             </p>
-            <button
-              onClick={handleExportToCsv}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors"
-            >
-              <FiDownload size={12} />
-              Exportar a Excel
-            </button>
+            {isSuperAdmin && (
+              <button
+                onClick={handleExportToCsv}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors cursor-pointer"
+              >
+                <FiDownload size={12} />
+                Exportar a Excel
+              </button>
+            )}
           </div>
         )}
       </GlassCard>

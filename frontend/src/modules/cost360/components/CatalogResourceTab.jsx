@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import toast from 'react-hot-toast';
 import { FiSearch, FiEdit2, FiTrash2, FiCheck, FiX, FiDownload } from 'react-icons/fi';
 import { apiFetch, apiPut, apiDelete, apiPatch } from '../../../lib/apiHelper';
+import { AuthContext } from '../../../context/AuthContext';
 
 const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adminMode = false }) => {
+  const { user } = useContext(AuthContext);
+  const isSuperAdmin = user?.is_superadmin === true || user?.email === 'admin@arko360.net';
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -286,14 +290,16 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
               <span className="font-bold text-slate-700">{new Intl.NumberFormat('es-VE').format(totalItems)}</span>{' '}
               {search ? 'coincidencias' : `Total ${title}`}
             </p>
-            <button
-              onClick={handleExportToExcel}
-              type="button"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors"
-            >
-              <FiDownload size={12} />
-              Exportar a Excel
-            </button>
+            {isSuperAdmin && (
+              <button
+                onClick={handleExportToExcel}
+                type="button"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors cursor-pointer"
+              >
+                <FiDownload size={12} />
+                Exportar a Excel
+              </button>
+            )}
           </div>
         )}
       </div>

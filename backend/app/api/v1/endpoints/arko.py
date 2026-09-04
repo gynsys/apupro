@@ -542,6 +542,7 @@ class ArkoMeResponse(BaseModel):
     max_ai_apus: Optional[int] = 0
     ai_apus_generated: Optional[int] = 0
     costos_config: CostosConfigSchema
+    is_superadmin: Optional[bool] = False
 
     class Config:
         from_attributes = True
@@ -567,7 +568,12 @@ def _get_costos_config(user: ArkoAdmin) -> CostosConfigSchema:
 def get_current_admin_me(
     current_admin: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> ArkoMeResponse:
-    """Retorna datos completos del administrador autenticado, incluyendo costos_config."""
+    """Retorna datos completos del administrador autenticado, incluyendo costos_config e is_superadmin."""
+    is_super = (
+        current_admin.email == "admin@arko360.net"
+        or current_admin.email == (settings.ADMIN_EMAIL or "")
+        or bool(current_admin.site_config and current_admin.site_config.get("is_superadmin"))
+    )
     return ArkoMeResponse(
         id=current_admin.id,
         email=current_admin.email,
@@ -579,6 +585,7 @@ def get_current_admin_me(
         max_ai_apus=current_admin.max_ai_apus or 0,
         ai_apus_generated=current_admin.ai_apus_generated or 0,
         costos_config=_get_costos_config(current_admin),
+        is_superadmin=is_super,
     )
 
 @router.put("/me", response_model=ArkoMeResponse)

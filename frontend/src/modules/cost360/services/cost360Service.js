@@ -142,6 +142,10 @@ export const exportApuExcelCustom = async (payload) => {
   return true;
 };
 
+export const getMasterItems = async (limit = 10000, search = '', database_id = 'master', covenin = '', only_coded = null) => {
+  return await fetchItems(0, limit, search, '', database_id, true, false, covenin, only_coded);
+};
+
 export default {
   fetchItems,
   fetchApuDetails,
@@ -152,5 +156,6 @@ export default {
   saveCustomApu,
   updateMasterItem,
   deleteMasterItem,
-  exportApuExcelCustom
+  exportApuExcelCustom,
+  getMasterItems
 };
