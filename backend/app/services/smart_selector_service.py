@@ -481,5 +481,6 @@ def fetch_base_apu_for_prompt(db: Session, codpar: str) -> Dict[str, Any]:
                 "bono": mo.Bono or 0.0,
             }
             for rel, mo in mo_rows
+            if mo.Descri and str(mo.Descri).lower() != "nan" and str(mo.CodMan).lower() != "nan" and not str(mo.CodMan).startswith("DESCRIPCION")
         ],
     }

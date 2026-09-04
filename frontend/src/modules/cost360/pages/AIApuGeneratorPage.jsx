@@ -458,16 +458,16 @@ export default function AIApuGeneratorPage() {
         step: 2,
         text: 'Paso 2 de 5: El Elemento o Ubicación\n¿En qué elemento, estructura o lugar se aplicará?', 
         chips: [
-          'En paredes',
-          'En losas',
-          'En columnas',
-          'En vigas',
-          'En zapatas',
-          'En fundaciones',
-          'En techos',
-          'En cubiertas',
-          'En pisos',
-          'En exteriores',
+          'Paredes',
+          'Losas',
+          'Columnas',
+          'Vigas',
+          'Zapatas',
+          'Fundaciones',
+          'Techos',
+          'Cubiertas',
+          'Pisos',
+          'Exteriores',
           'Omitir'
         ] 
       };
