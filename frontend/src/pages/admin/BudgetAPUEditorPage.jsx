@@ -194,17 +194,30 @@ export default function BudgetAPUEditorPage() {
         const payload = {
           ...selectedData,
           cantidad: existingRow.cantidad || 1,
-          depreciacion: existingRow.depreciacion ?? 1.0
+          ...(type === 'materials' ? { desperdicio: existingRow.desperdicio ?? 5.0, unidad: selectedData.unidad || existingRow.unidad || 'UND' } : {}),
+          ...(type === 'equipments' ? { depreciacion: existingRow.depreciacion ?? 1.0 } : {}),
         };
         await budgetService.addComponent(id, itemId, type, payload);
         toast.success('Insumo agregado con éxito');
       } else {
         // Replacing/updating an existing component
-        await budgetService.updateComponent(id, itemId, type, compId, {
+        const payload = {
           codigo: selectedData.codigo,
           descripcion: selectedData.descripcion,
-          precio_unitario: selectedData.precio_unitario
-        });
+          ...(type === 'materials' ? {
+            unidad: selectedData.unidad,
+            precio_unitario: selectedData.precio_unitario
+          } : {}),
+          ...(type === 'equipments' ? {
+            precio_unitario: selectedData.precio_unitario,
+            depreciacion: selectedData.depreciacion
+          } : {}),
+          ...(type === 'labors' ? {
+            jornal: selectedData.jornal,
+            bono: selectedData.bono
+          } : {})
+        };
+        await budgetService.updateComponent(id, itemId, type, compId, payload);
         toast.success('Insumo actualizado');
       }
       await loadData();

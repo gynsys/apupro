@@ -31,10 +31,12 @@ class BudgetAPUComponentUpdate(BaseModel):
     cantidad: Optional[float] = None
 
 class BudgetAPUMaterialUpdate(BudgetAPUComponentUpdate):
+    unidad: Optional[str] = None
     precio_unitario: Optional[float] = None
     desperdicio: Optional[float] = None
 
 class BudgetAPUEquipmentUpdate(BudgetAPUComponentUpdate):
+    unidad: Optional[str] = None
     precio_unitario: Optional[float] = None
     depreciacion: Optional[float] = None
 

@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Package, Wrench, Users, Plus, Search, Trash2, Loader, Sparkles } from 'lucide-react';
 import { numeroALetras } from '../utils/numberToLetters';
 import EquipmentSelectorModal from './EquipmentSelectorModal';
+import MaterialSelectorModal from './MaterialSelectorModal';
+import LaborSelectorModal from './LaborSelectorModal';
 
 export default function ApuEditorUI({
   item,
@@ -116,6 +118,16 @@ export default function ApuEditorUI({
     targetRow: null
   });
 
+  const [materialModal, setMaterialModal] = useState({
+    isOpen: false,
+    targetRow: null
+  });
+
+  const [laborModal, setLaborModal] = useState({
+    isOpen: false,
+    targetRow: null
+  });
+
   const handleSelectEquipment = (selectedData) => {
     const target = equipmentModal.targetRow;
     setEquipmentModal({ isOpen: false, targetRow: null });
@@ -136,6 +148,58 @@ export default function ApuEditorUI({
         onSelectComponent('equipments', null, selectedData);
       } else if (onAddSearchRow) {
         onAddSearchRow('equipments', selectedData);
+      }
+    }
+  };
+
+  const handleSelectMaterial = (selectedData) => {
+    const target = materialModal.targetRow;
+    setMaterialModal({ isOpen: false, targetRow: null });
+
+    if (target && target.id) {
+      if (onSelectComponent) {
+        onSelectComponent('materials', target.id, selectedData);
+      } else {
+        safeFn(onComponentChange)('materials', target.id, 'codigo', selectedData.codigo);
+        safeFn(onComponentBlur)('materials', target.id, 'codigo', selectedData.codigo);
+        safeFn(onComponentChange)('materials', target.id, 'descripcion', selectedData.descripcion);
+        safeFn(onComponentBlur)('materials', target.id, 'descripcion', selectedData.descripcion);
+        safeFn(onComponentChange)('materials', target.id, 'unidad', selectedData.unidad);
+        safeFn(onComponentBlur)('materials', target.id, 'unidad', selectedData.unidad);
+        safeFn(onComponentChange)('materials', target.id, 'precio_unitario', selectedData.precio_unitario);
+        safeFn(onComponentBlur)('materials', target.id, 'precio_unitario', selectedData.precio_unitario);
+      }
+    } else {
+      if (onSelectComponent) {
+        onSelectComponent('materials', null, selectedData);
+      } else if (onAddSearchRow) {
+        onAddSearchRow('materials', selectedData);
+      }
+    }
+  };
+
+  const handleSelectLabor = (selectedData) => {
+    const target = laborModal.targetRow;
+    setLaborModal({ isOpen: false, targetRow: null });
+
+    if (target && target.id) {
+      if (onSelectComponent) {
+        onSelectComponent('labors', target.id, selectedData);
+      } else {
+        safeFn(onComponentChange)('labors', target.id, 'codigo', selectedData.codigo);
+        safeFn(onComponentBlur)('labors', target.id, 'codigo', selectedData.codigo);
+        safeFn(onComponentChange)('labors', target.id, 'descripcion', selectedData.descripcion);
+        safeFn(onComponentBlur)('labors', target.id, 'descripcion', selectedData.descripcion);
+        safeFn(onComponentChange)('labors', target.id, 'jornal', selectedData.jornal);
+        safeFn(onComponentBlur)('labors', target.id, 'jornal', selectedData.jornal);
+        safeFn(onComponentChange)('labors', target.id, 'bono', selectedData.bono);
+        safeFn(onComponentBlur)('labors', target.id, 'bono', selectedData.bono);
+      }
+    } else {
+      if (onSelectComponent) {
+        onSelectComponent('labors', null, selectedData);
+      } else if (onAddSearchRow) {
+        onAddSearchRow('labors', selectedData);
       }
     }
   };
@@ -225,7 +289,8 @@ export default function ApuEditorUI({
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => safeFn(onAddSearchRow)('materials')}
+                type="button"
+                onClick={() => setMaterialModal({ isOpen: true, targetRow: null })}
                 className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-50 hover:text-blue-600 transition-colors shadow-sm"
               >
                 <Search size={14} /> Buscar
@@ -249,7 +314,7 @@ export default function ApuEditorUI({
                   <th className="p-2 w-20 text-right border-r border-slate-200">Desp. %</th>
                   <th className="p-2 w-32 text-right border-r border-slate-200">Precio</th>
                   <th className="p-2 w-32 text-right border-r border-slate-200">Total</th>
-                  <th className="p-2 w-10 text-center"></th>
+                  <th className="p-2 w-16 text-center"></th>
                 </tr>
               </thead>
               <tbody>
@@ -298,7 +363,7 @@ export default function ApuEditorUI({
                         value={mat.cantidad}
                         onChange={e => safeFn(onComponentChange)('materials', mat.id, 'cantidad', e.target.value)}
                         onBlur={e => safeFn(onComponentBlur)('materials', mat.id, 'cantidad', e.target.value)}
-                      />
+                        />
                     </td>
                     <td className="p-2 border-r border-slate-200 bg-amber-50/40">
                       <input 
@@ -322,14 +387,25 @@ export default function ApuEditorUI({
                       {((mat.cantidad * (mat.precio_unitario * exRate) * (1 + (mat.desperdicio || 0) / 100)) * (1 + (material_inflation/100))).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
                     <td className="p-2 text-center">
-                      <button
-                        onClick={() => safeFn(onRemoveRow)('materials', mat.id)}
-                        disabled={deletingId === mat.id}
-                        className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 opacity-0 group-hover:opacity-100 disabled:opacity-50"
-                        title="Eliminar insumo"
-                      >
-                        {deletingId === mat.id ? <Loader size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setMaterialModal({ isOpen: true, targetRow: mat })}
+                          className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 p-1 rounded transition-colors"
+                          title="Buscar y seleccionar material del catálogo"
+                        >
+                          <Search size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => safeFn(onRemoveRow)('materials', mat.id)}
+                          disabled={deletingId === mat.id}
+                          className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                          title="Eliminar insumo"
+                        >
+                          {deletingId === mat.id ? <Loader size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -487,8 +563,9 @@ export default function ApuEditorUI({
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => safeFn(onAddSearchRow)('labors')}
-                className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-50 hover:text-blue-600 transition-colors shadow-sm"
+                type="button"
+                onClick={() => setLaborModal({ isOpen: true, targetRow: null })}
+                className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-50 hover:text-emerald-600 transition-colors shadow-sm"
               >
                 <Search size={14} /> Buscar
               </button>
@@ -512,7 +589,7 @@ export default function ApuEditorUI({
                   <th className="p-2 w-32 text-right border-r border-slate-200">Total Jornal</th>
                   <th className="p-2 w-32 text-right border-r border-slate-200">Total Bono</th>
                   <th className="p-2 w-32 text-right border-r border-slate-200">Unitario</th>
-                  <th className="p-2 w-10 text-center"></th>
+                  <th className="p-2 w-16 text-center"></th>
                 </tr>
               </thead>
               <tbody>
@@ -580,14 +657,25 @@ export default function ApuEditorUI({
                       {((((lab.cantidad * (lab.jornal * exRate)) * (1 + (labor_inflation/100))) * (1 + (fcas_percent/100)) + ((lab.cantidad * ((lab.bono || labor_bonus || 0) * exRate)) * (1 + (labor_inflation/100)))) / (item.performance || item.rendimiento || 1)).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
                     <td className="p-2 text-center">
-                      <button
-                        onClick={() => safeFn(onRemoveRow)('labors', lab.id)}
-                        disabled={deletingId === lab.id}
-                        className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 opacity-0 group-hover:opacity-100 disabled:opacity-50"
-                        title="Eliminar mano de obra"
-                      >
-                        {deletingId === lab.id ? <Loader size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setLaborModal({ isOpen: true, targetRow: lab })}
+                          className="text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 p-1 rounded transition-colors"
+                          title="Buscar y seleccionar mano de obra del catálogo"
+                        >
+                          <Search size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => safeFn(onRemoveRow)('labors', lab.id)}
+                          disabled={deletingId === lab.id}
+                          className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                          title="Eliminar mano de obra"
+                        >
+                          {deletingId === lab.id ? <Loader size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -842,6 +930,20 @@ export default function ApuEditorUI({
         onClose={() => setEquipmentModal({ isOpen: false, targetRow: null })}
         onSelect={handleSelectEquipment}
         targetRow={equipmentModal.targetRow}
+      />
+
+      <MaterialSelectorModal
+        isOpen={materialModal.isOpen}
+        onClose={() => setMaterialModal({ isOpen: false, targetRow: null })}
+        onSelect={handleSelectMaterial}
+        targetRow={materialModal.targetRow}
+      />
+
+      <LaborSelectorModal
+        isOpen={laborModal.isOpen}
+        onClose={() => setLaborModal({ isOpen: false, targetRow: null })}
+        onSelect={handleSelectLabor}
+        targetRow={laborModal.targetRow}
       />
     </div>
   );
