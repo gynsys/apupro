@@ -144,11 +144,11 @@ export default function AIApuGeneratorPage() {
   useEffect(() => {
     if (isGuidedMode) {
       const parts = [];
-      if (guidedAccion && guidedAccion !== 'Omitir' && guidedAccion !== 'Ninguno / Omitir') parts.push(guidedAccion);
-      if (guidedUbicacion && guidedUbicacion !== 'Omitir' && guidedUbicacion !== 'Ninguno / Omitir') parts.push(guidedUbicacion);
-      if (guidedMaterial && guidedMaterial !== 'Omitir' && guidedMaterial !== 'Ninguno / Omitir') parts.push(guidedMaterial);
-      if (guidedIncluye && guidedIncluye !== 'Omitir' && guidedIncluye !== 'Ninguno / Omitir') parts.push(guidedIncluye);
-      if (guidedUnidad && guidedUnidad !== 'Sugerir por IA' && guidedUnidad !== 'Omitir' && guidedUnidad !== 'Ninguno / Omitir') parts.push(`unidad ${guidedUnidad}`);
+      if (guidedAccion && guidedAccion !== 'Omitir' && guidedAccion !== 'Ninguno' && guidedAccion !== 'Ninguno / Omitir') parts.push(guidedAccion);
+      if (guidedUbicacion && guidedUbicacion !== 'Omitir' && guidedUbicacion !== 'Ninguno' && guidedUbicacion !== 'Ninguno / Omitir') parts.push(guidedUbicacion);
+      if (guidedMaterial && guidedMaterial !== 'Omitir' && guidedMaterial !== 'Ninguno' && guidedMaterial !== 'Ninguno / Omitir') parts.push(guidedMaterial);
+      if (guidedIncluye && guidedIncluye !== 'Omitir' && guidedIncluye !== 'Ninguno' && guidedIncluye !== 'Ninguno / Omitir') parts.push(guidedIncluye);
+      if (guidedUnidad && guidedUnidad !== 'Sugerir por IA' && guidedUnidad !== 'Omitir' && guidedUnidad !== 'Ninguno' && guidedUnidad !== 'Ninguno / Omitir') parts.push(`unidad ${guidedUnidad}`);
       setPrompt(parts.join(' ').trim());
     }
   }, [guidedAccion, guidedUbicacion, guidedMaterial, guidedIncluye, guidedUnidad, isGuidedMode]);
@@ -440,12 +440,15 @@ export default function AIApuGeneratorPage() {
         chips: [
           'Construcción de',
           'Suministro de',
-          'Instalación / Colocación de',
+          'Instalación de',
+          'Colocación de',
           'Suministro e instalación de',
           'Excavación',
           'Demolición',
-          'Carga y acarreo',
-          'Reparación / Mantenimiento'
+          'Carga',
+          'Acarreo',
+          'Reparación',
+          'Mantenimiento'
         ] 
       };
     } else if (nextStep === 2) {
@@ -457,12 +460,15 @@ export default function AIApuGeneratorPage() {
         chips: [
           'En paredes',
           'En losas',
-          'En columnas / vigas',
-          'En zapatas / fundaciones',
-          'En techos / cubiertas',
+          'En columnas',
+          'En vigas',
+          'En zapatas',
+          'En fundaciones',
+          'En techos',
+          'En cubiertas',
           'En pisos',
           'En exteriores',
-          'Ninguno / Omitir'
+          'Omitir'
         ] 
       };
     } else if (nextStep === 3) {
@@ -478,7 +484,7 @@ export default function AIApuGeneratorPage() {
           'Bloque de arcilla',
           'Bloque de concreto',
           'Tubería PVC',
-          'Ninguno / Omitir'
+          'Omitir'
         ] 
       };
     } else if (nextStep === 4) {
@@ -489,12 +495,13 @@ export default function AIApuGeneratorPage() {
         text: 'Paso 4 de 5: Alcance y Condiciones\n¿Qué incluye o excluye la partida?', 
         chips: [
           'Solo mano de obra',
-          'Incluye transporte / acarreo',
+          'Incluye transporte',
+          'Incluye acarreo',
           'No incluye suministro de materiales ni equipos',
           'Todo incluido (Mat + MO + Eq)',
           'Incluye encofrado',
           'Incluye andamios',
-          'Ninguno / Omitir'
+          'Omitir'
         ] 
       };
     } else if (nextStep === 5) {
@@ -526,8 +533,8 @@ export default function AIApuGeneratorPage() {
           currentUbicacion,
           currentMaterial,
           currentIncluye,
-          (cleanText && cleanText !== 'Sugerir por IA' && cleanText !== 'Ninguno / Omitir' && cleanText !== 'Omitir') ? `unidad ${cleanText}` : ''
-        ].filter(p => p && p !== 'Omitir' && p !== 'Ninguno / Omitir');
+          (cleanText && cleanText !== 'Sugerir por IA' && cleanText !== 'Ninguno / Omitir' && cleanText !== 'Ninguno' && cleanText !== 'Omitir') ? `unidad ${cleanText}` : ''
+        ].filter(p => p && p !== 'Omitir' && p !== 'Ninguno' && p !== 'Ninguno / Omitir');
         
         const finalPrompt = parts.join(' ').trim();
         handleGenerate(finalPrompt);
@@ -619,10 +626,23 @@ export default function AIApuGeneratorPage() {
   };
 
   const processAIResponse = (response, textToSubmit) => {
-    if (response.debug_preprocesamiento) {
+    if (response.debug_rag_trace || response.debug_base_apu) {
+      setDebugInfo({
+        message: "Generación asistida por RAG Híbrido y Adaptación de Partida Base",
+        solicitud_usuario: textToSubmit,
+        rag_trace: response.debug_rag_trace || null,
+        base_apu: response.debug_base_apu || null,
+        prompt_enviado_al_llm: response.prompt_enviado_al_llm || null,
+        respuesta_cruda_llm: {
+          partida: response.partida,
+          advertencias: response.advertencias,
+          conteo_materiales: (response.materials || []).length,
+          conteo_equipos: (response.equipments || []).length,
+          conteo_mano_obra: (response.labors || []).length
+        }
+      });
+    } else if (response.debug_preprocesamiento) {
       setDebugInfo(response.debug_preprocesamiento);
-    } else if (response.debug_base_apu) {
-      setDebugInfo({ message: "APU adaptado desde partida base (Smart Selector)", base_apu: response.debug_base_apu });
     } else {
       setDebugInfo(null);
     }
@@ -1290,7 +1310,7 @@ export default function AIApuGeneratorPage() {
                             {chatbotLoadingStage === 1 && "Working..."}
                             {chatbotLoadingStage === 2 && "Iniciando preproceso semántico..."}
                             {chatbotLoadingStage === 3 && "Buscando en la BD Maestra con RAG Híbrido..."}
-                            {chatbotLoadingStage === 4 && "Construyendo y adaptando APU con IA a toda máquina..."}
+                            {chatbotLoadingStage === 4 && "Construyendo y adaptando APU con IA..."}
                           </span>
                         </div>
                         <div className="w-full h-2 bg-amber-100 rounded-full overflow-hidden mt-1">
@@ -1470,6 +1490,25 @@ export default function AIApuGeneratorPage() {
               APU EN EDICIÓN
             </h3>
             <div className="flex items-center gap-3">
+              {debugInfo && (
+                <button
+                  onClick={() => {
+                    const blob = new Blob([JSON.stringify(debugInfo, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `debug_apu_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono rounded-xl transition-colors border border-slate-700 shadow-sm"
+                  title="Descargar Log Completo de Preproceso, RAG e IA"
+                >
+                  <Database size={15} className="text-blue-400" />
+                  <span className="hidden sm:inline">Debug JSON</span>
+                </button>
+              )}
               <button
                 onClick={() => setPrintModalOpen(true)}
                 className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 hover:border-blue-400 hover:shadow-md transition-all duration-200 shadow-sm"

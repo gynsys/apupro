@@ -476,9 +476,14 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
         
         base_apu = fetch_base_apu_for_prompt(db, payload.base_partida_code)
         
+        all_candidates_trace = []
         complementary_apus = []
         try:
-            candidates, _ = _get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=4)
+            candidates, _ = _get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
+            all_candidates_trace = [
+                {"codpar": c["item"].CodPar, "covenin": c["item"].CovPar, "descripcion": c["item"].Descri, "score": c["score"]}
+                for c in candidates
+            ]
             comp_items = [c["item"] for c in candidates if c["item"].CodPar != payload.base_partida_code][:2]
             for item in comp_items:
                 comp_apu = fetch_base_apu_for_prompt(db, item.CodPar)
@@ -497,6 +502,23 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             smart_answers=payload.smart_answers or {},
             history=history_dicts,
         )
+        # Inyectar traza completa del RAG Híbrido en el resultado para debug
+        result["debug_rag_trace"] = {
+            "motor_rag": "RAG Híbrido (MiniLM + Léxico)",
+            "solicitud_usuario": payload.description,
+            "covenin_prefix": payload.covenin_prefix,
+            "covenin_context": payload.covenin_context,
+            "partida_base_ganadora": {
+                "codpar": base_apu.get("codpar"),
+                "covenin": base_apu.get("covenin"),
+                "descripcion": base_apu.get("descripcion")
+            },
+            "partidas_complementarias": [
+                {"codpar": c.get("codpar"), "covenin": c.get("covenin"), "descripcion": c.get("descripcion")}
+                for c in complementary_apus
+            ],
+            "top_candidatas_evaluadas": all_candidates_trace
+        }
         if (result.get("status") in ("success", "completed")) and result.get("partida"):
             from app.db.arko_base import ArkoSessionLocal
             with ArkoSessionLocal() as adb:

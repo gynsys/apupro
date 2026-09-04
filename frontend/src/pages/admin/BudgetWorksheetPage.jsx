@@ -979,9 +979,6 @@ export default function BudgetWorksheetPage() {
                   <FileText size={14} className="text-slate-400" />
                   Notas del Presupuesto
                 </span>
-                <span className="text-[11px] text-slate-400">
-                  (Se incluirá en la impresión solo si contiene texto)
-                </span>
               </div>
               <textarea
                 value={notesText}

@@ -88,7 +88,8 @@ _REGLAS_EQUIPOS_ESCALA = """
 # REGLA ESTRICTA DE MAQUINARIA Y ESCALA DE OBRA (¡CRÍTICO!)
 1. PROPORCIONALIDAD DE ESCALA: Los equipos deben corresponder estrictamente al volumen, acceso y magnitud de la obra.
 2. PROHIBICIÓN DE MAQUINARIA PESADA EN TRABAJOS MANUALES O CONFINADOS: Si la descripción indica o implica trabajo 'a mano', 'manual', 'en sótano', 'reparación puntual', 'espacio confinado', 'acarreo interno' o 'equipo liviano', QUEDA TERMINANTEMENTE PROHIBIDO incluir maquinaria pesada (tractores, retroexcavadoras, payloader, jumbo, camiones roqueros, etc.). Usa únicamente herramientas menores o equipos manuales ligeros.
-3. PROHIBIDO SALTO DE CATEGORÍA DE EQUIPO:
+3. INCLUSIÓN OBLIGATORIA DE EQUIPOS LIVIANOS EN ACARREO O TRABAJO MANUAL: Si la actividad implica movimiento, carga, acarreo o transporte manual de materiales, tierra, escombros o piedras, DEBES INCLUIR obligatoriamente equipos manuales de apoyo (ej: CARRETILLA, pala, pico, etc.) en la sección de equipos, incluso si el APU base histórico venía sin equipos.
+4. PROHIBIDO SALTO DE CATEGORÍA DE EQUIPO:
    - Está PROHIBIDO sustituir un trompo mezclador (1 saco / equipo liviano) por un camión mixer premezclado o planta de concreto.
    - Está PROHIBIDO sustituir un camión grúa liviano (o polipasto) por una grúa telescópica de 50-100 toneladas para izajes menores.
    - Si el catálogo no tiene el equipo liviano adecuado, AGRÉGALO con origen "ia", precio_unitario 0.00 y emite una advertencia para cotización manual.
@@ -278,5 +279,6 @@ Prefijo COVENIN: {covenin_prefix}
         result["advertencias"] = []
 
     result["debug_base_apu"] = base_apu
+    result["prompt_enviado_al_llm"] = prompt
 
     return result
