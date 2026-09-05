@@ -378,6 +378,7 @@ export default function AIApuGeneratorPage() {
       setLoading(true);
       const data = await fetchApuDetails(itemCode, selectedDatabase);
       
+      setIsGuidedMode(false);
       setItem({
         cod_par: data.partida.CodPar,
         description: data.partida.Descri,
@@ -655,6 +656,14 @@ export default function AIApuGeneratorPage() {
       setExactMatchCandidate(response.matched_item);
       setBasePrompt(textToSubmit);
       setIsClarifying(false);
+      setIsGuidedMode(false);
+      setCurrentChatStep(0);
+      setGuidedAccion(null);
+      setGuidedUbicacion(null);
+      setGuidedMaterial(null);
+      setGuidedIncluye(null);
+      setGuidedUnidad(null);
+      setChatbotLoadingStage(0);
       toast("Existe una partida que coincide con tu descripción", { icon: '🎯' });
       return;
     }
@@ -667,16 +676,32 @@ export default function AIApuGeneratorPage() {
       setAiQuestions(response.questions || []);
       setAiGuiaRedaccion(response.guia_redaccion || null);
       setIsClarifying(true);
+      setIsGuidedMode(false);
+      setCurrentChatStep(0);
+      setGuidedAccion(null);
+      setGuidedUbicacion(null);
+      setGuidedMaterial(null);
+      setGuidedIncluye(null);
+      setGuidedUnidad(null);
+      setChatbotLoadingStage(0);
       setPrompt('');
       toast.error("Descripción no válida o ambigua. Revisa las preguntas de clarificación.", { icon: '⚠️' });
     } else {
       setIsClarifying(false);
+      setIsGuidedMode(false);
       setChatHistory([]);
       setAiClarificationMessage("");
       setAiOptions([]);
       setAiQuestions([]);
       setAiGuiaRedaccion(null);
       setExactMatchCandidate(null);
+      setCurrentChatStep(0);
+      setGuidedAccion(null);
+      setGuidedUbicacion(null);
+      setGuidedMaterial(null);
+      setGuidedIncluye(null);
+      setGuidedUnidad(null);
+      setChatbotLoadingStage(0);
       // Map response to the format expected by the editor
       setItem({
         ...response.partida,
@@ -1149,7 +1174,7 @@ export default function AIApuGeneratorPage() {
               
               {aiQuestions.length > 0 && (
                 <div className="my-3 bg-white/90 border border-amber-200 rounded-xl p-3.5 shadow-xs">
-                  <p className="text-xs font-bold text-amber-900 mb-2 uppercase tracking-wide">Puntos a verificar o aclarar:</p>
+                  <p className="text-xs font-bold text-amber-900 mb-2 uppercase tracking-wide">REDACCION RECOMENDADA:</p>
                   <ul className="text-sm text-slate-700 space-y-1.5 font-medium">
                     {aiQuestions.map((q, idx) => (
                       <li key={idx} className="flex items-start gap-2">
@@ -1160,23 +1185,6 @@ export default function AIApuGeneratorPage() {
                   </ul>
                 </div>
               )}
-
-              {/* GUÍA DIDÁCTICA DE REDACCIÓN */}
-              <div className="my-3 bg-gradient-to-br from-indigo-50/90 to-blue-50/90 border border-indigo-200/80 rounded-xl p-4 shadow-xs">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-base">💡</span>
-                  <h5 className="text-xs font-bold text-indigo-900 uppercase tracking-wide">Fórmula de redacción recomendada:</h5>
-                </div>
-                <div className="p-2 bg-white/80 rounded-lg border border-indigo-100 text-xs font-semibold text-indigo-950 mb-2.5">
-                  <code>[Acción] + [Elemento constructivo] + [Material / Especificación] + [Alcance o Ubicación]</code>
-                </div>
-                <div className="space-y-1 text-xs text-slate-600">
-                  <p className="font-semibold text-indigo-900">Ejemplos estándar según normas COVENIN:</p>
-                  <p className="italic">“Construcción de pared de bloques de arcilla e=15 cm con mortero 1:4 en planta baja.”</p>
-                  <p className="italic">“Excavación a mano para zanjas de fundación en tierra suelta hasta 1.50 m de profundidad.”</p>
-                  <p className="italic">“Demolición con martillo neumático de losa de concreto e=20 cm, incluye acarreo a mano.”</p>
-                </div>
-              </div>
               
               {aiOptions.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-amber-200">
@@ -1243,7 +1251,7 @@ export default function AIApuGeneratorPage() {
             </div>
           )}
           
-          {isGuidedMode && !isSmartMode && !isClarifying ? (
+          {isGuidedMode && !isSmartMode && !isClarifying && !item ? (
             <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-hidden animate-in fade-in duration-200">
               <div className="bg-[#FEF3C7] border-2 border-[#FEF3C7] rounded-xl p-4 md:p-6 relative flex flex-col max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200" style={{ minHeight: '400px', maxHeight: '80vh' }}>
                 <button 
