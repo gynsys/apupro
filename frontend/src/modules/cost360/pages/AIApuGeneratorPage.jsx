@@ -438,17 +438,21 @@ export default function AIApuGeneratorPage() {
         step: 1,
         text: 'Paso 1 de 5: La Acción\n¿Qué acción o proceso constructivo se va a realizar?', 
         chips: [
-          'Construcción de',
-          'Suministro de',
-          'Instalación de',
-          'Colocación de',
-          'Suministro e instalación de',
-          'Excavación',
+          'Construcción',
+          'Suministro',
+          'Instalación',
+          'Colocación',
           'Demolición',
-          'Carga',
+          'Excavación',
           'Acarreo',
+          'Carga',
+          'Transporte',
+          'Pintura',
           'Reparación',
-          'Mantenimiento'
+          'Mantenimiento',
+          'Remoción',
+          'Desmontaje',
+          'Limpieza'
         ] 
       };
     } else if (nextStep === 2) {
