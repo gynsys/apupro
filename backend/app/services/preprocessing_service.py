@@ -209,9 +209,9 @@ def _find_similar_items(
                     CostItem.CovPar.startswith(covenin_prefix),
                     CostItem.CodPar.startswith(covenin_prefix)
                 )
-            ).filter(~CostItem.CovPar.like('% S/C%')).limit(3).all()
+            ).limit(3).all()
             return base_items, 0.0, []
-        except:
+        except Exception:
             return [], 0.0, []
             
     return similar_items, best_score, scored_items

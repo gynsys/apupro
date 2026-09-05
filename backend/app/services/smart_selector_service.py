@@ -281,7 +281,7 @@ def _get_dynamic_candidates(db: Session, description: str, covenin_prefix: str, 
         if not final_ids:
             return [], best_score
             
-        items = db.query(CostItem).filter(CostItem.CodPar.in_(final_ids)).filter(~CostItem.CovPar.like("% S/C%")).all()
+        items = db.query(CostItem).filter(CostItem.CodPar.in_(final_ids)).all()
         item_map = {i.CodPar: i for i in items}
         sorted_items = [{"item": item_map[i], "score": round(score, 3)} for i, score in candidates_with_scores[:limit] if i in item_map]
         return sorted_items, best_score
@@ -331,7 +331,6 @@ def get_smart_selector_data(
                 .filter(
                     or_(*prefix_conditions)
                 )
-                .filter(~CostItem.CovPar.like("% S/C%"))
                 .all()
             )
     except Exception as exc:

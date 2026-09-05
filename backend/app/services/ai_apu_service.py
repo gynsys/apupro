@@ -92,7 +92,7 @@ _REGLAS_EQUIPOS_ESCALA = """
 4. PROHIBIDO SALTO DE CATEGORÍA DE EQUIPO:
    - Está PROHIBIDO sustituir un trompo mezclador (1 saco / equipo liviano) por un camión mixer premezclado o planta de concreto.
    - Está PROHIBIDO sustituir un camión grúa liviano (o polipasto) por una grúa telescópica de 50-100 toneladas para izajes menores.
-   - Si el catálogo no tiene el equipo liviano adecuado, AGRÉGALO con origen "ia", precio_unitario 0.00 y emite una advertencia para cotización manual.
+   - Si el catálogo no tiene el equipo liviano adecuado, AGRÉGALO con origen "ia", asígnale una tarifa diaria referencial estimada de mercado en USD (nunca 0.0) y emite una advertencia con el prefijo `[PRECIO_REFERENCIAL]`.
 """
 
 _REGLAS_NUMERICAS = """
@@ -109,7 +109,10 @@ _REGLAS_NUMERICAS = """
 _REGLAS_INSUMOS_PRECIOS = """
 # REGLAS DE INSUMOS Y PRECIOS
 1. Prioriza SIEMPRE insumos del catálogo provisto con sus precios históricos reales (`origen: "historico"`).
-2. PROHIBIDO INVENTAR PRECIOS: Si se requiere un insumo técnicamente indispensable que NO está en el catálogo, agrégalo con `origen: "ia"` pero coloca obligatoriamente su `precio_unitario: 0.0`. En `advertencias`, agrega una nota con el prefijo `[REQUIERE_COTIZACION]` indicando que dicho insumo debe ser cotizado por el usuario.
+2. PRECIOS REFERENCIALES DE MERCADO PARA INSUMOS FALTANTES:
+   - Si se requiere un insumo técnicamente indispensable que NO está en el catálogo provisto, agrégalo con `origen: "ia"`.
+   - Asígnale un `precio_unitario` referencial estimado según valores de mercado actuales de la construcción en USD (NUNCA dejes precio 0.0).
+   - En `advertencias`, agrega obligatoriamente una nota con el prefijo `[PRECIO_REFERENCIAL]` indicando el insumo y que dicho valor es un precio de mercado referencial estimado por la IA que se recomienda cotizar y validar con proveedores locales.
 """
 
 
@@ -258,7 +261,7 @@ Prefijo COVENIN: {covenin_prefix}
 5. AJUSTA cantidades cuando la nueva partida lo requiera (ej: distinta área, espesor, proporción).
    Marca los insumos ajustados como `"origen": "ia"` y explica el ajuste en `nota_calculo`.
 6. AUTO-FUSIÓN: Si la descripción del usuario exige algo que falta en la Base (ej. Bote de material, Pintura, Andamios, Encofrado) pero que sí existe en las Partidas Complementarias, "róbalo" e intégralo conservando sus precios históricos.
-7. AGREGA insumos nuevos que la nueva partida requiera estrictamente y no estén ni en la base ni en las complementarias. Márcalos como `"origen": "ia"` con `precio_unitario: 0.0`.
+7. AGREGA insumos nuevos que la nueva partida requiera estrictamente y no estén ni en la base ni en las complementarias. Márcalos como `"origen": "ia"`, asígnales un precio unitario referencial estimado de mercado en USD (nunca 0.0) y agrega una advertencia con el prefijo `[PRECIO_REFERENCIAL]`.
 8. NUNCA alteres los precios unitarios de los insumos del APU base ni de las complementarias. Son precios reales de la BD.
 9. Agrega SIEMPRE una advertencia indicando que el APU fue adaptado desde la partida base [{base_apu.get('codpar', 'N/A')}].
 

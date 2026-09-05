@@ -64,7 +64,10 @@ class AISearchEngine:
             
         if csv_path_to_use:
             import pandas as pd
-            df = pd.read_csv(csv_path_to_use, usecols=['Referencia'])
+            try:
+                df = pd.read_csv(csv_path_to_use, sep=';', usecols=['Referencia'])
+            except Exception:
+                df = pd.read_csv(csv_path_to_use, usecols=['Referencia'])
             self.ids_mapping = df['Referencia'].astype(str).tolist()
             print(f"Cargados {len(self.ids_mapping)} IDs de mapeo desde {csv_path_to_use}.")
         else:
@@ -161,8 +164,7 @@ class AISearchEngine:
             SELECT "CodPar", "CovPar", "Descri",
                    ts_rank(to_tsvector('spanish', "Descri"), to_tsquery('spanish', :tsquery)) as rank
             FROM public.cost360_items
-            WHERE "CovPar" NOT LIKE '% S/C%'
-              AND to_tsvector('spanish', "Descri") @@ to_tsquery('spanish', :tsquery)
+            WHERE to_tsvector('spanish', "Descri") @@ to_tsquery('spanish', :tsquery)
             ORDER BY rank DESC
             LIMIT :limit
         ''')
