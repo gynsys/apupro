@@ -1,9 +1,13 @@
+import io
+import re
+from pathlib import Path
+from typing import Optional, Dict, Any, List
+import openpyxl
+import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.responses import FileResponse
+from sqlalchemy import text
 from sqlalchemy.orm import Session
-from typing import Optional
-from pathlib import Path
-import openpyxl
 
 from app.db.base import get_db
 from app.api.v1.endpoints.arko import get_current_arko_admin
@@ -16,16 +20,67 @@ from app.schemas.cost360 import (
     Cost360DatabaseCreate, Cost360DatabaseUpdate, Cost360DatabaseListResponse,
     MasterItemUpdate, MasterAPUUpdate, CustomApuExportRequest
 )
-import re
-from sqlalchemy import text
 from app.core.logging import logger
 
-def set_schema_for_db(db: Session, database_id: str):
+def set_schema_for_db(db: Session, database_id: str) -> None:
     if database_id and database_id not in ["master", "personalizada"] and re.match(r'^[a-zA-Z0-9_\-]+$', database_id):
         try:
             db.execute(text(f'SET LOCAL search_path TO "{database_id}", public'))
-        except:
-            pass
+        except Exception as e:
+            logger.error(f"Error setting schema for database {database_id}: {e}", exc_info=True)
+
+def clean_cell_str(val: Any) -> str:
+    if val is None:
+        return ""
+    if isinstance(val, float) and val.is_integer():
+        return str(int(val)).strip()
+    val_str = str(val).strip()
+    return "" if val_str.lower() in ("none", "nan") else val_str
+
+RESOURCE_CONFIG: Dict[str, Dict[str, str]] = {
+    "materials": {
+        "table": "cost360_materials",
+        "id_col": "CodMat",
+        "price_col": "CosMat",
+        "desc_col": "Descri",
+        "name": "Material",
+    },
+    "material": {
+        "table": "cost360_materials",
+        "id_col": "CodMat",
+        "price_col": "CosMat",
+        "desc_col": "Descri",
+        "name": "Material",
+    },
+    "equipments": {
+        "table": "cost360_equipment",
+        "id_col": "CodEqu",
+        "price_col": "CosDia",
+        "desc_col": "Descri",
+        "name": "Equipo",
+    },
+    "equipment": {
+        "table": "cost360_equipment",
+        "id_col": "CodEqu",
+        "price_col": "CosDia",
+        "desc_col": "Descri",
+        "name": "Equipo",
+    },
+    "labors": {
+        "table": "cost360_labor",
+        "id_col": "CodMan",
+        "price_col": "Jornal",
+        "desc_col": "Descri",
+        "name": "Mano de Obra",
+    },
+    "labor": {
+        "table": "cost360_labor",
+        "id_col": "CodMan",
+        "price_col": "Jornal",
+        "desc_col": "Descri",
+        "name": "Mano de Obra",
+    },
+}
 
 # Import Services and CRUD
 from app.crud.crud_cost360 import (
@@ -309,75 +364,146 @@ def update_material_route(codigo: str, payload: CostMaterialUpdate, db: Session 
     return mat
 
 @router.post("/materials/bulk-update")
-def bulk_update_materials(payload: dict, db: Session = Depends(get_db)):
+@router.post("/{resource_type}/bulk-update")
+def bulk_update_resources(
+    resource_type: str = "materials",
+    payload: Optional[Dict[str, Any]] = None,
+    database_id: Optional[str] = "master",
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
     """
-    Actualización masiva de precios - NO consume tokens de IA
-    Actualización directa en base de datos para máxima eficiencia
+    Actualización masiva de precios para materiales, equipos o mano de obra.
+    Actualización directa en base de datos para máxima eficiencia sin consumo de tokens IA.
     """
+    if payload is None:
+        payload = {}
+
+    res_key = resource_type.lower().strip()
+    if res_key not in RESOURCE_CONFIG:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tipo de recurso inválido: '{resource_type}'. Válidos: materiales, equipos, mano de obra."
+        )
+
+    config = RESOURCE_CONFIG[res_key]
+    table_name = config["table"]
+    id_col = config["id_col"]
+    price_col = config["price_col"]
+    item_label = config["name"]
+
+    if database_id and database_id != "master":
+        set_schema_for_db(db, database_id)
+
     try:
-        updates = payload.get('updates', [])
+        updates = payload.get("updates", [])
         if not updates:
             return {"updated": 0, "errors": [], "total": 0}
-        
-        # Optimización: usar UPDATE directo en lugar de queries individuales
+
         updated_count = 0
-        errors = []
-        
-        # Preparar datos para actualización en lote
-        codigos_precio = {}
+        errors: List[str] = []
+
+        codigos_precio: Dict[str, float] = {}
         for update in updates:
-            codigo = update.get('codigo')
-            precio = update.get('precio')
-            if codigo and precio is not None:
-                codigos_precio[codigo] = precio
-        
-        # Actualización en lote para mejor rendimiento
+            if not isinstance(update, dict):
+                continue
+            codigo = clean_cell_str(update.get("codigo", ""))
+            precio_raw = update.get("precio")
+            if codigo and precio_raw is not None:
+                try:
+                    codigos_precio[codigo] = float(precio_raw)
+                except (ValueError, TypeError):
+                    errors.append(f"Precio inválido para código {codigo}: {precio_raw}")
+
+        query_text = text(f'UPDATE {table_name} SET "{price_col}" = :precio WHERE "{id_col}" = :codigo')
         for codigo, precio in codigos_precio.items():
             try:
-                result = db.execute(
-                    text('UPDATE cost360_materials SET "CosMat" = :precio WHERE "CodMat" = :codigo'),
-                    {"precio": precio, "codigo": codigo}
-                )
+                result = db.execute(query_text, {"precio": precio, "codigo": codigo})
                 if result.rowcount > 0:
                     updated_count += result.rowcount
                 else:
-                    errors.append(f"Material {codigo} no encontrado")
+                    errors.append(f"{item_label} {codigo} no encontrado")
             except Exception as e:
+                logger.error(f"Error actualizando {item_label} {codigo}: {e}", exc_info=True)
                 errors.append(f"Error actualizando {codigo}: {str(e)}")
-        
+
         db.commit()
-        
+
         return {
             "updated": updated_count,
             "errors": errors,
             "total": len(updates)
         }
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
+        logger.error(f"Error en actualización masiva de precios ({resource_type}): {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error en actualización masiva: {str(e)}")
 
 @router.post("/materials/bulk-update-descriptions")
-async def bulk_update_descriptions(file: UploadFile = File(...), db: Session = Depends(get_db)):
+@router.post("/{resource_type}/bulk-update-descriptions")
+async def bulk_update_descriptions_route(
+    resource_type: str = "materials",
+    file: UploadFile = File(...),
+    database_id: Optional[str] = "master",
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
     """
-    Actualización masiva de descripciones desde archivo Excel
-    Formato esperado: columnas "Código" y "Descripción"
+    Actualización masiva de descripciones desde archivo Excel (.xlsx o .xls).
+    Formato esperado: columnas 'Código' y 'Descripción'.
+    Aplica a materiales, equipos o mano de obra según resource_type.
     """
-    try:
-        # Leer el archivo Excel con openpyxl
-        import io
-        contents = await file.read()
-        wb = openpyxl.load_workbook(io.BytesIO(contents))
-        ws = wb.active
+    res_key = resource_type.lower().strip()
+    if res_key not in RESOURCE_CONFIG:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tipo de recurso inválido: '{resource_type}'. Válidos: materiales, equipos, mano de obra."
+        )
 
-        # Encontrar índices de columnas requeridas
-        header_row = list(ws.iter_rows(min_row=1, max_row=1, values_only=True))[0]
-        codigo_col_idx = None
-        descripcion_col_idx = None
+    config = RESOURCE_CONFIG[res_key]
+    table_name = config["table"]
+    id_col = config["id_col"]
+    desc_col = config["desc_col"]
+    item_label = config["name"]
+
+    if database_id and database_id != "master":
+        set_schema_for_db(db, database_id)
+
+    try:
+        contents = await file.read()
+        rows: List[List[Any]] = []
+        try:
+            wb = openpyxl.load_workbook(io.BytesIO(contents), data_only=True)
+            ws = wb.active
+            rows = [list(r) for r in ws.iter_rows(values_only=True)]
+        except Exception as e_xl:
+            try:
+                df = pd.read_excel(io.BytesIO(contents))
+                header = list(df.columns)
+                data_rows = df.values.tolist()
+                rows = [header] + data_rows
+            except Exception as e_pd:
+                logger.error(f"Error leyendo archivo Excel: {e_xl} | Fallback pandas: {e_pd}", exc_info=True)
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"No se pudo leer el archivo Excel. Asegúrese de que sea un archivo válido (.xlsx o .xls)."
+                )
+
+        if not rows or len(rows) < 2:
+            return {"updated": 0, "errors": ["El archivo Excel está vacío o no contiene filas de datos"], "total": 0}
+
+        header_row = rows[0]
+        codigo_col_idx: Optional[int] = None
+        descripcion_col_idx: Optional[int] = None
 
         for idx, header in enumerate(header_row):
-            if 'Código' in str(header) or 'Codigo' in str(header):
+            if header is None:
+                continue
+            h_norm = str(header).lower().strip()
+            h_clean = h_norm.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
+            if codigo_col_idx is None and any(k in h_clean for k in ["codigo", "codmat", "codequ", "codman", "cod", "id"]):
                 codigo_col_idx = idx
-            elif 'Descripción' in str(header) or 'Descripcion' in str(header) or 'Descri' in str(header):
+            elif descripcion_col_idx is None and any(k in h_clean for k in ["descripcion", "descri", "detalle", "nombre"]):
                 descripcion_col_idx = idx
 
         if codigo_col_idx is None or descripcion_col_idx is None:
@@ -386,30 +512,34 @@ async def bulk_update_descriptions(file: UploadFile = File(...), db: Session = D
                 detail=f"Columnas requeridas no encontradas. Se necesita 'Código' y 'Descripción'. Encabezados encontrados: {header_row}"
             )
 
-        # Procesar actualizaciones
         updated_count = 0
-        errors = []
+        errors: List[str] = []
+        items_to_update: List[Dict[str, str]] = []
 
-        for row in ws.iter_rows(min_row=2, values_only=True):
+        for row in rows[1:]:
             if len(row) <= max(codigo_col_idx, descripcion_col_idx):
                 continue
 
-            codigo = str(row[codigo_col_idx]).strip() if row[codigo_col_idx] else ""
-            descripcion = str(row[descripcion_col_idx]).strip() if row[descripcion_col_idx] else ""
+            codigo = clean_cell_str(row[codigo_col_idx])
+            descripcion = clean_cell_str(row[descripcion_col_idx])
 
             if not codigo or not descripcion:
                 continue
 
+            items_to_update.append({"codigo": codigo, "descripcion": descripcion})
+
+        query_text = text(f'UPDATE {table_name} SET "{desc_col}" = :descripcion WHERE "{id_col}" = :codigo')
+        for item in items_to_update:
+            codigo = item["codigo"]
+            descripcion = item["descripcion"]
             try:
-                result = db.execute(
-                    text('UPDATE cost360_materials SET "Descri" = :descripcion WHERE "CodMat" = :codigo'),
-                    {"descripcion": descripcion, "codigo": codigo}
-                )
+                result = db.execute(query_text, {"descripcion": descripcion, "codigo": codigo})
                 if result.rowcount > 0:
                     updated_count += result.rowcount
                 else:
-                    errors.append(f"Material {codigo} no encontrado")
+                    errors.append(f"{item_label} {codigo} no encontrado")
             except Exception as e:
+                logger.error(f"Error actualizando descripción de {item_label} {codigo}: {e}", exc_info=True)
                 errors.append(f"Error actualizando {codigo}: {str(e)}")
 
         db.commit()
@@ -417,10 +547,13 @@ async def bulk_update_descriptions(file: UploadFile = File(...), db: Session = D
         return {
             "updated": updated_count,
             "errors": errors,
-            "total": ws.max_row - 1  # Excluyendo header
+            "total": len(items_to_update),
         }
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
+        logger.error(f"Error en actualización masiva de descripciones ({resource_type}): {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error en actualización masiva de descripciones: {str(e)}")
 
 @router.delete("/materials/{codigo}")

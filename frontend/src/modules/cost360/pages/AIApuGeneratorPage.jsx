@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Loader, Loader2, Package, Wrench, Users, Calculator, Save, Sparkles, Check, CheckCircle2, Filter, Plus, Search, FileText, Trash2, AlertTriangle, Database, Layers, Printer, Bot, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader, Loader2, Package, Wrench, Users, Calculator, Save, Sparkles, Check, CheckCircle2, Filter, Plus, Search, FileText, Trash2, AlertTriangle, Database, Layers, Printer, Bot, X, Edit2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { AuthContext } from '../../../context/AuthContext';
 import { generateAIApu, saveCustomApu, fetchCategoriesTree, fetchItems, fetchApuDetails } from '../services/cost360Service';
@@ -399,11 +399,60 @@ export default function AIApuGeneratorPage() {
     }
   };
 
+  const getStepValue = (step) => {
+    if (step === 1) return guidedAccion;
+    if (step === 2) return guidedUbicacion;
+    if (step === 3) return guidedMaterial;
+    if (step === 4) return guidedIncluye;
+    if (step === 5) return guidedUnidad;
+    return '';
+  };
+
+  const handleGoBack = (targetStep = null) => {
+    if (chatbotLoadingStage > 0) return;
+    const prevStep = targetStep !== null ? targetStep : currentChatStep - 1;
+    if (prevStep < 0) return;
+
+    if (prevStep === 0) {
+      setCurrentChatStep(0);
+      setGuidedAccion(null);
+      setGuidedUbicacion(null);
+      setGuidedMaterial(null);
+      setGuidedIncluye(null);
+      setGuidedUnidad(null);
+      setChatInputValue('');
+      setGuidedMessages(prev => prev.filter(m => m.id === 'msg-bot0'));
+      return;
+    }
+
+    setCurrentChatStep(prevStep);
+
+    // Limpiar campos posteriores
+    if (prevStep < 5) setGuidedUnidad(null);
+    if (prevStep < 4) setGuidedIncluye(null);
+    if (prevStep < 3) setGuidedMaterial(null);
+    if (prevStep < 2) setGuidedUbicacion(null);
+    if (prevStep < 1) setGuidedAccion(null);
+
+    const prevVal = getStepValue(prevStep);
+    setChatInputValue(prevVal && prevVal !== 'Omitir' && prevVal !== 'Ninguno' && prevVal !== 'Ninguno / Omitir' ? prevVal : '');
+
+    // Rebobinar mensajes: mantener los previos y el mensaje de pregunta del bot del paso activo
+    setGuidedMessages(prev => {
+      return prev.filter(m => {
+        if (m.step === 0 || m.id === 'msg-bot0') return true;
+        if (m.step < prevStep) return true;
+        if (m.step === prevStep && m.sender === 'bot') return true;
+        return false;
+      });
+    });
+  };
+
   const handleChatSubmit = (text) => {
     if (!text || !text.trim()) return;
     const cleanText = text.trim();
     
-    const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText };
+    const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: currentChatStep };
     
     let currentAccion = guidedAccion;
     let currentUbicacion = guidedUbicacion;
@@ -1204,15 +1253,54 @@ export default function AIApuGeneratorPage() {
                 >
                   <X size={20} />
                 </button>
-                <div className="flex items-center gap-3 mb-4 border-b border-amber-200/50 pb-4 flex-shrink-0">
-                <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold shadow-md shadow-amber-500/30">
-                  <Sparkles size={20} />
+                <div className="flex items-center gap-3 mb-3 border-b border-amber-200/50 pb-3 flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold shadow-md shadow-amber-500/30">
+                    <Sparkles size={20} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-amber-900">Asistente CostBase</h3>
+                    <p className="text-xs text-amber-800 truncate">Te guiaré paso a paso para crear tu APU.</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-amber-900">Asistente CostBase</h3>
-                  <p className="text-xs text-amber-800">Te guiaré paso a paso para crear tu APU.</p>
-                </div>
-              </div>
+
+                {/* Stepper Interactivo de 5 Pasos */}
+                {currentChatStep > 0 && chatbotLoadingStage === 0 && (
+                  <div className="mb-3 pb-3 border-b border-amber-200/50 flex-shrink-0">
+                    <div className="flex items-center justify-between gap-1 text-[11px]">
+                      {[
+                        { step: 1, label: 'Acción' },
+                        { step: 2, label: 'Ubicación' },
+                        { step: 3, label: 'Material' },
+                        { step: 4, label: 'Alcance' },
+                        { step: 5, label: 'Unidad' },
+                      ].map(({ step, label }) => {
+                        const isDone = currentChatStep > step;
+                        const isCurrent = currentChatStep === step;
+                        return (
+                          <button
+                            key={step}
+                            type="button"
+                            disabled={!isDone}
+                            onClick={() => isDone && handleGoBack(step)}
+                            className={`flex-1 flex flex-col items-center py-1 px-1 rounded-lg transition-all ${
+                              isCurrent
+                                ? 'bg-amber-500 text-white font-bold shadow-xs'
+                                : isDone
+                                ? 'bg-amber-200/80 text-amber-900 font-semibold hover:bg-amber-300/80 cursor-pointer'
+                                : 'text-amber-800/40 cursor-not-allowed'
+                            }`}
+                            title={isDone ? `Volver al paso ${step}: ${label}` : label}
+                          >
+                            <span className="flex items-center gap-0.5">
+                              {isDone && <Check size={10} className="text-amber-900" />}
+                              <span>{step}. {label}</span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
               <div className="flex-1 overflow-y-auto pr-2 space-y-6 flex flex-col pb-4 scrollbar-thin scrollbar-thumb-amber-200">
                 {guidedMessages.map((msg, idx) => (
@@ -1222,6 +1310,16 @@ export default function AIApuGeneratorPage() {
                         <div className="w-8 h-8 rounded-full bg-amber-500 flex-shrink-0 flex items-center justify-center text-white mb-1 shadow-sm shadow-amber-500/20">
                           <Bot size={18} />
                         </div>
+                      )}
+                      {msg.sender === 'user' && msg.step > 0 && chatbotLoadingStage === 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleGoBack(msg.step)}
+                          title={`Editar o cambiar respuesta del paso ${msg.step}`}
+                          className="opacity-70 hover:opacity-100 p-1 text-amber-800 hover:text-amber-950 hover:bg-amber-200/60 rounded-full transition-all cursor-pointer shrink-0"
+                        >
+                          <Edit2 size={13} />
+                        </button>
                       )}
                       <div className={`${msg.sender === 'bot' ? 'bg-white border border-amber-200 rounded-2xl rounded-bl-none p-4' : 'bg-amber-600 text-white rounded-2xl rounded-br-none px-4 py-2.5'} shadow-sm w-fit max-w-[280px] sm:max-w-[400px]`}>
                         <p className={`text-sm leading-relaxed whitespace-pre-wrap ${msg.sender === 'bot' ? 'text-amber-950' : 'text-white'}`}>{msg.text}</p>
@@ -1285,7 +1383,18 @@ export default function AIApuGeneratorPage() {
               {/* Chat Input */}
               {chatbotLoadingStage === 0 && (
                 <div className="mt-4 pt-4 border-t border-amber-200 flex-shrink-0">
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
+                    {currentChatStep > 0 && (
+                      <button 
+                        type="button"
+                        onClick={() => handleGoBack()}
+                        title="Volver al paso anterior"
+                        className="bg-white border-2 border-amber-300 hover:bg-amber-100 text-amber-900 rounded-full px-3 py-2 text-xs font-bold flex items-center gap-1 transition-all shrink-0 shadow-xs cursor-pointer active:scale-95"
+                      >
+                        <ArrowLeft size={14} />
+                        <span className="hidden sm:inline">Atrás</span>
+                      </button>
+                    )}
                     <input 
                       type="text"
                       value={chatInputValue}
@@ -1299,7 +1408,7 @@ export default function AIApuGeneratorPage() {
                     <button 
                       onClick={() => handleChatSubmit(chatInputValue)}
                       disabled={!chatInputValue.trim()}
-                      className="bg-amber-500 hover:bg-amber-600 text-white rounded-full p-2.5 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="bg-amber-500 hover:bg-amber-600 text-white rounded-full p-2.5 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0 shadow-xs cursor-pointer"
                     >
                       <ArrowRight size={18} />
                     </button>

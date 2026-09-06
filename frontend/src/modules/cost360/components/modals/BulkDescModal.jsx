@@ -2,24 +2,32 @@ import React from 'react';
 import { FiUpload } from 'react-icons/fi';
 import { useBulkUpdate } from '../../hooks/useBulkUpdate';
 
-const BulkDescModal = ({ onSuccess, onClose }) => {
+const BulkDescModal = ({ onSuccess, onClose, resourceType = 'materials', selectedDatabase = 'master', title }) => {
   const {
     descFile,
     setDescFile,
     submitBulkDescriptions,
-  } = useBulkUpdate();
+  } = useBulkUpdate(resourceType, selectedDatabase);
 
   const handleSubmit = () => {
     submitBulkDescriptions(onSuccess);
   };
 
+  const modalTitle = title
+    ? `Actualizar Descripciones de ${title} en Masa`
+    : resourceType === 'equipments'
+      ? 'Actualizar Descripciones de Equipos en Masa'
+      : resourceType === 'labors'
+        ? 'Actualizar Descripciones de Mano de Obra en Masa'
+        : 'Actualizar Descripciones de Materiales en Masa';
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-slate-800">Actualizar Descripciones en Masa</h2>
+          <h2 className="text-xl font-bold text-slate-800">{modalTitle}</h2>
           <p className="text-sm text-slate-600 mt-1">
-            Sube un archivo Excel con columnas: Codigo, Descripcion
+            Sube un archivo Excel (.xlsx o .xls) con columnas: Código y Descripción
           </p>
         </div>
         <div className="p-6 flex-1 flex flex-col gap-4">

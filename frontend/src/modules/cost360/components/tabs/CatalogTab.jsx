@@ -49,6 +49,9 @@ const CatalogTab = ({ title, resourceType, selectedDatabase, config }) => {
 
       {showPriceModal && (
         <BulkPriceModal
+          resourceType={resourceType}
+          selectedDatabase={selectedDatabase}
+          title={title}
           onClose={() => setShowPriceModal(false)}
           onSuccess={() => setShowPriceModal(false)}
         />
@@ -56,6 +59,9 @@ const CatalogTab = ({ title, resourceType, selectedDatabase, config }) => {
 
       {showDescModal && (
         <BulkDescModal
+          resourceType={resourceType}
+          selectedDatabase={selectedDatabase}
+          title={title}
           onClose={() => setShowDescModal(false)}
           onSuccess={() => setShowDescModal(false)}
         />
