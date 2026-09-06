@@ -4,10 +4,11 @@ import { createPortal } from 'react-dom';
 export default function PrintAPULayout({ partida, materiales, equipos, mano_obra, options }) {
   if (!partida) return null;
 
-  const rendimiento = partida.RenPar || partida.rendimiento || 1;
-  const adminPercent = partida.admin_percent ?? 15;
-  const utilPercent = partida.util_percent ?? 10;
-  const fcasFactor = (partida.fcas_percent ?? 988) / 100;
+  const rendimiento = partida.RenPar || partida.rendimiento || partida.performance || 1;
+  const adminPercent = options?.admin_percent ?? partida.admin_percent ?? partida.settings?.admin_percent ?? 15;
+  const utilPercent = options?.profit_percent ?? options?.util_percent ?? partida.profit_percent ?? partida.util_percent ?? partida.settings?.profit_percent ?? 10;
+  const fcasPercent = options?.fcas_percent ?? partida.fcas_percent ?? partida.settings?.fcas_percent ?? 417;
+  const fcasFactor = fcasPercent / 100;
 
   const calcMatTotal = () => materiales.reduce((acc, m) => {
     const q = parseFloat(m.cantidad ?? m.quantity ?? 0);
@@ -44,7 +45,8 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
   const adminCost = subtotalA * (adminPercent / 100);
   const subtotalB = subtotalA + adminCost;
   const utilCost = subtotalB * (utilPercent / 100);
-  const unitPrice = subtotalB + utilCost;
+  const subtotalC = subtotalB + utilCost;
+  const unitPrice = subtotalC;
 
   const numFormat = (val) => Number(val).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -280,7 +282,7 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
             <tr>
               <td className="border border-black px-1 py-0.5" colSpan={3}></td>
               <td className="border border-black px-1 py-0.5 text-right font-bold bg-gray-50" colSpan={2}>
-                FCAS: {numFormat(partida.fcas_percent ?? 988)} %
+                FCAS: {numFormat(fcasPercent)} %
               </td>
               <td className="border border-black px-1 py-0.5 text-right font-bold bg-gray-50">Prestaciones Sociales:</td>
               <td className="border border-black px-1 py-0.5 text-right">{numFormat(calcLabTotalJornalDay() * fcasFactor)}</td>
@@ -299,14 +301,14 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
 
       {/* Resumen de Costos (alineado a la derecha) */}
       <div className="flex justify-end mt-6">
-        <table className="border-collapse border border-black text-[11px] w-[350px]">
+        <table className="border-collapse border border-black text-[11px] w-[380px]">
           <tbody>
             <tr>
-              <td className="border border-black px-2 py-1 text-right font-bold w-48 bg-gray-50">Costo Directo o SubTotal A:</td>
+              <td className="border border-black px-2 py-1 text-right font-bold w-52 bg-gray-50">Costo Directo SubTotal A:</td>
               <td className="border border-black px-2 py-1 text-right w-32 font-bold">{numFormat(subtotalA)}</td>
             </tr>
             <tr>
-              <td className="border border-black px-2 py-1 text-right bg-gray-50">{numFormat(adminPercent)}% Administración e Imprevistos:</td>
+              <td className="border border-black px-2 py-1 text-right bg-gray-50">{numFormat(adminPercent)}% Administración y Gastos Generales:</td>
               <td className="border border-black px-2 py-1 text-right">{numFormat(adminCost)}</td>
             </tr>
             <tr>
@@ -314,8 +316,12 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
               <td className="border border-black px-2 py-1 text-right font-bold">{numFormat(subtotalB)}</td>
             </tr>
             <tr>
-              <td className="border border-black px-2 py-1 text-right bg-gray-50">{numFormat(utilPercent)}% Utilidad:</td>
+              <td className="border border-black px-2 py-1 text-right bg-gray-50">{numFormat(utilPercent)}% Imprevisto Utilidad:</td>
               <td className="border border-black px-2 py-1 text-right">{numFormat(utilCost)}</td>
+            </tr>
+            <tr>
+              <td className="border border-black px-2 py-1 text-right font-bold bg-gray-50">SubTotal C:</td>
+              <td className="border border-black px-2 py-1 text-right font-bold">{numFormat(subtotalC)}</td>
             </tr>
             <tr className="bg-blue-100">
               <td className="border border-black px-2 py-1 text-right font-bold uppercase text-[12px]">Precio Unitario:</td>

@@ -339,10 +339,9 @@ export default function ApuEditorUI({
                         onBlur={e => safeFn(onComponentBlur)('materials', mat.id, 'descripcion', e.target.value)}
                         placeholder="Descripción del material"
                       />
-                      {(mat.origen || mat.nota_calculo) && (
+                      {mat.origen && (
                         <div className="flex items-center gap-2 mt-1 px-1">
-                          {mat.origen && renderOrigenTag(mat.origen)}
-                          {mat.nota_calculo && <span className="text-[10px] text-slate-500 italic truncate" title={mat.nota_calculo}>{mat.nota_calculo}</span>}
+                          {renderOrigenTag(mat.origen)}
                         </div>
                       )}
                     </td>
@@ -480,10 +479,9 @@ export default function ApuEditorUI({
                         onBlur={e => safeFn(onComponentBlur)('equipments', eq.id, 'descripcion', e.target.value)}
                         placeholder="Descripción del equipo"
                       />
-                      {(eq.origen || eq.nota_calculo) && (
+                      {eq.origen && (
                         <div className="flex items-center gap-2 mt-1 px-1">
-                          {eq.origen && renderOrigenTag(eq.origen)}
-                          {eq.nota_calculo && <span className="text-[10px] text-slate-500 italic truncate" title={eq.nota_calculo}>{eq.nota_calculo}</span>}
+                          {renderOrigenTag(eq.origen)}
                         </div>
                       )}
                     </td>
@@ -614,10 +612,9 @@ export default function ApuEditorUI({
                         onBlur={e => safeFn(onComponentBlur)('labors', lab.id, 'descripcion', e.target.value)}
                         placeholder="Descripción (ej. Maestro de Obra)"
                       />
-                      {(lab.origen || lab.nota_calculo) && (
+                      {lab.origen && (
                         <div className="flex items-center gap-2 mt-1 px-1">
-                          {lab.origen && renderOrigenTag(lab.origen)}
-                          {lab.nota_calculo && <span className="text-[10px] text-slate-500 italic truncate" title={lab.nota_calculo}>{lab.nota_calculo}</span>}
+                          {renderOrigenTag(lab.origen)}
                         </div>
                       )}
                     </td>

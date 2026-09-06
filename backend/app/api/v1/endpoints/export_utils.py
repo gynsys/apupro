@@ -54,6 +54,7 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     prestaciones = float(settings.get("fcas_percent", 435.0))
 
     wb = Workbook()
+    wb.calculation.calcMode = 'auto'
     ws = wb.active
     ws.title = f"APU_{item.get('CodPar', 'Custom')}"
 
@@ -113,9 +114,12 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     
     total_mat_row = row
     ws[f"F{total_mat_row}"] = "Total Materiales:"
-    first_data = mat_start + 2
-    last_data = total_mat_row - 1 if row > mat_start + 2 else mat_start + 2
-    ws[f"H{total_mat_row}"] = f"=SUM(H{first_data}:H{last_data})"
+    if mat_rows:
+        first_data = mat_start + 2
+        last_data = total_mat_row - 1
+        ws[f"H{total_mat_row}"] = f"=SUM(H{first_data}:H{last_data})"
+    else:
+        ws[f"H{total_mat_row}"] = 0.0
     style_cell(ws[f"H{total_mat_row}"], bold=True, number_format='#,##0.00')
 
     # EQUIPOS
@@ -143,9 +147,12 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     
     total_eq_row = row
     ws[f"F{total_eq_row}"] = "Total Equipos:"
-    first_data = eq_start + 2
-    last_data = total_eq_row - 1 if row > eq_start + 2 else eq_start + 2
-    ws[f"H{total_eq_row}"] = f"=SUM(H{first_data}:H{last_data})"
+    if eq_rows:
+        first_data = eq_start + 2
+        last_data = total_eq_row - 1
+        ws[f"H{total_eq_row}"] = f"=SUM(H{first_data}:H{last_data})"
+    else:
+        ws[f"H{total_eq_row}"] = 0.0
     style_cell(ws[f"H{total_eq_row}"], bold=True, number_format='#,##0.00')
     
     cuo_row = total_eq_row + 1
@@ -179,11 +186,15 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
         row += 1
     
     sub_row = row
-    first_data = mo_start + 2
-    last_data = sub_row - 1 if row > mo_start + 2 else mo_start + 2
     ws[f"D{sub_row}"] = "SubTotal Mano de Obra:"
-    ws[f"G{sub_row}"] = f"=SUM(G{first_data}:G{last_data})"
-    ws[f"H{sub_row}"] = f"=SUM(H{first_data}:H{last_data})"
+    if mo_rows:
+        first_data = mo_start + 2
+        last_data = sub_row - 1
+        ws[f"G{sub_row}"] = f"=SUM(G{first_data}:G{last_data})"
+        ws[f"H{sub_row}"] = f"=SUM(H{first_data}:H{last_data})"
+    else:
+        ws[f"G{sub_row}"] = 0.0
+        ws[f"H{sub_row}"] = 0.0
     style_cell(ws[f"G{sub_row}"], bold=True, number_format='#,##0.00')
     style_cell(ws[f"H{sub_row}"], bold=True, number_format='#,##0.00')
     

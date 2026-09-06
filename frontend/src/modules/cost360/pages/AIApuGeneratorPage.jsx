@@ -13,6 +13,7 @@ import ExportApuExcelButton from '../components/ExportApuExcelButton';
 import PrintAPUModal from '../../../components/PrintAPUModal';
 import PrintAPULayout from '../../../components/PrintAPULayout';
 import CreatableSelect from 'react-select/creatable';
+import SubscriptionRequestModal from '../../../components/SubscriptionRequestModal';
 
 const ACCIONES_OPCIONES = [
   { value: 'Limpieza de terreno', label: 'Limpieza de terreno' },
@@ -182,6 +183,9 @@ export default function AIApuGeneratorPage() {
   // Obtenemos el usuario del contexto de autenticación
   const { user } = React.useContext(AuthContext);
   const isAdmin = user?.is_superadmin === true || user?.is_admin === true || user?.role === 'admin' || user?.role === 'superadmin' || user?.email === 'admin@arko360.net';
+
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [subscriptionErrorMsg, setSubscriptionErrorMsg] = useState(null);
 
   const [guidedMessages, setGuidedMessages] = useState([]);
   
@@ -638,8 +642,20 @@ export default function AIApuGeneratorPage() {
       processAIResponse(response, textToSubmit);
       
     } catch (error) {
-      console.error(error);
-      toast.error("Error al generar APU con IA");
+      console.error("Error en generación APU con IA:", error);
+      const status = error.response?.status;
+      const detail = error.response?.data?.detail;
+
+      if (status === 403) {
+        const errorMsg = detail || "No tienes una suscripción activa o permiso para utilizar el Generador de APU asistido por IA.";
+        toast.error(errorMsg, { duration: 7000, icon: '🔒' });
+        setSubscriptionErrorMsg(errorMsg);
+        setShowSubscriptionModal(true);
+      } else if (status === 401) {
+        toast.error("Tu sesión ha expirado o no estás autenticado. Por favor inicia sesión nuevamente.", { duration: 5000 });
+      } else {
+        toast.error(detail || "Error al generar APU con IA. Inténtalo nuevamente.");
+      }
     } finally {
       setLoading(false);
       setChatbotLoadingStage(0);
@@ -1015,7 +1031,7 @@ export default function AIApuGeneratorPage() {
         </div>
       )}
 
-      {creationMode === 'ia' && (() => {
+      {creationMode === 'ia' && !item && (() => {
         const isSelectorsComplete = true;
         
         return (
@@ -1489,6 +1505,7 @@ export default function AIApuGeneratorPage() {
               onChange={(e) => {
                 if (!isGuidedMode) {
                   setPrompt(e.target.value);
+                  if (subscriptionErrorMsg) setSubscriptionErrorMsg(null);
                 }
               }}
               onKeyDown={(e) => {
@@ -1510,6 +1527,27 @@ export default function AIApuGeneratorPage() {
               }
               className={`w-full h-24 p-4 border rounded-xl focus:outline-none focus:ring-2 transition-all text-sm mb-4 disabled:opacity-50 disabled:cursor-not-allowed ${isClarifying || isSmartMode ? 'bg-blue-50/50 border-blue-300 focus:border-blue-500 focus:ring-blue-500/20' : 'bg-slate-50 border-slate-300 focus:bg-white focus:border-red-500 focus:ring-red-500/20'}`}
             />
+          )}
+
+          {subscriptionErrorMsg && (
+            <div className="mb-4 p-4 bg-amber-50 border border-amber-300 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="p-2 bg-amber-200/70 text-amber-800 rounded-lg shrink-0 mt-0.5 sm:mt-0">
+                  <AlertTriangle size={20} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-amber-900 leading-snug">{subscriptionErrorMsg}</p>
+                  <p className="text-xs text-amber-800/80 mt-0.5">El Generador APU con IA es una función premium. Activa o renueva tu suscripción para obtener acceso ilimitado.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSubscriptionModal(true)}
+                className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-bold rounded-lg shadow-sm shrink-0 transition-all cursor-pointer"
+              >
+                Ver Planes
+              </button>
+            </div>
           )}
           
           {!(isGuidedMode && !isSmartMode && !isClarifying) && (
@@ -1571,7 +1609,7 @@ export default function AIApuGeneratorPage() {
           materiales={item.materials || []} 
           equipos={item.equipments || []} 
           mano_obra={item.labors || []} 
-          options={printOptions} 
+          options={{ ...settings, ...printOptions }} 
         />
       )}
       
@@ -1586,10 +1624,25 @@ export default function AIApuGeneratorPage() {
       {item && (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200">
-            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <Calculator size={20} className="text-blue-500" />
-              APU EN EDICIÓN
-            </h3>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setItem(null);
+                  setIsGuidedMode(true);
+                  setCurrentChatStep(0);
+                }}
+                className="px-3 py-1.5 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 text-slate-700 hover:text-blue-600 transition-all shadow-sm flex items-center gap-1.5 text-xs font-bold cursor-pointer"
+                title="Volver al Asistente IA"
+              >
+                <ArrowLeft size={16} />
+                <span>Volver al Asistente</span>
+              </button>
+              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Calculator size={20} className="text-blue-500" />
+                APU EN EDICIÓN
+              </h3>
+            </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setPrintModalOpen(true)}
@@ -1649,6 +1702,13 @@ export default function AIApuGeneratorPage() {
           </div>
         </div>
       )}
+
+      {/* MODAL DE SOLICITUD DE SUSCRIPCIÓN / PLANES */}
+      <SubscriptionRequestModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        limitType="apu"
+      />
     </div>
   );
 }
