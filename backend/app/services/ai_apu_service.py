@@ -1,6 +1,18 @@
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+from sqlalchemy.orm import Session
+from app.core.logging import logger
 from app.services.llm_router import call_llm_json
+from app.db.models.cost360 import (
+    CostItem,
+    CostAPUMaterial,
+    CostAPUEquipment,
+    CostAPULabor,
+    CostMaterial,
+    CostEquipment,
+    CostLabor,
+)
+from app.services.ai_search import ai_engine
 
 
 # ---------------------------------------------------------------------------
@@ -285,3 +297,137 @@ Prefijo COVENIN: {covenin_prefix}
     result["prompt_enviado_al_llm"] = prompt
 
     return result
+
+
+def get_dynamic_candidates(
+    db: Session,
+    description: str,
+    covenin_prefix: str = "",
+    limit: int = 15,
+) -> Tuple[List[Dict[str, Any]], float]:
+    """
+    Recupera las partidas más similares desde el Cerebro RAG Híbrido,
+    considerando el material técnico y filtrando opcionalmente por prefijo.
+    """
+    if not description or not isinstance(description, str):
+        return [], 0.0
+
+    try:
+        if not getattr(ai_engine, "is_loaded", False):
+            ai_engine.load_brain()
+            
+        hybrid_results = ai_engine.hybrid_search(db, description, limit=limit * 3)
+        if not hybrid_results:
+            return [], 0.0
+            
+        best_score = hybrid_results[0]["score"]
+        
+        tipo_obra = covenin_prefix[0] if covenin_prefix else ""
+        prefixes = [covenin_prefix] if covenin_prefix else []
+        
+        candidates_with_scores: List[Tuple[str, float]] = []
+        
+        for result in hybrid_results:
+            item_id = result["id"]
+            score = result["score"]
+            
+            is_strict = any(item_id.startswith(p) for p in prefixes) if prefixes else False
+            is_family = item_id.startswith(tipo_obra) if tipo_obra else False
+            
+            if is_strict:
+                score += 0.15
+            elif is_family:
+                score += 0.05
+                
+            if score >= 0.30:
+                candidates_with_scores.append((item_id, score))
+                
+        candidates_with_scores.sort(key=lambda x: x[1], reverse=True)
+        final_ids = [c[0] for c in candidates_with_scores[:limit]]
+            
+        if not final_ids:
+            return [], best_score
+            
+        items = db.query(CostItem).filter(CostItem.CodPar.in_(final_ids)).all()
+        item_map = {i.CodPar: i for i in items}
+        sorted_items = [
+            {"item": item_map[i], "score": round(score, 3)}
+            for i, score in candidates_with_scores[:limit]
+            if i in item_map
+        ]
+        return sorted_items, best_score
+    except Exception as exc:
+        logger.error("Error en get_dynamic_candidates: %s", exc, exc_info=True)
+        return [], 0.0
+
+
+def fetch_base_apu_for_prompt(db: Session, codpar: str) -> Dict[str, Any]:
+    """
+    Recupera los datos completos del APU de una partida histórica para
+    pasarlos al LLM como base de adaptación.
+    """
+    if not codpar or not isinstance(codpar, str):
+        return {}
+
+    item = db.query(CostItem).filter(CostItem.CodPar == codpar).first()
+    if not item:
+        return {}
+
+    mat_rows = (
+        db.query(CostAPUMaterial, CostMaterial)
+        .join(CostMaterial, CostAPUMaterial.CodIns == CostMaterial.CodMat)
+        .filter(CostAPUMaterial.CodPar == codpar)
+        .all()
+    )
+    eq_rows = (
+        db.query(CostAPUEquipment, CostEquipment)
+        .join(CostEquipment, CostAPUEquipment.CodIns == CostEquipment.CodEqu)
+        .filter(CostAPUEquipment.CodPar == codpar)
+        .all()
+    )
+    mo_rows = (
+        db.query(CostAPULabor, CostLabor)
+        .join(CostLabor, CostAPULabor.CodIns == CostLabor.CodMan)
+        .filter(CostAPULabor.CodPar == codpar)
+        .all()
+    )
+
+    return {
+        "codpar": item.CodPar,
+        "covenin": item.CovPar,
+        "descripcion": item.Descri,
+        "unidad": item.UniPar,
+        "rendimiento": item.RenPar or 1.0,
+        "materiales": [
+            {
+                "codigo": mat.CodMat,
+                "descripcion": mat.Descri,
+                "unidad": mat.UniMat,
+                "cantidad": rel.CanIns,
+                "desperdicio": getattr(rel, "Desper", 0.0) or 0.0,
+                "precio_unitario": mat.CosMat or 0.0,
+            }
+            for rel, mat in mat_rows
+        ],
+        "equipos": [
+            {
+                "codigo": eq.CodEqu,
+                "descripcion": eq.Descri,
+                "cantidad": rel.CanIns,
+                "depreciacion": getattr(rel, "Deprec", 1.0) or 1.0,
+                "precio_diario": eq.CosDia or 0.0,
+            }
+            for rel, eq in eq_rows
+        ],
+        "mano_obra": [
+            {
+                "codigo": mo.CodMan,
+                "descripcion": mo.Descri,
+                "cantidad": rel.CanIns,
+                "jornal": mo.Jornal or 0.0,
+                "bono": mo.Bono or 0.0,
+            }
+            for rel, mo in mo_rows
+            if mo.Descri and str(mo.Descri).lower() != "nan" and str(mo.CodMan).lower() != "nan" and not str(mo.CodMan).startswith("DESCRIPCION")
+        ],
+    }

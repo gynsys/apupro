@@ -18,6 +18,7 @@ from app.schemas.cost360 import (
 )
 import re
 from sqlalchemy import text
+from app.core.logging import logger
 
 def set_schema_for_db(db: Session, database_id: str):
     if database_id and database_id not in ["master", "personalizada"] and re.match(r'^[a-zA-Z0-9_\-]+$', database_id):
@@ -40,8 +41,14 @@ from app.crud.crud_cost360 import (
     update_master_item, delete_master_item, update_master_apu_details
 )
 from app.services.preprocessing_service import preprocess_apu_data, fast_preprocess_debug
-from app.services.ai_apu_service import generate_apu_with_ai, generate_apu_with_ai_from_base
+from app.services.ai_apu_service import (
+    generate_apu_with_ai,
+    generate_apu_with_ai_from_base,
+    get_dynamic_candidates,
+    fetch_base_apu_for_prompt,
+)
 from app.api.v1.endpoints.export_utils import generate_excel_workbook
+from app.services.synonyms_service import expand_technical_synonyms
 
 router = APIRouter()
 
@@ -448,7 +455,11 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
     # Verificar acceso a IA
     check_ai_access(current_user)
 
-    # 0. Si es solo preproceso DEBUG, devolver resultado rapido
+    # 0. Normalización y Expansión Técnica con Diccionario (Paso 1)
+    if payload.description:
+        payload.description = expand_technical_synonyms(payload.description)
+
+    # 0.1. Si es solo preproceso DEBUG, devolver resultado rapido
     if payload.only_preprocess:
         from app.services.ai_search import ai_engine
         debug_data = fast_preprocess_debug(
@@ -468,29 +479,34 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             "debug_preprocesamiento": debug_data
         }
 
-    # 0.5. MODO SMART SELECTOR: el usuario ya eligió una partida base -> generar con base real
-    if payload.base_partida_code:
-        from app.services.smart_selector_service import fetch_base_apu_for_prompt, _get_dynamic_candidates
-        import logging
-        logger = logging.getLogger(__name__)
-        
-        base_apu = fetch_base_apu_for_prompt(db, payload.base_partida_code)
+    # 0.5. MODO RAG / ADAPTACIÓN DE BASE REAL
+    base_code = payload.base_partida_code
+    candidates = []
+    if not base_code and not payload.only_preprocess:
+        # Búsqueda RAG Híbrida automática para encontrar la mejor partida base
+        candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
+        if candidates and candidates[0]["score"] >= 0.35:
+            base_code = candidates[0]["item"].CodPar
+
+    if base_code:
+        base_apu = fetch_base_apu_for_prompt(db, base_code)
         
         all_candidates_trace = []
         complementary_apus = []
         try:
-            candidates, _ = _get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
+            if not candidates:
+                candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
             all_candidates_trace = [
                 {"codpar": c["item"].CodPar, "covenin": c["item"].CovPar, "descripcion": c["item"].Descri, "score": c["score"]}
                 for c in candidates
             ]
-            comp_items = [c["item"] for c in candidates if c["item"].CodPar != payload.base_partida_code][:2]
+            comp_items = [c["item"] for c in candidates if c["item"].CodPar != base_code][:2]
             for item in comp_items:
                 comp_apu = fetch_base_apu_for_prompt(db, item.CodPar)
                 if comp_apu:
                     complementary_apus.append(comp_apu)
-        except Exception as e:
-            logger.warning(f"Error fetching complementary APUs: {e}")
+        except Exception as exc:
+            logger.warning("Error fetching complementary APUs: %s", exc)
 
         history_dicts = [msg.model_dump() for msg in payload.history] if payload.history else []
         result = generate_apu_with_ai_from_base(
@@ -638,15 +654,40 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
 
 @router.post("/smart-select")
 def smart_select_route(payload: SmartSelectRequest, db: Session = Depends(get_db)):
-    """Selección guiada de partida base mediante preguntas discriminantes. Sin LLM."""
-    from app.services.smart_selector_service import get_smart_selector_data
-    return get_smart_selector_data(
-        db=db,
-        description=payload.description,
-        covenin_prefix=payload.covenin_prefix,
-        covenin_context=payload.covenin_context,
-        answers=payload.answers or {},
-    )
+    """Selección automática de partida base mediante RAG Híbrido."""
+    candidates, best_score = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
+    best_match = None
+    if candidates:
+        top_item = candidates[0]["item"]
+        best_match = {
+            "codpar": top_item.CodPar,
+            "covenin": top_item.CovPar,
+            "descripcion": top_item.Descri,
+            "unidad": top_item.UniPar,
+            "score": round(candidates[0]["score"], 3),
+        }
+    return {
+        "covenin_prefix": payload.covenin_prefix,
+        "covenin_context": payload.covenin_context,
+        "description": payload.description,
+        "answers_received": payload.answers or {},
+        "total_partidas": len(candidates),
+        "candidates_count": len(candidates),
+        "questions": [],
+        "candidates": [
+            {
+                "codpar": c["item"].CodPar,
+                "covenin": c["item"].CovPar,
+                "descripcion": c["item"].Descri,
+                "unidad": c["item"].UniPar,
+                "score": round(c["score"], 3),
+            }
+            for c in candidates
+        ],
+        "best_match": best_match,
+        "confidence": round(best_score, 3),
+        "ready_to_generate": True,
+    }
 
 
 @router.post("/custom-apus", response_model=CustomCostItemResponse)

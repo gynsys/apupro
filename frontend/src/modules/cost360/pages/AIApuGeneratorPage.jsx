@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Loader, Loader2, Package, Wrench, Users, Calculator, Save, Sparkles, Check, CheckCircle2, Filter, Plus, Search, FileText, Trash2, AlertTriangle, Database, Layers, Printer, Bot, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { AuthContext } from '../../../context/AuthContext';
-import { generateAIApu, saveCustomApu, fetchCategoriesTree, fetchItems, fetchApuDetails, smartSelect, generateAIApuFromBase } from '../services/cost360Service';
+import { generateAIApu, saveCustomApu, fetchCategoriesTree, fetchItems, fetchApuDetails } from '../services/cost360Service';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
 import Cost360SearchBar from '../components/Cost360SearchBar';
 import { useCost360Search } from '../hooks/useCost360Search';
@@ -578,31 +578,9 @@ export default function AIApuGeneratorPage() {
         return;
       }
 
-      // ---- SMART SELECTOR LOGIC ----
-      if (!onlyPreprocess && !bypassSmart && !isClarifying && !isSmartMode && !bypassExactMatch) {
-        const smartRes = await smartSelect(textToSubmit, prefixToSend, context, smartAnswers);
-        
-        if (!smartRes.ready_to_generate && smartRes.questions && smartRes.questions.length > 0) {
-          setSmartData(smartRes);
-          setIsSmartMode(true);
-          setBasePrompt(textToSubmit);
-          setLoading(false);
-          return; // Pausar para esperar respuesta del usuario
-        }
-        
-        // Si ya está listo (porque hubo match o respondio todo) y hay un best_match
-        if (smartRes.ready_to_generate && smartRes.best_match) {
-          const response = await generateAIApuFromBase(textToSubmit, prefixToSend, context, smartRes.best_match.codpar, smartAnswers);
-          processAIResponse(response, textToSubmit);
-          setIsSmartMode(false);
-          setSmartData(null);
-          return;
-        }
-      }
-      
       const newHistory = isClarifying ? [...chatHistory, { role: 'user', content: textToSubmit }] : [{ role: 'user', content: textToSubmit }];
       
-      // Llamada normal (con soporte para bypass_exact_match)
+      // Generación directa con IA y RAG Híbrido
       const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory, onlyPreprocess, bypassExactMatch);
       processAIResponse(response, textToSubmit);
       
@@ -711,40 +689,6 @@ export default function AIApuGeneratorPage() {
         advertencias: response.advertencias || []
       });
       toast.success("APU generado con éxito");
-    }
-  };
-
-  const handleSmartAnswer = async (questionId, optionValue) => {
-    const newAnswers = { ...smartAnswers, [questionId]: optionValue };
-    setSmartAnswers(newAnswers);
-    
-    // Disparar validación de nuevo
-    setLoading(true);
-    try {
-      const prefixToSend = selectedPartida || selectedSubcapitulo;
-      const smartRes = await smartSelect(basePrompt, prefixToSend, "", newAnswers);
-      
-      if (!smartRes.ready_to_generate && smartRes.questions && smartRes.questions.length > 0) {
-        setSmartData(smartRes);
-      } else {
-        // Listo para generar!
-        if (smartRes.best_match) {
-          const response = await generateAIApuFromBase(basePrompt, prefixToSend, "", smartRes.best_match.codpar, newAnswers);
-          processAIResponse(response, basePrompt);
-        } else {
-          // Fallback a generación normal
-          const response = await generateAIApu(basePrompt, prefixToSend, "", [], false);
-          processAIResponse(response, basePrompt);
-        }
-        setIsSmartMode(false);
-        setSmartData(null);
-        setSmartAnswers({});
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Error al procesar respuesta");
-    } finally {
-      setLoading(false);
     }
   };
 

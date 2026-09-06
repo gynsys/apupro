@@ -684,15 +684,26 @@ export default function ApuEditorUI({
           </div>
           <div className="bg-slate-50 p-4 border-t border-slate-300">
             <div className="flex justify-end">
-              <table className="w-full md:w-[600px] text-xs font-bold text-slate-700 border-collapse">
+              <table className="w-full md:w-[650px] text-xs font-bold text-slate-700 border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-300 text-[11px] text-slate-500 font-semibold bg-slate-100/60">
+                    <th className="p-1.5 text-right">Concepto</th>
+                    <th className="p-1.5 w-28 text-right border-l border-slate-200">Total Jornal (Día)</th>
+                    <th className="p-1.5 w-28 text-right border-l border-slate-200">Total Bono (Día)</th>
+                    <th className="p-1.5 w-28 text-right border-l border-slate-200">Unitario</th>
+                  </tr>
+                </thead>
                 <tbody>
                   <tr>
                     <td className="p-2 text-right border-b border-slate-200 uppercase">Subtotal Mano de Obra:</td>
-                    <td className="p-2 w-32 text-right border-b border-slate-200 bg-white border-l border-slate-200">
+                    <td className="p-2 text-right border-b border-slate-200 bg-white border-l border-slate-200">
+                      {totJornal.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
+                    </td>
+                    <td className="p-2 text-right border-b border-slate-200 bg-white border-l border-slate-200">
                       {totBono.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
-                    <td className="p-2 w-32 text-right border-b border-slate-200 bg-white border-l border-slate-200">
-                      {totJornal.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
+                    <td className="p-2 text-right border-b border-slate-200 bg-white border-l border-slate-200 text-slate-600">
+                      {((totJornal + totBono) / rendimiento).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
                   </tr>
                   <tr>
@@ -710,36 +721,44 @@ export default function ApuEditorUI({
                       )}
                       <span>Prestaciones Sociales:</span>
                     </td>
-                    <td className="p-2 w-32 text-right border-b border-slate-200 bg-white border-l border-slate-200 text-slate-500">
+                    <td className="p-2 text-right border-b border-slate-200 bg-white border-l border-slate-200 text-slate-900">
+                      {fcasMonto.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
+                    </td>
+                    <td className="p-2 text-right border-b border-slate-200 bg-white border-l border-slate-200 text-slate-500">
                       {0.00.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
-                    <td className="p-2 w-32 text-right border-b border-slate-200 bg-white border-l border-slate-200 text-slate-900">
-                      {fcasMonto.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
+                    <td className="p-2 text-right border-b border-slate-200 bg-white border-l border-slate-200 text-slate-600">
+                      {(fcasMonto / rendimiento).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
                   </tr>
                   <tr>
                     <td className="p-2 text-right border-b border-slate-200 uppercase">Subtotal + Prestaciones:</td>
-                    <td className="p-2 w-32 text-right border-b border-slate-200 bg-white border-l border-slate-200">
+                    <td className="p-2 text-right border-b border-slate-200 bg-white border-l border-slate-200">
+                      {(totJornal + fcasMonto).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
+                    </td>
+                    <td className="p-2 text-right border-b border-slate-200 bg-white border-l border-slate-200">
                       {totBono.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
-                    <td className="p-2 w-32 text-right border-b border-slate-200 bg-white border-l border-slate-200">
-                      {(totJornal + fcasMonto).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
+                    <td className="p-2 text-right border-b border-slate-200 bg-white border-l border-slate-200 text-slate-600">
+                      {((totJornal + fcasMonto + totBono) / rendimiento).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
                   </tr>
                   <tr className="bg-slate-100">
-                    <td className="p-2 text-right border-b border-slate-300 uppercase font-black">Total General Mano de Obra:</td>
-                    <td className="p-2 border-b border-slate-300"></td>
-                    <td className="p-2 w-32 text-right border-b border-slate-300 bg-white font-black text-slate-900 border-l border-slate-200 shadow-inner">
+                    <td className="p-2 text-right border-b border-slate-300 uppercase font-black">Total Diario Cuadrilla:</td>
+                    <td colSpan={2} className="p-2 text-center border-b border-slate-300 bg-white font-black text-slate-900 border-l border-slate-200 shadow-inner">
                       {totGeneralManoObra.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
+                    <td className="p-2 text-right border-b border-slate-300 bg-slate-50 border-l border-slate-200"></td>
                   </tr>
                   <tr className="bg-red-50/50">
                     <td className="p-2 text-right border-b border-slate-300 uppercase flex items-center justify-end gap-2">
                       <span className="text-[10px] text-slate-500">% de Incidencia: {incidenciaManoObra.toLocaleString('es-VE', {minimumFractionDigits:4, maximumFractionDigits:4})}</span>
                       <span className="font-bold text-red-900">Costo Unitario Mano de Obra:</span>
                     </td>
-                    <td className="p-2 border-b border-slate-300"></td>
-                    <td className="p-2 w-32 text-right border-b border-slate-300 bg-red-100/50 font-black text-red-900 border-l border-slate-200 shadow-inner">
+                    <td colSpan={2} className="p-2 border-b border-slate-300 text-right pr-2 text-slate-500 font-normal">
+                      (Total Diario ÷ Rendimiento {rendimiento}):
+                    </td>
+                    <td className="p-2 text-right border-b border-slate-300 bg-red-100/50 font-black text-red-900 border-l border-slate-200 shadow-inner">
                       {costoUnitarioManoObra.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
                   </tr>

@@ -1,10 +1,71 @@
 import os
 import re
+from typing import List, Dict, Any, Tuple, Set, Optional
 import numpy as np
+import pandas as pd
 from sentence_transformers import SentenceTransformer
-from typing import List, Dict, Any, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from app.core.logging import logger
+from app.services.synonyms_service import expand_technical_synonyms
+from app.services.dimension_service import extract_unified_dimensions, score_dimension_match
+
+MATERIAL_CATEGORIES: Dict[str, Dict[str, List[str]]] = {
+    "tuberia": {
+        "POLIPROPILENO": [r"\bPOLIPROPILENO\b", r"\bPPR\b", r"\bPOLIFUSION\b"],
+        "PEAD": [r"\bPEAD\b", r"\bPOLIETILENO DE ALTA DENSIDAD\b", r"\bPOLIETILENO\b"],
+        "PVC": [r"\bPVC\b", r"\bCPVC\b", r"\bPOLICLORURO\b"],
+        "COBRE": [r"\bCOBRE\b"],
+        "HIERRO_GALVANIZADO": [r"\bHIERRO GALVANIZADO\b", r"\bHG\b", r"\bGALVANIZADO\b"],
+        "HIERRO_FUNDIDO": [r"\bHIERRO FUNDIDO\b", r"\bHF\b"],
+        "ACERO": [r"\bACERO AL CARBONO\b", r"\bACERO INOXIDABLE\b", r"\bACERO NEGRO\b"],
+    },
+    "estructuras": {
+        "CONCRETO": [r"\bCONCRETO\b", r"\bHORMIGON\b"],
+        "ACERO_ESTRUCTURAL": [r"\bESTRUCTURA METALICA\b", r"\bPERFIL METALICO\b", r"\bVIGA DE ACERO\b"],
+        "MADERA": [r"\bMADERA\b", r"\bMACHIMBRADO\b"],
+        "DRYWALL_YESO": [r"\bDRYWALL\b", r"\bYESO\b", r"\bTABLAYESO\b"],
+    }
+}
+
+
+def detect_materials(text_input: str) -> Dict[str, Set[str]]:
+    """Detecta materiales técnicos por categoría en un texto dado."""
+    if not text_input or not isinstance(text_input, str):
+        return {}
+    upper = text_input.upper()
+    found: Dict[str, Set[str]] = {}
+    for cat_name, materials in MATERIAL_CATEGORIES.items():
+        for mat_name, patterns in materials.items():
+            for pat in patterns:
+                if re.search(pat, upper):
+                    if cat_name not in found:
+                        found[cat_name] = set()
+                    found[cat_name].add(mat_name)
+                    break
+    return found
+
+
+def extract_negative_exclusions(query: str) -> List[str]:
+    """
+    Detecta términos y conceptos explícitamente excluidos en la consulta
+    mediante cláusulas como 'sin ...' para penalizar ítems que los contengan.
+    """
+    if not query or not isinstance(query, str):
+        return []
+
+    exclusions: List[str] = []
+
+    # 1. Concreto: sin mixer / sin premezclado
+    if re.search(r"\b(sin\s+mixer|sin\s+premezclado|sin\s+camion\s+mezclador)\b", query, re.IGNORECASE):
+        exclusions.extend(["PREMEZCLADO", "MIXER"])
+
+    # 2. Obras de tierra: sin maquinaria / sin equipo / excavación a mano
+    if re.search(r"\b(sin\s+maquinaria|sin\s+equipo|a\s+mano\s+sin|sin\s+retroexcavadora)\b", query, re.IGNORECASE):
+        exclusions.extend(["RETROEXCAVADORA", "TRACTOR", "MAQUINARIA", "EQUIPO PESADO"])
+
+    return exclusions
+
 
 class AISearchEngine:
     _instance = None
@@ -63,7 +124,6 @@ class AISearchEngine:
                 break
             
         if csv_path_to_use:
-            import pandas as pd
             try:
                 df = pd.read_csv(csv_path_to_use, sep=';', usecols=['Referencia'])
             except Exception:
@@ -139,12 +199,18 @@ class AISearchEngine:
         como 'sin incluir', 'no incluye', 'utilizando', 'con'.
         Esto evita que la IA se distraiga con palabras secundarias.
         """
+        if not query or not isinstance(query, str):
+            return ""
+
         # Expresión regular para separar la frase en base a palabras clave de exclusión/condición
-        splitters = re.compile(r'\b(sin incluir|no incluye|utilizando|con empleo de|empleando)\b', re.IGNORECASE)
+        splitters = re.compile(
+            r'\b(sin incluir|no incluye|sin empleo de|sin uso de|sin maquinaria|sin equipo|sin mixer|utilizando|con empleo de|empleando)\b',
+            re.IGNORECASE,
+        )
         parts = splitters.split(query)
         if parts:
             # La primera parte suele ser la intención principal de búsqueda
-            main_chunk = parts[0].strip()
+            main_chunk = parts[0].strip(" ,.-")
             return main_chunk if len(main_chunk) > 5 else query
         return query
 
@@ -153,8 +219,12 @@ class AISearchEngine:
         Búsqueda Tradicional (Full-Text Search) usando PostgreSQL.
         Busca coincidencias exactas de las palabras en el campo Descri.
         """
-        # Convertir query a formato "palabra | palabra | palabra" para tsquery flexibilizado
-        words = [w for w in query.split() if len(w) > 2]
+        if not query or not isinstance(query, str):
+            return []
+
+        # Extraer únicamente tokens alfanuméricos limpios (sin comas, puntos ni caracteres especiales)
+        raw_words = re.findall(r'[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]+', query)
+        words = [w.lower() for w in raw_words if len(w) > 2]
         if not words:
             return []
         
@@ -169,12 +239,16 @@ class AISearchEngine:
             LIMIT :limit
         ''')
         
-        results = db.execute(sql, {"tsquery": tsquery_str, "limit": limit}).fetchall()
-        
-        return [
-            {"id": row.CodPar, "score": float(row.rank), "desc": row.Descri}
-            for row in results
-        ]
+        try:
+            results = db.execute(sql, {"tsquery": tsquery_str, "limit": limit}).fetchall()
+            return [
+                {"id": row.CodPar, "score": float(row.rank), "desc": row.Descri}
+                for row in results
+            ]
+        except Exception as exc:
+            db.rollback()
+            logger.error("Error en lexical_search con tsquery '%s': %s", tsquery_str, exc, exc_info=True)
+            return []
 
     def hybrid_search(self, db: Session, query: str, valid_ids: List[str] = None, limit: int = 40) -> List[Dict[str, Any]]:
         """
@@ -186,8 +260,10 @@ class AISearchEngine:
             return []
 
         # 1. Puntaje Semántico (RAG)
+        # Expandir siglas técnicas y sinónimos para asegurar coincidencia léxica y semántica
+        expanded_query = expand_technical_synonyms(query)
         # Usamos chunking para no distraer al modelo con "sin incluir"
-        main_query = self.extract_main_chunk(query)
+        main_query = self.extract_main_chunk(expanded_query)
         query_embedding = self.model.encode([main_query])
         
         norm_query = np.linalg.norm(query_embedding)
@@ -218,19 +294,19 @@ class AISearchEngine:
         max_lex_score = max(lexical_scores.values()) if lexical_scores else 1.0
         if max_lex_score == 0: max_lex_score = 1.0
 
-        # 3. Fusión Híbrida
-        # Fórmula: 70% Semántico + 30% Léxico (si existe)
-        # Si la palabra exacta no existe, el score léxico es 0, penalizando ligeramente pero no eliminando.
+        # 3. Fusión Híbrida Equilibrada
+        # Fórmula: 55% Semántico + 45% Léxico
+        # Si un ítem tiene 0 palabras clave (lex_score == 0.0), se penaliza severamente (sem_score * 0.45)
+        # para evitar que partidas semánticamente ambiguas desplacen a coincidencias conceptuales exactas.
         hybrid_results = []
         for item_id, sem_score in semantic_scores.items():
-            lex_score = lexical_scores.get(item_id, 0.0) / max_lex_score
+            raw_lex = lexical_scores.get(item_id, 0.0)
+            lex_score = raw_lex / max_lex_score
             
-            # Penalización fuerte si la frase tiene coincidencia semántica pero 0 palabras clave
-            # y el puntaje semántico no es abrumadoramente alto.
-            if lex_score == 0.0 and sem_score < 0.60:
-                final_score = sem_score * 0.70
+            if lex_score == 0.0:
+                final_score = sem_score * 0.45
             else:
-                final_score = (sem_score * 0.70) + (lex_score * 0.30)
+                final_score = (sem_score * 0.55) + (lex_score * 0.45)
                 
             hybrid_results.append({
                 "id": item_id,
@@ -239,8 +315,63 @@ class AISearchEngine:
                 "lex_score": lex_score
             })
 
-        # Ordenar por el score híbrido
+        # Ordenar preliminarmente por el score híbrido
         hybrid_results.sort(key=lambda x: x["score"], reverse=True)
+
+        # 4. Ponderación Técnica: Materiales, Dimensiones Físicas y Exclusiones Negativas
+        query_mats = detect_materials(main_query)
+        query_dims = extract_unified_dimensions(main_query)
+        query_exclusions = extract_negative_exclusions(query)
+
+        if (query_mats or query_dims or query_exclusions) and hybrid_results:
+            top_eval_count = min(len(hybrid_results), max(limit * 5, 200))
+            top_candidates = hybrid_results[:top_eval_count]
+            remaining_candidates = hybrid_results[top_eval_count:]
+            
+            eval_ids = [c["id"] for c in top_candidates]
+            if eval_ids:
+                try:
+                    sql_desc = text('SELECT "CodPar", "Descri" FROM cost360_items WHERE "CodPar" IN :id_tuple')
+                    desc_rows = db.execute(sql_desc, {"id_tuple": tuple(eval_ids)}).fetchall()
+                    desc_map = {row.CodPar: row.Descri for row in desc_rows}
+                    
+                    for candidate in top_candidates:
+                        desc = desc_map.get(candidate["id"], "")
+                        score_mod = 0.0
+                        
+                        # 4a. Ponderación por Material Técnico
+                        if query_mats:
+                            item_mats = detect_materials(desc)
+                            for cat, q_mat_set in query_mats.items():
+                                it_mat_set = item_mats.get(cat, set())
+                                # Coincidencia exacta del material solicitado
+                                if q_mat_set & it_mat_set:
+                                    score_mod += 0.12
+                                # Conflicto con material incompatible de la misma categoría
+                                elif it_mat_set and not (q_mat_set & it_mat_set):
+                                    score_mod -= 0.08
+
+                        # 4b. Ponderación por Dimensiones Técnicas (Exact Match & Conflict Penalty)
+                        if query_dims:
+                            item_dims = extract_unified_dimensions(desc)
+                            dim_delta, _ = score_dimension_match(query_dims, item_dims)
+                            score_mod += dim_delta
+
+                        # 4c. Penalización Severa por Exclusiones Explícitas ("sin mixer", "sin maquinaria")
+                        if query_exclusions:
+                            desc_upper = desc.upper()
+                            for ex in query_exclusions:
+                                if re.search(r"\b" + re.escape(ex) + r"\b", desc_upper):
+                                    score_mod -= 0.35
+                                    break
+                                
+                        candidate["score"] = candidate["score"] + score_mod
+                    
+                    top_candidates.sort(key=lambda x: x["score"], reverse=True)
+                    hybrid_results = top_candidates + remaining_candidates
+                except Exception as exc:
+                    logger.error("Error aplicando ponderacion tecnica (materiales/dimensiones) en hybrid_search: %s", exc, exc_info=True)
+
         return hybrid_results[:limit]
 
 ai_engine = AISearchEngine()

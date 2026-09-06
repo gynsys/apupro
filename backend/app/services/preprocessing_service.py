@@ -25,6 +25,7 @@ from app.db.models.cost360 import (
     CostLabor,
     CostMaterial,
 )
+from app.services.ai_apu_service import get_dynamic_candidates
 
 # ---------------------------------------------------------------------------
 # Configuración de logging
@@ -196,9 +197,7 @@ def _find_similar_items(
     Busca partidas usando la lógica de expansión dinámica (cascada) y devuelve
     las partidas junto con el mejor score semántico y la traza de los scores.
     """
-    from app.services.smart_selector_service import _get_dynamic_candidates
-    
-    scored_items, best_score = _get_dynamic_candidates(db, description, covenin_prefix or "", limit=15)
+    scored_items, best_score = get_dynamic_candidates(db, description, covenin_prefix or "", limit=15)
     similar_items = [p["item"] for p in scored_items] if scored_items else []
     
     if not similar_items and covenin_prefix:
@@ -713,7 +712,6 @@ def fast_preprocess_debug(
     No consume tokens de IA ni carga el modelo MiniLM.
     """
     try:
-        from app.services.smart_selector_service import _get_dynamic_candidates
         from app.services.ai_search import ai_engine
         
         if not getattr(ai_engine, "is_loaded", False):
@@ -723,7 +721,7 @@ def fast_preprocess_debug(
         
         if description:
             # 1. Búsqueda Híbrida (La nueva y mejorada) - Traer 40 para debug
-            scored_items, _ = _get_dynamic_candidates(db, description, covenin_prefix or "", limit=40)
+            scored_items, _ = get_dynamic_candidates(db, description, covenin_prefix or "", limit=40)
             estrategia_hibrida = [{"codpar": p["item"].CodPar, "descripcion": p["item"].Descri, "puntaje_hibrido": p["score"]} for p in scored_items]
             
             # Ganadora y Complementarias
