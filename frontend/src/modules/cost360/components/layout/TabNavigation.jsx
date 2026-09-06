@@ -23,6 +23,7 @@ const TabNavigation = ({
   onlyCoded,
   onToggleOnlyCoded,
   onToggleCategory,
+  onLimitChange,
 }) => {
   // Costos desde contexto global — persisten en BD por usuario
   const { costosConfig, updateCostosConfig, loading } = useUserCostos();
@@ -157,6 +158,7 @@ const TabNavigation = ({
         onlyCoded={onlyCoded}
         onToggleOnlyCoded={onToggleOnlyCoded}
         onToggleCategory={onToggleCategory}
+        onLimitChange={onLimitChange}
         onUpdateRAGBrain={handleUpdateRAGBrain}
       />
     </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Wrench, CheckCircle, Sliders } from 'lucide-react';
 import { FiDatabase, FiCpu } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
@@ -14,6 +15,7 @@ export default function UtilitiesModal({
   onlyCoded = false,
   onToggleOnlyCoded,
   onToggleCategory,
+  onLimitChange,
   onUpdateRAGBrain,
 }) {
   const navigate = useNavigate();
@@ -61,14 +63,14 @@ export default function UtilitiesModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200 animate-slide-up">
+  const modalContent = (
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200 animate-slide-up max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="bg-slate-900 p-5 text-white relative">
+        <div className="bg-slate-900 p-5 text-white relative shrink-0">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-800"
+            className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
             aria-label="Cerrar modal"
           >
             <X size={20} />
@@ -83,14 +85,14 @@ export default function UtilitiesModal({
                 Utilitarios y Herramientas del Administrador
               </h2>
               <p className="text-xs text-slate-300 mt-0.5">
-                Panel centralizado de utilitarios: depuración, filtros de catálogo, motor RAG y automatización
+                Panel centralizado: depuración, filtros de catálogo, límites y motor RAG
               </p>
             </div>
           </div>
         </div>
 
         {/* Content Body */}
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+        <div className="p-6 space-y-6 flex-1 overflow-y-auto">
           {/* SECCIÓN 1: Inteligencia Artificial, RAG y Depuración */}
           <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
@@ -119,7 +121,7 @@ export default function UtilitiesModal({
               </div>
             </div>
 
-            {/* Elemento 5: Botones RAG y Auto IA */}
+            {/* Botones RAG y Auto IA */}
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                 Acciones del Motor IA (RAG & Automatización)
@@ -164,7 +166,7 @@ export default function UtilitiesModal({
             )}
           </div>
 
-          {/* SECCIÓN 2: Filtros de Catálogo y Partidas (Elementos 2, 3 y 4) */}
+          {/* SECCIÓN 2: Filtros de Catálogo y Partidas */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-4">
             <div className="border-b border-slate-200 pb-3">
               <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
@@ -176,9 +178,9 @@ export default function UtilitiesModal({
               </p>
             </div>
 
-            {/* Elemento 2 & 3: Filtro Publico Global y Filtro Local */}
+            {/* Filtro Publico Global y Filtro Local */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Elemento 2: Filtro Publico Global */}
+              {/* Filtro Publico Global */}
               <div className="flex items-center gap-3 px-3.5 py-2.5 bg-indigo-50 border border-indigo-100 rounded-xl" title="Afecta a todos los usuarios del sistema">
                 <input
                   type="checkbox"
@@ -197,7 +199,7 @@ export default function UtilitiesModal({
                 </div>
               </div>
 
-              {/* Elemento 3: Filtro Local (Tu vista) */}
+              {/* Filtro Local (Tu vista) */}
               <div className="flex items-center gap-3 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl shadow-xs">
                 <input
                   type="checkbox"
@@ -217,7 +219,7 @@ export default function UtilitiesModal({
               </div>
             </div>
 
-            {/* Elemento 4: Visibilidad de Capítulos */}
+            {/* Visibilidad de Capítulos */}
             <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold text-slate-700 block">
@@ -232,10 +234,41 @@ export default function UtilitiesModal({
               </div>
             </div>
           </div>
+
+          {/* SECCIÓN 3: Configuración y Límites de Bases de Datos */}
+          <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
+            <div className="border-b border-slate-200 pb-2">
+              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-emerald-600" />
+                Límites y Parámetros de Base de Datos
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Control de cuotas y parámetros para usuarios del sistema
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between p-3.5 bg-white border border-slate-200 rounded-xl shadow-xs">
+              <div>
+                <span className="text-xs font-bold text-slate-700 block">Límite de Bases de Datos por Usuario</span>
+                <span className="text-[11px] text-slate-500 block">Cantidad máxima de bases de datos personalizadas permitidas por usuario</span>
+              </div>
+              <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
+                <label className="text-xs font-semibold text-slate-600">Límite BD/Usuario:</label>
+                <input 
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={config?.max_user_databases || 2}
+                  onChange={(e) => onLimitChange && onLimitChange(e.target.value)}
+                  className="w-12 text-center text-sm font-medium border border-slate-300 rounded focus:outline-none focus:border-blue-500 py-0.5"
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end">
+        <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end shrink-0">
           <button
             type="button"
             onClick={onClose}
@@ -247,4 +280,6 @@ export default function UtilitiesModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

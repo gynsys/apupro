@@ -13,6 +13,7 @@ from app.schemas.cost360 import (
 import uuid
 import json
 import unicodedata
+import re
 
 def strip_accents(s: str) -> str:
     if not s:
@@ -174,8 +175,59 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
     items = query.order_by(covenin_priority, CostItem.CodPar).offset(skip).limit(limit).all()
     return total, items
 
-def get_item_by_code(db: Session, item_code: str):
+def get_item_by_code(db: Session, item_code: str) -> Optional[CostItem]:
     return db.query(CostItem).filter(CostItem.CodPar == item_code).first()
+
+def get_item_by_code_or_covpar(db: Session, code_str: str) -> Optional[CostItem]:
+    """
+    Search CostItem by CodPar or CovPar (exact or normalized without punctuation).
+    """
+    if not code_str:
+        return None
+    raw = code_str.strip()
+    # 1. Exact match case-insensitive
+    item = db.query(CostItem).filter(
+        or_(
+            func.upper(CostItem.CodPar) == raw.upper(),
+            func.upper(CostItem.CovPar) == raw.upper()
+        )
+    ).first()
+    if item:
+        return item
+    
+    # 2. Normalized match (remove dots, dashes, spaces)
+    clean = re.sub(r'[^A-Za-z0-9]', '', raw).upper()
+    if len(clean) >= 3:
+        item = db.query(CostItem).filter(
+            or_(
+                func.replace(func.replace(func.replace(func.upper(CostItem.CodPar), '.', ''), '-', ''), ' ', '') == clean,
+                func.replace(func.replace(func.replace(func.upper(CostItem.CovPar), '.', ''), '-', ''), ' ', '') == clean
+            )
+        ).first()
+        if item:
+            return item
+    return None
+
+def get_similar_items_by_code_prefix(db: Session, code_str: str, limit: int = 5) -> Tuple[List[CostItem], str]:
+    """
+    Search up to `limit` CostItem rows matching the beginning of the code prefix.
+    """
+    if not code_str:
+        return [], ""
+    raw = code_str.strip()
+    clean = re.sub(r'[^A-Za-z0-9]', '', raw).upper()
+    for length in (5, 4, 3):
+        if len(clean) >= length:
+            prefix = clean[:length]
+            items = db.query(CostItem).filter(
+                or_(
+                    CostItem.CodPar.ilike(f"{prefix}%"),
+                    CostItem.CovPar.ilike(f"{prefix}%")
+                )
+            ).limit(limit).all()
+            if items:
+                return items, prefix
+    return [], ""
 
 def get_apu_materials(db: Session, item_code: str):
     return db.query(CostAPUMaterial, CostMaterial)\

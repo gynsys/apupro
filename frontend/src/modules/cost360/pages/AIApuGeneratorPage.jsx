@@ -852,8 +852,8 @@ export default function AIApuGeneratorPage() {
       setGuidedIncluye(null);
       setGuidedUnidad(null);
       setChatbotLoadingStage(0);
-      setPrompt('');
-      toast.error("Descripción no válida o ambigua. Revisa las preguntas de clarificación.", { icon: '⚠️' });
+      setPrompt(textToSubmit);
+      toast.error("Se requiere una descripción técnica estructurada.", { icon: '⚠️' });
     } else {
       setIsClarifying(false);
       setIsGuidedMode(false);

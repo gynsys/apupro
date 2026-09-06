@@ -213,6 +213,7 @@ const AdminDatabasePage = () => {
           onlyCoded={onlyCoded}
           onToggleOnlyCoded={setOnlyCoded}
           onToggleCategory={toggleCategory}
+          onLimitChange={handleLimitChange}
         />
       </div>
 
@@ -262,17 +263,6 @@ const AdminDatabasePage = () => {
           </button>
         </div>
         <div className="flex gap-4 items-center">
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
-            <label className="text-xs font-semibold text-slate-600">Límite BD/Usuario:</label>
-            <input 
-              type="number"
-              min="1"
-              max="20"
-              value={config?.max_user_databases || 2}
-              onChange={(e) => handleLimitChange(e.target.value)}
-              className="w-12 text-center text-sm font-medium border border-slate-300 rounded focus:outline-none focus:border-blue-500 py-0.5"
-            />
-          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate('/cost360/databases')}

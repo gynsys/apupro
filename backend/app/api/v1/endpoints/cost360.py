@@ -85,7 +85,7 @@ RESOURCE_CONFIG: Dict[str, Dict[str, str]] = {
 
 # Import Services and CRUD
 from app.crud.crud_cost360 import (
-    get_items_paginated, get_item_by_code,
+    get_items_paginated, get_item_by_code, get_item_by_code_or_covpar, get_similar_items_by_code_prefix,
     get_apu_materials, get_apu_equipments, get_apu_labors,
     search_materials_paginated, search_equipments_paginated, search_labors_paginated,
     get_categories_tree_data,
@@ -98,6 +98,7 @@ from app.crud.crud_cost360 import (
 )
 from app.services.preprocessing_service import preprocess_apu_data, fast_preprocess_debug
 from app.services.ai_apu_service import (
+    is_code_input,
     generate_apu_with_ai,
     generate_apu_with_ai_from_base,
     get_dynamic_candidates,
@@ -590,103 +591,9 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
     # Verificar acceso a IA
     check_ai_access(current_user)
 
-    # 0. Normalización y Expansión Técnica con Diccionario (Paso 1)
-    if payload.description:
-        payload.description = expand_technical_synonyms(payload.description)
-
-    # 0.1. Si es solo preproceso DEBUG, devolver resultado rapido
-    if payload.only_preprocess:
-        from app.services.ai_search import ai_engine
-        debug_data = fast_preprocess_debug(
-            db, payload.description, payload.covenin_prefix, payload.covenin_context
-        )
-        # Inyectar estado real del motor IA para diagnóstico
-        debug_data["motor_ia_estado"] = {
-            "is_loaded": ai_engine.is_loaded,
-            "total_ids_mapeados": len(ai_engine.ids_mapping),
-            "embeddings_forma": str(ai_engine.embeddings.shape) if ai_engine.embeddings is not None else "No cargado",
-        }
-        return {
-            "status": "clarification_needed",
-            "clarification_message": f"MODO DEBUG: {len(debug_data.get('todas_las_partidas_covenin', []))} candidatas encontradas tras expansión dinámica",
-            "options": [],
-            "questions": [],
-            "debug_preprocesamiento": debug_data
-        }
-
-    # 0.5. MODO RAG / ADAPTACIÓN DE BASE REAL
-    base_code = payload.base_partida_code
-    candidates = []
-    if not base_code and not payload.only_preprocess:
-        # Búsqueda RAG Híbrida automática para encontrar la mejor partida base
-        candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
-        if candidates and candidates[0]["score"] >= 0.35:
-            base_code = candidates[0]["item"].CodPar
-
-    if base_code:
-        base_apu = fetch_base_apu_for_prompt(db, base_code)
-        
-        all_candidates_trace = []
-        complementary_apus = []
-        try:
-            if not candidates:
-                candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
-            all_candidates_trace = [
-                {"codpar": c["item"].CodPar, "covenin": c["item"].CovPar, "descripcion": c["item"].Descri, "score": c["score"]}
-                for c in candidates
-            ]
-            complementary_apus = select_relevant_complementary_apus(
-                db=db,
-                user_description=payload.description,
-                base_apu=base_apu,
-                candidates=candidates,
-                max_complementary=2,
-            )
-        except Exception as exc:
-            logger.error("Error fetching complementary APUs: %s", exc, exc_info=True)
-
-        history_dicts = [msg.model_dump() for msg in payload.history] if payload.history else []
-        result = generate_apu_with_ai_from_base(
-            base_apu=base_apu,
-            complementary_apus=complementary_apus,
-            user_description=payload.description,
-            covenin_prefix=payload.covenin_prefix or "",
-            covenin_context=payload.covenin_context or "",
-            smart_answers=payload.smart_answers or {},
-            history=history_dicts,
-        )
-        # Inyectar traza completa del RAG Híbrido en el resultado para debug
-        result["debug_rag_trace"] = {
-            "motor_rag": "RAG Híbrido (MiniLM + Léxico)",
-            "solicitud_usuario": payload.description,
-            "covenin_prefix": payload.covenin_prefix,
-            "covenin_context": payload.covenin_context,
-            "partida_base_ganadora": {
-                "codpar": base_apu.get("codpar"),
-                "covenin": base_apu.get("covenin"),
-                "descripcion": base_apu.get("descripcion")
-            },
-            "partidas_complementarias": [
-                {"codpar": c.get("codpar"), "covenin": c.get("covenin"), "descripcion": c.get("descripcion")}
-                for c in complementary_apus
-            ],
-            "top_candidatas_evaluadas": all_candidates_trace
-        }
-        if (result.get("status") in ("success", "completed")) and result.get("partida"):
-            from app.db.arko_base import ArkoSessionLocal
-            with ArkoSessionLocal() as adb:
-                db_user = adb.query(current_user.__class__).filter_by(id=current_user.id).first()
-                if db_user:
-                    db_user.ai_apus_generated = getattr(db_user, 'ai_apus_generated', 0) + 1
-                    adb.commit()
-        return result
-
-    # 1. Preprocesamiento (BD + Estadísticas) + IA semantica
-    payload_llm = preprocess_apu_data(db, payload.description, payload.covenin_prefix, payload.covenin_context)
-    
-    # 0.8. Si el usuario aceptó la partida de Match Exacto ("Sí, es esa")
+    # 0. Si el usuario aceptó la partida de Match Exacto ("Sí, es esa"), devolver APU de BD directamente
     if payload.accept_exact_match_code:
-        item = get_item_by_code(db, payload.accept_exact_match_code)
+        item = get_item_by_code_or_covpar(db, payload.accept_exact_match_code)
         if item:
             mat_results = get_apu_materials(db, item.CodPar)
             eq_results = get_apu_equipments(db, item.CodPar)
@@ -753,10 +660,136 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
                 ]
             }
 
-    # 1. Preprocesamiento (BD + Estadísticas) + IA semantica
+    # 1. Early Validation & Detección de Código vs Descripción de Obra
+    raw_desc = (payload.description or "").strip()
+    if not raw_desc or len(raw_desc) < 3:
+        return {
+            "status": "clarification_needed",
+            "clarification_message": "La descripción ingresada es demasiado breve o vacía para estructurar un Análisis de Precios Unitarios (APU). Por favor describe la actividad a ejecutar.",
+            "options": [],
+            "questions": [
+                "1. ¿Qué actividad constructiva específica deseas presupuestar?",
+                "2. ¿Qué materiales y equipos principales intervienen?",
+                "3. ¿En qué unidad de medida se computa la partida?"
+            ],
+            "guia_redaccion": "Estructura recomendada: [Acción] + [Elemento] + [Material/Especificación] + [Unidad]."
+        }
+
+    # Si el usuario ingresó únicamente un código o nomenclatura (ej: 'E11102235', 'CMT050', etc.):
+    # El generador con IA no es un buscador de partidas por código; requiere una descripción técnica estructurada.
+    if is_code_input(raw_desc):
+        return {
+            "status": "clarification_needed",
+            "clarification_message": (
+                f"El texto ingresado ('{raw_desc}') corresponde a un código o nomenclatura y no a una descripción técnica de obra.\n\n"
+                "Para generar un APU con Inteligencia Artificial, describe la actividad técnica a ejecutar "
+                "(ej: 'Construcción provisional convencional de oficinas, sin friso ni cielo raso' o 'Suministro e instalación de bomba centrífuga').\n\n"
+                "Te recomendamos utilizar el Asistente Guiado (Chatbot) o el APU Builder para estructurar tu descripción paso a paso."
+            ),
+            "options": [],
+            "questions": [
+                "1. ¿Cuál es la actividad técnica principal que deseas presupuestar? (Acción + Elemento)",
+                "2. ¿Qué especificaciones, materiales o condiciones aplican?",
+                "3. ¿En qué unidad de medida se computa la partida (m2, m3, und, kg, etc.)?"
+            ],
+            "guia_redaccion": "Estructura recomendada: [Acción] + [Elemento] + [Especificaciones/Materiales] + [Unidad]."
+        }
+
+    # 2. Normalización y Expansión Técnica con Diccionario (Paso 1)
+    if payload.description:
+        payload.description = expand_technical_synonyms(payload.description)
+
+    # 2.1. Si es solo preproceso DEBUG, devolver resultado rapido
+    if payload.only_preprocess:
+        from app.services.ai_search import ai_engine
+        debug_data = fast_preprocess_debug(
+            db, payload.description, payload.covenin_prefix, payload.covenin_context
+        )
+        # Inyectar estado real del motor IA para diagnóstico
+        debug_data["motor_ia_estado"] = {
+            "is_loaded": ai_engine.is_loaded,
+            "total_ids_mapeados": len(ai_engine.ids_mapping),
+            "embeddings_forma": str(ai_engine.embeddings.shape) if ai_engine.embeddings is not None else "No cargado",
+        }
+        return {
+            "status": "clarification_needed",
+            "clarification_message": f"MODO DEBUG: {len(debug_data.get('todas_las_partidas_covenin', []))} candidatas encontradas tras expansión dinámica",
+            "options": [],
+            "questions": [],
+            "debug_preprocesamiento": debug_data
+        }
+
+    # 2.5. MODO RAG / ADAPTACIÓN DE BASE REAL
+    base_code = payload.base_partida_code
+    candidates = []
+    if not base_code and not payload.only_preprocess:
+        # Búsqueda RAG Híbrida automática para encontrar la mejor partida base
+        candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
+        if candidates and candidates[0]["score"] >= 0.35:
+            base_code = candidates[0]["item"].CodPar
+
+    if base_code:
+        base_apu = fetch_base_apu_for_prompt(db, base_code)
+        
+        all_candidates_trace = []
+        complementary_apus = []
+        try:
+            if not candidates:
+                candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
+            all_candidates_trace = [
+                {"codpar": c["item"].CodPar, "covenin": c["item"].CovPar, "descripcion": c["item"].Descri, "score": c["score"]}
+                for c in candidates
+            ]
+            complementary_apus = select_relevant_complementary_apus(
+                db=db,
+                user_description=payload.description,
+                base_apu=base_apu,
+                candidates=candidates,
+                max_complementary=2,
+            )
+        except Exception as exc:
+            logger.error("Error fetching complementary APUs: %s", exc, exc_info=True)
+
+        history_dicts = [msg.model_dump() for msg in payload.history] if payload.history else []
+        result = generate_apu_with_ai_from_base(
+            base_apu=base_apu,
+            complementary_apus=complementary_apus,
+            user_description=payload.description,
+            covenin_prefix=payload.covenin_prefix or "",
+            covenin_context=payload.covenin_context or "",
+            smart_answers=payload.smart_answers or {},
+            history=history_dicts,
+        )
+        # Inyectar traza completa del RAG Híbrido en el resultado para debug
+        result["debug_rag_trace"] = {
+            "motor_rag": "RAG Híbrido (MiniLM + Léxico)",
+            "solicitud_usuario": payload.description,
+            "covenin_prefix": payload.covenin_prefix,
+            "covenin_context": payload.covenin_context,
+            "partida_base_ganadora": {
+                "codpar": base_apu.get("codpar"),
+                "covenin": base_apu.get("covenin"),
+                "descripcion": base_apu.get("descripcion")
+            },
+            "partidas_complementarias": [
+                {"codpar": c.get("codpar"), "covenin": c.get("covenin"), "descripcion": c.get("descripcion")}
+                for c in complementary_apus
+            ],
+            "top_candidatas_evaluadas": all_candidates_trace
+        }
+        if (result.get("status") in ("success", "completed")) and result.get("partida"):
+            from app.db.arko_base import ArkoSessionLocal
+            with ArkoSessionLocal() as adb:
+                db_user = adb.query(current_user.__class__).filter_by(id=current_user.id).first()
+                if db_user:
+                    db_user.ai_apus_generated = getattr(db_user, 'ai_apus_generated', 0) + 1
+                    adb.commit()
+        return result
+
+    # 3. Preprocesamiento (BD + Estadísticas) + IA semantica (Fallback clásico sin base directa)
     payload_llm = preprocess_apu_data(db, payload.description, payload.covenin_prefix, payload.covenin_context)
     
-    # 1.5. Pregunta interactiva si hay Match Exacto y el usuario aún no ha omitido
+    # 3.5. Pregunta interactiva si hay Match Exacto y el usuario aún no ha omitido
     if payload_llm.get("modo") == "partida_exacta_encontrada" and not payload.bypass_exact_match:
         cod_par = payload_llm.get("partida_exacta_codigo")
         item = get_item_by_code(db, cod_par)
@@ -774,7 +807,7 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
                 "message": "Existe una partida que coincide casi al 100% con tu descripción:"
             }
 
-    # 2. Generación con IA (LLM Router)
+    # 4. Generación con IA (LLM Router)
     history_dicts = [msg.model_dump() for msg in payload.history] if payload.history else []
     result = generate_apu_with_ai(payload_llm, history_dicts)
     
