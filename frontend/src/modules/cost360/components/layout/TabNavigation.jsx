@@ -3,8 +3,9 @@ import { TABS } from '../../constants/tabs.config';
 import { useUserCostos } from '../../../../context/UserCostosContext';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { FiDatabase } from 'react-icons/fi';
+import { FiDatabase, FiTool } from 'react-icons/fi';
 import { apiPost } from '../../../../lib/apiHelper';
+import UtilitiesModal from '../modals/UtilitiesModal';
 
 
 
@@ -20,6 +21,7 @@ const TabNavigation = ({ activeTab, onTabChange }) => {
 
   // Estado local para edición en curso (antes de guardar)
   const [draft, setDraft] = useState(null);
+  const [isUtilitiesOpen, setIsUtilitiesOpen] = useState(false);
   const currentCostos = draft ?? costosConfig;
 
   const navigate = useNavigate();
@@ -97,6 +99,14 @@ const TabNavigation = ({ activeTab, onTabChange }) => {
             </svg>
             Auto IA
           </button>
+          <button
+            onClick={() => setIsUtilitiesOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg shadow-sm hover:shadow-md transition-all hover:scale-[1.02] border border-slate-700"
+            title="Utilitarios y Herramientas de Administrador"
+          >
+            <FiTool className="w-3.5 h-3.5 text-amber-400" />
+            Utilitarios
+          </button>
       </div>
 
       {/* Inputs de costos */}
@@ -146,6 +156,10 @@ const TabNavigation = ({ activeTab, onTabChange }) => {
         </button>
       </div>
 
+      <UtilitiesModal
+        isOpen={isUtilitiesOpen}
+        onClose={() => setIsUtilitiesOpen(false)}
+      />
     </div>
   );
 };

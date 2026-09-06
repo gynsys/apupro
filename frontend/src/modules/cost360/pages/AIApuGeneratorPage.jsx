@@ -162,9 +162,6 @@ export default function AIApuGeneratorPage() {
   const [aiGuiaRedaccion, setAiGuiaRedaccion] = useState(null);
   const [isClarifying, setIsClarifying] = useState(false);
   const [debugInfo, setDebugInfo] = useState(null);
-  const [autoDownloadDebugJson, setAutoDownloadDebugJson] = useState(() => {
-    return localStorage.getItem('auto_download_debug_json') === 'true';
-  });
 
   // Match Exacto Interactivo
   const [exactMatchCandidate, setExactMatchCandidate] = useState(null);
@@ -703,8 +700,9 @@ export default function AIApuGeneratorPage() {
       setDebugInfo(null);
     }
 
-    // Auto-descarga de Debug JSON si el toggle está activo
-    if (autoDownloadDebugJson && currentDebug) {
+    // Auto-descarga de Debug JSON si está habilitado desde Utilitarios de Administrador
+    const shouldDownloadDebug = localStorage.getItem('auto_download_debug_json') === 'true';
+    if (shouldDownloadDebug && currentDebug) {
       try {
         const blob = new Blob([JSON.stringify(currentDebug, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -935,30 +933,6 @@ export default function AIApuGeneratorPage() {
             {creationMode === 'manual' ? 'Nuevo APU (Desde Cero)' : creationMode === 'import' ? 'Importar / Clonar APU' : 'Generador de APU con IA'}
           </h2>
         </div>
-
-        {isAdmin && creationMode === 'ia' && (
-          <div className="flex items-center gap-2 bg-slate-900 text-white px-3 py-1.5 rounded-xl border border-slate-700 shadow-xs" title="Exclusivo Admin: Descarga automáticamente el log técnico JSON de depuración al generar">
-            <span className="text-[11px] font-mono font-bold text-slate-200">Debug JSON</span>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={autoDownloadDebugJson}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setAutoDownloadDebugJson(checked);
-                  localStorage.setItem('auto_download_debug_json', checked ? 'true' : 'false');
-                  if (checked) {
-                    toast.success('Descarga automática de Debug JSON ACTIVADA (Admin)');
-                  } else {
-                    toast('Descarga automática de Debug JSON DESACTIVADA', { icon: 'ℹ️' });
-                  }
-                }}
-                className="sr-only peer"
-              />
-              <div className="w-8 h-4 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-500 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-500"></div>
-            </label>
-          </div>
-        )}
       </div>
 
 
