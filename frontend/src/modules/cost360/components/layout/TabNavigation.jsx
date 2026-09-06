@@ -15,7 +15,15 @@ const updateRAGBrain = async () => {
   return response.json();
 };
 
-const TabNavigation = ({ activeTab, onTabChange }) => {
+const TabNavigation = ({
+  activeTab,
+  onTabChange,
+  config,
+  onToggleGlobalCoded,
+  onlyCoded,
+  onToggleOnlyCoded,
+  onToggleCategory,
+}) => {
   // Costos desde contexto global — persisten en BD por usuario
   const { costosConfig, updateCostosConfig, loading } = useUserCostos();
 
@@ -79,33 +87,18 @@ const TabNavigation = ({ activeTab, onTabChange }) => {
       </div>
 
       
-      {/* Botones de Admin integrados */}
+      {/* Botón de Utilitarios Integrado (Agrupa RAG, Auto IA, Filtros y Debug JSON) */}
       <div className="flex gap-2 items-center pb-2 ml-4 mr-auto">
-          <button
-            onClick={handleUpdateRAGBrain}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold rounded-lg shadow-sm hover:shadow-md transition-all hover:scale-[1.02]"
-            title="Actualizar Cerebro RAG"
-          >
-            <FiDatabase className="w-3.5 h-3.5" />
-            RAG
-          </button>
-          <button
-            onClick={() => navigate('/cost360/market-admin')}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold rounded-lg shadow-sm hover:shadow-md transition-all hover:scale-[1.02]"
-            title="Automatización IA"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            Auto IA
-          </button>
           <button
             onClick={() => setIsUtilitiesOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg shadow-sm hover:shadow-md transition-all hover:scale-[1.02] border border-slate-700"
-            title="Utilitarios y Herramientas de Administrador"
+            title="Utilitarios del Administrador (RAG, Auto IA, Filtros de Catálogo y Debug JSON)"
           >
             <FiTool className="w-3.5 h-3.5 text-amber-400" />
             Utilitarios
+            {(config?.forceOnlyCodedMaster || onlyCoded) && (
+              <span className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse" title="Filtros de catálogo activos" />
+            )}
           </button>
       </div>
 
@@ -159,6 +152,12 @@ const TabNavigation = ({ activeTab, onTabChange }) => {
       <UtilitiesModal
         isOpen={isUtilitiesOpen}
         onClose={() => setIsUtilitiesOpen(false)}
+        config={config}
+        onToggleGlobalCoded={onToggleGlobalCoded}
+        onlyCoded={onlyCoded}
+        onToggleOnlyCoded={onToggleOnlyCoded}
+        onToggleCategory={onToggleCategory}
+        onUpdateRAGBrain={handleUpdateRAGBrain}
       />
     </div>
   );

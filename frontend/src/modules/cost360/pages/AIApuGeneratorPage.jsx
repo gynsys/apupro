@@ -16,6 +16,9 @@ import CreatableSelect from 'react-select/creatable';
 import SubscriptionRequestModal from '../../../components/SubscriptionRequestModal';
 
 const ACCIONES_OPCIONES = [
+  { value: 'Suministro e instalación de', label: 'Suministro e instalación de' },
+  { value: 'Suministro de', label: 'Suministro de' },
+  { value: 'Instalación de', label: 'Instalación de' },
   { value: 'Limpieza de terreno', label: 'Limpieza de terreno' },
   { value: 'Trazo y replanteo', label: 'Trazo y replanteo' },
   { value: 'Demolición de', label: 'Demolición de' },
@@ -145,14 +148,37 @@ export default function AIApuGeneratorPage() {
   useEffect(() => {
     if (isGuidedMode) {
       const parts = [];
-      if (guidedAccion && guidedAccion !== 'Omitir' && guidedAccion !== 'Ninguno' && guidedAccion !== 'Ninguno / Omitir') parts.push(guidedAccion);
-      if (guidedUbicacion && guidedUbicacion !== 'Omitir' && guidedUbicacion !== 'Ninguno' && guidedUbicacion !== 'Ninguno / Omitir') parts.push(guidedUbicacion);
-      if (guidedMaterial && guidedMaterial !== 'Omitir' && guidedMaterial !== 'Ninguno' && guidedMaterial !== 'Ninguno / Omitir') parts.push(guidedMaterial);
-      if (guidedIncluye && guidedIncluye !== 'Omitir' && guidedIncluye !== 'Ninguno' && guidedIncluye !== 'Ninguno / Omitir') parts.push(guidedIncluye);
-      if (guidedUnidad && guidedUnidad !== 'Sugerir por IA' && guidedUnidad !== 'Omitir' && guidedUnidad !== 'Ninguno' && guidedUnidad !== 'Ninguno / Omitir') parts.push(`unidad ${guidedUnidad}`);
-      setPrompt(parts.join(' ').trim());
+      if (guidedAccion && guidedAccion !== 'Omitir' && guidedAccion !== 'Ninguno' && guidedAccion !== 'Ninguno / Omitir') {
+        parts.push(guidedAccion);
+      }
+      if (guidedMaterial && guidedMaterial !== 'Omitir' && guidedMaterial !== 'Ninguno' && guidedMaterial !== 'Ninguno / Omitir') {
+        const matLower = guidedMaterial.toLowerCase();
+        const accLower = (guidedAccion || '').toLowerCase();
+        if (!accLower.endsWith('de') && !accLower.endsWith('en') && !matLower.startsWith('de ') && !matLower.startsWith('del ') && !matLower.startsWith('en ')) {
+          parts.push(`de ${guidedMaterial}`);
+        } else {
+          parts.push(guidedMaterial);
+        }
+      }
+      if (guidedUbicacion && guidedUbicacion !== 'Omitir' && guidedUbicacion !== 'Ninguno' && guidedUbicacion !== 'Ninguno / Omitir') {
+        const ubiLower = guidedUbicacion.toLowerCase();
+        const hasPrep = ubiLower.startsWith('para ') || ubiLower.startsWith('en ') || ubiLower.startsWith('sobre ') || ubiLower.startsWith('hacia ') || ubiLower.startsWith('bajo ');
+        if (!hasPrep) {
+          const isSupply = /suministr|instalac|colocac|montaje/i.test(guidedAccion || '');
+          parts.push(isSupply ? `para ${guidedUbicacion}` : `en ${guidedUbicacion}`);
+        } else {
+          parts.push(guidedUbicacion);
+        }
+      }
+      if (guidedIncluye && guidedIncluye !== 'Omitir' && guidedIncluye !== 'Ninguno' && guidedIncluye !== 'Ninguno / Omitir') {
+        parts.push(guidedIncluye);
+      }
+      if (guidedUnidad && guidedUnidad !== 'Sugerir por IA' && guidedUnidad !== 'Omitir' && guidedUnidad !== 'Ninguno' && guidedUnidad !== 'Ninguno / Omitir') {
+        parts.push(`unidad ${guidedUnidad}`);
+      }
+      setPrompt(parts.join(' ').replace(/\s+/g, ' ').trim());
     }
-  }, [guidedAccion, guidedUbicacion, guidedMaterial, guidedIncluye, guidedUnidad, isGuidedMode]);
+  }, [guidedAccion, guidedMaterial, guidedUbicacion, guidedIncluye, guidedUnidad, isGuidedMode]);
   
   // Conversational AI States
   const [chatHistory, setChatHistory] = useState([]);
@@ -406,8 +432,8 @@ export default function AIApuGeneratorPage() {
 
   const getStepValue = (step) => {
     if (step === 1) return guidedAccion;
-    if (step === 2) return guidedUbicacion;
-    if (step === 3) return guidedMaterial;
+    if (step === 2) return guidedMaterial;
+    if (step === 3) return guidedUbicacion;
     if (step === 4) return guidedIncluye;
     if (step === 5) return guidedUnidad;
     return '';
@@ -421,8 +447,8 @@ export default function AIApuGeneratorPage() {
     if (prevStep === 0) {
       setCurrentChatStep(0);
       setGuidedAccion(null);
-      setGuidedUbicacion(null);
       setGuidedMaterial(null);
+      setGuidedUbicacion(null);
       setGuidedIncluye(null);
       setGuidedUnidad(null);
       setChatInputValue('');
@@ -435,8 +461,8 @@ export default function AIApuGeneratorPage() {
     // Limpiar campos posteriores
     if (prevStep < 5) setGuidedUnidad(null);
     if (prevStep < 4) setGuidedIncluye(null);
-    if (prevStep < 3) setGuidedMaterial(null);
-    if (prevStep < 2) setGuidedUbicacion(null);
+    if (prevStep < 3) setGuidedUbicacion(null);
+    if (prevStep < 2) setGuidedMaterial(null);
     if (prevStep < 1) setGuidedAccion(null);
 
     const prevVal = getStepValue(prevStep);
@@ -460,8 +486,8 @@ export default function AIApuGeneratorPage() {
     const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: currentChatStep };
     
     let currentAccion = guidedAccion;
-    let currentUbicacion = guidedUbicacion;
     let currentMaterial = guidedMaterial;
+    let currentUbicacion = guidedUbicacion;
     let currentIncluye = guidedIncluye;
     let currentUnidad = guidedUnidad;
 
@@ -469,11 +495,11 @@ export default function AIApuGeneratorPage() {
       setGuidedAccion(cleanText);
       currentAccion = cleanText;
     } else if (currentChatStep === 2) {
-      setGuidedUbicacion(cleanText);
-      currentUbicacion = cleanText;
-    } else if (currentChatStep === 3) {
       setGuidedMaterial(cleanText);
       currentMaterial = cleanText;
+    } else if (currentChatStep === 3) {
+      setGuidedUbicacion(cleanText);
+      currentUbicacion = cleanText;
     } else if (currentChatStep === 4) {
       setGuidedIncluye(cleanText);
       currentIncluye = cleanText;
@@ -485,6 +511,8 @@ export default function AIApuGeneratorPage() {
     const nextStep = currentChatStep === 0 ? 1 : currentChatStep + 1;
     setCurrentChatStep(nextStep);
     
+    const isSupplyOrInstall = /suministr|instalac|colocac|montaje/i.test(currentAccion || '');
+
     let nextBotMsg = null;
     if (nextStep === 1) {
       nextBotMsg = { 
@@ -493,59 +521,100 @@ export default function AIApuGeneratorPage() {
         step: 1,
         text: 'Paso 1 de 5: La Acción\n¿Qué acción o proceso constructivo se va a realizar?', 
         chips: [
-          'Construcción',
+          'Suministro e instalación',
           'Suministro',
           'Instalación',
+          'Construcción',
           'Colocación',
           'Demolición',
           'Excavación',
-          'Acarreo',
-          'Carga',
-          'Transporte',
+          'Vaciado de concreto',
           'Pintura',
+          'Acarreo',
           'Reparación',
           'Mantenimiento',
-          'Remoción',
           'Desmontaje',
           'Limpieza'
         ] 
       };
     } else if (nextStep === 2) {
-      nextBotMsg = { 
-        id: `bot-step-2-${Date.now()}`, 
-        sender: 'bot', 
-        step: 2,
-        text: 'Paso 2 de 5: El Elemento o Ubicación\n¿En qué elemento, estructura o lugar se aplicará?', 
-        chips: [
-          'Paredes',
-          'Losas',
-          'Columnas',
-          'Vigas',
-          'Zapatas',
-          'Fundaciones',
-          'Techos',
-          'Cubiertas',
-          'Pisos',
-          'Exteriores',
-          'Omitir'
-        ] 
-      };
+      if (isSupplyOrInstall) {
+        nextBotMsg = { 
+          id: `bot-step-2-${Date.now()}`, 
+          sender: 'bot', 
+          step: 2,
+          text: `Paso 2 de 5: ¿Qué se va a ${currentAccion ? currentAccion.toLowerCase() : 'suministrar o instalar'}?\nIndica el equipo, material o elemento específico:`, 
+          chips: [
+            'Bomba centrífuga',
+            'Bomba sumergible',
+            'Tablero eléctrico',
+            'Tubería PVC',
+            'Tubería de acero',
+            'Válvula compuerta',
+            'Transformador',
+            'Luminaria LED',
+            'Tanque de agua',
+            'Cable de cobre',
+            'Piezas sanitarias',
+            'Aire acondicionado',
+            'Omitir'
+          ] 
+        };
+      } else {
+        nextBotMsg = { 
+          id: `bot-step-2-${Date.now()}`, 
+          sender: 'bot', 
+          step: 2,
+          text: 'Paso 2 de 5: El Elemento o Material\n¿Qué elemento, estructura o material se va a intervenir o construir?', 
+          chips: [
+            'Paredes de bloques',
+            'Losa de concreto',
+            'Columnas y vigas',
+            'Zapatas / Fundaciones',
+            'Pisos / Pavimento',
+            'Techo / Cubierta',
+            'Acero de refuerzo',
+            'Omitir'
+          ] 
+        };
+      }
     } else if (nextStep === 3) {
-      nextBotMsg = { 
-        id: `bot-step-3-${Date.now()}`, 
-        sender: 'bot', 
-        step: 3,
-        text: 'Paso 3 de 5: El Material y Especificación\n¿Con qué material, resistencia o tipo específico?', 
-        chips: [
-          "Concreto f'c=210 kg/cm²",
-          "Concreto f'c=250 kg/cm²",
-          "Acero Fy=4200 kg/cm²",
-          'Bloque de arcilla',
-          'Bloque de concreto',
-          'Tubería PVC',
-          'Omitir'
-        ] 
-      };
+      if (isSupplyOrInstall) {
+        nextBotMsg = { 
+          id: `bot-step-3-${Date.now()}`, 
+          sender: 'bot', 
+          step: 3,
+          text: 'Paso 3 de 5: ¿Para qué sería o dónde?\nIndica el uso, destino, sistema o lugar de instalación (ej: para pozo profundo):', 
+          chips: [
+            'Para pozo profundo',
+            'Para sistema hidroneumático',
+            'Para aguas blancas',
+            'Para aguas servidas',
+            'Para sistema contra incendio',
+            'Para red eléctrica',
+            'En sala de máquinas',
+            'En exteriores',
+            'En interiores',
+            'Omitir'
+          ] 
+        };
+      } else {
+        nextBotMsg = { 
+          id: `bot-step-3-${Date.now()}`, 
+          sender: 'bot', 
+          step: 3,
+          text: 'Paso 3 de 5: Ubicación o Especificación\n¿En qué lugar, nivel o con qué especificación?', 
+          chips: [
+            "Concreto f'c=210 kg/cm²",
+            "Concreto f'c=250 kg/cm²",
+            'En planta baja',
+            'En sótano / fundaciones',
+            'En exteriores',
+            'En interiores',
+            'Omitir'
+          ] 
+        };
+      }
     } else if (nextStep === 4) {
       nextBotMsg = { 
         id: `bot-step-4-${Date.now()}`, 
@@ -553,13 +622,13 @@ export default function AIApuGeneratorPage() {
         step: 4,
         text: 'Paso 4 de 5: Alcance y Condiciones\n¿Qué incluye o excluye la partida?', 
         chips: [
+          'Incluye conexiones y accesorios',
+          'Incluye pruebas y puesta en marcha',
+          'Todo incluido (Mat + MO + Eq)',
+          'Solo suministro',
           'Solo mano de obra',
           'Incluye transporte',
-          'Incluye acarreo',
-          'No incluye suministro de materiales ni equipos',
-          'Todo incluido (Mat + MO + Eq)',
-          'Incluye encofrado',
-          'Incluye andamios',
+          'No incluye acometida',
           'Omitir'
         ] 
       };
@@ -570,12 +639,13 @@ export default function AIApuGeneratorPage() {
         step: 5,
         text: 'Paso 5 de 5: Unidad de Medida\n¿En qué unidad de medida se computará la partida?', 
         chips: [
-          'm³',
-          'm²',
-          'ml',
-          'kg',
-          'ton',
           'und',
+          'pza',
+          'm',
+          'ml',
+          'm²',
+          'm³',
+          'kg',
           'pto',
           'viaje',
           'Sugerir por IA'
@@ -587,15 +657,47 @@ export default function AIApuGeneratorPage() {
       setTimeout(() => setChatbotLoadingStage(3), 3000);
       setTimeout(() => setChatbotLoadingStage(4), 4500);
       setTimeout(() => {
-        const parts = [
-          currentAccion,
-          currentUbicacion,
-          currentMaterial,
-          currentIncluye,
-          (cleanText && cleanText !== 'Sugerir por IA' && cleanText !== 'Ninguno / Omitir' && cleanText !== 'Ninguno' && cleanText !== 'Omitir') ? `unidad ${cleanText}` : ''
-        ].filter(p => p && p !== 'Omitir' && p !== 'Ninguno' && p !== 'Ninguno / Omitir');
+        const parts = [];
         
-        const finalPrompt = parts.join(' ').trim();
+        // 1. Acción
+        if (currentAccion && currentAccion !== 'Omitir' && currentAccion !== 'Ninguno' && currentAccion !== 'Ninguno / Omitir') {
+          parts.push(currentAccion);
+        }
+        
+        // 2. ¿Qué se suministra o instala? (Material / Equipo / Elemento)
+        if (currentMaterial && currentMaterial !== 'Omitir' && currentMaterial !== 'Ninguno' && currentMaterial !== 'Ninguno / Omitir') {
+          const matLower = currentMaterial.toLowerCase();
+          const accLower = (currentAccion || '').toLowerCase();
+          if (!accLower.endsWith('de') && !accLower.endsWith('en') && !matLower.startsWith('de ') && !matLower.startsWith('del ') && !matLower.startsWith('en ')) {
+            parts.push(`de ${currentMaterial}`);
+          } else {
+            parts.push(currentMaterial);
+          }
+        }
+        
+        // 3. ¿Para qué o dónde? (Destino / Ubicación)
+        if (currentUbicacion && currentUbicacion !== 'Omitir' && currentUbicacion !== 'Ninguno' && currentUbicacion !== 'Ninguno / Omitir') {
+          const ubiLower = currentUbicacion.toLowerCase();
+          const hasPrep = ubiLower.startsWith('para ') || ubiLower.startsWith('en ') || ubiLower.startsWith('sobre ') || ubiLower.startsWith('hacia ') || ubiLower.startsWith('bajo ');
+          if (!hasPrep) {
+            const isSupply = /suministr|instalac|colocac|montaje/i.test(currentAccion || '');
+            parts.push(isSupply ? `para ${currentUbicacion}` : `en ${currentUbicacion}`);
+          } else {
+            parts.push(currentUbicacion);
+          }
+        }
+        
+        // 4. Alcance y Condiciones
+        if (currentIncluye && currentIncluye !== 'Omitir' && currentIncluye !== 'Ninguno' && currentIncluye !== 'Ninguno / Omitir') {
+          parts.push(currentIncluye);
+        }
+        
+        // 5. Unidad de medida
+        if (cleanText && cleanText !== 'Sugerir por IA' && cleanText !== 'Ninguno / Omitir' && cleanText !== 'Ninguno' && cleanText !== 'Omitir') {
+          parts.push(`unidad ${cleanText}`);
+        }
+        
+        const finalPrompt = parts.join(' ').replace(/\s+/g, ' ').trim();
         handleGenerate(finalPrompt);
       }, 5000);
     }
@@ -1323,13 +1425,16 @@ export default function AIApuGeneratorPage() {
                 {currentChatStep > 0 && chatbotLoadingStage === 0 && (
                   <div className="mb-3 pb-3 border-b border-amber-200/50 flex-shrink-0">
                     <div className="flex items-center justify-between gap-1 text-[11px]">
-                      {[
-                        { step: 1, label: 'Acción' },
-                        { step: 2, label: 'Ubicación' },
-                        { step: 3, label: 'Material' },
-                        { step: 4, label: 'Alcance' },
-                        { step: 5, label: 'Unidad' },
-                      ].map(({ step, label }) => {
+                      {(() => {
+                        const isSupplyOrInstall = /suministr|instalac|colocac|montaje/i.test(guidedAccion || '');
+                        return [
+                          { step: 1, label: 'Acción' },
+                          { step: 2, label: isSupplyOrInstall ? '¿Qué es?' : 'Elemento' },
+                          { step: 3, label: isSupplyOrInstall ? '¿Para qué?' : 'Ubicación' },
+                          { step: 4, label: 'Alcance' },
+                          { step: 5, label: 'Unidad' },
+                        ];
+                      })().map(({ step, label }) => {
                         const isDone = currentChatStep > step;
                         const isCurrent = currentChatStep === step;
                         return (
@@ -1458,7 +1563,14 @@ export default function AIApuGeneratorPage() {
                       onKeyDown={e => {
                         if (e.key === 'Enter') handleChatSubmit(chatInputValue);
                       }}
-                      placeholder="Escribe tu respuesta..."
+                      placeholder={
+                        currentChatStep === 1 ? "Ej: Suministro e instalación, Suministro, Construcción..." :
+                        currentChatStep === 2 ? (/suministr|instalac|colocac|montaje/i.test(guidedAccion || '') ? "Ej: Bomba centrífuga, Tablero eléctrico, Tubería PVC..." : "Ej: Paredes de bloques, Losa de concreto...") :
+                        currentChatStep === 3 ? (/suministr|instalac|colocac|montaje/i.test(guidedAccion || '') ? "Ej: Para pozo profundo, para aguas blancas, en sala de bombas..." : "Ej: En planta baja, en sótano...") :
+                        currentChatStep === 4 ? "Ej: Incluye conexiones, todo incluido, solo mano de obra..." :
+                        currentChatStep === 5 ? "Ej: und, m², ml, pza..." :
+                        "Escribe tu respuesta..."
+                      }
                       className="flex-1 bg-white border-2 border-amber-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-amber-900 placeholder:text-amber-700/50"
                     />
                     <button 

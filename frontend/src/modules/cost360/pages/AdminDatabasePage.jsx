@@ -13,7 +13,6 @@ import ScrapingTab from '../components/tabs/ScrapingTab';
 import PDFsTab from '../components/tabs/PDFsTab';
 import UsuariosTab from '../components/tabs/UsuariosTab';
 import RAGDiagnosticTab from '../components/tabs/RAGDiagnosticTab';
-import CategoryManager from '../components/CategoryManager';
 import PublishDatabaseModal from '../components/modals/PublishDatabaseModal';
 import { TABS } from '../constants/tabs.config';
 import { DEFAULT_APU_PROMPT } from '../constants/prompts.default';
@@ -203,14 +202,17 @@ const AdminDatabasePage = () => {
     }
   };
 
-  const showPartidasFilters = activeTab === 'visor_bd' && visorSubTab === 'partidas';
-
   return (
     <div className="absolute inset-0 p-4 md:p-6 flex flex-col overflow-hidden gap-4">
       <div className="rounded-2xl relative z-10" style={glassStrong}>
         <TabNavigation
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          config={config}
+          onToggleGlobalCoded={toggleGlobalCoded}
+          onlyCoded={onlyCoded}
+          onToggleOnlyCoded={setOnlyCoded}
+          onToggleCategory={toggleCategory}
         />
       </div>
 
@@ -239,33 +241,11 @@ const AdminDatabasePage = () => {
             </div>
           )}
 
-          {showPartidasFilters && (
-            <>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg" title="Afecta a todos los usuarios del sistema">
-                <input
-                  type="checkbox"
-                  id="globalCoded"
-                  checked={config?.forceOnlyCodedMaster === true}
-                  onChange={(e) => toggleGlobalCoded(e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 bg-white border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
-                />
-                <label htmlFor="globalCoded" className="text-sm font-bold text-indigo-900 cursor-pointer">
-                  Filtro Publico Global
-                </label>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg">
-                <input
-                  type="checkbox"
-                  id="onlyCoded"
-                  checked={onlyCoded}
-                  onChange={(e) => setOnlyCoded(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-                />
-                <label htmlFor="onlyCoded" className="text-sm font-medium text-slate-700 cursor-pointer">
-                  Filtro Local (Tu vista)
-                </label>
-              </div>
-            </>
+          {(config?.forceOnlyCodedMaster || onlyCoded) && (
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50/80 border border-indigo-200/60 rounded-lg text-[11px] text-indigo-700 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+              <span>Filtro de partidas activo ({config?.forceOnlyCodedMaster ? 'Global' : 'Local'})</span>
+            </div>
           )}
 
           <button
@@ -293,9 +273,6 @@ const AdminDatabasePage = () => {
               className="w-12 text-center text-sm font-medium border border-slate-300 rounded focus:outline-none focus:border-blue-500 py-0.5"
             />
           </div>
-          {showPartidasFilters && (
-            <CategoryManager config={config} onToggleCategory={toggleCategory} />
-          )}
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate('/cost360/databases')}
