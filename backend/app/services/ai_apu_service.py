@@ -1,5 +1,7 @@
 import json
-from typing import Any, Dict, List, Optional, Tuple
+import re
+from typing import Any, Dict, List, Optional, Tuple, Set
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core.logging import logger
 from app.services.llm_router import call_llm_json
@@ -48,7 +50,8 @@ CASO 1: Si la solicitud es técnicamente comprensible y ejecutable, genera el AP
     "labors": [
         {"id":"l-1","codigo":"...","descripcion":"...","unidad":"día","cantidad":0.0,"jornal":0.0,"bono":0.0,"origen":"historico","nota_calculo":"..."}
     ],
-    "advertencias": ["lista de advertencias técnicas o notas al usuario"]
+    "notas_adaptacion": ["Nota técnica interna de cómo se adaptó el APU desde la base para registro de depuración"],
+    "advertencias": ["[PRECIO_REFERENCIAL] Solo advertencias comerciales sobre precios referenciales o cotizaciones necesarias para el cliente final"]
 }
 
 CASO 2: ÚNICAMENTE si la entrada es ininteligible, contradictoria o un disparate que no describe una actividad técnica de construcción:
@@ -275,7 +278,8 @@ Prefijo COVENIN: {covenin_prefix}
 6. AUTO-FUSIÓN: Si la descripción del usuario exige algo que falta en la Base (ej. Bote de material, Pintura, Andamios, Encofrado) pero que sí existe en las Partidas Complementarias, "róbalo" e intégralo conservando sus precios históricos.
 7. AGREGA insumos nuevos que la nueva partida requiera estrictamente y no estén ni en la base ni en las complementarias. Márcalos como `"origen": "ia"`, asígnales un precio unitario referencial estimado de mercado en USD (nunca 0.0) y agrega una advertencia con el prefijo `[PRECIO_REFERENCIAL]`.
 8. NUNCA alteres los precios unitarios de los insumos del APU base ni de las complementarias. Son precios reales de la BD.
-9. Agrega SIEMPRE una advertencia indicando que el APU fue adaptado desde la partida base [{base_apu.get('codpar', 'N/A')}].
+9. Registra SIEMPRE en `notas_adaptacion` (para el log técnico de depuración) que el APU fue adaptado desde la partida base [{base_apu.get('codpar', 'N/A')}], qué insumos se podaron y la justificación del rendimiento.
+10. El campo `advertencias` es EXCLUSIVO para advertencias dirigidas al cliente/usuario sobre precios referenciales estimados por IA (`[PRECIO_REFERENCIAL]`) o insumos que requieren cotización local. NUNCA coloques notas de adaptación técnica interna en `advertencias`.
 
 # CRITERIO DE CLARIFICACIÓN VS GENERACIÓN
 - Si la solicitud es inteligible y describe una actividad técnica razonable, DEBES GENERAR EL APU con `status: "completed"`. Asume la hipótesis técnica más lógica basada en el APU base.
@@ -292,6 +296,8 @@ Prefijo COVENIN: {covenin_prefix}
     result = call_llm_json(prompt, use_case="cost360")
     if "advertencias" not in result:
         result["advertencias"] = []
+    if "notas_adaptacion" not in result:
+        result["notas_adaptacion"] = []
 
     result["debug_base_apu"] = base_apu
     result["prompt_enviado_al_llm"] = prompt
@@ -431,3 +437,139 @@ def fetch_base_apu_for_prompt(db: Session, codpar: str) -> Dict[str, Any]:
             if mo.Descri and str(mo.Descri).lower() != "nan" and str(mo.CodMan).lower() != "nan" and not str(mo.CodMan).startswith("DESCRIPCION")
         ],
     }
+
+
+SECONDARY_ACTIVITY_PATTERNS: Dict[str, Dict[str, Any]] = {
+    "bote_transporte": {
+        "pattern": r"\b(bote|transporte|acarreo|botadero|escombros?)\b",
+        "search_keywords": "transporte bote escombros camión volteo",
+    },
+    "friso_revoque": {
+        "pattern": r"\b(friso|frisad[oa]|revoque|pañete|enlucido)\b",
+        "search_keywords": "friso mortero acabado paredes",
+    },
+    "pintura": {
+        "pattern": r"\b(pintura|pintad[oa]|esmalte)\b",
+        "search_keywords": "pintura caucho esmalte paredes",
+    },
+    "acero_malla": {
+        "pattern": r"\b(malla|electrosoldada|truckson|cabillas?|acero de refuerzo)\b",
+        "search_keywords": "malla electrosoldada acero refuerzo",
+    },
+    "machones_dinteles": {
+        "pattern": r"\b(machon(es)?|dintel(es)?|viga(s)? de corona)\b",
+        "search_keywords": "machones dinteles concreto arriostramiento",
+    },
+    "encofrado": {
+        "pattern": r"\b(encofrado|formaleta|apuntalamiento)\b",
+        "search_keywords": "encofrado madera metalico",
+    },
+    "impermeabilizacion": {
+        "pattern": r"\b(impermeabilizad[oa]|manto asfaltico|impermeabilizante)\b",
+        "search_keywords": "impermeabilizacion manto asfaltico",
+    },
+    "demolicion": {
+        "pattern": r"\b(demolicion|demolid[oa]|pica|tumbar)\b",
+        "search_keywords": "demolicion pica",
+    },
+    "excavacion": {
+        "pattern": r"\b(excavacion|excavad[oa]|zanja)\b",
+        "search_keywords": "excavacion zanja",
+    },
+}
+
+
+def select_relevant_complementary_apus(
+    db: Session,
+    user_description: str,
+    base_apu: Dict[str, Any],
+    candidates: List[Dict[str, Any]],
+    max_complementary: int = 2,
+) -> List[Dict[str, Any]]:
+    """
+    Selecciona de forma inteligente partidas complementarias solo si son estrictamente necesarias.
+
+    1. Si la solicitud del usuario es una actividad simple y pura (sin actividades accesorias compuestas),
+       y la partida base ya cubre la necesidad principal, retorna [] (CERO complementarias).
+    2. Si el usuario pide actividades adicionales ('con bote', 'frisada', 'con pintura', 'con malla')
+       que NO están presentes en la descripción de la partida base:
+       - Identifica qué actividad accesoria falta.
+       - Busca entre los candidatos (o en la BD) una partida específica que cubra esa actividad faltante.
+       - Garantiza que las complementarias sean de familias/capítulos COVENIN distintos (diversidad).
+    """
+    if not user_description or not isinstance(user_description, str) or not base_apu:
+        return []
+
+    base_desc = str(base_apu.get("descripcion") or "").upper()
+    base_cod = str(base_apu.get("codpar") or "").upper()
+    base_cov_prefix = str(base_apu.get("covenin") or "")[:4].upper()
+    user_upper = user_description.upper()
+
+    # Detectar qué actividades secundarias exige el usuario
+    unmet_activities: List[str] = []
+    for act_name, config in SECONDARY_ACTIVITY_PATTERNS.items():
+        if re.search(config["pattern"], user_upper, re.IGNORECASE):
+            # Si el usuario lo pidió, verificar si la partida base ya lo incluye
+            if not re.search(config["pattern"], base_desc, re.IGNORECASE):
+                unmet_activities.append(act_name)
+
+    # REGLA DE ORO: Si no hay actividades accesorias faltantes, CERO complementarias
+    if not unmet_activities:
+        return []
+
+    # Si hay actividades faltantes, buscar la mejor candidata para cada una
+    selected_apus: List[Dict[str, Any]] = []
+    used_cov_prefixes: Set[str] = {base_cov_prefix} if base_cov_prefix else set()
+    used_cods: Set[str] = {base_cod}
+
+    for act_name in unmet_activities[:max_complementary]:
+        act_config = SECONDARY_ACTIVITY_PATTERNS[act_name]
+        act_pattern = act_config["pattern"]
+
+        matched_item = None
+        # Buscar primero entre los candidatos recuperados por el RAG
+        for c in candidates:
+            item = c.get("item")
+            if not item:
+                continue
+            item_cod = str(item.CodPar).upper()
+            item_desc = str(item.Descri).upper()
+            item_cov = str(item.CovPar or "")[:4].upper()
+
+            if item_cod in used_cods:
+                continue
+            if item_cov and item_cov in used_cov_prefixes:
+                continue
+
+            if re.search(act_pattern, item_desc, re.IGNORECASE):
+                matched_item = item
+                break
+
+        # Si no está en candidatos inmediatos, buscar directamente en BD una partida representativa
+        if not matched_item:
+            try:
+                kw = act_config["search_keywords"].split()[0]
+                kw2 = act_config["search_keywords"].split()[1] if len(act_config["search_keywords"].split()) > 1 else kw
+                sql = text(
+                    'SELECT "CodPar" FROM cost360_items '
+                    'WHERE "Descri" ILIKE :kw1 AND "Descri" ILIKE :kw2 '
+                    'AND "CodPar" != :base_cod '
+                    'ORDER BY length("Descri") ASC LIMIT 1'
+                )
+                row = db.execute(sql, {"kw1": f"%{kw}%", "kw2": f"%{kw2}%", "base_cod": base_cod}).fetchone()
+                if row:
+                    matched_item = db.query(CostItem).filter(CostItem.CodPar == row.CodPar).first()
+            except Exception as e_search:
+                logger.error(f"Error buscando partida complementaria para {act_name}: {e_search}", exc_info=True)
+
+        if matched_item:
+            matched_cod = str(matched_item.CodPar).upper()
+            matched_cov = str(matched_item.CovPar or "")[:4].upper()
+            comp_apu = fetch_base_apu_for_prompt(db, matched_item.CodPar)
+            if comp_apu:
+                selected_apus.append(comp_apu)
+                used_cods.add(matched_cod)
+                if matched_cov:
+                    used_cov_prefixes.add(matched_cov)
+
+    return selected_apus

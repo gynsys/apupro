@@ -25,6 +25,11 @@ MATERIAL_CATEGORIES: Dict[str, Dict[str, List[str]]] = {
         "ACERO_ESTRUCTURAL": [r"\bESTRUCTURA METALICA\b", r"\bPERFIL METALICO\b", r"\bVIGA DE ACERO\b"],
         "MADERA": [r"\bMADERA\b", r"\bMACHIMBRADO\b"],
         "DRYWALL_YESO": [r"\bDRYWALL\b", r"\bYESO\b", r"\bTABLAYESO\b"],
+    },
+    "mamposteria": {
+        "ARCILLA": [r"\bARCILLA\b", r"\bADOBE\b", r"\bLADRILLO\b"],
+        "BLOQUE_CONCRETO": [r"\bBLOQUE(S)?\s+DE\s+CONCRETO\b", r"\bBLOQUE(S)?\s+CONCRETO\b"],
+        "CONCRETO_ESTRUCTURAL": [r"\bCONCRETO\b", r"\bMACHON(ES)?\b", r"\bVIGA(S)?\s+DE\s+CORONA\b"],
     }
 }
 

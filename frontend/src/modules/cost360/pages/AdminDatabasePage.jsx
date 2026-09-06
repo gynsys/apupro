@@ -12,6 +12,7 @@ import CatalogTab from '../components/tabs/CatalogTab';
 import ScrapingTab from '../components/tabs/ScrapingTab';
 import PDFsTab from '../components/tabs/PDFsTab';
 import UsuariosTab from '../components/tabs/UsuariosTab';
+import RAGDiagnosticTab from '../components/tabs/RAGDiagnosticTab';
 import CategoryManager from '../components/CategoryManager';
 import PublishDatabaseModal from '../components/modals/PublishDatabaseModal';
 import { TABS } from '../constants/tabs.config';
@@ -39,7 +40,8 @@ const glassStrong = {
 };
 
 const AdminDatabasePage = () => {
-  const [activeTab, setActiveTab] = useState('partidas');
+  const [activeTab, setActiveTab] = useState('visor_bd');
+  const [visorSubTab, setVisorSubTab] = useState('partidas');
   const [onlyCoded, setOnlyCoded] = useState(true);
   const [selectedDatabase, setSelectedDatabase] = useState('master');
   const [promptText, setPromptText] = useState(DEFAULT_APU_PROMPT);
@@ -201,7 +203,7 @@ const AdminDatabasePage = () => {
     }
   };
 
-  const showPartidasFilters = activeTab === 'partidas';
+  const showPartidasFilters = activeTab === 'visor_bd' && visorSubTab === 'partidas';
 
   return (
     <div className="absolute inset-0 p-4 md:p-6 flex flex-col overflow-hidden gap-4">
@@ -214,6 +216,29 @@ const AdminDatabasePage = () => {
 
       <div className="flex justify-between items-center px-4 -mt-2">
         <div className="flex gap-4 items-center">
+          {activeTab === 'visor_bd' && (
+            <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl border border-slate-300/60 shadow-inner">
+              {[
+                { key: 'partidas', label: 'Partidas APU' },
+                { key: 'materiales', label: 'Materiales' },
+                { key: 'equipos', label: 'Equipos' },
+                { key: 'mano_obra', label: 'Mano de Obra' },
+              ].map(sub => (
+                <button
+                  key={sub.key}
+                  onClick={() => setVisorSubTab(sub.key)}
+                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                    visorSubTab === sub.key
+                      ? 'bg-white text-blue-700 shadow-sm font-bold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                  }`}
+                >
+                  {sub.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {showPartidasFilters && (
             <>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg" title="Afecta a todos los usuarios del sistema">
@@ -302,11 +327,11 @@ const AdminDatabasePage = () => {
       </div>
 
       <div className="flex-1 flex flex-col gap-4 min-h-0 mt-2">
-        {activeTab === 'partidas' && (
+        {activeTab === 'visor_bd' && visorSubTab === 'partidas' && (
           <PartidasTab onlyCoded={onlyCoded} selectedDatabase={selectedDatabase} />
         )}
 
-        {activeTab === 'materiales' && (
+        {activeTab === 'visor_bd' && visorSubTab === 'materiales' && (
           <CatalogTab
             title="Materiales"
             resourceType="materials"
@@ -315,7 +340,7 @@ const AdminDatabasePage = () => {
           />
         )}
 
-        {activeTab === 'equipos' && (
+        {activeTab === 'visor_bd' && visorSubTab === 'equipos' && (
           <CatalogTab
             title="Equipos"
             resourceType="equipments"
@@ -324,7 +349,7 @@ const AdminDatabasePage = () => {
           />
         )}
 
-        {activeTab === 'mano_obra' && (
+        {activeTab === 'visor_bd' && visorSubTab === 'mano_obra' && (
           <CatalogTab
             title="Mano de Obra"
             resourceType="labors"
@@ -332,6 +357,8 @@ const AdminDatabasePage = () => {
             config={config}
           />
         )}
+
+        {activeTab === 'diagnostico_rag' && <RAGDiagnosticTab />}
 
         {activeTab === 'scraping' && <ScrapingTab />}
 

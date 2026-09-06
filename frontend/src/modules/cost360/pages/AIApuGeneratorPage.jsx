@@ -161,6 +161,9 @@ export default function AIApuGeneratorPage() {
   const [aiGuiaRedaccion, setAiGuiaRedaccion] = useState(null);
   const [isClarifying, setIsClarifying] = useState(false);
   const [debugInfo, setDebugInfo] = useState(null);
+  const [autoDownloadDebugJson, setAutoDownloadDebugJson] = useState(() => {
+    return localStorage.getItem('auto_download_debug_json') === 'true';
+  });
 
   // Match Exacto Interactivo
   const [exactMatchCandidate, setExactMatchCandidate] = useState(null);
@@ -178,6 +181,7 @@ export default function AIApuGeneratorPage() {
   
   // Obtenemos el usuario del contexto de autenticación
   const { user } = React.useContext(AuthContext);
+  const isAdmin = user?.is_superadmin === true || user?.is_admin === true || user?.role === 'admin' || user?.role === 'superadmin' || user?.email === 'admin@arko360.net';
 
   const [guidedMessages, setGuidedMessages] = useState([]);
   
@@ -658,8 +662,9 @@ export default function AIApuGeneratorPage() {
   };
 
   const processAIResponse = (response, textToSubmit) => {
+    let currentDebug = null;
     if (response.debug_rag_trace || response.debug_base_apu) {
-      setDebugInfo({
+      currentDebug = {
         message: "Generación asistida por RAG Híbrido y Adaptación de Partida Base",
         solicitud_usuario: textToSubmit,
         rag_trace: response.debug_rag_trace || null,
@@ -667,16 +672,36 @@ export default function AIApuGeneratorPage() {
         prompt_enviado_al_llm: response.prompt_enviado_al_llm || null,
         respuesta_cruda_llm: {
           partida: response.partida,
+          notas_adaptacion: response.notas_adaptacion || [],
           advertencias: response.advertencias,
           conteo_materiales: (response.materials || []).length,
           conteo_equipos: (response.equipments || []).length,
           conteo_mano_obra: (response.labors || []).length
         }
-      });
+      };
+      setDebugInfo(currentDebug);
     } else if (response.debug_preprocesamiento) {
-      setDebugInfo(response.debug_preprocesamiento);
+      currentDebug = response.debug_preprocesamiento;
+      setDebugInfo(currentDebug);
     } else {
       setDebugInfo(null);
+    }
+
+    // Auto-descarga de Debug JSON si el toggle está activo
+    if (autoDownloadDebugJson && currentDebug) {
+      try {
+        const blob = new Blob([JSON.stringify(currentDebug, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `debug_apu_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        toast.success("Debug JSON descargado automáticamente", { icon: '📥' });
+      } catch (err) {
+        console.error("Error al auto-descargar Debug JSON:", err);
+      }
     }
 
     if (response.status === 'exact_match_candidate') {
@@ -729,13 +754,30 @@ export default function AIApuGeneratorPage() {
       setGuidedIncluye(null);
       setGuidedUnidad(null);
       setChatbotLoadingStage(0);
+
+      // Filtrar advertencias para la vista pública:
+      // Excluir notas técnicas de adaptación interna y mantener solo alertas de cotización o precio referencial
+      const rawAdvertencias = response.advertencias || [];
+      const advertenciasPublicas = rawAdvertencias.filter(adv => {
+        const lower = adv.toLowerCase();
+        if (
+          lower.includes('adaptado desde la partida base') || 
+          lower.includes('apu adaptado') || 
+          lower.includes('se mantuvieron rendimientos') || 
+          lower.includes('se eliminaron los insumos')
+        ) {
+          return false;
+        }
+        return true;
+      });
+
       // Map response to the format expected by the editor
       setItem({
         ...response.partida,
         materials: response.materials || [],
         equipments: response.equipments || [],
         labors: response.labors || [],
-        advertencias: response.advertencias || []
+        advertencias: advertenciasPublicas
       });
       toast.success("APU generado con éxito");
     }
@@ -877,6 +919,30 @@ export default function AIApuGeneratorPage() {
             {creationMode === 'manual' ? 'Nuevo APU (Desde Cero)' : creationMode === 'import' ? 'Importar / Clonar APU' : 'Generador de APU con IA'}
           </h2>
         </div>
+
+        {isAdmin && creationMode === 'ia' && (
+          <div className="flex items-center gap-2 bg-slate-900 text-white px-3 py-1.5 rounded-xl border border-slate-700 shadow-xs" title="Exclusivo Admin: Descarga automáticamente el log técnico JSON de depuración al generar">
+            <span className="text-[11px] font-mono font-bold text-slate-200">Debug JSON</span>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoDownloadDebugJson}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setAutoDownloadDebugJson(checked);
+                  localStorage.setItem('auto_download_debug_json', checked ? 'true' : 'false');
+                  if (checked) {
+                    toast.success('Descarga automática de Debug JSON ACTIVADA (Admin)');
+                  } else {
+                    toast('Descarga automática de Debug JSON DESACTIVADA', { icon: 'ℹ️' });
+                  }
+                }}
+                className="sr-only peer"
+              />
+              <div className="w-8 h-4 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-500 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-500"></div>
+            </label>
+          </div>
+        )}
       </div>
 
 
@@ -1446,27 +1512,6 @@ export default function AIApuGeneratorPage() {
             />
           )}
           
-          {debugInfo && (
-            <div className="flex justify-center mb-6">
-              <button
-                onClick={() => {
-                  const blob = new Blob([JSON.stringify(debugInfo, null, 2)], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `debug_apu_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono rounded-lg transition-colors border border-slate-700 shadow-sm"
-              >
-                <Database size={14} className="text-blue-400" />
-                Descargar Log de Debug (JSON)
-              </button>
-            </div>
-          )}
-          
           {!(isGuidedMode && !isSmartMode && !isClarifying) && (
             <div className="flex justify-end gap-3">
               {isClarifying && (
@@ -1477,15 +1522,6 @@ export default function AIApuGeneratorPage() {
                   Cancelar
                 </button>
               )}
-              <button
-                onClick={() => handleGeneratePreprocess()}
-                disabled={loading || !prompt.trim() || !isSelectorsComplete || isClarifying || isSmartMode}
-                className="flex items-center gap-2 text-slate-600 bg-slate-100 px-4 py-3 rounded-xl hover:bg-slate-200 transition-all font-bold disabled:opacity-50 text-sm border border-slate-200"
-                title="Muestra cómo la IA buscará en la base de datos sin consumir saldo"
-              >
-                <Search size={18} />
-                Preproceso
-              </button>
               <button
                 onClick={() => handleGenerate()}
                 disabled={loading || !prompt.trim() || !isSelectorsComplete || isSmartMode}
@@ -1555,25 +1591,6 @@ export default function AIApuGeneratorPage() {
               APU EN EDICIÓN
             </h3>
             <div className="flex items-center gap-3">
-              {debugInfo && (
-                <button
-                  onClick={() => {
-                    const blob = new Blob([JSON.stringify(debugInfo, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `debug_apu_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono rounded-xl transition-colors border border-slate-700 shadow-sm"
-                  title="Descargar Log Completo de Preproceso, RAG e IA"
-                >
-                  <Database size={15} className="text-blue-400" />
-                  <span className="hidden sm:inline">Debug JSON</span>
-                </button>
-              )}
               <button
                 onClick={() => setPrintModalOpen(true)}
                 className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 hover:border-blue-400 hover:shadow-md transition-all duration-200 shadow-sm"
@@ -1588,13 +1605,21 @@ export default function AIApuGeneratorPage() {
             </div>
           </div>
           
-          {item.advertencias && item.advertencias.length > 0 && (
+          {item.advertencias && item.advertencias.filter(adv => {
+            const l = adv.toLowerCase();
+            return !l.includes('adaptado desde la partida base') && !l.includes('apu adaptado') && !l.includes('se mantuvieron rendimientos') && !l.includes('se eliminaron los insumos');
+          }).length > 0 && (
             <div className="mb-6 p-4 bg-amber-50 border border-amber-300 rounded-xl shadow-sm">
               <h4 className="text-amber-800 font-bold mb-2 flex items-center gap-2">⚠️ Advertencias del Análisis</h4>
               <ul className="list-disc list-inside text-sm text-amber-700 space-y-1">
-                {item.advertencias.map((adv, idx) => (
-                  <li key={idx}>{adv}</li>
-                ))}
+                {item.advertencias
+                  .filter(adv => {
+                    const l = adv.toLowerCase();
+                    return !l.includes('adaptado desde la partida base') && !l.includes('apu adaptado') && !l.includes('se mantuvieron rendimientos') && !l.includes('se eliminaron los insumos');
+                  })
+                  .map((adv, idx) => (
+                    <li key={idx}>{adv}</li>
+                  ))}
               </ul>
             </div>
           )}

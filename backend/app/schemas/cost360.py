@@ -209,3 +209,9 @@ class Cost360DatabaseResponse(Cost360DatabaseBase):
 
 class Cost360DatabaseListResponse(BaseModel):
     databases: List[Cost360DatabaseBase]
+
+class RagDiagnosticRequest(BaseModel):
+    query: str
+    covenin_prefix: Optional[str] = ""
+    limit: Optional[int] = 15
+

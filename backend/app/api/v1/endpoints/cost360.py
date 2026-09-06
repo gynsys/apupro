@@ -18,7 +18,8 @@ from app.schemas.cost360 import (
     AiApuGenerateRequest, SmartSelectRequest,
     CustomCostItemCreate, CustomCostItemResponse,
     Cost360DatabaseCreate, Cost360DatabaseUpdate, Cost360DatabaseListResponse,
-    MasterItemUpdate, MasterAPUUpdate, CustomApuExportRequest
+    MasterItemUpdate, MasterAPUUpdate, CustomApuExportRequest,
+    RagDiagnosticRequest
 )
 from app.core.logging import logger
 
@@ -101,6 +102,7 @@ from app.services.ai_apu_service import (
     generate_apu_with_ai_from_base,
     get_dynamic_candidates,
     fetch_base_apu_for_prompt,
+    select_relevant_complementary_apus,
 )
 from app.api.v1.endpoints.export_utils import generate_excel_workbook
 from app.services.synonyms_service import expand_technical_synonyms
@@ -633,13 +635,15 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
                 {"codpar": c["item"].CodPar, "covenin": c["item"].CovPar, "descripcion": c["item"].Descri, "score": c["score"]}
                 for c in candidates
             ]
-            comp_items = [c["item"] for c in candidates if c["item"].CodPar != base_code][:2]
-            for item in comp_items:
-                comp_apu = fetch_base_apu_for_prompt(db, item.CodPar)
-                if comp_apu:
-                    complementary_apus.append(comp_apu)
+            complementary_apus = select_relevant_complementary_apus(
+                db=db,
+                user_description=payload.description,
+                base_apu=base_apu,
+                candidates=candidates,
+                max_complementary=2,
+            )
         except Exception as exc:
-            logger.warning("Error fetching complementary APUs: %s", exc)
+            logger.error("Error fetching complementary APUs: %s", exc, exc_info=True)
 
         history_dicts = [msg.model_dump() for msg in payload.history] if payload.history else []
         result = generate_apu_with_ai_from_base(
@@ -820,6 +824,98 @@ def smart_select_route(payload: SmartSelectRequest, db: Session = Depends(get_db
         "best_match": best_match,
         "confidence": round(best_score, 3),
         "ready_to_generate": True,
+    }
+
+
+@router.post("/rag-diagnostic")
+def rag_diagnostic_route(
+    payload: RagDiagnosticRequest,
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(get_current_arko_admin)
+) -> Dict[str, Any]:
+    """Diagnóstico técnico en tiempo real del motor RAG Híbrido, sin costo de LLM."""
+    if not payload.query or not payload.query.strip():
+        raise HTTPException(status_code=400, detail="La consulta no puede estar vacía.")
+
+    query: str = payload.query.strip()
+    expanded_query: str = expand_technical_synonyms(query)
+
+    try:
+        candidates, best_score = get_dynamic_candidates(
+            db=db,
+            description=expanded_query,
+            covenin_prefix=payload.covenin_prefix or "",
+            limit=payload.limit or 15
+        )
+    except Exception as exc:
+        logger.error(f"Error en búsqueda RAG de diagnóstico: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error en motor RAG: {str(exc)}")
+
+    formatted_candidates: List[Dict[str, Any]] = []
+    base_apu_details: Optional[Dict[str, Any]] = None
+    complementary_details: List[Dict[str, Any]] = []
+
+    if candidates:
+        for c in candidates:
+            item = c["item"]
+            formatted_candidates.append({
+                "codpar": getattr(item, "CodPar", ""),
+                "covenin": getattr(item, "CovPar", "") or getattr(item, "CodPar", ""),
+                "descripcion": getattr(item, "Descri", ""),
+                "unidad": getattr(item, "UniPar", ""),
+                "rendimiento": getattr(item, "RenPar", 0.0),
+                "score": round(float(c.get("score", 0.0)), 4),
+            })
+
+        winning_candidate = candidates[0]
+        base_code: str = getattr(winning_candidate["item"], "CodPar", "")
+        if base_code:
+            try:
+                base_apu = fetch_base_apu_for_prompt(db, base_code)
+                base_apu_details = {
+                    "codpar": base_apu.get("codpar"),
+                    "covenin": base_apu.get("covenin"),
+                    "descripcion": base_apu.get("descripcion"),
+                    "unidad": base_apu.get("unidad"),
+                    "rendimiento": base_apu.get("rendimiento"),
+                    "total_materiales": len(base_apu.get("materiales", [])),
+                    "total_equipos": len(base_apu.get("equipos", [])),
+                    "total_mano_obra": len(base_apu.get("mano_obra", [])),
+                    "materiales": base_apu.get("materiales", [])[:6],
+                    "equipos": base_apu.get("equipos", [])[:6],
+                    "mano_obra": base_apu.get("mano_obra", [])[:6],
+                }
+
+                complementaries = select_relevant_complementary_apus(
+                    db=db,
+                    user_description=expanded_query,
+                    base_apu=base_apu,
+                    candidates=candidates,
+                    max_complementary=2,
+                )
+                for comp in complementaries:
+                    complementary_details.append({
+                        "codpar": comp.get("codpar"),
+                        "covenin": comp.get("covenin"),
+                        "descripcion": comp.get("descripcion"),
+                        "unidad": comp.get("unidad"),
+                        "rendimiento": comp.get("rendimiento"),
+                    })
+            except Exception as exc:
+                logger.error(f"Error procesando APU base o complementarias en diagnóstico: {exc}", exc_info=True)
+
+    return {
+        "status": "ok",
+        "query_original": query,
+        "query_expandida": expanded_query,
+        "sinonimos_aplicados": query.strip().lower() != expanded_query.strip().lower(),
+        "total_candidatas": len(formatted_candidates),
+        "best_score": round(float(best_score), 4) if best_score else 0.0,
+        "ganadora": formatted_candidates[0] if formatted_candidates else None,
+        "base_apu": base_apu_details,
+        "complementarias": complementary_details,
+        "es_autosuficiente": len(complementary_details) == 0,
+        "candidatas": formatted_candidates,
     }
 
 
