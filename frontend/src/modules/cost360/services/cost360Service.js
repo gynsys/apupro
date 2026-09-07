@@ -11,6 +11,16 @@ const cost360ApiClient = axios.create({
   withCredentials: true, // Include httpOnly cookies
 });
 
+// Adjuntar token Bearer de localStorage si existe (soporte para ambos esquemas de auth)
+cost360ApiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('arko_admin_token') || localStorage.getItem('token') || localStorage.getItem('access_token');
+  if (token) {
+    config.headers = config.headers || {};
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
+  return config;
+});
+
 /**
  * Fetch a list of cost items (Partidas)
  * @param {number} skip - Offset for pagination

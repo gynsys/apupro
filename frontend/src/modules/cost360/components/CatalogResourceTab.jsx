@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { FiSearch, FiEdit2, FiTrash2, FiCheck, FiX, FiDownload, FiExternalLink } from 'react-icons/fi';
 import { apiFetch, apiPut, apiDelete, apiPatch } from '../../../lib/apiHelper';
 import { AuthContext } from '../../../context/AuthContext';
 
 const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adminMode = false }) => {
+  const navigate = useNavigate();
   const { user } = useContext(AuthContext);
   const isSuperAdmin = user?.is_superadmin === true || user?.email === 'admin@arko360.net';
 
@@ -497,23 +499,31 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {usesModal.apus.map(apu => (
-                            <tr key={apu.CodPar} className="hover:bg-blue-50/50 transition-colors group">
-                              <td className="px-4 py-2.5 font-mono whitespace-nowrap">
-                                <a
-                                  href={`/cost360/apu/${apu.CodPar}${selectedDatabase ? `?db=${selectedDatabase}` : ''}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1.5 font-bold text-blue-600 hover:text-blue-800 hover:underline transition-colors"
-                                  title="Ver APU en APUViewer"
-                                >
-                                  <span>{apu.CovPar || apu.CodPar}</span>
-                                  <FiExternalLink size={13} className="opacity-60 group-hover:opacity-100 transition-opacity" />
-                                </a>
-                              </td>
-                              <td className="px-4 py-2.5 text-slate-700 leading-snug">{apu.Descri}</td>
-                            </tr>
-                          ))}
+                          {usesModal.apus.map(apu => {
+                            const apuUrl = `/cost360/apu/${apu.CodPar}${selectedDatabase ? `?db=${selectedDatabase}` : ''}`;
+                            return (
+                              <tr key={apu.CodPar} className="hover:bg-blue-50/50 transition-colors group">
+                                <td className="px-4 py-2.5 font-mono whitespace-nowrap">
+                                  <a
+                                    href={apuUrl}
+                                    onClick={(e) => {
+                                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.button === 0) {
+                                        e.preventDefault();
+                                        setUsesModal({ isOpen: false, item: null, apus: [], loading: false });
+                                        navigate(apuUrl);
+                                      }
+                                    }}
+                                    className="inline-flex items-center gap-1.5 font-bold text-blue-600 hover:text-blue-800 hover:underline transition-colors cursor-pointer"
+                                    title="Ver APU en APUViewer"
+                                  >
+                                    <span>{apu.CovPar || apu.CodPar}</span>
+                                    <FiExternalLink size={13} className="opacity-60 group-hover:opacity-100 transition-opacity" />
+                                  </a>
+                                </td>
+                                <td className="px-4 py-2.5 text-slate-700 leading-snug">{apu.Descri}</td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
