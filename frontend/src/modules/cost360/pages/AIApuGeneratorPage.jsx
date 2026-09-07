@@ -1028,8 +1028,16 @@ export default function AIApuGeneratorPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <button 
-            onClick={() => navigate('/cost360')}
+            onClick={() => {
+              if (item && creationMode === 'import') {
+                setItem(null);
+                navigate('/cost360/ai-generator?mode=import');
+              } else {
+                navigate('/cost360');
+              }
+            }}
             className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 transition-colors shrink-0 shadow-sm"
+            title={item && creationMode === 'import' ? "Volver al Buscador" : "Volver a Cost360"}
           >
             <ArrowLeft size={20} />
           </button>
@@ -1041,7 +1049,7 @@ export default function AIApuGeneratorPage() {
       </div>
 
 
-      {creationMode === 'import' && (
+      {creationMode === 'import' && !item && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: 'rgba(248, 250, 252, 0.5)' }}>
             {/* Database and Mode Selectors Row */}
@@ -1724,14 +1732,18 @@ export default function AIApuGeneratorPage() {
                 type="button"
                 onClick={() => {
                   setItem(null);
-                  setIsGuidedMode(true);
-                  setCurrentChatStep(0);
+                  if (creationMode === 'import') {
+                    navigate('/cost360/ai-generator?mode=import');
+                  } else {
+                    setIsGuidedMode(true);
+                    setCurrentChatStep(0);
+                  }
                 }}
                 className="px-3 py-1.5 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 text-slate-700 hover:text-blue-600 transition-all shadow-sm flex items-center gap-1.5 text-xs font-bold cursor-pointer"
-                title="Volver al Asistente IA"
+                title={creationMode === 'import' ? "Volver al Buscador" : "Volver al Asistente IA"}
               >
                 <ArrowLeft size={16} />
-                <span>Volver al Asistente</span>
+                <span>{creationMode === 'import' ? 'Volver al Buscador' : 'Volver al Asistente'}</span>
               </button>
               <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                 <Calculator size={20} className="text-blue-500" />
