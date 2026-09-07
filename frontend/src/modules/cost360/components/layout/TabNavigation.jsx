@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Users } from 'lucide-react';
 import { TABS } from '../../constants/tabs.config';
 import { useUserCostos } from '../../../../context/UserCostosContext';
 import toast from 'react-hot-toast';
@@ -88,11 +89,11 @@ const TabNavigation = ({
       </div>
 
       
-      {/* Botón de Utilitarios Integrado (Agrupa RAG, Auto IA, Filtros y Debug JSON) */}
+      {/* Botón de Utilitarios Integrado y Botón de Usuarios */}
       <div className="flex gap-2 items-center pb-2 ml-4 mr-auto">
           <button
             onClick={() => setIsUtilitiesOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg shadow-sm hover:shadow-md transition-all hover:scale-[1.02] border border-slate-700"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg shadow-sm hover:shadow-md transition-all hover:scale-[1.02] border border-slate-700 cursor-pointer"
             title="Utilitarios del Administrador (RAG, Auto IA, Filtros de Catálogo y Debug JSON)"
           >
             <FiTool className="w-3.5 h-3.5 text-amber-400" />
@@ -100,6 +101,19 @@ const TabNavigation = ({
             {(config?.forceOnlyCodedMaster || onlyCoded) && (
               <span className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse" title="Filtros de catálogo activos" />
             )}
+          </button>
+
+          <button
+            onClick={() => onTabChange('usuarios')}
+            className={`text-xs font-semibold px-3 py-1.5 rounded-lg border shadow-sm transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              activeTab === 'usuarios'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-blue-600'
+            }`}
+            title="Gestión de usuarios y suscripciones"
+          >
+            <Users size={14} />
+            <span>Usuarios</span>
           </button>
       </div>
 
