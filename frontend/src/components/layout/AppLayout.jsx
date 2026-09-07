@@ -11,7 +11,9 @@ import toast from 'react-hot-toast';
 import SubscriptionRequestModal from '../SubscriptionRequestModal';
 import ReportPaymentModal from '../ReportPaymentModal';
 import AccountSettingsModal from '../modals/AccountSettingsModal';
-import { Crown, Receipt } from 'lucide-react';
+import { Crown, Receipt, HelpCircle } from 'lucide-react';
+import NotificationBell from './NotificationBell';
+import HelpDrawer from '../help/HelpDrawer';
 
 const NAV_ITEMS = [
   { name: 'Presupuestos', href: '/budgets',           Icon: FileText },
@@ -22,8 +24,6 @@ const NAV_ITEMS = [
   { name: 'Crear con IA', href: '/cost360/ai-generator?mode=ia', Icon: Cpu }
 ];
 
-import NotificationBell from './NotificationBell';
-
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -32,6 +32,7 @@ export default function AppLayout() {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
+  const [showHelpDrawer, setShowHelpDrawer] = useState(false);
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -126,7 +127,7 @@ export default function AppLayout() {
         </div>
 
         {/* Botón Reportar Pago */}
-        <div className="group relative w-full flex justify-center pb-4">
+        <div className="group relative w-full flex justify-center pb-2">
           <button
             onClick={() => {
               setSidebarOpen(false);
@@ -139,6 +140,25 @@ export default function AppLayout() {
           {/* Tooltip */}
           <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
             Reportar Pago
+            <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
+          </div>
+        </div>
+
+        {/* Botón Centro de Ayuda */}
+        <div className="group relative w-full flex justify-center pb-4">
+          <button
+            onClick={() => {
+              setSidebarOpen(false);
+              setShowHelpDrawer(true);
+            }}
+            className="flex items-center justify-center p-3 rounded-xl transition-all duration-200 text-slate-500 hover:bg-blue-50 hover:text-blue-600 cursor-pointer"
+            title="Centro de Ayuda"
+          >
+            <HelpCircle size={24} />
+          </button>
+          {/* Tooltip */}
+          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
+            Centro de Ayuda
             <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
           </div>
         </div>
@@ -192,6 +212,13 @@ export default function AppLayout() {
         {/* Right controls */}
         {isAuthenticated ? (
           <div className="flex items-center gap-0.5">
+            <button
+              onClick={() => setShowHelpDrawer(true)}
+              className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50/70 transition-colors cursor-pointer"
+              title="Centro de Ayuda"
+            >
+              <HelpCircle size={19} />
+            </button>
             <NotificationBell />
             <button
               onClick={() => navigate('/budgets')}
@@ -299,6 +326,12 @@ export default function AppLayout() {
         user={user}
         onRefreshUser={checkAuth}
         onOpenReportPayment={() => setShowPaymentModal(true)}
+      />
+
+      {/* Panel Deslizante de Ayuda */}
+      <HelpDrawer
+        isOpen={showHelpDrawer}
+        onClose={() => setShowHelpDrawer(false)}
       />
     </div>
   );
