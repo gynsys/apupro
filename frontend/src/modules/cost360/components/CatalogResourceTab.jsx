@@ -355,9 +355,15 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                     }}
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-blue-700 font-mono">
-                      <div>{item.ref_code || item[safeConfig.idKey]}</div>
-                      {item.ref_code && (
-                        <div className="text-[10px] text-slate-400 font-normal">id: {item[safeConfig.idKey]}</div>
+                      {adminMode ? (
+                        <div>
+                          <div>{item[safeConfig.idKey]}</div>
+                          {item.ref_code && (
+                            <div className="text-[10px] text-slate-400 font-normal">ref: {item.ref_code}</div>
+                          )}
+                        </div>
+                      ) : (
+                        <div>{item.ref_code || item[safeConfig.idKey]}</div>
                       )}
                     </td>
                     {!safeConfig.editableFields?.some(f => f.key === safeConfig.descKey) && (
@@ -449,7 +455,14 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                   <p className="text-sm text-slate-500 mt-0.5">
                     {usesModal.item && (
                       <>
-                        <span className="font-mono font-bold text-blue-600">{usesModal.item[safeConfig.idKey]}</span> — {usesModal.item[safeConfig.descKey]}
+                        <span className="font-mono font-bold text-blue-600">
+                          {adminMode ? usesModal.item[safeConfig.idKey] : (usesModal.item.ref_code || usesModal.item[safeConfig.idKey])}
+                        </span>
+                        {usesModal.item.ref_code && (
+                          <span className="text-xs text-slate-400 font-normal ml-1">
+                            ({adminMode ? `ref: ${usesModal.item.ref_code}` : usesModal.item[safeConfig.idKey]})
+                          </span>
+                        )} — {usesModal.item[safeConfig.descKey]}
                       </>
                     )}
                   </p>
@@ -479,17 +492,17 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                       <table className="min-w-full divide-y divide-slate-200 text-sm">
                         <thead className="bg-slate-50">
                           <tr>
-                            <th className="px-4 py-2 text-left font-semibold text-slate-600">Código</th>
-                            <th className="px-4 py-2 text-left font-semibold text-slate-600">CovPar</th>
-                              <th className="px-4 py-2 text-left font-semibold text-slate-600">Descripción de la Partida</th>
+                            <th className="px-4 py-2.5 text-left font-semibold text-slate-600 whitespace-nowrap w-48">Cod. COVENIN</th>
+                            <th className="px-4 py-2.5 text-left font-semibold text-slate-600">Descripción de la Partida</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {usesModal.apus.map(apu => (
-                            <tr key={apu.CodPar} className="hover:bg-slate-50">
-                              <td className="px-4 py-2.5 font-mono text-blue-600 font-medium whitespace-nowrap">{apu.CodPar}</td>
-                              <td className="px-4 py-2.5 font-mono text-slate-500 whitespace-nowrap">{apu.CovPar || "-"}</td>
-                                <td className="px-4 py-2.5 text-slate-700">{apu.Descri}</td>
+                            <tr key={apu.CodPar} className="hover:bg-slate-50 transition-colors">
+                              <td className="px-4 py-2.5 font-mono text-blue-600 font-bold whitespace-nowrap">
+                                {apu.CovPar || apu.CodPar}
+                              </td>
+                              <td className="px-4 py-2.5 text-slate-700 leading-snug">{apu.Descri}</td>
                             </tr>
                           ))}
                         </tbody>
