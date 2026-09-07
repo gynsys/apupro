@@ -860,18 +860,18 @@ export default function ApuEditorUI({
                     {costos.subtotalC.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                 </tr>
-                <tr>
-                  <td className="p-2 text-right border-b border-slate-200 flex items-center justify-end gap-2 uppercase">
-                    <span>%</span>
-                    <span className="bg-slate-100 text-slate-600 px-2 py-0.5 border border-slate-200 rounded">0.00</span>
-                    <span>Financiamiento:</span>
-                  </td>
-                  <td className="p-2 w-36 text-right border-b border-slate-200 bg-white border-l border-slate-200 text-slate-500">
-                    {0.00.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                </tr>
                 {iva_percent > 0 ? (
                   <>
+                    <tr>
+                      <td className="p-2 text-right border-b border-slate-200 flex items-center justify-end gap-2 uppercase">
+                        <span>%</span>
+                        <span className="bg-slate-100 text-slate-600 px-2 py-0.5 border border-slate-200 rounded">0.00</span>
+                        <span>Financiamiento:</span>
+                      </td>
+                      <td className="p-2 w-36 text-right border-b border-slate-200 bg-white border-l border-slate-200 text-slate-500">
+                        {0.00.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
                     <tr className="bg-slate-100">
                       <td className="p-2 text-right border-b border-slate-300 text-slate-700 uppercase font-black">Precio Unitario Sin Impuesto:</td>
                       <td className="p-2 w-36 text-right border-b border-slate-300 bg-blue-50/50 border-l border-slate-200 font-bold text-blue-900">

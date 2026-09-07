@@ -368,17 +368,18 @@ export default function AIApuGeneratorPage() {
     loadDatabases();
   }, []);
 
-  // Defaults for calculations
+  // Defaults for calculations - IVA en 0 porque en los presupuestos se incluye el IVA general
   const [settings, setSettings] = useState({
     fcas_percent: 417,
     admin_percent: 15.0,
     profit_percent: 10.0,
-    iva_percent: 16.0,
+    iva_percent: 0,
     labor_bonus: 0,
     currency: 'USD'
   });
 
   const handleCreateManual = () => {
+    setSettings(prev => ({ ...prev, iva_percent: 0 }));
     setItem({
       cod_par: "CUST-" + Math.floor(Math.random() * 10000),
       description: "Nueva Partida Personalizada",
@@ -411,6 +412,7 @@ export default function AIApuGeneratorPage() {
       const data = await fetchApuDetails(itemCode, selectedDatabase);
       
       setIsGuidedMode(false);
+      setSettings(prev => ({ ...prev, iva_percent: 0 }));
       setItem({
         cod_par: data.partida.CodPar,
         description: data.partida.Descri,
@@ -891,6 +893,7 @@ export default function AIApuGeneratorPage() {
       });
 
       // Map response to the format expected by the editor
+      setSettings(prev => ({ ...prev, iva_percent: 0 }));
       setItem({
         ...response.partida,
         materials: response.materials || [],
@@ -1728,23 +1731,6 @@ export default function AIApuGeneratorPage() {
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200">
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setItem(null);
-                  if (creationMode === 'import') {
-                    navigate('/cost360/ai-generator?mode=import');
-                  } else {
-                    setIsGuidedMode(true);
-                    setCurrentChatStep(0);
-                  }
-                }}
-                className="px-3 py-1.5 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 text-slate-700 hover:text-blue-600 transition-all shadow-sm flex items-center gap-1.5 text-xs font-bold cursor-pointer"
-                title={creationMode === 'import' ? "Volver al Buscador" : "Volver al Asistente IA"}
-              >
-                <ArrowLeft size={16} />
-                <span>{creationMode === 'import' ? 'Volver al Buscador' : 'Volver al Asistente'}</span>
-              </button>
               <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                 <Calculator size={20} className="text-blue-500" />
                 APU EN EDICIÓN

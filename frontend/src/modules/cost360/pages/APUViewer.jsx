@@ -30,7 +30,7 @@ export default function APUViewer() {
     admin_percent: 15,
     profit_percent: 10,
     fcas_percent: 417,
-    iva_percent: 16,
+    iva_percent: 0,
     labor_bonus: 0,
     currency: 'USD'
   });
@@ -55,7 +55,6 @@ export default function APUViewer() {
           labors: (apuData.mano_obra || []).map(l => ({ id: l.codigo, codigo: l.codigo, descripcion: l.descripcion, unidad: 'día', cantidad: l.cantidad, jornal: l.jornal, bono: l.bono, origen: 'historico' }))
         });
       } catch (err) {
-        console.error("Error loading APU details:", err);
         setError("Error loading APU details");
       } finally {
         setLoading(false);
@@ -138,29 +137,61 @@ export default function APUViewer() {
       const apuData = await cost360Service.fetchApuDetails(id, dbId);
       setData(apuData);
     } catch (err) {
-      console.error("Error saving APU:", err);
       toast.error("Error al guardar los cambios del APU");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeleteAPU = async () => {
+  const handleDeleteAPU = () => {
     const code = item?.cov_par || item?.cod_par || id;
-    if (!window.confirm(`¿Estás seguro de eliminar la partida "${code}" de tu Base Personalizada? Esta acción no se puede deshacer.`)) {
-      return;
-    }
-    try {
-      setDeleting(true);
-      await cost360Service.deleteCustomApu(id);
-      toast.success("Partida eliminada correctamente");
-      navigate(fromParam || '/cost360?db=personalizada');
-    } catch (err) {
-      console.error("Error al eliminar partida:", err);
-      toast.error(err.response?.data?.detail || "Error al eliminar la partida");
-    } finally {
-      setDeleting(false);
-    }
+    toast((t) => (
+      <div className="flex flex-col gap-2.5 py-1 min-w-[260px]">
+        <div className="flex items-start gap-2.5">
+          <span className="text-amber-500 font-bold text-lg leading-none mt-0.5">⚠️</span>
+          <div>
+            <p className="text-xs font-bold text-slate-800">¿Eliminar partida de tu Base?</p>
+            <p className="text-xs text-slate-600 font-mono mt-1 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 inline-block">{code}</p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-1">
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200 cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={async () => {
+              toast.dismiss(t.id);
+              try {
+                setDeleting(true);
+                await cost360Service.deleteCustomApu(id);
+                toast.success("Partida eliminada correctamente");
+                navigate(fromParam || '/cost360?db=personalizada');
+              } catch (err) {
+                toast.error(err.response?.data?.detail || "Error al eliminar la partida");
+              } finally {
+                setDeleting(false);
+              }
+            }}
+            className="px-3 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors cursor-pointer"
+          >
+            Eliminar
+          </button>
+        </div>
+      </div>
+    ), {
+      duration: 6000,
+      position: 'top-center',
+      style: {
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: '1rem',
+        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08)',
+        padding: '0.85rem 1rem',
+      }
+    });
   };
 
   if (loading) {

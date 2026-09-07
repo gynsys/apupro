@@ -58,11 +58,10 @@ export default function DatabaseManagementPage() {
         const customRes = await cost360Service.fetchItems(0, 1, '', '', 'personalizada');
         setCustomItemsCount(customRes?.total || 0);
       } catch (err) {
-        console.error('Error fetching custom items count:', err);
+        // Ignorar silenciosamente
       }
     } catch (error) {
       toast.error('Error cargando bases de datos');
-      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -96,7 +95,6 @@ export default function DatabaseManagementPage() {
         setShowCreateModal(false);
       } else {
         toast.error('Error al crear base de datos');
-        console.error(error);
       }
     }
   };
@@ -117,7 +115,6 @@ export default function DatabaseManagementPage() {
       reloadDatabases();
     } catch (error) {
       toast.error('Error al actualizar base de datos');
-      console.error(error);
     }
   };
 
@@ -146,7 +143,6 @@ export default function DatabaseManagementPage() {
       reloadDatabases(); // Actualizar el contexto global
     } catch (error) {
       toast.error('Error al eliminar base de datos');
-      console.error(error);
     }
   };
 
@@ -212,24 +208,17 @@ export default function DatabaseManagementPage() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Tarjeta Base Personalizada */}
-          <div
-            className="tarjeta-presupuesto-ambar group cursor-default relative flex flex-col justify-between"
-            style={{
-              border: '2px solid rgba(59, 130, 246, 0.35)',
-              background: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(239,246,255,0.85) 100%)',
-              boxShadow: '0 8px 24px -4px rgba(37, 99, 235, 0.12)',
-            }}
-          >
-            <div>
+          <div className="tarjeta-presupuesto-ambar group cursor-default relative !flex !flex-col !items-stretch justify-between h-full">
+            <div className="flex flex-col flex-1">
               {/* Header */}
               <div className="tarjeta-header flex flex-col justify-center items-start mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="icono-archivo-ambar" style={{ background: '#dbeafe', color: '#1d4ed8' }}>
+                  <div className="icono-archivo-ambar">
                     <Layers size={20} strokeWidth={2.2} />
                   </div>
                   <div>
                     <h3 className="tarjeta-titulo-ambar font-extrabold text-slate-800">Base Personalizada</h3>
-                    <span className="inline-block mt-0.5 px-2.5 py-0.5 text-[11px] font-bold bg-blue-100 text-blue-800 rounded-md">
+                    <span className="inline-block mt-0.5 px-2.5 py-0.5 text-[11px] font-bold bg-blue-100/70 group-hover:bg-transparent text-blue-800 group-hover:text-amber-950 rounded-md border border-blue-200/50 group-hover:border-amber-400/40 transition-colors">
                       Partidas Propias
                     </span>
                   </div>
@@ -237,15 +226,17 @@ export default function DatabaseManagementPage() {
               </div>
 
               {/* Body */}
-              <div className="tarjeta-body">
-                <p className="text-sm text-slate-600 mb-3">
+              <div className="tarjeta-body flex-1 flex flex-col justify-between">
+                <p className="text-sm text-slate-600 group-hover:text-slate-700 mb-3 transition-colors">
                   Base de datos exclusiva para las partidas y APUs que creas desde cero o adaptas con el Generador IA.
                 </p>
 
-                <div className="rounded-xl p-3 bg-white/90 border border-blue-100 shadow-xs mb-3 space-y-1.5">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-500 font-medium">Tus partidas guardadas:</span>
-                    <span className="font-extrabold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-200">
+                <div className="rounded-xl p-3 caja-inflacion mb-3 w-full">
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-slate-600 group-hover:text-amber-950 font-medium transition-colors whitespace-nowrap">
+                      Tus partidas guardadas:
+                    </span>
+                    <span className="font-extrabold text-blue-700 group-hover:text-amber-950 bg-blue-50/60 group-hover:bg-transparent px-3.5 py-1 rounded-lg border border-blue-200/80 group-hover:border-amber-400/50 whitespace-nowrap shrink-0 transition-colors min-w-[95px] text-center inline-flex items-center justify-center">
                       {customItemsCount} {customItemsCount === 1 ? 'partida' : 'partidas'}
                     </span>
                   </div>
@@ -261,14 +252,14 @@ export default function DatabaseManagementPage() {
             </div>
 
             {/* Footer */}
-            <div className="pt-3 mt-4 border-t border-slate-200/70 flex items-center justify-between">
+            <div className="pt-3 mt-4 border-t border-slate-200/70 group-hover:border-amber-200/80 flex flex-col gap-2.5 transition-colors">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
                 <CheckCircle size={15} />
-                Activa
+                <span>Activa</span>
               </div>
               <button
                 onClick={() => navigate('/cost360?db=personalizada')}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:gap-2 cursor-pointer"
+                className="w-full flex items-center justify-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:gap-2 cursor-pointer"
               >
                 <span>Ver Partidas</span>
                 <ArrowRight size={14} />
