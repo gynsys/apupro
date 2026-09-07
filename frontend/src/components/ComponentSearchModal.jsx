@@ -40,7 +40,9 @@ export default function ComponentSearchModal({ isOpen, onClose, onAdd, type, tit
     // Depending on type, map the Cost360 model fields to APU component fields
     if (type === 'materials') {
       return {
-        codigo: item.CodMat,
+        codigo: item.ref_code || item.CodMat,
+        cod_ins: item.CodMat,
+        ref_code: item.ref_code,
         descripcion: item.Descri,
         unidad: item.UniMat || 'UND',
         cantidad: 1,
@@ -48,7 +50,9 @@ export default function ComponentSearchModal({ isOpen, onClose, onAdd, type, tit
       };
     } else if (type === 'equipments') {
       return {
-        codigo: item.CodEqu,
+        codigo: item.ref_code || item.CodEqu,
+        cod_ins: item.CodEqu,
+        ref_code: item.ref_code,
         descripcion: item.Descri,
         unidad: 'Día',
         cantidad: 1,
@@ -56,7 +60,9 @@ export default function ComponentSearchModal({ isOpen, onClose, onAdd, type, tit
       };
     } else if (type === 'labors') {
       return {
-        codigo: item.CodMan,
+        codigo: item.ref_code || item.CodMan,
+        cod_ins: item.CodMan,
+        ref_code: item.ref_code,
         descripcion: item.Descri,
         cantidad: 1,
         jornal: item.Jornal || 0,
@@ -161,7 +167,7 @@ export default function ComponentSearchModal({ isOpen, onClose, onAdd, type, tit
                       onDoubleClick={() => onAdd(mapComponentData(item))}
                     >
                       <td className="p-3 font-mono text-xs text-slate-500">
-                        {item.CodMat || item.CodEqu || item.CodMan}
+                        {item.ref_code || item.CodMat || item.CodEqu || item.CodMan}
                       </td>
                       <td className="p-3 text-slate-800">
                         {item.Descri}

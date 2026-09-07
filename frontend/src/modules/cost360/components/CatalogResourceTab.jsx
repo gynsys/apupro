@@ -354,7 +354,12 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                       e.currentTarget.style.borderLeftColor = 'transparent';
                     }}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-blue-700 font-mono">{item[safeConfig.idKey]}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-blue-700 font-mono">
+                      <div>{item.ref_code || item[safeConfig.idKey]}</div>
+                      {item.ref_code && (
+                        <div className="text-[10px] text-slate-400 font-normal">id: {item[safeConfig.idKey]}</div>
+                      )}
+                    </td>
                     {!safeConfig.editableFields?.some(f => f.key === safeConfig.descKey) && (
                       <td className="px-6 py-4 text-xs text-slate-600 group-hover:text-slate-800">{item[safeConfig.descKey]}</td>
                     )}

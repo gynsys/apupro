@@ -19,6 +19,7 @@ class CostItemListResponse(BaseModel):
 
 class CostMaterialSchema(BaseModel):
     CodMat: str
+    ref_code: Optional[str] = None
     Descri: Optional[str] = None
     UniMat: Optional[str] = None
     CosMat: Optional[float] = None
@@ -26,12 +27,14 @@ class CostMaterialSchema(BaseModel):
 
 class CostEquipmentSchema(BaseModel):
     CodEqu: str
+    ref_code: Optional[str] = None
     Descri: Optional[str] = None
     CosDia: Optional[float] = None
     class Config: from_attributes = True
 
 class CostLaborSchema(BaseModel):
     CodMan: str
+    ref_code: Optional[str] = None
     Descri: Optional[str] = None
     Jornal: Optional[float] = None
     Bono: Optional[float] = None
@@ -39,6 +42,8 @@ class CostLaborSchema(BaseModel):
 
 class APUComponent(BaseModel):
     codigo: str
+    cod_ins: Optional[str] = None
+    ref_code: Optional[str] = None
     descripcion: str
     unidad: str
     cantidad: float

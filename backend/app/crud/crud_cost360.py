@@ -251,9 +251,9 @@ def search_materials_paginated(db: Session, skip: int, limit: int, search: str):
     query = db.query(CostMaterial).filter(CostMaterial.CodMat.in_(used_materials))
     if search:
         search_term = f"%{search}%"
-        query = query.filter(CostMaterial.CodMat.ilike(search_term) | CostMaterial.Descri.ilike(search_term))
+        query = query.filter(CostMaterial.ref_code.ilike(search_term) | CostMaterial.CodMat.ilike(search_term) | CostMaterial.Descri.ilike(search_term))
     total = query.count()
-    items = query.order_by(CostMaterial.CodMat).offset(skip).limit(limit).all()
+    items = query.order_by(CostMaterial.ref_code, CostMaterial.CodMat).offset(skip).limit(limit).all()
     return total, items
 
 def search_equipments_paginated(db: Session, skip: int, limit: int, search: str):
@@ -263,9 +263,9 @@ def search_equipments_paginated(db: Session, skip: int, limit: int, search: str)
     query = db.query(CostEquipment).filter(CostEquipment.CodEqu.in_(used_equipments))
     if search:
         search_term = f"%{search}%"
-        query = query.filter(CostEquipment.CodEqu.ilike(search_term) | CostEquipment.Descri.ilike(search_term))
+        query = query.filter(CostEquipment.ref_code.ilike(search_term) | CostEquipment.CodEqu.ilike(search_term) | CostEquipment.Descri.ilike(search_term))
     total = query.count()
-    items = query.order_by(CostEquipment.CodEqu).offset(skip).limit(limit).all()
+    items = query.order_by(CostEquipment.ref_code, CostEquipment.CodEqu).offset(skip).limit(limit).all()
     return total, items
 
 def search_labors_paginated(db: Session, skip: int, limit: int, search: str):
@@ -275,9 +275,9 @@ def search_labors_paginated(db: Session, skip: int, limit: int, search: str):
     query = db.query(CostLabor).filter(CostLabor.CodMan.in_(used_labors))
     if search:
         search_term = f"%{search}%"
-        query = query.filter(CostLabor.CodMan.ilike(search_term) | CostLabor.Descri.ilike(search_term))
+        query = query.filter(CostLabor.ref_code.ilike(search_term) | CostLabor.CodMan.ilike(search_term) | CostLabor.Descri.ilike(search_term))
     total = query.count()
-    items = query.order_by(CostLabor.CodMan).offset(skip).limit(limit).all()
+    items = query.order_by(CostLabor.ref_code, CostLabor.CodMan).offset(skip).limit(limit).all()
     return total, items
 
 def get_categories_tree_data(db: Session):

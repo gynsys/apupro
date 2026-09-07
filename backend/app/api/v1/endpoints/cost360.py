@@ -237,7 +237,8 @@ def get_apu(item_code: str, database_id: str = "master", db: Session = Depends(g
         precio = (mat.CosMat or 0.0) * factors["mat"]
         subtotal = rel.CanIns * precio * (1 + (desperdicio / 100.0))
         materiales.append(APUComponent(
-            codigo=mat.CodMat, descripcion=mat.Descri, unidad=mat.UniMat, cantidad=rel.CanIns,
+            codigo=mat.ref_code or mat.CodMat, cod_ins=mat.CodMat, ref_code=mat.ref_code,
+            descripcion=mat.Descri, unidad=mat.UniMat, cantidad=rel.CanIns,
             precio_unitario=round(precio, 4), subtotal=round(subtotal, 2), desperdicio=desperdicio
         ))
 
@@ -249,7 +250,8 @@ def get_apu(item_code: str, database_id: str = "master", db: Session = Depends(g
         precio_adquisicion = precio_diario_depreciado / depreciacion if depreciacion > 0 else precio_diario_depreciado
         subtotal = rel.CanIns * precio_diario_depreciado
         equipos.append(APUComponent(
-            codigo=eq.CodEqu, descripcion=eq.Descri, unidad="Día", cantidad=rel.CanIns,
+            codigo=eq.ref_code or eq.CodEqu, cod_ins=eq.CodEqu, ref_code=eq.ref_code,
+            descripcion=eq.Descri, unidad="Día", cantidad=rel.CanIns,
             precio_unitario=round(precio_adquisicion, 4), subtotal=round(subtotal, 2), depreciacion=depreciacion
         ))
 
@@ -263,7 +265,8 @@ def get_apu(item_code: str, database_id: str = "master", db: Session = Depends(g
         precio = jornal + bono
         subtotal = tot_jornal + tot_bono
         mano_obra.append(APUComponent(
-            codigo=mo.CodMan, descripcion=mo.Descri, unidad="Día", cantidad=rel.CanIns,
+            codigo=mo.ref_code or mo.CodMan, cod_ins=mo.CodMan, ref_code=mo.ref_code,
+            descripcion=mo.Descri, unidad="Día", cantidad=rel.CanIns,
             precio_unitario=round(precio, 2), subtotal=round(subtotal, 2),
             jornal=round(jornal, 4), bono=round(bono, 4),
             tot_jornal=round(tot_jornal, 2), tot_bono=round(tot_bono, 2)
@@ -602,7 +605,9 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             materials = [
                 {
                     "id": f"m-{mat.CodMat}",
-                    "codigo": mat.CodMat,
+                    "codigo": mat.ref_code or mat.CodMat,
+                    "cod_ins": mat.CodMat,
+                    "ref_code": mat.ref_code,
                     "descripcion": mat.Descri,
                     "unidad": mat.UniMat,
                     "cantidad": rel.CanIns,
@@ -616,7 +621,9 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             equipments = [
                 {
                     "id": f"e-{eq.CodEqu}",
-                    "codigo": eq.CodEqu,
+                    "codigo": eq.ref_code or eq.CodEqu,
+                    "cod_ins": eq.CodEqu,
+                    "ref_code": eq.ref_code,
                     "descripcion": eq.Descri,
                     "unidad": "día",
                     "cantidad": rel.CanIns,
@@ -630,7 +637,9 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             labors = [
                 {
                     "id": f"l-{mo.CodMan}",
-                    "codigo": mo.CodMan,
+                    "codigo": mo.ref_code or mo.CodMan,
+                    "cod_ins": mo.CodMan,
+                    "ref_code": mo.ref_code,
                     "descripcion": mo.Descri,
                     "unidad": "día",
                     "cantidad": rel.CanIns,

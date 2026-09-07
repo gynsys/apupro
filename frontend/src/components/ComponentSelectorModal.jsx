@@ -19,10 +19,12 @@ const TYPE_CONFIG = {
       spinner: 'text-blue-600',
       link: 'text-blue-600 hover:text-blue-700'
     },
-    placeholder: 'Buscar por código (ej: CEM, ARE, CAB) o descripción del material...',
+    placeholder: 'Buscar por código (ej: MAT-CON, MAT-MET) o descripción del material...',
     endpoint: '/cost360/materials',
     mapItem: (mat) => ({
-      codigo: mat.CodMat || '',
+      codigo: mat.ref_code || mat.CodMat || '',
+      cod_ins: mat.CodMat || '',
+      ref_code: mat.ref_code || '',
       descripcion: mat.Descri || '',
       unidad: mat.UniMat || 'UND',
       precio_unitario: Number(mat.CosMat || 0),
@@ -45,10 +47,12 @@ const TYPE_CONFIG = {
       spinner: 'text-indigo-600',
       link: 'text-indigo-600 hover:text-indigo-700'
     },
-    placeholder: 'Buscar por código (ej: CPT, ALB, CAM) o descripción del equipo...',
+    placeholder: 'Buscar por código (ej: EQU-PES, EQU-LIV) o descripción del equipo...',
     endpoint: '/cost360/equipments',
     mapItem: (eq) => ({
-      codigo: eq.CodEqu || '',
+      codigo: eq.ref_code || eq.CodEqu || '',
+      cod_ins: eq.CodEqu || '',
+      ref_code: eq.ref_code || '',
       descripcion: eq.Descri || '',
       precio_unitario: Number(eq.CosDia || 0),
       depreciacion: 1.0,
@@ -71,10 +75,12 @@ const TYPE_CONFIG = {
       spinner: 'text-emerald-600',
       link: 'text-emerald-600 hover:text-emerald-700'
     },
-    placeholder: 'Buscar por código (ej: MO, ALB, CAP) o cargo (ej: Maestro, Albañil)...',
+    placeholder: 'Buscar por código (ej: MO-OFI, MO-OBR) o cargo (ej: Maestro, Albañil)...',
     endpoint: '/cost360/labors',
     mapItem: (lab) => ({
-      codigo: lab.CodMan || '',
+      codigo: lab.ref_code || lab.CodMan || '',
+      cod_ins: lab.CodMan || '',
+      ref_code: lab.ref_code || '',
       descripcion: lab.Descri || '',
       jornal: Number(lab.Jornal || 0),
       bono: Number(lab.Bono || 0),
@@ -357,7 +363,7 @@ export default function ComponentSelectorModal({
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {items.map((row, idx) => {
-                  const code = row.CodMat || row.CodEqu || row.CodMan || '';
+                  const code = row.ref_code || row.CodMat || row.CodEqu || row.CodMan || '';
                   const desc = row.Descri || '';
                   const unit = row.UniMat || '';
                   const price = row.CosMat || row.CosDia || 0;

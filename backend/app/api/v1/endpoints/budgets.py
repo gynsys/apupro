@@ -528,21 +528,21 @@ def sync_budget_prices(budget_id: str, db: Session = Depends(get_db), current_us
     for item in budget.items:
         # Sync Materials
         for mat in item.materials:
-            cost_mat = db.query(CostMaterial).filter(CostMaterial.CodMat == mat.codigo).first()
+            cost_mat = db.query(CostMaterial).filter((CostMaterial.ref_code == mat.codigo) | (CostMaterial.CodMat == mat.codigo)).first()
             if cost_mat:
                 mat.precio_unitario = cost_mat.CosMat if cost_mat.CosMat is not None else 0.0
                 mat.descripcion = cost_mat.Descri if cost_mat.Descri is not None else mat.descripcion
                 
         # Sync Equipment
         for eq in item.equipments:
-            cost_eq = db.query(CostEquipment).filter(CostEquipment.CodEqu == eq.codigo).first()
+            cost_eq = db.query(CostEquipment).filter((CostEquipment.ref_code == eq.codigo) | (CostEquipment.CodEqu == eq.codigo)).first()
             if cost_eq:
                 eq.precio_unitario = cost_eq.CosDia if cost_eq.CosDia is not None else 0.0
                 eq.descripcion = cost_eq.Descri if cost_eq.Descri is not None else eq.descripcion
                 
         # Sync Labor
         for lab in item.labors:
-            cost_lab = db.query(CostLabor).filter(CostLabor.CodMan == lab.codigo).first()
+            cost_lab = db.query(CostLabor).filter((CostLabor.ref_code == lab.codigo) | (CostLabor.CodMan == lab.codigo)).first()
             if cost_lab:
                 lab.jornal = cost_lab.Jornal if cost_lab.Jornal is not None else 0.0
                 lab.bono = cost_lab.Bono if cost_lab.Bono is not None else 0.0

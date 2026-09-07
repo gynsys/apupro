@@ -30,6 +30,7 @@ class CostItem(Base):
 class CostMaterial(Base):
     __tablename__ = "cost360_materials"
     CodMat = Column(String, primary_key=True, index=True)
+    ref_code = Column(String, index=True, nullable=True)
     Descri = Column(String)
     UniMat = Column(String)
     CosMat = Column(Float)
@@ -42,6 +43,7 @@ class CostMaterial(Base):
 class CostLabor(Base):
     __tablename__ = "cost360_labor"
     CodMan = Column(String, primary_key=True, index=True)
+    ref_code = Column(String, index=True, nullable=True)
     Descri = Column(String)
     Jornal = Column(Float)  # Salario base (mapeado desde 'Salari' en CSV)
     Bono = Column(Float)
@@ -49,6 +51,7 @@ class CostLabor(Base):
 class CostEquipment(Base):
     __tablename__ = "cost360_equipment"
     CodEqu = Column(String, primary_key=True, index=True)
+    ref_code = Column(String, index=True, nullable=True)
     Descri = Column(String)
     CosDia = Column(Float)
 
