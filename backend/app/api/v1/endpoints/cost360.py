@@ -680,12 +680,8 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
     if is_code_input(raw_desc):
         return {
             "status": "clarification_needed",
-            "clarification_message": (
-                f"El texto ingresado ('{raw_desc}') corresponde a un código o nomenclatura y no a una descripción técnica de obra.\n\n"
-                "Para generar un APU con Inteligencia Artificial, describe la actividad técnica a ejecutar "
-                "(ej: 'Construcción provisional convencional de oficinas, sin friso ni cielo raso' o 'Suministro e instalación de bomba centrífuga').\n\n"
-                "Te recomendamos utilizar el Asistente Guiado (Chatbot) o el APU Builder para estructurar tu descripción paso a paso."
-            ),
+            "clarification_message": f"El texto ingresado ('{raw_desc}')  no es una descripción técnica de obra.",
+            "recommendation": "Te recomendamos utilizar el Asistente Guiado para estructurar tu descripción paso a paso.",
             "options": [],
             "questions": [
                 "1. ¿Cuál es la actividad técnica principal que deseas presupuestar? (Acción + Elemento)",

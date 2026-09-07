@@ -183,6 +183,7 @@ export default function AIApuGeneratorPage() {
   // Conversational AI States
   const [chatHistory, setChatHistory] = useState([]);
   const [aiClarificationMessage, setAiClarificationMessage] = useState("");
+  const [aiClarificationRecommendation, setAiClarificationRecommendation] = useState("");
   const [aiOptions, setAiOptions] = useState([]);
   const [aiQuestions, setAiQuestions] = useState([]);
   const [aiGuiaRedaccion, setAiGuiaRedaccion] = useState(null);
@@ -840,6 +841,7 @@ export default function AIApuGeneratorPage() {
       const newHistory = isClarifying ? [...chatHistory, { role: 'user', content: textToSubmit }] : [{ role: 'user', content: textToSubmit }];
       setChatHistory(newHistory);
       setAiClarificationMessage(response.clarification_message || "No se pudo interpretar una partida técnica válida.");
+      setAiClarificationRecommendation(response.recommendation || "Te recomendamos utilizar el Asistente Guiado para estructurar tu descripción paso a paso.");
       setAiOptions(response.options || []);
       setAiQuestions(response.questions || []);
       setAiGuiaRedaccion(response.guia_redaccion || null);
@@ -859,6 +861,7 @@ export default function AIApuGeneratorPage() {
       setIsGuidedMode(false);
       setChatHistory([]);
       setAiClarificationMessage("");
+      setAiClarificationRecommendation("");
       setAiOptions([]);
       setAiQuestions([]);
       setAiGuiaRedaccion(null);
@@ -1318,7 +1321,7 @@ export default function AIApuGeneratorPage() {
                     {aiClarificationMessage || "No fue posible interpretar una partida técnica válida"}
                   </h4>
                   <p className="text-xs text-amber-800 mt-1 font-medium">
-                    Para asegurar que tu presupuesto sea confiable y no inventar costos erróneos, la IA necesita que definas estos puntos clave:
+                    {aiClarificationRecommendation || "Te recomendamos utilizar el Asistente Guiado para estructurar tu descripción paso a paso."}
                   </p>
                 </div>
               </div>
@@ -1326,13 +1329,16 @@ export default function AIApuGeneratorPage() {
               {aiQuestions.length > 0 && (
                 <div className="my-3 bg-white/90 border border-amber-200 rounded-xl p-3.5 shadow-xs">
                   <p className="text-xs font-bold text-amber-900 mb-2 uppercase tracking-wide">REDACCION RECOMENDADA:</p>
-                  <ul className="text-sm text-slate-700 space-y-1.5 font-medium">
-                    {aiQuestions.map((q, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <span className="text-amber-600 font-bold shrink-0">•</span>
-                        <span>{q}</span>
-                      </li>
-                    ))}
+                  <ul className="text-sm text-slate-700 space-y-2 font-medium">
+                    {aiQuestions.map((q, idx) => {
+                      const hasNumber = /^\d+[\.\)]\s*/.test(q);
+                      return (
+                        <li key={idx} className="flex items-start gap-2">
+                          {!hasNumber && <span className="text-amber-600 font-bold shrink-0">•</span>}
+                          <span>{q}</span>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
@@ -1370,6 +1376,7 @@ export default function AIApuGeneratorPage() {
                       setIsClarifying(false);
                       setChatHistory([]);
                       setAiClarificationMessage("");
+                      setAiClarificationRecommendation("");
                       setAiOptions([]);
                       setAiQuestions([]);
                       setAiGuiaRedaccion(null);
@@ -1385,6 +1392,7 @@ export default function AIApuGeneratorPage() {
                     setIsClarifying(false);
                     setChatHistory([]);
                     setAiClarificationMessage("");
+                    setAiClarificationRecommendation("");
                     setAiOptions([]);
                     setAiQuestions([]);
                     setAiGuiaRedaccion(null);
@@ -1640,7 +1648,7 @@ export default function AIApuGeneratorPage() {
             <div className="flex justify-end gap-3">
               {isClarifying && (
                 <button
-                  onClick={() => { setIsClarifying(false); setChatHistory([]); setAiClarificationMessage(""); setAiOptions([]); setAiQuestions([]); setPrompt(''); }}
+                  onClick={() => { setIsClarifying(false); setChatHistory([]); setAiClarificationMessage(""); setAiClarificationRecommendation(""); setAiOptions([]); setAiQuestions([]); setPrompt(''); }}
                   className="px-4 py-2 text-slate-500 hover:text-slate-700 text-sm font-bold transition-colors"
                 >
                   Cancelar
