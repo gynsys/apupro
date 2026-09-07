@@ -208,10 +208,10 @@ export default function DatabaseManagementPage() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Tarjeta Base Personalizada */}
-          <div className="tarjeta-presupuesto-ambar group cursor-default relative !flex !flex-col !items-stretch justify-between h-full">
+          <div className="tarjeta-presupuesto-ambar group cursor-default relative !flex !flex-col !items-stretch justify-between !h-[310px]">
             <div className="flex flex-col flex-1">
               {/* Header */}
-              <div className="tarjeta-header flex flex-col justify-center items-start mb-3">
+              <div className="tarjeta-header flex flex-col justify-center items-start mb-2">
                 <div className="flex items-center gap-3">
                   <div className="icono-archivo-ambar">
                     <Layers size={20} strokeWidth={2.2} />
@@ -227,11 +227,11 @@ export default function DatabaseManagementPage() {
 
               {/* Body */}
               <div className="tarjeta-body flex-1 flex flex-col justify-between">
-                <p className="text-sm text-slate-600 group-hover:text-slate-700 mb-3 transition-colors">
+                <p className="text-sm text-slate-600 group-hover:text-slate-700 mb-2 transition-colors">
                   Base de datos exclusiva para las partidas y APUs que creas desde cero o adaptas con el Generador IA.
                 </p>
 
-                <div className="rounded-xl p-3 caja-inflacion mb-3 w-full">
+                <div className="rounded-xl p-2.5 caja-inflacion mb-2 w-full">
                   <div className="flex items-center justify-between gap-3 text-sm">
                     <span className="text-slate-600 group-hover:text-amber-950 font-medium transition-colors whitespace-nowrap">
                       Tus partidas guardadas:
@@ -252,14 +252,14 @@ export default function DatabaseManagementPage() {
             </div>
 
             {/* Footer */}
-            <div className="pt-3 mt-4 border-t border-slate-200/70 group-hover:border-amber-200/80 flex flex-col gap-2.5 transition-colors">
+            <div className="pt-2 mt-2 border-t border-slate-200/70 group-hover:border-amber-200/80 flex flex-col gap-2 transition-colors">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
                 <CheckCircle size={15} />
                 <span>Activa</span>
               </div>
               <button
                 onClick={() => navigate('/cost360?db=personalizada')}
-                className="w-full flex items-center justify-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:gap-2 cursor-pointer"
+                className="w-full flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:gap-2 cursor-pointer"
               >
                 <span>Ver Partidas</span>
                 <ArrowRight size={14} />
@@ -271,7 +271,7 @@ export default function DatabaseManagementPage() {
           {databases.map((db) => (
             <div
               key={db.id}
-              className="tarjeta-presupuesto-ambar group cursor-default relative"
+              className="tarjeta-presupuesto-ambar group cursor-default relative !flex !flex-col !items-stretch justify-between !h-[310px]"
             >
               {/* Header */}
               <div className="tarjeta-header flex flex-col justify-center items-start">
