@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { FolderOpen, Save, Trash2, X, Check, Printer, RotateCcw } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 // ============================================
 // CALCULADORA FCAS PROFESIONAL - VENEZUELA
@@ -25,7 +27,8 @@ export default function CalculadoraFCAS({
   initialBonoCestaticket = 40,
   initialMetodo = 'estandar',
   savedProfiles = {},
-  onSaveProfile = null
+  onSaveProfile = null,
+  onDeleteProfile = null
 }) {
   // ── Estados ──────────────────────────────────────────────
   const [metodo, setMetodo] = useState(initialMetodo); // 'estandar' o 'indexado'
@@ -35,6 +38,12 @@ export default function CalculadoraFCAS({
   const [diasNoTrabajados, setDiasNoTrabajados] = useState(114); // se recalcula automáticamente
   const [conceptos, setConceptos] = useState(CONCEPTOS_DEFAULT);
   const [calculoAutomatico, setCalculoAutomatico] = useState(true);
+
+  // ── Modales de Gestión de Cálculos ─────────────────────────
+  const [showOpenModal, setShowOpenModal] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [newProfileName, setNewProfileName] = useState('');
+  const [profileToDelete, setProfileToDelete] = useState(null);
 
   // Sincronizar si cambian las props iniciales
   useEffect(() => {
@@ -117,12 +126,66 @@ export default function CalculadoraFCAS({
 
   const handlePrint = () => window.print();
 
-  const handleSaveProfile = () => {
-    const name = window.prompt("Ingresa un nombre para guardar esta configuración (ej: Alcaldía, Gobernación):");
-    if (name && name.trim()) {
-      if (onSaveProfile) {
-        onSaveProfile(name.trim(), { salarioBase, bonoCestaticket, metodo });
-      }
+  const handleConfirmSaveProfile = (e) => {
+    if (e) e.preventDefault();
+    const trimmed = newProfileName.trim();
+    if (!trimmed) {
+      toast.error('Por favor ingresa un nombre para el cálculo');
+      return;
+    }
+    const profileData = {
+      salarioBase,
+      bonoCestaticket,
+      metodo,
+      diasContratados,
+      diasNoTrabajados,
+      conceptos,
+      fcasPorcentaje: parseFloat(fcasPorcentaje.toFixed(2)),
+      costoRealMensual: parseFloat(costoRealMensual.toFixed(2)),
+      fecha: new Date().toISOString()
+    };
+    if (onSaveProfile) {
+      onSaveProfile(trimmed, profileData);
+    }
+    setShowSaveModal(false);
+    setNewProfileName('');
+  };
+
+  const handleLoadProfile = (name, p) => {
+    if (!p) return;
+    if (p.salarioBase != null) setSalarioBase(p.salarioBase);
+    if (p.bonoCestaticket != null) setBonoCestaticket(p.bonoCestaticket);
+    if (p.metodo) setMetodo(p.metodo);
+    if (p.diasContratados != null) setDiasContratados(p.diasContratados);
+    if (p.diasNoTrabajados != null) {
+      setDiasNoTrabajados(p.diasNoTrabajados);
+      setCalculoAutomatico(false);
+    }
+    if (Array.isArray(p.conceptos) && p.conceptos.length > 0) {
+      setConceptos(p.conceptos);
+    }
+    setShowOpenModal(false);
+    toast.success(`Cálculo "${name}" cargado exitosamente`);
+  };
+
+  const handleDeleteProfile = (name) => {
+    if (onDeleteProfile) {
+      onDeleteProfile(name);
+    }
+    setProfileToDelete(null);
+  };
+
+  const handleUseFCAS = () => {
+    const roundedFCAS = parseFloat(fcasPorcentaje.toFixed(2));
+    if (onUseFCAS) {
+      onUseFCAS(roundedFCAS, {
+        salarioBase,
+        bonoCestaticket,
+        metodo,
+        diasContratados,
+        diasNoTrabajados,
+        conceptos
+      });
     }
   };
 
@@ -134,6 +197,8 @@ export default function CalculadoraFCAS({
   const cardClasses = isPage
     ? "bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl w-full max-w-5xl mx-auto flex flex-col h-full overflow-hidden border border-slate-200/60 print:border-none print:shadow-none print:overflow-visible print:h-auto print:block"
     : "bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200/60 print:border-none print:shadow-none print:max-h-none print:overflow-visible print:h-auto print:block";
+
+  const savedCount = Object.keys(savedProfiles || {}).length;
 
   return (
     <div className={containerClasses}>
@@ -149,37 +214,37 @@ export default function CalculadoraFCAS({
           </div>
           
           <div className="flex items-center flex-wrap gap-2 print:hidden">
-            {Object.keys(savedProfiles).length > 0 && (
-              <select
-                className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white text-slate-700 font-medium focus:outline-none focus:border-blue-500"
-                onChange={(e) => {
-                  if (e.target.value) {
-                    const p = savedProfiles[e.target.value];
-                    if (p) {
-                      setSalarioBase(p.salarioBase);
-                      setBonoCestaticket(p.bonoCestaticket);
-                      setMetodo(p.metodo);
-                    }
-                    e.target.value = "";
-                  }
-                }}
-              >
-                <option value="">📁 Cargar perfil...</option>
-                {Object.keys(savedProfiles).map(name => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
-            )}
-
+            {/* Botón Abrir Cálculo */}
             <button
               type="button"
-              onClick={handleSaveProfile}
-              className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg transition-colors border border-blue-200"
-              title="Guardar como..."
+              onClick={() => setShowOpenModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-semibold rounded-lg transition-colors border border-sky-200 shadow-sm"
+              title="Abrir un cálculo guardado"
             >
-              Guardar Como
+              <FolderOpen size={15} />
+              <span>Abrir Cálculo</span>
+              {savedCount > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.5 bg-sky-600 text-white text-[10px] font-bold rounded-full leading-none">
+                  {savedCount}
+                </span>
+              )}
             </button>
 
+            {/* Botón Guardar Como */}
+            <button
+              type="button"
+              onClick={() => {
+                setNewProfileName('');
+                setShowSaveModal(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg transition-colors border border-blue-200 shadow-sm"
+              title="Guardar cálculo actual con un nombre"
+            >
+              <Save size={15} />
+              <span>Guardar Como</span>
+            </button>
+
+            {/* Restaurar valores si hubo modificaciones */}
             {(salarioBase !== initialSalarioBase || bonoCestaticket !== initialBonoCestaticket || metodo !== initialMetodo) && (
               <button
                 type="button"
@@ -187,39 +252,45 @@ export default function CalculadoraFCAS({
                   setSalarioBase(initialSalarioBase);
                   setBonoCestaticket(initialBonoCestaticket);
                   setMetodo(initialMetodo);
+                  setConceptos(CONCEPTOS_DEFAULT.map(c => ({ ...c })));
+                  setCalculoAutomatico(true);
                 }}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition-colors border border-slate-300"
-                title="Restaurar tus cálculos guardados"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition-colors border border-slate-300"
+                title="Restaurar a valores predeterminados"
               >
-                Deshacer
+                <RotateCcw size={14} />
+                <span>Restaurar</span>
               </button>
             )}
+
+            {/* Botón Usar FCAS (Predeterminado para Nuevos Presupuestos) */}
             <button
               type="button"
-              onClick={() => onUseFCAS && onUseFCAS(fcasPorcentaje, { salarioBase, bonoCestaticket, metodo })}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors"
+              onClick={handleUseFCAS}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+              title="Establece este porcentaje como el FCAS predeterminado en tu cuenta para futuros presupuestos"
             >
-              Usar FCAS
+              <Check size={15} />
+              <span>Usar FCAS</span>
             </button>
+
             <button
               type="button"
               onClick={handlePrint}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600 hover:text-slate-900"
+              className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600 hover:text-slate-900 border border-slate-200"
               title="Imprimir cálculo"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-              </svg>
+              <Printer size={16} />
             </button>
+
             {!isPage && (
               <button
                 type="button"
                 onClick={onClose}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600"
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600 border border-slate-200"
+                title="Cerrar ventana"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X size={16} />
               </button>
             )}
           </div>
@@ -392,6 +463,261 @@ export default function CalculadoraFCAS({
 
         </div>
       </div>
+
+      {/* MODAL ABRIR CÁLCULO */}
+      {showOpenModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm print:hidden">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-sky-100 text-sky-700 rounded-xl">
+                  <FolderOpen size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-800">Cálculos de FCAS Guardados</h3>
+                  <p className="text-xs text-slate-500">
+                    {savedCount} {savedCount === 1 ? 'cálculo guardado' : 'cálculos guardados'} en tu cuenta
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOpenModal(false);
+                  setProfileToDelete(null);
+                }}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                title="Cerrar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-3">
+              {savedCount === 0 ? (
+                <div className="text-center py-10 px-4">
+                  <div className="w-16 h-16 bg-sky-50 text-sky-400 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-sky-100">
+                    <FolderOpen size={32} />
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-700 mb-1">Aún no tienes cálculos guardados</h4>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto mb-4">
+                    Configura los parámetros laborales que necesites y haz clic en <strong className="text-slate-700">"Guardar Como"</strong> para registrar cálculos para obras específicas, licitaciones públicas o convenios privados.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowOpenModal(false);
+                      setShowSaveModal(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-sm transition-all"
+                  >
+                    <Save size={14} /> Guardar cálculo actual
+                  </button>
+                </div>
+              ) : (
+                Object.entries(savedProfiles).map(([name, data]) => {
+                  const isDeleting = profileToDelete === name;
+                  const fcasVal = data.fcasPorcentaje != null ? data.fcasPorcentaje : null;
+                  const metodoLabel = data.metodo === 'indexado' ? 'Indexado con Cestaticket' : 'Estándar LOTTT';
+                  const fechaStr = data.fecha 
+                    ? new Date(data.fecha).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                    : null;
+
+                  return (
+                    <div
+                      key={name}
+                      className="p-4 rounded-xl border border-slate-200 bg-white hover:border-sky-300 hover:shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="text-sm font-bold text-slate-800 truncate" title={name}>
+                            {name}
+                          </h4>
+                          {fcasVal != null && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              FCAS {fcasVal}%
+                            </span>
+                          )}
+                          <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                            {metodoLabel}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                          <span>Base: <strong className="text-slate-700">${data.salarioBase || 0}</strong></span>
+                          <span>•</span>
+                          <span>Cestaticket: <strong className="text-slate-700">${data.bonoCestaticket || 0}</strong></span>
+                          {data.diasContratados && (
+                            <>
+                              <span>•</span>
+                              <span>{data.diasContratados} días ({data.diasNoTrabajados || 114} Ti)</span>
+                            </>
+                          )}
+                          {fechaStr && (
+                            <>
+                              <span>•</span>
+                              <span className="text-slate-400">{fechaStr}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Botones de acción */}
+                      <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                        {isDeleting ? (
+                          <div className="flex items-center gap-1.5 bg-red-50 p-1 rounded-lg border border-red-200">
+                            <span className="text-[11px] font-semibold text-red-700 px-1">¿Eliminar?</span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteProfile(name)}
+                              className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded"
+                            >
+                              Sí
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setProfileToDelete(null)}
+                              className="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs rounded"
+                            >
+                              No
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleLoadProfile(name, data)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
+                            >
+                              <FolderOpen size={14} />
+                              <span>Cargar</span>
+                            </button>
+                            {onDeleteProfile && (
+                              <button
+                                type="button"
+                                onClick={() => setProfileToDelete(name)}
+                                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Eliminar este cálculo"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/50 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOpenModal(false);
+                  setProfileToDelete(null);
+                }}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-xl transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL GUARDAR CÁLCULO COMO */}
+      {showSaveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm print:hidden">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-blue-100 text-blue-700 rounded-xl">
+                  <Save size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-800">Guardar Cálculo de FCAS</h3>
+                  <p className="text-xs text-slate-500">Guarda este análisis para reutilizarlo cuando quieras</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSaveModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                title="Cerrar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleConfirmSaveProfile} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Nombre del Cálculo / Perfil
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={newProfileName}
+                  onChange={(e) => setNewProfileName(e.target.value)}
+                  placeholder="Ej: Licitación Gobernación 2026, Privado..."
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-slate-800 font-medium"
+                />
+              </div>
+
+              {/* Resumen de lo que se guardará */}
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-2">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Resumen del Análisis a Guardar
+                </span>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-slate-500">FCAS Resultante:</span>
+                    <p className="font-bold text-blue-600 text-sm">{fcasPorcentaje.toFixed(2)}%</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Costo Mensual Real:</span>
+                    <p className="font-bold text-slate-800 text-sm">${costoRealMensual.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Método:</span>
+                    <p className="font-semibold text-slate-700 capitalize">{metodo}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Salario / Bono:</span>
+                    <p className="font-semibold text-slate-700">${salarioBase} / ${bonoCestaticket}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSaveModal(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!newProfileName.trim()}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-xl shadow-sm transition-all"
+                >
+                  <Save size={14} />
+                  <span>Guardar Cálculo</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

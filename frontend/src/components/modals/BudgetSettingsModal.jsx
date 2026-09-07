@@ -18,7 +18,7 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
     name: budget.project_name || budget.name || '',
     currency: budget.currency || 'USD',
     exchange_rate: budget.exchange_rate ?? 1.0,
-    fcas_percent: budget.fcas_percent ?? 417.0,
+    fcas_percent: budget.fcas_percent ?? costosConfig?.fcas ?? 417.0,
     admin_percent: budget.admin_percent ?? 15.0,
     profit_percent: budget.profit_percent ?? 10.0,
     iva_percent: budget.iva_percent ?? 16.0,
@@ -56,17 +56,6 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
       }));
     }
   }, [budget]);
-
-  useEffect(() => {
-    // Si la calculadora de FCAS se usa mientras este modal está abierto,
-    // reflejamos el cambio aquí
-    if (costosConfig) {
-      setSettings(prev => ({
-        ...prev,
-        fcas_percent: costosConfig.fcas ?? prev.fcas_percent
-      }));
-    }
-  }, [costosConfig]);
 
   const handleLogoChange = async (e) => {
     const file = e.target.files[0];
@@ -287,12 +276,38 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1">
-                    <Percent size={14}/> FCAS Global
-                  </label>
+                  <div className="flex items-center justify-between gap-1">
+                    <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1 whitespace-nowrap">
+                      <Percent size={14}/> FCAS Global (%)
+                    </label>
+                    {costosConfig?.fcasSavedProfiles && Object.keys(costosConfig.fcasSavedProfiles).length > 0 && (
+                      <select 
+                        className="text-[11px] bg-sky-50 text-sky-800 border border-sky-200 rounded-md px-1.5 py-0.5 outline-none hover:bg-sky-100 transition-colors cursor-pointer max-w-[130px] truncate"
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            const p = costosConfig.fcasSavedProfiles[e.target.value];
+                            if (p && p.fcasPorcentaje != null) {
+                              setSettings(prev => ({ ...prev, fcas_percent: p.fcasPorcentaje }));
+                              toast.success(`FCAS ${p.fcasPorcentaje}% cargado desde "${e.target.value}"`);
+                            }
+                            e.target.value = "";
+                          }
+                        }}
+                        defaultValue=""
+                        title="Cargar porcentaje desde un cálculo de FCAS guardado"
+                      >
+                        <option value="" disabled>📁 Cargar cálculo...</option>
+                        {Object.entries(costosConfig.fcasSavedProfiles).map(([pName, pData]) => (
+                          <option key={pName} value={pName}>
+                            {pName} ({pData.fcasPorcentaje}%)
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
                   <input 
                     type="number" 
-                    step="1"
+                    step="0.01"
                     value={settings.fcas_percent}
                     onChange={e => setSettings({...settings, fcas_percent: e.target.value})}
                     className="px-2 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"

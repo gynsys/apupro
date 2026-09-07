@@ -57,14 +57,14 @@ RESOURCE_CONFIG: Dict[str, Dict[str, str]] = {
     "equipments": {
         "table": "cost360_equipment",
         "id_col": "CodEqu",
-        "price_col": "CosDia",
+        "price_col": "precio",
         "desc_col": "Descri",
         "name": "Equipo",
     },
     "equipment": {
         "table": "cost360_equipment",
         "id_col": "CodEqu",
-        "price_col": "CosDia",
+        "price_col": "precio",
         "desc_col": "Descri",
         "name": "Equipo",
     },
@@ -366,12 +366,20 @@ def search_equipments_route(skip: int = 0, limit: int = 50, search: str = "", da
     set_schema_for_db(db, database_id)
     total, items = search_equipments_paginated(db, skip, limit, search)
     # Aplicar factor de inflación de equipos si la base no es maestra
+    factor = 1.0
     if database_id and database_id != "master":
         db_config = get_database_by_id(db, database_id)
         if db_config and db_config.equipment_inflation:
             factor = 1 + (db_config.equipment_inflation / 100.0)
-            for item in items:
-                item.CosDia = round((item.CosDia or 0.0) * factor, 4)
+    
+    for item in items:
+        dep = item.deprec_factor if (item.deprec_factor and item.deprec_factor > 0) else 1.0
+        if factor != 1.0:
+            item.CosDia = round((item.CosDia or 0.0) * factor, 4)
+            if item.precio is not None:
+                item.precio = round((item.precio or 0.0) * factor, 2)
+        if item.precio is None:
+            item.precio = round((item.CosDia or 0.0) / dep, 2)
     return {"total": total, "items": items}
 
 @router.get("/labors")
@@ -449,7 +457,10 @@ def bulk_update_resources(
                 except (ValueError, TypeError):
                     errors.append(f"Precio inválido para código {codigo}: {precio_raw}")
 
-        query_text = text(f'UPDATE {table_name} SET "{price_col}" = :precio WHERE "{id_col}" = :codigo')
+        if res_key in ("equipments", "equipment"):
+            query_text = text(f'UPDATE {table_name} SET "precio" = :precio, "CosDia" = ROUND((:precio * COALESCE(deprec_factor, 1.0))::numeric, 4) WHERE "{id_col}" = :codigo')
+        else:
+            query_text = text(f'UPDATE {table_name} SET "{price_col}" = :precio WHERE "{id_col}" = :codigo')
         for codigo, precio in codigos_precio.items():
             try:
                 result = db.execute(query_text, {"precio": precio, "codigo": codigo})

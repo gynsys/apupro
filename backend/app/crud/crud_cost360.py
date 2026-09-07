@@ -341,8 +341,17 @@ def delete_material(db: Session, codigo: str):
 def update_equipment(db: Session, codigo: str, payload: CostEquipmentUpdate):
     eq = db.query(CostEquipment).filter(CostEquipment.CodEqu == codigo).first()
     if eq:
-        if payload.CosDia is not None:
-            eq.CosDia = payload.CosDia
+        factor = eq.deprec_factor if (eq.deprec_factor and eq.deprec_factor > 0) else 1.0
+        if payload.precio is not None:
+            eq.precio = float(payload.precio)
+            eq.CosDia = round(float(payload.precio) * factor, 4)
+        elif payload.CosDia is not None:
+            eq.CosDia = float(payload.CosDia)
+            eq.precio = round(float(payload.CosDia) / factor, 2)
+        if payload.deprec_factor is not None:
+            eq.deprec_factor = float(payload.deprec_factor)
+            if eq.precio is not None:
+                eq.CosDia = round(eq.precio * eq.deprec_factor, 4)
         if payload.Descri is not None:
             eq.Descri = payload.Descri
         db.commit()

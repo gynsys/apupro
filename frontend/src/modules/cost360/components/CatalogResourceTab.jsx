@@ -30,7 +30,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
       { key: 'CosMat', label: 'Precio Unitario ($)', type: 'number' }
     ] : resourceType === 'equipments' ? [
       { key: 'Descri', label: 'Descripción', type: 'text' },
-      { key: 'CosDia', label: 'Costo Diario ($)', type: 'number' }
+      { key: 'precio', label: 'Precio ($)', type: 'number' }
     ] : [
       { key: 'Descri', label: 'Descripción', type: 'text' },
       { key: 'Jornal', label: 'Jornal ($)', type: 'number' },

@@ -283,7 +283,10 @@ const AdminDatabasePage = () => {
             title="Materiales"
             resourceType="materials"
             selectedDatabase={selectedDatabase}
-            config={config}
+            config={{
+              idKey: 'CodMat', descKey: 'Descri',
+              editableFields: [{ key: 'CosMat', label: 'Precio Unitario ($)' }]
+            }}
           />
         )}
 
@@ -292,7 +295,10 @@ const AdminDatabasePage = () => {
             title="Equipos"
             resourceType="equipments"
             selectedDatabase={selectedDatabase}
-            config={config}
+            config={{
+              idKey: 'CodEqu', descKey: 'Descri',
+              editableFields: [{ key: 'precio', label: 'Precio ($)' }]
+            }}
           />
         )}
 
@@ -301,7 +307,13 @@ const AdminDatabasePage = () => {
             title="Mano de Obra"
             resourceType="labors"
             selectedDatabase={selectedDatabase}
-            config={config}
+            config={{
+              idKey: 'CodMan', descKey: 'Descri',
+              editableFields: [
+                { key: 'Jornal', label: 'Jornal ($)' },
+                { key: 'Bono', label: 'Bono ($)' }
+              ]
+            }}
           />
         )}
 

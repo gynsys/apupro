@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File, Response, Request
 from sqlalchemy.orm import Session
-from typing import List, Optional, Any, Generator
-from pydantic import BaseModel
+from typing import List, Optional, Any, Generator, Dict
+from pydantic import BaseModel, Field
 from datetime import datetime, timedelta
 from fastapi.security import OAuth2PasswordRequestForm
 from passlib.context import CryptContext
@@ -519,12 +519,20 @@ class CostosConfigSchema(BaseModel):
     porcentajeAdministracion: float = 15.0
     iva: float = 16.0
     fcas: float = 0.0
+    fcasSalarioBase: Optional[float] = 240.0
+    fcasBonoCestaticket: Optional[float] = 40.0
+    fcasMetodo: Optional[str] = "estandar"
+    fcasSavedProfiles: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 class CostosConfigUpdate(BaseModel):
     porcentajeUtilidad: Optional[float] = None
     porcentajeAdministracion: Optional[float] = None
     iva: Optional[float] = None
     fcas: Optional[float] = None
+    fcasSalarioBase: Optional[float] = None
+    fcasBonoCestaticket: Optional[float] = None
+    fcasMetodo: Optional[str] = None
+    fcasSavedProfiles: Optional[Dict[str, Any]] = None
 
 class ArkoMeUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -638,16 +646,17 @@ def update_current_admin_costos(
     patch = costos_in.model_dump(exclude_none=True)
     # Validar rangos
     for key, value in patch.items():
-        if value < 0:
-            raise HTTPException(
-                status_code=400,
-                detail=f"El valor de {key} no puede ser negativo.",
-            )
-        if key in ("porcentajeUtilidad", "porcentajeAdministracion", "iva") and value > 100:
-            raise HTTPException(
-                status_code=400,
-                detail=f"El porcentaje {key} no puede superar 100%.",
-            )
+        if isinstance(value, (int, float)):
+            if value < 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"El valor de {key} no puede ser negativo.",
+                )
+            if key in ("porcentajeUtilidad", "porcentajeAdministracion", "iva") and value > 100:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"El porcentaje {key} no puede superar 100%.",
+                )
     updated.update(patch)
     with get_db_session() as db:
         user = db.query(ArkoAdmin).filter(ArkoAdmin.id == current_admin.id).first()

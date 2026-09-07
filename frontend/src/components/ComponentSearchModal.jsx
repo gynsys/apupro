@@ -56,7 +56,8 @@ export default function ComponentSearchModal({ isOpen, onClose, onAdd, type, tit
         descripcion: item.Descri,
         unidad: 'Día',
         cantidad: 1,
-        precio_unitario: item.CosDia || 0
+        precio_unitario: item.precio != null ? item.precio : (item.CosDia || 0),
+        depreciacion: item.deprec_factor != null ? item.deprec_factor : 1.0
       };
     } else if (type === 'labors') {
       return {
@@ -173,7 +174,7 @@ export default function ComponentSearchModal({ isOpen, onClose, onAdd, type, tit
                         {item.Descri}
                       </td>
                       <td className="p-3 text-right font-semibold text-slate-700">
-                        {(item.CosMat || item.CosDia || (item.Jornal + (item.Bono || 0)) || 0).toLocaleString('es-VE', {minimumFractionDigits: 2})}
+                        {(type === 'equipments' ? (item.precio != null ? item.precio : item.CosDia) : (item.CosMat || item.CosDia || (item.Jornal + (item.Bono || 0)) || 0)).toLocaleString('es-VE', {minimumFractionDigits: 2})}
                       </td>
                       <td className="p-3 text-center">
                         <button 

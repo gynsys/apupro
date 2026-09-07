@@ -23,13 +23,13 @@ const BulkPriceModal = ({ onSuccess, onClose, resourceType = 'materials', select
         : 'Actualizar Precios de Materiales en Masa';
 
   const formatHelp = resourceType === 'equipments'
-    ? 'Pega los costos diarios (CosDia) en formato: ALB001: $55.06 (uno por línea o copiado de Excel)'
+    ? 'Pega los precios comerciales de los equipos en formato: EQU-868131: $380.00 (uno por línea o copiado de Excel)'
     : resourceType === 'labors'
-      ? 'Pega los jornales/salarios en formato: 1-1.1: $2.26 (uno por línea o copiado de Excel)'
+      ? 'Pega los jornales diarios en formato: 1-1.1: $2.26 (uno por línea o copiado de Excel)'
       : 'Pega los precios en formato: ACA134: $0.45 (uno por línea o copiado de Excel)';
 
   const placeholderText = resourceType === 'equipments'
-    ? 'ALB000: $22.01 USD\nALB001: $55.06 USD\nALB002: $4.68 USD'
+    ? 'EQU-868131: $380.00 USD\nALB001: $450.00 USD\nALB002: $120.00 USD'
     : resourceType === 'labors'
       ? '1-1.1: $2.26 USD\n1-1.2: $2.46 USD\n11-2.4: $2.55 USD'
       : 'ACA134: $0.45 USD\nCEM041: $8.50 USD\nCAB012: $12.00 USD';

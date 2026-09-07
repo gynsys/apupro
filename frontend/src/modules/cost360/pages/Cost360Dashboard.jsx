@@ -410,7 +410,7 @@ const Cost360Dashboard = () => {
           selectedDatabase={selectedDatabase}
           config={{
             idKey: 'CodEqu', descKey: 'Descri',
-            editableFields: [{ key: 'CosDia', label: 'Costo Diario ($)' }]
+            editableFields: [{ key: 'precio', label: 'Precio ($)' }]
           }}
         />
       )}

@@ -54,8 +54,8 @@ const TYPE_CONFIG = {
       cod_ins: eq.CodEqu || '',
       ref_code: eq.ref_code || '',
       descripcion: eq.Descri || '',
-      precio_unitario: Number(eq.CosDia || 0),
-      depreciacion: 1.0,
+      precio_unitario: Number(eq.precio != null ? eq.precio : (eq.CosDia || 0)),
+      depreciacion: Number(eq.deprec_factor != null ? eq.deprec_factor : 1.0),
       cantidad: 1,
       unidad: 'Día'
     })
@@ -349,7 +349,7 @@ export default function ComponentSelectorModal({
                     <th className="py-2.5 px-4 w-32 text-right">P. Unitario ($)</th>
                   )}
                   {type === 'equipments' && (
-                    <th className="py-2.5 px-4 w-32 text-right">Tarifa / Día ($)</th>
+                    <th className="py-2.5 px-4 w-32 text-right">Precio ($)</th>
                   )}
                   {type === 'labors' && (
                     <>
@@ -366,7 +366,7 @@ export default function ComponentSelectorModal({
                   const code = row.ref_code || row.CodMat || row.CodEqu || row.CodMan || '';
                   const desc = row.Descri || '';
                   const unit = row.UniMat || '';
-                  const price = row.CosMat || row.CosDia || 0;
+                  const price = type === 'equipments' ? (row.precio != null ? row.precio : (row.CosDia || 0)) : (row.CosMat || row.CosDia || 0);
                   const totalDia = type === 'labors' ? ((Number(row.Jornal) || 0) + (Number(row.Bono) || 0)) : 0;
 
                   return (

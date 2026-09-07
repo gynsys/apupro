@@ -54,6 +54,9 @@ class CostEquipment(Base):
     ref_code = Column(String, index=True, nullable=True)
     Descri = Column(String)
     CosDia = Column(Float)
+    precio = Column(Float, nullable=True)
+    deprec_factor = Column(Float, default=1.0)
+
 
 class CostAPUMaterial(Base):
     __tablename__ = "cost360_apu_materials"

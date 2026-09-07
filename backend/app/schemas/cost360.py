@@ -30,6 +30,8 @@ class CostEquipmentSchema(BaseModel):
     ref_code: Optional[str] = None
     Descri: Optional[str] = None
     CosDia: Optional[float] = None
+    precio: Optional[float] = None
+    deprec_factor: Optional[float] = None
     class Config: from_attributes = True
 
 class CostLaborSchema(BaseModel):
@@ -99,6 +101,8 @@ class CostMaterialUpdate(BaseModel):
 
 class CostEquipmentUpdate(BaseModel):
     CosDia: Optional[float] = None
+    precio: Optional[float] = None
+    deprec_factor: Optional[float] = None
     Descri: Optional[str] = None
 
 class CostLaborUpdate(BaseModel):
