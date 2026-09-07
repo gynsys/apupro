@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FiSearch, FiLayers, FiArrowRight, FiBox, FiTool, FiUsers, FiDatabase } from 'react-icons/fi';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { FiSearch, FiLayers, FiArrowRight, FiBox, FiTool, FiUsers, FiDatabase, FiTrash2 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import cost360Service from '../services/cost360Service';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
@@ -28,12 +28,30 @@ const glassStrong = {
 };
 
 const Cost360Dashboard = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const dbParam = searchParams.get('db');
   const [activeTab, setActiveTab] = useState('partidas');
   const [databases, setDatabases] = useState([]);
-  const [selectedDatabase, setSelectedDatabase] = useState('master');
+  const [selectedDatabase, setSelectedDatabase] = useState(dbParam || 'master');
   
   const navigate = useNavigate();
   const { config } = useContext(SiteConfigContext);
+
+  useEffect(() => {
+    if (dbParam && dbParam !== selectedDatabase) {
+      setSelectedDatabase(dbParam);
+    }
+  }, [dbParam]);
+
+  const handleSelectDatabase = (newDb) => {
+    setSelectedDatabase(newDb);
+    if (newDb === 'master') {
+      searchParams.delete('db');
+      setSearchParams(searchParams);
+    } else {
+      setSearchParams({ ...Object.fromEntries(searchParams.entries()), db: newDb });
+    }
+  };
 
   // Costos desde contexto global
   const { costosConfig, updateCostosConfig, loading: loadingCostos } = useUserCostos();
@@ -74,6 +92,21 @@ const Cost360Dashboard = () => {
     onlyCoded: window.ARKO_SITE_CONFIG?.forceOnlyCodedMaster === true,
     autoSearch: true
   });
+
+  const handleDeleteCustomItem = async (item) => {
+    const code = item.CovPar || item.CodPar;
+    if (!window.confirm(`¿Estás seguro de eliminar la partida "${code}" de tu Base Personalizada? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    try {
+      await cost360Service.deleteCustomApu(item.id || item.CodPar);
+      toast.success(`Partida ${code} eliminada correctamente`);
+      handleSearch();
+    } catch (err) {
+      console.error('Error al eliminar partida personalizada:', err);
+      toast.error(err.response?.data?.detail || 'Error al eliminar la partida');
+    }
+  };
 
   useEffect(() => {
     const loadDatabases = async () => {
@@ -192,7 +225,7 @@ const Cost360Dashboard = () => {
             <div>
               <select
                 value={selectedDatabase}
-                onChange={(e) => setSelectedDatabase(e.target.value)}
+                onChange={(e) => handleSelectDatabase(e.target.value)}
                 className="bg-white border-2 border-slate-300 text-slate-700 text-sm font-medium rounded-lg px-4 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm transition-all w-64 appearance-none"
                 style={{
                   backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3e%3c/svg%3e")',
@@ -261,7 +294,20 @@ const Cost360Dashboard = () => {
                           <p className="text-sm text-slate-700 font-medium line-clamp-2 max-w-3xl group-hover:text-slate-900 transition-colors">{item.Descri}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 shrink-0">
+                      <div className="flex items-center gap-3 shrink-0">
+                        {selectedDatabase === 'personalizada' && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteCustomItem(item);
+                            }}
+                            title="Eliminar partida de tu Base Personalizada"
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <FiTrash2 size={16} />
+                          </button>
+                        )}
                         <span
                           className="text-xs font-semibold px-2.5 py-1 rounded-full"
                           style={{ background: 'rgba(241,245,249,0.9)', color: '#475569', border: '1px solid rgba(148,163,184,0.3)' }}

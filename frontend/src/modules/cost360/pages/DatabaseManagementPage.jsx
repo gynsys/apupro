@@ -3,10 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Database, Plus, Trash2, Edit2, Copy, 
   TrendingUp, DollarSign, Users, Settings,
-  AlertTriangle, CheckCircle, X
+  AlertTriangle, CheckCircle, X, Layers, ArrowRight
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
+import cost360Service from '../services/cost360Service';
 import { useDatabaseContext } from '../../../contexts/DatabaseContext';
 import SubscriptionRequestModal from '../../../components/SubscriptionRequestModal';
 
@@ -14,6 +15,7 @@ export default function DatabaseManagementPage() {
   const navigate = useNavigate();
   const { refreshDatabases: reloadDatabases } = useDatabaseContext();
   const [databases, setDatabases] = useState([]);
+  const [customItemsCount, setCustomItemsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -51,6 +53,13 @@ export default function DatabaseManagementPage() {
       setLoading(true);
       const data = await cost360DatabaseService.getAll();
       setDatabases(data.databases || []);
+
+      try {
+        const customRes = await cost360Service.fetchItems(0, 1, '', '', 'personalizada');
+        setCustomItemsCount(customRes?.total || 0);
+      } catch (err) {
+        console.error('Error fetching custom items count:', err);
+      }
     } catch (error) {
       toast.error('Error cargando bases de datos');
       console.error(error);
@@ -201,136 +210,196 @@ export default function DatabaseManagementPage() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {databases.length === 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Tarjeta Base Personalizada */}
           <div
-            className="rounded-2xl p-12 text-center"
+            className="tarjeta-presupuesto-ambar group cursor-default relative flex flex-col justify-between"
             style={{
-              background: 'rgba(255,255,255,0.72)',
-              backdropFilter: 'blur(18px)',
-              border: '1px solid rgba(255,255,255,0.65)',
-              boxShadow: '0 4px 32px 0 rgba(80,100,200,0.08)',
+              border: '2px solid rgba(59, 130, 246, 0.35)',
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(239,246,255,0.85) 100%)',
+              boxShadow: '0 8px 24px -4px rgba(37, 99, 235, 0.12)',
             }}
           >
-            <Database className="mx-auto mb-4 text-slate-400" size={48} />
-            <h3 className="text-lg font-semibold text-slate-700 mb-2">No hay bases de datos personalizadas</h3>
-            <p className="text-slate-500 mb-4">Crea tu primera base de datos duplicando la Base Maestra</p>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="text-blue-600 font-bold transition-all duration-300 hover:text-blue-700 hover:drop-shadow-md hover:-translate-y-0.5"
-            >
-              Crear Base de Datos
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {databases.map((db) => (
-              <div
-                key={db.id}
-                className="tarjeta-presupuesto-ambar group cursor-default relative"
-              >
-                {/* Header */}
-                <div className="tarjeta-header flex flex-col justify-center items-start">
-                  <div className="flex items-center gap-3">
-                    <div className="icono-archivo-ambar">
-                      <Database size={20} strokeWidth={2} />
-                    </div>
-                    <div>
-                      <h3 className="tarjeta-titulo-ambar">{db.name}</h3>
-                    </div>
+            <div>
+              {/* Header */}
+              <div className="tarjeta-header flex flex-col justify-center items-start mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="icono-archivo-ambar" style={{ background: '#dbeafe', color: '#1d4ed8' }}>
+                    <Layers size={20} strokeWidth={2.2} />
+                  </div>
+                  <div>
+                    <h3 className="tarjeta-titulo-ambar font-extrabold text-slate-800">Base Personalizada</h3>
+                    <span className="inline-block mt-0.5 px-2.5 py-0.5 text-[11px] font-bold bg-blue-100 text-blue-800 rounded-md">
+                      Partidas Propias
+                    </span>
                   </div>
                 </div>
-                
-                {!db.is_master && (
-                  <div className="absolute top-2 right-2 flex gap-1">
-                    <button
-                      onClick={() => openEditModal(db)}
-                      className="btn-accion hover:bg-transparent hover:text-blue-600 transition-colors"
-                      title="Editar"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button
-                      onClick={() => confirmDelete(db)}
-                      className="btn-accion hover:bg-transparent hover:text-red-600 transition-colors"
-                      title="Eliminar"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+              </div>
+
+              {/* Body */}
+              <div className="tarjeta-body">
+                <p className="text-sm text-slate-600 mb-3">
+                  Base de datos exclusiva para las partidas y APUs que creas desde cero o adaptas con el Generador IA.
+                </p>
+
+                <div className="rounded-xl p-3 bg-white/90 border border-blue-100 shadow-xs mb-3 space-y-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500 font-medium">Tus partidas guardadas:</span>
+                    <span className="font-extrabold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-200">
+                      {customItemsCount} {customItemsCount === 1 ? 'partida' : 'partidas'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="tarjeta-detalles flex-col items-start gap-1">
+                  <div className="detalle-fecha">
+                    <Copy size={13} className="mini-icono" />
+                    Origen: Creación propia / IA
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="pt-3 mt-4 border-t border-slate-200/70 flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+                <CheckCircle size={15} />
+                Activa
+              </div>
+              <button
+                onClick={() => navigate('/cost360?db=personalizada')}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:gap-2 cursor-pointer"
+              >
+                <span>Ver Partidas</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+
+          {/* Tarjetas de Bases Duplicadas */}
+          {databases.map((db) => (
+            <div
+              key={db.id}
+              className="tarjeta-presupuesto-ambar group cursor-default relative"
+            >
+              {/* Header */}
+              <div className="tarjeta-header flex flex-col justify-center items-start">
+                <div className="flex items-center gap-3">
+                  <div className="icono-archivo-ambar">
+                    <Database size={20} strokeWidth={2} />
+                  </div>
+                  <div>
+                    <h3 className="tarjeta-titulo-ambar">{db.name}</h3>
+                  </div>
+                </div>
+              </div>
+              
+              {!db.is_master && (
+                <div className="absolute top-2 right-2 flex gap-1">
+                  <button
+                    onClick={() => openEditModal(db)}
+                    className="btn-accion hover:bg-transparent hover:text-blue-600 transition-colors"
+                    title="Editar"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button
+                    onClick={() => confirmDelete(db)}
+                    className="btn-accion hover:bg-transparent hover:text-red-600 transition-colors"
+                    title="Eliminar"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              )}
+
+              {/* Body */}
+              <div className="tarjeta-body flex-1">
+                {db.description && (
+                  <p className="text-sm text-slate-600 mb-2">{db.description}</p>
+                )}
+
+                {/* Inflation Stats - Solo se muestra en bases personales de usuarios */}
+                {!db.is_published && !db.is_master && (db.material_inflation > 0 || db.labor_inflation > 0 || db.equipment_inflation > 0) && (
+                  <div className="rounded-xl p-3.5 space-y-2.5 mb-2 caja-inflacion">
+                    <div className="text-xs font-medium text-slate-500 mb-2">Índices de Inflación Aplicados</div>
+                    
+                    {db.material_inflation > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-1 text-slate-600">
+                          <DollarSign size={14} /> Materiales
+                        </span>
+                        <span className="font-medium text-green-600">+{db.material_inflation}%</span>
+                      </div>
+                    )}
+                    
+                    {db.labor_inflation > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-1 text-slate-600">
+                          <Users size={14} /> Mano de Obra
+                        </span>
+                        <span className="font-medium text-green-600">+{db.labor_inflation}%</span>
+                      </div>
+                    )}
+                    
+                    {db.equipment_inflation > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-1 text-slate-600">
+                          <Settings size={14} /> Equipos
+                        </span>
+                        <span className="font-medium text-green-600">+{db.equipment_inflation}%</span>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Body */}
-                <div className="tarjeta-body flex-1">
-                  {db.description && (
-                    <p className="text-sm text-slate-600 mb-2">{db.description}</p>
-                  )}
-
-                  {/* Inflation Stats - Solo se muestra en bases personales de usuarios */}
-                  {!db.is_published && !db.is_master && (db.material_inflation > 0 || db.labor_inflation > 0 || db.equipment_inflation > 0) && (
-                    <div className="rounded-xl p-3.5 space-y-2.5 mb-2 caja-inflacion">
-                      <div className="text-xs font-medium text-slate-500 mb-2">Índices de Inflación Aplicados</div>
-                      
-                      {db.material_inflation > 0 && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-1 text-slate-600">
-                            <DollarSign size={14} /> Materiales
-                          </span>
-                          <span className="font-medium text-green-600">+{db.material_inflation}%</span>
-                        </div>
-                      )}
-                      
-                      {db.labor_inflation > 0 && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-1 text-slate-600">
-                            <Users size={14} /> Mano de Obra
-                          </span>
-                          <span className="font-medium text-green-600">+{db.labor_inflation}%</span>
-                        </div>
-                      )}
-                      
-                      {db.equipment_inflation > 0 && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-1 text-slate-600">
-                            <Settings size={14} /> Equipos
-                          </span>
-                          <span className="font-medium text-green-600">+{db.equipment_inflation}%</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Metadata */}
-                  <div className="tarjeta-detalles flex-col items-start gap-1 mt-auto">
-                    <div className="detalle-fecha">
-                      <Copy size={13} className="mini-icono" />
-                      Origen: {db.source_database_id || 'master'}
-                    </div>
-                    <div className="detalle-fecha">
-                      Creado: {db.created_at ? new Date(db.created_at).toLocaleDateString('es-VE') : 'N/A'}
-                    </div>
+                {/* Metadata */}
+                <div className="tarjeta-detalles flex-col items-start gap-1 mt-auto">
+                  <div className="detalle-fecha">
+                    <Copy size={13} className="mini-icono" />
+                    Origen: {db.source_database_id || 'master'}
+                  </div>
+                  <div className="detalle-fecha">
+                    Creado: {db.created_at ? new Date(db.created_at).toLocaleDateString('es-VE') : 'N/A'}
                   </div>
                 </div>
-
-                {/* Footer (Activa indicator) */}
-                <div className={`flex items-center gap-2 text-sm pt-2 border-t border-slate-100 ${
-                  db.is_active ? 'text-green-600' : 'text-slate-400'
-                }`}>
-                  {db.is_active ? (
-                    <>
-                      <CheckCircle size={16} />
-                      Activa
-                    </>
-                  ) : (
-                    <>
-                      <X size={16} />
-                      Inactiva
-                    </>
-                  )}
-                </div>
               </div>
-            ))}
-          </div>
-        )}
+
+              {/* Footer (Activa indicator) */}
+              <div className={`flex items-center gap-2 text-sm pt-2 border-t border-slate-100 ${
+                db.is_active ? 'text-green-600' : 'text-slate-400'
+              }`}>
+                {db.is_active ? (
+                  <>
+                    <CheckCircle size={16} />
+                    Activa
+                  </>
+                ) : (
+                  <>
+                    <X size={16} />
+                    Inactiva
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* Tarjeta invitación a duplicar si no tiene bases adicionales */}
+          {databases.length === 0 && (
+            <div
+              onClick={() => setShowCreateModal(true)}
+              className="rounded-2xl p-6 border-2 border-dashed border-slate-300 hover:border-blue-400 bg-white/40 hover:bg-blue-50/30 transition-all flex flex-col items-center justify-center text-center cursor-pointer min-h-[260px] group"
+            >
+              <div className="w-12 h-12 rounded-full bg-slate-100 group-hover:bg-blue-100 text-slate-400 group-hover:text-blue-600 flex items-center justify-center mb-3 transition-colors">
+                <Plus size={24} />
+              </div>
+              <h4 className="font-bold text-slate-700 group-hover:text-blue-700 transition-colors">Duplicar Base Maestra</h4>
+              <p className="text-xs text-slate-500 mt-1 max-w-[220px]">
+                Crea una copia con índices de inflación para tus presupuestos
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Create Modal */}

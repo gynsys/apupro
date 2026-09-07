@@ -23,7 +23,23 @@ def strip_accents(s: str) -> str:
 def unaccent_col(column):
     return func.translate(column, 'áéíóúÁÉÍÓÚäëïöüÄËÏÖÜ', 'aeiouAEIOUaeiouAEIOU')
 
-def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Optional[str] = None, chapter: Optional[str] = None, categoria: Optional[str] = None, tipo_actividad: Optional[str] = None, search_desc: bool = True, search_insumos: bool = False, covenin: Optional[str] = None, database_id: str = "master", only_coded: bool = False, hidden_categories: Optional[str] = None):
+def get_items_paginated(
+    db: Session,
+    skip: int = 0,
+    limit: int = 50,
+    search: Optional[str] = None,
+    chapter: Optional[str] = None,
+    categoria: Optional[str] = None,
+    tipo_actividad: Optional[str] = None,
+    search_desc: bool = True,
+    search_insumos: bool = False,
+    covenin: Optional[str] = None,
+    database_id: str = "master",
+    only_coded: bool = False,
+    hidden_categories: Optional[str] = None,
+    user_id: Optional[int] = None,
+    is_superadmin: bool = False
+) -> Tuple[int, List[dict]]:
     
     # Failsafe: Si ambos están apagados, forzar búsqueda por descripción por defecto
     if not search_desc and not search_insumos:
@@ -33,6 +49,9 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
     if database_id == "personalizada":
         # Base de datos personalizada: buscar en CustomCostItem
         query = db.query(CustomCostItem)
+        if not is_superadmin and user_id is not None:
+            query = query.filter(or_(CustomCostItem.user_id == user_id, CustomCostItem.user_id == None))
+
         if search:
             words = search.split()
             all_filters = []
@@ -67,11 +86,13 @@ def get_items_paginated(db: Session, skip: int = 0, limit: int = 50, search: Opt
                 
                 subtotal_a = mat_total + eq_total + lab_total
                 pre_uni = subtotal_a * 1.15 * 1.10
-            except:
+            except Exception:
                 cod_par = "CUST-" + ci.id[:4].upper()
                 pre_uni = 0.0
 
             items.append({
+                "id": ci.id,
+                "user_id": ci.user_id,
                 "CodPar": cod_par,
                 "Descri": ci.description,
                 "CovPar": None,
@@ -357,9 +378,17 @@ def delete_labor(db: Session, codigo: str):
         return True
     return False
 
-def save_custom_apu(db: Session, description: str, unit: str, performance: float, apu_data: str):
+def save_custom_apu(
+    db: Session,
+    description: str,
+    unit: str,
+    performance: float,
+    apu_data: str,
+    user_id: Optional[int] = None
+) -> CustomCostItem:
     new_item = CustomCostItem(
         id=str(uuid.uuid4()),
+        user_id=user_id,
         description=description,
         unit=unit,
         performance=performance,
@@ -369,6 +398,42 @@ def save_custom_apu(db: Session, description: str, unit: str, performance: float
     db.commit()
     db.refresh(new_item)
     return new_item
+
+def delete_custom_apu(
+    db: Session,
+    item_id: str,
+    user_id: Optional[int] = None,
+    is_superadmin: bool = False
+) -> bool:
+    # 1. Buscar por UUID exacto
+    item = db.query(CustomCostItem).filter(CustomCostItem.id == item_id).first()
+
+    # 2. Si no coincide, buscar por prefijo o dentro de apu_data
+    if not item:
+        all_custom = db.query(CustomCostItem).all()
+        for ci in all_custom:
+            if ci.id.startswith(item_id.lower()) or item_id in ci.id:
+                item = ci
+                break
+            try:
+                data = json.loads(ci.apu_data)
+                if data.get("cod_par") == item_id:
+                    item = ci
+                    break
+            except Exception:
+                continue
+
+    if not item:
+        return False
+
+    # Verificar permiso: solo superadmin o el dueño de la partida
+    if not is_superadmin and item.user_id is not None and user_id is not None and item.user_id != user_id:
+        raise PermissionError("No tienes permiso para eliminar esta partida personalizada")
+
+    db.delete(item)
+    db.commit()
+    return True
+
 
 # Database Management CRUD Functions
 def get_all_databases(db: Session):

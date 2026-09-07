@@ -10,7 +10,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db.base import get_db
-from app.api.v1.endpoints.arko import get_current_arko_admin
+from app.api.v1.endpoints.arko import get_current_arko_admin, get_optional_arko_admin
+from app.db.models.arko import ArkoAdmin
 from app.middleware.plan_limits import check_ai_access
 from app.schemas.cost360 import (
     CostItemListResponse, APUResponse, APUComponent,
@@ -92,7 +93,7 @@ from app.crud.crud_cost360 import (
     update_material, delete_material,
     update_equipment, delete_equipment,
     update_labor, delete_labor,
-    save_custom_apu,
+    save_custom_apu, delete_custom_apu,
     get_all_databases, get_database_by_id, create_database, update_database, delete_database,
     update_master_item, delete_master_item, update_master_apu_details
 )
@@ -111,7 +112,22 @@ from app.services.synonyms_service import expand_technical_synonyms
 router = APIRouter()
 
 @router.get("/items", response_model=CostItemListResponse)
-def get_items(skip: int = 0, limit: int = 50, search: Optional[str] = None, chapter: Optional[str] = None, categoria: Optional[str] = None, tipo_actividad: Optional[str] = None, search_desc: bool = True, search_insumos: bool = False, covenin: Optional[str] = None, database_id: str = "master", only_coded: bool = False, hidden_categories: Optional[str] = None, db: Session = Depends(get_db)):
+def get_items(
+    skip: int = 0,
+    limit: int = 50,
+    search: Optional[str] = None,
+    chapter: Optional[str] = None,
+    categoria: Optional[str] = None,
+    tipo_actividad: Optional[str] = None,
+    search_desc: bool = True,
+    search_insumos: bool = False,
+    covenin: Optional[str] = None,
+    database_id: str = "master",
+    only_coded: bool = False,
+    hidden_categories: Optional[str] = None,
+    current_user: Optional[ArkoAdmin] = Depends(get_optional_arko_admin),
+    db: Session = Depends(get_db)
+):
     if database_id.startswith("budget_"):
         budget_id = database_id.replace("budget_", "")
         from app.db.models.budget import BudgetItem
@@ -144,8 +160,21 @@ def get_items(skip: int = 0, limit: int = 50, search: Optional[str] = None, chap
             
         return {"total": total, "items": items}
 
+    user_id = current_user.id if current_user else None
+    is_superadmin = False
+    if current_user:
+        is_superadmin = (
+            getattr(current_user, 'is_superadmin', False) or
+            (current_user.email == 'admin@arko360.net') or
+            getattr(current_user, 'role', '') in ['admin', 'superadmin']
+        )
+
     set_schema_for_db(db, database_id)
-    total, items = get_items_paginated(db, skip, limit, search, chapter, categoria, tipo_actividad, search_desc, search_insumos, covenin, database_id, only_coded, hidden_categories)
+    total, items = get_items_paginated(
+        db, skip, limit, search, chapter, categoria, tipo_actividad,
+        search_desc, search_insumos, covenin, database_id, only_coded, hidden_categories,
+        user_id=user_id, is_superadmin=is_superadmin
+    )
     return {"total": total, "items": items}
 
 
@@ -958,9 +987,51 @@ def rag_diagnostic_route(
 
 
 @router.post("/custom-apus", response_model=CustomCostItemResponse)
-def save_custom_apu_route(payload: CustomCostItemCreate, db: Session = Depends(get_db)):
-    new_item = save_custom_apu(db, payload.description, payload.unit, payload.performance, payload.apu_data)
+def save_custom_apu_route(
+    payload: CustomCostItemCreate,
+    current_user: Optional[ArkoAdmin] = Depends(get_optional_arko_admin),
+    db: Session = Depends(get_db)
+) -> Any:
+    user_id = current_user.id if current_user else None
+    new_item = save_custom_apu(
+        db=db,
+        description=payload.description,
+        unit=payload.unit,
+        performance=payload.performance,
+        apu_data=payload.apu_data,
+        user_id=user_id
+    )
     return new_item
+
+@router.delete("/custom-apus/{item_id}")
+def delete_custom_apu_route(
+    item_id: str,
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+    db: Session = Depends(get_db)
+) -> dict:
+    is_superadmin = (
+        getattr(current_user, 'is_superadmin', False) or
+        (current_user.email == 'admin@arko360.net') or
+        getattr(current_user, 'role', '') in ['admin', 'superadmin']
+    )
+    try:
+        success = delete_custom_apu(
+            db=db,
+            item_id=item_id,
+            user_id=current_user.id,
+            is_superadmin=is_superadmin
+        )
+        if not success:
+            raise HTTPException(status_code=404, detail="Partida personalizada no encontrada")
+        return {"status": "success", "message": "Partida personalizada eliminada exitosamente"}
+    except PermissionError as pe:
+        raise HTTPException(status_code=403, detail=str(pe))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error al eliminar partida personalizada {item_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error interno al eliminar la partida")
+
 
 
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Printer, FileSpreadsheet, Save } from 'lucide-react';
+import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Printer, FileSpreadsheet, Save, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import cost360Service, { updateApuDetails } from '../services/cost360Service';
 import PrintAPUModal from '../../../components/PrintAPUModal';
@@ -23,6 +23,7 @@ export default function APUViewer() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
   const [item, setItem] = useState(null);
   const [settings, setSettings] = useState({
@@ -144,6 +145,24 @@ export default function APUViewer() {
     }
   };
 
+  const handleDeleteAPU = async () => {
+    const code = item?.cov_par || item?.cod_par || id;
+    if (!window.confirm(`¿Estás seguro de eliminar la partida "${code}" de tu Base Personalizada? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    try {
+      setDeleting(true);
+      await cost360Service.deleteCustomApu(id);
+      toast.success("Partida eliminada correctamente");
+      navigate(fromParam || '/cost360?db=personalizada');
+    } catch (err) {
+      console.error("Error al eliminar partida:", err);
+      toast.error(err.response?.data?.detail || "Error al eliminar la partida");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -208,6 +227,17 @@ export default function APUViewer() {
               >
                 {saving ? <Loader className="animate-spin" size={14} /> : <Save size={14} />}
                 <span>{saving ? 'Guardando...' : 'Guardar APU'}</span>
+              </button>
+            )}
+            {dbId === 'personalizada' && (
+              <button
+                onClick={handleDeleteAPU}
+                disabled={deleting}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 active:bg-red-200 border border-red-200 rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                title="Eliminar esta partida de tu Base Personalizada"
+              >
+                {deleting ? <Loader className="animate-spin" size={14} /> : <Trash2 size={14} />}
+                <span>{deleting ? 'Eliminando...' : 'Eliminar'}</span>
               </button>
             )}
             <button 

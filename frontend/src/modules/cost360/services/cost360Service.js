@@ -121,6 +121,11 @@ export const deleteMasterItem = async (itemCode) => {
   return response.data;
 };
 
+export const deleteCustomApu = async (itemId) => {
+  const response = await cost360ApiClient.delete(`/custom-apus/${itemId}`);
+  return response.data;
+};
+
 export const exportApuExcelCustom = async (payload) => {
   const response = await cost360ApiClient.post('/apu/export-excel-custom', payload, {
     responseType: 'blob'
@@ -162,6 +167,7 @@ export default {
   generateAIApuFromBase,
   smartSelect,
   saveCustomApu,
+  deleteCustomApu,
   updateMasterItem,
   deleteMasterItem,
   exportApuExcelCustom,
