@@ -347,7 +347,7 @@ export default function AIApuGeneratorPage() {
     forceSearch: triggerSearch
   } = useCost360Search({
     databaseId: selectedDatabase,
-    onlyCoded: window.ARKO_SITE_CONFIG?.only_coded_items || false,
+    onlyCoded: true,
     limit: 50,
     autoSearch: creationMode === 'import'
   });
@@ -1084,7 +1084,8 @@ export default function AIApuGeneratorPage() {
           </div>
 
           <div className="mt-2 text-xs text-slate-500 font-medium">
-            {totalMatches > 0 ? new Intl.NumberFormat('es-VE').format(totalMatches) : 0} coincidencias
+            <span className="font-bold text-slate-700">{totalMatches > 0 ? new Intl.NumberFormat('es-VE').format(totalMatches) : 0}</span>{' '}
+            {searchQuery || searchCovenin ? 'coincidencias' : 'Total Partidas'}
           </div>
 
           {searchResults.length > 0 && (
