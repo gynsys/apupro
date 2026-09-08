@@ -1,7 +1,7 @@
 import io
 import re
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 import openpyxl
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File
@@ -434,6 +434,89 @@ def update_material_route(codigo: str, payload: CostMaterialUpdate, db: Session 
     if not mat: raise HTTPException(status_code=404, detail="Material no encontrado")
     return mat
 
+def execute_bulk_resource_updates(
+    db: Session,
+    table_name: str,
+    id_col: str,
+    price_col: str,
+    res_key: str,
+    item_label: str,
+    codigos_precio: Dict[str, float],
+    batch_size: int = 500,
+) -> Tuple[int, List[str]]:
+    """
+    Ejecuta actualizaciones masivas de precios de manera ultra-rápida y a prueba de fallos.
+    Utiliza lotes SQL con cláusula VALUES para actualizar cientos de registros por consulta.
+    Si algún lote llegara a tener un error de sintaxis/dato, utiliza savepoints (begin_nested)
+    para aislarlo fila por fila y garantizar que todos los demás registros válidos continúen.
+    """
+    if not codigos_precio:
+        return 0, []
+
+    updated_count = 0
+    errors: List[str] = []
+    items_list = list(codigos_precio.items())
+
+    for i in range(0, len(items_list), batch_size):
+        chunk = items_list[i:i + batch_size]
+        values_parts: List[str] = []
+        for cod, pr in chunk:
+            safe_cod = cod.replace("'", "''").strip()
+            values_parts.append(f"('{safe_cod}', {float(pr)}::double precision)")
+
+        values_sql = ", ".join(values_parts)
+
+        if res_key in ("equipments", "equipment", "equipos"):
+            batch_query = text(f"""
+                UPDATE {table_name} AS t
+                SET "precio" = v.precio,
+                    "CosDia" = ROUND((v.precio * COALESCE(t.deprec_factor, 1.0))::numeric, 4)
+                FROM (VALUES {values_sql}) AS v(codigo, precio)
+                WHERE (UPPER(TRIM(t."{id_col}")) = UPPER(TRIM(v.codigo))
+                   OR (t.ref_code IS NOT NULL AND UPPER(TRIM(t.ref_code)) = UPPER(TRIM(v.codigo))))
+            """)
+        else:
+            batch_query = text(f"""
+                UPDATE {table_name} AS t
+                SET "{price_col}" = v.precio
+                FROM (VALUES {values_sql}) AS v(codigo, precio)
+                WHERE (UPPER(TRIM(t."{id_col}")) = UPPER(TRIM(v.codigo))
+                   OR (t.ref_code IS NOT NULL AND UPPER(TRIM(t.ref_code)) = UPPER(TRIM(v.codigo))))
+            """)
+
+        try:
+            with db.begin_nested():
+                res = db.execute(batch_query)
+                updated_count += res.rowcount
+        except Exception as e_batch:
+            logger.warning(f"Lote {i}-{i+len(chunk)} ejecutando fallback individual por savepoint: {e_batch}")
+            for cod, pr in chunk:
+                try:
+                    with db.begin_nested():
+                        if res_key in ("equipments", "equipment", "equipos"):
+                            q = text(
+                                f'UPDATE {table_name} '
+                                f'SET "precio" = :p, "CosDia" = ROUND((:p * COALESCE(deprec_factor, 1.0))::numeric, 4) '
+                                f'WHERE (UPPER(TRIM("{id_col}")) = UPPER(TRIM(:c)) OR (ref_code IS NOT NULL AND UPPER(TRIM(ref_code)) = UPPER(TRIM(:c))))'
+                            )
+                        else:
+                            q = text(
+                                f'UPDATE {table_name} '
+                                f'SET "{price_col}" = :p '
+                                f'WHERE (UPPER(TRIM("{id_col}")) = UPPER(TRIM(:c)) OR (ref_code IS NOT NULL AND UPPER(TRIM(ref_code)) = UPPER(TRIM(:c))))'
+                            )
+                        r = db.execute(q, {"p": pr, "c": cod})
+                        if r.rowcount > 0:
+                            updated_count += r.rowcount
+                        else:
+                            errors.append(f"{item_label} {cod} no encontrado")
+                except Exception as e_indiv:
+                    logger.error(f"Error actualizando {item_label} {cod}: {e_indiv}", exc_info=True)
+                    errors.append(f"Error con {cod}: {str(e_indiv)}")
+
+    db.commit()
+    return updated_count, errors
+
 @router.post("/materials/bulk-update")
 @router.post("/{resource_type}/bulk-update")
 def bulk_update_resources(
@@ -470,14 +553,13 @@ def bulk_update_resources(
         if not updates:
             return {"updated": 0, "errors": [], "total": 0}
 
-        updated_count = 0
         errors: List[str] = []
-
         codigos_precio: Dict[str, float] = {}
+
         for update in updates:
             if not isinstance(update, dict):
                 continue
-            codigo = clean_cell_str(update.get("codigo", ""))
+            codigo = clean_cell_str(update.get("codigo", "")).strip().strip('"\'')
             precio_raw = update.get("precio")
             if codigo and precio_raw is not None:
                 try:
@@ -498,30 +580,16 @@ def bulk_update_resources(
                 except (ValueError, TypeError):
                     errors.append(f"Precio inválido para código {codigo}: {precio_raw}")
 
-        if res_key in ("equipments", "equipment", "equipos"):
-            query_text = text(
-                f'UPDATE {table_name} '
-                f'SET "precio" = :precio, "CosDia" = ROUND((:precio * COALESCE(deprec_factor, 1.0))::numeric, 4) '
-                f'WHERE (UPPER(TRIM("{id_col}")) = UPPER(TRIM(:codigo)) OR (ref_code IS NOT NULL AND UPPER(TRIM(ref_code)) = UPPER(TRIM(:codigo))))'
-            )
-        else:
-            query_text = text(
-                f'UPDATE {table_name} '
-                f'SET "{price_col}" = :precio '
-                f'WHERE (UPPER(TRIM("{id_col}")) = UPPER(TRIM(:codigo)) OR (ref_code IS NOT NULL AND UPPER(TRIM(ref_code)) = UPPER(TRIM(:codigo))))'
-            )
-        for codigo, precio in codigos_precio.items():
-            try:
-                result = db.execute(query_text, {"precio": precio, "codigo": codigo})
-                if result.rowcount > 0:
-                    updated_count += result.rowcount
-                else:
-                    errors.append(f"{item_label} {codigo} no encontrado")
-            except Exception as e:
-                logger.error(f"Error actualizando {item_label} {codigo}: {e}", exc_info=True)
-                errors.append(f"Error actualizando {codigo}: {str(e)}")
-
-        db.commit()
+        updated_count, db_errors = execute_bulk_resource_updates(
+            db=db,
+            table_name=table_name,
+            id_col=id_col,
+            price_col=price_col,
+            res_key=res_key,
+            item_label=item_label,
+            codigos_precio=codigos_precio,
+        )
+        errors.extend(db_errors)
 
         return {
             "updated": updated_count,
@@ -593,45 +661,65 @@ async def bulk_update_prices_excel_route(
         if not rows or len(rows) < 2:
             return {"updated": 0, "errors": ["El archivo está vacío o no contiene filas de datos"], "total": 0}
 
-        header_row = rows[0]
         codigo_col_idx: Optional[int] = None
         precio_col_idx: Optional[int] = None
+        header_row_idx = 0
 
-        for idx, header in enumerate(header_row):
-            if header is None:
-                continue
-            h_norm = str(header).lower().strip()
-            h_clean = h_norm.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
-            if codigo_col_idx is None and any(k in h_clean for k in ["codigo", "codmat", "codequ", "codman", "cod", "id", "referencia", "ref"]):
-                codigo_col_idx = idx
-            elif precio_col_idx is None and any(k in h_clean for k in ["precio", "costo", "cosmat", "jornal", "cosdia", "monto", "valor", "p.u", "pu", "tarifa", "salario"]):
-                precio_col_idx = idx
+        # Escanear las primeras 25 filas para detectar la fila de encabezados real
+        for r_idx in range(min(len(rows), 25)):
+            r = rows[r_idx]
+            c_idx = None
+            p_idx = None
+            for idx, header in enumerate(r):
+                if header is None:
+                    continue
+                h_norm = str(header).lower().strip()
+                h_clean = h_norm.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
+                if c_idx is None and any(k in h_clean for k in ["codigo", "codmat", "codequ", "codman", "cod.", "cod_", "código", "ref_code", "referencia"]):
+                    c_idx = idx
+                elif p_idx is None and any(k in h_clean for k in ["precio", "costo", "cosmat", "jornal", "cosdia", "monto", "valor", "p.u", "pu", "tarifa", "salario"]):
+                    p_idx = idx
+            if c_idx is not None and p_idx is not None:
+                codigo_col_idx = c_idx
+                precio_col_idx = p_idx
+                header_row_idx = r_idx
+                break
 
-        start_row_idx = 1
+        # Fallback si no hubo coincidencia por palabras clave
         if codigo_col_idx is None or precio_col_idx is None:
-            if len(header_row) >= 2:
-                codigo_col_idx = 0
-                precio_col_idx = len(header_row) - 1 if len(header_row) > 1 else 1
-                first_val_str = str(header_row[precio_col_idx]).strip()
-                if any(c.isdigit() for c in first_val_str):
-                    start_row_idx = 0
+            for r_idx in range(min(len(rows), 15)):
+                r = rows[r_idx]
+                if len(r) >= 2 and r[0] is not None:
+                    test_str = str(r[-1] if len(r) > 1 else r[1]).strip()
+                    clean_test = re.sub(r"[^\d,\.]", "", test_str)
+                    if clean_test and any(ch.isdigit() for ch in clean_test):
+                        codigo_col_idx = 0
+                        precio_col_idx = len(r) - 1 if len(r) > 1 else 1
+                        header_row_idx = r_idx - 1
+                        break
+            if codigo_col_idx is None or precio_col_idx is None:
+                if len(rows[0]) >= 2:
+                    codigo_col_idx = 0
+                    precio_col_idx = len(rows[0]) - 1
+                    header_row_idx = 0
                 else:
-                    start_row_idx = 1
-            else:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Columnas requeridas no encontradas. Se necesita columna de Código y Precio. Encabezados: {header_row}"
-                )
+                    raise HTTPException(
+                        status_code=400,
+                        detail="No se encontraron columnas de Código y Precio en el archivo Excel."
+                    )
 
-        updated_count = 0
         errors: List[str] = []
         codigos_precio: Dict[str, float] = {}
 
-        for row in rows[start_row_idx:]:
+        for row in rows[header_row_idx + 1:]:
             if len(row) <= max(codigo_col_idx, precio_col_idx):
                 continue
 
-            codigo = clean_cell_str(row[codigo_col_idx])
+            raw_c = row[codigo_col_idx]
+            if raw_c is None:
+                continue
+
+            codigo = clean_cell_str(raw_c).strip().strip('"\'')
             precio_raw = row[precio_col_idx]
 
             if not codigo or precio_raw is None:
@@ -660,31 +748,16 @@ async def bulk_update_prices_excel_route(
         if not codigos_precio:
             return {"updated": 0, "errors": ["No se detectaron códigos y precios válidos en el archivo"], "total": 0}
 
-        if res_key in ("equipments", "equipment", "equipos"):
-            query_text = text(
-                f'UPDATE {table_name} '
-                f'SET "precio" = :precio, "CosDia" = ROUND((:precio * COALESCE(deprec_factor, 1.0))::numeric, 4) '
-                f'WHERE (UPPER(TRIM("{id_col}")) = UPPER(TRIM(:codigo)) OR (ref_code IS NOT NULL AND UPPER(TRIM(ref_code)) = UPPER(TRIM(:codigo))))'
-            )
-        else:
-            query_text = text(
-                f'UPDATE {table_name} '
-                f'SET "{price_col}" = :precio '
-                f'WHERE (UPPER(TRIM("{id_col}")) = UPPER(TRIM(:codigo)) OR (ref_code IS NOT NULL AND UPPER(TRIM(ref_code)) = UPPER(TRIM(:codigo))))'
-            )
-
-        for codigo, precio in codigos_precio.items():
-            try:
-                result = db.execute(query_text, {"precio": precio, "codigo": codigo})
-                if result.rowcount > 0:
-                    updated_count += result.rowcount
-                else:
-                    errors.append(f"{item_label} {codigo} no encontrado")
-            except Exception as e:
-                logger.error(f"Error actualizando precio desde Excel de {item_label} {codigo}: {e}", exc_info=True)
-                errors.append(f"Error actualizando {codigo}: {str(e)}")
-
-        db.commit()
+        updated_count, db_errors = execute_bulk_resource_updates(
+            db=db,
+            table_name=table_name,
+            id_col=id_col,
+            price_col=price_col,
+            res_key=res_key,
+            item_label=item_label,
+            codigos_precio=codigos_precio,
+        )
+        errors.extend(db_errors)
 
         return {
             "updated": updated_count,
