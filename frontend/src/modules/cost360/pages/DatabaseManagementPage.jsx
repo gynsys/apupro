@@ -274,7 +274,7 @@ export default function DatabaseManagementPage() {
               className="tarjeta-presupuesto-ambar group cursor-default relative !flex !flex-col !items-stretch justify-between !h-[310px]"
             >
               {/* Header */}
-              <div className={`tarjeta-header flex flex-col justify-center ${db.is_master ? 'items-center pt-3' : 'items-start'}`}>
+              <div className={`tarjeta-header flex flex-col justify-center ${db.is_master ? 'items-center pt-10' : 'items-start'}`}>
                 <div className="flex items-center gap-3">
                   <div className="icono-archivo-ambar">
                     <Database size={20} strokeWidth={2} />
