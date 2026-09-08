@@ -274,7 +274,7 @@ export default function DatabaseManagementPage() {
               className="tarjeta-presupuesto-ambar group cursor-default relative !flex !flex-col !items-stretch justify-between !h-[310px]"
             >
               {/* Header */}
-              <div className={`tarjeta-header flex flex-col justify-center ${db.is_master ? 'items-center' : 'items-start'}`}>
+              <div className={`tarjeta-header flex flex-col justify-center ${db.is_master ? 'items-center pt-3' : 'items-start'}`}>
                 <div className="flex items-center gap-3">
                   <div className="icono-archivo-ambar">
                     <Database size={20} strokeWidth={2} />
@@ -358,6 +358,8 @@ export default function DatabaseManagementPage() {
 
               {/* Footer (Activa indicator) */}
               <div className={`flex items-center gap-2 text-sm pt-2 border-t border-slate-100 ${
+                db.is_master ? 'justify-center' : ''
+              } ${
                 db.is_active ? 'text-green-600' : 'text-slate-400'
               }`}>
                 {db.is_active ? (
