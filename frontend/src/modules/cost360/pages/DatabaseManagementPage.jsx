@@ -274,7 +274,7 @@ export default function DatabaseManagementPage() {
               className="tarjeta-presupuesto-ambar group cursor-default relative !flex !flex-col !items-stretch justify-between !h-[310px]"
             >
               {/* Header */}
-              <div className="tarjeta-header flex flex-col justify-center items-start">
+              <div className={`tarjeta-header flex flex-col justify-center ${db.is_master ? 'items-center' : 'items-start'}`}>
                 <div className="flex items-center gap-3">
                   <div className="icono-archivo-ambar">
                     <Database size={20} strokeWidth={2} />
@@ -305,9 +305,9 @@ export default function DatabaseManagementPage() {
               )}
 
               {/* Body */}
-              <div className="tarjeta-body flex-1">
+              <div className={`tarjeta-body flex-1 flex flex-col ${db.is_master ? 'items-center justify-center text-center' : ''}`}>
                 {db.description && (
-                  <p className="text-sm text-slate-600 mb-2">{db.description}</p>
+                  <p className={`text-sm text-slate-600 mb-2 ${db.is_master ? 'text-center my-auto px-2 max-w-[300px]' : ''}`}>{db.description}</p>
                 )}
 
                 {/* Inflation Stats - Solo se muestra en bases personales de usuarios */}
@@ -345,12 +345,12 @@ export default function DatabaseManagementPage() {
                 )}
 
                 {/* Metadata */}
-                <div className="tarjeta-detalles flex-col items-start gap-1 mt-auto">
-                  <div className="detalle-fecha">
+                <div className={`tarjeta-detalles flex-col ${db.is_master ? 'items-center justify-center text-center mt-auto' : 'items-start mt-auto'} gap-1`}>
+                  <div className={`detalle-fecha ${db.is_master ? 'flex items-center justify-center gap-1' : ''}`}>
                     <Copy size={13} className="mini-icono" />
                     Origen: {db.source_database_id || 'master'}
                   </div>
-                  <div className="detalle-fecha">
+                  <div className={`detalle-fecha ${db.is_master ? 'text-center' : ''}`}>
                     Creado: {db.created_at ? new Date(db.created_at).toLocaleDateString('es-VE') : 'N/A'}
                   </div>
                 </div>
