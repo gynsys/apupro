@@ -535,6 +535,169 @@ def bulk_update_resources(
         logger.error(f"Error en actualización masiva de precios ({resource_type}): {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error en actualización masiva: {str(e)}")
 
+@router.post("/materials/bulk-update-excel")
+@router.post("/{resource_type}/bulk-update-excel")
+async def bulk_update_prices_excel_route(
+    resource_type: str = "materials",
+    file: UploadFile = File(...),
+    database_id: Optional[str] = "master",
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Actualización masiva de precios desde archivo Excel (.xlsx o .xls) o CSV de un solo golpe.
+    Formato esperado: columnas de 'Código' y 'Precio' (o 'Costo', 'Jornal', etc.).
+    Aplica a materiales, equipos o mano de obra según resource_type.
+    """
+    res_key = resource_type.lower().strip()
+    if res_key not in RESOURCE_CONFIG:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tipo de recurso inválido: '{resource_type}'. Válidos: materiales, equipos, mano de obra."
+        )
+
+    config = RESOURCE_CONFIG[res_key]
+    table_name = config["table"]
+    id_col = config["id_col"]
+    price_col = config["price_col"]
+    item_label = config["name"]
+
+    if database_id and database_id != "master":
+        set_schema_for_db(db, database_id)
+
+    try:
+        contents = await file.read()
+        rows: List[List[Any]] = []
+        try:
+            wb = openpyxl.load_workbook(io.BytesIO(contents), data_only=True)
+            ws = wb.active
+            rows = [list(r) for r in ws.iter_rows(values_only=True)]
+        except Exception as e_xl:
+            try:
+                df = pd.read_excel(io.BytesIO(contents))
+                header = list(df.columns)
+                data_rows = df.values.tolist()
+                rows = [header] + data_rows
+            except Exception as e_pd:
+                try:
+                    df = pd.read_csv(io.BytesIO(contents), sep=None, engine="python")
+                    header = list(df.columns)
+                    data_rows = df.values.tolist()
+                    rows = [header] + data_rows
+                except Exception as e_csv:
+                    logger.error(f"Error leyendo archivo de precios: {e_xl} | {e_pd} | {e_csv}", exc_info=True)
+                    raise HTTPException(
+                        status_code=400,
+                        detail="No se pudo leer el archivo. Asegúrese de que sea un archivo Excel válido (.xlsx o .xls) o CSV."
+                    )
+
+        if not rows or len(rows) < 2:
+            return {"updated": 0, "errors": ["El archivo está vacío o no contiene filas de datos"], "total": 0}
+
+        header_row = rows[0]
+        codigo_col_idx: Optional[int] = None
+        precio_col_idx: Optional[int] = None
+
+        for idx, header in enumerate(header_row):
+            if header is None:
+                continue
+            h_norm = str(header).lower().strip()
+            h_clean = h_norm.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
+            if codigo_col_idx is None and any(k in h_clean for k in ["codigo", "codmat", "codequ", "codman", "cod", "id", "referencia", "ref"]):
+                codigo_col_idx = idx
+            elif precio_col_idx is None and any(k in h_clean for k in ["precio", "costo", "cosmat", "jornal", "cosdia", "monto", "valor", "p.u", "pu", "tarifa", "salario"]):
+                precio_col_idx = idx
+
+        start_row_idx = 1
+        if codigo_col_idx is None or precio_col_idx is None:
+            if len(header_row) >= 2:
+                codigo_col_idx = 0
+                precio_col_idx = len(header_row) - 1 if len(header_row) > 1 else 1
+                first_val_str = str(header_row[precio_col_idx]).strip()
+                if any(c.isdigit() for c in first_val_str):
+                    start_row_idx = 0
+                else:
+                    start_row_idx = 1
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Columnas requeridas no encontradas. Se necesita columna de Código y Precio. Encabezados: {header_row}"
+                )
+
+        updated_count = 0
+        errors: List[str] = []
+        codigos_precio: Dict[str, float] = {}
+
+        for row in rows[start_row_idx:]:
+            if len(row) <= max(codigo_col_idx, precio_col_idx):
+                continue
+
+            codigo = clean_cell_str(row[codigo_col_idx])
+            precio_raw = row[precio_col_idx]
+
+            if not codigo or precio_raw is None:
+                continue
+
+            precio_val: Optional[float] = None
+            if isinstance(precio_raw, (int, float)):
+                precio_val = float(precio_raw)
+            elif isinstance(precio_raw, str):
+                clean_p = re.sub(r"[^\d,\.]", "", precio_raw.strip())
+                if clean_p:
+                    if "." in clean_p and "," in clean_p:
+                        if clean_p.rfind(",") > clean_p.rfind("."):
+                            clean_p = clean_p.replace(".", "").replace(",", ".")
+                        else:
+                            clean_p = clean_p.replace(",", "")
+                    elif "," in clean_p:
+                        clean_p = clean_p.replace(",", ".")
+                    try:
+                        precio_val = float(clean_p)
+                    except ValueError:
+                        errors.append(f"Precio inválido para código {codigo}: {precio_raw}")
+            if precio_val is not None:
+                codigos_precio[codigo] = precio_val
+
+        if not codigos_precio:
+            return {"updated": 0, "errors": ["No se detectaron códigos y precios válidos en el archivo"], "total": 0}
+
+        if res_key in ("equipments", "equipment", "equipos"):
+            query_text = text(
+                f'UPDATE {table_name} '
+                f'SET "precio" = :precio, "CosDia" = ROUND((:precio * COALESCE(deprec_factor, 1.0))::numeric, 4) '
+                f'WHERE (UPPER(TRIM("{id_col}")) = UPPER(TRIM(:codigo)) OR (ref_code IS NOT NULL AND UPPER(TRIM(ref_code)) = UPPER(TRIM(:codigo))))'
+            )
+        else:
+            query_text = text(
+                f'UPDATE {table_name} '
+                f'SET "{price_col}" = :precio '
+                f'WHERE (UPPER(TRIM("{id_col}")) = UPPER(TRIM(:codigo)) OR (ref_code IS NOT NULL AND UPPER(TRIM(ref_code)) = UPPER(TRIM(:codigo))))'
+            )
+
+        for codigo, precio in codigos_precio.items():
+            try:
+                result = db.execute(query_text, {"precio": precio, "codigo": codigo})
+                if result.rowcount > 0:
+                    updated_count += result.rowcount
+                else:
+                    errors.append(f"{item_label} {codigo} no encontrado")
+            except Exception as e:
+                logger.error(f"Error actualizando precio desde Excel de {item_label} {codigo}: {e}", exc_info=True)
+                errors.append(f"Error actualizando {codigo}: {str(e)}")
+
+        db.commit()
+
+        return {
+            "updated": updated_count,
+            "errors": errors,
+            "total": len(codigos_precio),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error en actualización masiva de precios por Excel ({resource_type}): {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error en actualización masiva por Excel: {str(e)}")
+
 @router.post("/materials/bulk-update-descriptions")
 @router.post("/{resource_type}/bulk-update-descriptions")
 async def bulk_update_descriptions_route(

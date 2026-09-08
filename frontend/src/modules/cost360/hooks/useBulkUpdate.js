@@ -127,6 +127,8 @@ export const useBulkUpdate = (resourceType = 'materials', databaseId = 'master')
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [showDescModal, setShowDescModal] = useState(false);
   const [priceText, setPriceText] = useState('');
+  const [priceFile, setPriceFile] = useState(null);
+  const [isUploadingPriceFile, setIsUploadingPriceFile] = useState(false);
   const [descFile, setDescFile] = useState(null);
 
   const getResourceLabel = useCallback(() => {
@@ -186,6 +188,63 @@ export const useBulkUpdate = (resourceType = 'materials', databaseId = 'master')
     }
   }, [priceText, parsePriceLines, resourceType, databaseId, getResourceLabel]);
 
+  const submitBulkPricesFile = useCallback(async (file, onSuccess) => {
+    const targetFile = file || priceFile;
+    if (!targetFile) {
+      toast.error('Por favor selecciona un archivo Excel (.xlsx o .xls)');
+      return;
+    }
+
+    setIsUploadingPriceFile(true);
+    const loadingToast = toast.loading(`Actualizando precios desde ${targetFile.name}...`);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', targetFile);
+      const queryParams = databaseId ? `?database_id=${encodeURIComponent(databaseId)}` : '';
+      const response = await apiPostFormData(`/cost360/${resourceType}/bulk-update-excel${queryParams}`, formData);
+
+      toast.dismiss(loadingToast);
+
+      if (response.ok) {
+        const result = await response.json();
+        const updatedCount = result.updated || 0;
+        const errorCount = (result.errors || []).length;
+        const label = getResourceLabel();
+
+        if (updatedCount > 0) {
+          if (errorCount > 0) {
+            toast.success(`${updatedCount} precios de ${label} actualizados (${errorCount} no encontrados)`, {
+              duration: 4500,
+              position: 'top-center'
+            });
+          } else {
+            toast.success(`${updatedCount} precios de ${label} actualizados correctamente`, {
+              duration: 3500,
+              position: 'top-center'
+            });
+          }
+          setShowPriceModal(false);
+          setPriceFile(null);
+          setPriceText('');
+          if (onSuccess) setTimeout(onSuccess, 500);
+        } else {
+          const sampleError = result.errors?.[0] || 'Ningún código coincidió con la base de datos';
+          toast.error(`No se actualizaron precios: ${sampleError}`, { duration: 4500 });
+        }
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        toast.error(errData.detail || `Error al actualizar precios desde Excel: ${response.status}`);
+      }
+    } catch (err) {
+      toast.dismiss(loadingToast);
+      console.error('Error en submitBulkPricesFile:', err);
+      toast.error('Error de conexión al servidor');
+    } finally {
+      setIsUploadingPriceFile(false);
+    }
+  }, [priceFile, resourceType, databaseId, getResourceLabel]);
+
   const submitBulkDescriptions = useCallback(async (onSuccess) => {
     if (!descFile) {
       toast.error('Por favor selecciona un archivo Excel');
@@ -240,9 +299,13 @@ export const useBulkUpdate = (resourceType = 'materials', databaseId = 'master')
     setShowDescModal,
     priceText,
     setPriceText,
+    priceFile,
+    setPriceFile,
+    isUploadingPriceFile,
     descFile,
     setDescFile,
     submitBulkPrices,
+    submitBulkPricesFile,
     submitBulkDescriptions,
     parsePriceLines,
   };
