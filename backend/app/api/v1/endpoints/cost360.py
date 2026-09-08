@@ -402,7 +402,21 @@ def search_materials_route(
             factor = 1 + (db_config.material_inflation / 100.0)
             for item in items:
                 item.CosMat = round((item.CosMat or 0.0) * factor, 4)
-    return {"total": total, "items": items}
+
+    serialized_items = [
+        {
+            "CodMat": item.CodMat,
+            "ref_code": item.ref_code,
+            "Descri": item.Descri,
+            "UniMat": item.UniMat,
+            "CosMat": item.CosMat,
+            "family_id": item.family_id,
+            "market_indicator_id": item.market_indicator_id,
+            "market_factor": item.market_factor,
+        }
+        for item in items
+    ]
+    return {"total": total, "items": serialized_items}
 
 @router.get("/equipments")
 def search_equipments_route(
@@ -430,15 +444,26 @@ def search_equipments_route(
         if db_config and db_config.equipment_inflation:
             factor = 1 + (db_config.equipment_inflation / 100.0)
     
+    serialized_items = []
     for item in items:
         dep = item.deprec_factor if (item.deprec_factor and item.deprec_factor > 0) else 1.0
+        cos_dia = item.CosDia
+        precio = item.precio
         if factor != 1.0:
-            item.CosDia = round((item.CosDia or 0.0) * factor, 4)
-            if item.precio is not None:
-                item.precio = round((item.precio or 0.0) * factor, 2)
-        if item.precio is None:
-            item.precio = round((item.CosDia or 0.0) / dep, 2)
-    return {"total": total, "items": items}
+            cos_dia = round((cos_dia or 0.0) * factor, 4)
+            if precio is not None:
+                precio = round((precio or 0.0) * factor, 2)
+        if precio is None:
+            precio = round((cos_dia or 0.0) / dep, 2)
+        serialized_items.append({
+            "CodEqu": item.CodEqu,
+            "ref_code": item.ref_code,
+            "Descri": item.Descri,
+            "CosDia": cos_dia,
+            "precio": precio,
+            "deprec_factor": item.deprec_factor,
+        })
+    return {"total": total, "items": serialized_items}
 
 @router.get("/labors")
 def search_labors_route(
@@ -460,14 +485,27 @@ def search_labors_route(
     set_schema_for_db(db, database_id)
     total, items = search_labors_paginated(db, skip, limit, search, all_items=(all_items or is_superadmin))
     # Aplicar factor de inflación de mano de obra si la base no es maestra
+    factor = 1.0
     if database_id and database_id != "master":
         db_config = get_database_by_id(db, database_id)
         if db_config and db_config.labor_inflation:
             factor = 1 + (db_config.labor_inflation / 100.0)
-            for item in items:
-                item.Jornal = round((item.Jornal or 0.0) * factor, 4)
-                item.Bono = round((item.Bono or 0.0) * factor, 4)
-    return {"total": total, "items": items}
+
+    serialized_items = []
+    for item in items:
+        jornal = item.Jornal
+        bono = item.Bono
+        if factor != 1.0:
+            jornal = round((jornal or 0.0) * factor, 4)
+            bono = round((bono or 0.0) * factor, 4)
+        serialized_items.append({
+            "CodMan": item.CodMan,
+            "ref_code": item.ref_code,
+            "Descri": item.Descri,
+            "Jornal": jornal,
+            "Bono": bono,
+        })
+    return {"total": total, "items": serialized_items}
 
 @router.get("/categories_tree")
 def get_categories_tree_route(db: Session = Depends(get_db)):
@@ -724,28 +762,44 @@ async def bulk_update_prices_excel_route(
                     c_idx = idx
                 elif p_idx is None and any(k in h_clean for k in ["precio", "costo", "cosmat", "jornal", "cosdia", "monto", "valor", "p.u", "pu", "tarifa", "salario"]):
                     p_idx = idx
-            if c_idx is not None and p_idx is not None:
+            if c_idx is not None:
                 codigo_col_idx = c_idx
-                precio_col_idx = p_idx
                 header_row_idx = r_idx
-                break
+                if p_idx is not None:
+                    precio_col_idx = p_idx
+                    break
+
+        # Si encontramos columna de código pero ninguna columna decía "precio" (ej. encabezado dice 'Descripción' pero contiene números)
+        if codigo_col_idx is not None and precio_col_idx is None:
+            for col_cand in range(len(rows[header_row_idx])):
+                if col_cand == codigo_col_idx:
+                    continue
+                num_matches = 0
+                for sample_r in rows[header_row_idx + 1:header_row_idx + 15]:
+                    if len(sample_r) > col_cand and sample_r[col_cand] is not None:
+                        val_str = re.sub(r"[^\d,\.]", "", str(sample_r[col_cand]).strip())
+                        if val_str and any(ch.isdigit() for ch in val_str):
+                            num_matches += 1
+                if num_matches >= 3:
+                    precio_col_idx = col_cand
+                    break
 
         # Fallback si no hubo coincidencia por palabras clave
         if codigo_col_idx is None or precio_col_idx is None:
             for r_idx in range(min(len(rows), 15)):
                 r = rows[r_idx]
                 if len(r) >= 2 and r[0] is not None:
-                    test_str = str(r[-1] if len(r) > 1 else r[1]).strip()
+                    test_str = str(r[1] if len(r) > 1 else r[-1]).strip()
                     clean_test = re.sub(r"[^\d,\.]", "", test_str)
                     if clean_test and any(ch.isdigit() for ch in clean_test):
                         codigo_col_idx = 0
-                        precio_col_idx = len(r) - 1 if len(r) > 1 else 1
+                        precio_col_idx = 1
                         header_row_idx = r_idx - 1
                         break
             if codigo_col_idx is None or precio_col_idx is None:
                 if len(rows[0]) >= 2:
                     codigo_col_idx = 0
-                    precio_col_idx = len(rows[0]) - 1
+                    precio_col_idx = 1
                     header_row_idx = 0
                 else:
                     raise HTTPException(
@@ -868,55 +922,102 @@ async def bulk_update_descriptions_route(
         if not rows or len(rows) < 2:
             return {"updated": 0, "errors": ["El archivo Excel está vacío o no contiene filas de datos"], "total": 0}
 
-        header_row = rows[0]
         codigo_col_idx: Optional[int] = None
         descripcion_col_idx: Optional[int] = None
+        header_row_idx = 0
 
-        for idx, header in enumerate(header_row):
-            if header is None:
-                continue
-            h_norm = str(header).lower().strip()
-            h_clean = h_norm.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
-            if codigo_col_idx is None and any(k in h_clean for k in ["codigo", "codmat", "codequ", "codman", "cod", "id"]):
-                codigo_col_idx = idx
-            elif descripcion_col_idx is None and any(k in h_clean for k in ["descripcion", "descri", "detalle", "nombre"]):
-                descripcion_col_idx = idx
+        # Escanear las primeras 25 filas para detectar la fila de encabezados real
+        for r_idx in range(min(len(rows), 25)):
+            r = rows[r_idx]
+            c_idx = None
+            d_idx = None
+            for idx, header in enumerate(r):
+                if header is None:
+                    continue
+                h_norm = str(header).lower().strip()
+                h_clean = h_norm.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
+                if c_idx is None and any(k in h_clean for k in ["codigo", "codmat", "codequ", "codman", "cod.", "cod_", "código", "ref_code", "referencia", "id"]):
+                    c_idx = idx
+                elif d_idx is None and any(k in h_clean for k in ["descripcion", "descri", "detalle", "nombre", "texto"]):
+                    d_idx = idx
+            if c_idx is not None and d_idx is not None:
+                codigo_col_idx = c_idx
+                descripcion_col_idx = d_idx
+                header_row_idx = r_idx
+                break
 
+        # Fallback si no hubo coincidencia por palabras clave: asumir Columna 0 = Código, Columna 1 = Descripción
         if codigo_col_idx is None or descripcion_col_idx is None:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Columnas requeridas no encontradas. Se necesita 'Código' y 'Descripción'. Encabezados encontrados: {header_row}"
-            )
+            if len(rows[0]) >= 2:
+                codigo_col_idx = 0
+                descripcion_col_idx = 1
+                header_row_idx = -1  # Para procesar desde la fila 0
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No se encontraron columnas de Código y Descripción en el archivo Excel."
+                )
 
         updated_count = 0
         errors: List[str] = []
         items_to_update: List[Dict[str, str]] = []
 
-        for row in rows[1:]:
+        start_row = header_row_idx + 1 if header_row_idx >= 0 else 0
+        for row in rows[start_row:]:
             if len(row) <= max(codigo_col_idx, descripcion_col_idx):
                 continue
 
-            codigo = clean_cell_str(row[codigo_col_idx])
-            descripcion = clean_cell_str(row[descripcion_col_idx])
+            codigo = clean_cell_str(row[codigo_col_idx]).strip().strip('"\'')
+            descripcion = clean_cell_str(row[descripcion_col_idx]).strip()
 
             if not codigo or not descripcion:
                 continue
 
             items_to_update.append({"codigo": codigo, "descripcion": descripcion})
 
-        query_text = text(f'UPDATE {table_name} SET "{desc_col}" = :descripcion WHERE "{id_col}" = :codigo')
-        for item in items_to_update:
-            codigo = item["codigo"]
-            descripcion = item["descripcion"]
+        if not items_to_update:
+            return {"updated": 0, "errors": ["No se detectaron códigos y descripciones válidas en el archivo"], "total": 0}
+
+        # Ejecución por lotes para máximo rendimiento y tolerancia a fallos
+        batch_size = 500
+        for i in range(0, len(items_to_update), batch_size):
+            chunk = items_to_update[i:i + batch_size]
+            values_parts: List[str] = []
+            for item in chunk:
+                safe_cod = item["codigo"].replace("'", "''").strip()
+                safe_desc = item["descripcion"].replace("'", "''").strip()
+                values_parts.append(f"('{safe_cod}', '{safe_desc}')")
+
+            values_sql = ", ".join(values_parts)
+            batch_query = text(f"""
+                UPDATE {table_name} AS t
+                SET "{desc_col}" = v.descripcion
+                FROM (VALUES {values_sql}) AS v(codigo, descripcion)
+                WHERE (UPPER(TRIM(t."{id_col}")) = UPPER(TRIM(v.codigo))
+                   OR (t.ref_code IS NOT NULL AND UPPER(TRIM(t.ref_code)) = UPPER(TRIM(v.codigo))))
+            """)
             try:
-                result = db.execute(query_text, {"descripcion": descripcion, "codigo": codigo})
-                if result.rowcount > 0:
-                    updated_count += result.rowcount
-                else:
-                    errors.append(f"{item_label} {codigo} no encontrado")
-            except Exception as e:
-                logger.error(f"Error actualizando descripción de {item_label} {codigo}: {e}", exc_info=True)
-                errors.append(f"Error actualizando {codigo}: {str(e)}")
+                with db.begin_nested():
+                    res = db.execute(batch_query)
+                    updated_count += res.rowcount
+            except Exception as e_batch:
+                logger.warning(f"Lote {i}-{i+len(chunk)} ejecutando fallback individual de descripciones: {e_batch}")
+                q_single = text(f"""
+                    UPDATE {table_name}
+                    SET "{desc_col}" = :d
+                    WHERE (UPPER(TRIM("{id_col}")) = UPPER(TRIM(:c))
+                       OR (ref_code IS NOT NULL AND UPPER(TRIM(ref_code)) = UPPER(TRIM(:c))))
+                """)
+                for item in chunk:
+                    try:
+                        with db.begin_nested():
+                            r = db.execute(q_single, {"d": item["descripcion"], "c": item["codigo"]})
+                            if r.rowcount > 0:
+                                updated_count += r.rowcount
+                            else:
+                                errors.append(f"{item_label} {item['codigo']} no encontrado")
+                    except Exception as e_indiv:
+                        errors.append(f"Error actualizando {item['codigo']}: {str(e_indiv)}")
 
         db.commit()
 
