@@ -54,6 +54,13 @@ RESOURCE_CONFIG: Dict[str, Dict[str, str]] = {
         "desc_col": "Descri",
         "name": "Material",
     },
+    "materiales": {
+        "table": "cost360_materials",
+        "id_col": "CodMat",
+        "price_col": "CosMat",
+        "desc_col": "Descri",
+        "name": "Material",
+    },
     "equipments": {
         "table": "cost360_equipment",
         "id_col": "CodEqu",
@@ -68,6 +75,13 @@ RESOURCE_CONFIG: Dict[str, Dict[str, str]] = {
         "desc_col": "Descri",
         "name": "Equipo",
     },
+    "equipos": {
+        "table": "cost360_equipment",
+        "id_col": "CodEqu",
+        "price_col": "precio",
+        "desc_col": "Descri",
+        "name": "Equipo",
+    },
     "labors": {
         "table": "cost360_labor",
         "id_col": "CodMan",
@@ -76,6 +90,20 @@ RESOURCE_CONFIG: Dict[str, Dict[str, str]] = {
         "name": "Mano de Obra",
     },
     "labor": {
+        "table": "cost360_labor",
+        "id_col": "CodMan",
+        "price_col": "Jornal",
+        "desc_col": "Descri",
+        "name": "Mano de Obra",
+    },
+    "mano_obra": {
+        "table": "cost360_labor",
+        "id_col": "CodMan",
+        "price_col": "Jornal",
+        "desc_col": "Descri",
+        "name": "Mano de Obra",
+    },
+    "mano-de-obra": {
         "table": "cost360_labor",
         "id_col": "CodMan",
         "price_col": "Jornal",
@@ -453,14 +481,35 @@ def bulk_update_resources(
             precio_raw = update.get("precio")
             if codigo and precio_raw is not None:
                 try:
-                    codigos_precio[codigo] = float(precio_raw)
+                    if isinstance(precio_raw, (int, float)):
+                        codigos_precio[codigo] = float(precio_raw)
+                    elif isinstance(precio_raw, str):
+                        clean_p = re.sub(r"[^\d,\.]", "", precio_raw.strip())
+                        if "." in clean_p and "," in clean_p:
+                            if clean_p.rfind(",") > clean_p.rfind("."):
+                                clean_p = clean_p.replace(".", "").replace(",", ".")
+                            else:
+                                clean_p = clean_p.replace(",", "")
+                        elif "," in clean_p:
+                            clean_p = clean_p.replace(",", ".")
+                        codigos_precio[codigo] = float(clean_p)
+                    else:
+                        codigos_precio[codigo] = float(precio_raw)
                 except (ValueError, TypeError):
                     errors.append(f"Precio inválido para código {codigo}: {precio_raw}")
 
-        if res_key in ("equipments", "equipment"):
-            query_text = text(f'UPDATE {table_name} SET "precio" = :precio, "CosDia" = ROUND((:precio * COALESCE(deprec_factor, 1.0))::numeric, 4) WHERE "{id_col}" = :codigo')
+        if res_key in ("equipments", "equipment", "equipos"):
+            query_text = text(
+                f'UPDATE {table_name} '
+                f'SET "precio" = :precio, "CosDia" = ROUND((:precio * COALESCE(deprec_factor, 1.0))::numeric, 4) '
+                f'WHERE (UPPER(TRIM("{id_col}")) = UPPER(TRIM(:codigo)) OR (ref_code IS NOT NULL AND UPPER(TRIM(ref_code)) = UPPER(TRIM(:codigo))))'
+            )
         else:
-            query_text = text(f'UPDATE {table_name} SET "{price_col}" = :precio WHERE "{id_col}" = :codigo')
+            query_text = text(
+                f'UPDATE {table_name} '
+                f'SET "{price_col}" = :precio '
+                f'WHERE (UPPER(TRIM("{id_col}")) = UPPER(TRIM(:codigo)) OR (ref_code IS NOT NULL AND UPPER(TRIM(ref_code)) = UPPER(TRIM(:codigo))))'
+            )
         for codigo, precio in codigos_precio.items():
             try:
                 result = db.execute(query_text, {"precio": precio, "codigo": codigo})
