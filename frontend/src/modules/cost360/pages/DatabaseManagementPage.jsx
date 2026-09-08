@@ -305,7 +305,7 @@ export default function DatabaseManagementPage() {
               )}
 
               {/* Body */}
-              <div className={`tarjeta-body flex-1 flex flex-col ${db.is_master ? 'items-center justify-center text-center' : ''}`}>
+              <div className={`tarjeta-body flex-1 flex flex-col ${db.is_master ? 'items-center justify-center text-center -translate-y-[25px]' : ''}`}>
                 {db.description && (
                   <p className={`text-sm text-slate-600 mb-2 ${db.is_master ? 'text-center my-auto px-2 max-w-[300px]' : ''}`}>{db.description}</p>
                 )}
@@ -358,7 +358,7 @@ export default function DatabaseManagementPage() {
 
               {/* Footer (Activa indicator) */}
               <div className={`flex items-center gap-2 text-sm pt-2 border-t border-slate-100 ${
-                db.is_master ? 'justify-center' : ''
+                db.is_master ? 'justify-center -translate-y-[25px]' : ''
               } ${
                 db.is_active ? 'text-green-600' : 'text-slate-400'
               }`}>
