@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, and_, text
+from sqlalchemy import func, or_, and_, text, case
 from typing import Optional, List, Tuple
 from app.db.models.cost360 import (
     CostItem, CostMaterial, CostEquipment, CostLabor,
@@ -178,7 +178,7 @@ def get_items_paginated(
         query = query.filter(CostItem.CovPar.op('~')(r'(^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$|^[0-9]+RA$)'))
         total = query.count()
 
-    if hidden_categories and not covenin and not chapter:
+    if hidden_categories and not covenin and not chapter and not is_superadmin:
         hc_list = [hc.strip() for hc in hidden_categories.split(',')]
         for hc in hc_list:
             if hc:
@@ -187,7 +187,6 @@ def get_items_paginated(
     
     # Priorizar partidas con COVENIN completo (formato [LETRA].[9 DÍGITOS] como C.110800300)
     # Usamos una función SQL nativa para mayor compatibilidad
-    from sqlalchemy import case, func
     covenin_priority = case(
         (func.length(CostItem.CovPar) == 11, 0),  # COVENIN completo tiene 11 caracteres (LETRA + punto + 9 dígitos)
         else_=1  # Otros tienen prioridad 1
@@ -265,11 +264,20 @@ def get_apu_labors(db: Session, item_code: str):
         .join(CostLabor, CostAPULabor.CodIns == CostLabor.CodMan)\
         .filter(CostAPULabor.CodPar == item_code).all()
 
-def search_materials_paginated(db: Session, skip: int, limit: int, search: str):
-    valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'(^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$|^[0-9]+RA$)'))
-    used_materials = db.query(CostAPUMaterial.CodIns).filter(CostAPUMaterial.CodPar.in_(valid_apu_query))
-    
-    query = db.query(CostMaterial).filter(CostMaterial.CodMat.in_(used_materials))
+def search_materials_paginated(
+    db: Session,
+    skip: int,
+    limit: int,
+    search: str,
+    all_items: bool = True
+) -> Tuple[int, List[CostMaterial]]:
+    if all_items:
+        query = db.query(CostMaterial)
+    else:
+        valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'(^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$|^[0-9]+RA$)'))
+        used_materials = db.query(CostAPUMaterial.CodIns).filter(CostAPUMaterial.CodPar.in_(valid_apu_query))
+        query = db.query(CostMaterial).filter(CostMaterial.CodMat.in_(used_materials))
+
     if search:
         search_term = f"%{search}%"
         query = query.filter(CostMaterial.ref_code.ilike(search_term) | CostMaterial.CodMat.ilike(search_term) | CostMaterial.Descri.ilike(search_term))
@@ -277,11 +285,20 @@ def search_materials_paginated(db: Session, skip: int, limit: int, search: str):
     items = query.order_by(CostMaterial.ref_code, CostMaterial.CodMat).offset(skip).limit(limit).all()
     return total, items
 
-def search_equipments_paginated(db: Session, skip: int, limit: int, search: str):
-    valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'(^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$|^[0-9]+RA$)'))
-    used_equipments = db.query(CostAPUEquipment.CodIns).filter(CostAPUEquipment.CodPar.in_(valid_apu_query))
+def search_equipments_paginated(
+    db: Session,
+    skip: int,
+    limit: int,
+    search: str,
+    all_items: bool = True
+) -> Tuple[int, List[CostEquipment]]:
+    if all_items:
+        query = db.query(CostEquipment)
+    else:
+        valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'(^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$|^[0-9]+RA$)'))
+        used_equipments = db.query(CostAPUEquipment.CodIns).filter(CostAPUEquipment.CodPar.in_(valid_apu_query))
+        query = db.query(CostEquipment).filter(CostEquipment.CodEqu.in_(used_equipments))
 
-    query = db.query(CostEquipment).filter(CostEquipment.CodEqu.in_(used_equipments))
     if search:
         search_term = f"%{search}%"
         query = query.filter(CostEquipment.ref_code.ilike(search_term) | CostEquipment.CodEqu.ilike(search_term) | CostEquipment.Descri.ilike(search_term))
@@ -289,11 +306,20 @@ def search_equipments_paginated(db: Session, skip: int, limit: int, search: str)
     items = query.order_by(CostEquipment.ref_code, CostEquipment.CodEqu).offset(skip).limit(limit).all()
     return total, items
 
-def search_labors_paginated(db: Session, skip: int, limit: int, search: str):
-    valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'(^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$|^[0-9]+RA$)'))
-    used_labors = db.query(CostAPULabor.CodIns).filter(CostAPULabor.CodPar.in_(valid_apu_query))
+def search_labors_paginated(
+    db: Session,
+    skip: int,
+    limit: int,
+    search: str,
+    all_items: bool = True
+) -> Tuple[int, List[CostLabor]]:
+    if all_items:
+        query = db.query(CostLabor)
+    else:
+        valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'(^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$|^[0-9]+RA$)'))
+        used_labors = db.query(CostAPULabor.CodIns).filter(CostAPULabor.CodPar.in_(valid_apu_query))
+        query = db.query(CostLabor).filter(CostLabor.CodMan.in_(used_labors))
 
-    query = db.query(CostLabor).filter(CostLabor.CodMan.in_(used_labors))
     if search:
         search_term = f"%{search}%"
         query = query.filter(CostLabor.ref_code.ilike(search_term) | CostLabor.CodMan.ilike(search_term) | CostLabor.Descri.ilike(search_term))

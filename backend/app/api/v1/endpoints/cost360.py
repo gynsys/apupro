@@ -377,9 +377,24 @@ def delete_master_item_route(item_code: str, db: Session = Depends(get_db)):
     return {"status": "ok"}
 
 @router.get("/materials")
-def search_materials_route(skip: int = 0, limit: int = 50, search: str = "", database_id: str = "master", db: Session = Depends(get_db)):
+def search_materials_route(
+    skip: int = 0,
+    limit: int = 50,
+    search: str = "",
+    database_id: str = "master",
+    all_items: bool = True,
+    current_user: Optional[ArkoAdmin] = Depends(get_optional_arko_admin),
+    db: Session = Depends(get_db)
+) -> dict:
+    is_superadmin = False
+    if current_user:
+        is_superadmin = (
+            getattr(current_user, 'is_superadmin', False) or
+            (current_user.email == 'admin@arko360.net') or
+            getattr(current_user, 'role', '') in ['admin', 'superadmin']
+        )
     set_schema_for_db(db, database_id)
-    total, items = search_materials_paginated(db, skip, limit, search)
+    total, items = search_materials_paginated(db, skip, limit, search, all_items=(all_items or is_superadmin))
     # Aplicar factor de inflación de materiales si la base no es maestra
     if database_id and database_id != "master":
         db_config = get_database_by_id(db, database_id)
@@ -390,9 +405,24 @@ def search_materials_route(skip: int = 0, limit: int = 50, search: str = "", dat
     return {"total": total, "items": items}
 
 @router.get("/equipments")
-def search_equipments_route(skip: int = 0, limit: int = 50, search: str = "", database_id: str = "master", db: Session = Depends(get_db)):
+def search_equipments_route(
+    skip: int = 0,
+    limit: int = 50,
+    search: str = "",
+    database_id: str = "master",
+    all_items: bool = True,
+    current_user: Optional[ArkoAdmin] = Depends(get_optional_arko_admin),
+    db: Session = Depends(get_db)
+) -> dict:
+    is_superadmin = False
+    if current_user:
+        is_superadmin = (
+            getattr(current_user, 'is_superadmin', False) or
+            (current_user.email == 'admin@arko360.net') or
+            getattr(current_user, 'role', '') in ['admin', 'superadmin']
+        )
     set_schema_for_db(db, database_id)
-    total, items = search_equipments_paginated(db, skip, limit, search)
+    total, items = search_equipments_paginated(db, skip, limit, search, all_items=(all_items or is_superadmin))
     # Aplicar factor de inflación de equipos si la base no es maestra
     factor = 1.0
     if database_id and database_id != "master":
@@ -411,9 +441,24 @@ def search_equipments_route(skip: int = 0, limit: int = 50, search: str = "", da
     return {"total": total, "items": items}
 
 @router.get("/labors")
-def search_labors_route(skip: int = 0, limit: int = 50, search: str = "", database_id: str = "master", db: Session = Depends(get_db)):
+def search_labors_route(
+    skip: int = 0,
+    limit: int = 50,
+    search: str = "",
+    database_id: str = "master",
+    all_items: bool = True,
+    current_user: Optional[ArkoAdmin] = Depends(get_optional_arko_admin),
+    db: Session = Depends(get_db)
+) -> dict:
+    is_superadmin = False
+    if current_user:
+        is_superadmin = (
+            getattr(current_user, 'is_superadmin', False) or
+            (current_user.email == 'admin@arko360.net') or
+            getattr(current_user, 'role', '') in ['admin', 'superadmin']
+        )
     set_schema_for_db(db, database_id)
-    total, items = search_labors_paginated(db, skip, limit, search)
+    total, items = search_labors_paginated(db, skip, limit, search, all_items=(all_items or is_superadmin))
     # Aplicar factor de inflación de mano de obra si la base no es maestra
     if database_id and database_id != "master":
         db_config = get_database_by_id(db, database_id)

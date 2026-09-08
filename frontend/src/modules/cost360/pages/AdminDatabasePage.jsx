@@ -41,7 +41,7 @@ const glassStrong = {
 const AdminDatabasePage = () => {
   const [activeTab, setActiveTab] = useState('visor_bd');
   const [visorSubTab, setVisorSubTab] = useState('partidas');
-  const [onlyCoded, setOnlyCoded] = useState(true);
+  const [onlyCoded, setOnlyCoded] = useState(false);
   const [selectedDatabase, setSelectedDatabase] = useState('master');
   const [promptText, setPromptText] = useState(DEFAULT_APU_PROMPT);
 
