@@ -779,12 +779,12 @@ export default function BudgetWorksheetPage() {
                   <th className="p-4 bg-slate-50 border-b border-slate-200">Descripción</th>
                   <th className="p-4 w-20 text-center bg-slate-50 border-b border-slate-200">Unidad</th>
                   <th className="p-4 w-32 text-right bg-slate-50 border-b border-slate-200">
-                    <div className="flex items-center justify-end gap-1.5 group/th relative cursor-help">
+                    <div className="flex items-center justify-end gap-1.5 group/th relative cursor-help translate-x-[20px]">
                       <span>Cantidad</span>
                       <Calculator size={13} className="text-amber-600 hover:text-amber-700 transition-colors shrink-0" />
                       
-                      {/* Tooltip flotante */}
-                      <div className="absolute bottom-full right-0 mb-2 hidden group-hover/th:flex flex-col w-64 p-3 bg-slate-900 text-white text-[11px] rounded-xl shadow-2xl z-50 pointer-events-none normal-case font-normal leading-relaxed border border-slate-700 animate-in fade-in zoom-in-95">
+                      {/* Tooltip flotante hacia abajo para que no quede tapado por la barra superior */}
+                      <div className="absolute top-full right-0 mt-2 hidden group-hover/th:flex flex-col w-64 p-3 bg-slate-900 text-white text-[11px] rounded-xl shadow-2xl z-50 pointer-events-none normal-case font-normal leading-relaxed border border-slate-700 animate-in fade-in zoom-in-95">
                         <div className="flex items-center gap-1.5 font-bold text-amber-300 pb-1.5 border-b border-slate-700">
                           <Calculator size={13} />
                           <span>Fórmulas directas (Tipo ETABS)</span>
