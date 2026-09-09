@@ -138,6 +138,7 @@ export default function AIApuGeneratorPage() {
   const guidedParam = searchParams.get('guided');
   const [isGuidedMode, setIsGuidedMode] = useState(guidedParam !== null ? guidedParam === 'true' : true);
   const [entryModeSource, setEntryModeSource] = useState(guidedParam === 'false' ? 'libre' : 'chat');
+  const lastEntrySourceRef = useRef(guidedParam === 'false' ? 'libre' : 'chat');
   const [guidedAccion, setGuidedAccion] = useState(null);
   const [guidedUbicacion, setGuidedUbicacion] = useState(null);
   const [guidedMaterial, setGuidedMaterial] = useState(null);
@@ -406,6 +407,18 @@ export default function AIApuGeneratorPage() {
       setItem(null);
     }
   }, [modeParam]);
+
+  useEffect(() => {
+    if (guidedParam === 'false') {
+      setIsGuidedMode(false);
+      setEntryModeSource('libre');
+      lastEntrySourceRef.current = 'libre';
+    } else if (guidedParam === 'true') {
+      setIsGuidedMode(true);
+      setEntryModeSource('chat');
+      lastEntrySourceRef.current = 'chat';
+    }
+  }, [guidedParam]);
 
   // Removed manual triggerSearch and useEffect since useCost360Search handles it
   const handleImportApu = async (itemCode) => {
@@ -703,7 +716,9 @@ export default function AIApuGeneratorPage() {
         }
         
         const finalPrompt = parts.join(' ').replace(/\s+/g, ' ').trim();
-        handleGenerate(finalPrompt);
+        setEntryModeSource('chat');
+        lastEntrySourceRef.current = 'chat';
+        handleGenerate(finalPrompt, false, false, false, null, 'chat');
       }, 5000);
     }
     
@@ -719,12 +734,15 @@ export default function AIApuGeneratorPage() {
     handleGenerate(null, true);
   };
 
-  const handleGenerate = async (overridePrompt = null, onlyPreprocess = false, bypassSmart = false, bypassExactMatch = false, acceptExactMatchCode = null) => {
+  const handleGenerate = async (overridePrompt = null, onlyPreprocess = false, bypassSmart = false, bypassExactMatch = false, acceptExactMatchCode = null, source = null) => {
     const textToSubmit = overridePrompt !== null ? overridePrompt : prompt;
     if (!textToSubmit.trim()) {
       toast.error("Ingresa una descripción para generar el APU");
       return;
     }
+    const effectiveSource = source || (overridePrompt !== null ? 'chat' : (isGuidedMode ? 'chat' : 'libre'));
+    setEntryModeSource(effectiveSource);
+    lastEntrySourceRef.current = effectiveSource;
     setLoading(true);
     setItem(null);
     setExactMatchCandidate(null);
@@ -1038,12 +1056,19 @@ export default function AIApuGeneratorPage() {
                 setItem(null);
                 if (creationMode === 'import') {
                   navigate('/cost360/ai-generator?mode=import');
+                } else if (creationMode === 'manual') {
+                  navigate('/cost360/ai-generator?mode=manual');
                 } else if (creationMode === 'ia') {
-                  if (entryModeSource === 'libre') {
+                  const targetSource = lastEntrySourceRef.current || entryModeSource;
+                  if (targetSource === 'libre') {
                     setIsGuidedMode(false);
+                    setEntryModeSource('libre');
+                    lastEntrySourceRef.current = 'libre';
                     navigate('/cost360/ai-generator?mode=ia&guided=false');
                   } else {
                     setIsGuidedMode(true);
+                    setEntryModeSource('chat');
+                    lastEntrySourceRef.current = 'chat';
                     navigate('/cost360/ai-generator?mode=ia&guided=true');
                   }
                 }
@@ -1155,6 +1180,8 @@ export default function AIApuGeneratorPage() {
                   onClick={() => { 
                     setIsGuidedMode(true); 
                     setEntryModeSource('chat');
+                    lastEntrySourceRef.current = 'chat';
+                    navigate('/cost360/ai-generator?mode=ia&guided=true', { replace: true });
                     setCurrentChatStep(0); 
                     setGuidedAccion(null);
                     setGuidedUbicacion(null);
@@ -1183,6 +1210,8 @@ export default function AIApuGeneratorPage() {
                   onClick={() => {
                     setIsGuidedMode(false);
                     setEntryModeSource('libre');
+                    lastEntrySourceRef.current = 'libre';
+                    navigate('/cost360/ai-generator?mode=ia&guided=false', { replace: true });
                   }}
                   className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${!isGuidedMode ? 'bg-white shadow-sm text-red-600' : 'text-slate-500 hover:text-slate-700'}`}
                 >
@@ -1394,6 +1423,9 @@ export default function AIApuGeneratorPage() {
                     onClick={() => {
                       setIsClarifying(false);
                       setIsGuidedMode(true);
+                      setEntryModeSource('chat');
+                      lastEntrySourceRef.current = 'chat';
+                      navigate('/cost360/ai-generator?mode=ia&guided=true', { replace: true });
                     }}
                     className="px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-700 transition-colors shadow-sm flex items-center gap-1.5"
                   >
@@ -1402,6 +1434,10 @@ export default function AIApuGeneratorPage() {
                   <button
                     onClick={() => {
                       setIsClarifying(false);
+                      setIsGuidedMode(false);
+                      setEntryModeSource('libre');
+                      lastEntrySourceRef.current = 'libre';
+                      navigate('/cost360/ai-generator?mode=ia&guided=false', { replace: true });
                       setChatHistory([]);
                       setAiClarificationMessage("");
                       setAiClarificationRecommendation("");
@@ -1442,7 +1478,12 @@ export default function AIApuGeneratorPage() {
             <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-hidden animate-in fade-in duration-200">
               <div className="bg-[#FEF3C7] border-2 border-[#FEF3C7] rounded-xl p-4 md:p-6 relative flex flex-col max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200" style={{ minHeight: '400px', maxHeight: '80vh' }}>
                 <button 
-                  onClick={() => setIsGuidedMode(false)}
+                  onClick={() => {
+                    setIsGuidedMode(false);
+                    setEntryModeSource('libre');
+                    lastEntrySourceRef.current = 'libre';
+                    navigate('/cost360/ai-generator?mode=ia&guided=false', { replace: true });
+                  }}
                   className="absolute top-4 right-4 text-amber-700 hover:text-amber-900 hover:bg-amber-200/50 rounded-full p-1.5 transition-colors"
                 >
                   <X size={20} />
@@ -1537,7 +1578,12 @@ export default function AIApuGeneratorPage() {
                         {currentChatStep === 0 && (
                           <button 
                             type="button"
-                            onClick={() => setIsGuidedMode(false)}
+                            onClick={() => {
+                              setIsGuidedMode(false);
+                              setEntryModeSource('libre');
+                              lastEntrySourceRef.current = 'libre';
+                              navigate('/cost360/ai-generator?mode=ia&guided=false', { replace: true });
+                            }}
                             className="bg-transparent border border-amber-400 hover:bg-amber-200/60 text-amber-800 font-semibold text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer"
                           >
                             Escribir libremente
@@ -1634,7 +1680,7 @@ export default function AIApuGeneratorPage() {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   if (isSelectorsComplete && prompt.trim() && !isSmartMode) {
-                    handleGenerate();
+                    handleGenerate(null, false, false, false, null, 'libre');
                   }
                 }
               }}
@@ -1683,7 +1729,7 @@ export default function AIApuGeneratorPage() {
                 </button>
               )}
               <button
-                onClick={() => handleGenerate()}
+                onClick={() => handleGenerate(null, false, false, false, null, 'libre')}
                 disabled={loading || !prompt.trim() || !isSelectorsComplete || isSmartMode}
                 className={`flex items-center gap-2 text-white px-6 py-3 rounded-xl transition-all shadow-sm font-bold disabled:opacity-50 ${isClarifying ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'}`}
               >
