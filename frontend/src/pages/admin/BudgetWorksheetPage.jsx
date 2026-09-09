@@ -779,25 +779,21 @@ export default function BudgetWorksheetPage() {
                   <th className="p-4 bg-slate-50 border-b border-slate-200">Descripción</th>
                   <th className="p-4 w-20 text-center bg-slate-50 border-b border-slate-200">Unidad</th>
                   <th className="p-4 w-32 text-right bg-slate-50 border-b border-slate-200">
-                    <div className="flex items-center justify-end gap-1.5 group/th relative cursor-help translate-x-[20px]">
+                    <div className="relative -right-5 flex items-center justify-end gap-1.5 group/th cursor-help">
                       <span>Cantidad</span>
                       <Calculator size={13} className="text-amber-600 hover:text-amber-700 transition-colors shrink-0" />
                       
-                      {/* Tooltip flotante hacia abajo para que no quede tapado por la barra superior */}
-                      <div className="absolute top-full right-0 mt-2 hidden group-hover/th:flex flex-col w-64 p-3 bg-slate-900 text-white text-[11px] rounded-xl shadow-2xl z-50 pointer-events-none normal-case font-normal leading-relaxed border border-slate-700 animate-in fade-in zoom-in-95">
-                        <div className="flex items-center gap-1.5 font-bold text-amber-300 pb-1.5 border-b border-slate-700">
-                          <Calculator size={13} />
-                          <span>Fórmulas directas (Tipo ETABS)</span>
-                        </div>
-                        <p className="mt-1.5 text-slate-300 text-[11px]">
+                      {/* Tooltip flotante con paleta ámbar de tarjeta de presupuesto */}
+                      <div className="absolute top-full right-0 mt-2 hidden group-hover/th:flex flex-col w-64 p-3.5 bg-[#fef3c7] text-[#78350f] text-[11px] rounded-2xl shadow-xl z-50 pointer-events-none normal-case font-normal leading-relaxed border-2 border-[#f59e0b] animate-in fade-in zoom-in-95">
+                        <p className="font-semibold text-amber-950 text-[11px]">
                           Puedes escribir operaciones matemáticas básicas directamente:
                         </p>
-                        <div className="mt-1.5 font-mono text-[10px] text-amber-200 bg-slate-800/90 p-2 rounded-lg space-y-1">
+                        <div className="mt-2 font-mono text-[11px] text-amber-900 bg-amber-100/80 border border-amber-300/80 p-2.5 rounded-xl space-y-1 font-semibold">
                           <div>• 12.5 * 3</div>
                           <div>• (4.5 + 3.2) * 2.60</div>
                           <div>• 100 / 4 + 15</div>
                         </div>
-                        <span className="text-[10px] text-slate-400 mt-1.5 italic">Pulsa Enter o sal del campo para resolver automáticamente.</span>
+                        <span className="text-[10px] text-amber-800/80 mt-2 italic font-medium">Pulsa Enter o sal del campo para resolver automáticamente.</span>
                       </div>
                     </div>
                   </th>
