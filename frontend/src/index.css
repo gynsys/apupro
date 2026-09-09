@@ -208,13 +208,18 @@ html, body, #root {
   transform: scaleX(1); /* El fondo se desliza respetando las curvas */
 }
 
-/* Utilidad para quitar flechas a input number */
+/* Quitar flechas/steppers de todas las entradas numéricas */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button,
 .hide-spinners::-webkit-outer-spin-button,
 .hide-spinners::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+  -webkit-appearance: none !important;
+  margin: 0 !important;
 }
-.hide-spinners[type=number] {
-  -moz-appearance: textfield;
+
+input[type="number"],
+.hide-spinners[type="number"] {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
 }
 

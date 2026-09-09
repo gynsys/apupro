@@ -153,7 +153,7 @@ const PartidasTab = ({ onlyCoded, selectedDatabase = 'master' }) => {
           <div className="mt-3 flex items-center justify-between">
             <p className="text-xs text-slate-500 font-medium">
               <span className="font-bold text-slate-700">{new Intl.NumberFormat('es-VE').format(totalItems)}</span>{' '}
-              {search ? 'coincidencias' : 'Total Partidas'}
+              {search ? 'coincidencias' : 'Partidas'}
             </p>
             {isSuperAdmin && (
               <button

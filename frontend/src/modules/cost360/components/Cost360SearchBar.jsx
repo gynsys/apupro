@@ -124,9 +124,9 @@ const Cost360SearchBar = ({
         </div>
       </div>
 
-      {/* Barra de Búsqueda Principal */}
-      <form onSubmit={(e) => { e.preventDefault(); if(onSearch) onSearch(); }} className="flex flex-col sm:flex-row gap-3">
-        <div className="relative w-full sm:w-48 shrink-0">
+      {/* Barra de Búsqueda Principal y Selectores en la misma fila */}
+      <form onSubmit={(e) => { e.preventDefault(); if(onSearch) onSearch(); }} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="relative w-full sm:w-[152px] shrink-0">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <FiSearch className="text-slate-400 text-base" />
           </div>
@@ -144,7 +144,7 @@ const Cost360SearchBar = ({
           />
         </div>
 
-        <div className="relative flex-1">
+        <div className="relative flex-1 min-w-0">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <FiSearch className="text-slate-400 text-base" />
           </div>
@@ -166,30 +166,30 @@ const Cost360SearchBar = ({
             </div>
           )}
         </div>
+
+        {/* Búsqueda Inversa Toggles */}
+        <div className="flex items-center gap-3 shrink-0 px-1 text-sm whitespace-nowrap">
+          <span className="text-slate-600 font-medium">Buscar por:</span>
+          
+          <label className="flex items-center cursor-pointer gap-2">
+            <div className="relative">
+              <input type="checkbox" className="sr-only" checked={searchDesc} onChange={(e) => setSearchDesc(e.target.checked)} />
+              <div className={`block w-10 h-6 rounded-full transition-colors ${searchDesc ? 'bg-blue-500' : 'bg-slate-300'}`}></div>
+              <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${searchDesc ? 'transform translate-x-4' : ''}`}></div>
+            </div>
+            <span className="text-slate-700 select-none font-medium">Descripción</span>
+          </label>
+
+          <label className="flex items-center cursor-pointer gap-2" title="Busca dentro de los Materiales, Equipos y Mano de Obra de las partidas">
+            <div className="relative">
+              <input type="checkbox" className="sr-only" checked={searchInsumos} onChange={(e) => setSearchInsumos(e.target.checked)} />
+              <div className={`block w-10 h-6 rounded-full transition-colors ${searchInsumos ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
+              <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${searchInsumos ? 'transform translate-x-4' : ''}`}></div>
+            </div>
+            <span className="text-slate-700 select-none font-medium">Materiales</span>
+          </label>
+        </div>
       </form>
-
-      {/* Búsqueda Inversa Toggles & Dropdown */}
-      <div className="flex flex-wrap items-center gap-4 px-1 mt-1 text-sm">
-        <span className="text-slate-600 font-medium">Buscar por:</span>
-        
-        <label className="flex items-center cursor-pointer gap-2">
-          <div className="relative">
-            <input type="checkbox" className="sr-only" checked={searchDesc} onChange={(e) => setSearchDesc(e.target.checked)} />
-            <div className={`block w-10 h-6 rounded-full transition-colors ${searchDesc ? 'bg-blue-500' : 'bg-slate-300'}`}></div>
-            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${searchDesc ? 'transform translate-x-4' : ''}`}></div>
-          </div>
-          <span className="text-slate-700 select-none">Descripción</span>
-        </label>
-
-        <label className="flex items-center cursor-pointer gap-2" title="Busca dentro de los Materiales, Equipos y Mano de Obra de las partidas">
-          <div className="relative">
-            <input type="checkbox" className="sr-only" checked={searchInsumos} onChange={(e) => setSearchInsumos(e.target.checked)} />
-            <div className={`block w-10 h-6 rounded-full transition-colors ${searchInsumos ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
-            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${searchInsumos ? 'transform translate-x-4' : ''}`}></div>
-          </div>
-          <span className="text-slate-700 select-none">Materiales</span>
-        </label>
-      </div>
     </div>
   );
 };

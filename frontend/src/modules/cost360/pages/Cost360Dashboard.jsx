@@ -298,7 +298,7 @@ const Cost360Dashboard = () => {
             {totalItems > 0 && (
               <p className="mt-3 text-xs text-slate-500 font-medium">
                 <span className="font-bold text-slate-700">{new Intl.NumberFormat('es-VE').format(totalItems)}</span>{' '}
-                {search ? 'coincidencias' : 'Total Partidas'}
+                {search ? 'coincidencias' : 'Partidas'}
               </p>
             )}
           </div>
