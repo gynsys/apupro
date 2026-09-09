@@ -210,40 +210,40 @@ const Cost360Dashboard = () => {
           <div className="flex gap-4 items-end pb-2">
             {/* Inputs de costos */}
             <div className="flex gap-2 items-end">
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">% Utilidad</label>
+              <div className="flex flex-col items-center">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1">% Utilidad</label>
                 <input
                   type="number"
                   value={currentCostos?.porcentajeUtilidad ?? 0}
                   onChange={(e) => handleCostoChange('porcentajeUtilidad', e.target.value)}
-                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 text-center hide-spinners [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">% Admin</label>
+              <div className="flex flex-col items-center">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1">% Admin</label>
                 <input
                   type="number"
                   value={currentCostos?.porcentajeAdministracion ?? 0}
                   onChange={(e) => handleCostoChange('porcentajeAdministracion', e.target.value)}
-                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 text-center hide-spinners [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">IVA %</label>
+              <div className="flex flex-col items-center">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1">IVA %</label>
                 <input
                   type="number"
                   value={currentCostos?.iva ?? 0}
                   onChange={(e) => handleCostoChange('iva', e.target.value)}
-                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 text-center hide-spinners [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">F.C.A.S %</label>
+              <div className="flex flex-col items-center">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1">F.C.A.S %</label>
                 <input
                   type="number"
                   value={currentCostos?.fcas ?? 0}
                   onChange={(e) => handleCostoChange('fcas', e.target.value)}
-                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 text-center hide-spinners [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                 />
               </div>
               <button
