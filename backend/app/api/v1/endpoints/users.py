@@ -26,6 +26,7 @@ class SubscriptionRequest(BaseModel):
 class UserListResponse(BaseModel):
     id: int
     email: str
+    username: Optional[str] = None
     full_name: Optional[str] = None
     is_active: bool
     plan: str
@@ -55,6 +56,7 @@ def get_users(current_user = Depends(get_current_arko_admin)):
             {
                 "id": user.id,
                 "email": user.email,
+                "username": getattr(user, "username", None) or user.full_name or (user.email.split('@')[0] if user.email else None),
                 "full_name": user.full_name,
                 "is_active": user.is_active,
                 "plan": user.plan or 'free',

@@ -254,18 +254,18 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
           </form>
         ) : view === 'forgotPassword' ? (
           <form className="mt-8 space-y-6" onSubmit={handleForgotPassword}>
-            <p className="text-sm text-gray-600 text-center mb-4">Ingresa tu correo y te enviaremos un código para recuperar tu contraseña.</p>
+            <p className="text-sm text-gray-600 text-center mb-4">Ingresa tu correo o nombre de usuario y te enviaremos un código para recuperar tu contraseña.</p>
             <div className="rounded-md shadow-sm">
               <div>
-                <label htmlFor="email-address-forgot" className="sr-only">Correo electrónico</label>
+                <label htmlFor="email-address-forgot" className="sr-only">Correo electrónico o usuario</label>
                 <input
                   id="email-address-forgot"
                   name="email"
-                  type="email"
-                  autoComplete="email"
+                  type="text"
+                  autoComplete="username"
                   required
                   className="appearance-none rounded-md relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-[#1A6BB5] focus:border-[#1A6BB5] sm:text-sm"
-                  placeholder="Correo electrónico"
+                  placeholder="Correo electrónico o nombre de usuario"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -354,15 +354,15 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
             <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
               <div className="rounded-md shadow-sm" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div>
-                  <label htmlFor="email-address" className="sr-only">Correo electrónico</label>
+                  <label htmlFor="login-identifier" className="sr-only">Correo electrónico o nombre de usuario</label>
                   <input
-                    id="email-address"
+                    id="login-identifier"
                     name="email"
-                    type="email"
-                    autoComplete="email"
+                    type="text"
+                    autoComplete="username"
                     required
                     className="appearance-none rounded-md relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-[#1A6BB5] focus:border-[#1A6BB5] focus:z-10 sm:text-sm"
-                    placeholder="Correo electrónico"
+                    placeholder="Correo electrónico o nombre de usuario"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />

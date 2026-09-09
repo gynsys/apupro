@@ -233,11 +233,11 @@ export async function deleteMyLandingSitePost(token, postId) {
   return response.json();
 }
 
-export async function registerArkoAdmin(email, password, fullName) {
+export async function registerArkoAdmin(email, password, username) {
   const response = await fetch(`${API_URL}/arko/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, full_name: fullName })
+    body: JSON.stringify({ email, password, full_name: username, username })
   });
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
