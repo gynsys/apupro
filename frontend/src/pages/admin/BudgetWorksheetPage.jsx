@@ -1134,7 +1134,7 @@ export default function BudgetWorksheetPage() {
                 {totalSearchResults > 0 && (
                   <p className="mt-3 text-xs text-slate-500 font-medium">
                     <span className="font-bold text-slate-700">{new Intl.NumberFormat('es-VE').format(totalSearchResults)}</span>{' '}
-                    {(searchQuery || searchCovenin) ? 'coincidencias' : 'Partidas'}
+                    {(searchQuery || searchCovenin) ? (totalSearchResults === 1 ? 'coincidencia' : 'coincidencias') : (totalSearchResults === 1 ? 'Partida' : 'Partidas')}
                   </p>
                 )}
               </div>

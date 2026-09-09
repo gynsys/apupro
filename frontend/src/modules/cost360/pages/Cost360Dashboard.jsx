@@ -281,7 +281,7 @@ const Cost360Dashboard = () => {
 
       {activeTab === 'partidas' && (
         <>
-          <div className="rounded-2xl p-4 flex flex-col gap-3" style={glass}>
+          <div className="rounded-2xl p-4 flex flex-col gap-3 relative" style={glassCard}>
             <Cost360SearchBar
               searchQuery={search}
               setSearchQuery={setSearch}
@@ -296,10 +296,15 @@ const Cost360Dashboard = () => {
             />
 
             {totalItems > 0 && (
-              <p className="mt-3 text-xs text-slate-500 font-medium">
-                <span className="font-bold text-slate-700">{new Intl.NumberFormat('es-VE').format(totalItems)}</span>{' '}
-                {search ? 'coincidencias' : 'Partidas'}
-              </p>
+              <div className="absolute -bottom-3 left-6 z-20 pointer-events-none">
+                <div className="inline-flex items-center gap-1.5 px-3 py-0.5 bg-slate-900/90 text-white rounded-full text-xs font-semibold shadow-lg backdrop-blur border border-slate-700/60 pointer-events-auto select-none transition-all">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                  <span className="font-bold text-white">{new Intl.NumberFormat('es-VE').format(totalItems)}</span>
+                  <span className="text-slate-300 font-medium">
+                    {search ? (totalItems === 1 ? 'coincidencia' : 'coincidencias') : (totalItems === 1 ? 'Partida' : 'Partidas')}
+                  </span>
+                </div>
+              </div>
             )}
           </div>
 

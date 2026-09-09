@@ -1133,7 +1133,7 @@ export default function AIApuGeneratorPage() {
 
           <div className="mt-2 text-xs text-slate-500 font-medium">
             <span className="font-bold text-slate-700">{totalMatches > 0 ? new Intl.NumberFormat('es-VE').format(totalMatches) : 0}</span>{' '}
-            {searchQuery || searchCovenin ? 'coincidencias' : 'Partidas'}
+            {searchQuery || searchCovenin ? (totalMatches === 1 ? 'coincidencia' : 'coincidencias') : (totalMatches === 1 ? 'Partida' : 'Partidas')}
           </div>
 
           {searchResults.length > 0 && (

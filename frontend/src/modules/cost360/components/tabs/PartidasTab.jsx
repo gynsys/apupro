@@ -135,7 +135,7 @@ const PartidasTab = ({ onlyCoded, selectedDatabase = 'master' }) => {
 
   return (
     <>
-      <GlassCard className="rounded-2xl p-4 flex flex-col gap-3">
+      <GlassCard className="rounded-2xl p-4 flex flex-col gap-3 relative">
         <Cost360SearchBar
           searchQuery={search}
           setSearchQuery={setSearch}
@@ -150,20 +150,26 @@ const PartidasTab = ({ onlyCoded, selectedDatabase = 'master' }) => {
         />
 
         {totalItems > 0 && (
-          <div className="mt-3 flex items-center justify-between">
-            <p className="text-xs text-slate-500 font-medium">
-              <span className="font-bold text-slate-700">{new Intl.NumberFormat('es-VE').format(totalItems)}</span>{' '}
-              {search ? 'coincidencias' : 'Partidas'}
-            </p>
-            {isSuperAdmin && (
-              <button
-                onClick={handleExportToCsv}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors cursor-pointer"
-              >
-                <FiDownload size={12} />
-                Exportar a Excel
-              </button>
-            )}
+          <div className="absolute -bottom-3 left-6 z-20 pointer-events-none">
+            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 bg-slate-900/90 text-white rounded-full text-xs font-semibold shadow-lg backdrop-blur border border-slate-700/60 pointer-events-auto select-none transition-all">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+              <span className="font-bold text-white">{new Intl.NumberFormat('es-VE').format(totalItems)}</span>
+              <span className="text-slate-300 font-medium">
+                {search ? (totalItems === 1 ? 'coincidencia' : 'coincidencias') : (totalItems === 1 ? 'Partida' : 'Partidas')}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {isSuperAdmin && totalItems > 0 && (
+          <div className="absolute -bottom-3.5 right-6 z-20">
+            <button
+              onClick={handleExportToCsv}
+              className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-emerald-700 bg-white border border-emerald-300 rounded-full shadow-sm hover:bg-emerald-50 transition-colors cursor-pointer"
+            >
+              <FiDownload size={12} />
+              Exportar a Excel
+            </button>
           </div>
         )}
       </GlassCard>
