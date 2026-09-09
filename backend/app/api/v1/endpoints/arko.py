@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File, Response, Request
 from sqlalchemy.orm import Session
+from sqlalchemy import or_, func
 from typing import List, Optional, Any, Generator, Dict
 from pydantic import BaseModel, Field
 from datetime import datetime, timedelta
@@ -110,11 +111,21 @@ def get_public_post(slug: str):
 def login_arko_admin(request: Request, response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
     try:
         with get_db_session() as db:
-            user = db.query(ArkoAdmin).filter(ArkoAdmin.email == form_data.username).first()
+            identifier = (form_data.username or "").strip()
+            if not identifier:
+                raise HTTPException(status_code=400, detail="El correo o nombre de usuario es requerido")
+
+            user = db.query(ArkoAdmin).filter(
+                or_(
+                    func.lower(ArkoAdmin.email) == identifier.lower(),
+                    func.lower(ArkoAdmin.username) == identifier.lower(),
+                    func.lower(ArkoAdmin.full_name) == identifier.lower()
+                )
+            ).first()
             if not user or not verify_password(form_data.password, user.hashed_password):
-                raise HTTPException(status_code=400, detail="Incorrect email or password")
+                raise HTTPException(status_code=400, detail="Credenciales incorrectas")
             if not user.is_active:
-                raise HTTPException(status_code=400, detail="Inactive user")
+                raise HTTPException(status_code=400, detail="Usuario inactivo")
             if not getattr(user, "is_email_verified", True):
                 raise HTTPException(status_code=403, detail="Email not verified")
 
