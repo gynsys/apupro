@@ -1226,9 +1226,9 @@ export default function AIApuGeneratorPage() {
                     navigate('/cost360/ai-generator?mode=ia&guided=false', { replace: true });
                   }}
                   className={`relative overflow-hidden group px-4 py-2 rounded-xl transition-all active:scale-95 cursor-pointer ${
-                    !isGuidedMode 
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md shadow-blue-500/25 text-white' 
-                      : 'bg-white border border-slate-200 text-slate-700 shadow-xs hover:border-blue-300'
+                    !isGuidedMode
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md shadow-blue-500/25 text-white'
+                      : 'bg-white border-2 border-slate-300 text-slate-700 shadow-xs hover:border-blue-300'
                   }`}
                 >
                   <div className="absolute inset-0 bg-[#e0f2fe] transform scale-x-0 origin-left transition-transform duration-400 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:scale-x-100"></div>
