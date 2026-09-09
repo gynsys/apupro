@@ -1082,7 +1082,7 @@ export default function AIApuGeneratorPage() {
             <ArrowLeft size={20} />
           </button>
           <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            {creationMode === 'manual' ? <Plus size={20} className="text-blue-600" /> : creationMode === 'import' ? <FileText size={20} className="text-indigo-600" /> : <Sparkles size={20} className="text-red-500" />}
+            {creationMode === 'manual' ? <Plus size={20} className="text-blue-600" /> : creationMode === 'import' ? <FileText size={20} className="text-indigo-600" /> : <Sparkles size={20} className="text-[#1D4ED8]" />}
             {creationMode === 'manual' ? 'Nuevo APU (Desde Cero)' : creationMode === 'import' ? 'Importar / Clonar APU' : 'Generador de APU con IA'}
           </h2>
         </div>
@@ -1175,8 +1175,9 @@ export default function AIApuGeneratorPage() {
             </label>
             
             {!isSmartMode && !isClarifying && (
-              <div className="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
+              <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => { 
                     setIsGuidedMode(true); 
                     setEntryModeSource('chat');
@@ -1202,20 +1203,41 @@ export default function AIApuGeneratorPage() {
                       }
                     ]);
                   }}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${isGuidedMode ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`relative overflow-hidden group px-4 py-2 rounded-xl transition-all active:scale-95 cursor-pointer ${
+                    isGuidedMode 
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md shadow-blue-500/25 text-white' 
+                      : 'bg-white border border-slate-200 text-slate-700 shadow-xs hover:border-blue-300'
+                  }`}
                 >
-                  Asistente IA
+                  <div className="absolute inset-0 bg-[#e0f2fe] transform scale-x-0 origin-left transition-transform duration-400 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:scale-x-100"></div>
+                  <div className={`relative z-10 flex items-center gap-2 text-xs font-bold transition-colors ${
+                    isGuidedMode ? 'text-white group-hover:text-[#1e3a8a]' : 'text-slate-700 group-hover:text-[#1e3a8a]'
+                  }`}>
+                    <Bot size={15} />
+                    <span>Asistente IA</span>
+                  </div>
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     setIsGuidedMode(false);
                     setEntryModeSource('libre');
                     lastEntrySourceRef.current = 'libre';
                     navigate('/cost360/ai-generator?mode=ia&guided=false', { replace: true });
                   }}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${!isGuidedMode ? 'bg-white shadow-sm text-red-600' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`relative overflow-hidden group px-4 py-2 rounded-xl transition-all active:scale-95 cursor-pointer ${
+                    !isGuidedMode 
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md shadow-blue-500/25 text-white' 
+                      : 'bg-white border border-slate-200 text-slate-700 shadow-xs hover:border-blue-300'
+                  }`}
                 >
-                  Modo Libre
+                  <div className="absolute inset-0 bg-[#e0f2fe] transform scale-x-0 origin-left transition-transform duration-400 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:scale-x-100"></div>
+                  <div className={`relative z-10 flex items-center gap-2 text-xs font-bold transition-colors ${
+                    !isGuidedMode ? 'text-white group-hover:text-[#1e3a8a]' : 'text-slate-700 group-hover:text-[#1e3a8a]'
+                  }`}>
+                    <Edit2 size={14} />
+                    <span>Modo Libre</span>
+                  </div>
                 </button>
               </div>
             )}
@@ -1693,7 +1715,7 @@ export default function AIApuGeneratorPage() {
                 isGuidedMode ? "Usa los selectores de arriba para formar la descripción..." :
                 "Modo experto: Escribe la partida libremente..."
               }
-              className={`w-full h-24 p-4 border rounded-xl focus:outline-none focus:ring-2 transition-all text-sm mb-4 disabled:opacity-50 disabled:cursor-not-allowed ${isClarifying || isSmartMode ? 'bg-blue-50/50 border-blue-300 focus:border-blue-500 focus:ring-blue-500/20' : 'bg-slate-50 border-slate-300 focus:bg-white focus:border-red-500 focus:ring-red-500/20'}`}
+              className={`w-full h-24 p-4 border rounded-xl focus:outline-none focus:ring-2 transition-all text-sm mb-4 disabled:opacity-50 disabled:cursor-not-allowed ${isClarifying || isSmartMode ? 'bg-blue-50/50 border-blue-300 focus:border-blue-500 focus:ring-blue-500/20' : 'bg-slate-50 border-slate-300 hover:border-[#1D4ED8]/50 focus:bg-white focus:border-[#1D4ED8] focus:ring-[#1D4ED8]/25'}`}
             />
           )}
 
@@ -1731,7 +1753,7 @@ export default function AIApuGeneratorPage() {
               <button
                 onClick={() => handleGenerate(null, false, false, false, null, 'libre')}
                 disabled={loading || !prompt.trim() || !isSelectorsComplete || isSmartMode}
-                className={`flex items-center gap-2 text-white px-6 py-3 rounded-xl transition-all shadow-sm font-bold disabled:opacity-50 ${isClarifying ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'}`}
+                className={`flex items-center gap-2 text-white px-6 py-3 rounded-xl transition-all shadow-md font-bold disabled:opacity-50 active:scale-95 cursor-pointer ${isClarifying ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-blue-500/20' : 'bg-[#1D4ED8] hover:bg-blue-800 shadow-blue-600/25'}`}
               >
                 {loading ? <Loader className="animate-spin" size={18} /> : (isClarifying ? <Check size={18} /> : <Sparkles size={18} />)}
                 {loading ? (isClarifying ? 'Pensando...' : 'Generando...') : (isClarifying ? 'Responder' : 'Generar APU')}
