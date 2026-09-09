@@ -50,8 +50,9 @@ try:
             "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS username VARCHAR(100);",
             "CREATE INDEX IF NOT EXISTS idx_arko_admins_plan ON arko_admins(plan);",
             "CREATE INDEX IF NOT EXISTS idx_arko_admins_plan_expires ON arko_admins(plan_expires_at);",
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_arko_admins_username ON arko_admins(LOWER(username));",
-            "UPDATE arko_admins SET username = LOWER(SPLIT_PART(email, '@', 1)) WHERE (username IS NULL OR username = '') AND email IS NOT NULL;"
+            "UPDATE arko_admins SET username = LOWER(TRIM(full_name)) WHERE (username IS NULL OR username = '') AND full_name IS NOT NULL AND TRIM(full_name) != '';",
+            "UPDATE arko_admins SET username = LOWER(SPLIT_PART(email, '@', 1)) WHERE (username IS NULL OR username = '') AND email IS NOT NULL;",
+            "CREATE INDEX IF NOT EXISTS idx_arko_admins_username ON arko_admins(LOWER(username));"
         ]
         for stmt in schema_statements:
             try:
