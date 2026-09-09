@@ -135,7 +135,9 @@ export default function AIApuGeneratorPage() {
   const searchTimeoutRef = useRef(null);
   
   // Guided Builder States
-  const [isGuidedMode, setIsGuidedMode] = useState(true);
+  const guidedParam = searchParams.get('guided');
+  const [isGuidedMode, setIsGuidedMode] = useState(guidedParam !== null ? guidedParam === 'true' : true);
+  const [entryModeSource, setEntryModeSource] = useState(guidedParam === 'false' ? 'libre' : 'chat');
   const [guidedAccion, setGuidedAccion] = useState(null);
   const [guidedUbicacion, setGuidedUbicacion] = useState(null);
   const [guidedMaterial, setGuidedMaterial] = useState(null);
@@ -1032,15 +1034,25 @@ export default function AIApuGeneratorPage() {
         <div className="flex items-center gap-4">
           <button 
             onClick={() => {
-              if (item && creationMode === 'import') {
+              if (item) {
                 setItem(null);
-                navigate('/cost360/ai-generator?mode=import');
+                if (creationMode === 'import') {
+                  navigate('/cost360/ai-generator?mode=import');
+                } else if (creationMode === 'ia') {
+                  if (entryModeSource === 'libre') {
+                    setIsGuidedMode(false);
+                    navigate('/cost360/ai-generator?mode=ia&guided=false');
+                  } else {
+                    setIsGuidedMode(true);
+                    navigate('/cost360/ai-generator?mode=ia&guided=true');
+                  }
+                }
               } else {
                 navigate('/cost360');
               }
             }}
             className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 transition-colors shrink-0 shadow-sm"
-            title={item && creationMode === 'import' ? "Volver al Buscador" : "Volver a Cost360"}
+            title={item ? "Volver al Generador" : "Volver a Cost360"}
           >
             <ArrowLeft size={20} />
           </button>
@@ -1142,6 +1154,7 @@ export default function AIApuGeneratorPage() {
                 <button
                   onClick={() => { 
                     setIsGuidedMode(true); 
+                    setEntryModeSource('chat');
                     setCurrentChatStep(0); 
                     setGuidedAccion(null);
                     setGuidedUbicacion(null);
@@ -1167,7 +1180,10 @@ export default function AIApuGeneratorPage() {
                   Asistente IA
                 </button>
                 <button
-                  onClick={() => setIsGuidedMode(false)}
+                  onClick={() => {
+                    setIsGuidedMode(false);
+                    setEntryModeSource('libre');
+                  }}
                   className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${!isGuidedMode ? 'bg-white shadow-sm text-red-600' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                   Modo Libre

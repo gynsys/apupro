@@ -110,9 +110,13 @@ export default function APUViewer() {
   const handleBack = () => {
     if (fromParam === 'admin-db' || fromParam === '/cost360/admin-db') {
       navigate('/cost360/admin-db');
+    } else if (fromParam === 'ai-generator-libre' || location.state?.from === '/cost360/ai-generator?mode=ia&guided=false') {
+      navigate('/cost360/ai-generator?mode=ia&guided=false');
+    } else if (fromParam === 'ai-generator-chat' || location.state?.from === '/cost360/ai-generator?mode=ia&guided=true') {
+      navigate('/cost360/ai-generator?mode=ia&guided=true');
     } else if (location.state?.from) {
       navigate(location.state.from);
-    } else if (window.history.length > 2) {
+    } else if (window.history.length > 1) {
       navigate(-1);
     } else {
       navigate('/cost360');
