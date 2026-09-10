@@ -369,7 +369,7 @@ export default function BudgetAPUEditorPage() {
           isOpen={printModalOpen}
           onClose={() => setPrintModalOpen(false)}
           onPrint={(options) => setPrintOptions(options)}
-          budgetName={budget.name}
+          budgetName={budget.company_name || ''}
         />
       )}
       

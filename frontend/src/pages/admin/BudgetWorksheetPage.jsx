@@ -643,7 +643,7 @@ export default function BudgetWorksheetPage() {
             setShowApuPrintModal(false);
             setApuPrintOptions(options);
           }}
-          budgetName={budget.project_name || budget.name}
+          budgetName={budget.company_name || ''}
         />
       )}
 

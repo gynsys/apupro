@@ -21,7 +21,11 @@ export default function BudgetPrintLayout({ budget, config }) {
   
   // Filtrar capítulos según la configuración
   const shouldIncludeChapters = config.type === 'capitulos';
-  
+
+  // Declarar ANTES del forEach para evitar Temporal Dead Zone
+  const currencyDisplay = (config?.currency === 'BS' || config?.currency === 'Bs' || config?.currency === 'Bs.') ? 'Bs.' : (config?.currency || 'USD');
+  const currencyHeader = currencyDisplay.endsWith('.') ? currencyDisplay : `${currencyDisplay}.`;
+
   items.forEach((item, index) => {
     if (item.is_chapter) {
       if (shouldIncludeChapters) {
@@ -63,8 +67,6 @@ export default function BudgetPrintLayout({ budget, config }) {
     }
   });
 
-  const currencyDisplay = (config?.currency === 'BS' || config?.currency === 'Bs' || config?.currency === 'Bs.') ? 'Bs.' : (config?.currency || 'USD');
-  const currencyHeader = currencyDisplay.endsWith('.') ? currencyDisplay : `${currencyDisplay}.`;
   const ivaPercent = budget.iva_percent !== undefined && budget.iva_percent !== null ? Number(budget.iva_percent) : 16;
 
   if (shouldIncludeChapters && currentChapter) {
