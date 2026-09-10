@@ -277,7 +277,7 @@ export default function CreateBudgetModal({ onClose, onSuccess, onLimitReached }
               disabled={loading}
               className="bg-sky-600 text-white border-none text-sm font-semibold px-6 py-2 rounded-xl cursor-pointer shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:bg-sky-700 hover:-translate-y-[1px] disabled:opacity-70 disabled:hover:translate-y-0"
             >
-              {loading ? 'Creando...' : 'Crear Proyecto'}
+              {loading ? 'Creando...' : 'Crear Presupuesto'}
             </button>
           </div>
         </form>

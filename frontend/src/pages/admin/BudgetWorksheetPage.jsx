@@ -670,12 +670,28 @@ export default function BudgetWorksheetPage() {
       {apuPrintOptions && apuPrintOptions.scope === 'all' && budget && createPortal(
         <div
           id="print-apu-layout"
-          style={{ display: 'none', backgroundColor: '#fff', fontFamily: 'Arial, sans-serif' }}
+          style={{
+            position: 'fixed',
+            left: '-9999px',
+            top: 0,
+            width: '210mm',
+            backgroundColor: 'white',
+            color: 'black',
+            fontSize: '11px',
+            lineHeight: '1.2',
+            fontFamily: 'Arial, sans-serif',
+            zIndex: -1,
+          }}
         >
           {(budget.items || []).filter(i => !i.is_chapter).map((item, idx) => (
             <div
               key={item.id || idx}
-              style={{ pageBreakBefore: idx === 0 ? 'auto' : 'always', paddingTop: idx === 0 ? 0 : '10mm' }}
+              style={{
+                pageBreakBefore: idx === 0 ? 'auto' : 'always',
+                breakBefore: idx === 0 ? 'auto' : 'page',
+                padding: '10mm',
+                boxSizing: 'border-box',
+              }}
             >
               <APUPrintSheet
                 partida={{

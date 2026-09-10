@@ -32,7 +32,6 @@ html, body, #root {
     top: 0 !important;
     width: 100% !important;
     z-index: 9999 !important;
-    padding: 10mm !important;
   }
   /* Mostrar SOLO el contenedor de impresion Presupuesto */
   #print-budget-layout {

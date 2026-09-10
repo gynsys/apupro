@@ -145,14 +145,12 @@ export function APUPrintSheet({ partida, materiales = [], equipos = [], mano_obr
           <thead>
             <tr className="bg-gray-50">
               <th className="border border-black px-1 py-1 text-center font-bold w-8">Nº</th>
-              {/* Columna B ajustada a lo solicitado */}
               <th className="border border-black px-1 py-1 text-left font-bold w-auto">Descripción</th>
               <th className="border border-black px-1 py-1 text-center font-bold w-10">Und.</th>
               <th className="border border-black px-1 py-1 text-right font-bold">Cantidad</th>
               <th className="border border-black px-1 py-1 text-right font-bold w-12">Desp%</th>
               <th className="border border-black px-1 py-1 text-right font-bold">Precio</th>
               <th className="border border-black px-1 py-1 text-right font-bold">Total Material</th>
-              <th className="border border-black px-1 py-1 text-right font-bold">Costo Unitario</th>
             </tr>
           </thead>
           <tbody>
@@ -170,7 +168,6 @@ export function APUPrintSheet({ partida, materiales = [], equipos = [], mano_obr
                   <td className="border border-black px-1 py-0.5 text-right">{numFormat(w)}</td>
                   <td className="border border-black px-1 py-0.5 text-right">{numFormat(p)}</td>
                   <td className="border border-black px-1 py-0.5 text-right">{numFormat(sub)}</td>
-                  <td className="border border-black px-1 py-0.5 text-right bg-gray-50"></td>
                 </tr>
               );
             })}
@@ -179,7 +176,6 @@ export function APUPrintSheet({ partida, materiales = [], equipos = [], mano_obr
                 Total Materiales
               </td>
               <td className="border border-black px-1 py-1 text-right">{numFormat(totalMat)}</td>
-              <td className="border border-black px-1 py-1 text-right bg-gray-100">{numFormat(totalMat)}</td>
             </tr>
           </tbody>
         </table>
