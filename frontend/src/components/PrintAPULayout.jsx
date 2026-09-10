@@ -1,8 +1,16 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 
-export default function PrintAPULayout({ partida, materiales, equipos, mano_obra, options }) {
+export function APUPrintSheet({ partida, materiales = [], equipos = [], mano_obra = [], options = {} }) {
   if (!partida) return null;
+
+  const exRate = (options?.currency === 'BS' || options?.currency === 'Bs' || options?.currency === 'Bs.') 
+    ? (parseFloat(options?.exchange_rate ?? partida.exchange_rate) || 1.0) 
+    : 1.0;
+  const matInflation = parseFloat(options?.material_inflation ?? partida.material_inflation ?? 0) || 0;
+  const eqInflation = parseFloat(options?.equipment_inflation ?? partida.equipment_inflation ?? 0) || 0;
+  const labInflation = parseFloat(options?.labor_inflation ?? partida.labor_inflation ?? 0) || 0;
+  const defaultLaborBonus = parseFloat(options?.labor_bonus ?? partida.labor_bonus ?? 0) || 0;
 
   const rendimiento = partida.RenPar || partida.rendimiento || partida.performance || 1;
   const adminPercent = options?.admin_percent ?? partida.admin_percent ?? partida.settings?.admin_percent ?? 15;
@@ -12,7 +20,7 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
 
   const calcMatTotal = () => materiales.reduce((acc, m) => {
     const q = parseFloat(m.cantidad ?? m.quantity ?? 0);
-    const p = parseFloat(m.precio_unitario ?? m.price ?? 0);
+    const p = (parseFloat(m.precio_unitario ?? m.price ?? 0) * exRate) * (1 + (matInflation / 100));
     const w = parseFloat(m.desperdicio ?? m.waste ?? 0);
     return acc + (m.subtotal ?? (q * p * (1 + w / 100)));
   }, 0);
@@ -20,20 +28,21 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
   const calcEqTotal = () => equipos.reduce((acc, eq) => {
     const q = parseFloat(eq.cantidad ?? eq.quantity ?? 0);
     const d = parseFloat(eq.depreciacion ?? eq.depreciation ?? 1);
-    const p = parseFloat(eq.precio_unitario ?? eq.price ?? 0);
+    const p = (parseFloat(eq.precio_unitario ?? eq.price ?? 0) * exRate) * (1 + (eqInflation / 100));
     return acc + (eq.subtotal ?? (q * d * p));
   }, 0);
 
   const calcLabTotalJornalDay = () => mano_obra.reduce((acc, lab) => {
     const q = parseFloat(lab.cantidad ?? lab.quantity ?? 0);
-    const j = parseFloat(lab.jornal ?? 0);
+    const j = (parseFloat(lab.jornal ?? 0) * exRate) * (1 + (labInflation / 100));
     return acc + (lab.tot_jornal ?? (q * j));
   }, 0);
 
   const calcLabTotalBonoDay = () => mano_obra.reduce((acc, lab) => {
     const q = parseFloat(lab.cantidad ?? lab.quantity ?? 0);
-    const b = parseFloat(lab.bono ?? 0);
-    return acc + (lab.tot_bono ?? (q * b));
+    const bBonus = parseFloat(lab.bono) || defaultLaborBonus;
+    const b = (bBonus * exRate) * (1 + (labInflation / 100));
+    return acc + (q * b);
   }, 0);
 
   const calcLabTotalDay = () => calcLabTotalJornalDay() * (1 + fcasFactor) + calcLabTotalBonoDay();
@@ -75,24 +84,10 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
   const headerBg  = showColor ? '#e5e7eb' : '#ffffff';  // gray-200 o blanco
   const totalBg   = showColor ? '#dbeafe' : '#ffffff';  // blue-100 o blanco
   const border    = showLines ? '1px solid black' : '1px solid transparent';
+  const currencyDisplay = (options?.currency === 'BS' || options?.currency === 'Bs' || options?.currency === 'Bs.') ? 'Bs.' : (options?.currency || 'USD');
 
-  return createPortal(
-    <div
-      id="print-apu-layout"
-      style={{
-        position: 'fixed',
-        left: '-9999px',
-        top: 0,
-        width: '210mm',
-        backgroundColor: 'white',
-        color: 'black',
-        fontSize: '11px',
-        lineHeight: '1.2',
-        fontFamily: 'Arial, sans-serif',
-        padding: '10mm',
-        zIndex: -1,
-      }}
-    >
+  return (
+    <div className="apu-sheet-inner" style={{ width: '100%', boxSizing: 'border-box' }}>
       {/* Título principal */}
       <h1 className="text-center text-lg font-bold uppercase tracking-wide mb-4 mt-2">
         Análisis de Precio Unitario
@@ -330,6 +325,37 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+export default function PrintAPULayout({ partida, materiales, equipos, mano_obra, options }) {
+  if (!partida) return null;
+
+  return createPortal(
+    <div
+      id="print-apu-layout"
+      style={{
+        position: 'fixed',
+        left: '-9999px',
+        top: 0,
+        width: '210mm',
+        backgroundColor: 'white',
+        color: 'black',
+        fontSize: '11px',
+        lineHeight: '1.2',
+        fontFamily: 'Arial, sans-serif',
+        padding: '10mm',
+        zIndex: -1,
+      }}
+    >
+      <APUPrintSheet
+        partida={partida}
+        materiales={materiales}
+        equipos={equipos}
+        mano_obra={mano_obra}
+        options={options}
+      />
     </div>,
     document.body
   );

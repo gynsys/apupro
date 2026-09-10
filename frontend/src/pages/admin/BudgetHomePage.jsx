@@ -622,9 +622,10 @@ export default function BudgetHomePage() {
               setPrintBudgetData(budgetData);
               setPrintConfig(config);
               // Esperar a que el layout se renderice y luego imprimir
+              const delay = config.includeAllApus ? 700 : 500;
               setTimeout(() => {
                 window.print();
-              }, 500);
+              }, delay);
             } catch (error) {
               console.error('Error al cargar presupuesto:', error);
               toast.error('Error al cargar el presupuesto para impresión');

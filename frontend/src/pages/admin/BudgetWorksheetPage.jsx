@@ -251,11 +251,13 @@ export default function BudgetWorksheetPage() {
       };
       window.addEventListener('afterprint', handleAfterPrint);
       
-      setTimeout(() => {
+      const delay = printConfig.includeAllApus ? 600 : 300;
+      const timer = setTimeout(() => {
         window.print();
-      }, 300);
+      }, delay);
 
       return () => {
+        clearTimeout(timer);
         window.removeEventListener('afterprint', handleAfterPrint);
       };
     }

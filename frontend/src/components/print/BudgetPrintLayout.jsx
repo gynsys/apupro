@@ -1,6 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { calculateItemPU } from '../../utils/apuCalculations';
+import { APUPrintSheet } from '../PrintAPULayout';
 
 export default function BudgetPrintLayout({ budget, config }) {
   if (!budget) return null;
@@ -250,6 +251,58 @@ export default function BudgetPrintLayout({ budget, config }) {
         </div>
 
       </div>
+      
+      {/* APUs de todas las partidas si se seleccionó en el modal */}
+      {config?.includeAllApus && (
+        <div className="apus-print-collection" style={{ width: '100%', boxSizing: 'border-box' }}>
+          {items.filter(i => !i.is_chapter).map((item, idx) => (
+            <div 
+              key={`print-all-apu-${item.id || idx}`}
+              style={{
+                pageBreakBefore: 'always',
+                breakBefore: 'page',
+                paddingTop: '10mm',
+                boxSizing: 'border-box'
+              }}
+            >
+              <APUPrintSheet
+                partida={{
+                  ...item,
+                  fcas_percent: budget.fcas_percent,
+                  admin_percent: budget.admin_percent,
+                  util_percent: budget.profit_percent,
+                  rendimiento: item.performance ?? item.rendimiento ?? 1,
+                  cantidad: item.quantity,
+                  obra: obra,
+                  contratante: contratante,
+                  ubicacion: ubicacion,
+                  company_name: budget.company_name || obra
+                }}
+                materiales={item.materials || []}
+                equipos={item.equipments || []}
+                mano_obra={item.labors || []}
+                options={{
+                  color: true,
+                  format: 'lines',
+                  showCompany: config.includeLogo,
+                  companyName: budget.company_name || obra,
+                  currency: config.currency || budget.currency,
+                  exchange_rate: budget.exchange_rate,
+                  material_inflation: budget.material_inflation,
+                  equipment_inflation: budget.equipment_inflation,
+                  labor_inflation: budget.labor_inflation,
+                  admin_percent: budget.admin_percent,
+                  profit_percent: budget.profit_percent,
+                  fcas_percent: budget.fcas_percent,
+                  obra: obra,
+                  contratante: contratante,
+                  dateType: 'current'
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>,
     document.body
   );
