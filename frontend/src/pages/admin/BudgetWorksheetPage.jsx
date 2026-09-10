@@ -842,13 +842,13 @@ export default function BudgetWorksheetPage() {
                   <th className="p-4 w-32 bg-slate-50 border-b border-slate-200">Código</th>
                   <th className="p-4 bg-slate-50 border-b border-slate-200">Descripción</th>
                   <th className="p-4 w-20 text-center bg-slate-50 border-b border-slate-200">Unidad</th>
-                  <th className="p-4 w-32 text-center bg-slate-50 border-b border-slate-200">
-                    <div className="inline-flex items-center justify-center gap-1.5 group/th relative cursor-help">
+                  <th className="p-4 w-32 text-right bg-slate-50 border-b border-slate-200">
+                    <div className="inline-flex items-center justify-end gap-1.5 group/th relative cursor-help w-full">
                       <span>Cantidad</span>
                       <Calculator size={13} className="text-amber-600 hover:text-amber-700 transition-colors shrink-0" />
                       
                       {/* Tooltip flotante con paleta ámbar de tarjeta de presupuesto */}
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover/th:flex flex-col w-64 p-3.5 bg-[#fef3c7] text-[#78350f] text-[11px] rounded-2xl shadow-xl z-50 pointer-events-none normal-case font-normal leading-relaxed border-2 border-[#f59e0b] animate-in fade-in zoom-in-95 text-left">
+                      <div className="absolute top-full right-0 mt-2 hidden group-hover/th:flex flex-col w-64 p-3.5 bg-[#fef3c7] text-[#78350f] text-[11px] rounded-2xl shadow-xl z-50 pointer-events-none normal-case font-normal leading-relaxed border-2 border-[#f59e0b] animate-in fade-in zoom-in-95 text-left">
                         <p className="font-semibold text-amber-950 text-[11px]">
                           Puedes escribir operaciones matemáticas básicas directamente:
                         </p>
