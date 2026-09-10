@@ -621,8 +621,15 @@ export default function BudgetHomePage() {
               const budgetData = await budgetService.getById(printBudget.id);
               setPrintBudgetData(budgetData);
               setPrintConfig(config);
+              const originalTitle = document.title;
+              document.title = '';
+              const handleAfterPrint = () => {
+                document.title = originalTitle;
+                window.removeEventListener('afterprint', handleAfterPrint);
+              };
+              window.addEventListener('afterprint', handleAfterPrint);
               // Esperar a que el layout se renderice y luego imprimir
-              const delay = config.includeAllApus ? 700 : 500;
+              const delay = config.includeAllApus ? 800 : 500;
               setTimeout(() => {
                 window.print();
               }, delay);

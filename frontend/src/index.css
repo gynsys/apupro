@@ -7,15 +7,17 @@ html, body, #root {
   margin: 0;
 }
 
+/* Eliminar encabezado nativo (titulo, fecha, hora) y pie de pagina (URL) del navegador */
+@page {
+  margin: 0;
+  size: auto;
+}
+
 @media print {
-  @page {
-    margin: 0;
-    /* Eliminar URL, titulo y fecha del navegador */
-    size: A4;
-  }
-  body {
-    padding: 0;
-    background-color: white;
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: white !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -38,9 +40,13 @@ html, body, #root {
   /* Mostrar SOLO el contenedor de impresion Presupuesto */
   #print-budget-layout {
     display: block !important;
-    position: relative !important;
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
     width: 100% !important;
     margin: 0 !important;
+    padding: 12mm 15mm !important;
+    box-sizing: border-box !important;
     background-color: white !important;
   }
   .no-print {

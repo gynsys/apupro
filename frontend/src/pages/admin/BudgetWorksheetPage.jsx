@@ -252,18 +252,23 @@ export default function BudgetWorksheetPage() {
   // Handle Budget printing
   useEffect(() => {
     if (printConfig) {
+      const originalTitle = document.title;
+      document.title = ''; // Evita que el navegador imprima el titulo en el encabezado
+
       const handleAfterPrint = () => {
+        document.title = originalTitle;
         setPrintConfig(null);
       };
       window.addEventListener('afterprint', handleAfterPrint);
       
-      const delay = printConfig.includeAllApus ? 600 : 300;
+      const delay = printConfig.includeAllApus ? 800 : 500;
       const timer = setTimeout(() => {
         window.print();
       }, delay);
 
       return () => {
         clearTimeout(timer);
+        document.title = originalTitle;
         window.removeEventListener('afterprint', handleAfterPrint);
       };
     }

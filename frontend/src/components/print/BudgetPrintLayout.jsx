@@ -113,9 +113,9 @@ export default function BudgetPrintLayout({ budget, config }) {
                   src={logoSrc}
                   alt="Logo Empresa"
                   style={{
-                    height: '65px',
+                    height: '52px',
                     width: 'auto',
-                    maxWidth: '260px',
+                    maxWidth: '250px',
                     display: 'block',
                   }}
                   onError={(e) => { e.target.style.display = 'none'; }}
