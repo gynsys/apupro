@@ -18,7 +18,7 @@ export default function BudgetPrintLayout({ budget, config }) {
   let itemIndex = 1;
 
   const items = budget.items || [];
-  
+
   // Filtrar capítulos según la configuración
   const shouldIncludeChapters = config.type === 'capitulos';
 
@@ -26,33 +26,28 @@ export default function BudgetPrintLayout({ budget, config }) {
   const currencyDisplay = (config?.currency === 'BS' || config?.currency === 'Bs' || config?.currency === 'Bs.') ? 'Bs.' : (config?.currency || 'USD');
   const currencyHeader = currencyDisplay.endsWith('.') ? currencyDisplay : `${currencyDisplay}.`;
 
-  items.forEach((item, index) => {
+  items.forEach((item) => {
     if (item.is_chapter) {
       if (shouldIncludeChapters) {
         if (currentChapter) {
           rows.push({
             type: 'chapter-subtotal',
             chapterId: currentChapter.id,
-            description: `Total ${currencyHeader} ${currentChapter.description}:`,
+            chapterName: currentChapter.description,
             amount: currentChapterSubtotal
           });
         }
         currentChapter = item;
         currentChapterSubtotal = 0;
-        
-        rows.push({
-          type: 'chapter',
-          ...item
-        });
+        rows.push({ type: 'chapter', ...item });
       } else {
-        // Si no incluir capítulos, resetear el capítulo actual
         currentChapter = null;
         currentChapterSubtotal = 0;
       }
     } else {
       const pu = calculatePU(item);
       const total = pu * item.quantity;
-      
+
       if (shouldIncludeChapters && currentChapter) {
         currentChapterSubtotal += total;
       }
@@ -73,7 +68,7 @@ export default function BudgetPrintLayout({ budget, config }) {
     rows.push({
       type: 'chapter-subtotal',
       chapterId: currentChapter.id,
-      description: `Total ${currencyHeader} ${currentChapter.description}:`,
+      chapterName: currentChapter.description,
       amount: currentChapterSubtotal
     });
   }
@@ -82,74 +77,88 @@ export default function BudgetPrintLayout({ budget, config }) {
   const ivaAmount = subtotalPresupuesto * (ivaPercent / 100);
   const totalGeneral = subtotalPresupuesto + (config.includeIva ? ivaAmount : 0);
 
-  const formatCurrency = (val) => val.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const formatCurrency = (val) => Number(val).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const obra = (budget.project_name || budget.name || '').trim();
-  const ubicacion = (config?.ubicacion || budget.ubicacion || budget.location || localStorage.getItem(`budget_ubicacion_${budget.id}`) || '').trim();
+  const obra        = (budget.project_name || budget.name || '').trim();
+  const ubicacion   = (config?.ubicacion || budget.ubicacion || budget.location || localStorage.getItem(`budget_ubicacion_${budget.id}`) || '').trim();
   const contratante = (budget.client_name || config?.contratante || '').trim();
+  const companyName = (budget.company_name || '').trim();
 
   return createPortal(
-    <div 
+    <div
       id="print-budget-layout"
-      className="print-only" 
-      style={{ 
-        display: 'none', 
-        backgroundColor: '#fff', 
-        color: '#000', 
+      className="print-only"
+      style={{
+        display: 'none',
+        backgroundColor: '#fff',
+        color: '#000',
         fontFamily: 'Arial, sans-serif',
         width: '100%',
         boxSizing: 'border-box',
         padding: '12mm 15mm'
       }}
     >
-      <div className="print-container" style={{ width: '100%', boxSizing: 'border-box' }}>
-        {/* ENCABEZADO */}
-        <div className="header" style={{ marginBottom: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px' }}>
-            {config.includeLogo && (
-              <div className="logo" style={{ flexShrink: 0 }}>
-                {(() => {
-                  const savedLogo = localStorage.getItem(`budget_logo_${budget.id}`);
-                  if (savedLogo) {
-                    return <img src={savedLogo} alt="Logo Empresa" style={{ maxHeight: '65px' }} onError={(e) => e.target.style.display = 'none'} />;
-                  }
-                  return <img src="/images/logo_aeko360.png" alt="Logo Default" style={{ maxHeight: '65px' }} onError={(e) => e.target.style.display = 'none'} />;
-                })()}
-              </div>
-            )}
-            <div style={{ flex: 1 }}>
-              {obra && (
-                <p style={{ margin: '0 0 4px 0', fontSize: '15px', lineHeight: '1.3' }}>
-                  <span style={{ fontWeight: 'bold', color: '#000' }}>Obra: </span>
-                  <span style={{ fontWeight: 'normal', color: '#000' }}>{obra}</span>
-                </p>
-              )}
-              {ubicacion && (
-                <p style={{ margin: '2px 0', fontSize: '12px' }}>
-                  <span style={{ fontWeight: 'bold', color: '#000' }}>Ubicación: </span>
-                  <span style={{ fontWeight: 'normal', color: '#000' }}>{ubicacion}</span>
-                </p>
-              )}
-              {contratante && (
-                <p style={{ margin: '2px 0', fontSize: '12px' }}>
-                  <span style={{ fontWeight: 'bold', color: '#000' }}>Contratante: </span>
-                  <span style={{ fontWeight: 'normal', color: '#000' }}>{contratante}</span>
-                </p>
-              )}
-              {config.includeRif && budget.company_rif && budget.company_rif.trim() && (
-                <p style={{ margin: '2px 0', fontSize: '12px' }}>
-                  <span style={{ fontWeight: 'bold', color: '#000' }}>RIF: </span>
-                  <span style={{ fontWeight: 'normal', color: '#000' }}>{budget.company_rif.trim()}</span>
-                </p>
-              )}
+      <div style={{ width: '100%', boxSizing: 'border-box' }}>
+
+        {/* ── ENCABEZADO (estilo PDF: empresa top-left, sin membrete derecho) ── */}
+        <div style={{ marginBottom: '14px' }}>
+
+          {/* Logo si se incluye */}
+          {config.includeLogo && (() => {
+            const savedLogo = localStorage.getItem(`budget_logo_${budget.id}`);
+            const logoSrc = savedLogo || '/images/logo_aeko360.png';
+            return (
+              <img
+                src={logoSrc}
+                alt="Logo Empresa"
+                style={{ maxHeight: '55px', display: 'block', marginBottom: '6px' }}
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+            );
+          })()}
+
+          {/* Nombre de empresa — grande y bold, alineado a la izquierda */}
+          {companyName && (
+            <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '6px' }}>
+              {companyName}
             </div>
-          </div>
-          <h2 style={{ textAlign: 'center', letterSpacing: '8px', marginTop: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-            {config.title || 'PRESUPUESTO'}
-          </h2>
+          )}
+
+          {/* Obra */}
+          {obra && (
+            <p style={{ margin: '2px 0', fontSize: '11px' }}>
+              <strong>Obra:</strong> {obra}
+            </p>
+          )}
+
+          {/* Contratante */}
+          {contratante && (
+            <p style={{ margin: '2px 0', fontSize: '11px' }}>
+              <strong>Contratante:</strong> {contratante}
+            </p>
+          )}
+
+          {/* Ubicación */}
+          {ubicacion && (
+            <p style={{ margin: '2px 0', fontSize: '11px' }}>
+              <strong>Ubicación:</strong> {ubicacion}
+            </p>
+          )}
+
+          {/* RIF */}
+          {config.includeRif && budget.company_rif && budget.company_rif.trim() && (
+            <p style={{ margin: '2px 0', fontSize: '11px' }}>
+              <strong>RIF:</strong> {budget.company_rif.trim()}
+            </p>
+          )}
         </div>
 
-        {/* TABLA DE PRESUPUESTO */}
+        {/* Título centrado con letras espaciadas */}
+        <h2 style={{ textAlign: 'center', letterSpacing: '8px', margin: '0 0 14px 0', fontSize: '18px', fontWeight: 'bold' }}>
+          {config.title || 'PRESUPUESTO'}
+        </h2>
+
+        {/* ── TABLA DE PRESUPUESTO ── */}
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', borderBottom: '1px solid #000', tableLayout: 'fixed' }}>
           <thead>
             <tr>
@@ -163,39 +172,81 @@ export default function BudgetPrintLayout({ budget, config }) {
           </thead>
           <tbody>
             {rows.map((row) => {
+
+              /* ── CAPÍTULO ── */
               if (row.type === 'chapter') {
                 return (
                   <tr key={`cap-${row.id}`} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                    <td style={{ ...tdStyle, borderLeft: '1px solid #000', borderTop: '1px solid #000', borderBottom: '1px solid #000', width: '45px' }}></td>
-                    <td colSpan="5" style={{ ...tdStyle, fontWeight: 'bold', paddingTop: '10px', borderRight: '1px solid #000', borderTop: '1px solid #000', borderBottom: '1px solid #000' }}>
+                    <td
+                      colSpan={6}
+                      style={{
+                        ...tdStyle,
+                        borderLeft: '1px solid #000',
+                        borderRight: '1px solid #000',
+                        fontWeight: 'bold',
+                        paddingTop: '10px',
+                        paddingBottom: '2px',
+                        fontSize: '11px',
+                        textTransform: 'uppercase',
+                      }}
+                    >
                       {row.description}
                     </td>
                   </tr>
                 );
               }
 
+              /* ── SUBTOTAL DE CAPÍTULO ── */
               if (row.type === 'chapter-subtotal') {
                 return (
                   <tr key={`sub-${row.chapterId}`} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                    <td colSpan="2" style={{ ...tdStyle, textAlign: 'right', fontWeight: 'bold', paddingBottom: '10px', borderLeft: '1px solid #000', borderBottom: '1px solid #000' }}>
-                      <span style={{ textDecoration: 'underline' }}>{row.description}</span>
+                    <td
+                      colSpan={5}
+                      style={{
+                        ...tdStyle,
+                        borderLeft: '1px solid #000',
+                        borderBottom: '1px solid #000',
+                        textAlign: 'right',
+                        fontWeight: 'bold',
+                        fontStyle: 'italic',
+                        paddingTop: '4px',
+                        paddingBottom: '10px',
+                      }}
+                    >
+                      {/* Sin subrayado — bold italic alineado a la derecha */}
+                      Total {currencyHeader}&nbsp;&nbsp;{row.chapterName}:
                     </td>
-                    <td colSpan="3" style={{ ...tdStyle, borderBottom: '1px solid #000' }}></td>
-                    <td style={{ ...tdStyle, fontWeight: 'bold', textAlign: 'right', textDecoration: 'underline', paddingBottom: '10px', borderRight: '1px solid #000', borderBottom: '1px solid #000', width: '125px' }}>
+                    <td
+                      style={{
+                        ...tdStyle,
+                        borderRight: '1px solid #000',
+                        borderBottom: '1px solid #000',
+                        fontWeight: 'bold',
+                        textAlign: 'right',
+                        paddingTop: '4px',
+                        paddingBottom: '10px',
+                        width: '125px',
+                      }}
+                    >
                       {formatCurrency(row.amount)}
                     </td>
                   </tr>
                 );
               }
 
-              // Normal Item
+              /* ── PARTIDA NORMAL ── */
               return (
                 <tr key={`item-${row.id}`} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                   <td style={{ ...tdStyle, textAlign: 'center', verticalAlign: 'top', width: '45px' }}>
                     {row.partNumber}
                   </td>
                   <td style={{ ...tdStyle, verticalAlign: 'top' }}>
-                    <div style={{ fontWeight: 'bold', fontSize: '10px' }}>{row.cov_par || row.cod_par}</div>
+                    {/* Código bold en su propia línea, con separación visible antes de la descripción */}
+                    {(row.cov_par || row.cod_par) && (
+                      <div style={{ fontWeight: 'bold', fontSize: '10px', marginBottom: '4px' }}>
+                        {row.cov_par || row.cod_par}
+                      </div>
+                    )}
                     <div>{row.description}</div>
                   </td>
                   <td style={{ ...tdStyle, textAlign: 'center', verticalAlign: 'top', width: '45px' }}>
@@ -216,20 +267,16 @@ export default function BudgetPrintLayout({ budget, config }) {
           </tbody>
         </table>
 
-        {/* PIE DE TABLA / TOTALES Y NOTAS */}
+        {/* ── PIE: NOTAS + TOTALES ── */}
         <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '11px', width: '100%', boxSizing: 'border-box' }}>
-          {/* CUADRO DE NOTAS: Si está vacío NO coloca nada (ni la palabra nota ni el recuadro gris claro) */}
+
           {budget.notes && budget.notes.trim() !== '' ? (
             <div style={{ flex: 1, marginRight: '20px', border: '1px solid #d1d5db', borderRadius: '4px', padding: '6px 10px', fontSize: '10px', backgroundColor: '#fff' }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '3px', textTransform: 'uppercase', color: '#111827', fontSize: '10px' }}>
-                Nota:
-              </div>
-              <div style={{ whiteSpace: 'pre-wrap', color: '#374151', lineHeight: '1.4' }}>
-                {budget.notes}
-              </div>
+              <div style={{ fontWeight: 'bold', marginBottom: '3px', textTransform: 'uppercase', color: '#111827', fontSize: '10px' }}>Nota:</div>
+              <div style={{ whiteSpace: 'pre-wrap', color: '#374151', lineHeight: '1.4' }}>{budget.notes}</div>
             </div>
           ) : (
-            <div style={{ flex: 1 }}></div>
+            <div style={{ flex: 1 }} />
           )}
 
           <table style={{ borderCollapse: 'collapse', flexShrink: 0, marginLeft: 'auto', tableLayout: 'fixed' }}>
@@ -253,12 +300,12 @@ export default function BudgetPrintLayout({ budget, config }) {
         </div>
 
       </div>
-      
-      {/* APUs de todas las partidas si se seleccionó en el modal */}
+
+      {/* ── APUs individuales si se seleccionó "Imprimir todos los APU" ── */}
       {config?.includeAllApus && (
-        <div className="apus-print-collection" style={{ width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ width: '100%', boxSizing: 'border-box' }}>
           {items.filter(i => !i.is_chapter).map((item, idx) => (
-            <div 
+            <div
               key={`print-all-apu-${item.id || idx}`}
               style={{
                 pageBreakBefore: 'always',
