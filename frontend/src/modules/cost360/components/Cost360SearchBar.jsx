@@ -56,7 +56,7 @@ const Cost360SearchBar = ({
               setSelectedSubcapitulo('');
               setSelectedPartida('');
             }}
-            className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
+            className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 text-sm transition-colors hover:border-[#324ADD] focus:outline-none focus:border-[#324ADD] focus:ring-2 focus:ring-[#324ADD]/20"
           >
             <option value="">Todos los Tipos...</option>
             {visibleTree.map(cat => (
@@ -74,7 +74,7 @@ const Cost360SearchBar = ({
               setSelectedPartida('');
             }}
             disabled={!selectedTipoObra}
-            className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
+            className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 text-sm transition-colors hover:border-[#324ADD] focus:outline-none focus:border-[#324ADD] focus:ring-2 focus:ring-[#324ADD]/20 disabled:opacity-50 disabled:hover:border-slate-300"
           >
             <option value="">Todos los Capítulos...</option>
             {selectedTipoObra && coveninTree.find(c => c.code === selectedTipoObra)?.children?.map(cap => (
@@ -91,7 +91,7 @@ const Cost360SearchBar = ({
               setSelectedPartida('');
             }}
             disabled={!selectedCapitulo}
-            className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
+            className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 text-sm transition-colors hover:border-[#324ADD] focus:outline-none focus:border-[#324ADD] focus:ring-2 focus:ring-[#324ADD]/20 disabled:opacity-50 disabled:hover:border-slate-300"
           >
             <option value="">Todos los Subcapítulos...</option>
             {selectedCapitulo && coveninTree.find(c => c.code === selectedTipoObra)?.children?.find(c => c.code === selectedCapitulo)?.children?.map(sub => (
@@ -106,7 +106,7 @@ const Cost360SearchBar = ({
             value={selectedPartida}
             onChange={(e) => setSelectedPartida(e.target.value)}
             disabled={!selectedSubcapitulo || !hasFourthLevel}
-            className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
+            className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 text-sm transition-colors hover:border-[#324ADD] focus:outline-none focus:border-[#324ADD] focus:ring-2 focus:ring-[#324ADD]/20 disabled:opacity-50 disabled:hover:border-slate-300"
           >
             {!selectedSubcapitulo ? (
               <option value="">Selecciona el Subcapítulo...</option>
