@@ -200,12 +200,15 @@ export default function BudgetPrintLayout({ budget, config }) {
               }
 
               /* ── SUBTOTAL DE CAPÍTULO ──
-                 Celdas individuales: Part.No vacío | label (colSpan=4) | monto.
-                 Se mantiene la línea entre Part.No y Descripción, y entre PU y Total. */
+                 Celdas individuales por columna para que las líneas verticales
+                 sean continuas. Todo el texto con su monto va en la columna Descripción. */
               if (row.type === 'chapter-subtotal') {
+                const isBs = config?.currency === 'BS' || config?.currency === 'Bs' || config?.currency === 'Bs.';
+                const subtotalPrefix = isBs ? 'Total Bs. ' : 'Total ';
+
                 return (
                   <tr key={`sub-${row.chapterId}`} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                    {/* Celda Part.No — vacía, mantiene su línea derecha */}
+                    {/* Celda Part.No — vacía */}
                     <td style={{
                       ...tdStyle,
                       borderLeft: '1px solid #000',
@@ -214,9 +217,8 @@ export default function BudgetPrintLayout({ budget, config }) {
                       paddingTop: '4px',
                       paddingBottom: '10px',
                     }} />
-                    {/* Label spanning Descripción + Und. + Cantidad + PU */}
+                    {/* Celda Descripción — contiene el Total con su monto alineado a la derecha */}
                     <td
-                      colSpan={4}
                       style={{
                         ...tdStyle,
                         borderBottom: '1px solid #000',
@@ -227,21 +229,41 @@ export default function BudgetPrintLayout({ budget, config }) {
                         paddingBottom: '10px',
                       }}
                     >
-                      Total {currencyHeader}&nbsp;&nbsp;{row.chapterName}:
+                      {subtotalPrefix}{row.chapterName}: {formatCurrency(row.amount)}
                     </td>
-                    {/* Monto */}
+                    {/* Celda Und. — vacía para continuidad vertical */}
+                    <td style={{
+                      ...tdStyle,
+                      borderBottom: '1px solid #000',
+                      width: '45px',
+                      paddingTop: '4px',
+                      paddingBottom: '10px',
+                    }} />
+                    {/* Celda Cantidad — vacía para continuidad vertical */}
+                    <td style={{
+                      ...tdStyle,
+                      borderBottom: '1px solid #000',
+                      width: '75px',
+                      paddingTop: '4px',
+                      paddingBottom: '10px',
+                    }} />
+                    {/* Celda Precio Unitario — vacía para continuidad vertical */}
+                    <td style={{
+                      ...tdStyle,
+                      borderBottom: '1px solid #000',
+                      width: '90px',
+                      paddingTop: '4px',
+                      paddingBottom: '10px',
+                    }} />
+                    {/* Celda Total — vacía para continuidad vertical */}
                     <td style={{
                       ...tdStyle,
                       borderRight: '1px solid #000',
                       borderBottom: '1px solid #000',
-                      fontWeight: 'bold',
-                      textAlign: 'right',
+                      width: '125px',
                       paddingTop: '4px',
                       paddingBottom: '10px',
-                      width: '125px',
-                    }}>
-                      {formatCurrency(row.amount)}
-                    </td>
+                    }} />
                   </tr>
                 );
               }
