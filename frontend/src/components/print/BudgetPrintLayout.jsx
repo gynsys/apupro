@@ -103,25 +103,26 @@ export default function BudgetPrintLayout({ budget, config }) {
         {/* ── ENCABEZADO (estilo PDF: empresa top-left, sin membrete derecho) ── */}
         <div style={{ marginBottom: '14px' }}>
 
-          {/* Logo si se incluye — tamaño controlado para que se renderice completo */}
+          {/* Logo si se incluye — contenedor con espacio suficiente para que se renderice completo */}
           {config.includeLogo && (() => {
             const savedLogo = localStorage.getItem(`budget_logo_${budget.id}`);
             const logoSrc = savedLogo || '/images/logo_aeko360.png';
             return (
-              <img
-                src={logoSrc}
-                alt="Logo Empresa"
-                style={{
-                  maxWidth: '160px',
-                  maxHeight: '70px',
-                  width: 'auto',
-                  height: 'auto',
-                  objectFit: 'contain',
-                  display: 'block',
-                  marginBottom: '6px',
-                }}
-                onError={(e) => { e.target.style.display = 'none'; }}
-              />
+              <div style={{ marginBottom: '10px', minHeight: '80px', display: 'flex', alignItems: 'flex-start' }}>
+                <img
+                  src={logoSrc}
+                  alt="Logo Empresa"
+                  style={{
+                    maxHeight: '80px',
+                    maxWidth: '280px',
+                    width: 'auto',
+                    height: 'auto',
+                    objectFit: 'contain',
+                    display: 'block',
+                  }}
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              </div>
             );
           })()}
 
@@ -201,7 +202,8 @@ export default function BudgetPrintLayout({ budget, config }) {
 
               /* ── SUBTOTAL DE CAPÍTULO ──
                  Celdas individuales por columna para que las líneas verticales
-                 sean continuas. Todo el texto con su monto va en la columna Descripción. */
+                 sean continuas. Todo el texto con su monto va en la columna Descripción.
+                 Sin líneas divisorias horizontales entre capítulos. */
               if (row.type === 'chapter-subtotal') {
                 const isBs = config?.currency === 'BS' || config?.currency === 'Bs' || config?.currency === 'Bs.';
                 const subtotalPrefix = isBs ? 'Total Bs. ' : 'Total ';
@@ -212,7 +214,6 @@ export default function BudgetPrintLayout({ budget, config }) {
                     <td style={{
                       ...tdStyle,
                       borderLeft: '1px solid #000',
-                      borderBottom: '1px solid #000',
                       width: '45px',
                       paddingTop: '4px',
                       paddingBottom: '10px',
@@ -221,7 +222,6 @@ export default function BudgetPrintLayout({ budget, config }) {
                     <td
                       style={{
                         ...tdStyle,
-                        borderBottom: '1px solid #000',
                         textAlign: 'right',
                         fontWeight: 'bold',
                         fontStyle: 'italic',
@@ -234,7 +234,6 @@ export default function BudgetPrintLayout({ budget, config }) {
                     {/* Celda Und. — vacía para continuidad vertical */}
                     <td style={{
                       ...tdStyle,
-                      borderBottom: '1px solid #000',
                       width: '45px',
                       paddingTop: '4px',
                       paddingBottom: '10px',
@@ -242,7 +241,6 @@ export default function BudgetPrintLayout({ budget, config }) {
                     {/* Celda Cantidad — vacía para continuidad vertical */}
                     <td style={{
                       ...tdStyle,
-                      borderBottom: '1px solid #000',
                       width: '75px',
                       paddingTop: '4px',
                       paddingBottom: '10px',
@@ -250,7 +248,6 @@ export default function BudgetPrintLayout({ budget, config }) {
                     {/* Celda Precio Unitario — vacía para continuidad vertical */}
                     <td style={{
                       ...tdStyle,
-                      borderBottom: '1px solid #000',
                       width: '90px',
                       paddingTop: '4px',
                       paddingBottom: '10px',
@@ -259,7 +256,6 @@ export default function BudgetPrintLayout({ budget, config }) {
                     <td style={{
                       ...tdStyle,
                       borderRight: '1px solid #000',
-                      borderBottom: '1px solid #000',
                       width: '125px',
                       paddingTop: '4px',
                       paddingBottom: '10px',
@@ -410,7 +406,7 @@ const tdStyle = {
 };
 
 const totalLabelStyle = {
-  border: '1px solid #000',
+  border: 'none',
   textAlign: 'right',
   padding: '4px 8px',
   fontWeight: 'bold',
