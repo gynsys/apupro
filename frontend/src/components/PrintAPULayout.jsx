@@ -331,18 +331,14 @@ export default function PrintAPULayout({ partida, materiales, equipos, mano_obra
   return createPortal(
     <div
       id="print-apu-layout"
+      className="print-only"
       style={{
-        position: 'fixed',
-        left: '-9999px',
-        top: 0,
-        width: '210mm',
-        backgroundColor: 'white',
-        color: 'black',
-        fontSize: '11px',
-        lineHeight: '1.2',
+        display: 'none',
+        backgroundColor: '#fff',
+        color: '#000',
         fontFamily: 'Arial, sans-serif',
-        padding: '10mm',
-        zIndex: -1,
+        width: '100%',
+        boxSizing: 'border-box',
       }}
     >
       <APUPrintSheet

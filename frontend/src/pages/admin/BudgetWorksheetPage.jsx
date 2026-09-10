@@ -670,17 +670,14 @@ export default function BudgetWorksheetPage() {
       {apuPrintOptions && apuPrintOptions.scope === 'all' && budget && createPortal(
         <div
           id="print-apu-layout"
+          className="print-only"
           style={{
-            position: 'fixed',
-            left: '-9999px',
-            top: 0,
-            width: '210mm',
-            backgroundColor: 'white',
-            color: 'black',
-            fontSize: '11px',
-            lineHeight: '1.2',
+            display: 'none',
+            backgroundColor: '#fff',
+            color: '#000',
             fontFamily: 'Arial, sans-serif',
-            zIndex: -1,
+            width: '100%',
+            boxSizing: 'border-box',
           }}
         >
           {(budget.items || []).filter(i => !i.is_chapter).map((item, idx) => (
@@ -689,7 +686,7 @@ export default function BudgetWorksheetPage() {
               style={{
                 pageBreakBefore: idx === 0 ? 'auto' : 'always',
                 breakBefore: idx === 0 ? 'auto' : 'page',
-                padding: '10mm',
+                paddingTop: idx === 0 ? 0 : '10mm',
                 boxSizing: 'border-box',
               }}
             >
@@ -699,8 +696,10 @@ export default function BudgetWorksheetPage() {
                   fcas_percent: budget.fcas_percent,
                   admin_percent: budget.admin_percent,
                   util_percent: budget.profit_percent,
-                  rendimiento: item.performance,
+                  rendimiento: item.performance ?? item.rendimiento ?? 1,
                   cantidad: item.quantity,
+                  obra: budget.project_name || budget.name || '',
+                  contratante: budget.client_name || '',
                 }}
                 materiales={item.materials || []}
                 equipos={item.equipments || []}
@@ -711,6 +710,8 @@ export default function BudgetWorksheetPage() {
                   admin_percent: budget.admin_percent,
                   profit_percent: budget.profit_percent,
                   fcas_percent: budget.fcas_percent,
+                  obra: budget.project_name || budget.name || '',
+                  contratante: budget.client_name || '',
                 }}
               />
             </div>
