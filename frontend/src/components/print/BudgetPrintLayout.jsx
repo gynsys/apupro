@@ -103,21 +103,19 @@ export default function BudgetPrintLayout({ budget, config }) {
         {/* ── ENCABEZADO (estilo PDF: empresa top-left, sin membrete derecho) ── */}
         <div style={{ marginBottom: '14px' }}>
 
-          {/* Logo si se incluye — contenedor con espacio suficiente para que se renderice completo */}
+          {/* Logo si se incluye — renderizado limpio con relación de aspecto natural */}
           {config.includeLogo && (() => {
             const savedLogo = localStorage.getItem(`budget_logo_${budget.id}`);
             const logoSrc = savedLogo || '/images/logo_aeko360.png';
             return (
-              <div style={{ marginBottom: '10px', minHeight: '80px', display: 'flex', alignItems: 'flex-start' }}>
+              <div style={{ marginBottom: '8px' }}>
                 <img
                   src={logoSrc}
                   alt="Logo Empresa"
                   style={{
-                    maxHeight: '80px',
-                    maxWidth: '280px',
+                    height: '65px',
                     width: 'auto',
-                    height: 'auto',
-                    objectFit: 'contain',
+                    maxWidth: '260px',
                     display: 'block',
                   }}
                   onError={(e) => { e.target.style.display = 'none'; }}
@@ -135,28 +133,28 @@ export default function BudgetPrintLayout({ budget, config }) {
 
           {/* Obra */}
           {obra && (
-            <p style={{ margin: '2px 0', fontSize: '11px' }}>
+            <p style={{ margin: '2px 0', fontSize: '12px', lineHeight: '1.4' }}>
               <strong>Obra:</strong> {obra}
             </p>
           )}
 
           {/* Contratante */}
           {contratante && (
-            <p style={{ margin: '2px 0', fontSize: '11px' }}>
+            <p style={{ margin: '2px 0', fontSize: '12px', lineHeight: '1.4' }}>
               <strong>Contratante:</strong> {contratante}
             </p>
           )}
 
           {/* Ubicación */}
           {ubicacion && (
-            <p style={{ margin: '2px 0', fontSize: '11px' }}>
+            <p style={{ margin: '2px 0', fontSize: '12px', lineHeight: '1.4' }}>
               <strong>Ubicación:</strong> {ubicacion}
             </p>
           )}
 
           {/* RIF */}
           {config.includeRif && budget.company_rif && budget.company_rif.trim() && (
-            <p style={{ margin: '2px 0', fontSize: '11px' }}>
+            <p style={{ margin: '2px 0', fontSize: '12px', lineHeight: '1.4' }}>
               <strong>RIF:</strong> {budget.company_rif.trim()}
             </p>
           )}
@@ -298,7 +296,7 @@ export default function BudgetPrintLayout({ budget, config }) {
         </table>
 
         {/* ── PIE: NOTAS + TOTALES ── */}
-        <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '11px', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '12px', width: '100%', boxSizing: 'border-box' }}>
 
           {budget.notes && budget.notes.trim() !== '' ? (
             <div style={{ flex: 1, marginRight: '20px', border: '1px solid #d1d5db', borderRadius: '4px', padding: '6px 10px', fontSize: '10px', backgroundColor: '#fff' }}>
@@ -411,6 +409,7 @@ const totalLabelStyle = {
   padding: '4px 8px',
   fontWeight: 'bold',
   whiteSpace: 'nowrap',
+  fontSize: '12px',
   boxSizing: 'border-box'
 };
 
@@ -419,6 +418,7 @@ const totalValueStyle = {
   padding: '4px 8px',
   textAlign: 'right',
   fontWeight: 'bold',
-  width: '125px',
+  fontSize: '12px',
+  width: '130px',
   boxSizing: 'border-box'
 };
