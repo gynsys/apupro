@@ -281,7 +281,7 @@ const Cost360Dashboard = () => {
 
       {activeTab === 'partidas' && (
         <>
-          <div className="rounded-2xl p-4 flex flex-col gap-3 relative" style={glassCard}>
+          <div className="rounded-2xl p-4 flex flex-col gap-3 relative" style={glass}>
             <Cost360SearchBar
               searchQuery={search}
               setSearchQuery={setSearch}
