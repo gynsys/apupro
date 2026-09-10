@@ -45,9 +45,9 @@ export default function PrintAPUModal({ isOpen, onClose, onPrint, budgetName = "
               <input type="radio" name="scope" checked={options.scope === 'current'} onChange={() => handleChange('scope', 'current')} className="w-3.5 h-3.5" />
               <span className="text-xs text-gray-800">Imprimir APU Actual</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer opacity-50">
-              <input type="radio" name="scope" checked={options.scope === 'all'} disabled onChange={() => handleChange('scope', 'all')} className="w-3.5 h-3.5" />
-              <span className="text-xs text-gray-800">Imprimir Todos los APU Visualizados</span>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="scope" checked={options.scope === 'all'} onChange={() => handleChange('scope', 'all')} className="w-3.5 h-3.5" />
+              <span className="text-xs text-gray-800">Imprimir Todos los APU</span>
             </label>
           </div>
 

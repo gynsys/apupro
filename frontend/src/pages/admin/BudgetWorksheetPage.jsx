@@ -14,7 +14,7 @@ import BudgetSettingsModal from '../../components/modals/BudgetSettingsModal';
 import BudgetPrintModal from '../../components/modals/BudgetPrintModal';
 import BudgetPrintLayout from '../../components/print/BudgetPrintLayout';
 import PrintAPUModal from '../../components/PrintAPUModal';
-import PrintAPULayout from '../../components/PrintAPULayout';
+import PrintAPULayout, { APUPrintSheet } from '../../components/PrintAPULayout';
 import SubscriptionRequestModal from '../../components/SubscriptionRequestModal';
 import ExportApuExcelButton from '../../modules/cost360/components/ExportApuExcelButton';
 import { useCost360Search } from '../../modules/cost360/hooks/useCost360Search';
@@ -226,22 +226,28 @@ export default function BudgetWorksheetPage() {
 
   // Handle APU printing
   useEffect(() => {
-    if (apuPrintOptions && apuToPrint) {
+    const isAllScope = apuPrintOptions?.scope === 'all';
+    const shouldPrint = apuPrintOptions && (isAllScope ? budget : apuToPrint);
+
+    if (shouldPrint) {
       const handleAfterPrint = () => {
         setApuPrintOptions(null);
         setApuToPrint(null);
       };
       window.addEventListener('afterprint', handleAfterPrint);
-      
-      setTimeout(() => {
+
+      // Give more time when rendering all APU sheets
+      const delay = isAllScope ? 700 : 300;
+      const timer = setTimeout(() => {
         window.print();
-      }, 300);
+      }, delay);
 
       return () => {
+        clearTimeout(timer);
         window.removeEventListener('afterprint', handleAfterPrint);
       };
     }
-  }, [apuPrintOptions, apuToPrint]);
+  }, [apuPrintOptions, apuToPrint, budget]);
 
   // Handle Budget printing
   useEffect(() => {
@@ -641,8 +647,9 @@ export default function BudgetWorksheetPage() {
         />
       )}
 
-      {/* APU PRINT LAYOUT */}
-      {apuPrintOptions && apuToPrint && (
+
+      {/* APU PRINT LAYOUT — Ficha individual */}
+      {apuPrintOptions && apuPrintOptions.scope !== 'all' && apuToPrint && (
         <PrintAPULayout
           partida={{ 
             ...apuToPrint, 
@@ -658,6 +665,44 @@ export default function BudgetWorksheetPage() {
           options={{ ...apuPrintOptions, companyName: budget.company_name || budget.project_name || budget.name }}
         />
       )}
+
+      {/* APU PRINT LAYOUT — Todos los APU del presupuesto */}
+      {apuPrintOptions && apuPrintOptions.scope === 'all' && budget && createPortal(
+        <div
+          id="print-apu-layout"
+          style={{ display: 'none', backgroundColor: '#fff', fontFamily: 'Arial, sans-serif' }}
+        >
+          {(budget.items || []).filter(i => !i.is_chapter).map((item, idx) => (
+            <div
+              key={item.id || idx}
+              style={{ pageBreakBefore: idx === 0 ? 'auto' : 'always', paddingTop: idx === 0 ? 0 : '10mm' }}
+            >
+              <APUPrintSheet
+                partida={{
+                  ...item,
+                  fcas_percent: budget.fcas_percent,
+                  admin_percent: budget.admin_percent,
+                  util_percent: budget.profit_percent,
+                  rendimiento: item.performance,
+                  cantidad: item.quantity,
+                }}
+                materiales={item.materials || []}
+                equipos={item.equipments || []}
+                mano_obra={item.labors || []}
+                options={{
+                  ...apuPrintOptions,
+                  companyName: budget.company_name || budget.project_name || budget.name,
+                  admin_percent: budget.admin_percent,
+                  profit_percent: budget.profit_percent,
+                  fcas_percent: budget.fcas_percent,
+                }}
+              />
+            </div>
+          ))}
+        </div>,
+        document.body
+      )}
+
 
       {/* WORKSHEET TABLE */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex-1 flex flex-col relative overflow-hidden">
