@@ -113,9 +113,9 @@ export default function BudgetPrintLayout({ budget, config }) {
                   src={logoSrc}
                   alt="Logo Empresa"
                   style={{
-                    height: '52px',
+                    height: '42px',
                     width: 'auto',
-                    maxWidth: '250px',
+                    maxWidth: '200px',
                     display: 'block',
                   }}
                   onError={(e) => { e.target.style.display = 'none'; }}
@@ -225,6 +225,7 @@ export default function BudgetPrintLayout({ budget, config }) {
                         fontStyle: 'italic',
                         paddingTop: '4px',
                         paddingBottom: '10px',
+                        fontSize: '12px',
                       }}
                     >
                       {subtotalPrefix}{row.chapterName}: {formatCurrency(row.amount)}
@@ -280,13 +281,13 @@ export default function BudgetPrintLayout({ budget, config }) {
                   <td style={{ ...tdStyle, textAlign: 'center', verticalAlign: 'top', width: '45px' }}>
                     {row.unit}
                   </td>
-                  <td style={{ ...tdStyle, textAlign: 'right', verticalAlign: 'top', width: '75px' }}>
+                  <td style={{ ...tdStyle, textAlign: 'right', verticalAlign: 'top', width: '75px', fontSize: '12px' }}>
                     {formatCurrency(row.quantity)}
                   </td>
-                  <td style={{ ...tdStyle, textAlign: 'right', verticalAlign: 'top', width: '90px' }}>
+                  <td style={{ ...tdStyle, textAlign: 'right', verticalAlign: 'top', width: '90px', fontSize: '12px' }}>
                     {formatCurrency(row.pu)}
                   </td>
-                  <td style={{ ...tdStyle, textAlign: 'right', verticalAlign: 'top', width: '125px' }}>
+                  <td style={{ ...tdStyle, textAlign: 'right', verticalAlign: 'top', width: '125px', fontSize: '12px' }}>
                     {formatCurrency(row.total)}
                   </td>
                 </tr>
