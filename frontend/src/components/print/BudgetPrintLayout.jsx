@@ -103,7 +103,7 @@ export default function BudgetPrintLayout({ budget, config }) {
         {/* ── ENCABEZADO (estilo PDF: empresa top-left, sin membrete derecho) ── */}
         <div style={{ marginBottom: '14px' }}>
 
-          {/* Logo si se incluye */}
+          {/* Logo si se incluye — tamaño controlado para que se renderice completo */}
           {config.includeLogo && (() => {
             const savedLogo = localStorage.getItem(`budget_logo_${budget.id}`);
             const logoSrc = savedLogo || '/images/logo_aeko360.png';
@@ -111,7 +111,15 @@ export default function BudgetPrintLayout({ budget, config }) {
               <img
                 src={logoSrc}
                 alt="Logo Empresa"
-                style={{ maxHeight: '55px', display: 'block', marginBottom: '6px' }}
+                style={{
+                  maxWidth: '160px',
+                  maxHeight: '70px',
+                  width: 'auto',
+                  height: 'auto',
+                  objectFit: 'contain',
+                  display: 'block',
+                  marginBottom: '6px',
+                }}
                 onError={(e) => { e.target.style.display = 'none'; }}
               />
             );
@@ -173,38 +181,44 @@ export default function BudgetPrintLayout({ budget, config }) {
           <tbody>
             {rows.map((row) => {
 
-              /* ── CAPÍTULO ── */
+              /* ── CAPÍTULO ──
+                 Celdas individuales por columna para que las líneas verticales
+                 sean continuas. El nombre va en la columna Descripción. */
               if (row.type === 'chapter') {
                 return (
                   <tr key={`cap-${row.id}`} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                    <td
-                      colSpan={6}
-                      style={{
-                        ...tdStyle,
-                        borderLeft: '1px solid #000',
-                        borderRight: '1px solid #000',
-                        fontWeight: 'bold',
-                        paddingTop: '10px',
-                        paddingBottom: '2px',
-                        fontSize: '11px',
-                        textTransform: 'uppercase',
-                      }}
-                    >
+                    <td style={{ ...tdStyle, borderLeft: '1px solid #000', width: '45px', paddingTop: '10px', paddingBottom: '2px' }} />
+                    <td style={{ ...tdStyle, fontWeight: 'bold', paddingTop: '10px', paddingBottom: '2px', fontSize: '11px', textTransform: 'uppercase' }}>
                       {row.description}
                     </td>
+                    <td style={{ ...tdStyle, width: '45px', paddingTop: '10px', paddingBottom: '2px' }} />
+                    <td style={{ ...tdStyle, width: '75px', paddingTop: '10px', paddingBottom: '2px' }} />
+                    <td style={{ ...tdStyle, width: '90px', paddingTop: '10px', paddingBottom: '2px' }} />
+                    <td style={{ ...tdStyle, borderRight: '1px solid #000', width: '125px', paddingTop: '10px', paddingBottom: '2px' }} />
                   </tr>
                 );
               }
 
-              /* ── SUBTOTAL DE CAPÍTULO ── */
+              /* ── SUBTOTAL DE CAPÍTULO ──
+                 Celdas individuales: Part.No vacío | label (colSpan=4) | monto.
+                 Se mantiene la línea entre Part.No y Descripción, y entre PU y Total. */
               if (row.type === 'chapter-subtotal') {
                 return (
                   <tr key={`sub-${row.chapterId}`} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                    {/* Celda Part.No — vacía, mantiene su línea derecha */}
+                    <td style={{
+                      ...tdStyle,
+                      borderLeft: '1px solid #000',
+                      borderBottom: '1px solid #000',
+                      width: '45px',
+                      paddingTop: '4px',
+                      paddingBottom: '10px',
+                    }} />
+                    {/* Label spanning Descripción + Und. + Cantidad + PU */}
                     <td
-                      colSpan={5}
+                      colSpan={4}
                       style={{
                         ...tdStyle,
-                        borderLeft: '1px solid #000',
                         borderBottom: '1px solid #000',
                         textAlign: 'right',
                         fontWeight: 'bold',
@@ -213,21 +227,19 @@ export default function BudgetPrintLayout({ budget, config }) {
                         paddingBottom: '10px',
                       }}
                     >
-                      {/* Sin subrayado — bold italic alineado a la derecha */}
                       Total {currencyHeader}&nbsp;&nbsp;{row.chapterName}:
                     </td>
-                    <td
-                      style={{
-                        ...tdStyle,
-                        borderRight: '1px solid #000',
-                        borderBottom: '1px solid #000',
-                        fontWeight: 'bold',
-                        textAlign: 'right',
-                        paddingTop: '4px',
-                        paddingBottom: '10px',
-                        width: '125px',
-                      }}
-                    >
+                    {/* Monto */}
+                    <td style={{
+                      ...tdStyle,
+                      borderRight: '1px solid #000',
+                      borderBottom: '1px solid #000',
+                      fontWeight: 'bold',
+                      textAlign: 'right',
+                      paddingTop: '4px',
+                      paddingBottom: '10px',
+                      width: '125px',
+                    }}>
                       {formatCurrency(row.amount)}
                     </td>
                   </tr>
