@@ -93,50 +93,53 @@ export function APUPrintSheet({ partida, materiales = [], equipos = [], mano_obr
         Análisis de Precio Unitario
       </h1>
 
-      {/* Encabezado estilo Excel */}
-      <table className="w-full border-collapse text-[11px] mb-4" style={{ border }}>
-        <tbody>
-          {showCompany && (
-            <tr>
-              <td style={{ border, backgroundColor: headerBg }} className="px-2 py-1 font-bold w-[15%]">Empresa:</td>
-              <td style={{ border }} className="px-2 py-1 uppercase" colSpan={3}>{companyName}</td>
-            </tr>
-          )}
-          <tr>
-            <td style={{ border, backgroundColor: headerBg }} className="px-2 py-1 font-bold w-[15%]">Obra:</td>
-            <td style={{ border }} className="px-2 py-1 uppercase" colSpan={3}>{obra}</td>
-          </tr>
-          <tr>
-            <td style={{ border, backgroundColor: headerBg }} className="px-2 py-1 font-bold">Contratante:</td>
-            <td style={{ border }} className="px-2 py-1 uppercase" colSpan={3}>{contratante}</td>
-          </tr>
-          <tr>
-            <td style={{ border, backgroundColor: headerBg }} className="px-2 py-1 font-bold" rowSpan={2}>Descripción:</td>
-            <td style={{ border }} className="px-2 py-1 uppercase align-top" rowSpan={2} colSpan={3}>
-              {partida.Descri ?? partida.descripcion ?? partida.description ?? ''}
-            </td>
-          </tr>
-          <tr></tr>
-          <tr>
-            <td style={{ border, backgroundColor: headerBg }} className="px-2 py-1 font-bold">Unidad:</td>
-            <td style={{ border }} className="px-2 py-1 uppercase w-[35%]">{partida.UniPar ?? partida.unidad ?? partida.unit ?? ''}</td>
-            <td style={{ border, backgroundColor: headerBg }} className="px-2 py-1 font-bold w-[15%]">Cantidad:</td>
-            <td style={{ border }} className="px-2 py-1 w-[35%]">{numFormat(partida.CanPar ?? partida.cantidad ?? partida.quantity ?? 1)}</td>
-          </tr>
-          <tr>
-            <td style={{ border, backgroundColor: headerBg }} className="px-2 py-1 font-bold">Rendimiento:</td>
-            <td style={{ border }} className="px-2 py-1">{numFormat(rendimiento)}</td>
-            <td style={{ border, backgroundColor: headerBg }} className="px-2 py-1 font-bold">Código:</td>
-            <td style={{ border }} className="px-2 py-1">{codigoCovenin}</td>
-          </tr>
-          {dateStr && (
-            <tr>
-              <td style={{ border, backgroundColor: headerBg }} className="px-2 py-1 font-bold">Fecha:</td>
-              <td style={{ border }} className="px-2 py-1" colSpan={3}>{dateStr}</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      {/* Encabezado sin líneas divisorias, con etiquetas y valores juntos */}
+      <div style={{ width: '100%', fontSize: '11px', marginBottom: '14px', lineHeight: '1.5', color: '#000' }}>
+        {showCompany && (
+          <div style={{ marginBottom: '2px' }}>
+            <span style={{ fontWeight: 'bold' }}>Empresa: </span>
+            <span style={{ textTransform: 'uppercase' }}>{companyName}</span>
+          </div>
+        )}
+        <div style={{ marginBottom: '2px' }}>
+          <span style={{ fontWeight: 'bold' }}>Obra: </span>
+          <span style={{ textTransform: 'uppercase' }}>{obra}</span>
+        </div>
+        <div style={{ marginBottom: '2px' }}>
+          <span style={{ fontWeight: 'bold' }}>Contratante: </span>
+          <span style={{ textTransform: 'uppercase' }}>{contratante}</span>
+        </div>
+        <div style={{ marginBottom: '2px' }}>
+          <span style={{ fontWeight: 'bold' }}>Descripción: </span>
+          <span style={{ textTransform: 'uppercase' }}>{partida.Descri ?? partida.descripcion ?? partida.description ?? ''}</span>
+        </div>
+        <div style={{ display: 'flex', marginBottom: '2px' }}>
+          <div style={{ width: '50%' }}>
+            <span style={{ fontWeight: 'bold' }}>Unidad: </span>
+            <span style={{ textTransform: 'uppercase' }}>{partida.UniPar ?? partida.unidad ?? partida.unit ?? ''}</span>
+          </div>
+          <div style={{ width: '50%' }}>
+            <span style={{ fontWeight: 'bold' }}>Cantidad: </span>
+            <span>{numFormat(partida.CanPar ?? partida.cantidad ?? partida.quantity ?? 1)}</span>
+          </div>
+        </div>
+        <div style={{ display: 'flex', marginBottom: '2px' }}>
+          <div style={{ width: '50%' }}>
+            <span style={{ fontWeight: 'bold' }}>Rendimiento: </span>
+            <span>{numFormat(rendimiento)}</span>
+          </div>
+          <div style={{ width: '50%' }}>
+            <span style={{ fontWeight: 'bold' }}>Código: </span>
+            <span>{codigoCovenin}</span>
+          </div>
+        </div>
+        {dateStr && (
+          <div style={{ marginBottom: '2px' }}>
+            <span style={{ fontWeight: 'bold' }}>Fecha: </span>
+            <span>{dateStr}</span>
+          </div>
+        )}
+      </div>
 
       {/* 1. MATERIALES */}
       <div className="mb-4">
