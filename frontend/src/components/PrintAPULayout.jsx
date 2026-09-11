@@ -88,6 +88,14 @@ export function APUPrintSheet({ partida, materiales = [], equipos = [], mano_obr
 
   return (
     <div className="apu-sheet-inner" style={{ width: '100%', boxSizing: 'border-box' }}>
+      <style>{`
+        .apu-sheet-inner table,
+        .apu-sheet-inner th,
+        .apu-sheet-inner td {
+          border-width: 0.5px !important;
+          border-color: #000000 !important;
+        }
+      `}</style>
       {/* Título principal */}
       <h1 className="text-center text-lg font-bold uppercase tracking-wide mb-4 mt-2">
         Análisis de Precio Unitario
@@ -317,7 +325,7 @@ export function APUPrintSheet({ partida, materiales = [], equipos = [], mano_obr
               <td className="border border-black px-2 py-1 text-right font-bold bg-gray-50">SubTotal C:</td>
               <td className="border border-black px-2 py-1 text-right font-bold">{numFormat(subtotalC)}</td>
             </tr>
-            <tr className="bg-blue-100">
+            <tr>
               <td className="border border-black px-2 py-1 text-right font-bold uppercase text-[12px]">Precio Unitario:</td>
               <td className="border border-black px-2 py-1 text-right font-bold text-[12px]">{numFormat(unitPrice)}</td>
             </tr>

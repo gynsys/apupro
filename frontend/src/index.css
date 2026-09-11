@@ -55,6 +55,12 @@ html, body, #root {
   .print-only {
     display: block !important;
   }
+  .apu-sheet-inner table,
+  .apu-sheet-inner th,
+  .apu-sheet-inner td {
+    border-width: 0.5px !important;
+    border-color: #000000 !important;
+  }
 }
 
 @media screen {
