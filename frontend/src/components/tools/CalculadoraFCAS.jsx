@@ -137,33 +137,45 @@ export default function CalculadoraFCAS({
     return { diasPrestacionesEquivalentes: prestEq, diasPasivosAdicionales: pasivosAdicionales };
   }, [conceptos, alicuotaSalarioIntegral]);
 
+  // Proporción del período evaluado frente al año base
+  const factorTemporal = useMemo(() => {
+    return diasContratados > 0 ? diasContratados / 365 : 1;
+  }, [diasContratados]);
+
+  const diasPrestacionesProporcionales = useMemo(() => {
+    return diasPrestacionesEquivalentes * factorTemporal;
+  }, [diasPrestacionesEquivalentes, factorTemporal]);
+
+  // Días equivalentes del Cestaticket frente al salario base (exclusivo para método indexado)
+  const diasEquivalentesBono = useMemo(() => {
+    if (metodo !== 'indexado' || salarioBase <= 0 || bonoCestaticket <= 0) return 0;
+    const salarioDiarioRef = salarioBase / 30;
+    const costoBonoPeriodo = (bonoCestaticket / 30) * diasContratados;
+    return costoBonoPeriodo / salarioDiarioRef;
+  }, [metodo, salarioBase, bonoCestaticket, diasContratados]);
+
   // ── Cálculo del FCAS (%) ────────────────────────────────────
   const fcasPorcentaje = useMemo(() => {
-    if (diasLaboradosReales <= 0 || salarioDiario <= 0) return 0;
-
-    const factorTemporal = diasContratados > 0 ? diasContratados / 365 : 1;
-    const diasPrestacionesProporcionales = diasPrestacionesEquivalentes * factorTemporal;
+    if (diasLaboradosReales <= 0) return 0;
 
     let numerador;
     if (metodo === 'estandar') {
       // MÉTODO ESTÁNDAR: Ti + Todos los beneficios/prestaciones equivalentes
+      // No depende de salarios monetarios, solo de días de ley vs días laborados
       numerador = diasNoTrabajados + diasPrestacionesProporcionales;
     } else {
       // MÉTODO INDEXADO: Ti + Prestaciones + Días equivalentes del Cestaticket
-      const costoBonoPeriodo = (bonoCestaticket / 30) * diasContratados;
-      const diasEquivalentesBono = costoBonoPeriodo / salarioDiario;
       numerador = diasNoTrabajados + diasPrestacionesProporcionales + diasEquivalentesBono;
     }
 
     return (numerador / diasLaboradosReales) * 100;
-  }, [metodo, salarioDiario, bonoCestaticket, diasContratados, diasNoTrabajados, diasLaboradosReales, diasPrestacionesEquivalentes]);
+  }, [metodo, diasLaboradosReales, diasNoTrabajados, diasPrestacionesProporcionales, diasEquivalentesBono]);
 
-  // ── Costo real mensual de mano de obra ──────────────────────
+  // ── Costo real mensual de mano de obra (para persistencia/perfiles) ──────
   const { costoRealMensual, costoJornalObra } = useMemo(() => {
     if (salarioBase <= 0) return { costoRealMensual: 0, costoJornalObra: 0 };
 
     const mesesPeriodo = diasContratados > 0 ? diasContratados / 30 : 12;
-    const factorTemporal = diasContratados > 0 ? diasContratados / 365 : 1;
 
     // Pasivos y aportes patronales adicionales al salario mensual ordinario
     const costoPasivosPeriodo = diasPasivosAdicionales * salarioDiario * factorTemporal;
@@ -175,7 +187,6 @@ export default function CalculadoraFCAS({
     // Costo diario efectivo en obra (Jornal con FCAS aplicable en APU)
     let jornalObra = salarioDiario * (1 + fcasPorcentaje / 100);
     if (metodo === 'estandar') {
-      // En método estándar, el Cestaticket se adiciona en el APU
       const bonoDiarioObra = diasLaboradosReales > 0 
         ? ((bonoCestaticket / 30) * diasContratados) / diasLaboradosReales 
         : 0;
@@ -186,7 +197,7 @@ export default function CalculadoraFCAS({
       costoRealMensual: totalMensual, 
       costoJornalObra: jornalObra 
     };
-  }, [salarioBase, salarioDiario, diasPasivosAdicionales, diasContratados, bonoCestaticket, fcasPorcentaje, metodo, diasLaboradosReales]);
+  }, [salarioBase, salarioDiario, diasPasivosAdicionales, factorTemporal, diasContratados, bonoCestaticket, fcasPorcentaje, metodo, diasLaboradosReales]);
 
   // ── Handlers ──────────────────────────────────────────────
   const toggleConcepto = (idx) => {
@@ -404,100 +415,156 @@ export default function CalculadoraFCAS({
                 <span className={`text-4xl font-black ${metodo === 'indexado' ? 'text-emerald-600' : 'text-blue-600'}`}>
                   {fcasPorcentaje.toFixed(2)}%
                 </span>
-                <span className="text-xs text-slate-500 font-medium">del salario base</span>
+                <span className="text-xs text-slate-500 font-medium">sobre el jornal básico</span>
               </div>
               <p className="text-[11px] text-slate-500 mt-3 bg-slate-50 p-2 rounded-lg border border-slate-200">
                 {metodo === 'indexado'
-                  ? '⚠️ El Cestaticket se convierte en días equivalentes y se integra al FCAS.'
-                  : '📋 Método Estándar: El Cestaticket va al APU, no infla el FCAS.'}
+                  ? '⚠️ Método Indexado: El Cestaticket se convierte en días equivalentes y se integra al FCAS. En el APU no se coloca monto en la columna Bono.'
+                  : '📋 Método Estándar LOTTT / CVC: Factor porcentual puro en días. El Cestaticket se factura por separado en la columna Bono del APU.'}
               </p>
             </div>
 
             <div className="rounded-2xl p-5 bg-white/70 backdrop-blur-sm border border-slate-200/70 shadow-sm flex flex-col justify-between">
-              <span className="text-xs font-bold tracking-widest uppercase text-slate-500">Costo Real de Mano de Obra (Mensual)</span>
-              <div className="mt-2 flex items-baseline gap-1">
-                <span className="text-4xl font-black text-slate-800">${costoRealMensual.toFixed(2)}</span>
-                <span className="text-sm font-semibold text-slate-500">USD / Obrero</span>
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold tracking-widest uppercase text-slate-500">Balance de Días de la Ecuación</span>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-extrabold border border-slate-200">
+                  Multiplicador: {(1 + fcasPorcentaje / 100).toFixed(4)}
+                </span>
               </div>
-              <div className="text-[11px] text-slate-500 mt-3 grid grid-cols-2 gap-2">
-                <div className="bg-slate-50 p-1.5 rounded border border-slate-200">
-                  Salario Diario Base: <b className="text-slate-700">${salarioDiario.toFixed(2)}</b>
+              <div className="text-[11px] text-slate-600 mt-2 grid grid-cols-2 gap-2">
+                <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Días Calendario (N)</span>
+                  <b className="text-slate-800 text-sm">{diasContratados} días</b>
                 </div>
-                <div className="bg-slate-50 p-1.5 rounded border border-slate-200">
-                  Días Reales de Obra (DEL): <b className="text-slate-700">{diasLaboradosReales} días</b>
+                <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Días en Obra (DEL)</span>
+                  <b className="text-blue-700 text-sm">{diasLaboradosReales} días</b>
                 </div>
-                <div className="bg-slate-50 p-1.5 rounded border border-slate-200 col-span-2 flex justify-between items-center">
-                  <span>Jornal Efectivo en Obra:</span>
-                  <b className="text-slate-800 font-bold">${costoJornalObra.toFixed(2)} USD / día de obra</b>
+                <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">No Laborados (DPNT)</span>
+                  <b className="text-amber-700 text-sm">{totalDiasNoTrabajados} días</b>
+                </div>
+                <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">
+                    {metodo === 'indexado' ? 'Beneficios + Bono Eq.' : 'Beneficios y Cargas (DAP)'}
+                  </span>
+                  <b className="text-emerald-700 text-sm">
+                    {metodo === 'indexado' 
+                      ? (diasPrestacionesProporcionales + diasEquivalentesBono).toFixed(1) 
+                      : diasPrestacionesProporcionales.toFixed(1)} días
+                  </b>
                 </div>
               </div>
+              <p className="text-[10px] text-slate-500 mt-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                {metodo === 'indexado'
+                  ? `⚖️ ${diasLaboradosReales} días en obra absorben ${(diasLaboradosReales * (1 + fcasPorcentaje / 100)).toFixed(1)} días de salario base, cargas y Cestaticket.`
+                  : `⚖️ ${diasLaboradosReales} días efectivamente laborados absorben ${(diasLaboradosReales * (1 + fcasPorcentaje / 100)).toFixed(1)} días de salario y beneficios de ley.`}
+              </p>
             </div>
           </div>
 
           {/* Inputs de Control */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-200/60">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Salario Base Mensual (USD)</label>
-              <DecimalInput
-                value={salarioBase}
-                onChange={(val) => setSalarioBase(Math.max(0, val))}
-                className="w-full bg-white rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cestaticket Mensual (USD)</label>
-              <DecimalInput
-                value={bonoCestaticket}
-                onChange={(val) => setBonoCestaticket(Math.max(0, val))}
-                className="w-full bg-white rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              />
-              {metodo === 'estandar' && (
-                <p className="text-[10px] text-slate-400">Se añade como costo fijo al APU</p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Días Ejecución (N)</label>
-              <DecimalInput
-                value={diasContratados}
-                onChange={(val) => setDiasContratados(Math.max(1, val))}
-                className="w-full bg-white rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex justify-between items-center">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Días No Laborados (Ti)</label>
-                <button
-                  type="button"
-                  onClick={() => setCalculoAutomatico(!calculoAutomatico)}
-                  className={`text-[10px] px-2 py-0.5 rounded transition-colors ${
-                    calculoAutomatico ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'
-                  }`}
-                >
-                  {calculoAutomatico ? '🔒 Auto' : '✏️ Manual'}
-                </button>
+          {metodo === 'estandar' ? (
+            /* Método Estándar: Solo requiere los días de calendario (N) y días no laborados (Ti) */
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-200/60">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Días Ejecución del Contrato (N)</label>
+                <DecimalInput
+                  value={diasContratados}
+                  onChange={(val) => setDiasContratados(Math.max(1, val))}
+                  className="w-full bg-white rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+                <p className="text-[10px] text-slate-400">Días de calendario evaluados (Base estándar: 365 días)</p>
               </div>
-              <DecimalInput
-                value={diasNoTrabajados}
-                onChange={(val) => {
-                  setCalculoAutomatico(false);
-                  setDiasNoTrabajados(Math.min(diasContratados, val));
-                }}
-                className={`w-full bg-white rounded-xl border px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:ring-1 ${
-                  calculoAutomatico 
-                    ? 'border-emerald-300 bg-emerald-50/50 text-emerald-800' 
-                    : 'border-slate-300 focus:border-blue-500'
-                }`}
-              />
-              {calculoAutomatico && (
-                <p className="text-[10px] text-emerald-600 mt-1">
-                  (Fines de semana + feriados)
+
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Días No Laborados de Calendario (Ti)</label>
+                  <button
+                    type="button"
+                    onClick={() => setCalculoAutomatico(!calculoAutomatico)}
+                    className={`text-[10px] px-2 py-0.5 rounded transition-colors font-semibold ${
+                      calculoAutomatico ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {calculoAutomatico ? '🔒 Auto (Fines de semana + Feriados)' : '✏️ Manual'}
+                  </button>
+                </div>
+                <DecimalInput
+                  value={diasNoTrabajados}
+                  onChange={(val) => {
+                    setCalculoAutomatico(false);
+                    setDiasNoTrabajados(Math.min(diasContratados, val));
+                  }}
+                  className={`w-full bg-white rounded-xl border px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:ring-1 ${
+                    calculoAutomatico 
+                      ? 'border-emerald-300 bg-emerald-50/50 text-emerald-800' 
+                      : 'border-slate-300 focus:border-blue-500'
+                  }`}
+                />
+                <p className="text-[10px] text-slate-400">
+                  {calculoAutomatico ? 'Calculado automáticamente (52 semanas + 10 feriados nacionales)' : 'Ajuste manual para obras con condiciones climáticas particulares'}
                 </p>
-              )}
+              </div>
             </div>
-          </div>
+          ) : (
+            /* Método Indexado: Requiere N, Ti, y el salario/bono para indexar el Cestaticket a días */
+            <div className="space-y-2 bg-emerald-50/40 p-4 rounded-2xl border border-emerald-200/60">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Días Ejecución (N)</label>
+                  <DecimalInput
+                    value={diasContratados}
+                    onChange={(val) => setDiasContratados(Math.max(1, val))}
+                    className="w-full bg-white rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Días No Laborados (Ti)</label>
+                    <button
+                      type="button"
+                      onClick={() => setCalculoAutomatico(!calculoAutomatico)}
+                      className={`text-[10px] px-2 py-0.5 rounded transition-colors font-semibold ${
+                        calculoAutomatico ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {calculoAutomatico ? '🔒 Auto' : '✏️ Manual'}
+                    </button>
+                  </div>
+                  <DecimalInput
+                    value={diasNoTrabajados}
+                    onChange={(val) => {
+                      setCalculoAutomatico(false);
+                      setDiasNoTrabajados(Math.min(diasContratados, val));
+                    }}
+                    className="w-full bg-white rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">Salario Base Ref. (USD/mes)</label>
+                  <DecimalInput
+                    value={salarioBase}
+                    onChange={(val) => setSalarioBase(Math.max(0, val))}
+                    className="w-full bg-white rounded-xl border border-emerald-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  />
+                  <p className="text-[10px] text-emerald-700">Para calcular el salario diario</p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">Cestaticket (USD/mes)</label>
+                  <DecimalInput
+                    value={bonoCestaticket}
+                    onChange={(val) => setBonoCestaticket(Math.max(0, val))}
+                    className="w-full bg-white rounded-xl border border-emerald-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  />
+                  <p className="text-[10px] text-emerald-700">Equivale a {diasEquivalentesBono.toFixed(1)} días de salario</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Matriz de Incidencias */}
           <div className="space-y-2">
@@ -767,16 +834,25 @@ export default function CalculadoraFCAS({
                     <p className="font-bold text-blue-600 text-sm">{fcasPorcentaje.toFixed(2)}%</p>
                   </div>
                   <div>
-                    <span className="text-slate-500">Costo Mensual Real:</span>
-                    <p className="font-bold text-slate-800 text-sm">${costoRealMensual.toFixed(2)}</p>
+                    <span className="text-slate-500">Multiplicador (1+FCAS):</span>
+                    <p className="font-bold text-slate-800 text-sm">{(1 + fcasPorcentaje / 100).toFixed(4)}</p>
                   </div>
                   <div>
                     <span className="text-slate-500">Método:</span>
-                    <p className="font-semibold text-slate-700 capitalize">{metodo}</p>
+                    <p className="font-semibold text-slate-700">{metodo === 'indexado' ? 'Con Bono en FCAS' : 'Estándar LOTTT'}</p>
                   </div>
                   <div>
-                    <span className="text-slate-500">Salario / Bono:</span>
-                    <p className="font-semibold text-slate-700">${salarioBase} / ${bonoCestaticket}</p>
+                    {metodo === 'indexado' ? (
+                      <>
+                        <span className="text-slate-500">Salario / Bono Ref:</span>
+                        <p className="font-semibold text-slate-700">${salarioBase} / ${bonoCestaticket}</p>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-slate-500">Días en Obra (DEL):</span>
+                        <p className="font-semibold text-slate-700">{diasLaboradosReales} días</p>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
