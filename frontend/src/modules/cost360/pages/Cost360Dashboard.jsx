@@ -326,7 +326,7 @@ const Cost360Dashboard = () => {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-slate-900 font-mono mb-1">{item.CovPar || item.CodPar}</p>
-                          <p className="text-sm text-slate-700 font-medium line-clamp-2 max-w-3xl group-hover:text-slate-900 transition-colors">{item.Descri}</p>
+                          <p className="text-sm text-slate-700 font-medium line-clamp-2 max-w-3xl lg:max-w-[1140px] group-hover:text-slate-900 transition-colors">{item.Descri}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
