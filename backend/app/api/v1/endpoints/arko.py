@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import or_, func
 import jwt
 
@@ -569,7 +570,7 @@ class CostosConfigSchema(BaseModel):
     porcentajeUtilidad: float = 10.0
     porcentajeAdministracion: float = 15.0
     iva: float = 16.0
-    fcas: float = 0.0
+    fcas: float = 417.0
     fcasSalarioBase: Optional[float] = 240.0
     fcasBonoCestaticket: Optional[float] = 40.0
     fcasMetodo: Optional[str] = "estandar"
@@ -717,7 +718,8 @@ def update_current_admin_costos(
         user = db.query(ArkoAdmin).filter(ArkoAdmin.id == current_admin.id).first()
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
-        user.costos_config = updated
+        user.costos_config = dict(updated)
+        flag_modified(user, "costos_config")
         db.commit()
     return CostosConfigSchema(**updated)
 

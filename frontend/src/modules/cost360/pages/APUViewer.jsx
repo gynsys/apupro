@@ -8,6 +8,7 @@ import PrintAPULayout from '../../../components/PrintAPULayout';
 import ExportApuExcelButton from '../components/ExportApuExcelButton';
 import ApuEditorUI from '../../../components/ApuEditorUI';
 import { AuthContext } from '../../../context/AuthContext';
+import { useUserCostos } from '../../../context/UserCostosContext';
 
 export default function APUViewer() {
   const { id } = useParams();
@@ -26,14 +27,28 @@ export default function APUViewer() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
   const [item, setItem] = useState(null);
-  const [settings, setSettings] = useState({
-    admin_percent: 15,
-    profit_percent: 10,
-    fcas_percent: 417,
-    iva_percent: 0,
+  const { costosConfig, updateCostosConfig } = useUserCostos();
+  const [settings, setSettings] = useState(() => ({
+    admin_percent: costosConfig?.porcentajeAdministracion ?? 15,
+    profit_percent: costosConfig?.porcentajeUtilidad ?? 10,
+    fcas_percent: costosConfig?.fcas ?? 417,
+    iva_percent: costosConfig?.iva ?? 0,
     labor_bonus: 0,
     currency: 'USD'
-  });
+  }));
+
+  // Sincronizar settings cuando costosConfig cargue o se actualice
+  useEffect(() => {
+    if (costosConfig) {
+      setSettings(prev => ({
+        ...prev,
+        admin_percent: costosConfig.porcentajeAdministracion ?? prev.admin_percent,
+        profit_percent: costosConfig.porcentajeUtilidad ?? prev.profit_percent,
+        fcas_percent: costosConfig.fcas ?? prev.fcas_percent,
+        iva_percent: costosConfig.iva ?? prev.iva_percent,
+      }));
+    }
+  }, [costosConfig]);
   
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [printOptions, setPrintOptions] = useState(null);
@@ -221,11 +236,11 @@ export default function APUViewer() {
     <div className="p-4 md:p-6 max-w-7xl mx-auto min-h-screen pb-20 print:p-0 print:m-0 print:max-w-none print:bg-white print:w-full">
       {printOptions && (
         <PrintAPULayout 
-          partida={partida} 
+          partida={{ ...partida, ...settings }} 
           materiales={materiales} 
           equipos={equipos} 
           mano_obra={mano_obra} 
-          options={printOptions} 
+          options={{ ...printOptions, ...settings }} 
         />
       )}
       
@@ -297,8 +312,18 @@ export default function APUViewer() {
             onHeaderChange={handleHeaderChange}
             onComponentChange={handleComponentChange}
             onRemoveRow={handleRemoveRow}
-            onAddBlankRow={handleAddRow}
-            onSettingsChange={(field, value) => setSettings({ ...settings, [field]: value })}
+            onSettingsChange={(field, value) => {
+              setSettings(prev => ({ ...prev, [field]: value }));
+              const mapping = {
+                fcas_percent: 'fcas',
+                admin_percent: 'porcentajeAdministracion',
+                profit_percent: 'porcentajeUtilidad',
+                iva_percent: 'iva'
+              };
+              if (mapping[field]) {
+                updateCostosConfig({ [mapping[field]]: value }).catch(() => {});
+              }
+            }}
           />
         </div>
       )}

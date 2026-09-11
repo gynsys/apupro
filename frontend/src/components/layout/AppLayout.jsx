@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { FaTools } from 'react-icons/fa';
 import { AuthContext } from '../../context/AuthContext';
-import { UserCostosProvider, useUserCostos } from '../../context/UserCostosContext';
 import toast from 'react-hot-toast';
 import SubscriptionRequestModal from '../SubscriptionRequestModal';
 import ReportPaymentModal from '../ReportPaymentModal';
@@ -301,9 +300,7 @@ export default function AppLayout() {
 
         {/* ── MAIN CONTENT ──────────────────────────────────── */}
         <main className="flex-1 overflow-y-auto print:h-auto print:block print:overflow-visible min-w-0 relative">
-          <UserCostosProvider>
-            <Outlet />
-          </UserCostosProvider>
+          <Outlet />
         </main>
 
       </div>

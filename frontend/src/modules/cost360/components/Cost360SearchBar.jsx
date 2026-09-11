@@ -132,7 +132,7 @@ const Cost360SearchBar = ({
           </div>
           <input
             type="text"
-            className="block w-full pl-11 pr-4 py-3 rounded-xl text-sm text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-medium"
+            className="block w-full pl-11 pr-4 py-3 rounded-xl text-[11px] placeholder:text-[11px] text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-medium"
             style={{
               background: 'rgba(255,255,255,0.8)',
               border: '2px solid #cbd5e1',

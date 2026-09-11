@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Loader, Loader2, Package, Wrench, Users, Calculator, Save, Sparkles, Check, CheckCircle2, Filter, Plus, Search, FileText, Trash2, AlertTriangle, Database, Layers, Printer, Bot, X, Edit2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { AuthContext } from '../../../context/AuthContext';
+import { useUserCostos } from '../../../context/UserCostosContext';
 import { generateAIApu, saveCustomApu, fetchCategoriesTree, fetchItems, fetchApuDetails } from '../services/cost360Service';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
 import Cost360SearchBar from '../components/Cost360SearchBar';
@@ -371,15 +372,29 @@ export default function AIApuGeneratorPage() {
     loadDatabases();
   }, []);
 
+  const { costosConfig, updateCostosConfig } = useUserCostos();
+
   // Defaults for calculations - IVA en 0 porque en los presupuestos se incluye el IVA general
-  const [settings, setSettings] = useState({
-    fcas_percent: 417,
-    admin_percent: 15.0,
-    profit_percent: 10.0,
+  const [settings, setSettings] = useState(() => ({
+    fcas_percent: costosConfig?.fcas ?? 417,
+    admin_percent: costosConfig?.porcentajeAdministracion ?? 15.0,
+    profit_percent: costosConfig?.porcentajeUtilidad ?? 10.0,
     iva_percent: 0,
     labor_bonus: 0,
     currency: 'USD'
-  });
+  }));
+
+  // Sincronizar settings cuando costosConfig cargue o se actualice
+  useEffect(() => {
+    if (costosConfig) {
+      setSettings(prev => ({
+        ...prev,
+        fcas_percent: costosConfig.fcas ?? prev.fcas_percent,
+        admin_percent: costosConfig.porcentajeAdministracion ?? prev.admin_percent,
+        profit_percent: costosConfig.porcentajeUtilidad ?? prev.profit_percent,
+      }));
+    }
+  }, [costosConfig]);
 
   const handleCreateManual = () => {
     setSettings(prev => ({ ...prev, iva_percent: 0 }));
@@ -1862,8 +1877,18 @@ export default function AIApuGeneratorPage() {
             onComponentBlur={() => {}} // Changes are saved when they click "Guardar APU"
             onRemoveRow={handleRemoveRow}
             onAddBlankRow={handleAddRow}
-            onAddSearchRow={() => { toast.error("La búsqueda no está disponible en este modo, usa fila en blanco"); }} // Optional: connect to ComponentSearchModal later
-            onSettingsChange={(field, value) => setSettings({ ...settings, [field]: value })}
+            onSettingsChange={(field, value) => {
+              setSettings(prev => ({ ...prev, [field]: value }));
+              const mapping = {
+                fcas_percent: 'fcas',
+                admin_percent: 'porcentajeAdministracion',
+                profit_percent: 'porcentajeUtilidad',
+                iva_percent: 'iva'
+              };
+              if (mapping[field]) {
+                updateCostosConfig({ [mapping[field]]: value }).catch(() => {});
+              }
+            }}
           />
 
           {/* SAVE BUTTON */}

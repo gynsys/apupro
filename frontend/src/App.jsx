@@ -21,6 +21,7 @@ import AppLayout from './components/layout/AppLayout.jsx';
 import { API_URL } from './services/api';
 import { Toaster } from 'react-hot-toast';
 import { DatabaseProvider } from './contexts/DatabaseContext.jsx';
+import { UserCostosProvider } from './context/UserCostosContext.jsx';
 
 export const SiteConfigContext = React.createContext(null);
 
@@ -73,7 +74,8 @@ function App() {
     <AuthProvider>
       <Toaster position="top-center" containerStyle={{ zIndex: 999999 }} />
       <DatabaseProvider>
-        <SiteConfigContext.Provider value={{ config, setConfig, fetchSiteConfig }}>
+        <UserCostosProvider>
+          <SiteConfigContext.Provider value={{ config, setConfig, fetchSiteConfig }}>
           <BrowserRouter basename={window.location.pathname.startsWith('/app') ? '/app' : ''}>
           <Routes>
                                                 <Route path="/" element={<LandingPage />} />
@@ -178,7 +180,8 @@ function App() {
           </Routes>
         </BrowserRouter>
       </SiteConfigContext.Provider>
-      </DatabaseProvider>
+    </UserCostosProvider>
+  </DatabaseProvider>
     </AuthProvider>
   );
 }
