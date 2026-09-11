@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Users } from 'lucide-react';
 import { TABS } from '../../constants/tabs.config';
 import { useUserCostos } from '../../../../context/UserCostosContext';
+import DecimalInput from '../../../../components/DecimalInput';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { FiDatabase, FiTool } from 'react-icons/fi';
@@ -121,38 +122,34 @@ const TabNavigation = ({
       <div className="flex gap-2 items-end pb-2">
         <div className="flex flex-col items-center">
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1">% Utilidad</label>
-          <input
-            type="number"
+          <DecimalInput
             value={currentCostos?.porcentajeUtilidad ?? 0}
-            onChange={(e) => handleCostoChange('porcentajeUtilidad', e.target.value)}
-            className="w-14 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 text-center hide-spinners [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            onChange={(val) => handleCostoChange('porcentajeUtilidad', val)}
+            className="w-14 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 text-center focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
         </div>
         <div className="flex flex-col items-center">
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1">% Admin</label>
-          <input
-            type="number"
+          <DecimalInput
             value={currentCostos?.porcentajeAdministracion ?? 0}
-            onChange={(e) => handleCostoChange('porcentajeAdministracion', e.target.value)}
-            className="w-14 px-2 py-1.5 text-center hide-spinners [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            onChange={(val) => handleCostoChange('porcentajeAdministracion', val)}
+            className="w-14 px-2 py-1.5 text-center bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
         </div>
         <div className="flex flex-col items-center">
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1">IVA %</label>
-          <input
-            type="number"
+          <DecimalInput
             value={currentCostos?.iva ?? 0}
-            onChange={(e) => handleCostoChange('iva', e.target.value)}
-            className="w-14 px-2 py-1.5 text-center hide-spinners [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            onChange={(val) => handleCostoChange('iva', val)}
+            className="w-14 px-2 py-1.5 text-center bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
         </div>
         <div className="flex flex-col items-center">
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1">F.C.A.S %</label>
-          <input
-            type="number"
+          <DecimalInput
             value={currentCostos?.fcas ?? 0}
-            onChange={(e) => handleCostoChange('fcas', e.target.value)}
-            className="w-14 px-2 py-1.5 text-center hide-spinners [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+            onChange={(val) => handleCostoChange('fcas', val)}
+            className="w-14 px-2 py-1.5 text-center bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
           />
         </div>
         <button

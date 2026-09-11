@@ -4,6 +4,7 @@ import { Settings, X, DollarSign, Hash, Percent, UploadCloud, Trash2 } from 'luc
 import { toast } from 'react-hot-toast';
 import { budgetService } from '../../services/budgetService';
 import { useUserCostos } from '../../context/UserCostosContext';
+import DecimalInput from '../DecimalInput';
 
 export default function BudgetSettingsModal({ budget, onClose, onSave }) {
   const { costosConfig } = useUserCostos();
@@ -267,11 +268,9 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                   <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1">
                     <Hash size={14}/> Tasa (BS/USD)
                   </label>
-                  <input 
-                    type="number" 
-                    step="0.01"
+                  <DecimalInput 
                     value={settings.exchange_rate}
-                    onChange={e => setSettings({...settings, exchange_rate: e.target.value})}
+                    onChange={val => setSettings({...settings, exchange_rate: val})}
                     className="px-2 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                   />
                 </div>
@@ -305,11 +304,9 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                       </select>
                     )}
                   </div>
-                  <input 
-                    type="number" 
-                    step="0.01"
+                  <DecimalInput 
                     value={settings.fcas_percent}
-                    onChange={e => setSettings({...settings, fcas_percent: e.target.value})}
+                    onChange={val => setSettings({...settings, fcas_percent: val})}
                     className="px-2 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                   />
                 </div>
@@ -321,11 +318,9 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                   <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1 whitespace-nowrap">
                     <Percent size={14}/> Inf. Mat.
                   </label>
-                  <input 
-                    type="number" 
-                    step="0.1"
+                  <DecimalInput 
                     value={settings.material_inflation}
-                    onChange={e => setSettings({...settings, material_inflation: e.target.value})}
+                    onChange={val => setSettings({...settings, material_inflation: val})}
                     className="px-2 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                   />
                 </div>
@@ -333,11 +328,9 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                   <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1 whitespace-nowrap">
                     <Percent size={14}/> Inf. Eq.
                   </label>
-                  <input 
-                    type="number" 
-                    step="0.1"
+                  <DecimalInput 
                     value={settings.equipment_inflation}
-                    onChange={e => setSettings({...settings, equipment_inflation: e.target.value})}
+                    onChange={val => setSettings({...settings, equipment_inflation: val})}
                     className="px-2 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                   />
                 </div>
@@ -345,11 +338,9 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                   <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1 whitespace-nowrap">
                     <Percent size={14}/> Inf. M.O.
                   </label>
-                  <input 
-                    type="number" 
-                    step="0.1"
+                  <DecimalInput 
                     value={settings.labor_inflation}
-                    onChange={e => setSettings({...settings, labor_inflation: e.target.value})}
+                    onChange={val => setSettings({...settings, labor_inflation: val})}
                     className="px-2 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                   />
                 </div>
@@ -357,11 +348,9 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                   <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1 whitespace-nowrap">
                     <DollarSign size={14}/> Bono
                   </label>
-                  <input 
-                    type="number" 
-                    step="0.01"
+                  <DecimalInput 
                     value={settings.labor_bonus}
-                    onChange={e => setSettings({...settings, labor_bonus: e.target.value})}
+                    onChange={val => setSettings({...settings, labor_bonus: val})}
                     className="px-2 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                   />
                 </div>
@@ -373,11 +362,9 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                   <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1">
                     <Percent size={14}/> Admin.
                   </label>
-                  <input 
-                    type="number" 
-                    step="1"
+                  <DecimalInput 
                     value={settings.admin_percent}
-                    onChange={e => setSettings({...settings, admin_percent: e.target.value})}
+                    onChange={val => setSettings({...settings, admin_percent: val})}
                     className="px-2 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                   />
                 </div>
@@ -385,11 +372,9 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                   <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1">
                     <Percent size={14}/> Utilidad
                   </label>
-                  <input 
-                    type="number" 
-                    step="1"
+                  <DecimalInput 
                     value={settings.profit_percent}
-                    onChange={e => setSettings({...settings, profit_percent: e.target.value})}
+                    onChange={val => setSettings({...settings, profit_percent: val})}
                     className="px-2 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                   />
                 </div>
@@ -397,11 +382,9 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                   <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1">
                     <Percent size={14}/> I.V.A
                   </label>
-                  <input 
-                    type="number" 
-                    step="1"
+                  <DecimalInput 
                     value={settings.iva_percent}
-                    onChange={e => setSettings({...settings, iva_percent: e.target.value})}
+                    onChange={val => setSettings({...settings, iva_percent: val})}
                     className="px-2 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                   />
                 </div>

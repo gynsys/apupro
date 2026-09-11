@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { FiSearch, FiEdit2, FiTrash2, FiCheck, FiX, FiDownload, FiExternalLink } from 'react-icons/fi';
 import { apiFetch, apiPut, apiDelete, apiPatch } from '../../../lib/apiHelper';
 import { AuthContext } from '../../../context/AuthContext';
+import DecimalInput from '../../../components/DecimalInput';
 
 const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adminMode = false }) => {
   const navigate = useNavigate();
@@ -383,12 +384,10 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                               onChange={(e) => setEditForm({ ...editForm, [f.key]: e.target.value })}
                             />
                           ) : (
-                            <input
-                              type="number"
-                              step="0.01"
+                            <DecimalInput
                               className="w-24 text-right border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-2 py-1"
                               value={editForm[f.key]}
-                              onChange={(e) => setEditForm({ ...editForm, [f.key]: parseFloat(e.target.value) || 0 })}
+                              onChange={(val) => setEditForm({ ...editForm, [f.key]: val })}
                             />
                           )
                         ) : (

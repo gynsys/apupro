@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { API_URL } from '../../services/api';
+import DecimalInput from '../../components/DecimalInput';
 
 export default function MaterialsPage() {
   const [materials, setMaterials] = useState([]);
@@ -136,7 +137,7 @@ export default function MaterialsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Precio USD</label>
-                <input required type="number" step="0.01" value={editForm.precio_usd} onChange={e => setEditForm({...editForm, precio_usd: parseFloat(e.target.value)})} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border" />
+                <DecimalInput required value={editForm.precio_usd} onChange={val => setEditForm({...editForm, precio_usd: val})} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border" />
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-4">

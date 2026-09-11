@@ -2,6 +2,7 @@ import React from 'react';
 import { FiX, FiSave } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import cost360Service from '../../services/cost360Service';
+import DecimalInput from '../../../../components/DecimalInput';
 
 const EditPartidaModal = ({ item, onClose, onUpdated }) => {
   const [form, setForm] = React.useState({
@@ -68,10 +69,9 @@ const EditPartidaModal = ({ item, onClose, onUpdated }) => {
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Rendimiento</label>
-              <input
-                type="number"
+              <DecimalInput
                 value={form.RenPar}
-                onChange={(e) => setForm({ ...form, RenPar: parseFloat(e.target.value) || 0 })}
+                onChange={(val) => setForm({ ...form, RenPar: val })}
                 className="w-full text-sm font-medium text-slate-700 bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
               />
             </div>

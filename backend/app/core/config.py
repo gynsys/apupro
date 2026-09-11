@@ -3,42 +3,79 @@ Configuration module for GynSys Backend.
 Uses Pydantic BaseSettings to load environment variables.
 """
 
-from pydantic_settings import BaseSettings
 from typing import Optional, List, Union
 import os
+import secrets
+import logging
+from pydantic_settings import BaseSettings
 from pydantic import AnyHttpUrl, field_validator
 
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
+    # Environment
+    ENVIRONMENT: str = "development"
+    DEBUG: bool = False
+
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def validate_debug_flag(cls, v: Union[bool, str, int]) -> bool:
+        """Enforce DEBUG=False in production to prevent leaking sensitive tracebacks."""
+        if isinstance(v, str):
+            v_bool = v.strip().lower() in ("true", "1", "yes", "on")
+        else:
+            v_bool = bool(v)
+
+        env = os.getenv("ENVIRONMENT", "development")
+        if env == "production" and v_bool:
+            logger.warning("⚠️ DEBUG mode requested but forced to False because ENVIRONMENT is production.")
+            return False
+        return v_bool
+
     # Database
-    # DATABASE_URL: str = "sqlite:///./gynsys.db"
-    DATABASE_URL: str = "postgresql://postgres:gyn13409534@db:5432/gynsys"
+    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/apupro_db"
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def validate_database_url(cls, v: str) -> str:
+        """Validate DATABASE_URL and prevent hardcoded insecure credentials in production."""
+        if not v:
+            raise ValueError("DATABASE_URL must be configured.")
+        env = os.getenv("ENVIRONMENT", "development")
+        if env == "production":
+            insecure_patterns = ["gyn13409534", "apupro_password", "postgres:postgres@", "localhost", "127.0.0.1"]
+            for pattern in insecure_patterns:
+                if pattern in v:
+                    raise ValueError(
+                        f"Insecure DATABASE_URL detected for production (contains '{pattern}'). "
+                        "Configure a secure DATABASE_URL in .env"
+                    )
+        return v
 
     # JWT Security — Validated at startup (see validator below)
     SECRET_KEY: str = "your-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours (1 day)
 
     @field_validator("SECRET_KEY", mode="before")
     @classmethod
     def validate_secret_key(cls, v: str) -> str:
         """Prevent production deployments with default/empty SECRET_KEY."""
-        import secrets as _secrets
-        import logging as _logging
-        if not v or v == "your-secret-key-change-in-production":
+        insecure_keys = ["", "your-secret-key-change-in-production", "your_secret_key_here"]
+        if not v or v in insecure_keys:
             env = os.getenv("ENVIRONMENT", "development")
             if env == "production":
                 raise ValueError(
                     "SECRET_KEY must be explicitly set in production. "
                     "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
                 )
-            _logging.getLogger(__name__).warning(
-                "⚠️ Using auto-generated SECRET_KEY. Set it explicitly via .env for consistency."
+            logger.warning(
+                "⚠️ Using auto-generated SECRET_KEY in development. Set it explicitly via .env for consistency."
             )
-            return _secrets.token_urlsafe(64)
+            return secrets.token_urlsafe(64)
         return v
     
     # URLs
@@ -113,6 +150,7 @@ class Settings(BaseSettings):
             "capacitor://localhost"
         ]
         
+        env = os.getenv("ENVIRONMENT", "development")
         if isinstance(origins, list):
             # Clean origins: no trailing slashes, no spaces
             origins = [o.strip().rstrip("/") for o in origins if o.strip()]
@@ -120,6 +158,19 @@ class Settings(BaseSettings):
                 clean_domain = domain.strip().rstrip("/")
                 if clean_domain not in origins:
                     origins.append(clean_domain)
+            
+            # Restringir CORS en producción: eliminar localhost y 127.0.0.1 de navegadores
+            if env == "production":
+                origins = [
+                    o for o in origins
+                    if not (
+                        o.startswith("http://localhost") or
+                        o.startswith("http://127.0.0.1") or
+                        ":5173" in o or
+                        ":5174" in o or
+                        ":3000" in o
+                    ) or o == "capacitor://localhost"
+                ]
             return origins
             
         return v
@@ -153,12 +204,23 @@ class Settings(BaseSettings):
     # Data Encryption
     ENCRYPTION_KEY: str = "r4Pn0YDQH7obBlPFuPHzWj_hEWLotrVUHonpkba_fn8="
 
+    @field_validator("ENCRYPTION_KEY", mode="before")
+    @classmethod
+    def validate_encryption_key(cls, v: str) -> str:
+        """Validate ENCRYPTION_KEY and ensure production safety."""
+        env = os.getenv("ENVIRONMENT", "development")
+        if not v:
+            if env == "production":
+                raise ValueError("ENCRYPTION_KEY must be explicitly set in production via .env")
+            return "r4Pn0YDQH7obBlPFuPHzWj_hEWLotrVUHonpkba_fn8="
+        return v
+
     # Email
     SMTP_TLS: bool = True
     SMTP_PORT: int = 587
     SMTP_HOST: str | None = "smtp.gmail.com"
     SMTP_USER: str | None = "multitenant.app@gmail.com"
-    SMTP_PASSWORD: str | None = "tu_password"
+    SMTP_PASSWORD: str | None = None
     
     # Force verified domain sender
     EMAILS_FROM_EMAIL: str | None = "info@costbase.net" 
@@ -169,6 +231,15 @@ class Settings(BaseSettings):
     MINIO_PUBLIC_ENDPOINT: str = "http://localhost:9000" # URL accessible from Browser
     MINIO_ACCESS_KEY: str = "minioadmin"
     MINIO_SECRET_KEY: str = "minioadmin"
+
+    @field_validator("MINIO_SECRET_KEY", mode="before")
+    @classmethod
+    def validate_minio_secret(cls, v: str) -> str:
+        env = os.getenv("ENVIRONMENT", "development")
+        if env == "production" and v == "minioadmin":
+            logger.warning("⚠️ MINIO_SECRET_KEY is using default 'minioadmin' in production. Change it via .env.")
+        return v
+
     MINIO_BUCKET: str = "gynsys-media"
 
     # VAPID (Web Push)

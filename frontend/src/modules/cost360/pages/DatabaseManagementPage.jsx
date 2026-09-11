@@ -11,6 +11,7 @@ import cost360Service from '../services/cost360Service';
 import { useDatabaseContext } from '../../../contexts/DatabaseContext';
 import { AuthContext } from '../../../context/AuthContext';
 import SubscriptionRequestModal from '../../../components/SubscriptionRequestModal';
+import DecimalInput from '../../../components/DecimalInput';
 
 export default function DatabaseManagementPage() {
   const navigate = useNavigate();
@@ -476,13 +477,11 @@ export default function DatabaseManagementPage() {
                     <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1">
                       <DollarSign size={14} /> Materiales (%)
                     </label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="100"
+                    <DecimalInput
+                      min={0}
+                      max={100}
                       value={formData.material_inflation}
-                      onChange={(e) => setFormData({ ...formData, material_inflation: parseFloat(e.target.value) || 0 })}
+                      onChange={(val) => setFormData({ ...formData, material_inflation: val })}
                       className="px-3 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                       placeholder="0"
                     />
@@ -491,13 +490,11 @@ export default function DatabaseManagementPage() {
                     <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1">
                       <Users size={14} /> Mano de Obra (%)
                     </label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="100"
+                    <DecimalInput
+                      min={0}
+                      max={100}
                       value={formData.labor_inflation}
-                      onChange={(e) => setFormData({ ...formData, labor_inflation: parseFloat(e.target.value) || 0 })}
+                      onChange={(val) => setFormData({ ...formData, labor_inflation: val })}
                       className="px-3 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                       placeholder="0"
                     />
@@ -506,13 +503,11 @@ export default function DatabaseManagementPage() {
                     <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1">
                       <Settings size={14} /> Equipos (%)
                     </label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="100"
+                    <DecimalInput
+                      min={0}
+                      max={100}
                       value={formData.equipment_inflation}
-                      onChange={(e) => setFormData({ ...formData, equipment_inflation: parseFloat(e.target.value) || 0 })}
+                      onChange={(val) => setFormData({ ...formData, equipment_inflation: val })}
                       className="px-3 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                       placeholder="0"
                     />
@@ -567,21 +562,33 @@ export default function DatabaseManagementPage() {
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-700">Inflación Materiales</label>
                   <div className="relative">
-                    <input type="number" step="0.1" value={editFormData.material_inflation} onChange={(e) => setEditFormData({ ...editFormData, material_inflation: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white outline-none focus:border-blue-500" />
+                    <DecimalInput 
+                      value={editFormData.material_inflation} 
+                      onChange={(val) => setEditFormData({ ...editFormData, material_inflation: val })} 
+                      className="w-full px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white outline-none focus:border-blue-500" 
+                    />
                     <span className="absolute right-3 top-1 text-slate-400 font-bold">%</span>
                   </div>
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-700">Inflación Mano Obra</label>
                   <div className="relative">
-                    <input type="number" step="0.1" value={editFormData.labor_inflation} onChange={(e) => setEditFormData({ ...editFormData, labor_inflation: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white outline-none focus:border-blue-500" />
+                    <DecimalInput 
+                      value={editFormData.labor_inflation} 
+                      onChange={(val) => setEditFormData({ ...editFormData, labor_inflation: val })} 
+                      className="w-full px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white outline-none focus:border-blue-500" 
+                    />
                     <span className="absolute right-3 top-1 text-slate-400 font-bold">%</span>
                   </div>
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-700">Inflación Equipos</label>
                   <div className="relative">
-                    <input type="number" step="0.1" value={editFormData.equipment_inflation} onChange={(e) => setEditFormData({ ...editFormData, equipment_inflation: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white outline-none focus:border-blue-500" />
+                    <DecimalInput 
+                      value={editFormData.equipment_inflation} 
+                      onChange={(val) => setEditFormData({ ...editFormData, equipment_inflation: val })} 
+                      className="w-full px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white outline-none focus:border-blue-500" 
+                    />
                     <span className="absolute right-3 top-1 text-slate-400 font-bold">%</span>
                   </div>
                 </div>

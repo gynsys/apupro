@@ -25,11 +25,26 @@ from app.schemas.cost360 import (
 from app.core.logging import logger
 
 def set_schema_for_db(db: Session, database_id: str) -> None:
-    if database_id and database_id not in ["master", "personalizada"] and re.match(r'^[a-zA-Z0-9_\-]+$', database_id):
-        try:
+    """Establece de forma segura el search_path para el esquema de la base de datos solicitada.
+    Valida el formato del identificador y verifica su existencia en PostgreSQL mediante consulta parametrizada
+    para prevenir inyección SQL.
+    """
+    if not database_id or database_id in ["master", "personalizada"]:
+        return
+    if not re.match(r'^[a-zA-Z0-9_]+$', database_id):
+        logger.warning(f"Identificador de esquema rechazado por formato inválido: {database_id}")
+        return
+    try:
+        exists = db.execute(
+            text("SELECT 1 FROM information_schema.schemata WHERE schema_name = :schema"),
+            {"schema": database_id}
+        ).scalar()
+        if exists:
             db.execute(text(f'SET LOCAL search_path TO "{database_id}", public'))
-        except Exception as e:
-            logger.error(f"Error setting schema for database {database_id}: {e}", exc_info=True)
+        else:
+            logger.warning(f"El esquema '{database_id}' no existe en PostgreSQL. search_path no modificado.")
+    except Exception as e:
+        logger.error(f"Error setting schema for database {database_id}: {e}", exc_info=True)
 
 def clean_cell_str(val: Any) -> str:
     if val is None:

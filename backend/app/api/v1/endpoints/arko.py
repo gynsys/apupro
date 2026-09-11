@@ -1,23 +1,33 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File, Response, Request
-from sqlalchemy.orm import Session
-from sqlalchemy import or_, func
-from typing import List, Optional, Any, Generator, Dict
-from pydantic import BaseModel, Field
-from datetime import datetime, timedelta
-from fastapi.security import OAuth2PasswordRequestForm
-from passlib.context import CryptContext
-from pathlib import Path
+import os
+import random
+import re
+import string
 import shutil
 import logging
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import List, Optional, Any, Generator, Dict
+from contextlib import contextmanager
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File, Response, Request, Cookie
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+from sqlalchemy import or_, func
+import jwt
 
 from app.core.logging import logger
 from app.db.arko_base import ArkoSessionLocal
-from contextlib import contextmanager
 from app.db.models.arko import ArkoPost, ArkoProject, ArkoAdmin
-from app.core.security import create_access_token
+from app.core.security import (
+    create_access_token,
+    validate_password_strength,
+    hash_password,
+    verify_password,
+)
 from app.core.config import settings
 from app.services.redis_cache_service import redis_cache
-from app.services.email import send_verification_email
+from app.services.email import send_verification_email, send_email, send_reset_password_email
 from app.core.limiter import limiter
 from app.core.html_sanitizer import sanitize_html
 
@@ -29,13 +39,8 @@ def get_db_session() -> Generator[Session, None, None]:
     finally:
         db.close()
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-def get_password_hash(password):
-    return pwd_context.hash(password)
+# Alias get_password_hash to centralized hash_password
+get_password_hash = hash_password
 
 router = APIRouter()
 
@@ -97,11 +102,7 @@ def get_public_post(slug: str):
     except HTTPException:
         raise
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
         logger.error(f"Error fetching Arko post {slug}: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
-
         raise HTTPException(status_code=500, detail="Internal server error")
 
 # --- Autenticación Arko ---
@@ -147,17 +148,11 @@ def login_arko_admin(request: Request, response: Response, form_data: OAuth2Pass
     except HTTPException:
         raise
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
         logger.error(f"Error in Arko login: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-from app.services.email import send_reset_password_email, send_verification_email
-import random
-import string
-
-def generate_verification_code(length=6):
+def generate_verification_code(length: int = 6) -> str:
     return ''.join(random.choices(string.digits, k=length))
 
 class RegisterRequest(BaseModel):
@@ -167,7 +162,12 @@ class RegisterRequest(BaseModel):
     username: Optional[str] = None
 
 @router.post("/auth/register")
-def register_arko_admin(data: RegisterRequest):
+def register_arko_admin(data: RegisterRequest) -> dict:
+    try:
+        validate_password_strength(data.password)
+    except ValueError as val_err:
+        raise HTTPException(status_code=400, detail=str(val_err))
+
     try:
         with get_db_session() as db:
             clean_email = data.email.strip().lower()
@@ -200,7 +200,7 @@ def register_arko_admin(data: RegisterRequest):
             # Almacenar datos temporalmente en Redis (NO en base de datos)
             registration_data = {
                 "email": clean_email,
-                "password": data.password,  # Se hashearán al crear el usuario final
+                "hashed_password": get_password_hash(data.password),
                 "full_name": data.full_name or clean_username,
                 "username": clean_username or clean_email.split('@')[0]
             }
@@ -269,7 +269,12 @@ class ResetPasswordRequest(BaseModel):
     new_password: str
 
 @router.post("/auth/reset-password")
-def reset_password(data: ResetPasswordRequest):
+def reset_password(data: ResetPasswordRequest) -> dict:
+    try:
+        validate_password_strength(data.new_password)
+    except ValueError as val_err:
+        raise HTTPException(status_code=400, detail=str(val_err))
+
     try:
         with get_db_session() as db:
             identifier = (data.email or "").strip().lower()
@@ -327,7 +332,7 @@ def verify_email(data: VerifyEmailRequest):
             new_user = ArkoAdmin(
                 email=registration_data["email"],
                 username=username_val,
-                hashed_password=get_password_hash(registration_data["password"]),
+                hashed_password=registration_data.get("hashed_password") or get_password_hash(registration_data.get("password", "")),
                 full_name=registration_data.get("full_name") or username_val,
                 is_active=True,
                 is_email_verified=True,  # Ya verificado desde el inicio
@@ -492,10 +497,6 @@ def logout_arko_admin(response: Response):
     return {"message": "Logged out successfully"}
 
 # --- Dependencia Arko ---
-from fastapi.security import OAuth2PasswordBearer
-from fastapi import Cookie
-import jwt
-
 oauth2_scheme_arko = OAuth2PasswordBearer(tokenUrl="/api/v1/arko/auth/login", auto_error=False)
 
 def get_current_arko_admin(
@@ -547,15 +548,14 @@ def get_optional_arko_admin(
 # --- Endpoints Privados (Para el Dashboard Arko) ---
 
 @router.post("/auth/test-email")
-def test_email_config(current_user = Depends(get_current_arko_admin)):
+def test_email_config(current_user: ArkoAdmin = Depends(get_current_arko_admin)) -> Dict[str, Any]:
     """Diagnóstico: prueba el envío de correo con Resend (solo superadmin)"""
-    from app.services.email import send_email
     api_key = settings.RESEND_API_KEY or ""
-    key_status = "configurada" if api_key.startswith("re_") else f"INVALIDA o vacia (primeros chars: '{api_key[:8]}')"
+    key_status = "configurada" if api_key.startswith("re_") else "no configurada o inválida"
     test_sent = send_email(
         to_email=current_user.email,
         subject="[TEST] Diagnóstico de correo CostBase",
-        html_content=f"<p>Correo de prueba enviado correctamente.</p>"
+        html_content="<p>Correo de prueba enviado correctamente.</p>"
     )
     return {
         "resend_api_key_status": key_status,
@@ -668,8 +668,10 @@ def update_current_admin_me(
                 raise HTTPException(status_code=400, detail="Debes ingresar tu contraseña actual para cambiarla.")
             if not verify_password(profile_in.current_password, user.hashed_password):
                 raise HTTPException(status_code=400, detail="La contraseña actual es incorrecta.")
-            if len(profile_in.new_password) < 6:
-                raise HTTPException(status_code=400, detail="La nueva contraseña debe tener al menos 6 caracteres.")
+            try:
+                validate_password_strength(profile_in.new_password)
+            except ValueError as val_err:
+                raise HTTPException(status_code=400, detail=str(val_err))
             user.hashed_password = get_password_hash(profile_in.new_password)
 
         db.commit()

@@ -91,90 +91,113 @@
 
 ## 🟠 VULNERABILIDADES ALTAS
 
-### 4. ⏳ Secretos hardcoded en configuración
-- **Estado:** PENDIENTE
+### 4. ✅ Secretos hardcoded en configuración
+- **Estado:** COMPLETADO
 - **Severidad:** ALTA
-- **Archivos a modificar:**
-  - ⏳ `backend/app/core/config.py`
-- **Acciones requeridas:**
-  - Remover valores por defecto de DATABASE_URL, SECRET_KEY, ENCRYPTION_KEY, SMTP_PASSWORD, MINIO_SECRET_KEY
-  - Agregar validación que obligue a definir estos valores en .env
-  - Crear .env.example con instrucciones
+- **Archivos modificados:**
+  - ✅ `backend/app/core/config.py` - Variable explícita ENVIRONMENT, validación fail-fast en producción para DATABASE_URL, SECRET_KEY, ENCRYPTION_KEY y MINIO_SECRET_KEY. Fallback seguro con warnings en desarrollo.
+  - ✅ `backend/.env.example` - Plantilla documentada con ejemplos y comandos de generación aleatoria segura.
+- **Implementación:**
+  - `validate_secret_key`: Falla en producción si la clave está vacía o usa valores por defecto conocidos.
+  - `validate_database_url`: Falla en producción si contiene contraseñas conocidas de prueba o referencias inseguras.
+  - `validate_encryption_key`: Valida clave Fernet en producción.
+  - `SMTP_PASSWORD`: Default cambiado a None.
 
 ---
 
-### 5. ⏳ SQL Injection potencial en SET search_path
-- **Estado:** PENDIENTE
+### 5. ✅ SQL Injection potencial en SET search_path
+- **Estado:** COMPLETADO
 - **Severidad:** ALTA
-- **Archivos a modificar:**
-  - ⏳ `backend/app/api/v1/endpoints/cost360.py`
-- **Acciones requeridas:**
-  - Implementar whitelist de schemas permitidos
-  - Usar parameterized queries en lugar de f-strings
+- **Archivos modificados:**
+  - ✅ `backend/app/api/v1/endpoints/cost360.py` - Sanitización y validación estricta en `set_schema_for_db`.
+  - ✅ `backend/app/crud/crud_cost360.py` - `validate_schema_name` aplicado en clonación física y eliminación de esquemas; remoción de imports inline y prints.
+- **Implementación:**
+  - Whitelist estricta de caracteres mediante regex (`^[a-zA-Z0-9_]+$`).
+  - Verificación previa de existencia en PostgreSQL con query parametrizada contra `information_schema.schemata` (`WHERE schema_name = :schema`).
+  - Inyecciones y caracteres maliciosos son rechazados antes de cualquier ejecución SQL.
 
 ---
 
-### 6. ⏳ Upload de archivos sin validación de tipo MIME y tamaño
-- **Estado:** PENDIENTE
+### 6. ✅ Upload de archivos sin validación de tipo MIME y tamaño
+- **Estado:** COMPLETADO
 - **Severidad:** ALTA
-- **Archivos a modificar:**
-  - ⏳ `backend/app/api/v1/endpoints/uploads.py`
-- **Acciones requeridas:**
-  - Instalar python-magic
-  - Validar MIME type real del archivo
-  - Validar tamaño máximo
-  - Sanitizar filename para prevenir path traversal
+- **Archivos modificados:**
+  - ✅ `backend/app/api/v1/endpoints/uploads.py` - Reescrito conforme a Reglas de Oro (imports arriba, sin pass, type hints completos).
+- **Implementación:**
+  - Validación de tamaño máximo (5MB) chunk a chunk con corte inmediato (HTTP 413) previniendo ataques de denegación de servicio (DoS).
+  - Validación de firma binaria real (Magic Bytes) para audio (`.mp3`, `.wav`, `.ogg`, `.m4a`, `.aac`).
+  - Verificación de integridad de imagen mediante Pillow (`Image.open().verify()`) para medios (`.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`).
+  - Prevención de Path Traversal mediante nombres deterministas seguros con timestamp + UUID hex y sanitización del display name.
 
 ---
 
-### 7. ⏳ WebSocket sin autenticación
-- **Estado:** PENDIENTE
+### 7. ✅ WebSocket sin autenticación
+- **Estado:** COMPLETADO
 - **Severidad:** ALTA
-- **Archivos a modificar:**
-  - ⏳ `backend/app/api/v1/endpoints/scraping_ws.py`
-- **Acciones requeridas:**
-  - Implementar validación de token en conexión WebSocket
-  - Agregar get_current_user_ws function
+- **Archivos modificados:**
+  - ✅ `backend/app/api/v1/endpoints/scraping_ws.py` - Autenticación estricta con token/cookie y verificación de rol admin.
+  - ✅ `backend/app/api/v1/endpoints/scraping.py` - Endpoints REST protegidos con `Depends(get_current_arko_admin)` e inyección limpia de sesión de base de datos.
+- **Implementación:**
+  - `authenticate_websocket`: Lee cookie `arko_admin_token`, query param `?token=` o header `Authorization: Bearer`.
+  - Cierre inmediato de sockets no autorizados con código WS `1008` (Policy Violation).
+  - Reemplazo de `except: pass` y `print()` por logging estructurado y tipado completo.
 
 ---
 
 ## 🟡 VULNERABILIDADES MEDIAS
 
-### 8. ⏳ CORS permite origins específicos pero también incluye localhost en producción
-- **Estado:** PENDIENTE
+### 8. ✅ CORS permite origins específicos pero también incluye localhost en producción
+- **Estado:** COMPLETADO
 - **Severidad:** MEDIA
-- **Archivos a modificar:**
-  - ⏳ `backend/app/core/config.py`
+- **Archivos modificados:**
+  - ✅ `backend/app/core/config.py` - Validador `assemble_cors_origins` filtra automáticamente puertos y dominios locales (`localhost`, `127.0.0.1`, `:5173`, `:5174`, `:3000`) cuando `ENVIRONMENT=production`.
+- **Implementación:**
+  - En producción, únicamente se admiten los dominios verificados de la plataforma (`https://*.arko360.net`, `https://*.costbase.net`) y esquemas móviles (`capacitor://localhost`).
+  - En desarrollo, se preservan los puertos locales para pruebas locales ágiles.
 
 ---
 
-### 9. ⏳ No hay Content Security Policy (CSP) headers
-- **Estado:** PENDIENTE
+### 9. ✅ No hay Content Security Policy (CSP) headers
+- **Estado:** COMPLETADO
 - **Severidad:** MEDIA
-- **Archivos a modificar:**
-  - ⏳ `backend/app/main.py`
+- **Archivos modificados:**
+  - ✅ `backend/app/main.py` - Implementado middleware global de cabeceras de seguridad y CSP; consolidación de imports al inicio del archivo.
+- **Implementación:**
+  - Inyección de cabeceras HTTP:
+    - `Content-Security-Policy`: Restricción estricta de orígenes autorizados para scripts, estilos, fuentes, imágenes y WebSockets.
+    - `X-Content-Type-Options: nosniff` (previene MIME-sniffing).
+    - `X-Frame-Options: DENY` (previene ataques de clickjacking).
+    - `X-XSS-Protection: 1; mode=block`.
+    - `Referrer-Policy: strict-origin-when-cross-origin`.
 
 ---
 
-### 10. ⏳ Expiración de token JWT demasiado larga (7 días)
-- **Estado:** PENDIENTE
+### 10. ✅ Expiración de token JWT demasiado larga (7 días)
+- **Estado:** COMPLETADO
 - **Severidad:** MEDIA
-- **Archivos a modificar:**
-  - ⏳ `backend/app/core/config.py`
-  - ⏳ `backend/app/core/security.py`
-  - ⏳ `backend/app/api/v1/endpoints/arko.py`
+- **Archivos modificados:**
+  - ✅ `backend/app/core/config.py` - `ACCESS_TOKEN_EXPIRE_MINUTES` reducido de 10,080 minutos (7 días) a 1,440 minutos (24 horas).
+  - ✅ `backend/app/core/security.py` - Token JWT generado con expiración sincronizada con settings.
+  - ✅ `backend/app/api/v1/endpoints/arko.py` - Cookie httpOnly `arko_admin_token` configurada con `max_age` sincronizado a 24 horas.
+- **Implementación:**
+  - Se redujo la ventana de exposición en caso de compromiso de token a un máximo de 24 horas, requiriendo re-autenticación al expirar.
 
 ---
 
-### 11. ⏳ Logging de información sensible
-- **Estado:** PENDIENTE
+### 11. ✅ Logging de información sensible
+- **Estado:** COMPLETADO
 - **Severidad:** MEDIA
-- **Archivos a modificar:**
-  - ⏳ Múltiples archivos de endpoints
+- **Archivos modificados:**
+  - ✅ `backend/app/services/redis_cache_service.py` - Eliminados todos los `print()`; sustituidos por `logger.error(..., exc_info=True)`.
+  - ✅ `backend/app/api/v1/endpoints/arko.py`:
+    - En registro de usuarios, las contraseñas se almacenan en Redis **ya hasheadas con bcrypt** (`hashed_password`), eliminando passwords en texto plano de la memoria y caché.
+    - Eliminada la visualización y logging de los primeros caracteres de `RESEND_API_KEY`.
+    - Eliminados imports de `logging` y `send_email` dentro de funciones.
+  - ✅ `backend/app/api/v1/endpoints/cost360_databases.py` - Sanitizado el logging en creación de bases de datos para no volcar payloads completos en texto plano.
 
 ---
 
-### 12. ⏳ Dependencia vulnerable de Quill (XSS)
+### 12. ✅ Dependencia vulnerable de Quill (XSS)
 - **Estado:** COMPLETADO (mitigado con bleach)
 - **Severidad:** MEDIA
 - **Nota:** Sanitización implementada en backend
@@ -183,38 +206,68 @@
 
 ## 🟢 VULNERABILIDADES BAJAS
 
-### 13. ⏳ No hay validación de fortaleza de contraseña
-- **Estado:** PENDIENTE
+### 13. ✅ No hay validación de fortaleza de contraseña
+- **Estado:** COMPLETADO
 - **Severidad:** BAJA
+- **Archivos modificados:**
+  - ✅ `backend/app/core/security.py` - Implementada función centralizada `validate_password_strength(password: str) -> None`.
+  - ✅ `backend/app/api/v1/endpoints/arko.py` - Validación temprana (fail-fast) en endpoints `/auth/register`, `/auth/reset-password` y `/me` (actualización de perfil).
+- **Implementación:**
+  - Requisitos de fortaleza obligatorios:
+    - Longitud mínima de 8 caracteres.
+    - Longitud máxima de 72 bytes (límite UTF-8 de bcrypt).
+    - Al menos una letra mayúscula (`[A-Z]`).
+    - Al menos una letra minúscula (`[a-z]`).
+    - Al menos un dígito numérico (`[0-9]`).
+  - Validación al inicio de la función (fail-fast) que rechaza contraseñas débiles con código HTTP 400 antes de interactuar con la base de datos o Redis.
 
 ---
 
-### 14. ⏳ No hay headers de seguridad en responses de archivos estáticos
-- **Estado:** PENDIENTE
+### 14. ✅ No hay headers de seguridad en responses de archivos estáticos
+- **Estado:** COMPLETADO
 - **Severidad:** BAJA
+- **Archivos modificados:**
+  - ✅ `backend/app/main.py` - Subclase `SecureStaticFiles(StaticFiles)` sobreescribiendo `get_response`.
+- **Implementación:**
+  - Debido a que las aplicaciones estáticas montadas en FastAPI/Starlette con `app.mount()` eluden los middlewares HTTP estándar, se implementó `SecureStaticFiles` inyectando directamente en cada respuesta servida en `/uploads`:
+    - `X-Content-Type-Options: nosniff` (previene MIME-sniffing de archivos multimedia/adjuntos).
+    - `X-Frame-Options: DENY` (previene clickjacking o incrustación de adjuntos en iframes maliciosos).
+    - `Cache-Control: public, max-age=86400` (control óptimo de almacenamiento en caché de clientes).
 
 ---
 
-### 15. ⏳ DEBUG flag podría estar activado en producción
-- **Estado:** PENDIENTE
+### 15. ✅ DEBUG flag podría estar activado en producción
+- **Estado:** COMPLETADO
 - **Severidad:** BAJA
+- **Archivos modificados:**
+  - ✅ `backend/app/core/config.py` - Añadido campo `DEBUG: bool = False` con validador Pydantic `@field_validator("DEBUG", mode="before")`.
+  - ✅ `backend/app/main.py` - Instanciación de `FastAPI(..., debug=settings.DEBUG, ...)`.
+- **Implementación:**
+  - Cuando `ENVIRONMENT=production`, el validador fuerza automáticamente `DEBUG=False` e imprime advertencia en logs si se intentó activar vía variable de entorno, previniendo fuga de trazas de error (stack traces) y schemas internos a usuarios finales.
 
 ---
 
-### 16. ⏳ Bcrypt truncación de contraseñas largas
-- **Estado:** PENDIENTE
+### 16. ✅ Bcrypt truncación de contraseñas largas
+- **Estado:** COMPLETADO
 - **Severidad:** BAJA
+- **Archivos modificados:**
+  - ✅ `backend/app/core/security.py` - Funciones `hash_password` y `verify_password` actualizadas.
+  - ✅ `backend/app/api/v1/endpoints/arko.py` - Unificado uso directo de `hash_password` y `verify_password`.
+- **Implementación:**
+  - En `hash_password`, si la contraseña codificada en UTF-8 supera los 72 bytes, se rechaza de inmediato lanzando `ValueError` en lugar de truncar silenciosamente.
+  - En `verify_password`, si el texto plano supera los 72 bytes UTF-8, retorna de inmediato `False` sin someterlo a la comparación de los primeros 72 bytes.
+  - Se eliminó el uso obsoleto de `passlib.context.CryptContext` en `arko.py`, resolviendo simultáneamente una incompatibilidad con versiones modernas de `bcrypt` (4.x+) en Python 3.14.
 
 ---
 
 ## 📊 RESUMEN DE PROGRESO
 
 - **CRÍTICAS:** 3/3 completadas (100%)
-- **ALTAS:** 0/4 completadas (0%)
-- **MEDIAS:** 1/5 completadas (20%)
-- **BAJAS:** 0/4 completadas (0%)
+- **ALTAS:** 4/4 completadas (100%)
+- **MEDIAS:** 5/5 completadas (100%)
+- **BAJAS:** 4/4 completadas (100%)
 
-**Total:** 4/16 completadas (25%)
+**Total:** 16/16 completadas (100%)
 
 ---
 

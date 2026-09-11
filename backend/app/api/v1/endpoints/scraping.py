@@ -9,6 +9,10 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 import requests
+
+from app.db.base import get_db
+from app.api.v1.endpoints.arko import get_current_arko_admin
+from app.db.models.arko import ArkoAdmin
 try:
     import cloudscraper
 except ImportError:
@@ -306,8 +310,8 @@ def scraping_seguro_configurable():
 
 # --- ENDPOINTS DE CONTROL ---
 @router.post("/start")
-async def start_scraping():
-    """Iniciar el bot de scraping"""
+async def start_scraping(current_user: ArkoAdmin = Depends(get_current_arko_admin)) -> Dict[str, Any]:
+    """Iniciar el bot de scraping (requiere admin)"""
     if bot_state.status == "running":
         raise HTTPException(status_code=400, detail="El bot ya está ejecutándose")
     
@@ -322,8 +326,8 @@ async def start_scraping():
     return {"status": "started", "message": "Bot iniciado en background"}
 
 @router.post("/pause")
-async def pause_scraping():
-    """Pausar el bot de scraping"""
+async def pause_scraping(current_user: ArkoAdmin = Depends(get_current_arko_admin)) -> Dict[str, Any]:
+    """Pausar el bot de scraping (requiere admin)"""
     if bot_state.status != "running":
         raise HTTPException(status_code=400, detail="El bot no está ejecutándose")
     
@@ -332,8 +336,8 @@ async def pause_scraping():
     return {"status": "paused", "message": "Bot pausado"}
 
 @router.post("/resume")
-async def resume_scraping():
-    """Reanudar el bot de scraping"""
+async def resume_scraping(current_user: ArkoAdmin = Depends(get_current_arko_admin)) -> Dict[str, Any]:
+    """Reanudar el bot de scraping (requiere admin)"""
     if bot_state.status != "paused":
         raise HTTPException(status_code=400, detail="El bot no está pausado")
     
@@ -342,8 +346,8 @@ async def resume_scraping():
     return {"status": "resumed", "message": "Bot reanudado"}
 
 @router.post("/kill")
-async def kill_scraping():
-    """Detener completamente el bot de scraping"""
+async def kill_scraping(current_user: ArkoAdmin = Depends(get_current_arko_admin)) -> Dict[str, Any]:
+    """Detener completamente el bot de scraping (requiere admin)"""
     bot_state.stop_flag = True
     bot_state.pause_flag = False
     bot_state.set_status("idle")
@@ -355,12 +359,12 @@ async def kill_scraping():
 
 # --- ENDPOINTS DE CONFIGURACIÓN ---
 @router.get("/config")
-async def get_config():
-    """Obtener configuración actual"""
+async def get_config(current_user: ArkoAdmin = Depends(get_current_arko_admin)) -> ScrapingConfig:
+    """Obtener configuración actual del bot"""
     return bot_state.config
 
 @router.put("/config")
-async def update_config(config: ScrapingConfig):
+async def update_config(config: ScrapingConfig, current_user: ArkoAdmin = Depends(get_current_arko_admin)) -> Dict[str, Any]:
     """Actualizar configuración del bot"""
     bot_state.config = config
     bot_state.add_log("INFO", f"Configuración actualizada: {config}")
@@ -368,7 +372,7 @@ async def update_config(config: ScrapingConfig):
 
 # --- ENDPOINTS DE ESTADO Y LOGS ---
 @router.get("/status")
-async def get_status():
+async def get_status(current_user: ArkoAdmin = Depends(get_current_arko_admin)) -> Dict[str, Any]:
     """Obtener estado actual del bot"""
     return {
         "status": bot_state.status,
@@ -377,65 +381,71 @@ async def get_status():
     }
 
 @router.get("/logs")
-async def get_logs(limit: int = 100):
+async def get_logs(limit: int = 100, current_user: ArkoAdmin = Depends(get_current_arko_admin)) -> List[Dict[str, Any]]:
     """Obtener logs del bot"""
     return bot_state.logs[-limit:]
 
 @router.delete("/logs")
-async def clear_logs():
+async def clear_logs(current_user: ArkoAdmin = Depends(get_current_arko_admin)) -> Dict[str, Any]:
     """Limpiar logs del bot"""
     bot_state.logs = []
     return {"status": "cleared"}
 
 # --- ENDPOINTS DE PENDING RESULTS (MANTENIDOS DEL ORIGINAL) ---
 @router.get("/pending")
-async def get_pending_scraping_results():
-    from app.db.base import get_db
-    with get_db() as db:
-        results = db.execute(text('''
-            SELECT h.id, h.material_id, h.precio as scraped_price, h.fuente, h.fecha, h.titulo_scraped, c."Descri" as db_desc, c."CosMat" as db_price 
-            FROM historial_precios h 
-            JOIN cost360_materials c ON h.material_id = c."CodMat" 
-            WHERE h.status = 'pending' 
-            ORDER BY h.created_at DESC
-        ''')).fetchall()
-        
-        return [
-            {
-                "id": r[0],
-                "material_id": r[1],
-                "scraped_price": float(r[2]),
-                "fuente": r[3],
-                "fecha": str(r[4]),
-                "titulo_scraped": r[5],
-                "db_desc": r[6],
-                "db_price": float(r[7]) if r[7] else 0.0
-            } for r in results
-        ]
+async def get_pending_scraping_results(
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin)
+) -> List[Dict[str, Any]]:
+    results = db.execute(text('''
+        SELECT h.id, h.material_id, h.precio as scraped_price, h.fuente, h.fecha, h.titulo_scraped, c."Descri" as db_desc, c."CosMat" as db_price 
+        FROM historial_precios h 
+        JOIN cost360_materials c ON h.material_id = c."CodMat" 
+        WHERE h.status = 'pending' 
+        ORDER BY h.created_at DESC
+    ''')).fetchall()
+    
+    return [
+        {
+            "id": r[0],
+            "material_id": r[1],
+            "scraped_price": float(r[2]),
+            "fuente": r[3],
+            "fecha": str(r[4]),
+            "titulo_scraped": r[5],
+            "db_desc": r[6],
+            "db_price": float(r[7]) if r[7] else 0.0
+        } for r in results
+    ]
 
 class ApproveRequest(BaseModel):
     price: float
 
 @router.post("/approve/{result_id}")
-async def approve_scraping_result(result_id: int, req: ApproveRequest):
-    from app.db.base import get_db
-    with get_db() as db:
-        row = db.execute(text("SELECT material_id FROM historial_precios WHERE id = :id AND status = 'pending'"), {"id": result_id}).fetchone()
-        if not row:
-            raise HTTPException(status_code=404, detail="Result not found or already processed")
-            
-        mat_id = row[0]
+async def approve_scraping_result(
+    result_id: int,
+    req: ApproveRequest,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin)
+) -> Dict[str, Any]:
+    row = db.execute(text("SELECT material_id FROM historial_precios WHERE id = :id AND status = 'pending'"), {"id": result_id}).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Result not found or already processed")
         
-        db.execute(text("UPDATE historial_precios SET status = 'approved', precio = :price WHERE id = :id"), {"id": result_id, "price": req.price})
-        db.execute(text("UPDATE cost360_materials SET \"CosMat\" = :price WHERE \"CodMat\" = :mat_id"), {"price": req.price, "mat_id": mat_id})
-        
-        db.commit()
+    mat_id = row[0]
+    
+    db.execute(text("UPDATE historial_precios SET status = 'approved', precio = :price WHERE id = :id"), {"id": result_id, "price": req.price})
+    db.execute(text("UPDATE cost360_materials SET \"CosMat\" = :price WHERE \"CodMat\" = :mat_id"), {"price": req.price, "mat_id": mat_id})
+    
+    db.commit()
     return {"status": "success"}
 
 @router.post("/reject/{result_id}")
-async def reject_scraping_result(result_id: int):
-    from app.db.base import get_db
-    with get_db() as db:
-        db.execute(text("UPDATE historial_precios SET status = 'rejected' WHERE id = :id"), {"id": result_id})
-        db.commit()
+async def reject_scraping_result(
+    result_id: int,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin)
+) -> Dict[str, Any]:
+    db.execute(text("UPDATE historial_precios SET status = 'rejected' WHERE id = :id"), {"id": result_id})
+    db.commit()
     return {"status": "success"}

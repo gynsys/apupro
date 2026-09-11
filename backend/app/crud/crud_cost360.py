@@ -14,6 +14,15 @@ import uuid
 import json
 import unicodedata
 import re
+import logging
+
+logger = logging.getLogger(__name__)
+
+def validate_schema_name(schema_name: str) -> bool:
+    """Valida estrictamente que el nombre de un esquema PostgreSQL sea alfanumérico con guiones bajos."""
+    if not schema_name or not isinstance(schema_name, str):
+        return False
+    return bool(re.match(r'^[a-zA-Z0-9_]+$', schema_name))
 
 def strip_accents(s: str) -> str:
     if not s:
@@ -487,19 +496,18 @@ def create_database(db: Session, payload: Cost360DatabaseCreate, created_by: Opt
     se guardan como metadatos. El precio con factor se calcula dinámicamente en los
     endpoints de consulta (estrategia de precio virtual), sin duplicar filas de datos.
     """
-    import logging
-    logger = logging.getLogger(__name__)
-
     source_id = payload.source_database_id or 'master'
     source_db = get_database_by_id(db, source_id)
     if not source_db and source_id != 'master':
         raise ValueError(f"Base de datos origen '{source_id}' no encontrada")
 
-    import re
     clean_name = re.sub(r'[^a-z0-9_]', '', payload.name.lower().replace(' ', '_'))
     if not clean_name:
         clean_name = 'db'
     new_db_id = f"{clean_name}_{str(uuid.uuid4())[:8]}"
+
+    if not validate_schema_name(new_db_id):
+        raise ValueError(f"Identificador de esquema generado no válido: {new_db_id}")
 
     logger.warning(f"[CREATE_DB_CRUD] Creating DB id={new_db_id} source={source_id} owner={created_by}")
 
@@ -522,6 +530,8 @@ def create_database(db: Session, payload: Cost360DatabaseCreate, created_by: Opt
     # Clonación Física vía Esquemas de PostgreSQL
     try:
         source_schema = "public" if source_id == "master" else source_id
+        if not validate_schema_name(source_schema):
+            raise ValueError(f"Identificador de esquema origen no válido: {source_schema}")
         logger.warning(f"[CREATE_DB_CRUD] Creating schema={new_db_id} from source_schema={source_schema}")
         
         # 1. Crear el esquema
@@ -596,18 +606,21 @@ def delete_database(db: Session, database_id: str):
     
     # NUEVA LÓGICA: Si es la personalizada, limpiar la tabla nativa
     if database_id == "personalizada":
-        from app.db.models.cost360 import CustomCostItem
         db.query(CustomCostItem).delete()
         db.commit()
         return True
     
+    # Validar que el identificador del esquema sea seguro
+    if not validate_schema_name(database_id):
+        raise ValueError(f"Identificador de esquema no válido: {database_id}")
+
     # Eliminar el esquema físico en PostgreSQL
     try:
         db.execute(text(f'DROP SCHEMA IF EXISTS "{database_id}" CASCADE'))
         db.commit()
     except Exception as e:
         db.rollback()
-        print(f"Advertencia: No se pudo eliminar el esquema físico {database_id}: {e}")
+        logger.error(f"Advertencia: No se pudo eliminar el esquema físico {database_id}: {e}", exc_info=True)
         
     return True
 

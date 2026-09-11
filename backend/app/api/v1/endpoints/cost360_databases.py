@@ -189,7 +189,7 @@ def create_database_route(payload: Cost360DatabaseCreate, db: Session = Depends(
                     else:
                         limit = 2
 
-        logger.warning(f"[CREATE_DB] limit={limit} payload={payload.dict()}")
+        logger.info(f"[CREATE_DB] limit={limit} db_name={payload.name} source={payload.source_database_id}")
 
         if limit is not None:
             current_db_count = db.query(Cost360Database).filter(

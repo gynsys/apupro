@@ -4,6 +4,7 @@ import { numeroALetras } from '../utils/numberToLetters';
 import EquipmentSelectorModal from './EquipmentSelectorModal';
 import MaterialSelectorModal from './MaterialSelectorModal';
 import LaborSelectorModal from './LaborSelectorModal';
+import DecimalInput from './DecimalInput';
 
 export default function ApuEditorUI({
   item,
@@ -262,12 +263,11 @@ export default function ApuEditorUI({
           </div>
           <div className="flex-1 p-3 border-r border-slate-100 min-w-[150px] bg-amber-50/30">
             <span className="block text-xs font-bold text-amber-700/70 uppercase mb-1">Rendimiento</span>
-            <input 
-              type="number" 
-              className="w-full bg-amber-100/50 border-b-2 border-amber-300 focus:border-amber-500 focus:outline-none focus:bg-amber-100 px-1 font-bold text-amber-900 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            <DecimalInput 
+              className="w-full bg-amber-100/50 border-b-2 border-amber-300 focus:border-amber-500 focus:outline-none focus:bg-amber-100 px-1 font-bold text-amber-900 transition-colors"
               value={item.performance || item.rendimiento || 1}
-              onChange={e => safeFn(onHeaderChange)('performance', e.target.value)}
-              onBlur={e => safeFn(onHeaderBlur)('performance', e.target.value)}
+              onChange={(val) => safeFn(onHeaderChange)('performance', val)}
+              onBlur={(val) => safeFn(onHeaderBlur)('performance', val)}
             />
           </div>
           <div className="flex-1 p-3 min-w-[150px] bg-blue-50/50">
@@ -356,30 +356,27 @@ export default function ApuEditorUI({
                       />
                     </td>
                     <td className="p-2 border-r border-slate-200 bg-amber-50/40">
-                      <input 
-                        type="number" 
-                        className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium [appearance:textfield]"
+                      <DecimalInput 
+                        className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium"
                         value={mat.cantidad}
-                        onChange={e => safeFn(onComponentChange)('materials', mat.id, 'cantidad', e.target.value)}
-                        onBlur={e => safeFn(onComponentBlur)('materials', mat.id, 'cantidad', e.target.value)}
-                        />
-                    </td>
-                    <td className="p-2 border-r border-slate-200 bg-amber-50/40">
-                      <input 
-                        type="number" 
-                        className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium [appearance:textfield]"
-                        value={mat.desperdicio || 0}
-                        onChange={e => safeFn(onComponentChange)('materials', mat.id, 'desperdicio', e.target.value)}
-                        onBlur={e => safeFn(onComponentBlur)('materials', mat.id, 'desperdicio', e.target.value)}
+                        onChange={(val) => safeFn(onComponentChange)('materials', mat.id, 'cantidad', val)}
+                        onBlur={(val) => safeFn(onComponentBlur)('materials', mat.id, 'cantidad', val)}
                       />
                     </td>
                     <td className="p-2 border-r border-slate-200 bg-amber-50/40">
-                      <input 
-                        type="number" 
-                        className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium [appearance:textfield]"
+                      <DecimalInput 
+                        className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium"
+                        value={mat.desperdicio ?? 0}
+                        onChange={(val) => safeFn(onComponentChange)('materials', mat.id, 'desperdicio', val)}
+                        onBlur={(val) => safeFn(onComponentBlur)('materials', mat.id, 'desperdicio', val)}
+                      />
+                    </td>
+                    <td className="p-2 border-r border-slate-200 bg-amber-50/40">
+                      <DecimalInput 
+                        className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium"
                         value={Number((mat.precio_unitario * exRate).toFixed(2))}
-                        onChange={e => safeFn(onComponentChange)('materials', mat.id, 'precio_unitario', parseFloat(e.target.value) / exRate)}
-                        onBlur={e => safeFn(onComponentBlur)('materials', mat.id, 'precio_unitario', parseFloat(e.target.value) / exRate)}
+                        onChange={(val) => safeFn(onComponentChange)('materials', mat.id, 'precio_unitario', val / exRate)}
+                        onBlur={(val) => safeFn(onComponentBlur)('materials', mat.id, 'precio_unitario', val / exRate)}
                       />
                     </td>
                     <td className="p-2 text-right font-semibold text-slate-700 bg-slate-50 text-xs border-r border-slate-200">
@@ -486,30 +483,27 @@ export default function ApuEditorUI({
                       )}
                     </td>
                     <td className="p-2 border-r border-slate-200 bg-amber-50/40">
-                      <input 
-                        type="number" 
-                        className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium [appearance:textfield]"
+                      <DecimalInput 
+                        className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium"
                         value={eq.cantidad}
-                        onChange={e => safeFn(onComponentChange)('equipments', eq.id, 'cantidad', e.target.value)}
-                        onBlur={e => safeFn(onComponentBlur)('equipments', eq.id, 'cantidad', e.target.value)}
+                        onChange={(val) => safeFn(onComponentChange)('equipments', eq.id, 'cantidad', val)}
+                        onBlur={(val) => safeFn(onComponentBlur)('equipments', eq.id, 'cantidad', val)}
                       />
                     </td>
                     <td className="p-2 border-r border-slate-200 bg-amber-50/40">
-                      <input 
-                        type="number" 
-                        className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium [appearance:textfield]"
+                      <DecimalInput 
+                        className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium"
                         value={eq.depreciacion ?? 1.0}
-                        onChange={e => safeFn(onComponentChange)('equipments', eq.id, 'depreciacion', e.target.value)}
-                        onBlur={e => safeFn(onComponentBlur)('equipments', eq.id, 'depreciacion', e.target.value)}
+                        onChange={(val) => safeFn(onComponentChange)('equipments', eq.id, 'depreciacion', val)}
+                        onBlur={(val) => safeFn(onComponentBlur)('equipments', eq.id, 'depreciacion', val)}
                       />
                     </td>
                     <td className="p-2 border-r border-slate-200 bg-amber-50/40">
-                      <input 
-                        type="number" 
-                        className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium [appearance:textfield]"
+                      <DecimalInput 
+                        className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium"
                         value={Number((eq.precio_unitario * exRate).toFixed(2))}
-                        onChange={e => safeFn(onComponentChange)('equipments', eq.id, 'precio_unitario', parseFloat(e.target.value) / exRate)}
-                        onBlur={e => safeFn(onComponentBlur)('equipments', eq.id, 'precio_unitario', parseFloat(e.target.value) / exRate)}
+                        onChange={(val) => safeFn(onComponentChange)('equipments', eq.id, 'precio_unitario', val / exRate)}
+                        onBlur={(val) => safeFn(onComponentBlur)('equipments', eq.id, 'precio_unitario', val / exRate)}
                       />
                     </td>
                     <td className="p-2 text-right font-semibold text-slate-700 bg-slate-50 text-xs border-r border-slate-200">
@@ -619,27 +613,24 @@ export default function ApuEditorUI({
                       )}
                     </td>
                     <td className="p-2 border-r border-slate-200 bg-amber-50/40">
-                      <input 
-                        type="number" 
-                        className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium [appearance:textfield]"
+                      <DecimalInput 
+                        className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium"
                         value={lab.cantidad}
-                        onChange={e => safeFn(onComponentChange)('labors', lab.id, 'cantidad', e.target.value)}
-                        onBlur={e => safeFn(onComponentBlur)('labors', lab.id, 'cantidad', e.target.value)}
+                        onChange={(val) => safeFn(onComponentChange)('labors', lab.id, 'cantidad', val)}
+                        onBlur={(val) => safeFn(onComponentBlur)('labors', lab.id, 'cantidad', val)}
                       />
                     </td>
                     <td className="p-2 border-r border-slate-200 bg-amber-50/40">
-                      <input 
-                        type="number" 
-                        className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium [appearance:textfield]"
+                      <DecimalInput 
+                        className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium"
                         value={Number((lab.jornal * exRate).toFixed(2))}
-                        onChange={e => safeFn(onComponentChange)('labors', lab.id, 'jornal', parseFloat(e.target.value) / exRate)}
-                        onBlur={e => safeFn(onComponentBlur)('labors', lab.id, 'jornal', parseFloat(e.target.value) / exRate)}
+                        onChange={(val) => safeFn(onComponentChange)('labors', lab.id, 'jornal', val / exRate)}
+                        onBlur={(val) => safeFn(onComponentBlur)('labors', lab.id, 'jornal', val / exRate)}
                       />
                     </td>
                     <td className="p-2 border-r border-slate-200 bg-amber-50/40">
-                      <input 
-                        type="number" 
-                        className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium [appearance:textfield]"
+                      <DecimalInput 
+                        className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium opacity-75"
                         value={Number(((lab.bono || labor_bonus || 0) * exRate).toFixed(2))}
                         disabled
                       />
@@ -707,11 +698,10 @@ export default function ApuEditorUI({
                     <td className="p-2 text-right border-b border-slate-200 uppercase flex items-center justify-end gap-2">
                       <span>F.C.A.S. %</span>
                       {onSettingsChange ? (
-                        <input 
-                          type="number"
-                          className="w-16 text-center bg-amber-50 text-amber-900 border border-amber-200 rounded px-1 [appearance:textfield]"
+                        <DecimalInput 
+                          className="w-16 text-center bg-amber-50 text-amber-900 border border-amber-200 rounded px-1"
                           value={fcas_percent}
-                          onChange={(e) => onSettingsChange('fcas_percent', parseFloat(e.target.value) || 0)}
+                          onChange={(val) => onSettingsChange('fcas_percent', val)}
                         />
                       ) : (
                         <span className="bg-amber-50 text-amber-900 px-2 py-0.5 border border-amber-200 rounded">{fcas_percent}</span>
@@ -814,11 +804,10 @@ export default function ApuEditorUI({
                   <td className="p-2 text-right border-b border-slate-200 flex items-center justify-end gap-2 uppercase">
                     <span>%</span>
                     {onSettingsChange ? (
-                      <input 
-                        type="number"
-                        className="w-16 text-center bg-amber-50 text-amber-900 border border-amber-200 rounded px-1 [appearance:textfield]"
+                      <DecimalInput 
+                        className="w-16 text-center bg-amber-50 text-amber-900 border border-amber-200 rounded px-1"
                         value={admin_percent}
-                        onChange={(e) => onSettingsChange('admin_percent', parseFloat(e.target.value) || 0)}
+                        onChange={(val) => onSettingsChange('admin_percent', val)}
                       />
                     ) : (
                       <span className="bg-amber-50 text-amber-900 px-2 py-0.5 border border-amber-200 rounded">{admin_percent}</span>
@@ -839,11 +828,10 @@ export default function ApuEditorUI({
                   <td className="p-2 text-right border-b border-slate-200 flex items-center justify-end gap-2 uppercase">
                     <span>%</span>
                     {onSettingsChange ? (
-                      <input 
-                        type="number"
-                        className="w-16 text-center bg-amber-50 text-amber-900 border border-amber-200 rounded px-1 [appearance:textfield]"
+                      <DecimalInput 
+                        className="w-16 text-center bg-amber-50 text-amber-900 border border-amber-200 rounded px-1"
                         value={profit_percent}
-                        onChange={(e) => onSettingsChange('profit_percent', parseFloat(e.target.value) || 0)}
+                        onChange={(val) => onSettingsChange('profit_percent', val)}
                       />
                     ) : (
                       <span className="bg-amber-50 text-amber-900 px-2 py-0.5 border border-amber-200 rounded">{profit_percent}</span>
@@ -882,11 +870,10 @@ export default function ApuEditorUI({
                       <td className="p-2 text-right border-b border-slate-200 flex items-center justify-end gap-2 uppercase">
                         <span>%</span>
                         {onSettingsChange ? (
-                          <input 
-                            type="number"
-                            className="w-16 text-center bg-amber-50 text-amber-900 border border-amber-200 rounded px-1 [appearance:textfield]"
+                          <DecimalInput 
+                            className="w-16 text-center bg-amber-50 text-amber-900 border border-amber-200 rounded px-1"
                             value={iva_percent}
-                            onChange={(e) => onSettingsChange('iva_percent', parseFloat(e.target.value) || 0)}
+                            onChange={(val) => onSettingsChange('iva_percent', val)}
                           />
                         ) : (
                           <span className="bg-amber-50 text-amber-900 px-2 py-0.5 border border-amber-200 rounded">{iva_percent}</span>

@@ -48,7 +48,7 @@ class RedisCacheService:
             self.redis_client.setex(key, expiry_seconds, value)
             return True
         except Exception as e:
-            print(f"Error almacenando registro pendiente: {e}")
+            logger.error(f"Error almacenando registro pendiente: {e}", exc_info=True)
             return False
     
     def get_pending_registration(self, email: str) -> Optional[Dict[str, Any]]:
@@ -71,7 +71,7 @@ class RedisCacheService:
                 return json.loads(value)
             return None
         except Exception as e:
-            print(f"Error recuperando registro pendiente: {e}")
+            logger.error(f"Error recuperando registro pendiente: {e}", exc_info=True)
             return None
     
     def delete_pending_registration(self, email: str) -> bool:
@@ -92,7 +92,7 @@ class RedisCacheService:
             self.redis_client.delete(key)
             return True
         except Exception as e:
-            print(f"Error eliminando registro pendiente: {e}")
+            logger.error(f"Error eliminando registro pendiente: {e}", exc_info=True)
             return False
     
     def store_verification_code(self, email: str, code: str, expiry_seconds: int = 900) -> bool:
@@ -115,7 +115,7 @@ class RedisCacheService:
             self.redis_client.setex(key, expiry_seconds, code)
             return True
         except Exception as e:
-            print(f"Error almacenando código de verificación: {e}")
+            logger.error(f"Error almacenando código de verificación: {e}", exc_info=True)
             return False
     
     def verify_code(self, email: str, code: str) -> bool:
@@ -137,7 +137,7 @@ class RedisCacheService:
             stored_code = self.redis_client.get(key)
             return stored_code == code
         except Exception as e:
-            print(f"Error verificando código: {e}")
+            logger.error(f"Error verificando código: {e}", exc_info=True)
             return False
     
     def cleanup_expired_registrations(self) -> int:

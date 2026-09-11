@@ -7,37 +7,27 @@
  * 4. Intercepta el pegado (paste) y beforeinput para normalizar comas decimales a puntos.
  */
 
-function insertDecimalPoint(input) {
+function insertDecimalPointSafe(input) {
   if (!input) return;
   const currentVal = input.value || '';
   if (currentVal.includes('.')) {
     return; // Ya posee un punto decimal
   }
 
-  let success = false;
-  try {
-    success = document.execCommand('insertText', false, '.');
-  } catch (_) {
-    success = false;
-  }
-
-  if (!success) {
-    try {
-      const origType = input.type;
-      input.type = 'text';
-      const start = input.selectionStart ?? currentVal.length;
-      const end = input.selectionEnd ?? currentVal.length;
+  // Si el input no es de tipo number (es decir, es text / decimal), podemos usar setRangeText
+  if (input.type !== 'number') {
+    const start = input.selectionStart ?? currentVal.length;
+    const end = input.selectionEnd ?? currentVal.length;
+    if (typeof input.setRangeText === 'function') {
+      input.setRangeText('.', start, end, 'end');
+    } else {
       input.value = currentVal.substring(0, start) + '.' + currentVal.substring(end);
-      input.selectionStart = input.selectionEnd = start + 1;
-      input.type = origType;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-      success = true;
-    } catch (_) {
-      input.value = currentVal + '.';
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
+      if (typeof input.setSelectionRange === 'function') {
+        input.setSelectionRange(start + 1, start + 1);
+      }
     }
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
   }
 }
 
@@ -54,7 +44,7 @@ export function initGlobalNumericInputHandlers() {
     }
   }, true);
 
-  // 2. Interceptar pulsaciones de coma (,) en inputs numéricos
+  // 2. Interceptar pulsaciones de coma (,) en inputs numéricos y de texto decimal
   document.addEventListener('keydown', (e) => {
     const target = e.target;
     if (!target || target.tagName !== 'INPUT') return;
@@ -67,9 +57,9 @@ export function initGlobalNumericInputHandlers() {
     if (!isNumeric) return;
 
     if (e.key === ',' || e.keyCode === 188 || e.key === 'Decimal') {
-      if (target.type === 'number') {
+      if (target.type !== 'number') {
         e.preventDefault();
-        insertDecimalPoint(target);
+        insertDecimalPointSafe(target);
       }
     }
   }, true);
@@ -79,9 +69,14 @@ export function initGlobalNumericInputHandlers() {
     const target = e.target;
     if (!target || target.tagName !== 'INPUT') return;
 
-    if (target.type === 'number' && e.data === ',') {
-      e.preventDefault();
-      insertDecimalPoint(target);
+    if (target.type !== 'number' && e.data === ',') {
+      const isNumeric = target.inputMode === 'decimal' || 
+                        target.inputMode === 'numeric' ||
+                        target.classList.contains('hide-spinners');
+      if (isNumeric) {
+        e.preventDefault();
+        insertDecimalPointSafe(target);
+      }
     }
   }, true);
 
@@ -98,7 +93,6 @@ export function initGlobalNumericInputHandlers() {
 
     const pastedText = (e.clipboardData || window.clipboardData)?.getData('text');
     if (pastedText && pastedText.includes(',')) {
-      e.preventDefault();
       let normalized = pastedText.trim();
       if (normalized.includes('.') && normalized.includes(',')) {
         normalized = normalized.replace(/\./g, '').replace(',', '.');
@@ -106,15 +100,11 @@ export function initGlobalNumericInputHandlers() {
         normalized = normalized.replace(',', '.');
       }
 
-      let inserted = false;
-      try {
-        inserted = document.execCommand('insertText', false, normalized);
-      } catch (_) {
-        inserted = false;
-      }
-
-      if (!inserted) {
-        target.value = normalized;
+      if (target.type !== 'number' && typeof target.setRangeText === 'function') {
+        e.preventDefault();
+        const start = target.selectionStart ?? target.value.length;
+        const end = target.selectionEnd ?? target.value.length;
+        target.setRangeText(normalized, start, end, 'end');
         target.dispatchEvent(new Event('input', { bubbles: true }));
         target.dispatchEvent(new Event('change', { bubbles: true }));
       }

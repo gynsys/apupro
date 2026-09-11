@@ -4,6 +4,7 @@ import { X, UploadCloud, DollarSign, Hash, Percent, Trash2 } from 'lucide-react'
 import { toast } from 'react-hot-toast';
 import { budgetService } from '../../services/budgetService';
 import { useUserCostos } from '../../context/UserCostosContext';
+import DecimalInput from '../DecimalInput';
 
 export default function CreateBudgetModal({ onClose, onSuccess, onLimitReached }) {
   const { costosConfig } = useUserCostos();
@@ -178,25 +179,28 @@ export default function CreateBudgetModal({ onClose, onSuccess, onLimitReached }
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-[13px] font-semibold text-amber-900 whitespace-nowrap"># Tasa</label>
-              <input 
-                type="number" step="0.01" name="exchange_rate"
-                value={formData.exchange_rate} onChange={handleChange}
+              <DecimalInput 
+                name="exchange_rate"
+                value={formData.exchange_rate} 
+                onChange={(val) => setFormData(prev => ({ ...prev, exchange_rate: val }))}
                 className="px-2 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
               />
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-[13px] font-semibold text-amber-900 whitespace-nowrap">% FCAS</label>
-              <input 
-                type="number" step="1" name="fcas_percent"
-                value={formData.fcas_percent} onChange={handleChange}
+              <DecimalInput 
+                name="fcas_percent"
+                value={formData.fcas_percent} 
+                onChange={(val) => setFormData(prev => ({ ...prev, fcas_percent: val }))}
                 className="px-2 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
               />
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-[13px] font-semibold text-amber-900 whitespace-nowrap">$ Bono M.O.</label>
-              <input 
-                type="number" step="0.01" name="labor_bonus"
-                value={formData.labor_bonus} onChange={handleChange}
+              <DecimalInput 
+                name="labor_bonus"
+                value={formData.labor_bonus} 
+                onChange={(val) => setFormData(prev => ({ ...prev, labor_bonus: val }))}
                 className="px-2 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
               />
             </div>
@@ -206,25 +210,28 @@ export default function CreateBudgetModal({ onClose, onSuccess, onLimitReached }
           <div className="grid grid-cols-4 gap-4 w-full">
             <div className="flex flex-col gap-2">
               <label className="text-[13px] font-semibold text-amber-900">% Admin.</label>
-              <input 
-                type="number" step="1" name="admin_percent"
-                value={formData.admin_percent} onChange={handleChange}
+              <DecimalInput 
+                name="admin_percent"
+                value={formData.admin_percent} 
+                onChange={(val) => setFormData(prev => ({ ...prev, admin_percent: val }))}
                 className="px-2 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
               />
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-[13px] font-semibold text-amber-900">% Utilidad</label>
-              <input 
-                type="number" step="1" name="profit_percent"
-                value={formData.profit_percent} onChange={handleChange}
+              <DecimalInput 
+                name="profit_percent"
+                value={formData.profit_percent} 
+                onChange={(val) => setFormData(prev => ({ ...prev, profit_percent: val }))}
                 className="px-2 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
               />
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-[13px] font-semibold text-amber-900">% I.V.A</label>
-              <input 
-                type="number" step="1" name="iva_percent"
-                value={formData.iva_percent} onChange={handleChange}
+              <DecimalInput 
+                name="iva_percent"
+                value={formData.iva_percent} 
+                onChange={(val) => setFormData(prev => ({ ...prev, iva_percent: val }))}
                 className="px-2 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
               />
             </div>

@@ -1,19 +1,29 @@
-from fastapi import FastAPI
+import os
+import re
+import asyncio
+import logging
+from typing import Callable, Any
+
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from sqlalchemy import text
+
 from app.api.v1.api import api_router
 from app.db.arko_base import ArkoBase, arko_engine
 from app.db.base import Base, engine
 from app.core.config import settings
-from fastapi.staticfiles import StaticFiles
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
 from app.core.limiter import limiter
-import logging
-import re
+from app.services.ai_search import ai_engine
+from app.api.v1.endpoints.users import process_plan_expirations
+from app.db.models.arko import ArkoAdmin
+import app.db.models
+
 logger = logging.getLogger(__name__)
 
-from sqlalchemy import text
-import app.db.models
 
 def clean_fcas_description(desc: str) -> str:
     if not desc:
@@ -127,18 +137,33 @@ app = FastAPI(
     title="Arko360 Admin API",
     description="API for Arko360 Administration",
     version="1.0.0",
+    debug=settings.DEBUG,
     docs_url="/api/v1/arko/docs",
     openapi_url="/api/v1/arko/openapi.json",
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-from app.services.ai_search import ai_engine
-import asyncio
-from app.api.v1.endpoints.users import process_plan_expirations
-from app.db.models.arko import ArkoAdmin
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next: Callable[[Request], Any]) -> Response:
+    """Inyecta cabeceras HTTP de seguridad estándar y Content Security Policy (CSP)."""
+    response: Response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self' https:; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; "
+        "style-src 'self' 'unsafe-inline' https:; "
+        "img-src 'self' data: blob: https:; "
+        "font-src 'self' data: https:; "
+        "connect-src 'self' https: wss: ws:; "
+        "frame-ancestors 'none';"
+    )
+    return response
 
-async def run_expiration_cron():
+async def run_expiration_cron() -> None:
     while True:
         try:
             # Fake current_user to pass dependency check
@@ -148,12 +173,12 @@ async def run_expiration_cron():
             logger.info("Corriendo cron de vencimientos de suscripciones...")
             process_plan_expirations(current_user=FakeUser())
         except Exception as e:
-            logger.error(f"Error en el cron de vencimientos: {e}")
+            logger.error(f"Error en el cron de vencimientos: {e}", exc_info=True)
         # Run every 5 minutes
         await asyncio.sleep(300)
 
 @app.on_event("startup")
-async def startup_event():
+async def startup_event() -> None:
     logger.info("Application starting up... Loading AI brain")
     ai_engine.load_brain()
     # Iniciar Cron Job ligero en segundo plano
@@ -171,12 +196,46 @@ if settings.CORS_ORIGINS:
 
 app.include_router(api_router, prefix="/api/v1")
 
-import os
+class SecureStaticFiles(StaticFiles):
+    """
+    Subclase de StaticFiles que inyecta cabeceras de seguridad estrictas
+    (X-Content-Type-Options, X-Frame-Options) y Cache-Control en archivos servidos.
+    """
+    async def get_response(self, path: str, scope: Any) -> Response:
+        response: Response = await super().get_response(path, scope)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Cache-Control"] = "public, max-age=86400"
+        return response
+
+
 upload_dir = settings.UPLOAD_DIR
 if not os.path.exists(upload_dir):
     os.makedirs(upload_dir, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=upload_dir), name="uploads")
+app.mount("/uploads", SecureStaticFiles(directory=upload_dir), name="uploads")
 
 @app.get("/api/v1/arko/health")
-def health_check():
+def health_check() -> dict:
     return {"status": "ok", "service": "arko_backend"}
+
+
+@app.get("/robots.txt", response_class=PlainTextResponse)
+def get_robots_txt() -> str:
+    """Disallow search engine crawlers on backend API domain."""
+    return "User-agent: *\nDisallow: /\n"
+
+
+@app.get("/.well-known/security.txt", response_class=PlainTextResponse)
+@app.get("/security.txt", response_class=PlainTextResponse)
+def get_security_txt() -> str:
+    """RFC 9116 security vulnerability reporting contact information."""
+    return (
+        "# Security Contact Information for CostBase & Arko360\n"
+        "# RFC 9116 - A File Format to Aid in Security Vulnerability Disclosure\n\n"
+        "Contact: mailto:security@costbase.net\n"
+        "Contact: mailto:admin@arko360.net\n"
+        "Expires: 2027-12-31T23:59:59.000Z\n"
+        "Preferred-Languages: es, en\n"
+        "Canonical: https://www.costbase.net/.well-known/security.txt\n"
+        "Policy: https://www.costbase.net/security\n"
+    )

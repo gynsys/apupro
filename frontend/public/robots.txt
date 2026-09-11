@@ -1,0 +1,24 @@
+# Robots.txt for CostBase & Arko360 (https://www.costbase.net)
+
+User-agent: *
+
+# Allow public landing and shared views
+Allow: /$
+Allow: /share/
+Allow: /images/
+
+# Disallow private user areas, authentication, and administration consoles
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /settings/
+Disallow: /profile/
+Disallow: /auth/
+Disallow: /api/
+Disallow: /uploads/
+Disallow: /private/
+
+# Crawl-delay for polite crawling
+Crawl-delay: 10
+
+# Sitemap
+Sitemap: https://www.costbase.net/sitemap.xml

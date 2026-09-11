@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { FolderOpen, Save, Trash2, X, Check, Printer, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
+import DecimalInput from '../DecimalInput';
 
 // ============================================
 // CALCULADORA FCAS PROFESIONAL - VENEZUELA
@@ -361,20 +362,18 @@ export default function CalculadoraFCAS({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-200/60">
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Salario Base Mensual (USD)</label>
-              <input
-                type="number"
+              <DecimalInput
                 value={salarioBase}
-                onChange={(e) => setSalarioBase(Math.max(0, parseFloat(e.target.value) || 0))}
+                onChange={(val) => setSalarioBase(Math.max(0, val))}
                 className="w-full bg-white rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cestaticket Mensual (USD)</label>
-              <input
-                type="number"
+              <DecimalInput
                 value={bonoCestaticket}
-                onChange={(e) => setBonoCestaticket(Math.max(0, parseFloat(e.target.value) || 0))}
+                onChange={(val) => setBonoCestaticket(Math.max(0, val))}
                 className="w-full bg-white rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
               {metodo === 'estandar' && (
@@ -384,10 +383,9 @@ export default function CalculadoraFCAS({
 
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Días Ejecución (N)</label>
-              <input
-                type="number"
+              <DecimalInput
                 value={diasContratados}
-                onChange={(e) => setDiasContratados(Math.max(1, parseFloat(e.target.value) || 0))}
+                onChange={(val) => setDiasContratados(Math.max(1, val))}
                 className="w-full bg-white rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
@@ -405,12 +403,11 @@ export default function CalculadoraFCAS({
                   {calculoAutomatico ? '🔒 Auto' : '✏️ Manual'}
                 </button>
               </div>
-              <input
-                type="number"
+              <DecimalInput
                 value={diasNoTrabajados}
-                onChange={(e) => {
+                onChange={(val) => {
                   setCalculoAutomatico(false);
-                  setDiasNoTrabajados(Math.min(diasContratados, parseFloat(e.target.value) || 0));
+                  setDiasNoTrabajados(Math.min(diasContratados, val));
                 }}
                 className={`w-full bg-white rounded-xl border px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:ring-1 ${
                   calculoAutomatico 
