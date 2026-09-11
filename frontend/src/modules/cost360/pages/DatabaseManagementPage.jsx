@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Database, Plus, Trash2, Edit2, Copy, 
@@ -9,10 +9,18 @@ import { toast } from 'react-hot-toast';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
 import cost360Service from '../services/cost360Service';
 import { useDatabaseContext } from '../../../contexts/DatabaseContext';
+import { AuthContext } from '../../../context/AuthContext';
 import SubscriptionRequestModal from '../../../components/SubscriptionRequestModal';
 
 export default function DatabaseManagementPage() {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext) || {};
+  const isSuperAdmin = Boolean(
+    user?.is_superadmin === true || 
+    user?.role === 'superadmin' || 
+    user?.is_admin === true || 
+    user?.email?.toLowerCase() === 'admin@arko360.net'
+  );
   const { refreshDatabases: reloadDatabases } = useDatabaseContext();
   const [databases, setDatabases] = useState([]);
   const [customItemsCount, setCustomItemsCount] = useState(0);
@@ -285,7 +293,7 @@ export default function DatabaseManagementPage() {
                 </div>
               </div>
               
-              {!db.is_master && (
+              {!db.is_master && (isSuperAdmin || (!db.is_published && db.owner_id === user?.email)) && (
                 <div className="absolute top-2 right-2 flex gap-1">
                   <button
                     onClick={() => openEditModal(db)}
@@ -310,8 +318,8 @@ export default function DatabaseManagementPage() {
                   <p className={`text-sm text-slate-600 mb-2 ${db.is_master ? 'text-center my-auto px-2 max-w-[300px]' : ''}`}>{db.description}</p>
                 )}
 
-                {/* Inflation Stats - Solo se muestra en bases personales de usuarios */}
-                {!db.is_published && !db.is_master && (db.material_inflation > 0 || db.labor_inflation > 0 || db.equipment_inflation > 0) && (
+                {/* Inflation Stats - Solo se muestra para el administrador / super admin (admin@arko360.net) */}
+                {isSuperAdmin && !db.is_master && (db.material_inflation > 0 || db.labor_inflation > 0 || db.equipment_inflation > 0) && (
                   <div className="rounded-xl p-3.5 space-y-2.5 mb-2 caja-inflacion">
                     <div className="text-xs font-medium text-slate-500 mb-2">Índices de Inflación Aplicados</div>
                     

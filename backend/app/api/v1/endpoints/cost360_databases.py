@@ -43,9 +43,12 @@ def list_databases(db: Session = Depends(get_db), current_user = Depends(get_cur
     # Filtrar por bases maestras o bases que le pertenecen al usuario
     user_dbs = []
     user_email = current_user.email.lower() if current_user.email else ""
+    is_superadmin = (
+        getattr(current_user, 'is_superadmin', False) or
+        (user_email == 'admin@arko360.net') or
+        getattr(current_user, 'role', '') in ['admin', 'superadmin']
+    )
     
-    import logging
-    logger = logging.getLogger(__name__)
     logger.warning(f"[LIST_DB] user_email='{user_email}' total_dbs={len(databases)}")
 
     for db_obj in databases:
@@ -62,6 +65,31 @@ def list_databases(db: Session = Depends(get_db), current_user = Depends(get_cur
             if db_owner and db_owner.lower() == user_email:
                 user_dbs.append(db_obj)
                 logger.warning(f"[LIST_DB] Included {db_obj.id} because owner matches")
+
+    # Para usuarios normales, ocultar los factores de inflación de bases publicadas
+    if not is_superadmin:
+        sanitized_dbs = []
+        for d in user_dbs:
+            if getattr(d, 'is_published', False):
+                sanitized_dbs.append({
+                    "id": d.id,
+                    "name": d.name,
+                    "description": d.description,
+                    "is_master": d.is_master,
+                    "is_active": d.is_active,
+                    "material_inflation": 0.0,
+                    "labor_inflation": 0.0,
+                    "equipment_inflation": 0.0,
+                    "source_database_id": d.source_database_id,
+                    "created_at": d.created_at,
+                    "created_by": d.created_by,
+                    "owner_id": d.owner_id,
+                    "is_published": d.is_published,
+                    "published_at": d.published_at,
+                })
+            else:
+                sanitized_dbs.append(d)
+        return {"databases": sanitized_dbs}
             
     return {"databases": user_dbs}
 
@@ -107,10 +135,34 @@ def initialize_master_database(db: Session = Depends(get_db)):
 
 @router.get("/{database_id}")
 def get_database(database_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
-    """Obtener detalles de una base de datos especÃ­fica"""
+    """Obtener detalles de una base de datos específica"""
     database = get_database_by_id(db, database_id)
     if not database:
         raise HTTPException(status_code=404, detail="Base de datos no encontrada")
+    
+    user_email = current_user.email.lower() if current_user.email else ""
+    is_superadmin = (
+        getattr(current_user, 'is_superadmin', False) or
+        (user_email == 'admin@arko360.net') or
+        getattr(current_user, 'role', '') in ['admin', 'superadmin']
+    )
+    if not is_superadmin and getattr(database, 'is_published', False):
+        return {
+            "id": database.id,
+            "name": database.name,
+            "description": database.description,
+            "is_master": database.is_master,
+            "is_active": database.is_active,
+            "material_inflation": 0.0,
+            "labor_inflation": 0.0,
+            "equipment_inflation": 0.0,
+            "source_database_id": database.source_database_id,
+            "created_at": database.created_at,
+            "created_by": database.created_by,
+            "owner_id": database.owner_id,
+            "is_published": database.is_published,
+            "published_at": database.published_at,
+        }
     return database
 
 @router.post("")
