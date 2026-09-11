@@ -268,17 +268,16 @@ export function APUPrintSheet({ partida, materiales = [], equipos = [], mano_obr
             })}
             {/* Subtotales */}
             <tr>
-              <td className="border border-black px-1 py-0.5" colSpan={5}></td>
-              <td className="border border-black px-1 py-0.5 text-right font-bold bg-gray-50">Sub Total Mano de Obra:</td>
+              <td className="border border-black px-1 py-0.5" colSpan={4}></td>
+              <td className="border border-black px-1 py-0.5 text-right font-bold bg-gray-50 whitespace-nowrap" colSpan={2}>Sub Total Mano de Obra:</td>
               <td className="border border-black px-1 py-0.5 text-right font-bold">{numFormat(calcLabTotalBonoDay())}</td>
               <td className="border border-black px-1 py-0.5 text-right font-bold">{numFormat(calcLabTotalJornalDay())}</td>
             </tr>
             <tr>
-              <td className="border border-black px-1 py-0.5" colSpan={3}></td>
-              <td className="border border-black px-1 py-0.5 text-right font-bold bg-gray-50" colSpan={2}>
+              <td className="border border-black px-1 py-0.5 text-right font-bold bg-gray-50 whitespace-nowrap" colSpan={4} style={{ whiteSpace: 'nowrap' }}>
                 FCAS: {numFormat(fcasPercent)} %
               </td>
-              <td className="border border-black px-1 py-0.5 text-right font-bold bg-gray-50">Prestaciones Sociales:</td>
+              <td className="border border-black px-1 py-0.5 text-right font-bold bg-gray-50 whitespace-nowrap" colSpan={2}>Prestaciones Sociales:</td>
               <td className="border border-black px-1 py-0.5 text-right">{numFormat(calcLabTotalJornalDay() * fcasFactor)}</td>
               <td className="border border-black px-1 py-0.5 bg-gray-50"></td>
             </tr>
