@@ -75,46 +75,118 @@ export default function CalculadoraFCAS({
     return salarioBase > 0 ? salarioBase / 30 : 0;
   }, [salarioBase]);
 
-  // ── Suma de días de conceptos activos ──────────────────
-  const diasPrestaciones = useMemo(() => {
-    return conceptos.filter(c => c.activo).reduce((sum, c) => sum + c.dias, 0);
+  // ── Alícuota de Salario Integral (LOTTT Art. 122) ─────────
+  // Para la garantía de prestaciones (Art. 142 LOTTT), el salario integral
+  // incluye la alícuota de utilidades y de bono vacacional:
+  const diasUtilidades = useMemo(() => {
+    return conceptos.find(c => c.id === 'utilidades')?.activo 
+      ? (conceptos.find(c => c.id === 'utilidades')?.dias || 0) 
+      : 0;
   }, [conceptos]);
 
-  // ── Cálculo del FCAS ────────────────────────────────────
+  const diasBonoVac = useMemo(() => {
+    return conceptos.find(c => c.id === 'bono_vac')?.activo 
+      ? (conceptos.find(c => c.id === 'bono_vac')?.dias || 0) 
+      : 0;
+  }, [conceptos]);
+
+  const alicuotaSalarioIntegral = useMemo(() => {
+    // Alícuota = 1 + (Días Utilidades + Días Bono Vacacional) / 360
+    return 1 + (diasUtilidades + diasBonoVac) / 360;
+  }, [diasUtilidades, diasBonoVac]);
+
+  // ── Ausencias remuneradas disfrutadas fuera de obra (Vacaciones disfrute + Permisos) ──
+  const diasAusenciasObra = useMemo(() => {
+    const factorTemporal = diasContratados > 0 ? diasContratados / 365 : 1;
+    const vac = conceptos.find(c => c.id === 'vacaciones')?.activo ? (conceptos.find(c => c.id === 'vacaciones')?.dias || 0) : 0;
+    const perm = conceptos.find(c => c.id === 'permisos')?.activo ? (conceptos.find(c => c.id === 'permisos')?.dias || 0) : 0;
+    return Math.round((vac + perm) * factorTemporal);
+  }, [conceptos, diasContratados]);
+
+  // Total de días no laborados en obra (Descansos semanales/feriados Ti + Ausencias por vacaciones/permisos)
+  const totalDiasNoTrabajados = useMemo(() => {
+    return diasNoTrabajados + diasAusenciasObra;
+  }, [diasNoTrabajados, diasAusenciasObra]);
+
+  // Días Efectivamente Laborados en Obra (DEL)
+  const diasLaboradosReales = useMemo(() => {
+    return Math.max(1, diasContratados - totalDiasNoTrabajados);
+  }, [diasContratados, totalDiasNoTrabajados]);
+
+  // ── Días equivalentes de conceptos de beneficios y pasivos ──
+  const { diasPrestacionesEquivalentes, diasPasivosAdicionales } = useMemo(() => {
+    let prestEq = 0;
+    let pasivosAdicionales = 0;
+
+    conceptos.forEach(c => {
+      if (!c.activo) return;
+      if (c.id === 'prestaciones') {
+        const eq = c.dias * alicuotaSalarioIntegral;
+        prestEq += eq;
+        pasivosAdicionales += eq;
+      } else if (c.id === 'vacaciones' || c.id === 'permisos') {
+        // Ausencias remuneradas: ya cubiertas en el salario base ordinario
+        prestEq += c.dias;
+      } else {
+        // Utilidades, Bono Vacacional, SSO, FAOV, INCES: pasivos y aportes adicionales
+        prestEq += c.dias;
+        pasivosAdicionales += c.dias;
+      }
+    });
+
+    return { diasPrestacionesEquivalentes: prestEq, diasPasivosAdicionales: pasivosAdicionales };
+  }, [conceptos, alicuotaSalarioIntegral]);
+
+  // ── Cálculo del FCAS (%) ────────────────────────────────────
   const fcasPorcentaje = useMemo(() => {
-    const diasLaboradosReales = diasContratados - diasNoTrabajados;
     if (diasLaboradosReales <= 0 || salarioDiario <= 0) return 0;
 
-    // Proporción del período evaluado frente al año base
-    const factorTemporal = diasContratados / 365;
-    const diasPrestacionesProporcionales = diasPrestaciones * factorTemporal;
+    const factorTemporal = diasContratados > 0 ? diasContratados / 365 : 1;
+    const diasPrestacionesProporcionales = diasPrestacionesEquivalentes * factorTemporal;
 
     let numerador;
     if (metodo === 'estandar') {
-      // FÓRMULA ESTÁNDAR: Ti + Días de Prestaciones
+      // MÉTODO ESTÁNDAR: Ti + Todos los beneficios/prestaciones equivalentes
       numerador = diasNoTrabajados + diasPrestacionesProporcionales;
     } else {
       // MÉTODO INDEXADO: Ti + Prestaciones + Días equivalentes del Cestaticket
-      // Convertir el bono mensual en días equivalentes de salario diario
       const costoBonoPeriodo = (bonoCestaticket / 30) * diasContratados;
       const diasEquivalentesBono = costoBonoPeriodo / salarioDiario;
       numerador = diasNoTrabajados + diasPrestacionesProporcionales + diasEquivalentesBono;
     }
 
     return (numerador / diasLaboradosReales) * 100;
-  }, [metodo, salarioDiario, bonoCestaticket, diasContratados, diasNoTrabajados, diasPrestaciones]);
+  }, [metodo, salarioDiario, bonoCestaticket, diasContratados, diasNoTrabajados, diasLaboradosReales, diasPrestacionesEquivalentes]);
 
-  // ── Costo real mensual ──────────────────────────────────
-  const costoRealMensual = useMemo(() => {
-    const factor = 1 + fcasPorcentaje / 100;
+  // ── Costo real mensual de mano de obra ──────────────────────
+  const { costoRealMensual, costoJornalObra } = useMemo(() => {
+    if (salarioBase <= 0) return { costoRealMensual: 0, costoJornalObra: 0 };
+
+    const mesesPeriodo = diasContratados > 0 ? diasContratados / 30 : 12;
+    const factorTemporal = diasContratados > 0 ? diasContratados / 365 : 1;
+
+    // Pasivos y aportes patronales adicionales al salario mensual ordinario
+    const costoPasivosPeriodo = diasPasivosAdicionales * salarioDiario * factorTemporal;
+    const provisionMensualPasivos = mesesPeriodo > 0 ? costoPasivosPeriodo / mesesPeriodo : 0;
+
+    // Costo mensual real contable: Salario Base + Provisión de Pasivos + Cestaticket
+    const totalMensual = salarioBase + provisionMensualPasivos + (bonoCestaticket || 0);
+
+    // Costo diario efectivo en obra (Jornal con FCAS aplicable en APU)
+    let jornalObra = salarioDiario * (1 + fcasPorcentaje / 100);
     if (metodo === 'estandar') {
-      // En el método estándar, el Cestaticket se añade como costo fijo aparte
-      return salarioBase * factor + bonoCestaticket;
-    } else {
-      // En el método indexado, el bono ya está diluido en el FCAS
-      return salarioBase * factor;
+      // En método estándar, el Cestaticket se adiciona en el APU
+      const bonoDiarioObra = diasLaboradosReales > 0 
+        ? ((bonoCestaticket / 30) * diasContratados) / diasLaboradosReales 
+        : 0;
+      jornalObra += bonoDiarioObra;
     }
-  }, [salarioBase, fcasPorcentaje, metodo, bonoCestaticket]);
+
+    return { 
+      costoRealMensual: totalMensual, 
+      costoJornalObra: jornalObra 
+    };
+  }, [salarioBase, salarioDiario, diasPasivosAdicionales, diasContratados, bonoCestaticket, fcasPorcentaje, metodo, diasLaboradosReales]);
 
   // ── Handlers ──────────────────────────────────────────────
   const toggleConcepto = (idx) => {
@@ -352,7 +424,11 @@ export default function CalculadoraFCAS({
                   Salario Diario Base: <b className="text-slate-700">${salarioDiario.toFixed(2)}</b>
                 </div>
                 <div className="bg-slate-50 p-1.5 rounded border border-slate-200">
-                  Días de Obra Reales: <b className="text-slate-700">{diasContratados - diasNoTrabajados} días</b>
+                  Días Reales de Obra (DEL): <b className="text-slate-700">{diasLaboradosReales} días</b>
+                </div>
+                <div className="bg-slate-50 p-1.5 rounded border border-slate-200 col-span-2 flex justify-between items-center">
+                  <span>Jornal Efectivo en Obra:</span>
+                  <b className="text-slate-800 font-bold">${costoJornalObra.toFixed(2)} USD / día de obra</b>
                 </div>
               </div>
             </div>
@@ -450,9 +526,21 @@ export default function CalculadoraFCAS({
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-3 h-3 rounded-full ${c.activo ? (metodo === 'indexado' ? 'bg-emerald-500' : 'bg-blue-500') : 'bg-slate-300'}`} />
-                    <span className="text-sm text-slate-700">{c.nombre}</span>
+                    <div>
+                      <span className="text-sm text-slate-700 block">{c.nombre}</span>
+                      {c.id === 'prestaciones' && c.activo && alicuotaSalarioIntegral > 1 && (
+                        <span className="text-[10px] text-blue-600 font-semibold">
+                          Equiv. {(c.dias * alicuotaSalarioIntegral).toFixed(1)} días con Salario Integral (Art. 122 LOTTT)
+                        </span>
+                      )}
+                      {(c.id === 'vacaciones' || c.id === 'permisos') && c.activo && (
+                        <span className="text-[10px] text-amber-600 font-medium">
+                          Ausencia remunerada (se deduce de días en obra)
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span className="text-xs font-bold text-slate-500">{c.dias} días</span>
+                  <span className="text-xs font-bold text-slate-500 shrink-0 ml-2">{c.dias} días</span>
                 </div>
               ))}
             </div>
