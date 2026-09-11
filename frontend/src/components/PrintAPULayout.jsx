@@ -235,15 +235,15 @@ export function APUPrintSheet({ partida, materiales = [], equipos = [], mano_obr
         <table className="w-full border-collapse border border-black text-[11px]">
           <thead>
             <tr className="bg-gray-50">
-              <th className="border border-black px-1 py-1 text-center font-bold w-8">Nº</th>
+              <th className="border border-black px-1 py-1 text-center font-bold w-8" style={{ width: '32px' }}>Nº</th>
               {/* Columna B con ancho asegurado */}
               <th className="border border-black px-1 py-1 text-left font-bold w-auto">Descripción</th>
-              <th className="border border-black px-1 py-1 text-right font-bold">Cantidad</th>
-              <th className="border border-black px-1 py-1 text-right font-bold">Jornal</th>
-              <th className="border border-black px-1 py-1 text-right font-bold">Bono</th>
-              <th className="border border-black px-1 py-1 text-right font-bold">Total Bono</th>
-              <th className="border border-black px-1 py-1 text-right font-bold">Total Jornal</th>
-              <th className="border border-black px-1 py-1 text-right font-bold">Costo Unitario</th>
+              <th className="border border-black px-1 py-1 text-right font-bold w-16" style={{ width: '65px' }}>Cantidad</th>
+              <th className="border border-black px-1 py-1 text-right font-bold w-16" style={{ width: '65px' }}>Jornal</th>
+              <th className="border border-black px-1 py-1 text-right font-bold w-16" style={{ width: '70px' }}>Bono</th>
+              <th className="border border-black px-1 py-1 text-right font-bold w-20" style={{ width: '80px' }}>Total Bono</th>
+              <th className="border border-black px-1 py-1 text-right font-bold w-20" style={{ width: '80px' }}>Total Jornal</th>
+              <th className="border border-black px-1 py-1 text-right font-bold w-24" style={{ width: '85px' }}>Costo Unitario</th>
             </tr>
           </thead>
           <tbody>
@@ -268,8 +268,9 @@ export function APUPrintSheet({ partida, materiales = [], equipos = [], mano_obr
             })}
             {/* Subtotales */}
             <tr>
-              <td className="border border-black px-1 py-0.5" colSpan={4}></td>
-              <td className="border border-black px-1 py-0.5 text-right font-bold bg-gray-50 whitespace-nowrap" colSpan={2}>Sub Total Mano de Obra:</td>
+              <td className="border border-black px-1 py-0.5 text-right font-bold bg-gray-50 whitespace-nowrap" colSpan={6}>
+                Sub Total Mano de Obra:
+              </td>
               <td className="border border-black px-1 py-0.5 text-right font-bold">{numFormat(calcLabTotalBonoDay())}</td>
               <td className="border border-black px-1 py-0.5 text-right font-bold">{numFormat(calcLabTotalJornalDay())}</td>
             </tr>
