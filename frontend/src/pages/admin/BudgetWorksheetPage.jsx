@@ -313,18 +313,40 @@ export default function BudgetWorksheetPage() {
     }
   };
 
-  const handleSyncPrices = async () => {
-    if (!window.confirm('¿Deseas actualizar los precios unitarios de TODO el presupuesto usando la Base Maestra? Los rendimientos y cantidades se mantendrán intactos.')) return;
-    try {
-      setSyncing(true);
-      await budgetService.syncPrices(id);
-      toast.success('Precios de todo el presupuesto actualizados correctamente');
-      loadBudget();
-    } catch (e) {
-      toast.error('Error al actualizar precios');
-    } finally {
-      setSyncing(false);
-    }
+  const handleSyncPrices = () => {
+    toast((t) => (
+      <div className="flex flex-col gap-3 py-1 min-w-[280px] max-w-sm">
+        <p className="text-sm font-medium text-slate-800 leading-snug">
+          ¿Deseas actualizar los precios unitarios de TODO el presupuesto usando la Base Maestra? Los rendimientos y cantidades se mantendrán intactos.
+        </p>
+        <div className="flex justify-end gap-2 mt-1">
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200 cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={async () => {
+              toast.dismiss(t.id);
+              try {
+                setSyncing(true);
+                await budgetService.syncPrices(id);
+                toast.success('Precios de todo el presupuesto actualizados correctamente');
+                loadBudget();
+              } catch (e) {
+                toast.error('Error al actualizar precios');
+              } finally {
+                setSyncing(false);
+              }
+            }}
+            className="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm cursor-pointer"
+          >
+            Actualizar
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity });
   };
 
   const handleOpenSearchModal = () => {
@@ -748,7 +770,7 @@ export default function BudgetWorksheetPage() {
                         </div>
                       </div>
                       <div className="hidden md:flex items-center">
-                        <span className="text-sm text-green-700 font-bold bg-green-50 px-4 py-1.5 rounded-xl border border-green-200 shadow-sm">
+                        <span className="text-sm text-black font-bold">
                           Total Partidas: {budget.items.filter(item => !item.is_chapter).length}
                         </span>
                       </div>
