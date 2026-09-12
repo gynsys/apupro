@@ -263,6 +263,9 @@ class Settings(BaseSettings):
     # NUNCA activar en producción real con usuarios reales.
     NOTIFICATIONS_DEBUG_MODE: bool = False
 
+    # Monitoreo Externo / Heartbeat (Healthchecks.io)
+    HEALTHCHECKS_PING_URL: Optional[str] = None
+
     class Config:
         render_env = "/etc/secrets/.env"
         if os.path.exists(render_env):
