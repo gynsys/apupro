@@ -382,31 +382,29 @@ export default function CalculadoraFCAS({
 
         <div className="flex-1 overflow-y-auto px-6 pt-2 pb-8 space-y-5 print:p-4 print:overflow-visible">
           {/* Selector de Método */}
-          <div className="flex justify-center">
-            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 w-fit print:border print:bg-white">
-              <button
-                type="button"
-                onClick={() => setMetodo('estandar')}
-                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
-                  metodo === 'estandar'
-                    ? 'bg-blue-600 text-white shadow'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                }`}
-              >
-                Método Estándar LOTTT
-              </button>
-              <button
-                type="button"
-                onClick={() => setMetodo('indexado')}
-                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
-                  metodo === 'indexado'
-                    ? 'bg-emerald-600 text-white shadow'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                }`}
-              >
-                Método con Cestaticket en FCAS
-              </button>
-            </div>
+          <div className="flex justify-center items-center gap-5">
+            <button
+              type="button"
+              onClick={() => setMetodo('estandar')}
+              className={`px-4 py-2 text-xs font-bold rounded-xl border-2 transition-all ${
+                metodo === 'estandar'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                  : 'bg-white text-slate-800 border-slate-300 hover:text-slate-900 hover:border-slate-400 hover:bg-slate-50'
+              }`}
+            >
+              Método Estándar LOTTT
+            </button>
+            <button
+              type="button"
+              onClick={() => setMetodo('indexado')}
+              className={`px-4 py-2 text-xs font-bold rounded-xl border-2 transition-all ${
+                metodo === 'indexado'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                  : 'bg-white text-slate-800 border-slate-300 hover:text-slate-900 hover:border-slate-400 hover:bg-slate-50'
+              }`}
+            >
+              Método con Cestaticket en FCAS
+            </button>
           </div>
 
           {/* Indicador Principal */}
