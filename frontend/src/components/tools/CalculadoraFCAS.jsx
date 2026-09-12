@@ -408,21 +408,14 @@ export default function CalculadoraFCAS({
           </div>
 
           {/* Indicador Principal */}
-          <div className="rounded-2xl p-5 bg-white/70 backdrop-blur-sm border border-slate-200/70 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <span className="text-xs font-bold tracking-widest uppercase text-slate-500">Factor F.C.A.S. Calculado</span>
-              <div className="mt-1 flex items-baseline gap-2">
-                <span className={`text-4xl font-black ${metodo === 'indexado' ? 'text-emerald-600' : 'text-blue-600'}`}>
-                  {fcasPorcentaje.toFixed(2)}%
-                </span>
-                <span className="text-xs text-slate-500 font-medium">sobre el jornal básico</span>
-              </div>
+          <div className="rounded-2xl p-5 bg-white/70 backdrop-blur-sm border border-slate-200/70 shadow-sm">
+            <span className="text-xs font-bold tracking-widest uppercase text-slate-500">Factor F.C.A.S. Calculado</span>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className={`text-4xl font-black ${metodo === 'indexado' ? 'text-emerald-600' : 'text-blue-600'}`}>
+                {fcasPorcentaje.toFixed(2)}%
+              </span>
+              <span className="text-xs text-slate-500 font-medium">sobre el jornal básico</span>
             </div>
-            <p className="text-xs text-slate-600 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200/80 max-w-lg">
-              {metodo === 'indexado'
-                ? '⚠️ Método Indexado: El Cestaticket se convierte en días equivalentes y se integra al FCAS.'
-                : '📋 Método Estándar LOTTT / CVC: Factor porcentual puro en días.'}
-            </p>
           </div>
 
           {/* Inputs de Control */}
