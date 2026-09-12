@@ -407,60 +407,22 @@ export default function CalculadoraFCAS({
             </button>
           </div>
 
-          {/* Indicadores Principales */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="rounded-2xl p-5 bg-white/70 backdrop-blur-sm border border-slate-200/70 shadow-sm flex flex-col justify-between">
+          {/* Indicador Principal */}
+          <div className="rounded-2xl p-5 bg-white/70 backdrop-blur-sm border border-slate-200/70 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
               <span className="text-xs font-bold tracking-widest uppercase text-slate-500">Factor F.C.A.S. Calculado</span>
-              <div className="mt-2 flex items-baseline gap-2">
+              <div className="mt-1 flex items-baseline gap-2">
                 <span className={`text-4xl font-black ${metodo === 'indexado' ? 'text-emerald-600' : 'text-blue-600'}`}>
                   {fcasPorcentaje.toFixed(2)}%
                 </span>
                 <span className="text-xs text-slate-500 font-medium">sobre el jornal básico</span>
               </div>
-              <p className="text-[11px] text-slate-500 mt-3 bg-slate-50 p-2 rounded-lg border border-slate-200">
-                {metodo === 'indexado'
-                  ? '⚠️ Método Indexado: El Cestaticket se convierte en días equivalentes y se integra al FCAS. En el APU no se coloca monto en la columna Bono.'
-                  : '📋 Método Estándar LOTTT / CVC: Factor porcentual puro en días. El Cestaticket se factura por separado en la columna Bono del APU.'}
-              </p>
             </div>
-
-            <div className="rounded-2xl p-5 bg-white/70 backdrop-blur-sm border border-slate-200/70 shadow-sm flex flex-col justify-between">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold tracking-widest uppercase text-slate-500">Balance de Días de la Ecuación</span>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-extrabold border border-slate-200">
-                  Multiplicador: {(1 + fcasPorcentaje / 100).toFixed(4)}
-                </span>
-              </div>
-              <div className="text-[11px] text-slate-600 mt-2 grid grid-cols-2 gap-2">
-                <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Días Calendario (N)</span>
-                  <b className="text-slate-800 text-sm">{diasContratados} días</b>
-                </div>
-                <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Días en Obra (DEL)</span>
-                  <b className="text-blue-700 text-sm">{diasLaboradosReales} días</b>
-                </div>
-                <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">No Laborados (DPNT)</span>
-                  <b className="text-amber-700 text-sm">{totalDiasNoTrabajados} días</b>
-                </div>
-                <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">
-                    {metodo === 'indexado' ? 'Beneficios + Bono Eq.' : 'Beneficios y Cargas (DAP)'}
-                  </span>
-                  <b className="text-emerald-700 text-sm">
-                    {metodo === 'indexado' 
-                      ? (diasPrestacionesProporcionales + diasEquivalentesBono).toFixed(1) 
-                      : diasPrestacionesProporcionales.toFixed(1)} días
-                  </b>
-                </div>
-              </div>
-              <p className="text-[10px] text-slate-500 mt-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                {metodo === 'indexado'
-                  ? `⚖️ ${diasLaboradosReales} días en obra absorben ${(diasLaboradosReales * (1 + fcasPorcentaje / 100)).toFixed(1)} días de salario base, cargas y Cestaticket.`
-                  : `⚖️ ${diasLaboradosReales} días efectivamente laborados absorben ${(diasLaboradosReales * (1 + fcasPorcentaje / 100)).toFixed(1)} días de salario y beneficios de ley.`}
-              </p>
-            </div>
+            <p className="text-xs text-slate-600 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200/80 max-w-lg">
+              {metodo === 'indexado'
+                ? '⚠️ Método Indexado: El Cestaticket se convierte en días equivalentes y se integra al FCAS.'
+                : '📋 Método Estándar LOTTT / CVC: Factor porcentual puro en días.'}
+            </p>
           </div>
 
           {/* Inputs de Control */}
