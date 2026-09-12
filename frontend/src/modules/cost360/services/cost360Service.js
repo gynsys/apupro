@@ -22,6 +22,22 @@ cost360ApiClient.interceptors.request.use((config) => {
 });
 
 /**
+ * Normaliza un código COVENIN eliminando puntos, comas, guiones y espacios.
+ * Normaliza también códigos de Redes Aéreas (ej. RA 2559 o RA2559 -> 2559RA).
+ * @param {string} code - Código a normalizar
+ * @returns {string} Código normalizado
+ */
+export const normalizeCoveninCode = (code) => {
+  if (!code || typeof code !== 'string') return '';
+  let cleaned = code.trim().toUpperCase().replace(/[\.\,\-\s]+/g, '');
+  const raMatch = cleaned.match(/^RA(\d+)$/);
+  if (raMatch) {
+    cleaned = `${raMatch[1]}RA`;
+  }
+  return cleaned;
+};
+
+/**
  * Fetch a list of cost items (Partidas)
  * @param {number} skip - Offset for pagination
  * @param {number} limit - Limit of items to fetch
@@ -39,7 +55,7 @@ export const fetchItems = async (skip = 0, limit = 50, search = '', chapter = ''
     const params = { skip, limit, database_id, search_desc, search_insumos, only_coded: final_only_coded, hidden_categories };
     if (search) params.search = search;
     if (chapter) params.chapter = chapter;
-    if (covenin) params.covenin = covenin;
+    if (covenin) params.covenin = normalizeCoveninCode(covenin);
     
     const response = await cost360ApiClient.get('/items', { params });
     return response.data;

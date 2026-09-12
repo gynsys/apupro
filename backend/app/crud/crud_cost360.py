@@ -32,6 +32,20 @@ def strip_accents(s: str) -> str:
 def unaccent_col(column):
     return func.translate(column, 'áéíóúÁÉÍÓÚäëïöüÄËÏÖÜ', 'aeiouAEIOUaeiouAEIOU')
 
+def normalize_covenin_code(code: Optional[str]) -> str:
+    """
+    Normaliza un código COVENIN eliminando puntos, comas, guiones y espacios.
+    Soporta partidas de Vialidad (R), Hidráulica (HC) y Redes Aéreas (RA, ej: RA 2559 -> 2559RA).
+    """
+    if not code or not isinstance(code, str):
+        return ""
+    cleaned = code.strip().upper()
+    cleaned = re.sub(r'[\.\,\-\s]+', '', cleaned)
+    ra_match = re.match(r'^RA(\d+)$', cleaned)
+    if ra_match:
+        cleaned = f"{ra_match.group(1)}RA"
+    return cleaned
+
 def get_items_paginated(
     db: Session,
     skip: int = 0,
@@ -120,9 +134,7 @@ def get_items_paginated(
     if database_id and database_id != "master":
         db_config = get_database_by_id(db, database_id)
         if db_config and not db_config.is_master:
-            # Aplicar filtros específicos de la base de datos personalizada si existen
-            # Aquí podrías agregar lógica específica según cómo estén configuradas las bases personalizadas
-            pass  # Por ahora, busca en toda la base maestra
+            logger.debug(f"Búsqueda en catálogo sobre base personalizada: {database_id}")
     
     if search:
         words = search.split()
@@ -140,6 +152,17 @@ def get_items_paginated(
                     CostItem.apu_equipments.any(CostAPUEquipment.equipment.has(unaccent_col(CostEquipment.Descri).ilike(f"%{clean_word}%"))),
                     CostItem.apu_labors.any(CostAPULabor.labor.has(unaccent_col(CostLabor.Descri).ilike(f"%{clean_word}%")))
                 ])
+            
+            # Soporte para búsqueda directa por código en el campo de texto libre
+            norm_word = normalize_covenin_code(clean_word)
+            if len(norm_word) >= 3:
+                word_filters.append(CostItem.CovPar.ilike(f"{norm_word}%"))
+                word_filters.append(CostItem.CodPar.ilike(f"{norm_word}%"))
+                if norm_word.endswith("RA"):
+                    word_filters.append(CostItem.CovPar.ilike(f"%{norm_word}%"))
+                elif norm_word.isdigit():
+                    word_filters.append(CostItem.CovPar.ilike(f"{norm_word}RA%"))
+
             if word_filters:
                 all_filters.append(or_(*word_filters))
         
@@ -148,32 +171,100 @@ def get_items_paginated(
             query = query.filter(and_(*all_filters))
             
     if covenin:
-        if covenin == "R":
-            query = query.filter(CostItem.CovPar.startswith("R"), ~CostItem.CovPar.endswith("RA"), ~CostItem.CovPar.startswith("RA"))
-        elif covenin == "RA":
-            query = query.filter(or_(CostItem.CovPar.endswith("RA"), CostItem.CovPar.startswith("RA"), CostItem.Categoria == "RA"))
-        else:
-            query = query.filter(CostItem.CovPar.startswith(covenin))
+        clean_cov = normalize_covenin_code(covenin)
+        if clean_cov:
+            if clean_cov == "R":
+                query = query.filter(
+                    CostItem.CovPar.ilike("R%"),
+                    ~CostItem.CovPar.ilike("%RA"),
+                    ~CostItem.CovPar.ilike("RA%")
+                )
+            elif clean_cov == "RA":
+                query = query.filter(
+                    or_(
+                        CostItem.CovPar.ilike("%RA"),
+                        CostItem.CovPar.ilike("RA%"),
+                        CostItem.Categoria == "RA"
+                    )
+                )
+            elif clean_cov.startswith("HC"):
+                # Partidas de hidráulica (ej: HC15210, HC.15210, HC 15210)
+                query = query.filter(
+                    or_(
+                        CostItem.CovPar.ilike(f"{clean_cov}%"),
+                        CostItem.CodPar.ilike(f"{clean_cov}%")
+                    )
+                )
+            elif clean_cov.endswith("RA"):
+                # Partidas de redes aéreas (ej: 2559RA, 2559.RA, 2559 RA, RA 2559)
+                query = query.filter(
+                    or_(
+                        CostItem.CovPar.ilike(f"{clean_cov}%"),
+                        CostItem.CovPar.ilike(f"%{clean_cov}%"),
+                        CostItem.CodPar.ilike(f"{clean_cov}%")
+                    )
+                )
+            elif clean_cov.isdigit():
+                # Código solo numérico (ej: 2559): buscar directo, como sufijo RA (2559RA) y en CodPar
+                query = query.filter(
+                    or_(
+                        CostItem.CovPar.ilike(f"{clean_cov}%"),
+                        CostItem.CovPar.ilike(f"{clean_cov}RA%"),
+                        CostItem.CodPar.ilike(f"{clean_cov}%")
+                    )
+                )
+            else:
+                # Código estándar COVENIN (ej. R910122215 de R.910.122.215, E311110000 de E.311.110.000)
+                query = query.filter(
+                    or_(
+                        CostItem.CovPar.ilike(f"{clean_cov}%"),
+                        CostItem.CodPar.ilike(f"{clean_cov}%")
+                    )
+                )
 
     if chapter:
-        if chapter == "R":
-            query_chap = query.filter(CostItem.CovPar.startswith("R"), ~CostItem.CovPar.endswith("RA"), ~CostItem.CovPar.startswith("RA"))
-        elif chapter == "RA":
-            query_chap = query.filter(or_(CostItem.CovPar.endswith("RA"), CostItem.CovPar.startswith("RA"), CostItem.Categoria == "RA"))
-        else:
-            query_chap = query.filter(or_(CostItem.CovPar.startswith(chapter), CostItem.CodPar.startswith(chapter)))
+        clean_chap = normalize_covenin_code(chapter)
+        if clean_chap:
+            if clean_chap == "R":
+                query_chap = query.filter(
+                    CostItem.CovPar.ilike("R%"),
+                    ~CostItem.CovPar.ilike("%RA"),
+                    ~CostItem.CovPar.ilike("RA%")
+                )
+            elif clean_chap == "RA":
+                query_chap = query.filter(
+                    or_(
+                        CostItem.CovPar.ilike("%RA"),
+                        CostItem.CovPar.ilike("RA%"),
+                        CostItem.Categoria == "RA"
+                    )
+                )
+            else:
+                query_chap = query.filter(
+                    or_(
+                        CostItem.CovPar.ilike(f"{clean_chap}%"),
+                        CostItem.CodPar.ilike(f"{clean_chap}%")
+                    )
+                )
+                total = query_chap.count()
+                
+                if total == 0 and len(clean_chap) > 3:
+                    fallback_chap = clean_chap[:-1]
+                    while len(fallback_chap) >= 3:
+                        query_chap = query.filter(
+                            or_(
+                                CostItem.CovPar.ilike(f"{fallback_chap}%"),
+                                CostItem.CodPar.ilike(f"{fallback_chap}%")
+                            )
+                        )
+                        total = query_chap.count()
+                        if total > 0:
+                            break
+                        fallback_chap = fallback_chap[:-1]
             total = query_chap.count()
-            
-            if total == 0 and len(chapter) > 3:
-                fallback_chap = chapter[:-1]
-                while len(fallback_chap) >= 3:
-                    query_chap = query.filter(or_(CostItem.CovPar.startswith(fallback_chap), CostItem.CodPar.startswith(fallback_chap)))
-                    total = query_chap.count()
-                    if total > 0:
-                        break
-                    fallback_chap = fallback_chap[:-1]
-        total = query_chap.count()
-        query = query_chap
+            query = query_chap
+        else:
+            total = query.count()
     else:
         total = query.count()
         
@@ -224,8 +315,8 @@ def get_item_by_code_or_covpar(db: Session, code_str: str) -> Optional[CostItem]
     if item:
         return item
     
-    # 2. Normalized match (remove dots, dashes, spaces)
-    clean = re.sub(r'[^A-Za-z0-9]', '', raw).upper()
+    # 2. Normalized match (remove dots, dashes, spaces and handle RA/HC)
+    clean = normalize_covenin_code(raw)
     if len(clean) >= 3:
         item = db.query(CostItem).filter(
             or_(
@@ -244,7 +335,7 @@ def get_similar_items_by_code_prefix(db: Session, code_str: str, limit: int = 5)
     if not code_str:
         return [], ""
     raw = code_str.strip()
-    clean = re.sub(r'[^A-Za-z0-9]', '', raw).upper()
+    clean = normalize_covenin_code(raw)
     for length in (5, 4, 3):
         if len(clean) >= length:
             prefix = clean[:length]

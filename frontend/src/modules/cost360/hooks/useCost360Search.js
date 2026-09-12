@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import cost360Service from '../services/cost360Service';
+import cost360Service, { normalizeCoveninCode } from '../services/cost360Service';
 
 export const useCost360Search = ({
   databaseId = 'master',
@@ -24,6 +24,7 @@ export const useCost360Search = ({
   const fetchResults = useCallback(async (currentSkip = 0, append = false) => {
     try {
       setIsSearching(true);
+      const cleanCovenin = normalizeCoveninCode(searchCovenin) || (searchCovenin ? searchCovenin.trim() : '');
       const response = await cost360Service.fetchItems(
         currentSkip,
         limit,
@@ -32,7 +33,7 @@ export const useCost360Search = ({
         databaseId,
         searchDesc,
         searchInsumos,
-        searchCovenin,
+        cleanCovenin,
         onlyCoded
       );
       
