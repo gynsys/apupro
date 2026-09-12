@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from typing import Callable, Any, Dict, Optional, Tuple
 
 import httpx
-from fastapi import FastAPI, Request, Response, status
+from fastapi import FastAPI, Request, Response, Depends, HTTPException, Cookie, status
 from fastapi.responses import PlainTextResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -24,6 +24,7 @@ from app.core.limiter import limiter
 from app.services.ai_search import ai_engine
 from app.services.redis_cache_service import redis_cache
 from app.api.v1.endpoints.users import process_plan_expirations
+from app.api.v1.endpoints.arko import get_current_arko_admin
 from app.db.models.arko import ArkoAdmin
 import app.db.models
 
@@ -453,6 +454,193 @@ def get_system_health() -> Response:
     """
     data, http_code = check_system_health()
     return JSONResponse(status_code=http_code, content=data)
+
+
+@app.post("/api/v1/system/recover/cron", tags=["Monitoring"])
+async def recover_cron(
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """
+    Fuerza una ejecución inmediata del Cron de Suscripciones y reinicia el ciclo de 5 minutos.
+    Requiere sesión de administrador activa.
+    """
+    logger.info(f"🔧 Admin {current_user.email} solicitó recuperación del Cron Job de suscripciones")
+    start = time.time()
+
+    try:
+        class FakeUser:
+            email: str = current_user.email
+
+        result = process_plan_expirations(current_user=FakeUser())
+        duration_ms = round((time.time() - start) * 1000, 2)
+
+        CRON_HEALTH["status"] = "healthy"
+        CRON_HEALTH["last_run_at"] = datetime.now(timezone.utc).isoformat()
+        CRON_HEALTH["last_run_timestamp"] = time.time()
+        CRON_HEALTH["last_success_at"] = datetime.now(timezone.utc).isoformat()
+        CRON_HEALTH["last_duration_ms"] = duration_ms
+        CRON_HEALTH["last_result"] = result
+        CRON_HEALTH["last_error"] = None
+        CRON_HEALTH["total_runs"] += 1
+
+        logger.info(f"✅ Cron Job recuperado exitosamente en {duration_ms} ms")
+        return {
+            "status": "recovered",
+            "message": "Cron de suscripciones ejecutado exitosamente y ciclo reiniciado.",
+            "duration_ms": duration_ms,
+            "result": result,
+        }
+    except Exception as exc:
+        CRON_HEALTH["status"] = "error"
+        CRON_HEALTH["total_errors"] += 1
+        CRON_HEALTH["last_error"] = str(exc)
+        logger.error(f"Error al recuperar el Cron Job: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error al ejecutar el Cron: {str(exc)[:200]}")
+
+
+@app.post("/api/v1/system/recover/ai-brain", tags=["Monitoring"])
+def recover_ai_brain(
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """
+    Recarga el Cerebro de IA (SentenceTransformer + embeddings) en memoria RAM.
+    Útil si el modelo no se cargó al iniciar o fue liberado por OOM.
+    Requiere sesión de administrador activa.
+    """
+    logger.info(f"🔧 Admin {current_user.email} solicitó recarga del Cerebro de IA")
+    start = time.time()
+
+    try:
+        ai_engine.load_brain()
+        duration_ms = round((time.time() - start) * 1000, 2)
+        embeddings_count = (
+            len(ai_engine.ids_mapping)
+            if (ai_engine.is_loaded and ai_engine.ids_mapping is not None)
+            else 0
+        )
+        logger.info(f"✅ Cerebro de IA recargado en {duration_ms} ms — {embeddings_count} embeddings")
+        return {
+            "status": "recovered",
+            "message": f"Motor de IA recargado exitosamente con {embeddings_count} embeddings.",
+            "duration_ms": duration_ms,
+            "embeddings_count": embeddings_count,
+        }
+    except Exception as exc:
+        logger.error(f"Error al recargar el Cerebro de IA: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error al recargar IA: {str(exc)[:200]}")
+
+
+@app.post("/api/v1/system/recover/connections", tags=["Monitoring"])
+def recover_connections(
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """
+    Purga el pool de conexiones de ambas bases de datos PostgreSQL y reconecta Redis.
+    Útil cuando hay conexiones zombies o Redis se desconectó y volvió a subir.
+    Requiere sesión de administrador activa.
+    """
+    logger.info(f"🔧 Admin {current_user.email} solicitó restablecimiento de conexiones DB y Redis")
+    results: Dict[str, Any] = {}
+
+    try:
+        engine.dispose()
+        results["database_primary"] = "pool_purgado"
+    except Exception as exc:
+        results["database_primary"] = f"error: {str(exc)[:100]}"
+        logger.error(f"Error al purgar pool DB primaria: {exc}", exc_info=True)
+
+    try:
+        arko_engine.dispose()
+        results["database_arko"] = "pool_purgado"
+    except Exception as exc:
+        results["database_arko"] = f"error: {str(exc)[:100]}"
+        logger.error(f"Error al purgar pool DB Arko: {exc}", exc_info=True)
+
+    try:
+        redis_cache._connect()
+        results["redis"] = "reconectado" if redis_cache.redis_client else "desconectado"
+    except Exception as exc:
+        results["redis"] = f"error: {str(exc)[:100]}"
+        logger.error(f"Error al reconectar Redis: {exc}", exc_info=True)
+
+    logger.info(f"✅ Restablecimiento de conexiones completado: {results}")
+    return {
+        "status": "recovered",
+        "message": "Pools de conexiones purgados y Redis reconectado.",
+        "details": results,
+    }
+
+
+@app.post("/api/v1/system/recover/all", tags=["Monitoring"])
+async def recover_all(
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """
+    Auto-Reparación Integral: Recarga el Cerebro de IA, purga pools de DB,
+    reconecta Redis y ejecuta el Cron de suscripciones en un solo paso.
+    Requiere sesión de administrador activa.
+    """
+    logger.info(f"🔧 Admin {current_user.email} solicitó Auto-Reparación Integral del sistema")
+    start = time.time()
+    steps: Dict[str, str] = {}
+
+    # 1. Purgar pools DB
+    try:
+        engine.dispose()
+        arko_engine.dispose()
+        steps["database_pools"] = "purgados"
+    except Exception as exc:
+        steps["database_pools"] = f"error: {str(exc)[:80]}"
+        logger.error(f"Error al purgar pools DB: {exc}", exc_info=True)
+
+    # 2. Reconectar Redis
+    try:
+        redis_cache._connect()
+        steps["redis"] = "reconectado" if redis_cache.redis_client else "sin_respuesta"
+    except Exception as exc:
+        steps["redis"] = f"error: {str(exc)[:80]}"
+        logger.error(f"Error al reconectar Redis: {exc}", exc_info=True)
+
+    # 3. Recargar Cerebro de IA
+    try:
+        if not getattr(ai_engine, "is_loaded", False):
+            ai_engine.load_brain()
+        steps["ai_brain"] = f"cargado ({len(ai_engine.ids_mapping) if ai_engine.ids_mapping else 0} embeddings)"
+    except Exception as exc:
+        steps["ai_brain"] = f"error: {str(exc)[:80]}"
+        logger.error(f"Error al recargar IA: {exc}", exc_info=True)
+
+    # 4. Ejecutar Cron
+    try:
+        class FakeUser:
+            email: str = current_user.email
+
+        cron_result = process_plan_expirations(current_user=FakeUser())
+        CRON_HEALTH["status"] = "healthy"
+        CRON_HEALTH["last_run_at"] = datetime.now(timezone.utc).isoformat()
+        CRON_HEALTH["last_run_timestamp"] = time.time()
+        CRON_HEALTH["last_success_at"] = datetime.now(timezone.utc).isoformat()
+        CRON_HEALTH["total_runs"] += 1
+        CRON_HEALTH["last_result"] = cron_result
+        CRON_HEALTH["last_error"] = None
+        steps["cron"] = "ejecutado_ok"
+    except Exception as exc:
+        CRON_HEALTH["status"] = "error"
+        CRON_HEALTH["total_errors"] += 1
+        CRON_HEALTH["last_error"] = str(exc)
+        steps["cron"] = f"error: {str(exc)[:80]}"
+        logger.error(f"Error al ejecutar cron durante auto-reparación: {exc}", exc_info=True)
+
+    total_ms = round((time.time() - start) * 1000, 2)
+    all_ok = all("error" not in v for v in steps.values())
+    logger.info(f"✅ Auto-Reparación Integral completada en {total_ms} ms — {steps}")
+
+    return {
+        "status": "recovered" if all_ok else "partial",
+        "message": "Auto-Reparación Integral completada." if all_ok else "Reparación completada con errores parciales.",
+        "duration_ms": total_ms,
+        "steps": steps,
+    }
 
 
 @app.get("/api/v1/arko/health", tags=["Monitoring"])

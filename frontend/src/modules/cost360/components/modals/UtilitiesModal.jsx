@@ -64,6 +64,34 @@ export default function UtilitiesModal({
     }
   }, [isOpen]);
 
+  const [recovering, setRecovering] = useState(null); // 'cron' | 'ai-brain' | 'connections' | 'all'
+
+  const executeRecovery = async (action) => {
+    setRecovering(action);
+    const labels = {
+      cron: 'Cron de Suscripciones',
+      'ai-brain': 'Cerebro de IA',
+      connections: 'Conexiones DB & Redis',
+      all: 'Auto-Reparación Integral',
+    };
+    const toastId = toast.loading(`Recuperando ${labels[action]}...`);
+    try {
+      const res = await apiPost(`/system/recover/${action}`, {});
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      toast.success(`✅ ${labels[action]} recuperado.\n${data.message || ''}`, { id: toastId, duration: 5000 });
+      // Refrescar métricas automáticamente tras recuperación
+      await fetchHealth();
+    } catch (err) {
+      toast.error(`❌ Error al recuperar ${labels[action]}: ${err.message}`, { id: toastId, duration: 6000 });
+    } finally {
+      setRecovering(null);
+    }
+  };
+
   if (!isOpen) return null;
 
   const handleToggleDebug = (e) => {
@@ -364,7 +392,7 @@ export default function UtilitiesModal({
                 {/* Grid de Métricas */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* PostgreSQL */}
-                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs space-y-1">
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                         <FiDatabase className="w-3.5 h-3.5 text-blue-600" />
@@ -379,12 +407,23 @@ export default function UtilitiesModal({
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-500">
-                      PostgreSQL Primaria ({healthData.components?.database_primary?.latency_ms} ms) · Arko ({healthData.components?.database_arko?.latency_ms} ms)
+                      Primaria ({healthData.components?.database_primary?.latency_ms} ms) · Arko ({healthData.components?.database_arko?.latency_ms} ms)
                     </p>
+                    {healthData.components?.database_primary?.status !== 'connected' && (
+                      <button
+                        type="button"
+                        onClick={() => executeRecovery('connections')}
+                        disabled={recovering !== null}
+                        className="w-full mt-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${recovering === 'connections' ? 'animate-spin' : ''}`} />
+                        {recovering === 'connections' ? 'Restableciendo...' : 'Restablecer Conexiones'}
+                      </button>
+                    )}
                   </div>
 
                   {/* Cerebro de IA */}
-                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs space-y-1">
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                         <FiCpu className="w-3.5 h-3.5 text-indigo-600" />
@@ -399,12 +438,23 @@ export default function UtilitiesModal({
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-500">
-                      {healthData.components?.ai_engine?.embeddings_count?.toLocaleString() || '13.608'} embeddings mapeados para búsqueda híbrida
+                      {healthData.components?.ai_engine?.embeddings_count?.toLocaleString() || '13.608'} embeddings mapeados
                     </p>
+                    {!healthData.components?.ai_engine?.is_loaded && (
+                      <button
+                        type="button"
+                        onClick={() => executeRecovery('ai-brain')}
+                        disabled={recovering !== null}
+                        className="w-full mt-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${recovering === 'ai-brain' ? 'animate-spin' : ''}`} />
+                        {recovering === 'ai-brain' ? 'Cargando IA...' : 'Recargar Cerebro de IA'}
+                      </button>
+                    )}
                   </div>
 
                   {/* Cron de Suscripciones */}
-                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs space-y-1">
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 text-purple-600" />
@@ -425,8 +475,17 @@ export default function UtilitiesModal({
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-500">
-                      {healthData.components?.cron_subscription_expirations?.total_runs ?? 0} corridas · {healthData.components?.cron_subscription_expirations?.total_errors ?? 0} errores · Heartbeat: {healthData.components?.cron_subscription_expirations?.healthchecks_ping_enabled ? 'Conectado' : 'Local'}
+                      {healthData.components?.cron_subscription_expirations?.total_runs ?? 0} corridas · {healthData.components?.cron_subscription_expirations?.total_errors ?? 0} errores
                     </p>
+                    <button
+                      type="button"
+                      onClick={() => executeRecovery('cron')}
+                      disabled={recovering !== null}
+                      className="w-full mt-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${recovering === 'cron' ? 'animate-spin' : ''}`} />
+                      {recovering === 'cron' ? 'Ejecutando Cron...' : 'Forzar Ejecución Ahora'}
+                    </button>
                   </div>
 
                   {/* Disco del Servidor */}
@@ -459,6 +518,21 @@ export default function UtilitiesModal({
                     </p>
                   </div>
                 </div>
+
+                {/* Botón Maestro de Auto-Reparación */}
+                <button
+                  type="button"
+                  onClick={() => executeRecovery('all')}
+                  disabled={recovering !== null}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow-md transition-all hover:scale-[1.01] cursor-pointer disabled:opacity-60"
+                >
+                  {recovering === 'all' ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Layers className="w-4 h-4" />
+                  )}
+                  {recovering === 'all' ? 'Reparando Sistema...' : '🔧 Auto-Reparación Integral (DB + Redis + IA + Cron)'}
+                </button>
 
                 {/* Footer del diagnóstico */}
                 <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-200/80">
