@@ -382,64 +382,66 @@ export default function CalculadoraFCAS({
 
         <div className="flex-1 overflow-y-auto px-6 pt-2 pb-8 space-y-5 print:p-4 print:overflow-visible">
           {/* Selector de Método */}
-          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 w-fit print:border print:bg-white">
-            <button
-              type="button"
-              onClick={() => setMetodo('estandar')}
-              className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
-                metodo === 'estandar'
-                  ? 'bg-blue-600 text-white shadow'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-              }`}
-            >
-              Método Estándar LOTTT
-            </button>
-            <button
-              type="button"
-              onClick={() => setMetodo('indexado')}
-              className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
-                metodo === 'indexado'
-                  ? 'bg-emerald-600 text-white shadow'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-              }`}
-            >
-              Método con Cestaticket en FCAS
-            </button>
+          <div className="flex justify-center">
+            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 w-fit print:border print:bg-white">
+              <button
+                type="button"
+                onClick={() => setMetodo('estandar')}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+                  metodo === 'estandar'
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+              >
+                Método Estándar LOTTT
+              </button>
+              <button
+                type="button"
+                onClick={() => setMetodo('indexado')}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+                  metodo === 'indexado'
+                    ? 'bg-emerald-600 text-white shadow'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+              >
+                Método con Cestaticket en FCAS
+              </button>
+            </div>
           </div>
 
           {/* Indicador Principal */}
-          <div className="rounded-2xl p-5 bg-white/70 backdrop-blur-sm border border-slate-200/70 shadow-sm">
-            <span className="text-xs font-bold tracking-widest uppercase text-slate-500">Factor F.C.A.S. Calculado</span>
-            <div className="mt-1 flex items-baseline gap-2">
+          <div className="rounded-2xl p-5 bg-white border-2 border-slate-300 shadow-sm flex flex-col items-center justify-center text-center">
+            <span className="text-xs font-black tracking-widest uppercase text-slate-800">Factor F.C.A.S. Calculado</span>
+            <div className="mt-1 flex items-baseline justify-center gap-2">
               <span className={`text-4xl font-black ${metodo === 'indexado' ? 'text-emerald-600' : 'text-blue-600'}`}>
                 {fcasPorcentaje.toFixed(2)}%
               </span>
-              <span className="text-xs text-slate-500 font-medium">sobre el jornal básico</span>
+              <span className="text-xs text-slate-700 font-bold">sobre el jornal básico</span>
             </div>
           </div>
 
           {/* Inputs de Control */}
           {metodo === 'estandar' ? (
             /* Método Estándar: Solo requiere los días de calendario (N) y días no laborados (Ti) */
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-200/60">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Días Ejecución del Contrato (N)</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white p-5 rounded-2xl border-2 border-slate-300 shadow-sm">
+              <div className="space-y-1.5">
+                <label className="text-xs font-black text-slate-800 uppercase tracking-wider">Días Ejecución del Contrato (N)</label>
                 <DecimalInput
                   value={diasContratados}
                   onChange={(val) => setDiasContratados(Math.max(1, val))}
-                  className="w-full bg-white rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-slate-50 rounded-xl border-2 border-slate-300 px-3 py-2 text-sm text-slate-900 font-bold focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-1 focus:ring-blue-600"
                 />
-                <p className="text-[10px] text-slate-400">Días de calendario evaluados (Base estándar: 365 días)</p>
+                <p className="text-xs text-slate-600 font-medium">Días de calendario evaluados (Base estándar: 365 días)</p>
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Días No Laborados de Calendario (Ti)</label>
+                  <label className="text-xs font-black text-slate-800 uppercase tracking-wider">Días No Laborados de Calendario (Ti)</label>
                   <button
                     type="button"
                     onClick={() => setCalculoAutomatico(!calculoAutomatico)}
-                    className={`text-[10px] px-2 py-0.5 rounded transition-colors font-semibold ${
-                      calculoAutomatico ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
+                    className={`text-[11px] px-2.5 py-0.5 rounded-lg transition-colors font-bold ${
+                      calculoAutomatico ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-slate-200 text-slate-800 border border-slate-300'
                     }`}
                   >
                     {calculoAutomatico ? '🔒 Auto (Fines de semana + Feriados)' : '✏️ Manual'}
@@ -451,38 +453,38 @@ export default function CalculadoraFCAS({
                     setCalculoAutomatico(false);
                     setDiasNoTrabajados(Math.min(diasContratados, val));
                   }}
-                  className={`w-full bg-white rounded-xl border px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:ring-1 ${
+                  className={`w-full rounded-xl border-2 px-3 py-2 text-sm font-bold focus:outline-none focus:ring-1 ${
                     calculoAutomatico 
-                      ? 'border-emerald-300 bg-emerald-50/50 text-emerald-800' 
-                      : 'border-slate-300 focus:border-blue-500'
+                      ? 'border-emerald-400 bg-emerald-50/60 text-emerald-900 focus:ring-emerald-500' 
+                      : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
                   }`}
                 />
-                <p className="text-[10px] text-slate-400">
+                <p className="text-xs text-slate-600 font-medium">
                   {calculoAutomatico ? 'Calculado automáticamente (52 semanas + 10 feriados nacionales)' : 'Ajuste manual para obras con condiciones climáticas particulares'}
                 </p>
               </div>
             </div>
           ) : (
             /* Método Indexado: Requiere N, Ti, y el salario/bono para indexar el Cestaticket a días */
-            <div className="space-y-2 bg-emerald-50/40 p-4 rounded-2xl border border-emerald-200/60">
+            <div className="space-y-2 bg-white p-5 rounded-2xl border-2 border-slate-300 shadow-sm">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Días Ejecución (N)</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black text-slate-800 uppercase tracking-wider">Días Ejecución (N)</label>
                   <DecimalInput
                     value={diasContratados}
                     onChange={(val) => setDiasContratados(Math.max(1, val))}
-                    className="w-full bg-white rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    className="w-full bg-slate-50 rounded-xl border-2 border-slate-300 px-3 py-2 text-sm text-slate-900 font-bold focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-600"
                   />
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <div className="flex justify-between items-center">
-                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Días No Laborados (Ti)</label>
+                    <label className="text-xs font-black text-slate-800 uppercase tracking-wider">Días No Laborados (Ti)</label>
                     <button
                       type="button"
                       onClick={() => setCalculoAutomatico(!calculoAutomatico)}
-                      className={`text-[10px] px-2 py-0.5 rounded transition-colors font-semibold ${
-                        calculoAutomatico ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
+                      className={`text-[11px] px-2 py-0.5 rounded transition-colors font-bold ${
+                        calculoAutomatico ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-slate-200 text-slate-800 border border-slate-300'
                       }`}
                     >
                       {calculoAutomatico ? '🔒 Auto' : '✏️ Manual'}
@@ -494,75 +496,75 @@ export default function CalculadoraFCAS({
                       setCalculoAutomatico(false);
                       setDiasNoTrabajados(Math.min(diasContratados, val));
                     }}
-                    className="w-full bg-white rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    className="w-full bg-slate-50 rounded-xl border-2 border-slate-300 px-3 py-2 text-sm text-slate-900 font-bold focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-600"
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">Salario Base Ref. (USD/mes)</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black text-emerald-800 uppercase tracking-wider">Salario Base Ref. (USD/mes)</label>
                   <DecimalInput
                     value={salarioBase}
                     onChange={(val) => setSalarioBase(Math.max(0, val))}
-                    className="w-full bg-white rounded-xl border border-emerald-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    className="w-full bg-slate-50 rounded-xl border-2 border-emerald-300 px-3 py-2 text-sm text-slate-900 font-bold focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-600"
                   />
-                  <p className="text-[10px] text-emerald-700">Para calcular el salario diario</p>
+                  <p className="text-xs text-emerald-800 font-semibold">Para calcular el salario diario</p>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">Cestaticket (USD/mes)</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black text-emerald-800 uppercase tracking-wider">Cestaticket (USD/mes)</label>
                   <DecimalInput
                     value={bonoCestaticket}
                     onChange={(val) => setBonoCestaticket(Math.max(0, val))}
-                    className="w-full bg-white rounded-xl border border-emerald-300 px-3 py-2 text-sm text-slate-800 font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    className="w-full bg-slate-50 rounded-xl border-2 border-emerald-300 px-3 py-2 text-sm text-slate-900 font-bold focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-600"
                   />
-                  <p className="text-[10px] text-emerald-700">Equivale a {diasEquivalentesBono.toFixed(1)} días de salario</p>
+                  <p className="text-xs text-emerald-800 font-semibold">Equivale a {diasEquivalentesBono.toFixed(1)} días de salario</p>
                 </div>
               </div>
             </div>
           )}
 
           {/* Matriz de Incidencias */}
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-bold tracking-widest uppercase text-slate-500">
+              <span className="text-xs font-black tracking-widest uppercase text-slate-800">
                 Matriz de Beneficios y Prestaciones (Días nominales anuales)
               </span>
               <button
                 type="button"
                 onClick={resetear}
-                className="text-xs bg-slate-200 hover:bg-slate-300 px-3 py-1 rounded-lg text-slate-700 transition-colors print:hidden"
+                className="text-xs bg-slate-200 hover:bg-slate-300 font-bold px-3 py-1 rounded-lg text-slate-800 transition-colors border border-slate-300 print:hidden"
               >
                 Resetear Matriz
               </button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {conceptos.map((c, idx) => (
                 <div
                   key={c.id}
                   onClick={() => toggleConcepto(idx)}
-                  className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer select-none ${
+                  className={`flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all cursor-pointer select-none ${
                     c.activo
-                      ? 'bg-white/80 border-slate-300 shadow-sm'
-                      : 'bg-slate-50/40 border-slate-200/60 opacity-50 hover:opacity-70'
+                      ? 'bg-white border-slate-300 shadow-sm hover:border-amber-400 hover:shadow-md'
+                      : 'bg-slate-50 border-slate-200 opacity-60 hover:opacity-80 hover:border-slate-300'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${c.activo ? (metodo === 'indexado' ? 'bg-emerald-500' : 'bg-blue-500') : 'bg-slate-300'}`} />
-                    <div>
-                      <span className="text-sm text-slate-700 block">{c.nombre}</span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-3.5 h-3.5 rounded-full shrink-0 ${c.activo ? (metodo === 'indexado' ? 'bg-emerald-600 ring-2 ring-emerald-200' : 'bg-blue-600 ring-2 ring-blue-200') : 'bg-slate-400'}`} />
+                    <div className="min-w-0">
+                      <span className="text-sm font-bold text-slate-900 block truncate">{c.nombre}</span>
                       {c.id === 'prestaciones' && c.activo && alicuotaSalarioIntegral > 1 && (
-                        <span className="text-[10px] text-blue-600 font-semibold">
+                        <span className="text-[11px] text-blue-700 font-bold block">
                           Equiv. {(c.dias * alicuotaSalarioIntegral).toFixed(1)} días con Salario Integral (Art. 122 LOTTT)
                         </span>
                       )}
                       {(c.id === 'vacaciones' || c.id === 'permisos') && c.activo && (
-                        <span className="text-[10px] text-amber-600 font-medium">
+                        <span className="text-[11px] text-amber-700 font-bold block">
                           Ausencia remunerada (se deduce de días en obra)
                         </span>
                       )}
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-slate-500 shrink-0 ml-2">{c.dias} días</span>
+                  <span className="text-xs font-black text-slate-800 shrink-0 ml-3">{c.dias} días</span>
                 </div>
               ))}
             </div>
