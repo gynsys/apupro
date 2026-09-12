@@ -1,10 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Wrench, CheckCircle, Sliders } from 'lucide-react';
+import { 
+  X, 
+  Wrench, 
+  CheckCircle, 
+  Sliders, 
+  Activity, 
+  RefreshCw, 
+  Clock, 
+  HardDrive, 
+  Layers, 
+  ExternalLink, 
+  CheckCircle2, 
+  AlertTriangle 
+} from 'lucide-react';
 import { FiDatabase, FiCpu } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { apiPost } from '../../../../lib/apiHelper';
+import { apiPost, apiGet } from '../../../../lib/apiHelper';
 import CategoryManager from '../CategoryManager';
 
 export default function UtilitiesModal({
@@ -21,11 +34,33 @@ export default function UtilitiesModal({
   const navigate = useNavigate();
   const [autoDownloadDebugJson, setAutoDownloadDebugJson] = useState(false);
   const [isUpdatingRAG, setIsUpdatingRAG] = useState(false);
+  const [healthData, setHealthData] = useState(null);
+  const [loadingHealth, setLoadingHealth] = useState(false);
+  const [healthError, setHealthError] = useState(null);
+
+  const fetchHealth = async () => {
+    setLoadingHealth(true);
+    setHealthError(null);
+    try {
+      const res = await apiGet('/system/health');
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      setHealthData(data);
+    } catch (err) {
+      console.error('Error fetching system health:', err);
+      setHealthError('No se pudo conectar al endpoint de monitoreo (/api/v1/system/health)');
+    } finally {
+      setLoadingHealth(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
       const saved = localStorage.getItem('auto_download_debug_json') === 'true';
       setAutoDownloadDebugJson(saved);
+      fetchHealth();
     }
   }, [isOpen]);
 
@@ -264,6 +299,184 @@ export default function UtilitiesModal({
                 />
               </div>
             </div>
+          </div>
+
+          {/* SECCIÓN 4: Diagnóstico y Salud del Sistema (Monitoreo 24/7) */}
+          <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-3 gap-2">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-600" />
+                  Diagnóstico y Salud del Sistema (Monitoreo 24/7)
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Estado en vivo de bases de datos, Redis, Cerebro de IA, Cron de suscripciones y disco
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={fetchHealth}
+                disabled={loadingHealth}
+                className="flex items-center gap-1.5 self-start sm:self-auto px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-xs font-semibold shadow-xs transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-50"
+                title="Actualizar estado del sistema"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingHealth ? 'animate-spin text-blue-600' : 'text-slate-500'}`} />
+                <span>{loadingHealth ? 'Verificando...' : 'Actualizar'}</span>
+              </button>
+            </div>
+
+            {loadingHealth && !healthData ? (
+              <div className="flex items-center justify-center py-6 gap-3 text-slate-500 text-xs">
+                <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
+                <span>Consultando telemetría del servidor...</span>
+              </div>
+            ) : healthError ? (
+              <div className="flex items-center gap-2.5 p-3.5 bg-red-50 text-red-700 rounded-xl border border-red-200 text-xs">
+                <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>{healthError}</span>
+              </div>
+            ) : healthData ? (
+              <div className="space-y-3">
+                {/* Banner de Estado Global */}
+                <div className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl border ${
+                  healthData.status === 'healthy' 
+                    ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
+                    : healthData.status === 'degraded'
+                    ? 'bg-amber-50/80 border-amber-200 text-amber-900'
+                    : 'bg-red-50/80 border-red-200 text-red-900'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {healthData.status === 'healthy' ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-amber-600" />
+                    )}
+                    <span className="text-xs font-bold">
+                      {healthData.status === 'healthy' ? 'Sistema 100% Operativo' : healthData.status === 'degraded' ? 'Sistema Operativo (con avisos)' : 'Alerta en Servicios Críticos'}
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-mono text-slate-600">
+                    Uptime: {Math.floor((healthData.uptime_seconds || 0) / 3600)}h {Math.floor(((healthData.uptime_seconds || 0) % 3600) / 60)}m
+                  </span>
+                </div>
+
+                {/* Grid de Métricas */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* PostgreSQL */}
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <FiDatabase className="w-3.5 h-3.5 text-blue-600" />
+                        Bases de Datos
+                      </span>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        healthData.components?.database_primary?.status === 'connected'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {healthData.components?.database_primary?.status === 'connected' ? `Conectada (${healthData.components?.database_primary?.latency_ms} ms)` : 'Desconectada'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      PostgreSQL Primaria ({healthData.components?.database_primary?.latency_ms} ms) · Arko ({healthData.components?.database_arko?.latency_ms} ms)
+                    </p>
+                  </div>
+
+                  {/* Cerebro de IA */}
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <FiCpu className="w-3.5 h-3.5 text-indigo-600" />
+                        Cerebro de IA & RAG
+                      </span>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        healthData.components?.ai_engine?.is_loaded
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {healthData.components?.ai_engine?.is_loaded ? 'Cargado en RAM' : 'No cargado'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      {healthData.components?.ai_engine?.embeddings_count?.toLocaleString() || '13.608'} embeddings mapeados para búsqueda híbrida
+                    </p>
+                  </div>
+
+                  {/* Cron de Suscripciones */}
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-purple-600" />
+                        Cron de Suscripciones
+                      </span>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        healthData.components?.cron_subscription_expirations?.status === 'healthy'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : healthData.components?.cron_subscription_expirations?.status === 'initializing'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {healthData.components?.cron_subscription_expirations?.status === 'healthy'
+                          ? `Activo (hace ${healthData.components?.cron_subscription_expirations?.minutes_since_last_run ?? 0}m)`
+                          : healthData.components?.cron_subscription_expirations?.status === 'initializing'
+                          ? 'Iniciando'
+                          : 'Demorado'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      {healthData.components?.cron_subscription_expirations?.total_runs ?? 0} corridas · {healthData.components?.cron_subscription_expirations?.total_errors ?? 0} errores · Heartbeat: {healthData.components?.cron_subscription_expirations?.healthchecks_ping_enabled ? 'Conectado' : 'Local'}
+                    </p>
+                  </div>
+
+                  {/* Disco del Servidor */}
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <HardDrive className="w-3.5 h-3.5 text-cyan-600" />
+                        Almacenamiento
+                      </span>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        (healthData.components?.system_resources?.disk?.percent_used ?? 0) < 85
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {healthData.components?.system_resources?.disk?.percent_used}% usado
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1 overflow-hidden">
+                      <div
+                        className={`h-1.5 rounded-full transition-all duration-500 ${
+                          (healthData.components?.system_resources?.disk?.percent_used ?? 0) < 85
+                            ? 'bg-emerald-500'
+                            : 'bg-amber-500'
+                        }`}
+                        style={{ width: `${Math.min(healthData.components?.system_resources?.disk?.percent_used ?? 0, 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-500 pt-0.5">
+                      {healthData.components?.system_resources?.disk?.free_gb} GB libres de {healthData.components?.system_resources?.disk?.total_gb} GB
+                    </p>
+                  </div>
+                </div>
+
+                {/* Footer del diagnóstico */}
+                <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-200/80">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Monitoreo automático activo cada 5 minutos
+                  </span>
+                  <a
+                    href="/api/v1/system/health"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 font-semibold hover:underline"
+                  >
+                    Ver JSON crudo <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
 

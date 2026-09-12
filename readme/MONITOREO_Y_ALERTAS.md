@@ -122,7 +122,7 @@ Los certificados SSL gratuitos de Let's Encrypt o Certbot tienen una validez de 
 2. **Crear Monitor de la API:**
    - **Monitor Type:** `HTTP(s)`
    - **Friendly Name:** `Costbase Backend API`
-   - **URL (or IP):** `https://api.gynsys.net/health` *(o la URL de tu API en producción)*
+   - **URL (or IP):** `https://costbase.net/api/v1/health` *(o `https://costbase.net/health` según tu proxy)*
    - **Monitoring Interval:** `5 minutes`
 3. **Activar Monitoreo de Certificado SSL:**
    - En la configuración del monitor o en la sección **SSL Settings**, activa la casilla **"Enable SSL Expiry Notification"**.

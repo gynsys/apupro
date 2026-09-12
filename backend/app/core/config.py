@@ -80,7 +80,7 @@ class Settings(BaseSettings):
     
     # URLs
     FRONTEND_URL: str = "https://www.costbase.net"
-    BACKEND_URL: str = "https://api.gynsys.net"
+    BACKEND_URL: str = "https://costbase.net"
 
     # Resend Email Configuration
     RESEND_API_KEY: Optional[str] = None
