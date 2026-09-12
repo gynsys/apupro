@@ -1062,8 +1062,8 @@ export default function BudgetWorksheetPage() {
             {/* ÁREA DE NOTAS */}
             <div className="flex-1 max-w-2xl bg-white p-3 rounded-2xl border border-slate-300 shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
               <div className="flex items-center justify-between mb-1.5 px-1">
-                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <FileText size={14} className="text-slate-400" />
+                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <FileText size={14} className="text-slate-500" />
                   Notas del Presupuesto
                 </span>
               </div>
@@ -1073,7 +1073,7 @@ export default function BudgetWorksheetPage() {
                 onBlur={handleSaveNotes}
                 placeholder="Escribe notas, observaciones, términos de validez o condiciones de pago..."
                 rows={2}
-                className="w-full bg-transparent border-0 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed"
+                className="w-full bg-transparent border-0 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed"
               />
             </div>
 

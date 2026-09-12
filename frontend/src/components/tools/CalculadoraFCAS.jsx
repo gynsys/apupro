@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { FolderOpen, Save, Trash2, X, Check, Printer, RotateCcw } from 'lucide-react';
+import { FolderOpen, Save, Trash2, X, Check, Printer, RotateCcw, Pencil, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DecimalInput from '../DecimalInput';
 
@@ -438,11 +438,21 @@ export default function CalculadoraFCAS({
                   <button
                     type="button"
                     onClick={() => setCalculoAutomatico(!calculoAutomatico)}
-                    className={`text-[11px] px-2.5 py-0.5 rounded-lg transition-colors font-bold ${
+                    className={`text-[11px] px-2.5 py-0.5 rounded-lg transition-colors font-bold inline-flex items-center gap-1.5 ${
                       calculoAutomatico ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-slate-200 text-slate-800 border border-slate-300'
                     }`}
                   >
-                    {calculoAutomatico ? '🔒 Auto (Fines de semana + Feriados)' : '✏️ Manual'}
+                    {calculoAutomatico ? (
+                      <>
+                        <Lock size={12} className="shrink-0" />
+                        <span>Auto (Fines de semana + Feriados)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Pencil size={12} className="shrink-0" />
+                        <span>Manual</span>
+                      </>
+                    )}
                   </button>
                 </div>
                 <DecimalInput
@@ -481,11 +491,21 @@ export default function CalculadoraFCAS({
                     <button
                       type="button"
                       onClick={() => setCalculoAutomatico(!calculoAutomatico)}
-                      className={`text-[11px] px-2 py-0.5 rounded transition-colors font-bold ${
+                      className={`text-[11px] px-2.5 py-0.5 rounded-lg transition-colors font-bold inline-flex items-center gap-1.5 ${
                         calculoAutomatico ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-slate-200 text-slate-800 border border-slate-300'
                       }`}
                     >
-                      {calculoAutomatico ? '🔒 Auto' : '✏️ Manual'}
+                      {calculoAutomatico ? (
+                        <>
+                          <Lock size={12} className="shrink-0" />
+                          <span>Auto</span>
+                        </>
+                      ) : (
+                        <>
+                          <Pencil size={12} className="shrink-0" />
+                          <span>Manual</span>
+                        </>
+                      )}
                     </button>
                   </div>
                   <DecimalInput

@@ -5,6 +5,7 @@ const EditUserModal = ({ user, onClose, onSave }) => {
     plan: 'free',
     max_budgets: 0,
     max_items_per_budget: 0,
+    max_ai_apus: 0,
     has_ai_access: false,
     test_mode: false,
   });
@@ -15,6 +16,7 @@ const EditUserModal = ({ user, onClose, onSave }) => {
         plan: user.plan || 'free',
         max_budgets: user.max_budgets || 0,
         max_items_per_budget: user.max_items_per_budget || 0,
+        max_ai_apus: user.max_ai_apus !== undefined ? user.max_ai_apus : 0,
         has_ai_access: user.has_ai_access || false,
         test_mode: false,
       });
@@ -29,17 +31,27 @@ const EditUserModal = ({ user, onClose, onSave }) => {
     if (newPlan === 'free' || newPlan === 'demo') {
       newForm.max_budgets = 1;
       newForm.max_items_per_budget = 2;
+      newForm.max_ai_apus = 0;
+      newForm.has_ai_access = false;
     } else if (newPlan === 'Básico') {
-      newForm.max_budgets = 1000; // ilimitado (virtualmente)
+      newForm.max_budgets = 1000;
       newForm.max_items_per_budget = 1000;
+      newForm.max_ai_apus = 20;
       newForm.has_ai_access = true;
     } else if (newPlan === 'Profesional') {
       newForm.max_budgets = 2000;
       newForm.max_items_per_budget = 2000;
+      newForm.max_ai_apus = 50;
       newForm.has_ai_access = true;
     } else if (newPlan === 'Experto') {
       newForm.max_budgets = 5000;
       newForm.max_items_per_budget = 5000;
+      newForm.max_ai_apus = 100;
+      newForm.has_ai_access = true;
+    } else if (newPlan === 'enterprise') {
+      newForm.max_budgets = 99999;
+      newForm.max_items_per_budget = 99999;
+      newForm.max_ai_apus = 0; // 0 = Ilimitado
       newForm.has_ai_access = true;
     }
     
@@ -51,6 +63,7 @@ const EditUserModal = ({ user, onClose, onSave }) => {
       plan: form.plan,
       max_budgets: form.max_budgets,
       max_items_per_budget: form.max_items_per_budget,
+      max_ai_apus: form.max_ai_apus,
       has_ai_access: form.has_ai_access,
       test_mode: form.test_mode,
     });
@@ -85,6 +98,7 @@ const EditUserModal = ({ user, onClose, onSave }) => {
                 <option value="Básico">Básico</option>
                 <option value="Profesional">Profesional</option>
                 <option value="Experto">Experto</option>
+                <option value="enterprise">Corporativo / Enterprise</option>
               </select>
                 {form.plan !== 'free' && form.plan !== 'demo' && (
                   <div className="mt-3 flex items-center p-3 bg-amber-50 rounded-lg border border-amber-200">
@@ -123,15 +137,27 @@ const EditUserModal = ({ user, onClose, onSave }) => {
               </div>
             </div>
             
-            <div className="flex items-center gap-2 mt-2">
-              <input
-                type="checkbox"
-                id="ai-access"
-                checked={form.has_ai_access}
-                onChange={(e) => setForm({ ...form, has_ai_access: e.target.checked })}
-                className="w-4 h-4 text-blue-600 rounded"
-              />
-              <label htmlFor="ai-access" className="text-sm font-medium text-slate-700">Permitir IA (Generación de Partidas)</label>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Límite APUs con IA</label>
+                <input
+                  type="number"
+                  value={form.max_ai_apus}
+                  onChange={(e) => setForm({ ...form, max_ai_apus: parseInt(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
+                <span className="text-[11px] text-slate-500">0 = Ilimitado</span>
+              </div>
+              <div className="flex items-center gap-2 pt-6">
+                <input
+                  type="checkbox"
+                  id="ai-access"
+                  checked={form.has_ai_access}
+                  onChange={(e) => setForm({ ...form, has_ai_access: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded"
+                />
+                <label htmlFor="ai-access" className="text-sm font-medium text-slate-700">Permitir IA (Generación)</label>
+              </div>
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-6">

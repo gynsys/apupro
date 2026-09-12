@@ -62,7 +62,11 @@ try:
             "CREATE INDEX IF NOT EXISTS idx_arko_admins_plan_expires ON arko_admins(plan_expires_at);",
             "UPDATE arko_admins SET username = LOWER(TRIM(full_name)) WHERE (username IS NULL OR username = '') AND full_name IS NOT NULL AND TRIM(full_name) != '';",
             "UPDATE arko_admins SET username = LOWER(SPLIT_PART(email, '@', 1)) WHERE (username IS NULL OR username = '') AND email IS NOT NULL;",
-            "CREATE INDEX IF NOT EXISTS idx_arko_admins_username ON arko_admins(LOWER(username));"
+            "CREATE INDEX IF NOT EXISTS idx_arko_admins_username ON arko_admins(LOWER(username));",
+            "UPDATE arko_admins SET max_ai_apus = 20 WHERE plan IN ('Básico', 'basico', 'basic') AND (max_ai_apus = 10 OR max_ai_apus IS NULL);",
+            "UPDATE arko_admins SET max_ai_apus = 50 WHERE plan IN ('Profesional', 'profesional', 'pro') AND (max_ai_apus = 25 OR max_ai_apus IS NULL);",
+            "UPDATE arko_admins SET max_ai_apus = 100 WHERE plan IN ('Experto', 'experto', 'expert') AND (max_ai_apus = 50 OR max_ai_apus IS NULL);",
+            "UPDATE arko_admins SET max_ai_apus = 0 WHERE plan IN ('enterprise', 'corporativo', 'admin');"
         ]
         for stmt in schema_statements:
             try:

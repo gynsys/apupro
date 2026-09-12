@@ -185,3 +185,6 @@ Existen dos mecanismos:
 2. Selecciona la pestaña **"Diagnóstico RAG"**.
 3. Escribe cualquier descripción técnica y pulsa **"Diagnosticar"** o pulsa **"Batería de Pruebas"**.
 4. Podrás verificar en menos de 200 ms la expansión de sinónimos, el ranking de candidatas con barras de score y si el sistema decidió incluir o descartar complementarias.
+
+### ¿Cómo modificar las cuotas de APUs de los planes SaaS?
+Consulta la guía paso a paso dedicada: [`readme/GUIA_CONFIGURACION_CUOTAS_APU.md`](GUIA_CONFIGURACION_CUOTAS_APU.md).

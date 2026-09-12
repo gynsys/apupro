@@ -44,6 +44,7 @@ class UserUpdateRequest(BaseModel):
     plan: Optional[str] = None
     max_budgets: Optional[int] = None
     max_items_per_budget: Optional[int] = None
+    max_ai_apus: Optional[int] = None
     has_ai_access: Optional[bool] = None
     test_mode: Optional[bool] = False
 
@@ -103,12 +104,15 @@ def update_user(user_id: int, user_data: UserUpdateRequest, current_user = Depen
                     user.plan_expires_at = datetime.utcnow() + timedelta(days=30)
                     
                 user.ai_apus_generated = 0
-                if user_data.plan == "Básico":
-                    user.max_ai_apus = 10
-                elif user_data.plan == "Profesional":
-                    user.max_ai_apus = 25
-                elif user_data.plan == "Experto":
+                plan_norm = (user_data.plan or "").strip().lower()
+                if plan_norm in ("básico", "basico", "basic"):
+                    user.max_ai_apus = 20
+                elif plan_norm in ("profesional", "pro"):
                     user.max_ai_apus = 50
+                elif plan_norm in ("experto", "expert"):
+                    user.max_ai_apus = 100
+                elif plan_norm in ("enterprise", "corporativo"):
+                    user.max_ai_apus = 0
                 else:
                     user.max_ai_apus = 0
             elif user_data.plan == "free":
@@ -120,6 +124,8 @@ def update_user(user_id: int, user_data: UserUpdateRequest, current_user = Depen
             user.max_budgets = user_data.max_budgets
         if user_data.max_items_per_budget is not None:
             user.max_items_per_budget = user_data.max_items_per_budget
+        if user_data.max_ai_apus is not None:
+            user.max_ai_apus = user_data.max_ai_apus
         if user_data.has_ai_access is not None:
             user.has_ai_access = user_data.has_ai_access
 

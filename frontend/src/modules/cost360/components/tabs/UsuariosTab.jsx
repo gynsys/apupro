@@ -97,12 +97,16 @@ const UsuariosTab = () => {
                   </span>
                 </td>
                 <td className="p-4 text-center">
-                  {user.plan !== 'free' ? (
-                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${user.ai_apus_generated >= user.max_ai_apus ? 'bg-red-100 text-red-700' : 'bg-indigo-100 text-indigo-700'}`}>
-                      {user.ai_apus_generated} / {user.max_ai_apus}
+                  {user.plan === 'free' && !user.has_ai_access ? (
+                    <span className="text-slate-400 text-xs">-</span>
+                  ) : (user.plan === 'enterprise' || !user.max_ai_apus || user.max_ai_apus === 0) ? (
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      {user.ai_apus_generated || 0} / Ilimitado
                     </span>
                   ) : (
-                    <span className="text-slate-400 text-xs">-</span>
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${user.ai_apus_generated >= user.max_ai_apus ? 'bg-red-100 text-red-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                      {user.ai_apus_generated || 0} / {user.max_ai_apus}
+                    </span>
                   )}
                 </td>
                 <td className="p-4 text-xs text-slate-600 whitespace-nowrap">

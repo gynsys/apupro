@@ -8,7 +8,7 @@ export default function PricingSection({ onRegisterClick }) {
       price: '9.99',
       description: 'Ideal para profesionales independientes y proyectos pequeños.',
       features: [
-        '10 APUs generados con IA por mes',
+        '20 APUs generados con IA por mes',
         'Actualización de precios Mensual',
         'Presupuestos manuales ilimitados',
         'Acceso a la Base de Datos Maestra',
@@ -22,7 +22,7 @@ export default function PricingSection({ onRegisterClick }) {
       price: '19.99',
       description: 'Perfecto para contratistas con flujo constante de obras.',
       features: [
-        '25 APUs generados con IA por mes',
+        '50 APUs generados con IA por mes',
         'Actualización de precios Quincenal',
         'Gestión de bases de datos personalizadas',
         'Todo lo incluido en el plan Básico',
@@ -36,7 +36,7 @@ export default function PricingSection({ onRegisterClick }) {
       price: '34.99',
       description: 'Para empresas que requieren el máximo rendimiento y volumen.',
       features: [
-        '50 APUs generados con IA por mes',
+        '100 APUs generados con IA por mes',
         'Actualización de precios Quincenal',
         'Máxima velocidad de procesamiento IA',
         'Herramientas avanzadas de análisis',

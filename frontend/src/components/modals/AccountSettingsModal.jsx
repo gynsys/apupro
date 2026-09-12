@@ -180,7 +180,9 @@ export default function AccountSettingsModal({
                   <Sparkles size={14} className="text-sky-600" /> Generador APU con Inteligencia Artificial
                 </span>
                 <span className="font-bold text-slate-900">
-                  {aiUsed} / {aiMax} APUs
+                  {user?.plan === 'enterprise' || (user?.has_ai_access && aiMax === 0) 
+                    ? `${aiUsed} / Ilimitado APUs` 
+                    : `${aiUsed} / ${aiMax} APUs`}
                 </span>
               </div>
 
@@ -188,19 +190,25 @@ export default function AccountSettingsModal({
               <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200">
                 <div 
                   className={`h-full rounded-full transition-all duration-500 ${
-                    aiPercent >= 100 
-                      ? 'bg-red-500' 
-                      : aiPercent >= 80 
-                        ? 'bg-amber-500' 
-                        : 'bg-gradient-to-r from-sky-500 to-indigo-600'
+                    user?.plan === 'enterprise' || (user?.has_ai_access && aiMax === 0)
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-600'
+                      : aiPercent >= 100 
+                        ? 'bg-red-500' 
+                        : aiPercent >= 80 
+                          ? 'bg-amber-500' 
+                          : 'bg-gradient-to-r from-sky-500 to-indigo-600'
                   }`}
-                  style={{ width: `${aiPercent}%` }}
+                  style={{ width: user?.plan === 'enterprise' || (user?.has_ai_access && aiMax === 0) ? '100%' : `${aiPercent}%` }}
                 />
               </div>
 
               <div className="flex items-center justify-between text-[11px] text-slate-500">
                 <span>Consumo mensual de tu plan</span>
-                <span>{aiPercent}% utilizado</span>
+                <span>
+                  {user?.plan === 'enterprise' || (user?.has_ai_access && aiMax === 0)
+                    ? 'Acceso Ilimitado'
+                    : `${aiPercent}% utilizado`}
+                </span>
               </div>
             </div>
 
