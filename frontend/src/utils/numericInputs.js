@@ -10,18 +10,19 @@
 function insertDecimalPointSafe(input) {
   if (!input) return;
   const currentVal = input.value || '';
-  if (currentVal.includes('.')) {
-    return; // Ya posee un punto decimal
+  if (currentVal.includes('.') || currentVal.includes(',')) {
+    return; // Ya posee un separador decimal
   }
 
   // Si el input no es de tipo number (es decir, es text / decimal), podemos usar setRangeText
   if (input.type !== 'number') {
     const start = input.selectionStart ?? currentVal.length;
     const end = input.selectionEnd ?? currentVal.length;
+    const sep = ',';
     if (typeof input.setRangeText === 'function') {
-      input.setRangeText('.', start, end, 'end');
+      input.setRangeText(sep, start, end, 'end');
     } else {
-      input.value = currentVal.substring(0, start) + '.' + currentVal.substring(end);
+      input.value = currentVal.substring(0, start) + sep + currentVal.substring(end);
       if (typeof input.setSelectionRange === 'function') {
         input.setSelectionRange(start + 1, start + 1);
       }
@@ -44,7 +45,7 @@ export function initGlobalNumericInputHandlers() {
     }
   }, true);
 
-  // 2. Interceptar pulsaciones de coma (,) en inputs numéricos y de texto decimal
+  // 2. Interceptar pulsaciones de coma (,) o punto (.) en inputs de texto decimal para mostrar coma visual
   document.addEventListener('keydown', (e) => {
     const target = e.target;
     if (!target || target.tagName !== 'INPUT') return;
@@ -56,7 +57,7 @@ export function initGlobalNumericInputHandlers() {
 
     if (!isNumeric) return;
 
-    if (e.key === ',' || e.keyCode === 188 || e.key === 'Decimal') {
+    if (e.key === ',' || e.key === '.' || e.keyCode === 188 || e.keyCode === 190 || e.key === 'Decimal') {
       if (target.type !== 'number') {
         e.preventDefault();
         insertDecimalPointSafe(target);
@@ -69,7 +70,7 @@ export function initGlobalNumericInputHandlers() {
     const target = e.target;
     if (!target || target.tagName !== 'INPUT') return;
 
-    if (target.type !== 'number' && e.data === ',') {
+    if (target.type !== 'number' && (e.data === ',' || e.data === '.')) {
       const isNumeric = target.inputMode === 'decimal' || 
                         target.inputMode === 'numeric' ||
                         target.classList.contains('hide-spinners');

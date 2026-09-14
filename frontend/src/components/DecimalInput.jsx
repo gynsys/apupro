@@ -34,7 +34,7 @@ export default function DecimalInput({
     if (v === null || v === undefined || v === '') return '';
     const num = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.'));
     if (isNaN(num)) return '';
-    return String(v);
+    return String(v).replace('.', ',');
   };
 
   const [localVal, setLocalVal] = useState(() => formatInitial(value));
@@ -60,29 +60,29 @@ export default function DecimalInput({
   const handleInputChange = (e) => {
     let raw = e.target.value;
 
-    // Normalizar comas a puntos
-    raw = raw.replace(/,/g, '.');
+    // Normalizar puntos a comas para que visualmente siempre sea la coma el separador
+    raw = raw.replace(/\./g, ',');
 
-    // Filtrar caracteres válidos: dígitos, un solo punto, y opcional signo negativo
+    // Filtrar caracteres válidos: dígitos, una sola coma, y opcional signo negativo
     let cleaned = '';
-    let hasDot = false;
+    let hasComma = false;
     for (let i = 0; i < raw.length; i++) {
       const char = raw[i];
       if (char >= '0' && char <= '9') {
         cleaned += char;
-      } else if (char === '.' && !hasDot) {
-        cleaned += '.';
-        hasDot = true;
+      } else if (char === ',' && !hasComma) {
+        cleaned += ',';
+        hasComma = true;
       } else if (char === '-' && i === 0 && allowNegative) {
         cleaned += '-';
       }
     }
 
     // Limitar cantidad de decimales si se especifica
-    if (decimals !== undefined && hasDot) {
-      const parts = cleaned.split('.');
+    if (decimals !== undefined && hasComma) {
+      const parts = cleaned.split(',');
       if (parts[1] && parts[1].length > decimals) {
-        cleaned = parts[0] + '.' + parts[1].slice(0, decimals);
+        cleaned = parts[0] + ',' + parts[1].slice(0, decimals);
       }
     }
 
@@ -119,8 +119,8 @@ export default function DecimalInput({
     if (max !== undefined && finalNumeric > max) finalNumeric = max;
 
     const finalStr = localVal.trim() === '' 
-      ? (min !== undefined ? String(min) : '') 
-      : String(finalNumeric);
+      ? (min !== undefined ? String(min).replace('.', ',') : '') 
+      : String(finalNumeric).replace('.', ',');
 
     setLocalVal(finalStr);
 

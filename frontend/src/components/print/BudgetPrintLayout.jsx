@@ -46,7 +46,8 @@ export default function BudgetPrintLayout({ budget, config }) {
       }
     } else {
       const pu = calculatePU(item);
-      const total = pu * item.quantity;
+      const qty = parseFloat(item.quantity) || 0;
+      const total = Math.round((pu * qty + Number.EPSILON) * 100) / 100;
 
       if (shouldIncludeChapters && currentChapter) {
         currentChapterSubtotal += total;
@@ -73,9 +74,14 @@ export default function BudgetPrintLayout({ budget, config }) {
     });
   }
 
-  const subtotalPresupuesto = items.filter(i => !i.is_chapter).reduce((sum, i) => sum + (calculatePU(i) * i.quantity), 0);
-  const ivaAmount = subtotalPresupuesto * (ivaPercent / 100);
-  const totalGeneral = subtotalPresupuesto + (config.includeIva ? ivaAmount : 0);
+  const subtotalPresupuesto = items.filter(i => !i.is_chapter).reduce((sum, i) => {
+    const pu = calculatePU(i);
+    const qty = parseFloat(i.quantity) || 0;
+    return sum + (Math.round((pu * qty + Number.EPSILON) * 100) / 100);
+  }, 0);
+  const roundedSubtotal = Math.round((subtotalPresupuesto + Number.EPSILON) * 100) / 100;
+  const ivaAmount = Math.round((roundedSubtotal * (ivaPercent / 100) + Number.EPSILON) * 100) / 100;
+  const totalGeneral = Math.round((roundedSubtotal + (config.includeIva ? ivaAmount : 0) + Number.EPSILON) * 100) / 100;
 
   const formatCurrency = (val) => Number(val).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 

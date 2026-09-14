@@ -72,7 +72,8 @@ export function calculateItemPU(item, budget = {}) {
   const profitCost = subtotalB * (profitPercent / 100);
   const subtotalC = subtotalB + profitCost;
 
-  return subtotalC;
+  // Redondear el Precio Unitario siempre a 2 decimales exactos
+  return Math.round((subtotalC + Number.EPSILON) * 100) / 100;
 }
 
 /**
@@ -91,12 +92,14 @@ export function calculateBudgetTotals(budget = {}) {
     .reduce((sum, item) => {
       const pu = calculateItemPU(item, budget);
       const qty = parseFloat(item.quantity) || 0;
-      return sum + (pu * qty);
+      const itemTotal = Math.round((pu * qty + Number.EPSILON) * 100) / 100;
+      return sum + itemTotal;
     }, 0);
 
+  const roundedSubtotal = Math.round((subtotalPresupuesto + Number.EPSILON) * 100) / 100;
   const ivaPercent = parseFloat(budget.iva_percent ?? 16.0);
-  const ivaAmount = subtotalPresupuesto * (ivaPercent / 100);
-  const totalGeneral = subtotalPresupuesto + ivaAmount;
+  const ivaAmount = Math.round((roundedSubtotal * (ivaPercent / 100) + Number.EPSILON) * 100) / 100;
+  const totalGeneral = Math.round((roundedSubtotal + ivaAmount + Number.EPSILON) * 100) / 100;
 
-  return { subtotalPresupuesto, ivaAmount, totalGeneral };
+  return { subtotalPresupuesto: roundedSubtotal, ivaAmount, totalGeneral };
 }

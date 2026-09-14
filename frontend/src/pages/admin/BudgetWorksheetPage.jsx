@@ -39,13 +39,18 @@ const ExcelIcon = ({ size = 20, className = "" }) => (
 );
 
 function MathQuantityInput({ value, onChange, onSave, className }) {
-  const [localVal, setLocalVal] = useState(value ?? 0);
+  const formatVal = (v) => {
+    if (v === null || v === undefined || v === '') return '0';
+    return String(v).replace(/\./g, ',');
+  };
+
+  const [localVal, setLocalVal] = useState(() => formatVal(value));
   const [isFocused, setIsFocused] = useState(false);
   const [previewVal, setPreviewVal] = useState(null);
 
   useEffect(() => {
     if (!isFocused) {
-      setLocalVal(value ?? 0);
+      setLocalVal(formatVal(value));
     }
   }, [value, isFocused]);
 
@@ -82,11 +87,11 @@ function MathQuantityInput({ value, onChange, onSave, className }) {
 
     const evaluated = evaluateExpression(localVal);
     if (evaluated !== null) {
-      setLocalVal(evaluated);
+      setLocalVal(formatVal(evaluated));
       if (onChange) onChange(evaluated);
       if (onSave) onSave(evaluated);
     } else {
-      setLocalVal(value ?? 0);
+      setLocalVal(formatVal(value));
       if (localVal && String(localVal).trim() !== '' && String(localVal).trim() !== String(value)) {
         toast.error('Fórmula no válida. Se conservó el valor anterior.', { id: 'math-err', duration: 2000 });
       }
@@ -97,8 +102,11 @@ function MathQuantityInput({ value, onChange, onSave, className }) {
     <div className="relative inline-flex items-center justify-end w-full">
       <input
         type="text"
-        value={localVal}
-        onFocus={() => setIsFocused(true)}
+        value={isFocused ? localVal : formatVal(value)}
+        onFocus={() => {
+          setIsFocused(true);
+          setLocalVal(formatVal(value));
+        }}
         onChange={handleInputChange}
         onBlur={handleCommit}
         onKeyDown={(e) => {
@@ -106,13 +114,13 @@ function MathQuantityInput({ value, onChange, onSave, className }) {
             e.preventDefault();
             e.target.blur();
           } else if (e.key === 'Escape') {
-            setLocalVal(value ?? 0);
+            setLocalVal(formatVal(value));
             setIsFocused(false);
             setPreviewVal(null);
             e.target.blur();
           }
         }}
-        title="Admite fórmulas matemáticas: ej. 12.5 * 3, (4.5+3.2)*2.6, 100/4. Pulsa Enter para resolver."
+        title="Admite fórmulas matemáticas: ej. 12,5 * 3 o 12.5 * 3. Pulsa Enter para resolver."
         className={className}
       />
       {isFocused && previewVal !== null && (
@@ -528,16 +536,18 @@ export default function BudgetWorksheetPage() {
   const calculateBudgetTotal = () => calculateBudgetTotals(budget);
 
   const handleQuantityChange = (itemId, newQuantity) => {
+    const parsedQty = typeof newQuantity === 'number' ? newQuantity : parseFloat(String(newQuantity).replace(',', '.')) || 0;
     // Optimistic UI update
     setBudget(prev => ({
       ...prev,
-      items: prev.items.map(i => i.id === itemId ? { ...i, quantity: parseFloat(newQuantity) || 0 } : i)
+      items: prev.items.map(i => i.id === itemId ? { ...i, quantity: parsedQty } : i)
     }));
   };
 
   const saveQuantity = async (itemId, newQuantity) => {
     try {
-      await budgetService.updateItem(budget.id, itemId, { quantity: parseFloat(newQuantity) || 0 });
+      const parsedQty = typeof newQuantity === 'number' ? newQuantity : parseFloat(String(newQuantity).replace(',', '.')) || 0;
+      await budgetService.updateItem(budget.id, itemId, { quantity: parsedQty });
     } catch (error) {
       console.error(error);
       toast.error('Error guardando la cantidad');
@@ -869,10 +879,10 @@ export default function BudgetWorksheetPage() {
                   <th className="p-4 w-32 bg-slate-50 border-b border-slate-200">Código</th>
                   <th className="p-4 bg-slate-50 border-b border-slate-200">Descripción</th>
                   <th className="p-4 w-20 text-center bg-slate-50 border-b border-slate-200">Unidad</th>
-                  <th className="p-4 w-32 text-right bg-slate-50 border-b border-slate-200">
+                  <th className="p-4 w-28 text-right bg-slate-50 border-b border-slate-200">
                     <div className="inline-flex items-center justify-end gap-1.5 group/th relative cursor-help w-full">
-                      <span>Cantidad</span>
                       <Calculator size={13} className="text-amber-600 hover:text-amber-700 transition-colors shrink-0" />
+                      <span>Cantidad</span>
                       
                       {/* Tooltip flotante con paleta ámbar de tarjeta de presupuesto */}
                       <div className="absolute top-full right-0 mt-2 hidden group-hover/th:flex flex-col w-64 p-3.5 bg-[#fef3c7] text-[#78350f] text-[11px] rounded-2xl shadow-xl z-50 pointer-events-none normal-case font-normal leading-relaxed border-2 border-[#f59e0b] animate-in fade-in zoom-in-95 text-left">
@@ -888,7 +898,7 @@ export default function BudgetWorksheetPage() {
                       </div>
                     </div>
                   </th>
-                  <th className="p-4 w-32 text-right bg-slate-50 border-b border-slate-200">P.U.</th>
+                  <th className="p-4 w-24 text-right bg-slate-50 border-b border-slate-200">P.U.</th>
                   <th className="p-4 w-32 text-right bg-slate-50 border-b border-slate-200">Total</th>
                   <th className="p-4 w-32 text-center bg-slate-50 border-b border-slate-200">Acciones</th>
                 </tr>
@@ -1004,7 +1014,7 @@ export default function BudgetWorksheetPage() {
                                     <td className="p-4 text-center text-sm font-medium text-slate-500">{item.unit}</td>
                                     <td className="p-4 text-right" onClick={e => e.stopPropagation()}>
                                       <MathQuantityInput 
-                                        className="w-28 text-right bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none transition-colors font-mono text-sm font-semibold text-slate-800"
+                                        className="w-full text-right bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none transition-colors font-mono text-sm font-semibold text-slate-800"
                                         value={item.quantity}
                                         onChange={val => handleQuantityChange(item.id, val)}
                                         onSave={val => saveQuantity(item.id, val)}
@@ -1014,7 +1024,7 @@ export default function BudgetWorksheetPage() {
                                       {calculatePU(item).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </td>
                                     <td className="p-4 text-right text-sm font-bold text-slate-900">
-                                      {(calculatePU(item) * item.quantity).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      {(Math.round((calculatePU(item) * (parseFloat(item.quantity) || 0) + Number.EPSILON) * 100) / 100).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </td>
                                     <td className="p-4 text-center">
                                         <div className="flex items-center justify-center gap-1">
@@ -1061,12 +1071,6 @@ export default function BudgetWorksheetPage() {
           <div className="mt-4 flex-none flex flex-col md:flex-row items-stretch md:items-start justify-between gap-6">
             {/* ÁREA DE NOTAS */}
             <div className="flex-1 max-w-2xl bg-white p-3 rounded-2xl border border-slate-300 shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-              <div className="flex items-center justify-between mb-1.5 px-1">
-                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <FileText size={14} className="text-slate-500" />
-                  Notas del Presupuesto
-                </span>
-              </div>
               <textarea
                 value={notesText}
                 onChange={(e) => setNotesText(e.target.value)}
