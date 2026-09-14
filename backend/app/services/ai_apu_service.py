@@ -128,7 +128,19 @@ _REGLAS_INSUMOS_PRECIOS = """
    - Si se requiere un insumo técnicamente indispensable que NO está en el catálogo provisto, agrégalo con `origen: "ia"`.
    - Asígnale un `precio_unitario` referencial estimado según valores de mercado actuales de la construcción en USD (NUNCA dejes precio 0.0).
    - En `advertencias`, agrega obligatoriamente una nota con el prefijo `[PRECIO_REFERENCIAL]` indicando el insumo y que dicho valor es un precio de mercado referencial estimado por la IA que se recomienda cotizar y validar con proveedores locales.
+3. COMPATIBILIDAD FUNCIONAL ESTRICTA DE EQUIPOS Y MATERIALES (¡CRÍTICO!):
+   - Si la partida base contiene un equipo o material principal con una función, diseño o aplicación incompatible con la solicitud del usuario, QUEDA PROHIBIDO reutilizar el insumo histórico como si fuera el mismo.
+   - Casos típicos obligatorios:
+     * BOMBAS: Bomba sumergible para aguas negras / achique (tipo Flygt o de sólidos con impulsor vórtex) NO ES COMPATIBLE con pozo profundo (agua limpia / tipo lapicero / multietapas de acero inoxidable). Si el usuario solicita bomba de pozo profundo y la partida base contiene bomba de aguas negras/achique, DEBES SUSTITUIR el material por 'BOMBA SUMERGIBLE PARA POZO PROFUNDO (TIPO LAPICERO)', marcarlo con origen 'ia', estimar su precio referencial en USD según los HP solicitados (~$1.200 - $2.500 USD) y emitir la advertencia `[PRECIO_REFERENCIAL]`.
+     * TUBERÍAS: Tubería sanitaria / ventilación NO es compatible con tubería de presión de agua o gas.
+     * CABLES: Cable eléctrico convencional en tubería NO es cable sumergible tipo submarino para pozo.
+4. EXCLUSIONES DE ALCANCE Y ADVERTENCIAS AL PRESUPUESTISTA:
+   - Si el usuario indica explícitamente que NO incluye un componente (ejemplo: 'no incluye cable submarino', 'sin excavación', 'sin flete', 'sin tablero'), debes:
+     a) Excluir el insumo de la lista de materiales y equipos.
+     b) Reflejar la exclusión en la descripción técnica COVENIN: '(NO INCLUYE ...)'.
+     c) Agregar OBLIGATORIAMENTE en `advertencias` una nota con el prefijo `[ALCANCE]` (ejemplo: '[ALCANCE] Se excluye el suministro de cable submarino conforme a la solicitud. Se recomienda cotizar y presupuestar en partida eléctrica independiente').
 """
+
 
 COMMON_CONSTRUCTION_TERMS: Set[str] = {
     "construccion", "suministro", "instalacion", "colocacion", "demolicion",
@@ -320,14 +332,18 @@ Prefijo COVENIN: {covenin_prefix}
 1. El APU base es para una partida SIMILAR, no idéntica. Tu trabajo es adaptarlo para "{user_description}".
 2. ANCLAJE DE RENDIMIENTO: Conserva como ancla principal el rendimiento (`performance`) del APU base [{base_apu.get('rendimiento') or base_apu.get('performance') or base_apu.get('RenPar') or 'N/A'}]. Solo ajústalo si la geometría, altura o complejidad de la nueva partida lo justifica de forma evidente, y explica el motivo en notas.
 3. CONSERVA todos los insumos que sigan siendo relevantes para la nueva partida. Márcalos como `"origen": "historico"`.
-4. ELIMINA los insumos que claramente no aplican a la nueva partida.
+4. ELIMINA o SUSTITUYE los insumos que no aplican. Si el equipo o material principal de la base tiene una aplicación o diseño técnicamente incompatible con la solicitada (ejemplo: bomba de achique/aguas negras tipo Flygt vs. bomba de pozo profundo/agua limpia tipo lapicero), NO uses el insumo histórico. Reemplázalo por el insumo correcto con origen "ia", precio referencial de mercado en USD y emite la advertencia `[PRECIO_REFERENCIAL]`.
 5. AJUSTA cantidades cuando la nueva partida lo requiera (ej: distinta área, espesor, proporción).
    Marca los insumos ajustados como `"origen": "ia"` y explica el ajuste en `nota_calculo`.
 6. AUTO-FUSIÓN: Si la descripción del usuario exige algo que falta en la Base (ej. Bote de material, Pintura, Andamios, Encofrado) pero que sí existe en las Partidas Complementarias, "róbalo" e intégralo conservando sus precios históricos.
 7. AGREGA insumos nuevos que la nueva partida requiera estrictamente y no estén ni en la base ni en las complementarias. Márcalos como `"origen": "ia"`, asígnales un precio unitario referencial estimado de mercado en USD (nunca 0.0) y agrega una advertencia con el prefijo `[PRECIO_REFERENCIAL]`.
 8. NUNCA alteres los precios unitarios de los insumos del APU base ni de las complementarias. Son precios reales de la BD.
 9. Registra SIEMPRE en `notas_adaptacion` (para el log técnico de depuración) que el APU fue adaptado desde la partida base [{base_apu.get('codpar', 'N/A')}], qué insumos se podaron y la justificación del rendimiento.
-10. El campo `advertencias` es EXCLUSIVO para advertencias dirigidas al cliente/usuario sobre precios referenciales estimados por IA (`[PRECIO_REFERENCIAL]`) o insumos que requieren cotización local. NUNCA coloques notas de adaptación técnica interna en `advertencias`.
+10. El campo `advertencias` es para advertencias dirigidas al presupuestista/usuario sobre:
+   - Precios referenciales estimados por IA (`[PRECIO_REFERENCIAL]`): cuando un insumo indispensable no existe en el catálogo histórico o cuando se sustituyó un equipo incompatible de la base.
+   - Exclusiones de alcance solicitadas (`[ALCANCE]`): cuando el usuario indica expresamente que la partida no incluye un elemento clave (ej: sin cable submarino, sin excavación, sin tablero) para alertar que debe presupuestarse en partida separada.
+   NUNCA coloques notas de adaptación técnica interna en `advertencias` (esas van en `notas_adaptacion`).
+
 
 # CRITERIO DE CLARIFICACIÓN VS GENERACIÓN
 - Si la solicitud es inteligible y describe una actividad técnica razonable, DEBES GENERAR EL APU con `status: "completed"`. Asume la hipótesis técnica más lógica basada en el APU base.
