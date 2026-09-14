@@ -1,8 +1,2 @@
-import React from 'react';
-import PDFUpdaterTab from '../PDFUpdaterTab';
-
-const PDFsTab = () => {
-  return <PDFUpdaterTab />;
-};
-
-export default PDFsTab;
+export * from "../../../costbase/components/tabs/PDFsTab.jsx";
+export { default } from "../../../costbase/components/tabs/PDFsTab.jsx";

@@ -113,7 +113,7 @@ export const HELP_ARTICLES = [
     level: 'Intermedio',
     icon: 'Database',
     shortDesc: 'Conoce las diferencias entre la Base Maestra, bases duplicadas con inflación y tu Base Personalizada.',
-    tags: ['bases de datos', 'base maestra', 'base personalizada', 'inflacion', 'cost360', 'duplicar'],
+    tags: ['bases de datos', 'base maestra', 'base personalizada', 'inflacion', 'costbase', 'cost360', 'duplicar'],
     steps: [
       {
         title: 'Base Maestra (CostBase)',
@@ -254,13 +254,13 @@ export const HELP_FAQS = [
   },
   {
     id: 'faq-6',
-    category: 'Cost360',
+    category: 'CostBase',
     q: '¿Puedo editar los precios de la Base Maestra directamente?',
     a: 'La Base Maestra es de solo lectura para garantizar consistencia referencial. Si deseas personalizar precios, puedes duplicarla aplicando índices de inflación o guardar tus partidas en tu Base Personalizada.'
   },
   {
     id: 'faq-7',
-    category: 'Cost360',
+    category: 'CostBase',
     q: '¿Dónde encuentro las partidas que he creado con IA?',
     a: 'Todas las partidas que creas desde cero o generas con el Asistente IA se almacenan automáticamente en tu "Base Personalizada", accesible desde la sección "Visor Bases de Datos" o seleccionando la base personalizada en el menú.'
   },
@@ -273,14 +273,14 @@ export const HELP_FAQS = [
   {
     id: 'faq-9',
     category: 'Costos',
-    q: '¿Por qué el IVA aparece en 0% dentro de los APUs?',
-    a: 'Siguiendo las mejores prácticas de ingeniería de costos, el IVA se aplica al pie de presupuesto sobre el subtotal general. Los APUs individuales reflejan el costo unitario antes de impuestos.'
+    q: '¿Cómo afecta el FCAS al costo de la Mano de Obra?',
+    a: 'El FCAS (Factor de Costos Asociados al Salario) multiplica el salario base diario del tabulador según las prestaciones, bonos y obligaciones legales vigentes de la convención colectiva de la construcción.'
   },
   {
     id: 'faq-10',
-    category: 'Planes',
-    q: '¿Cómo solicito un plan o aumento de límite de presupuestos?',
-    a: 'Haz clic en el icono de la corona (Planes y Suscripción) en la parte inferior de la barra lateral para ver los planes disponibles o contactar al equipo de soporte para activación inmediata.'
+    category: 'Presupuestos',
+    q: '¿Puedo exportar el presupuesto a Excel con fórmulas vivas?',
+    a: 'Sí. En cualquier presupuesto haz clic en "Exportar Excel" y se generará un archivo .xlsx con fórmulas nativas de suma y multiplicación para hojas de medición y análisis.'
   }
 ];
 
@@ -290,6 +290,19 @@ export const CONTEXTUAL_SUGGESTIONS = {
     'primer-presupuesto',
     'backup-restauracion',
     'compartir-presupuestos'
+  ],
+  '/costbase': [
+    'bases-de-datos',
+    'configuracion-costos',
+    'generador-apu-ia'
+  ],
+  '/costbase/databases': [
+    'bases-de-datos',
+    'configuracion-costos'
+  ],
+  '/costbase/ai-generator': [
+    'generador-apu-ia',
+    'bases-de-datos'
   ],
   '/cost360': [
     'bases-de-datos',

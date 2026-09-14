@@ -1,0 +1,440 @@
+import React, { useState, useEffect, useContext, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { FiSearch, FiLayers, FiArrowRight, FiBox, FiTool, FiUsers, FiDatabase, FiTrash2 } from 'react-icons/fi';
+import toast from 'react-hot-toast';
+import cost360Service from '../services/cost360Service';
+import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
+import { SiteConfigContext } from '../../../App';
+import CatalogResourceTab from '../components/CatalogResourceTab';
+import Cost360SearchBar from '../components/Cost360SearchBar';
+import { useCost360Search } from '../hooks/useCost360Search';
+import { useUserCostos } from '../../../context/UserCostosContext';
+import DecimalInput from '../../../components/DecimalInput';
+
+/* ── Shared glass style ─────────────────────────────────── */
+const glass = {
+  background: 'rgba(255,255,255,0.72)',
+  backdropFilter: 'blur(18px)',
+  WebkitBackdropFilter: 'blur(18px)',
+  border: '2px solid #cbd5e1',
+  boxShadow: '0 4px 32px 0 rgba(80,100,200,0.08)',
+};
+
+const glassStrong = {
+  background: 'rgba(255,255,255,0.88)',
+  backdropFilter: 'blur(20px)',
+  WebkitBackdropFilter: 'blur(20px)',
+  border: '2px solid #cbd5e1',
+  boxShadow: '0 8px 40px 0 rgba(80,100,200,0.10)',
+};
+
+const Cost360Dashboard = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const dbParam = searchParams.get('db');
+  const [activeTab, setActiveTab] = useState('partidas');
+  const [databases, setDatabases] = useState([]);
+  const [selectedDatabase, setSelectedDatabase] = useState(dbParam || 'master');
+  
+  const navigate = useNavigate();
+  const { config } = useContext(SiteConfigContext);
+
+  useEffect(() => {
+    if (dbParam && dbParam !== selectedDatabase) {
+      setSelectedDatabase(dbParam);
+    }
+  }, [dbParam]);
+
+  const handleSelectDatabase = (newDb) => {
+    setSelectedDatabase(newDb);
+    if (newDb === 'master') {
+      searchParams.delete('db');
+      setSearchParams(searchParams);
+    } else {
+      setSearchParams({ ...Object.fromEntries(searchParams.entries()), db: newDb });
+    }
+  };
+
+  // Costos desde contexto global
+  const { costosConfig, updateCostosConfig, loading: loadingCostos } = useUserCostos();
+  const [draft, setDraft] = useState(null);
+  const currentCostos = draft ?? costosConfig;
+
+  const handleCostoChange = (key, value) => {
+    const numValue = parseFloat(value) || 0;
+    setDraft(prev => ({ ...(prev ?? costosConfig), [key]: numValue }));
+  };
+
+  const handleSaveCostos = async () => {
+    if (!draft) return;
+    try {
+      await updateCostosConfig(draft);
+      setDraft(null);
+      toast.success('Configuración de costos guardada');
+    } catch (error) {
+      toast.error('Error al guardar la configuración de costos');
+    }
+  };
+
+  const {
+    searchQuery: search,
+    setSearchQuery: setSearch,
+    searchCovenin, setSearchCovenin,
+    searchDesc, setSearchDesc,
+    searchInsumos, setSearchInsumos,
+    results: items,
+    totalResults: totalItems,
+    isSearching: loading,
+    hasMore,
+    loadMore: handleLoadMore,
+    forceSearch: handleSearch
+  } = useCost360Search({
+    databaseId: selectedDatabase,
+    limit: 1000,
+    onlyCoded: window.ARKO_SITE_CONFIG?.forceOnlyCodedMaster === true,
+    autoSearch: true
+  });
+
+  const handleDeleteCustomItem = (item) => {
+    const code = item.CovPar || item.CodPar;
+    toast((t) => (
+      <div className="flex flex-col gap-2.5 py-1 min-w-[260px]">
+        <div className="flex items-start gap-2.5">
+          <span className="text-amber-500 font-bold text-lg leading-none mt-0.5">⚠️</span>
+          <div>
+            <p className="text-xs font-bold text-slate-800">¿Eliminar partida de tu Base?</p>
+            <p className="text-xs text-slate-600 font-mono mt-1 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 inline-block">{code}</p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-1">
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200 cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={async () => {
+              toast.dismiss(t.id);
+              try {
+                await cost360Service.deleteCustomApu(item.id || item.CodPar);
+                toast.success(`Partida ${code} eliminada`);
+                handleSearch();
+              } catch (err) {
+                toast.error(err.response?.data?.detail || 'Error al eliminar la partida');
+              }
+            }}
+            className="px-3 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors cursor-pointer"
+          >
+            Eliminar
+          </button>
+        </div>
+      </div>
+    ), {
+      duration: 6000,
+      position: 'top-center',
+      style: {
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: '1rem',
+        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08)',
+        padding: '0.85rem 1rem',
+      }
+    });
+  };
+
+  useEffect(() => {
+    const loadDatabases = async () => {
+      try {
+        const dbs = await cost360DatabaseService.getAll();
+        const loadedDbs = dbs.databases || [];
+        if (!loadedDbs.find(db => db.id === 'personalizada')) {
+          loadedDbs.push({ id: 'personalizada', name: 'Base Personalizada', is_master: false });
+        }
+        setDatabases(loadedDbs);
+      } catch (error) {
+        // Silencioso
+      }
+    };
+    loadDatabases();
+  }, []);
+
+  const TABS = [
+    { key: 'partidas',   label: 'Partidas (APU)', Icon: FiLayers },
+    { key: 'materiales', label: 'Materiales',      Icon: FiBox   },
+    { key: 'equipos',    label: 'Equipos',         Icon: FiTool  },
+    { key: 'mano_obra',  label: 'Mano de Obra',    Icon: FiUsers },
+  ];
+
+  return (
+    <div className="absolute inset-0 p-4 md:p-6 flex flex-col overflow-hidden gap-4">
+
+      <div className="rounded-2xl overflow-hidden" style={glassStrong}>
+        <div
+          className="px-6 py-5 flex items-center gap-4"
+          style={{
+            background: 'linear-gradient(90deg, rgba(37,99,235,0.08) 0%, rgba(99,102,241,0.04) 100%)',
+            borderBottom: '1px solid rgba(148,163,255,0.2)',
+          }}
+        >
+          <div
+            className="p-2.5 rounded-xl shadow-sm"
+            style={{ background: 'linear-gradient(135deg,#2563eb,#4f46e5)', color: '#fff' }}
+          >
+            <FiDatabase size={22} />
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold text-slate-800 tracking-tight leading-none">Explora las Bases de Datos, Insumos, Materiales o Personal</h1>
+          </div>
+        </div>
+
+        <div className="px-4 flex justify-between items-end pt-2 pb-0">
+          <div className="flex gap-1">
+            {TABS.map(({ key, label, Icon }) => {
+              const active = activeTab === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setActiveTab(key)}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-xl border-b-2 transition-all duration-200 btn-borde-azul-redondeado ${
+                    active
+                      ? 'text-blue-700 border-blue-600 bg-blue-50/60'
+                      : 'text-slate-500 border-transparent'
+                  }`}
+                >
+                  <Icon size={14} />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex gap-4 items-end pb-2">
+            {/* Inputs de costos */}
+            <div className="flex gap-2 items-end">
+              <div className="flex flex-col items-center">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1">% Utilidad</label>
+                <DecimalInput
+                  value={currentCostos?.porcentajeUtilidad ?? 0}
+                  onChange={(val) => handleCostoChange('porcentajeUtilidad', val)}
+                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 text-center focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex flex-col items-center">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1">% Admin</label>
+                <DecimalInput
+                  value={currentCostos?.porcentajeAdministracion ?? 0}
+                  onChange={(val) => handleCostoChange('porcentajeAdministracion', val)}
+                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 text-center focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex flex-col items-center">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1">IVA %</label>
+                <DecimalInput
+                  value={currentCostos?.iva ?? 0}
+                  onChange={(val) => handleCostoChange('iva', val)}
+                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 text-center focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex flex-col items-center">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1">F.C.A.S %</label>
+                <DecimalInput
+                  value={currentCostos?.fcas ?? 0}
+                  onChange={(val) => handleCostoChange('fcas', val)}
+                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 text-center focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
+              <button
+                onClick={handleSaveCostos}
+                disabled={!draft || loadingCostos}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors"
+              >
+                {loadingCostos ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
+
+            <div>
+              <select
+                value={selectedDatabase}
+                onChange={(e) => handleSelectDatabase(e.target.value)}
+                className="bg-white border-2 border-slate-300 text-slate-700 text-sm font-medium rounded-lg px-4 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm transition-all w-64 appearance-none"
+                style={{
+                  backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3e%3c/svg%3e")',
+                  backgroundPosition: 'right 0.5rem center',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundSize: '1.5em 1.5em',
+                  paddingRight: '2.5rem',
+                }}
+              >
+                <option value="master">Base Maestra (Defecto)</option>
+                {databases.filter(db => db.id !== 'master' && db.is_master !== true).map(db => (
+                  <option key={db.id} value={db.id}>{db.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+        <div className="h-px" style={{ background: 'linear-gradient(90deg,rgba(148,163,255,0.4),transparent)' }} />
+      </div>
+
+      {activeTab === 'partidas' && (
+        <>
+          <div className="rounded-2xl p-4 flex flex-col gap-3 relative" style={glass}>
+            <Cost360SearchBar
+              searchQuery={search}
+              setSearchQuery={setSearch}
+              searchCovenin={searchCovenin}
+              setSearchCovenin={setSearchCovenin}
+              searchDesc={searchDesc}
+              setSearchDesc={setSearchDesc}
+              searchInsumos={searchInsumos}
+              setSearchInsumos={setSearchInsumos}
+              isSearching={loading}
+              onSearch={handleSearch}
+            />
+
+            {totalItems > 0 && (
+              <div className="absolute -bottom-3 left-6 z-20 pointer-events-none">
+                <div className="inline-flex items-center gap-1.5 px-3 py-0.5 bg-slate-900/90 text-white rounded-full text-xs font-semibold shadow-lg backdrop-blur border border-slate-700/60 pointer-events-auto select-none transition-all">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                  <span className="font-bold text-white">{new Intl.NumberFormat('es-VE').format(totalItems)}</span>
+                  <span className="text-slate-300 font-medium">
+                    {search ? (totalItems === 1 ? 'coincidencia' : 'coincidencias') : (totalItems === 1 ? 'Partida' : 'Partidas')}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── ZONE 5: Results list ──────────────────────── */}
+          <div className="rounded-2xl overflow-y-auto flex-1 min-h-0 flex flex-col" style={glassStrong}>
+            <div className="flex-1">
+            {items.length > 0 ? (
+              <ul className="divide-y" style={{ borderColor: 'rgba(148,163,255,0.15)' }}>
+                {items.map((item) => (
+                  <li
+                    key={item.CodPar}
+                    onClick={() => navigate(`/cost360/apu/${item.CodPar}?db=${selectedDatabase}`)}
+                    className="group cursor-pointer transition-all duration-200 border-l-4 border-transparent hover:border-blue-600 hover:bg-blue-50/90 hover:shadow-md hover:translate-x-1"
+                  >
+                    <div className="px-5 py-4 flex items-center justify-between gap-4">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div
+                          className="mt-0.5 p-2 rounded-lg shrink-0 transition-colors duration-150"
+                          style={{ background: 'rgba(219,234,254,0.8)', color: '#2563eb' }}
+                        >
+                          <FiLayers size={15} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-slate-900 font-mono mb-1">{item.CovPar || item.CodPar}</p>
+                          <p className="text-sm text-slate-700 font-medium line-clamp-2 max-w-3xl lg:max-w-[1140px] group-hover:text-slate-900 transition-colors">{item.Descri}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        {selectedDatabase === 'personalizada' && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteCustomItem(item);
+                            }}
+                            title="Eliminar partida de tu Base Personalizada"
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <FiTrash2 size={16} />
+                          </button>
+                        )}
+                        <span
+                          className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                          style={{ background: 'rgba(241,245,249,0.9)', color: '#475569', border: '1px solid rgba(148,163,184,0.3)' }}
+                        >
+                          {item.UniPar}
+                        </span>
+                        <FiArrowRight
+                          size={18}
+                          className="text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all duration-200"
+                        />
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : !loading ? (
+              <div className="py-20 text-center">
+                <FiLayers size={32} className="mx-auto mb-3 text-slate-300" />
+                <p className="text-slate-400 text-sm">No se encontraron partidas con ese criterio.</p>
+              </div>
+            ) : null}
+
+            {loading && (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+              </div>
+            )}
+          </div>
+
+            {hasMore && !loading && items.length > 0 && (
+              <div className="flex justify-center py-4 pb-8 shrink-0">
+                <button
+                  onClick={handleLoadMore}
+                  className="px-8 py-2.5 rounded-full text-sm font-semibold text-blue-700 transition-all duration-300 hover:shadow-[0_8px_20px_rgba(37,99,235,0.2)] hover:-translate-y-0.5 hover:bg-white"
+                  style={{
+                    background: 'rgba(255,255,255,0.8)',
+                    border: '1.5px solid rgba(37,99,235,0.3)',
+                    backdropFilter: 'blur(8px)',
+                  }}
+                >
+                  Cargar Más Partidas
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {activeTab === 'materiales' && (
+        <CatalogResourceTab
+          key={`mat-${selectedDatabase}`}
+          title="Materiales"
+          resourceType="materials"
+          selectedDatabase={selectedDatabase}
+          config={{
+            idKey: 'CodMat', descKey: 'Descri',
+            editableFields: [{ key: 'CosMat', label: 'Precio Unitario ($)' }]
+          }}
+        />
+      )}
+
+      {activeTab === 'equipos' && (
+        <CatalogResourceTab
+          key={`eq-${selectedDatabase}`}
+          title="Equipos"
+          resourceType="equipments"
+          selectedDatabase={selectedDatabase}
+          config={{
+            idKey: 'CodEqu', descKey: 'Descri',
+            editableFields: [{ key: 'precio', label: 'Precio ($)' }]
+          }}
+        />
+      )}
+
+      {activeTab === 'mano_obra' && (
+        <CatalogResourceTab
+          key={`mo-${selectedDatabase}`}
+          title="Mano de Obra"
+          resourceType="labors"
+          selectedDatabase={selectedDatabase}
+          config={{
+            idKey: 'CodMan', descKey: 'Descri',
+            editableFields: [
+              { key: 'Jornal', label: 'Jornal ($)' },
+              { key: 'Bono',   label: 'Bono ($)' }
+            ]
+          }}
+        />
+      )}
+
+    </div>
+  );
+};
+
+export default Cost360Dashboard;

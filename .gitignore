@@ -50,6 +50,7 @@ bot.log
 # Database dumps
 *.dump
 *.sql
+!backend/app/db/migrations/*.sql
 dump.sql
 import_*.sql
 
@@ -57,3 +58,7 @@ import_*.sql
 *.tmp
 *.temp
 scratch/
+~$*.xlsx
+*.db
+check_*.py
+test_*.py

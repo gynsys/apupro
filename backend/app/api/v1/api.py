@@ -5,8 +5,8 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import budgets
 from app.api.v1.endpoints import materials
-from app.api.v1.endpoints import cost360
-from app.api.v1.endpoints import cost360_databases
+from app.api.v1.endpoints import costbase
+from app.api.v1.endpoints import costbase_databases
 from app.api.v1.endpoints import search_v6
 from app.api.v1.endpoints import uploads
 from app.api.v1.endpoints import arko
@@ -20,10 +20,17 @@ from app.api.v1.endpoints.dedup import router_dedup
 from app.api.v1.endpoints import users as users_module
 api_router = APIRouter()
 
-# APUpro Endpoints
+# Arko Core Endpoints
 api_router.include_router(arko.router, prefix="/arko", tags=["arko360"])
-api_router.include_router(cost360.router, prefix="/cost360", tags=["cost360"])
-api_router.include_router(cost360_databases.router, prefix="/cost360/databases", tags=["cost360_databases"])
+
+# Primary CostBase Endpoints
+api_router.include_router(costbase.router, prefix="/costbase", tags=["costbase"])
+api_router.include_router(costbase_databases.router, prefix="/costbase/databases", tags=["costbase_databases"])
+api_router.include_router(search_v6.router, prefix="/costbase/v6", tags=["costbase_v6"])
+
+# Backward-Compatible Cost360 Aliases
+api_router.include_router(costbase.router, prefix="/cost360", tags=["cost360"])
+api_router.include_router(costbase_databases.router, prefix="/cost360/databases", tags=["cost360_databases"])
 api_router.include_router(search_v6.router, prefix="/cost360/v6", tags=["cost360_v6"])
 api_router.include_router(budgets.router, prefix="/budgets", tags=["budgets"])
 api_router.include_router(materials.router, prefix="/materials", tags=["materials"])

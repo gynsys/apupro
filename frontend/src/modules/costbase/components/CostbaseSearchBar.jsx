@@ -1,0 +1,199 @@
+import React, { useState, useEffect } from 'react';
+import { FiSearch } from 'react-icons/fi';
+import { Loader } from 'lucide-react';
+import coveninTreeData from '../data/covenin_tree.json';
+import { SiteConfigContext } from '../../../App';
+
+const Cost360SearchBar = ({
+  searchQuery,
+  setSearchQuery,
+  searchCovenin,
+  setSearchCovenin,
+  searchDesc,
+  setSearchDesc,
+  searchInsumos,
+  setSearchInsumos,
+  isSearching,
+  onSearch,
+  hideSearchButton = false
+}) => {
+  const [coveninTree] = useState(coveninTreeData);
+  const [selectedTipoObra, setSelectedTipoObra] = useState('');
+  const [selectedCapitulo, setSelectedCapitulo] = useState('');
+  const [selectedSubcapitulo, setSelectedSubcapitulo] = useState('');
+  const [selectedPartida, setSelectedPartida] = useState('');
+
+  const configContext = React.useContext(SiteConfigContext);
+  const hiddenCategories = configContext?.config?.hiddenCategories || [];
+  
+  // Filtrar el árbol principal para ocultar las categorías desactivadas
+  const visibleTree = React.useMemo(() => {
+    return coveninTree.filter(c => !hiddenCategories.includes(c.code));
+  }, [coveninTree, hiddenCategories]);
+
+  // Sincronizar el prefijo hacia el padre
+  useEffect(() => {
+    const currentPrefix = selectedPartida || selectedSubcapitulo || selectedCapitulo || selectedTipoObra || '';
+    if (setSearchCovenin) {
+       setSearchCovenin(currentPrefix);
+    }
+  }, [selectedTipoObra, selectedCapitulo, selectedSubcapitulo, selectedPartida, setSearchCovenin]);
+
+  const currentSub = coveninTree.find(c => c.code === selectedTipoObra)?.children?.find(c => c.code === selectedCapitulo)?.children?.find(c => c.code === selectedSubcapitulo);
+  const hasFourthLevel = currentSub?.children?.length > 0;
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Filtros COVENIN */}
+      <div className="flex flex-col md:flex-row gap-4 mb-2">
+        <div className="flex-1">
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de Obra</label>
+          <select 
+            value={selectedTipoObra}
+            onChange={(e) => {
+              setSelectedTipoObra(e.target.value);
+              setSelectedCapitulo('');
+              setSelectedSubcapitulo('');
+              setSelectedPartida('');
+            }}
+            className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 text-sm transition-colors hover:border-[#324ADD] focus:outline-none focus:border-[#324ADD] focus:ring-2 focus:ring-[#324ADD]/20"
+          >
+            <option value="">Todos los Tipos...</option>
+            {visibleTree.map(cat => (
+              <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex-1">
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Capítulo</label>
+          <select 
+            value={selectedCapitulo}
+            onChange={(e) => {
+              setSelectedCapitulo(e.target.value);
+              setSelectedSubcapitulo('');
+              setSelectedPartida('');
+            }}
+            disabled={!selectedTipoObra}
+            className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 text-sm transition-colors hover:border-[#324ADD] focus:outline-none focus:border-[#324ADD] focus:ring-2 focus:ring-[#324ADD]/20 disabled:opacity-50 disabled:hover:border-slate-300"
+          >
+            <option value="">Todos los Capítulos...</option>
+            {selectedTipoObra && coveninTree.find(c => c.code === selectedTipoObra)?.children?.map(cap => (
+              <option key={cap.code} value={cap.code}>{cap.code} - {cap.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex-1">
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Subcapítulo</label>
+          <select 
+            value={selectedSubcapitulo}
+            onChange={(e) => {
+              setSelectedSubcapitulo(e.target.value);
+              setSelectedPartida('');
+            }}
+            disabled={!selectedCapitulo}
+            className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 text-sm transition-colors hover:border-[#324ADD] focus:outline-none focus:border-[#324ADD] focus:ring-2 focus:ring-[#324ADD]/20 disabled:opacity-50 disabled:hover:border-slate-300"
+          >
+            <option value="">Todos los Subcapítulos...</option>
+            {selectedCapitulo && coveninTree.find(c => c.code === selectedTipoObra)?.children?.find(c => c.code === selectedCapitulo)?.children?.map(sub => (
+              <option key={sub.code} value={sub.code}>{sub.code} - {sub.name}</option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="flex-1">
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Partida Base</label>
+          <select 
+            value={selectedPartida}
+            onChange={(e) => setSelectedPartida(e.target.value)}
+            disabled={!selectedSubcapitulo || !hasFourthLevel}
+            className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 text-sm transition-colors hover:border-[#324ADD] focus:outline-none focus:border-[#324ADD] focus:ring-2 focus:ring-[#324ADD]/20 disabled:opacity-50 disabled:hover:border-slate-300"
+          >
+            {!selectedSubcapitulo ? (
+              <option value="">Selecciona el Subcapítulo...</option>
+            ) : !hasFourthLevel ? (
+              <option value="">No aplica (sin desglose)</option>
+            ) : (
+              <>
+                <option value="">Todas las Partidas...</option>
+                {currentSub.children.map(par => (
+                  <option key={par.code} value={par.code}>{par.code} - {par.name}</option>
+                ))}
+              </>
+            )}
+          </select>
+        </div>
+      </div>
+
+      {/* Barra de Búsqueda Principal y Selectores en la misma fila */}
+      <form onSubmit={(e) => { e.preventDefault(); if(onSearch) onSearch(); }} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="relative w-full sm:w-[152px] shrink-0">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <FiSearch className="text-slate-400 text-base" />
+          </div>
+          <input
+            type="text"
+            className="block w-full pl-11 pr-4 py-3 rounded-xl text-[11px] placeholder:text-[11px] text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-medium"
+            style={{
+              background: 'rgba(255,255,255,0.8)',
+              border: '2px solid #cbd5e1',
+              boxShadow: 'inset 0 1px 4px rgba(80,100,200,0.06)',
+            }}
+            placeholder="Cód. COVENIN"
+            value={searchCovenin}
+            onChange={(e) => setSearchCovenin(e.target.value)}
+          />
+        </div>
+
+        <div className="relative flex-1 min-w-0">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <FiSearch className="text-slate-400 text-base" />
+          </div>
+          <input
+            type="text"
+            className="block w-full pl-11 pr-4 py-3 rounded-xl text-sm text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-medium"
+            style={{
+              background: 'rgba(255,255,255,0.8)',
+              border: '2px solid #cbd5e1',
+              boxShadow: 'inset 0 1px 4px rgba(80,100,200,0.06)',
+            }}
+            placeholder="Ej: excavación a maquina..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {isSearching && (
+            <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-blue-500">
+               <Loader className="animate-spin" size={16} />
+            </div>
+          )}
+        </div>
+
+        {/* Búsqueda Inversa Toggles */}
+        <div className="flex items-center gap-3 shrink-0 px-1 text-sm whitespace-nowrap">
+          <span className="text-slate-600 font-medium">Buscar por:</span>
+          
+          <label className="flex items-center cursor-pointer gap-2">
+            <div className="relative">
+              <input type="checkbox" className="sr-only" checked={searchDesc} onChange={(e) => setSearchDesc(e.target.checked)} />
+              <div className={`block w-10 h-6 rounded-full transition-colors ${searchDesc ? 'bg-blue-500' : 'bg-slate-300'}`}></div>
+              <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${searchDesc ? 'transform translate-x-4' : ''}`}></div>
+            </div>
+            <span className="text-slate-700 select-none font-medium">Descripción</span>
+          </label>
+
+          <label className="flex items-center cursor-pointer gap-2" title="Busca dentro de los Materiales, Equipos y Mano de Obra de las partidas">
+            <div className="relative">
+              <input type="checkbox" className="sr-only" checked={searchInsumos} onChange={(e) => setSearchInsumos(e.target.checked)} />
+              <div className={`block w-10 h-6 rounded-full transition-colors ${searchInsumos ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
+              <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${searchInsumos ? 'transform translate-x-4' : ''}`}></div>
+            </div>
+            <span className="text-slate-700 select-none font-medium">Materiales</span>
+          </label>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export const CostbaseSearchBar = Cost360SearchBar;
+export default CostbaseSearchBar;
+

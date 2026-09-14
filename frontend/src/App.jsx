@@ -11,11 +11,11 @@ import BudgetWorksheetPage from './pages/admin/BudgetWorksheetPage.jsx';
 import BudgetAPUEditorPage from './pages/admin/BudgetAPUEditorPage.jsx';
 import SharedBudgetPage from './pages/admin/SharedBudgetPage.jsx';
 import CalculadoraFCASPage from './pages/tools/CalculadoraFCASPage.jsx';
-import Cost360Dashboard from './modules/cost360/pages/Cost360Dashboard.jsx';
-import APUViewer from './modules/cost360/pages/APUViewer.jsx';
-import AIApuGeneratorPage from './modules/cost360/pages/AIApuGeneratorPage.jsx';
-import DatabaseManagementPage from './modules/cost360/pages/DatabaseManagementPage.jsx';
-import AdminDatabasePage from './modules/cost360/pages/AdminDatabasePage.jsx';
+import CostbaseDashboard from './modules/costbase/pages/CostbaseDashboard.jsx';
+import APUViewer from './modules/costbase/pages/APUViewer.jsx';
+import AIApuGeneratorPage from './modules/costbase/pages/AIApuGeneratorPage.jsx';
+import DatabaseManagementPage from './modules/costbase/pages/DatabaseManagementPage.jsx';
+import AdminDatabasePage from './modules/costbase/pages/AdminDatabasePage.jsx';
 import MarketAdminPage from './modules/market/pages/MarketAdminPage.jsx';
 import AppLayout from './components/layout/AppLayout.jsx';
 import { API_URL } from './services/api';
@@ -104,7 +104,24 @@ function App() {
               <Route index element={<CalculadoraFCASPage />} />
             </Route>
             
-            {/* RUTAS DE BASE MAESTRA (Protegidas) */}
+            {/* RUTAS DE BASE MAESTRA - COSTBASE (Protegidas) */}
+            <Route 
+              path="/costbase" 
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<CostbaseDashboard />} />
+              <Route path="apu/:id" element={<APUViewer />} />
+              <Route path="ai-generator" element={<AIApuGeneratorPage />} />
+              <Route path="databases" element={<DatabaseManagementPage />} />
+              <Route path="admin-db" element={<AdminDatabasePage />} />
+              <Route path="market-admin" element={<MarketAdminPage />} />
+            </Route>
+
+            {/* ALIAS RETROCOMPATIBLES /cost360 */}
             <Route 
               path="/cost360" 
               element={
@@ -113,7 +130,7 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Cost360Dashboard />} />
+              <Route index element={<CostbaseDashboard />} />
               <Route path="apu/:id" element={<APUViewer />} />
               <Route path="ai-generator" element={<AIApuGeneratorPage />} />
               <Route path="databases" element={<DatabaseManagementPage />} />
@@ -154,10 +171,34 @@ function App() {
             </Route>
 
             <Route
+              path="/:slug/costbase"
+              element={
+                <ProtectedRoute>
+                  <CostbaseDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/:slug/costbase/apu/:id"
+              element={
+                <ProtectedRoute>
+                  <APUViewer />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/:slug/costbase/ai-generator"
+              element={
+                <ProtectedRoute>
+                  <AIApuGeneratorPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/:slug/cost360"
               element={
                 <ProtectedRoute>
-                  <Cost360Dashboard />
+                  <CostbaseDashboard />
                 </ProtectedRoute>
               }
             />

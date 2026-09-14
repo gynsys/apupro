@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { cost360DatabaseService } from '../services/cost360DatabaseService';
+import { costbaseDatabaseService } from '../services/costbaseDatabaseService';
 
 const DatabaseContext = createContext(null);
 
 // Default databases fallback
 const DEFAULT_DATABASES = [
-  { id: 'master', name: 'Base Maestra', description: 'Base de datos oficial de Cost360', is_master: true, is_active: true },
+  { id: 'master', name: 'Base Maestra', description: 'Base de datos oficial de CostBase', is_master: true, is_active: true },
 ];
 
 export const DatabaseProvider = ({ children }) => {
@@ -19,7 +19,7 @@ export const DatabaseProvider = ({ children }) => {
 
   const loadDatabases = async () => {
     try {
-      const data = await cost360DatabaseService.getAll();
+      const data = await costbaseDatabaseService.getAll();
       let dbList = data.databases || [];
       
       // Ensure master database is always included

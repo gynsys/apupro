@@ -16,9 +16,9 @@ import BudgetPrintLayout from '../../components/print/BudgetPrintLayout';
 import PrintAPUModal from '../../components/PrintAPUModal';
 import PrintAPULayout, { APUPrintSheet } from '../../components/PrintAPULayout';
 import SubscriptionRequestModal from '../../components/SubscriptionRequestModal';
-import ExportApuExcelButton from '../../modules/cost360/components/ExportApuExcelButton';
-import { useCost360Search } from '../../modules/cost360/hooks/useCost360Search';
-import Cost360SearchBar from '../../modules/cost360/components/Cost360SearchBar';
+import ExportApuExcelButton from '../../modules/costbase/components/ExportApuExcelButton';
+import { useCostbaseSearch as useCost360Search } from '../../modules/costbase/hooks/useCostbaseSearch';
+import { CostbaseSearchBar as Cost360SearchBar } from '../../modules/costbase/components/CostbaseSearchBar';
 import { SiteConfigContext } from '../../App';
 import { calculateItemPU, calculateBudgetTotals } from '../../utils/apuCalculations';
 
@@ -99,7 +99,7 @@ function MathQuantityInput({ value, onChange, onSave, className }) {
   };
 
   return (
-    <div className="relative inline-flex items-center justify-end w-full">
+    <div className="relative inline-flex items-center justify-center w-full">
       <input
         type="text"
         value={isFocused ? localVal : formatVal(value)}
@@ -124,7 +124,7 @@ function MathQuantityInput({ value, onChange, onSave, className }) {
         className={className}
       />
       {isFocused && previewVal !== null && (
-        <div className="absolute right-0 bottom-full mb-1.5 bg-slate-900 text-amber-300 text-[11px] font-mono font-bold px-2 py-0.5 rounded-lg shadow-xl z-30 pointer-events-none whitespace-nowrap flex items-center gap-1 border border-slate-700 animate-in fade-in zoom-in-95">
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 bg-slate-900 text-amber-300 text-[11px] font-mono font-bold px-2 py-0.5 rounded-lg shadow-xl z-30 pointer-events-none whitespace-nowrap flex items-center gap-1 border border-slate-700 animate-in fade-in zoom-in-95">
           <span className="text-slate-400">=</span>
           <span>{previewVal.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
         </div>
@@ -879,13 +879,13 @@ export default function BudgetWorksheetPage() {
                   <th className="p-4 w-32 bg-slate-50 border-b border-slate-200">Código</th>
                   <th className="p-4 bg-slate-50 border-b border-slate-200">Descripción</th>
                   <th className="p-4 w-20 text-center bg-slate-50 border-b border-slate-200">Unidad</th>
-                  <th className="p-4 w-28 text-right bg-slate-50 border-b border-slate-200">
-                    <div className="inline-flex items-center justify-end gap-1.5 group/th relative cursor-help w-full">
+                  <th className="p-4 w-28 text-center bg-slate-50 border-b border-slate-200">
+                    <div className="inline-flex items-center justify-center gap-1.5 group/th relative cursor-help w-full">
                       <Calculator size={13} className="text-amber-600 hover:text-amber-700 transition-colors shrink-0" />
                       <span>Cantidad</span>
                       
                       {/* Tooltip flotante con paleta ámbar de tarjeta de presupuesto */}
-                      <div className="absolute top-full right-0 mt-2 hidden group-hover/th:flex flex-col w-64 p-3.5 bg-[#fef3c7] text-[#78350f] text-[11px] rounded-2xl shadow-xl z-50 pointer-events-none normal-case font-normal leading-relaxed border-2 border-[#f59e0b] animate-in fade-in zoom-in-95 text-left">
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover/th:flex flex-col w-64 p-3.5 bg-[#fef3c7] text-[#78350f] text-[11px] rounded-2xl shadow-xl z-50 pointer-events-none normal-case font-normal leading-relaxed border-2 border-[#f59e0b] animate-in fade-in zoom-in-95 text-left">
                         <p className="font-semibold text-amber-950 text-[11px]">
                           Puedes escribir operaciones matemáticas básicas directamente:
                         </p>
@@ -1012,9 +1012,9 @@ export default function BudgetWorksheetPage() {
                                       </div>
                                     </td>
                                     <td className="p-4 text-center text-sm font-medium text-slate-500">{item.unit}</td>
-                                    <td className="p-4 text-right" onClick={e => e.stopPropagation()}>
+                                    <td className="p-4 text-center" onClick={e => e.stopPropagation()}>
                                       <MathQuantityInput 
-                                        className="w-full text-right bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none transition-colors font-mono text-sm font-semibold text-slate-800"
+                                        className="w-full text-center bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none transition-colors font-mono text-sm font-semibold text-slate-800"
                                         value={item.quantity}
                                         onChange={val => handleQuantityChange(item.id, val)}
                                         onSave={val => saveQuantity(item.id, val)}

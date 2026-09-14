@@ -1,1 +1,0 @@
-\copy (SELECT * FROM temp_u.cost360_materials) TO STDOUT WITH CSV HEADER

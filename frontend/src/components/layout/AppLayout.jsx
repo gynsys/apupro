@@ -16,11 +16,11 @@ import HelpDrawer from '../help/HelpDrawer';
 
 const NAV_ITEMS = [
   { name: 'Presupuestos', href: '/budgets',           Icon: FileText },
-  { name: 'Visor Bases de Datos', href: '/cost360',   Icon: Database, exact: true  },
-  { name: 'Gestion Bases de Datos', href: '/cost360/databases', Icon: Server   },
-  { name: 'Nuevo (Desde Cero)', href: '/cost360/ai-generator?mode=manual', Icon: FileText },
-  { name: 'Importar / Clonar', href: '/cost360/ai-generator?mode=import', Icon: Copy },
-  { name: 'Crear con IA', href: '/cost360/ai-generator?mode=ia', Icon: Cpu }
+  { name: 'Visor Bases de Datos', href: '/costbase',   altHrefs: ['/cost360'], Icon: Database, exact: true  },
+  { name: 'Gestion Bases de Datos', href: '/costbase/databases', altHrefs: ['/cost360/databases'], Icon: Server   },
+  { name: 'Nuevo (Desde Cero)', href: '/costbase/ai-generator?mode=manual', altHrefs: ['/cost360/ai-generator?mode=manual', '/cost360/ai-generator'], Icon: FileText },
+  { name: 'Importar / Clonar', href: '/costbase/ai-generator?mode=import', altHrefs: ['/cost360/ai-generator?mode=import'], Icon: Copy },
+  { name: 'Crear con IA', href: '/costbase/ai-generator?mode=ia', altHrefs: ['/cost360/ai-generator?mode=ia'], Icon: Cpu }
 ];
 
 export default function AppLayout() {
@@ -35,14 +35,18 @@ export default function AppLayout() {
 
   const handleLogout = () => { logout(); navigate('/'); };
 
-  const isActive = (item) =>
-    item.exact ? location.pathname === item.href : location.pathname.startsWith(item.href);
+  const isActive = (item) => {
+    if (item.exact) {
+      return location.pathname === item.href || item.altHrefs?.includes(location.pathname);
+    }
+    return location.pathname.startsWith(item.href) || item.altHrefs?.some(alt => location.pathname.startsWith(alt.split('?')[0]));
+  };
 
   // Extend NAV_ITEMS conditionally based on admin status
   const getNavItems = () => {
     let items = [...NAV_ITEMS];
     if (user?.email === 'admin@arko360.net') {
-      items.push({ name: 'Mantenimiento BD', href: '/cost360/admin-db', Icon: FaTools });
+      items.push({ name: 'Mantenimiento BD', href: '/costbase/admin-db', altHrefs: ['/cost360/admin-db'], Icon: FaTools });
     }
     return items;
   };

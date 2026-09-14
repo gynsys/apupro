@@ -1,0 +1,885 @@
+﻿from sqlalchemy.orm import Session
+from sqlalchemy import func, or_, and_, text, case
+from typing import Optional, List, Tuple
+from app.db.models.costbase import (
+    CostItem, CostMaterial, CostEquipment, CostLabor,
+    CostAPUMaterial, CostAPUEquipment, CostAPULabor, CustomCostItem
+)
+from app.db.models.costbase_database import Cost360Database
+from app.schemas.costbase import (
+    CostMaterialUpdate, CostEquipmentUpdate, CostLaborUpdate,
+    Cost360DatabaseCreate, Cost360DatabaseUpdate
+)
+import uuid
+import json
+import unicodedata
+import re
+import logging
+
+logger = logging.getLogger(__name__)
+
+def validate_schema_name(schema_name: str) -> bool:
+    """Valida estrictamente que el nombre de un esquema PostgreSQL sea alfanumÃ©rico con guiones bajos."""
+    if not schema_name or not isinstance(schema_name, str):
+        return False
+    return bool(re.match(r'^[a-zA-Z0-9_]+$', schema_name))
+
+def strip_accents(s: str) -> str:
+    if not s:
+        return s
+    return ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
+
+def unaccent_col(column):
+    return func.translate(column, 'Ã¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ¤Ã«Ã¯Ã¶Ã¼Ã„Ã‹ÃÃ–Ãœ', 'aeiouAEIOUaeiouAEIOU')
+
+def normalize_covenin_code(code: Optional[str]) -> str:
+    """
+    Normaliza un cÃ³digo COVENIN eliminando puntos, comas, guiones y espacios.
+    Soporta partidas de Vialidad (R), HidrÃ¡ulica (HC) y Redes AÃ©reas (RA, ej: RA 2559 -> 2559RA).
+    """
+    if not code or not isinstance(code, str):
+        return ""
+    cleaned = code.strip().upper()
+    cleaned = re.sub(r'[\.\,\-\s]+', '', cleaned)
+    ra_match = re.match(r'^RA(\d+)$', cleaned)
+    if ra_match:
+        cleaned = f"{ra_match.group(1)}RA"
+    return cleaned
+
+def get_items_paginated(
+    db: Session,
+    skip: int = 0,
+    limit: int = 50,
+    search: Optional[str] = None,
+    chapter: Optional[str] = None,
+    categoria: Optional[str] = None,
+    tipo_actividad: Optional[str] = None,
+    search_desc: bool = True,
+    search_insumos: bool = False,
+    covenin: Optional[str] = None,
+    database_id: str = "master",
+    only_coded: bool = False,
+    hidden_categories: Optional[str] = None,
+    user_id: Optional[int] = None,
+    is_superadmin: bool = False
+) -> Tuple[int, List[dict]]:
+    
+    # Failsafe: Si ambos estÃ¡n apagados, forzar bÃºsqueda por descripciÃ³n por defecto
+    if not search_desc and not search_insumos:
+        search_desc = True
+    
+    # Determinar quÃ© base de datos estÃ¡ seleccionada y configurar la query apropiada
+    if database_id == "personalizada":
+        # Base de datos personalizada: buscar en CustomCostItem
+        query = db.query(CustomCostItem)
+        if not is_superadmin and user_id is not None:
+            query = query.filter(or_(CustomCostItem.user_id == user_id, CustomCostItem.user_id == None))
+
+        if search:
+            words = search.split()
+            all_filters = []
+            for word in words:
+                clean_word = strip_accents(word)
+                word_filters = []
+                if search_desc:
+                    word_filters.append(unaccent_col(CustomCostItem.description).ilike(f"%{clean_word}%"))
+                if search_insumos:
+                    word_filters.append(unaccent_col(CustomCostItem.apu_data).ilike(f"%{clean_word}%"))
+                if word_filters:
+                    all_filters.append(or_(*word_filters))
+            
+            if all_filters:
+                query = query.filter(and_(*all_filters))
+        
+        total = query.count()
+        custom_items = query.order_by(CustomCostItem.created_at.desc()).offset(skip).limit(limit).all()
+        
+        items = []
+        for ci in custom_items:
+            try:
+                data = json.loads(ci.apu_data)
+                cod_par = data.get("cod_par", "CUST-" + ci.id[:4].upper())
+                
+                mat_total = sum(m.get('cantidad', 0) * m.get('precio_unitario', 0) * (1 + m.get('desperdicio', 0)/100) for m in data.get('materials', []))
+                eq_total = sum(e.get('cantidad', 0) * e.get('depreciacion', 1.0) * e.get('precio_unitario', 0) for e in data.get('equipments', [])) / (ci.performance or 1)
+                
+                lab_jornal = sum(l.get('cantidad', 0) * l.get('jornal', 0) for l in data.get('labors', []))
+                lab_bono = sum(l.get('cantidad', 0) * l.get('bono', 0) for l in data.get('labors', []))
+                lab_total = (lab_jornal + lab_bono + (lab_jornal * 4.17)) / (ci.performance or 1)
+                
+                subtotal_a = mat_total + eq_total + lab_total
+                pre_uni = subtotal_a * 1.15 * 1.10
+            except Exception:
+                cod_par = "CUST-" + ci.id[:4].upper()
+                pre_uni = 0.0
+
+            items.append({
+                "id": ci.id,
+                "user_id": ci.user_id,
+                "CodPar": cod_par,
+                "Descri": ci.description,
+                "CovPar": None,
+                "UniPar": ci.unit,
+                "PreUni": pre_uni,
+                "RenPar": ci.performance,
+                "Categoria": "Custom",
+                "TipoActividad": "Custom"
+            })
+        return total, items
+    
+    # Para cualquier otra base de datos (master o personalizadas adicionales), buscar en CostItem
+    query = db.query(CostItem)
+    
+    # Si no es master, verificar si es una base de datos personalizada con filtros especÃ­ficos
+    if database_id and database_id != "master":
+        db_config = get_database_by_id(db, database_id)
+        if db_config and not db_config.is_master:
+            logger.debug(f"BÃºsqueda en catÃ¡logo sobre base personalizada: {database_id}")
+    
+    if search:
+        words = search.split()
+        all_filters = []
+        for word in words:
+            clean_word = strip_accents(word)
+            word_filters = []
+            if search_desc:
+                word_filters.extend([
+                    unaccent_col(CostItem.Descri).ilike(f"%{clean_word}%")
+                ])
+            if search_insumos:
+                word_filters.extend([
+                    CostItem.apu_materials.any(CostAPUMaterial.material.has(unaccent_col(CostMaterial.Descri).ilike(f"%{clean_word}%"))),
+                    CostItem.apu_equipments.any(CostAPUEquipment.equipment.has(unaccent_col(CostEquipment.Descri).ilike(f"%{clean_word}%"))),
+                    CostItem.apu_labors.any(CostAPULabor.labor.has(unaccent_col(CostLabor.Descri).ilike(f"%{clean_word}%")))
+                ])
+            
+            # Soporte para bÃºsqueda directa por cÃ³digo en el campo de texto libre
+            norm_word = normalize_covenin_code(clean_word)
+            if len(norm_word) >= 3:
+                word_filters.append(CostItem.CovPar.ilike(f"{norm_word}%"))
+                word_filters.append(CostItem.CodPar.ilike(f"{norm_word}%"))
+                if norm_word.endswith("RA"):
+                    word_filters.append(CostItem.CovPar.ilike(f"%{norm_word}%"))
+                elif norm_word.isdigit():
+                    word_filters.append(CostItem.CovPar.ilike(f"{norm_word}RA%"))
+
+            if word_filters:
+                all_filters.append(or_(*word_filters))
+        
+        # Aplicar todos los filtros con AND entre palabras diferentes para mayor precisiÃ³n
+        if all_filters:
+            query = query.filter(and_(*all_filters))
+            
+    if covenin:
+        clean_cov = normalize_covenin_code(covenin)
+        if clean_cov:
+            if clean_cov == "R":
+                query = query.filter(
+                    CostItem.CovPar.ilike("R%"),
+                    ~CostItem.CovPar.ilike("%RA"),
+                    ~CostItem.CovPar.ilike("RA%")
+                )
+            elif clean_cov == "RA":
+                query = query.filter(
+                    or_(
+                        CostItem.CovPar.ilike("%RA"),
+                        CostItem.CovPar.ilike("RA%"),
+                        CostItem.Categoria == "RA"
+                    )
+                )
+            elif clean_cov.startswith("HC"):
+                # Partidas de hidrÃ¡ulica (ej: HC15210, HC.15210, HC 15210)
+                query = query.filter(
+                    or_(
+                        CostItem.CovPar.ilike(f"{clean_cov}%"),
+                        CostItem.CodPar.ilike(f"{clean_cov}%")
+                    )
+                )
+            elif clean_cov.endswith("RA"):
+                # Partidas de redes aÃ©reas (ej: 2559RA, 2559.RA, 2559 RA, RA 2559)
+                query = query.filter(
+                    or_(
+                        CostItem.CovPar.ilike(f"{clean_cov}%"),
+                        CostItem.CovPar.ilike(f"%{clean_cov}%"),
+                        CostItem.CodPar.ilike(f"{clean_cov}%")
+                    )
+                )
+            elif clean_cov.isdigit():
+                # CÃ³digo solo numÃ©rico (ej: 2559): buscar directo, como sufijo RA (2559RA) y en CodPar
+                query = query.filter(
+                    or_(
+                        CostItem.CovPar.ilike(f"{clean_cov}%"),
+                        CostItem.CovPar.ilike(f"{clean_cov}RA%"),
+                        CostItem.CodPar.ilike(f"{clean_cov}%")
+                    )
+                )
+            else:
+                # CÃ³digo estÃ¡ndar COVENIN (ej. R910122215 de R.910.122.215, E311110000 de E.311.110.000)
+                query = query.filter(
+                    or_(
+                        CostItem.CovPar.ilike(f"{clean_cov}%"),
+                        CostItem.CodPar.ilike(f"{clean_cov}%")
+                    )
+                )
+
+    if chapter:
+        clean_chap = normalize_covenin_code(chapter)
+        if clean_chap:
+            if clean_chap == "R":
+                query_chap = query.filter(
+                    CostItem.CovPar.ilike("R%"),
+                    ~CostItem.CovPar.ilike("%RA"),
+                    ~CostItem.CovPar.ilike("RA%")
+                )
+            elif clean_chap == "RA":
+                query_chap = query.filter(
+                    or_(
+                        CostItem.CovPar.ilike("%RA"),
+                        CostItem.CovPar.ilike("RA%"),
+                        CostItem.Categoria == "RA"
+                    )
+                )
+            else:
+                query_chap = query.filter(
+                    or_(
+                        CostItem.CovPar.ilike(f"{clean_chap}%"),
+                        CostItem.CodPar.ilike(f"{clean_chap}%")
+                    )
+                )
+                total = query_chap.count()
+                
+                if total == 0 and len(clean_chap) > 3:
+                    fallback_chap = clean_chap[:-1]
+                    while len(fallback_chap) >= 3:
+                        query_chap = query.filter(
+                            or_(
+                                CostItem.CovPar.ilike(f"{fallback_chap}%"),
+                                CostItem.CodPar.ilike(f"{fallback_chap}%")
+                            )
+                        )
+                        total = query_chap.count()
+                        if total > 0:
+                            break
+                        fallback_chap = fallback_chap[:-1]
+            total = query_chap.count()
+            query = query_chap
+        else:
+            total = query.count()
+    else:
+        total = query.count()
+        
+    if categoria:
+        query = query.filter(CostItem.Categoria == categoria)
+        total = query.count() # re-count if categoria is applied
+    if tipo_actividad:
+        query = query.filter(CostItem.TipoActividad == tipo_actividad)
+        total = query.count() # re-count if tipo_actividad is applied
+    if only_coded:
+        query = query.filter(CostItem.CovPar.op('~')(r'(^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$|^[0-9]+RA$)'))
+        total = query.count()
+
+    if hidden_categories and not covenin and not chapter and not is_superadmin:
+        hc_list = [hc.strip() for hc in hidden_categories.split(',')]
+        for hc in hc_list:
+            if hc:
+                query = query.filter(or_(CostItem.CovPar == None, ~CostItem.CovPar.startswith(hc)))
+        total = query.count()
+    
+    # Priorizar partidas con COVENIN completo (formato [LETRA].[9 DÃGITOS] como C.110800300)
+    # Usamos una funciÃ³n SQL nativa para mayor compatibilidad
+    covenin_priority = case(
+        (func.length(CostItem.CovPar) == 11, 0),  # COVENIN completo tiene 11 caracteres (LETRA + punto + 9 dÃ­gitos)
+        else_=1  # Otros tienen prioridad 1
+    )
+    
+    items = query.order_by(covenin_priority, CostItem.CodPar).offset(skip).limit(limit).all()
+    return total, items
+
+def get_item_by_code(db: Session, item_code: str) -> Optional[CostItem]:
+    return db.query(CostItem).filter(CostItem.CodPar == item_code).first()
+
+def get_item_by_code_or_covpar(db: Session, code_str: str) -> Optional[CostItem]:
+    """
+    Search CostItem by CodPar or CovPar (exact or normalized without punctuation).
+    """
+    if not code_str:
+        return None
+    raw = code_str.strip()
+    # 1. Exact match case-insensitive
+    item = db.query(CostItem).filter(
+        or_(
+            func.upper(CostItem.CodPar) == raw.upper(),
+            func.upper(CostItem.CovPar) == raw.upper()
+        )
+    ).first()
+    if item:
+        return item
+    
+    # 2. Normalized match (remove dots, dashes, spaces and handle RA/HC)
+    clean = normalize_covenin_code(raw)
+    if len(clean) >= 3:
+        item = db.query(CostItem).filter(
+            or_(
+                func.replace(func.replace(func.replace(func.upper(CostItem.CodPar), '.', ''), '-', ''), ' ', '') == clean,
+                func.replace(func.replace(func.replace(func.upper(CostItem.CovPar), '.', ''), '-', ''), ' ', '') == clean
+            )
+        ).first()
+        if item:
+            return item
+    return None
+
+def get_similar_items_by_code_prefix(db: Session, code_str: str, limit: int = 5) -> Tuple[List[CostItem], str]:
+    """
+    Search up to `limit` CostItem rows matching the beginning of the code prefix.
+    """
+    if not code_str:
+        return [], ""
+    raw = code_str.strip()
+    clean = normalize_covenin_code(raw)
+    for length in (5, 4, 3):
+        if len(clean) >= length:
+            prefix = clean[:length]
+            items = db.query(CostItem).filter(
+                or_(
+                    CostItem.CodPar.ilike(f"{prefix}%"),
+                    CostItem.CovPar.ilike(f"{prefix}%")
+                )
+            ).limit(limit).all()
+            if items:
+                return items, prefix
+    return [], ""
+
+def get_apu_materials(db: Session, item_code: str):
+    return db.query(CostAPUMaterial, CostMaterial)\
+        .join(CostMaterial, CostAPUMaterial.CodIns == CostMaterial.CodMat)\
+        .filter(CostAPUMaterial.CodPar == item_code).all()
+
+def get_apu_equipments(db: Session, item_code: str):
+    return db.query(CostAPUEquipment, CostEquipment)\
+        .join(CostEquipment, CostAPUEquipment.CodIns == CostEquipment.CodEqu)\
+        .filter(CostAPUEquipment.CodPar == item_code).all()
+
+def get_apu_labors(db: Session, item_code: str):
+    return db.query(CostAPULabor, CostLabor)\
+        .join(CostLabor, CostAPULabor.CodIns == CostLabor.CodMan)\
+        .filter(CostAPULabor.CodPar == item_code).all()
+
+def search_materials_paginated(
+    db: Session,
+    skip: int,
+    limit: int,
+    search: str,
+    all_items: bool = True
+) -> Tuple[int, List[CostMaterial]]:
+    if all_items:
+        query = db.query(CostMaterial)
+    else:
+        valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'(^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$|^[0-9]+RA$)'))
+        used_materials = db.query(CostAPUMaterial.CodIns).filter(CostAPUMaterial.CodPar.in_(valid_apu_query))
+        query = db.query(CostMaterial).filter(CostMaterial.CodMat.in_(used_materials))
+
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(CostMaterial.ref_code.ilike(search_term) | CostMaterial.CodMat.ilike(search_term) | CostMaterial.Descri.ilike(search_term))
+    total = query.count()
+    items = query.order_by(CostMaterial.ref_code, CostMaterial.CodMat).offset(skip).limit(limit).all()
+    return total, items
+
+def search_equipments_paginated(
+    db: Session,
+    skip: int,
+    limit: int,
+    search: str,
+    all_items: bool = True
+) -> Tuple[int, List[CostEquipment]]:
+    if all_items:
+        query = db.query(CostEquipment)
+    else:
+        valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'(^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$|^[0-9]+RA$)'))
+        used_equipments = db.query(CostAPUEquipment.CodIns).filter(CostAPUEquipment.CodPar.in_(valid_apu_query))
+        query = db.query(CostEquipment).filter(CostEquipment.CodEqu.in_(used_equipments))
+
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(CostEquipment.ref_code.ilike(search_term) | CostEquipment.CodEqu.ilike(search_term) | CostEquipment.Descri.ilike(search_term))
+    total = query.count()
+    items = query.order_by(CostEquipment.ref_code, CostEquipment.CodEqu).offset(skip).limit(limit).all()
+    return total, items
+
+def search_labors_paginated(
+    db: Session,
+    skip: int,
+    limit: int,
+    search: str,
+    all_items: bool = True
+) -> Tuple[int, List[CostLabor]]:
+    if all_items:
+        query = db.query(CostLabor)
+    else:
+        valid_apu_query = db.query(CostItem.CodPar).filter(CostItem.CovPar.op('~')(r'(^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$|^[0-9]+RA$)'))
+        used_labors = db.query(CostAPULabor.CodIns).filter(CostAPULabor.CodPar.in_(valid_apu_query))
+        query = db.query(CostLabor).filter(CostLabor.CodMan.in_(used_labors))
+
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(CostLabor.ref_code.ilike(search_term) | CostLabor.CodMan.ilike(search_term) | CostLabor.Descri.ilike(search_term))
+    total = query.count()
+    items = query.order_by(CostLabor.ref_code, CostLabor.CodMan).offset(skip).limit(limit).all()
+    return total, items
+
+def get_categories_tree_data(db: Session):
+    items = db.query(CostItem.Categoria, CostItem.TipoActividad).distinct().all()
+    tree = {}
+    for cat, sub in items:
+        if cat:
+            if cat not in tree:
+                tree[cat] = set()
+            if sub:
+                tree[cat].add(sub)
+                
+    result = []
+    for cat, subs in tree.items():
+        result.append({
+            "categoria": cat,
+            "actividades": sorted(list(subs))
+        })
+    return sorted(result, key=lambda x: x["categoria"])
+
+def update_material(db: Session, codigo: str, payload: CostMaterialUpdate):
+    mat = db.query(CostMaterial).filter(CostMaterial.CodMat == codigo).first()
+    if mat:
+        if payload.CosMat is not None:
+            mat.CosMat = payload.CosMat
+        if payload.Descri is not None:
+            mat.Descri = payload.Descri
+        db.commit()
+        db.refresh(mat)
+    return mat
+
+def delete_material(db: Session, codigo: str):
+    mat = db.query(CostMaterial).filter(CostMaterial.CodMat == codigo).first()
+    if mat:
+        db.delete(mat)
+        db.commit()
+        return True
+    return False
+
+def update_equipment(db: Session, codigo: str, payload: CostEquipmentUpdate):
+    eq = db.query(CostEquipment).filter(CostEquipment.CodEqu == codigo).first()
+    if eq:
+        factor = eq.deprec_factor if (eq.deprec_factor and eq.deprec_factor > 0) else 1.0
+        if payload.precio is not None:
+            eq.precio = float(payload.precio)
+            eq.CosDia = round(float(payload.precio) * factor, 4)
+        elif payload.CosDia is not None:
+            eq.CosDia = float(payload.CosDia)
+            eq.precio = round(float(payload.CosDia) / factor, 2)
+        if payload.deprec_factor is not None:
+            eq.deprec_factor = float(payload.deprec_factor)
+            if eq.precio is not None:
+                eq.CosDia = round(eq.precio * eq.deprec_factor, 4)
+        if payload.Descri is not None:
+            eq.Descri = payload.Descri
+        db.commit()
+        db.refresh(eq)
+    return eq
+
+def delete_equipment(db: Session, codigo: str):
+    eq = db.query(CostEquipment).filter(CostEquipment.CodEqu == codigo).first()
+    if eq:
+        db.delete(eq)
+        db.commit()
+        return True
+    return False
+
+def update_labor(db: Session, codigo: str, payload: CostLaborUpdate):
+    labor = db.query(CostLabor).filter(CostLabor.CodMan == codigo).first()
+    if labor:
+        if payload.Jornal is not None:
+            labor.Jornal = payload.Jornal
+        if payload.Bono is not None:
+            labor.Bono = payload.Bono
+        if payload.Descri is not None:
+            labor.Descri = payload.Descri
+        db.commit()
+        db.refresh(labor)
+    return labor
+
+def delete_labor(db: Session, codigo: str):
+    labor = db.query(CostLabor).filter(CostLabor.CodMan == codigo).first()
+    if labor:
+        db.delete(labor)
+        db.commit()
+        return True
+    return False
+
+def save_custom_apu(
+    db: Session,
+    description: str,
+    unit: str,
+    performance: float,
+    apu_data: str,
+    user_id: Optional[int] = None
+) -> CustomCostItem:
+    new_item = CustomCostItem(
+        id=str(uuid.uuid4()),
+        user_id=user_id,
+        description=description,
+        unit=unit,
+        performance=performance,
+        apu_data=apu_data
+    )
+    db.add(new_item)
+    db.commit()
+    db.refresh(new_item)
+    return new_item
+
+def delete_custom_apu(
+    db: Session,
+    item_id: str,
+    user_id: Optional[int] = None,
+    is_superadmin: bool = False
+) -> bool:
+    # 1. Buscar por UUID exacto
+    item = db.query(CustomCostItem).filter(CustomCostItem.id == item_id).first()
+
+    # 2. Si no coincide, buscar por prefijo o dentro de apu_data
+    if not item:
+        all_custom = db.query(CustomCostItem).all()
+        for ci in all_custom:
+            if ci.id.startswith(item_id.lower()) or item_id in ci.id:
+                item = ci
+                break
+            try:
+                data = json.loads(ci.apu_data)
+                if data.get("cod_par") == item_id:
+                    item = ci
+                    break
+            except Exception:
+                continue
+
+    if not item:
+        return False
+
+    # Verificar permiso: solo superadmin o el dueÃ±o de la partida
+    if not is_superadmin and item.user_id is not None and user_id is not None and item.user_id != user_id:
+        raise PermissionError("No tienes permiso para eliminar esta partida personalizada")
+
+    db.delete(item)
+    db.commit()
+    return True
+
+
+# Database Management CRUD Functions
+def get_all_databases(db: Session):
+    """Obtener todas las bases de datos Cost360"""
+    return db.query(Cost360Database).order_by(Cost360Database.created_at.desc()).all()
+
+def get_database_by_id(db: Session, database_id: str):
+    """Obtener una base de datos por ID"""
+    return db.query(Cost360Database).filter(Cost360Database.id == database_id).first()
+
+def create_database(db: Session, payload: Cost360DatabaseCreate, created_by: Optional[str] = None):
+    """
+    Crear una nueva base de datos con Ã­ndices de inflaciÃ³n.
+
+    Los factores de inflaciÃ³n (material_inflation, labor_inflation, equipment_inflation)
+    se guardan como metadatos. El precio con factor se calcula dinÃ¡micamente en los
+    endpoints de consulta (estrategia de precio virtual), sin duplicar filas de datos.
+    """
+    source_id = payload.source_database_id or 'master'
+    source_db = get_database_by_id(db, source_id)
+    if not source_db and source_id != 'master':
+        raise ValueError(f"Base de datos origen '{source_id}' no encontrada")
+
+    clean_name = re.sub(r'[^a-z0-9_]', '', payload.name.lower().replace(' ', '_'))
+    if not clean_name:
+        clean_name = 'db'
+    new_db_id = f"{clean_name}_{str(uuid.uuid4())[:8]}"
+
+    if not validate_schema_name(new_db_id):
+        raise ValueError(f"Identificador de esquema generado no vÃ¡lido: {new_db_id}")
+
+    logger.warning(f"[CREATE_DB_CRUD] Creating DB id={new_db_id} source={source_id} owner={created_by}")
+
+    new_database = Cost360Database(
+        id=new_db_id,
+        name=payload.name,
+        description=payload.description,
+        is_master=False,
+        is_active=True,
+        material_inflation=payload.material_inflation or 0.0,
+        labor_inflation=payload.labor_inflation or 0.0,
+        equipment_inflation=payload.equipment_inflation or 0.0,
+        source_database_id=source_id,
+        created_by=created_by,
+        owner_id=created_by
+    )
+    db.add(new_database)
+    db.commit()
+    
+    # ClonaciÃ³n FÃ­sica vÃ­a Esquemas de PostgreSQL
+    try:
+        source_schema = "public" if source_id == "master" else source_id
+        if not validate_schema_name(source_schema):
+            raise ValueError(f"Identificador de esquema origen no vÃ¡lido: {source_schema}")
+        logger.warning(f"[CREATE_DB_CRUD] Creating schema={new_db_id} from source_schema={source_schema}")
+        
+        # 1. Crear el esquema
+        db.execute(text(f'CREATE SCHEMA "{new_db_id}"'))
+        
+        # 2. Copiar tablas
+        tables_to_clone = [
+            "cost360_materials",
+            "cost360_equipment",
+            "cost360_labor",
+            "cost360_items",
+            "cost360_apu_materials",
+            "cost360_apu_equipment",
+            "cost360_apu_labor"
+        ]
+        
+        for table in tables_to_clone:
+            logger.warning(f"[CREATE_DB_CRUD] Cloning table={table}")
+            # Crear estructura e Ã­ndices (INCLUDING ALL)
+            db.execute(text(f'CREATE TABLE "{new_db_id}"."{table}" (LIKE "{source_schema}"."{table}" INCLUDING ALL)'))
+            # Copiar datos fÃ­sicos
+            db.execute(text(f'INSERT INTO "{new_db_id}"."{table}" SELECT * FROM "{source_schema}"."{table}"'))
+            
+        db.commit()
+        logger.warning(f"[CREATE_DB_CRUD] Schema cloned successfully id={new_db_id}")
+    except Exception as e:
+        logger.error(f"[CREATE_DB_CRUD] Schema clone FAILED: {str(e)}", exc_info=True)
+        db.rollback()
+        # Si falla la clonaciÃ³n fÃ­sica, revertimos la creaciÃ³n del registro
+        db.delete(new_database)
+        db.commit()
+        raise ValueError(f"Error al clonar la base de datos fÃ­sicamente: {str(e)}")
+
+    db.refresh(new_database)
+    return new_database
+
+def update_database(db: Session, database_id: str, payload: Cost360DatabaseUpdate):
+    """Actualizar metadatos de una base de datos"""
+    db_obj = get_database_by_id(db, database_id)
+    if not db_obj:
+        return None
+    
+    if payload.name is not None:
+        db_obj.name = payload.name
+    if payload.description is not None:
+        db_obj.description = payload.description
+    if payload.is_active is not None:
+        db_obj.is_active = payload.is_active
+    if getattr(payload, 'material_inflation', None) is not None:
+        db_obj.material_inflation = payload.material_inflation
+    if getattr(payload, 'labor_inflation', None) is not None:
+        db_obj.labor_inflation = payload.labor_inflation
+    if getattr(payload, 'equipment_inflation', None) is not None:
+        db_obj.equipment_inflation = payload.equipment_inflation
+    
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+def delete_database(db: Session, database_id: str):
+    """Eliminar una base de datos personalizada"""
+    db_obj = get_database_by_id(db, database_id)
+    if not db_obj:
+        return False
+    
+    # No permitir eliminar la base maestra
+    if db_obj.is_master:
+        raise ValueError("No se puede eliminar la base de datos maestra")
+    
+    db.delete(db_obj)
+    db.commit()
+    
+    # NUEVA LÃ“GICA: Si es la personalizada, limpiar la tabla nativa
+    if database_id == "personalizada":
+        db.query(CustomCostItem).delete()
+        db.commit()
+        return True
+    
+    # Validar que el identificador del esquema sea seguro
+    if not validate_schema_name(database_id):
+        raise ValueError(f"Identificador de esquema no vÃ¡lido: {database_id}")
+
+    # Eliminar el esquema fÃ­sico en PostgreSQL
+    try:
+        db.execute(text(f'DROP SCHEMA IF EXISTS "{database_id}" CASCADE'))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Advertencia: No se pudo eliminar el esquema fÃ­sico {database_id}: {e}", exc_info=True)
+        
+    return True
+
+def update_master_item(db: Session, item_code: str, descri: str, unipar: str, renpar: float):
+    item = db.query(CostItem).filter(CostItem.CodPar == item_code).first()
+    if not item:
+        return None
+    
+    if descri is not None:
+        item.Descri = descri
+    if unipar is not None:
+        item.UniPar = unipar
+    if renpar is not None:
+        item.RenPar = renpar
+        
+    db.commit()
+    db.refresh(item)
+    return item
+
+def delete_master_item(db: Session, item_code: str):
+    item = db.query(CostItem).filter(CostItem.CodPar == item_code).first()
+    if not item:
+        return False
+    
+    # Cascade delete child relations manually to avoid FK constraint errors
+    db.query(CostAPUMaterial).filter(CostAPUMaterial.CodPar == item_code).delete(synchronize_session=False)
+    db.query(CostAPUEquipment).filter(CostAPUEquipment.CodPar == item_code).delete(synchronize_session=False)
+    db.query(CostAPULabor).filter(CostAPULabor.CodPar == item_code).delete(synchronize_session=False)
+    
+    # Delete the main item
+    db.delete(item)
+    db.commit()
+    return True
+
+def update_master_apu_details(
+    db: Session,
+    item_code: str,
+    description: Optional[str] = None,
+    unit: Optional[str] = None,
+    performance: Optional[float] = None,
+    materials: Optional[List[dict]] = None,
+    equipments: Optional[List[dict]] = None,
+    labors: Optional[List[dict]] = None
+) -> Optional[CostItem]:
+    if not item_code:
+        raise ValueError("item_code is required")
+        
+    item = db.query(CostItem).filter(CostItem.CodPar == item_code).first()
+    if not item:
+        item = db.query(CostItem).filter(CostItem.CovPar == item_code).first()
+    if not item:
+        return None
+        
+    real_cod_par = item.CodPar
+
+    if description is not None:
+        item.Descri = description.strip()
+        item.desc_limpia = description.strip()
+    if unit is not None:
+        item.UniPar = unit.strip()
+    if performance is not None and performance > 0:
+        item.RenPar = performance
+
+    if equipments is not None:
+        db.query(CostAPUEquipment).filter(CostAPUEquipment.CodPar == real_cod_par).delete(synchronize_session=False)
+        for eq in equipments:
+            cod_ins = eq.get("codigo") or eq.get("id")
+            if not cod_ins or cod_ins == "s/c":
+                continue
+            can_ins = float(eq.get("cantidad") or 0.0)
+            if can_ins <= 0:
+                continue
+            deprec = float(eq.get("depreciacion") or 1.0)
+            eq_exists = db.query(CostEquipment).filter(CostEquipment.CodEqu == cod_ins).first()
+            if not eq_exists:
+                eq_exists = CostEquipment(
+                    CodEqu=cod_ins,
+                    Descri=eq.get("descripcion") or "Equipo",
+                    CosDia=float(eq.get("precio_unitario") or 0.0)
+                )
+                db.add(eq_exists)
+                db.flush()
+            db.add(CostAPUEquipment(
+                CodPar=real_cod_par,
+                CodIns=cod_ins,
+                CanIns=can_ins,
+                Deprec=deprec
+            ))
+
+    if materials is not None:
+        db.query(CostAPUMaterial).filter(CostAPUMaterial.CodPar == real_cod_par).delete(synchronize_session=False)
+        for mat in materials:
+            cod_ins = mat.get("codigo") or mat.get("id")
+            if not cod_ins or cod_ins == "s/c":
+                continue
+            can_ins = float(mat.get("cantidad") or 0.0)
+            if can_ins <= 0:
+                continue
+            desper = float(mat.get("desperdicio") or 0.0)
+            mat_exists = db.query(CostMaterial).filter(CostMaterial.CodMat == cod_ins).first()
+            if not mat_exists:
+                mat_exists = CostMaterial(
+                    CodMat=cod_ins,
+                    Descri=mat.get("descripcion") or "Material",
+                    UniMat=mat.get("unidad") or "und",
+                    CosMat=float(mat.get("precio_unitario") or 0.0)
+                )
+                db.add(mat_exists)
+                db.flush()
+            db.add(CostAPUMaterial(
+                CodPar=real_cod_par,
+                CodIns=cod_ins,
+                CanIns=can_ins,
+                Desper=desper
+            ))
+
+    if labors is not None:
+        db.query(CostAPULabor).filter(CostAPULabor.CodPar == real_cod_par).delete(synchronize_session=False)
+        for lab in labors:
+            cod_ins = lab.get("codigo") or lab.get("id")
+            if not cod_ins or cod_ins == "s/c":
+                continue
+            can_ins = float(lab.get("cantidad") or 0.0)
+            if can_ins <= 0:
+                continue
+            lab_exists = db.query(CostLabor).filter(CostLabor.CodMan == cod_ins).first()
+            if not lab_exists:
+                lab_exists = CostLabor(
+                    CodMan=cod_ins,
+                    Descri=lab.get("descripcion") or "Mano de Obra",
+                    Jornal=float(lab.get("jornal") or lab.get("precio_unitario") or 0.0),
+                    Bono=float(lab.get("bono") or 0.0)
+                )
+                db.add(lab_exists)
+                db.flush()
+            db.add(CostAPULabor(
+                CodPar=real_cod_par,
+                CodIns=cod_ins,
+                CanIns=can_ins
+            ))
+
+    # Recalcular PreUni
+    rendimiento = item.RenPar or 1.0
+    if rendimiento <= 0:
+        rendimiento = 1.0
+
+    mat_tot = 0.0
+    for rel, m in db.query(CostAPUMaterial, CostMaterial).join(CostMaterial, CostAPUMaterial.CodIns == CostMaterial.CodMat).filter(CostAPUMaterial.CodPar == real_cod_par).all():
+        desp = (rel.Desper or 0.0) / 100.0
+        mat_tot += (rel.CanIns or 0.0) * (m.CosMat or 0.0) * (1.0 + desp)
+
+    eq_tot = 0.0
+    for rel, e in db.query(CostAPUEquipment, CostEquipment).join(CostEquipment, CostAPUEquipment.CodIns == CostEquipment.CodEqu).filter(CostAPUEquipment.CodPar == real_cod_par).all():
+        depr = rel.Deprec if rel.Deprec is not None else 1.0
+        eq_tot += (rel.CanIns or 0.0) * (e.CosDia or 0.0) * depr
+    eq_unit = eq_tot / rendimiento
+
+    mo_tot = 0.0
+    for rel, l in db.query(CostAPULabor, CostLabor).join(CostLabor, CostAPULabor.CodIns == CostLabor.CodMan).filter(CostAPULabor.CodPar == real_cod_par).all():
+        jornal = l.Jornal or 0.0
+        bono = l.Bono or 0.0
+        mo_tot += (rel.CanIns or 0.0) * (jornal + bono + (jornal * 4.17))
+    mo_unit = mo_tot / rendimiento
+
+    subtotal_a = mat_tot + eq_unit + mo_unit
+    item.PreUni = round(subtotal_a * 1.15 * 1.10, 2)
+
+    db.commit()
+    db.refresh(item)
+    return item
+

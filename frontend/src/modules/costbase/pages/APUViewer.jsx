@@ -1,0 +1,332 @@
+import React, { useState, useEffect, useContext } from 'react';
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Printer, FileSpreadsheet, Save, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import cost360Service, { updateApuDetails } from '../services/cost360Service';
+import PrintAPUModal from '../../../components/PrintAPUModal';
+import PrintAPULayout from '../../../components/PrintAPULayout';
+import ExportApuExcelButton from '../components/ExportApuExcelButton';
+import ApuEditorUI from '../../../components/ApuEditorUI';
+import { AuthContext } from '../../../context/AuthContext';
+import { useUserCostos } from '../../../context/UserCostosContext';
+
+export default function APUViewer() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const dbId = searchParams.get('db') || 'master';
+  const fromParam = searchParams.get('from') || location.state?.from;
+
+  const { user } = useContext(AuthContext) || {};
+  const isSuperAdmin = user?.is_superadmin === true || user?.email === 'admin@arko360.net' || user?.role === 'superadmin' || user?.is_admin === true;
+
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState(null);
+  const [item, setItem] = useState(null);
+  const { costosConfig, updateCostosConfig } = useUserCostos();
+  const [settings, setSettings] = useState(() => ({
+    admin_percent: costosConfig?.porcentajeAdministracion ?? 15,
+    profit_percent: costosConfig?.porcentajeUtilidad ?? 10,
+    fcas_percent: costosConfig?.fcas ?? 417,
+    iva_percent: costosConfig?.iva ?? 0,
+    labor_bonus: 0,
+    currency: 'USD'
+  }));
+
+  // Sincronizar settings cuando costosConfig cargue o se actualice
+  useEffect(() => {
+    if (costosConfig) {
+      setSettings(prev => ({
+        ...prev,
+        admin_percent: costosConfig.porcentajeAdministracion ?? prev.admin_percent,
+        profit_percent: costosConfig.porcentajeUtilidad ?? prev.profit_percent,
+        fcas_percent: costosConfig.fcas ?? prev.fcas_percent,
+        iva_percent: costosConfig.iva ?? prev.iva_percent,
+      }));
+    }
+  }, [costosConfig]);
+  
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [printOptions, setPrintOptions] = useState(null);
+
+  useEffect(() => {
+    const fetchAPU = async () => {
+      try {
+        setLoading(true);
+        const apuData = await cost360Service.fetchApuDetails(id, dbId);
+        setData(apuData);
+        setItem({
+          cod_par: apuData.partida.CodPar,
+          cov_par: apuData.partida.CovPar,
+          description: apuData.partida.Descri,
+          unit: apuData.partida.UniPar,
+          performance: apuData.partida.RenPar || 1,
+          materials: (apuData.materiales || []).map(m => ({ id: m.codigo, codigo: m.codigo, descripcion: m.descripcion, unidad: m.unidad, cantidad: m.cantidad, precio_unitario: m.precio_unitario, desperdicio: m.desperdicio || 5, origen: 'historico' })),
+          equipments: (apuData.equipos || []).map(e => ({ id: e.codigo, codigo: e.codigo, descripcion: e.descripcion, unidad: 'día', cantidad: e.cantidad, precio_unitario: e.precio_unitario, depreciacion: e.depreciacion || 1.0, origen: 'historico' })),
+          labors: (apuData.mano_obra || []).map(l => ({ id: l.codigo, codigo: l.codigo, descripcion: l.descripcion, unidad: 'día', cantidad: l.cantidad, jornal: l.jornal, bono: l.bono, origen: 'historico' }))
+        });
+      } catch (err) {
+        setError("Error loading APU details");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAPU();
+  }, [id]);
+
+  useEffect(() => {
+    if (printOptions) {
+      const handleAfterPrint = () => {
+        setPrintOptions(null);
+        setPrintModalOpen(false);
+      };
+      window.addEventListener('afterprint', handleAfterPrint);
+      setTimeout(() => {
+        window.print();
+      }, 300);
+      return () => window.removeEventListener('afterprint', handleAfterPrint);
+    }
+  }, [printOptions]);
+
+  const handleComponentChange = (type, compId, field, value) => {
+    setItem(prev => {
+      const updated = { ...prev };
+      updated[type] = updated[type].map(c => {
+        if (c.id === compId) {
+          const isNumeric = ['cantidad', 'precio_unitario', 'desperdicio', 'depreciacion', 'jornal'].includes(field);
+          return { ...c, [field]: isNumeric ? (parseFloat(value) || 0) : value };
+        }
+        return c;
+      });
+      return updated;
+    });
+  };
+
+  const handleHeaderChange = (field, value) => {
+    setItem(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleRemoveRow = (type, id) => {
+    setItem(prev => ({ ...prev, [type]: prev[type].filter(i => i.id !== id) }));
+  };
+
+  const handleAddRow = (type) => {
+    const newId = 'NEW-' + Math.random().toString(36).substr(2, 9);
+    setItem(prev => ({
+      ...prev,
+      [type]: [...prev[type], { id: newId, codigo: 's/c', descripcion: 'Nuevo ítem', cantidad: 1, precio_unitario: 0, origen: 'manual' }]
+    }));
+  };
+
+  const handleBack = () => {
+    if (fromParam === 'admin-db' || fromParam === '/cost360/admin-db') {
+      navigate('/cost360/admin-db');
+    } else if (fromParam === 'ai-generator-libre' || location.state?.from === '/cost360/ai-generator?mode=ia&guided=false') {
+      navigate('/cost360/ai-generator?mode=ia&guided=false');
+    } else if (fromParam === 'ai-generator-chat' || location.state?.from === '/cost360/ai-generator?mode=ia&guided=true') {
+      navigate('/cost360/ai-generator?mode=ia&guided=true');
+    } else if (location.state?.from) {
+      navigate(location.state.from);
+    } else if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/cost360');
+    }
+  };
+
+  const handleSaveAPU = async () => {
+    if (!item) return;
+    try {
+      setSaving(true);
+      const payload = {
+        description: item.description,
+        unit: item.unit,
+        performance: item.performance,
+        materials: item.materials,
+        equipments: item.equipments,
+        labors: item.labors
+      };
+      const updateFn = cost360Service.updateApuDetails || updateApuDetails;
+      await updateFn(item.cod_par || id, payload, dbId);
+      toast.success("APU guardado exitosamente");
+      const apuData = await cost360Service.fetchApuDetails(id, dbId);
+      setData(apuData);
+    } catch (err) {
+      toast.error("Error al guardar los cambios del APU");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteAPU = () => {
+    const code = item?.cov_par || item?.cod_par || id;
+    toast((t) => (
+      <div className="flex flex-col gap-2.5 py-1 min-w-[260px]">
+        <div className="flex items-start gap-2.5">
+          <span className="text-amber-500 font-bold text-lg leading-none mt-0.5">⚠️</span>
+          <div>
+            <p className="text-xs font-bold text-slate-800">¿Eliminar partida de tu Base?</p>
+            <p className="text-xs text-slate-600 font-mono mt-1 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 inline-block">{code}</p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-1">
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200 cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={async () => {
+              toast.dismiss(t.id);
+              try {
+                setDeleting(true);
+                await cost360Service.deleteCustomApu(id);
+                toast.success("Partida eliminada correctamente");
+                navigate(fromParam || '/cost360?db=personalizada');
+              } catch (err) {
+                toast.error(err.response?.data?.detail || "Error al eliminar la partida");
+              } finally {
+                setDeleting(false);
+              }
+            }}
+            className="px-3 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors cursor-pointer"
+          >
+            Eliminar
+          </button>
+        </div>
+      </div>
+    ), {
+      duration: 6000,
+      position: 'top-center',
+      style: {
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: '1rem',
+        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08)',
+        padding: '0.85rem 1rem',
+      }
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader className="animate-spin text-blue-500" size={32} />
+      </div>
+    );
+  }
+
+  if (error || !data || !data.partida) {
+    return (
+      <div className="text-center p-8 text-red-500 bg-red-50 rounded-xl border border-red-200 m-6">
+        {error || "APU not found"}
+      </div>
+    );
+  }
+
+  const { partida, materiales = [], equipos = [], mano_obra = [] } = data;
+
+
+  return (
+    <div className="p-4 md:p-6 max-w-7xl mx-auto min-h-screen pb-20 print:p-0 print:m-0 print:max-w-none print:bg-white print:w-full">
+      {printOptions && (
+        <PrintAPULayout 
+          partida={{ ...partida, ...settings }} 
+          materiales={materiales} 
+          equipos={equipos} 
+          mano_obra={mano_obra} 
+          options={{ ...printOptions, ...settings }} 
+        />
+      )}
+      
+      {printModalOpen && (
+        <PrintAPUModal 
+          isOpen={printModalOpen}
+          onClose={() => setPrintModalOpen(false)} 
+          onPrint={(options) => setPrintOptions(options)} 
+        />
+      )}
+      
+      <div className="print:hidden">
+        {/* TOOLBAR */}
+        <div className="flex items-center justify-between mb-4 sticky top-0 z-30 bg-gray-50/95 backdrop-blur py-3 px-4 md:px-6 border-b border-gray-200/50 shadow-sm">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={handleBack}
+              className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 transition-colors shrink-0 shadow-sm cursor-pointer"
+              title="Volver"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <h2 className="text-sm font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+              <Calculator size={16} className="text-blue-500" /> ANÁLISIS DE PRECIO UNITARIO
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            {isSuperAdmin && (
+              <button
+                onClick={handleSaveAPU}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 rounded-xl transition-all shadow-sm cursor-pointer"
+                title="Guardar modificaciones del APU en la base de datos"
+              >
+                {saving ? <Loader className="animate-spin" size={14} /> : <Save size={14} />}
+                <span>{saving ? 'Guardando...' : 'Guardar APU'}</span>
+              </button>
+            )}
+            {dbId === 'personalizada' && (
+              <button
+                onClick={handleDeleteAPU}
+                disabled={deleting}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 active:bg-red-200 border border-red-200 rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                title="Eliminar esta partida de tu Base Personalizada"
+              >
+                {deleting ? <Loader className="animate-spin" size={14} /> : <Trash2 size={14} />}
+                <span>{deleting ? 'Eliminando...' : 'Eliminar'}</span>
+              </button>
+            )}
+            <button 
+              onClick={() => setPrintModalOpen(true)}
+              className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 transition-colors shadow-sm flex items-center gap-2 cursor-pointer"
+              title="Imprimir"
+            >
+              <Printer size={20} />
+            </button>
+            <ExportApuExcelButton
+              item={item}
+              settings={settings}
+            />
+          </div>
+        </div>
+      </div>
+      {item && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <ApuEditorUI
+            item={item}
+            settings={settings}
+            onHeaderChange={handleHeaderChange}
+            onComponentChange={handleComponentChange}
+            onRemoveRow={handleRemoveRow}
+            onSettingsChange={(field, value) => {
+              setSettings(prev => ({ ...prev, [field]: value }));
+              const mapping = {
+                fcas_percent: 'fcas',
+                admin_percent: 'porcentajeAdministracion',
+                profit_percent: 'porcentajeUtilidad',
+                iva_percent: 'iva'
+              };
+              if (mapping[field]) {
+                updateCostosConfig({ [mapping[field]]: value }).catch(() => {});
+              }
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}

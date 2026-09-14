@@ -1,0 +1,1637 @@
+﻿import io
+import re
+from pathlib import Path
+from typing import Optional, Dict, Any, List, Tuple
+import openpyxl
+import pandas as pd
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File
+from fastapi.responses import FileResponse
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
+from app.db.base import get_db
+from app.api.v1.endpoints.arko import get_current_arko_admin, get_optional_arko_admin
+from app.db.models.arko import ArkoAdmin
+from app.middleware.plan_limits import check_ai_access
+from app.schemas.costbase import (
+    CostItemListResponse, APUResponse, APUComponent,
+    CostMaterialUpdate, CostEquipmentUpdate, CostLaborUpdate,
+    AiApuGenerateRequest, SmartSelectRequest,
+    CustomCostItemCreate, CustomCostItemResponse,
+    Cost360DatabaseCreate, Cost360DatabaseUpdate, Cost360DatabaseListResponse,
+    MasterItemUpdate, MasterAPUUpdate, CustomApuExportRequest,
+    RagDiagnosticRequest
+)
+from app.core.logging import logger
+
+def set_schema_for_db(db: Session, database_id: str) -> None:
+    """Establece de forma segura el search_path para el esquema de la base de datos solicitada.
+    Valida el formato del identificador y verifica su existencia en PostgreSQL mediante consulta parametrizada
+    para prevenir inyecciÃ³n SQL.
+    """
+    if not database_id or database_id in ["master", "personalizada"]:
+        return
+    if not re.match(r'^[a-zA-Z0-9_]+$', database_id):
+        logger.warning(f"Identificador de esquema rechazado por formato invÃ¡lido: {database_id}")
+        return
+    try:
+        exists = db.execute(
+            text("SELECT 1 FROM information_schema.schemata WHERE schema_name = :schema"),
+            {"schema": database_id}
+        ).scalar()
+        if exists:
+            db.execute(text(f'SET LOCAL search_path TO "{database_id}", public'))
+        else:
+            logger.warning(f"El esquema '{database_id}' no existe en PostgreSQL. search_path no modificado.")
+    except Exception as e:
+        logger.error(f"Error setting schema for database {database_id}: {e}", exc_info=True)
+
+def clean_cell_str(val: Any) -> str:
+    if val is None:
+        return ""
+    if isinstance(val, float) and val.is_integer():
+        return str(int(val)).strip()
+    val_str = str(val).strip()
+    return "" if val_str.lower() in ("none", "nan") else val_str
+
+RESOURCE_CONFIG: Dict[str, Dict[str, str]] = {
+    "materials": {
+        "table": "cost360_materials",
+        "id_col": "CodMat",
+        "price_col": "CosMat",
+        "desc_col": "Descri",
+        "name": "Material",
+    },
+    "material": {
+        "table": "cost360_materials",
+        "id_col": "CodMat",
+        "price_col": "CosMat",
+        "desc_col": "Descri",
+        "name": "Material",
+    },
+    "materiales": {
+        "table": "cost360_materials",
+        "id_col": "CodMat",
+        "price_col": "CosMat",
+        "desc_col": "Descri",
+        "name": "Material",
+    },
+    "equipments": {
+        "table": "cost360_equipment",
+        "id_col": "CodEqu",
+        "price_col": "precio",
+        "desc_col": "Descri",
+        "name": "Equipo",
+    },
+    "equipment": {
+        "table": "cost360_equipment",
+        "id_col": "CodEqu",
+        "price_col": "precio",
+        "desc_col": "Descri",
+        "name": "Equipo",
+    },
+    "equipos": {
+        "table": "cost360_equipment",
+        "id_col": "CodEqu",
+        "price_col": "precio",
+        "desc_col": "Descri",
+        "name": "Equipo",
+    },
+    "labors": {
+        "table": "cost360_labor",
+        "id_col": "CodMan",
+        "price_col": "Jornal",
+        "desc_col": "Descri",
+        "name": "Mano de Obra",
+    },
+    "labor": {
+        "table": "cost360_labor",
+        "id_col": "CodMan",
+        "price_col": "Jornal",
+        "desc_col": "Descri",
+        "name": "Mano de Obra",
+    },
+    "mano_obra": {
+        "table": "cost360_labor",
+        "id_col": "CodMan",
+        "price_col": "Jornal",
+        "desc_col": "Descri",
+        "name": "Mano de Obra",
+    },
+    "mano-de-obra": {
+        "table": "cost360_labor",
+        "id_col": "CodMan",
+        "price_col": "Jornal",
+        "desc_col": "Descri",
+        "name": "Mano de Obra",
+    },
+}
+
+# Import Services and CRUD
+from app.crud.crud_costbase import (
+    get_items_paginated, get_item_by_code, get_item_by_code_or_covpar, get_similar_items_by_code_prefix,
+    get_apu_materials, get_apu_equipments, get_apu_labors,
+    search_materials_paginated, search_equipments_paginated, search_labors_paginated,
+    get_categories_tree_data,
+    update_material, delete_material,
+    update_equipment, delete_equipment,
+    update_labor, delete_labor,
+    save_custom_apu, delete_custom_apu,
+    get_all_databases, get_database_by_id, create_database, update_database, delete_database,
+    update_master_item, delete_master_item, update_master_apu_details
+)
+from app.services.preprocessing_service import preprocess_apu_data, fast_preprocess_debug
+from app.services.ai_apu_service import (
+    is_code_input,
+    generate_apu_with_ai,
+    generate_apu_with_ai_from_base,
+    get_dynamic_candidates,
+    fetch_base_apu_for_prompt,
+    select_relevant_complementary_apus,
+)
+from app.api.v1.endpoints.export_utils import generate_excel_workbook
+from app.services.synonyms_service import expand_technical_synonyms
+
+router = APIRouter()
+
+@router.get("/items", response_model=CostItemListResponse)
+def get_items(
+    skip: int = 0,
+    limit: int = 50,
+    search: Optional[str] = None,
+    chapter: Optional[str] = None,
+    categoria: Optional[str] = None,
+    tipo_actividad: Optional[str] = None,
+    search_desc: bool = True,
+    search_insumos: bool = False,
+    covenin: Optional[str] = None,
+    database_id: str = "master",
+    only_coded: bool = False,
+    hidden_categories: Optional[str] = None,
+    current_user: Optional[ArkoAdmin] = Depends(get_optional_arko_admin),
+    db: Session = Depends(get_db)
+):
+    if database_id.startswith("budget_"):
+        budget_id = database_id.replace("budget_", "")
+        from app.db.models.budget import BudgetItem
+        from sqlalchemy import or_, func
+        
+        query = db.query(BudgetItem).filter(BudgetItem.budget_id == budget_id, BudgetItem.is_chapter == False)
+        
+        if search:
+            search_term = f"%{search.lower()}%"
+            query = query.filter(
+                or_(
+                    func.lower(BudgetItem.cod_par).like(search_term),
+                    func.lower(BudgetItem.description).like(search_term)
+                )
+            )
+            
+        total = query.count()
+        budget_items = query.order_by(BudgetItem.order).offset(skip).limit(limit).all()
+        
+        items = []
+        for bi in budget_items:
+            items.append({
+                "CodPar": bi.cod_par,
+                "Descri": bi.description,
+                "CovPar": bi.cov_par,
+                "UniPar": bi.unit,
+                "PreUni": 0.0,
+                "RenPar": bi.performance
+            })
+            
+        return {"total": total, "items": items}
+
+    user_id = current_user.id if current_user else None
+    is_superadmin = False
+    if current_user:
+        is_superadmin = (
+            getattr(current_user, 'is_superadmin', False) or
+            (current_user.email == 'admin@arko360.net') or
+            getattr(current_user, 'role', '') in ['admin', 'superadmin']
+        )
+
+    set_schema_for_db(db, database_id)
+    total, items = get_items_paginated(
+        db, skip, limit, search, chapter, categoria, tipo_actividad,
+        search_desc, search_insumos, covenin, database_id, only_coded, hidden_categories,
+        user_id=user_id, is_superadmin=is_superadmin
+    )
+    return {"total": total, "items": items}
+
+
+def _get_db_factors(db: Session, database_id: str) -> dict:
+    """Obtener los factores de inflaciÃ³n de una base de datos por su ID."""
+    if not database_id or database_id == 'master':
+        return {"mat": 1.0, "lab": 1.0, "eq": 1.0}
+    db_config = get_database_by_id(db, database_id)
+    if not db_config:
+        return {"mat": 1.0, "lab": 1.0, "eq": 1.0}
+    return {
+        "mat": 1 + (db_config.material_inflation or 0.0) / 100.0,
+        "lab": 1 + (db_config.labor_inflation or 0.0) / 100.0,
+        "eq": 1 + (db_config.equipment_inflation or 0.0) / 100.0,
+    }
+
+@router.get("/items/{item_code}/apu", response_model=APUResponse)
+def get_apu(item_code: str, database_id: str = "master", db: Session = Depends(get_db)):
+    if database_id.startswith("budget_"):
+        budget_id = database_id.replace("budget_", "")
+        from app.db.models.budget import BudgetItem
+        bi = db.query(BudgetItem).filter(BudgetItem.budget_id == budget_id, BudgetItem.cod_par == item_code).first()
+        if not bi:
+            raise HTTPException(status_code=404, detail="Partida de presupuesto no encontrada")
+            
+        partida = {
+            "CodPar": bi.cod_par,
+            "Descri": bi.description,
+            "CovPar": bi.cov_par,
+            "UniPar": bi.unit,
+            "PreUni": 0.0,
+            "RenPar": bi.performance
+        }
+        
+        materials = [
+            APUComponent(codigo=m.codigo, descripcion=m.descripcion, unidad=m.unidad, cantidad=m.cantidad, precio_unitario=m.precio_unitario, subtotal=m.cantidad*m.precio_unitario*(1+m.desperdicio/100), desperdicio=m.desperdicio) for m in bi.materials
+        ]
+        equipments = [
+            APUComponent(codigo=e.codigo, descripcion=e.descripcion, unidad=e.unidad, cantidad=e.cantidad, precio_unitario=e.precio_unitario, subtotal=e.cantidad*e.precio_unitario*(e.depreciacion), depreciacion=e.depreciacion) for e in bi.equipments
+        ]
+        labors = [
+            APUComponent(codigo=l.codigo, descripcion=l.descripcion, unidad="DÃ­a", cantidad=l.cantidad, precio_unitario=l.jornal+l.bono, subtotal=l.cantidad*(l.jornal+l.bono), jornal=l.jornal, bono=l.bono, tot_jornal=l.cantidad*l.jornal, tot_bono=l.cantidad*l.bono) for l in bi.labors
+        ]
+        
+        total_directo = sum(c.subtotal for c in materials) + sum(c.subtotal for c in equipments) + sum(c.subtotal for c in labors)
+        return {"partida": partida, "materiales": materials, "equipos": equipments, "mano_obra": labors, "total_directo": total_directo}
+
+    set_schema_for_db(db, database_id)
+    if item_code.startswith("CUST-"):
+        from app.db.models.costbase import CustomCostItem
+        import json
+        custom_items = db.query(CustomCostItem).all()
+        for ci in custom_items:
+            try:
+                data = json.loads(ci.apu_data)
+                cod = data.get("cod_par") or ("CUST-" + ci.id[:4].upper())
+                if cod == item_code:
+                    partida = {
+                        "CodPar": cod,
+                        "Descri": ci.description,
+                        "UniPar": ci.unit,
+                        "RenPar": ci.performance
+                    }
+                    materials = [
+                        APUComponent(codigo=m.get('id',''), descripcion=m.get('descripcion',''), unidad=m.get('unidad',''), cantidad=m.get('cantidad',0), precio_unitario=m.get('precio_unitario',0), subtotal=m.get('cantidad',0)*m.get('precio_unitario',0)*(1+m.get('desperdicio',0)/100), desperdicio=m.get('desperdicio',0)) for m in data.get('materials', [])
+                    ]
+                    equipments = [
+                        APUComponent(codigo=e.get('id',''), descripcion=e.get('descripcion',''), unidad=e.get('unidad',''), cantidad=e.get('cantidad',0), precio_unitario=e.get('precio_unitario',0), subtotal=e.get('cantidad',0)*e.get('precio_unitario',0)*(e.get('depreciacion',1.0)), depreciacion=e.get('depreciacion',1.0)) for e in data.get('equipments', [])
+                    ]
+                    labors = [
+                        APUComponent(codigo=l.get('id',''), descripcion=l.get('descripcion',''), unidad=l.get('unidad',''), cantidad=l.get('cantidad',0), precio_unitario=l.get('jornal',0), subtotal=l.get('cantidad',0)*l.get('jornal',0), jornal=l.get('jornal',0), bono=l.get('bono',0)) for l in data.get('labor', data.get('labors', []))
+                    ]
+                    total_directo = sum(c.subtotal for c in materials) + sum(c.subtotal for c in equipments) + sum(c.subtotal for c in labors)
+                    return {"partida": partida, "materiales": materials, "equipos": equipments, "mano_obra": labors, "total_directo": total_directo}
+            except:
+                continue
+        raise HTTPException(status_code=404, detail="Partida personalizada no encontrada")
+
+    item = get_item_by_code(db, item_code)
+    if not item:
+        raise HTTPException(status_code=404, detail="Partida no encontrada")
+
+    factors = _get_db_factors(db, database_id)
+
+    mat_results = get_apu_materials(db, item_code)
+    materiales = []
+    for rel, mat in mat_results:
+        desperdicio = rel.Desper if hasattr(rel, 'Desper') and rel.Desper else 0.0
+        precio = (mat.CosMat or 0.0) * factors["mat"]
+        subtotal = rel.CanIns * precio * (1 + (desperdicio / 100.0))
+        materiales.append(APUComponent(
+            codigo=mat.ref_code or mat.CodMat, cod_ins=mat.CodMat, ref_code=mat.ref_code,
+            descripcion=mat.Descri, unidad=mat.UniMat, cantidad=rel.CanIns,
+            precio_unitario=round(precio, 4), subtotal=round(subtotal, 2), desperdicio=desperdicio
+        ))
+
+    eq_results = get_apu_equipments(db, item_code)
+    equipos = []
+    for rel, eq in eq_results:
+        depreciacion = rel.Deprec if hasattr(rel, 'Deprec') and rel.Deprec else 1.0
+        precio_diario_depreciado = (eq.CosDia or 0.0) * factors["eq"]
+        precio_adquisicion = precio_diario_depreciado / depreciacion if depreciacion > 0 else precio_diario_depreciado
+        subtotal = rel.CanIns * precio_diario_depreciado
+        equipos.append(APUComponent(
+            codigo=eq.ref_code or eq.CodEqu, cod_ins=eq.CodEqu, ref_code=eq.ref_code,
+            descripcion=eq.Descri, unidad="DÃ­a", cantidad=rel.CanIns,
+            precio_unitario=round(precio_adquisicion, 4), subtotal=round(subtotal, 2), depreciacion=depreciacion
+        ))
+
+    mo_results = get_apu_labors(db, item_code)
+    mano_obra = []
+    for rel, mo in mo_results:
+        jornal = (mo.Jornal or 0.0) * factors["lab"]
+        bono = (mo.Bono or 0.0) * factors["lab"]
+        tot_jornal = rel.CanIns * jornal
+        tot_bono = rel.CanIns * bono
+        precio = jornal + bono
+        subtotal = tot_jornal + tot_bono
+        mano_obra.append(APUComponent(
+            codigo=mo.ref_code or mo.CodMan, cod_ins=mo.CodMan, ref_code=mo.ref_code,
+            descripcion=mo.Descri, unidad="DÃ­a", cantidad=rel.CanIns,
+            precio_unitario=round(precio, 2), subtotal=round(subtotal, 2),
+            jornal=round(jornal, 4), bono=round(bono, 4),
+            tot_jornal=round(tot_jornal, 2), tot_bono=round(tot_bono, 2)
+        ))
+
+    total_directo = sum(c.subtotal for c in materiales) + sum(c.subtotal for c in equipos) + sum(c.subtotal for c in mano_obra)
+
+    return APUResponse(
+        partida=item, materiales=materiales, equipos=equipos, mano_obra=mano_obra, total_directo=round(total_directo, 2)
+    )
+
+@router.put("/items/{item_code}")
+def update_master_item_route(item_code: str, payload: MasterItemUpdate, db: Session = Depends(get_db)):
+    updated_item = update_master_item(db, item_code, payload.Descri, payload.UniPar, payload.RenPar)
+    if not updated_item:
+        raise HTTPException(status_code=404, detail="Partida no encontrada")
+    return updated_item
+
+@router.put("/items/{item_code}/apu")
+def update_master_apu_route(item_code: str, payload: MasterAPUUpdate, database_id: str = "master", db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
+    set_schema_for_db(db, database_id)
+    updated_item = update_master_apu_details(
+        db=db,
+        item_code=item_code,
+        description=payload.description,
+        unit=payload.unit,
+        performance=payload.performance,
+        materials=[m.model_dump() for m in payload.materials] if payload.materials is not None else None,
+        equipments=[e.model_dump() for e in payload.equipments] if payload.equipments is not None else None,
+        labors=[l.model_dump() for l in payload.labors] if payload.labors is not None else None
+    )
+    if not updated_item:
+        raise HTTPException(status_code=404, detail="Partida no encontrada")
+    return {
+        "status": "ok",
+        "message": "APU actualizado correctamente",
+        "item": {
+            "CodPar": updated_item.CodPar,
+            "CovPar": updated_item.CovPar,
+            "Descri": updated_item.Descri,
+            "UniPar": updated_item.UniPar,
+            "RenPar": updated_item.RenPar,
+            "PreUni": updated_item.PreUni
+        }
+    }
+
+@router.delete("/items/{item_code}")
+def delete_master_item_route(item_code: str, db: Session = Depends(get_db)):
+    if not delete_master_item(db, item_code):
+        raise HTTPException(status_code=404, detail="Partida no encontrada")
+    return {"status": "ok"}
+
+@router.get("/materials")
+def search_materials_route(
+    skip: int = 0,
+    limit: int = 50,
+    search: str = "",
+    database_id: str = "master",
+    all_items: bool = True,
+    current_user: Optional[ArkoAdmin] = Depends(get_optional_arko_admin),
+    db: Session = Depends(get_db)
+) -> dict:
+    is_superadmin = False
+    if current_user:
+        is_superadmin = (
+            getattr(current_user, 'is_superadmin', False) or
+            (current_user.email == 'admin@arko360.net') or
+            getattr(current_user, 'role', '') in ['admin', 'superadmin']
+        )
+    set_schema_for_db(db, database_id)
+    total, items = search_materials_paginated(db, skip, limit, search, all_items=(all_items or is_superadmin))
+    # Aplicar factor de inflaciÃ³n de materiales si la base no es maestra
+    if database_id and database_id != "master":
+        db_config = get_database_by_id(db, database_id)
+        if db_config and db_config.material_inflation:
+            factor = 1 + (db_config.material_inflation / 100.0)
+            for item in items:
+                item.CosMat = round((item.CosMat or 0.0) * factor, 4)
+
+    serialized_items = [
+        {
+            "CodMat": item.CodMat,
+            "ref_code": item.ref_code,
+            "Descri": item.Descri,
+            "UniMat": item.UniMat,
+            "CosMat": item.CosMat,
+            "family_id": item.family_id,
+            "market_indicator_id": item.market_indicator_id,
+            "market_factor": item.market_factor,
+        }
+        for item in items
+    ]
+    return {"total": total, "items": serialized_items}
+
+@router.get("/equipments")
+def search_equipments_route(
+    skip: int = 0,
+    limit: int = 50,
+    search: str = "",
+    database_id: str = "master",
+    all_items: bool = True,
+    current_user: Optional[ArkoAdmin] = Depends(get_optional_arko_admin),
+    db: Session = Depends(get_db)
+) -> dict:
+    is_superadmin = False
+    if current_user:
+        is_superadmin = (
+            getattr(current_user, 'is_superadmin', False) or
+            (current_user.email == 'admin@arko360.net') or
+            getattr(current_user, 'role', '') in ['admin', 'superadmin']
+        )
+    set_schema_for_db(db, database_id)
+    total, items = search_equipments_paginated(db, skip, limit, search, all_items=(all_items or is_superadmin))
+    # Aplicar factor de inflaciÃ³n de equipos si la base no es maestra
+    factor = 1.0
+    if database_id and database_id != "master":
+        db_config = get_database_by_id(db, database_id)
+        if db_config and db_config.equipment_inflation:
+            factor = 1 + (db_config.equipment_inflation / 100.0)
+    
+    serialized_items = []
+    for item in items:
+        dep = item.deprec_factor if (item.deprec_factor and item.deprec_factor > 0) else 1.0
+        cos_dia = item.CosDia
+        precio = item.precio
+        if factor != 1.0:
+            cos_dia = round((cos_dia or 0.0) * factor, 4)
+            if precio is not None:
+                precio = round((precio or 0.0) * factor, 2)
+        if precio is None:
+            precio = round((cos_dia or 0.0) / dep, 2)
+        serialized_items.append({
+            "CodEqu": item.CodEqu,
+            "ref_code": item.ref_code,
+            "Descri": item.Descri,
+            "CosDia": cos_dia,
+            "precio": precio,
+            "deprec_factor": item.deprec_factor,
+        })
+    return {"total": total, "items": serialized_items}
+
+@router.get("/labors")
+def search_labors_route(
+    skip: int = 0,
+    limit: int = 50,
+    search: str = "",
+    database_id: str = "master",
+    all_items: bool = True,
+    current_user: Optional[ArkoAdmin] = Depends(get_optional_arko_admin),
+    db: Session = Depends(get_db)
+) -> dict:
+    is_superadmin = False
+    if current_user:
+        is_superadmin = (
+            getattr(current_user, 'is_superadmin', False) or
+            (current_user.email == 'admin@arko360.net') or
+            getattr(current_user, 'role', '') in ['admin', 'superadmin']
+        )
+    set_schema_for_db(db, database_id)
+    total, items = search_labors_paginated(db, skip, limit, search, all_items=(all_items or is_superadmin))
+    # Aplicar factor de inflaciÃ³n de mano de obra si la base no es maestra
+    factor = 1.0
+    if database_id and database_id != "master":
+        db_config = get_database_by_id(db, database_id)
+        if db_config and db_config.labor_inflation:
+            factor = 1 + (db_config.labor_inflation / 100.0)
+
+    serialized_items = []
+    for item in items:
+        jornal = item.Jornal
+        bono = item.Bono
+        if factor != 1.0:
+            jornal = round((jornal or 0.0) * factor, 4)
+            bono = round((bono or 0.0) * factor, 4)
+        serialized_items.append({
+            "CodMan": item.CodMan,
+            "ref_code": item.ref_code,
+            "Descri": item.Descri,
+            "Jornal": jornal,
+            "Bono": bono,
+        })
+    return {"total": total, "items": serialized_items}
+
+@router.get("/categories_tree")
+def get_categories_tree_route(db: Session = Depends(get_db)):
+    return get_categories_tree_data(db)
+
+@router.patch("/materials/{codigo}")
+def update_material_route(codigo: str, payload: CostMaterialUpdate, db: Session = Depends(get_db)):
+    mat = update_material(db, codigo, payload)
+    if not mat: raise HTTPException(status_code=404, detail="Material no encontrado")
+    return mat
+
+def execute_bulk_resource_updates(
+    db: Session,
+    table_name: str,
+    id_col: str,
+    price_col: str,
+    res_key: str,
+    item_label: str,
+    codigos_precio: Dict[str, float],
+    batch_size: int = 500,
+) -> Tuple[int, List[str]]:
+    """
+    Ejecuta actualizaciones masivas de precios de manera ultra-rÃ¡pida y a prueba de fallos.
+    Utiliza lotes SQL con clÃ¡usula VALUES para actualizar cientos de registros por consulta.
+    Si algÃºn lote llegara a tener un error de sintaxis/dato, utiliza savepoints (begin_nested)
+    para aislarlo fila por fila y garantizar que todos los demÃ¡s registros vÃ¡lidos continÃºen.
+    """
+    if not codigos_precio:
+        return 0, []
+
+    updated_count = 0
+    errors: List[str] = []
+    items_list = list(codigos_precio.items())
+
+    for i in range(0, len(items_list), batch_size):
+        chunk = items_list[i:i + batch_size]
+        values_parts: List[str] = []
+        for cod, pr in chunk:
+            safe_cod = cod.replace("'", "''").strip()
+            values_parts.append(f"('{safe_cod}', {float(pr)}::double precision)")
+
+        values_sql = ", ".join(values_parts)
+
+        if res_key in ("equipments", "equipment", "equipos"):
+            batch_query = text(f"""
+                UPDATE {table_name} AS t
+                SET "precio" = v.precio,
+                    "CosDia" = ROUND((v.precio * COALESCE(t.deprec_factor, 1.0))::numeric, 4)
+                FROM (VALUES {values_sql}) AS v(codigo, precio)
+                WHERE (UPPER(TRIM(t."{id_col}")) = UPPER(TRIM(v.codigo))
+                   OR (t.ref_code IS NOT NULL AND UPPER(TRIM(t.ref_code)) = UPPER(TRIM(v.codigo))))
+            """)
+        else:
+            batch_query = text(f"""
+                UPDATE {table_name} AS t
+                SET "{price_col}" = v.precio
+                FROM (VALUES {values_sql}) AS v(codigo, precio)
+                WHERE (UPPER(TRIM(t."{id_col}")) = UPPER(TRIM(v.codigo))
+                   OR (t.ref_code IS NOT NULL AND UPPER(TRIM(t.ref_code)) = UPPER(TRIM(v.codigo))))
+            """)
+
+        try:
+            with db.begin_nested():
+                res = db.execute(batch_query)
+                updated_count += res.rowcount
+        except Exception as e_batch:
+            logger.warning(f"Lote {i}-{i+len(chunk)} ejecutando fallback individual por savepoint: {e_batch}")
+            for cod, pr in chunk:
+                try:
+                    with db.begin_nested():
+                        if res_key in ("equipments", "equipment", "equipos"):
+                            q = text(
+                                f'UPDATE {table_name} '
+                                f'SET "precio" = :p, "CosDia" = ROUND((:p * COALESCE(deprec_factor, 1.0))::numeric, 4) '
+                                f'WHERE (UPPER(TRIM("{id_col}")) = UPPER(TRIM(:c)) OR (ref_code IS NOT NULL AND UPPER(TRIM(ref_code)) = UPPER(TRIM(:c))))'
+                            )
+                        else:
+                            q = text(
+                                f'UPDATE {table_name} '
+                                f'SET "{price_col}" = :p '
+                                f'WHERE (UPPER(TRIM("{id_col}")) = UPPER(TRIM(:c)) OR (ref_code IS NOT NULL AND UPPER(TRIM(ref_code)) = UPPER(TRIM(:c))))'
+                            )
+                        r = db.execute(q, {"p": pr, "c": cod})
+                        if r.rowcount > 0:
+                            updated_count += r.rowcount
+                        else:
+                            errors.append(f"{item_label} {cod} no encontrado")
+                except Exception as e_indiv:
+                    logger.error(f"Error actualizando {item_label} {cod}: {e_indiv}", exc_info=True)
+                    errors.append(f"Error con {cod}: {str(e_indiv)}")
+
+    db.commit()
+    return updated_count, errors
+
+@router.post("/materials/bulk-update")
+@router.post("/{resource_type}/bulk-update")
+def bulk_update_resources(
+    resource_type: str = "materials",
+    payload: Optional[Dict[str, Any]] = None,
+    database_id: Optional[str] = "master",
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    ActualizaciÃ³n masiva de precios para materiales, equipos o mano de obra.
+    ActualizaciÃ³n directa en base de datos para mÃ¡xima eficiencia sin consumo de tokens IA.
+    """
+    if payload is None:
+        payload = {}
+
+    res_key = resource_type.lower().strip()
+    if res_key not in RESOURCE_CONFIG:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tipo de recurso invÃ¡lido: '{resource_type}'. VÃ¡lidos: materiales, equipos, mano de obra."
+        )
+
+    config = RESOURCE_CONFIG[res_key]
+    table_name = config["table"]
+    id_col = config["id_col"]
+    price_col = config["price_col"]
+    item_label = config["name"]
+
+    if database_id and database_id != "master":
+        set_schema_for_db(db, database_id)
+
+    try:
+        updates = payload.get("updates", [])
+        if not updates:
+            return {"updated": 0, "errors": [], "total": 0}
+
+        errors: List[str] = []
+        codigos_precio: Dict[str, float] = {}
+
+        for update in updates:
+            if not isinstance(update, dict):
+                continue
+            codigo = clean_cell_str(update.get("codigo", "")).strip().strip('"\'')
+            precio_raw = update.get("precio")
+            if codigo and precio_raw is not None:
+                try:
+                    if isinstance(precio_raw, (int, float)):
+                        codigos_precio[codigo] = float(precio_raw)
+                    elif isinstance(precio_raw, str):
+                        clean_p = re.sub(r"[^\d,\.]", "", precio_raw.strip())
+                        if "." in clean_p and "," in clean_p:
+                            if clean_p.rfind(",") > clean_p.rfind("."):
+                                clean_p = clean_p.replace(".", "").replace(",", ".")
+                            else:
+                                clean_p = clean_p.replace(",", "")
+                        elif "," in clean_p:
+                            clean_p = clean_p.replace(",", ".")
+                        codigos_precio[codigo] = float(clean_p)
+                    else:
+                        codigos_precio[codigo] = float(precio_raw)
+                except (ValueError, TypeError):
+                    errors.append(f"Precio invÃ¡lido para cÃ³digo {codigo}: {precio_raw}")
+
+        updated_count, db_errors = execute_bulk_resource_updates(
+            db=db,
+            table_name=table_name,
+            id_col=id_col,
+            price_col=price_col,
+            res_key=res_key,
+            item_label=item_label,
+            codigos_precio=codigos_precio,
+        )
+        errors.extend(db_errors)
+
+        return {
+            "updated": updated_count,
+            "errors": errors,
+            "total": len(updates)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error en actualizaciÃ³n masiva de precios ({resource_type}): {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error en actualizaciÃ³n masiva: {str(e)}")
+
+@router.post("/materials/bulk-update-excel")
+@router.post("/{resource_type}/bulk-update-excel")
+async def bulk_update_prices_excel_route(
+    resource_type: str = "materials",
+    file: UploadFile = File(...),
+    database_id: Optional[str] = "master",
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    ActualizaciÃ³n masiva de precios desde archivo Excel (.xlsx o .xls) o CSV de un solo golpe.
+    Formato esperado: columnas de 'CÃ³digo' y 'Precio' (o 'Costo', 'Jornal', etc.).
+    Aplica a materiales, equipos o mano de obra segÃºn resource_type.
+    """
+    res_key = resource_type.lower().strip()
+    if res_key not in RESOURCE_CONFIG:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tipo de recurso invÃ¡lido: '{resource_type}'. VÃ¡lidos: materiales, equipos, mano de obra."
+        )
+
+    config = RESOURCE_CONFIG[res_key]
+    table_name = config["table"]
+    id_col = config["id_col"]
+    price_col = config["price_col"]
+    item_label = config["name"]
+
+    if database_id and database_id != "master":
+        set_schema_for_db(db, database_id)
+
+    try:
+        contents = await file.read()
+        rows: List[List[Any]] = []
+        try:
+            wb = openpyxl.load_workbook(io.BytesIO(contents), data_only=True)
+            ws = wb.active
+            rows = [list(r) for r in ws.iter_rows(values_only=True)]
+        except Exception as e_xl:
+            try:
+                df = pd.read_excel(io.BytesIO(contents))
+                header = list(df.columns)
+                data_rows = df.values.tolist()
+                rows = [header] + data_rows
+            except Exception as e_pd:
+                try:
+                    df = pd.read_csv(io.BytesIO(contents), sep=None, engine="python")
+                    header = list(df.columns)
+                    data_rows = df.values.tolist()
+                    rows = [header] + data_rows
+                except Exception as e_csv:
+                    logger.error(f"Error leyendo archivo de precios: {e_xl} | {e_pd} | {e_csv}", exc_info=True)
+                    raise HTTPException(
+                        status_code=400,
+                        detail="No se pudo leer el archivo. AsegÃºrese de que sea un archivo Excel vÃ¡lido (.xlsx o .xls) o CSV."
+                    )
+
+        if not rows or len(rows) < 2:
+            return {"updated": 0, "errors": ["El archivo estÃ¡ vacÃ­o o no contiene filas de datos"], "total": 0}
+
+        codigo_col_idx: Optional[int] = None
+        precio_col_idx: Optional[int] = None
+        header_row_idx = 0
+
+        # Escanear las primeras 25 filas para detectar la fila de encabezados real
+        for r_idx in range(min(len(rows), 25)):
+            r = rows[r_idx]
+            c_idx = None
+            p_idx = None
+            for idx, header in enumerate(r):
+                if header is None:
+                    continue
+                h_norm = str(header).lower().strip()
+                h_clean = h_norm.replace("Ã¡", "a").replace("Ã©", "e").replace("Ã­", "i").replace("Ã³", "o").replace("Ãº", "u")
+                if c_idx is None and any(k in h_clean for k in ["codigo", "codmat", "codequ", "codman", "cod.", "cod_", "cÃ³digo", "ref_code", "referencia"]):
+                    c_idx = idx
+                elif p_idx is None and any(k in h_clean for k in ["precio", "costo", "cosmat", "jornal", "cosdia", "monto", "valor", "p.u", "pu", "tarifa", "salario"]):
+                    p_idx = idx
+            if c_idx is not None:
+                codigo_col_idx = c_idx
+                header_row_idx = r_idx
+                if p_idx is not None:
+                    precio_col_idx = p_idx
+                    break
+
+        # Si encontramos columna de cÃ³digo pero ninguna columna decÃ­a "precio" (ej. encabezado dice 'DescripciÃ³n' pero contiene nÃºmeros)
+        if codigo_col_idx is not None and precio_col_idx is None:
+            for col_cand in range(len(rows[header_row_idx])):
+                if col_cand == codigo_col_idx:
+                    continue
+                num_matches = 0
+                for sample_r in rows[header_row_idx + 1:header_row_idx + 15]:
+                    if len(sample_r) > col_cand and sample_r[col_cand] is not None:
+                        val_str = re.sub(r"[^\d,\.]", "", str(sample_r[col_cand]).strip())
+                        if val_str and any(ch.isdigit() for ch in val_str):
+                            num_matches += 1
+                if num_matches >= 3:
+                    precio_col_idx = col_cand
+                    break
+
+        # Fallback si no hubo coincidencia por palabras clave
+        if codigo_col_idx is None or precio_col_idx is None:
+            for r_idx in range(min(len(rows), 15)):
+                r = rows[r_idx]
+                if len(r) >= 2 and r[0] is not None:
+                    test_str = str(r[1] if len(r) > 1 else r[-1]).strip()
+                    clean_test = re.sub(r"[^\d,\.]", "", test_str)
+                    if clean_test and any(ch.isdigit() for ch in clean_test):
+                        codigo_col_idx = 0
+                        precio_col_idx = 1
+                        header_row_idx = r_idx - 1
+                        break
+            if codigo_col_idx is None or precio_col_idx is None:
+                if len(rows[0]) >= 2:
+                    codigo_col_idx = 0
+                    precio_col_idx = 1
+                    header_row_idx = 0
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="No se encontraron columnas de CÃ³digo y Precio en el archivo Excel."
+                    )
+
+        errors: List[str] = []
+        codigos_precio: Dict[str, float] = {}
+
+        for row in rows[header_row_idx + 1:]:
+            if len(row) <= max(codigo_col_idx, precio_col_idx):
+                continue
+
+            raw_c = row[codigo_col_idx]
+            if raw_c is None:
+                continue
+
+            codigo = clean_cell_str(raw_c).strip().strip('"\'')
+            precio_raw = row[precio_col_idx]
+
+            if not codigo or precio_raw is None:
+                continue
+
+            precio_val: Optional[float] = None
+            if isinstance(precio_raw, (int, float)):
+                precio_val = float(precio_raw)
+            elif isinstance(precio_raw, str):
+                clean_p = re.sub(r"[^\d,\.]", "", precio_raw.strip())
+                if clean_p:
+                    if "." in clean_p and "," in clean_p:
+                        if clean_p.rfind(",") > clean_p.rfind("."):
+                            clean_p = clean_p.replace(".", "").replace(",", ".")
+                        else:
+                            clean_p = clean_p.replace(",", "")
+                    elif "," in clean_p:
+                        clean_p = clean_p.replace(",", ".")
+                    try:
+                        precio_val = float(clean_p)
+                    except ValueError:
+                        errors.append(f"Precio invÃ¡lido para cÃ³digo {codigo}: {precio_raw}")
+            if precio_val is not None:
+                codigos_precio[codigo] = precio_val
+
+        if not codigos_precio:
+            return {"updated": 0, "errors": ["No se detectaron cÃ³digos y precios vÃ¡lidos en el archivo"], "total": 0}
+
+        updated_count, db_errors = execute_bulk_resource_updates(
+            db=db,
+            table_name=table_name,
+            id_col=id_col,
+            price_col=price_col,
+            res_key=res_key,
+            item_label=item_label,
+            codigos_precio=codigos_precio,
+        )
+        errors.extend(db_errors)
+
+        return {
+            "updated": updated_count,
+            "errors": errors,
+            "total": len(codigos_precio),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error en actualizaciÃ³n masiva de precios por Excel ({resource_type}): {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error en actualizaciÃ³n masiva por Excel: {str(e)}")
+
+@router.post("/materials/bulk-update-descriptions")
+@router.post("/{resource_type}/bulk-update-descriptions")
+async def bulk_update_descriptions_route(
+    resource_type: str = "materials",
+    file: UploadFile = File(...),
+    database_id: Optional[str] = "master",
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    ActualizaciÃ³n masiva de descripciones desde archivo Excel (.xlsx o .xls).
+    Formato esperado: columnas 'CÃ³digo' y 'DescripciÃ³n'.
+    Aplica a materiales, equipos o mano de obra segÃºn resource_type.
+    """
+    res_key = resource_type.lower().strip()
+    if res_key not in RESOURCE_CONFIG:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tipo de recurso invÃ¡lido: '{resource_type}'. VÃ¡lidos: materiales, equipos, mano de obra."
+        )
+
+    config = RESOURCE_CONFIG[res_key]
+    table_name = config["table"]
+    id_col = config["id_col"]
+    desc_col = config["desc_col"]
+    item_label = config["name"]
+
+    if database_id and database_id != "master":
+        set_schema_for_db(db, database_id)
+
+    try:
+        contents = await file.read()
+        rows: List[List[Any]] = []
+        try:
+            wb = openpyxl.load_workbook(io.BytesIO(contents), data_only=True)
+            ws = wb.active
+            rows = [list(r) for r in ws.iter_rows(values_only=True)]
+        except Exception as e_xl:
+            try:
+                df = pd.read_excel(io.BytesIO(contents))
+                header = list(df.columns)
+                data_rows = df.values.tolist()
+                rows = [header] + data_rows
+            except Exception as e_pd:
+                logger.error(f"Error leyendo archivo Excel: {e_xl} | Fallback pandas: {e_pd}", exc_info=True)
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"No se pudo leer el archivo Excel. AsegÃºrese de que sea un archivo vÃ¡lido (.xlsx o .xls)."
+                )
+
+        if not rows or len(rows) < 2:
+            return {"updated": 0, "errors": ["El archivo Excel estÃ¡ vacÃ­o o no contiene filas de datos"], "total": 0}
+
+        codigo_col_idx: Optional[int] = None
+        descripcion_col_idx: Optional[int] = None
+        header_row_idx = 0
+
+        # Escanear las primeras 25 filas para detectar la fila de encabezados real
+        for r_idx in range(min(len(rows), 25)):
+            r = rows[r_idx]
+            c_idx = None
+            d_idx = None
+            for idx, header in enumerate(r):
+                if header is None:
+                    continue
+                h_norm = str(header).lower().strip()
+                h_clean = h_norm.replace("Ã¡", "a").replace("Ã©", "e").replace("Ã­", "i").replace("Ã³", "o").replace("Ãº", "u")
+                if c_idx is None and any(k in h_clean for k in ["codigo", "codmat", "codequ", "codman", "cod.", "cod_", "cÃ³digo", "ref_code", "referencia", "id"]):
+                    c_idx = idx
+                elif d_idx is None and any(k in h_clean for k in ["descripcion", "descri", "detalle", "nombre", "texto"]):
+                    d_idx = idx
+            if c_idx is not None and d_idx is not None:
+                codigo_col_idx = c_idx
+                descripcion_col_idx = d_idx
+                header_row_idx = r_idx
+                break
+
+        # Fallback si no hubo coincidencia por palabras clave: asumir Columna 0 = CÃ³digo, Columna 1 = DescripciÃ³n
+        if codigo_col_idx is None or descripcion_col_idx is None:
+            if len(rows[0]) >= 2:
+                codigo_col_idx = 0
+                descripcion_col_idx = 1
+                header_row_idx = -1  # Para procesar desde la fila 0
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No se encontraron columnas de CÃ³digo y DescripciÃ³n en el archivo Excel."
+                )
+
+        updated_count = 0
+        errors: List[str] = []
+        items_to_update: List[Dict[str, str]] = []
+
+        start_row = header_row_idx + 1 if header_row_idx >= 0 else 0
+        for row in rows[start_row:]:
+            if len(row) <= max(codigo_col_idx, descripcion_col_idx):
+                continue
+
+            codigo = clean_cell_str(row[codigo_col_idx]).strip().strip('"\'')
+            descripcion = clean_cell_str(row[descripcion_col_idx]).strip()
+
+            if not codigo or not descripcion:
+                continue
+
+            items_to_update.append({"codigo": codigo, "descripcion": descripcion})
+
+        if not items_to_update:
+            return {"updated": 0, "errors": ["No se detectaron cÃ³digos y descripciones vÃ¡lidas en el archivo"], "total": 0}
+
+        # EjecuciÃ³n por lotes para mÃ¡ximo rendimiento y tolerancia a fallos
+        batch_size = 500
+        for i in range(0, len(items_to_update), batch_size):
+            chunk = items_to_update[i:i + batch_size]
+            values_parts: List[str] = []
+            for item in chunk:
+                safe_cod = item["codigo"].replace("'", "''").strip()
+                safe_desc = item["descripcion"].replace("'", "''").strip()
+                values_parts.append(f"('{safe_cod}', '{safe_desc}')")
+
+            values_sql = ", ".join(values_parts)
+            batch_query = text(f"""
+                UPDATE {table_name} AS t
+                SET "{desc_col}" = v.descripcion
+                FROM (VALUES {values_sql}) AS v(codigo, descripcion)
+                WHERE (UPPER(TRIM(t."{id_col}")) = UPPER(TRIM(v.codigo))
+                   OR (t.ref_code IS NOT NULL AND UPPER(TRIM(t.ref_code)) = UPPER(TRIM(v.codigo))))
+            """)
+            try:
+                with db.begin_nested():
+                    res = db.execute(batch_query)
+                    updated_count += res.rowcount
+            except Exception as e_batch:
+                logger.warning(f"Lote {i}-{i+len(chunk)} ejecutando fallback individual de descripciones: {e_batch}")
+                q_single = text(f"""
+                    UPDATE {table_name}
+                    SET "{desc_col}" = :d
+                    WHERE (UPPER(TRIM("{id_col}")) = UPPER(TRIM(:c))
+                       OR (ref_code IS NOT NULL AND UPPER(TRIM(ref_code)) = UPPER(TRIM(:c))))
+                """)
+                for item in chunk:
+                    try:
+                        with db.begin_nested():
+                            r = db.execute(q_single, {"d": item["descripcion"], "c": item["codigo"]})
+                            if r.rowcount > 0:
+                                updated_count += r.rowcount
+                            else:
+                                errors.append(f"{item_label} {item['codigo']} no encontrado")
+                    except Exception as e_indiv:
+                        errors.append(f"Error actualizando {item['codigo']}: {str(e_indiv)}")
+
+        db.commit()
+
+        return {
+            "updated": updated_count,
+            "errors": errors,
+            "total": len(items_to_update),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error en actualizaciÃ³n masiva de descripciones ({resource_type}): {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error en actualizaciÃ³n masiva de descripciones: {str(e)}")
+
+@router.delete("/materials/{codigo}")
+def delete_material_route(codigo: str, db: Session = Depends(get_db)):
+    if not delete_material(db, codigo): raise HTTPException(status_code=404, detail="Material no encontrado")
+    return {"status": "ok"}
+
+@router.patch("/equipments/{codigo}")
+def update_equipment_route(codigo: str, payload: CostEquipmentUpdate, db: Session = Depends(get_db)):
+    eq = update_equipment(db, codigo, payload)
+    if not eq: raise HTTPException(status_code=404, detail="Equipo no encontrado")
+    return eq
+
+@router.delete("/equipments/{codigo}")
+def delete_equipment_route(codigo: str, db: Session = Depends(get_db)):
+    if not delete_equipment(db, codigo): raise HTTPException(status_code=404, detail="Equipo no encontrado")
+    return {"status": "ok"}
+
+@router.patch("/labors/{codigo}")
+def update_labor_route(codigo: str, payload: CostLaborUpdate, db: Session = Depends(get_db)):
+    labor = update_labor(db, codigo, payload)
+    if not labor: raise HTTPException(status_code=404, detail="Mano de obra no encontrada")
+    return labor
+
+@router.delete("/labors/{codigo}")
+def delete_labor_route(codigo: str, db: Session = Depends(get_db)):
+    if not delete_labor(db, codigo): raise HTTPException(status_code=404, detail="Mano de obra no encontrada")
+    return {"status": "ok"}
+
+@router.post("/generate-ai-apu")
+def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
+    # Verificar acceso a IA
+    check_ai_access(current_user)
+
+    # 0. Si el usuario aceptÃ³ la partida de Match Exacto ("SÃ­, es esa"), devolver APU de BD directamente
+    if payload.accept_exact_match_code:
+        item = get_item_by_code_or_covpar(db, payload.accept_exact_match_code)
+        if item:
+            mat_results = get_apu_materials(db, item.CodPar)
+            eq_results = get_apu_equipments(db, item.CodPar)
+            mo_results = get_apu_labors(db, item.CodPar)
+
+            materials = [
+                {
+                    "id": f"m-{mat.CodMat}",
+                    "codigo": mat.ref_code or mat.CodMat,
+                    "cod_ins": mat.CodMat,
+                    "ref_code": mat.ref_code,
+                    "descripcion": mat.Descri,
+                    "unidad": mat.UniMat,
+                    "cantidad": rel.CanIns,
+                    "desperdicio": getattr(rel, 'Desper', 0.0) or 0.0,
+                    "precio_unitario": mat.CosMat or 0.0,
+                    "origen": "historico",
+                    "nota_calculo": "ExtraÃ­do directamente de la base de datos certificada."
+                } for rel, mat in mat_results
+            ]
+
+            equipments = [
+                {
+                    "id": f"e-{eq.CodEqu}",
+                    "codigo": eq.ref_code or eq.CodEqu,
+                    "cod_ins": eq.CodEqu,
+                    "ref_code": eq.ref_code,
+                    "descripcion": eq.Descri,
+                    "unidad": "dÃ­a",
+                    "cantidad": rel.CanIns,
+                    "depreciacion": getattr(rel, 'Deprec', 1.0) or 1.0,
+                    "precio_unitario": eq.CosDia or 0.0,
+                    "origen": "historico",
+                    "nota_calculo": "ExtraÃ­do directamente de la base de datos certificada."
+                } for rel, eq in eq_results
+            ]
+
+            labors = [
+                {
+                    "id": f"l-{mo.CodMan}",
+                    "codigo": mo.ref_code or mo.CodMan,
+                    "cod_ins": mo.CodMan,
+                    "ref_code": mo.ref_code,
+                    "descripcion": mo.Descri,
+                    "unidad": "dÃ­a",
+                    "cantidad": rel.CanIns,
+                    "jornal": mo.Jornal or 0.0,
+                    "bono": mo.Bono or 0.0,
+                    "precio_unitario": (mo.Jornal or 0.0) + (mo.Bono or 0.0),
+                    "origen": "historico",
+                    "nota_calculo": "ExtraÃ­do directamente de la base de datos certificada."
+                } for rel, mo in mo_results
+            ]
+
+            return {
+                "status": "completed",
+                "partida": {
+                    "cod_par": item.CodPar,
+                    "cov_par": item.CovPar or item.CodPar,
+                    "description": item.Descri,
+                    "unit": item.UniPar,
+                    "quantity": 1.0,
+                    "performance": getattr(item, 'RenPar', 1.0) or 1.0
+                },
+                "materials": materials,
+                "equipments": equipments,
+                "labors": labors,
+                "advertencias": [
+                    f"Partida certificada [{item.CodPar}] importada directamente desde la base de datos maestra a solicitud del usuario."
+                ]
+            }
+
+    # 1. Early Validation & DetecciÃ³n de CÃ³digo vs DescripciÃ³n de Obra
+    raw_desc = (payload.description or "").strip()
+    if not raw_desc or len(raw_desc) < 3:
+        return {
+            "status": "clarification_needed",
+            "clarification_message": "La descripciÃ³n ingresada es demasiado breve o vacÃ­a para estructurar un AnÃ¡lisis de Precios Unitarios (APU). Por favor describe la actividad a ejecutar.",
+            "options": [],
+            "questions": [
+                "1. Â¿QuÃ© actividad constructiva especÃ­fica deseas presupuestar?",
+                "2. Â¿QuÃ© materiales y equipos principales intervienen?",
+                "3. Â¿En quÃ© unidad de medida se computa la partida?"
+            ],
+            "guia_redaccion": "Estructura recomendada: [AcciÃ³n] + [Elemento] + [Material/EspecificaciÃ³n] + [Unidad]."
+        }
+
+    # Si el usuario ingresÃ³ Ãºnicamente un cÃ³digo o nomenclatura (ej: 'E11102235', 'CMT050', etc.):
+    # El generador con IA no es un buscador de partidas por cÃ³digo; requiere una descripciÃ³n tÃ©cnica estructurada.
+    if is_code_input(raw_desc):
+        return {
+            "status": "clarification_needed",
+            "clarification_message": f"El texto ingresado ('{raw_desc}')  no es una descripciÃ³n tÃ©cnica de obra.",
+            "recommendation": "Te recomendamos utilizar el Asistente Guiado para estructurar tu descripciÃ³n paso a paso.",
+            "options": [],
+            "questions": [
+                "1. Â¿CuÃ¡l es la actividad tÃ©cnica principal que deseas presupuestar? (AcciÃ³n + Elemento)",
+                "2. Â¿QuÃ© especificaciones, materiales o condiciones aplican?",
+                "3. Â¿En quÃ© unidad de medida se computa la partida (m2, m3, und, kg, etc.)?"
+            ],
+            "guia_redaccion": "Estructura recomendada: [AcciÃ³n] + [Elemento] + [Especificaciones/Materiales] + [Unidad]."
+        }
+
+    # 2. NormalizaciÃ³n y ExpansiÃ³n TÃ©cnica con Diccionario (Paso 1)
+    if payload.description:
+        payload.description = expand_technical_synonyms(payload.description)
+
+    # 2.1. Si es solo preproceso DEBUG, devolver resultado rapido
+    if payload.only_preprocess:
+        from app.services.ai_search import ai_engine
+        debug_data = fast_preprocess_debug(
+            db, payload.description, payload.covenin_prefix, payload.covenin_context
+        )
+        # Inyectar estado real del motor IA para diagnÃ³stico
+        debug_data["motor_ia_estado"] = {
+            "is_loaded": ai_engine.is_loaded,
+            "total_ids_mapeados": len(ai_engine.ids_mapping),
+            "embeddings_forma": str(ai_engine.embeddings.shape) if ai_engine.embeddings is not None else "No cargado",
+        }
+        return {
+            "status": "clarification_needed",
+            "clarification_message": f"MODO DEBUG: {len(debug_data.get('todas_las_partidas_covenin', []))} candidatas encontradas tras expansiÃ³n dinÃ¡mica",
+            "options": [],
+            "questions": [],
+            "debug_preprocesamiento": debug_data
+        }
+
+    # 2.5. MODO RAG / ADAPTACIÃ“N DE BASE REAL
+    base_code = payload.base_partida_code
+    candidates = []
+    if not base_code and not payload.only_preprocess:
+        # BÃºsqueda RAG HÃ­brida automÃ¡tica para encontrar la mejor partida base
+        candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
+        if candidates and candidates[0]["score"] >= 0.35:
+            base_code = candidates[0]["item"].CodPar
+
+    if base_code:
+        base_apu = fetch_base_apu_for_prompt(db, base_code)
+        
+        all_candidates_trace = []
+        complementary_apus = []
+        try:
+            if not candidates:
+                candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
+            all_candidates_trace = [
+                {"codpar": c["item"].CodPar, "covenin": c["item"].CovPar, "descripcion": c["item"].Descri, "score": c["score"]}
+                for c in candidates
+            ]
+            complementary_apus = select_relevant_complementary_apus(
+                db=db,
+                user_description=payload.description,
+                base_apu=base_apu,
+                candidates=candidates,
+                max_complementary=2,
+            )
+        except Exception as exc:
+            logger.error("Error fetching complementary APUs: %s", exc, exc_info=True)
+
+        history_dicts = [msg.model_dump() for msg in payload.history] if payload.history else []
+        result = generate_apu_with_ai_from_base(
+            base_apu=base_apu,
+            complementary_apus=complementary_apus,
+            user_description=payload.description,
+            covenin_prefix=payload.covenin_prefix or "",
+            covenin_context=payload.covenin_context or "",
+            smart_answers=payload.smart_answers or {},
+            history=history_dicts,
+        )
+        # Inyectar traza completa del RAG HÃ­brido en el resultado para debug
+        result["debug_rag_trace"] = {
+            "motor_rag": "RAG HÃ­brido (MiniLM + LÃ©xico)",
+            "solicitud_usuario": payload.description,
+            "covenin_prefix": payload.covenin_prefix,
+            "covenin_context": payload.covenin_context,
+            "partida_base_ganadora": {
+                "codpar": base_apu.get("codpar"),
+                "covenin": base_apu.get("covenin"),
+                "descripcion": base_apu.get("descripcion")
+            },
+            "partidas_complementarias": [
+                {"codpar": c.get("codpar"), "covenin": c.get("covenin"), "descripcion": c.get("descripcion")}
+                for c in complementary_apus
+            ],
+            "top_candidatas_evaluadas": all_candidates_trace
+        }
+        if (result.get("status") in ("success", "completed")) and result.get("partida"):
+            from app.db.arko_base import ArkoSessionLocal
+            with ArkoSessionLocal() as adb:
+                db_user = adb.query(current_user.__class__).filter_by(id=current_user.id).first()
+                if db_user:
+                    db_user.ai_apus_generated = getattr(db_user, 'ai_apus_generated', 0) + 1
+                    adb.commit()
+        return result
+
+    # 3. Preprocesamiento (BD + EstadÃ­sticas) + IA semantica (Fallback clÃ¡sico sin base directa)
+    payload_llm = preprocess_apu_data(db, payload.description, payload.covenin_prefix, payload.covenin_context)
+    
+    # 3.5. Pregunta interactiva si hay Match Exacto y el usuario aÃºn no ha omitido
+    if payload_llm.get("modo") == "partida_exacta_encontrada" and not payload.bypass_exact_match:
+        cod_par = payload_llm.get("partida_exacta_codigo")
+        item = get_item_by_code(db, cod_par)
+        if item:
+            return {
+                "status": "exact_match_candidate",
+                "matched_item": {
+                    "cod_par": item.CodPar,
+                    "cov_par": item.CovPar or item.CodPar,
+                    "description": item.Descri,
+                    "unit": item.UniPar,
+                    "pre_uni": item.PreUni or 0.0,
+                    "performance": getattr(item, 'RenPar', 1.0) or 1.0
+                },
+                "message": "Existe una partida que coincide casi al 100% con tu descripciÃ³n:"
+            }
+
+    # 4. GeneraciÃ³n con IA (LLM Router)
+    history_dicts = [msg.model_dump() for msg in payload.history] if payload.history else []
+    result = generate_apu_with_ai(payload_llm, history_dicts)
+    
+    if (result.get("status") in ("success", "completed")) and result.get("partida"):
+        from app.db.arko_base import ArkoSessionLocal
+        with ArkoSessionLocal() as adb:
+            db_user = adb.query(current_user.__class__).filter_by(id=current_user.id).first()
+            if db_user:
+                db_user.ai_apus_generated = getattr(db_user, 'ai_apus_generated', 0) + 1
+                adb.commit()
+
+    return result
+
+
+@router.post("/smart-select")
+def smart_select_route(payload: SmartSelectRequest, db: Session = Depends(get_db)):
+    """SelecciÃ³n automÃ¡tica de partida base mediante RAG HÃ­brido."""
+    candidates, best_score = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
+    best_match = None
+    if candidates:
+        top_item = candidates[0]["item"]
+        best_match = {
+            "codpar": top_item.CodPar,
+            "covenin": top_item.CovPar,
+            "descripcion": top_item.Descri,
+            "unidad": top_item.UniPar,
+            "score": round(candidates[0]["score"], 3),
+        }
+    return {
+        "covenin_prefix": payload.covenin_prefix,
+        "covenin_context": payload.covenin_context,
+        "description": payload.description,
+        "answers_received": payload.answers or {},
+        "total_partidas": len(candidates),
+        "candidates_count": len(candidates),
+        "questions": [],
+        "candidates": [
+            {
+                "codpar": c["item"].CodPar,
+                "covenin": c["item"].CovPar,
+                "descripcion": c["item"].Descri,
+                "unidad": c["item"].UniPar,
+                "score": round(c["score"], 3),
+            }
+            for c in candidates
+        ],
+        "best_match": best_match,
+        "confidence": round(best_score, 3),
+        "ready_to_generate": True,
+    }
+
+
+@router.post("/rag-diagnostic")
+def rag_diagnostic_route(
+    payload: RagDiagnosticRequest,
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(get_current_arko_admin)
+) -> Dict[str, Any]:
+    """DiagnÃ³stico tÃ©cnico en tiempo real del motor RAG HÃ­brido, sin costo de LLM."""
+    if not payload.query or not payload.query.strip():
+        raise HTTPException(status_code=400, detail="La consulta no puede estar vacÃ­a.")
+
+    query: str = payload.query.strip()
+    expanded_query: str = expand_technical_synonyms(query)
+
+    try:
+        candidates, best_score = get_dynamic_candidates(
+            db=db,
+            description=expanded_query,
+            covenin_prefix=payload.covenin_prefix or "",
+            limit=payload.limit or 15
+        )
+    except Exception as exc:
+        logger.error(f"Error en bÃºsqueda RAG de diagnÃ³stico: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error en motor RAG: {str(exc)}")
+
+    formatted_candidates: List[Dict[str, Any]] = []
+    base_apu_details: Optional[Dict[str, Any]] = None
+    complementary_details: List[Dict[str, Any]] = []
+
+    if candidates:
+        for c in candidates:
+            item = c["item"]
+            formatted_candidates.append({
+                "codpar": getattr(item, "CodPar", ""),
+                "covenin": getattr(item, "CovPar", "") or getattr(item, "CodPar", ""),
+                "descripcion": getattr(item, "Descri", ""),
+                "unidad": getattr(item, "UniPar", ""),
+                "rendimiento": getattr(item, "RenPar", 0.0),
+                "score": round(float(c.get("score", 0.0)), 4),
+            })
+
+        winning_candidate = candidates[0]
+        base_code: str = getattr(winning_candidate["item"], "CodPar", "")
+        if base_code:
+            try:
+                base_apu = fetch_base_apu_for_prompt(db, base_code)
+                base_apu_details = {
+                    "codpar": base_apu.get("codpar"),
+                    "covenin": base_apu.get("covenin"),
+                    "descripcion": base_apu.get("descripcion"),
+                    "unidad": base_apu.get("unidad"),
+                    "rendimiento": base_apu.get("rendimiento"),
+                    "total_materiales": len(base_apu.get("materiales", [])),
+                    "total_equipos": len(base_apu.get("equipos", [])),
+                    "total_mano_obra": len(base_apu.get("mano_obra", [])),
+                    "materiales": base_apu.get("materiales", [])[:6],
+                    "equipos": base_apu.get("equipos", [])[:6],
+                    "mano_obra": base_apu.get("mano_obra", [])[:6],
+                }
+
+                complementaries = select_relevant_complementary_apus(
+                    db=db,
+                    user_description=expanded_query,
+                    base_apu=base_apu,
+                    candidates=candidates,
+                    max_complementary=2,
+                )
+                for comp in complementaries:
+                    complementary_details.append({
+                        "codpar": comp.get("codpar"),
+                        "covenin": comp.get("covenin"),
+                        "descripcion": comp.get("descripcion"),
+                        "unidad": comp.get("unidad"),
+                        "rendimiento": comp.get("rendimiento"),
+                    })
+            except Exception as exc:
+                logger.error(f"Error procesando APU base o complementarias en diagnÃ³stico: {exc}", exc_info=True)
+
+    return {
+        "status": "ok",
+        "query_original": query,
+        "query_expandida": expanded_query,
+        "sinonimos_aplicados": query.strip().lower() != expanded_query.strip().lower(),
+        "total_candidatas": len(formatted_candidates),
+        "best_score": round(float(best_score), 4) if best_score else 0.0,
+        "ganadora": formatted_candidates[0] if formatted_candidates else None,
+        "base_apu": base_apu_details,
+        "complementarias": complementary_details,
+        "es_autosuficiente": len(complementary_details) == 0,
+        "candidatas": formatted_candidates,
+    }
+
+
+@router.post("/custom-apus", response_model=CustomCostItemResponse)
+def save_custom_apu_route(
+    payload: CustomCostItemCreate,
+    current_user: Optional[ArkoAdmin] = Depends(get_optional_arko_admin),
+    db: Session = Depends(get_db)
+) -> Any:
+    user_id = current_user.id if current_user else None
+    new_item = save_custom_apu(
+        db=db,
+        description=payload.description,
+        unit=payload.unit,
+        performance=payload.performance,
+        apu_data=payload.apu_data,
+        user_id=user_id
+    )
+    return new_item
+
+@router.delete("/custom-apus/{item_id}")
+def delete_custom_apu_route(
+    item_id: str,
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+    db: Session = Depends(get_db)
+) -> dict:
+    is_superadmin = (
+        getattr(current_user, 'is_superadmin', False) or
+        (current_user.email == 'admin@arko360.net') or
+        getattr(current_user, 'role', '') in ['admin', 'superadmin']
+    )
+    try:
+        success = delete_custom_apu(
+            db=db,
+            item_id=item_id,
+            user_id=current_user.id,
+            is_superadmin=is_superadmin
+        )
+        if not success:
+            raise HTTPException(status_code=404, detail="Partida personalizada no encontrada")
+        return {"status": "success", "message": "Partida personalizada eliminada exitosamente"}
+    except PermissionError as pe:
+        raise HTTPException(status_code=403, detail=str(pe))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error al eliminar partida personalizada {item_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error interno al eliminar la partida")
+
+
+
+
+
+@router.post("/apu/{item_id}/export-excel")
+async def export_apu_excel(item_id: str, db: Session = Depends(get_db)):
+    """Genera un archivo Excel con fÃ³rmulas nativas usando el formato del script de referencia apu_formulas.py"""
+    try:
+        # Obtener la partida principal
+        try:
+            item = get_item_by_code(db, item_id.split('-')[0])
+        except Exception:
+            raise HTTPException(status_code=404, detail="Item not found")
+
+        # Obtener APU
+        mat_rows = get_apu_materials(db, item_id)
+        eq_rows = get_apu_equipments(db, item_id)
+        mo_rows = get_apu_labors(db, item_id)
+
+        # Convertir a dicts
+        item_dict = {
+            "CodPar": item.CodPar,
+            "CovPar": item.CovPar,
+            "Descri": item.Descri,
+            "UniPar": item.UniPar,
+            "RenPar": item.RenPar
+        }
+        
+        mats = [{"Descri": mat.Descri if mat else '', "UniMat": mat.UniMat if mat else '', "CanIns": apu.CanIns, "Desper": apu.Desper, "CosMat": mat.CosMat if mat else 0} for apu, mat in mat_rows]
+        eqs = [{"Descri": eq.Descri if eq else '', "CanIns": apu.CanIns, "Deprec": apu.Deprec, "CosDia": eq.CosDia if eq else 0} for apu, eq in eq_rows]
+        mos = [{"Descri": mo.Descri if mo else '', "CanIns": apu.CanIns, "Jornal": mo.Jornal if mo else 0, "Bono": mo.Bono if mo else 0} for apu, mo in mo_rows]
+
+        file_path, filename = generate_excel_workbook(item_dict, mats, eqs, mos)
+        return FileResponse(path=str(file_path), filename=filename)
+
+    except Exception as e:
+        import traceback
+        print(f"Error exportando APU Excel: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error al exportar APU: {str(e)}")
+@router.post("/apu/export-excel-custom")
+async def export_apu_excel_custom(payload: CustomApuExportRequest):
+    """Genera un archivo Excel desde la memoria enviada por el frontend (APU dinÃ¡mico o en ediciÃ³n)"""
+    try:
+        # Extraer data
+        item_data = payload.item
+        mats = payload.materials
+        eqs = payload.equipments
+        mos = payload.labors
+        
+        # Mapear a las llaves que espera export_utils
+        item_dict = {
+            "CodPar": item_data.get("CodPar") or item_data.get("cod_par", "Custom"),
+            "Descri": item_data.get("Descri") or item_data.get("description", "Custom APU"),
+            "UniPar": item_data.get("UniPar") or item_data.get("unit", "UND"),
+            "RenPar": item_data.get("RenPar") or item_data.get("performance", 1.0)
+        }
+        
+        settings = payload.settings or {}
+        
+        file_path, filename = generate_excel_workbook(item_dict, mats, eqs, mos, settings)
+        
+        return FileResponse(
+            path=str(file_path), 
+            filename=filename, 
+            media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+        
+    except Exception as e:
+        import traceback
+        print(f"Error exportando APU custom a Excel: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error al exportar APU: {str(e)}")
+
+
+
+
+@router.post("/rag/update-brain")
+def update_rag_brain(background_tasks: BackgroundTasks):
+    """
+    Ejecuta la actualizaciÃ³n del Cerebro RAG (generaciÃ³n de embeddings y CSV) en segundo plano.
+    Este proceso lee las partidas de PostgreSQL, calcula los embeddings con MiniLM y 
+    los guarda en la carpeta /app para que el AISearchEngine los cargue en el proximo restart.
+    """
+    import subprocess
+    
+    def run_generation():
+        try:
+            # Ejecutamos el script que ya existe en el contenedor
+            subprocess.run(
+                ["python3", "/app/generate_embeddings.py"], 
+                capture_output=True, 
+                text=True, 
+                check=True
+            )
+            print("GeneraciÃ³n de Cerebro RAG finalizada con Ã©xito.")
+            # Reiniciar la aplicacion para cargar los nuevos archivos (opcional)
+        except subprocess.CalledProcessError as e:
+            from app.core.logging import logger
+            logger.error(f"Error generando Cerebro RAG: {e.stderr}", exc_info=True)
+            
+    background_tasks.add_task(run_generation)
+    
+    return {
+        "status": "success", 
+        "message": "ActualizaciÃ³n del Cerebro RAG iniciada en segundo plano. Esto tomarÃ¡ de 5 a 15 minutos."
+    }
+
+
+@router.get("/materials/{material_id}/apus")
+def get_material_apus(material_id: str, db: Session = Depends(get_db)):
+    """Devuelve las partidas (APUs) donde se usa este material."""
+    query = text(r'''
+        SELECT a."CodPar", i."Descri", i."CovPar"
+        FROM cost360_apu_materials a 
+        JOIN cost360_items i ON a."CodPar" = i."CodPar" 
+        WHERE a."CodIns" = :cod AND i."CovPar" ~ '^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$'
+    ''')
+    rows = db.execute(query, {"cod": material_id}).fetchall()
+    return [{"CodPar": r[0], "Descri": r[1], "CovPar": r[2]} for r in rows]
+
+@router.get("/equipments/{equipment_id}/apus")
+def get_equipment_apus(equipment_id: str, db: Session = Depends(get_db)):
+    """Devuelve las partidas (APUs) donde se usa este equipo."""
+    query = text(r'''
+        SELECT a."CodPar", i."Descri", i."CovPar"
+        FROM cost360_apu_equipment a 
+        JOIN cost360_items i ON a."CodPar" = i."CodPar" 
+        WHERE a."CodIns" = :cod AND i."CovPar" ~ '^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$'
+    ''')
+    rows = db.execute(query, {"cod": equipment_id}).fetchall()
+    return [{"CodPar": r[0], "Descri": r[1], "CovPar": r[2]} for r in rows]
+
+@router.get("/labors/{labor_id}/apus")
+def get_labor_apus(labor_id: str, db: Session = Depends(get_db)):
+    """Devuelve las partidas (APUs) donde se usa esta mano de obra."""
+    query = text(r'''
+        SELECT a."CodPar", i."Descri", i."CovPar"
+        FROM cost360_apu_labor a 
+        JOIN cost360_items i ON a."CodPar" = i."CodPar" 
+        WHERE a."CodIns" = :cod AND i."CovPar" ~ '^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$'
+    ''')
+    rows = db.execute(query, {"cod": labor_id}).fetchall()
+    return [{"CodPar": r[0], "Descri": r[1], "CovPar": r[2]} for r in rows]
+

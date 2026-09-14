@@ -8,7 +8,7 @@ import ComponentSearchModal from '../../components/ComponentSearchModal';
 import PrintAPUModal from '../../components/PrintAPUModal';
 import PrintAPULayout from '../../components/PrintAPULayout';
 import ApuEditorUI from '../../components/ApuEditorUI';
-import ExportApuExcelButton from '../../modules/cost360/components/ExportApuExcelButton';
+import ExportApuExcelButton from '../../modules/costbase/components/ExportApuExcelButton';
 import { calculateBudgetTotals, calculateItemPU } from '../../utils/apuCalculations';
 
 

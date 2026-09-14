@@ -64,12 +64,12 @@ export default function HelpDrawer({ isOpen, onClose }) {
 
     if (path.startsWith('/budgets')) {
       matchingIds = CONTEXTUAL_SUGGESTIONS['/budgets'] || [];
-    } else if (path.startsWith('/cost360/databases')) {
-      matchingIds = CONTEXTUAL_SUGGESTIONS['/cost360/databases'] || [];
-    } else if (path.startsWith('/cost360/ai-generator')) {
-      matchingIds = CONTEXTUAL_SUGGESTIONS['/cost360/ai-generator'] || [];
-    } else if (path.startsWith('/cost360')) {
-      matchingIds = CONTEXTUAL_SUGGESTIONS['/cost360'] || [];
+    } else if (path.startsWith('/costbase/databases') || path.startsWith('/cost360/databases')) {
+      matchingIds = CONTEXTUAL_SUGGESTIONS['/costbase/databases'] || CONTEXTUAL_SUGGESTIONS['/cost360/databases'] || [];
+    } else if (path.startsWith('/costbase/ai-generator') || path.startsWith('/cost360/ai-generator')) {
+      matchingIds = CONTEXTUAL_SUGGESTIONS['/costbase/ai-generator'] || CONTEXTUAL_SUGGESTIONS['/cost360/ai-generator'] || [];
+    } else if (path.startsWith('/costbase') || path.startsWith('/cost360')) {
+      matchingIds = CONTEXTUAL_SUGGESTIONS['/costbase'] || CONTEXTUAL_SUGGESTIONS['/cost360'] || [];
     } else if (path.startsWith('/fcas')) {
       matchingIds = CONTEXTUAL_SUGGESTIONS['/fcas'] || [];
     }
