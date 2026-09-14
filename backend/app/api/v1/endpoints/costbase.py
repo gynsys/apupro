@@ -1,5 +1,6 @@
-﻿import io
+import io
 import re
+import unicodedata
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Tuple
 import openpyxl
@@ -53,6 +54,14 @@ def clean_cell_str(val: Any) -> str:
         return str(int(val)).strip()
     val_str = str(val).strip()
     return "" if val_str.lower() in ("none", "nan") else val_str
+
+def normalize_text_alphanumeric(text_val: str) -> str:
+    """Normaliza texto eliminando tildes, signos de puntuación y espacios extras."""
+    if not text_val or not isinstance(text_val, str):
+        return ""
+    nfkd = unicodedata.normalize('NFKD', text_val)
+    no_accents = ''.join(c for c in nfkd if not unicodedata.combining(c))
+    return re.sub(r'[^a-z0-9 ]', '', no_accents.lower()).strip()
 
 RESOURCE_CONFIG: Dict[str, Dict[str, str]] = {
     "materials": {
@@ -1170,23 +1179,38 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             "guia_redaccion": "Estructura recomendada: [AcciÃ³n] + [Elemento] + [Material/EspecificaciÃ³n] + [Unidad]."
         }
 
-    # Si el usuario ingresÃ³ Ãºnicamente un cÃ³digo o nomenclatura (ej: 'E11102235', 'CMT050', etc.):
-    # El generador con IA no es un buscador de partidas por cÃ³digo; requiere una descripciÃ³n tÃ©cnica estructurada.
+    # Si el usuario ingresó únicamente un código o nomenclatura (ej: 'E11102235', 'CMT050', etc.):
+    # Si coincide con una partida existente en BD y no ha hecho bypass, ofrecer match exacto directamente
     if is_code_input(raw_desc):
+        if not payload.bypass_exact_match:
+            exact_item = get_item_by_code_or_covpar(db, raw_desc.strip())
+            if exact_item:
+                return {
+                    "status": "exact_match_candidate",
+                    "matched_item": {
+                        "cod_par": exact_item.CodPar,
+                        "cov_par": exact_item.CovPar or exact_item.CodPar,
+                        "description": exact_item.Descri,
+                        "unit": exact_item.UniPar,
+                        "pre_uni": exact_item.PreUni or 0.0,
+                        "performance": getattr(exact_item, 'RenPar', 1.0) or 1.0
+                    },
+                    "message": f"Existe la partida {exact_item.CovPar or exact_item.CodPar} correspondiente al código ingresado. ¿Te refieres a esta partida?"
+                }
         return {
             "status": "clarification_needed",
-            "clarification_message": f"El texto ingresado ('{raw_desc}')  no es una descripciÃ³n tÃ©cnica de obra.",
-            "recommendation": "Te recomendamos utilizar el Asistente Guiado para estructurar tu descripciÃ³n paso a paso.",
+            "clarification_message": f"El texto ingresado ('{raw_desc}')  no es una descripción técnica de obra.",
+            "recommendation": "Te recomendamos utilizar el Asistente Guiado para estructurar tu descripción paso a paso.",
             "options": [],
             "questions": [
-                "1. Â¿CuÃ¡l es la actividad tÃ©cnica principal que deseas presupuestar? (AcciÃ³n + Elemento)",
-                "2. Â¿QuÃ© especificaciones, materiales o condiciones aplican?",
-                "3. Â¿En quÃ© unidad de medida se computa la partida (m2, m3, und, kg, etc.)?"
+                "1. ¿Cuál es la actividad técnica principal que deseas presupuestar? (Acción + Elemento)",
+                "2. ¿Qué especificaciones, materiales o condiciones aplican?",
+                "3. ¿En qué unidad de medida se computa la partida (m2, m3, und, kg, etc.)?"
             ],
-            "guia_redaccion": "Estructura recomendada: [AcciÃ³n] + [Elemento] + [Especificaciones/Materiales] + [Unidad]."
+            "guia_redaccion": "Estructura recomendada: [Acción] + [Elemento] + [Especificaciones/Materiales] + [Unidad]."
         }
 
-    # 2. NormalizaciÃ³n y ExpansiÃ³n TÃ©cnica con Diccionario (Paso 1)
+    # 2. Normalización y Expansión Técnica con Diccionario (Paso 1)
     if payload.description:
         payload.description = expand_technical_synonyms(payload.description)
 
@@ -1196,7 +1220,7 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
         debug_data = fast_preprocess_debug(
             db, payload.description, payload.covenin_prefix, payload.covenin_context
         )
-        # Inyectar estado real del motor IA para diagnÃ³stico
+        # Inyectar estado real del motor IA para diagnóstico
         debug_data["motor_ia_estado"] = {
             "is_loaded": ai_engine.is_loaded,
             "total_ids_mapeados": len(ai_engine.ids_mapping),
@@ -1204,18 +1228,64 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
         }
         return {
             "status": "clarification_needed",
-            "clarification_message": f"MODO DEBUG: {len(debug_data.get('todas_las_partidas_covenin', []))} candidatas encontradas tras expansiÃ³n dinÃ¡mica",
+            "clarification_message": f"MODO DEBUG: {len(debug_data.get('todas_las_partidas_covenin', []))} candidatas encontradas tras expansión dinámica",
             "options": [],
             "questions": [],
             "debug_preprocesamiento": debug_data
         }
 
-    # 2.5. MODO RAG / ADAPTACIÃ“N DE BASE REAL
-    base_code = payload.base_partida_code
+    # 2.2. Detección interactiva de Match Exacto antes del RAG
+    # Se evalúa si el usuario no ha omitido la verificación (bypass_exact_match es False)
+    # y no se forzó una partida base específica.
     candidates = []
+    if not payload.bypass_exact_match and not payload.base_partida_code:
+        # Si la descripción incluye cláusulas explícitas de exclusión o modificación de alcance,
+        # se asume que el usuario busca una partida personalizada/adaptada (no un match idéntico de catálogo).
+        exclusion_patterns = ["no incluye", "sin ", "excepto", "excluyendo", "no contempla", "no considerar"]
+        has_exclusion = any(neg in raw_desc.lower() for neg in exclusion_patterns)
+        
+        if not has_exclusion:
+            candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
+            if candidates:
+                top_cand = candidates[0]
+                top_item = top_cand["item"]
+                top_score = top_cand["score"]
+                
+                norm_query = normalize_text_alphanumeric(raw_desc)
+                norm_item_desc = normalize_text_alphanumeric(top_item.Descri or "")
+                
+                stopwords = {"de", "la", "el", "en", "para", "con", "por", "un", "una", "y", "o", "a", "los", "las", "del", "al", "e"}
+                words_query = set(norm_query.split()) - stopwords
+                words_item = set(norm_item_desc.split()) - stopwords
+                
+                is_exact_text = (norm_query == norm_item_desc)
+                is_high_overlap = False
+                if words_query and words_item:
+                    common_words = words_query.intersection(words_item)
+                    overlap_ratio = len(common_words) / len(words_query)
+                    item_overlap_ratio = len(common_words) / len(words_item)
+                    is_high_overlap = (overlap_ratio >= 0.88 and item_overlap_ratio >= 0.75)
+                
+                if is_exact_text or is_high_overlap or top_score >= 0.90:
+                    return {
+                        "status": "exact_match_candidate",
+                        "matched_item": {
+                            "cod_par": top_item.CodPar,
+                            "cov_par": top_item.CovPar or top_item.CodPar,
+                            "description": top_item.Descri,
+                            "unit": top_item.UniPar,
+                            "pre_uni": top_item.PreUni or 0.0,
+                            "performance": getattr(top_item, 'RenPar', 1.0) or 1.0
+                        },
+                        "message": f"Existe la partida {top_item.CovPar or top_item.CodPar} que coincide casi al 100% con tu descripción. ¿Te refieres a esta partida?"
+                    }
+
+    # 2.5. MODO RAG / ADAPTACIÓN DE BASE REAL
+    base_code = payload.base_partida_code
     if not base_code and not payload.only_preprocess:
-        # BÃºsqueda RAG HÃ­brida automÃ¡tica para encontrar la mejor partida base
-        candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
+        # Búsqueda RAG Híbrida automática para encontrar la mejor partida base
+        if not candidates:
+            candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
         if candidates and candidates[0]["score"] >= 0.35:
             base_code = candidates[0]["item"].CodPar
 
@@ -1251,9 +1321,59 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             smart_answers=payload.smart_answers or {},
             history=history_dicts,
         )
-        # Inyectar traza completa del RAG HÃ­brido en el resultado para debug
+
+        # -------------------------------------------------------------
+        # SALVAGUARDAS CRÍTICAS PARA EL APU GENERADO/ADAPTADO POR IA:
+        # 1. CÓDIGO DE PARTIDA: NUNCA debe ser el código oficial de la partida base (XXX028, etc.).
+        #    Toda partida generada/adaptada por IA debe ser una Partida Especial no tipificada (SC001).
+        # -------------------------------------------------------------
+        if result.get("partida"):
+            partida_data = result["partida"]
+            current_cod = (partida_data.get("cod_par") or "").strip()
+            base_cod_val = getattr(base_apu, "get", lambda k, d=None: d)("codpar", base_code) or base_code
+            
+            # Si el LLM conservó el código de la partida base o un código temporal/XXX o sin SC:
+            if (
+                current_cod == base_cod_val or 
+                current_cod.upper().startswith("XXX") or 
+                not current_cod or 
+                "SC" not in current_cod.upper()
+            ):
+                prefix = (payload.covenin_prefix or "").strip().replace(".", "").replace("-", "")
+                if not prefix or len(prefix) < 3:
+                    base_cov = (base_apu.get("covenin") or base_code or "E").replace(".", "").replace("-", "")
+                    clean_pref = re.sub(r'[^A-Za-z0-9]', '', base_cov)
+                    prefix = clean_pref[:4] if len(clean_pref) >= 4 else "E511"
+                
+                new_sc_code = f"{prefix.upper()}SC001"
+                partida_data["cod_par"] = new_sc_code
+                partida_data["cov_par"] = new_sc_code
+
+        # -------------------------------------------------------------
+        # 2. ADVERTENCIAS AL USUARIO:
+        #    - Excluir cualquier advertencia de alcance o exclusiones ([ALCANCE]).
+        #    - Excluir cualquier mención o revelación de la partida base utilizada.
+        #    - Conservar únicamente alertas comerciales de precios referenciales ([PRECIO_REFERENCIAL]).
+        # -------------------------------------------------------------
+        if "advertencias" in result and isinstance(result["advertencias"], list):
+            clean_adv = []
+            base_code_lower = (base_code or "").strip().lower()
+            for adv in result["advertencias"]:
+                if not adv or not isinstance(adv, str):
+                    continue
+                adv_lower = adv.lower()
+                if "[alcance]" in adv_lower or "alcance:" in adv_lower or "se excluye" in adv_lower:
+                    continue
+                if "partida base" in adv_lower or "apu base" in adv_lower or "adaptado desde" in adv_lower:
+                    continue
+                if base_code_lower and base_code_lower in adv_lower:
+                    continue
+                clean_adv.append(adv)
+            result["advertencias"] = clean_adv
+
+        # Inyectar traza completa del RAG Híbrido en el resultado para debug
         result["debug_rag_trace"] = {
-            "motor_rag": "RAG HÃ­brido (MiniLM + LÃ©xico)",
+            "motor_rag": "RAG Híbrido (Gemini Embeddings + Léxico)",
             "solicitud_usuario": payload.description,
             "covenin_prefix": payload.covenin_prefix,
             "covenin_context": payload.covenin_context,
@@ -1277,10 +1397,10 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
                     adb.commit()
         return result
 
-    # 3. Preprocesamiento (BD + EstadÃ­sticas) + IA semantica (Fallback clÃ¡sico sin base directa)
+    # 3. Preprocesamiento (BD + Estadísticas) + IA semantica (Fallback clásico sin base directa)
     payload_llm = preprocess_apu_data(db, payload.description, payload.covenin_prefix, payload.covenin_context)
     
-    # 3.5. Pregunta interactiva si hay Match Exacto y el usuario aÃºn no ha omitido
+    # 3.5. Pregunta interactiva si hay Match Exacto y el usuario aún no ha omitido
     if payload_llm.get("modo") == "partida_exacta_encontrada" and not payload.bypass_exact_match:
         cod_par = payload_llm.get("partida_exacta_codigo")
         item = get_item_by_code(db, cod_par)
@@ -1295,14 +1415,20 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
                     "pre_uni": item.PreUni or 0.0,
                     "performance": getattr(item, 'RenPar', 1.0) or 1.0
                 },
-                "message": "Existe una partida que coincide casi al 100% con tu descripciÃ³n:"
+                "message": f"Existe la partida {item.CovPar or item.CodPar} que coincide casi al 100% con tu descripción. ¿Te refieres a esta partida?"
             }
 
-    # 4. GeneraciÃ³n con IA (LLM Router)
+    # 4. Generación con IA (LLM Router)
     history_dicts = [msg.model_dump() for msg in payload.history] if payload.history else []
     result = generate_apu_with_ai(payload_llm, history_dicts)
     
     if (result.get("status") in ("success", "completed")) and result.get("partida"):
+        # Sanitizar advertencias
+        if "advertencias" in result and isinstance(result["advertencias"], list):
+            result["advertencias"] = [
+                adv for adv in result["advertencias"]
+                if adv and isinstance(adv, str) and "[alcance]" not in adv.lower() and "alcance:" not in adv.lower()
+            ]
         from app.db.arko_base import ArkoSessionLocal
         with ArkoSessionLocal() as adb:
             db_user = adb.query(current_user.__class__).filter_by(id=current_user.id).first()
@@ -1311,6 +1437,7 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
                 adb.commit()
 
     return result
+
 
 
 @router.post("/smart-select")

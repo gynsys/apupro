@@ -75,13 +75,15 @@ CASO 2: ÚNICAMENTE si la entrada es ininteligible, contradictoria o un disparat
 """
 
 _REGLAS_COVENIN = """
-# REGLAS DE CODIFICACIÓN COVENIN Y PARTIDAS ESPECIALES NO TIPIFICADAS (CONVENCIÓN SC)
-1. Si la partida proviene de una partida base histórica existente, conserva su código `cod_par` oficial.
-2. Si la partida es NUEVA, ADAPTADA o GENERADA POR IA, debe seguir la convención formal de presupuestos y licitaciones en Venezuela para partidas no tipificadas en el tabulador (convención SC = Sin Código / Partida Especial):
-   - Prefijo de sector y capítulo según la actividad (ej. E1010 para obras preliminares, E313 para estructuras de concreto, E411 para albañilería, E511 para instalaciones, etc.). Si se proporciona `covenin_prefix`, úsalo como raíz eliminando ceros sobrantes.
-   - Seguido de 'SC' (que indica formalmente Partida Especial / Sin Código COVENIN).
+# REGLAS DE CODIFICACIÓN COVENIN (PARTIDAS ADAPTADAS O GENERADAS POR IA)
+1. EL CÓDIGO DE LA PARTIDA NUNCA DEBE SER EL CÓDIGO DE LA PARTIDA BASE HISTÓRICA.
+   - Una partida generada o adaptada por IA es una partida nueva/especial no tipificada en el tabulador original.
+   - ESTÁ TERMINANTEMENTE PROHIBIDO asignar o conservar el código de la partida base (ej: 'XXX028', 'CCS086', etc.) en el campo `cod_par` de la partida adaptada.
+2. Toda partida generada o adaptada por IA DEBE llevar obligatoriamente un código de Partida Especial (convención formal SC = Sin Código / No Tipificada):
+   - Prefijo de sector y capítulo según la actividad (ej. E511 para instalaciones hidráulicas/bombas, E313 para estructuras de concreto, E411 para albañilería, etc.). Si se proporciona `covenin_prefix`, úsalo como raíz eliminando ceros sobrantes.
+   - Seguido de 'SC' (Partida Especial / Sin Código).
    - Seguido de un correlativo de tres dígitos '001'.
-   - Ejemplos obligatorios: 'E1010SC001', 'E313SC001', 'E411SC001', 'C311SC001'.
+   - Ejemplos obligatorios: 'E511SC001', 'E313SC001', 'E411SC001', 'C311SC001'.
    - PROHIBIDO inventar códigos puramente numéricos falsos que simulen ser normas oficiales tipificadas.
 """
 
@@ -134,12 +136,13 @@ _REGLAS_INSUMOS_PRECIOS = """
      * BOMBAS: Bomba sumergible para aguas negras / achique (tipo Flygt o de sólidos con impulsor vórtex) NO ES COMPATIBLE con pozo profundo (agua limpia / tipo lapicero / multietapas de acero inoxidable). Si el usuario solicita bomba de pozo profundo y la partida base contiene bomba de aguas negras/achique, DEBES SUSTITUIR el material por 'BOMBA SUMERGIBLE PARA POZO PROFUNDO (TIPO LAPICERO)', marcarlo con origen 'ia', estimar su precio referencial en USD según los HP solicitados (~$1.200 - $2.500 USD) y emitir la advertencia `[PRECIO_REFERENCIAL]`.
      * TUBERÍAS: Tubería sanitaria / ventilación NO es compatible con tubería de presión de agua o gas.
      * CABLES: Cable eléctrico convencional en tubería NO es cable sumergible tipo submarino para pozo.
-4. EXCLUSIONES DE ALCANCE Y ADVERTENCIAS AL PRESUPUESTISTA:
-   - Si el usuario indica explícitamente que NO incluye un componente (ejemplo: 'no incluye cable submarino', 'sin excavación', 'sin flete', 'sin tablero'), debes:
-     a) Excluir el insumo de la lista de materiales y equipos.
-     b) Reflejar la exclusión en la descripción técnica COVENIN: '(NO INCLUYE ...)'.
-     c) Agregar OBLIGATORIAMENTE en `advertencias` una nota con el prefijo `[ALCANCE]` (ejemplo: '[ALCANCE] Se excluye el suministro de cable submarino conforme a la solicitud. Se recomienda cotizar y presupuestar en partida eléctrica independiente').
+4. EXCLUSIONES DE ALCANCE:
+   - Si el usuario indica explícitamente que NO incluye un componente (ejemplo: 'no incluye cable submarino', 'sin excavación', 'sin flete', 'sin tablero'), simplemente exclúyelo de la lista de insumos y refléjalo en la descripción técnica: '(NO INCLUYE ...)'.
+   - NO agregues advertencias sobre exclusiones de alcance, el analista de costos ya lo conoce.
+5. NUNCA MENCIONES LA PARTIDA BASE EN 'ADVERTENCIAS':
+   - ESTÁ TERMINANTEMENTE PROHIBIDO escribir en 'advertencias' qué APU o código se usó de base histórica. Las advertencias son EXCLUSIVAS para precios referenciales estimados ([PRECIO_REFERENCIAL]).
 """
+
 
 
 COMMON_CONSTRUCTION_TERMS: Set[str] = {
@@ -339,10 +342,10 @@ Prefijo COVENIN: {covenin_prefix}
 7. AGREGA insumos nuevos que la nueva partida requiera estrictamente y no estén ni en la base ni en las complementarias. Márcalos como `"origen": "ia"`, asígnales un precio unitario referencial estimado de mercado en USD (nunca 0.0) y agrega una advertencia con el prefijo `[PRECIO_REFERENCIAL]`.
 8. NUNCA alteres los precios unitarios de los insumos del APU base ni de las complementarias. Son precios reales de la BD.
 9. Registra SIEMPRE en `notas_adaptacion` (para el log técnico de depuración) que el APU fue adaptado desde la partida base [{base_apu.get('codpar', 'N/A')}], qué insumos se podaron y la justificación del rendimiento.
-10. El campo `advertencias` es para advertencias dirigidas al presupuestista/usuario sobre:
-   - Precios referenciales estimados por IA (`[PRECIO_REFERENCIAL]`): cuando un insumo indispensable no existe en el catálogo histórico o cuando se sustituyó un equipo incompatible de la base.
-   - Exclusiones de alcance solicitadas (`[ALCANCE]`): cuando el usuario indica expresamente que la partida no incluye un elemento clave (ej: sin cable submarino, sin excavación, sin tablero) para alertar que debe presupuestarse en partida separada.
-   NUNCA coloques notas de adaptación técnica interna en `advertencias` (esas van en `notas_adaptacion`).
+10. El campo `advertencias` es EXCLUSIVAMENTE para alertas de precios referenciales de mercado estimados por IA con el prefijo `[PRECIO_REFERENCIAL]` (cuando un insumo indispensable no existe en el catálogo histórico o cuando se sustituyó un equipo o material incompatible de la base).
+    - NUNCA agregues advertencias sobre exclusiones de alcance (`[ALCANCE]`); el analista de costos ya conoce el alcance solicitado.
+    - NUNCA menciones qué partida o código se utilizó como base histórica en `advertencias`.
+    - Las notas de adaptación interna van EXCLUSIVAMENTE en `notas_adaptacion`, jamás en `advertencias`.
 
 
 # CRITERIO DE CLARIFICACIÓN VS GENERACIÓN

@@ -920,7 +920,9 @@ export default function AIApuGeneratorPage() {
           lower.includes('adaptado desde la partida base') || 
           lower.includes('apu adaptado') || 
           lower.includes('se mantuvieron rendimientos') || 
-          lower.includes('se eliminaron los insumos')
+          lower.includes('se eliminaron los insumos') ||
+          lower.includes('[alcance]') ||
+          lower.includes('se excluye')
         ) {
           return false;
         }
