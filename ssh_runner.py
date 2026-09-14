@@ -11,7 +11,7 @@ def run_ssh_command(cmd: str) -> str:
         cmd
     ]
     try:
-        result = subprocess.run(ssh_cmd, capture_output=True, text=True, check=False)
+        result = subprocess.run(ssh_cmd, capture_output=True, text=True, encoding='utf-8', errors='replace', check=False)
         print(result.stdout)
         if result.stderr:
             print("STDERR:", result.stderr)

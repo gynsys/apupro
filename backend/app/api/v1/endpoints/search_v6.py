@@ -27,7 +27,7 @@ def hybrid_search(
     
     # 2. Embedding Semántico
     try:
-        query_emb = ai_engine.model.encode([query])[0]
+        query_emb = ai_engine.encode_query(query)
         semantic_scores = ai_engine.calculate_cosine_similarity(query_emb)
     except Exception as e:
         return {"error": f"Error calculando similitud semántica: {str(e)}"}

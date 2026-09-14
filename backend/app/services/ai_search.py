@@ -3,12 +3,30 @@ import re
 from typing import List, Dict, Any, Tuple, Set, Optional
 import numpy as np
 import pandas as pd
-from sentence_transformers import SentenceTransformer
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+
+from app.core.config import settings
 from app.core.logging import logger
+from app.db.base import SessionLocal
+from app.crud.llm import get_active_providers_for_use_case, decrypt_api_key
 from app.services.synonyms_service import expand_technical_synonyms
 from app.services.dimension_service import extract_unified_dimensions, score_dimension_match
+
+try:
+    from sentence_transformers import SentenceTransformer
+    HAVE_SENTENCE_TRANSFORMERS = True
+except ImportError:
+    SentenceTransformer = None  # type: ignore
+    HAVE_SENTENCE_TRANSFORMERS = False
+
+try:
+    import google.generativeai as genai
+    HAVE_GEMINI = True
+except ImportError:
+    genai = None  # type: ignore
+    HAVE_GEMINI = False
+
 
 MATERIAL_CATEGORIES: Dict[str, Dict[str, List[str]]] = {
     "tuberia": {
@@ -72,87 +90,206 @@ def extract_negative_exclusions(query: str) -> List[str]:
     return exclusions
 
 
+class GeminiModelShim:
+    """Wrapper compatible con la interfaz de SentenceTransformer para Gemini."""
+    def __init__(self, engine: "AISearchEngine") -> None:
+        self.engine = engine
+
+    def encode(self, texts: List[str]) -> np.ndarray:
+        if not texts or not isinstance(texts, list):
+            raise ValueError("texts must be a non-empty list of strings.")
+        vectors = []
+        for text_item in texts:
+            vec = self.engine.encode_query(text_item)
+            vectors.append(vec)
+        return np.array(vectors, dtype=np.float32)
+
+
 class AISearchEngine:
     _instance = None
 
-    def __new__(cls):
+    def __new__(cls) -> "AISearchEngine":
         if cls._instance is None:
             cls._instance = super(AISearchEngine, cls).__new__(cls)
             cls._instance.model = None
             cls._instance.embeddings = None
             cls._instance.ids_mapping = []
+            cls._instance.provider = "local"
             cls._instance.is_loaded = False
         return cls._instance
 
-    def load_brain(self):
+    def _resolve_gemini_api_key(self) -> Optional[str]:
+        """Obtiene la clave API de Gemini desde settings o de la tabla llm_providers."""
+        if settings.GEMINI_API_KEY:
+            return settings.GEMINI_API_KEY
+
+        db: Session = SessionLocal()
+        try:
+            providers = get_active_providers_for_use_case(db)
+            gemini_prov = next((p for p in providers if p.provider_key == "gemini"), None)
+            if gemini_prov and gemini_prov.api_key_enc:
+                return decrypt_api_key(gemini_prov.api_key_enc)
+        except Exception as exc:
+            logger.error("No se pudo obtener la clave de Gemini desde la base de datos: %s", exc, exc_info=True)
+            return None
+        finally:
+            db.close()
+        return None
+
+    def load_brain(self, provider: Optional[str] = None) -> None:
         if self.is_loaded:
             return
 
-        print("Iniciando carga del 'Cerebro' de IA...")
-        
-        # 1. Cargar el modelo transformer
-        try:
-            # paraphrase-multilingual-MiniLM-L12-v2
-            self.model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
-            print("Modelo SentenceTransformer cargado exitosamente.")
-        except Exception as e:
-            print(f"Error cargando el modelo de IA: {e}")
+        target_provider = (provider or settings.AI_EMBEDDING_PROVIDER or "local").lower()
+        logger.info("Iniciando carga del 'Cerebro' de IA con proveedor objetivo: %s", target_provider)
 
-        # 2. Cargar matriz NumPy
-        # Orden de búsqueda: producción Docker (/app/ai_brain/) -> relativa -> local Windows
-        npy_docker_path = '/app/ai_brain/embeddings_partidas.npy'
-        npy_relative_path = os.path.join(os.path.dirname(__file__), '..', '..', 'embeddings_partidas.npy')
-        npy_local_path = r'C:\Users\pablo\Desktop\BD_COST360\embeddings_partidas.npy'
-        
+        gemini_ready = False
+        if target_provider == "gemini":
+            if HAVE_GEMINI and genai is not None:
+                api_key = self._resolve_gemini_api_key()
+                if api_key:
+                    try:
+                        genai.configure(api_key=api_key)
+                        gemini_ready = True
+                        self.provider = "gemini"
+                        self.model = GeminiModelShim(self)
+                        logger.info("Proveedor Gemini configurado exitosamente.")
+                    except Exception as exc:
+                        logger.error("Error al configurar genai: %s", exc, exc_info=True)
+                else:
+                    logger.warning("No se encontro API key de Gemini para proveedor 'gemini'.")
+            else:
+                logger.warning("SDK google.generativeai no disponible en este entorno.")
+
+        # Si el proveedor es 'local' o si 'gemini' no pudo configurarse y tenemos sentence-transformers:
+        if not gemini_ready and target_provider == "local":
+            self.provider = "local"
+            if HAVE_SENTENCE_TRANSFORMERS and SentenceTransformer is not None:
+                try:
+                    self.model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
+                    logger.info("Modelo SentenceTransformer local cargado exitosamente.")
+                except Exception as exc:
+                    logger.error("Error cargando modelo local SentenceTransformer: %s", exc, exc_info=True)
+            else:
+                logger.warning("SentenceTransformer no disponible en el entorno.")
+
+        # 2. Cargar matriz NumPy segun proveedor
+        candidates_gemini = [
+            '/app/ai_brain/embeddings_gemini.npy',
+            os.path.join(os.path.dirname(__file__), '..', '..', 'embeddings_gemini.npy'),
+            r'C:\Users\pablo\Desktop\BD_COST360\embeddings_gemini.npy'
+        ]
+        candidates_local = [
+            '/app/ai_brain/embeddings_partidas.npy',
+            os.path.join(os.path.dirname(__file__), '..', '..', 'embeddings_partidas.npy'),
+            r'C:\Users\pablo\Desktop\BD_COST360\embeddings_partidas.npy'
+        ]
+
+        candidates_npy = candidates_gemini if self.provider == "gemini" else candidates_local
         npy_path = None
-        for candidate in [npy_docker_path, npy_relative_path, npy_local_path]:
+        for candidate in candidates_npy:
             if os.path.exists(candidate):
                 npy_path = candidate
                 break
 
+        # Fallback inteligente si se configuro gemini pero embeddings_gemini.npy no esta listo todavia:
+        if not npy_path and self.provider == "gemini":
+            logger.warning("embeddings_gemini.npy no encontrado. Intentando fallback a embeddings_partidas.npy local...")
+            for fallback_cand in candidates_local:
+                if os.path.exists(fallback_cand):
+                    npy_path = fallback_cand
+                    self.provider = "local"
+                    if HAVE_SENTENCE_TRANSFORMERS and SentenceTransformer is not None:
+                        try:
+                            self.model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
+                        except Exception as exc:
+                            logger.error("Error en fallback local SentenceTransformer: %s", exc, exc_info=True)
+                    break
+
         if npy_path:
-            self.embeddings = np.load(npy_path)
-            print(f"Matriz de embeddings cargada desde {npy_path} con forma {self.embeddings.shape}")
+            try:
+                self.embeddings = np.load(npy_path)
+                logger.info("Matriz de embeddings cargada desde %s con forma %s (Proveedor activo: %s)", npy_path, self.embeddings.shape, self.provider)
+            except Exception as exc:
+                logger.error("Error al cargar matriz de embeddings desde %s: %s", npy_path, exc, exc_info=True)
         else:
-            print(f"ERROR CRITICO: No se encontró embeddings_partidas.npy en ninguna ruta buscada.")
-            
-        # 3. Cargar mapeo de IDs desde el CSV
-        # Orden de búsqueda: producción Docker (/app/ai_brain/) -> relativa -> local Windows
-        csv_docker_path = '/app/ai_brain/Base_Datos_IA.csv'
-        csv_relative_path = os.path.join(os.path.dirname(__file__), '..', '..', 'Base_Datos_IA.csv')
-        csv_local_path = r'C:\Users\pablo\Desktop\BD_COST360\Base_Datos_IA.csv'
-        
+            logger.error("ERROR CRITICO: No se encontro matriz de embeddings .npy en ninguna ruta.")
+
+        # 3. Cargar mapeo de IDs desde CSV
+        candidates_csv = [
+            '/app/ai_brain/Base_Datos_IA_Gemini.csv' if self.provider == "gemini" else "",
+            '/app/ai_brain/Base_Datos_IA.csv',
+            os.path.join(os.path.dirname(__file__), '..', '..', 'Base_Datos_IA.csv'),
+            r'C:\Users\pablo\Desktop\BD_COST360\Base_Datos_IA.csv'
+        ]
         csv_path_to_use = None
-        for candidate in [csv_docker_path, csv_relative_path, csv_local_path]:
-            if os.path.exists(candidate):
+        for candidate in candidates_csv:
+            if candidate and os.path.exists(candidate):
                 csv_path_to_use = candidate
                 break
-            
+
         if csv_path_to_use:
             try:
                 df = pd.read_csv(csv_path_to_use, sep=';', usecols=['Referencia'])
             except Exception:
-                df = pd.read_csv(csv_path_to_use, usecols=['Referencia'])
-            self.ids_mapping = df['Referencia'].astype(str).tolist()
-            print(f"Cargados {len(self.ids_mapping)} IDs de mapeo desde {csv_path_to_use}.")
-        else:
-            print(f"ERROR CRITICO: No se encontró Base_Datos_IA.csv en ninguna ruta:")
-            print(f"  - Relativa: {os.path.abspath(csv_relative_path)}")
-            print(f"  - Local: {csv_local_path}")
+                try:
+                    df = pd.read_csv(csv_path_to_use, usecols=['Referencia'])
+                except Exception as exc:
+                    logger.error("Error al leer CSV de IDs: %s", exc, exc_info=True)
+                    df = None
 
-        if self.model is not None and self.embeddings is not None and self.ids_mapping:
-            self.is_loaded = True
+            if df is not None:
+                self.ids_mapping = df['Referencia'].astype(str).tolist()
+                logger.info("Cargados %d IDs de mapeo desde %s", len(self.ids_mapping), csv_path_to_use)
+        else:
+            logger.error("ERROR CRITICO: No se encontro CSV de mapeo de IDs.")
+
+        if self.embeddings is not None and self.ids_mapping:
+            if (self.provider == "gemini" and gemini_ready) or (self.provider == "local" and self.model is not None and not isinstance(self.model, GeminiModelShim)):
+                self.is_loaded = True
+                logger.info("AISearchEngine inicializado exitosamente en modo '%s'.", self.provider)
+
+    def encode_query(self, query: str) -> np.ndarray:
+        """
+        Vectoriza una consulta individual utilizando el proveedor configurado (Gemini o MiniLM).
+        Retorna un vector 1D de NumPy en float32.
+        """
+        if not query or not isinstance(query, str):
+            raise ValueError("La consulta debe ser una cadena de texto no vacia.")
+
+        if self.provider == "gemini":
+            if not HAVE_GEMINI or genai is None:
+                raise RuntimeError("El modulo google.generativeai no esta disponible.")
+            try:
+                res = genai.embed_content(
+                    model=settings.GEMINI_EMBEDDING_MODEL,
+                    content=query,
+                    output_dimensionality=settings.GEMINI_EMBEDDING_DIM
+                )
+                return np.array(res["embedding"], dtype=np.float32)
+            except Exception as exc:
+                logger.error("Error al generar embedding de consulta con Gemini: %s", exc, exc_info=True)
+                if self.model is not None and not isinstance(self.model, GeminiModelShim):
+                    logger.warning("Recurriendo a modelo local SentenceTransformer tras fallo en Gemini.")
+                    emb = self.model.encode([query])[0]
+                    return np.array(emb, dtype=np.float32)
+                raise
+        else:
+            if self.model is None or isinstance(self.model, GeminiModelShim):
+                raise RuntimeError("El modelo local SentenceTransformer no esta disponible.")
+            emb = self.model.encode([query])[0]
+            return np.array(emb, dtype=np.float32)
 
     def calculate_cosine_similarity(self, query_embedding: np.ndarray) -> np.ndarray:
         if not self.is_loaded or self.embeddings is None:
-            return np.array([])
-        
-        # similitud del coseno: (A . B) / (||A|| * ||B||)
-        # Asumiendo que self.embeddings ya están normalizados (típico en sentence-transformers)
-        # Si no lo están:
+            return np.array([], dtype=np.float32)
+
+        if query_embedding is None or len(query_embedding) == 0:
+            return np.array([], dtype=np.float32)
+
         norm_query = np.linalg.norm(query_embedding)
         norm_embeddings = np.linalg.norm(self.embeddings, axis=1)
-        
+
         dot_product = np.dot(self.embeddings, query_embedding.T).flatten()
         similarities = dot_product / (norm_embeddings * norm_query + 1e-10)
         return similarities
@@ -162,11 +299,15 @@ class AISearchEngine:
         Calcula la similitud semántica solo para un subconjunto de IDs.
         Retorna una lista ordenada de diccionarios con {'id': ..., 'score': ...}.
         """
-        if not self.is_loaded or self.embeddings is None or self.model is None:
+        if not query or not isinstance(query, str):
+            raise ValueError("La consulta debe ser una cadena no vacia.")
+        if not valid_ids:
+            return []
+        if not self.is_loaded or self.embeddings is None:
             return []
 
         # Vectorizar query
-        query_embedding = self.model.encode([query])
+        query_embedding = self.encode_query(query)
 
         # Obtener índices del subconjunto (usamos un set para búsqueda rápida)
         valid_ids_set = set(valid_ids)
@@ -186,7 +327,7 @@ class AISearchEngine:
         # Calcular similitud coseno
         norm_query = np.linalg.norm(query_embedding)
         norm_embeddings = np.linalg.norm(subset_embeddings, axis=1)
-        
+
         dot_product = np.dot(subset_embeddings, query_embedding.T).flatten()
         similarities = dot_product / (norm_embeddings * norm_query + 1e-10)
 
@@ -255,13 +396,17 @@ class AISearchEngine:
             logger.error("Error en lexical_search con tsquery '%s': %s", tsquery_str, exc, exc_info=True)
             return []
 
-    def hybrid_search(self, db: Session, query: str, valid_ids: List[str] = None, limit: int = 40) -> List[Dict[str, Any]]:
+    def hybrid_search(self, db: Session, query: str, valid_ids: Optional[List[str]] = None, limit: int = 40) -> List[Dict[str, Any]]:
         """
-        Búsqueda Híbrida que combina el score Semántico (SentenceTransformers)
+        Búsqueda Híbrida que combina el score Semántico (SentenceTransformers o Gemini)
         con el score Léxico (PostgreSQL ts_rank).
         Si valid_ids se proporciona, solo busca en esos IDs.
         """
-        if not self.is_loaded or self.embeddings is None or self.model is None:
+        if not query or not isinstance(query, str):
+            raise ValueError("La consulta debe ser una cadena no vacia.")
+        if db is None:
+            raise ValueError("La sesion de base de datos es requerida.")
+        if not self.is_loaded or self.embeddings is None:
             return []
 
         # 1. Puntaje Semántico (RAG)
@@ -269,7 +414,7 @@ class AISearchEngine:
         expanded_query = expand_technical_synonyms(query)
         # Usamos chunking para no distraer al modelo con "sin incluir"
         main_query = self.extract_main_chunk(expanded_query)
-        query_embedding = self.model.encode([main_query])
+        query_embedding = self.encode_query(main_query)
         
         norm_query = np.linalg.norm(query_embedding)
         norm_embeddings = np.linalg.norm(self.embeddings, axis=1)

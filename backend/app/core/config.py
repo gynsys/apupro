@@ -251,8 +251,11 @@ class Settings(BaseSettings):
     # Firebase (Native Push)
     FIREBASE_SERVICE_ACCOUNT_PATH: Optional[str] = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH")
 
-    # Google Gemini AI
+    # Google Gemini AI & Embeddings
     GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY")
+    AI_EMBEDDING_PROVIDER: str = os.getenv("AI_EMBEDDING_PROVIDER", "local")
+    GEMINI_EMBEDDING_MODEL: str = os.getenv("GEMINI_EMBEDDING_MODEL", "models/gemini-embedding-001")
+    GEMINI_EMBEDDING_DIM: int = int(os.getenv("GEMINI_EMBEDDING_DIM", "768"))
 
     # Groq AI (Fallback)
     GROQ_API_KEY: Optional[str] = os.getenv("GROQ_API_KEY")
