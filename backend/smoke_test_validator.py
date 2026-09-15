@@ -100,6 +100,13 @@ CAPA2_TESTS = [
     ("demolicion", None, "clarification_needed", "RAG_AMBIGUOUS_ACTION_ONLY"),
     ("tuberia", None, "clarification_needed", "RAG_AMBIGUOUS_ELEMENT_ONLY"),
     ("demolicion de pared de bloques", None, None, None),
+    # 8. Casos con errores ortográficos comunes (typos fonéticos)
+    ("acareo de escombros", None, None, None),
+    ("contruccion de pared de bloques", None, None, None),
+    ("excabacion de zanjas", None, None, None),
+    ("excavasion", None, "clarification_needed", "RAG_AMBIGUOUS_ACTION_ONLY"),
+    ("instalacion de valdosas de granito", None, None, None),
+    ("acareo", None, "clarification_needed", "RAG_AMBIGUOUS_ACTION_ONLY"),
 ]
 
 for query, cands, exp_veredicto, exp_codigo in CAPA2_TESTS:

@@ -94,6 +94,37 @@ if os.path.exists(_LEXICON_PATH):
     except Exception as _e:
         logger.warning(f"No se pudo cargar construction_lexicon.json: {_e}")
 
+
+def _spanish_ortho_normalize(w: str) -> str:
+    """
+    Normalización fonética y morfológica de variantes ortográficas comunes en español:
+      - Betacismo: v <-> b (excabacion <-> excavacion, valdosas <-> baldosas)
+      - Seseo: ce, ci, z -> s (excavasion <-> excavacion, seramica <-> ceramica)
+      - Pérdida de s preconsonántica: nst -> nt, nsp -> np (contruccion <-> construccion, intalacion <-> instalacion)
+      - Asimilación nasal: np -> mp, nb -> mb (inpermeabilizacion <-> impermeabilizacion)
+      - Geminadas simplificadas: rr -> r, cc -> c (acareo <-> acarreo)
+      - Desinencias participiales: eado -> iado (baceado <-> vaciado)
+    """
+    if not w:
+        return ""
+    w = w.lower().strip()
+    nfkd = unicodedata.normalize("NFD", w)
+    w = "".join(c for c in nfkd if unicodedata.category(c) != "Mn")
+
+    w = w.replace("v", "b")
+    w = re.sub(r"c(?=[ei])", "s", w)
+    w = w.replace("z", "s")
+    w = w.replace("nst", "nt").replace("nsp", "np")
+    w = w.replace("np", "mp").replace("nb", "mb")
+    w = w.replace("rr", "r").replace("cc", "c")
+    w = re.sub(r"eado$", "iado", w)
+    return w
+
+
+# Mapas ortográficos fonéticos pre-computados (O(1) lookup para tolerancia a errores ortográficos)
+_ACTION_ORTHO_MAP: Dict[str, str] = {_spanish_ortho_normalize(a): a for a in _CONSTRUCTION_ACTIONS}
+_ELEMENT_ORTHO_MAP: Dict[str, str] = {_spanish_ortho_normalize(e): e for e in _CONSTRUCTION_PHYSICAL_ELEMENTS}
+
 # Patrones de inyección SQL compilados una sola vez al cargar el módulo
 _SQL_PATTERNS: List[re.Pattern] = [
     re.compile(p, re.IGNORECASE) for p in [
@@ -208,18 +239,42 @@ def _normalize_token(text_val: str) -> str:
     return re.sub(r"[^a-z0-9]", "", without_accents)
 
 
-def _matches_lexicon(word: str, lexicon: Set[str]) -> bool:
-    """Verifica si una palabra o su lema/plural pertenece al conjunto léxico."""
+def _matches_lexicon(
+    word: str,
+    lexicon: Set[str],
+    ortho_map: Optional[Dict[str, str]] = None,
+) -> bool:
+    """
+    Verifica si una palabra o su lema/plural pertenece al conjunto léxico,
+    con soporte opcional de tolerancia fonética a errores ortográficos comunes.
+    """
     if not word or len(word) < 3:
         return False
+
+    # 1. Coincidencia exacta directa
     if word in lexicon:
         return True
+
+    # 2. Desinencias de plurales en español
     if word.endswith("es") and len(word) > 4:
         if word[:-2] in lexicon or word[:-1] in lexicon:
             return True
     elif word.endswith("s") and len(word) > 3:
         if word[:-1] in lexicon:
             return True
+
+    # 3. Tolerancia ortográfica fonética (O(1) lookup vía diccionario pre-computado)
+    if ortho_map:
+        norm = _spanish_ortho_normalize(word)
+        if norm in ortho_map:
+            return True
+        if word.endswith("es") and len(word) > 4:
+            if _spanish_ortho_normalize(word[:-2]) in ortho_map or _spanish_ortho_normalize(word[:-1]) in ortho_map:
+                return True
+        elif word.endswith("s") and len(word) > 3:
+            if _spanish_ortho_normalize(word[:-1]) in ortho_map:
+                return True
+
     return False
 
 
@@ -444,8 +499,8 @@ def validate_rag_signals(
     tokens = [_normalize_token(t) for t in raw_tokens]
     tokens = [t for t in tokens if t and t not in _STOPWORDS and len(t) > 2]
 
-    has_action = any(_matches_lexicon(t, _CONSTRUCTION_ACTIONS) for t in tokens)
-    has_element = any(_matches_lexicon(t, _CONSTRUCTION_PHYSICAL_ELEMENTS) for t in tokens)
+    has_action = any(_matches_lexicon(t, _CONSTRUCTION_ACTIONS, _ACTION_ORTHO_MAP) for t in tokens)
+    has_element = any(_matches_lexicon(t, _CONSTRUCTION_PHYSICAL_ELEMENTS, _ELEMENT_ORTHO_MAP) for t in tokens)
 
     # ── CHECK 1: Sin Acción ni Elemento Constructivo (Off-Topic léxico inmediato) ──
     # Si la consulta no tiene ni una sola acción ni un solo elemento de construcción:

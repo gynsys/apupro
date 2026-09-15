@@ -1,190 +1,260 @@
-# Generador de APU con Inteligencia Artificial (Costbase / Cost360)
-## Guía Maestra de Arquitectura, Flujo de Ejecución y Manual de Mantenimiento
+# Generador de APU con Inteligencia Artificial (Costbase / APUPro Platform)
+## Guía Maestra de Arquitectura, Pipeline Multi-Capa y Manual de Mantenimiento
 
-> **Módulo:** `cost360`  
+> **Módulo:** `costbase` / `cost360`  
 > **Funcionalidad:** Generador de Análisis de Precios Unitarios (APU) con Inteligencia Artificial (Función Premium)  
 > **Última Actualización:** Septiembre 2026  
 > **Normativa de Referencia:** COVENIN 2000:1992 (Sector Construcción Venezuela)  
+> **Base de Datos Oficial:** PostgreSQL (`cost360_items`) con **17.408 partidas** históricas y codificadas  
 
 ---
 
 ## 1. Descripción General
 
-El **Generador de APU con IA** es la funcionalidad insignia (*premium*) de Costbase. Su objetivo es transformar una solicitud técnica en lenguaje natural (ej. *"Construcción de pared de adobe e=15cm"* o *"Vaciado de losa maciza e=12cm con concreto 250 con bote a 10km"*) en un **Análisis de Precios Unitarios (APU) riguroso, balanceado y listo para licitar** en Venezuela.
+El **Generador de APU con IA** es la funcionalidad insignia de APUPro Platform (Costbase). Su objetivo es transformar una solicitud técnica en lenguaje natural (ej. *"Construcción de pared de bloques de arcilla e=15cm con mortero 1:4"* o *"Demolición de losa de concreto con acarreo de escombros"*) en un **Análisis de Precios Unitarios (APU) riguroso, balanceado y listo para presupuestar o licitar** en Venezuela.
 
-A diferencia de sistemas genéricos basados en prompts simples que "alucinan" cuadrillas o inventan precios y rendimientos irreales, Costbase opera bajo una arquitectura **RAG Híbrida con Adaptación de Base Real**:
-1. **Nunca inventa un APU desde cero**: Busca en una base de datos certificada de más de 13.600 partidas históricas para encontrar la partida constructiva más afín.
-2. **Ancla rendimientos e insumos reales**: Toma la estructura comprobada (mano de obra, equipos y materiales de la partida ganadora) y la utiliza como base madre.
-3. **Auto-fusión inteligente**: Inyecta partidas complementarias solo si el usuario pide actividades compuestas (ej: bote de escombros, friso, pintura), evitando contaminar partidas autosuficientes.
-4. **Supervisión LLM acotada**: El Modelo de Lenguaje (LLM) no calcula precios ni inventa códigos; únicamente adapta cantidades, poda insumos sobrantes y formula la descripción técnica bajo la convención venezolana de Partidas Especiales (`SC`).
+A diferencia de generadores genéricos que "alucinan" cuadrillas o inventan precios y rendimientos irreales, APUPro opera bajo una arquitectura **Multi-Capa Defensiva con RAG Híbrido y Adaptación Anclada**:
+
+1. **Defensa Temprana Fail-Fast (< 1ms, 0 Tokens):** Intercepta texto abusivo, inyecciones, entradas ambiguas (*"demolicion"*) o fuera de tema (*"carro corre duro"*, *"la moto corre mucho"*) **antes** de consumir tokens LLM o saturar la base de datos.
+2. **Léxico COVENIN Oficial con Tolerancia Fonética:** Clasificador en memoria con **226 acciones** y **3.146 elementos/materiales** extraídos de las 17.408 partidas reales, capaz de reconocer variantes ortográficas venezolanas (*acareo*, *contruccion*, *excabacion*, *valdosas*).
+3. **Guardia de Conflicto de Material en Match Exacto:** Si el texto coincide formalmente con una partida pero difiere en el material (ej. el usuario pide *"adobe"* y el catálogo tiene *"bloques huecos de arcilla"*), se bloquea el match exacto y se deriva al generador con IA.
+4. **Anclaje de Rendimientos e Insumos Reales:** Selecciona la partida histórica más afín y utiliza su estructura de costos (mano de obra, equipos, materiales) como base madre.
+5. **Auto-Fusión de Complementarias:** Agrega insumos de partidas accesorias (ej: bote de escombros, friso, pintura) únicamente si la partida base no los contempla en su alcance original.
+6. **Cero Adivinanzas:** Cuando una entrada requiere aclaratoria, el sistema **nunca** muestra botones con alternativas aleatorias o inventadas; orienta al usuario con guías de redacción técnica y permite reiniciar o usar el Asistente Guiado paso a paso.
 
 ---
 
 ## 2. Mapa de Archivos del Sistema
 
-A continuación se detalla la ubicación y responsabilidad de cada archivo involucrado:
-
-### 2.1 Backend (Python / FastAPI)
-
-| Archivo | Ruta | Responsabilidad Técnica |
-|---|---|---|
-| **Diccionario de Sinónimos** | `backend/app/services/synonyms_service.py` | Normaliza modismos venezolanos y términos constructivos mediante regex (ej: `adobe` $ightarrow$ `BLOQUES DE ARCILLA ADOBE`, `losacero`, `tubo estructural`, etc.). |
-| **Cerebro RAG Híbrido** | `backend/app/services/ai_search.py` | Implementa la clase Singleton `AISearchEngine`. Carga en memoria `embeddings_partidas.npy` y ejecuta búsqueda semántica vectorial (MiniLM) combinada con BM25, re-ranking de materiales y dimensiones. |
-| **Servicio de Adaptación y Complementarias** | `backend/app/services/ai_apu_service.py` | Orquesta la adaptación: `generate_apu_with_ai_from_base`, `select_relevant_complementary_apus`, definición de prompts especializados y separación de `notas_adaptacion` vs `advertencias`. |
-| **Endpoints de API** | `backend/app/api/v1/endpoints/cost360.py` | Expone las rutas `/generate-ai-apu`, `/rag-diagnostic`, `/smart-select` y `/custom-apus`. Conecta la autenticación y validación de planes. |
-| **Esquemas Pydantic** | `backend/app/schemas/cost360.py` | Define las estructuras de datos estrictas (`AiApuGenerateRequest`, `RagDiagnosticRequest`, `APUResponse`, etc.). |
-| **Router LLM Multi-Proveedor** | `backend/app/services/llm_router.py` | Abstrae la comunicación con proveedores (Gemini, OpenAI, Anthropic, Groq) garantizando respuestas en JSON estricto (`call_llm_json`). |
-| **Preprocesamiento Clásico** | `backend/app/services/preprocessing_service.py` | Métodos auxiliares de extracción léxica y validación de umbrales mínimos de similitud. |
-| **Filtro Inteligente (Smart Selector)** | `backend/app/services/smart_selector_service.py` | Generación de árboles de preguntas discriminantes por frecuencia TF-IDF sin consumo de tokens LLM. |
-| **Generador del Cerebro Offline** | `backend/generate_embeddings.py` | Script para indexar masivamente las partidas de PostgreSQL hacia `embeddings_partidas.npy` y `Base_Datos_IA.csv`. |
-
-### 2.2 Frontend (React / Tailwind CSS / Vite)
-
-| Archivo | Ruta | Responsabilidad Técnica |
-|---|---|---|
-| **Página del Generador** | `frontend/src/modules/cost360/pages/AIApuGeneratorPage.jsx` | Interfaz principal: Asistente guiado de 5 pasos, modo experto, switch administrativo **Debug JSON**, eliminación de alertas internas en vista pública y editor interactivo. |
-| **Panel Diagnóstico RAG** | `frontend/src/modules/cost360/components/tabs/RAGDiagnosticTab.jsx` | Playground interactivo en tiempo real: prueba prompts, inspecciona partida base ganadora, analiza autosuficiencia y corre batería de pruebas automatizada. |
-| **Consola de Administración** | `frontend/src/modules/cost360/pages/AdminDatabasePage.jsx` | Agrupa los catálogos en el **Visor de BD** unificado y aloja la pestaña **Diagnóstico RAG**. |
-| **Configuración de Pestañas** | `frontend/src/modules/cost360/constants/tabs.config.js` | Configuración de las pestañas principales del módulo de administración. |
+```
+apupro_platform/
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/endpoints/
+│   │   │   └── costbase.py                 # Endpoint principal /generate-ai-apu y orquestación
+│   │   ├── services/
+│   │   │   ├── apu_input_validator.py       # Capas 1 y 2: Sanitización, Guardia Léxica y Fonética
+│   │   │   ├── synonyms_service.py          # Normalización de modismos y siglas técnicas
+│   │   │   ├── ai_search.py                 # Motor RAG: Embeddings, BM25 y Re-ranking
+│   │   │   ├── ai_apu_service.py            # Capa 4: Prompting LLM, adaptación y podado
+│   │   │   ├── llm_router.py                # Abstracción multi-proveedor (Gemini, OpenAI, etc.)
+│   │   │   └── data/
+│   │   │       └── construction_lexicon.json # Léxico oficial (226 acciones, 3.146 elementos)
+│   │   └── evaluations/
+│   │       ├── golden_dataset_input_validation.py # 56 casos de prueba etiquetados
+│   │       └── run_input_validation_tests.py      # Runner de validación por capas
+│   ├── scripts/
+│   │   └── compile_construction_lexicon.py  # Compilador de léxico desde PostgreSQL
+│   └── smoke_test_validator.py              # Suite de 34 tests unitarios de validación y typos
+│
+└── frontend/src/modules/costbase/
+    ├── pages/
+    │   └── AIApuGeneratorPage.jsx           # Vista orquestadora modular (395 líneas)
+    ├── hooks/
+    │   ├── useApuGenerator.js               # Hook: Llamadas API, estados de aclaratoria y debug
+    │   └── useGuidedAssistant.js            # Hook: Estado del Asistente Guiado (5 pasos)
+    ├── constants/
+    │   └── guidedBuilderConstants.js        # Opciones, chips y prompts de las 5 fases
+    └── components/ai-generator/
+        ├── ApuGeneratorHeader.jsx           # Encabezado contextual y tabs de modo
+        ├── ClarificationAlertCard.jsx       # Tarjeta ámbar sin opciones adivinadas
+        ├── ExactMatchCard.jsx               # Tarjeta interactiva de match exacto
+        ├── GuidedAssistantModal.jsx         # Modal del Asistente Guiado paso a paso
+        ├── FreeTextPromptInput.jsx          # Input de texto libre y botón Generar APU
+        ├── SmartFilterCard.jsx              # Tarjeta de preguntas discriminantes
+        ├── ImportFromDbPanel.jsx            # Panel de clonación de bases de datos
+        └── DatabasePreviewList.jsx          # Visor colapsable de partidas históricas
+```
 
 ---
 
 ## 3. Arquitectura y Flujo de Funcionamiento Paso a Paso
 
-El pipeline de generación se ejecuta en las siguientes fases secuenciales:
+El pipeline de procesamiento se ejecuta en 5 fases secuenciales estrictas:
 
 ```mermaid
 flowchart TD
-    A[Usuario ingresa descripción técnica] --> B[synonyms_service.py: Expansión de Sinónimos Técnicos]
-    B --> C[ai_search.py: Búsqueda RAG Híbrida Dense + Sparse]
-    C --> D[Re-ranking Multicriterio: Materiales + Dimensiones + COVENIN]
-    D --> E[Partida Base Ganadora Top 1 Seleccionada]
-    E --> F{ai_apu_service.py: ¿Requiere Complementarias?}
-    F -- "Actividad Pura o Base Autosuficiente" --> G[0 Complementarias: Mantener APU Limpio]
-    F -- "Exige Bote/Friso/Pintura ausente en Base" --> H[Inyectar hasta 2 Complementarias Diversas]
-    G --> I[Construcción del Prompt de Adaptación Especializada]
-    H --> I
-    I --> J[llm_router.py: LLM adapta cantidades y poda insumos]
-    J --> K[Separación de Salidas]
-    K --> L[notas_adaptacion -> JSON de Debug Interno]
-    K --> M[advertencias -> Avisos de Precios Referenciales para Usuario]
-    L --> N[Frontend: Editor de APU Interactivo]
-    M --> N
+    A["Usuario ingresa descripción"] --> B["Capa 1: apu_input_validator.py\n(Sintaxis, Inyecciones, Entropía)"]
+    B -- "Inválida / Inyección" --> Z1["Rechazo Inmediato (0ms, 0 tokens)"]
+    B -- "Pasa" --> C["Capa 2: Pre-RAG Guardia Léxica Fonética\n(226 acciones, 3.146 elementos COVENIN)"]
+    
+    C -- "Sin términos constructivos (ej: 'carro corre duro')" --> Z2["RAG_OFF_TOPIC -> Aclaratoria (0.05ms)"]
+    C -- "Acción sola (ej: 'demolicion') o Elemento solo" --> Z3["RAG_AMBIGUOUS_* -> Pide complementar (0.02ms)"]
+    C -- "Pasa (Acción + Elemento, con/sin typos)" --> D["synonyms_service.py: Expansión de Sinónimos Técnicos"]
+    
+    D --> E["Capa 3: RAG Híbrido (Vectorial + BM25 + Re-ranking)"]
+    E -- "Score < 0.32" --> Z4["RAG_OFF_TOPIC"]
+    E -- "Candidatas Recuperadas" --> F{"Capa 2.5: ¿Match Exacto?"}
+    
+    F -- "Overlap >= 92% SIN conflicto de material" --> G["Match Exacto Candidato -> Preguntar al usuario"]
+    F -- "Conflicto Material (ej: adobe vs bloques arcilla) o Bypass" --> H["Capa 4: Adaptación con LLM (Gemini)"]
+    
+    H --> I["select_relevant_complementary_apus\n(0 a 2 partidas accesorias)"]
+    I --> J["ai_apu_service.py: Prompt de Adaptación Anclada"]
+    J --> K["Separación de Respuestas:\n- APU Estructurado\n- Advertencias Comerciales\n- Debug JSON Interno"]
+    K --> L["Frontend: Renderizado en Editor Interactivo"]
 ```
 
-### Fase 1: Normalización y Expansión Técnica (`synonyms_service.py`)
-Antes de vectorizar el texto, el sistema intercepta modismos constructivos venezolanos para enriquecer la semántica.
-* *Ejemplo:* Si el usuario escribe `"Construcción Paredes adobe unidad m²"`, la regla regex `(r"(ADOBE|ADOBES)", "BLOQUES DE ARCILLA ADOBE")` expande la consulta a:
-  `"Construcción Paredes BLOQUES DE ARCILLA ADOBE unidad m²"`.
-* Esto garantiza que el vector matemático resultante se alinee de inmediato con las partidas de mampostería y bloque de arcilla de la base maestra, evitando desvíos hacia concreto armado.
+---
 
-### Fase 2: Búsqueda Semántica Híbrida (`ai_search.py`)
-1. **Vectorización:** La consulta expandida se convierte en un vector de 384 dimensiones mediante el modelo `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`.
-2. **Cálculo Matricial:** En milisegundos, NumPy calcula la similitud del coseno contra la matriz precargada de 13.608 partidas (`embeddings_partidas.npy`).
-3. **Búsqueda Léxica:** Se combina con un score BM25 sobre tokens técnicos clave.
-
-### Fase 3: Re-ranking Multicriterio (`ai_search.py`)
-Para evitar que una partida de concreto vaciado gane sobre una de albañilería o viceversa:
-* **Categorías de Materiales (`MATERIAL_CATEGORIES`):** Se clasifican las familias técnicas (`mamposteria`, `concreto`, `acero`, `madera`, etc.). Si la consulta contiene arcilla/adobe, se otorga un bono de `+0.12` a mampostería de arcilla y una penalización de `-0.08` a concretos estructurales.
-* **Coincidencia Dimensional (`dim_matching_score`):** Detecta espesores y diámetros (ej: 10 cm, 15 cm, 20 cm, phi 1/2 pulg). Si la medida coincide con la partida base, recibe bonificación; si difiere drásticamente, se penaliza.
-* **Prefijo COVENIN:** Coincidencia exacta de capítulo suma `+0.15`; coincidencia de tipo de obra suma `+0.08`.
-
-### Fase 4: Selección de la Partida Base Ganadora
-La partida con mayor score tras el re-ranking se selecciona como **Partida Base de Adaptación**. Se extraen de la base de datos PostgreSQL todos sus componentes reales:
-* Mano de obra (cuadrilla histórica, jornales y bonos).
-* Equipos (maquinarias, herramientas y costos diarios).
-* Materiales (códigos, unidades, rendimientos de consumo y precios unitarios).
-* Rendimiento oficial diario (`performance`).
-
-### Fase 5: Selección Inteligente de Complementarias (`select_relevant_complementary_apus`)
-Esta fase resuelve el problema de la "contaminación de partidas":
-1. **Regla de Autosuficiencia:** Si la solicitud describe una actividad simple (ej: solo construir paredes, o solo vaciar concreto), la función devuelve `[]` (**0 partidas complementarias**). El APU se mantiene 100% fiel a su actividad.
-2. **Regla de Alcance Oficial:** Si el usuario solicita `"Demolición losa concreto con bote"` y la partida ganadora ya incluye en su alcance oficial `"INCLUYE BOTE DE ESCOMBROS"` (como ocurre con la partida `EOP296`), el sistema detecta que la necesidad ya está cubierta y no agrega complementarias redundantes.
-3. **Regla de Inyección Faltante:** Si la base es una pared de bloque pura y el usuario exige *"pared frisada y pintada"*, el sistema detecta que faltan las actividades secundarias `friso_revoque` y `pintura`. Busca en la base de datos hasta 2 partidas representativas de esos capítulos específicos y las entrega al LLM para que "robe" los insumos necesarios sin inventar precios.
-
-### Fase 6: Adaptación Especializada con LLM (`ai_apu_service.py`)
-El prompt inyecta las partidas en formato JSON y somete al LLM a reglas de estricto cumplimiento:
-* **Escala de Maquinaria:** Prohibido usar maquinaria pesada en actividades manuales o confinadas. En acarreo manual es obligatorio incluir herramientas menores (carretilla, pala, pico) aun si el APU histórico no las tenía.
-* **Anclaje de Rendimiento:** El rendimiento del APU debe permanecer anclado al del APU base histórico. Solo se modifica si la geometría o complejidad técnica lo justifican con una explicación explícita.
-* **Codificación SC Oficial:** Si la partida es adaptada o nueva, se codifica formalmente con la convención venezolana de Partidas Especiales no tipificadas: `PrefijoSector` + `SC` + `Correlativo` (ej: `E411SC001`, `E313SC001`, `E1010SC001`). Nunca inventa códigos numéricos falsos.
-* **Precios Unitarios Intocables:** Los precios unitarios de materiales, jornales y equipos históricos se preservan intactos.
-
-### Fase 7: Separación Estricta de Advertencias (Público vs Técnico)
-El modelo entrega dos listas separadas:
-* `notas_adaptacion`: Registra para la bitácora interna de qué partida base se partió, qué insumos se podaron y la justificación del rendimiento. Esta información va al log JSON de depuración.
-* `advertencias`: Exclusiva para avisos comerciales dirigidos al usuario final/cliente sobre insumos que no estaban en catálogo y a los que la IA asignó un precio referencial (`[PRECIO_REFERENCIAL]`), recomendando su cotización con proveedores locales.
+### Fase 1: Capa 1 — Sanitización Sintáctica y Seguridad (`apu_input_validator.py`)
+* **Tiempo:** `< 1 ms` | **Costo:** `0 tokens` | **Red:** `Ninguna`
+* **Verificaciones:**
+  1. **Longitud:** Mínimo 10 caracteres, máximo 500 caracteres.
+  2. **Inyecciones SQL:** Regex compiladas contra comandos de manipulación (`SELECT`, `DROP`, `UNION`, `1=1`).
+  3. **Inyecciones HTML / XSS / Plantillas:** Bloqueo de `<script>`, `${{...}}`, tags HTML.
+  4. **Prompt Injections:** Bloqueo de directivas adversariales (*"ignora tus instrucciones"*, *"jailbreak"*, *"nuevo rol"*).
+  5. **Alfabeto y Caracteres:** Mínimo 60% de caracteres en bloque Unicode Latin.
+  6. **Relación de Vocales:** Entre 20% y 75% para descartar teclado aleatorio (*"asdfgh qwerty"*).
+  7. **Entropía de Shannon:** Mínimo 2.5 bits/carácter (filtra repetición masiva o cadenas monótonas).
 
 ---
 
-## 4. El Archivo `embeddings_partidas.npy`: Qué Es, Dónde Vive y Cómo Funciona
+### Fase 2: Capa 2 — Guardia Léxica Pre-RAG y Tolerancia Fonética
+* **Tiempo:** `0.03 ms - 0.15 ms` | **Costo:** `0 tokens` | **Base de Datos:** `No consultada`
+* **Léxico Oficial COVENIN (`construction_lexicon.json`):**
+  * **226 acciones constructivas:** Verbos y sustantivos de actividad (*demolición, vaciado, friso, excavación, tendido, empalme, montaje, picado, etc.*).
+  * **3.146 elementos físicos y materiales:** Componentes de obra (*paredes, zapatas, cabillas, losas, tuberías, geotextiles, transformadores, baldosas, etc.*).
+* **Tolerancia Fonética O(1) (`_spanish_ortho_normalize`):**
+  Aplica reglas fonéticas del español latinoamericano en memoria mediante mapas de hash:
+  * **Betacismo (`b` $\leftrightarrow$ `v`):** `"excabacion"` $\rightarrow$ `"excavacion"`, `"valdosas"` $\rightarrow$ `"baldosas"`, `"baceado"` $\rightarrow$ `"vaciado"`.
+  * **Seseo (`c` ante *e/i*, `z` $\leftrightarrow$ `s`):** `"excavasion"` $\rightarrow$ `"excavacion"`, `"seramica"` $\rightarrow$ `"ceramica"`, `"demolision"` $\rightarrow$ `"demolicion"`.
+  * **Omisión de `s` preconsonántica (`nst` $\rightarrow$ `nt`, `nsp` $\rightarrow$ `np`):** `"contruccion"` $\rightarrow$ `"construccion"`, `"intalacion"` $\rightarrow$ `"instalacion"`, `"tranporte"` $\rightarrow$ `"transporte"`.
+  * **Asimilación nasal (`np` $\rightarrow$ `mp`, `nb` $\rightarrow$ `mb`):** `"inpermeabilizacion"` $\rightarrow$ `"impermeabilizacion"`.
+  * **Geminadas reducidas (`rr` $\rightarrow$ `r`, `cc` $\rightarrow$ `c`):** `"acareo"` $\rightarrow$ `"acarreo"`, `"construcion"` $\rightarrow$ `"construccion"`.
+* **Guardia Anti-Falsos Positivos:** Palabras cotidianas como `"carro"`, `"moto"`, `"corre"`, `"duro"`, `"pizza"` **nunca** coinciden con términos técnicos.
 
-### ¿Qué es este archivo?
-Es una matriz NumPy binaria precomputada con dimensiones `(13.608, 384)`. Cada fila corresponde al vector semántico de 384 números de precisión flotante de una partida de la base de datos maestra de Costbase, generado por el modelo de NLP `paraphrase-multilingual-MiniLM-L12-v2`.
+---
 
-### ¿Está actualmente en uso?
-**SÍ, ABSOLUTAMENTE.** Es el componente central del motor RAG. Cada vez que se genera un APU, se consulta el Diagnóstico RAG o se utiliza el buscador semántico, el sistema ejecuta una multiplicación matricial ultrarrápida contra este archivo.
+### Fase 3: Capa 2.5 — Detección de Match Exacto y Guardia de Conflicto de Material
+* Se ejecuta **únicamente** si la consulta superó la Capa 1 y la Capa 2.
+* Si el texto coincide al $\ge 92\%$ con una partida oficial COVENIN de la base de datos:
+  * **Guardia de Conflicto de Material:** Si el usuario especificó un material particular (ej. *"adobe"*, *"concreto 280"*, *"tubería HG"*) y la partida candidata de base de datos contempla otro material incompatible (ej. *"bloques huecos de arcilla"*, *"concreto 210"*, *"tubería PVC"*), **se prohíbe sugerir match exacto**. La consulta se envía directo al Generador con IA para formular el APU especial adaptado.
+  * Si los materiales coinciden plenamente, se devuelve `status: "exact_match_candidate"` para que el usuario pueda reutilizar la partida oficial certificada sin gastar cuota mensual de IA.
 
-### ¿Dónde se encuentra en el Servidor vs en la Máquina Local?
-En `backend/app/services/ai_search.py` (líneas 103-112), la carga se resuelve mediante un orden de búsqueda en cascada (*fallback*):
+---
 
-1. **En el Servidor de Producción (Contenedor Docker Linux):**
-   * Ruta: `/app/ai_brain/embeddings_partidas.npy`
-   * Acompañado de: `/app/ai_brain/Base_Datos_IA.csv` (contiene el mapeo fila <-> `CodPar`).
-   * El contenedor tiene montado este directorio para persistir el modelo en RAM.
-2. **En Desarrollo Local (Windows):**
-   * Ruta fallback: `C:\Users\pablo\Desktop\BD_COST360\embeddings_partidas.npy`
-   * Si no existe `/app/ai_brain/`, el código busca en la carpeta de base de datos local de Windows para que las pruebas locales funcionen de manera transparente.
+### Fase 4: Capa 3 — Búsqueda RAG Híbrida y Complementarias
+* **Expansión de Sinónimos (`synonyms_service.py`):** Expande siglas comerciales y jerga venezolana (`PPR` $\rightarrow$ `POLIPROPILENO PPR`, `bobcat` $\rightarrow$ `MINICARGADOR BOBCAT`, `f'c 210` $\rightarrow$ `CONCRETO F'C 210 KG/CM2`).
+* **Búsqueda Vectorial Semántica:** Calcula similitud semántica contra las 17.408 partidas de la base maestra.
+* **Auto-Fusión Inteligente (`select_relevant_complementary_apus`):**
+  * **Autosuficiencia:** Si la partida base ya cubre el alcance (ej. partida de demolición que en su texto dice *"INCLUYE BOTE DE ESCOMBROS"*), se devuelven **0 complementarias**.
+  * **Inyección Controlada:** Si la partida es simple pero el usuario solicitó actividades secundarias ausentes (ej. pared que exige friso y pintura), inyecta hasta 2 partidas complementarias para nutrir los insumos sin inventar precios.
 
-### ¿Cómo se regenera cuando se agregan nuevas partidas a la base de datos?
-Existen dos mecanismos:
-1. **Desde la Interfaz Web:** Un usuario administrador pulsa el botón **"RAG"** en la barra superior de `admin-db` (o llama a `POST /api/v1/admin/update-rag-brain`). Esto dispara una tarea en segundo plano que re-indexa la base de datos y sobreescribe los archivos.
-2. **Por Terminal en el Servidor:** Ejecutar dentro del contenedor:
+---
+
+### Fase 5: Capa 4 — Adaptación Anclada con LLM (`ai_apu_service.py`)
+* El prompt técnico somete al LLM a reglas de ingeniería de costos:
+  * **Anclaje de Rendimiento:** El rendimiento oficial diario (`performance`) queda anclado a la partida histórica salvo justificación geométrica explícita.
+  * **Precios Unitarios Intocables:** Los costos de materiales, jornales y equipos provienen de la base de datos y no pueden ser alterados por el LLM.
+  * **Codificación SC Oficial:** Las partidas adaptadas se codifican bajo la convención venezolana de Partidas Especiales: `PrefijoSector` + `SC` + `Correlativo` (ej: `E411SC001`).
+  * **Supresión de Adivinanzas:** Si el LLM requiere clarificación, el backend fuerza `"options": []` para no mostrar listas engañosas.
+
+---
+
+## 4. Arquitectura Frontend (Clean Architecture Modular)
+
+El frontend de generación fue refactorizado siguiendo el principio de Responsabilidad Única (SRP), reduciendo [`AIApuGeneratorPage.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/pages/AIApuGeneratorPage.jsx) de 1.941 líneas a **395 líneas**:
+
+### 4.1 Custom Hooks de Negocio
+* **[`useApuGenerator.js`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/hooks/useApuGenerator.js):**
+  * Gestiona las peticiones a la API (`generateAIApu`).
+  * Controla estados de carga por fases (*Analizando semántica*, *Buscando en base COVENIN*, *Adaptando APU*).
+  * Maneja respuestas de aclaratoria (`clarification_needed`) y match exacto (`exact_match_candidate`).
+  * Administra la descarga automática del archivo de diagnóstico JSON (`debug_apu_*.json`).
+* **[`useGuidedAssistant.js`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/hooks/useGuidedAssistant.js):**
+  * Controla el asistente conversacional interactivo (Fases 0 a 5).
+  * Concatena dinámicamente las respuestas del usuario en un prompt estructurado: `[Acción] + [Elemento] + [Material] + [Alcance]`.
+
+### 4.2 Componentes UI Especializados
+* **[`ClarificationAlertCard.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/components/ai-generator/ClarificationAlertCard.jsx):**
+  * Tarjeta ámbar limpia sin botones de alternativas adivinadas.
+  * Presenta la guía de **REDACCIÓN RECOMENDADA** y las preguntas clave.
+  * Muestra los botones de acción: `[Usar Asistente Guiado Paso a Paso]` y `[Reiniciar Entrada Libre]` / `[Reiniciar Chatbot]`.
+* **[`FreeTextPromptInput.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/components/ai-generator/FreeTextPromptInput.jsx):**
+  * Textarea con auto-ajuste de altura y conmutador entre modo Asistente y Entrada Libre.
+  * **Ocultación Reactiva:** Si la entrada está en estado de aclaratoria por ser demasiado breve, oculta el botón "Generar APU" y el campo para obligar a reiniciar o usar el Asistente Guiado.
+* **[`ExactMatchCard.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/components/ai-generator/ExactMatchCard.jsx):**
+  * Permite adoptar con un solo clic una partida existente en base de datos sin gastar cuota mensual de IA.
+
+---
+
+## 5. Códigos Internos de Auditoría y Respuestas de la API
+
+La API `/generate-ai-apu` devuelve una estructura JSON estándar con códigos de diagnóstico para auditoría interna:
+
+| Código Interno | Estado HTTP | Veredicto | Significado Técnico |
+|---|:---:|:---:|---|
+| `SQL_INJECTION` | 200 | `reject` | Intento de inyección SQL interceptado en Capa 1. |
+| `PROMPT_INJECTION` | 200 | `reject` | Intento de manipulación de instrucciones LLM en Capa 1. |
+| `HTML_INJECTION` | 200 | `reject` | Inyección de etiquetas HTML o scripts en Capa 1. |
+| `LOW_ENTROPY` | 200 | `reject` | Texto repetitivo o monótono en Capa 1 (*"demolicion demolicion..."*). |
+| `RAG_OFF_TOPIC` | 200 | `reject` / `clarification_needed` | Entrada sin términos constructivos (*"carro corre duro"*, *"pizza"*) o score RAG $< 0.32$. |
+| `RAG_AMBIGUOUS_ACTION_ONLY` | 200 | `clarification_needed` | Entrada con verbo constructivo pero sin elemento físico (*"demolicion"*, *"instalacion"*). |
+| `RAG_AMBIGUOUS_ELEMENT_ONLY` | 200 | `clarification_needed` | Entrada con elemento constructivo pero sin acción técnica (*"tuberia"*, *"valdosas"*). |
+| `RAG_NO_CANDIDATES` | 200 | `reject` | La búsqueda vectorial no arrojó ninguna partida afín en el catálogo. |
+
+### Formato de Respuesta en Aclaratoria
+```json
+{
+  "status": "clarification_needed",
+  "clarification_message": "La descripción es demasiado breve para generar un APU preciso. Por favor describe la actividad con al menos el elemento constructivo y la acción a ejecutar.",
+  "recommendation": "Te recomendamos utilizar el Asistente Guiado para estructurar tu descripción paso a paso.",
+  "options": [],
+  "questions": [
+    "1. Acción principal: ¿Qué actividad deseas presupuestar (demolición, construcción, instalación)?",
+    "2. Elemento constructivo: ¿Sobre qué elemento se actúa (pared, tubería, losa, piso)?",
+    "3. Material o especificación: ¿Qué material o resistencia tiene (bloque, PVC, concreto)?",
+    "4. Método y alcance: ¿Se realiza a mano o con maquinaria? ¿Incluye bote o transporte?"
+  ],
+  "guia_redaccion": "Estructura recomendada: [Acción] + [Elemento] + [Material/Especificación] + [Método].",
+  "_internal_code": "RAG_AMBIGUOUS_ACTION_ONLY"
+}
+```
+
+---
+
+## 6. Manual Práctico de Mantenimiento y Modificaciones
+
+### 6.1 ¿Cómo re-compilar el Léxico Constructivo tras agregar partidas a PostgreSQL?
+Si se importan o modifican partidas en la tabla `cost360_items`, ejecuta el compilador oficial:
+```bash
+cd backend
+python scripts/compile_construction_lexicon.py
+```
+Este script analiza las descripciones, extrae las acciones y elementos morfológicos y actualiza automáticamente `backend/app/services/data/construction_lexicon.json`.
+
+### 6.2 ¿Cómo agregar nuevas reglas de Tolerancia Ortográfica Fonética?
+Abre [`backend/app/services/apu_input_validator.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/apu_input_validator.py) y edita la función `_spanish_ortho_normalize(w: str)`:
+```python
+# Ejemplo: incorporar asimilación de 'll' a 'y'
+w = w.replace("ll", "y")
+```
+Al reiniciar el servidor, `_ACTION_ORTHO_MAP` y `_ELEMENT_ORTHO_MAP` se pre-computan automáticamente con la nueva regla.
+
+### 6.3 ¿Cómo agregar un nuevo Modismo o Término Técnico?
+Abre [`backend/app/services/synonyms_service.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/synonyms_service.py) y agrega la tupla en `TECHNICAL_SYNONYMS`:
+```python
+(r"\b(NUEVO_TERMINO|VARIANTE)\b", "EQUIVALENTE_NORMATIVO_COVENIN"),
+```
+
+### 6.4 ¿Cómo ejecutar la Batería de Pruebas Automatizadas?
+1. **Smoke Tests Rápidos (34 pruebas de validación, seguridad y typos):**
    ```bash
-   docker exec -it apupro-backend python generate_embeddings.py
+   cd backend
+   python smoke_test_validator.py
    ```
-   El proceso toma entre 2 y 4 minutos en CPU y actualiza automáticamente los 13.600+ vectores.
-
----
-
-## 5. Guía Práctica de Mantenimiento y Modificaciones
-
-### ¿Cómo agregar un nuevo sinónimo técnico o modismo?
-1. Abre `backend/app/services/synonyms_service.py`.
-2. Agrega una nueva tupla en la lista `TECHNICAL_SYNONYMS`:
-   ```python
-   (r"\b(TERMINO_LOCAL|VARIANTES)\b", "EQUIVALENTE_TECNICO_OFICIAL_COVENIN"),
+2. **Evaluación de Golden Dataset por Capas (56 casos etiquetados):**
+   ```bash
+   cd backend
+   # Probar Capas 1 y 2
+   python -m app.evaluations.run_input_validation_tests --capa 2
+   
+   # Probar solo casos fuera de tema (Off-Topic)
+   python -m app.evaluations.run_input_validation_tests --capa 2 --categoria OFF_TOPIC
    ```
-3. Guarda el archivo. No requiere reiniciar el cerebro vectorial ni recompilar el frontend; surte efecto inmediato en la siguiente petición.
-
-### ¿Cómo ajustar o agregar una categoría de materiales en el Re-ranking?
-1. Abre `backend/app/services/ai_search.py`.
-2. Localiza el diccionario `MATERIAL_CATEGORIES`:
-   ```python
-   "nueva_categoria": {
-       "keywords": ["palabra1", "palabra2", "palabra3"],
-       "bonus": 0.12,
-       "penalty": -0.08,
-       "incompatible": ["categoria_opuesta"]
-   }
+3. **Verificación de Compilación Frontend:**
+   ```bash
+   cd frontend
+   npm run build
    ```
-3. Esto asegurará que las búsquedas que contengan esos términos reciban un bono del 12% sobre partidas afines y penalicen partidas con materiales incompatibles.
-
-### ¿Cómo agregar una nueva actividad para Auto-Fusión de Complementarias?
-1. Abre `backend/app/services/ai_apu_service.py`.
-2. Localiza el diccionario `SECONDARY_ACTIVITY_PATTERNS`:
-   ```python
-   "nombre_actividad": {
-       "pattern": r"\b(regex_de_activacion)\b",
-       "search_keywords": "palabras clave para buscar en BD la partida accesoria",
-   }
-   ```
-3. El motor revisará automáticamente si la partida base ya contiene dicha actividad antes de inyectarla.
-
-### ¿Cómo depurar y probar cambios en el RAG sin gastar saldo del LLM?
-1. Ve a `https://costbase.net/cost360/admin-db` con una cuenta de Administrador.
-2. Selecciona la pestaña **"Diagnóstico RAG"**.
-3. Escribe cualquier descripción técnica y pulsa **"Diagnosticar"** o pulsa **"Batería de Pruebas"**.
-4. Podrás verificar en menos de 200 ms la expansión de sinónimos, el ranking de candidatas con barras de score y si el sistema decidió incluir o descartar complementarias.
-
-### ¿Cómo modificar las cuotas de APUs de los planes SaaS?
-Consulta la guía paso a paso dedicada: [`readme/GUIA_CONFIGURACION_CUOTAS_APU.md`](GUIA_CONFIGURACION_CUOTAS_APU.md).
