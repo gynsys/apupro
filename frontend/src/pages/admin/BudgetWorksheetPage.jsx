@@ -531,6 +531,26 @@ export default function BudgetWorksheetPage() {
     }
   };
 
+  const handleMoveItem = async (index, direction) => {
+    if (!budget?.items) return;
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= budget.items.length) return;
+
+    const newItems = Array.from(budget.items);
+    const [moved] = newItems.splice(index, 1);
+    newItems.splice(targetIndex, 0, moved);
+
+    setBudget(prev => ({ ...prev, items: newItems }));
+
+    try {
+      const itemIds = newItems.map(i => i.id);
+      await budgetService.reorderItems(id, itemIds);
+    } catch (error) {
+      toast.error('Error al mover la partida');
+      loadBudget();
+    }
+  };
+
   const calculatePU = (item) => calculateItemPU(item, budget);
 
   const calculateBudgetTotal = () => calculateBudgetTotals(budget);
@@ -620,7 +640,7 @@ export default function BudgetWorksheetPage() {
   const { subtotalPresupuesto, ivaAmount, totalGeneral } = calculateBudgetTotal();
 
   return (
-    <div className="absolute inset-0 p-4 md:p-6 flex flex-col overflow-hidden w-full max-w-7xl mx-auto no-print">
+    <div className="absolute inset-0 p-2 sm:p-4 md:p-6 flex flex-col overflow-hidden w-full max-w-7xl mx-auto no-print">
       {/* WORKSHEET CONTENT */}
       <div className="flex-1 flex flex-col relative min-h-0">
 
@@ -758,123 +778,384 @@ export default function BudgetWorksheetPage() {
       )}
 
 
-      {/* WORKSHEET TABLE */}
+      {/* WORKSHEET CONTAINER */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex-1 flex flex-col relative overflow-hidden">
-        <div className="flex-1 overflow-y-auto min-h-0 relative">
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <table className="w-full text-left border-separate border-spacing-0">
-              <thead className="sticky top-0 z-30 shadow-md ring-1 ring-slate-200 bg-white">
-                {/* PAGE HEADER INSIDE TABLE HEADER */}
-                <tr>
-                  <th colSpan="8" className="p-0 border-b border-slate-200 bg-white">
-                    <div className="px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                      <div className="flex items-center gap-4">
-                        <button 
-                          onClick={() => navigate('/budgets')}
-                          className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
-                        >
-                          <ArrowLeft size={20} className="text-slate-600" />
-                        </button>
-                        <div>
-                          <h1 className="text-2xl font-bold text-slate-800 leading-tight">{budget.project_name || budget.name}</h1>
-                        </div>
+        {/* WORKSHEET HEADER BAR */}
+        <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-200 bg-white shrink-0">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+            {/* Project Name + Back Button */}
+            <div className="flex items-center justify-between w-full md:w-auto gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <button 
+                  onClick={() => navigate('/budgets')}
+                  className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm shrink-0"
+                  title="Volver a presupuestos"
+                >
+                  <ArrowLeft size={20} className="text-slate-600" />
+                </button>
+                <div className="min-w-0">
+                  <h1 className="text-lg sm:text-2xl font-bold text-slate-800 leading-tight truncate">
+                    {budget.project_name || budget.name}
+                  </h1>
+                </div>
+              </div>
+              <div className="flex md:hidden items-center shrink-0">
+                <span className="text-xs text-slate-600 font-bold bg-slate-100 px-2.5 py-1 rounded-lg">
+                  {budget.items.filter(item => !item.is_chapter).length} part.
+                </span>
+              </div>
+            </div>
+
+            {/* Total Partidas count (Desktop) */}
+            <div className="hidden md:flex items-center">
+              <span className="text-sm text-black font-bold">
+                Total Partidas: {budget.items.filter(item => !item.is_chapter).length}
+              </span>
+            </div>
+
+            {/* Topbar Actions Portal */}
+            {headerPortalTarget && createPortal(
+              <div className="flex gap-2 mx-2">
+                {/* Database Selector Dropdown */}
+                <div 
+                  className="relative"
+                  onMouseEnter={() => setHeaderDbDropdownOpen(true)}
+                  onMouseLeave={() => setHeaderDbDropdownOpen(false)}
+                >
+                  <button
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm text-sm"
+                  >
+                    <Database size={16} />
+                    Base de Datos
+                    <ChevronDown size={14} className={headerDbDropdownOpen ? 'rotate-180 transition-transform duration-200' : 'transition-transform duration-200'} />
+                  </button>
+                  {headerDbDropdownOpen && (
+                    <div className="absolute top-full left-0 pt-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="bg-white border border-slate-200 rounded-lg shadow-xl min-w-[200px] overflow-hidden py-1">
+                        {databases.map(db => (
+                          <button
+                            key={db.id}
+                            onClick={() => {
+                              setActiveDatabase(db);
+                              setHeaderDbDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors flex items-center gap-2 ${
+                              activeDatabase.id === db.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'
+                            }`}
+                          >
+                            <Database size={14} />
+                            {db.name}
+                          </button>
+                        ))}
                       </div>
-                      <div className="hidden md:flex items-center">
-                        <span className="text-sm text-black font-bold">
-                          Total Partidas: {budget.items.filter(item => !item.is_chapter).length}
+                    </div>
+                  )}
+                </div>
+                <button 
+                  onClick={handleSyncPrices}
+                  disabled={syncing}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl hover:bg-blue-100 transition-colors font-medium shadow-sm text-sm"
+                >
+                  <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
+                  {syncing ? 'Actualizando...' : 'Actualizar Precios'}
+                </button>
+                <button 
+                  onClick={() => setShowSettings(!showSettings)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm text-sm"
+                >
+                  <Settings size={16} /> Configuración Global
+                </button>
+                <button 
+                  onClick={() => setShowPrintModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-amber-200 text-amber-700 rounded-xl hover:bg-amber-50 transition-colors font-medium shadow-sm text-sm"
+                >
+                  <Printer size={16} /> Imprimir
+                </button>
+              </div>,
+              headerPortalTarget
+            )}
+
+            {/* Action Buttons: Partidas, Capítulos, Excel */}
+            <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <button  
+                onClick={handleOpenSearchModal}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2.5 sm:py-2 rounded-xl font-semibold shadow-lg shadow-blue-500/30 transition-all active:scale-95 text-sm"
+              >
+                <Plus size={18} /> Agregar Partida
+              </button>
+
+              <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
+                <button  
+                  onClick={() => { setChapterName(""); setShowChapterModal(true); }}
+                  className="flex items-center justify-center gap-2 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 px-3.5 py-2 rounded-xl font-medium shadow-sm transition-all text-xs sm:text-sm"
+                >
+                  <FolderPlus size={16} /> <span className="truncate">Agregar Capítulo</span>
+                </button>
+
+                <button
+                  onClick={handleExportBudgetToExcel}
+                  disabled={exportingBudgetExcel}
+                  className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 px-3.5 py-2 rounded-xl font-medium shadow-sm transition-all disabled:opacity-50 text-xs sm:text-sm"
+                  title="Exportar presupuesto a Excel"
+                >
+                  {exportingBudgetExcel ? (
+                    <Loader size={16} className="animate-spin text-emerald-600" />
+                  ) : (
+                    <ExcelIcon size={16} className="text-emerald-600" />
+                  )}
+                  <span className="sm:hidden font-medium text-emerald-700">Exportar Excel</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* WORKSHEET BODY (SCROLLABLE) */}
+        <div className="flex-1 overflow-y-auto min-h-0 relative">
+          {/* MOBILE VIEW (< md): TARJETAS NATIVAS */}
+          <div className="md:hidden p-3 space-y-3">
+            {budget.items.length === 0 ? (
+              <div className="p-8 text-center text-slate-500 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 my-4">
+                <Layers className="mx-auto mb-3 text-slate-300" size={36} />
+                <p className="text-sm font-medium">No hay partidas en este presupuesto.</p>
+                <button 
+                  onClick={handleOpenSearchModal}
+                  className="mt-3 text-blue-600 font-semibold hover:underline text-sm inline-flex items-center gap-1"
+                >
+                  <Plus size={16} /> Buscar e incluir la primera partida
+                </button>
+              </div>
+            ) : (
+              (() => {
+                let mobileItemNumber = 0;
+                return budget.items.map((item, idx) => {
+                  const isSelected = selectedItemId === item.id;
+
+                  if (item.is_chapter) {
+                    return (
+                      <div 
+                        key={item.id} 
+                        onClick={() => setSelectedItemId(isSelected ? null : item.id)}
+                        className={`rounded-xl p-3 shadow-sm border transition-all flex items-center justify-between gap-2 ${
+                          isSelected ? 'bg-slate-900 ring-2 ring-blue-500 text-white border-blue-500' : 'bg-slate-800 text-white border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <div className="flex flex-col shrink-0 gap-0.5" onClick={e => e.stopPropagation()}>
+                            <button 
+                              type="button"
+                              disabled={idx === 0}
+                              onClick={() => handleMoveItem(idx, 'up')}
+                              className="p-1 text-slate-400 hover:text-white disabled:opacity-20 rounded hover:bg-slate-700 active:scale-95 transition-all"
+                              title="Subir capítulo"
+                            >
+                              <ArrowUp size={14} />
+                            </button>
+                            <button 
+                              type="button"
+                              disabled={idx === budget.items.length - 1}
+                              onClick={() => handleMoveItem(idx, 'down')}
+                              className="p-1 text-slate-400 hover:text-white disabled:opacity-20 rounded hover:bg-slate-700 active:scale-95 transition-all"
+                              title="Bajar capítulo"
+                            >
+                              <ArrowDown size={14} />
+                            </button>
+                          </div>
+                          
+                          {editingChapterId === item.id ? (
+                            <input
+                              autoFocus
+                              type="text"
+                              value={editingChapterName}
+                              onChange={e => setEditingChapterName(e.target.value)}
+                              onBlur={() => handleSaveChapterEdit(item.id)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') handleSaveChapterEdit(item.id);
+                                if (e.key === 'Escape') setEditingChapterId(null);
+                              }}
+                              className="w-full bg-slate-900 border border-blue-400 rounded px-2.5 py-1 text-white font-bold uppercase text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
+                              onClick={e => e.stopPropagation()}
+                            />
+                          ) : (
+                            <span 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingChapterId(item.id);
+                                setEditingChapterName(item.description);
+                              }}
+                              className="font-bold text-xs uppercase tracking-wider text-amber-300 truncate cursor-pointer"
+                              title="Tocar para editar capítulo"
+                            >
+                              {item.description}
+                            </span>
+                          )}
+                        </div>
+
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteItem(item.id);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-colors shrink-0"
+                          title="Eliminar capítulo"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  mobileItemNumber++;
+                  const currentNumber = mobileItemNumber;
+                  const pu = calculatePU(item);
+                  const qty = parseFloat(item.quantity) || 0;
+                  const total = Math.round((pu * qty + Number.EPSILON) * 100) / 100;
+
+                  return (
+                    <div 
+                      key={item.id}
+                      onClick={() => setSelectedItemId(isSelected ? null : item.id)}
+                      className={`bg-white rounded-2xl border transition-all p-3.5 space-y-2.5 shadow-sm ${
+                        isSelected ? 'ring-2 ring-blue-500 border-blue-300 bg-blue-50/20' : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      {/* FILA 1: Identificación y Reordenamiento */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {/* Número de partida y Botones de Movimiento */}
+                          <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200/80 shrink-0" onClick={e => e.stopPropagation()}>
+                            <span className="text-xs font-bold text-slate-700 px-1.5 min-w-[20px] text-center">
+                              {currentNumber}
+                            </span>
+                            <div className="flex flex-col border-l border-slate-200 pl-0.5">
+                              <button
+                                type="button"
+                                disabled={idx === 0}
+                                onClick={() => handleMoveItem(idx, 'up')}
+                                className="p-0.5 text-slate-500 hover:text-blue-600 disabled:opacity-20 hover:bg-slate-200 rounded active:scale-95 transition-all"
+                                title="Mover arriba"
+                              >
+                                <ArrowUp size={11} />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={idx === budget.items.length - 1}
+                                onClick={() => handleMoveItem(idx, 'down')}
+                                className="p-0.5 text-slate-500 hover:text-blue-600 disabled:opacity-20 hover:bg-slate-200 rounded active:scale-95 transition-all"
+                                title="Mover abajo"
+                              >
+                                <ArrowDown size={11} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Código Covenin o Interno */}
+                          <span className="font-mono font-bold text-[11px] text-slate-700 bg-slate-100/90 px-2 py-0.5 rounded border border-slate-200/70 truncate">
+                            {item.cov_par || item.cod_par || 'S/C'}
+                          </span>
+                        </div>
+
+                        {/* Unidad */}
+                        <span className="text-[11px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-200/60 shrink-0">
+                          {item.unit || 'UND'}
                         </span>
                       </div>
-                      <div className="flex gap-3">
-                        {headerPortalTarget && createPortal(
-                          <div className="flex gap-2 mx-2">
-                            {/* Database Selector Dropdown */}
-                            <div 
-                              className="relative"
-                              onMouseEnter={() => setHeaderDbDropdownOpen(true)}
-                              onMouseLeave={() => setHeaderDbDropdownOpen(false)}
-                            >
-                              <button
-                                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm text-sm"
-                              >
-                                <Database size={16} />
-                                Base de Datos
-                                <ChevronDown size={14} className={headerDbDropdownOpen ? 'rotate-180 transition-transform duration-200' : 'transition-transform duration-200'} />
-                              </button>
-                              {headerDbDropdownOpen && (
-                                <div className="absolute top-full left-0 pt-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                                  <div className="bg-white border border-slate-200 rounded-lg shadow-xl min-w-[200px] overflow-hidden py-1">
-                                    {databases.map(db => (
-                                      <button
-                                        key={db.id}
-                                        onClick={() => {
-                                          setActiveDatabase(db);
-                                          setHeaderDbDropdownOpen(false);
-                                        }}
-                                        className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors flex items-center gap-2 ${
-                                          activeDatabase.id === db.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'
-                                        }`}
-                                      >
-                                        <Database size={14} />
-                                        {db.name}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                            <button 
-                              onClick={handleSyncPrices}
-                              disabled={syncing}
-                              className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl hover:bg-blue-100 transition-colors font-medium shadow-sm text-sm"
-                            >
-                              <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
-                              {syncing ? 'Actualizando...' : 'Actualizar Precios'}
-                            </button>
-                            <button 
-                              onClick={() => setShowSettings(!showSettings)}
-                              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm text-sm"
-                            >
-                              <Settings size={16} /> Configuración Global
-                            </button>
-                            <button 
-                              onClick={() => setShowPrintModal(true)}
-                              className="flex items-center gap-2 px-4 py-2 bg-white border border-amber-200 text-amber-700 rounded-xl hover:bg-amber-50 transition-colors font-medium shadow-sm text-sm"
-                            >
-                              <Printer size={16} /> Imprimir
-                            </button>
-                          </div>,
-                          headerPortalTarget
-                        )}
-                        <button
-                          onClick={handleExportBudgetToExcel}
-                          disabled={exportingBudgetExcel}
-                          className="p-2 bg-white border border-slate-200 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 rounded-xl font-medium shadow-sm transition-all flex items-center justify-center disabled:opacity-50"
-                          title="Exportar presupuesto a Excel"
+
+                      {/* FILA 2: Descripción */}
+                      <div className="text-xs text-slate-800 font-medium leading-relaxed line-clamp-3">
+                        {item.description}
+                      </div>
+
+                      {/* FILA 3: Cálculos (3 columnas: Cantidad, P.U., Total) */}
+                      <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100" onClick={e => e.stopPropagation()}>
+                        {/* Cantidad editable */}
+                        <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 flex flex-col justify-between">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center mb-1 flex items-center justify-center gap-1">
+                            <Calculator size={10} className="text-amber-600 shrink-0" />
+                            Cant.
+                          </span>
+                          <MathQuantityInput 
+                            className="w-full text-center bg-white border border-slate-200 focus:border-blue-500 rounded-lg py-1 px-1 font-mono text-xs font-bold text-slate-900 shadow-inner"
+                            value={item.quantity}
+                            onChange={val => handleQuantityChange(item.id, val)}
+                            onSave={val => saveQuantity(item.id, val)}
+                          />
+                        </div>
+
+                        {/* P.U. */}
+                        <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 flex flex-col justify-between text-center">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                            P.U.
+                          </span>
+                          <span className="font-mono text-xs font-semibold text-slate-800 py-1 truncate">
+                            {pu.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+
+                        {/* Total */}
+                        <div className="bg-blue-50/70 p-2 rounded-xl border border-blue-200 flex flex-col justify-between text-center">
+                          <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block mb-1">
+                            Total
+                          </span>
+                          <span className="font-mono text-xs font-extrabold text-blue-900 py-1 truncate">
+                            {total.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* FILA 4: STRICTLY ONLY ICONS (NO TEXT) */}
+                      <div className="grid grid-cols-4 gap-2 pt-1.5 border-t border-slate-100" onClick={e => e.stopPropagation()}>
+                        <button 
+                          type="button"
+                          onClick={() => navigate(`/budgets/${budget.id}/item/${item.id}`)} 
+                          className="p-2.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 active:bg-blue-100 border border-slate-200 rounded-xl transition-colors flex items-center justify-center"
+                          title="Editar APU"
                         >
-                          {exportingBudgetExcel ? (
-                            <Loader size={18} className="animate-spin text-emerald-600" />
-                          ) : (
-                            <ExcelIcon size={18} className="text-emerald-600" />
-                          )}
+                          <Settings size={18} />
                         </button>
-                        <button  
-                          onClick={() => { setChapterName(""); setShowChapterModal(true); }}
-                          className="flex items-center gap-2 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 px-4 py-2 rounded-xl font-medium shadow-sm transition-all text-sm"
+                        
+                        <button 
+                          type="button"
+                          onClick={() => { setApuToPrint(item); setShowApuPrintModal(true); }} 
+                          className="p-2.5 text-slate-600 hover:text-green-600 hover:bg-green-50 active:bg-green-100 border border-slate-200 rounded-xl transition-colors flex items-center justify-center"
+                          title="Imprimir APU"
                         >
-                          <FolderPlus size={16} /> Agregar Capítulo
+                          <Printer size={18} />
                         </button>
-                        <button  
-                          onClick={handleOpenSearchModal}
-                          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2 rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-all active:scale-95 text-sm"
+                        
+                        <ExportApuExcelButton 
+                          item={item} 
+                          materials={item.materials || []}
+                          equipments={item.equipments || []}
+                          labors={item.labors || []}
+                          settings={budget.settings}
+                          className="p-2.5 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 active:bg-emerald-100 border border-slate-200 rounded-xl transition-colors flex items-center justify-center w-full"
+                          iconSize={18}
+                        />
+                        
+                        <button 
+                          type="button"
+                          onClick={() => handleDeleteItem(item.id)} 
+                          className="p-2.5 text-slate-600 hover:text-red-600 hover:bg-red-50 active:bg-red-100 border border-slate-200 rounded-xl transition-colors flex items-center justify-center"
+                          title="Eliminar"
                         >
-                          <Plus size={16} /> Agregar Partida
+                          <Trash2 size={18} />
                         </button>
                       </div>
                     </div>
-                  </th>
-                </tr>
-                {/* COLUMN HEADERS */}
-                <tr className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 font-semibold shadow-sm">
+                  );
+                });
+              })()
+            )}
+          </div>
+
+          {/* DESKTOP VIEW (>= md): TABLA SPREADSHEET */}
+          <div className="hidden md:block">
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <table className="w-full text-left border-separate border-spacing-0">
+                <thead className="sticky top-0 z-30 shadow-md ring-1 ring-slate-200 bg-white">
+                  {/* COLUMN HEADERS */}
+                  <tr className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 font-semibold shadow-sm">
                   <th className="p-4 w-16 text-center bg-slate-50 border-b border-slate-200">#</th>
                   <th className="p-4 w-32 bg-slate-50 border-b border-slate-200">Código</th>
                   <th className="p-4 bg-slate-50 border-b border-slate-200">Descripción</th>
@@ -1063,12 +1344,13 @@ export default function BudgetWorksheetPage() {
               </Droppable>
             </table>
           </DragDropContext>
+          </div>
         </div>
         </div>
         
         {/* FOOTER: NOTAS & TOTAL */}
         {budget.items?.length > 0 && (
-          <div className="mt-4 flex-none flex flex-col md:flex-row items-stretch md:items-start justify-between gap-6">
+          <div className="mt-3 sm:mt-4 flex-none flex flex-col md:flex-row items-stretch md:items-start justify-between gap-3 sm:gap-6">
             {/* ÁREA DE NOTAS */}
             <div className="flex-1 max-w-2xl bg-white p-3 rounded-2xl border border-slate-300 shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
               <textarea
@@ -1082,7 +1364,7 @@ export default function BudgetWorksheetPage() {
             </div>
 
             {/* TABLA DE TOTALES */}
-            <div className="bg-slate-50 px-4 py-2 rounded-2xl border-2 border-slate-300 shadow-sm min-w-[300px] shrink-0">
+            <div className="bg-slate-50 px-4 py-2 rounded-2xl border-2 border-slate-300 shadow-sm w-full md:w-auto md:min-w-[300px] shrink-0">
               <div className="flex justify-between items-center py-1">
                 <span className="text-slate-500 font-medium text-sm leading-none">SUBTOTAL</span>
                 <span className="text-lg font-semibold text-slate-700 leading-none">
@@ -1109,12 +1391,12 @@ export default function BudgetWorksheetPage() {
 
       {/* SEARCH MODAL */}
       {showSearchModal && createPortal(
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-20">
-          <div className="w-full max-w-4xl bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col h-[80vh] animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center px-6 py-4 bg-white/40 border-b border-amber-600/15">
-              <div className="flex items-center gap-4">
-                <h2 className="m-0 text-xl font-bold text-amber-900 flex items-center gap-2">
-                  <Search className="text-sky-600" /> Buscar Partidas
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-start justify-center p-0 sm:p-4 sm:pt-20">
+          <div className="w-full h-full sm:h-[80vh] sm:max-w-4xl bg-amber-100 rounded-none sm:rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex flex-wrap sm:flex-nowrap justify-between items-center px-4 sm:px-6 py-3 sm:py-4 bg-white/40 border-b border-amber-600/15 gap-2">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                <h2 className="m-0 text-lg sm:text-xl font-bold text-amber-900 flex items-center gap-2">
+                  <Search className="text-sky-600" size={20} /> Buscar Partidas
                 </h2>
                 
                 <div className="flex gap-2">
@@ -1125,10 +1407,10 @@ export default function BudgetWorksheetPage() {
                     onMouseLeave={() => setModalDbDropdownOpen(false)}
                   >
                     <button
-                      className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm text-sm"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm text-xs sm:text-sm"
                     >
-                      <Database size={16} />
-                      {activeDatabase.name || 'Base de Datos'}
+                      <Database size={14} />
+                      <span className="max-w-[100px] truncate">{activeDatabase.name || 'Base de Datos'}</span>
                       <ChevronDown size={14} className={modalDbDropdownOpen ? 'rotate-180 transition-transform duration-200' : 'transition-transform duration-200'} />
                     </button>
                     {modalDbDropdownOpen && (
@@ -1163,9 +1445,9 @@ export default function BudgetWorksheetPage() {
                     onMouseLeave={() => setModalBudgetDropdownOpen(false)}
                   >
                     <button
-                      className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm text-sm"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm text-xs sm:text-sm"
                     >
-                      <FileText size={16} />
+                      <FileText size={14} />
                       Presupuestos
                       <ChevronDown size={14} className={modalBudgetDropdownOpen ? 'rotate-180 transition-transform duration-200' : 'transition-transform duration-200'} />
                     </button>
@@ -1204,14 +1486,14 @@ export default function BudgetWorksheetPage() {
                   setSearchCovenin('');
                   setShowSearchModal(false);
                 }}
-                className="text-amber-700 hover:text-amber-900 bg-transparent transition-colors p-1"
+                className="text-amber-700 hover:text-amber-900 bg-transparent transition-colors p-1.5 rounded-lg hover:bg-amber-200/50"
               >
-                <X size={24} />
+                <X size={22} />
               </button>
             </div>
             
             {!activeDatabase.is_budget && (
-              <div className="px-6 py-4 border-b border-amber-600/15 bg-white/40">
+              <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-amber-600/15 bg-white/40">
                 <Cost360SearchBar
                   key={activeDatabase.id}
                   searchQuery={searchQuery}
@@ -1227,7 +1509,7 @@ export default function BudgetWorksheetPage() {
                 />
 
                 {totalSearchResults > 0 && (
-                  <p className="mt-3 text-xs text-slate-500 font-medium">
+                  <p className="mt-2 text-xs text-slate-500 font-medium">
                     <span className="font-bold text-slate-700">{new Intl.NumberFormat('es-VE').format(totalSearchResults)}</span>{' '}
                     {(searchQuery || searchCovenin) ? (totalSearchResults === 1 ? 'coincidencia' : 'coincidencias') : (totalSearchResults === 1 ? 'Partida' : 'Partidas')}
                   </p>
@@ -1235,20 +1517,20 @@ export default function BudgetWorksheetPage() {
               </div>
             )}
 
-            <div className="overflow-y-auto p-4 flex-1 bg-white/20">
+            <div className="overflow-y-auto p-3 sm:p-4 flex-1 bg-white/20">
               {searchResults.length === 0 && !searching ? (
                 <div className="text-center py-12 text-amber-700/70 text-sm font-medium">
                   No se encontraron partidas.
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2.5 sm:space-y-3">
                   {searchResults.map(item => (
                     <div 
                       key={item.CodPar}
-                      className="bg-white/80 border border-amber-600/10 rounded-xl p-4 flex gap-4 hover:border-sky-300 hover:shadow-md transition-all items-center"
+                      className="bg-white/80 border border-amber-600/10 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row gap-2.5 sm:gap-4 hover:border-sky-300 hover:shadow-md transition-all items-start sm:items-center justify-between"
                     >
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1.5">
+                        <div className="flex items-center gap-2 mb-1">
                           <span className="font-mono text-[11px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
                             {item.CovPar || item.CodPar}
                           </span>
@@ -1256,13 +1538,13 @@ export default function BudgetWorksheetPage() {
                             UND: {item.UniPar}
                           </span>
                         </div>
-                        <p className="text-[13px] text-amber-950 line-clamp-2 leading-relaxed m-0">
+                        <p className="text-xs sm:text-[13px] text-amber-950 line-clamp-2 leading-relaxed m-0">
                           {item.Descri}
                         </p>
                       </div>
                       <button 
                         onClick={() => handleAddItem(item)}
-                        className="shrink-0 flex items-center gap-1.5 bg-transparent border border-sky-200 hover:border-sky-500 hover:bg-sky-50 text-sky-700 px-4 py-1.5 rounded-lg font-semibold transition-colors text-xs"
+                        className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5 bg-transparent border border-sky-200 hover:border-sky-500 hover:bg-sky-50 text-sky-700 px-4 py-2 sm:py-1.5 rounded-lg font-semibold transition-colors text-xs active:scale-95"
                       >
                         <Plus size={14} /> Incluir
                       </button>
@@ -1293,8 +1575,8 @@ export default function BudgetWorksheetPage() {
       />
       {/* CHAPTER MODAL */}
       {showChapterModal && createPortal(
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-[550px] bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="w-full max-w-full sm:max-w-[550px] bg-amber-100 rounded-t-3xl sm:rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
             <div className="flex flex-col gap-2 px-6 pt-6 pb-2">
               <h2 className="m-0 text-xl font-bold text-amber-900 flex items-center gap-2">
                 <FolderPlus className="text-sky-600" size={24} />
@@ -1308,21 +1590,21 @@ export default function BudgetWorksheetPage() {
                 value={chapterName}
                 onChange={(e) => setChapterName(e.target.value)}
                 placeholder="Ej. Movimiento de Tierras"
-                className="px-4 py-2 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
+                className="px-4 py-2.5 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleAddChapter();
                 }}
               />
-              <div className="flex justify-end gap-4 mt-2">
+              <div className="flex justify-end gap-3 mt-2">
                 <button 
                   onClick={() => { setShowChapterModal(false); setChapterName(""); }}
-                  className="bg-transparent border-none text-amber-700 text-sm font-semibold px-6 py-2 cursor-pointer rounded-xl hover:bg-white/30 transition-colors"
+                  className="bg-transparent border-none text-amber-700 text-sm font-semibold px-5 py-2.5 cursor-pointer rounded-xl hover:bg-white/30 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button 
                   onClick={handleAddChapter}
-                  className="bg-sky-600 text-white border-none text-sm font-semibold px-6 py-2 rounded-xl cursor-pointer shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:bg-sky-700 hover:-translate-y-[1px]"
+                  className="bg-sky-600 text-white border-none text-sm font-semibold px-6 py-2.5 rounded-xl cursor-pointer shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:bg-sky-700 hover:-translate-y-[1px]"
                 >
                   Agregar
                 </button>
@@ -1335,25 +1617,25 @@ export default function BudgetWorksheetPage() {
 
       {/* DELETE CONFIRM MODAL */}
       {itemToDelete && createPortal(
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-8 animate-in fade-in zoom-in-95 duration-200 text-center">
-            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Trash2 className="text-red-600" size={32} />
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl w-full max-w-full sm:max-w-sm shadow-2xl p-6 sm:p-8 animate-in fade-in zoom-in-95 duration-200 text-center">
+            <div className="w-14 sm:w-16 h-14 sm:h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+              <Trash2 className="text-red-600" size={28} />
             </div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Eliminar {itemToDelete.is_chapter ? 'capítulo' : 'partida'}</h3>
-            <p className="text-slate-500 mb-8 text-sm leading-relaxed">
+            <h3 className="text-lg sm:text-xl font-bold text-slate-800 mb-2">Eliminar {itemToDelete.is_chapter ? 'capítulo' : 'partida'}</h3>
+            <p className="text-slate-500 mb-6 sm:mb-8 text-xs sm:text-sm leading-relaxed">
               ¿Estás seguro de que deseas eliminar este elemento del presupuesto? Esta acción actualizará los totales y no se puede deshacer.
             </p>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5 sm:gap-3">
               <button 
                 onClick={confirmDelete}
-                className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors w-full shadow-lg shadow-red-500/30"
+                className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors w-full shadow-lg shadow-red-500/30 text-sm"
               >
                 Sí, eliminar
               </button>
               <button 
                 onClick={() => setItemToDelete(null)}
-                className="px-5 py-3 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors w-full"
+                className="px-5 py-3 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors w-full text-sm"
               >
                 Cancelar
               </button>
