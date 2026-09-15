@@ -1712,13 +1712,14 @@ export default function AIApuGeneratorPage() {
               onChange={(e) => {
                 if (!isGuidedMode) {
                   setPrompt(e.target.value);
+                  if (exactMatchCandidate) setExactMatchCandidate(null);
                   if (subscriptionErrorMsg) setSubscriptionErrorMsg(null);
                 }
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  if (isSelectorsComplete && prompt.trim() && !isSmartMode) {
+                  if (isSelectorsComplete && prompt.trim() && !isSmartMode && !exactMatchCandidate) {
                     handleGenerate(null, false, false, false, null, 'libre');
                   }
                 }
@@ -1757,7 +1758,7 @@ export default function AIApuGeneratorPage() {
             </div>
           )}
           
-          {!(isGuidedMode && !isSmartMode && !isClarifying) && (
+          {!(isGuidedMode && !isSmartMode && !isClarifying) && !exactMatchCandidate && (
             <div className="flex justify-end gap-3">
               {isClarifying && (
                 <button
