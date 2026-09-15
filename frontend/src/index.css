@@ -152,17 +152,25 @@ html, body {
   background: #ffffff;
   border: 2px solid #cbd5e1;
   border-radius: 16px;
-  padding: 10px 20px;
+  padding: 12px 14px;
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 16px;
+  flex-direction: column;
+  gap: 12px;
   min-height: 60px;
   height: auto;
   transition: transform 0.3s cubic-bezier(0.215, 0.610, 0.355, 1),
               background-color 0.3s ease,
               border-color 0.3s ease,
               box-shadow 0.3s ease;
+}
+
+@media screen and (min-width: 768px) {
+  .tarjeta-presupuesto-ambar {
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 20px;
+    gap: 16px;
+  }
 }
 
 .tarjeta-presupuesto-ambar:hover {
@@ -214,21 +222,31 @@ html, body {
 .acciones-rapidas {
   display: flex;
   gap: 4px;
+  align-items: center;
 }
 
 .btn-accion {
   background: transparent;
   border: none;
   color: #94a3b8;
-  padding: 6px;
-  border-radius: 6px;
+  padding: 8px;
+  min-width: 36px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.25s ease, color 0.25s ease;
+  transition: background-color 0.25s ease, color 0.25s ease, transform 0.15s ease;
 }
 
 .btn-accion:hover {
   background-color: rgba(217, 119, 6, 0.15);
   color: #b45309;
+}
+
+.btn-accion:active {
+  transform: scale(0.92);
 }
 
 .tarjeta-body {

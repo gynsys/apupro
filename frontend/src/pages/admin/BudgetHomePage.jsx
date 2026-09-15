@@ -297,29 +297,34 @@ export default function BudgetHomePage() {
               </h1>
               <p className="text-slate-500 mt-1">Administra, crea y organiza todos tus proyectos</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full md:w-auto">
+              {/* Botón Primario a ancho completo en móvil */}
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out"
+                className="group flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out min-h-[44px] touch-target w-full sm:w-auto"
               >
                 <Plus size={20} className="group-hover:scale-110 group-hover:rotate-90 transition-transform duration-300" />
                 Nuevo Presupuesto
               </button>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={importingBackup}
-                className="group flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Upload size={20} className="group-hover:scale-110 transition-transform duration-300" />
-                {importingBackup ? 'Importando...' : 'Importar Backup'}
-              </button>
-              <button
-                onClick={() => setIsImportSharedOpen(true)}
-                className="group flex items-center gap-2 bg-[#B5DCB0] hover:bg-[#a1d39b] text-[#143d1a] border border-[#9ecc98] px-5 py-2.5 rounded-xl font-semibold shadow-md shadow-[#B5DCB0]/30 hover:shadow-lg hover:shadow-[#B5DCB0]/40 hover:-translate-y-0.5 transition-all duration-300 ease-out"
-              >
-                <Link2 size={20} className="group-hover:scale-110 transition-transform duration-300 text-[#143d1a]" />
-                Importar con Enlace
-              </button>
+              
+              {/* Botones Secundarios: 2 columnas en móvil, inline en desktop */}
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={importingBackup}
+                  className="group flex items-center justify-center gap-1.5 sm:gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-3 sm:px-5 py-2.5 rounded-xl font-medium shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] touch-target text-xs sm:text-sm"
+                >
+                  <Upload size={18} className="group-hover:scale-110 transition-transform duration-300 shrink-0" />
+                  <span className="truncate">{importingBackup ? 'Importando...' : 'Importar Backup'}</span>
+                </button>
+                <button
+                  onClick={() => setIsImportSharedOpen(true)}
+                  className="group flex items-center justify-center gap-1.5 sm:gap-2 bg-[#B5DCB0] hover:bg-[#a1d39b] text-[#143d1a] border border-[#9ecc98] px-3 sm:px-5 py-2.5 rounded-xl font-semibold shadow-md shadow-[#B5DCB0]/30 hover:shadow-lg hover:shadow-[#B5DCB0]/40 hover:-translate-y-0.5 transition-all duration-300 ease-out min-h-[44px] touch-target text-xs sm:text-sm"
+                >
+                  <Link2 size={18} className="group-hover:scale-110 transition-transform duration-300 text-[#143d1a] shrink-0" />
+                  <span className="truncate">Importar Enlace</span>
+                </button>
+              </div>
             </div>
             <input
               ref={fileInputRef}
@@ -374,25 +379,41 @@ export default function BudgetHomePage() {
               <div
                 key={budget.id}
                 onClick={() => navigate(`/budgets/${budget.id}`)}
-                className="tarjeta-presupuesto-ambar cursor-pointer group"
+                className="tarjeta-presupuesto-ambar cursor-pointer group transition-all"
               >
-                <div className="tarjeta-header flex w-full justify-between items-center gap-4">
-                  {/* Lado Izquierdo: Título y Métricas */}
-                  <div className="flex flex-col gap-2 items-start justify-center flex-1 overflow-hidden">
-                    <h3 className="tarjeta-titulo-ambar truncate w-full" title={budget.project_name || budget.name}>
-                      {budget.project_name || budget.name}
+                {/* Lado Principal / Superior: Título y Métricas */}
+                <div className="flex flex-col gap-2 w-full min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3 w-full">
+                    <h3 
+                      className="tarjeta-titulo-ambar font-bold text-base text-slate-800 group-hover:text-amber-900 transition-colors break-words line-clamp-2" 
+                      title={budget.project_name || budget.name || 'Presupuesto sin título'}
+                    >
+                      {budget.project_name || budget.name || 'Presupuesto sin título'}
                     </h3>
-                    {/* Segunda Fila Interna: Métricas */}
-                    <div className="flex items-center gap-6 justify-start">
-                      <p className="text-xs text-amber-700 font-semibold">
-                        Partidas: {budgetTotals[budget.id] ? budgetTotals[budget.id].items : '...'}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <Clock size={13} className="text-slate-400"/>
-                        <span className="text-xs text-slate-500">
-                          {new Date(budget.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
+                    
+                    {/* Badge de Monto Móvil */}
+                    {budgetTotals[budget.id] ? (
+                      <span className="md:hidden shrink-0 text-xs font-bold text-amber-950 bg-amber-200/70 border border-amber-300 px-2.5 py-1 rounded-lg whitespace-nowrap shadow-xs">
+                        {budget.currency === 'USD' ? '$' : 'Bs.'} {new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(budgetTotals[budget.id].amount)}
+                      </span>
+                    ) : (
+                      <span className="md:hidden shrink-0 text-[11px] text-amber-700/60 whitespace-nowrap">...</span>
+                    )}
+                  </div>
+
+                  {/* Fila de Métricas */}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 justify-start text-xs">
+                    <span className="text-xs text-amber-800 font-semibold bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-200/60">
+                      Partidas: {budgetTotals[budget.id] ? budgetTotals[budget.id].items : '...'}
+                    </span>
+                    <div className="flex items-center gap-1.5 text-slate-500">
+                      <Clock size={13} className="text-slate-400 shrink-0"/>
+                      <span>
+                        {new Date(budget.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    {/* Monto en Desktop */}
+                    <div className="hidden md:flex items-center ml-auto">
                       {budgetTotals[budget.id] ? (
                         <span className="text-sm font-bold text-amber-900">
                           {budget.currency === 'USD' ? '$' : 'Bs.'} {new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(budgetTotals[budget.id].amount)}
@@ -402,66 +423,66 @@ export default function BudgetHomePage() {
                       )}
                     </div>
                   </div>
+                </div>
 
-                  {/* Lado Derecho: Iconos de Acción centrados verticalmente */}
-                  <div className="acciones-rapidas flex items-center shrink-0">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDuplicatingBudget(budget); setDuplicateName((budget.project_name || budget.name) + ' (Copia)'); }}
-                      className="btn-accion"
-                      title="Duplicar"
-                    >
-                      <Copy size={18} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setSettingsBudget(budget); }}
-                      className="btn-accion"
-                      title="Configuración Global"
-                    >
-                      <Settings size={18} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setPrintBudget(budget); setPrintModalOpen(true); }}
-                      className="btn-accion"
-                      title="Imprimir"
-                    >
-                      <Printer size={18} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleExportToExcel(budget); }}
-                      className="btn-accion"
-                      title="Exportar a Excel"
-                    >
-                      <FileSpreadsheet size={18} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleBackupExport(budget); }}
-                      className="btn-accion"
-                      title="Exportar Backup"
-                    >
-                      <CloudDownload size={18} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setSharingBudget(budget); }}
-                      className="btn-accion hover:text-amber-600 transition-colors"
-                      title="Compartir enlace en la nube"
-                    >
-                      <Share2 size={18} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setRenamingBudget(budget); setRenameName(budget.project_name || budget.name); }}
-                      className="btn-accion"
-                      title="Editar"
-                    >
-                      <Edit3 size={18} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); confirmDelete(budget.id); }}
-                      className="btn-accion"
-                      title="Eliminar"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
+                {/* Barra de Acciones Rápidas: En móvil se ubica abajo con borde separador; en desktop a la derecha */}
+                <div className="acciones-rapidas flex items-center justify-between md:justify-end gap-1 w-full md:w-auto shrink-0 pt-2.5 md:pt-0 border-t md:border-t-0 border-amber-200/60 overflow-x-auto no-scrollbar">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setDuplicatingBudget(budget); setDuplicateName((budget.project_name || budget.name || 'Presupuesto') + ' (Copia)'); }}
+                    className="btn-accion"
+                    title="Duplicar"
+                  >
+                    <Copy size={18} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSettingsBudget(budget); }}
+                    className="btn-accion"
+                    title="Configuración Global"
+                  >
+                    <Settings size={18} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setPrintBudget(budget); setPrintModalOpen(true); }}
+                    className="btn-accion"
+                    title="Imprimir"
+                  >
+                    <Printer size={18} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleExportToExcel(budget); }}
+                    className="btn-accion"
+                    title="Exportar a Excel"
+                  >
+                    <FileSpreadsheet size={18} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleBackupExport(budget); }}
+                    className="btn-accion"
+                    title="Exportar Backup"
+                  >
+                    <CloudDownload size={18} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSharingBudget(budget); }}
+                    className="btn-accion hover:text-amber-600 transition-colors"
+                    title="Compartir enlace en la nube"
+                  >
+                    <Share2 size={18} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setRenamingBudget(budget); setRenameName(budget.project_name || budget.name || ''); }}
+                    className="btn-accion"
+                    title="Editar Nombre"
+                  >
+                    <Edit3 size={18} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); confirmDelete(budget.id); }}
+                    className="btn-accion hover:text-red-600"
+                    title="Eliminar"
+                  >
+                    <Trash2 size={18} />
+                  </button>
                 </div>
               </div>
             ))}
@@ -497,16 +518,18 @@ export default function BudgetHomePage() {
             <div className="p-6">
               <h2 className="text-lg font-bold text-slate-800 mb-2">Eliminar Presupuesto</h2>
               <p className="text-sm text-slate-600 mb-6">¿Estás seguro que deseas eliminar este presupuesto de forma permanente?</p>
-              <div className="flex justify-end gap-3">
+              <div className="flex items-center justify-end gap-3">
                 <button 
+                  type="button"
                   onClick={() => setDeletingId(null)}
-                  className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors text-sm"
+                  className="px-4 py-2.5 touch-target flex items-center justify-center text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors text-sm"
                 >
                   Cancelar
                 </button>
                 <button 
+                  type="button"
                   onClick={handleDelete}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-red-500/30"
+                  className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 touch-target flex items-center justify-center rounded-xl text-sm font-medium transition-colors shadow-lg shadow-red-500/30"
                 >
                   Sí, eliminar
                 </button>
@@ -518,14 +541,14 @@ export default function BudgetHomePage() {
 
       {/* RENAME MODAL */}
       {renamingBudget && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-[550px] bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col max-h-[90vh]">
-            <div className="flex flex-col gap-2 px-6 pt-6 pb-2">
-              <h2 className="m-0 text-xl font-bold text-amber-900">Renombrar Presupuesto</h2>
-              <p className="text-[13px] text-amber-700 m-0">Ingresa el nuevo nombre para este proyecto.</p>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4">
+          <div className="w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-[550px] bg-amber-100 rounded-none sm:rounded-2xl shadow-2xl overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex flex-col gap-1.5 px-4 sm:px-6 pt-safe sm:pt-6 py-4 bg-white/40 border-b border-amber-600/15 shrink-0">
+              <h2 className="m-0 text-lg sm:text-xl font-bold text-amber-900">Renombrar Presupuesto</h2>
+              <p className="text-xs sm:text-[13px] text-amber-700 m-0">Ingresa el nuevo nombre para este proyecto.</p>
             </div>
             
-            <form onSubmit={handleRename} className="px-6 pb-6 pt-2 flex flex-col gap-4">
+            <form onSubmit={handleRename} className="px-4 sm:px-6 py-4 flex-1 overflow-y-auto flex flex-col gap-4">
               <div className="flex flex-col gap-2 w-full">
                 <label className="text-[13px] font-semibold text-amber-900">Nombre del Proyecto</label>
                 <input 
@@ -534,20 +557,20 @@ export default function BudgetHomePage() {
                   required
                   value={renameName}
                   onChange={(e) => setRenameName(e.target.value)}
-                  className="px-3 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
+                  className="px-3.5 py-2 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                 />
               </div>
-              <div className="flex justify-end gap-4 mt-2">
+              <div className="flex items-center justify-end gap-3 mt-auto pt-3 pb-safe border-t border-amber-600/15 shrink-0">
                 <button 
                   type="button"
                   onClick={() => setRenamingBudget(null)}
-                  className="bg-transparent border-none text-amber-700 text-sm font-semibold px-6 py-2 cursor-pointer rounded-xl hover:bg-white/30 transition-colors"
+                  className="bg-transparent border-none text-amber-700 text-sm font-semibold px-5 py-2.5 touch-target flex items-center justify-center cursor-pointer rounded-xl hover:bg-white/30 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit"
-                  className="bg-sky-600 text-white border-none text-sm font-semibold px-6 py-2 rounded-xl cursor-pointer shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:bg-sky-700 hover:-translate-y-[1px]"
+                  className="bg-sky-600 text-white border-none text-sm font-semibold px-6 py-2.5 touch-target flex items-center justify-center rounded-xl cursor-pointer shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:bg-sky-700 hover:-translate-y-[1px]"
                 >
                   Guardar
                 </button>
@@ -559,14 +582,14 @@ export default function BudgetHomePage() {
 
       {/* DUPLICATE MODAL */}
       {duplicatingBudget && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-[550px] bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col max-h-[90vh]">
-            <div className="flex flex-col gap-2 px-6 pt-6 pb-2">
-              <h2 className="m-0 text-xl font-bold text-amber-900">Duplicar Presupuesto</h2>
-              <p className="text-[13px] text-amber-700 m-0">Se creará una copia exacta con todas sus partidas y APUs.</p>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4">
+          <div className="w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-[550px] bg-amber-100 rounded-none sm:rounded-2xl shadow-2xl overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex flex-col gap-1.5 px-4 sm:px-6 pt-safe sm:pt-6 py-4 bg-white/40 border-b border-amber-600/15 shrink-0">
+              <h2 className="m-0 text-lg sm:text-xl font-bold text-amber-900">Duplicar Presupuesto</h2>
+              <p className="text-xs sm:text-[13px] text-amber-700 m-0">Se creará una copia exacta con todas sus partidas y APUs.</p>
             </div>
             
-            <form onSubmit={handleDuplicate} className="px-6 pb-6 pt-2 flex flex-col gap-4">
+            <form onSubmit={handleDuplicate} className="px-4 sm:px-6 py-4 flex-1 overflow-y-auto flex flex-col gap-4">
               <div className="flex flex-col gap-2 w-full">
                 <label className="text-[13px] font-semibold text-amber-900">Nombre de la Copia</label>
                 <input 
@@ -575,20 +598,20 @@ export default function BudgetHomePage() {
                   required
                   value={duplicateName}
                   onChange={(e) => setDuplicateName(e.target.value)}
-                  className="px-3 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
+                  className="px-3.5 py-2 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                 />
               </div>
-              <div className="flex justify-end gap-4 mt-2">
+              <div className="flex items-center justify-end gap-3 mt-auto pt-3 pb-safe border-t border-amber-600/15 shrink-0">
                 <button 
                   type="button"
                   onClick={() => setDuplicatingBudget(null)}
-                  className="bg-transparent border-none text-amber-700 text-sm font-semibold px-6 py-2 cursor-pointer rounded-xl hover:bg-white/30 transition-colors"
+                  className="bg-transparent border-none text-amber-700 text-sm font-semibold px-5 py-2.5 touch-target flex items-center justify-center cursor-pointer rounded-xl hover:bg-white/30 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit"
-                  className="bg-sky-600 text-white border-none text-sm font-semibold px-6 py-2 rounded-xl cursor-pointer shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:bg-sky-700 hover:-translate-y-[1px]"
+                  className="bg-sky-600 text-white border-none text-sm font-semibold px-6 py-2.5 touch-target flex items-center justify-center rounded-xl cursor-pointer shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:bg-sky-700 hover:-translate-y-[1px]"
                 >
                   Crear Copia
                 </button>

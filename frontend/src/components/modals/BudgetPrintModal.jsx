@@ -78,25 +78,26 @@ export default function BudgetPrintModal({ onClose, onPrint, initialCurrency = '
   };
 
   return createPortal(
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-[450px] bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4">
+      <div className="w-full h-full sm:h-auto sm:max-h-[92dvh] sm:max-w-[450px] bg-amber-100 rounded-none sm:rounded-2xl shadow-2xl overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
         
         {/* Encabezado */}
-        <div className="flex justify-between items-center px-6 py-4 bg-white/40 border-b border-amber-600/15">
-          <h2 className="m-0 text-xl font-bold text-amber-900 flex items-center gap-2">
-            <Printer className="text-sky-600" /> Imprimir Reporte
+        <div className="flex justify-between items-center px-4 sm:px-6 py-3.5 sm:py-4 pt-safe bg-white/40 border-b border-amber-600/15 shrink-0">
+          <h2 className="m-0 text-lg sm:text-xl font-bold text-amber-900 flex items-center gap-2">
+            <Printer className="text-sky-600 shrink-0" size={20} /> <span>Imprimir Reporte</span>
           </h2>
           <button 
             type="button"
             onClick={onClose}
-            className="text-amber-700 hover:text-amber-900 bg-transparent transition-colors p-1"
+            className="text-amber-700 hover:text-amber-900 p-2 touch-target flex items-center justify-center rounded-xl hover:bg-amber-200/50 transition-colors cursor-pointer"
+            aria-label="Cerrar modal"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
         
         {/* Cuerpo */}
-        <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-5">
+        <form onSubmit={handleSubmit} className="px-4 sm:px-6 py-4 flex-1 overflow-y-auto flex flex-col gap-5">
           
           {/* Tipo de Presupuesto (Mutuamente excluyente) */}
           <div className="flex flex-col gap-3">
@@ -240,17 +241,17 @@ export default function BudgetPrintModal({ onClose, onPrint, initialCurrency = '
           </div>
           
           {/* Botones */}
-          <div className="flex justify-end gap-3 mt-4">
+          <div className="flex items-center justify-end gap-3 mt-auto pt-3 pb-safe border-t border-amber-600/15 shrink-0">
             <button 
               type="button"
               onClick={onClose}
-              className="bg-transparent border-none text-amber-700 text-sm font-semibold px-5 py-2 cursor-pointer rounded-xl hover:bg-white/30 transition-colors"
+              className="bg-transparent border-none text-amber-700 text-sm font-semibold px-4 py-2.5 touch-target flex items-center justify-center cursor-pointer rounded-xl hover:bg-white/30 transition-colors"
             >
               Cancelar
             </button>
             <button 
               type="submit"
-              className="flex items-center gap-2 bg-sky-600 text-white border-none text-sm font-semibold px-6 py-2 rounded-xl cursor-pointer shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:bg-sky-700 hover:-translate-y-[1px]"
+              className="flex items-center justify-center gap-2 bg-sky-600 text-white border-none text-sm font-semibold px-5 py-2.5 touch-target rounded-xl cursor-pointer shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:bg-sky-700 hover:-translate-y-[1px]"
             >
               <Printer size={16} /> Generar Impresión
             </button>

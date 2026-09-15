@@ -67,11 +67,11 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="w-full max-w-lg bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] border border-amber-600/15 overflow-hidden font-sans flex flex-col max-h-[92dvh] animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4">
+      <div className="w-full h-full sm:h-auto sm:max-h-[92dvh] sm:max-w-lg bg-amber-100 rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border sm:border-amber-600/15 overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
         
         {/* Encabezado con estilo del modal de impresión */}
-        <div className="flex justify-between items-center px-4 sm:px-6 py-3.5 sm:py-4 bg-white/40 border-b border-amber-600/15">
+        <div className="flex justify-between items-center px-4 sm:px-6 py-3.5 sm:py-4 pt-safe bg-white/40 border-b border-amber-600/15 shrink-0">
           <div className="flex items-center gap-2.5">
             <Share2 className="text-sky-600 shrink-0" size={20} />
             <div>
@@ -90,7 +90,7 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
         </div>
 
         {/* Contenido del modal */}
-        <div className="p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto">
+        <div className="p-4 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-4">
           {/* Card resumen del presupuesto */}
           <div className="bg-white/60 border border-amber-600/20 rounded-xl p-4 shadow-sm">
             <span className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70 block">
@@ -151,11 +151,11 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
           )}
 
           {/* Footer del modal: solo botón Cerrar */}
-          <div className="flex items-center justify-end pt-3 border-t border-amber-600/15">
+          <div className="flex items-center justify-end pt-3 pb-safe border-t border-amber-600/15 mt-auto shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="bg-transparent border-none text-amber-700 text-sm font-semibold px-5 py-2 cursor-pointer rounded-xl hover:bg-white/40 transition-colors"
+              className="bg-transparent border-none text-amber-700 text-sm font-semibold px-5 py-2.5 touch-target flex items-center justify-center cursor-pointer rounded-xl hover:bg-white/40 transition-colors"
             >
               Cerrar
             </button>

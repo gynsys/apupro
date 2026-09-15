@@ -65,15 +65,15 @@ export default function ReportPaymentModal({ isOpen, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-md bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] border border-amber-600/15 overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+      <div className="w-full h-full sm:h-auto sm:max-h-[92dvh] sm:max-w-md bg-amber-100 rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border sm:border-amber-600/15 overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
         
         {/* Encabezado con estilo del modal de impresión */}
-        <div className="flex justify-between items-center px-6 py-4 bg-white/40 border-b border-amber-600/15">
+        <div className="flex justify-between items-center px-4 sm:px-6 py-3.5 sm:py-4 pt-safe bg-white/40 border-b border-amber-600/15 shrink-0">
           <div className="flex items-center gap-2.5">
-            <Receipt className="text-sky-600" size={22} />
+            <Receipt className="text-sky-600 shrink-0" size={22} />
             <div>
-              <h2 className="m-0 text-xl font-bold text-amber-900 leading-tight">Reportar Pago</h2>
+              <h2 className="m-0 text-lg sm:text-xl font-bold text-amber-900 leading-tight">Reportar Pago</h2>
               <p className="text-xs text-amber-800/80 m-0">Sube tu comprobante para activar tu plan</p>
             </div>
           </div>
@@ -81,14 +81,15 @@ export default function ReportPaymentModal({ isOpen, onClose }) {
             type="button" 
             onClick={onClose}
             disabled={isSubmitting}
-            className="text-amber-700 hover:text-amber-900 bg-transparent transition-colors p-1"
+            className="text-amber-700 hover:text-amber-900 p-2 touch-target flex items-center justify-center rounded-xl hover:bg-amber-200/50 transition-colors cursor-pointer"
+            aria-label="Cerrar modal"
           >
-            <X size={22} />
+            <X size={20} />
           </button>
         </div>
 
         {!success ? (
-          <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-3.5">
+          <form onSubmit={handleSubmit} className="px-4 sm:px-6 py-4 flex-1 overflow-y-auto flex flex-col gap-3.5">
             <div>
               <label className="text-[13px] font-bold text-amber-900 uppercase tracking-wide block mb-1">
                 Plan a activar
@@ -165,26 +166,26 @@ export default function ReportPaymentModal({ isOpen, onClose }) {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-amber-600/15 mt-1">
+            <div className="flex items-center justify-end gap-3 pt-3 pb-safe border-t border-amber-600/15 mt-auto shrink-0">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="bg-transparent border-none text-amber-700 text-sm font-semibold px-4 py-2 cursor-pointer rounded-xl hover:bg-white/40 transition-colors"
+                className="bg-transparent border-none text-amber-700 text-sm font-semibold px-4 py-2.5 touch-target flex items-center justify-center cursor-pointer rounded-xl hover:bg-white/40 transition-colors"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="py-2.5 px-6 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-xl shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="py-2.5 px-6 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-xl shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed touch-target flex items-center justify-center"
               >
                 {isSubmitting ? 'Enviando...' : 'Enviar Reporte'}
               </button>
             </div>
           </form>
         ) : (
-          <div className="p-8 text-center">
+          <div className="p-6 sm:p-8 text-center flex flex-col items-center justify-center flex-1 pb-safe">
             <div className="w-16 h-16 bg-sky-100 text-sky-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle size={36} />
             </div>
@@ -194,7 +195,7 @@ export default function ReportPaymentModal({ isOpen, onClose }) {
             </p>
             <button
               onClick={onClose}
-              className="px-6 py-2.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-xl shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all"
+              className="px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-xl shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all touch-target w-full sm:w-auto"
             >
               Entendido
             </button>

@@ -130,9 +130,9 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
   };
 
   return createPortal(
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="w-full max-w-[550px] bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col max-h-[92dvh] animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex justify-between items-center px-4 sm:px-6 py-3.5 sm:py-4 bg-white/40 border-b border-amber-600/15">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4">
+      <div className="w-full h-full sm:h-auto sm:max-h-[92dvh] sm:max-w-[550px] bg-amber-100 rounded-none sm:rounded-2xl shadow-2xl overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex justify-between items-center px-4 sm:px-6 py-3.5 sm:py-4 pt-safe bg-white/40 border-b border-amber-600/15 shrink-0">
           <h2 className="m-0 text-lg sm:text-xl font-bold text-amber-900 flex items-center gap-2">
             <Settings className="text-sky-600 shrink-0" size={20} /> <span className="truncate">Configuración del Presupuesto</span>
           </h2>
@@ -146,22 +146,22 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
           </button>
         </div>
         
-        <div className="flex border-b border-amber-600/15 px-4 sm:px-6 pt-3 sm:pt-4 bg-white/40">
+        <div className="flex border-b border-amber-600/15 px-4 sm:px-6 pt-3 sm:pt-4 bg-white/40 overflow-x-auto no-scrollbar shrink-0">
           <button
-            className={`pb-3 px-4 font-medium text-sm transition-colors border-b-2 ${configTab === 'general' ? 'border-sky-600 text-sky-700' : 'border-transparent text-amber-700 hover:text-amber-900'}`}
+            className={`pb-3 px-4 font-medium text-sm transition-colors border-b-2 whitespace-nowrap ${configTab === 'general' ? 'border-sky-600 text-sky-700 font-bold' : 'border-transparent text-amber-700 hover:text-amber-900'}`}
             onClick={() => setConfigTab('general')}
           >
             Datos Generales
           </button>
           <button
-            className={`pb-3 px-4 font-medium text-sm transition-colors border-b-2 ${configTab === 'params' ? 'border-sky-600 text-sky-700' : 'border-transparent text-amber-700 hover:text-amber-900'}`}
+            className={`pb-3 px-4 font-medium text-sm transition-colors border-b-2 whitespace-nowrap ${configTab === 'params' ? 'border-sky-600 text-sky-700 font-bold' : 'border-transparent text-amber-700 hover:text-amber-900'}`}
             onClick={() => setConfigTab('params')}
           >
             Parámetros de Cálculo
           </button>
         </div>
 
-        <div className="px-6 py-4 flex flex-col gap-4 overflow-y-auto">
+        <div className="px-4 sm:px-6 py-4 flex-1 overflow-y-auto flex flex-col gap-4">
           {configTab === 'general' ? (
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2 w-full">
@@ -395,16 +395,18 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
           )}
         </div>
         
-        <div className="px-6 py-4 border-t border-amber-600/15 flex justify-end gap-4 bg-white/40">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 pb-safe border-t border-amber-600/15 flex items-center justify-end gap-3 sm:gap-4 bg-white/40 shrink-0">
           <button 
+            type="button"
             onClick={onClose}
-            className="bg-transparent border-none text-amber-700 text-sm font-semibold px-6 py-2 cursor-pointer rounded-xl hover:bg-white/30 transition-colors"
+            className="bg-transparent border-none text-amber-700 text-sm font-semibold px-4 py-2.5 touch-target flex items-center justify-center cursor-pointer rounded-xl hover:bg-white/30 transition-colors"
           >
             Cancelar
           </button>
           <button 
+            type="button"
             onClick={handleSaveSettings}
-            className="bg-sky-600 text-white border-none text-sm font-semibold px-6 py-2 rounded-xl cursor-pointer shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:bg-sky-700 hover:-translate-y-[1px]"
+            className="bg-sky-600 text-white border-none text-sm font-semibold px-5 py-2.5 touch-target flex items-center justify-center rounded-xl cursor-pointer shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:bg-sky-700 hover:-translate-y-[1px]"
           >
             Guardar Configuración
           </button>

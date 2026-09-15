@@ -206,13 +206,13 @@ export default function ComponentSelectorModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
-        className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col h-[95dvh] sm:h-auto sm:max-h-[88vh] animate-in zoom-in-95 duration-200"
+        className="bg-white w-full max-w-4xl rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border sm:border-slate-200 overflow-hidden flex flex-col h-full sm:h-auto sm:max-h-[88vh] animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* MODAL HEADER */}
-        <div className="px-3 sm:px-6 py-3 sm:py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
+        <div className="px-3 sm:px-6 py-3 sm:py-4 pt-safe bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl border flex items-center justify-center shadow-sm shrink-0 ${theme.iconBox}`}>
               <Icon size={18} className="sm:w-5 sm:h-5" />
@@ -461,14 +461,17 @@ export default function ComponentSelectorModal({
         </div>
 
         {/* MODAL FOOTER */}
-        <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <span className="text-[11px]">
+        <div className="px-4 sm:px-6 py-3 pb-safe bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 shrink-0">
+          <span className="text-[11px] hidden sm:inline">
             💡 Puedes hacer doble clic en cualquier fila para seleccionarla al instante.
+          </span>
+          <span className="text-[11px] sm:hidden">
+            Toca una fila para seleccionarla.
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold transition-colors"
+            className="px-5 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold transition-colors touch-target flex items-center justify-center cursor-pointer ml-auto sm:ml-0"
           >
             Cerrar
           </button>

@@ -109,29 +109,30 @@ export default function ImportSharedBudgetModal({ isOpen, onClose, onSuccess }) 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] border border-amber-600/15 overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4">
+      <div className="w-full h-full sm:h-auto sm:max-h-[92dvh] sm:max-w-lg bg-amber-100 rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border sm:border-amber-600/15 overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
         
         {/* Encabezado con estilo del modal de impresión */}
-        <div className="flex justify-between items-center px-6 py-4 bg-white/40 border-b border-amber-600/15">
+        <div className="flex justify-between items-center px-4 sm:px-6 py-3.5 sm:py-4 pt-safe bg-white/40 border-b border-amber-600/15 shrink-0">
           <div className="flex items-center gap-2.5">
-            <Link2 className="text-sky-600" size={22} />
+            <Link2 className="text-sky-600 shrink-0" size={22} />
             <div>
-              <h2 className="m-0 text-xl font-bold text-amber-900 leading-tight">Importar con Enlace</h2>
+              <h2 className="m-0 text-lg sm:text-xl font-bold text-amber-900 leading-tight">Importar con Enlace</h2>
               <p className="text-xs text-amber-800/80 m-0">Pega el link que te compartió un compañero</p>
             </div>
           </div>
           <button 
             type="button"
             onClick={onClose}
-            className="text-amber-700 hover:text-amber-900 bg-transparent transition-colors p-1"
+            className="text-amber-700 hover:text-amber-900 p-2 touch-target flex items-center justify-center rounded-xl hover:bg-amber-200/50 transition-colors cursor-pointer"
+            aria-label="Cerrar modal"
           >
-            <X size={22} />
+            <X size={20} />
           </button>
         </div>
 
         {/* Cuerpo del Modal */}
-        <div className="px-6 py-5 flex flex-col gap-4">
+        <div className="px-4 sm:px-6 py-4 flex-1 overflow-y-auto flex flex-col gap-4">
           
           {/* Campo para ingresar el link */}
           <div className="flex flex-col gap-2">
@@ -231,11 +232,11 @@ export default function ImportSharedBudgetModal({ isOpen, onClose, onSuccess }) 
           )}
 
           {/* Footer modal */}
-          <div className="flex items-center justify-end pt-3 border-t border-amber-600/15">
+          <div className="flex items-center justify-end pt-3 pb-safe border-t border-amber-600/15 mt-auto shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="bg-transparent border-none text-amber-700 text-sm font-semibold px-5 py-2 cursor-pointer rounded-xl hover:bg-white/40 transition-colors"
+              className="bg-transparent border-none text-amber-700 text-sm font-semibold px-5 py-2.5 touch-target flex items-center justify-center cursor-pointer rounded-xl hover:bg-white/40 transition-colors"
             >
               Cancelar
             </button>

@@ -101,10 +101,10 @@ export default function AccountSettingsModal({
   };
 
   return createPortal(
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="w-full max-w-lg bg-amber-50/95 border-2 border-[#B5DCB0] rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92dvh]">
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4">
+      <div className="w-full h-full sm:h-auto sm:max-h-[92dvh] sm:max-w-lg bg-amber-50/95 border-0 sm:border-2 sm:border-[#B5DCB0] rounded-none sm:rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col">
         {/* HEADER */}
-        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[#B5DCB0] flex items-center justify-between bg-amber-100/40 gap-2">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 pt-safe border-b border-[#B5DCB0] flex items-center justify-between bg-amber-100/40 gap-2 shrink-0">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-sky-100 border border-sky-200 flex items-center justify-center text-sky-700 shadow-sm shrink-0">
               <User size={18} className="sm:w-5 sm:h-5" />
@@ -129,7 +129,7 @@ export default function AccountSettingsModal({
         </div>
 
         {/* BODY */}
-        <form onSubmit={handleSave} className="p-6 overflow-y-auto flex flex-col gap-5">
+        <form onSubmit={handleSave} className="p-4 sm:p-6 overflow-y-auto flex-1 flex flex-col gap-5">
           {/* DATOS DE USUARIO */}
           <div className="flex flex-col gap-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
@@ -306,18 +306,18 @@ export default function AccountSettingsModal({
           </div>
 
           {/* BOTONES ACCIÓN */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-amber-200/70">
+          <div className="flex items-center justify-end gap-3 pt-3 pb-safe border-t border-amber-200/70 mt-auto shrink-0">
             <button 
               type="button"
               onClick={onClose}
-              className="bg-transparent border-none text-amber-800 text-sm font-semibold px-5 py-2 cursor-pointer rounded-xl hover:bg-white/40 transition-colors"
+              className="bg-transparent border-none text-amber-800 text-sm font-semibold px-5 py-2.5 touch-target flex items-center justify-center cursor-pointer rounded-xl hover:bg-white/40 transition-colors"
             >
               Cancelar
             </button>
             <button 
               type="submit"
               disabled={saving}
-              className="bg-sky-600 text-white border-none text-sm font-semibold px-6 py-2 rounded-xl cursor-pointer shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:bg-sky-700 hover:-translate-y-[1px] disabled:opacity-50 flex items-center gap-2"
+              className="bg-sky-600 text-white border-none text-sm font-semibold px-6 py-2.5 touch-target rounded-xl cursor-pointer shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:bg-sky-700 hover:-translate-y-[1px] disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {saving ? <Loader2 size={16} className="animate-spin" /> : null}
               Guardar Cambios
