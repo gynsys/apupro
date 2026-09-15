@@ -130,12 +130,25 @@ _REGLAS_INSUMOS_PRECIOS = """
    - Si se requiere un insumo técnicamente indispensable que NO está en el catálogo provisto, agrégalo con `origen: "ia"`.
    - Asígnale un `precio_unitario` referencial estimado según valores de mercado actuales de la construcción en USD (NUNCA dejes precio 0.0).
    - En `advertencias`, agrega obligatoriamente una nota con el prefijo `[PRECIO_REFERENCIAL]` indicando el insumo y que dicho valor es un precio de mercado referencial estimado por la IA que se recomienda cotizar y validar con proveedores locales.
-3. COMPATIBILIDAD FUNCIONAL ESTRICTA DE EQUIPOS Y MATERIALES (¡CRÍTICO!):
-   - Si la partida base contiene un equipo o material principal con una función, diseño o aplicación incompatible con la solicitud del usuario, QUEDA PROHIBIDO reutilizar el insumo histórico como si fuera el mismo.
-   - Casos típicos obligatorios:
-     * BOMBAS: Bomba sumergible para aguas negras / achique (tipo Flygt o de sólidos con impulsor vórtex) NO ES COMPATIBLE con pozo profundo (agua limpia / tipo lapicero / multietapas de acero inoxidable). Si el usuario solicita bomba de pozo profundo y la partida base contiene bomba de aguas negras/achique, DEBES SUSTITUIR el material por 'BOMBA SUMERGIBLE PARA POZO PROFUNDO (TIPO LAPICERO)', marcarlo con origen 'ia', estimar su precio referencial en USD según los HP solicitados (~$1.200 - $2.500 USD) y emitir la advertencia `[PRECIO_REFERENCIAL]`.
-     * TUBERÍAS: Tubería sanitaria / ventilación NO es compatible con tubería de presión de agua o gas.
-     * CABLES: Cable eléctrico convencional en tubería NO es cable sumergible tipo submarino para pozo.
+3. MATRIZ OBLIGATORIA DE COMPATIBILIDAD FUNCIONAL EN 7 FAMILIAS (¡CRÍTICO!):
+   Para CADA insumo del APU base, evalúa si su aplicación física coincide con la solicitada. Si hay incompatibilidad funcional, QUEDA TERMINANTEMENTE PROHIBIDO conservar el insumo histórico; DEBES sustituirlo por el adecuado con `origen: "ia"`, precio referencial estimado en USD y emitir `[PRECIO_REFERENCIAL]`:
+   a) BOMBAS Y EQUIPOS HIDRÁULICOS:
+      - Pozo Profundo / Agua Limpia: REQUIERE bomba tipo lapicero/multietapa en acero inoxidable. PROHIBIDO usar bombas de aguas negras, achique o trituradoras tipo Flygt.
+      - Aguas Negras / Residuales: REQUIERE bomba de achique para sólidos con impulsor inatascable/vórtex. PROHIBIDO usar bombas de agua limpia o lapicero.
+      - Sistema Hidroneumático: REQUIERE bomba centrífuga horizontal o vertical de presión acoplada a pulmón/tanque.
+   b) TUBERÍAS Y CONDUCCIÓN DE FLUIDOS:
+      - Agua a Presión: REQUIERE PVC Presión (ASTM D-2241), CPVC o PPR Termofusión. PROHIBIDO usar tubería de desagüe, sanitaria o ventilación (Norma 656, pared delgada).
+      - Conducción Sanitaria / Pluvial: Flujo por gravedad en PVC sanitario. PROHIBIDO usar tubería de presión de alto costo.
+   c) CABLES Y CONDUCTORES ELÉCTRICOS:
+      - Pozo / Inmersión Continua: REQUIERE cable sumergible plano o redondo de goma vulcanizada. PROHIBIDO cable convencional de ducto (THW/THHN) sumergido sin protección.
+   d) VÁLVULAS Y ACCESORIOS:
+      - Columna de Impulsión / Bombeo: REQUIERE válvula de retención (check) vertical para evitar golpe de ariete. No sustituir por válvula de compuerta común.
+   e) CONCRETOS Y MEZCLAS:
+      - Vaciado Manual o Puntual (< 4 m³ o espacio confinado): REQUIERE trompo mezclador (1 saco) y herramientas menores. PROHIBIDO camión mixer o bomba pluma si el acceso o escala es manual.
+   f) TABLEROS ELÉCTRICOS:
+      - Motores y Fuerza: REQUIERE contactor, relé térmico y guardamotor en caja adecuada. PROHIBIDO tablero residencial de alumbrado (NLAB) para motores trifásicos.
+   g) IMPERMEABILIZACIÓN:
+      - Manto Asfáltico: El insumo activo impermeabilizante es el manto termosoldado (3 o 4 mm). La pintura asfáltica es solo imprimación previa, nunca el impermeabilizante principal.
 4. EXCLUSIONES DE ALCANCE:
    - Si el usuario indica explícitamente que NO incluye un componente (ejemplo: 'no incluye cable submarino', 'sin excavación', 'sin flete', 'sin tablero'), simplemente exclúyelo de la lista de insumos y refléjalo en la descripción técnica: '(NO INCLUYE ...)'.
    - NO agregues advertencias sobre exclusiones de alcance, el analista de costos ya lo conoce.
@@ -335,7 +348,7 @@ Prefijo COVENIN: {covenin_prefix}
 1. El APU base es para una partida SIMILAR, no idéntica. Tu trabajo es adaptarlo para "{user_description}".
 2. ANCLAJE DE RENDIMIENTO: Conserva como ancla principal el rendimiento (`performance`) del APU base [{base_apu.get('rendimiento') or base_apu.get('performance') or base_apu.get('RenPar') or 'N/A'}]. Solo ajústalo si la geometría, altura o complejidad de la nueva partida lo justifica de forma evidente, y explica el motivo en notas.
 3. CONSERVA todos los insumos que sigan siendo relevantes para la nueva partida. Márcalos como `"origen": "historico"`.
-4. ELIMINA o SUSTITUYE los insumos que no aplican. Si el equipo o material principal de la base tiene una aplicación o diseño técnicamente incompatible con la solicitada (ejemplo: bomba de achique/aguas negras tipo Flygt vs. bomba de pozo profundo/agua limpia tipo lapicero), NO uses el insumo histórico. Reemplázalo por el insumo correcto con origen "ia", precio referencial de mercado en USD y emite la advertencia `[PRECIO_REFERENCIAL]`.
+4. ELIMINA o SUSTITUYE los insumos que no aplican aplicando rigurosamente la MATRIZ OBLIGATORIA DE COMPATIBILIDAD FUNCIONAL EN 7 FAMILIAS (bombas, tuberías, cables, válvulas, concretos, tableros, impermeabilizaciones). Si el equipo o material principal de la base es incompatible, NO uses el insumo histórico. Reemplázalo por el insumo correcto con origen "ia", precio referencial de mercado en USD y emite la advertencia `[PRECIO_REFERENCIAL]`.
 5. AJUSTA cantidades cuando la nueva partida lo requiera (ej: distinta área, espesor, proporción).
    Marca los insumos ajustados como `"origen": "ia"` y explica el ajuste en `nota_calculo`.
 6. AUTO-FUSIÓN: Si la descripción del usuario exige algo que falta en la Base (ej. Bote de material, Pintura, Andamios, Encofrado) pero que sí existe en las Partidas Complementarias, "róbalo" e intégralo conservando sus precios históricos.
@@ -372,6 +385,65 @@ Prefijo COVENIN: {covenin_prefix}
     return result
 
 
+INCOMPATIBLE_POLARITY_RULES: List[Tuple[Set[str], Set[str], float]] = [
+    # 1. Agua Limpia / Pozo Profundo VS Aguas Negras / Residuales / Achique / Cloacas
+    (
+        {"pozo", "pozo profundo", "agua limpia", "agua potable", "lapicero", "hidroneumatico"},
+        {"aguas negras", "aguas residuales", "aguas servidas", "achique", "cloaca", "drenaje pluvial", "aguas de lluvia"},
+        0.25
+    ),
+    # 2. Tuberías a Presión / Agua Blanca VS Tuberías Sanitarias / Desagüe / Ventilación
+    (
+        {"presion", "aduccion", "distribucion", "astm d-2241", "ppr", "termofusion", "agua blanca"},
+        {"ventilacion", "sanitaria", "desague", "bajante", "norma 656", "aguas servidas"},
+        0.25
+    ),
+    # 3. Trabajo Manual / Espacio Confinado / Reparación Puntual VS Maquinaria Pesada
+    (
+        {"a mano", "manual", "con carretilla", "espacio confinado", "en sotano", "reparacion puntual"},
+        {"retroexcavadora", "payloader", "tractor", "jumbo", "camion roquero", "planta de concreto", "camion mixer"},
+        0.30
+    ),
+    # 4. Cable Sumergible de Pozo VS Cable Eléctrico Convencional en Ducto
+    (
+        {"cable submarino", "cable sumergible", "pozo profundo"},
+        {"conduit", "embutido en tuberia", "en bandeja"},
+        0.20
+    ),
+    # 5. Fuerza / Motores Trifásicos VS Alumbrado / Tomacorrientes Monofásicos
+    (
+        {"fuerza", "motor", "ccm", "arrancador", "bomba trifasica"},
+        {"alumbrado", "iluminacion", "tomacorriente", "tablero nlab"},
+        0.20
+    )
+]
+
+
+def _apply_polarity_penalties(query_text: str, item_desc: str, current_score: float) -> float:
+    """
+    Aplica penalizaciones cruzadas si la consulta del usuario y la descripción del ítem
+    pertenecen a polos técnicos opuestos e incompatibles.
+    """
+    if not query_text or not item_desc:
+        return current_score
+
+    q_lower = query_text.lower()
+    i_lower = item_desc.lower()
+
+    for polo_a, polo_b, penalty in INCOMPATIBLE_POLARITY_RULES:
+        q_has_a = any(t in q_lower for t in polo_a)
+        q_has_b = any(t in q_lower for t in polo_b)
+        i_has_a = any(t in i_lower for t in polo_a)
+        i_has_b = any(t in i_lower for t in polo_b)
+
+        if q_has_a and not q_has_b and i_has_b and not i_has_a:
+            current_score = max(0.0, current_score - penalty)
+        elif q_has_b and not q_has_a and i_has_a and not i_has_b:
+            current_score = max(0.0, current_score - penalty)
+
+    return current_score
+
+
 def get_dynamic_candidates(
     db: Session,
     description: str,
@@ -381,6 +453,7 @@ def get_dynamic_candidates(
     """
     Recupera las partidas más similares desde el Cerebro RAG Híbrido,
     considerando el material técnico y filtrando opcionalmente por prefijo.
+    Aplica penalizaciones cruzadas a candidatos con incompatibilidad funcional polar.
     """
     if not description or not isinstance(description, str):
         return [], 0.0
@@ -423,15 +496,23 @@ def get_dynamic_candidates(
             
         items = db.query(CostItem).filter(CostItem.CodPar.in_(final_ids)).all()
         item_map = {i.CodPar: i for i in items}
-        sorted_items = [
-            {"item": item_map[i], "score": round(score, 3)}
-            for i, score in candidates_with_scores[:limit]
-            if i in item_map
-        ]
-        return sorted_items, best_score
+        
+        # Aplicar penalización de polaridad técnica (Polos Opuestos)
+        scored_candidates = []
+        for i, score in candidates_with_scores[:limit]:
+            if i in item_map:
+                it = item_map[i]
+                adjusted_score = _apply_polarity_penalties(description, it.Descri or "", score)
+                scored_candidates.append({"item": it, "score": round(adjusted_score, 3)})
+
+        # Re-ordenar por el score ajustado para priorizar candidatos afines
+        scored_candidates.sort(key=lambda x: x["score"], reverse=True)
+        best_adjusted = scored_candidates[0]["score"] if scored_candidates else best_score
+        return scored_candidates, best_adjusted
     except Exception as exc:
         logger.error("Error en get_dynamic_candidates: %s", exc, exc_info=True)
         return [], 0.0
+
 
 
 def fetch_base_apu_for_prompt(db: Session, codpar: str) -> Dict[str, Any]:
