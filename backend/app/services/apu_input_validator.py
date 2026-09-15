@@ -432,34 +432,32 @@ def validate_rag_signals(
 
     # Si la consulta tiene 3 palabras clave o menos:
     if len(tokens) <= 3:
-        # Caso 2.1: Acción sola sin elemento ("demolicion", "instalacion", "reparacion", "pintura")
+        # Caso 2.1: Acción sola sin elemento ("demolicion", "instalacion", "suministro", "acarreo", "reparacion", "pintura")
         if has_action and not has_element:
-            options = _extract_distinct_options(candidates)
             logger.info("Query stopped by Capa 2 RAG (action without element): %.80s", query)
             return (
                 "clarification_needed",
                 (
-                    f"La descripción ingresada ('{query}') indica una acción técnica pero no especifica "
-                    "sobre qué elemento constructivo se ejecutará (ej: pared, piso, losa, tubería). "
-                    "Por favor selecciona una de las siguientes opciones o añade el elemento a tu descripción:"
+                    "La descripción es demasiado breve para generar un APU preciso. "
+                    "Por favor describe la actividad con al menos el elemento constructivo y la acción a ejecutar. "
+                    "Ejemplo: 'Demolición de pared de bloques de arcilla, incluye acarreo de escombros'."
                 ),
                 "RAG_AMBIGUOUS_ACTION_ONLY",
-                options,
+                [],  # Cero adivinanzas: no mostrar alternativas aleatorias/absurdas
             )
 
         # Caso 2.2: Elemento solo sin acción técnica ("tuberia", "losa de techo", "pared de bloques")
         if has_element and not has_action and len(tokens) <= 2:
-            options = _extract_distinct_options(candidates)
             logger.info("Query stopped by Capa 2 RAG (element without action): %.80s", query)
             return (
                 "clarification_needed",
                 (
-                    f"La descripción ingresada ('{query}') menciona un elemento constructivo pero no indica "
-                    "la actividad a ejecutar (ej: suministro e instalación, demolición, construcción, reparación). "
-                    "Por favor selecciona una de las siguientes opciones o añade la acción técnica:"
+                    "La descripción es demasiado breve para generar un APU preciso. "
+                    "Por favor describe la actividad con al menos el elemento constructivo y la acción a ejecutar. "
+                    "Ejemplo: 'Suministro e instalación de tubería PVC 1/2 pulgada para aguas blancas'."
                 ),
                 "RAG_AMBIGUOUS_ELEMENT_ONLY",
-                options,
+                [],  # Cero adivinanzas
             )
 
     # Pasó todas las verificaciones de la Capa 2
@@ -512,6 +510,7 @@ def build_rejection_response(
         return {
             "status": "clarification_needed",
             "clarification_message": mensaje,
+            "recommendation": "Te recomendamos utilizar el Asistente Guiado para estructurar tu descripción paso a paso.",
             "options": [],
             "questions": questions,
             "guia_redaccion": (
@@ -526,12 +525,13 @@ def build_rejection_response(
             "_internal_code": codigo,
         }
 
-    # clarification_needed con opciones del RAG
+    # clarification_needed
     return {
         "status": "clarification_needed",
         "clarification_message": mensaje,
+        "recommendation": "Te recomendamos utilizar el Asistente Guiado para estructurar tu descripción paso a paso.",
         "options": options,
-        "questions": questions if not options else [],
+        "questions": questions,
         "guia_redaccion": (
             "Estructura recomendada: [Accion] + [Elemento] + [Material/Especificacion] + [Metodo]. "
             "Ejemplo: 'Excavacion a mano en terreno blando para zanjas 0.60x0.80m, incluye bote'."

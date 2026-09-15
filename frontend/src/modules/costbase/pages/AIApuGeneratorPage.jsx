@@ -1408,18 +1408,36 @@ export default function AIApuGeneratorPage() {
 
           {!isSmartMode && isClarifying && (aiQuestions.length > 0 || aiClarificationMessage) && (
             <div className="mb-6 p-5 bg-amber-50/90 border-2 border-amber-200 rounded-2xl shadow-sm animate-in fade-in zoom-in-95 duration-300">
-              <div className="flex items-start gap-3 mb-3">
-                <div className="p-2 bg-amber-500 text-white rounded-xl shrink-0 shadow-sm shadow-amber-500/30">
-                  <Sparkles size={20} />
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-amber-500 text-white rounded-xl shrink-0 shadow-sm shadow-amber-500/30">
+                    <Sparkles size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-amber-950 font-bold text-base leading-tight">
+                      {aiClarificationMessage || "No fue posible interpretar una partida técnica válida"}
+                    </h4>
+                    <p className="text-xs text-amber-800 mt-1 font-medium">
+                      {aiClarificationRecommendation || "Te recomendamos utilizar el Asistente Guiado para estructurar tu descripción paso a paso."}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-amber-950 font-bold text-base leading-tight">
-                    {aiClarificationMessage || "No fue posible interpretar una partida técnica válida"}
-                  </h4>
-                  <p className="text-xs text-amber-800 mt-1 font-medium">
-                    {aiClarificationRecommendation || "Te recomendamos utilizar el Asistente Guiado para estructurar tu descripción paso a paso."}
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsClarifying(false);
+                    setAiClarificationMessage("");
+                    setAiClarificationRecommendation("");
+                    setAiOptions([]);
+                    setAiQuestions([]);
+                    setAiGuiaRedaccion(null);
+                  }}
+                  className="text-amber-700 hover:text-amber-950 p-1.5 rounded-lg hover:bg-amber-100 transition-colors shrink-0 cursor-pointer"
+                  title="Cerrar aviso"
+                  aria-label="Cerrar aviso"
+                >
+                  <X size={18} />
+                </button>
               </div>
               
               {aiQuestions.length > 0 && (
@@ -1456,58 +1474,19 @@ export default function AIApuGeneratorPage() {
                 </div>
               )}
 
-              <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-amber-200/70 items-center justify-between">
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => {
-                      setIsClarifying(false);
-                      setIsGuidedMode(true);
-                      setEntryModeSource('chat');
-                      lastEntrySourceRef.current = 'chat';
-                      navigate('/cost360/ai-generator?mode=ia&guided=true', { replace: true });
-                    }}
-                    className="px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-700 transition-colors shadow-sm flex items-center gap-1.5"
-                  >
-                    <Sparkles size={14} /> Usar Asistente Guiado Paso a Paso
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsClarifying(false);
-                      setIsGuidedMode(false);
-                      setEntryModeSource('libre');
-                      lastEntrySourceRef.current = 'libre';
-                      navigate('/cost360/ai-generator?mode=ia&guided=false', { replace: true });
-                      setChatHistory([]);
-                      setAiClarificationMessage("");
-                      setAiClarificationRecommendation("");
-                      setAiOptions([]);
-                      setAiQuestions([]);
-                      setAiGuiaRedaccion(null);
-                    }}
-                    className="px-3 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-100 transition-colors shadow-sm"
-                  >
-                    Editar Texto Libre
-                  </button>
-                </div>
-
+              <div className="mt-4 pt-3 border-t border-amber-200/70 flex items-center">
                 <button
+                  type="button"
                   onClick={() => {
                     setIsClarifying(false);
-                    setChatHistory([]);
-                    setAiClarificationMessage("");
-                    setAiClarificationRecommendation("");
-                    setAiOptions([]);
-                    setAiQuestions([]);
-                    setAiGuiaRedaccion(null);
-                    setPrompt('');
-                    setSelectedTipoObra('');
-                    setSelectedCapitulo('');
-                    setSelectedSubcapitulo('');
-                    setSelectedPartida('');
+                    setIsGuidedMode(true);
+                    setEntryModeSource('chat');
+                    lastEntrySourceRef.current = 'chat';
+                    navigate('/cost360/ai-generator?mode=ia&guided=true', { replace: true });
                   }}
-                  className="px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors"
+                  className="px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-700 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
                 >
-                  Reiniciar Categorías
+                  <Sparkles size={14} /> Usar Asistente Guiado Paso a Paso
                 </button>
               </div>
             </div>
@@ -1760,22 +1739,15 @@ export default function AIApuGeneratorPage() {
           )}
           
           {!(isGuidedMode && !isSmartMode && !isClarifying) && !exactMatchCandidate && (
-            <div className="flex justify-end gap-3">
-              {isClarifying && (
-                <button
-                  onClick={() => { setIsClarifying(false); setChatHistory([]); setAiClarificationMessage(""); setAiClarificationRecommendation(""); setAiOptions([]); setAiQuestions([]); setPrompt(''); }}
-                  className="px-4 py-2 text-slate-500 hover:text-slate-700 text-sm font-bold transition-colors"
-                >
-                  Cancelar
-                </button>
-              )}
+            <div className="flex justify-end">
               <button
+                type="button"
                 onClick={() => handleGenerate(null, false, false, false, null, 'libre')}
                 disabled={loading || !prompt.trim() || !isSelectorsComplete || isSmartMode}
-                className={`flex items-center gap-2 text-white px-6 py-3 rounded-xl transition-all shadow-md font-bold disabled:opacity-50 active:scale-95 cursor-pointer ${isClarifying ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-blue-500/20' : 'bg-[#1D4ED8] hover:bg-blue-800 shadow-blue-600/25'}`}
+                className="flex items-center gap-2 text-white px-6 py-3 rounded-xl transition-all shadow-md font-bold disabled:opacity-50 active:scale-95 cursor-pointer bg-[#1D4ED8] hover:bg-blue-800 shadow-blue-600/25"
               >
-                {loading ? <Loader className="animate-spin" size={18} /> : (isClarifying ? <Check size={18} /> : <Sparkles size={18} />)}
-                {loading ? (isClarifying ? 'Pensando...' : 'Generando...') : (isClarifying ? 'Responder' : 'Generar APU')}
+                {loading ? <Loader className="animate-spin" size={18} /> : <Sparkles size={18} />}
+                {loading ? 'Generando APU...' : 'Generar APU'}
               </button>
             </div>
           )}

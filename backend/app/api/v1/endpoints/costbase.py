@@ -172,6 +172,7 @@ from app.services.ai_apu_service import (
 )
 from app.api.v1.endpoints.export_utils import generate_excel_workbook
 from app.services.synonyms_service import expand_technical_synonyms
+from app.services.ai_search import detect_materials
 from app.services.apu_input_validator import validate_apu_input, validate_rag_signals, build_rejection_response
 
 router = APIRouter()
@@ -1240,74 +1241,89 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             "debug_preprocesamiento": debug_data
         }
 
-    # 2.2. Detección interactiva de Match Exacto antes del RAG
-    # El Match Exacto aplica EXCLUSIVAMENTE sobre las ~9.600 partidas codificadas oficialmente por norma.
-    # Si el usuario NO ha indicado bypass_exact_match y NO forzó una partida base:
+    # 2.2. Búsqueda RAG Híbrida Automática (Gemini Embeddings + Léxico)
     candidates = []
+    if not candidates and not payload.only_preprocess:
+        candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
+
+    # --- CAPA 2: Validación de Ambigüedad y Dominio vía señales RAG ---
+    # Si la consulta es una palabra aislada, una entrada incompleta ("suministro", "demolicion", "acarreo")
+    # o fuera de tema ("pizza"), se frena AQUÍ: no gasta tokens, no evalúa match exacto ni deriva al LLM.
+    capa2_result = validate_rag_signals(payload.description, candidates)
+    if capa2_result is not None:
+        veredicto, mensaje, codigo_interno, options = capa2_result
+        logger.info("APU input stopped by Capa 2 RAG [%s]: %.80s", codigo_interno, payload.description)
+        return build_rejection_response(veredicto, mensaje, codigo_interno, rag_candidates=options)
+
+    # 2.3. Detección interactiva de Match Exacto (Solo sobre partidas codificadas y sin conflictos)
+    # Se evalúa ÚNICAMENTE si la consulta ya superó la Capa 1 y la Capa 2.
     if not payload.bypass_exact_match and not payload.base_partida_code:
-        # Si la descripción incluye cláusulas explícitas de exclusión o modificación de alcance,
-        # se asume que el usuario busca una partida personalizada/adaptada (no un match idéntico de catálogo).
         exclusion_patterns = ["no incluye", "sin ", "excepto", "excluyendo", "no contempla", "no considerar"]
         has_exclusion = any(neg in raw_desc.lower() for neg in exclusion_patterns)
         
-        if not has_exclusion:
-            candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
-            if candidates:
-                # Buscar entre los candidatos más altos aquellos que sean oficialmente codificados (~9.600 partidas)
-                coded_candidate = None
-                for cand in candidates[:3]:
-                    if is_covenin_coded_item(cand["item"]):
-                        coded_candidate = cand
-                        break
+        if not has_exclusion and candidates:
+            # Buscar entre los candidatos más altos aquellos que sean oficialmente codificados (~9.600 partidas)
+            coded_candidate = None
+            for cand in candidates[:3]:
+                if is_covenin_coded_item(cand["item"]):
+                    coded_candidate = cand
+                    break
 
-                if coded_candidate:
-                    top_item = coded_candidate["item"]
-                    top_score = coded_candidate["score"]
-                    
-                    norm_query = normalize_text_alphanumeric(raw_desc)
-                    norm_item_desc = normalize_text_alphanumeric(top_item.Descri or "")
-                    
-                    stopwords = {"de", "la", "el", "en", "para", "con", "por", "un", "una", "y", "o", "a", "los", "las", "del", "al", "e"}
-                    words_query = set(norm_query.split()) - stopwords
-                    words_item = set(norm_item_desc.split()) - stopwords
-                    
-                    is_exact_text = (norm_query == norm_item_desc)
-                    is_high_overlap = False
-                    if words_query and words_item:
-                        common_words = words_query.intersection(words_item)
-                        overlap_ratio = len(common_words) / len(words_query)
-                        item_overlap_ratio = len(common_words) / len(words_item)
-                        is_high_overlap = (overlap_ratio >= 0.88 and item_overlap_ratio >= 0.75)
-                    
-                    if is_exact_text or is_high_overlap or top_score >= 0.90:
-                        return {
-                            "status": "exact_match_candidate",
-                            "matched_item": {
-                                "cod_par": top_item.CodPar,
-                                "cov_par": top_item.CovPar or top_item.CodPar,
-                                "description": top_item.Descri,
-                                "unit": top_item.UniPar,
-                                "pre_uni": top_item.PreUni or 0.0,
-                                "performance": getattr(top_item, 'RenPar', 1.0) or 1.0
-                            },
-                            "message": f"Existe la partida {top_item.CovPar or top_item.CodPar} que coincide casi al 100% con tu descripción. ¿Te refieres a esta partida?"
-                        }
+            if coded_candidate:
+                top_item = coded_candidate["item"]
+                
+                # Normalizar texto original del usuario y de la partida oficial
+                norm_query = normalize_text_alphanumeric(raw_desc)
+                norm_item_desc = normalize_text_alphanumeric(top_item.Descri or "")
+                
+                stopwords = {"de", "la", "el", "en", "para", "con", "por", "un", "una", "y", "o", "a", "los", "las", "del", "al", "e"}
+                words_query = set(norm_query.split()) - stopwords
+                words_item = set(norm_item_desc.split()) - stopwords
+                
+                is_exact_text = (norm_query == norm_item_desc)
+                is_high_overlap = False
+                if words_query and words_item:
+                    common_words = words_query.intersection(words_item)
+                    overlap_ratio = len(common_words) / len(words_query)
+                    item_overlap_ratio = len(common_words) / len(words_item)
+                    is_high_overlap = (overlap_ratio >= 0.92 and item_overlap_ratio >= 0.85)
+                
+                # GUARDIA GENÉRICA DE MATERIALES:
+                # Si el usuario solicitó un material específico y la partida candidata tiene un material
+                # diferente de la misma categoría (ej: adobe vs arcilla, cobre vs hierro, drywall vs concreto),
+                # QUEDA TERMINANTEMENTE PROHIBIDO el Match Exacto.
+                query_mats = detect_materials(raw_desc)
+                item_mats = detect_materials(top_item.Descri or "")
+                has_material_conflict = False
+                if query_mats:
+                    for cat, q_set in query_mats.items():
+                        it_set = item_mats.get(cat, set())
+                        if it_set and not (q_set & it_set):
+                            has_material_conflict = True
+                            break
+                        elif not it_set and q_set:
+                            has_material_conflict = True
+                            break
 
+                # El Match Exacto aplica ÚNICAMENTE si no hay conflicto técnico y el texto es idéntico o casi idéntico
+                # (Se eliminó definitivamente el 'or top_score >= 0.90' para evitar falsos positivos semánticos)
+                if not has_material_conflict and (is_exact_text or is_high_overlap):
+                    return {
+                        "status": "exact_match_candidate",
+                        "matched_item": {
+                            "cod_par": top_item.CodPar,
+                            "cov_par": top_item.CovPar or top_item.CodPar,
+                            "description": top_item.Descri,
+                            "unit": top_item.UniPar,
+                            "pre_uni": top_item.PreUni or 0.0,
+                            "performance": getattr(top_item, 'RenPar', 1.0) or 1.0
+                        },
+                        "message": f"Existe la partida {top_item.CovPar or top_item.CodPar} que coincide casi al 100% con tu descripción. ¿Te refieres a esta partida?"
+                    }
 
-    # 2.5. MODO RAG / ADAPTACIÓN DE BASE REAL
+    # 2.4. MODO RAG / ADAPTACIÓN DE BASE REAL
     base_code = payload.base_partida_code
     if not base_code and not payload.only_preprocess:
-        # Búsqueda RAG Híbrida automática para encontrar la mejor partida base
-        if not candidates:
-            candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
-
-        # --- CAPA 2: Validación de Ambigüedad y Dominio vía señales RAG (Gemini Embeddings + Léxico) ---
-        capa2_result = validate_rag_signals(payload.description, candidates)
-        if capa2_result is not None:
-            veredicto, mensaje, codigo_interno, options = capa2_result
-            logger.info("APU input stopped by Capa 2 RAG [%s]: %.80s", codigo_interno, payload.description)
-            return build_rejection_response(veredicto, mensaje, codigo_interno, rag_candidates=options)
-
         if candidates and candidates[0]["score"] >= 0.35:
             base_code = candidates[0]["item"].CodPar
 

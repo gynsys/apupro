@@ -45,7 +45,8 @@ MATERIAL_CATEGORIES: Dict[str, Dict[str, List[str]]] = {
         "DRYWALL_YESO": [r"\bDRYWALL\b", r"\bYESO\b", r"\bTABLAYESO\b"],
     },
     "mamposteria": {
-        "ARCILLA": [r"\bARCILLA\b", r"\bADOBE\b", r"\bLADRILLO\b"],
+        "ARCILLA": [r"\bARCILLA\b", r"\bLADRILLO(S)?\b"],
+        "ADOBE": [r"\bADOBE(S)?\b", r"\bTIERRA\s+CRUDA\b", r"\bBARRO\b"],
         "BLOQUE_CONCRETO": [r"\bBLOQUE(S)?\s+DE\s+CONCRETO\b", r"\bBLOQUE(S)?\s+CONCRETO\b"],
         "CONCRETO_ESTRUCTURAL": [r"\bCONCRETO\b", r"\bMACHON(ES)?\b", r"\bVIGA(S)?\s+DE\s+CORONA\b"],
     }
