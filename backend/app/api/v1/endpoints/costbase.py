@@ -63,6 +63,18 @@ def normalize_text_alphanumeric(text_val: str) -> str:
     no_accents = ''.join(c for c in nfkd if not unicodedata.combining(c))
     return re.sub(r'[^a-z0-9 ]', '', no_accents.lower()).strip()
 
+def is_covenin_coded_item(item: Any) -> bool:
+    """
+    Verifica si una partida pertenece al catálogo de partidas tipificadas/codificadas COVENIN (~9.642 partidas).
+    Excluye partidas con 'S/C', 'SC' o sin código normativo oficial.
+    """
+    if not item or not getattr(item, 'CovPar', None):
+        return False
+    cov = str(item.CovPar).strip()
+    if not cov or "S/C" in cov.upper() or "SC" in cov.upper():
+        return False
+    return bool(re.match(r'(^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$|^[0-9]+RA$)', cov))
+
 RESOURCE_CONFIG: Dict[str, Dict[str, str]] = {
     "materials": {
         "table": "cost360_materials",
@@ -1159,9 +1171,7 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
                 "materials": materials,
                 "equipments": equipments,
                 "labors": labors,
-                "advertencias": [
-                    f"Partida certificada [{item.CodPar}] importada directamente desde la base de datos maestra a solicitud del usuario."
-                ]
+                "advertencias": []
             }
 
     # 1. Early Validation & DetecciÃ³n de CÃ³digo vs DescripciÃ³n de Obra
@@ -1184,7 +1194,7 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
     if is_code_input(raw_desc):
         if not payload.bypass_exact_match:
             exact_item = get_item_by_code_or_covpar(db, raw_desc.strip())
-            if exact_item:
+            if exact_item and is_covenin_coded_item(exact_item):
                 return {
                     "status": "exact_match_candidate",
                     "matched_item": {
@@ -1235,8 +1245,8 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
         }
 
     # 2.2. Detección interactiva de Match Exacto antes del RAG
-    # Se evalúa si el usuario no ha omitido la verificación (bypass_exact_match es False)
-    # y no se forzó una partida base específica.
+    # El Match Exacto aplica EXCLUSIVAMENTE sobre las ~9.600 partidas codificadas oficialmente por norma.
+    # Si el usuario NO ha indicado bypass_exact_match y NO forzó una partida base:
     candidates = []
     if not payload.bypass_exact_match and not payload.base_partida_code:
         # Si la descripción incluye cláusulas explícitas de exclusión o modificación de alcance,
@@ -1247,38 +1257,46 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
         if not has_exclusion:
             candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
             if candidates:
-                top_cand = candidates[0]
-                top_item = top_cand["item"]
-                top_score = top_cand["score"]
-                
-                norm_query = normalize_text_alphanumeric(raw_desc)
-                norm_item_desc = normalize_text_alphanumeric(top_item.Descri or "")
-                
-                stopwords = {"de", "la", "el", "en", "para", "con", "por", "un", "una", "y", "o", "a", "los", "las", "del", "al", "e"}
-                words_query = set(norm_query.split()) - stopwords
-                words_item = set(norm_item_desc.split()) - stopwords
-                
-                is_exact_text = (norm_query == norm_item_desc)
-                is_high_overlap = False
-                if words_query and words_item:
-                    common_words = words_query.intersection(words_item)
-                    overlap_ratio = len(common_words) / len(words_query)
-                    item_overlap_ratio = len(common_words) / len(words_item)
-                    is_high_overlap = (overlap_ratio >= 0.88 and item_overlap_ratio >= 0.75)
-                
-                if is_exact_text or is_high_overlap or top_score >= 0.90:
-                    return {
-                        "status": "exact_match_candidate",
-                        "matched_item": {
-                            "cod_par": top_item.CodPar,
-                            "cov_par": top_item.CovPar or top_item.CodPar,
-                            "description": top_item.Descri,
-                            "unit": top_item.UniPar,
-                            "pre_uni": top_item.PreUni or 0.0,
-                            "performance": getattr(top_item, 'RenPar', 1.0) or 1.0
-                        },
-                        "message": f"Existe la partida {top_item.CovPar or top_item.CodPar} que coincide casi al 100% con tu descripción. ¿Te refieres a esta partida?"
-                    }
+                # Buscar entre los candidatos más altos aquellos que sean oficialmente codificados (~9.600 partidas)
+                coded_candidate = None
+                for cand in candidates[:3]:
+                    if is_covenin_coded_item(cand["item"]):
+                        coded_candidate = cand
+                        break
+
+                if coded_candidate:
+                    top_item = coded_candidate["item"]
+                    top_score = coded_candidate["score"]
+                    
+                    norm_query = normalize_text_alphanumeric(raw_desc)
+                    norm_item_desc = normalize_text_alphanumeric(top_item.Descri or "")
+                    
+                    stopwords = {"de", "la", "el", "en", "para", "con", "por", "un", "una", "y", "o", "a", "los", "las", "del", "al", "e"}
+                    words_query = set(norm_query.split()) - stopwords
+                    words_item = set(norm_item_desc.split()) - stopwords
+                    
+                    is_exact_text = (norm_query == norm_item_desc)
+                    is_high_overlap = False
+                    if words_query and words_item:
+                        common_words = words_query.intersection(words_item)
+                        overlap_ratio = len(common_words) / len(words_query)
+                        item_overlap_ratio = len(common_words) / len(words_item)
+                        is_high_overlap = (overlap_ratio >= 0.88 and item_overlap_ratio >= 0.75)
+                    
+                    if is_exact_text or is_high_overlap or top_score >= 0.90:
+                        return {
+                            "status": "exact_match_candidate",
+                            "matched_item": {
+                                "cod_par": top_item.CodPar,
+                                "cov_par": top_item.CovPar or top_item.CodPar,
+                                "description": top_item.Descri,
+                                "unit": top_item.UniPar,
+                                "pre_uni": top_item.PreUni or 0.0,
+                                "performance": getattr(top_item, 'RenPar', 1.0) or 1.0
+                            },
+                            "message": f"Existe la partida {top_item.CovPar or top_item.CodPar} que coincide casi al 100% con tu descripción. ¿Te refieres a esta partida?"
+                        }
+
 
     # 2.5. MODO RAG / ADAPTACIÓN DE BASE REAL
     base_code = payload.base_partida_code
@@ -1404,7 +1422,7 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
     if payload_llm.get("modo") == "partida_exacta_encontrada" and not payload.bypass_exact_match:
         cod_par = payload_llm.get("partida_exacta_codigo")
         item = get_item_by_code(db, cod_par)
-        if item:
+        if item and is_covenin_coded_item(item):
             return {
                 "status": "exact_match_candidate",
                 "matched_item": {
