@@ -799,10 +799,24 @@ export default function BudgetWorksheetPage() {
                   </h1>
                 </div>
               </div>
-              <div className="flex md:hidden items-center shrink-0">
-                <span className="text-xs text-slate-600 font-bold bg-slate-100 px-2.5 py-1 rounded-lg">
+              <div className="flex md:hidden items-center shrink-0 gap-1.5">
+                <span className="text-xs text-slate-600 font-bold bg-slate-100 px-2 py-1 rounded-lg">
                   {budget.items.filter(item => !item.is_chapter).length} part.
                 </span>
+                <button 
+                  onClick={() => setShowSettings(!showSettings)}
+                  className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors shadow-xs"
+                  title="Configuración Global"
+                >
+                  <Settings size={17} />
+                </button>
+                <button 
+                  onClick={() => setShowPrintModal(true)}
+                  className="p-1.5 bg-white border border-amber-200 rounded-lg text-amber-700 hover:bg-amber-50 transition-colors shadow-xs"
+                  title="Imprimir Presupuesto"
+                >
+                  <Printer size={17} />
+                </button>
               </div>
             </div>
 
@@ -861,13 +875,13 @@ export default function BudgetWorksheetPage() {
                 </button>
                 <button 
                   onClick={() => setShowSettings(!showSettings)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm text-sm"
+                  className="hidden md:flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm text-sm"
                 >
                   <Settings size={16} /> Configuración Global
                 </button>
                 <button 
                   onClick={() => setShowPrintModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-amber-200 text-amber-700 rounded-xl hover:bg-amber-50 transition-colors font-medium shadow-sm text-sm"
+                  className="hidden md:flex items-center gap-2 px-4 py-2 bg-white border border-amber-200 text-amber-700 rounded-xl hover:bg-amber-50 transition-colors font-medium shadow-sm text-sm"
                 >
                   <Printer size={16} /> Imprimir
                 </button>
@@ -875,7 +889,7 @@ export default function BudgetWorksheetPage() {
               headerPortalTarget
             )}
 
-            {/* Action Buttons: Partidas, Capítulos, Excel */}
+            {/* Action Buttons: Partidas, Capítulos, Excel, Configuración, Imprimir */}
             <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <button  
                 onClick={handleOpenSearchModal}
@@ -887,23 +901,38 @@ export default function BudgetWorksheetPage() {
               <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
                 <button  
                   onClick={() => { setChapterName(""); setShowChapterModal(true); }}
-                  className="flex items-center justify-center gap-2 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 px-3.5 py-2 rounded-xl font-medium shadow-sm transition-all text-xs sm:text-sm"
+                  className="flex items-center justify-center gap-2 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 px-3 py-2 rounded-xl font-medium shadow-xs transition-all text-xs sm:text-sm"
                 >
-                  <FolderPlus size={16} /> <span className="truncate">Agregar Capítulo</span>
+                  <FolderPlus size={16} className="shrink-0" /> <span className="truncate">Agregar Capítulo</span>
                 </button>
 
                 <button
                   onClick={handleExportBudgetToExcel}
                   disabled={exportingBudgetExcel}
-                  className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 px-3.5 py-2 rounded-xl font-medium shadow-sm transition-all disabled:opacity-50 text-xs sm:text-sm"
+                  className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 px-3 py-2 rounded-xl font-medium shadow-xs transition-all disabled:opacity-50 text-xs sm:text-sm"
                   title="Exportar presupuesto a Excel"
                 >
                   {exportingBudgetExcel ? (
-                    <Loader size={16} className="animate-spin text-emerald-600" />
+                    <Loader size={16} className="animate-spin text-emerald-600 shrink-0" />
                   ) : (
-                    <ExcelIcon size={16} className="text-emerald-600" />
+                    <ExcelIcon size={16} className="text-emerald-600 shrink-0" />
                   )}
-                  <span className="sm:hidden font-medium text-emerald-700">Exportar Excel</span>
+                  <span className="truncate">Exportar Excel</span>
+                </button>
+
+                {/* VISIBLES EN MÓVIL (< md) */}
+                <button 
+                  onClick={() => setShowSettings(!showSettings)}
+                  className="md:hidden flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-3 py-2 rounded-xl font-medium shadow-xs transition-all text-xs"
+                >
+                  <Settings size={16} className="shrink-0 text-slate-600" /> <span className="truncate">Configuración</span>
+                </button>
+
+                <button 
+                  onClick={() => setShowPrintModal(true)}
+                  className="md:hidden flex items-center justify-center gap-2 bg-white border border-amber-200 text-amber-700 hover:bg-amber-50 px-3 py-2 rounded-xl font-medium shadow-xs transition-all text-xs"
+                >
+                  <Printer size={16} className="shrink-0 text-amber-600" /> <span className="truncate">Imprimir</span>
                 </button>
               </div>
             </div>
@@ -936,29 +965,31 @@ export default function BudgetWorksheetPage() {
                       <div 
                         key={item.id} 
                         onClick={() => setSelectedItemId(isSelected ? null : item.id)}
-                        className={`rounded-xl p-3 shadow-sm border transition-all flex items-center justify-between gap-2 ${
-                          isSelected ? 'bg-slate-900 ring-2 ring-blue-500 text-white border-blue-500' : 'bg-slate-800 text-white border-slate-700'
+                        className={`rounded-xl px-3 py-1.5 shadow-xs border transition-all flex items-center justify-between gap-2 min-h-[34px] ${
+                          isSelected 
+                            ? 'bg-[#fef3c7] ring-2 ring-amber-500 border-[#f59e0b]' 
+                            : 'bg-[#fef3c7] border-[#f59e0b] hover:bg-amber-200/60'
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <div className="flex flex-col shrink-0 gap-0.5" onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
                             <button 
                               type="button"
                               disabled={idx === 0}
                               onClick={() => handleMoveItem(idx, 'up')}
-                              className="p-1 text-slate-400 hover:text-white disabled:opacity-20 rounded hover:bg-slate-700 active:scale-95 transition-all"
+                              className="p-1 text-amber-800 hover:text-amber-950 disabled:opacity-20 rounded hover:bg-amber-200/80 active:scale-95 transition-all"
                               title="Subir capítulo"
                             >
-                              <ArrowUp size={14} />
+                              <ArrowUp size={13} />
                             </button>
                             <button 
                               type="button"
                               disabled={idx === budget.items.length - 1}
                               onClick={() => handleMoveItem(idx, 'down')}
-                              className="p-1 text-slate-400 hover:text-white disabled:opacity-20 rounded hover:bg-slate-700 active:scale-95 transition-all"
+                              className="p-1 text-amber-800 hover:text-amber-950 disabled:opacity-20 rounded hover:bg-amber-200/80 active:scale-95 transition-all"
                               title="Bajar capítulo"
                             >
-                              <ArrowDown size={14} />
+                              <ArrowDown size={13} />
                             </button>
                           </div>
                           
@@ -973,7 +1004,7 @@ export default function BudgetWorksheetPage() {
                                 if (e.key === 'Enter') handleSaveChapterEdit(item.id);
                                 if (e.key === 'Escape') setEditingChapterId(null);
                               }}
-                              className="w-full bg-slate-900 border border-blue-400 rounded px-2.5 py-1 text-white font-bold uppercase text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
+                              className="w-full bg-white border border-amber-500 rounded px-2 py-0.5 text-[#78350f] font-bold uppercase text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
                               onClick={e => e.stopPropagation()}
                             />
                           ) : (
@@ -983,7 +1014,7 @@ export default function BudgetWorksheetPage() {
                                 setEditingChapterId(item.id);
                                 setEditingChapterName(item.description);
                               }}
-                              className="font-bold text-xs uppercase tracking-wider text-amber-300 truncate cursor-pointer"
+                              className="font-bold text-xs uppercase tracking-wider text-[#78350f] truncate cursor-pointer"
                               title="Tocar para editar capítulo"
                             >
                               {item.description}
@@ -996,10 +1027,10 @@ export default function BudgetWorksheetPage() {
                             e.stopPropagation();
                             handleDeleteItem(item.id);
                           }}
-                          className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-colors shrink-0"
+                          className="p-1 text-amber-800 hover:text-red-600 hover:bg-amber-200/80 rounded-lg transition-colors shrink-0"
                           title="Eliminar capítulo"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={15} />
                         </button>
                       </div>
                     );
@@ -1350,38 +1381,78 @@ export default function BudgetWorksheetPage() {
         
         {/* FOOTER: NOTAS & TOTAL */}
         {budget.items?.length > 0 && (
-          <div className="mt-3 sm:mt-4 flex-none flex flex-col md:flex-row items-stretch md:items-start justify-between gap-3 sm:gap-6">
-            {/* ÁREA DE NOTAS */}
-            <div className="flex-1 max-w-2xl bg-white p-3 rounded-2xl border border-slate-300 shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-              <textarea
-                value={notesText}
-                onChange={(e) => setNotesText(e.target.value)}
-                onBlur={handleSaveNotes}
-                placeholder="Escribe notas, observaciones, términos de validez o condiciones de pago..."
-                rows={2}
-                className="w-full bg-transparent border-0 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed"
-              />
+          <div className="mt-2.5 sm:mt-4 flex-none">
+            {/* MOBILE COMPACT TOTALS & NOTES (< md) */}
+            <div className="md:hidden flex flex-col gap-2">
+              {/* Notas compactas en móvil */}
+              <div className="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-xs focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-100 transition-all">
+                <textarea
+                  value={notesText}
+                  onChange={(e) => setNotesText(e.target.value)}
+                  onBlur={handleSaveNotes}
+                  placeholder="Notas u observaciones del presupuesto..."
+                  rows={1}
+                  className="w-full bg-transparent border-0 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none resize-none leading-normal"
+                />
+              </div>
+
+              {/* Barra compacta de totales (3 columnas, altura reducida a menos de la mitad) */}
+              <div className="bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">SUBTOTAL</span>
+                  <span className="font-mono font-bold text-slate-700 text-xs leading-none">
+                    {subtotalPresupuesto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex flex-col text-center px-2 border-x border-slate-200">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">I.V.A. ({budget.iva_percent ?? 16}%)</span>
+                  <span className="font-mono font-bold text-slate-700 text-xs leading-none">
+                    {ivaAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex flex-col text-right">
+                  <span className="text-[10px] text-blue-600 font-bold uppercase tracking-wider leading-none mb-0.5">TOTAL ({budget.currency})</span>
+                  <span className="font-mono font-extrabold text-blue-900 text-sm leading-none">
+                    {totalGeneral.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            {/* TABLA DE TOTALES */}
-            <div className="bg-slate-50 px-4 py-2 rounded-2xl border-2 border-slate-300 shadow-sm w-full md:w-auto md:min-w-[300px] shrink-0">
-              <div className="flex justify-between items-center py-1">
-                <span className="text-slate-500 font-medium text-sm leading-none">SUBTOTAL</span>
-                <span className="text-lg font-semibold text-slate-700 leading-none">
-                  {subtotalPresupuesto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
+            {/* DESKTOP TOTALS & NOTES (>= md) */}
+            <div className="hidden md:flex flex-row items-stretch md:items-start justify-between gap-6">
+              {/* ÁREA DE NOTAS */}
+              <div className="flex-1 max-w-2xl bg-white p-3 rounded-2xl border border-slate-300 shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                <textarea
+                  value={notesText}
+                  onChange={(e) => setNotesText(e.target.value)}
+                  onBlur={handleSaveNotes}
+                  placeholder="Escribe notas, observaciones, términos de validez o condiciones de pago..."
+                  rows={2}
+                  className="w-full bg-transparent border-0 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed"
+                />
               </div>
-              <div className="flex justify-between items-center py-1 border-b border-slate-200">
-                <span className="text-slate-500 font-medium text-sm leading-none">I.V.A. ({budget.iva_percent ?? 16}%)</span>
-                <span className="text-lg font-semibold text-slate-700 leading-none">
-                  {ivaAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-1">
-                <span className="text-slate-500 font-medium text-sm leading-none">TOTAL ({budget.currency})</span>
-                <span className="text-lg font-semibold text-slate-700 leading-none">
-                  {totalGeneral.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
+
+              {/* TABLA DE TOTALES */}
+              <div className="bg-slate-50 px-4 py-2 rounded-2xl border-2 border-slate-300 shadow-sm w-full md:w-auto md:min-w-[300px] shrink-0">
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-slate-500 font-medium text-sm leading-none">SUBTOTAL</span>
+                  <span className="text-[14px] font-semibold text-slate-700 leading-none">
+                    {subtotalPresupuesto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                  <span className="text-slate-500 font-medium text-sm leading-none">I.V.A. ({budget.iva_percent ?? 16}%)</span>
+                  <span className="text-[14px] font-semibold text-slate-700 leading-none">
+                    {ivaAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-slate-500 font-medium text-sm leading-none">TOTAL ({budget.currency})</span>
+                  <span className="text-[14px] font-bold text-slate-800 leading-none">
+                    {totalGeneral.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
