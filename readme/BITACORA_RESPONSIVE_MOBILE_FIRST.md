@@ -155,7 +155,7 @@ Este componente alimenta la selección de **Materiales, Equipos y Mano de Obra**
 
 ---
 
-## 7. Verificación y Despliegue en Producción
+## 7. Verificación y Despliegue en Producción Anterior
 
 1. **Compilación de Producción:**
    - Verificado con `npm run build` en Vite sin advertencias críticas de empaquetado.
@@ -167,3 +167,136 @@ Este componente alimenta la selección de **Materiales, Equipos y Mano de Obra**
    - Paquete transferido y extraído en el contenedor Docker Nginx (`apupro_platform-apupro-frontend-1`).
    - Repositorio remoto actualizado con `git pull origin main`.
    - Verificación HTTP 200 y validación de cabeceras en `https://costbase.net/`.
+
+---
+
+## 8. Fase 6: Estandarización de Modales Full-Screen Nativo Móvil
+
+Para ofrecer una experiencia indistinguible de una aplicación nativa en smartphones (`< sm`), se rediseñaron todos los modales principales y selectores del sistema:
+- **Estructura Arquitectónica:**
+  - Contenedor exterior: `fixed inset-0 ... p-0 sm:p-4`
+  - Contenedor interior: `w-full h-full sm:h-auto sm:max-w-[size] rounded-none sm:rounded-2xl flex flex-col`
+  - Cabecera fija: `pt-safe shrink-0` (protege contra notch y Dynamic Island de iPhone)
+  - Cuerpo desplazable: `flex-1 overflow-y-auto` con scroll independiente
+  - Pie de página / Botones fijos: `pb-safe shrink-0` (protege contra la barra de gestos de inicio de iOS y Android)
+  - Altura de interacción táctil: Mínimo 44px (`min-h-[44px]`).
+
+### Archivos Adaptados en Fase 6:
+1. `frontend/src/components/modals/CreateBudgetModal.jsx`: Formulario de creación de presupuesto a pantalla completa móvil.
+2. `frontend/src/components/modals/BudgetSettingsModal.jsx`: Configuración global de presupuesto (moneda, FCAS, admin, utilidad, IVA) con tabs táctiles sin scrollbars visibles.
+3. `frontend/src/components/modals/ShareBudgetModal.jsx`: Modal de compartir presupuesto con campo URL adaptado y botón de copiado táctil.
+4. `frontend/src/components/modals/ImportSharedBudgetModal.jsx`: Diálogo de importación con vista previa completa en móvil.
+5. `frontend/src/components/modals/BudgetPrintModal.jsx`: Modal de opciones de impresión y exportación PDF/APU.
+6. `frontend/src/components/SubscriptionRequestModal.jsx`: Modal de suscripción y planes con tarjetas legibles y pantalla de confirmación optimizada.
+7. `frontend/src/components/ReportPaymentModal.jsx`: Reporte de pagos con formulario de pago táctil.
+8. `frontend/src/components/modals/AccountSettingsModal.jsx`: Configuración de perfil y cuenta de usuario.
+9. `frontend/src/components/ComponentSelectorModal.jsx`: Selector de insumos (materiales, equipos, mano de obra) a pantalla completa con búsqueda optimizada.
+
+---
+
+## 9. Fase 7: Gestor de Presupuestos (`BudgetHomePage.jsx`)
+
+En la pantalla principal del gestor de presupuestos se resolvieron los problemas de botones desbordados y tarjetas ilegibles:
+
+### 9.1. Cabecera y Botones de Acción Superior
+- Se reorganizó a `flex flex-col sm:flex-row gap-2.5 sm:gap-3`.
+- **En móvil:**
+  - Botón principal `+ Nuevo Presupuesto`: Toma el 100% del ancho (`w-full`) como acción destacada superior.
+  - Botones secundarios `Importar Backup` e `Importar Enlace`: Distribuidos en una cuadrícula de 2 columnas (`grid grid-cols-2`) directamente debajo, eliminando cualquier recorte.
+- **En escritorio:** Mantiene la alineación horizontal fluida original.
+
+### 9.2. Tarjetas de Presupuesto (`.tarjeta-presupuesto-ambar`)
+- **Layout Adaptativo:** Cambia de `flex-direction: column` en móvil a `flex-direction: row` en escritorio (`≥ 768px`).
+- **Bloque de Información:** En móvil ocupa el ancho total mostrando el nombre del proyecto (`line-clamp-2 break-words` con fallback preventivo), badge de monto total (`$ / Bs.`), conteo de partidas y fecha de creación sin solapamientos.
+- **Barra de Acciones Rápidas:** Los 8 botones de acción rápida se organizan en una barra inferior táctil con separador `border-t border-amber-200/60`, dimensiones mínimas de 36x36px y feedback táctil (`active:scale-95`).
+- **Modales Inline:** Los modales de "Renombrar", "Duplicar" y "Eliminar Presupuesto" se adaptaron con soporte full-screen nativo.
+
+---
+
+## 10. Fase 8: Hoja de Trabajo y Edición de Presupuestos (`BudgetWorksheetPage.jsx`)
+
+La hoja de trabajo del presupuesto presentaba el mayor desafío por la densidad de información (tabla de 8 columnas técnicas con cálculo en tiempo real, capítulos de obra y múltiples acciones por fila).
+
+### 10.1. Desacoplamiento de la Cabecera del Worksheet
+- La cabecera fue extraída de la etiqueta `<tr><th colSpan="8">` de la tabla hacia un contenedor superior independiente:
+  - **En móvil:**
+    - Botón primario `+ Agregar Partida` a ancho completo (`w-full`).
+    - Cuadrícula de 2x2 para las acciones secundarias: `📁 Agregar Capítulo`, `📊 Exportar Excel`, `⚙️ Configuración Global` y `🖨️ Imprimir`.
+    - Accesos rápidos en la barra superior al lado del título y conteo de partidas: botones de 1 toque ⚙️ y 🖨️.
+  - **En escritorio:** Mantiene la alineación horizontal limpia con el selector de base de datos, actualización de precios, configuración e impresión mediante portal a la barra de navegación superior (`header-actions-portal`).
+
+### 10.2. Tarjetas Nativas de Partida para Móvil (`md:hidden`)
+Para evitar el desplazamiento lateral horizontal de la tabla de 8 columnas en smartphones, se sustituyó por una lista de tarjetas de partida apiladas verticalmente con 4 niveles:
+1. **Fila 1 (Identificación y Movimiento):**
+   - Número de partida `#` con botones táctiles `▲` y `▼` para reordenar partidas arriba/abajo sin pelear con el scroll táctil del teléfono (`handleMoveItem`).
+   - Badge con Código COVENIN o interno (`cov_par` / `cod_par`).
+   - Badge con Unidad de medida (`UND: {item.unit}`).
+2. **Fila 2 (Descripción):**
+   - Texto completo de la descripción de la partida con tipografía clara y espaciado cómodo.
+3. **Fila 3 (Panel de Cálculos en 3 Columnas):**
+   - **Cantidad:** Campo interactivo editable con calculadora matemática integrada (`MathQuantityInput`). Actualiza en tiempo real los subtotales e importes generales.
+   - **P.U.:** Precio unitario formateado.
+   - **Total:** Monto total de la partida destacado en color azul.
+4. **Fila 4 (Botones de Acción - ESTRICTAMENTE SOLO ICONOS):**
+   - 4 botones táctiles sin texto visible (`≥ 40px` de altura):
+     - ⚙️ `Settings` (Editar APU de la partida)
+     - 🖨️ `Printer` (Imprimir ficha técnica APU)
+     - 📊 `ExportApuExcelButton` (Exportar APU a Excel)
+     - 🗑️ `Trash2` (Eliminar partida)
+
+### 10.3. Tarjeta de Capítulos de Obra Rediseñada
+- **Mitad de altura:** Reducida a `min-h-[34px]` y padding `px-3 py-1.5`.
+- **Botones de movimiento horizontales:** Botones `▲` y `▼` alineados lado a lado (`flex items-center gap-0.5`), eliminando la altura forzada anterior.
+- **Paleta de Color Ámbar (Hover de Presupuestos):**
+  - Fondo: `#fef3c7` (`bg-[#fef3c7]`)
+  - Borde: `#f59e0b` (`border-[#f59e0b]`)
+  - Texto: `#78350f` (`text-[#78350f]` en negrita mayúscula)
+  - Edición rápida de nombre de capítulo al tocar el texto y botón de papelera integrado.
+
+### 10.4. Barra de Totales Ultra-Compacta en Móvil
+- **En móvil (`md:hidden`):**
+  - Se sustituyó la tarjeta vertical de más de 120px por una barra horizontal de 3 columnas de tan solo **~36px de alto**: `SUBTOTAL` | `I.V.A. (16%)` | `TOTAL (USD/Bs.)`.
+  - Área de notas compacta de 1 sola fila (`rows={1}`) que no obstruye la pantalla.
+- **En escritorio (`hidden md:flex`):**
+  - Se conserva la vista espaciosa con notas de 2 líneas y la tabla vertical de totales con tipografía ajustada a 14px (`text-[14px]`).
+
+### 10.5. Experiencia de Escritorio Preservada (`hidden md:block`)
+- En pantallas medianas y grandes se conserva intacta la tabla estilo hoja de cálculo de 8 columnas con arrastrar y soltar (Drag and Drop mediante `@hello-pangea/dnd`).
+
+### 10.6. Modales Internos de la Hoja de Trabajo
+- **Buscar e Incluir Partidas (`showSearchModal`):** Pantalla completa nativa en teléfonos (`w-full h-full sm:h-[80vh]`), cabecera flexible con selector de bases de datos/presupuestos y botón "Incluir" táctil.
+- **Agregar Capítulo (`showChapterModal`):** Formato bottom-sheet táctil.
+- **Confirmación de Eliminación (`itemToDelete`):** Diálogo centrado o bottom-sheet con botones táctiles de 44px.
+
+---
+
+## 11. Estado Actual y Próximos Pasos para Retomar
+
+### 11.1. Estado del Repositorio
+- **Compilación de Producción (`npm run build`):** Verificada y pasando con éxito con **código de salida 0** en Vite.
+- **Archivos Modificados en la Sesión:**
+  - `frontend/src/components/modals/CreateBudgetModal.jsx`
+  - `frontend/src/components/modals/BudgetSettingsModal.jsx`
+  - `frontend/src/components/modals/ShareBudgetModal.jsx`
+  - `frontend/src/components/modals/ImportSharedBudgetModal.jsx`
+  - `frontend/src/components/modals/BudgetPrintModal.jsx`
+  - `frontend/src/components/SubscriptionRequestModal.jsx`
+  - `frontend/src/components/ReportPaymentModal.jsx`
+  - `frontend/src/components/modals/AccountSettingsModal.jsx`
+  - `frontend/src/components/ComponentSelectorModal.jsx`
+  - `frontend/src/pages/admin/BudgetHomePage.jsx`
+  - `frontend/src/pages/admin/BudgetWorksheetPage.jsx`
+  - `frontend/src/index.css`
+
+### 11.2. Próximas Pantallas Pendientes por Revisar/Optimizar al Retomar:
+1. **Página de Edición Individual de APU (`BudgetAPUEditorPage.jsx` / `ApuEditorUI.jsx`):**
+   - Revisar la experiencia móvil al agregar y editar insumos individuales de materiales, equipos y mano de obra dentro de una partida específica de presupuesto.
+2. **Páginas de Catálogos Maestros:**
+   - `MaterialsPage.jsx` (Materiales)
+   - `EquipmentsPage.jsx` (Equipos)
+   - `LaborsPage.jsx` (Mano de Obra)
+3. **Calculadora FCAS (`FCASCalculatorPage.jsx`):**
+   - Optimizar formularios de factores de costos asociados al salario para teléfonos móviles.
+4. **Página de Presupuestos Compartidos (`SharedBudgetPage.jsx`):**
+   - Verificar la vista pública móvil para clientes que reciben un presupuesto compartido mediante enlace.
+

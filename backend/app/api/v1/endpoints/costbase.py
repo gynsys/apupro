@@ -172,6 +172,7 @@ from app.services.ai_apu_service import (
 )
 from app.api.v1.endpoints.export_utils import generate_excel_workbook
 from app.services.synonyms_service import expand_technical_synonyms
+from app.services.apu_input_validator import validate_apu_input, validate_rag_signals, build_rejection_response
 
 router = APIRouter()
 
@@ -1174,20 +1175,15 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
                 "advertencias": []
             }
 
-    # 1. Early Validation & DetecciÃ³n de CÃ³digo vs DescripciÃ³n de Obra
+    # 1. Early Validation & Detección de Código vs Descripción de Obra
     raw_desc = (payload.description or "").strip()
-    if not raw_desc or len(raw_desc) < 3:
-        return {
-            "status": "clarification_needed",
-            "clarification_message": "La descripciÃ³n ingresada es demasiado breve o vacÃ­a para estructurar un AnÃ¡lisis de Precios Unitarios (APU). Por favor describe la actividad a ejecutar.",
-            "options": [],
-            "questions": [
-                "1. Â¿QuÃ© actividad constructiva especÃ­fica deseas presupuestar?",
-                "2. Â¿QuÃ© materiales y equipos principales intervienen?",
-                "3. Â¿En quÃ© unidad de medida se computa la partida?"
-            ],
-            "guia_redaccion": "Estructura recomendada: [AcciÃ³n] + [Elemento] + [Material/EspecificaciÃ³n] + [Unidad]."
-        }
+
+    # --- CAPA 1: Validación de entrada (costo cero — sin LLM, sin red) ---
+    capa1_result = validate_apu_input(raw_desc)
+    if capa1_result is not None:
+        veredicto, mensaje, codigo_interno = capa1_result
+        logger.info("APU input rejected by Capa 1 [%s]: %.80s", codigo_interno, raw_desc)
+        return build_rejection_response(veredicto, mensaje, codigo_interno)
 
     # Si el usuario ingresó únicamente un código o nomenclatura (ej: 'E11102235', 'CMT050', etc.):
     # Si coincide con una partida existente en BD y no ha hecho bypass, ofrecer match exacto directamente
@@ -1304,6 +1300,14 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
         # Búsqueda RAG Híbrida automática para encontrar la mejor partida base
         if not candidates:
             candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
+
+        # --- CAPA 2: Validación de Ambigüedad y Dominio vía señales RAG (Gemini Embeddings + Léxico) ---
+        capa2_result = validate_rag_signals(payload.description, candidates)
+        if capa2_result is not None:
+            veredicto, mensaje, codigo_interno, options = capa2_result
+            logger.info("APU input stopped by Capa 2 RAG [%s]: %.80s", codigo_interno, payload.description)
+            return build_rejection_response(veredicto, mensaje, codigo_interno, rag_candidates=options)
+
         if candidates and candidates[0]["score"] >= 0.35:
             base_code = candidates[0]["item"].CodPar
 
