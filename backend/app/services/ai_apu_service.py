@@ -276,6 +276,7 @@ un catálogo de insumos filtrado y advertencias. Tu trabajo es estructurar un AP
     result["debug_preprocesamiento"] = payload_llm
 
     if result.get("status") == "clarification_needed":
+        result["options"] = []
         return result
 
     if payload_llm.get("advertencias_preprocesamiento"):
@@ -379,8 +380,7 @@ SOLICITA CLARIFICACIÓN (status: "clarification_needed") SI Y SOLO SI:
   - C3 falla: la combinación es un absurdo físico o una contradicción insalvable.
   - La descripción es irrelevante para el dominio construcción (comida, geografía, entretenimiento, etc.).
 
-CUANDO solicites clarificación, usa las candidatas del RAG para ofrecer opciones concretas.
-NO hagas preguntas abiertas si ya tienes candidatas con score >= 0.70.
+CUANDO solicites clarificación, responde con "options": []. ESTÁ TERMINANTEMENTE PROHIBIDO inventar o adivinar opciones o partidas alternativas no solicitadas. Limítate a explicar qué información técnica falta en questions y clarification_message.
 
 {_REGLAS_EQUIPOS_ESCALA}
 {_REGLAS_INSUMOS_PRECIOS}
@@ -395,6 +395,9 @@ NO hagas preguntas abiertas si ya tienes candidatas con score >= 0.70.
         result["advertencias"] = []
     if "notas_adaptacion" not in result:
         result["notas_adaptacion"] = []
+
+    if result.get("status") == "clarification_needed":
+        result["options"] = []
 
     result["debug_base_apu"] = base_apu
     result["prompt_enviado_al_llm"] = prompt

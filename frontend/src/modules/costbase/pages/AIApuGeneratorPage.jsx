@@ -343,13 +343,8 @@ export default function AIApuGeneratorPage() {
               message={generator.aiClarificationMessage}
               recommendation={generator.aiClarificationRecommendation}
               questions={generator.aiQuestions}
-              options={generator.aiOptions}
               entryModeSource={guided.entryModeSource}
               onDismiss={generator.dismissClarification}
-              onSelectOption={(opt) => {
-                setPrompt(opt);
-                generator.handleGenerate(opt, false, false, false, null, 'chat');
-              }}
               onStartGuided={() => {
                 generator.dismissClarification();
                 guided.resetChatbot();

@@ -5,10 +5,8 @@ export default function ClarificationAlertCard({
   message,
   recommendation,
   questions = [],
-  options = [],
   entryModeSource = 'libre',
   onDismiss,
-  onSelectOption,
   onStartGuided,
   onResetChatbot,
   onResetLibre
@@ -54,20 +52,6 @@ export default function ClarificationAlertCard({
               );
             })}
           </ul>
-        </div>
-      )}
-      
-      {options.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-amber-200">
-          {options.map((opt, idx) => (
-            <button
-              key={idx}
-              onClick={() => onSelectOption && onSelectOption(opt)}
-              className="px-3 py-1.5 bg-white border border-amber-300 text-amber-900 rounded-lg text-xs font-bold hover:bg-amber-100 transition-colors shadow-sm cursor-pointer"
-            >
-              {opt}
-            </button>
-          ))}
         </div>
       )}
 

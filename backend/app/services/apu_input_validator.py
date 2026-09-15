@@ -488,17 +488,6 @@ def build_rejection_response(
     Returns:
         Dict con la estructura de respuesta estándar del pipeline APU.
     """
-    options: List[str] = []
-    if rag_candidates and veredicto == "clarification_needed":
-        # Ofrecer las top candidatas del RAG como opciones concretas
-        for candidate in rag_candidates[:4]:
-            if isinstance(candidate, str):
-                options.append(candidate)
-            elif isinstance(candidate, dict):
-                desc = candidate.get("descripcion") or candidate.get("desc") or candidate.get("description", "")
-                if desc:
-                    options.append(desc.capitalize())
-
     questions = [
         "1. Accion principal: Que actividad deseas presupuestar (demolicion, construccion, instalacion)?",
         "2. Elemento constructivo: Sobre que elemento se actua (pared, tuberia, losa, piso)?",
@@ -530,7 +519,7 @@ def build_rejection_response(
         "status": "clarification_needed",
         "clarification_message": mensaje,
         "recommendation": "Te recomendamos utilizar el Asistente Guiado para estructurar tu descripción paso a paso.",
-        "options": options,
+        "options": [],
         "questions": questions,
         "guia_redaccion": (
             "Estructura recomendada: [Accion] + [Elemento] + [Material/Especificacion] + [Metodo]. "
