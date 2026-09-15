@@ -36,17 +36,18 @@ export default function AdminLayout() {
   const primaryColor = getPrimaryColor()
 
   return (
-    <div className="min-h-screen bg-gray-50 animate-fade-in">
+    <div className="min-h-[100dvh] bg-gray-50 animate-fade-in">
       {/* Mobile sidebar */}
       <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
         <div className="fixed inset-0 bg-black bg-opacity-25" onClick={() => setSidebarOpen(false)} />
-        <div className="fixed left-0 top-0 bottom-0 w-64 bg-white shadow-lg">
+        <div className="fixed left-0 top-0 bottom-0 w-[85vw] max-w-xs bg-white shadow-lg pt-safe pb-safe">
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between p-4 border-b">
               <h2 className="text-lg font-semibold text-gray-900">Arko 360 Admin</h2>
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 p-2 touch-target flex items-center justify-center cursor-pointer"
+                aria-label="Cerrar menú"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

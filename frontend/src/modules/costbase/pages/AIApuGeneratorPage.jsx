@@ -1389,16 +1389,16 @@ export default function AIApuGeneratorPage() {
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 mt-4 pt-3 border-t border-emerald-200/70">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 mt-4 pt-3 border-t border-emerald-200/70">
                 <button
                   onClick={handleAcceptExactMatch}
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 transition-all transform active:scale-95 cursor-pointer"
+                  className="w-full sm:w-auto justify-center px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 transition-all transform active:scale-95 cursor-pointer min-h-[44px] touch-target"
                 >
                   <Check size={18} /> Sí, es esa
                 </button>
                 <button
                   onClick={handleRejectExactMatch}
-                  className="px-4 py-2.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 transition-all cursor-pointer"
+                  className="w-full sm:w-auto justify-center px-4 py-2.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 transition-all cursor-pointer min-h-[44px] touch-target"
                 >
                   <Sparkles size={16} className="text-amber-500" /> No es esa (Generar con IA)
                 </button>
@@ -1514,8 +1514,8 @@ export default function AIApuGeneratorPage() {
           )}
           
           {isGuidedMode && !isSmartMode && !isClarifying && !item ? (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-hidden animate-in fade-in duration-200">
-              <div className="bg-[#FEF3C7] border-2 border-[#FEF3C7] rounded-xl p-4 md:p-6 relative flex flex-col max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200" style={{ minHeight: '400px', maxHeight: '80vh' }}>
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4 overflow-hidden animate-in fade-in duration-200">
+              <div className="bg-[#FEF3C7] border-2 border-[#FEF3C7] rounded-2xl p-3.5 sm:p-6 relative flex flex-col max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200" style={{ minHeight: '380px', maxHeight: '90dvh' }}>
                 <button 
                   onClick={() => {
                     setIsGuidedMode(false);
@@ -1523,7 +1523,8 @@ export default function AIApuGeneratorPage() {
                     lastEntrySourceRef.current = 'libre';
                     navigate('/cost360/ai-generator?mode=ia&guided=false', { replace: true });
                   }}
-                  className="absolute top-4 right-4 text-amber-700 hover:text-amber-900 hover:bg-amber-200/50 rounded-full p-1.5 transition-colors"
+                  className="absolute top-3 right-3 text-amber-700 hover:text-amber-900 hover:bg-amber-200/50 rounded-full p-2 touch-target flex items-center justify-center transition-colors cursor-pointer"
+                  aria-label="Cerrar asistente"
                 >
                   <X size={20} />
                 </button>

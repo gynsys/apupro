@@ -52,118 +52,155 @@ export default function AppLayout() {
   };
 
   /* ── Sidebar nav list ───────────────────────────────────────── */
-  const SidebarContent = () => (
-    <nav className="flex flex-col h-full py-5 items-center w-full">
-      {/* Mobile logo */}
-      <div className="flex items-center gap-2.5 px-5 mb-6 lg:hidden w-full justify-center">
-        <div className="bg-blue-600 text-white p-1.5 rounded-xl shadow">
-          <Layout size={18} />
+  const SidebarContent = ({ isMobile = false }) => (
+    <nav className={`flex flex-col h-full py-4 ${isMobile ? 'items-start px-3' : 'items-center'} w-full`}>
+      {/* Mobile logo header inside drawer */}
+      {isMobile && (
+        <div className="flex items-center gap-2.5 px-3 mb-5 w-full">
+          <div className="bg-blue-600 text-white p-1.5 rounded-xl shadow">
+            <Layout size={18} />
+          </div>
+          <span className="font-extrabold text-lg text-slate-800 tracking-tight">CostBase</span>
         </div>
-      </div>
+      )}
 
-      <div className="space-y-3 px-2 flex-1 pb-4 w-full flex flex-col items-center">
+      <div className={`space-y-2 flex-1 pb-4 w-full flex flex-col ${isMobile ? 'items-stretch' : 'items-center'}`}>
         {getNavItems().map(({ name, href, Icon, exact }) => {
           const active = exact ? location.pathname === href : location.pathname.startsWith(href);
           return (
-            <div key={href} className="group relative w-full flex justify-center">
+            <div key={href} className="group relative w-full">
               <Link
                 to={href}
                 onClick={() => setSidebarOpen(false)}
-                className="flex items-center justify-center p-3 rounded-xl transition-all duration-200 text-slate-500 hover:bg-[#FEF3C7] hover:text-slate-800"
+                className={`flex items-center ${
+                  isMobile ? 'justify-start px-3.5 py-2.5 gap-3' : 'justify-center p-3'
+                } rounded-xl transition-all duration-200 ${
+                  active ? 'bg-blue-50 text-blue-700 font-semibold shadow-xs' : 'text-slate-600 hover:bg-[#FEF3C7] hover:text-slate-900'
+                } min-h-[44px] touch-target`}
               >
                 {typeof Icon === 'function' ? (
                   <Icon
-                    size={24}
-                    className={active ? 'text-blue-600' : 'text-slate-400'}
+                    size={22}
+                    className={active ? 'text-blue-600 shrink-0' : 'text-slate-400 shrink-0'}
                   />
                 ) : (
                   <Icon
-                    className={`${active ? 'text-blue-600' : 'text-slate-400'} w-6 h-6`}
+                    className={`${active ? 'text-blue-600' : 'text-slate-400'} w-5 h-5 shrink-0`}
                   />
+                )}
+                {isMobile && (
+                  <span className="text-sm font-medium tracking-tight truncate">{name}</span>
                 )}
               </Link>
               
-              {/* Tooltip */}
-              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
-                {name}
-                <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
-              </div>
+              {!isMobile && (
+                <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
+                  {name}
+                  <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
+                </div>
+              )}
             </div>
           );
         })}
 
-        {/* Botón Calculadora FCAS movido justo debajo de los iconos de navegación */}
-        <div className="group relative w-full flex justify-center">
+        {/* Botón Calculadora FCAS */}
+        <div className="group relative w-full">
           <Link
             to="/fcas"
             onClick={() => setSidebarOpen(false)}
-            className="flex items-center justify-center p-3 rounded-xl transition-all duration-200 text-slate-500 hover:bg-[#FEF3C7] hover:text-slate-800"
+            className={`flex items-center ${
+              isMobile ? 'justify-start px-3.5 py-2.5 gap-3' : 'justify-center p-3'
+            } rounded-xl transition-all duration-200 ${
+              location.pathname.startsWith('/fcas') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-[#FEF3C7] hover:text-slate-900'
+            } min-h-[44px] touch-target`}
           >
-            <Calculator size={24} className={location.pathname.startsWith('/fcas') ? 'text-blue-600' : 'text-slate-400'} />
+            <Calculator size={22} className={location.pathname.startsWith('/fcas') ? 'text-blue-600 shrink-0' : 'text-slate-400 shrink-0'} />
+            {isMobile && (
+              <span className="text-sm font-medium tracking-tight truncate">Cálculo FCAS</span>
+            )}
           </Link>
-          {/* Tooltip */}
-          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
-            Calculo FCAS
-            <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
-          </div>
+          {!isMobile && (
+            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
+              Cálculo FCAS
+              <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
+            </div>
+          )}
         </div>
 
         {/* Separator to push the next item to bottom */}
-        <div className="flex-1"></div>
+        <div className="flex-1 min-h-[12px]"></div>
 
         {/* Botón Mi Plan / Premium */}
-        <div className="group relative w-full flex justify-center mt-auto pb-2">
+        <div className="group relative w-full mt-auto pb-1">
           <button
             onClick={() => {
               setSidebarOpen(false);
               setShowSubscriptionModal(true);
             }}
-            className="flex items-center justify-center p-3 rounded-xl transition-all duration-200 text-slate-500 hover:bg-[#FEF3C7] hover:text-amber-600"
+            className={`flex items-center ${
+              isMobile ? 'justify-start px-3.5 py-2.5 gap-3' : 'justify-center p-3'
+            } rounded-xl transition-all duration-200 text-slate-600 hover:bg-[#FEF3C7] hover:text-amber-600 w-full min-h-[44px] touch-target cursor-pointer`}
           >
-            <Crown size={24} />
+            <Crown size={22} className="text-amber-500 shrink-0" />
+            {isMobile && (
+              <span className="text-sm font-medium tracking-tight truncate">Planes y Beneficios</span>
+            )}
           </button>
-          {/* Tooltip */}
-          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
-            Planes y Beneficios
-            <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
-          </div>
+          {!isMobile && (
+            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
+              Planes y Beneficios
+              <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
+            </div>
+          )}
         </div>
 
         {/* Botón Reportar Pago */}
-        <div className="group relative w-full flex justify-center pb-2">
+        <div className="group relative w-full pb-1">
           <button
             onClick={() => {
               setSidebarOpen(false);
               setShowPaymentModal(true);
             }}
-            className="flex items-center justify-center p-3 rounded-xl transition-all duration-200 text-slate-500 hover:bg-green-50 hover:text-green-600"
+            className={`flex items-center ${
+              isMobile ? 'justify-start px-3.5 py-2.5 gap-3' : 'justify-center p-3'
+            } rounded-xl transition-all duration-200 text-slate-600 hover:bg-green-50 hover:text-green-600 w-full min-h-[44px] touch-target cursor-pointer`}
           >
-            <Receipt size={24} />
+            <Receipt size={22} className="text-emerald-500 shrink-0" />
+            {isMobile && (
+              <span className="text-sm font-medium tracking-tight truncate">Reportar Pago</span>
+            )}
           </button>
-          {/* Tooltip */}
-          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
-            Reportar Pago
-            <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
-          </div>
+          {!isMobile && (
+            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
+              Reportar Pago
+              <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
+            </div>
+          )}
         </div>
 
         {/* Botón Centro de Ayuda */}
-        <div className="group relative w-full flex justify-center pb-4">
+        <div className="group relative w-full pb-2">
           <button
             onClick={() => {
               setSidebarOpen(false);
               setShowHelpDrawer(true);
             }}
-            className="flex items-center justify-center p-3 rounded-xl transition-all duration-200 text-slate-500 hover:bg-blue-50 hover:text-blue-600 cursor-pointer"
+            className={`flex items-center ${
+              isMobile ? 'justify-start px-3.5 py-2.5 gap-3' : 'justify-center p-3'
+            } rounded-xl transition-all duration-200 text-slate-600 hover:bg-blue-50 hover:text-blue-600 w-full min-h-[44px] touch-target cursor-pointer`}
             title="Centro de Ayuda"
           >
-            <HelpCircle size={24} />
+            <HelpCircle size={22} className="text-blue-500 shrink-0" />
+            {isMobile && (
+              <span className="text-sm font-medium tracking-tight truncate">Centro de Ayuda</span>
+            )}
           </button>
-          {/* Tooltip */}
-          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
-            Centro de Ayuda
-            <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
-          </div>
+          {!isMobile && (
+            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
+              Centro de Ayuda
+              <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
+            </div>
+          )}
         </div>
       </div>
     </nav>
@@ -172,14 +209,14 @@ export default function AppLayout() {
   return (
     /* ── Root: gradient mesh background ──────────────────────── */
     <div
-      className="h-screen overflow-hidden flex flex-col print:block print:overflow-visible print:h-auto animate-fade-in"
+      className="h-[100dvh] max-h-[100dvh] overflow-hidden flex flex-col print:block print:overflow-visible print:h-auto animate-fade-in"
       style={{
         background: 'linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 40%, #f5f3ff 100%)',
       }}
     >
       {/* ── ZONE 2: TOP HEADER — glass bar ────────────────────── */}
       <header
-        className="print:hidden h-14 sticky top-0 z-50 flex items-center px-4 gap-3"
+        className="print:hidden min-h-[3.5rem] pt-safe sticky top-0 z-50 flex items-center px-3 sm:px-4 gap-2 sm:gap-3"
         style={{
           background: 'rgba(255,255,255,0.75)',
           backdropFilter: 'blur(16px)',
@@ -190,8 +227,9 @@ export default function AppLayout() {
       >
         {/* Hamburger */}
         <button
-          className="lg:hidden p-1.5 rounded-xl text-slate-400 hover:bg-white/80 transition-colors"
+          className="lg:hidden p-2 rounded-xl text-slate-500 hover:bg-white/80 transition-colors touch-target flex items-center justify-center cursor-pointer"
           onClick={() => setSidebarOpen(true)}
+          aria-label="Abrir menú"
         >
           <Menu size={22} />
         </button>
@@ -214,10 +252,10 @@ export default function AppLayout() {
 
         {/* Right controls */}
         {isAuthenticated ? (
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setShowHelpDrawer(true)}
-              className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50/70 transition-colors cursor-pointer"
+              className="p-2 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50/70 transition-colors cursor-pointer min-w-[38px] min-h-[38px] flex items-center justify-center"
               title="Centro de Ayuda"
             >
               <HelpCircle size={19} />
@@ -225,21 +263,21 @@ export default function AppLayout() {
             <NotificationBell />
             <button
               onClick={() => navigate('/budgets')}
-              className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50/70 transition-colors"
+              className="p-2 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50/70 transition-colors min-w-[38px] min-h-[38px] flex items-center justify-center cursor-pointer"
               title="Inicio"
             >
               <Home size={19} />
             </button>
             <button
               onClick={() => setShowAccountModal(true)}
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-white/80 transition-colors cursor-pointer"
+              className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white/80 transition-colors cursor-pointer min-w-[38px] min-h-[38px] flex items-center justify-center"
               title="Configuración de la Cuenta"
             >
               <Settings size={19} />
             </button>
             <button
               onClick={handleLogout}
-              className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50/70 transition-colors cursor-pointer"
+              className="p-2 rounded-xl text-slate-500 hover:text-red-500 hover:bg-red-50/70 transition-colors cursor-pointer min-w-[38px] min-h-[38px] flex items-center justify-center"
               title="Cerrar Sesión"
             >
               <LogOut size={19} />
@@ -257,7 +295,7 @@ export default function AppLayout() {
 
         {/* ── ZONE 1: SIDEBAR — glass panel (lg+) ────────────── */}
         <aside
-          className="print:hidden hidden lg:flex lg:flex-col w-[80px] shrink-0 sticky top-14 h-[calc(100vh-3.5rem)] z-40"
+          className="print:hidden hidden lg:flex lg:flex-col w-[80px] shrink-0 sticky top-14 h-[calc(100dvh-3.5rem)] z-40"
           style={{
             background: 'rgba(255,255,255,0.65)',
             backdropFilter: 'blur(20px)',
@@ -266,7 +304,7 @@ export default function AppLayout() {
             boxShadow: '1px 0 20px 0 rgba(80,100,200,0.06)',
           }}
         >
-          <SidebarContent />
+          <SidebarContent isMobile={false} />
         </aside>
 
         {/* ── SIDEBAR Mobile Overlay ─────────────────────────── */}
@@ -278,25 +316,26 @@ export default function AppLayout() {
               onClick={() => setSidebarOpen(false)}
             />
             <div
-              className="print:hidden fixed top-0 left-0 h-full w-64 z-50 flex flex-col lg:hidden shadow-2xl"
+              className="print:hidden fixed top-0 left-0 h-full max-h-[100dvh] w-[85vw] max-w-xs z-50 flex flex-col lg:hidden shadow-2xl pt-safe pb-safe"
               style={{
-                background: 'rgba(255,255,255,0.88)',
+                background: 'rgba(255,255,255,0.92)',
                 backdropFilter: 'blur(24px)',
                 WebkitBackdropFilter: 'blur(24px)',
                 borderRight: '1px solid rgba(255,255,255,0.7)',
               }}
             >
-              <div className="flex items-center justify-between h-14 px-4 border-b border-white/40">
-                <span className="text-sm font-semibold text-slate-600">Menú</span>
+              <div className="flex items-center justify-between h-14 px-4 border-b border-slate-200/60">
+                <span className="text-sm font-bold text-slate-700">Navegación</span>
                 <button
                   onClick={() => setSidebarOpen(false)}
-                  className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100"
+                  className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 touch-target flex items-center justify-center cursor-pointer"
+                  aria-label="Cerrar menú"
                 >
                   <X size={20} />
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto">
-                <SidebarContent />
+                <SidebarContent isMobile={true} />
               </div>
             </div>
           </>

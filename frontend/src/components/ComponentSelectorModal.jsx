@@ -206,20 +206,20 @@ export default function ComponentSelectorModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
-        className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[88vh] animate-in zoom-in-95 duration-200"
+        className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col h-[95dvh] sm:h-auto sm:max-h-[88vh] animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* MODAL HEADER */}
-        <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shadow-sm ${theme.iconBox}`}>
-              <Icon size={20} />
+        <div className="px-3 sm:px-6 py-3 sm:py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl border flex items-center justify-center shadow-sm shrink-0 ${theme.iconBox}`}>
+              <Icon size={18} className="sm:w-5 sm:h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-slate-800 text-base">{title}</h3>
+                <h3 className="font-bold text-slate-800 text-sm sm:text-base truncate">{title}</h3>
                 <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${theme.badge}`}>
                   {total.toLocaleString()} {total === 1 ? singular : plural}
                 </span>
@@ -309,7 +309,7 @@ export default function ComponentSelectorModal({
         </div>
 
         {/* TABLE CONTENT */}
-        <div className="flex-1 overflow-y-auto min-h-0 bg-slate-50/50">
+        <div className="flex-1 overflow-y-auto overflow-x-auto min-h-0 bg-slate-50/50">
           {loading && items.length === 0 ? (
             <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-2.5">
               <Loader2 size={32} className={`animate-spin ${theme.spinner}`} />
@@ -320,9 +320,9 @@ export default function ComponentSelectorModal({
               <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
                 <Search size={22} />
               </div>
-              <p className="text-sm font-bold text-slate-700">No se encontraron {plural}</p>
-              <p className="text-xs text-slate-400 mt-1 max-w-sm">
-                No hay coincidencias con "{query}". Prueba con otra palabra clave o código de referencia.
+              <p className="text-xs font-semibold text-slate-600">No se encontraron {plural}</p>
+              <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
+                Intenta buscar con otros términos o palabras clave (ej: {type === 'materials' ? 'arena, cemento, tubo' : type === 'equipments' ? 'camión, taladro, bomba' : 'albañil, soldador, ayudante'}).
               </p>
               {query && (
                 <button
@@ -335,7 +335,7 @@ export default function ComponentSelectorModal({
               )}
             </div>
           ) : (
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-xs border-collapse min-w-[500px]">
               <thead className="bg-slate-100 text-slate-600 uppercase font-bold sticky top-0 border-b border-slate-200 z-10 shadow-sm text-[11px]">
                 <tr>
                   <th className="py-2.5 px-4 w-28">Ref. / Código</th>

@@ -221,12 +221,12 @@ export default function ApuEditorUI({
   return (
     <div className="space-y-6">
       <div className="bg-white border-2 border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="p-3 sm:p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-3 sm:gap-4">
           <div className="md:col-span-1">
-            <span className="block text-xs font-bold text-slate-400 uppercase mb-1">Código</span>
+            <span className="block text-[11px] sm:text-xs font-bold text-slate-400 uppercase mb-1">Código</span>
             <input 
               type="text" 
-              className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-sm font-bold font-mono text-slate-800 focus:outline-none focus:border-blue-500"
+              className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-sm font-bold font-mono text-slate-800 focus:outline-none focus:border-blue-500"
               value={item.CovPar || item.CodPar || item.cov_par || item.cod_par || item.codigo || ''}
               onChange={e => safeFn(onHeaderChange)(item.CovPar !== undefined ? 'CovPar' : (item.cov_par !== undefined ? 'cov_par' : 'cod_par'), e.target.value)}
               onBlur={e => safeFn(onHeaderBlur)(item.CovPar !== undefined ? 'CovPar' : (item.cov_par !== undefined ? 'cov_par' : 'cod_par'), e.target.value)}
@@ -234,10 +234,10 @@ export default function ApuEditorUI({
             />
           </div>
           <div className="md:col-span-3">
-            <span className="block text-xs font-bold text-slate-400 uppercase mb-1">Descripción</span>
+            <span className="block text-[11px] sm:text-xs font-bold text-slate-400 uppercase mb-1">Descripción</span>
             <input 
               type="text" 
-              className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-sm font-medium focus:outline-none focus:border-blue-500"
+              className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-sm font-medium focus:outline-none focus:border-blue-500"
               value={item.description || item.descripcion || ''}
               onChange={e => safeFn(onHeaderChange)('description', e.target.value)}
               onBlur={e => safeFn(onHeaderBlur)('description', e.target.value)}
@@ -246,9 +246,9 @@ export default function ApuEditorUI({
           </div>
         </div>
 
-        <div className="flex flex-wrap border-b border-slate-200 bg-white">
-          <div className="flex-1 p-3 border-r border-slate-100 min-w-[120px]">
-            <span className="block text-xs font-bold text-slate-400 uppercase mb-1">Unidad</span>
+        <div className="grid grid-cols-2 md:grid-cols-4 border-b border-slate-200 bg-white">
+          <div className="p-3 border-r border-b md:border-b-0 border-slate-100">
+            <span className="block text-[11px] sm:text-xs font-bold text-slate-400 uppercase mb-1">Unidad</span>
             <input 
               type="text" 
               className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-sm font-bold text-slate-700 focus:outline-none focus:border-blue-500"
@@ -257,22 +257,22 @@ export default function ApuEditorUI({
               onBlur={e => safeFn(onHeaderBlur)('unit', e.target.value)}
             />
           </div>
-          <div className="flex-1 p-3 border-r border-slate-100 min-w-[120px]">
-            <span className="block text-xs font-bold text-slate-400 uppercase mb-1">Cantidad Base</span>
+          <div className="p-3 border-b md:border-b-0 md:border-r border-slate-100">
+            <span className="block text-[11px] sm:text-xs font-bold text-slate-400 uppercase mb-1">Cantidad Base</span>
             <span className="text-sm font-bold text-slate-700">1</span>
           </div>
-          <div className="flex-1 p-3 border-r border-slate-100 min-w-[150px] bg-amber-50/30">
-            <span className="block text-xs font-bold text-amber-700/70 uppercase mb-1">Rendimiento</span>
+          <div className="p-3 border-r border-slate-100 bg-amber-50/30">
+            <span className="block text-[11px] sm:text-xs font-bold text-amber-700/70 uppercase mb-1">Rendimiento</span>
             <DecimalInput 
-              className="w-full bg-amber-100/50 border-b-2 border-amber-300 focus:border-amber-500 focus:outline-none focus:bg-amber-100 px-1 font-bold text-amber-900 transition-colors"
+              className="w-full bg-amber-100/50 border-b-2 border-amber-300 focus:border-amber-500 focus:outline-none focus:bg-amber-100 px-1 font-bold text-amber-900 transition-colors text-sm"
               value={item.performance || item.rendimiento || 1}
               onChange={(val) => safeFn(onHeaderChange)('performance', val)}
               onBlur={(val) => safeFn(onHeaderBlur)('performance', val)}
             />
           </div>
-          <div className="flex-1 p-3 min-w-[150px] bg-blue-50/50">
-            <span className="block text-xs font-bold text-blue-500 uppercase mb-1">Precio Unitario ({currency})</span>
-            <span className="text-lg font-black text-blue-700">
+          <div className="p-3 bg-blue-50/50">
+            <span className="block text-[11px] sm:text-xs font-bold text-blue-500 uppercase mb-1">Precio Unitario ({currency})</span>
+            <span className="text-base sm:text-lg font-black text-blue-700">
               {costos.unitPrice.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
             </span>
           </div>
@@ -304,7 +304,7 @@ export default function ApuEditorUI({
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse">
+            <table className="w-full text-left text-sm border-collapse min-w-[620px]">
               <thead>
                 <tr className="bg-white border-b border-slate-200 text-xs font-bold text-slate-600">
                   <th className="p-2 w-24 border-r border-slate-200">Ref.</th>
@@ -441,7 +441,7 @@ export default function ApuEditorUI({
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse">
+            <table className="w-full text-left text-sm border-collapse min-w-[620px]">
               <thead>
                 <tr className="bg-white border-b border-slate-200 text-xs font-bold text-slate-600">
                   <th className="p-2 w-24 border-r border-slate-200">Ref.</th>
@@ -570,7 +570,7 @@ export default function ApuEditorUI({
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse">
+            <table className="w-full text-left text-sm border-collapse min-w-[620px]">
               <thead>
                 <tr className="bg-white border-b border-slate-200 text-xs font-bold text-slate-600">
                   <th className="p-2 w-24 border-r border-slate-200">Ref.</th>
@@ -757,10 +757,10 @@ export default function ApuEditorUI({
 
         {/* BOTTOM SUMMARY BLOCK */}
         {/* BOTTOM SUMMARY BLOCK (CLASSIC LULO STYLE) */}
-        <div className="flex flex-col md:flex-row justify-between items-end gap-6 mt-8">
+        <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-end gap-4 sm:gap-6 mt-6 sm:mt-8">
           {/* Left Stats Block */}
-          <div className="w-full md:w-auto bg-slate-50 border border-slate-300 shadow-sm p-1">
-            <table className="text-xs font-bold text-slate-700 border-collapse">
+          <div className="w-full lg:w-auto bg-slate-50 border border-slate-300 shadow-sm p-1 overflow-x-auto">
+            <table className="w-full text-xs font-bold text-slate-700 border-collapse min-w-[280px]">
               <tbody>
                 <tr>
                   <td className="p-2 text-right border-b border-slate-200 uppercase">Horas Laborables al Día:</td>
@@ -791,8 +791,8 @@ export default function ApuEditorUI({
           </div>
 
           {/* Right Summary Block */}
-          <div className="w-full md:w-[600px] bg-slate-50 border border-slate-300 shadow-md p-1">
-            <table className="w-full text-xs font-bold text-slate-700 border-collapse">
+          <div className="w-full lg:w-[600px] bg-slate-50 border border-slate-300 shadow-md p-1 overflow-x-auto">
+            <table className="w-full text-xs font-bold text-slate-700 border-collapse min-w-[320px]">
               <tbody>
                 <tr className="bg-blue-50/50">
                   <td className="p-2 text-right border-b border-slate-200 text-blue-900 uppercase font-black">Costo Directo Subtotal A:</td>

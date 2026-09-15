@@ -166,36 +166,38 @@ const Cost360Dashboard = () => {
   ];
 
   return (
-    <div className="absolute inset-0 p-4 md:p-6 flex flex-col overflow-hidden gap-4">
+    <div className="absolute inset-0 p-2 sm:p-4 md:p-6 flex flex-col overflow-hidden gap-3 sm:gap-4">
 
       <div className="rounded-2xl overflow-hidden" style={glassStrong}>
         <div
-          className="px-6 py-5 flex items-center gap-4"
+          className="px-4 sm:px-6 py-3.5 sm:py-5 flex items-center gap-3 sm:gap-4"
           style={{
             background: 'linear-gradient(90deg, rgba(37,99,235,0.08) 0%, rgba(99,102,241,0.04) 100%)',
             borderBottom: '1px solid rgba(148,163,255,0.2)',
           }}
         >
           <div
-            className="p-2.5 rounded-xl shadow-sm"
+            className="p-2 sm:p-2.5 rounded-xl shadow-sm shrink-0"
             style={{ background: 'linear-gradient(135deg,#2563eb,#4f46e5)', color: '#fff' }}
           >
-            <FiDatabase size={22} />
+            <FiDatabase size={20} className="sm:w-[22px] sm:h-[22px]" />
           </div>
           <div>
-            <h1 className="text-xl font-extrabold text-slate-800 tracking-tight leading-none">Explora las Bases de Datos, Insumos, Materiales o Personal</h1>
+            <h1 className="text-base sm:text-xl font-extrabold text-slate-800 tracking-tight leading-snug">
+              Explora las Bases de Datos, Insumos, Materiales o Personal
+            </h1>
           </div>
         </div>
 
-        <div className="px-4 flex justify-between items-end pt-2 pb-0">
-          <div className="flex gap-1">
+        <div className="px-3 sm:px-4 flex flex-col lg:flex-row justify-between items-stretch lg:items-end gap-3 pt-2 pb-2">
+          <div className="flex gap-1 overflow-x-auto no-scrollbar pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 shrink-0">
             {TABS.map(({ key, label, Icon }) => {
               const active = activeTab === key;
               return (
                 <button
                   key={key}
                   onClick={() => setActiveTab(key)}
-                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-xl border-b-2 transition-all duration-200 btn-borde-azul-redondeado ${
+                  className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-t-xl border-b-2 transition-all duration-200 whitespace-nowrap btn-borde-azul-redondeado ${
                     active
                       ? 'text-blue-700 border-blue-600 bg-blue-50/60'
                       : 'text-slate-500 border-transparent'
@@ -208,55 +210,57 @@ const Cost360Dashboard = () => {
             })}
           </div>
 
-          <div className="flex gap-4 items-end pb-2">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2.5 sm:gap-3 items-stretch sm:items-end pb-1">
             {/* Inputs de costos */}
-            <div className="flex gap-2 items-end">
-              <div className="flex flex-col items-center">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1">% Utilidad</label>
-                <DecimalInput
-                  value={currentCostos?.porcentajeUtilidad ?? 0}
-                  onChange={(val) => handleCostoChange('porcentajeUtilidad', val)}
-                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 text-center focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div className="flex flex-col items-center">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1">% Admin</label>
-                <DecimalInput
-                  value={currentCostos?.porcentajeAdministracion ?? 0}
-                  onChange={(val) => handleCostoChange('porcentajeAdministracion', val)}
-                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 text-center focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div className="flex flex-col items-center">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1">IVA %</label>
-                <DecimalInput
-                  value={currentCostos?.iva ?? 0}
-                  onChange={(val) => handleCostoChange('iva', val)}
-                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 text-center focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div className="flex flex-col items-center">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1">F.C.A.S %</label>
-                <DecimalInput
-                  value={currentCostos?.fcas ?? 0}
-                  onChange={(val) => handleCostoChange('fcas', val)}
-                  className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 text-center focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
+              <div className="grid grid-cols-4 sm:flex gap-1.5 sm:gap-2 items-end">
+                <div className="flex flex-col items-center">
+                  <label className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1 truncate">% Utilidad</label>
+                  <DecimalInput
+                    value={currentCostos?.porcentajeUtilidad ?? 0}
+                    onChange={(val) => handleCostoChange('porcentajeUtilidad', val)}
+                    className="w-full sm:w-20 px-1.5 sm:px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm font-semibold text-slate-700 text-center focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="flex flex-col items-center">
+                  <label className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1 truncate">% Admin</label>
+                  <DecimalInput
+                    value={currentCostos?.porcentajeAdministracion ?? 0}
+                    onChange={(val) => handleCostoChange('porcentajeAdministracion', val)}
+                    className="w-full sm:w-20 px-1.5 sm:px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm font-semibold text-slate-700 text-center focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="flex flex-col items-center">
+                  <label className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1 truncate">IVA %</label>
+                  <DecimalInput
+                    value={currentCostos?.iva ?? 0}
+                    onChange={(val) => handleCostoChange('iva', val)}
+                    className="w-full sm:w-20 px-1.5 sm:px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm font-semibold text-slate-700 text-center focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="flex flex-col items-center">
+                  <label className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-full mb-1 truncate">F.C.A.S %</label>
+                  <DecimalInput
+                    value={currentCostos?.fcas ?? 0}
+                    onChange={(val) => handleCostoChange('fcas', val)}
+                    className="w-full sm:w-20 px-1.5 sm:px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm font-semibold text-slate-700 text-center focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
               </div>
               <button
                 onClick={handleSaveCostos}
                 disabled={!draft || loadingCostos}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors"
+                className="px-3 py-2 sm:py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors touch-target flex items-center justify-center cursor-pointer"
               >
                 {loadingCostos ? 'Guardando…' : 'Guardar'}
               </button>
             </div>
 
-            <div>
+            <div className="w-full sm:w-auto">
               <select
                 value={selectedDatabase}
                 onChange={(e) => handleSelectDatabase(e.target.value)}
-                className="bg-white border-2 border-slate-300 text-slate-700 text-sm font-medium rounded-lg px-4 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm transition-all w-64 appearance-none"
+                className="bg-white border-2 border-slate-300 text-slate-700 text-xs sm:text-sm font-medium rounded-lg px-3 sm:px-4 py-2 sm:py-1.5 outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm transition-all w-full sm:w-64 appearance-none min-h-[38px]"
                 style={{
                   backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3e%3c/svg%3e")',
                   backgroundPosition: 'right 0.5rem center',
