@@ -67,31 +67,32 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] border border-amber-600/15 overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div className="w-full max-w-lg bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] border border-amber-600/15 overflow-hidden font-sans flex flex-col max-h-[92dvh] animate-in fade-in zoom-in-95 duration-200">
         
         {/* Encabezado con estilo del modal de impresión */}
-        <div className="flex justify-between items-center px-6 py-4 bg-white/40 border-b border-amber-600/15">
+        <div className="flex justify-between items-center px-4 sm:px-6 py-3.5 sm:py-4 bg-white/40 border-b border-amber-600/15">
           <div className="flex items-center gap-2.5">
-            <Share2 className="text-sky-600" size={22} />
+            <Share2 className="text-sky-600 shrink-0" size={20} />
             <div>
-              <h2 className="m-0 text-xl font-bold text-amber-900 leading-tight">Compartir Presupuesto</h2>
+              <h2 className="m-0 text-lg sm:text-xl font-bold text-amber-900 leading-tight">Compartir Presupuesto</h2>
               <p className="text-xs text-amber-800/80 m-0">Portabilidad y clonación rápida en la nube</p>
             </div>
           </div>
           <button 
             type="button"
             onClick={onClose}
-            className="text-amber-700 hover:text-amber-900 bg-transparent transition-colors p-1"
+            className="text-amber-700 hover:text-amber-900 p-2 touch-target flex items-center justify-center rounded-xl hover:bg-amber-200/50 transition-colors cursor-pointer"
+            aria-label="Cerrar modal"
           >
-            <X size={22} />
+            <X size={20} />
           </button>
         </div>
 
-        {/* Cuerpo del Modal */}
-        <div className="px-6 py-5 flex flex-col gap-4">
-          {/* Tarjeta del proyecto */}
-          <div className="bg-white/60 border border-amber-600/15 rounded-xl p-4 shadow-sm">
+        {/* Contenido del modal */}
+        <div className="p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto">
+          {/* Card resumen del presupuesto */}
+          <div className="bg-white/60 border border-amber-600/20 rounded-xl p-4 shadow-sm">
             <span className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70 block">
               Proyecto a Compartir
             </span>
@@ -117,7 +118,7 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
                 Enlace Único de Importación
               </label>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <input
                   type="text"
                   readOnly
@@ -127,7 +128,7 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all shadow-[0_4px_6px_rgba(2,132,199,0.2)] active:scale-95 ${
+                  className={`flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all shadow-[0_4px_6px_rgba(2,132,199,0.2)] active:scale-95 min-h-[40px] touch-target cursor-pointer ${
                     copied 
                       ? 'bg-emerald-600 hover:bg-emerald-700 text-white' 
                       : 'bg-sky-600 hover:bg-sky-700 text-white hover:-translate-y-[1px]'

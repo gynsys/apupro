@@ -4,28 +4,28 @@ import { useNavigate } from 'react-router-dom';
 
 export default function HeroSection({ onLoginClick }) {
   return (
-    <section className="relative overflow-hidden bg-slate-950 text-white min-h-screen flex items-center pt-20">
+    <section className="relative overflow-hidden bg-slate-950 text-white min-h-[100dvh] flex items-center pt-24 pb-12">
       {/* Background gradients */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-blue-600/30 blur-[120px]" />
         <div className="absolute top-[40%] -right-[10%] w-[40%] h-[40%] rounded-full bg-indigo-600/20 blur-[100px]" />
       </div>
 
-      <div className="container mx-auto px-6 relative z-10">
+      <div className="container mx-auto px-4 sm:px-6 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm mb-8 animate-fade-in">
-            <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-sm font-medium text-slate-300">El nuevo estándar en Análisis de Precios Unitarios</span>
+          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm mb-6 sm:mb-8 animate-fade-in">
+            <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse shrink-0" />
+            <span className="text-xs sm:text-sm font-medium text-slate-300">El nuevo estándar en Análisis de Precios Unitarios</span>
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 leading-tight">
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-extrabold tracking-tight mb-6 sm:mb-8 leading-tight">
             Presupuestos de Obra <br className="hidden md:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">
               Impulsados por IA
             </span>
           </h1>
           
-          <p className="text-xl text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-lg md:text-xl text-slate-400 mb-8 sm:mb-12 max-w-2xl mx-auto leading-relaxed">
             CostBase transforma la manera en que los profesionales de la construcción calculan, gestionan y exportan sus APUs. Precisión total, bases de datos en la nube y generación inteligente.
           </p>
           

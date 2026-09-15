@@ -92,18 +92,19 @@ export default function CreateBudgetModal({ onClose, onSuccess, onLimitReached }
   };
 
   return createPortal(
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-[550px] bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div className="w-full max-w-[550px] bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col max-h-[92dvh] animate-in fade-in zoom-in-95 duration-200">
         
         {/* Encabezado */}
-        <div className="flex justify-between items-center px-6 py-4 bg-white/40 border-b border-amber-600/15">
-          <h2 className="m-0 text-xl font-bold text-amber-900">Nuevo Presupuesto</h2>
+        <div className="flex justify-between items-center px-4 sm:px-6 py-3.5 sm:py-4 bg-white/40 border-b border-amber-600/15">
+          <h2 className="m-0 text-lg sm:text-xl font-bold text-amber-900">Nuevo Presupuesto</h2>
           <button 
             type="button"
             onClick={onClose}
-            className="text-amber-700 hover:text-amber-900 bg-transparent transition-colors p-1"
+            className="text-amber-700 hover:text-amber-900 p-2 touch-target flex items-center justify-center rounded-xl hover:bg-amber-200/50 transition-colors cursor-pointer"
+            aria-label="Cerrar modal"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
         

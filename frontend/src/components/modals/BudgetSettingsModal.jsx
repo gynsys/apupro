@@ -130,21 +130,23 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
   };
 
   return createPortal(
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-[550px] bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex justify-between items-center px-6 py-4 bg-white/40 border-b border-amber-600/15">
-          <h2 className="m-0 text-xl font-bold text-amber-900 flex items-center gap-2">
-            <Settings className="text-sky-600" /> Configuración del Presupuesto
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div className="w-full max-w-[550px] bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col max-h-[92dvh] animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex justify-between items-center px-4 sm:px-6 py-3.5 sm:py-4 bg-white/40 border-b border-amber-600/15">
+          <h2 className="m-0 text-lg sm:text-xl font-bold text-amber-900 flex items-center gap-2">
+            <Settings className="text-sky-600 shrink-0" size={20} /> <span className="truncate">Configuración del Presupuesto</span>
           </h2>
           <button 
+            type="button"
             onClick={onClose}
-            className="text-amber-700 hover:text-amber-900 bg-transparent transition-colors p-1"
+            className="text-amber-700 hover:text-amber-900 p-2 touch-target flex items-center justify-center rounded-xl hover:bg-amber-200/50 transition-colors cursor-pointer"
+            aria-label="Cerrar modal"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
         
-        <div className="flex border-b border-amber-600/15 px-6 pt-4 bg-white/40">
+        <div className="flex border-b border-amber-600/15 px-4 sm:px-6 pt-3 sm:pt-4 bg-white/40">
           <button
             className={`pb-3 px-4 font-medium text-sm transition-colors border-b-2 ${configTab === 'general' ? 'border-sky-600 text-sky-700' : 'border-transparent text-amber-700 hover:text-amber-900'}`}
             onClick={() => setConfigTab('general')}

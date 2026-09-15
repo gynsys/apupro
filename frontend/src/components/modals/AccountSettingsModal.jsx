@@ -101,19 +101,19 @@ export default function AccountSettingsModal({
   };
 
   return createPortal(
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-amber-50/95 border-2 border-[#B5DCB0] rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div className="w-full max-w-lg bg-amber-50/95 border-2 border-[#B5DCB0] rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92dvh]">
         {/* HEADER */}
-        <div className="px-6 py-4 border-b border-[#B5DCB0] flex items-center justify-between bg-amber-100/40">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-sky-100 border border-sky-200 flex items-center justify-center text-sky-700 shadow-sm">
-              <User size={20} />
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[#B5DCB0] flex items-center justify-between bg-amber-100/40 gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-sky-100 border border-sky-200 flex items-center justify-center text-sky-700 shadow-sm shrink-0">
+              <User size={18} className="sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h2 className="m-0 text-lg font-bold text-amber-900 leading-tight">
+            <div className="min-w-0">
+              <h2 className="m-0 text-base sm:text-lg font-bold text-amber-900 leading-tight truncate">
                 Configuración de la Cuenta
               </h2>
-              <p className="m-0 text-xs text-amber-700/80">
+              <p className="m-0 text-xs text-amber-700/80 truncate">
                 Datos de usuario y capacidad del plan
               </p>
             </div>
@@ -121,7 +121,8 @@ export default function AccountSettingsModal({
           <button 
             type="button"
             onClick={onClose}
-            className="p-1.5 text-amber-700 hover:text-amber-900 rounded-xl hover:bg-white/40 transition-colors"
+            className="p-2 text-amber-700 hover:text-amber-900 rounded-xl hover:bg-white/40 transition-colors touch-target flex items-center justify-center cursor-pointer"
+            aria-label="Cerrar modal"
           >
             <X size={20} />
           </button>
