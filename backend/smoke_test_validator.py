@@ -76,6 +76,12 @@ mock_pipe_candidates = [
     {"score": 0.810, "descripcion": "DESMONTAJE DE TUBERIA EXISTENTE"},
 ]
 
+# Mock de candidatos con score alto falso para consultas no constructivas (carro / moto)
+mock_false_high_candidates = [
+    {"score": 0.764, "descripcion": "CARPETA CORRIDA DE ASFALTO CALIENTE"},
+    {"score": 0.750, "descripcion": "MOTORES Y MOTOBOMBAS ELECTRICAS"},
+]
+
 CAPA2_TESTS = [
     # 1. Caso real "demolicion" (accion sola sin elemento) -> DEBE pedir clarificacion con opciones
     ("demolicion", mock_demo_candidates, "clarification_needed", "RAG_AMBIGUOUS_ACTION_ONLY"),
@@ -85,6 +91,15 @@ CAPA2_TESTS = [
     ("no incluye transporte, a mano en terreno montanoso excavacion", mock_valid_candidates, None, None),
     # 4. Caso elemento solo ("tuberia") -> DEBE pedir clarificacion
     ("tuberia", mock_pipe_candidates, "clarification_needed", "RAG_AMBIGUOUS_ELEMENT_ONLY"),
+    # 5. Caso no constructivo "carro corre duro" con score RAG falsamente alto -> DEBE rechazar inmediatamente
+    ("carro corre duro", mock_false_high_candidates, "reject", "RAG_OFF_TOPIC"),
+    # 6. Caso no constructivo "la moto corre mucho" con score RAG falsamente alto -> DEBE rechazar inmediatamente
+    ("la moto corre mucho", mock_false_high_candidates, "reject", "RAG_OFF_TOPIC"),
+    # 7. Modo Pre-RAG (candidates=None): evalúa antes de consultar base de datos ni generar embeddings
+    ("carro corre duro", None, "reject", "RAG_OFF_TOPIC"),
+    ("demolicion", None, "clarification_needed", "RAG_AMBIGUOUS_ACTION_ONLY"),
+    ("tuberia", None, "clarification_needed", "RAG_AMBIGUOUS_ELEMENT_ONLY"),
+    ("demolicion de pared de bloques", None, None, None),
 ]
 
 for query, cands, exp_veredicto, exp_codigo in CAPA2_TESTS:

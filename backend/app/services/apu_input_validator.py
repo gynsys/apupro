@@ -20,6 +20,8 @@ Integración:
     devolver la respuesta al frontend sin seguir el pipeline.
 """
 
+import os
+import json
 import math
 import re
 import unicodedata
@@ -80,6 +82,17 @@ _CONSTRUCTION_PHYSICAL_ELEMENTS: Set[str] = {
     "acero", "cabilla", "cabillas", "malla", "perfil", "correa",
     "baño", "cocina", "sala", "fachada", "cuarto",
 }
+
+# Carga dinámica del léxico compilado desde las 17,408 partidas COVENIN de la base de datos
+_LEXICON_PATH: str = os.path.join(os.path.dirname(__file__), "data", "construction_lexicon.json")
+if os.path.exists(_LEXICON_PATH):
+    try:
+        with open(_LEXICON_PATH, "r", encoding="utf-8") as _f:
+            _lex_data = json.load(_f)
+            _CONSTRUCTION_ACTIONS.update(_lex_data.get("actions", []))
+            _CONSTRUCTION_PHYSICAL_ELEMENTS.update(_lex_data.get("elements", []))
+    except Exception as _e:
+        logger.warning(f"No se pudo cargar construction_lexicon.json: {_e}")
 
 # Patrones de inyección SQL compilados una sola vez al cargar el módulo
 _SQL_PATTERNS: List[re.Pattern] = [
@@ -184,6 +197,30 @@ def _is_json_payload(text: str) -> bool:
 
 def _has_pattern(text: str, patterns: List[re.Pattern]) -> bool:
     return any(p.search(text) for p in patterns)
+
+
+def _normalize_token(text_val: str) -> str:
+    """Normaliza un token removiendo acentos y caracteres no alfanuméricos."""
+    if not text_val:
+        return ""
+    nfkd = unicodedata.normalize("NFD", text_val.lower().strip())
+    without_accents = "".join(c for c in nfkd if unicodedata.category(c) != "Mn")
+    return re.sub(r"[^a-z0-9]", "", without_accents)
+
+
+def _matches_lexicon(word: str, lexicon: Set[str]) -> bool:
+    """Verifica si una palabra o su lema/plural pertenece al conjunto léxico."""
+    if not word or len(word) < 3:
+        return False
+    if word in lexicon:
+        return True
+    if word.endswith("es") and len(word) > 4:
+        if word[:-2] in lexicon or word[:-1] in lexicon:
+            return True
+    elif word.endswith("s") and len(word) > 3:
+        if word[:-1] in lexicon:
+            return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -383,14 +420,14 @@ def _extract_distinct_options(candidates: List[Dict[str, Any]], max_options: int
 
 def validate_rag_signals(
     query: str,
-    candidates: List[Dict[str, Any]],
+    candidates: Optional[List[Dict[str, Any]]] = None,
 ) -> Optional[Tuple[str, str, str, List[str]]]:
     """
     Capa 2: Validación de Ambigüedad y Dominio vía RAG Híbrido (Gemini Embeddings + Léxico).
 
-    Analiza las señales estadísticas y semánticas de los candidatos recuperados por el RAG
+    Analiza las señales estadísticas y semánticas de la consulta y de los candidatos recuperados por el RAG
     para detectar:
-      1. Consultas fuera del dominio de construcción (off-topic, score < 0.32).
+      1. Consultas fuera del dominio de construcción (sin acción ni elemento constructivo, o score RAG < 0.32).
       2. Consultas que solo contienen una acción constructiva sin elemento ("demolicion", "instalacion").
       3. Consultas que solo contienen un elemento constructivo sin acción ("tuberia").
 
@@ -400,37 +437,32 @@ def validate_rag_signals(
             - veredicto: "reject" o "clarification_needed"
             - mensaje: Explicación para el usuario.
             - codigo_interno: Código para auditoría ("RAG_OFF_TOPIC", "RAG_AMBIGUOUS_ACTION_ONLY", etc.)
-            - opciones: Lista de hasta 4 descripciones extraídas de los mejores candidatos RAG.
+            - opciones: Lista de hasta 4 descripciones (forzada a [] para cero adivinanzas engañosas).
     """
-    # ── CHECK 1: Off-Topic / Fuera de Dominio ─────────────────────────
-    if not candidates:
-        return (
-            "reject",
-            "No se identificó ninguna actividad o partida constructiva afín a la solicitud ingresada. "
-            "Este sistema está diseñado exclusivamente para presupuestos y análisis de precios unitarios (APU) de obras civiles.",
-            "RAG_NO_CANDIDATES",
-            [],
-        )
+    clean_query = re.sub(r"[^\w\s]", " ", query.lower())
+    raw_tokens = clean_query.split()
+    tokens = [_normalize_token(t) for t in raw_tokens]
+    tokens = [t for t in tokens if t and t not in _STOPWORDS and len(t) > 2]
 
-    top_score = candidates[0].get("score", 0.0)
-    if top_score < _RAG_MIN_OFF_TOPIC_SCORE:
-        logger.info("Query rejected by Capa 2 RAG score (score=%.3f < %.2f): %.80s", top_score, _RAG_MIN_OFF_TOPIC_SCORE, query)
+    has_action = any(_matches_lexicon(t, _CONSTRUCTION_ACTIONS) for t in tokens)
+    has_element = any(_matches_lexicon(t, _CONSTRUCTION_PHYSICAL_ELEMENTS) for t in tokens)
+
+    # ── CHECK 1: Sin Acción ni Elemento Constructivo (Off-Topic léxico inmediato) ──
+    # Si la consulta no tiene ni una sola acción ni un solo elemento de construcción:
+    # Ej: "carro corre duro", "la moto corre mucho", "ayer comi hamburguesa"
+    if not has_action and not has_element:
+        logger.info("Query rejected by Capa 2 (no construction action or element): %.80s", query)
         return (
             "reject",
-            "La solicitud ingresada no corresponde a una actividad de construcción u obras civiles reconocible en el catálogo. "
-            "Por favor describe una partida de obra (ej: excavación, vaciado de concreto, albañilería, tuberías, instalaciones).",
+            (
+                "La solicitud ingresada no corresponde a una actividad de construcción u obras civiles reconocible en el catálogo. "
+                "Por favor describe una partida de obra (ej: excavación, vaciado de concreto, albañilería, tuberías, instalaciones)."
+            ),
             "RAG_OFF_TOPIC",
             [],
         )
 
     # ── CHECK 2: Ambigüedad Léxica y Falta de Elemento Constructivo ───
-    clean_query = re.sub(r"[^\w\s]", " ", query.lower())
-    tokens = [t for t in clean_query.split() if t not in _STOPWORDS and len(t) > 2]
-
-    has_action = any(t in _CONSTRUCTION_ACTIONS for t in tokens)
-    has_element = any(t in _CONSTRUCTION_PHYSICAL_ELEMENTS for t in tokens)
-
-    # Si la consulta tiene 3 palabras clave o menos:
     if len(tokens) <= 3:
         # Caso 2.1: Acción sola sin elemento ("demolicion", "instalacion", "suministro", "acarreo", "reparacion", "pintura")
         if has_action and not has_element:
@@ -458,6 +490,32 @@ def validate_rag_signals(
                 ),
                 "RAG_AMBIGUOUS_ELEMENT_ONLY",
                 [],  # Cero adivinanzas
+            )
+
+    # ── CHECK 3: Evaluación de Candidatos RAG (si fueron proporcionados) ──
+    if candidates is not None:
+        if not candidates:
+            return (
+                "reject",
+                (
+                    "No se identificó ninguna actividad o partida constructiva afín a la solicitud ingresada. "
+                    "Este sistema está diseñado exclusivamente para presupuestos y análisis de precios unitarios (APU) de obras civiles."
+                ),
+                "RAG_NO_CANDIDATES",
+                [],
+            )
+
+        top_score = candidates[0].get("score", 0.0)
+        if top_score < _RAG_MIN_OFF_TOPIC_SCORE:
+            logger.info("Query rejected by Capa 2 RAG score (score=%.3f < %.2f): %.80s", top_score, _RAG_MIN_OFF_TOPIC_SCORE, query)
+            return (
+                "reject",
+                (
+                    "La solicitud ingresada no corresponde a una actividad de construcción u obras civiles reconocible en el catálogo. "
+                    "Por favor describe una partida de obra (ej: excavación, vaciado de concreto, albañilería, tuberías, instalaciones)."
+                ),
+                "RAG_OFF_TOPIC",
+                [],
             )
 
     # Pasó todas las verificaciones de la Capa 2

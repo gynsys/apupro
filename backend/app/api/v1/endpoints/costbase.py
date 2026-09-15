@@ -1241,18 +1241,25 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             "debug_preprocesamiento": debug_data
         }
 
+    # --- CAPA 2 (Pre-RAG): Validación Léxica Temprana (< 1ms, cero tokens, sin consulta pesada a BD) ---
+    # Si la consulta no tiene términos constructivos ("carro corre duro") o es ambigua aislada ("demolicion"),
+    # se intercepta AQUÍ de inmediato, ahorrando tiempo de red, cómputo de embeddings y carga de base de datos.
+    pre_rag_result = validate_rag_signals(payload.description, candidates=None)
+    if pre_rag_result is not None:
+        veredicto, mensaje, codigo_interno, options = pre_rag_result
+        logger.info("APU input stopped by Capa 2 Pre-RAG [%s]: %.80s", codigo_interno, payload.description)
+        return build_rejection_response(veredicto, mensaje, codigo_interno, rag_candidates=options)
+
     # 2.2. Búsqueda RAG Híbrida Automática (Gemini Embeddings + Léxico)
     candidates = []
     if not candidates and not payload.only_preprocess:
         candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
 
-    # --- CAPA 2: Validación de Ambigüedad y Dominio vía señales RAG ---
-    # Si la consulta es una palabra aislada, una entrada incompleta ("suministro", "demolicion", "acarreo")
-    # o fuera de tema ("pizza"), se frena AQUÍ: no gasta tokens, no evalúa match exacto ni deriva al LLM.
+    # --- CAPA 2 (Post-RAG): Validación de Relevancia Semántica sobre Candidatos Recuperados ---
     capa2_result = validate_rag_signals(payload.description, candidates)
     if capa2_result is not None:
         veredicto, mensaje, codigo_interno, options = capa2_result
-        logger.info("APU input stopped by Capa 2 RAG [%s]: %.80s", codigo_interno, payload.description)
+        logger.info("APU input stopped by Capa 2 Post-RAG [%s]: %.80s", codigo_interno, payload.description)
         return build_rejection_response(veredicto, mensaje, codigo_interno, rag_candidates=options)
 
     # 2.3. Detección interactiva de Match Exacto (Solo sobre partidas codificadas y sin conflictos)
