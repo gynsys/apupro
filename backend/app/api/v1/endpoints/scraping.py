@@ -305,7 +305,16 @@ def scraping_seguro_configurable() -> None:
                         url = url_template.replace('{query}', descripcion_url)
 
                         if portal_actual == 'epa':
-                            headers = {'User-Agent': agente_aleatorio, 'Referer': 'https://ve.epaenlinea.com/'}
+                            headers = {
+                                'User-Agent': agente_aleatorio,
+                                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                                'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+                                'Sec-Fetch-Dest': 'document',
+                                'Sec-Fetch-Mode': 'navigate',
+                                'Sec-Fetch-Site': 'same-origin',
+                                'Upgrade-Insecure-Requests': '1',
+                                'Referer': 'https://ve.epaenlinea.com/'
+                            }
                             try:
                                 response = scraper.get(url, headers=headers, timeout=12)
                                 if response.status_code == 200:
@@ -328,6 +337,8 @@ def scraping_seguro_configurable() -> None:
                                                 break
                                         except Exception:
                                             continue
+                                else:
+                                    bot_state.add_log("WARN", f"EPA respondió código HTTP {response.status_code} para {mat['codigo']}")
                             except Exception as epa_err:
                                 bot_state.add_log("WARN", f"Error consultando EPA: {epa_err}")
                                             
@@ -496,6 +507,8 @@ def get_scraping_diag() -> Dict[str, Any]:
         url = "https://ve.epaenlinea.com/catalogsearch/result/?q=LAMINA+YESO+1%2F2"
         headers = {
             'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
             'Referer': 'https://ve.epaenlinea.com/'
         }
         resp = requests.get(url, headers=headers, timeout=10)
@@ -503,8 +516,11 @@ def get_scraping_diag() -> Dict[str, Any]:
         html_t = resp.text
         titles = re.findall(r'class="product-item-link"[^>]*>(.*?)</a>', html_t, re.DOTALL)
         prices = re.findall(r'data-price-amount="([\d\.,]+)"', html_t)
+        page_title_match = re.search(r'<title>(.*?)</title>', html_t, re.IGNORECASE)
         epa_test = {
             "status_code": resp.status_code,
+            "page_title": page_title_match.group(1).strip() if page_title_match else None,
+            "server_header": resp.headers.get("server"),
             "html_length": len(html_t),
             "titles_found": len(titles),
             "prices_found": len(prices),
@@ -513,6 +529,23 @@ def get_scraping_diag() -> Dict[str, Any]:
         }
     except Exception as exc:
         epa_test = {"error": str(exc)}
+
+    cloudscraper_test: Dict[str, Any] = {"available": cloudscraper is not None}
+    if cloudscraper:
+        try:
+            cs = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False})
+            cs_resp = cs.get("https://ve.epaenlinea.com/catalogsearch/result/?q=LAMINA+YESO+1%2F2", timeout=12)
+            cs_titles = re.findall(r'class="product-item-link"[^>]*>(.*?)</a>', cs_resp.text, re.DOTALL)
+            cs_title_tag = re.search(r'<title>(.*?)</title>', cs_resp.text, re.IGNORECASE)
+            cloudscraper_test.update({
+                "status_code": cs_resp.status_code,
+                "page_title": cs_title_tag.group(1).strip() if cs_title_tag else None,
+                "html_length": len(cs_resp.text),
+                "titles_found": len(cs_titles),
+                "first_title": cs_titles[0].strip() if cs_titles else None
+            })
+        except Exception as cs_exc:
+            cloudscraper_test["error"] = str(cs_exc)
 
     db_test: Dict[str, Any] = {}
     try:
@@ -534,7 +567,8 @@ def get_scraping_diag() -> Dict[str, Any]:
         "batch_size": bot_state.config.batch_size,
         "continuous_mode": bot_state.config.continuous_mode,
         "recent_logs": bot_state.logs[-30:],
-        "epa_connectivity": epa_test,
+        "epa_requests": epa_test,
+        "epa_cloudscraper": cloudscraper_test,
         "database_status": db_test
     }
 

@@ -7,7 +7,7 @@ WORKDIR /app
 COPY . .
 
 # Install dependencies and remove heavy torch/sentence-transformers packages (Gemini API handles embeddings)
-RUN pip install openpyxl==3.1.2 bleach==6.4.0 google-generativeai && \
+RUN pip install openpyxl==3.1.2 bleach==6.4.0 google-generativeai cloudscraper && \
     pip uninstall -y torch torchvision torchaudio sentence-transformers
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
