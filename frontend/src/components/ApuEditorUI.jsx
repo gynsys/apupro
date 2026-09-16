@@ -114,6 +114,15 @@ export default function ApuEditorUI({
   const costos = calculateCostosDirectos();
   const safeFn = (fn) => typeof fn === 'function' ? fn : () => {};
 
+  const formatSmartDecimal = (val, minSigDec = 5, maxDec = 6) => {
+    const num = parseFloat(val) || 0;
+    if (num === 0) return '0,00';
+    if (Math.abs(num) < 0.01) {
+      return num.toLocaleString('es-VE', { minimumFractionDigits: minSigDec, maximumFractionDigits: maxDec });
+    }
+    return num.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
   const [equipmentModal, setEquipmentModal] = useState({
     isOpen: false,
     targetRow: null
@@ -544,7 +553,7 @@ export default function ApuEditorUI({
             <div className="flex items-center gap-4">
               <span className="text-xs font-bold text-slate-600 uppercase">Total Equipos Unitario:</span>
               <span className="text-sm font-black text-slate-800 bg-white border border-slate-300 px-3 py-1 rounded min-w-[120px] text-right">
-                {costos.equipos.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
+                {formatSmartDecimal(costos.equipos)}
               </span>
             </div>
           </div>
@@ -738,15 +747,25 @@ export default function ApuEditorUI({
                     <td className="p-2 text-right border-b border-slate-300 bg-slate-50 border-l border-slate-200"></td>
                   </tr>
                   <tr className="bg-red-50/50">
-                    <td className="p-2 text-right border-b border-slate-300 uppercase flex items-center justify-end gap-2">
-                      <span className="text-[10px] text-slate-500">% de Incidencia: {incidenciaManoObra.toLocaleString('es-VE', {minimumFractionDigits:4, maximumFractionDigits:4})}</span>
-                      <span className="font-bold text-red-900">Costo Unitario Mano de Obra:</span>
+                    <td className="p-2 text-right border-b border-slate-300 uppercase font-bold text-red-900">
+                      Costo Unitario Mano de Obra:
                     </td>
                     <td colSpan={2} className="p-2 border-b border-slate-300 text-right pr-2 text-slate-500 font-normal">
                       (Total Diario ÷ Rendimiento {rendimiento}):
                     </td>
                     <td className="p-2 text-right border-b border-slate-300 bg-red-100/50 font-black text-red-900 border-l border-slate-200 shadow-inner">
                       {costoUnitarioManoObra.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
+                    </td>
+                  </tr>
+                  <tr className="bg-slate-50/80">
+                    <td className="p-2 text-right border-b border-slate-300 uppercase font-bold text-slate-700">
+                      % de Incidencia Mano de Obra:
+                    </td>
+                    <td colSpan={2} className="p-2 border-b border-slate-300 text-right pr-2 text-slate-500 font-normal">
+                      (% sobre el Costo Unitario de la Partida):
+                    </td>
+                    <td className="p-2 text-right border-b border-slate-300 bg-white font-black text-slate-800 border-l border-slate-200 shadow-inner">
+                      {incidenciaManoObra.toLocaleString('es-VE', {minimumFractionDigits:4, maximumFractionDigits:4})} %
                     </td>
                   </tr>
                 </tbody>
