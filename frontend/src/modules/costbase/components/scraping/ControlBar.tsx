@@ -139,17 +139,17 @@ export const ControlBar: React.FC<ControlBarProps> = ({
           variant="default"
           onClick={status === "paused" ? handleResume : handleStart}
           disabled={status === "running" || loading}
-          className="gap-2"
+          className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
         >
           <Play className="h-4 w-4 fill-current" />
-          {status === "paused" ? "Reanudar" : "Iniciar"}
+          {status === "paused" ? "Reanudar" : "Iniciar Scraping"}
         </Button>
 
         <Button
           variant="outline"
           onClick={handlePause}
           disabled={status !== "running" || loading}
-          className="gap-2"
+          className="gap-2 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
         >
           <Pause className="h-4 w-4 fill-current" />
           Pausar
@@ -158,11 +158,12 @@ export const ControlBar: React.FC<ControlBarProps> = ({
         <Button
           variant="destructive"
           onClick={handleKill}
-          disabled={status === "idle" || loading}
-          className="gap-2 animate-pulse"
+          disabled={loading}
+          className="gap-2 bg-rose-600 hover:bg-rose-700 text-white font-medium shadow-sm"
+          title="Detener inmediatamente el proceso de scraping"
         >
           <ShieldAlert className="h-4 w-4" />
-          Kill Switch
+          Detener Bot
         </Button>
 
         <Button

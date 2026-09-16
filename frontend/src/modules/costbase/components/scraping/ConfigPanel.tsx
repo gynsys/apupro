@@ -25,12 +25,12 @@ export const ConfigPanel: React.FC<{ className?: string }> = ({ className }) => 
   };
 
   return (
-    <Card className={`w-full ${className}`}>
-      <CardHeader className="pb-3">
+    <Card className={`w-full flex flex-col max-h-full overflow-hidden ${className}`}>
+      <CardHeader className="pb-3 shrink-0 border-b border-zinc-800/80">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Settings className="h-4 w-4 text-zinc-400" />
-            <CardTitle>Configuration</CardTitle>
+            <CardTitle>Configuración</CardTitle>
           </div>
           {isConfigDirty && (
             <button
@@ -38,13 +38,13 @@ export const ConfigPanel: React.FC<{ className?: string }> = ({ className }) => 
               disabled={loading}
               className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded transition-colors disabled:opacity-50"
             >
-              {loading ? "Saving..." : "Save Changes"}
+              {loading ? "Guardando..." : "Guardar Cambios"}
             </button>
           )}
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-5 flex-1 overflow-y-auto pr-3 py-4">
         {/* Max Concurrency Slider */}
         <div className="space-y-2.5">
           <div className="flex items-center justify-between">

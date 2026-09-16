@@ -2,6 +2,7 @@ import io
 import time
 import random
 import re
+import html
 import urllib.parse
 import threading
 from datetime import datetime
@@ -29,7 +30,7 @@ class ScrapingConfig(BaseModel):
     max_concurrency: int = 25
     headless: bool = True
     bypass_cloudflare: bool = True
-    request_delay_ms: int = 20000
+    request_delay_ms: int = 10000
     active_portals: List[str] = ["epa", "mercadolibre"]
     batch_size: int = 10
     continuous_mode: bool = False
@@ -66,48 +67,100 @@ class BotState:
 
 bot_state = BotState()
 
-# --- FUNCIONES DE VALIDACIÓN (MANTENIDAS DEL ORIGINAL) ---
+# --- NORMALIZACIÓN Y HELPERS DE TEXTO ---
+VULGAR_FRACTIONS: Dict[str, str] = {
+    '¼': '1/4', '½': '1/2', '¾': '3/4', 
+    '⅛': '1/8', '⅜': '3/8', '⅝': '5/8', '⅞': '7/8',
+    '”': '"', '“': '"', '’': "'", '‘': "'"
+}
+
+GENERIC_PLACEHOLDERS: Set[str] = {
+    "ACCESORIOS PARA FIJACION",
+    "ACCESORIOS Y ELEMENTOS DE FIJACION",
+    "MATERIAL DE FIJACION Y REMATE",
+    "MATERIALES PARA INSTALACIONES",
+    "MATERIALES VARIOS PARA INSTALACION",
+    "MATERIALES VARIOS",
+    "ELEMENTOS DE FIJACION",
+    "HERRAMIENTAS MENORES",
+    "MISCELANEOS",
+    "VARIOS DE INSTALACION"
+}
+
+def normalize_text_dimensions(text: str) -> str:
+    """Decodifica entidades HTML y normaliza fracciones vulgares como ¼ a 1/4."""
+    if not text:
+        return ""
+    unescaped = html.unescape(text)
+    for v_char, repl in VULGAR_FRACTIONS.items():
+        unescaped = unescaped.replace(v_char, repl)
+    return unescaped
+
+def is_generic_placeholder(desc: str) -> bool:
+    """Identifica materiales genéricos o de canasta en APU que no son productos comerciales."""
+    if not desc:
+        return True
+    cleaned = re.sub(r'[^A-Z\s]', '', desc.upper()).strip()
+    cleaned = re.sub(r'\s+', ' ', cleaned)
+    if cleaned in GENERIC_PLACEHOLDERS:
+        return True
+    if re.match(r'^(ACCESORIOS|MATERIALES VARIOS|ELEMENTOS DE FIJACION)(\s+PARA\s+\w+)?$', cleaned):
+        return True
+    return False
+
 def extract_numbers_and_dims(text: str) -> Set[str]:
-    text = text.replace('"', '').replace("'", "")
+    text = normalize_text_dimensions(text).replace('"', '').replace("'", "")
     pattern = r'\b(\d+(?:/\d+)?(?:[\.,]\d+)?)\b'
     matches = re.findall(pattern, text)
     return set(matches)
 
 def get_keywords(text: str) -> Set[str]:
-    text = text.lower().replace('"', '').replace("'", "")
+    text = normalize_text_dimensions(text).lower().replace('"', '').replace("'", "")
     words = re.findall(r'\b[a-z]{3,}\b', text)
-    stop_words = {'para', 'con', 'sin', 'los', 'las', 'del', 'por', 'que', 'una', 'uso', 'tipo'}
+    stop_words = {
+        'para', 'con', 'sin', 'los', 'las', 'del', 'por', 'que', 'una', 'uno',
+        'uso', 'tipo', 'color', 'marca', 'nacional', 'importado', 'varios'
+    }
     return set([w for w in words if w not in stop_words])
 
 def clean_search_term(desc: str) -> str:
-    desc_upper = desc.upper()
-    medida = re.search(r'\d+(?:/\d+)?(?:[\.,]\d+)?\s*(?:MM|CM|M|PULG|\"|KG|G|L|ML)', desc_upper)
+    """Limpia la descripción eliminando palabras de relleno para buscar en EPA/portales."""
+    if not desc:
+        return ""
+    desc_clean = normalize_text_dimensions(desc).upper()
+    medida = re.search(r'\d+(?:/\d+)?(?:[\.,]\d+)?\s*(?:MM|CM|M|PULG|\"|KG|G|L|ML)', desc_clean)
     medida_str = medida.group() if medida else ''
     
-    palabras = re.findall(r'\b[A-Z]{3,}\b', desc_upper)
-    stop_words = {'PARA', 'CON', 'SIN', 'LOS', 'LAS', 'DEL', 'POR'}
-    palabras = [p for p in palabras if p not in stop_words]
+    palabras = re.findall(r'\b[A-Z]{3,}\b', desc_clean)
+    stop_words = {
+        'PARA', 'CON', 'SIN', 'LOS', 'LAS', 'DEL', 'POR', 'QUE', 'UNA', 'UNO',
+        'USO', 'TIPO', 'COLOR', 'MARCA', 'NACIONAL', 'IMPORTADO', 'VARIOS',
+        'CALIDAD', 'PRIMERA', 'SEGUNDA'
+    }
+    palabras_filtradas = [p for p in palabras if p not in stop_words]
     
-    core = ' '.join(palabras[:3])
+    core = ' '.join(palabras_filtradas[:3])
     query = f'{core} {medida_str}'.strip()
-    return query
+    return query or ' '.join(palabras[:2])
 
 def is_valid_product(db_desc: str, scraped_desc: str) -> bool:
-    if not scraped_desc:
+    """Verifica si el producto encontrado coincide con la descripción de la BD."""
+    if not scraped_desc or not db_desc:
         return False
-    db_desc = db_desc.lower()
-    scraped_desc = scraped_desc.lower()
+        
+    db_desc_norm = normalize_text_dimensions(db_desc).lower()
+    scraped_desc_norm = normalize_text_dimensions(scraped_desc).lower()
     
-    nums_db = extract_numbers_and_dims(db_desc)
-    scraped_desc_clean = scraped_desc.replace('"', '').replace("'", "")
+    nums_db = extract_numbers_and_dims(db_desc_norm)
+    scraped_desc_clean = scraped_desc_norm.replace('"', '').replace("'", "")
     
     for num in nums_db:
         pattern = r'(?<!\d)' + re.escape(num) + r'(?!\d)'
         if not re.search(pattern, scraped_desc_clean):
             return False
             
-    kw_db = get_keywords(db_desc)
-    kw_scraped = get_keywords(scraped_desc)
+    kw_db = get_keywords(db_desc_norm)
+    kw_scraped = get_keywords(scraped_desc_norm)
     
     if kw_db:
         intersection = kw_db.intersection(kw_scraped)
@@ -115,11 +168,19 @@ def is_valid_product(db_desc: str, scraped_desc: str) -> bool:
             return False
             
         ratio = len(intersection) / len(kw_db)
-        required_ratio = 0.3 if nums_db else 0.6
+        required_ratio = 0.25 if nums_db else 0.5
         if ratio < required_ratio:
             return False
             
     return True
+
+def safe_sleep(seconds: float) -> None:
+    """Duerme en intervalos cortos de hasta 0.3s para responder de inmediato al Kill Switch."""
+    end_time = time.time() + max(0.0, seconds)
+    while time.time() < end_time:
+        if bot_state.stop_flag:
+            break
+        time.sleep(min(0.3, max(0.0, end_time - time.time())))
 
 # --- ORQUESTADOR DEL BOT CON CONFIGURACIÓN DINÁMICA ---
 def scraping_seguro_configurable() -> None:
@@ -133,7 +194,6 @@ def scraping_seguro_configurable() -> None:
     fecha_version = datetime.now().strftime("%Y-%m-%d")
     
     try:
-        # Inicializar Cloudscraper si bypass_cloudflare está activo
         if config.bypass_cloudflare and cloudscraper:
             bot_state.add_log("INFO", "Iniciando Cloudscraper para evadir Cloudflare/PerimeterX")
             scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False})
@@ -141,17 +201,21 @@ def scraping_seguro_configurable() -> None:
             bot_state.add_log("INFO", "Usando requests estándar (sin bypass)")
             scraper = requests
         
-        # User-Agents para rotación
         lista_navegadores = [
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1"
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0"
         ]
         
-        portales = config.active_portals
+        # Priorizar EPA si está en los portales activos
+        portales = list(config.active_portals)
+        if "epa" in portales and portales[0] != "epa":
+            portales = ["epa"] + [p for p in portales if p != "epa"]
+            
         processed_count = 0
         success_count = 0
+        offset = 0
+        processed_in_session: Set[str] = set()
 
         while True:
             if bot_state.stop_flag:
@@ -167,8 +231,12 @@ def scraping_seguro_configurable() -> None:
                           SELECT material_id FROM historial_precios WHERE fecha = :fecha
                       )
                     ORDER BY "CodMat" ASC
-                    LIMIT :batch_size
-                '''), {"batch_size": config.batch_size, "fecha": fecha_version}).fetchall()
+                    LIMIT :batch_size OFFSET :offset
+                '''), {
+                    "batch_size": config.batch_size, 
+                    "fecha": fecha_version,
+                    "offset": offset
+                }).fetchall()
 
                 materiales_db = [{"codigo": row[0], "descripcion": row[1], "precio_bd": row[2]} for row in result]
             
@@ -176,24 +244,36 @@ def scraping_seguro_configurable() -> None:
                 bot_state.add_log("INFO", "Todos los materiales disponibles para la fecha han sido procesados")
                 break
             
-            bot_state.add_log("INFO", f"Procesando lote de {len(materiales_db)} materiales (Total acumulado: {processed_count})")
+            # Avanzar offset para el siguiente lote
+            offset += len(materiales_db)
+            bot_state.add_log("INFO", f"Procesando lote de {len(materiales_db)} materiales (Total acumulado: {processed_count}, Offset: {offset})")
             
             for indice, mat in enumerate(materiales_db):
-                # Verificar flags de control
                 if bot_state.stop_flag:
                     bot_state.add_log("INFO", "Bot detenido por Kill Switch")
                     break
                     
                 while bot_state.pause_flag:
-                    time.sleep(1)
+                    time.sleep(0.5)
                     if bot_state.stop_flag:
                         break
                 
                 if bot_state.stop_flag:
                     break
+
+                # Evitar repetir en la misma sesión
+                if mat['codigo'] in processed_in_session:
+                    continue
+                processed_in_session.add(mat['codigo'])
+
+                # Saltar placeholders genéricos de APU
+                if is_generic_placeholder(mat['descripcion']):
+                    bot_state.add_log("INFO", f"Material genérico/placeholder saltado: {mat['codigo']} ({mat['descripcion']})")
+                    processed_count += 1
+                    continue
                     
                 agente_aleatorio = random.choice(lista_navegadores)
-                precio_detectado = 0
+                precio_detectado = 0.0
                 portal_exitoso = ''
                 titulo_exitoso = ''
                 
@@ -201,13 +281,12 @@ def scraping_seguro_configurable() -> None:
                     termino_limpio = clean_search_term(mat['descripcion'])
                     descripcion_url = urllib.parse.quote_plus(termino_limpio)
                     
-                    bot_state.add_log("INFO", f"Procesando [{indice+1}/{len(materiales_db)}] {mat['codigo']}: {mat['descripcion']}")
+                    bot_state.add_log("INFO", f"Procesando [{indice+1}/{len(materiales_db)}] {mat['codigo']}: {mat['descripcion']} -> Busqueda: '{termino_limpio}'")
                     
                     for portal_actual in portales:
-                        if precio_detectado > 0:
+                        if precio_detectado > 0 or bot_state.stop_flag:
                             break
 
-                        # Obtener URL del portal desde la configuración
                         url_template = config.portal_urls.get(portal_actual)
                         if not url_template:
                             bot_state.add_log("WARN", f"Portal '{portal_actual}' no tiene URL configurada, saltando...")
@@ -217,76 +296,66 @@ def scraping_seguro_configurable() -> None:
 
                         if portal_actual == 'epa':
                             headers = {'User-Agent': agente_aleatorio, 'Referer': 'https://ve.epaenlinea.com/'}
-                            response = scraper.get(url, headers=headers, timeout=15)
-                            
-                            if response.status_code == 200:
-                                html_content = response.text
-                                titulo_detectado = ''
-                                title_matches = re.findall(r'class="product-item-link"[^>]*>(.*?)</a>', html_content, re.DOTALL)
-                                if title_matches:
-                                    titulo_detectado = title_matches[0].strip()
-
-                                precio_patterns = [
-                                    r'data-price-amount="([\d\.,]+)"',
-                                    r'class="price"[^>]*>\s*(?:US\s*\$|\$)?\s*([\d\.,]+)',
-                                ]
-                                
-                                for pattern in precio_patterns:
-                                    matches = re.findall(pattern, html_content)
-                                    if matches:
+                            try:
+                                response = scraper.get(url, headers=headers, timeout=12)
+                                if response.status_code == 200:
+                                    response.encoding = response.apparent_encoding or 'utf-8'
+                                    html_content = response.text
+                                    
+                                    raw_titles = re.findall(r'class="product-item-link"[^>]*>(.*?)</a>', html_content, re.DOTALL)
+                                    raw_prices = re.findall(r'data-price-amount="([\d\.,]+)"', html_content)
+                                    
+                                    for raw_t, raw_p in zip(raw_titles, raw_prices):
                                         try:
-                                            precio_candidato = float(matches[0].replace(',', '.'))
+                                            precio_candidato = float(raw_p.replace(',', '.'))
+                                            titulo_candidato = normalize_text_dimensions(raw_t.strip())
                                             if precio_candidato > 0:
-                                                if titulo_detectado and not is_valid_product(mat['descripcion'], titulo_detectado):
-                                                    bot_state.add_log("WARN", f"Descartado (Falso Positivo EPA): '{titulo_detectado}'")
-                                                    break
+                                                if not is_valid_product(mat['descripcion'], titulo_candidato):
+                                                    continue
                                                 precio_detectado = precio_candidato
                                                 portal_exitoso = portal_actual
-                                                titulo_exitoso = titulo_detectado
+                                                titulo_exitoso = titulo_candidato
                                                 break
                                         except Exception:
                                             continue
+                            except Exception as epa_err:
+                                bot_state.add_log("WARN", f"Error consultando EPA: {epa_err}")
                                             
                         elif portal_actual == 'mercadolibre':
                             headers = {'User-Agent': agente_aleatorio, 'Referer': 'https://www.mercadolibre.com.ve/'}
-                            response = scraper.get(url, headers=headers, timeout=15)
-                            
-                            if response.status_code == 200:
-                                html_content = response.text
-                                if "suspicious-traffic" in html_content:
-                                    bot_state.add_log("WARN", "MercadoLibre requiere verificación anti-bot (captcha). Probando otros portales...")
-                                    continue
+                            try:
+                                response = scraper.get(url, headers=headers, timeout=12)
+                                if response.status_code == 200:
+                                    response.encoding = response.apparent_encoding or 'utf-8'
+                                    html_content = response.text
+                                    if "suspicious-traffic" in html_content:
+                                        bot_state.add_log("WARN", "MercadoLibre requiere verificación anti-bot (captcha). Saltando a otros portales...")
+                                        continue
 
-                                titulo_detectado = ''
-                                title_matches = re.findall(r'class="ui-search-item__title"[^>]*>(.*?)<', html_content)
-                                if title_matches:
-                                    titulo_detectado = title_matches[0].strip()
-
-                                precio_patterns = [
-                                    r'class="andes-money-amount__fraction">([\d\.,]+)<',
-                                    r'<meta itemprop="price" content="([\d\.,]+)">',
-                                    r'USD\s*\$\s*(\d{1,3}(?:[\.,]\d{3})*(?:[\.,]\d{2}))',
-                                    r'\$\s*(\d{1,3}(?:[\.,]\d{3})*(?:[\.,]\d{2}))'
-                                ]
-                                
-                                for pattern in precio_patterns:
-                                    matches = re.findall(pattern, html_content)
-                                    if matches:
+                                    raw_titles = re.findall(r'class="ui-search-item__title"[^>]*>(.*?)<', html_content)
+                                    raw_prices = [m[0] if isinstance(m, tuple) else m for m in re.findall(
+                                        r'class="andes-money-amount__fraction">([\d\.,]+)<|<meta itemprop="price" content="([\d\.,]+)">',
+                                        html_content
+                                    ) if (isinstance(m, tuple) and any(m)) or isinstance(m, str)]
+                                    
+                                    for raw_t, raw_p in zip(raw_titles, raw_prices):
                                         try:
-                                            precio_candidato = float(matches[0].replace(',', '.'))
+                                            precio_candidato = float(raw_p.replace(',', '.'))
+                                            titulo_candidato = normalize_text_dimensions(raw_t.strip())
                                             if precio_candidato > 0:
-                                                if titulo_detectado and not is_valid_product(mat['descripcion'], titulo_detectado):
-                                                    bot_state.add_log("WARN", f"Descartado (Falso Positivo ML): '{titulo_detectado}'")
-                                                    break
+                                                if not is_valid_product(mat['descripcion'], titulo_candidato):
+                                                    continue
                                                 precio_detectado = precio_candidato
                                                 portal_exitoso = portal_actual
-                                                titulo_exitoso = titulo_detectado
+                                                titulo_exitoso = titulo_candidato
                                                 break
                                         except Exception:
                                             continue
+                            except Exception as ml_err:
+                                bot_state.add_log("WARN", f"Error consultando MercadoLibre: {ml_err}")
                     
                     if precio_detectado > 0:
-                        bot_state.add_log("INFO", f"[EXITO] {mat['codigo']} | BD: ${mat['precio_bd']} | Scraping: ${precio_detectado} | Fuente: {portal_exitoso}")
+                        bot_state.add_log("INFO", f"[EXITO] {mat['codigo']} | BD: ${mat['precio_bd']} | Scraping: ${precio_detectado:.2f} | Fuente: {portal_exitoso} | {titulo_exitoso}")
                         try:
                             with get_db_session() as db_hist:
                                 db_hist.execute(text('''
@@ -311,10 +380,13 @@ def scraping_seguro_configurable() -> None:
                 
                 processed_count += 1
                 
-                # Delay configurable
+                # Delay configurable e interrumpible
                 delay_seconds = config.request_delay_ms / 1000
                 bot_state.add_log("INFO", f"Esperando {delay_seconds:.1f}s antes del siguiente material...")
-                time.sleep(delay_seconds)
+                safe_sleep(delay_seconds)
+                if bot_state.stop_flag:
+                    bot_state.add_log("INFO", "Bot detenido por Kill Switch")
+                    break
         
             bot_state.add_log("INFO", f"Lote finalizado: {processed_count} acumulados, {success_count} exitosos")
             if not config.continuous_mode or bot_state.stop_flag:
@@ -337,7 +409,6 @@ async def start_scraping(current_user: ArkoAdmin = Depends(get_current_arko_admi
     bot_state.stop_flag = False
     bot_state.pause_flag = False
     
-    # Iniciar en thread separado
     task = threading.Thread(target=scraping_seguro_configurable)
     bot_state.current_task = task
     task.start()
@@ -370,10 +441,7 @@ async def kill_scraping(current_user: ArkoAdmin = Depends(get_current_arko_admin
     bot_state.stop_flag = True
     bot_state.pause_flag = False
     bot_state.set_status("idle")
-    
-    if bot_state.current_task and bot_state.current_task.is_alive():
-        bot_state.current_task.join(timeout=5)
-    
+    bot_state.add_log("INFO", "Kill Switch accionado por el usuario. Deteniendo bot...")
     return {"status": "killed", "message": "Bot detenido completamente"}
 
 # --- ENDPOINTS DE CONFIGURACIÓN ---

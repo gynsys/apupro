@@ -11,6 +11,7 @@ import sys
 import time
 import random
 import re
+import html
 import urllib.parse
 import argparse
 from datetime import datetime
@@ -42,40 +43,88 @@ try:
 except ImportError:
     cloudscraper = None
 
+VULGAR_FRACTIONS: Dict[str, str] = {
+    '¼': '1/4', '½': '1/2', '¾': '3/4', 
+    '⅛': '1/8', '⅜': '3/8', '⅝': '5/8', '⅞': '7/8',
+    '”': '"', '“': '"', '’': "'", '‘': "'"
+}
+
+GENERIC_PLACEHOLDERS: Set[str] = {
+    "ACCESORIOS PARA FIJACION",
+    "ACCESORIOS Y ELEMENTOS DE FIJACION",
+    "MATERIAL DE FIJACION Y REMATE",
+    "MATERIALES PARA INSTALACIONES",
+    "MATERIALES VARIOS PARA INSTALACION",
+    "MATERIALES VARIOS",
+    "ELEMENTOS DE FIJACION",
+    "HERRAMIENTAS MENORES",
+    "MISCELANEOS",
+    "VARIOS DE INSTALACION"
+}
+
+def normalize_text_dimensions(text_val: str) -> str:
+    """Decodifica entidades HTML y normaliza fracciones vulgares como ¼ a 1/4."""
+    if not text_val:
+        return ""
+    unescaped = html.unescape(text_val)
+    for v_char, repl in VULGAR_FRACTIONS.items():
+        unescaped = unescaped.replace(v_char, repl)
+    return unescaped
+
+def is_generic_placeholder(desc: str) -> bool:
+    """Identifica materiales genéricos o de canasta en APU que no son productos comerciales."""
+    if not desc:
+        return True
+    cleaned = re.sub(r'[^A-Z\s]', '', desc.upper()).strip()
+    cleaned = re.sub(r'\s+', ' ', cleaned)
+    if cleaned in GENERIC_PLACEHOLDERS:
+        return True
+    if re.match(r'^(ACCESORIOS|MATERIALES VARIOS|ELEMENTOS DE FIJACION)(\s+PARA\s+\w+)?$', cleaned):
+        return True
+    return False
 
 def extract_numbers_and_dims(text_input: str) -> Set[str]:
-    clean_text = text_input.replace('"', '').replace("'", "")
+    clean_text = normalize_text_dimensions(text_input).replace('"', '').replace("'", "")
     pattern = r'\b(\d+(?:/\d+)?(?:[\.,]\d+)?)\b'
     matches = re.findall(pattern, clean_text)
     return set(matches)
 
 
 def get_keywords(text_input: str) -> Set[str]:
-    clean_text = text_input.lower().replace('"', '').replace("'", "")
+    clean_text = normalize_text_dimensions(text_input).lower().replace('"', '').replace("'", "")
     words = re.findall(r'\b[a-z]{3,}\b', clean_text)
-    stop_words = {'para', 'con', 'sin', 'los', 'las', 'del', 'por', 'que', 'una', 'uso', 'tipo'}
+    stop_words = {
+        'para', 'con', 'sin', 'los', 'las', 'del', 'por', 'que', 'una', 'uno',
+        'uso', 'tipo', 'color', 'marca', 'nacional', 'importado', 'varios'
+    }
     return set([w for w in words if w not in stop_words])
 
 
 def clean_search_term(desc: str) -> str:
-    desc_upper = desc.upper()
-    medida = re.search(r'\d+(?:/\d+)?(?:[\.,]\d+)?\s*(?:MM|CM|M|PULG|\"|KG|G|L|ML)', desc_upper)
+    if not desc:
+        return ""
+    desc_clean = normalize_text_dimensions(desc).upper()
+    medida = re.search(r'\d+(?:/\d+)?(?:[\.,]\d+)?\s*(?:MM|CM|M|PULG|\"|KG|G|L|ML)', desc_clean)
     medida_str = medida.group() if medida else ''
     
-    palabras = re.findall(r'\b[A-Z]{3,}\b', desc_upper)
-    stop_words = {'PARA', 'CON', 'SIN', 'LOS', 'LAS', 'DEL', 'POR'}
-    palabras = [p for p in palabras if p not in stop_words]
+    palabras = re.findall(r'\b[A-Z]{3,}\b', desc_clean)
+    stop_words = {
+        'PARA', 'CON', 'SIN', 'LOS', 'LAS', 'DEL', 'POR', 'QUE', 'UNA', 'UNO',
+        'USO', 'TIPO', 'COLOR', 'MARCA', 'NACIONAL', 'IMPORTADO', 'VARIOS',
+        'CALIDAD', 'PRIMERA', 'SEGUNDA'
+    }
+    palabras_filtradas = [p for p in palabras if p not in stop_words]
     
-    core = ' '.join(palabras[:3])
+    core = ' '.join(palabras_filtradas[:3])
     query = f'{core} {medida_str}'.strip()
-    return query
+    return query or ' '.join(palabras[:2])
 
 
 def is_valid_product(db_desc: str, scraped_desc: str) -> bool:
-    if not scraped_desc:
+    if not scraped_desc or not db_desc:
         return False
-    db_desc_lower = db_desc.lower()
-    scraped_desc_lower = scraped_desc.lower()
+    db_desc_lower = normalize_text_dimensions(db_desc).lower()
+    scraped_desc_lower = normalize_text_dimensions(scraped_desc).lower()
     
     nums_db = extract_numbers_and_dims(db_desc_lower)
     scraped_desc_clean = scraped_desc_lower.replace('"', '').replace("'", "")
@@ -94,7 +143,7 @@ def is_valid_product(db_desc: str, scraped_desc: str) -> bool:
             return False
             
         ratio = len(intersection) / len(kw_db)
-        required_ratio = 0.3 if nums_db else 0.6
+        required_ratio = 0.25 if nums_db else 0.5
         if ratio < required_ratio:
             return False
             
@@ -204,11 +253,17 @@ def run_overnight_scraping(
 
     total_procesados = 0
     total_con_precio = 0
+    offset = 0
+    processed_in_session: Set[str] = set()
     start_time = time.time()
+
+    # Priorizar EPA si está activo
+    if "epa" in portals and portals[0] != "epa":
+        portals = ["epa"] + [p for p in portals if p != "epa"]
 
     try:
         while True:
-            # Obtener siguiente lote de materiales no scrapeados en la fecha actual
+            # Obtener siguiente lote con OFFSET
             with get_db_session() as db:
                 query = text('''
                     SELECT "CodMat", "Descri", "CosMat" 
@@ -218,21 +273,35 @@ def run_overnight_scraping(
                           SELECT material_id FROM historial_precios WHERE fecha = :fecha
                       )
                     ORDER BY "CodMat" ASC
-                    LIMIT :batch_size
+                    LIMIT :batch_size OFFSET :offset
                 ''')
-                result = db.execute(query, {"fecha": fecha_hoy, "batch_size": batch_size}).fetchall()
+                result = db.execute(query, {
+                    "fecha": fecha_hoy, 
+                    "batch_size": batch_size,
+                    "offset": offset
+                }).fetchall()
 
             if not result:
                 print("\n[FIN] Todos los materiales del catalogo han sido escaneados para el dia de hoy!")
                 break
 
+            offset += len(result)
             materiales_lote = [{"codigo": r[0], "descripcion": r[1], "precio_bd": float(r[2] or 0.0)} for r in result]
-            print(f"\n[CARGA] Nuevo lote de {len(materiales_lote)} materiales...")
+            print(f"\n[CARGA] Nuevo lote de {len(materiales_lote)} materiales (Offset acumulado: {offset})...")
 
             for mat in materiales_lote:
                 if max_materials and total_procesados >= max_materials:
                     print(f"\n[FIN] Se alcanzo el limite solicitado de {max_materials} materiales.")
                     return
+
+                if mat["codigo"] in processed_in_session:
+                    continue
+                processed_in_session.add(mat["codigo"])
+
+                if is_generic_placeholder(mat["descripcion"]):
+                    print(f"[SKIP GENERICO] {mat['codigo']} | '{mat['descripcion']}'")
+                    total_procesados += 1
+                    continue
 
                 total_procesados += 1
                 termino = clean_search_term(mat["descripcion"])
@@ -253,16 +322,17 @@ def run_overnight_scraping(
                         url = f"https://ve.epaenlinea.com/catalogsearch/result/?q={query_encoded}"
                         headers = {'User-Agent': agente, 'Referer': 'https://ve.epaenlinea.com/'}
                         try:
-                            resp = scraper.get(url, headers=headers, timeout=15)
+                            resp = scraper.get(url, headers=headers, timeout=12)
                             if resp.status_code == 200:
-                                html = resp.text
-                                titulos = re.findall(r'class="product-item-link"[^>]*>(.*?)</a>', html, re.DOTALL)
-                                precios = re.findall(r'data-price-amount="([\d\.,]+)"', html)
+                                resp.encoding = resp.apparent_encoding or 'utf-8'
+                                html_text = resp.text
+                                titulos = re.findall(r'class="product-item-link"[^>]*>(.*?)</a>', html_text, re.DOTALL)
+                                precios = re.findall(r'data-price-amount="([\d\.,]+)"', html_text)
                                 if not precios:
-                                    precios = re.findall(r'class="price"[^>]*>\s*(?:US\s*\$|\$)?\s*([\d\.,]+)', html)
+                                    precios = re.findall(r'class="price"[^>]*>\s*(?:US\s*\$|\$)?\s*([\d\.,]+)', html_text)
 
                                 for i, t in enumerate(titulos):
-                                    titulo_limpio = t.strip()
+                                    titulo_limpio = normalize_text_dimensions(t.strip())
                                     if is_valid_product(mat["descripcion"], titulo_limpio):
                                         if i < len(precios):
                                             try:
