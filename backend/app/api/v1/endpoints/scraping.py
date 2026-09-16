@@ -6,7 +6,7 @@ import html
 import urllib.parse
 import threading
 from datetime import datetime
-from typing import List, Optional, Dict, Any, Set
+from typing import List, Optional, Dict, Any, Set, Tuple
 from pydantic import BaseModel
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends
 from fastapi.responses import Response
