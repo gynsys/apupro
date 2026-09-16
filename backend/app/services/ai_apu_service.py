@@ -118,9 +118,13 @@ _REGLAS_NUMERICAS = """
   * Si tienes partidas históricas de referencia, el rendimiento DEBE estar anclado a ellas o en el rango de los rendimientos históricos provistos.
   * No inventes rendimientos ilógicos o desproporcionados.
 - `desperdicio`: Número que representa el porcentaje de merma del material (ejemplo: 5.0 representa 5%, 10.0 representa 10%).
-- `depreciacion`: Factor horario del equipo (ejemplo: 1.0 para el 100% del costo diario).
+- `depreciacion`: Factor diario de depreciación o factor horario del equipo.
+  * En herramientas manuales y equipos propios (palas, carretillas, picos), conserva su factor de depreciación histórico (ejemplo: 0.01 = 1% diario).
+  * Si es un equipo alquilado por día a tarifa neta al 100%, usa 1.0.
+- `precio_unitario`: 
+  * En materiales: Precio unitario en USD por la unidad de medida (PZA, m, m2, m3, etc.).
+  * En equipos: PRECIO DE ADQUISICIÓN / COMPRA en USD del equipo o herramienta (ejemplo: pala $16.50, carretilla $35.00 a $50.00). La fórmula en el editor calcula: Total Día = Cantidad * Depreciación * Precio_Unitario. NUNCA coloques el costo diario ya depreciado en precio_unitario si la depreciación es menor a 1.0 (evita la doble depreciación).
 - `jornal` y `bono`: Tarifas diarias de mano de obra en USD por jornada de 8 horas.
-- `precio_unitario`: Precio en USD de la unidad del insumo.
 """
 
 _REGLAS_INSUMOS_PRECIOS = """
@@ -209,6 +213,63 @@ def is_code_input(text: str) -> bool:
     return False
 
 
+def _normalize_equipment_prices(result: Dict[str, Any], base_apu: Optional[Dict[str, Any]] = None) -> None:
+    """
+    Normaliza y asegura que los precios unitarios y factores de depreciación de los equipos
+    no sufran doble depreciación y mantengan coherencia con la fórmula del editor APU:
+    Total Día = Cantidad * Depreciación * Precio_Unitario.
+    """
+    if not result or not isinstance(result, dict) or "equipments" not in result:
+        return
+
+    equipments = result.get("equipments")
+    if not isinstance(equipments, list):
+        return
+
+    # Mapeo de equipos base históricos por código y descripción
+    base_eq_map: Dict[str, Dict[str, Any]] = {}
+    if base_apu and isinstance(base_apu, dict) and "equipos" in base_apu:
+        for eq in base_apu.get("equipos", []):
+            if isinstance(eq, dict):
+                cod = str(eq.get("codigo", "")).strip().upper()
+                if cod:
+                    base_eq_map[cod] = eq
+                desc = str(eq.get("descripcion", "")).strip().upper()
+                if desc:
+                    base_eq_map[desc] = eq
+
+    for eq_item in equipments:
+        if not isinstance(eq_item, dict):
+            continue
+
+        cod = str(eq_item.get("codigo", "")).strip().upper()
+        desc = str(eq_item.get("descripcion", "")).strip().upper()
+
+        # 1. Si coincide con un equipo histórico del APU base, anclar precio y depreciación exactos
+        base_match = base_eq_map.get(cod) or base_eq_map.get(desc)
+        if base_match:
+            base_price = float(base_match.get("precio_unitario") or 0.0)
+            base_deprec = float(base_match.get("depreciacion") or 1.0)
+            if base_price > 0:
+                eq_item["precio_unitario"] = round(base_price, 2)
+            if base_deprec > 0:
+                eq_item["depreciacion"] = base_deprec
+            if base_match.get("codigo"):
+                eq_item["codigo"] = base_match["codigo"]
+            continue
+
+        # 2. Si es un equipo nuevo agregado por IA (ej. carretilla, pala nueva, etc.)
+        deprec = float(eq_item.get("depreciacion") or 1.0)
+        pu = float(eq_item.get("precio_unitario") or 0.0)
+
+        # Si el LLM puso depreciación menor a 0.05 (ej: 0.01) pero un precio unitario diminuto (< 1.50)
+        # significa que colocó el costo diario en lugar del valor de adquisición (provocando doble depreciación)
+        if 0 < deprec < 0.05 and 0 < pu < 2.0:
+            eq_item["precio_unitario"] = round(pu / deprec, 2)
+        elif pu > 0 and deprec <= 0:
+            eq_item["depreciacion"] = 1.0
+
+
 def generate_apu_with_ai(payload_llm: Dict[str, Any], history: list = None) -> Dict[str, Any]:
     """
     Generación de APU usando el flujo clásico de preprocesamiento estadístico.
@@ -283,6 +344,8 @@ un catálogo de insumos filtrado y advertencias. Tu trabajo es estructurar un AP
 
     if payload_llm.get("advertencias_preprocesamiento"):
         result["advertencias"].extend(payload_llm["advertencias_preprocesamiento"])
+
+    _normalize_equipment_prices(result)
 
     return result
 
@@ -400,6 +463,8 @@ CUANDO solicites clarificación, responde con "options": []. ESTÁ TERMINANTEMEN
 
     if result.get("status") == "clarification_needed":
         result["options"] = []
+
+    _normalize_equipment_prices(result, base_apu)
 
     result["debug_base_apu"] = base_apu
     result["prompt_enviado_al_llm"] = prompt
@@ -576,7 +641,7 @@ def fetch_base_apu_for_prompt(db: Session, codpar: str) -> Dict[str, Any]:
         "rendimiento": item.RenPar or 1.0,
         "materiales": [
             {
-                "codigo": mat.CodMat,
+                "codigo": mat.ref_code or mat.CodMat,
                 "descripcion": mat.Descri,
                 "unidad": mat.UniMat,
                 "cantidad": rel.CanIns,
@@ -587,17 +652,21 @@ def fetch_base_apu_for_prompt(db: Session, codpar: str) -> Dict[str, Any]:
         ],
         "equipos": [
             {
-                "codigo": eq.CodEqu,
+                "codigo": eq.ref_code or eq.CodEqu,
                 "descripcion": eq.Descri,
                 "cantidad": rel.CanIns,
                 "depreciacion": getattr(rel, "Deprec", 1.0) or 1.0,
-                "precio_diario": eq.CosDia or 0.0,
+                "precio_unitario": round(
+                    eq.precio if (getattr(eq, "precio", None) is not None and eq.precio > 0)
+                    else ((eq.CosDia or 0.0) / (getattr(rel, "Deprec", 1.0) or 1.0) if (getattr(rel, "Deprec", 1.0) or 1.0) > 0 else (eq.CosDia or 0.0)),
+                    2
+                ),
             }
             for rel, eq in eq_rows
         ],
         "mano_obra": [
             {
-                "codigo": mo.CodMan,
+                "codigo": mo.ref_code or mo.CodMan,
                 "descripcion": mo.Descri,
                 "cantidad": rel.CanIns,
                 "jornal": mo.Jornal or 0.0,
