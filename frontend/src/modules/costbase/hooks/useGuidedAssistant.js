@@ -127,7 +127,8 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     const nextStep = currentChatStep === 0 ? 1 : currentChatStep + 1;
     setCurrentChatStep(nextStep);
 
-    const isSupplyOrInstall = /suministr|instalac|colocac|montaje/i.test(currentAccion || '');
+    const isSupplyOrInstall = /suministr|instalac|colocac|montaje/i.test(currentAccion || guidedAccion || '');
+    const isAcarreo = /acarreo|acarrear|bote|botar|transporte|transportar|traslado/i.test(currentAccion || guidedAccion || '');
 
     let nextBotMsg = null;
     if (nextStep === 1) {
@@ -139,34 +140,58 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
         chips: CHAT_STEP_DEFINITIONS[1].chips
       };
     } else if (nextStep === 2) {
-      if (isSupplyOrInstall) {
+      if (isAcarreo) {
+        nextBotMsg = { id: `bot-step-2-${Date.now()}`, sender: 'bot', step: 2, text: CHAT_STEP_DEFINITIONS[2].acarreo.text, chips: CHAT_STEP_DEFINITIONS[2].acarreo.chips };
+      } else if (isSupplyOrInstall) {
         const def = CHAT_STEP_DEFINITIONS[2].supplyOrInstall(currentAccion);
         nextBotMsg = { id: `bot-step-2-${Date.now()}`, sender: 'bot', step: 2, text: def.text, chips: def.chips };
       } else {
         nextBotMsg = { id: `bot-step-2-${Date.now()}`, sender: 'bot', step: 2, text: CHAT_STEP_DEFINITIONS[2].general.text, chips: CHAT_STEP_DEFINITIONS[2].general.chips };
       }
     } else if (nextStep === 3) {
-      if (isSupplyOrInstall) {
+      if (isAcarreo) {
+        nextBotMsg = { id: `bot-step-3-${Date.now()}`, sender: 'bot', step: 3, text: CHAT_STEP_DEFINITIONS[3].acarreo.text, chips: CHAT_STEP_DEFINITIONS[3].acarreo.chips };
+      } else if (isSupplyOrInstall) {
         nextBotMsg = { id: `bot-step-3-${Date.now()}`, sender: 'bot', step: 3, text: CHAT_STEP_DEFINITIONS[3].supplyOrInstall.text, chips: CHAT_STEP_DEFINITIONS[3].supplyOrInstall.chips };
       } else {
         nextBotMsg = { id: `bot-step-3-${Date.now()}`, sender: 'bot', step: 3, text: CHAT_STEP_DEFINITIONS[3].general.text, chips: CHAT_STEP_DEFINITIONS[3].general.chips };
       }
     } else if (nextStep === 4) {
-      nextBotMsg = {
-        id: `bot-step-4-${Date.now()}`,
-        sender: 'bot',
-        step: 4,
-        text: CHAT_STEP_DEFINITIONS[4].text,
-        chips: CHAT_STEP_DEFINITIONS[4].chips
-      };
+      if (isAcarreo) {
+        nextBotMsg = {
+          id: `bot-step-4-${Date.now()}`,
+          sender: 'bot',
+          step: 4,
+          text: CHAT_STEP_DEFINITIONS[4].acarreo.text,
+          chips: CHAT_STEP_DEFINITIONS[4].acarreo.chips
+        };
+      } else {
+        nextBotMsg = {
+          id: `bot-step-4-${Date.now()}`,
+          sender: 'bot',
+          step: 4,
+          text: CHAT_STEP_DEFINITIONS[4].text,
+          chips: CHAT_STEP_DEFINITIONS[4].chips
+        };
+      }
     } else if (nextStep === 5) {
-      nextBotMsg = {
-        id: `bot-step-5-${Date.now()}`,
-        sender: 'bot',
-        step: 5,
-        text: CHAT_STEP_DEFINITIONS[5].text,
-        chips: CHAT_STEP_DEFINITIONS[5].chips
-      };
+      if (isAcarreo) {
+        nextBotMsg = {
+          id: `bot-step-5-${Date.now()}`,
+          sender: 'bot',
+          step: 5,
+          text: CHAT_STEP_DEFINITIONS[5].acarreo.text,
+          chips: CHAT_STEP_DEFINITIONS[5].acarreo.chips
+        };
+      } else {
+        nextBotMsg = {
+          id: `bot-step-5-${Date.now()}`,
+          sender: 'bot',
+          step: 5,
+          text: CHAT_STEP_DEFINITIONS[5].text,
+          chips: CHAT_STEP_DEFINITIONS[5].chips
+        };
+      }
     } else if (nextStep === 6) {
       setChatbotLoadingStage(1);
       setTimeout(() => setChatbotLoadingStage(2), 1500);
@@ -191,10 +216,10 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
           }
         }
 
-        // 3. Destino / Ubicación
+        // 3. Destino / Ubicación / Distancia
         if (currentUbicacion && currentUbicacion !== 'Omitir' && currentUbicacion !== 'Ninguno' && currentUbicacion !== 'Ninguno / Omitir') {
           const ubiLower = currentUbicacion.toLowerCase();
-          const hasPrep = ubiLower.startsWith('para ') || ubiLower.startsWith('en ') || ubiLower.startsWith('sobre ') || ubiLower.startsWith('hacia ') || ubiLower.startsWith('bajo ');
+          const hasPrep = ubiLower.startsWith('para ') || ubiLower.startsWith('en ') || ubiLower.startsWith('sobre ') || ubiLower.startsWith('hacia ') || ubiLower.startsWith('bajo ') || ubiLower.startsWith('distancia ') || ubiLower.startsWith('a ');
           if (!hasPrep) {
             const isSupply = /suministr|instalac|colocac|montaje/i.test(currentAccion || '');
             parts.push(isSupply ? `para ${currentUbicacion}` : `en ${currentUbicacion}`);

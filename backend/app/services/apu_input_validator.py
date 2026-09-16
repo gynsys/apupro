@@ -473,6 +473,84 @@ def _extract_distinct_options(candidates: List[Dict[str, Any]], max_options: int
     return options
 
 
+_ACARREO_ACTION_STEMS: Set[str] = {
+    "acarreo", "acarrear", "acareo", "acarear",
+    "bote", "botar",
+    "transporte", "transportar",
+    "traslado", "trasladar",
+}
+
+
+def _has_acarreo_unit_or_context(text: str) -> bool:
+    """
+    Verifica si una consulta de acarreo o transporte especifica la unidad de medida,
+    la distancia de traslado o el método/equipo empleado.
+    """
+    lower = text.lower()
+
+    # 1. Unidades técnicas específicas de acarreo y transporte en COVENIN
+    unit_patterns = [
+        r"\bm3[\.\*x\s\-]*(m|km)\b",
+        r"\b(sac|sc)[\.\*x\s\-]*m\b",
+        r"\btf[\.\*x\s\-]*km\b",
+        r"\bton[\.\*x\s\-]*km\b",
+        r"\bkgf[\.\*x\s\-]*m\b",
+        r"\bpza[\.\*x\s\-]*m\b",
+        r"\b(vje|viajes?|fletes?)\b",
+        r"\b(m3|m³|metros?\s+cubicos?)\b",
+    ]
+    if any(re.search(p, lower) for p in unit_patterns):
+        return True
+
+    # 2. Distancia explícita con valor numérico (ej: 20m, 30 metros, 5 km, 15 kilometros)
+    dist_pattern = r"\b\d+(\.\d+)?\s*(m|mt|mts|metros?|km|kms|kilometros?)\b"
+    if re.search(dist_pattern, lower):
+        return True
+
+    # 3. Métodos y equipos de acarreo / transporte
+    transport_methods = {
+        "carretilla", "carretillas",
+        "camion", "camiones", "volteo", "volquete", "toronto", "dumper",
+        "tobo", "tobos", "cuñete", "cuñetes", "balde", "baldes",
+        "manual", "manualmente", "mecanico", "mecanizado",
+    }
+    if "a mano" in lower or "al hombro" in lower:
+        return True
+
+    words = re.findall(r"\b[a-záéíóúüñ]+\b", lower)
+    if any(w in transport_methods for w in words):
+        return True
+
+    return False
+
+
+def _is_primary_acarreo(query: str) -> bool:
+    """
+    Determina si la intención principal de la consulta es acarreo/transporte/bote de material.
+    Retorna False si el acarreo es accesorio a una partida principal (ej: demolición o excavación).
+    """
+    lower = query.lower()
+    acarreo_pos: List[int] = []
+    for s in _ACARREO_ACTION_STEMS:
+        for m in re.finditer(r"\b" + re.escape(s) + r"\b", lower):
+            acarreo_pos.append(m.start())
+
+    if not acarreo_pos:
+        return False
+
+    min_acarreo = min(acarreo_pos)
+
+    # Identificar si otra acción constructiva principal apareció antes del término de acarreo
+    for a in _CONSTRUCTION_ACTIONS:
+        if a in _ACARREO_ACTION_STEMS:
+            continue
+        for m in re.finditer(r"\b" + re.escape(a) + r"\b", lower):
+            if m.start() < min_acarreo:
+                return False
+
+    return True
+
+
 def validate_rag_signals(
     query: str,
     candidates: Optional[List[Dict[str, Any]]] = None,
@@ -485,14 +563,15 @@ def validate_rag_signals(
       1. Consultas fuera del dominio de construcción (sin acción ni elemento constructivo, o score RAG < 0.32).
       2. Consultas que solo contienen una acción constructiva sin elemento ("demolicion", "instalacion").
       3. Consultas que solo contienen un elemento constructivo sin acción ("tuberia").
+      4. Consultas de acarreo/transporte que carecen de unidad de medida, distancia o método.
 
     Returns:
         None si la consulta es técnicamente suficiente para proceder a la generación.
         Tuple (veredicto, mensaje, codigo_interno, opciones) si debe detenerse:
             - veredicto: "reject" o "clarification_needed"
             - mensaje: Explicación para el usuario.
-            - codigo_interno: Código para auditoría ("RAG_OFF_TOPIC", "RAG_AMBIGUOUS_ACTION_ONLY", etc.)
-            - opciones: Lista de hasta 4 descripciones (forzada a [] para cero adivinanzas engañosas).
+            - codigo_interno: Código para auditoría ("RAG_OFF_TOPIC", "RAG_AMBIGUOUS_ACTION_ONLY", "RAG_ACARREO_MISSING_UNIT", etc.)
+            - opciones: Lista de descripciones sugeridas (forzada a [] para cero adivinanzas engañosas).
     """
     clean_query = re.sub(r"[^\w\s]", " ", query.lower())
     raw_tokens = clean_query.split()
@@ -547,6 +626,21 @@ def validate_rag_signals(
                 [],  # Cero adivinanzas
             )
 
+    # ── CHECK 2.3: Validación de Unidad en Acarreo / Transporte ──────
+    if _is_primary_acarreo(query):
+        if not _has_acarreo_unit_or_context(query):
+            logger.info("Acarreo query missing unit/distance intercepted by Capa 2: %.80s", query)
+            return (
+                "clarification_needed",
+                (
+                    "Las partidas de acarreo y transporte dependen directamente de la unidad de medida y la distancia "
+                    "(m3.m para acarreo interno por metro lineal, m3 para volumen fijo, m3xkm para camión volteo por km, "
+                    "sac.m para sacos por metro, o vje para viaje). Por favor indica la unidad, distancia o método de traslado."
+                ),
+                "RAG_ACARREO_MISSING_UNIT",
+                [],  # Cero adivinanzas: no mostrar alternativas engañosas
+            )
+
     # ── CHECK 3: Evaluación de Candidatos RAG (si fueron proporcionados) ──
     if candidates is not None:
         if not candidates:
@@ -586,7 +680,7 @@ def build_rejection_response(
     mensaje: str,
     codigo: str,
     rag_candidates: Optional[list] = None,
-) -> dict:
+) -> Dict[str, Any]:
     """
     Construye la respuesta JSON estándar del pipeline cuando la Capa 1 o Capa 2
     rechaza o solicita clarificación.
@@ -601,6 +695,28 @@ def build_rejection_response(
     Returns:
         Dict con la estructura de respuesta estándar del pipeline APU.
     """
+    if codigo == "RAG_ACARREO_MISSING_UNIT":
+        return {
+            "status": "clarification_needed",
+            "clarification_message": mensaje,
+            "recommendation": "Indica la unidad de acarreo o la distancia para generar un APU preciso.",
+            "options": [],
+            "questions": [
+                "1. Unidad de medida: ¿En qué unidad deseas computar? (m3.m: interno por metro lineal, m3: volumen fijo en sitio, m3xkm: volteo por km, sac.m: sacos por metro, o vje: viaje)",
+                "2. Distancia o método: ¿Cuál es la distancia aproximada (ej: 30m, 10 km) o medio de transporte (carretilla a mano, camión volteo 7m3)?",
+            ],
+            "guia_redaccion": (
+                "Estructura recomendada: Acarreo de [Material] en [Unidad/Método] a [Distancia]. "
+                "Ejemplo: 'Acarreo de escombros a mano en carretilla a 30m (m3.m)' o 'Acarreo en camión volteo a 15 km (m3xkm)'."
+            ),
+            "partida": None,
+            "materials": [],
+            "equipments": [],
+            "labors": [],
+            "advertencias": [],
+            "_internal_code": codigo,
+        }
+
     questions = [
         "1. Accion principal: Que actividad deseas presupuestar (demolicion, construccion, instalacion)?",
         "2. Elemento constructivo: Sobre que elemento se actua (pared, tuberia, losa, piso)?",

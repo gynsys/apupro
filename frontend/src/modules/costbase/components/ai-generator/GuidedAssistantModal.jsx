@@ -23,11 +23,12 @@ export default function GuidedAssistantModal({
   if (!isOpen) return null;
 
   const isSupplyOrInstall = /suministr|instalac|colocac|montaje/i.test(guidedAccion || '');
+  const isAcarreo = /acarreo|acarrear|bote|botar|transporte|transportar|traslado/i.test(guidedAccion || '');
   const stepperItems = [
     { step: 1, label: 'Acción' },
-    { step: 2, label: isSupplyOrInstall ? '¿Qué es?' : 'Elemento' },
-    { step: 3, label: isSupplyOrInstall ? '¿Para qué?' : 'Ubicación' },
-    { step: 4, label: 'Alcance' },
+    { step: 2, label: isAcarreo ? 'Material' : (isSupplyOrInstall ? '¿Qué es?' : 'Elemento') },
+    { step: 3, label: isAcarreo ? 'Distancia' : (isSupplyOrInstall ? '¿Para qué?' : 'Ubicación') },
+    { step: 4, label: isAcarreo ? 'Equipo' : 'Alcance' },
     { step: 5, label: 'Unidad' },
   ];
 

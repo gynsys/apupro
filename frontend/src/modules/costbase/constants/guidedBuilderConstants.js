@@ -144,6 +144,19 @@ export const CHAT_STEP_DEFINITIONS = {
         'Omitir'
       ]
     }),
+    acarreo: {
+      text: 'Paso 2 de 5: Material a Acarrear o Trasladar\n¿Qué material o elemento se va a acarrear?',
+      chips: [
+        'Escombros de demolición',
+        'Tierra / Material de excavación',
+        'Arena / Agregados',
+        'Piedra picada',
+        'Sacos de cemento',
+        'Bloques de arcilla / concreto',
+        'Madera / Encofrados',
+        'Omitir'
+      ]
+    },
     general: {
       text: 'Paso 2 de 5: El Elemento o Material\n¿Qué elemento, estructura o material se va a intervenir o construir?',
       chips: [
@@ -174,6 +187,18 @@ export const CHAT_STEP_DEFINITIONS = {
         'Omitir'
       ]
     },
+    acarreo: {
+      text: 'Paso 3 de 5: Distancia o Entorno del Traslado\n¿Cuál es la distancia aproximada o entorno del acarreo?',
+      chips: [
+        'Distancia hasta 20 metros',
+        'Distancia hasta 50 metros',
+        'Distancia mayor a 50 metros',
+        'En interiores / pisos superiores',
+        'En exteriores a pie de obra',
+        'Hacia botadero externo',
+        'Omitir'
+      ]
+    },
     general: {
       text: 'Paso 3 de 5: Ubicación o Especificación\n¿En qué lugar, nivel o con qué especificación?',
       chips: [
@@ -188,31 +213,62 @@ export const CHAT_STEP_DEFINITIONS = {
     }
   },
   4: {
-    text: 'Paso 4 de 5: Alcance y Condiciones\n¿Qué incluye o excluye la partida?',
-    chips: [
-      'Incluye conexiones y accesorios',
-      'Incluye pruebas y puesta en marcha',
-      'Todo incluido (Mat + MO + Eq)',
-      'Solo suministro',
-      'Solo mano de obra',
-      'Incluye transporte',
-      'No incluye acometida',
-      'Omitir'
-    ]
+    acarreo: {
+      text: 'Paso 4 de 5: Medio y Equipo de Acarreo\n¿Qué medio, equipo o cuadrilla se utilizará?',
+      chips: [
+        'A mano en carretilla',
+        'A mano en tobos / sacos',
+        'En camión volteo 7 m³',
+        'En camión volteo con cargador',
+        'En minishovel / maquinaria ligera',
+        'Incluye carguío y descarga',
+        'Omitir'
+      ]
+    },
+    general: {
+      text: 'Paso 4 de 5: Alcance y Condiciones\n¿Qué incluye o excluye la partida?',
+      chips: [
+        'Incluye conexiones y accesorios',
+        'Incluye pruebas y puesta en marcha',
+        'Todo incluido (Mat + MO + Eq)',
+        'Solo suministro',
+        'Solo mano de obra',
+        'Incluye transporte',
+        'No incluye acometida',
+        'Omitir'
+      ]
+    },
+    get text() { return this.general.text; },
+    get chips() { return this.general.chips; }
   },
   5: {
-    text: 'Paso 5 de 5: Unidad de Medida\n¿En qué unidad de medida se computará la partida?',
-    chips: [
-      'und',
-      'pza',
-      'm',
-      'ml',
-      'm²',
-      'm³',
-      'kg',
-      'pto',
-      'viaje',
-      'Sugerir por IA'
-    ]
+    acarreo: {
+      text: 'Paso 5 de 5: Unidad de Acarreo y Transporte\nLas partidas de acarreo dependen del método y la distancia. ¿En qué unidad se computará?',
+      chips: [
+        'm3.m (Carretilla / a mano x metro)',
+        'm3 (Volumen fijo a pie de obra)',
+        'm3xkm (Camión volteo x km)',
+        'sac.m (Sacos de material x metro)',
+        'vje (Viaje en camión / flete)',
+        'Sugerir por IA'
+      ]
+    },
+    general: {
+      text: 'Paso 5 de 5: Unidad de Medida\n¿En qué unidad de medida se computará la partida?',
+      chips: [
+        'und',
+        'pza',
+        'm',
+        'ml',
+        'm²',
+        'm³',
+        'kg',
+        'pto',
+        'viaje',
+        'Sugerir por IA'
+      ]
+    },
+    get text() { return this.general.text; },
+    get chips() { return this.general.chips; }
   }
 };
