@@ -15,6 +15,7 @@ from app.db.models.cost360 import (
     CostLabor,
 )
 from app.services.ai_search import ai_engine
+from app.services.apu_labor_calibrator import calibrate_apu_crew_and_equipment
 
 
 # ---------------------------------------------------------------------------
@@ -346,6 +347,7 @@ un catálogo de insumos filtrado y advertencias. Tu trabajo es estructurar un AP
         result["advertencias"].extend(payload_llm["advertencias_preprocesamiento"])
 
     _normalize_equipment_prices(result)
+    calibrate_apu_crew_and_equipment(result)
 
     return result
 
@@ -465,6 +467,7 @@ CUANDO solicites clarificación, responde con "options": []. ESTÁ TERMINANTEMEN
         result["options"] = []
 
     _normalize_equipment_prices(result, base_apu)
+    calibrate_apu_crew_and_equipment(result, base_apu)
 
     result["debug_base_apu"] = base_apu
     result["prompt_enviado_al_llm"] = prompt

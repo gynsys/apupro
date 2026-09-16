@@ -1,0 +1,807 @@
+import math
+import re
+import unicodedata
+from typing import Any, Dict, List, Optional, Tuple
+from app.core.logging import logger
+
+
+# ---------------------------------------------------------------------------
+# BENCHMARKS EMPÍRICOS DE HORAS-HOMBRE (HH) Y RENDIMIENTO
+# Derivados del estudio estadístico sobre las 17.408 partidas de la BD
+# ---------------------------------------------------------------------------
+EMPERICAL_HH_BENCHMARKS: Dict[str, Dict[str, float]] = {
+    # 1. Acarreos y Transporte de Materiales
+    "ACARREO_m3.m": {
+        "p10": 0.0010,
+        "p25": 0.0024,
+        "median": 0.0080,
+        "p75": 0.0800,
+        "p90": 0.2500,
+        "rendimiento_med": 514.84,
+    },
+    "ACARREO_sac.m": {
+        "p10": 0.0001,
+        "p25": 0.0002,
+        "median": 0.0003,
+        "p75": 0.0004,
+        "p90": 0.0005,
+        "rendimiento_med": 14750.0,
+    },
+    "ACARREO_m3": {
+        "p10": 0.5000,
+        "p25": 1.2000,
+        "median": 2.0000,
+        "p75": 3.5000,
+        "p90": 5.0000,
+        "rendimiento_med": 25.0,
+    },
+
+    # 2. Albañilería y Paredes (E411/E412)
+    "ALBANILERIA_m2": {
+        "p10": 0.7200,
+        "p25": 1.1314,
+        "median": 2.1767,
+        "p75": 2.8000,
+        "p90": 3.4000,
+        "rendimiento_med": 22.0,
+    },
+
+    # 3. Frisos y Revoques (E413/E414)
+    "FRISOS_m2": {
+        "p10": 0.6500,
+        "p25": 0.9333,
+        "median": 2.0000,
+        "p75": 2.6000,
+        "p90": 3.1891,
+        "rendimiento_med": 25.0,
+    },
+
+    # 4. Pintura y Acabados (E8)
+    "PINTURA_m2": {
+        "p10": 0.1063,
+        "p25": 0.4000,
+        "median": 1.0000,
+        "p75": 2.5000,
+        "p90": 5.9943,
+        "rendimiento_med": 60.0,
+    },
+    "PINTURA_m": {
+        "p10": 0.2000,
+        "p25": 0.5200,
+        "median": 0.8667,
+        "p75": 1.8000,
+        "p90": 3.2776,
+        "rendimiento_med": 40.0,
+    },
+
+    # 5. Pisos y Pavimentos (E43)
+    "PISOS_m2": {
+        "p10": 1.5000,
+        "p25": 2.7938,
+        "median": 4.4000,
+        "p75": 6.2000,
+        "p90": 7.9086,
+        "rendimiento_med": 12.0,
+    },
+
+    # 6. Concreto Estructural (E31/E32)
+    "CONCRETO_m3": {
+        "p10": 1.5000,
+        "p25": 4.0000,
+        "median": 7.2667,
+        "p75": 11.5000,
+        "p90": 15.1600,
+        "rendimiento_med": 12.0,
+    },
+
+    # 7. Encofrados y Formaletas (E33-E35)
+    "ENCOFRADOS_m2": {
+        "p10": 0.7273,
+        "p25": 1.3600,
+        "median": 2.1818,
+        "p75": 5.2000,
+        "p90": 7.0400,
+        "rendimiento_med": 40.0,
+    },
+
+    # 8. Acero de Refuerzo / Cabillas (E3)
+    "ACERO_kgf": {
+        "p10": 0.0738,
+        "p25": 0.1043,
+        "median": 0.1745,
+        "p75": 0.2113,
+        "p90": 0.2500,
+        "rendimiento_med": 700.0,
+    },
+
+    # 9. Instalaciones Sanitarias e Hidráulicas (E5)
+    "SANITARIAS_m": {
+        "p10": 0.0933,
+        "p25": 0.3500,
+        "median": 0.4667,
+        "p75": 0.8000,
+        "p90": 1.2800,
+        "rendimiento_med": 70.0,
+    },
+    "SANITARIAS_pza": {
+        "p10": 0.7400,
+        "p25": 1.0286,
+        "median": 1.8000,
+        "p75": 3.4000,
+        "p90": 8.6133,
+        "rendimiento_med": 12.0,
+    },
+    "SANITARIAS_pto": {
+        "p10": 1.5000,
+        "p25": 2.4000,
+        "median": 3.3333,
+        "p75": 4.8000,
+        "p90": 6.0000,
+        "rendimiento_med": 12.0,
+    },
+
+    # 10. Instalaciones Eléctricas (E6)
+    "ELECTRICAS_m": {
+        "p10": 0.3867,
+        "p25": 0.8400,
+        "median": 1.4667,
+        "p75": 2.7778,
+        "p90": 5.1200,
+        "rendimiento_med": 25.0,
+    },
+    "ELECTRICAS_pza": {
+        "p10": 0.9000,
+        "p25": 1.4256,
+        "median": 2.6000,
+        "p75": 4.3667,
+        "p90": 6.7400,
+        "rendimiento_med": 10.0,
+    },
+    "ELECTRICAS_pto": {
+        "p10": 1.7778,
+        "p25": 2.5000,
+        "median": 3.4000,
+        "p75": 6.0000,
+        "p90": 10.0000,
+        "rendimiento_med": 10.0,
+    },
+
+    # 11. Movimiento de Tierra y Excavación Manual (E1/C1)
+    "EXCAVACION_MANUAL_m3": {
+        "p10": 1.2000,
+        "p25": 1.8000,
+        "median": 2.8000,
+        "p75": 4.5000,
+        "p90": 6.5000,
+        "rendimiento_med": 10.0,
+    },
+
+    # 12. Excavación y Carga Mecánica (E1/C1)
+    "EXCAVACION_MECANICA_m3": {
+        "p10": 0.0500,
+        "p25": 0.1634,
+        "median": 0.4500,
+        "p75": 0.8500,
+        "p90": 1.5000,
+        "rendimiento_med": 180.0,
+    },
+
+    # 13. Demoliciones y Pica
+    "DEMOLICION_m2": {
+        "p10": 0.3000,
+        "p25": 0.6000,
+        "median": 1.1000,
+        "p75": 1.8000,
+        "p90": 2.5000,
+        "rendimiento_med": 25.0,
+    },
+    "DEMOLICION_m3": {
+        "p10": 1.0000,
+        "p25": 2.0000,
+        "median": 3.5000,
+        "p75": 5.5000,
+        "p90": 8.0000,
+        "rendimiento_med": 8.0,
+    },
+}
+
+
+def _normalize_str(text: str) -> str:
+    """
+    Elimina acentos y signos diacríticos, convirtiendo a mayúsculas
+    para comparaciones semánticas deterministas y robustas en español.
+    """
+    if not text:
+        return ""
+    nfkd = unicodedata.normalize("NFKD", text)
+    stripped = "".join(c for c in nfkd if not unicodedata.combining(c))
+    return stripped.upper().strip()
+
+
+def classify_activity_typology(description: str, unit: str, covenin_code: str = "") -> str:
+    """
+    Clasifica de manera determinista una partida en una de las familias operativas estándar
+    según su descripción técnica, código COVENIN y unidad de medida.
+    """
+    desc_clean = _normalize_str(description)
+    cov_upper = _normalize_str(covenin_code).replace(".", "").replace("-", "")
+    u_norm = (unit or "").lower().strip()
+
+    # 1. Demoliciones y Desmantelamientos (prioridad máxima sobre elementos constructivos)
+    if cov_upper.startswith("R1") or cov_upper.startswith("R2") or cov_upper.startswith("R3"):
+        return "DEMOLICION"
+    if any(k in desc_clean for k in ["DEMOLICION", "DESMANTELAMIENTO", "PICA DE CONCRETO", "PICADO DE"]):
+        return "DEMOLICION"
+
+    # 2. Acarreo y transporte manual / distancia
+    if "m3.m" in u_norm or "sac.m" in u_norm:
+        return "ACARREO"
+    if (
+        ("ACARREO" in desc_clean or "TRANSPORTE A MANO" in desc_clean or "CARRETILL" in desc_clean)
+        and ("MAQUINARIA" not in desc_clean and "CAMION" not in desc_clean and "VOLTEO" not in desc_clean)
+    ):
+        return "ACARREO"
+    if cov_upper.startswith("R9"):
+        return "ACARREO"
+
+    # 3. Acero de Refuerzo / Cabillas (prioridad sobre Concreto por unidad de medida kgf/ton)
+    if u_norm in ("kgf", "kg", "ton", "tonf") and any(k in desc_clean for k in ["ACERO", "CABILLA", "ARMADURA", "HIERRO", "MALLA"]):
+        return "ACERO"
+    if any(k in desc_clean for k in ["ACERO DE REFUERZO", "CABILLA", "ARMADURA DE ACERO", "MALLA ELECTROSOLDADA"]):
+        return "ACERO"
+
+    # 4. Albañilería y Paredes
+    if cov_upper.startswith("E411") or cov_upper.startswith("E412"):
+        return "ALBANILERIA"
+    if any(k in desc_clean for k in ["PARED DE BLOQUE", "PARED DE LADRILLO", "ALBANILERIA", "MURO DE BLOQUE", "TABIQUERIA DE BLOQUE"]):
+        return "ALBANILERIA"
+
+    # 5. Frisos y Revoques
+    if cov_upper.startswith("E413") or cov_upper.startswith("E414"):
+        return "FRISOS"
+    if any(k in desc_clean for k in ["FRISO", "REVOQUE", "SALPICADO", "ENLUCIDO", "ESTUCO"]):
+        return "FRISOS"
+
+    # 6. Pintura y Acabados
+    if cov_upper.startswith("E8"):
+        return "PINTURA"
+    if any(k in desc_clean for k in ["PINTURA", "ESMALTE", "EMPASTADO", "FONDO ANTIALCALINO", "FONDO ANTICORROSIVO", "BARNIZ"]):
+        return "PINTURA"
+
+    # 7. Pisos y Pavimentos
+    if cov_upper.startswith("E43"):
+        return "PISOS"
+    if any(k in desc_clean for k in ["PISO DE", "BALDOSA", "PORCELANATO", "CERAMICA", "GRANITO", "RODAPIE"]):
+        return "PISOS"
+
+    # 8. Encofrados
+    if any(k in desc_clean for k in ["ENCOFRADO", "DESENCOFRADO", "FORMALETA"]):
+        return "ENCOFRADOS"
+    if cov_upper.startswith("E33") or cov_upper.startswith("E34") or cov_upper.startswith("E35"):
+        if "ACERO" not in desc_clean and "CABILLA" not in desc_clean and u_norm not in ("kgf", "kg", "ton"):
+            return "ENCOFRADOS"
+
+    # 9. Concreto Estructural
+    if cov_upper.startswith("E31") or cov_upper.startswith("E32"):
+        if u_norm not in ("kgf", "kg", "ton"):
+            return "CONCRETO"
+    if any(k in desc_clean for k in ["CONCRETO", "VACIADO DE CONCRETO", "LOSA DE CONCRETO", "VIGA DE CONCRETO", "COLUMNA DE CONCRETO", "ZAPATA"]):
+        if u_norm not in ("kgf", "kg", "ton"):
+            return "CONCRETO"
+
+    # 10. Instalaciones Sanitarias e Hidráulicas
+    if cov_upper.startswith("E5"):
+        return "SANITARIAS"
+    if any(k in desc_clean for k in ["TUBERIA SANITARIA", "AGUAS NEGRAS", "AGUAS BLANCAS", "PVC SANITARIO", "GRIFERIA", "LAVAMANOS", "EXCUSADO", "POCETA", "DUCHA", "LLAVE DE PASO", "SUMIDERO"]):
+        return "SANITARIAS"
+
+    # 11. Instalaciones Eléctricas
+    if cov_upper.startswith("E6"):
+        return "ELECTRICAS"
+    if any(k in desc_clean for k in ["TUBERIA CONDUIT", "CABLE", "CONDUCTOR ELECTRICO", "TABLERO ELECTRICO", "TOMACORRIENTE", "INTERRUPTOR", "LUMINARIA", "CAJETIN", "BREAKER"]):
+        return "ELECTRICAS"
+
+    # 12. Excavación y Movimiento de Tierra
+    if any(k in desc_clean for k in ["EXCAVACION A MANO", "ZANJA A MANO", "COMPACTACION A MANO", "DESMALEZAMIENTO A MANO"]):
+        return "EXCAVACION_MANUAL"
+    if any(k in desc_clean for k in ["EXCAVACION", "MOVIMIENTO DE TIERRA", "NIVELACION", "COMPACTACION"]):
+        if any(m in desc_clean for m in ["RETROEXCAVADORA", "TRACTOR", "MAQUINARIA", "JUMBO", "PAYLOADER"]):
+            return "EXCAVACION_MECANICA"
+        return "EXCAVACION_MANUAL"
+
+    return "GENERAL"
+
+
+def is_supervisory_role(role_desc: str, code: str = "") -> bool:
+    """
+    Verifica si una línea de mano de obra corresponde a supervisión menor (Caporal / Maestro).
+    """
+    if not role_desc and not code:
+        return False
+    desc_clean = (role_desc or "").upper()
+    code_clean = (code or "").upper().strip()
+
+    supervision_terms = ["CAPORAL", "MAESTRO DE OBRA", "SOBRESTANTE", "SUPERVISOR", "JEFE DE CUADRILLA"]
+    if any(term in desc_clean for term in supervision_terms):
+        return True
+
+    supervision_codes = {"11-1.3", "MOB013", "11-1.1", "11-1.2", "CAPORAL", "CAP-01"}
+    if code_clean in supervision_codes:
+        return True
+
+    return False
+
+
+def consolidate_labor_crew(labors: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[str]]:
+    """
+    Filtro 1: Deduplica y consolida las asignaciones de supervisión (Caporal).
+    Suma líneas redundantes y acota la fracción según el tamaño de cuadrilla activa:
+    - Cuadrilla activa <= 12 trabajadores: 0.10 <= Caporal <= 0.25
+    - Cuadrilla activa > 12 trabajadores: 0.20 <= Caporal <= 0.50
+    """
+    if not isinstance(labors, list) or not labors:
+        return labors or [], []
+
+    notes: List[str] = []
+    supervision_items: List[Dict[str, Any]] = []
+    active_workers: List[Dict[str, Any]] = []
+
+    for item in labors:
+        if not isinstance(item, dict):
+            continue
+        desc = str(item.get("descripcion", ""))
+        code = str(item.get("codigo", ""))
+        if is_supervisory_role(desc, code):
+            supervision_items.append(item)
+        else:
+            active_workers.append(item)
+
+    # Si no hay supervisión, no hay nada que consolidar
+    if not supervision_items:
+        return labors, notes
+
+    # Calcular el tamaño total de la cuadrilla operativa directa
+    total_active_count = sum(float(w.get("cantidad", 1.0) or 1.0) for w in active_workers)
+
+    # Calcular fracción acumulada de supervisión
+    total_sup_qty = sum(float(s.get("cantidad", 0.0) or 0.0) for s in supervision_items)
+
+    # Determinar el tope técnico según la normativa de rendimientos
+    if total_active_count <= 12.0:
+        clamped_sup_qty = min(0.25, max(0.10, total_sup_qty))
+    else:
+        clamped_sup_qty = min(0.50, max(0.20, total_sup_qty))
+
+    # Seleccionar la línea de supervisión principal (preferir la que tenga código estructurado o tarifas más representativas)
+    primary_sup = supervision_items[0].copy()
+    for s in supervision_items:
+        jornal = float(s.get("jornal", 0.0) or 0.0)
+        bono = float(s.get("bono", 0.0) or 0.0)
+        if (jornal + bono) > (float(primary_sup.get("jornal", 0.0) or 0.0) + float(primary_sup.get("bono", 0.0) or 0.0)):
+            primary_sup = s.copy()
+
+    was_consolidated = (len(supervision_items) > 1) or abs(total_sup_qty - clamped_sup_qty) > 0.01
+
+    primary_sup["cantidad"] = round(clamped_sup_qty, 2)
+    if "CAPORAL" not in primary_sup.get("descripcion", "").upper():
+        primary_sup["descripcion"] = "CAPORAL"
+
+    if was_consolidated:
+        note_msg = (
+            f"Supervisión calibrada: Se consolidó el cargo de Caporal a {clamped_sup_qty:.2f} "
+            f"para una cuadrilla activa de {total_active_count:.1f} trabajadores "
+            f"(deduplicadas {len(supervision_items)} líneas históricas redundantes)."
+        )
+        notes.append(note_msg)
+
+    consolidated_labors = active_workers + [primary_sup]
+    return consolidated_labors, notes
+
+
+def balance_crew_specialties(labors: List[Dict[str, Any]], typology: str) -> Tuple[List[Dict[str, Any]], List[str]]:
+    """
+    Filtro 2: Verifica la proporcionalidad de oficios (Oficial/Especialista vs. Ayudante).
+    Para disciplinas especializadas (albañilería, plomería, electricidad, carpintería, pintura),
+    garantiza que los ayudantes no excedan el ratio técnico constructivo (máximo 2 ayudantes por oficial).
+    """
+    if not isinstance(labors, list) or not labors:
+        return labors or [], []
+
+    specialized_typologies = {"ALBANILERIA", "FRISOS", "PINTURA", "ENCOFRADOS", "SANITARIAS", "ELECTRICAS"}
+    if typology not in specialized_typologies:
+        return labors, []
+
+    notes: List[str] = []
+
+    # Detectar oficiales y ayudantes
+    specialist_terms = [
+        "ALBAÑIL", "PINTOR", "PLOMERO", "ELECTRICISTA", "CARPINTERO",
+        "CABILLERO", "SOLDADOR", "INSTALADOR", "OFICIAL DE 1RA", "OFICIAL"
+    ]
+    helper_terms = ["AYUDANTE", "OBRERO DE 1RA", "OBRERO", "PEON"]
+
+    specialists: List[Dict[str, Any]] = []
+    helpers: List[Dict[str, Any]] = []
+    others: List[Dict[str, Any]] = []
+
+    for item in labors:
+        desc = str(item.get("descripcion", "")).upper()
+        if is_supervisory_role(desc, str(item.get("codigo", ""))):
+            others.append(item)
+            continue
+
+        is_help = any(t in desc for t in helper_terms)
+        is_spec = (not is_help) and any(t in desc for t in specialist_terms)
+
+        if is_spec:
+            specialists.append(item)
+        elif is_help:
+            helpers.append(item)
+        else:
+            others.append(item)
+
+    spec_count = sum(float(s.get("cantidad", 1.0) or 1.0) for s in specialists)
+    help_count = sum(float(h.get("cantidad", 1.0) or 1.0) for h in helpers)
+
+    # Si hay ayudantes pero 0 especialistas en una disciplina especializada, convertir el primer ayudante en oficial
+    if spec_count == 0 and help_count > 0:
+        first_helper = helpers[0]
+        trade_names = {
+            "ALBANILERIA": "ALBAÑIL DE 1RA",
+            "FRISOS": "ALBAÑIL FRISADOR",
+            "PINTURA": "PINTOR DE 1RA",
+            "ENCOFRADOS": "CARPINTERO DE 1RA",
+            "SANITARIAS": "PLOMERO DE 1RA",
+            "ELECTRICAS": "ELECTRICISTA DE 1RA"
+        }
+        spec_role = trade_names.get(typology, "OFICIAL DE 1RA")
+        first_helper["descripcion"] = spec_role
+        first_helper["cantidad"] = 1.0
+        specialists.append(first_helper)
+        helpers.pop(0)
+        spec_count = 1.0
+        help_count = sum(float(h.get("cantidad", 1.0) or 1.0) for h in helpers)
+        notes.append(f"Cuadrilla equilibrada: Se asignó 1.0 {spec_role} como oficial técnico de frente de trabajo.")
+
+    # Regla: máximo 2.0 ayudantes por especialista (lo estándar es 1:1 o 1:1.5)
+    max_allowed_helpers = max(1.0, round(spec_count * 2.0, 1))
+    if spec_count > 0 and help_count > max_allowed_helpers:
+        # Escalar ayudantes al tope técnico admisible
+        scale_ratio = max_allowed_helpers / help_count
+        for h in helpers:
+            old_qty = float(h.get("cantidad", 1.0) or 1.0)
+            h["cantidad"] = max(1.0, round(old_qty * scale_ratio, 1))
+        new_help_count = sum(float(h.get("cantidad", 1.0) or 1.0) for h in helpers)
+        notes.append(
+            f"Proporción de cuadrilla ajustada: Se calibró el ratio ayudante/oficial a {new_help_count/spec_count:.1f} "
+            f"({new_help_count:.1f} ayudantes para {spec_count:.1f} especialistas)."
+        )
+
+    balanced_labors = specialists + helpers + others
+    return balanced_labors, notes
+
+
+def balance_crew_and_equipments(
+    labors: List[Dict[str, Any]],
+    equipments: List[Dict[str, Any]],
+    typology: str,
+    description: str,
+    unit: str
+) -> Tuple[List[Dict[str, Any]], List[str]]:
+    """
+    Filtro 3: Sincronización entre Cuadrilla y Equipos / Herramientas Menores.
+    Aplica:
+    1. Circuito continuo de acarreo: Carretillas = 35% - 45% de la cuadrilla activa (~40%).
+       Palas = 25% - 35% de la cuadrilla (carga y descarga).
+    2. Herramientas de mano 1:1 para oficiales (Albañiles, Pintores, etc.).
+    3. Validación de operadores para equipos motorizados (Trompo, Vibrador).
+    """
+    if not isinstance(equipments, list):
+        equipments = []
+    if not isinstance(labors, list):
+        labors = []
+
+    notes: List[str] = []
+    active_labor_count = 0.0
+    for l in labors:
+        desc = str(l.get("descripcion", ""))
+        code = str(l.get("codigo", ""))
+        if not is_supervisory_role(desc, code):
+            active_labor_count += float(l.get("cantidad", 1.0) or 1.0)
+
+    if active_labor_count <= 0.0:
+        active_labor_count = 1.0
+
+    # -----------------------------------------------------------------------
+    # CASO A: LOGÍSTICA, TRANSPORTE Y ACARREOS (Circuito Continuo)
+    # -----------------------------------------------------------------------
+    is_haulage = (
+        typology == "ACARREO" or
+        "ACARREO" in description.upper() or
+        "CARRETILLA" in description.upper() or
+        "m3.m" in unit.lower()
+    )
+
+    if is_haulage:
+        # Circuito continuo: 40% transportadores (carretillas), 30% cargadores, 30% descargadores
+        # Si cuadrilla = 10 -> 4 carretillas, 3 palas
+        target_carretillas = max(1.0, float(round(active_labor_count * 0.40)))
+        target_palas = max(1.0, float(round(active_labor_count * 0.30)))
+
+        carretilla_item = None
+        pala_item = None
+
+        for eq in equipments:
+            eq_desc = str(eq.get("descripcion", "")).upper()
+            if "CARRETILLA" in eq_desc:
+                carretilla_item = eq
+            elif "PALA" in eq_desc:
+                pala_item = eq
+
+        # 1. Carretillas
+        if carretilla_item is not None:
+            curr_qty = float(carretilla_item.get("cantidad", 1.0) or 1.0)
+            if curr_qty < target_carretillas:
+                carretilla_item["cantidad"] = target_carretillas
+                notes.append(
+                    f"Sincronización equipo-cuadrilla: Carretillas ajustadas de {curr_qty:.0f} a {target_carretillas:.0f} unidades "
+                    f"(ratio de circuito continuo 40% para {active_labor_count:.0f} obreros: "
+                    f"{target_carretillas:.0f} en acarreo activo y {active_labor_count - target_carretillas:.0f} en carga/descarga)."
+                )
+        else:
+            # Si la partida es de acarreo manual pero faltaba la carretilla, agregarla
+            new_carretilla = {
+                "id": "e-ia-carretilla-circuito",
+                "codigo": "EQU-CARRETILLA",
+                "descripcion": "CARRETILLA METÁLICA DE MANO CAPACIDAD 3 CUFT (RUEDA DE CAUCHO)",
+                "unidad": "día",
+                "cantidad": target_carretillas,
+                "depreciacion": 0.01,
+                "precio_unitario": 45.00,
+                "origen": "ia",
+                "nota_calculo": (
+                    f"Dimensionamiento técnico: {target_carretillas:.0f} carretillas para cuadrilla de "
+                    f"{active_labor_count:.0f} obreros en ciclo continuo de transporte."
+                )
+            }
+            equipments.append(new_carretilla)
+            notes.append(
+                f"Sincronización equipo-cuadrilla: Se incorporaron {target_carretillas:.0f} carretillas metálicas "
+                f"en circuito continuo para los {active_labor_count:.0f} obreros de acarreo."
+            )
+
+        # 2. Palas
+        if pala_item is not None:
+            curr_pala = float(pala_item.get("cantidad", 1.0) or 1.0)
+            if curr_pala < target_palas:
+                pala_item["cantidad"] = target_palas
+                notes.append(
+                    f"Herramientas menores sincronizadas: Palas ajustadas a {target_palas:.0f} unidades "
+                    f"para cuadrilla de carga/descarga."
+                )
+
+    # -----------------------------------------------------------------------
+    # CASO B: CONCRETO EN ESTRUCTURA (Sincronización de Trompo y Vibrador)
+    # -----------------------------------------------------------------------
+    elif typology == "CONCRETO":
+        has_mixer = False
+        has_vibrator = False
+        for eq in equipments:
+            desc_e = str(eq.get("descripcion", "")).upper()
+            if "MEZCLADORA" in desc_e or "TROMPO" in desc_e:
+                has_mixer = True
+            if "VIBRADOR" in desc_e:
+                has_vibrator = True
+
+        # Si hay mezcladora y la cuadrilla es muy pequeña (< 4 personas), advertir o calibrar
+        if has_mixer and active_labor_count < 4.0:
+            notes.append(
+                f"Advertencia operativa: Mezcladora de concreto operando con cuadrilla reducida ({active_labor_count:.0f} obreros). "
+                f"Se recomienda un frente mínimo de 4 personas (1 operador, 2 carga de agregados/cemento, 1 transporte)."
+            )
+
+        if has_vibrator and active_labor_count < 3.0:
+            notes.append(
+                "Sincronización de vaciado: Se requiere al menos 1 operador dedicado para el vibrador de inmersión."
+            )
+
+    # -----------------------------------------------------------------------
+    # CASO C: ALBAÑILERÍA Y PINTURA (Paridad 1:1 de herramientas manuales)
+    # -----------------------------------------------------------------------
+    elif typology in ("ALBANILERIA", "PINTURA", "FRISOS"):
+        # Contar especialistas
+        specialist_count = 0.0
+        for l in labors:
+            desc_l = str(l.get("descripcion", "")).upper()
+            is_helper = any(h in desc_l for h in ["AYUDANTE", "OBRERO", "PEON"])
+            if (not is_helper) and any(term in desc_l for term in ["ALBAÑIL", "PINTOR", "FRISADOR"]):
+                specialist_count += float(l.get("cantidad", 1.0) or 1.0)
+
+        if specialist_count > 0:
+            for eq in equipments:
+                desc_e = str(eq.get("descripcion", "")).upper()
+                if any(tool in desc_e for tool in ["CUCHARA", "NIVEL", "BROCHA", "RODILLO", "LLANA"]):
+                    curr_qty = float(eq.get("cantidad", 1.0) or 1.0)
+                    if curr_qty < specialist_count:
+                        eq["cantidad"] = specialist_count
+                        notes.append(
+                            f"Paridad de herramientas 1:1: Ajustada cantidad de '{eq.get('descripcion')}' "
+                            f"a {specialist_count:.0f} unidades (una por especialista activo)."
+                        )
+
+    return equipments, notes
+
+
+def validate_and_calibrate_hh(
+    partida: Dict[str, Any],
+    labors: List[Dict[str, Any]],
+    typology: str
+) -> Tuple[Dict[str, Any], List[str]]:
+    """
+    Filtro 4: Verificador Paramétrico de Horas-Hombre (HH/unidad).
+    Calcula:
+        HH = (Sumatoria obreros * 8.0 horas) / Rendimiento
+    Compara contra la banda empírica [P10, P90] de las 17.408 partidas.
+    Si el rendimiento está fuera de límites físicos:
+    - Si HH < P10 (rendimiento sobrehumano o cuadrilla microscópica): recalibra al P50.
+    - Si HH > P90 (rendimiento raquítico o cuadrilla hiperinflada): recalibra al P50.
+    """
+    if not isinstance(partida, dict) or not isinstance(labors, list) or not labors:
+        return partida or {}, []
+
+    notes: List[str] = []
+    unit = str(partida.get("unit") or partida.get("unidad") or "").strip().lower()
+    perf = float(partida.get("performance") or partida.get("rendimiento") or 0.0)
+
+    # Sumar total de personas en cuadrilla (incluyendo supervisión ponderada)
+    total_crew_size = sum(float(l.get("cantidad", 1.0) or 1.0) for l in labors)
+    if total_crew_size <= 0.0:
+        return partida, notes
+
+    total_hh_per_day = total_crew_size * 8.0
+
+    # Si rendimiento viene en cero o negativo, fijar a un valor razonable
+    if perf <= 0.0:
+        perf = 10.0
+
+    current_hh = total_hh_per_day / perf
+
+    # Buscar benchmark empírico por clave compuesta (ej: ACARREO_m3.m, ALBANILERIA_m2)
+    benchmark_key = f"{typology}_{unit}"
+    benchmark = EMPERICAL_HH_BENCHMARKS.get(benchmark_key)
+
+    # Si no coincide exactamente unidad, buscar por prefijo de tipología
+    if not benchmark:
+        for k, v in EMPERICAL_HH_BENCHMARKS.items():
+            if k.startswith(typology):
+                benchmark = v
+                break
+
+    # Si no hay benchmark disponible para esta tipología exótica, no forzar calibración
+    if not benchmark:
+        return partida, notes
+
+    p10 = benchmark["p10"]
+    p50 = benchmark["median"]
+    p90 = benchmark["p90"]
+
+    # Margen de tolerancia elástico (50% sobre P90 y 50% bajo P10) antes de forzar ajuste
+    lower_bound = p10 * 0.50
+    upper_bound = p90 * 1.80
+
+    if current_hh < lower_bound:
+        # Rendimiento excesivo / subdimensionamiento de HH
+        calibrated_perf = round(total_hh_per_day / p50, 2)
+        new_hh = total_hh_per_day / calibrated_perf
+        partida["performance"] = calibrated_perf
+        if "rendimiento" in partida:
+            partida["rendimiento"] = calibrated_perf
+        notes.append(
+            f"Calibración de rendimiento (HH): Rendimiento diario ajustado de {perf:.2f} a {calibrated_perf:.2f} {unit}/día. "
+            f"El valor anterior implicaba {current_hh:.4f} HH/{unit} (físicamente inalcanzable, banda P10: {p10:.4f}). "
+            f"Nuevo HH resultante: {new_hh:.4f} HH/{unit} (mediana histórica P50: {p50:.4f})."
+        )
+    elif current_hh > upper_bound:
+        # Cuadrilla inflada o rendimiento colapsado
+        calibrated_perf = round(total_hh_per_day / p50, 2)
+        new_hh = total_hh_per_day / calibrated_perf
+        partida["performance"] = calibrated_perf
+        if "rendimiento" in partida:
+            partida["rendimiento"] = calibrated_perf
+        notes.append(
+            f"Calibración de rendimiento (HH): Rendimiento diario ajustado de {perf:.2f} a {calibrated_perf:.2f} {unit}/día "
+            f"para evitar sobrecosto por subrendimiento. (HH anterior: {current_hh:.4f}, calibrado a {new_hh:.4f} HH/{unit}, "
+            f"benchmark P50: {p50:.4f})."
+        )
+
+    return partida, notes
+
+
+def calibrate_apu_crew_and_equipment(
+    result: Dict[str, Any],
+    base_apu: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """
+    PUNTO DE ENTRADA PRINCIPAL DEL MOTOR DETERMINISTA DE CALIBRACIÓN:
+    Ejecuta en cascada los 4 filtros de consistencia técnica:
+    1. Deduplicación y acotamiento de supervisión (Caporal).
+    2. Proporcionalidad de oficios (Oficiales vs. Ayudantes).
+    3. Sincronización de cuadrilla vs. equipos y herramientas menores.
+    4. Validación paramétrica de Horas-Hombre (HH) y calibración de rendimiento.
+    """
+    if not isinstance(result, dict):
+        return result
+
+    # Si la generación requirió clarificación, no procesar
+    if result.get("status") == "clarification_needed":
+        return result
+
+    try:
+        partida = result.get("partida")
+        if not isinstance(partida, dict):
+            return result
+
+        # Identificar listas de insumos (soportando claves en inglés y español)
+        labors_key = "labors" if "labors" in result else "mano_obra"
+        equipments_key = "equipments" if "equipments" in result else "equipos"
+
+        labors = result.get(labors_key)
+        equipments = result.get(equipments_key)
+
+        if not isinstance(labors, list):
+            labors = []
+        if not isinstance(equipments, list):
+            equipments = []
+
+        description = str(partida.get("description") or partida.get("descripcion") or "")
+        unit = str(partida.get("unit") or partida.get("unidad") or "")
+        covenin = str(partida.get("cod_par") or partida.get("cov_par") or "")
+
+        # 0. Clasificar tipología constructiva
+        typology = classify_activity_typology(description, unit, covenin)
+
+        all_calibration_notes: List[str] = []
+
+        # 1. Deduplicación de supervisión (Caporal)
+        consolidated_labors, sup_notes = consolidate_labor_crew(labors)
+        all_calibration_notes.extend(sup_notes)
+
+        # 2. Proporcionalidad de oficios
+        balanced_labors, trade_notes = balance_crew_specialties(consolidated_labors, typology)
+        all_calibration_notes.extend(trade_notes)
+
+        # 3. Sincronización cuadrilla vs equipos
+        balanced_equipments, eq_notes = balance_crew_and_equipments(
+            balanced_labors, equipments, typology, description, unit
+        )
+        all_calibration_notes.extend(eq_notes)
+
+        # 4. Calibración paramétrica de Horas-Hombre (HH)
+        calibrated_partida, hh_notes = validate_and_calibrate_hh(
+            partida, balanced_labors, typology
+        )
+        all_calibration_notes.extend(hh_notes)
+
+        # Guardar insumos actualizados en result
+        result[labors_key] = balanced_labors
+        result[equipments_key] = balanced_equipments
+        result["partida"] = calibrated_partida
+
+        # Inyectar notas de calibración en notas_adaptacion
+        if "notas_adaptacion" not in result or not isinstance(result["notas_adaptacion"], list):
+            result["notas_adaptacion"] = []
+
+        for note in all_calibration_notes:
+            if note not in result["notas_adaptacion"]:
+                result["notas_adaptacion"].append(note)
+
+        logger.info(
+            "Calibración de APU completada satisfactoriamente para tipología '%s' (%d notas técnicas generadas).",
+            typology,
+            len(all_calibration_notes)
+        )
+
+    except Exception as exc:
+        logger.error("Error inesperado en calibración de APU: %s", exc, exc_info=True)
+
+    return result
