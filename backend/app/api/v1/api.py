@@ -11,8 +11,7 @@ from app.api.v1.endpoints import search_v6
 from app.api.v1.endpoints import uploads
 from app.api.v1.endpoints import arko
 from app.api.v1.endpoints import market
-from app.api.v1.endpoints import scraping
-from app.api.v1.endpoints import scraping_ws
+from app.api.v1.endpoints import llm
 from app.api.v1.endpoints import pdf_updater
 from app.api.v1.endpoints import notifications
 from app.api.v1.endpoints import payments
@@ -36,8 +35,7 @@ api_router.include_router(budgets.router, prefix="/budgets", tags=["budgets"])
 api_router.include_router(materials.router, prefix="/materials", tags=["materials"])
 api_router.include_router(uploads.router, prefix="/uploads", tags=["uploads"])
 api_router.include_router(market.router, prefix="/market", tags=["market"])
-api_router.include_router(scraping.router, prefix="/scraping", tags=["scraping"])
-api_router.include_router(scraping_ws.router, prefix="/scraping", tags=["scraping_ws"])
+api_router.include_router(llm.router, prefix="/llm", tags=["llm"])
 api_router.include_router(pdf_updater.router, prefix="/pdf-updater", tags=["pdf_updater"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
 api_router.include_router(payments.router, prefix="/payments", tags=["payments"])

@@ -29,7 +29,7 @@ export default function MarketAdminPage() {
               Módulo de Automatización de Precios
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Web Scraping, Saneamiento de IA e Indicadores de Mercado
+              Saneamiento con IA, Importación e Indicadores de Mercado
             </p>
           </div>
         </div>

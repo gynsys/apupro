@@ -9,7 +9,7 @@ import { cost360DatabaseService } from '../../../services/cost360DatabaseService
 import { useDatabaseContext } from '../../../contexts/DatabaseContext';
 import PartidasTab from '../components/tabs/PartidasTab';
 import CatalogTab from '../components/tabs/CatalogTab';
-import ScrapingTab from '../components/tabs/ScrapingTab';
+import KeyIATab from '../components/tabs/KeyIATab';
 import PDFsTab from '../components/tabs/PDFsTab';
 import UsuariosTab from '../components/tabs/UsuariosTab';
 import RAGDiagnosticTab from '../components/tabs/RAGDiagnosticTab';
@@ -319,7 +319,7 @@ const AdminDatabasePage = () => {
 
         {activeTab === 'diagnostico_rag' && <RAGDiagnosticTab />}
 
-        {activeTab === 'scraping' && <ScrapingTab />}
+        {activeTab === 'key_ia' && <KeyIATab />}
 
         {activeTab === 'pdfs' && <PDFsTab />}
 
