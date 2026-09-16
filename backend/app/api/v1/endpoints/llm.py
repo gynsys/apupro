@@ -171,6 +171,31 @@ def update_ai_key(
         )
 
 
+@router.get("/keys/{provider_id}/reveal")
+def reveal_ai_key(
+    provider_id: int,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin)
+) -> Dict[str, Any]:
+    """Retorna la API Key desencriptada exclusivamente para administradores autenticados."""
+    provider = get_provider_by_id(db, provider_id)
+    if not provider:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Proveedor con ID {provider_id} no encontrado."
+        )
+
+    try:
+        plain_key = decrypt_api_key(provider.api_key_enc)
+        return {"id": provider_id, "api_key": plain_key}
+    except Exception as e:
+        logger.error(f"Error descifrando clave de proveedor {provider_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al descifrar la clave: {str(e)}"
+        )
+
+
 @router.delete("/keys/{provider_id}")
 def delete_ai_key(
     provider_id: int,
@@ -238,13 +263,15 @@ def test_ai_key(
                     error=f"Error de conexión con Google Gemini: {str(gem_err)}"
                 )
 
-        elif key_type in ["openai", "groq", "custom"]:
+        elif key_type in ["openai", "groq", "deepseek", "custom"]:
             base_url = provider.base_url
             if not base_url:
                 if key_type == "openai":
                     base_url = "https://api.openai.com/v1"
                 elif key_type == "groq":
                     base_url = "https://api.groq.com/openai/v1"
+                elif key_type == "deepseek":
+                    base_url = "https://api.deepseek.com"
                 else:
                     base_url = "https://api.openai.com/v1"
 
@@ -260,7 +287,7 @@ def test_ai_key(
                 return LLMProviderTestResult(
                     success=True,
                     latency_ms=latency,
-                    response_preview="Conexión exitosa y modelos verificados."
+                    response_preview=f"Conexión exitosa con {key_type.upper()}."
                 )
             else:
                 return LLMProviderTestResult(

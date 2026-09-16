@@ -14,7 +14,8 @@ import {
   EyeOff, 
   Sparkles,
   Server,
-  Activity
+  Activity,
+  Copy
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiGet, apiPost, apiPut, apiDelete } from '../../../../lib/apiHelper';
@@ -34,6 +35,18 @@ const PROVIDER_PRESETS = {
     badgeColor: 'bg-blue-100 text-blue-700 border-blue-200',
     iconColor: 'text-blue-600',
     borderHighlight: 'border-blue-500/20'
+  },
+  deepseek: {
+    label: 'DeepSeek AI',
+    defaultModel: 'deepseek-chat',
+    suggestedModels: [
+      'deepseek-chat',
+      'deepseek-reasoner'
+    ],
+    placeholder: 'sk-...',
+    badgeColor: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+    iconColor: 'text-cyan-600',
+    borderHighlight: 'border-cyan-500/20'
   },
   openai: {
     label: 'OpenAI GPT',
@@ -107,6 +120,57 @@ const KeyIATab = () => {
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [showApiKey, setShowApiKey] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [revealedKeys, setRevealedKeys] = useState({});
+  const [loadingRevealId, setLoadingRevealId] = useState(null);
+
+  const toggleRevealKey = async (providerId) => {
+    if (revealedKeys[providerId]) {
+      setRevealedKeys((prev) => {
+        const next = { ...prev };
+        delete next[providerId];
+        return next;
+      });
+      return;
+    }
+
+    setLoadingRevealId(providerId);
+    try {
+      const res = await apiGet(`/llm/keys/${providerId}/reveal`);
+      if (res.ok) {
+        const data = await res.json();
+        setRevealedKeys((prev) => ({ ...prev, [providerId]: data.api_key }));
+      } else {
+        toast.error('No se pudo descifrar la clave');
+      }
+    } catch (e) {
+      toast.error('Error de red al consultar la clave');
+    } finally {
+      setLoadingRevealId(null);
+    }
+  };
+
+  const copyKeyToClipboard = async (providerId) => {
+    let keyToCopy = revealedKeys[providerId];
+    if (!keyToCopy) {
+      try {
+        const res = await apiGet(`/llm/keys/${providerId}/reveal`);
+        if (res.ok) {
+          const data = await res.json();
+          keyToCopy = data.api_key;
+          setRevealedKeys((prev) => ({ ...prev, [providerId]: data.api_key }));
+        }
+      } catch (e) {
+        // fallback
+      }
+    }
+
+    if (keyToCopy) {
+      await navigator.clipboard.writeText(keyToCopy);
+      toast.success('API Key copiada al portapapeles');
+    } else {
+      toast.error('No se pudo obtener la clave para copiar');
+    }
+  };
 
   const fetchProviders = useCallback(async () => {
     setLoading(true);
@@ -140,21 +204,33 @@ const KeyIATab = () => {
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (provider) => {
+  const handleOpenEditModal = async (provider) => {
     setModalMode('edit');
     setEditingProviderId(provider.id);
     setFormData({
       provider_key: provider.provider_key,
       display_name: provider.display_name,
       model_name: provider.model_name,
-      api_key: '', // Vacío por seguridad; solo si escribe algo se sobreescribirá
+      api_key: '',
       base_url: provider.base_url || '',
       priority: provider.priority || 1,
       use_case: provider.use_case || 'all',
       is_active: provider.is_active
     });
-    setShowApiKey(false);
+    setShowApiKey(true);
     setIsModalOpen(true);
+
+    try {
+      const res = await apiGet(`/llm/keys/${provider.id}/reveal`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.api_key) {
+          setFormData((prev) => ({ ...prev, api_key: data.api_key }));
+        }
+      }
+    } catch (e) {
+      console.error('Error revealing key for edit:', e);
+    }
   };
 
   const handleCloseModal = () => {
@@ -522,8 +598,26 @@ const KeyIATab = () => {
                         <span className="flex items-center gap-1 font-mono text-[11px] text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
                           <strong>Modelo:</strong> {provider.model_name}
                         </span>
-                        <span className="flex items-center gap-1 font-mono text-[11px] text-slate-600">
-                          <strong>Key:</strong> {provider.api_key_masked || '••••••••'}
+                        <span className="flex items-center gap-1.5 font-mono text-[11px] text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                          <strong>Key:</strong>
+                          <span>{revealedKeys[provider.id] || provider.api_key_masked || '••••••••'}</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleRevealKey(provider.id)}
+                            disabled={loadingRevealId === provider.id}
+                            className="text-slate-400 hover:text-indigo-600 p-0.5 rounded cursor-pointer ml-1"
+                            title={revealedKeys[provider.id] ? "Ocultar clave" : "Mostrar clave completa"}
+                          >
+                            {revealedKeys[provider.id] ? <EyeOff className="w-3.5 h-3.5 text-indigo-600" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copyKeyToClipboard(provider.id)}
+                            className="text-slate-400 hover:text-indigo-600 p-0.5 rounded cursor-pointer"
+                            title="Copiar clave completa"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
                         </span>
                         {provider.base_url && (
                           <span className="text-[11px] text-slate-400 truncate max-w-[200px]" title={provider.base_url}>
@@ -660,8 +754,8 @@ const KeyIATab = () => {
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                   Proveedor de IA
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {['gemini', 'openai', 'groq', 'anthropic'].map((key) => {
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {['gemini', 'deepseek', 'openai', 'groq', 'anthropic'].map((key) => {
                     const preset = PROVIDER_PRESETS[key];
                     const isSelected = formData.provider_key === key;
                     return (
