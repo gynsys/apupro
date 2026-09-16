@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple, Set
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core.logging import logger
+from app.db.base import get_db_session
 from app.services.llm_router import call_llm_json
 from app.db.models.cost360 import (
     CostItem,
@@ -271,7 +272,131 @@ def _normalize_equipment_prices(result: Dict[str, Any], base_apu: Optional[Dict[
             eq_item["depreciacion"] = 1.0
 
 
-def generate_apu_with_ai(payload_llm: Dict[str, Any], history: list = None) -> Dict[str, Any]:
+_RECONCILE_STOPWORDS: Set[str] = {
+    "DE", "LA", "EL", "EN", "PARA", "CON", "UN", "UNA", "Y", "O", "A", "LOS", "LAS",
+    "DEL", "AL", "E", "POR", "SIN", "SOBRE", "TIPO", "USO", "CAPACIDAD", "ESTANDAR",
+    "MANUAL", "ALBAÑILERIA", "ALBANILERIA", "USOS", "VARIOS", "GENERAL"
+}
+
+
+def _execute_equipment_reconciliation(result: Dict[str, Any], db: Session) -> None:
+    """
+    Ejecuta la búsqueda y normalización de equipos contra cost360_equipment.
+    """
+    equipments = result.get("equipments")
+    if not isinstance(equipments, list) or not equipments:
+        return
+
+    reconciled_terms: List[str] = []
+
+    for eq in equipments:
+        if not isinstance(eq, dict):
+            continue
+
+        is_ia = (eq.get("origen") == "ia")
+        no_cod = (not eq.get("codigo") or str(eq.get("codigo")).startswith("e-ia-"))
+        zero_price = (float(eq.get("precio_unitario") or 0.0) <= 0.0)
+
+        if is_ia or no_cod or zero_price:
+            desc = str(eq.get("descripcion", "")).strip()
+            clean = re.sub(r'[^A-Z0-9\s]', ' ', desc.upper())
+            tokens = [w for w in clean.split() if len(w) >= 3 and w not in _RECONCILE_STOPWORDS]
+            if not tokens:
+                continue
+
+            row = None
+            if len(tokens) >= 2:
+                sql2 = text("""
+                    SELECT "CodEqu", ref_code, "Descri", "CosDia", precio, deprec_factor
+                    FROM cost360_equipment
+                    WHERE "Descri" ILIKE :kw1 AND "Descri" ILIKE :kw2
+                    ORDER BY 
+                        CASE WHEN "Descri" ILIKE :kw_exact THEN 1 ELSE 2 END,
+                        length("Descri") ASC
+                    LIMIT 1;
+                """)
+                row = db.execute(sql2, {
+                    "kw1": f"%{tokens[0]}%",
+                    "kw2": f"%{tokens[1]}%",
+                    "kw_exact": f"%{desc[:15]}%"
+                }).fetchone()
+
+            if not row:
+                sql1 = text("""
+                    SELECT "CodEqu", ref_code, "Descri", "CosDia", precio, deprec_factor
+                    FROM cost360_equipment
+                    WHERE "Descri" ILIKE :kw1
+                    ORDER BY length("Descri") ASC
+                    LIMIT 1;
+                """)
+                row = db.execute(sql1, {"kw1": f"%{tokens[0]}%"}).fetchone()
+
+            if row:
+                matched_cod = row.CodEqu or row.ref_code
+                matched_desc = row.Descri
+                matched_price = float(row.precio or 0.0)
+                matched_deprec = float(row.deprec_factor or 1.0)
+                matched_cosdia = float(row.CosDia or 0.0)
+
+                if matched_price <= 0 and matched_cosdia > 0 and matched_deprec > 0:
+                    matched_price = round(matched_cosdia / matched_deprec, 2)
+
+                eq["codigo"] = matched_cod
+                eq["descripcion"] = matched_desc
+                eq["precio_unitario"] = matched_price
+                eq["depreciacion"] = matched_deprec
+                eq["origen"] = "historico"
+                reconciled_terms.append(tokens[0].lower())
+                reconciled_terms.append(matched_desc.lower())
+
+    # Sanitizar advertencias: purgar cualquier [PRECIO_REFERENCIAL] cuyos insumos
+    # ya cuenten con precios de catálogo de la base de datos o hayan sido eliminados.
+    if "advertencias" in result and isinstance(result["advertencias"], list):
+        current_eq_descs = [str(e.get("descripcion", "")).lower() for e in equipments if isinstance(e, dict) and e.get("origen") == "ia"]
+        current_mat_descs = [str(m.get("descripcion", "")).lower() for m in result.get("materials", []) if isinstance(m, dict) and m.get("origen") == "ia"]
+        active_ia_descs = current_eq_descs + current_mat_descs
+
+        clean_adv: List[str] = []
+        for adv in result["advertencias"]:
+            adv_str = str(adv)
+            if "[precio_referencial]" in adv_str.lower():
+                if any(term in adv_str.lower() for term in reconciled_terms):
+                    continue
+                quoted = re.findall(r"'([^']+)'", adv_str)
+                if quoted:
+                    insumo_name = quoted[0].lower()
+                    if not any(insumo_name in act or act in insumo_name for act in active_ia_descs):
+                        continue
+                elif not active_ia_descs:
+                    continue
+            clean_adv.append(adv)
+        result["advertencias"] = clean_adv
+
+
+def reconcile_equipment_with_database(result: Dict[str, Any], db: Optional[Session] = None) -> None:
+    """
+    Reconcilia los equipos del APU con el catálogo certificado de Costbase (cost360_equipment).
+    Si un equipo tiene origen 'ia' o precio referencial estimado, busca en la BD el equipo real para:
+    1. Asignar el código oficial de la BD (CodEqu o ref_code).
+    2. Asignar la descripción estándar certificada.
+    3. Asignar el precio de compra y factor de depreciación oficiales de la BD.
+    4. Cambiar 'origen' a 'historico'.
+    5. Purgar las advertencias de [PRECIO_REFERENCIAL] asociadas a dicho equipo.
+    """
+    if not result or not isinstance(result, dict) or "equipments" not in result:
+        return
+
+    if db is not None:
+        _execute_equipment_reconciliation(result, db)
+    else:
+        try:
+            with get_db_session() as session:
+                _execute_equipment_reconciliation(result, session)
+        except Exception as exc:
+            logger.error("Error al reconciliar equipos con base de datos: %s", exc, exc_info=True)
+
+
+def generate_apu_with_ai(payload_llm: Dict[str, Any], history: Optional[List[Dict[str, Any]]] = None, db: Optional[Session] = None) -> Dict[str, Any]:
     """
     Generación de APU usando el flujo clásico de preprocesamiento estadístico.
     Se usa cuando NO hay una partida base seleccionada por el usuario.
@@ -348,6 +473,7 @@ un catálogo de insumos filtrado y advertencias. Tu trabajo es estructurar un AP
 
     _normalize_equipment_prices(result)
     calibrate_apu_crew_and_equipment(result)
+    reconcile_equipment_with_database(result, db)
 
     return result
 
@@ -360,6 +486,7 @@ def generate_apu_with_ai_from_base(
     covenin_context: str = "",
     smart_answers: Optional[Dict[str, str]] = None,
     history: Optional[List[Dict]] = None,
+    db: Optional[Session] = None,
 ) -> Dict[str, Any]:
     """
     Generación de APU usando una partida base seleccionada por el usuario
@@ -468,6 +595,7 @@ CUANDO solicites clarificación, responde con "options": []. ESTÁ TERMINANTEMEN
 
     _normalize_equipment_prices(result, base_apu)
     calibrate_apu_crew_and_equipment(result, base_apu)
+    reconcile_equipment_with_database(result, db)
 
     result["debug_base_apu"] = base_apu
     result["prompt_enviado_al_llm"] = prompt

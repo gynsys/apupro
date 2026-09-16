@@ -1365,6 +1365,7 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             covenin_context=payload.covenin_context or "",
             smart_answers=payload.smart_answers or {},
             history=history_dicts,
+            db=db,
         )
 
         # -------------------------------------------------------------
@@ -1403,6 +1404,10 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
         if "advertencias" in result and isinstance(result["advertencias"], list):
             clean_adv = []
             base_code_lower = (base_code or "").strip().lower()
+            current_eq_descs = [str(e.get("descripcion", "")).lower() for e in result.get("equipments", []) if isinstance(e, dict) and e.get("origen") == "ia"]
+            current_mat_descs = [str(m.get("descripcion", "")).lower() for m in result.get("materials", []) if isinstance(m, dict) and m.get("origen") == "ia"]
+            active_ia_descs = current_eq_descs + current_mat_descs
+
             for adv in result["advertencias"]:
                 if not adv or not isinstance(adv, str):
                     continue
@@ -1413,6 +1418,14 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
                     continue
                 if base_code_lower and base_code_lower in adv_lower:
                     continue
+                if "[precio_referencial]" in adv_lower:
+                    quoted = re.findall(r"'([^']+)'", adv)
+                    if quoted:
+                        insumo_name = quoted[0].lower()
+                        if not any(insumo_name in act or act in insumo_name for act in active_ia_descs):
+                            continue
+                    elif not active_ia_descs:
+                        continue
                 clean_adv.append(adv)
             result["advertencias"] = clean_adv
 
@@ -1465,7 +1478,7 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
 
     # 4. Generación con IA (LLM Router)
     history_dicts = [msg.model_dump() for msg in payload.history] if payload.history else []
-    result = generate_apu_with_ai(payload_llm, history_dicts)
+    result = generate_apu_with_ai(payload_llm, history_dicts, db=db)
     
     if (result.get("status") in ("success", "completed")) and result.get("partida"):
         # Sanitizar advertencias

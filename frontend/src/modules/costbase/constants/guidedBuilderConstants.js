@@ -149,12 +149,13 @@ export const CHAT_STEP_DEFINITIONS = {
       text: 'Paso 2 de 5: Material a Acarrear o Trasladar\n¿Qué material o elemento se va a acarrear?',
       chips: [
         'Escombros de demolición',
-        'Tierra / Material de excavación',
-        'Arena / Agregados',
+        'Tierra de excavación',
+        'Arena',
         'Piedra picada',
         'Sacos de cemento',
-        'Bloques de arcilla / concreto',
-        'Madera / Encofrados',
+        'Bloques de arcilla',
+        'Bloques de concreto',
+        'Madera de encofrado',
         'Omitir'
       ]
     },
@@ -163,13 +164,17 @@ export const CHAT_STEP_DEFINITIONS = {
       chips: [
         'Paredes de bloques',
         'Losa de concreto',
-        'Pavimento / Acera',
+        'Pavimento',
+        'Acera',
         'Excavación de zanjas',
-        'Columnas y vigas',
-        'Zapatas / Fundaciones',
+        'Columnas',
+        'Vigas',
+        'Zapatas',
+        'Fundaciones',
         'Acero de refuerzo',
         'Friso en paredes',
         'Pintura en interiores',
+        'Pintura en exteriores',
         'Omitir'
       ]
     }
@@ -191,13 +196,15 @@ export const CHAT_STEP_DEFINITIONS = {
       ]
     },
     acarreo: {
-      text: 'Paso 3 de 5: Distancia o Entorno del Traslado\n¿Cuál es la distancia aproximada o entorno del acarreo?',
+      text: 'Paso 3 de 5: Entorno o Distancia del Traslado\n¿En qué entorno o a qué distancia se realizará el acarreo?',
       chips: [
+        'En planta baja',
+        'En pisos superiores',
+        'En sótano',
+        'En exteriores',
         'Distancia hasta 20 metros',
         'Distancia hasta 50 metros',
         'Distancia mayor a 50 metros',
-        'En interiores / pisos superiores',
-        'En exteriores a pie de obra',
         'Hacia botadero externo',
         'Omitir'
       ]
@@ -208,7 +215,9 @@ export const CHAT_STEP_DEFINITIONS = {
         "Concreto f'c=210 kg/cm²",
         "Concreto f'c=250 kg/cm²",
         'En planta baja',
-        'En sótano / fundaciones',
+        'En pisos superiores',
+        'En sótano',
+        'En fundaciones',
         'En exteriores',
         'En interiores',
         'Omitir'
@@ -217,13 +226,13 @@ export const CHAT_STEP_DEFINITIONS = {
   },
   4: {
     acarreo: {
-      text: 'Paso 4 de 5: Medio y Equipo de Acarreo\n¿Qué medio, equipo o cuadrilla se utilizará?',
+      text: 'Paso 4 de 5: Medio y Equipo de Acarreo\n¿Qué medio o equipo específico se utilizará?',
       chips: [
         'A mano en carretilla',
-        'A mano en tobos / sacos',
+        'A mano en tobos',
+        'A mano en sacos',
         'En camión volteo 7 m³',
-        'En camión volteo con cargador',
-        'En minishovel / maquinaria ligera',
+        'En minishovel',
         'Incluye carguío y descarga',
         'Omitir'
       ]
@@ -246,13 +255,13 @@ export const CHAT_STEP_DEFINITIONS = {
   },
   5: {
     acarreo: {
-      text: 'Paso 5 de 5: Unidad de Acarreo y Transporte\nLas partidas de acarreo dependen del método y la distancia. ¿En qué unidad se computará?',
+      text: 'Paso 5 de 5: Unidad de Medida\nLas partidas de acarreo se computan por distancia o volumen. ¿En qué unidad se medirá?',
       chips: [
-        'm3.m (Carretilla / a mano x metro)',
-        'm3 (Volumen fijo a pie de obra)',
-        'm3xkm (Camión volteo x km)',
-        'sac.m (Sacos de material x metro)',
-        'vje (Viaje en camión / flete)',
+        'm3.m (Metro cúbico x metro)',
+        'm3 (Metro cúbico)',
+        'm3xkm (Metro cúbico x kilómetro)',
+        'sac.m (Saco x metro)',
+        'viaje (Por viaje)',
         'Sugerir por IA'
       ]
     },
@@ -333,7 +342,7 @@ export function getParametricStep3Definition(material, accion) {
   if (/friso|revoque|enlucido|tarrajeo/i.test(mat) || /friso|revoque|tarrajeo/i.test(acc)) {
     return {
       text: 'Paso 3 de 5: Tipo de Friso o Acabado\n¿Qué tipo de acabado o especificación tiene el friso?',
-      chips: ['Friso base / rústico', 'Friso liso con pasta', 'En interiores', 'En exteriores / fachadas', 'Omitir']
+      chips: ['Friso rústico', 'Friso base', 'Friso liso con pasta', 'En interiores', 'En fachadas', 'En exteriores', 'Omitir']
     };
   }
 

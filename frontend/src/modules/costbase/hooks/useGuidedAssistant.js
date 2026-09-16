@@ -241,7 +241,8 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
 
         // 5. Unidad de medida
         if (cleanText && cleanText !== 'Sugerir por IA' && cleanText !== 'Ninguno / Omitir' && cleanText !== 'Ninguno' && cleanText !== 'Omitir') {
-          parts.push(`unidad ${cleanText}`);
+          const unitOnly = cleanText.includes('(') ? cleanText.split('(')[0].trim() : cleanText.trim();
+          parts.push(`unidad ${unitOnly}`);
         }
 
         const finalPrompt = parts.join(' ').replace(/\s+/g, ' ').trim();

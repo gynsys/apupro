@@ -515,70 +515,126 @@ def balance_crew_and_equipments(
     # -----------------------------------------------------------------------
     # CASO A: LOGÍSTICA, TRANSPORTE Y ACARREOS (Circuito Continuo)
     # -----------------------------------------------------------------------
+    desc_clean = _normalize_str(description)
     is_haulage = (
         typology == "ACARREO" or
-        "ACARREO" in description.upper() or
-        "CARRETILLA" in description.upper() or
-        "m3.m" in unit.lower()
+        "ACARREO" in desc_clean or
+        "CARRETILL" in desc_clean or
+        "m3.m" in unit.lower() or
+        "sac.m" in unit.lower()
     )
 
     if is_haulage:
-        # Circuito continuo: 40% transportadores (carretillas), 30% cargadores, 30% descargadores
-        # Si cuadrilla = 10 -> 4 carretillas, 3 palas
-        target_carretillas = max(1.0, float(round(active_labor_count * 0.40)))
-        target_palas = max(1.0, float(round(active_labor_count * 0.30)))
+        # Discriminar modalidad física de acarreo:
+        # A) En tobos / cuñetes / sacos (pisos superiores, escaleras, interiores, vertical)
+        # B) En carretillas (planta baja, exteriores, terrenos planos)
+        is_tobo_haulage = any(term in desc_clean for term in ["TOBO", "CUNETE", "SACO", "BOLSA", "PISOS SUPERIORES", "ESCALERA", "INTERIORES"])
 
-        carretilla_item = None
-        pala_item = None
-
-        for eq in equipments:
-            eq_desc = str(eq.get("descripcion", "")).upper()
-            if "CARRETILLA" in eq_desc:
-                carretilla_item = eq
-            elif "PALA" in eq_desc:
-                pala_item = eq
-
-        # 1. Carretillas
-        if carretilla_item is not None:
-            curr_qty = float(carretilla_item.get("cantidad", 1.0) or 1.0)
-            if curr_qty < target_carretillas:
-                carretilla_item["cantidad"] = target_carretillas
+        if is_tobo_haulage:
+            # 1. En acarreo por tobos/sacos se eliminan carretillas por incompatibilidad física
+            had_carretilla = any("CARRETILLA" in str(eq.get("descripcion", "")).upper() for eq in equipments)
+            equipments = [eq for eq in equipments if "CARRETILLA" not in str(eq.get("descripcion", "")).upper()]
+            if had_carretilla:
                 notes.append(
-                    f"Sincronización equipo-cuadrilla: Carretillas ajustadas de {curr_qty:.0f} a {target_carretillas:.0f} unidades "
-                    f"(ratio de circuito continuo 40% para {active_labor_count:.0f} obreros: "
-                    f"{target_carretillas:.0f} en acarreo activo y {active_labor_count - target_carretillas:.0f} en carga/descarga)."
+                    "Modalidad de acarreo calibrada: Se eliminaron carretillas por incompatibilidad física con acarreo en interiores/pisos superiores/tobos."
                 )
+
+            # 2. Sincronización de tobos (1.5 tobos por obrero activo en circuito de relevo)
+            target_tobos = max(2.0, float(round(active_labor_count * 1.5)))
+            target_palas = max(1.0, float(round(active_labor_count * 0.25)))
+
+            tobo_item = next((eq for eq in equipments if any(t in str(eq.get("descripcion", "")).upper() for t in ["TOBO", "CUNETE", "SACO", "BOLSA"])), None)
+            pala_item = next((eq for eq in equipments if "PALA" in str(eq.get("descripcion", "")).upper()), None)
+
+            if tobo_item is not None:
+                curr_tobos = float(tobo_item.get("cantidad", 1.0) or 1.0)
+                if curr_tobos < target_tobos:
+                    tobo_item["cantidad"] = target_tobos
+                    notes.append(
+                        f"Sincronización equipo-cuadrilla: Tobos ajustados a {target_tobos:.0f} unidades "
+                        f"(ratio de relevo continuo para {active_labor_count:.0f} obreros: carga, traslado y vaciado)."
+                    )
+            else:
+                new_tobo = {
+                    "id": "e-ia-tobo-circuito",
+                    "codigo": "ALB026",
+                    "descripcion": "TOBO PLASTICO DE ALBAÑIL/ACARREO/EXC",
+                    "unidad": "día",
+                    "cantidad": target_tobos,
+                    "depreciacion": 0.067,
+                    "precio_unitario": 13.63,
+                    "origen": "historico",
+                    "nota_calculo": f"Asignación técnica: {target_tobos:.0f} tobos para cuadrilla de {active_labor_count:.0f} obreros en acarreo vertical/interiores."
+                }
+                equipments.append(new_tobo)
+                notes.append(
+                    f"Sincronización equipo-cuadrilla: Se incorporaron {target_tobos:.0f} tobos de albañilería "
+                    f"para cuadrilla de {active_labor_count:.0f} obreros en acarreo manual."
+                )
+
+            if pala_item is not None:
+                curr_pala = float(pala_item.get("cantidad", 1.0) or 1.0)
+                if curr_pala < target_palas:
+                    pala_item["cantidad"] = target_palas
+                    notes.append(
+                        f"Herramientas menores sincronizadas: Palas ajustadas a {target_palas:.0f} unidades para carga de tobos."
+                    )
+
         else:
-            # Si la partida es de acarreo manual pero faltaba la carretilla, agregarla
-            new_carretilla = {
-                "id": "e-ia-carretilla-circuito",
-                "codigo": "EQU-CARRETILLA",
-                "descripcion": "CARRETILLA METÁLICA DE MANO CAPACIDAD 3 CUFT (RUEDA DE CAUCHO)",
-                "unidad": "día",
-                "cantidad": target_carretillas,
-                "depreciacion": 0.01,
-                "precio_unitario": 45.00,
-                "origen": "ia",
-                "nota_calculo": (
-                    f"Dimensionamiento técnico: {target_carretillas:.0f} carretillas para cuadrilla de "
-                    f"{active_labor_count:.0f} obreros en ciclo continuo de transporte."
-                )
-            }
-            equipments.append(new_carretilla)
-            notes.append(
-                f"Sincronización equipo-cuadrilla: Se incorporaron {target_carretillas:.0f} carretillas metálicas "
-                f"en circuito continuo para los {active_labor_count:.0f} obreros de acarreo."
-            )
-
-        # 2. Palas
-        if pala_item is not None:
-            curr_pala = float(pala_item.get("cantidad", 1.0) or 1.0)
-            if curr_pala < target_palas:
-                pala_item["cantidad"] = target_palas
+            # Modalidad en carretilla (terrenos planos / exteriores)
+            # 1. Purgar tobos si fueron heredados erróneamente de partidas base de tobo
+            had_tobo = any("TOBO" in str(eq.get("descripcion", "")).upper() or "CUNETE" in str(eq.get("descripcion", "")).upper() for eq in equipments)
+            equipments = [eq for eq in equipments if "TOBO" not in str(eq.get("descripcion", "")).upper() and "CUNETE" not in str(eq.get("descripcion", "")).upper()]
+            if had_tobo:
                 notes.append(
-                    f"Herramientas menores sincronizadas: Palas ajustadas a {target_palas:.0f} unidades "
-                    f"para cuadrilla de carga/descarga."
+                    "Modalidad de acarreo calibrada: Se eliminaron tobos por incompatibilidad física con acarreo plano en carretilla."
                 )
+
+            # 2. Sincronizar carretillas (40% de la cuadrilla)
+            target_carretillas = max(1.0, float(round(active_labor_count * 0.40)))
+            target_palas = max(1.0, float(round(active_labor_count * 0.30)))
+
+            carretilla_item = next((eq for eq in equipments if "CARRETILLA" in str(eq.get("descripcion", "")).upper()), None)
+            pala_item = next((eq for eq in equipments if "PALA" in str(eq.get("descripcion", "")).upper()), None)
+
+            if carretilla_item is not None:
+                curr_qty = float(carretilla_item.get("cantidad", 1.0) or 1.0)
+                if curr_qty < target_carretillas:
+                    carretilla_item["cantidad"] = target_carretillas
+                    notes.append(
+                        f"Sincronización equipo-cuadrilla: Carretillas ajustadas de {curr_qty:.0f} a {target_carretillas:.0f} unidades "
+                        f"(ratio de circuito continuo 40% para {active_labor_count:.0f} obreros: "
+                        f"{target_carretillas:.0f} en acarreo activo y {active_labor_count - target_carretillas:.0f} en carga/descarga)."
+                    )
+            else:
+                new_carretilla = {
+                    "id": "e-ia-carretilla-circuito",
+                    "codigo": "ALB112",
+                    "descripcion": "CARRETILLA CAP= 55 LT",
+                    "unidad": "día",
+                    "cantidad": target_carretillas,
+                    "depreciacion": 0.02,
+                    "precio_unitario": 194.88,
+                    "origen": "historico",
+                    "nota_calculo": (
+                        f"Dimensionamiento técnico: {target_carretillas:.0f} carretillas para cuadrilla de "
+                        f"{active_labor_count:.0f} obreros en ciclo continuo de transporte."
+                    )
+                }
+                equipments.append(new_carretilla)
+                notes.append(
+                    f"Sincronización equipo-cuadrilla: Se incorporaron {target_carretillas:.0f} carretillas metálicas "
+                    f"en circuito continuo para los {active_labor_count:.0f} obreros de acarreo."
+                )
+
+            if pala_item is not None:
+                curr_pala = float(pala_item.get("cantidad", 1.0) or 1.0)
+                if curr_pala < target_palas:
+                    pala_item["cantidad"] = target_palas
+                    notes.append(
+                        f"Herramientas menores sincronizadas: Palas ajustadas a {target_palas:.0f} unidades "
+                        f"para cuadrilla de carga/descarga."
+                    )
 
     # -----------------------------------------------------------------------
     # CASO B: CONCRETO EN ESTRUCTURA (Sincronización de Trompo y Vibrador)
@@ -775,6 +831,19 @@ def calibrate_apu_crew_and_equipment(
             balanced_labors, equipments, typology, description, unit
         )
         all_calibration_notes.extend(eq_notes)
+
+        # Sanitizar advertencias de insumos eliminados en la calibración
+        if "advertencias" in result and isinstance(result["advertencias"], list):
+            if any("eliminaron carretillas" in note.lower() for note in eq_notes):
+                result["advertencias"] = [
+                    adv for adv in result["advertencias"]
+                    if not (isinstance(adv, str) and "carretilla" in adv.lower())
+                ]
+            if any("eliminaron tobos" in note.lower() for note in eq_notes):
+                result["advertencias"] = [
+                    adv for adv in result["advertencias"]
+                    if not (isinstance(adv, str) and ("tobo" in adv.lower() or "cuñete" in adv.lower() or "cunete" in adv.lower()))
+                ]
 
         # 4. Calibración paramétrica de Horas-Hombre (HH)
         calibrated_partida, hh_notes = validate_and_calibrate_hh(
