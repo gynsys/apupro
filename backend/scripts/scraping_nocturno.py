@@ -16,7 +16,7 @@ import urllib.parse
 import argparse
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Set
+from typing import List, Dict, Any, Optional, Set, Tuple
 
 # Agregar directorio backend a sys.path
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -63,12 +63,18 @@ GENERIC_PLACEHOLDERS: Set[str] = {
 }
 
 def normalize_text_dimensions(text_val: str) -> str:
-    """Decodifica entidades HTML y normaliza fracciones vulgares como ¼ a 1/4."""
+    """Decodifica entidades HTML, normaliza fracciones vulgares y remueve acentos."""
     if not text_val:
         return ""
     unescaped = html.unescape(text_val)
     for v_char, repl in VULGAR_FRACTIONS.items():
         unescaped = unescaped.replace(v_char, repl)
+    accents = {
+        'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U', 'Ñ': 'N',
+        'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ñ': 'n'
+    }
+    for a, b in accents.items():
+        unescaped = unescaped.replace(a, b)
     return unescaped
 
 def is_generic_placeholder(desc: str) -> bool:
@@ -83,22 +89,14 @@ def is_generic_placeholder(desc: str) -> bool:
         return True
     return False
 
-def extract_numbers_and_dims(text_input: str) -> Set[str]:
-    clean_text = normalize_text_dimensions(text_input).replace('"', '').replace("'", "")
-    pattern = r'\b(\d+(?:/\d+)?(?:[\.,]\d+)?)\b'
-    matches = re.findall(pattern, clean_text)
-    return set(matches)
-
-
-def get_keywords(text_input: str) -> Set[str]:
-    clean_text = normalize_text_dimensions(text_input).lower().replace('"', '').replace("'", "")
-    words = re.findall(r'\b[a-z]{3,}\b', clean_text)
-    stop_words = {
-        'para', 'con', 'sin', 'los', 'las', 'del', 'por', 'que', 'una', 'uno',
-        'uso', 'tipo', 'color', 'marca', 'nacional', 'importado', 'varios'
-    }
-    return set([w for w in words if w not in stop_words])
-
+def extract_critical_dimensions(text: str) -> Tuple[Set[str], Set[str], Set[str]]:
+    """Extrae fracciones críticas, medidas enteras en pulgadas y volúmenes/pesos."""
+    text_upper = normalize_text_dimensions(text).upper()
+    text_upper = re.sub(r'X(?=\d)', ' X ', text_upper)
+    fractions = set(re.findall(r'(?<!\d/)(\b\d+/\d+)\b', text_upper))
+    inches = set(re.findall(r'(?<!/)(\b\d+)\s*(?:\"|PULG)', text_upper))
+    units = set(re.findall(r'\b(\d+(?:[\.,]\d+)?\s*(?:GAL|KG|LT|L|ML))\b', text_upper))
+    return fractions, inches, units
 
 def clean_search_term(desc: str) -> str:
     if not desc:
@@ -119,34 +117,47 @@ def clean_search_term(desc: str) -> str:
     query = f'{core} {medida_str}'.strip()
     return query or ' '.join(palabras[:2])
 
-
 def is_valid_product(db_desc: str, scraped_desc: str) -> bool:
+    """Verifica inteligentemente si el producto encontrado coincide técnicamente."""
     if not scraped_desc or not db_desc:
         return False
-    db_desc_lower = normalize_text_dimensions(db_desc).lower()
-    scraped_desc_lower = normalize_text_dimensions(scraped_desc).lower()
+        
+    db_norm = normalize_text_dimensions(db_desc).upper()
+    scraped_norm = normalize_text_dimensions(scraped_desc).upper()
     
-    nums_db = extract_numbers_and_dims(db_desc_lower)
-    scraped_desc_clean = scraped_desc_lower.replace('"', '').replace("'", "")
+    db_fracs, db_inches, db_units = extract_critical_dimensions(db_norm)
+    scraped_fracs, scraped_inches, scraped_units = extract_critical_dimensions(scraped_norm)
     
-    for num in nums_db:
-        pattern = r'(?<!\d)' + re.escape(num) + r'(?!\d)'
-        if not re.search(pattern, scraped_desc_clean):
+    # 1. Fracciones críticas (ej: 1/2", 3/8", 1/4")
+    if db_fracs:
+        if not (db_fracs & scraped_fracs):
             return False
-            
-    kw_db = get_keywords(db_desc_lower)
-    kw_scraped = get_keywords(scraped_desc_lower)
+
+    # 2. Pulgadas enteras (ej: 7", 4")
+    if db_inches:
+        if not all(re.search(r'(?<!\d)' + re.escape(inch) + r'(?!\d|\/)', scraped_norm) for inch in db_inches):
+            return False
+
+    # 3. Palabras clave
+    stop_words = {
+        'PARA', 'CON', 'SIN', 'LOS', 'LAS', 'DEL', 'POR', 'QUE', 'UNA', 'UNO',
+        'USO', 'TIPO', 'COLOR', 'MARCA', 'NACIONAL', 'IMPORTADO', 'VARIOS',
+        'CALIDAD', 'PRIMERA', 'SEGUNDA', 'MEDIDA', 'P/CIELO', 'RASO', 'P/PARED'
+    }
+    words_db = set(re.findall(r'\b[A-Z]{3,}\b', db_norm)) - stop_words
+    words_scraped = set(re.findall(r'\b[A-Z]{3,}\b', scraped_norm)) - stop_words
     
-    if kw_db:
-        intersection = kw_db.intersection(kw_scraped)
-        if len(intersection) == 0:
-            return False
-            
-        ratio = len(intersection) / len(kw_db)
-        required_ratio = 0.25 if nums_db else 0.5
-        if ratio < required_ratio:
-            return False
-            
+    if not words_db:
+        return True
+        
+    common_words = words_db & words_scraped
+    if not common_words:
+        return False
+        
+    ratio = len(common_words) / len(words_db)
+    if ratio < 0.40 and len(common_words) < 2:
+        return False
+        
     return True
 
 

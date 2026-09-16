@@ -30,10 +30,10 @@ class ScrapingConfig(BaseModel):
     max_concurrency: int = 25
     headless: bool = True
     bypass_cloudflare: bool = True
-    request_delay_ms: int = 10000
+    request_delay_ms: int = 4000
     active_portals: List[str] = ["epa", "mercadolibre"]
-    batch_size: int = 10
-    continuous_mode: bool = False
+    batch_size: int = 15
+    continuous_mode: bool = True
     portal_urls: Dict[str, str] = {
         "epa": "https://ve.epaenlinea.com/catalogsearch/result/?q={query}",
         "mercadolibre": "https://listado.mercadolibre.com.ve/{query}"
@@ -88,12 +88,18 @@ GENERIC_PLACEHOLDERS: Set[str] = {
 }
 
 def normalize_text_dimensions(text: str) -> str:
-    """Decodifica entidades HTML y normaliza fracciones vulgares como ¼ a 1/4."""
+    """Decodifica entidades HTML, normaliza fracciones vulgares y remueve acentos."""
     if not text:
         return ""
     unescaped = html.unescape(text)
     for v_char, repl in VULGAR_FRACTIONS.items():
         unescaped = unescaped.replace(v_char, repl)
+    accents = {
+        'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U', 'Ñ': 'N',
+        'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ñ': 'n'
+    }
+    for a, b in accents.items():
+        unescaped = unescaped.replace(a, b)
     return unescaped
 
 def is_generic_placeholder(desc: str) -> bool:
@@ -108,20 +114,14 @@ def is_generic_placeholder(desc: str) -> bool:
         return True
     return False
 
-def extract_numbers_and_dims(text: str) -> Set[str]:
-    text = normalize_text_dimensions(text).replace('"', '').replace("'", "")
-    pattern = r'\b(\d+(?:/\d+)?(?:[\.,]\d+)?)\b'
-    matches = re.findall(pattern, text)
-    return set(matches)
-
-def get_keywords(text: str) -> Set[str]:
-    text = normalize_text_dimensions(text).lower().replace('"', '').replace("'", "")
-    words = re.findall(r'\b[a-z]{3,}\b', text)
-    stop_words = {
-        'para', 'con', 'sin', 'los', 'las', 'del', 'por', 'que', 'una', 'uno',
-        'uso', 'tipo', 'color', 'marca', 'nacional', 'importado', 'varios'
-    }
-    return set([w for w in words if w not in stop_words])
+def extract_critical_dimensions(text: str) -> Tuple[Set[str], Set[str], Set[str]]:
+    """Extrae fracciones críticas, medidas enteras en pulgadas y volúmenes/pesos."""
+    text_upper = normalize_text_dimensions(text).upper()
+    text_upper = re.sub(r'X(?=\d)', ' X ', text_upper)
+    fractions = set(re.findall(r'(?<!\d/)(\b\d+/\d+)\b', text_upper))
+    inches = set(re.findall(r'(?<!/)(\b\d+)\s*(?:\"|PULG)', text_upper))
+    units = set(re.findall(r'\b(\d+(?:[\.,]\d+)?\s*(?:GAL|KG|LT|L|ML))\b', text_upper))
+    return fractions, inches, units
 
 def clean_search_term(desc: str) -> str:
     """Limpia la descripción eliminando palabras de relleno para buscar en EPA/portales."""
@@ -144,34 +144,48 @@ def clean_search_term(desc: str) -> str:
     return query or ' '.join(palabras[:2])
 
 def is_valid_product(db_desc: str, scraped_desc: str) -> bool:
-    """Verifica si el producto encontrado coincide con la descripción de la BD."""
+    """Verifica inteligentemente si el producto encontrado coincide técnicamente."""
     if not scraped_desc or not db_desc:
         return False
         
-    db_desc_norm = normalize_text_dimensions(db_desc).lower()
-    scraped_desc_norm = normalize_text_dimensions(scraped_desc).lower()
+    db_norm = normalize_text_dimensions(db_desc).upper()
+    scraped_norm = normalize_text_dimensions(scraped_desc).upper()
     
-    nums_db = extract_numbers_and_dims(db_desc_norm)
-    scraped_desc_clean = scraped_desc_norm.replace('"', '').replace("'", "")
+    db_fracs, db_inches, db_units = extract_critical_dimensions(db_norm)
+    scraped_fracs, scraped_inches, scraped_units = extract_critical_dimensions(scraped_norm)
     
-    for num in nums_db:
-        pattern = r'(?<!\d)' + re.escape(num) + r'(?!\d)'
-        if not re.search(pattern, scraped_desc_clean):
+    # 1. Validación de Fracciones (ej: 1/2", 3/8", 1/4"):
+    # Si la BD especifica fracción, el producto candidato DEBE contenerla exactamente
+    if db_fracs:
+        if not (db_fracs & scraped_fracs):
             return False
-            
-    kw_db = get_keywords(db_desc_norm)
-    kw_scraped = get_keywords(scraped_desc_norm)
+
+    # 2. Validación de Pulgadas Enteras (ej: 7", 4"):
+    if db_inches:
+        if not all(re.search(r'(?<!\d)' + re.escape(inch) + r'(?!\d|\/)', scraped_norm) for inch in db_inches):
+            return False
+
+    # 3. Validación de Palabras Clave
+    stop_words = {
+        'PARA', 'CON', 'SIN', 'LOS', 'LAS', 'DEL', 'POR', 'QUE', 'UNA', 'UNO',
+        'USO', 'TIPO', 'COLOR', 'MARCA', 'NACIONAL', 'IMPORTADO', 'VARIOS',
+        'CALIDAD', 'PRIMERA', 'SEGUNDA', 'MEDIDA', 'P/CIELO', 'RASO', 'P/PARED'
+    }
+    words_db = set(re.findall(r'\b[A-Z]{3,}\b', db_norm)) - stop_words
+    words_scraped = set(re.findall(r'\b[A-Z]{3,}\b', scraped_norm)) - stop_words
     
-    if kw_db:
-        intersection = kw_db.intersection(kw_scraped)
-        if len(intersection) == 0:
-            return False
-            
-        ratio = len(intersection) / len(kw_db)
-        required_ratio = 0.25 if nums_db else 0.5
-        if ratio < required_ratio:
-            return False
-            
+    if not words_db:
+        return True
+        
+    common_words = words_db & words_scraped
+    if not common_words:
+        return False
+        
+    # Coincidencia de al menos 40% de palabras clave o al menos 2 palabras clave comunes
+    ratio = len(common_words) / len(words_db)
+    if ratio < 0.40 and len(common_words) < 2:
+        return False
+        
     return True
 
 def safe_sleep(seconds: float) -> None:
@@ -227,21 +241,17 @@ def scraping_seguro_configurable() -> None:
                     SELECT "CodMat", "Descri", "CosMat" 
                     FROM cost360_materials 
                     WHERE "Descri" IS NOT NULL AND TRIM("Descri") != ''
-                      AND "CodMat" NOT IN (
-                          SELECT material_id FROM historial_precios WHERE fecha = :fecha
-                      )
                     ORDER BY "CodMat" ASC
                     LIMIT :batch_size OFFSET :offset
                 '''), {
                     "batch_size": config.batch_size, 
-                    "fecha": fecha_version,
                     "offset": offset
                 }).fetchall()
 
                 materiales_db = [{"codigo": row[0], "descripcion": row[1], "precio_bd": row[2]} for row in result]
             
             if not materiales_db:
-                bot_state.add_log("INFO", "Todos los materiales disponibles para la fecha han sido procesados")
+                bot_state.add_log("INFO", "Todos los materiales de la base de datos han sido procesados.")
                 break
             
             # Avanzar offset para el siguiente lote
