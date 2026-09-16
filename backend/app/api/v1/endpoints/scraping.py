@@ -179,142 +179,142 @@ def scraping_seguro_configurable() -> None:
             bot_state.add_log("INFO", f"Procesando lote de {len(materiales_db)} materiales (Total acumulado: {processed_count})")
             
             for indice, mat in enumerate(materiales_db):
-            # Verificar flags de control
-            if bot_state.stop_flag:
-                bot_state.add_log("INFO", "Bot detenido por Kill Switch")
-                break
+                # Verificar flags de control
+                if bot_state.stop_flag:
+                    bot_state.add_log("INFO", "Bot detenido por Kill Switch")
+                    break
+                    
+                while bot_state.pause_flag:
+                    time.sleep(1)
+                    if bot_state.stop_flag:
+                        break
                 
-            while bot_state.pause_flag:
-                time.sleep(1)
                 if bot_state.stop_flag:
                     break
-            
-            if bot_state.stop_flag:
-                break
-                
-            agente_aleatorio = random.choice(lista_navegadores)
-            precio_detectado = 0
-            portal_exitoso = ''
-            titulo_exitoso = ''
-            
-            try:
-                termino_limpio = clean_search_term(mat['descripcion'])
-                descripcion_url = urllib.parse.quote_plus(termino_limpio)
-                
-                bot_state.add_log("INFO", f"Procesando [{indice+1}/{len(materiales_db)}] {mat['codigo']}: {mat['descripcion']}")
-                
-                for portal_actual in portales:
-                    if precio_detectado > 0:
-                        break
-
-                    # Obtener URL del portal desde la configuración
-                    url_template = config.portal_urls.get(portal_actual)
-                    if not url_template:
-                        bot_state.add_log("WARN", f"Portal '{portal_actual}' no tiene URL configurada, saltando...")
-                        continue
-
-                    url = url_template.replace('{query}', descripcion_url)
-
-                    if portal_actual == 'epa':
-                        headers = {'User-Agent': agente_aleatorio, 'Referer': 'https://ve.epaenlinea.com/'}
-                        response = scraper.get(url, headers=headers, timeout=15)
-                        
-                        if response.status_code == 200:
-                            html_content = response.text
-                            titulo_detectado = ''
-                            title_matches = re.findall(r'class="product-item-link"[^>]*>(.*?)</a>', html_content, re.DOTALL)
-                            if title_matches:
-                                titulo_detectado = title_matches[0].strip()
-
-                            precio_patterns = [
-                                r'data-price-amount="([\d\.,]+)"',
-                                r'class="price"[^>]*>\s*(?:US\s*\$|\$)?\s*([\d\.,]+)',
-                            ]
-                            
-                            for pattern in precio_patterns:
-                                matches = re.findall(pattern, html_content)
-                                if matches:
-                                    try:
-                                        precio_candidato = float(matches[0].replace(',', '.'))
-                                        if precio_candidato > 0:
-                                            if titulo_detectado and not is_valid_product(mat['descripcion'], titulo_detectado):
-                                                bot_state.add_log("WARN", f"Descartado (Falso Positivo EPA): '{titulo_detectado}'")
-                                                break
-                                            precio_detectado = precio_candidato
-                                            portal_exitoso = portal_actual
-                                            titulo_exitoso = titulo_detectado
-                                            break
-                                    except Exception:
-                                        continue
-                                        
-                    elif portal_actual == 'mercadolibre':
-                        headers = {'User-Agent': agente_aleatorio, 'Referer': 'https://www.mercadolibre.com.ve/'}
-                        response = scraper.get(url, headers=headers, timeout=15)
-                        
-                        if response.status_code == 200:
-                            html_content = response.text
-                            if "suspicious-traffic" in html_content:
-                                bot_state.add_log("WARN", "MercadoLibre requiere verificación anti-bot (captcha). Probando otros portales...")
-                                continue
-
-                            titulo_detectado = ''
-                            title_matches = re.findall(r'class="ui-search-item__title"[^>]*>(.*?)<', html_content)
-                            if title_matches:
-                                titulo_detectado = title_matches[0].strip()
-
-                            precio_patterns = [
-                                r'class="andes-money-amount__fraction">([\d\.,]+)<',
-                                r'<meta itemprop="price" content="([\d\.,]+)">',
-                                r'USD\s*\$\s*(\d{1,3}(?:[\.,]\d{3})*(?:[\.,]\d{2}))',
-                                r'\$\s*(\d{1,3}(?:[\.,]\d{3})*(?:[\.,]\d{2}))'
-                            ]
-                            
-                            for pattern in precio_patterns:
-                                matches = re.findall(pattern, html_content)
-                                if matches:
-                                    try:
-                                        precio_candidato = float(matches[0].replace(',', '.'))
-                                        if precio_candidato > 0:
-                                            if titulo_detectado and not is_valid_product(mat['descripcion'], titulo_detectado):
-                                                bot_state.add_log("WARN", f"Descartado (Falso Positivo ML): '{titulo_detectado}'")
-                                                break
-                                            precio_detectado = precio_candidato
-                                            portal_exitoso = portal_actual
-                                            titulo_exitoso = titulo_detectado
-                                            break
-                                    except Exception:
-                                        continue
-                
-                if precio_detectado > 0:
-                    bot_state.add_log("INFO", f"[EXITO] {mat['codigo']} | BD: ${mat['precio_bd']} | Scraping: ${precio_detectado} | Fuente: {portal_exitoso}")
-                    try:
-                        with get_db_session() as db_hist:
-                            db_hist.execute(text('''
-                                INSERT INTO historial_precios (material_id, fecha, precio, fuente, status, titulo_scraped)
-                                VALUES (:material_id, :fecha, :precio, :fuente, 'pending', :titulo_scraped)
-                            '''), {
-                                "material_id": mat['codigo'],
-                                "fecha": fecha_version,
-                                "precio": precio_detectado,
-                                "fuente": portal_exitoso,
-                                "titulo_scraped": titulo_exitoso
-                            })
-                            db_hist.commit()
-                        success_count += 1
-                    except Exception as db_error:
-                        bot_state.add_log("ERROR", f"Error guardando en BD: {db_error}")
-                else:
-                    bot_state.add_log("WARN", f"[SIN PRECIO] {mat['codigo']} | BD: ${mat['precio_bd']}")
                     
-            except Exception as e:
-                bot_state.add_log("ERROR", f"Error procesando {mat['codigo']}: {str(e)}")
-            
-            processed_count += 1
-            
-            # Delay configurable
-            delay_seconds = config.request_delay_ms / 1000
-            bot_state.add_log("INFO", f"Esperando {delay_seconds:.1f}s antes del siguiente material...")
-            time.sleep(delay_seconds)
+                agente_aleatorio = random.choice(lista_navegadores)
+                precio_detectado = 0
+                portal_exitoso = ''
+                titulo_exitoso = ''
+                
+                try:
+                    termino_limpio = clean_search_term(mat['descripcion'])
+                    descripcion_url = urllib.parse.quote_plus(termino_limpio)
+                    
+                    bot_state.add_log("INFO", f"Procesando [{indice+1}/{len(materiales_db)}] {mat['codigo']}: {mat['descripcion']}")
+                    
+                    for portal_actual in portales:
+                        if precio_detectado > 0:
+                            break
+
+                        # Obtener URL del portal desde la configuración
+                        url_template = config.portal_urls.get(portal_actual)
+                        if not url_template:
+                            bot_state.add_log("WARN", f"Portal '{portal_actual}' no tiene URL configurada, saltando...")
+                            continue
+
+                        url = url_template.replace('{query}', descripcion_url)
+
+                        if portal_actual == 'epa':
+                            headers = {'User-Agent': agente_aleatorio, 'Referer': 'https://ve.epaenlinea.com/'}
+                            response = scraper.get(url, headers=headers, timeout=15)
+                            
+                            if response.status_code == 200:
+                                html_content = response.text
+                                titulo_detectado = ''
+                                title_matches = re.findall(r'class="product-item-link"[^>]*>(.*?)</a>', html_content, re.DOTALL)
+                                if title_matches:
+                                    titulo_detectado = title_matches[0].strip()
+
+                                precio_patterns = [
+                                    r'data-price-amount="([\d\.,]+)"',
+                                    r'class="price"[^>]*>\s*(?:US\s*\$|\$)?\s*([\d\.,]+)',
+                                ]
+                                
+                                for pattern in precio_patterns:
+                                    matches = re.findall(pattern, html_content)
+                                    if matches:
+                                        try:
+                                            precio_candidato = float(matches[0].replace(',', '.'))
+                                            if precio_candidato > 0:
+                                                if titulo_detectado and not is_valid_product(mat['descripcion'], titulo_detectado):
+                                                    bot_state.add_log("WARN", f"Descartado (Falso Positivo EPA): '{titulo_detectado}'")
+                                                    break
+                                                precio_detectado = precio_candidato
+                                                portal_exitoso = portal_actual
+                                                titulo_exitoso = titulo_detectado
+                                                break
+                                        except Exception:
+                                            continue
+                                            
+                        elif portal_actual == 'mercadolibre':
+                            headers = {'User-Agent': agente_aleatorio, 'Referer': 'https://www.mercadolibre.com.ve/'}
+                            response = scraper.get(url, headers=headers, timeout=15)
+                            
+                            if response.status_code == 200:
+                                html_content = response.text
+                                if "suspicious-traffic" in html_content:
+                                    bot_state.add_log("WARN", "MercadoLibre requiere verificación anti-bot (captcha). Probando otros portales...")
+                                    continue
+
+                                titulo_detectado = ''
+                                title_matches = re.findall(r'class="ui-search-item__title"[^>]*>(.*?)<', html_content)
+                                if title_matches:
+                                    titulo_detectado = title_matches[0].strip()
+
+                                precio_patterns = [
+                                    r'class="andes-money-amount__fraction">([\d\.,]+)<',
+                                    r'<meta itemprop="price" content="([\d\.,]+)">',
+                                    r'USD\s*\$\s*(\d{1,3}(?:[\.,]\d{3})*(?:[\.,]\d{2}))',
+                                    r'\$\s*(\d{1,3}(?:[\.,]\d{3})*(?:[\.,]\d{2}))'
+                                ]
+                                
+                                for pattern in precio_patterns:
+                                    matches = re.findall(pattern, html_content)
+                                    if matches:
+                                        try:
+                                            precio_candidato = float(matches[0].replace(',', '.'))
+                                            if precio_candidato > 0:
+                                                if titulo_detectado and not is_valid_product(mat['descripcion'], titulo_detectado):
+                                                    bot_state.add_log("WARN", f"Descartado (Falso Positivo ML): '{titulo_detectado}'")
+                                                    break
+                                                precio_detectado = precio_candidato
+                                                portal_exitoso = portal_actual
+                                                titulo_exitoso = titulo_detectado
+                                                break
+                                        except Exception:
+                                            continue
+                    
+                    if precio_detectado > 0:
+                        bot_state.add_log("INFO", f"[EXITO] {mat['codigo']} | BD: ${mat['precio_bd']} | Scraping: ${precio_detectado} | Fuente: {portal_exitoso}")
+                        try:
+                            with get_db_session() as db_hist:
+                                db_hist.execute(text('''
+                                    INSERT INTO historial_precios (material_id, fecha, precio, fuente, status, titulo_scraped)
+                                    VALUES (:material_id, :fecha, :precio, :fuente, 'pending', :titulo_scraped)
+                                '''), {
+                                    "material_id": mat['codigo'],
+                                    "fecha": fecha_version,
+                                    "precio": precio_detectado,
+                                    "fuente": portal_exitoso,
+                                    "titulo_scraped": titulo_exitoso
+                                })
+                                db_hist.commit()
+                            success_count += 1
+                        except Exception as db_error:
+                            bot_state.add_log("ERROR", f"Error guardando en BD: {db_error}")
+                    else:
+                        bot_state.add_log("WARN", f"[SIN PRECIO] {mat['codigo']} | BD: ${mat['precio_bd']}")
+                        
+                except Exception as e:
+                    bot_state.add_log("ERROR", f"Error procesando {mat['codigo']}: {str(e)}")
+                
+                processed_count += 1
+                
+                # Delay configurable
+                delay_seconds = config.request_delay_ms / 1000
+                bot_state.add_log("INFO", f"Esperando {delay_seconds:.1f}s antes del siguiente material...")
+                time.sleep(delay_seconds)
         
             bot_state.add_log("INFO", f"Lote finalizado: {processed_count} acumulados, {success_count} exitosos")
             if not config.continuous_mode or bot_state.stop_flag:
