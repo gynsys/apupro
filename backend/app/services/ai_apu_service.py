@@ -136,6 +136,7 @@ _REGLAS_INSUMOS_PRECIOS = """
       - Pozo Profundo / Agua Limpia: REQUIERE bomba tipo lapicero/multietapa en acero inoxidable. PROHIBIDO usar bombas de aguas negras, achique o trituradoras tipo Flygt.
       - Aguas Negras / Residuales: REQUIERE bomba de achique para sólidos con impulsor inatascable/vórtex. PROHIBIDO usar bombas de agua limpia o lapicero.
       - Sistema Hidroneumático: REQUIERE bomba centrífuga horizontal o vertical de presión acoplada a pulmón/tanque.
+      - CONTROL DE ESCALA Y POTENCIA (¡CRÍTICO!): Si la descripción técnica no pide explícitamente escala industrial (>15 HP), QUEDA TERMINANTEMENTE PROHIBIDO seleccionar o heredar del catálogo bombas industriales pesadas (>15 HP / >$3,000 como bombas sumergibles de 30 HP a $12,000+). Si la potencia exacta no vino fijada, adopta la escala comercial/residencial estándar (2 a 3 HP, costo referencial $600-$1,200), agrégala con origen "ia" y emite advertencia con prefijo `[PRECIO_REFERENCIAL]`.
    b) TUBERÍAS Y CONDUCCIÓN DE FLUIDOS:
       - Agua a Presión: REQUIERE PVC Presión (ASTM D-2241), CPVC o PPR Termofusión. PROHIBIDO usar tubería de desagüe, sanitaria o ventilación (Norma 656, pared delgada).
       - Conducción Sanitaria / Pluvial: Flujo por gravedad en PVC sanitario. PROHIBIDO usar tubería de presión de alto costo.
@@ -147,6 +148,7 @@ _REGLAS_INSUMOS_PRECIOS = """
       - Vaciado Manual o Puntual (< 4 m³ o espacio confinado): REQUIERE trompo mezclador (1 saco) y herramientas menores. PROHIBIDO camión mixer o bomba pluma si el acceso o escala es manual.
    f) TABLEROS ELÉCTRICOS:
       - Motores y Fuerza: REQUIERE contactor, relé térmico y guardamotor en caja adecuada. PROHIBIDO tablero residencial de alumbrado (NLAB) para motores trifásicos.
+      - CONTROL DE ESCALA: No seleccionar tableros industriales o subestaciones mayores a 42 circuitos a menos que se solicite expresamente.
    g) IMPERMEABILIZACIÓN:
       - Manto Asfáltico: El insumo activo impermeabilizante es el manto termosoldado (3 o 4 mm). La pintura asfáltica es solo imprimación previa, nunca el impermeabilizante principal.
 4. EXCLUSIONES DE ALCANCE:

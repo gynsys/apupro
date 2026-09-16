@@ -79,14 +79,8 @@ async def websocket_logs(websocket: WebSocket, db: Session = Depends(get_db)) ->
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized")
         return
 
-    user_email = user.email.lower() if user.email else ""
-    is_admin = (
-        getattr(user, "is_superadmin", False) or
-        (user_email == "admin@arko360.net") or
-        getattr(user, "role", "") in ["admin", "superadmin"]
-    )
-    if not is_admin:
-        logger.warning(f"Intento de conexión a WebSocket de logs rechazado para usuario no admin: {user_email}")
+    if not getattr(user, "is_active", True):
+        logger.warning(f"Intento de conexión a WebSocket de logs rechazado para usuario inactivo: {user.email}")
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Forbidden")
         return
 

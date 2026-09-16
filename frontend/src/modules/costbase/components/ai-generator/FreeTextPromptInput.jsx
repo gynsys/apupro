@@ -17,58 +17,58 @@ export default function FreeTextPromptInput({
 }) {
   return (
     <>
-      <div className="flex items-center justify-between mb-4">
-        <label className="block text-sm font-bold text-slate-700 flex items-center gap-2">
-          {isSmartMode
-            ? 'Smart Selector: Selecciona las características'
-            : isClarifying
-            ? 'Responde a la IA para continuar'
-            : 'Descripción Estructurada (APU Builder)'}
-        </label>
+      {!isClarifying && (
+        <div className="flex items-center justify-between mb-4">
+          <label className="block text-sm font-bold text-slate-700 flex items-center gap-2">
+            {isSmartMode
+              ? 'Smart Selector: Selecciona las características'
+              : 'Descripción Estructurada (APU Builder)'}
+          </label>
 
-        {!isSmartMode && !isClarifying && (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onSwitchToGuided}
-              className={`relative overflow-hidden group px-4 py-2 rounded-xl transition-all active:scale-95 cursor-pointer ${
-                isGuidedMode
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md shadow-blue-500/25 text-white'
-                  : 'bg-white border-2 border-slate-300 text-slate-700 shadow-xs hover:border-blue-300'
-              }`}
-            >
-              <div className="absolute inset-0 bg-[#e0f2fe] transform scale-x-0 origin-left transition-transform duration-400 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:scale-x-100"></div>
-              <div
-                className={`relative z-10 flex items-center gap-2 text-xs font-bold transition-colors ${
-                  isGuidedMode ? 'text-white group-hover:text-[#1e3a8a]' : 'text-slate-700 group-hover:text-[#1e3a8a]'
+          {!isSmartMode && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onSwitchToGuided}
+                className={`relative overflow-hidden group px-4 py-2 rounded-xl transition-all active:scale-95 cursor-pointer ${
+                  isGuidedMode
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md shadow-blue-500/25 text-white'
+                    : 'bg-white border-2 border-slate-300 text-slate-700 shadow-xs hover:border-blue-300'
                 }`}
               >
-                <Bot size={15} />
-                <span>Asistente IA</span>
-              </div>
-            </button>
-            <button
-              type="button"
-              onClick={onSwitchToLibre}
-              className={`relative overflow-hidden group px-4 py-2 rounded-xl transition-all active:scale-95 cursor-pointer ${
-                !isGuidedMode
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md shadow-blue-500/25 text-white'
-                  : 'bg-white border border-slate-200 text-slate-700 shadow-xs hover:border-blue-300'
-              }`}
-            >
-              <div className="absolute inset-0 bg-[#e0f2fe] transform scale-x-0 origin-left transition-transform duration-400 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:scale-x-100"></div>
-              <div
-                className={`relative z-10 flex items-center gap-2 text-xs font-bold transition-colors ${
-                  !isGuidedMode ? 'text-white group-hover:text-[#1e3a8a]' : 'text-slate-700 group-hover:text-[#1e3a8a]'
+                <div className="absolute inset-0 bg-[#e0f2fe] transform scale-x-0 origin-left transition-transform duration-400 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:scale-x-100"></div>
+                <div
+                  className={`relative z-10 flex items-center gap-2 text-xs font-bold transition-colors ${
+                    isGuidedMode ? 'text-white group-hover:text-[#1e3a8a]' : 'text-slate-700 group-hover:text-[#1e3a8a]'
+                  }`}
+                >
+                  <Bot size={15} />
+                  <span>Asistente IA</span>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={onSwitchToLibre}
+                className={`relative overflow-hidden group px-4 py-2 rounded-xl transition-all active:scale-95 cursor-pointer ${
+                  !isGuidedMode
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md shadow-blue-500/25 text-white'
+                    : 'bg-white border border-slate-200 text-slate-700 shadow-xs hover:border-blue-300'
                 }`}
               >
-                <Edit2 size={14} />
-                <span>Modo Libre</span>
-              </div>
-            </button>
-          </div>
-        )}
-      </div>
+                <div className="absolute inset-0 bg-[#e0f2fe] transform scale-x-0 origin-left transition-transform duration-400 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:scale-x-100"></div>
+                <div
+                  className={`relative z-10 flex items-center gap-2 text-xs font-bold transition-colors ${
+                    !isGuidedMode ? 'text-white group-hover:text-[#1e3a8a]' : 'text-slate-700 group-hover:text-[#1e3a8a]'
+                  }`}
+                >
+                  <Edit2 size={14} />
+                  <span>Modo Libre</span>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {!isClarifying && (
         <textarea

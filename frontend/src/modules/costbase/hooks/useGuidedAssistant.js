@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { CHAT_STEP_DEFINITIONS } from '../constants/guidedBuilderConstants';
+import { CHAT_STEP_DEFINITIONS, getParametricStep3Definition } from '../constants/guidedBuilderConstants';
 
 export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
   const [isGuidedMode, setIsGuidedMode] = useState(initialGuided);
@@ -149,7 +149,10 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
         nextBotMsg = { id: `bot-step-2-${Date.now()}`, sender: 'bot', step: 2, text: CHAT_STEP_DEFINITIONS[2].general.text, chips: CHAT_STEP_DEFINITIONS[2].general.chips };
       }
     } else if (nextStep === 3) {
-      if (isAcarreo) {
+      const parametricDef = getParametricStep3Definition(currentMaterial, currentAccion);
+      if (parametricDef) {
+        nextBotMsg = { id: `bot-step-3-${Date.now()}`, sender: 'bot', step: 3, text: parametricDef.text, chips: parametricDef.chips };
+      } else if (isAcarreo) {
         nextBotMsg = { id: `bot-step-3-${Date.now()}`, sender: 'bot', step: 3, text: CHAT_STEP_DEFINITIONS[3].acarreo.text, chips: CHAT_STEP_DEFINITIONS[3].acarreo.chips };
       } else if (isSupplyOrInstall) {
         nextBotMsg = { id: `bot-step-3-${Date.now()}`, sender: 'bot', step: 3, text: CHAT_STEP_DEFINITIONS[3].supplyOrInstall.text, chips: CHAT_STEP_DEFINITIONS[3].supplyOrInstall.chips };
@@ -216,11 +219,14 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
           }
         }
 
-        // 3. Destino / Ubicación / Distancia
+        // 3. Destino / Ubicación / Distancia / Parámetro técnico
         if (currentUbicacion && currentUbicacion !== 'Omitir' && currentUbicacion !== 'Ninguno' && currentUbicacion !== 'Ninguno / Omitir') {
           const ubiLower = currentUbicacion.toLowerCase();
-          const hasPrep = ubiLower.startsWith('para ') || ubiLower.startsWith('en ') || ubiLower.startsWith('sobre ') || ubiLower.startsWith('hacia ') || ubiLower.startsWith('bajo ') || ubiLower.startsWith('distancia ') || ubiLower.startsWith('a ');
-          if (!hasPrep) {
+          const hasPrep = ubiLower.startsWith('para ') || ubiLower.startsWith('en ') || ubiLower.startsWith('sobre ') || ubiLower.startsWith('hacia ') || ubiLower.startsWith('bajo ') || ubiLower.startsWith('distancia ') || ubiLower.startsWith('a ') || ubiLower.startsWith('de ') || ubiLower.startsWith('hasta ');
+          const isParametric = /^(espesor|di[aá]metro|calibre|\d|e\s*=|d\s*=|hasta\s*\d)/i.test(ubiLower);
+          if (isParametric) {
+            parts.push(currentUbicacion);
+          } else if (!hasPrep) {
             const isSupply = /suministr|instalac|colocac|montaje/i.test(currentAccion || '');
             parts.push(isSupply ? `para ${currentUbicacion}` : `en ${currentUbicacion}`);
           } else {

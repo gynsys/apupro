@@ -129,8 +129,9 @@ export const CHAT_STEP_DEFINITIONS = {
     supplyOrInstall: (accion) => ({
       text: `Paso 2 de 5: ¿Qué se va a ${accion ? accion.toLowerCase() : 'suministrar o instalar'}?\nIndica el equipo, material o elemento específico:`,
       chips: [
-        'Bomba centrífuga',
         'Bomba sumergible',
+        'Bomba centrífuga',
+        'Concertina de seguridad',
         'Tablero eléctrico',
         'Tubería PVC',
         'Tubería de acero',
@@ -139,8 +140,8 @@ export const CHAT_STEP_DEFINITIONS = {
         'Luminaria LED',
         'Tanque de agua',
         'Cable de cobre',
-        'Piezas sanitarias',
         'Aire acondicionado',
+        'Piezas sanitarias',
         'Omitir'
       ]
     }),
@@ -162,11 +163,13 @@ export const CHAT_STEP_DEFINITIONS = {
       chips: [
         'Paredes de bloques',
         'Losa de concreto',
+        'Pavimento / Acera',
+        'Excavación de zanjas',
         'Columnas y vigas',
         'Zapatas / Fundaciones',
-        'Pisos / Pavimento',
-        'Techo / Cubierta',
         'Acero de refuerzo',
+        'Friso en paredes',
+        'Pintura en interiores',
         'Omitir'
       ]
     }
@@ -272,3 +275,116 @@ export const CHAT_STEP_DEFINITIONS = {
     get chips() { return this.general.chips; }
   }
 };
+
+export function getParametricStep3Definition(material, accion) {
+  const mat = (material || '').toLowerCase();
+  const acc = (accion || '').toLowerCase();
+  const isDemolition = /demolic|demoler|picar|tumbar|derribar|desmont/i.test(acc);
+
+  // 1. Bombas y Equipos Hidráulicos
+  if (/bomba|electrobomba|motobomba/i.test(mat)) {
+    return {
+      text: 'Paso 3 de 5: Potencia o Capacidad de la Bomba\n¿Qué potencia (HP/kW) o caudal tiene el equipo?',
+      chips: ['0.5 HP', '1 HP', '1.5 HP', '2 HP', '3 HP', '5 HP', '7.5 HP', '10 HP', 'Omitir']
+    };
+  }
+
+  // 2. Concertina de Seguridad
+  if (/concertina/i.test(mat)) {
+    return {
+      text: 'Paso 3 de 5: Diámetro de la Concertina\n¿Qué diámetro de espiral tiene la concertina?',
+      chips: ['Diámetro 30 cm (12")', 'Diámetro 45 cm (18")', 'Diámetro 60 cm (24")', 'Diámetro 90 cm (36")', 'Omitir']
+    };
+  }
+
+  // 3. Paredes de Bloques / Muros (no demolición)
+  if (/pared|muro|bloque|ladrillo/i.test(mat) && !isDemolition) {
+    return {
+      text: 'Paso 3 de 5: Espesor de la Pared o Bloque\n¿De qué espesor o medida es el bloque o pared?',
+      chips: ['Espesor e=10 cm', 'Espesor e=12 cm', 'Espesor e=15 cm', 'Espesor e=20 cm', 'Omitir']
+    };
+  }
+
+  // 4. Losa de Concreto (no demolición)
+  if (/losa/i.test(mat) && !isDemolition) {
+    return {
+      text: 'Paso 3 de 5: Espesor de la Losa\n¿Cuál es el espesor de la losa?',
+      chips: ['Espesor e=15 cm', 'Espesor e=20 cm', 'Espesor e=25 cm', 'Espesor e=30 cm', 'Omitir']
+    };
+  }
+
+  // 5. Pavimento / Acera (no demolición)
+  if (/pavimento|acera|brocal/i.test(mat) && !isDemolition) {
+    return {
+      text: 'Paso 3 de 5: Espesor del Pavimento / Acera\n¿De qué espesor es el vaciado?',
+      chips: ['Espesor e=10 cm', 'Espesor e=15 cm', 'Espesor e=20 cm', 'Espesor e=25 cm', 'Omitir']
+    };
+  }
+
+  // 6. Excavación
+  if (/excavac|zanja/i.test(mat) || /excavac/i.test(acc)) {
+    return {
+      text: 'Paso 3 de 5: Profundidad y Método de Excavación\n¿Qué profundidad tiene y cómo se ejecutará?',
+      chips: ['Hasta 1.50 m (a mano)', 'Hasta 1.50 m (a máquina)', 'De 1.50 a 3.00 m (a máquina)', 'Mayor a 3.00 m (a máquina)', 'Omitir']
+    };
+  }
+
+  // 7. Friso / Revoque / Tarrajeo
+  if (/friso|revoque|enlucido|tarrajeo/i.test(mat) || /friso|revoque|tarrajeo/i.test(acc)) {
+    return {
+      text: 'Paso 3 de 5: Tipo de Friso o Acabado\n¿Qué tipo de acabado o especificación tiene el friso?',
+      chips: ['Friso base / rústico', 'Friso liso con pasta', 'En interiores', 'En exteriores / fachadas', 'Omitir']
+    };
+  }
+
+  // 8. Tuberías y Válvulas (no demolición)
+  if (/tuber|valvul/i.test(mat) && !isDemolition) {
+    return {
+      text: 'Paso 3 de 5: Diámetro de la Tubería o Válvula\n¿Qué diámetro nominal tiene?',
+      chips: ['1/2"', '3/4"', '1"', '1-1/2"', '2"', '3"', '4"', '6"', 'Omitir']
+    };
+  }
+
+  // 9. Transformador
+  if (/transformador/i.test(mat)) {
+    return {
+      text: 'Paso 3 de 5: Capacidad del Transformador\n¿Qué capacidad en kVA tiene el transformador?',
+      chips: ['15 kVA', '25 kVA', '37.5 kVA', '50 kVA', '75 kVA', '100 kVA', '150 kVA', 'Omitir']
+    };
+  }
+
+  // 10. Tablero Eléctrico
+  if (/tablero/i.test(mat)) {
+    return {
+      text: 'Paso 3 de 5: Capacidad del Tablero Eléctrico\n¿Cuántos circuitos o polos tiene el tablero?',
+      chips: ['8 circuitos', '12 circuitos', '18 circuitos', '24 circuitos', '30 circuitos', '42 circuitos', 'Omitir']
+    };
+  }
+
+  // 11. Cable / Conductor
+  if (/cable|conductor/i.test(mat)) {
+    return {
+      text: 'Paso 3 de 5: Calibre del Cable\n¿Qué calibre o sección tiene el conductor?',
+      chips: ['Calibre #14 AWG', 'Calibre #12 AWG', 'Calibre #10 AWG', 'Calibre #8 AWG', 'Calibre #6 AWG', 'Calibre #4 AWG', 'Omitir']
+    };
+  }
+
+  // 12. Tanque
+  if (/tanque/i.test(mat)) {
+    return {
+      text: 'Paso 3 de 5: Capacidad del Tanque\n¿De qué capacidad o volumen es el tanque?',
+      chips: ['500 litros', '1,000 litros', '1,500 litros', '2,000 litros', '5,000 litros', '10,000 litros', 'Omitir']
+    };
+  }
+
+  // 13. Aire Acondicionado
+  if (/aire|split|climatiz/i.test(mat)) {
+    return {
+      text: 'Paso 3 de 5: Capacidad del Aire Acondicionado\n¿De qué capacidad frigorífica es el equipo?',
+      chips: ['12,000 BTU (1 TR)', '18,000 BTU (1.5 TR)', '24,000 BTU (2 TR)', '36,000 BTU (3 TR)', '60,000 BTU (5 TR)', 'Omitir']
+    };
+  }
+
+  return null;
+}
+

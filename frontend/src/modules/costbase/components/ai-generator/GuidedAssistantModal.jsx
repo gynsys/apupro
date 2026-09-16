@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Sparkles, X, Check, Bot, Edit2, Loader2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { getParametricStep3Definition } from '../../constants/guidedBuilderConstants';
 
 export default function GuidedAssistantModal({
   isOpen = true,
@@ -7,6 +8,7 @@ export default function GuidedAssistantModal({
   currentChatStep,
   guidedMessages = [],
   guidedAccion,
+  guidedMaterial,
   chatbotLoadingStage = 0,
   chatInputValue,
   setChatInputValue,
@@ -24,10 +26,11 @@ export default function GuidedAssistantModal({
 
   const isSupplyOrInstall = /suministr|instalac|colocac|montaje/i.test(guidedAccion || '');
   const isAcarreo = /acarreo|acarrear|bote|botar|transporte|transportar|traslado/i.test(guidedAccion || '');
+  const isParametric = Boolean(getParametricStep3Definition(guidedMaterial, guidedAccion));
   const stepperItems = [
     { step: 1, label: 'Acción' },
     { step: 2, label: isAcarreo ? 'Material' : (isSupplyOrInstall ? '¿Qué es?' : 'Elemento') },
-    { step: 3, label: isAcarreo ? 'Distancia' : (isSupplyOrInstall ? '¿Para qué?' : 'Ubicación') },
+    { step: 3, label: isAcarreo ? 'Distancia' : (isParametric ? 'Medida / Capacidad' : (isSupplyOrInstall ? '¿Para qué?' : 'Ubicación')) },
     { step: 4, label: isAcarreo ? 'Equipo' : 'Alcance' },
     { step: 5, label: 'Unidad' },
   ];
@@ -192,7 +195,7 @@ export default function GuidedAssistantModal({
                 placeholder={
                   currentChatStep === 1 ? "Ej: Suministro e instalación, Suministro, Construcción..." :
                   currentChatStep === 2 ? (isSupplyOrInstall ? "Ej: Bomba centrífuga, Tablero eléctrico, Tubería PVC..." : "Ej: Paredes de bloques, Losa de concreto...") :
-                  currentChatStep === 3 ? (isSupplyOrInstall ? "Ej: Para pozo profundo, para aguas blancas, en sala de bombas..." : "Ej: En planta baja, en sótano...") :
+                  currentChatStep === 3 ? (isParametric ? "Ej: 2 HP, e=15 cm, 1/2 pulgada, 15 kVA, hasta 1.50 m..." : (isSupplyOrInstall ? "Ej: Para pozo profundo, para aguas blancas, en sala de bombas..." : "Ej: En planta baja, en sótano...")) :
                   currentChatStep === 4 ? "Ej: Incluye conexiones, todo incluido, solo mano de obra..." :
                   currentChatStep === 5 ? "Ej: und, m², ml, pza..." :
                   "Escribe tu respuesta..."

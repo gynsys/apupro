@@ -24,10 +24,20 @@ export const useScrapingWebSocket = () => {
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    // WebSocket cannot use httpOnly cookies directly
-    // Token needs to be passed as query parameter if backend supports it
-    // For now, this will work with cookies if the backend uses cookie-based auth for WS
-    const wsUrl = `${API_URL.replace('http', 'ws')}/scraping/ws/logs`;
+    let wsBase: string;
+    if (API_URL.startsWith('http://') || API_URL.startsWith('https://')) {
+      wsBase = API_URL.replace(/^http/, 'ws');
+    } else {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      const cleanPath = API_URL.startsWith('/') ? API_URL : `/${API_URL}`;
+      wsBase = `${protocol}//${host}${cleanPath}`;
+    }
+
+    const token = typeof localStorage !== 'undefined'
+      ? (localStorage.getItem('arko_admin_token') || localStorage.getItem('token') || localStorage.getItem('access_token'))
+      : null;
+    const wsUrl = token ? `${wsBase}/scraping/ws/logs?token=${encodeURIComponent(token)}` : `${wsBase}/scraping/ws/logs`;
 
     try {
       const ws = new WebSocket(wsUrl);

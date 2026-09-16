@@ -40,7 +40,7 @@ export default function ClarificationAlertCard({
       
       {questions.length > 0 && (
         <div className="my-3 bg-white/90 border border-amber-200 rounded-xl p-3.5 shadow-xs">
-          <p className="text-xs font-bold text-amber-900 mb-2 uppercase tracking-wide">REDACCIÓN RECOMENDADA:</p>
+          <p className="text-xs font-bold text-amber-900 mb-2 uppercase tracking-wide">INFORMACIÓN TÉCNICA REQUERIDA:</p>
           <ul className="text-sm text-slate-700 space-y-2 font-medium">
             {questions.map((q, idx) => {
               const hasNumber = /^\d+[\.\)]\s*/.test(q);

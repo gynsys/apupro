@@ -101,12 +101,10 @@ CAPA2_TESTS = [
     ("tuberia", None, "clarification_needed", "RAG_AMBIGUOUS_ELEMENT_ONLY"),
     ("demolicion de pared de bloques", None, None, None),
     # 8. Casos con errores ortográficos comunes (typos fonéticos)
-    ("contruccion de pared de bloques", None, None, None),
-    ("excabacion de zanjas", None, None, None),
     ("excavasion", None, "clarification_needed", "RAG_AMBIGUOUS_ACTION_ONLY"),
     ("instalacion de valdosas de granito", None, None, None),
     ("acareo", None, "clarification_needed", "RAG_AMBIGUOUS_ACTION_ONLY"),
-    # 9. Validación de Unidad en Acarreo / Bote (Caso A)
+    # 9. Validación de Unidad en Acarreo / Bote
     ("acarreo de escombros", None, "clarification_needed", "RAG_ACARREO_MISSING_UNIT"),
     ("acareo de escombros", None, "clarification_needed", "RAG_ACARREO_MISSING_UNIT"),
     ("acarreo de escombros en m3.m a 30m", None, None, None),
@@ -114,6 +112,31 @@ CAPA2_TESTS = [
     ("demolicion de pared de bloques incluye acarreo", None, None, None),
     ("bote de escombros", None, "clarification_needed", "RAG_ACARREO_MISSING_UNIT"),
     ("bote de escombros en camion a 15 km", None, None, None),
+    # 10. Validación de Familias Paramétricas (Cero Improvisación)
+    ("suministro e instalacion de bomba sumergible", None, "clarification_needed", "RAG_PARAMETRIC_MISSING_BOMBA"),
+    ("suministro e instalacion de bomba sumergible 2 hp", None, None, None),
+    ("contruccion de pared de bloques", None, "clarification_needed", "RAG_PARAMETRIC_MISSING_PARED"),
+    ("contruccion de pared de bloques e=15 cm", None, None, None),
+    ("instalacion de concertina de seguridad", None, "clarification_needed", "RAG_PARAMETRIC_MISSING_CONCERTINA"),
+    ("instalacion de concertina de 45 cm", None, None, None),
+    ("vaciado de concreto en losa", None, "clarification_needed", "RAG_PARAMETRIC_MISSING_LOSA"),
+    ("vaciado de concreto en losa e=20 cm", None, None, None),
+    ("construccion de pavimento de concreto", None, "clarification_needed", "RAG_PARAMETRIC_MISSING_PAVIMENTO"),
+    ("construccion de pavimento de concreto e=15 cm", None, None, None),
+    ("excabacion de zanjas", None, "clarification_needed", "RAG_PARAMETRIC_MISSING_EXCAVACION"),
+    ("excabacion de zanjas hasta 1.50 m a mano", None, None, None),
+    ("suministro de tuberia pvc", None, "clarification_needed", "RAG_PARAMETRIC_MISSING_TUBERIA"),
+    ("suministro de tuberia pvc 1/2 pulgada", None, None, None),
+    ("suministro de transformador", None, "clarification_needed", "RAG_PARAMETRIC_MISSING_TRANSFORMADOR"),
+    ("suministro de transformador 25 kva", None, None, None),
+    ("instalacion de tablero electrico", None, "clarification_needed", "RAG_PARAMETRIC_MISSING_TABLERO"),
+    ("instalacion de tablero electrico de 12 circuitos", None, None, None),
+    ("suministro de cable de cobre", None, "clarification_needed", "RAG_PARAMETRIC_MISSING_CABLE"),
+    ("suministro de cable de cobre #12 awg", None, None, None),
+    ("instalacion de tanque de agua", None, "clarification_needed", "RAG_PARAMETRIC_MISSING_TANQUE"),
+    ("instalacion de tanque de agua 1500 lts", None, None, None),
+    ("suministro e instalacion de aire acondicionado", None, "clarification_needed", "RAG_PARAMETRIC_MISSING_AIRE"),
+    ("suministro e instalacion de aire acondicionado 24000 btu", None, None, None),
 ]
 
 for query, cands, exp_veredicto, exp_codigo in CAPA2_TESTS:

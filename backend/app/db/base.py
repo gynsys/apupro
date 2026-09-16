@@ -1,9 +1,11 @@
 """
 Database base configuration and session management.
 """
+from contextlib import contextmanager
+from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 from app.core.config import settings
 
 # Create database engine
@@ -37,3 +39,23 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+@contextmanager
+def get_db_session() -> Generator[Session, None, None]:
+    """
+    Context manager for background tasks or non-FastAPI threads.
+    Usage:
+        with get_db_session() as db:
+            db.execute(...)
+    """
+    db = SessionLocal()
+    try:
+        yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+

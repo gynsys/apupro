@@ -15,12 +15,16 @@ const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
  */
 export const apiFetch = async (endpoint, options = {}) => {
   const url = `${API_URL}${endpoint}`;
+  const token = typeof localStorage !== 'undefined'
+    ? (localStorage.getItem('arko_admin_token') || localStorage.getItem('token') || localStorage.getItem('access_token'))
+    : null;
 
   return fetch(url, {
     ...options,
     credentials: 'include', // Include httpOnly cookies
     headers: {
       'Content-Type': options.headers?.['Content-Type'] || 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...options.headers,
     }
   });

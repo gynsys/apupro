@@ -1,16 +1,17 @@
 import time
 import random
 import re
+import urllib.parse
 import threading
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Set
 from pydantic import BaseModel
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 import requests
 
-from app.db.base import get_db
+from app.db.base import get_db, get_db_session
 from app.api.v1.endpoints.arko import get_current_arko_admin
 from app.db.models.arko import ArkoAdmin
 try:
@@ -26,26 +27,26 @@ class ScrapingConfig(BaseModel):
     headless: bool = True
     bypass_cloudflare: bool = True
     request_delay_ms: int = 20000
-    active_portals: List[str] = ["mercadolibre", "epa"]
+    active_portals: List[str] = ["epa", "mercadolibre"]
     batch_size: int = 10
     portal_urls: Dict[str, str] = {
-        "mercadolibre": "https://listado.mercadolibre.com.ve/{query}",
-        "epa": "https://ve.epaenlinea.com/catalogsearch/result/?q={query}"
+        "epa": "https://ve.epaenlinea.com/catalogsearch/result/?q={query}",
+        "mercadolibre": "https://listado.mercadolibre.com.ve/{query}"
     }
 
 # --- ESTADO GLOBAL DEL BOT ---
 class BotState:
-    def __init__(self):
-        self.status = "idle"  # idle, running, paused, error
-        self.config = ScrapingConfig()
+    def __init__(self) -> None:
+        self.status: str = "idle"  # idle, running, paused, error
+        self.config: ScrapingConfig = ScrapingConfig()
         self.current_task: Optional[threading.Thread] = None
         self.logs: List[Dict[str, Any]] = []
-        self.stop_flag = False
-        self.pause_flag = False
+        self.stop_flag: bool = False
+        self.pause_flag: bool = False
         
-    def add_log(self, level: str, message: str):
+    def add_log(self, level: str, message: str) -> None:
         log_entry = {
-            "id": f"{len(self.logs)}-{datetime.now().timestamp()}",
+            "id": f"{int(time.time() * 1000)}-{random.randint(100, 999)}",
             "timestamp": datetime.now().strftime("%H:%M:%S"),
             "level": level,
             "message": message
@@ -55,26 +56,26 @@ class BotState:
         if len(self.logs) > 1000:
             self.logs = self.logs[-1000:]
         
-    def set_status(self, status: str):
+    def set_status(self, status: str) -> None:
         self.status = status
         self.add_log("INFO", f"Estado cambiado a: {status}")
 
 bot_state = BotState()
 
 # --- FUNCIONES DE VALIDACIÓN (MANTENIDAS DEL ORIGINAL) ---
-def extract_numbers_and_dims(text):
+def extract_numbers_and_dims(text: str) -> Set[str]:
     text = text.replace('"', '').replace("'", "")
     pattern = r'\b(\d+(?:/\d+)?(?:[\.,]\d+)?)\b'
     matches = re.findall(pattern, text)
     return set(matches)
 
-def get_keywords(text):
+def get_keywords(text: str) -> Set[str]:
     text = text.lower().replace('"', '').replace("'", "")
     words = re.findall(r'\b[a-z]{3,}\b', text)
     stop_words = {'para', 'con', 'sin', 'los', 'las', 'del', 'por', 'que', 'una', 'uso', 'tipo'}
     return set([w for w in words if w not in stop_words])
 
-def clean_search_term(desc):
+def clean_search_term(desc: str) -> str:
     desc_upper = desc.upper()
     medida = re.search(r'\d+(?:/\d+)?(?:[\.,]\d+)?\s*(?:MM|CM|M|PULG|\"|KG|G|L|ML)', desc_upper)
     medida_str = medida.group() if medida else ''
@@ -87,8 +88,9 @@ def clean_search_term(desc):
     query = f'{core} {medida_str}'.strip()
     return query
 
-def is_valid_product(db_desc, scraped_desc):
-    if not scraped_desc: return False
+def is_valid_product(db_desc: str, scraped_desc: str) -> bool:
+    if not scraped_desc:
+        return False
     db_desc = db_desc.lower()
     scraped_desc = scraped_desc.lower()
     
@@ -116,7 +118,7 @@ def is_valid_product(db_desc, scraped_desc):
     return True
 
 # --- ORQUESTADOR DEL BOT CON CONFIGURACIÓN DINÁMICA ---
-def scraping_seguro_configurable():
+def scraping_seguro_configurable() -> None:
     """
     Scraping seguro con configuración dinámica del dashboard
     """
@@ -127,15 +129,26 @@ def scraping_seguro_configurable():
     fecha_version = datetime.now().strftime("%Y-%m-%d")
     
     try:
-        from app.db.base import get_db
-        
-        with get_db() as db:
-            result = db.execute(text(f'''
+        with get_db_session() as db:
+            result = db.execute(text('''
                 SELECT "CodMat", "Descri", "CosMat" 
                 FROM cost360_materials 
-                WHERE "CodMat" LIKE 'MAT%'
-                LIMIT {config.batch_size}
-            ''')).fetchall()
+                WHERE "Descri" IS NOT NULL AND TRIM("Descri") != ''
+                  AND "CodMat" NOT IN (
+                      SELECT material_id FROM historial_precios WHERE fecha = :fecha
+                  )
+                ORDER BY "CodMat" ASC
+                LIMIT :batch_size
+            '''), {"batch_size": config.batch_size, "fecha": fecha_version}).fetchall()
+
+            if not result:
+                result = db.execute(text('''
+                    SELECT "CodMat", "Descri", "CosMat" 
+                    FROM cost360_materials 
+                    WHERE "Descri" IS NOT NULL AND TRIM("Descri") != ''
+                    ORDER BY "CodMat" ASC
+                    LIMIT :batch_size
+                '''), {"batch_size": config.batch_size}).fetchall()
             
             materiales_db = [{"codigo": row[0], "descripcion": row[1], "precio_bd": row[2]} for row in result]
         
@@ -188,7 +201,7 @@ def scraping_seguro_configurable():
             
             try:
                 termino_limpio = clean_search_term(mat['descripcion'])
-                descripcion_url = termino_limpio.replace(' ', '+').replace('/', '')
+                descripcion_url = urllib.parse.quote_plus(termino_limpio)
                 
                 bot_state.add_log("INFO", f"Procesando [{indice+1}/{len(materiales_db)}] {mat['codigo']}: {mat['descripcion']}")
                 
@@ -233,7 +246,7 @@ def scraping_seguro_configurable():
                                             portal_exitoso = portal_actual
                                             titulo_exitoso = titulo_detectado
                                             break
-                                    except:
+                                    except Exception:
                                         continue
                                         
                     elif portal_actual == 'mercadolibre':
@@ -242,6 +255,10 @@ def scraping_seguro_configurable():
                         
                         if response.status_code == 200:
                             html_content = response.text
+                            if "suspicious-traffic" in html_content:
+                                bot_state.add_log("WARN", "MercadoLibre requiere verificación anti-bot (captcha). Probando otros portales...")
+                                continue
+
                             titulo_detectado = ''
                             title_matches = re.findall(r'class="ui-search-item__title"[^>]*>(.*?)<', html_content)
                             if title_matches:
@@ -267,13 +284,13 @@ def scraping_seguro_configurable():
                                             portal_exitoso = portal_actual
                                             titulo_exitoso = titulo_detectado
                                             break
-                                    except:
+                                    except Exception:
                                         continue
                 
                 if precio_detectado > 0:
                     bot_state.add_log("INFO", f"[EXITO] {mat['codigo']} | BD: ${mat['precio_bd']} | Scraping: ${precio_detectado} | Fuente: {portal_exitoso}")
                     try:
-                        with get_db() as db_hist:
+                        with get_db_session() as db_hist:
                             db_hist.execute(text('''
                                 INSERT INTO historial_precios (material_id, fecha, precio, fuente, status, titulo_scraped)
                                 VALUES (:material_id, :fecha, :precio, :fuente, 'pending', :titulo_scraped)
@@ -285,7 +302,7 @@ def scraping_seguro_configurable():
                                 "titulo_scraped": titulo_exitoso
                             })
                             db_hist.commit()
-                            success_count += 1
+                        success_count += 1
                     except Exception as db_error:
                         bot_state.add_log("ERROR", f"Error guardando en BD: {db_error}")
                 else:

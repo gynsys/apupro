@@ -551,6 +551,196 @@ def _is_primary_acarreo(query: str) -> bool:
     return True
 
 
+def _check_parametric_missing_specification(
+    query: str,
+) -> Optional[Tuple[str, str, str, List[str]]]:
+    """
+    Verifica si una consulta involucra una familia constructiva paramétrica crítica
+    (bombas, paredes de bloques, losas, pavimentos, excavaciones, concertinas, tuberías, etc.)
+    y carece de su parámetro físico, dimensional o de capacidad esencial.
+
+    Retorna una tupla (veredicto, mensaje, codigo_interno, opciones) si falta el parámetro,
+    o None si la especificación es suficiente o no aplica.
+    """
+    lower = query.lower()
+    is_demolition = bool(
+        re.search(r"\b(demolicion|demoler|picar|tumbar|derribar|desmontaje|desmontar)\b", lower)
+    )
+
+    # 1. Bomba / Equipo Hidráulico
+    if re.search(r"\b(bomba|bombas|electrobomba|electrobombas|motobomba|motobombas)\b", lower):
+        has_hp_or_flow = bool(
+            re.search(
+                r"\b\d+([\.,]\d+)?\s*(hp|cv|kw|lps|gpm)\b|\b(0\.5|1\.5|1\/2|3\/4)\s*hp\b",
+                lower,
+            )
+        )
+        if not has_hp_or_flow:
+            return (
+                "clarification_needed",
+                "¿Qué potencia (HP, kW) o caudal tiene la bomba?",
+                "RAG_PARAMETRIC_MISSING_BOMBA",
+                [],
+            )
+
+    # 2. Concertina de Seguridad
+    if re.search(r"\b(concertina|concertinas)\b", lower):
+        has_diam = bool(
+            re.search(
+                r"\b(30|45|60|75|90|150)\s*(cm|pulg|\"|mm)?\b|\b\d+(\.\d+)?\s*(cm|pulg|\"|mm)\b|\b(12|18|24|36)\s*(pulg|\")\b|\b\d+\s*\/\s*\d+\s*(pulg|\")?\b",
+                lower,
+            )
+        )
+        if not has_diam:
+            return (
+                "clarification_needed",
+                "¿Qué diámetro tiene la concertina de seguridad? (Ej: 30 cm / 12\", 45 cm / 18\", 60 cm / 24\")",
+                "RAG_PARAMETRIC_MISSING_CONCERTINA",
+                [],
+            )
+
+    # 3. Paredes de Bloques / Muros (no demolición)
+    has_wall = bool(re.search(r"\b(pared|paredes|muro|muros|tabique|tabiques)\b", lower))
+    has_block = bool(re.search(r"\b(bloque|bloques|ladrillo|ladrillos|arcilla)\b", lower))
+    if has_wall and has_block and not is_demolition:
+        has_thickness = bool(
+            re.search(
+                r"\be\s*=\s*\d+|\b\d+\s*(cm|cms)\b|\b\d+x\d+x\d+\b|\b(10|12|15|20)\s*(cm|cms)\b",
+                lower,
+            )
+        )
+        if not has_thickness:
+            return (
+                "clarification_needed",
+                "¿De qué espesor o medida es el bloque de la pared? (Ej: e=10 cm, e=12 cm, e=15 cm, e=20 cm)",
+                "RAG_PARAMETRIC_MISSING_PARED",
+                [],
+            )
+
+    # 4. Losa de Concreto / Techo / Entrepiso (no demolición)
+    if re.search(r"\b(losa|losas)\b", lower) and not is_demolition:
+        has_thickness = bool(
+            re.search(r"\be\s*=\s*\d+|\b\d+\s*(cm|cms)\b|\bespesor\b", lower)
+        )
+        if not has_thickness:
+            return (
+                "clarification_needed",
+                "¿De qué espesor es la losa de concreto? (Ej: e=15 cm, e=20 cm, e=25 cm, e=30 cm)",
+                "RAG_PARAMETRIC_MISSING_LOSA",
+                [],
+            )
+
+    # 5. Pavimento / Acera / Brocal (no demolición)
+    if re.search(r"\b(pavimento|pavimentos|acera|aceras)\b", lower) and not is_demolition:
+        has_thickness = bool(
+            re.search(r"\be\s*=\s*\d+|\b\d+\s*(cm|cms)\b|\bespesor\b", lower)
+        )
+        if not has_thickness:
+            return (
+                "clarification_needed",
+                "¿Qué espesor tiene el pavimento o acera? (Ej: e=10 cm, e=15 cm, e=20 cm)",
+                "RAG_PARAMETRIC_MISSING_PAVIMENTO",
+                [],
+            )
+
+    # 6. Excavación (profundidad o método)
+    if re.search(r"\b(excavaci[oó]n|excavaciones|excavar|excabaci[oó]n|excabaciones|excabar)\b", lower):
+        has_depth = bool(
+            re.search(r"\b(hasta\s*\d+(\.\d+)?\s*m|profundidad|\d+(\.\d+)?\s*m|\d+\s*metros?)\b", lower)
+        )
+        has_method = bool(
+            re.search(
+                r"\b(a\s*mano|manual|manualmente|a\s*maquina|mecanic[ao]|retroexcavadora|jumbo|tractor)\b",
+                lower,
+            )
+        )
+        if not has_depth and not has_method:
+            return (
+                "clarification_needed",
+                "¿Qué profundidad tiene la excavación y con qué método se ejecutará? (Ej: hasta 1.50 m a mano, 1.50 a 3.00 m a máquina)",
+                "RAG_PARAMETRIC_MISSING_EXCAVACION",
+                [],
+            )
+
+    # 7. Tubería / Válvula (no demolición)
+    if re.search(r"\b(tuberia|tuberias|tubo|tubos|valvula|valvulas)\b", lower) and not is_demolition:
+        has_diam = bool(
+            re.search(
+                r"\bd\s*=\s*|\b\d+(\.\d+)?\s*(pulg|pulgadas?|\"|mm)\b|\b\d+\s*\/\s*\d+\s*(pulg|\"|mm)?\b|\b\d+\s*mm\b|\b(1\/2|3\/4|1|1-1\/2|2|3|4|6)\s*(pulg|\"|in)?\b|\bdiametro\b",
+                lower,
+            )
+        )
+        if not has_diam:
+            return (
+                "clarification_needed",
+                "¿Qué diámetro tiene la tubería o válvula? (Ej: 1/2\", 3/4\", 1\", 2\", 3\", 4\")",
+                "RAG_PARAMETRIC_MISSING_TUBERIA",
+                [],
+            )
+
+    # 8. Transformador
+    if re.search(r"\b(transformador|transformadores)\b", lower):
+        has_kva = bool(re.search(r"\b\d+([\.,]\d+)?\s*(kva|k\.?v\.?a\.?|mva)\b", lower))
+        if not has_kva:
+            return (
+                "clarification_needed",
+                "¿Qué capacidad en kVA tiene el transformador? (Ej: 15 kVA, 25 kVA, 37.5 kVA, 50 kVA, 75 kVA)",
+                "RAG_PARAMETRIC_MISSING_TRANSFORMADOR",
+                [],
+            )
+
+    # 9. Tablero Eléctrico
+    if re.search(r"\b(tablero|tableros)\b", lower):
+        has_circuits = bool(re.search(r"\b\d+\s*(circuitos?|ctos?|polos?|fases?)\b", lower))
+        if not has_circuits:
+            return (
+                "clarification_needed",
+                "¿Cuántos circuitos o polos tiene el tablero eléctrico? (Ej: 8 circuitos, 12 circuitos, 18 circuitos, 24 circuitos, 42 circuitos)",
+                "RAG_PARAMETRIC_MISSING_TABLERO",
+                [],
+            )
+
+    # 10. Cable / Conductor
+    if re.search(r"\b(cable|cables|conductor|conductores)\b", lower) and re.search(r"\b(cobre|aluminio|thw|thhn|tw|tt|electrico|electricos|sumergible)\b", lower):
+        has_gauge = bool(
+            re.search(
+                r"\b(n[°º\.]?\s*\d+|\d+\s*awg|\d+\s*mcm|\d+(\.\d+)?\s*mm2|calibre\s*#?\s*\d+)\b",
+                lower,
+            )
+        )
+        if not has_gauge:
+            return (
+                "clarification_needed",
+                "¿Qué calibre o sección tiene el conductor eléctrico? (Ej: #14 AWG, #12 AWG, #10 AWG, #8 AWG, 2.5 mm²)",
+                "RAG_PARAMETRIC_MISSING_CABLE",
+                [],
+            )
+
+    # 11. Tanque de Agua
+    if re.search(r"\b(tanque|tanques)\b", lower):
+        has_volume = bool(re.search(r"\b\d+([\.,]\d+)?\s*(lts?|litros?|m3|m³|gal|galones?)\b", lower))
+        if not has_volume:
+            return (
+                "clarification_needed",
+                "¿De qué capacidad o volumen es el tanque de agua? (Ej: 500 lts, 1000 lts, 1500 lts, 2000 lts, 5000 lts)",
+                "RAG_PARAMETRIC_MISSING_TANQUE",
+                [],
+            )
+
+    # 12. Aire Acondicionado
+    if re.search(r"\b(aire\s+acondicionado|aires\s+acondicionados|split|fancoil|chiller)\b", lower):
+        has_btu = bool(re.search(r"\b\d+([\.,]\d+)?\s*(btu|ton|tr)\b", lower))
+        if not has_btu:
+            return (
+                "clarification_needed",
+                "¿Qué capacidad frigorífica tiene el aire acondicionado? (Ej: 12000 BTU, 18000 BTU, 24000 BTU, 36000 BTU)",
+                "RAG_PARAMETRIC_MISSING_AIRE",
+                [],
+            )
+
+    return None
+
+
 def validate_rag_signals(
     query: str,
     candidates: Optional[List[Dict[str, Any]]] = None,
@@ -641,6 +831,12 @@ def validate_rag_signals(
                 [],  # Cero adivinanzas: no mostrar alternativas engañosas
             )
 
+    # ── CHECK 2.4: Validación de Parámetros Técnicos Críticos (Cero Improvisación) ──
+    parametric_check = _check_parametric_missing_specification(query)
+    if parametric_check is not None:
+        logger.info("Parametric query missing dimension intercepted by Capa 2 [%s]: %.80s", parametric_check[2], query)
+        return parametric_check
+
     # ── CHECK 3: Evaluación de Candidatos RAG (si fueron proporcionados) ──
     if candidates is not None:
         if not candidates:
@@ -709,6 +905,22 @@ def build_rejection_response(
                 "Estructura recomendada: Acarreo de [Material] en [Unidad/Método] a [Distancia]. "
                 "Ejemplo: 'Acarreo de escombros a mano en carretilla a 30m (m3.m)' o 'Acarreo en camión volteo a 15 km (m3xkm)'."
             ),
+            "partida": None,
+            "materials": [],
+            "equipments": [],
+            "labors": [],
+            "advertencias": [],
+            "_internal_code": codigo,
+        }
+
+    if codigo.startswith("RAG_PARAMETRIC_MISSING_"):
+        return {
+            "status": "clarification_needed",
+            "clarification_message": mensaje,
+            "recommendation": "Indica este parámetro técnico para seleccionar o construir el APU con el costo exacto.",
+            "options": [],
+            "questions": [mensaje],
+            "guia_redaccion": f"Estructura recomendada: agrega la especificación técnica requerida a tu descripción ({mensaje}).",
             "partida": None,
             "materials": [],
             "equipments": [],
