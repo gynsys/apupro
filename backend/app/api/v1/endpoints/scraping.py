@@ -488,6 +488,56 @@ async def clear_logs(current_user: ArkoAdmin = Depends(get_current_arko_admin)) 
     bot_state.logs = []
     return {"status": "cleared"}
 
+@router.get("/diag")
+def get_scraping_diag() -> Dict[str, Any]:
+    """Diagnóstico en tiempo real del bot y conectividad a tiendas desde el servidor."""
+    epa_test: Dict[str, Any] = {}
+    try:
+        url = "https://ve.epaenlinea.com/catalogsearch/result/?q=LAMINA+YESO+1%2F2"
+        headers = {
+            'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            'Referer': 'https://ve.epaenlinea.com/'
+        }
+        resp = requests.get(url, headers=headers, timeout=10)
+        resp.encoding = resp.apparent_encoding or 'utf-8'
+        html_t = resp.text
+        titles = re.findall(r'class="product-item-link"[^>]*>(.*?)</a>', html_t, re.DOTALL)
+        prices = re.findall(r'data-price-amount="([\d\.,]+)"', html_t)
+        epa_test = {
+            "status_code": resp.status_code,
+            "html_length": len(html_t),
+            "titles_found": len(titles),
+            "prices_found": len(prices),
+            "first_title": normalize_text_dimensions(titles[0].strip()) if titles else None,
+            "first_price": prices[0] if prices else None,
+        }
+    except Exception as exc:
+        epa_test = {"error": str(exc)}
+
+    db_test: Dict[str, Any] = {}
+    try:
+        with get_db_session() as db:
+            mat_count = db.execute(text('SELECT COUNT(*) FROM cost360_materials')).scalar()
+            hist_count = db.execute(text('SELECT COUNT(*) FROM historial_precios')).scalar()
+            first_mats = db.execute(text('SELECT "CodMat", "Descri" FROM cost360_materials ORDER BY "CodMat" ASC LIMIT 3')).fetchall()
+            db_test = {
+                "materials_count": mat_count,
+                "history_count": hist_count,
+                "first_materials": [{"cod": r[0], "desc": r[1]} for r in first_mats]
+            }
+    except Exception as exc:
+        db_test = {"error": str(exc)}
+
+    return {
+        "bot_status": bot_state.status,
+        "active_portals": bot_state.config.active_portals,
+        "batch_size": bot_state.config.batch_size,
+        "continuous_mode": bot_state.config.continuous_mode,
+        "recent_logs": bot_state.logs[-30:],
+        "epa_connectivity": epa_test,
+        "database_status": db_test
+    }
+
 # --- ENDPOINTS DE PENDING RESULTS (MANTENIDOS DEL ORIGINAL) ---
 @router.get("/pending")
 async def get_pending_scraping_results(

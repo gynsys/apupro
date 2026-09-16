@@ -100,6 +100,42 @@ export const useScrapingWebSocket = () => {
     };
   }, [connect, disconnect]);
 
+  // Fallback: Si WebSocket no está conectado, consultar logs vía HTTP cada 3s
+  useEffect(() => {
+    if (connected) return;
+
+    let isMounted = true;
+    const pollLogs = async () => {
+      try {
+        const token = typeof localStorage !== 'undefined'
+          ? (localStorage.getItem('arko_admin_token') || localStorage.getItem('token'))
+          : null;
+        const headers: Record<string, string> = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const res = await fetch(`${API_URL}/scraping/logs?limit=150`, {
+          headers,
+          credentials: 'include'
+        });
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setLogs(data);
+          }
+        }
+      } catch (err) {
+        // Silencioso
+      }
+    };
+
+    pollLogs();
+    const interval = setInterval(pollLogs, 3000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [connected]);
+
   return {
     logs,
     status,
