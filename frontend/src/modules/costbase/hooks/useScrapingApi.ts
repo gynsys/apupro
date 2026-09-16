@@ -8,6 +8,7 @@ export interface ScrapingConfig {
   request_delay_ms: number;
   active_portals: string[];
   batch_size: number;
+  continuous_mode?: boolean;
   portal_urls: Record<string, string>;
 }
 

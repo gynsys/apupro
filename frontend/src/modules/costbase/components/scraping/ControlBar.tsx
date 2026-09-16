@@ -1,8 +1,9 @@
-import React from "react";
-import { Play, Pause, ShieldAlert, Activity } from "lucide-react";
+import React, { useState } from "react";
+import { Play, Pause, ShieldAlert, Activity, Download } from "lucide-react";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
 import { useScrapingApi } from "../../hooks/useScrapingApi";
+import { API_URL } from "../../../../services/api";
 
 type BotStatus = "idle" | "running" | "paused" | "error";
 
@@ -46,12 +47,47 @@ export const ControlBar: React.FC<ControlBarProps> = ({
     }
   };
 
+  const [downloading, setDownloading] = useState(false);
+
   const handleKill = async () => {
     try {
       await killScraping();
       onStatusChange("idle");
     } catch (error) {
       console.error("Error killing scraping:", error);
+    }
+  };
+
+  const handleDownloadExcel = async () => {
+    setDownloading(true);
+    try {
+      const token = typeof localStorage !== 'undefined'
+        ? (localStorage.getItem('arko_admin_token') || localStorage.getItem('token'))
+        : null;
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(`${API_URL}/scraping/export-excel`, {
+        headers,
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('No hay datos en el historial para exportar a Excel');
+      }
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `precios_scraped_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(downloadUrl);
+      document.body.removeChild(a);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Error al descargar Excel');
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -127,6 +163,16 @@ export const ControlBar: React.FC<ControlBarProps> = ({
         >
           <ShieldAlert className="h-4 w-4" />
           Kill Switch
+        </Button>
+
+        <Button
+          variant="outline"
+          onClick={handleDownloadExcel}
+          disabled={downloading}
+          className="gap-2 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+        >
+          <Download className="h-4 w-4" />
+          {downloading ? "Descargando..." : "Descargar Excel"}
         </Button>
       </div>
     </div>

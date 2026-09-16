@@ -1,3 +1,4 @@
+import io
 import time
 import random
 import re
@@ -7,9 +8,11 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any, Set
 from pydantic import BaseModel
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 import requests
+import pandas as pd
 
 from app.db.base import get_db, get_db_session
 from app.api.v1.endpoints.arko import get_current_arko_admin
@@ -29,6 +32,7 @@ class ScrapingConfig(BaseModel):
     request_delay_ms: int = 20000
     active_portals: List[str] = ["epa", "mercadolibre"]
     batch_size: int = 10
+    continuous_mode: bool = False
     portal_urls: Dict[str, str] = {
         "epa": "https://ve.epaenlinea.com/catalogsearch/result/?q={query}",
         "mercadolibre": "https://listado.mercadolibre.com.ve/{query}"
@@ -129,39 +133,8 @@ def scraping_seguro_configurable() -> None:
     fecha_version = datetime.now().strftime("%Y-%m-%d")
     
     try:
-        with get_db_session() as db:
-            result = db.execute(text('''
-                SELECT "CodMat", "Descri", "CosMat" 
-                FROM cost360_materials 
-                WHERE "Descri" IS NOT NULL AND TRIM("Descri") != ''
-                  AND "CodMat" NOT IN (
-                      SELECT material_id FROM historial_precios WHERE fecha = :fecha
-                  )
-                ORDER BY "CodMat" ASC
-                LIMIT :batch_size
-            '''), {"batch_size": config.batch_size, "fecha": fecha_version}).fetchall()
-
-            if not result:
-                result = db.execute(text('''
-                    SELECT "CodMat", "Descri", "CosMat" 
-                    FROM cost360_materials 
-                    WHERE "Descri" IS NOT NULL AND TRIM("Descri") != ''
-                    ORDER BY "CodMat" ASC
-                    LIMIT :batch_size
-                '''), {"batch_size": config.batch_size}).fetchall()
-            
-            materiales_db = [{"codigo": row[0], "descripcion": row[1], "precio_bd": row[2]} for row in result]
-        
-        if not materiales_db:
-            bot_state.add_log("WARN", "No se encontraron materiales en la base de datos")
-            bot_state.set_status("idle")
-            return
-        
-        bot_state.add_log("INFO", f"Procesando lote de {len(materiales_db)} materiales")
-        bot_state.add_log("INFO", f"Configuración: Concurrency={config.max_concurrency}, Delay={config.request_delay_ms}ms, Portals={config.active_portals}")
-        
         # Inicializar Cloudscraper si bypass_cloudflare está activo
-        if config.bypass_cloudflare:
+        if config.bypass_cloudflare and cloudscraper:
             bot_state.add_log("INFO", "Iniciando Cloudscraper para evadir Cloudflare/PerimeterX")
             scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False})
         else:
@@ -179,8 +152,33 @@ def scraping_seguro_configurable() -> None:
         portales = config.active_portals
         processed_count = 0
         success_count = 0
-        
-        for indice, mat in enumerate(materiales_db):
+
+        while True:
+            if bot_state.stop_flag:
+                bot_state.add_log("INFO", "Bot detenido por Kill Switch")
+                break
+
+            with get_db_session() as db:
+                result = db.execute(text('''
+                    SELECT "CodMat", "Descri", "CosMat" 
+                    FROM cost360_materials 
+                    WHERE "Descri" IS NOT NULL AND TRIM("Descri") != ''
+                      AND "CodMat" NOT IN (
+                          SELECT material_id FROM historial_precios WHERE fecha = :fecha
+                      )
+                    ORDER BY "CodMat" ASC
+                    LIMIT :batch_size
+                '''), {"batch_size": config.batch_size, "fecha": fecha_version}).fetchall()
+
+                materiales_db = [{"codigo": row[0], "descripcion": row[1], "precio_bd": row[2]} for row in result]
+            
+            if not materiales_db:
+                bot_state.add_log("INFO", "Todos los materiales disponibles para la fecha han sido procesados")
+                break
+            
+            bot_state.add_log("INFO", f"Procesando lote de {len(materiales_db)} materiales (Total acumulado: {processed_count})")
+            
+            for indice, mat in enumerate(materiales_db):
             # Verificar flags de control
             if bot_state.stop_flag:
                 bot_state.add_log("INFO", "Bot detenido por Kill Switch")
@@ -318,7 +316,11 @@ def scraping_seguro_configurable() -> None:
             bot_state.add_log("INFO", f"Esperando {delay_seconds:.1f}s antes del siguiente material...")
             time.sleep(delay_seconds)
         
-        bot_state.add_log("INFO", f"Lote finalizado: {processed_count} procesados, {success_count} exitosos")
+            bot_state.add_log("INFO", f"Lote finalizado: {processed_count} acumulados, {success_count} exitosos")
+            if not config.continuous_mode or bot_state.stop_flag:
+                break
+        
+        bot_state.add_log("INFO", f"Sesión de scraping finalizada: {processed_count} procesados, {success_count} exitosos")
         bot_state.set_status("idle")
         
     except Exception as e:
@@ -466,3 +468,92 @@ async def reject_scraping_result(
     db.execute(text("UPDATE historial_precios SET status = 'rejected' WHERE id = :id"), {"id": result_id})
     db.commit()
     return {"status": "success"}
+
+
+class VersionarRequest(BaseModel):
+    limit: int = 25
+
+
+@router.post("/versionar-precios-db")
+async def versionar_precios_db(
+    payload: Optional[VersionarRequest] = None,
+    current_user: ArkoAdmin = Depends(get_current_arko_admin)
+) -> Dict[str, Any]:
+    """Lanzar una tanda de scraping (compatible con el botón del frontend)."""
+    limit = payload.limit if payload else 25
+    if limit < 1:
+        raise HTTPException(status_code=400, detail="limit debe ser mayor o igual a 1")
+    
+    bot_state.config.batch_size = limit
+    if bot_state.status != "running":
+        bot_state.stop_flag = False
+        bot_state.pause_flag = False
+        task = threading.Thread(target=scraping_seguro_configurable)
+        bot_state.current_task = task
+        task.start()
+    return {"status": "processing", "message": f"Escaneo de {limit} materiales iniciado en segundo plano"}
+
+
+@router.get("/export-excel")
+async def export_scraped_excel(
+    date: Optional[str] = None,
+    current_user: ArkoAdmin = Depends(get_current_arko_admin)
+) -> Response:
+    """Genera y descarga un archivo Excel con todos los precios scrapeados y variaciones."""
+    with get_db_session() as db:
+        query_str = '''
+            SELECT 
+                h.id AS "ID",
+                h.material_id AS "Código",
+                c."Descri" AS "Descripción Base de Datos",
+                ROUND(CAST(c."CosMat" AS numeric), 2) AS "Precio Anterior BD ($)",
+                ROUND(CAST(h.precio AS numeric), 2) AS "Precio Scrapeado ($)",
+                ROUND(CAST(h.precio - c."CosMat" AS numeric), 2) AS "Diferencia ($)",
+                CASE 
+                    WHEN c."CosMat" > 0 THEN ROUND(CAST(((h.precio - c."CosMat") / c."CosMat") * 100 AS numeric), 2)
+                    ELSE 0 
+                END AS "Variación (%)",
+                h.titulo_scraped AS "Título Producto Tienda",
+                h.fuente AS "Portal / Fuente",
+                h.fecha AS "Fecha",
+                h.status AS "Estado Aprobación"
+            FROM historial_precios h
+            LEFT JOIN cost360_materials c ON h.material_id = c."CodMat"
+        '''
+        if date:
+            query_str += " WHERE h.fecha = :date"
+            query_str += " ORDER BY h.id DESC"
+            rows = db.execute(text(query_str), {"date": date}).fetchall()
+        else:
+            query_str += " ORDER BY h.id DESC"
+            rows = db.execute(text(query_str)).fetchall()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="No hay precios en el historial para exportar")
+
+    df = pd.DataFrame(rows, columns=[
+        "ID", "Código", "Descripción Base de Datos", "Precio Anterior BD ($)",
+        "Precio Scrapeado ($)", "Diferencia ($)", "Variación (%)",
+        "Título Producto Tienda", "Portal / Fuente", "Fecha", "Estado Aprobación"
+    ])
+
+    excel_buffer = io.BytesIO()
+    with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
+        df.to_excel(writer, sheet_name="Nuevos Precios Scraped", index=False)
+        ws = writer.sheets["Nuevos Precios Scraped"]
+        for col in ws.columns:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            col_letter = col[0].column_letter
+            ws.column_dimensions[col_letter].width = min(max_len + 3, 50)
+
+    excel_buffer.seek(0)
+    file_date = date or datetime.now().strftime("%Y-%m-%d")
+    filename = f"precios_scraped_{file_date}.xlsx"
+
+    return Response(
+        content=excel_buffer.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
+    )

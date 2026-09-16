@@ -1,5 +1,5 @@
 import React from "react";
-import { Settings, Gauge, Eye, ShieldCheck, Timer, Globe, Plus, Trash2 } from "lucide-react";
+import { Settings, Gauge, Eye, ShieldCheck, Timer, Globe, Plus, Trash2, Moon } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/Card";
 import { Label, Input } from "../ui/Input";
 import { Switch } from "../ui/Switch";
@@ -104,6 +104,23 @@ export const ConfigPanel: React.FC<{ className?: string }> = ({ className }) => 
               checked={config.bypass_cloudflare}
               onChange={(e) =>
                 handleConfigChange({ bypass_cloudflare: e.target.checked })
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label
+              htmlFor="continuous"
+              className="flex cursor-pointer items-center gap-1.5 text-zinc-300"
+            >
+              <Moon className="h-3.5 w-3.5 text-zinc-500" />
+              Modo Nocturno (Continuo)
+            </Label>
+            <Switch
+              id="continuous"
+              checked={Boolean(config.continuous_mode)}
+              onChange={(e) =>
+                handleConfigChange({ continuous_mode: e.target.checked })
               }
             />
           </div>
