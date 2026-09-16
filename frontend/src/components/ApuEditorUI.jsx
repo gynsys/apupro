@@ -450,7 +450,6 @@ export default function ApuEditorUI({
                   <th className="p-2 w-24 text-right border-r border-slate-200">Deprec.</th>
                   <th className="p-2 w-32 text-right border-r border-slate-200">Precio</th>
                   <th className="p-2 w-32 text-right border-r border-slate-200">Total Día</th>
-                  <th className="p-2 w-32 text-right border-r border-slate-200">Unitario</th>
                   <th className="p-2 w-16 text-center"></th>
                 </tr>
               </thead>
@@ -509,9 +508,6 @@ export default function ApuEditorUI({
                     <td className="p-2 text-right font-semibold text-slate-700 bg-slate-50 text-xs border-r border-slate-200">
                       {((eq.cantidad * (eq.depreciacion ?? 1.0) * (eq.precio_unitario * exRate)) * (1 + (equipment_inflation/100))).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
-                    <td className="p-2 text-right font-bold text-slate-800 bg-white text-xs border-r border-slate-200">
-                      {(((eq.cantidad * (eq.depreciacion ?? 1.0) * (eq.precio_unitario * exRate)) * (1 + (equipment_inflation/100))) / (item.performance || item.rendimiento || 1)).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
-                    </td>
                     <td className="p-2 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button
@@ -538,11 +534,19 @@ export default function ApuEditorUI({
               </tbody>
             </table>
           </div>
-          <div className="bg-slate-50 px-4 py-2 border-t border-slate-300 flex justify-end items-center gap-4">
-            <span className="text-xs font-bold text-slate-600 uppercase">Total Equipos (Día):</span>
-            <span className="text-sm font-black text-slate-800 bg-white border border-slate-300 px-3 py-1 rounded min-w-[120px] text-right">
-              {(costos.equipos * (item.performance || item.rendimiento || 1)).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
-            </span>
+          <div className="bg-slate-50 px-4 py-2.5 border-t border-slate-300 flex flex-col items-end gap-2">
+            <div className="flex items-center gap-4">
+              <span className="text-xs font-bold text-slate-600 uppercase">Total Equipos (Día):</span>
+              <span className="text-sm font-black text-slate-800 bg-white border border-slate-300 px-3 py-1 rounded min-w-[120px] text-right">
+                {calculateEquipmentTotalDay().toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
+              </span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-xs font-bold text-slate-600 uppercase">Total Equipos Unitario:</span>
+              <span className="text-sm font-black text-slate-800 bg-white border border-slate-300 px-3 py-1 rounded min-w-[120px] text-right">
+                {costos.equipos.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -580,7 +584,6 @@ export default function ApuEditorUI({
                   <th className="p-2 w-28 text-right border-r border-slate-200">Bono</th>
                   <th className="p-2 w-32 text-right border-r border-slate-200">Total Jornal</th>
                   <th className="p-2 w-32 text-right border-r border-slate-200">Total Bono</th>
-                  <th className="p-2 w-32 text-right border-r border-slate-200">Unitario</th>
                   <th className="p-2 w-16 text-center"></th>
                 </tr>
               </thead>
@@ -640,9 +643,6 @@ export default function ApuEditorUI({
                     </td>
                     <td className="p-2 text-right font-semibold text-slate-700 bg-slate-50 text-xs border-r border-slate-200">
                       {((lab.cantidad * ((lab.bono || labor_bonus || 0) * exRate)) * (1 + (labor_inflation/100))).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
-                    </td>
-                    <td className="p-2 text-right font-bold text-slate-800 bg-white text-xs border-r border-slate-200">
-                      {((((lab.cantidad * (lab.jornal * exRate)) * (1 + (labor_inflation/100))) * (1 + (fcas_percent/100)) + ((lab.cantidad * ((lab.bono || labor_bonus || 0) * exRate)) * (1 + (labor_inflation/100)))) / (item.performance || item.rendimiento || 1)).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
                     <td className="p-2 text-center">
                       <div className="flex items-center justify-center gap-1">
