@@ -142,9 +142,18 @@ export default function ApuEditorUI({
     const target = equipmentModal.targetRow;
     setEquipmentModal({ isOpen: false, targetRow: null });
 
+    const deprecVal = selectedData.depreciacion != null 
+      ? Number(selectedData.depreciacion) 
+      : (selectedData.deprec != null ? Number(selectedData.deprec) : (selectedData.deprec_factor != null ? Number(selectedData.deprec_factor) : 1.0));
+
+    const enrichedData = {
+      ...selectedData,
+      depreciacion: deprecVal
+    };
+
     if (target && target.id) {
       if (onSelectComponent) {
-        onSelectComponent('equipments', target.id, selectedData);
+        onSelectComponent('equipments', target.id, enrichedData);
       } else {
         safeFn(onComponentChange)('equipments', target.id, 'codigo', selectedData.codigo);
         safeFn(onComponentBlur)('equipments', target.id, 'codigo', selectedData.codigo);
@@ -152,12 +161,14 @@ export default function ApuEditorUI({
         safeFn(onComponentBlur)('equipments', target.id, 'descripcion', selectedData.descripcion);
         safeFn(onComponentChange)('equipments', target.id, 'precio_unitario', selectedData.precio_unitario);
         safeFn(onComponentBlur)('equipments', target.id, 'precio_unitario', selectedData.precio_unitario);
+        safeFn(onComponentChange)('equipments', target.id, 'depreciacion', deprecVal);
+        safeFn(onComponentBlur)('equipments', target.id, 'depreciacion', deprecVal);
       }
     } else {
       if (onSelectComponent) {
-        onSelectComponent('equipments', null, selectedData);
+        onSelectComponent('equipments', null, enrichedData);
       } else if (onAddSearchRow) {
-        onAddSearchRow('equipments', selectedData);
+        onAddSearchRow('equipments', enrichedData);
       }
     }
   };

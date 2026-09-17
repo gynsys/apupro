@@ -49,16 +49,24 @@ const TYPE_CONFIG = {
     },
     placeholder: 'Buscar por código (ej: EQU-PES, EQU-LIV) o descripción del equipo...',
     endpoint: '/cost360/equipments',
-    mapItem: (eq) => ({
-      codigo: eq.ref_code || eq.CodEqu || '',
-      cod_ins: eq.CodEqu || '',
-      ref_code: eq.ref_code || '',
-      descripcion: eq.Descri || '',
-      precio_unitario: Number(eq.precio != null ? eq.precio : (eq.CosDia || 0)),
-      depreciacion: Number(eq.deprec_factor != null ? eq.deprec_factor : 1.0),
-      cantidad: 1,
-      unidad: 'Día'
-    })
+    mapItem: (eq) => {
+      const precio = Number(eq.precio != null ? eq.precio : (eq.CosDia || 0));
+      const cosDia = Number(eq.CosDia || 0);
+      let deprec = eq.deprec_factor != null ? Number(eq.deprec_factor) : null;
+      if ((deprec == null || deprec === 0 || deprec === 1.0) && precio > 0 && cosDia > 0 && precio > cosDia) {
+        deprec = Number((cosDia / precio).toFixed(6));
+      }
+      return {
+        codigo: eq.ref_code || eq.CodEqu || '',
+        cod_ins: eq.CodEqu || '',
+        ref_code: eq.ref_code || '',
+        descripcion: eq.Descri || '',
+        precio_unitario: precio,
+        depreciacion: deprec != null && deprec > 0 ? deprec : 1.0,
+        cantidad: 1,
+        unidad: 'Día'
+      };
+    }
   },
   labors: {
     title: 'Catálogo de Mano de Obra',

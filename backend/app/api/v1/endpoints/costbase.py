@@ -494,13 +494,19 @@ def search_equipments_route(
                 precio = round((precio or 0.0) * factor, 2)
         if precio is None:
             precio = round((cos_dia or 0.0) / dep, 2)
+
+        # Si deprec_factor no vino o es 1.0 pero el precio es alto y claramente el cos_dia es una tasa diaria:
+        eff_deprec = item.deprec_factor
+        if (eff_deprec is None or eff_deprec == 0 or eff_deprec == 1.0) and precio and cos_dia and precio > 0 and cos_dia > 0 and precio > cos_dia:
+            eff_deprec = round(float(cos_dia) / float(precio), 6)
+
         serialized_items.append({
             "CodEqu": item.CodEqu,
             "ref_code": item.ref_code,
             "Descri": item.Descri,
             "CosDia": cos_dia,
             "precio": precio,
-            "deprec_factor": item.deprec_factor,
+            "deprec_factor": eff_deprec if eff_deprec is not None else item.deprec_factor,
         })
     return {"total": total, "items": serialized_items}
 

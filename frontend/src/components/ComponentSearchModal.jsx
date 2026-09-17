@@ -49,6 +49,12 @@ export default function ComponentSearchModal({ isOpen, onClose, onAdd, type, tit
         precio_unitario: item.CosMat || 0
       };
     } else if (type === 'equipments') {
+      const precio = Number(item.precio != null ? item.precio : (item.CosDia || 0));
+      const cosDia = Number(item.CosDia || 0);
+      let deprec = item.deprec_factor != null ? Number(item.deprec_factor) : null;
+      if ((deprec == null || deprec === 0 || deprec === 1.0) && precio > 0 && cosDia > 0 && precio > cosDia) {
+        deprec = Number((cosDia / precio).toFixed(6));
+      }
       return {
         codigo: item.ref_code || item.CodEqu,
         cod_ins: item.CodEqu,
@@ -56,8 +62,8 @@ export default function ComponentSearchModal({ isOpen, onClose, onAdd, type, tit
         descripcion: item.Descri,
         unidad: 'Día',
         cantidad: 1,
-        precio_unitario: item.precio != null ? item.precio : (item.CosDia || 0),
-        depreciacion: item.deprec_factor != null ? item.deprec_factor : 1.0
+        precio_unitario: precio,
+        depreciacion: deprec != null && deprec > 0 ? deprec : 1.0
       };
     } else if (type === 'labors') {
       return {

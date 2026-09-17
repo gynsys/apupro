@@ -196,7 +196,7 @@ export default function BudgetAPUEditorPage() {
           ...selectedData,
           cantidad: existingRow.cantidad || 1,
           ...(type === 'materials' ? { desperdicio: existingRow.desperdicio ?? 5.0, unidad: selectedData.unidad || existingRow.unidad || 'UND' } : {}),
-          ...(type === 'equipments' ? { depreciacion: existingRow.depreciacion ?? 1.0 } : {}),
+          ...(type === 'equipments' ? { depreciacion: selectedData.depreciacion != null ? selectedData.depreciacion : (existingRow.depreciacion ?? 1.0) } : {}),
         };
         await budgetService.addComponent(id, itemId, type, payload);
         toast.success('Insumo agregado con éxito');

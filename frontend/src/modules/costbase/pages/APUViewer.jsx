@@ -122,6 +122,58 @@ export default function APUViewer() {
     }));
   };
 
+  const handleSelectComponent = (type, compId, selectedData) => {
+    setItem(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev };
+      if (compId) {
+        updated[type] = (updated[type] || []).map(c => {
+          if (c.id === compId) {
+            return {
+              ...c,
+              codigo: selectedData.codigo || c.codigo,
+              descripcion: selectedData.descripcion || c.descripcion,
+              precio_unitario: selectedData.precio_unitario != null ? selectedData.precio_unitario : c.precio_unitario,
+              ...(type === 'materials' ? {
+                unidad: selectedData.unidad || c.unidad,
+                desperdicio: selectedData.desperdicio != null ? selectedData.desperdicio : (c.desperdicio ?? 5.0)
+              } : {}),
+              ...(type === 'equipments' ? {
+                depreciacion: selectedData.depreciacion != null ? selectedData.depreciacion : (c.depreciacion ?? 1.0)
+              } : {}),
+              ...(type === 'labors' ? {
+                jornal: selectedData.jornal != null ? selectedData.jornal : c.jornal,
+                bono: selectedData.bono != null ? selectedData.bono : c.bono
+              } : {})
+            };
+          }
+          return c;
+        });
+      } else {
+        const newRow = {
+          id: 'SEL-' + Math.floor(Math.random() * 100000),
+          codigo: selectedData.codigo || '',
+          descripcion: selectedData.descripcion || '',
+          cantidad: 1,
+          precio_unitario: selectedData.precio_unitario || 0,
+        };
+        if (type === 'materials') {
+          newRow.unidad = selectedData.unidad || 'und';
+          newRow.desperdicio = selectedData.desperdicio != null ? selectedData.desperdicio : 5;
+        } else if (type === 'equipments') {
+          newRow.unidad = selectedData.unidad || 'Día';
+          newRow.depreciacion = selectedData.depreciacion != null ? selectedData.depreciacion : 1.0;
+        } else if (type === 'labors') {
+          newRow.unidad = selectedData.unidad || 'Día';
+          newRow.jornal = selectedData.jornal || 0;
+          newRow.bono = selectedData.bono || 0;
+        }
+        updated[type] = [...(updated[type] || []), newRow];
+      }
+      return updated;
+    });
+  };
+
   const handleBack = () => {
     if (fromParam === 'admin-db' || fromParam === '/cost360/admin-db') {
       navigate('/cost360/admin-db');
@@ -312,6 +364,9 @@ export default function APUViewer() {
             onHeaderChange={handleHeaderChange}
             onComponentChange={handleComponentChange}
             onRemoveRow={handleRemoveRow}
+            onAddBlankRow={handleAddRow}
+            onSelectComponent={handleSelectComponent}
+            onAddSearchRow={(type, data) => handleSelectComponent(type, null, data)}
             onSettingsChange={(field, value) => {
               setSettings(prev => ({ ...prev, [field]: value }));
               const mapping = {
