@@ -225,7 +225,23 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
 
   const handleGoBack = (targetStep = null) => {
     if (chatbotLoadingStage > 0) return;
-    setDetectedFullPrompt(null);
+    if (detectedFullPrompt) {
+      const savedPrompt = detectedFullPrompt;
+      setDetectedFullPrompt(null);
+      setCurrentChatStep(1);
+      setChatInputValue(savedPrompt);
+      setGuidedMessages([
+        createInitialMessage(),
+        {
+          id: 'bot-step-1',
+          sender: 'bot',
+          step: 1,
+          text: CHAT_STEP_DEFINITIONS[1].text,
+          chips: CHAT_STEP_DEFINITIONS[1].chips
+        }
+      ]);
+      return;
+    }
     const prevStep = targetStep !== null ? targetStep : currentChatStep - 1;
     if (prevStep < 0) return;
 
@@ -295,57 +311,28 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     if (!text || !text.trim()) return;
     const cleanText = text.trim();
 
-    // 1. Manejo de Fast-Track cuando se detectó previamente un prompt completo
+    // 1. Manejo cuando se detectó previamente un prompt completo y estamos solicitando la unidad
     if (detectedFullPrompt) {
-      if (cleanText === 'Generar APU directamente') {
-        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 'fast_track' };
-        setGuidedMessages(prev => [...prev, newUserMsg]);
-        setChatInputValue('');
-        triggerGeneration(detectedFullPrompt, null);
-        return;
-      }
-      if (cleanText.startsWith('Unidad: ')) {
-        let chosenUnit = cleanText.replace('Unidad: ', '').trim();
-        if (chosenUnit === 'm²') chosenUnit = 'm2';
-        if (chosenUnit === 'm³') chosenUnit = 'm3';
-        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 'fast_track' };
+      const unitVal = validateStepInput(cleanText, 5, false);
+      if (unitVal.isValid) {
+        let chosenUnit = cleanText.toLowerCase().replace('m²', 'm2').replace('m³', 'm3');
+        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 5 };
         setGuidedMessages(prev => [...prev, newUserMsg]);
         setChatInputValue('');
         triggerGeneration(detectedFullPrompt, chosenUnit);
         return;
-      }
-      if (cleanText === 'Desglosar en los 5 pasos') {
-        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 'fast_track' };
-        const { accion, material, ubicacion, incluye } = decomposeComprehensivePrompt(detectedFullPrompt);
-        setGuidedAccion(accion);
-        setGuidedMaterial(material);
-        setGuidedUbicacion(ubicacion);
-        setGuidedIncluye(incluye);
-        setCurrentChatStep(5);
-        setDetectedFullPrompt(null);
-
-        const isMaint = /mantenimiento|saneamiento|reconstrucci[oó]n|arreglo|reparaci[oó]n|rehabilitaci[oó]n|restauraci[oó]n/i.test(
-          `${accion} ${material}`
-        );
-        const botMsg = {
-          id: `bot-step-5-${Date.now()}`,
+      } else {
+        toast.error(unitVal.error || 'Por favor indica una unidad válida (ej: und, pza, m², m, m³)', { id: 'chat-val-error', duration: 4500 });
+        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 5 };
+        const botValMsg = {
+          id: `bot-val-${Date.now()}`,
           sender: 'bot',
           step: 5,
-          text: `He estructurado tu descripción técnica:\n• Acción: ${accion}\n• Elemento: ${material}\n• Ubicación: ${ubicacion || 'General'}\n• Alcance: ${incluye || 'Estándar'}\n\nÚltimo paso (5 de 5): Unidad de Medida\n¿En qué unidad deseas presupuestar la partida?`,
-          chips: isMaint ? CHAT_STEP_DEFINITIONS[5].mantenimiento.chips : CHAT_STEP_DEFINITIONS[5].chips
+          text: `Aviso: "${cleanText}" no es una unidad de cómputo válida.\n\nPor favor selecciona una unidad o escribe una unidad estándar (und, pza, m², m, m³, kgf):`,
+          chips: ['und', 'pza', 'm²', 'm', 'm³']
         };
-        setGuidedMessages(prev => [...prev, newUserMsg, botMsg]);
+        setGuidedMessages(prev => [...prev, newUserMsg, botValMsg]);
         setChatInputValue('');
-        return;
-      }
-      // Si el usuario escribe una unidad en texto directo
-      const unitVal = validateStepInput(cleanText, 5, false);
-      if (unitVal.isValid && cleanText.length <= 10) {
-        let directUnit = cleanText.toLowerCase().replace('m²', 'm2').replace('m³', 'm3');
-        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 'fast_track' };
-        setGuidedMessages(prev => [...prev, newUserMsg]);
-        setChatInputValue('');
-        triggerGeneration(detectedFullPrompt, directUnit);
         return;
       }
     }
@@ -353,20 +340,19 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     // 2. Detección Inteligente de Descripción Completa (en paso 0, 1 o 2)
     if ((currentChatStep === 0 || currentChatStep === 1 || currentChatStep === 2) && isComprehensiveDescription(cleanText)) {
       setDetectedFullPrompt(cleanText);
+      setCurrentChatStep(5);
       const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: currentChatStep };
       const botMsg = {
         id: `bot-full-prompt-${Date.now()}`,
         sender: 'bot',
-        step: 'fast_track',
-        text: `He detectado que ingresaste una descripción técnica completa con acción, elemento y alcance de obra:\n\n«${cleanText}»\n\nPuedo generar tu APU de inmediato con esta descripción completa, o si prefieres, puedes seleccionar una unidad de cómputo para el cálculo:`,
+        step: 5,
+        text: `«${cleanText}»\n\nIndica la unidad de la partida:`,
         chips: [
-          'Generar APU directamente',
-          'Unidad: und',
-          'Unidad: pza',
-          'Unidad: m²',
-          'Unidad: m',
-          'Unidad: m³',
-          'Desglosar en los 5 pasos'
+          'und',
+          'pza',
+          'm²',
+          'm',
+          'm³'
         ]
       };
       setGuidedMessages(prev => [...prev, newUserMsg, botMsg]);
