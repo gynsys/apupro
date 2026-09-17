@@ -775,31 +775,59 @@ def delete_database(db: Session, database_id: str):
         
     return True
 
-def update_master_item(db: Session, item_code: str, descri: str, unipar: str, renpar: float):
-    item = db.query(CostItem).filter(CostItem.CodPar == item_code).first()
+def update_master_item(
+    db: Session,
+    item_code: str,
+    descri: Optional[str] = None,
+    unipar: Optional[str] = None,
+    renpar: Optional[float] = None
+) -> Optional[CostItem]:
+    clean_code = item_code.strip() if item_code else ""
+    if not clean_code:
+        return None
+    
+    item = db.query(CostItem).filter(
+        or_(
+            CostItem.CodPar == clean_code,
+            func.trim(CostItem.CodPar) == clean_code
+        )
+    ).first()
     if not item:
         return None
     
     if descri is not None:
-        item.Descri = descri
+        item.Descri = descri.strip()
     if unipar is not None:
-        item.UniPar = unipar
+        item.UniPar = unipar.strip()
     if renpar is not None:
-        item.RenPar = renpar
+        try:
+            item.RenPar = float(renpar)
+        except (ValueError, TypeError):
+            pass
         
     db.commit()
     db.refresh(item)
     return item
 
-def delete_master_item(db: Session, item_code: str):
-    item = db.query(CostItem).filter(CostItem.CodPar == item_code).first()
+def delete_master_item(db: Session, item_code: str) -> bool:
+    clean_code = item_code.strip() if item_code else ""
+    if not clean_code:
+        return False
+        
+    item = db.query(CostItem).filter(
+        or_(
+            CostItem.CodPar == clean_code,
+            func.trim(CostItem.CodPar) == clean_code
+        )
+    ).first()
     if not item:
         return False
     
+    actual_code = item.CodPar
     # Cascade delete child relations manually to avoid FK constraint errors
-    db.query(CostAPUMaterial).filter(CostAPUMaterial.CodPar == item_code).delete(synchronize_session=False)
-    db.query(CostAPUEquipment).filter(CostAPUEquipment.CodPar == item_code).delete(synchronize_session=False)
-    db.query(CostAPULabor).filter(CostAPULabor.CodPar == item_code).delete(synchronize_session=False)
+    db.query(CostAPUMaterial).filter(CostAPUMaterial.CodPar == actual_code).delete(synchronize_session=False)
+    db.query(CostAPUEquipment).filter(CostAPUEquipment.CodPar == actual_code).delete(synchronize_session=False)
+    db.query(CostAPULabor).filter(CostAPULabor.CodPar == actual_code).delete(synchronize_session=False)
     
     # Delete the main item
     db.delete(item)

@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import costbaseService from '../../services/costbaseService';
 import DecimalInput from '../../../../components/DecimalInput';
 
-const EditPartidaModal = ({ item, onClose, onUpdated }) => {
+const EditPartidaModal = ({ item, onClose, onUpdated, selectedDatabase = 'master' }) => {
   const [form, setForm] = React.useState({
     Descri: item?.Descri || '',
     UniPar: item?.UniPar || '',
@@ -23,16 +23,17 @@ const EditPartidaModal = ({ item, onClose, onUpdated }) => {
 
   const handleSave = async () => {
     try {
-      await cost360Service.updateMasterItem(item.CodPar, {
+      await costbaseService.updateMasterItem(item.CodPar, {
         Descri: form.Descri,
         UniPar: form.UniPar,
-        RenPar: form.RenPar,
-      });
-      toast.success("Partida actualizada");
+        RenPar: typeof form.RenPar === 'number' ? form.RenPar : parseFloat(form.RenPar) || 0,
+      }, selectedDatabase);
+      toast.success("Partida actualizada correctamente");
       onUpdated?.();
       onClose();
     } catch (err) {
-      toast.error("Error al actualizar");
+      const msg = err.response?.data?.detail || err.message || "Error al actualizar";
+      toast.error(`Error al actualizar: ${msg}`);
     }
   };
 

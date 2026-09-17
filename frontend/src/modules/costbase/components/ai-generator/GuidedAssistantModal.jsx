@@ -117,7 +117,7 @@ export default function GuidedAssistantModal({
                     <Bot size={18} />
                   </div>
                 )}
-                {msg.sender === 'user' && msg.step > 0 && chatbotLoadingStage === 0 && (
+                {msg.sender === 'user' && typeof msg.step === 'number' && msg.step > 0 && chatbotLoadingStage === 0 && (
                   <button
                     type="button"
                     onClick={() => handleGoBack && handleGoBack(msg.step)}

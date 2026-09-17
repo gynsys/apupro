@@ -144,13 +144,17 @@ export const saveCustomApu = async (payload) => {
   return response.data;
 };
 
-export const updateMasterItem = async (itemCode, data) => {
-  const response = await cost360ApiClient.put(`/items/${itemCode}`, data);
+export const updateMasterItem = async (itemCode, data, databaseId = 'master') => {
+  const response = await cost360ApiClient.put(`/items/${encodeURIComponent(itemCode)}`, data, {
+    params: { database_id: databaseId }
+  });
   return response.data;
 };
 
-export const deleteMasterItem = async (itemCode) => {
-  const response = await cost360ApiClient.delete(`/items/${itemCode}`);
+export const deleteMasterItem = async (itemCode, databaseId = 'master') => {
+  const response = await cost360ApiClient.delete(`/items/${encodeURIComponent(itemCode)}`, {
+    params: { database_id: databaseId }
+  });
   return response.data;
 };
 

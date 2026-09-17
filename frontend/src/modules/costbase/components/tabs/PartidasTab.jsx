@@ -124,7 +124,7 @@ const PartidasTab = ({ onlyCoded, selectedDatabase = 'master' }) => {
   const handleDelete = async (item) => {
     if (window.confirm("¿Estas seguro de eliminar esta partida maestra? Esto es irreversible y afectara a todos.")) {
       try {
-        await cost360Service.deleteMasterItem(item.CodPar);
+        await costbaseService.deleteMasterItem(item.CodPar, selectedDatabase);
         toast.success("Partida eliminada");
         handleSearch();
       } catch (err) {
@@ -261,6 +261,7 @@ const PartidasTab = ({ onlyCoded, selectedDatabase = 'master' }) => {
       {editingItem && (
         <EditPartidaModal
           item={editingItem}
+          selectedDatabase={selectedDatabase}
           onClose={() => setEditingItem(null)}
           onUpdated={handleSearch}
         />

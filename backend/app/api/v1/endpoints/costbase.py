@@ -375,8 +375,14 @@ def get_apu(item_code: str, database_id: str = "master", db: Session = Depends(g
         partida=item, materiales=materiales, equipos=equipos, mano_obra=mano_obra, total_directo=round(total_directo, 2)
     )
 
-@router.put("/items/{item_code}")
-def update_master_item_route(item_code: str, payload: MasterItemUpdate, db: Session = Depends(get_db)):
+@router.put("/items/{item_code:path}")
+def update_master_item_route(
+    item_code: str,
+    payload: MasterItemUpdate,
+    database_id: str = "master",
+    db: Session = Depends(get_db)
+):
+    set_schema_for_db(db, database_id)
     updated_item = update_master_item(db, item_code, payload.Descri, payload.UniPar, payload.RenPar)
     if not updated_item:
         raise HTTPException(status_code=404, detail="Partida no encontrada")
@@ -410,8 +416,13 @@ def update_master_apu_route(item_code: str, payload: MasterAPUUpdate, database_i
         }
     }
 
-@router.delete("/items/{item_code}")
-def delete_master_item_route(item_code: str, db: Session = Depends(get_db)):
+@router.delete("/items/{item_code:path}")
+def delete_master_item_route(
+    item_code: str,
+    database_id: str = "master",
+    db: Session = Depends(get_db)
+):
+    set_schema_for_db(db, database_id)
     if not delete_master_item(db, item_code):
         raise HTTPException(status_code=404, detail="Partida no encontrada")
     return {"status": "ok"}
