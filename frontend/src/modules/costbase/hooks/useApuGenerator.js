@@ -53,10 +53,30 @@ export function useApuGenerator({ setSettings }) {
 
   const processAIResponse = useCallback((response, textToSubmit) => {
     let currentDebug = null;
-    if (response.debug_rag_trace || response.debug_base_apu) {
+    if (response.debug_matematico_trace || response.generation_engine === 'inverse') {
+      currentDebug = {
+        message: 'Generación determinista por Modo Matemático (Síntesis Inversa Component-First)',
+        solicitud_usuario: textToSubmit,
+        generation_engine: 'inverse',
+        debug_matematico_trace: response.debug_matematico_trace || null,
+        candidate_apu: {
+          partida: response.partida,
+          materials: response.materials || [],
+          equipments: response.equipments || [],
+          labors: response.labors || [],
+          notas_adaptacion: response.notas_adaptacion || [],
+          advertencias: response.advertencias || [],
+          conteo_materiales: (response.materials || []).length,
+          conteo_equipos: (response.equipments || []).length,
+          conteo_mano_obra: (response.labors || []).length
+        }
+      };
+      setDebugInfo(currentDebug);
+    } else if (response.debug_rag_trace || response.debug_base_apu) {
       currentDebug = {
         message: 'Generación asistida por RAG Híbrido y Adaptación de Partida Base',
         solicitud_usuario: textToSubmit,
+        generation_engine: 'rag',
         rag_trace: response.debug_rag_trace || null,
         base_apu: response.debug_base_apu || null,
         prompt_enviado_al_llm: response.prompt_enviado_al_llm || null,

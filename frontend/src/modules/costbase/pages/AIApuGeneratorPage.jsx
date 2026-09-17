@@ -414,8 +414,20 @@ export default function AIApuGeneratorPage() {
               message={generator.aiClarificationMessage}
               recommendation={generator.aiClarificationRecommendation}
               questions={generator.aiQuestions}
+              options={generator.aiOptions}
               entryModeSource={guided.entryModeSource}
               onDismiss={generator.dismissClarification}
+              onClarificationSubmit={(answerText) => {
+                const combined = prompt && prompt.trim()
+                  ? `${prompt.trim()}, ${answerText.trim()}`
+                  : answerText.trim();
+                setPrompt(combined);
+                generator.dismissClarification();
+                generator.handleGenerate(combined, false, false, false, null, 'libre', selectedUnit);
+              }}
+              onEditOriginalPrompt={() => {
+                generator.dismissClarification();
+              }}
               onStartGuided={() => {
                 generator.dismissClarification();
                 guided.resetChatbot();

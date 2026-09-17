@@ -538,6 +538,24 @@ La partida DEBE estructurarse OBLIGATORIAMENTE con la unidad: '{u_clean}'.
   * Todos los consumos y rendimientos se calculan por metro lineal de desarrollo.
 """
 
+    base_unit = str(base_apu.get('unidad') or base_apu.get('unit') or '').strip().lower()
+    base_ren = base_apu.get('rendimiento') or base_apu.get('performance') or base_apu.get('RenPar') or 'N/A'
+    req_u_clean = str(requested_unit).strip().lower() if requested_unit else base_unit
+
+    if req_u_clean and base_unit and req_u_clean != base_unit:
+        performance_instruction = f"""2. CÁLCULO DINÁMICO DE RENDIMIENTO (DESANCLAJE DIMENSIONAL OBLIGATORIO):
+   - La partida base histórica tiene unidad '{base_unit}' (rendimiento {base_ren} {base_unit}/día), mientras que la partida requerida es '{req_u_clean}'.
+   - ESTÁ TERMINANTEMENTE PROHIBIDO copiar o anclarte al número {base_ren}: una unidad de '{req_u_clean}' no equivale físicamente a una de '{base_unit}'.
+   - Calcula el rendimiento diario como: R = (Horas totales de cuadrilla al día) / (Horas-hombre que toma ejecutar 1 {req_u_clean}).
+   - Para mantenimiento o reparaciones localizadas por unidad (und/pza), el rendimiento de una cuadrilla típica de 2 a 4 trabajadores es de 4 a 8 {req_u_clean}/día.
+   - Justifica el cálculo detalladamente en `notas_adaptacion`."""
+    else:
+        performance_instruction = f"""2. CÁLCULO DE RENDIMIENTO Y ESCALA DE CUADRILLA:
+   - Rendimiento base de referencia: {base_ren} {base_unit}/día.
+   - Si tu cuadrilla adaptada tiene mayor o menor número de oficiales/obreros que la base, o si la partida implica mayor dificultad (mantenimiento, demolición, altura, acceso restringido), AJUSTA el rendimiento en proporción a las Horas-Hombre reales.
+   - En actividades de mantenimiento o rehabilitación en sitio, el rendimiento suele reducirse entre un 25% y 40% respecto a obra nueva.
+   - Explica el cálculo en `notas_adaptacion`."""
+
     prompt = f"""
 # ROL
 Eres un Ingeniero Civil especialista en Análisis de Precios Unitarios (APU).
@@ -558,7 +576,7 @@ Prefijo COVENIN: {covenin_prefix}
 
 # INSTRUCCIONES DE ADAPTACIÓN
 1. El APU base es para una partida SIMILAR, no idéntica. Tu trabajo es adaptarlo para "{user_description}".
-2. ANCLAJE DE RENDIMIENTO: Conserva como ancla principal el rendimiento (`performance`) del APU base [{base_apu.get('rendimiento') or base_apu.get('performance') or base_apu.get('RenPar') or 'N/A'}]. Solo ajústalo si la geometría, altura o complejidad de la nueva partida lo justifica de forma evidente, y explica el motivo en notas.
+{performance_instruction}
 3. CONSERVA todos los insumos que sigan siendo relevantes para la nueva partida. Márcalos como `"origen": "historico"`.
 4. ELIMINA o SUSTITUYE los insumos que no aplican aplicando rigurosamente la MATRIZ OBLIGATORIA DE COMPATIBILIDAD FUNCIONAL EN 7 FAMILIAS (bombas, tuberías, cables, válvulas, concretos, tableros, impermeabilizaciones). Si el equipo o material principal de la base es incompatible, NO uses el insumo histórico. Reemplázalo por el insumo correcto con origen "ia", precio referencial de mercado en USD y emite la advertencia `[PRECIO_REFERENCIAL]`.
 5. AJUSTA cantidades cuando la nueva partida lo requiera (ej: distinta área, espesor, proporción).

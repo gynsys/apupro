@@ -46,100 +46,96 @@ export default function FreeTextPromptInput({
 
   return (
     <>
-      {!isClarifying && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-          <div className="flex items-center gap-3">
-            <label className="block text-sm font-bold text-slate-700 flex items-center gap-2">
-              {isSmartMode
-                ? 'Smart Selector: Selecciona las características'
-                : 'Descripción Estructurada (APU Builder)'}
-            </label>
-            {isSuperAdmin && !isSmartMode && !isGuidedMode && (
-              <ArchitectureModeSelector
-                generationMode={generationMode}
-                onChange={setGenerationMode}
-                compact={true}
-              />
-            )}
-          </div>
-
-          {!isSmartMode && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onSwitchToGuided}
-                className={`relative overflow-hidden group px-4 py-2 rounded-xl transition-all active:scale-95 cursor-pointer ${
-                  isGuidedMode
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md shadow-blue-500/25 text-white'
-                    : 'bg-white border-2 border-slate-300 text-slate-700 shadow-xs hover:border-blue-300'
-                }`}
-              >
-                <div className="absolute inset-0 bg-[#e0f2fe] transform scale-x-0 origin-left transition-transform duration-400 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:scale-x-100"></div>
-                <div
-                  className={`relative z-10 flex items-center gap-2 text-xs font-bold transition-colors ${
-                    isGuidedMode ? 'text-white group-hover:text-[#1e3a8a]' : 'text-slate-700 group-hover:text-[#1e3a8a]'
-                  }`}
-                >
-                  <Bot size={15} />
-                  <span>Asistente IA</span>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={onSwitchToLibre}
-                className={`relative overflow-hidden group px-4 py-2 rounded-xl transition-all active:scale-95 cursor-pointer ${
-                  !isGuidedMode
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md shadow-blue-500/25 text-white'
-                    : 'bg-white border border-slate-200 text-slate-700 shadow-xs hover:border-blue-300'
-                }`}
-              >
-                <div className="absolute inset-0 bg-[#e0f2fe] transform scale-x-0 origin-left transition-transform duration-400 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:scale-x-100"></div>
-                <div
-                  className={`relative z-10 flex items-center gap-2 text-xs font-bold transition-colors ${
-                    !isGuidedMode ? 'text-white group-hover:text-[#1e3a8a]' : 'text-slate-700 group-hover:text-[#1e3a8a]'
-                  }`}
-                >
-                  <Edit2 size={14} />
-                  <span>Modo Libre</span>
-                </div>
-              </button>
-            </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+        <div className="flex items-center gap-3">
+          <label className="block text-sm font-bold text-slate-700 flex items-center gap-2">
+            {isSmartMode
+              ? 'Smart Selector: Selecciona las características'
+              : 'Descripción Estructurada (APU Builder)'}
+          </label>
+          {isSuperAdmin && !isSmartMode && !isGuidedMode && (
+            <ArchitectureModeSelector
+              generationMode={generationMode}
+              onChange={setGenerationMode}
+              compact={true}
+            />
           )}
         </div>
-      )}
 
-      {!isClarifying && (
-        <textarea
-          value={prompt}
-          onChange={(e) => {
-            if (!isGuidedMode) {
-              setPrompt(e.target.value);
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleGenerateClick();
-            }
-          }}
-          disabled={isSmartMode || isGuidedMode}
-          placeholder={
-            isSmartMode
-              ? 'Responde las preguntas del filtro inteligente arriba...'
-              : isGuidedMode
-              ? 'Usa los selectores de arriba para formar la descripción...'
-              : 'Modo experto: Escribe la partida libremente...'
+        {!isSmartMode && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onSwitchToGuided}
+              className={`relative overflow-hidden group px-4 py-2 rounded-xl transition-all active:scale-95 cursor-pointer ${
+                isGuidedMode
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md shadow-blue-500/25 text-white'
+                  : 'bg-white border-2 border-slate-300 text-slate-700 shadow-xs hover:border-blue-300'
+              }`}
+            >
+              <div className="absolute inset-0 bg-[#e0f2fe] transform scale-x-0 origin-left transition-transform duration-400 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:scale-x-100"></div>
+              <div
+                className={`relative z-10 flex items-center gap-2 text-xs font-bold transition-colors ${
+                  isGuidedMode ? 'text-white group-hover:text-[#1e3a8a]' : 'text-slate-700 group-hover:text-[#1e3a8a]'
+                }`}
+              >
+                <Bot size={15} />
+                <span>Asistente IA</span>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={onSwitchToLibre}
+              className={`relative overflow-hidden group px-4 py-2 rounded-xl transition-all active:scale-95 cursor-pointer ${
+                !isGuidedMode
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md shadow-blue-500/25 text-white'
+                  : 'bg-white border border-slate-200 text-slate-700 shadow-xs hover:border-blue-300'
+              }`}
+            >
+              <div className="absolute inset-0 bg-[#e0f2fe] transform scale-x-0 origin-left transition-transform duration-400 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:scale-x-100"></div>
+              <div
+                className={`relative z-10 flex items-center gap-2 text-xs font-bold transition-colors ${
+                  !isGuidedMode ? 'text-white group-hover:text-[#1e3a8a]' : 'text-slate-700 group-hover:text-[#1e3a8a]'
+                }`}
+              >
+                <Edit2 size={14} />
+                <span>Modo Libre</span>
+              </div>
+            </button>
+          </div>
+        )}
+      </div>
+
+      <textarea
+        value={prompt}
+        onChange={(e) => {
+          if (!isGuidedMode) {
+            setPrompt(e.target.value);
           }
-          className={`w-full h-24 p-4 border rounded-xl focus:outline-none focus:ring-2 transition-all text-sm mb-3 disabled:opacity-50 disabled:cursor-not-allowed ${
-            isSmartMode
-              ? 'bg-blue-50/50 border-blue-300 focus:border-blue-500 focus:ring-blue-500/20'
-              : 'bg-slate-50 border-slate-300 hover:border-[#1D4ED8]/50 focus:bg-white focus:border-[#1D4ED8] focus:ring-[#1D4ED8]/25'
-          }`}
-        />
-      )}
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleGenerateClick();
+          }
+        }}
+        disabled={isSmartMode || isGuidedMode}
+        placeholder={
+          isSmartMode
+            ? 'Responde las preguntas del filtro inteligente arriba...'
+            : isGuidedMode
+            ? 'Usa los selectores de arriba para formar la descripción...'
+            : 'Modo experto: Escribe la partida libremente...'
+        }
+        className={`w-full h-24 p-4 border rounded-xl focus:outline-none focus:ring-2 transition-all text-sm mb-3 disabled:opacity-50 disabled:cursor-not-allowed ${
+          isSmartMode
+            ? 'bg-blue-50/50 border-blue-300 focus:border-blue-500 focus:ring-blue-500/20'
+            : 'bg-slate-50 border-slate-300 hover:border-[#1D4ED8]/50 focus:bg-white focus:border-[#1D4ED8] focus:ring-[#1D4ED8]/25'
+        }`}
+      />
 
       {/* PANEL OBLIGATORIO DE UNIDAD PARA MANTENIMIENTO */}
-      {!isGuidedMode && !isSmartMode && !isClarifying && isMaintenance && (
+      {!isGuidedMode && !isSmartMode && isMaintenance && (
         <div className={`mb-4 p-3.5 rounded-xl border transition-all animate-in fade-in slide-in-from-top-1 duration-200 ${
           unitWarning && !selectedUnit
             ? 'bg-amber-50/90 border-amber-400 ring-2 ring-amber-400/30'
@@ -216,7 +212,7 @@ export default function FreeTextPromptInput({
         </div>
       )}
 
-      {!isGuidedMode && !isSmartMode && !isClarifying && !exactMatchCandidate && (
+      {!isGuidedMode && !isSmartMode && !exactMatchCandidate && (
         <div className="flex justify-end">
           <button
             type="button"

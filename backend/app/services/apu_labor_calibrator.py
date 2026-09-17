@@ -45,6 +45,22 @@ EMPERICAL_HH_BENCHMARKS: Dict[str, Dict[str, float]] = {
         "p90": 3.4000,
         "rendimiento_med": 22.0,
     },
+    "ALBANILERIA_und": {
+        "p10": 2.5000,
+        "p25": 3.0000,
+        "median": 3.8000,
+        "p75": 5.0000,
+        "p90": 6.5000,
+        "rendimiento_med": 6.5,
+    },
+    "ALBANILERIA_pza": {
+        "p10": 2.0000,
+        "p25": 2.6000,
+        "median": 3.2000,
+        "p75": 4.5000,
+        "p90": 5.5000,
+        "rendimiento_med": 7.5,
+    },
 
     # 3. Frisos y Revoques (E413/E414)
     "FRISOS_m2": {
@@ -54,6 +70,30 @@ EMPERICAL_HH_BENCHMARKS: Dict[str, Dict[str, float]] = {
         "p75": 2.6000,
         "p90": 3.1891,
         "rendimiento_med": 25.0,
+    },
+    "FRISOS_und": {
+        "p10": 2.2000,
+        "p25": 2.8000,
+        "median": 3.6000,
+        "p75": 4.8000,
+        "p90": 6.0000,
+        "rendimiento_med": 7.0,
+    },
+    "FRISOS_pza": {
+        "p10": 1.8000,
+        "p25": 2.4000,
+        "median": 3.0000,
+        "p75": 4.2000,
+        "p90": 5.2000,
+        "rendimiento_med": 8.0,
+    },
+    "FRISOS_m": {
+        "p10": 0.3500,
+        "p25": 0.5500,
+        "median": 0.8000,
+        "p75": 1.2000,
+        "p90": 1.6000,
+        "rendimiento_med": 35.0,
     },
 
     # 4. Pintura y Acabados (E8)
@@ -99,6 +139,14 @@ EMPERICAL_HH_BENCHMARKS: Dict[str, Dict[str, float]] = {
         "p90": 7.9086,
         "rendimiento_med": 12.0,
     },
+    "PISOS_und": {
+        "p10": 2.0000,
+        "p25": 2.6000,
+        "median": 3.5000,
+        "p75": 4.8000,
+        "p90": 6.0000,
+        "rendimiento_med": 7.0,
+    },
 
     # 6. Concreto Estructural (E31/E32)
     "CONCRETO_m3": {
@@ -108,6 +156,22 @@ EMPERICAL_HH_BENCHMARKS: Dict[str, Dict[str, float]] = {
         "p75": 11.5000,
         "p90": 15.1600,
         "rendimiento_med": 12.0,
+    },
+    "CONCRETO_und": {
+        "p10": 3.0000,
+        "p25": 3.8000,
+        "median": 4.8000,
+        "p75": 6.2000,
+        "p90": 7.5000,
+        "rendimiento_med": 5.0,
+    },
+    "CONCRETO_pza": {
+        "p10": 2.5000,
+        "p25": 3.2000,
+        "median": 4.0000,
+        "p75": 5.5000,
+        "p90": 6.8000,
+        "rendimiento_med": 6.0,
     },
 
     # 7. Encofrados y Formaletas (E33-E35)
@@ -1058,7 +1122,15 @@ def validate_and_calibrate_hh(
 
     current_hh = total_hh_per_day / perf
 
-    # Buscar benchmark empírico por clave compuesta exacta (ej: ACARREO_m3.m, ALBANILERIA_m2, PINTURA_pza)
+    # 0. Factor de Complejidad Constructiva (Mantenimiento, Saneamiento, Altura)
+    desc_clean = _normalize_str(str(partida.get("description") or partida.get("descripcion") or ""))
+    is_maintenance = any(k in desc_clean for k in [
+        "MANTENIMIENTO", "SANEAMIENTO", "REPARACION", "RECONSTRUCCION", "RESTAURACION",
+        "REHABILITACION", "DEMOLICION", "REMOCION", "SUSTITUCION", "REEMPLAZO", "PELDANO"
+    ])
+    difficulty_factor = 1.30 if is_maintenance else 1.0
+
+    # 1. Buscar benchmark empírico por clave compuesta exacta (ej: ACARREO_m3.m, ALBANILERIA_m2, PINTURA_pza)
     benchmark_key = f"{typology}_{unit}"
     benchmark = EMPERICAL_HH_BENCHMARKS.get(benchmark_key)
 
@@ -1068,6 +1140,17 @@ def validate_and_calibrate_hh(
             if k.endswith(f"_{unit}") and k.startswith(typology):
                 benchmark = v
                 break
+
+    # Fallback inteligente para unidades discretas (und / pza) si la tipología no tenía clave directa
+    if not benchmark and unit in ("und", "pza"):
+        if typology in ("ALBANILERIA", "FRISOS", "CONCRETO", "PISOS"):
+            benchmark = EMPERICAL_HH_BENCHMARKS.get(f"{typology}_{unit}") or EMPERICAL_HH_BENCHMARKS.get(f"ALBANILERIA_{unit}")
+        elif typology == "PINTURA":
+            benchmark = EMPERICAL_HH_BENCHMARKS.get(f"PINTURA_{unit}")
+        elif typology == "ESTRUCTURAS_METALICAS":
+            benchmark = EMPERICAL_HH_BENCHMARKS.get(f"ESTRUCTURAS_METALICAS_{unit}")
+        else:
+            benchmark = EMPERICAL_HH_BENCHMARKS.get("ALBANILERIA_und")
 
     # Blindaje dimensional estricto: Si no hay benchmark para esta unidad física exacta,
     # NUNCA cruzar dimensiones (ej. jamás comparar m2 con und, pza o kgf).
@@ -1083,25 +1166,26 @@ def validate_and_calibrate_hh(
     p50 = benchmark["median"]
     p90 = benchmark["p90"]
 
-    # Margen de tolerancia elástico (50% sobre P90 y 30% bajo P10) antes de forzar ajuste
-    lower_bound = p10 * 0.70
-    upper_bound = p90 * 1.50
+    adjusted_p50 = p50 * difficulty_factor
+    lower_bound = p10 * difficulty_factor if is_maintenance else p10 * 0.80
+    upper_bound = p90 * 1.30 * difficulty_factor
 
     if current_hh < lower_bound:
         # Rendimiento excesivo / subdimensionamiento de HH
-        calibrated_perf = round(total_hh_per_day / p50, 2)
+        calibrated_perf = round(total_hh_per_day / adjusted_p50, 2)
         new_hh = total_hh_per_day / calibrated_perf
         partida["performance"] = calibrated_perf
         if "rendimiento" in partida:
             partida["rendimiento"] = calibrated_perf
+        maint_txt = f" (aplicando factor de mantenimiento x{difficulty_factor:.2f})" if is_maintenance else ""
         notes.append(
-            f"Calibración de rendimiento (HH): Rendimiento diario ajustado de {perf:.2f} a {calibrated_perf:.2f} {unit}/día. "
-            f"El valor anterior implicaba {current_hh:.4f} HH/{unit} (físicamente inalcanzable, banda P10: {p10:.4f}). "
-            f"Nuevo HH resultante: {new_hh:.4f} HH/{unit} (mediana histórica P50: {p50:.4f})."
+            f"Calibración de rendimiento (HH): Rendimiento diario ajustado de {perf:.2f} a {calibrated_perf:.2f} {unit}/día{maint_txt}. "
+            f"El valor anterior implicaba {current_hh:.4f} HH/{unit} (físicamente inalcanzable, banda P10: {lower_bound:.4f}). "
+            f"Nuevo HH resultante: {new_hh:.4f} HH/{unit} (mediana calibrada P50: {adjusted_p50:.4f})."
         )
     elif current_hh > upper_bound:
         # Cuadrilla inflada o rendimiento colapsado
-        calibrated_perf = round(total_hh_per_day / p50, 2)
+        calibrated_perf = round(total_hh_per_day / adjusted_p50, 2)
         new_hh = total_hh_per_day / calibrated_perf
         partida["performance"] = calibrated_perf
         if "rendimiento" in partida:
@@ -1109,8 +1193,47 @@ def validate_and_calibrate_hh(
         notes.append(
             f"Calibración de rendimiento (HH): Rendimiento diario ajustado de {perf:.2f} a {calibrated_perf:.2f} {unit}/día "
             f"para evitar sobrecosto por subrendimiento. (HH anterior: {current_hh:.4f}, calibrado a {new_hh:.4f} HH/{unit}, "
-            f"benchmark P50: {p50:.4f})."
+            f"benchmark P50: {adjusted_p50:.4f})."
         )
+
+    # -------------------------------------------------------------
+    # FUSIBLE BIOMECÁNICO UNIVERSAL (LÍMITES FÍSICOS HUMANOS INFRANQUEABLES)
+    # -------------------------------------------------------------
+    lead_worker_count = 1.0
+    for l in labors:
+        desc_l = _normalize_str(l.get("descripcion", ""))
+        if any(role in desc_l for role in ["ALBANIL", "PINTOR", "SOLDADOR", "HERRERO", "ELECTRICISTA", "PLOMERO", "CARPINTERO"]):
+            lead_worker_count = max(lead_worker_count, float(l.get("cantidad", 1.0) or 1.0))
+            break
+
+    CAPS_PER_LEAD_WORKER = {
+        "ALBANILERIA_und": 10.0,
+        "FRISOS_und": 10.0,
+        "REPARACIONES_PUNTUALES_und": 8.0,
+        "CONCRETO_und": 8.0,
+        "PISOS_und": 10.0,
+        "PINTURA_und": 25.0,
+        "PINTURA_pza": 30.0,
+        "PINTURA_m2": 80.0,
+        "ALBANILERIA_m2": 25.0,
+        "FRISOS_m2": 28.0,
+        "DEMOLICION_m3": 2.5,
+        "ACARREO_m3.m": 250.0,
+    }
+    cap_key = f"{typology}_{unit}"
+    max_cap_single = CAPS_PER_LEAD_WORKER.get(cap_key)
+    if max_cap_single:
+        max_physical_perf = round(max_cap_single * lead_worker_count, 2)
+        current_perf_val = float(partida.get("performance") or partida.get("rendimiento") or 0.0)
+        if current_perf_val > max_physical_perf:
+            notes.append(
+                f"Fusible biomecánico activado: Rendimiento acotado de {current_perf_val:.2f} a "
+                f"{max_physical_perf:.2f} {unit}/día (límite físico máximo de {max_cap_single:.1f} {unit}/jornada "
+                f"para {lead_worker_count:.1f} oficiales líderes)."
+            )
+            partida["performance"] = max_physical_perf
+            if "rendimiento" in partida:
+                partida["rendimiento"] = max_physical_perf
 
     return partida, notes
 

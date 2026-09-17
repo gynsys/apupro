@@ -578,9 +578,9 @@ def _check_parametric_missing_specification(
         if not has_hp_or_flow:
             return (
                 "clarification_needed",
-                "¿Qué potencia (HP, kW) o caudal tiene la bomba?",
+                "¿Qué potencia (HP, kW) o caudal tiene la bomba? (Ej: 0.5 HP, 1 HP, 2 HP, 5 HP)",
                 "RAG_PARAMETRIC_MISSING_BOMBA",
-                [],
+                ["0.5 HP", "1 HP", "1.5 HP", "2 HP", "3 HP", "5 HP", "7.5 HP", "10 HP"],
             )
 
     # 2. Concertina de Seguridad
@@ -596,7 +596,7 @@ def _check_parametric_missing_specification(
                 "clarification_needed",
                 "¿Qué diámetro tiene la concertina de seguridad? (Ej: 30 cm / 12\", 45 cm / 18\", 60 cm / 24\")",
                 "RAG_PARAMETRIC_MISSING_CONCERTINA",
-                [],
+                ['30 cm (12")', '45 cm (18")', '60 cm (24")', '90 cm (36")'],
             )
 
     # 3. Paredes de Bloques / Muros (no demolición)
@@ -614,7 +614,7 @@ def _check_parametric_missing_specification(
                 "clarification_needed",
                 "¿De qué espesor o medida es el bloque de la pared? (Ej: e=10 cm, e=12 cm, e=15 cm, e=20 cm)",
                 "RAG_PARAMETRIC_MISSING_PARED",
-                [],
+                ["e=10 cm", "e=12 cm", "e=15 cm", "e=20 cm"],
             )
 
     # 4. Losa de Concreto / Techo / Entrepiso (no demolición)
@@ -627,7 +627,7 @@ def _check_parametric_missing_specification(
                 "clarification_needed",
                 "¿De qué espesor es la losa de concreto? (Ej: e=15 cm, e=20 cm, e=25 cm, e=30 cm)",
                 "RAG_PARAMETRIC_MISSING_LOSA",
-                [],
+                ["e=10 cm", "e=12 cm", "e=15 cm", "e=20 cm", "e=25 cm", "e=30 cm"],
             )
 
     # 5. Pavimento / Acera / Brocal (no demolición)
@@ -640,7 +640,7 @@ def _check_parametric_missing_specification(
                 "clarification_needed",
                 "¿Qué espesor tiene el pavimento o acera? (Ej: e=10 cm, e=15 cm, e=20 cm)",
                 "RAG_PARAMETRIC_MISSING_PAVIMENTO",
-                [],
+                ["e=10 cm", "e=12 cm", "e=15 cm", "e=20 cm"],
             )
 
     # 6. Excavación (profundidad o método)
@@ -659,7 +659,7 @@ def _check_parametric_missing_specification(
                 "clarification_needed",
                 "¿Qué profundidad tiene la excavación y con qué método se ejecutará? (Ej: hasta 1.50 m a mano, 1.50 a 3.00 m a máquina)",
                 "RAG_PARAMETRIC_MISSING_EXCAVACION",
-                [],
+                ["hasta 1.50 m a mano", "1.50 a 3.00 m a máquina", "hasta 1.50 m a máquina", "mayor a 3.00 m a máquina"],
             )
 
     # 7. Tubería / Válvula (no demolición)
@@ -675,7 +675,7 @@ def _check_parametric_missing_specification(
                 "clarification_needed",
                 "¿Qué diámetro tiene la tubería o válvula? (Ej: 1/2\", 3/4\", 1\", 2\", 3\", 4\")",
                 "RAG_PARAMETRIC_MISSING_TUBERIA",
-                [],
+                ['1/2"', '3/4"', '1"', '1 1/2"', '2"', '2 1/2"', '3"', '4"', '6"'],
             )
 
     # 8. Transformador
@@ -686,7 +686,7 @@ def _check_parametric_missing_specification(
                 "clarification_needed",
                 "¿Qué capacidad en kVA tiene el transformador? (Ej: 15 kVA, 25 kVA, 37.5 kVA, 50 kVA, 75 kVA)",
                 "RAG_PARAMETRIC_MISSING_TRANSFORMADOR",
-                [],
+                ["15 kVA", "25 kVA", "37.5 kVA", "50 kVA", "75 kVA", "100 kVA", "150 kVA"],
             )
 
     # 9. Tablero Eléctrico
@@ -697,7 +697,7 @@ def _check_parametric_missing_specification(
                 "clarification_needed",
                 "¿Cuántos circuitos o polos tiene el tablero eléctrico? (Ej: 8 circuitos, 12 circuitos, 18 circuitos, 24 circuitos, 42 circuitos)",
                 "RAG_PARAMETRIC_MISSING_TABLERO",
-                [],
+                ["8 circuitos", "12 circuitos", "18 circuitos", "24 circuitos", "30 circuitos", "42 circuitos"],
             )
 
     # 10. Cable / Conductor
@@ -713,7 +713,7 @@ def _check_parametric_missing_specification(
                 "clarification_needed",
                 "¿Qué calibre o sección tiene el conductor eléctrico? (Ej: #14 AWG, #12 AWG, #10 AWG, #8 AWG, 2.5 mm²)",
                 "RAG_PARAMETRIC_MISSING_CABLE",
-                [],
+                ["#14 AWG", "#12 AWG", "#10 AWG", "#8 AWG", "#6 AWG", "#4 AWG", "#2 AWG", "2/0 AWG"],
             )
 
     # 11. Tanque de Agua
@@ -724,7 +724,7 @@ def _check_parametric_missing_specification(
                 "clarification_needed",
                 "¿De qué capacidad o volumen es el tanque de agua? (Ej: 500 lts, 1000 lts, 1500 lts, 2000 lts, 5000 lts)",
                 "RAG_PARAMETRIC_MISSING_TANQUE",
-                [],
+                ["500 lts", "1000 lts", "1500 lts", "2000 lts", "5000 lts", "10000 lts"],
             )
 
     # 12. Aire Acondicionado
@@ -735,7 +735,7 @@ def _check_parametric_missing_specification(
                 "clarification_needed",
                 "¿Qué capacidad frigorífica tiene el aire acondicionado? (Ej: 12000 BTU, 18000 BTU, 24000 BTU, 36000 BTU)",
                 "RAG_PARAMETRIC_MISSING_AIRE",
-                [],
+                ["12000 BTU", "18000 BTU", "24000 BTU", "36000 BTU", "5 TR"],
             )
 
     return None

@@ -139,6 +139,8 @@ FAMILY_TO_ARCHETYPE_MAP: Dict[str, str] = {
     "ESTRUCTURAS_METALICAS": "HERRERIA_ESTRUCTURA",
     "CONCRETO": "CONCRETO_VACIADO",
     "ALBANILERIA": "ALBANILERIA_PAREDES",
+    "REVESTIMIENTOS": "ALBANILERIA_PAREDES",
+    "REPARACIONES_CONCRETO": "ALBANILERIA_PAREDES",
     "INSTALACIONES_HIDRAULICAS": "INSTALACIONES_HIDRAULICAS",
     "INSTALACIONES_ELECTRICAS": "INSTALACIONES_ELECTRICAS",
 }
@@ -670,6 +672,65 @@ def build_deterministic_equipments(
         })
         notes.append("Equipos deterministas asignados: 2 Carretillas + 2 Palas + 1 Pico.")
 
+    elif archetype in ("ALBANILERIA_PAREDES", "CONCRETO_VACIADO"):
+        equipments.append({
+            "id": "e-1",
+            "codigo": "ALB002",
+            "descripcion": "CARRETILLA CAP= 55 LT CAUCHOS DE GOMA",
+            "unidad": "día",
+            "cantidad": 1.0,
+            "depreciacion": 0.025,
+            "precio_unitario": 187.19,
+            "origen": "historico",
+            "nota_calculo": "Transporte de mezclas y morteros.",
+        })
+        equipments.append({
+            "id": "e-2",
+            "codigo": "ALB007",
+            "descripcion": "CUCHARA PLANA PARA ALBAÑILERIA",
+            "unidad": "día",
+            "cantidad": 1.0,
+            "depreciacion": 0.01,
+            "precio_unitario": 25.0,
+            "origen": "historico",
+            "nota_calculo": "Aplicación de mortero y acabados.",
+        })
+        equipments.append({
+            "id": "e-3",
+            "codigo": "ALB015",
+            "descripcion": "TOBO PLASTICO CAP= 10 LT DE ALBAÑILERIA",
+            "unidad": "día",
+            "cantidad": 2.0,
+            "depreciacion": 0.07,
+            "precio_unitario": 15.0,
+            "origen": "historico",
+            "nota_calculo": "Dosificación de agua y mezclas.",
+        })
+        if is_maintenance or any(k in desc_clean for k in ["AMOLADORA", "ESMERIL", "CORTE", "DEMOLICION", "REMOCION", "LAMINA"]):
+            equipments.append({
+                "id": "e-4",
+                "codigo": "EQU-HER-045",
+                "descripcion": "AMOLADORA PORTATIL DE 4 1/2 PULGADAS 800W",
+                "unidad": "día",
+                "cantidad": 1.0,
+                "depreciacion": 0.02,
+                "precio_unitario": 75.0,
+                "origen": "historico",
+                "nota_calculo": "Corte de perfiles, remoción de láminas corroídas y desbaste.",
+            })
+        equipments.append({
+            "id": "e-5",
+            "codigo": "HER001",
+            "descripcion": "HERRAMIENTAS MENORES DE ALBAÑILERIA",
+            "unidad": "día",
+            "cantidad": 1.0,
+            "depreciacion": 0.05,
+            "precio_unitario": 20.0,
+            "origen": "historico",
+            "nota_calculo": "Nivel, plomada y llanas.",
+        })
+        notes.append("Equipos deterministas de albañilería asignados: Carretilla + Cuchara + Tobos + Herramientas menores.")
+
     else:
         # Fallback general
         equipments.append({
@@ -880,6 +941,67 @@ def extract_materials_recipe_from_db(
         ]
         notes.append("Receta canónica inyectada: Esmalte + Fondo anticorrosivo + Solvente + Lija.")
 
+    elif not materials and (archetype in ("ALBANILERIA_PAREDES", "CONCRETO_VACIADO") or any(k in desc_clean for k in ["FRISO", "PEGO", "MORTERO", "LOSA", "CONCRETO"])):
+        materials = [
+            {
+                "id": "m-1",
+                "codigo": "MAT-CON-0001",
+                "descripcion": "CEMENTO GRIS PORTLAND SACO DE 42,5 KG",
+                "unidad": "sco",
+                "cantidad": 0.15 if u_norm in ("und", "pza") else 0.25,
+                "desperdicio": 5.0,
+                "precio_unitario": 9.50,
+                "origen": "historico",
+                "nota_calculo": f"Cemento para mortero de pega y friso en {unit}.",
+            },
+            {
+                "id": "m-2",
+                "codigo": "MAT-CON-0005",
+                "descripcion": "ARENA LAVADA PARA FRISO Y ALBAÑILERIA",
+                "unidad": "m3",
+                "cantidad": 0.015 if u_norm in ("und", "pza") else 0.025,
+                "desperdicio": 5.0,
+                "precio_unitario": 35.0,
+                "origen": "historico",
+                "nota_calculo": "Agregado fino para mezcla de mortero.",
+            },
+            {
+                "id": "m-3",
+                "codigo": "MAT-VAR-0010",
+                "descripcion": "MORTERO ADHESIVO (PEGO GRIS) SACO DE 14 KG",
+                "unidad": "sco",
+                "cantidad": 0.20 if u_norm in ("und", "pza") else 0.30,
+                "desperdicio": 5.0,
+                "precio_unitario": 6.50,
+                "origen": "historico",
+                "nota_calculo": "Adhesivo cementicio para puente de adherencia y nivelación.",
+            },
+            {
+                "id": "m-4",
+                "codigo": "MAT-AGU-0001",
+                "descripcion": "AGUA PARA CONCRETO Y MEZCLAS",
+                "unidad": "m3",
+                "cantidad": 0.005,
+                "desperdicio": 5.0,
+                "precio_unitario": 2.50,
+                "origen": "historico",
+                "nota_calculo": "Agua de amasado para hidratación de cemento.",
+            },
+        ]
+        if any(k in desc_clean for k in ["AMOLADORA", "DISCO", "CORTE", "LAMINA"]):
+            materials.append({
+                "id": "m-5",
+                "codigo": "MAT-HER-0020",
+                "descripcion": "DISCO DE CORTE PARA METALES DE 4 1/2 PULGADAS",
+                "unidad": "und",
+                "cantidad": 0.15 if u_norm in ("und", "pza") else 0.20,
+                "desperdicio": 0.0,
+                "precio_unitario": 2.50,
+                "origen": "historico",
+                "nota_calculo": "Consumible de corte de láminas y desbaste.",
+            })
+        notes.append("Receta canónica inyectada: Cemento + Arena + Pego gris + Agua + Disco de corte.")
+
     return materials, notes
 
 
@@ -1028,6 +1150,33 @@ def synthesize_apu_inverse(
         prefix_code = covenin_prefix.strip().upper() if covenin_prefix else "E360"
         cod_par = f"{prefix_code}SC001"
 
+        total_crew_size = sum(float(l.get("cantidad", 1.0) or 1.0) for l in labors)
+        total_hh_day = round(total_crew_size * 8.0, 2)
+        hh_per_unit = round(total_hh_day / performance, 4) if performance > 0 else 0.0
+
+        debug_matematico_trace: Dict[str, Any] = {
+            "motor": "Modo Matemático (Síntesis Inversa Component-First)",
+            "solicitud_usuario": user_description,
+            "arquetipo": archetype,
+            "is_maintenance": is_maintenance,
+            "unidad_certificada": unit_clean,
+            "cuadrilla_matematica": {
+                "total_trabajadores": total_crew_size,
+                "total_hh_jornada": total_hh_day,
+                "labors": labors,
+                "notas_cuadrilla": crew_notes
+            },
+            "rendimiento_matematico": {
+                "performance": performance,
+                "unidad": unit_clean,
+                "hh_por_unidad": hh_per_unit,
+                "notas_calculo": ren_notes
+            },
+            "equipos": equipments,
+            "materiales": materials,
+            "notas_sintesis": notes_total
+        }
+
         candidate_apu: Dict[str, Any] = {
             "status": "completed",
             "clarification_message": None,
@@ -1046,10 +1195,12 @@ def synthesize_apu_inverse(
             "labors": labors,
             "notas_adaptacion": notes_total,
             "advertencias": [],
+            "debug_matematico_trace": debug_matematico_trace
         }
 
         # Paso 6: Auditoría con LLM
         final_apu = audit_apu_with_llm(candidate_apu, user_description)
+        final_apu["debug_matematico_trace"] = debug_matematico_trace
         return final_apu
 
     finally:

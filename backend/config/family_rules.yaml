@@ -88,6 +88,38 @@ rules:
       - "m"
       - "und"
 
+  # 3.5. Reparaciones de Concreto y Estructuras (Saneamiento, Bordes de Losa, Encamisado)
+  - family: "REPARACIONES_CONCRETO"
+    priority: 35
+    keywords:
+      - "SANEAMIENTO DE LOSA"
+      - "BORDE DE LOSA"
+      - "REPARACION DE LOSA"
+      - "SANEAMIENTO"
+      - "BORDE DE LOSAS"
+      - "REPARACION DE BORDE"
+      - "ENCAMISADO"
+      - "ENCOFRADO PERDIDO"
+      - "REPARACION ESTRUCTURAL"
+      - "REPARACION DE CONCRETO"
+      - "RESTAURACION DE CONCRETO"
+    actions:
+      - "SANEAMIENTO"
+      - "REPARACION"
+      - "RECUPERACION"
+      - "RESTAURACION"
+      - "FRISADO"
+      - "APLICACION"
+    covenin_prefixes:
+      - "E411"
+      - "R41"
+      - "E31"
+    units:
+      - "und"
+      - "pza"
+      - "m"
+      - "m2"
+
   # 4. Pintura, Recubrimientos y Tratamiento Superficial
   - family: "PINTURA_RECUBRIMIENTO"
     priority: 40
@@ -99,18 +131,15 @@ rules:
       - "FONDO ANTIALCALINO"
       - "CONVERTIDOR DE OXIDO"
       - "CROMATO DE ZINC"
-      - "LIMPIEZA DE SUPERFICIE"
-      - "LIMPIEZA DE SUPERFICIES"
       - "DESENGRASANTE"
       - "DESMANCHADO"
-      - "LAVADO DE SUPERFICIE"
       - "BARNIZ"
       - "EMPASTADO"
     actions:
-      - "APLICACION"
+      - "APLICACION DE PINTURA"
       - "PINTADO"
-      - "LIMPIEZA"
       - "FONDEADO"
+      - "ESMALTADO"
       - "DESENGRASE"
       - "ACABADO"
     covenin_prefixes:
@@ -122,6 +151,41 @@ rules:
       - "m"
       - "pza"
       - "und"
+
+  # 4.5. Revestimientos, Frisos y Morteros Adhesivos
+  - family: "REVESTIMIENTOS"
+    priority: 45
+    keywords:
+      - "FRISO"
+      - "FRISOS"
+      - "PEGO"
+      - "PEGO GRIS"
+      - "PEGO BLANCO"
+      - "MORTERO ADHESIVO"
+      - "MORTERO DE CEMENTO"
+      - "ENLUCIDO"
+      - "SALPICADO"
+      - "REVOQUE"
+      - "REVESTIMIENTO DE PISO"
+      - "REVESTIMIENTO"
+      - "RODAPIE"
+      - "SOBREPISO"
+    actions:
+      - "FRISADO"
+      - "APLICACION"
+      - "COLOCACION"
+      - "CONSTRUCCION"
+      - "REVESTIMIENTO"
+    covenin_prefixes:
+      - "E413"
+      - "E414"
+      - "R414"
+      - "R413"
+    units:
+      - "m2"
+      - "m"
+      - "und"
+      - "pza"
 
   # 5. Estructuras Metálicas y Herrería
   - family: "ESTRUCTURAS_METALICAS"
