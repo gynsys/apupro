@@ -132,13 +132,13 @@ export default function GuidedAssistantModal({
                 </div>
               </div>
               {msg.sender === 'bot' && msg.chips && (msg.step === currentChatStep || idx === guidedMessages.length - 1) && (
-                <div className="pl-10 flex flex-wrap gap-2 pt-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className={`flex flex-wrap gap-2 pt-1 animate-in fade-in slide-in-from-bottom-2 duration-300 ${currentChatStep === 0 ? 'justify-center pl-0 py-2' : 'pl-10'}`}>
                   {msg.chips.map(chip => (
                     <button 
                       key={chip}
                       type="button"
                       onClick={() => handleChatSubmit && handleChatSubmit(chip)}
-                      className="bg-white border border-amber-300 hover:border-amber-600 hover:bg-amber-100 text-amber-950 font-semibold text-xs px-3.5 py-1.5 rounded-xl transition-all shadow-sm hover:shadow active:scale-95 cursor-pointer"
+                      className={`${currentChatStep === 0 ? 'bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm px-4 py-2 shadow-md shadow-amber-500/20' : 'bg-white border border-amber-300 hover:border-amber-600 hover:bg-amber-100 text-amber-950 font-semibold text-xs px-3.5 py-1.5'} rounded-xl transition-all shadow-sm hover:shadow active:scale-95 cursor-pointer`}
                     >
                       {chip}
                     </button>
@@ -147,7 +147,7 @@ export default function GuidedAssistantModal({
                     <button 
                       type="button"
                       onClick={onSwitchToFreeText}
-                      className="bg-transparent border border-amber-400 hover:bg-amber-200/60 text-amber-800 font-semibold text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer"
+                      className="bg-white/80 border border-amber-400 hover:bg-amber-200/60 text-amber-900 font-bold text-sm px-4 py-2 rounded-xl transition-all shadow-sm cursor-pointer active:scale-95"
                     >
                       Escribir libremente
                     </button>
@@ -186,8 +186,8 @@ export default function GuidedAssistantModal({
           <div ref={chatEndRef} />
         </div>
 
-        {/* Chat Input */}
-        {chatbotLoadingStage === 0 && (
+        {/* Chat Input: Solo renderizar una vez iniciado el flujo (paso 1+) */}
+        {currentChatStep > 0 && chatbotLoadingStage === 0 && (
           <div className="mt-4 pt-4 border-t border-amber-200 flex-shrink-0">
             <div className="flex gap-2 items-center">
               {currentChatStep > 0 && (
