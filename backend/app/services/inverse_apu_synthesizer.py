@@ -177,28 +177,43 @@ def classify_inverse_archetype(description: str, unit: str, covenin_prefix: str 
     # 0. Evaluación de la Matriz Ontológica Declarativa (Reglas configurables)
     rules = load_family_rules()
     if rules:
-        sorted_rules = sorted(rules, key=lambda r: r.get("priority", 999))
-        for rule in sorted_rules:
+        candidates = []
+        for rule in rules:
             family = str(rule.get("family", "")).strip()
             keywords = [k.upper() for k in rule.get("keywords", [])]
             actions = [a.upper() for a in rule.get("actions", [])]
             cov_prefixes = [p.upper() for p in rule.get("covenin_prefixes", [])]
             units = [u.lower() for u in rule.get("units", [])]
+            priority = rule.get("priority", 999)
+
+            kw_match = any(k in desc_clean for k in keywords)
+            act_match = any(a in desc_clean for a in actions)
+            cov_match = any(cov_clean.startswith(p) for p in cov_prefixes)
+            u_match = bool(u_clean and u_clean in units)
+
+            # Para activarse, debe coincidir al menos una palabra clave o prefijo COVENIN de la familia
+            if not (kw_match or cov_match):
+                continue
 
             score = 0.0
-            if any(k in desc_clean for k in keywords):
+            if kw_match:
                 score += 0.40
-            if any(a in desc_clean for a in actions):
+            if act_match:
                 score += 0.30
-            if any(cov_clean.startswith(p) for p in cov_prefixes):
+            if cov_match:
                 score += 0.20
-            if u_clean and u_clean in units:
+            if u_match:
                 score += 0.10
 
             if score >= 0.40:
                 mapped = FAMILY_TO_ARCHETYPE_MAP.get(family)
                 if mapped:
-                    return mapped
+                    candidates.append((score, -priority, mapped))
+
+        if candidates:
+            # Elegir la familia con mayor score (y menor prioridad como desempate)
+            candidates.sort(key=lambda c: (c[0], c[1]), reverse=True)
+            return candidates[0][2]
 
     # 1. Demoliciones y Desmantelamientos
     if cov_clean.startswith("R1") or cov_clean.startswith("R2") or cov_clean.startswith("R3"):

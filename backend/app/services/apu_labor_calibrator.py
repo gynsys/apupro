@@ -402,21 +402,30 @@ def classify_activity_typology(description: str, unit: str, covenin_code: str = 
         "FONDO DE ZINC", "FONDO ANTIALCALINO", "FONDO ANTICORROSIVO", "BARNIZ", "EMPASTADO",
         "TRATAMIENTO ANTICORROSIVO"
     ])
-    has_heavy_fabrication = any(k in desc_clean for k in [
-        "FABRICACION", "SUMINISTRO Y MONTAJE", "MONTAJE DE ESTRUCTURA", "SOLDADURA ESTRUCTURAL",
-        "MONTAJE DE VIGA", "MONTAJE DE COLUMNA", "ARMADO DE ESTRUCTURA"
-    ])
-    if is_paint_action and not has_heavy_fabrication:
+    has_metalwork_action = any(k in desc_clean for k in [
+        "FABRICACION", "SUMINISTRO Y MONTAJE", "MONTAJE DE ESTRUCTURA", "SOLDADURA",
+        "OXICORTE", "CORTE DE PERFIL", "MONTAJE DE VIGA", "MONTAJE DE COLUMNA",
+        "ARMADO DE ESTRUCTURA", "REFUERZO DE ESTRUCTURA", "REFUERZO EN ESTRUCTURA",
+        "REFUERZO METALICO", "REPARACION DE ESTRUCTURA", "REPARACION Y REFUERZO",
+        "REPARACION DE DANOS", "DESMONTAJE Y MONTAJE", "HERRERIA"
+    ]) or (
+        any(e in desc_clean for e in ["ESTRUCTURA METALICA", "ESTRUCTURAS METALICAS", "BARANDA METALICA", "VIGA METALICA", "COLUMNA METALICA", "VIGAS DE APOYO"])
+        and any(w in desc_clean for w in ["REPARACION", "REFUERZO", "SOLDADURA", "OXICORTE", "CORTE", "DESMONTAJE"])
+    )
+    if is_paint_action and not has_metalwork_action:
         return "PINTURA"
 
-    # 4. Estructuras Metálicas, Herrería y Soldadura (E36, M36, R36)
-    if cov_upper.startswith("E36") or cov_upper.startswith("M36") or cov_upper.startswith("R36"):
+    # 4. Estructuras Metálicas, Herrería y Soldadura (E36, M36, R36, C22, E22)
+    if (
+        cov_upper.startswith("E36") or cov_upper.startswith("M36") or cov_upper.startswith("R36")
+        or cov_upper.startswith("C22") or cov_upper.startswith("E22")
+    ):
         return "ESTRUCTURAS_METALICAS"
     if any(k in desc_clean for k in [
         "ESTRUCTURA METALICA", "ESTRUCTURAS METALICAS", "HERRERIA", "SOLDADURA", "OXICORTE",
         "TUBO ESTRUCTURAL", "TUBOS ESTRUCTURALES", "PERFIL ESTRUCTURAL", "PERFILES DE ACERO",
-        "VIGA METALICA", "COLUMNA METALICA", "ZANCA", "ZANCAS", "PLETINA", "PLETINAS",
-        "ESCALERA METALICA", "BARANDA METALICA", "PORTON METALICO", "REJA DE HIERRO",
+        "VIGA METALICA", "COLUMNA METALICA", "VIGAS DE APOYO", "ZANCA", "ZANCAS", "PLETINA", "PLETINAS",
+        "ESCALERA METALICA", "BARANDA METALICA", "BARANDA", "BARANDAS", "PORTON METALICO", "REJA DE HIERRO",
         "PLANCHA DE APOYO", "PLANCHA BASE"
     ]):
         if not (u_norm in ("kgf", "kg", "ton", "tonf") and any(c in desc_clean for c in ["CABILLA", "ACERO DE REFUERZO", "MALLA ELECTROSOLDADA"])):
@@ -1134,6 +1143,18 @@ def validate_and_calibrate_hh(
     benchmark_key = f"{typology}_{unit}"
     benchmark = EMPERICAL_HH_BENCHMARKS.get(benchmark_key)
 
+    # 1.1 Benchmark especializado para reparaciones y mantenimiento localizado de estructuras metálicas en und/pza
+    if typology == "ESTRUCTURAS_METALICAS" and is_maintenance and unit in ("und", "pza"):
+        benchmark = {
+            "p10": 2.5000,
+            "p25": 3.8000,
+            "median": 5.2000,
+            "p75": 7.0000,
+            "p90": 9.5000,
+            "rendimiento_med": 5.0,
+        }
+        difficulty_factor = 1.0
+
     # Si no coincide exactamente, buscar SOLO dentro de benchmarks compatibles con la MISMA unidad física
     if not benchmark:
         for k, v in EMPERICAL_HH_BENCHMARKS.items():
@@ -1212,6 +1233,8 @@ def validate_and_calibrate_hh(
         "REPARACIONES_PUNTUALES_und": 8.0,
         "CONCRETO_und": 8.0,
         "PISOS_und": 10.0,
+        "ESTRUCTURAS_METALICAS_und": 8.0,
+        "ESTRUCTURAS_METALICAS_pza": 10.0,
         "PINTURA_und": 25.0,
         "PINTURA_pza": 30.0,
         "PINTURA_m2": 80.0,
