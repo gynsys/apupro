@@ -17,7 +17,7 @@ def compute_description_embedding(description: str) -> Optional[np.ndarray]:
 
     try:
         if not ai_engine.is_loaded:
-            ai_engine.load()
+            ai_engine.load_brain()
         vec = ai_engine.encode_query(description.strip())
         return vec
     except Exception as exc:

@@ -137,6 +137,10 @@ class AISearchEngine:
             db.close()
         return None
 
+    def load(self, provider: Optional[str] = None) -> None:
+        """Alias compatible para load_brain."""
+        self.load_brain(provider=provider)
+
     def load_brain(self, provider: Optional[str] = None) -> None:
         if self.is_loaded:
             return

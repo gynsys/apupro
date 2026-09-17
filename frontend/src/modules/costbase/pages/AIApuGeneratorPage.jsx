@@ -213,16 +213,26 @@ export default function AIApuGeneratorPage() {
     if (!generator.item) return;
     setSaving(true);
     try {
+      const desc = generator.item.description || generator.item.descripcion || '';
+      const unit = generator.item.unit || generator.item.unidad || 'und';
+      const perf = parseFloat(generator.item.performance || generator.item.rendimiento || 1.0) || 1.0;
+
+      if (!desc.trim()) {
+        toast.error('La partida debe tener una descripción para guardarse.');
+        return;
+      }
+
       await saveCustomApu({
-        description: generator.item.description,
-        unit: generator.item.unit,
-        performance: generator.item.performance,
+        description: desc.trim(),
+        unit: unit.trim(),
+        performance: perf,
         apu_data: JSON.stringify(generator.item)
       });
-      toast.success('APU guardado exitosamente');
+      toast.success('APU guardado exitosamente en tu base personalizada');
     } catch (error) {
-      console.error(error);
-      toast.error('Error al guardar APU');
+      console.error('Error al guardar APU personalizado:', error);
+      const msg = error.response?.data?.detail || error.message || 'Error al guardar APU';
+      toast.error(typeof msg === 'string' ? msg : 'Error al guardar APU');
     } finally {
       setSaving(false);
     }

@@ -416,7 +416,7 @@ export default function ApuEditorUI({
                           type="button"
                           onClick={() => safeFn(onRemoveRow)('materials', mat.id)}
                           disabled={deletingId === mat.id}
-                          className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                          className="text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors p-1 rounded disabled:opacity-50 cursor-pointer"
                           title="Eliminar insumo"
                         >
                           {deletingId === mat.id ? <Loader size={16} className="animate-spin" /> : <Trash2 size={16} />}
@@ -542,7 +542,7 @@ export default function ApuEditorUI({
                           type="button"
                           onClick={() => safeFn(onRemoveRow)('equipments', eq.id)}
                           disabled={deletingId === eq.id}
-                          className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                          className="text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors p-1 rounded disabled:opacity-50 cursor-pointer"
                           title="Eliminar equipo"
                         >
                           {deletingId === eq.id ? <Loader size={16} className="animate-spin" /> : <Trash2 size={16} />}
@@ -678,7 +678,7 @@ export default function ApuEditorUI({
                           type="button"
                           onClick={() => safeFn(onRemoveRow)('labors', lab.id)}
                           disabled={deletingId === lab.id}
-                          className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                          className="text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors p-1 rounded disabled:opacity-50 cursor-pointer"
                           title="Eliminar mano de obra"
                         >
                           {deletingId === lab.id ? <Loader size={16} className="animate-spin" /> : <Trash2 size={16} />}

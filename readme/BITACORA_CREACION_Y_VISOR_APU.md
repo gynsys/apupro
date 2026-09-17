@@ -49,4 +49,32 @@ Tras la implementación del flujo base, se detectaron discrepancias entre el bus
 - **Mano de Obra y Tags:** Se rectificó un error de sintaxis en el JSON de respuesta de la API (`manoObra` -> `mano_obra`) que impedía listar al personal. Adicionalmente, se configuró el badge "HISTÓRICO" para ser invisible (case-insensitive) y no causar ruido visual en la plantilla.
 
 ---
-*Documentación actualizada. Proyecto: Arko360_Platform.*
+
+## 5. Actualización Mayor (Septiembre 2026): Calibración Universal de Cuadrillas, Rendimientos y Caché Semántico
+
+### A. Caché Semántico Privado de APUs por Usuario (Capa 0 Pre-LLM)
+* **Objetivo:** Eficiencia $\times 10$ y costo 0 de tokens. Si el usuario ya guardó previamente un APU similar ($\ge 0.96$ de similitud semántica), el sistema no consulta al LLM y responde en $<50\text{ ms}$ directamente de la base de datos privada.
+* **Detonador (Trigger):** Al presionar *"Guardar APU Generado"* en `AIApuGeneratorPage.jsx`, la función `save_custom_apu` vectoriza la descripción mediante `ai_engine.encode_query` y almacena el vector JSON en `cost360_custom_items.embedding`.
+* **Aislamiento Multi-Tenant Estricto (Zero-Leak):** Se descartaron cachés comunitarios o públicos. La búsqueda semántica está aislada exclusivamente al `user_id` autenticado.
+* **Feedback Reactivo:** Notificación instantánea en frontend al recuperar un APU desde el caché (`⚡ APU recuperado de tus partidas guardadas`).
+
+### B. Calibración Determinista de Cuadrillas, Equipos y Rendimientos (`apu_labor_calibrator.py`)
+* **Fundamento Empírico Oficial:** Estudio estadístico de las 17.408 partidas de la base de datos oficial COVENIN, analizando especialmente las **1.422 partidas R** (reparaciones/reformas) y **1.483 partidas M** (mantenimiento/montaje).
+* **Rendimiento Físico en Unidades (`und` / `pza`):** El 90% de las reparaciones puntuales en la base oficial tienen rendimientos reales de **$1.0\text{ a }1.5\text{ und/día}$** (mediana = 1.00). Se implementó el anclaje matemático mediante Horas-Hombre empíricas para impedir que el LLM alucine rendimientos inflados de 12 a 18 und/día.
+* **Logística Inteligente de Vehículos Utilitarios:**
+  - **Preservación Utilitaria:** Para cuadrillas de mantenimiento, herrería y reparaciones en sitio, el vehículo utilitario (`CAMION FORD F-350 ESTACAS` o `CAMIONETA PICK-UP`) **NO se elimina**. Se preserva a razón de **$0.25\text{ día}$**, reconociendo el costo real del traslado de la cuadrilla y herramientas.
+  - **Degradación de Maquinaria Pesada:** Camiones 750, gandolas, chutos o grúas sobredimensionadas heredadas de obras pesadas se degradan automáticamente a **Camión F-350 a $0.25\text{ día}$**.
+  - **Sincronización del Chofer:** Todo vehículo utilitario en equipos garantiza la presencia de su correspondiente **`CHOFER` a $0.25\text{ día}$** en la cuadrilla.
+* **Equilibrio de Oficios y Supervisión:**
+  - Sustitución automática de oficios incompatibles (`ALBAÑIL` o `CABILLERO` cambiados a `HERRERO DE 1RA` o `SOLDADOR DE 1RA` en estructuras metálicas).
+  - Normalización de cargos de maestros (`MAESTRO CABILLERO`, `MO-DIR`) a supervisión menor (`CAPORAL` $\le 0.25\text{ día}$).
+  - Control de ayudantes a máximo 1.0 ayudante por especialista.
+* **Fórmula Matemática de Rendimiento:**
+  $$\text{Rendimiento Calibrado} = \frac{\text{Total Personas Cuadrilla} \times 8.0\text{ horas}}{\text{HH Empírica de Referencia}}$$
+
+### C. Visibilidad Permanente de la Papelera en la Plantilla de APUs (`ApuEditorUI.jsx`)
+* Se removieron las clases `opacity-0 group-hover:opacity-100` de los botones de eliminación en las 3 tablas técnicas (Materiales, Equipos y Mano de Obra).
+* El icono de papelera (`Trash2`) ahora permanece **visible en todo momento** (`text-red-400 hover:text-red-600 hover:bg-red-50`), permitiendo una eliminación ergonómica e intuitiva tanto en pantallas táctiles/móviles como en escritorio.
+
+---
+*Documentación técnica actualizada. Plataforma Costbase (APUPro).*

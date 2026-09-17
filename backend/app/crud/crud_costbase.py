@@ -14,6 +14,7 @@ import uuid
 import json
 import unicodedata
 import re
+import math
 import logging
 from app.services.user_semantic_cache import compute_description_embedding
 
@@ -522,9 +523,18 @@ def save_custom_apu(
     apu_data: str,
     user_id: Optional[int] = None
 ) -> CustomCostItem:
+    if not description or not isinstance(description, str) or not description.strip():
+        raise ValueError("La descripción de la partida personalizada no puede estar vacía.")
+    if not apu_data or not isinstance(apu_data, str) or not apu_data.strip():
+        raise ValueError("Los datos técnicos del APU (apu_data) no pueden estar vacíos.")
+
+    clean_desc = description.strip()
+    clean_unit = unit.strip() if (unit and isinstance(unit, str) and unit.strip()) else "und"
+    clean_perf = float(performance) if (performance is not None and not math.isnan(float(performance))) else 1.0
+
     emb_str: Optional[str] = None
     try:
-        emb_vec = compute_description_embedding(description)
+        emb_vec = compute_description_embedding(clean_desc)
         if emb_vec is not None:
             emb_str = json.dumps(emb_vec.tolist())
     except Exception as emb_err:
@@ -533,16 +543,56 @@ def save_custom_apu(
     new_item = CustomCostItem(
         id=str(uuid.uuid4()),
         user_id=user_id,
-        description=description,
-        unit=unit,
-        performance=performance,
+        description=clean_desc,
+        unit=clean_unit,
+        performance=clean_perf,
         apu_data=apu_data,
         embedding=emb_str
     )
-    db.add(new_item)
-    db.commit()
-    db.refresh(new_item)
-    return new_item
+
+    try:
+        db.add(new_item)
+        db.commit()
+        db.refresh(new_item)
+        return new_item
+    except Exception as exc:
+        db.rollback()
+        err_msg = str(exc).lower()
+        if "embedding" in err_msg or "column" in err_msg:
+            logger.warning("Columna 'embedding' ausente en cost360_custom_items. Auto-migrando esquema...")
+            try:
+                db.execute(text("ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS embedding TEXT;"))
+                db.commit()
+                db.add(new_item)
+                db.commit()
+                db.refresh(new_item)
+                logger.info("Auto-migración completada y CustomCostItem guardado exitosamente.")
+                return new_item
+            except Exception as auto_mig_err:
+                db.rollback()
+                logger.error("Error en auto-migración de embedding, aplicando fallback sin embedding: %s", auto_mig_err, exc_info=True)
+                try:
+                    insert_stmt = text("""
+                        INSERT INTO cost360_custom_items (id, user_id, description, unit, performance, apu_data, created_at)
+                        VALUES (:id, :user_id, :description, :unit, :performance, :apu_data, NOW())
+                    """)
+                    db.execute(insert_stmt, {
+                        "id": new_item.id,
+                        "user_id": user_id,
+                        "description": clean_desc,
+                        "unit": clean_unit,
+                        "performance": clean_perf,
+                        "apu_data": apu_data
+                    })
+                    db.commit()
+                    logger.info("CustomCostItem guardado exitosamente mediante fallback sin columna embedding.")
+                    return new_item
+                except Exception as fallback_err:
+                    db.rollback()
+                    logger.error("Error crítico en fallback de guardado de CustomCostItem: %s", fallback_err, exc_info=True)
+                    raise fallback_err
+        logger.error("Error al persistir CustomCostItem en base de datos: %s", exc, exc_info=True)
+        raise exc
 
 def delete_custom_apu(
     db: Session,

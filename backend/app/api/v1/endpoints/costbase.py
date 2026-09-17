@@ -1655,15 +1655,28 @@ def save_custom_apu_route(
     db: Session = Depends(get_db)
 ) -> Any:
     user_id = current_user.id if current_user else None
-    new_item = save_custom_apu(
-        db=db,
-        description=payload.description,
-        unit=payload.unit,
-        performance=payload.performance,
-        apu_data=payload.apu_data,
-        user_id=user_id
-    )
-    return new_item
+    try:
+        new_item = save_custom_apu(
+            db=db,
+            description=payload.description,
+            unit=payload.unit or "und",
+            performance=payload.performance or 1.0,
+            apu_data=payload.apu_data,
+            user_id=user_id
+        )
+        return new_item
+    except ValueError as val_err:
+        logger.warning("Validación fallida en /custom-apus: %s", val_err)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(val_err)
+        )
+    except Exception as exc:
+        logger.error("Error al procesar /custom-apus: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error interno al guardar la partida personalizada: {str(exc)}"
+        )
 
 @router.delete("/custom-apus/{item_id}")
 def delete_custom_apu_route(

@@ -112,16 +112,16 @@ class CostLaborUpdate(BaseModel):
 
 class CustomCostItemCreate(BaseModel):
     description: str
-    unit: str
-    performance: float
+    unit: Optional[str] = "und"
+    performance: Optional[float] = 1.0
     apu_data: str  # JSON encoded string of the APU details
 
 class CustomCostItemResponse(BaseModel):
     id: str
-    user_id: Optional[int]
+    user_id: Optional[int] = None
     description: str
-    unit: str
-    performance: float
+    unit: Optional[str] = "und"
+    performance: Optional[float] = 1.0
     apu_data: str
     created_at: Optional[datetime] = None
     
