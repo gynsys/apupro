@@ -1296,14 +1296,18 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             getattr(current_user, 'email', 'desconocido'),
             payload.description
         )
-        inverse_result = synthesize_apu_inverse(
-            user_description=payload.description,
-            unit=effective_unit or payload.unit,
-            covenin_prefix=payload.covenin_prefix or "",
-            db=db
-        )
-        inverse_result["generation_engine"] = "inverse"
-        return inverse_result
+        try:
+            inverse_result = synthesize_apu_inverse(
+                user_description=payload.description,
+                unit=effective_unit or payload.unit or "und",
+                covenin_prefix=payload.covenin_prefix or "",
+                db=db
+            )
+            inverse_result["generation_engine"] = "inverse"
+            return inverse_result
+        except Exception as exc:
+            logger.error("Error al sintetizar APU en Modo Matemático: %s", exc, exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Error en Modo Matemático: {str(exc)}")
 
     # --- CAPA 0 (Semantic Cache Privado del Usuario): Búsqueda Ultra-Rápida en APUs Validados (< 50ms, 0 tokens) ---
     if current_user and payload.description and not payload.only_preprocess and not payload.base_partida_code and not payload.accept_exact_match_code:

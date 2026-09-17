@@ -959,7 +959,8 @@ Devuelve ÚNICAMENTE el JSON final con la estructura:
 
 def synthesize_apu_inverse(
     user_description: str,
-    requested_unit: str = "und",
+    unit: str = "und",
+    requested_unit: Optional[str] = None,
     covenin_prefix: str = "",
     smart_answers: Optional[Dict[str, str]] = None,
     db: Optional[Session] = None
@@ -978,7 +979,8 @@ def synthesize_apu_inverse(
     if not user_description or not isinstance(user_description, str):
         raise ValueError("La descripción técnica del usuario no puede estar vacía.")
 
-    unit_clean = (requested_unit or "und").strip().lower()
+    raw_u = requested_unit or unit or "und"
+    unit_clean = raw_u.strip().lower()
     notes_total: List[str] = []
 
     # Determinar si es mantenimiento en sitio
