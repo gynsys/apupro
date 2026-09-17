@@ -46,6 +46,9 @@ export function useApuGenerator({ setSettings }) {
           partida: response.partida,
           notas_adaptacion: response.notas_adaptacion || [],
           advertencias: response.advertencias,
+          materials: response.materials || [],
+          equipments: response.equipments || [],
+          labors: response.labors || [],
           conteo_materiales: (response.materials || []).length,
           conteo_equipos: (response.equipments || []).length,
           conteo_mano_obra: (response.labors || []).length

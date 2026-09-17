@@ -203,6 +203,68 @@ EMPERICAL_HH_BENCHMARKS: Dict[str, Dict[str, float]] = {
         "p90": 8.0000,
         "rendimiento_med": 8.0,
     },
+
+    # 14. Estructuras Metálicas, Herrería y Soldadura (E36/M36)
+    "ESTRUCTURAS_METALICAS_und": {
+        "p10": 12.0000,
+        "p25": 16.0000,
+        "median": 24.0000,
+        "p75": 30.0000,
+        "p90": 40.0000,
+        "rendimiento_med": 1.25,
+    },
+    "ESTRUCTURAS_METALICAS_pza": {
+        "p10": 4.0000,
+        "p25": 6.0000,
+        "median": 8.0000,
+        "p75": 12.0000,
+        "p90": 16.0000,
+        "rendimiento_med": 3.0,
+    },
+    "ESTRUCTURAS_METALICAS_kgf": {
+        "p10": 0.0200,
+        "p25": 0.0280,
+        "median": 0.0380,
+        "p75": 0.0500,
+        "p90": 0.0650,
+        "rendimiento_med": 630.0,
+    },
+    "ESTRUCTURAS_METALICAS_m": {
+        "p10": 0.3000,
+        "p25": 0.5000,
+        "median": 0.8000,
+        "p75": 1.2000,
+        "p90": 1.6000,
+        "rendimiento_med": 30.0,
+    },
+
+    # 15. Reparaciones y Reformas Puntuales en Sitio (R4/R6)
+    "REPARACIONES_PUNTUALES_und": {
+        "p10": 8.0000,
+        "p25": 12.0000,
+        "median": 16.0000,
+        "p75": 20.0000,
+        "p90": 24.0000,
+        "rendimiento_med": 1.0,
+    },
+    "REPARACIONES_PUNTUALES_pza": {
+        "p10": 1.0000,
+        "p25": 1.5000,
+        "median": 2.4000,
+        "p75": 4.0000,
+        "p90": 6.0000,
+        "rendimiento_med": 8.0,
+    },
+
+    # 16. Mantenimiento Electromecánico y Equipos (M6/M7)
+    "MANTENIMIENTO_ELECTROMECANICO_und": {
+        "p10": 6.0000,
+        "p25": 10.0000,
+        "median": 16.0000,
+        "p75": 20.0000,
+        "p90": 24.0000,
+        "rendimiento_med": 1.5,
+    },
 }
 
 
@@ -244,7 +306,20 @@ def classify_activity_typology(description: str, unit: str, covenin_code: str = 
     if cov_upper.startswith("R9"):
         return "ACARREO"
 
-    # 3. Acero de Refuerzo / Cabillas (prioridad sobre Concreto por unidad de medida kgf/ton)
+    # 3. Estructuras Metálicas, Herrería y Soldadura (E36, M36, R36)
+    if cov_upper.startswith("E36") or cov_upper.startswith("M36") or cov_upper.startswith("R36"):
+        return "ESTRUCTURAS_METALICAS"
+    if any(k in desc_clean for k in [
+        "ESTRUCTURA METALICA", "ESTRUCTURAS METALICAS", "HERRERIA", "SOLDADURA", "OXICORTE",
+        "TUBO ESTRUCTURAL", "TUBOS ESTRUCTURALES", "PERFIL ESTRUCTURAL", "PERFILES DE ACERO",
+        "VIGA METALICA", "COLUMNA METALICA", "ZANCA", "ZANCAS", "PLETINA", "PLETINAS",
+        "ESCALERA METALICA", "BARANDA METALICA", "PORTON METALICO", "REJA DE HIERRO",
+        "PLANCHA DE APOYO", "PLANCHA BASE"
+    ]):
+        if not (u_norm in ("kgf", "kg", "ton", "tonf") and any(c in desc_clean for c in ["CABILLA", "ACERO DE REFUERZO", "MALLA ELECTROSOLDADA"])):
+            return "ESTRUCTURAS_METALICAS"
+
+    # 4. Acero de Refuerzo / Cabillas (prioridad sobre Concreto por unidad de medida kgf/ton)
     if u_norm in ("kgf", "kg", "ton", "tonf") and any(k in desc_clean for k in ["ACERO", "CABILLA", "ARMADURA", "HIERRO", "MALLA"]):
         return "ACERO"
     if any(k in desc_clean for k in ["ACERO DE REFUERZO", "CABILLA", "ARMADURA DE ACERO", "MALLA ELECTROSOLDADA"]):
@@ -309,6 +384,20 @@ def classify_activity_typology(description: str, unit: str, covenin_code: str = 
             return "EXCAVACION_MECANICA"
         return "EXCAVACION_MANUAL"
 
+    # 13. Mantenimiento Electromecánico y Equipos (M6, M7, M5)
+    if cov_upper.startswith("M6") or cov_upper.startswith("M7") or cov_upper.startswith("M5"):
+        if any(k in desc_clean for k in ["MANTENIMIENTO", "REVISION", "SERVICIO", "BOMBA", "MOTOR", "COMPRESOR", "AIRE ACONDICIONADO", "HIDRONEUMATICO"]):
+            return "MANTENIMIENTO_ELECTROMECANICO"
+    if any(k in desc_clean for k in ["MANTENIMIENTO DE BOMBA", "MANTENIMIENTO ELECTROMECANICO", "SISTEMA HIDRONEUMATICO", "COMPRESOR DE AIRE", "PLANTA ELECTRICA"]):
+        return "MANTENIMIENTO_ELECTROMECANICO"
+
+    # 14. Reparaciones y Reformas Puntuales en Sitio (R4, R6, R2 o en und/pza)
+    if cov_upper.startswith("R4") or cov_upper.startswith("R6") or cov_upper.startswith("R2"):
+        if u_norm in ("und", "pza"):
+            return "REPARACIONES_PUNTUALES"
+    if u_norm in ("und", "pza") and any(k in desc_clean for k in ["REPARACION", "REPARAR", "RECONSTRUCCION", "SANEAMIENTO", "SUSTITUCION DE"]):
+        return "REPARACIONES_PUNTUALES"
+
     return "GENERAL"
 
 
@@ -321,12 +410,12 @@ def is_supervisory_role(role_desc: str, code: str = "") -> bool:
     desc_clean = (role_desc or "").upper()
     code_clean = (code or "").upper().strip()
 
-    supervision_terms = ["CAPORAL", "MAESTRO DE OBRA", "SOBRESTANTE", "SUPERVISOR", "JEFE DE CUADRILLA"]
+    supervision_terms = ["CAPORAL", "MAESTRO", "SOBRESTANTE", "SUPERVISOR", "JEFE DE CUADRILLA"]
     if any(term in desc_clean for term in supervision_terms):
         return True
 
     supervision_codes = {"11-1.3", "MOB013", "11-1.1", "11-1.2", "CAPORAL", "CAP-01"}
-    if code_clean in supervision_codes:
+    if code_clean in supervision_codes or "MO-DIR" in code_clean:
         return True
 
     return False
@@ -407,7 +496,10 @@ def balance_crew_specialties(labors: List[Dict[str, Any]], typology: str) -> Tup
     if not isinstance(labors, list) or not labors:
         return labors or [], []
 
-    specialized_typologies = {"ALBANILERIA", "FRISOS", "PINTURA", "ENCOFRADOS", "SANITARIAS", "ELECTRICAS"}
+    specialized_typologies = {
+        "ALBANILERIA", "FRISOS", "PINTURA", "ENCOFRADOS", "SANITARIAS", "ELECTRICAS",
+        "ESTRUCTURAS_METALICAS", "REPARACIONES_PUNTUALES", "MANTENIMIENTO_ELECTROMECANICO"
+    }
     if typology not in specialized_typologies:
         return labors, []
 
@@ -416,7 +508,8 @@ def balance_crew_specialties(labors: List[Dict[str, Any]], typology: str) -> Tup
     # Detectar oficiales y ayudantes
     specialist_terms = [
         "ALBAÑIL", "PINTOR", "PLOMERO", "ELECTRICISTA", "CARPINTERO",
-        "CABILLERO", "SOLDADOR", "INSTALADOR", "OFICIAL DE 1RA", "OFICIAL"
+        "CABILLERO", "SOLDADOR", "HERRERO", "MONTADOR", "OXICORTADOR",
+        "TECNICO", "MECANICO", "INSTALADOR", "OFICIAL DE 1RA", "OFICIAL"
     ]
     helper_terms = ["AYUDANTE", "OBRERO DE 1RA", "OBRERO", "PEON"]
 
@@ -440,6 +533,14 @@ def balance_crew_specialties(labors: List[Dict[str, Any]], typology: str) -> Tup
         else:
             others.append(item)
 
+    # Sustitución de oficios incompatibles para ESTRUCTURAS_METALICAS
+    if typology == "ESTRUCTURAS_METALICAS":
+        for s in specialists:
+            s_desc = str(s.get("descripcion", "")).upper()
+            if any(inc in s_desc for inc in ["CABILLERO", "CARPINTERO", "ALBAÑIL", "PLOMERO"]):
+                s["descripcion"] = "HERRERO DE 1RA"
+                notes.append(f"Oficio especializado calibrado: Se sustituyó cargo incompatible '{s_desc}' de la base por HERRERO DE 1RA.")
+
     spec_count = sum(float(s.get("cantidad", 1.0) or 1.0) for s in specialists)
     help_count = sum(float(h.get("cantidad", 1.0) or 1.0) for h in helpers)
 
@@ -452,7 +553,10 @@ def balance_crew_specialties(labors: List[Dict[str, Any]], typology: str) -> Tup
             "PINTURA": "PINTOR DE 1RA",
             "ENCOFRADOS": "CARPINTERO DE 1RA",
             "SANITARIAS": "PLOMERO DE 1RA",
-            "ELECTRICAS": "ELECTRICISTA DE 1RA"
+            "ELECTRICAS": "ELECTRICISTA DE 1RA",
+            "ESTRUCTURAS_METALICAS": "SOLDADOR DE 1RA",
+            "REPARACIONES_PUNTUALES": "OFICIAL DE REPARACIONES DE 1RA",
+            "MANTENIMIENTO_ELECTROMECANICO": "TECNICO ELECTROMECANICO DE 1RA"
         }
         spec_role = trade_names.get(typology, "OFICIAL DE 1RA")
         first_helper["descripcion"] = spec_role
@@ -463,8 +567,9 @@ def balance_crew_specialties(labors: List[Dict[str, Any]], typology: str) -> Tup
         help_count = sum(float(h.get("cantidad", 1.0) or 1.0) for h in helpers)
         notes.append(f"Cuadrilla equilibrada: Se asignó 1.0 {spec_role} como oficial técnico de frente de trabajo.")
 
-    # Regla: máximo 2.0 ayudantes por especialista (lo estándar es 1:1 o 1:1.5)
-    max_allowed_helpers = max(1.0, round(spec_count * 2.0, 1))
+    # Regla: máximo 1.0 ayudante por especialista en trabajos puntuales/mantenimiento, 2.0 en masivos
+    max_ratio = 1.0 if typology in ("ESTRUCTURAS_METALICAS", "REPARACIONES_PUNTUALES", "MANTENIMIENTO_ELECTROMECANICO") else 2.0
+    max_allowed_helpers = max(1.0, round(spec_count * max_ratio, 1))
     if spec_count > 0 and help_count > max_allowed_helpers:
         # Escalar ayudantes al tope técnico admisible
         scale_ratio = max_allowed_helpers / help_count
@@ -685,6 +790,132 @@ def balance_crew_and_equipments(
                             f"a {specialist_count:.0f} unidades (una por especialista activo)."
                         )
 
+    # -----------------------------------------------------------------------
+    # CASO D: ESTRUCTURAS METÁLICAS, HERRERÍA Y SOLDADURA
+    # -----------------------------------------------------------------------
+    elif typology == "ESTRUCTURAS_METALICAS":
+        # Contar soldadores activos
+        welders_count = sum(float(l.get("cantidad", 1.0) or 1.0) for l in labors if "SOLDADOR" in str(l.get("descripcion", "")).upper())
+        if welders_count > 0:
+            welder_eq = next((eq for eq in equipments if any(w in str(eq.get("descripcion", "")).upper() for w in ["SOLDADORA", "MAQUINA DE SOLDAR", "MOTO SOLDADOR", "LINCOLN", "INVERSORA"])), None)
+            if welder_eq is not None:
+                curr_w = float(welder_eq.get("cantidad", 1.0) or 1.0)
+                if curr_w < welders_count:
+                    welder_eq["cantidad"] = welders_count
+                    notes.append(f"Equipos metalmecánicos: Ajustada máquina de soldar a {welders_count:.0f} un. (1 por soldador activo).")
+            else:
+                equipments.append({
+                    "id": "e-ia-soldadora-lincoln",
+                    "codigo": "EQU-HER-152",
+                    "descripcion": "SOLDADORA LINCOLN SA-200",
+                    "unidad": "día",
+                    "cantidad": welders_count,
+                    "depreciacion": 0.005282,
+                    "precio_unitario": 26559.59,
+                    "origen": "historico",
+                    "nota_calculo": f"1 máquina de soldar por cada soldador activo ({welders_count:.0f} soldadores)."
+                })
+                notes.append(f"Equipos metalmecánicos: Se incorporó máquina soldadora ({welders_count:.0f} un.) para soldadores activos.")
+
+        # Sincronizar esmeril angular si hay corte, desbaste o saneamiento
+        desc_c = _normalize_str(description)
+        if any(k in desc_c for k in ["CORTE", "DESBASTE", "ESMERIL", "PELDANO", "ZANCA", "TUBO", "PERFIL", "PLETINA", "SANEAMIENTO"]):
+            has_esmeril = any(any(g in str(eq.get("descripcion", "")).upper() for g in ["ESMERIL", "AMOLADORA", "TRONCHADORA"]) for eq in equipments)
+            if not has_esmeril:
+                equipments.append({
+                    "id": "e-ia-esmeril-angular",
+                    "codigo": "EQU-HER-056",
+                    "descripcion": "ESMERIL ANGULAR / AMOLADORA INDUSTRIAL 7 PULG",
+                    "unidad": "día",
+                    "cantidad": 1.0,
+                    "depreciacion": 0.01,
+                    "precio_unitario": 120.0,
+                    "origen": "historico",
+                    "nota_calculo": "Herramienta menor para corte y saneamiento de perfiles y zancas."
+                })
+                notes.append("Herramientas metalmecánicas: Se incorporó Esmeril Angular para corte y desbaste en sitio.")
+
+    # -----------------------------------------------------------------------
+    # CASO E: LOGÍSTICA INTELIGENTE DE VEHÍCULOS DE APOYO Y CHOFERES
+    # -----------------------------------------------------------------------
+    # Aplica para trabajos de campo, mantenimiento, herrería y reparaciones en sitio
+    is_site_logistics = typology in (
+        "ESTRUCTURAS_METALICAS", "REPARACIONES_PUNTUALES", "MANTENIMIENTO_ELECTROMECANICO",
+        "PINTURA", "ALBANILERIA", "FRISOS", "SANITARIAS", "ELECTRICAS"
+    )
+
+    if is_site_logistics:
+        light_terms = ["F-350", "F350", "ESTACAS", "F-150", "F150", "PICK-UP", "PICKUP", "CHEVROLET", "SILVERADO", "HILUX", "D-MAX", "FURGON"]
+        heavy_terms = [
+            "750", "CAMION 750", "MACK", "CHUTO", "GANDOLA", "VOLTEO", "PERFORADOR",
+            "CALDWELL", "MIXER", "CONCRETERA", "GRUA TELESCOPICA", "GRUA 40", "GRUA 50", "GRUA 100"
+        ]
+
+        # 1. Detectar y sustituir transporte pesado o maquinaria pesada fuera de escala
+        heavy_truck_found = False
+        purged_equipments = []
+        for eq in equipments:
+            eq_desc = str(eq.get("descripcion", "")).upper()
+            if any(h in eq_desc for h in heavy_terms):
+                heavy_truck_found = True
+            else:
+                purged_equipments.append(eq)
+        equipments = purged_equipments
+
+        if heavy_truck_found:
+            has_light = any(any(lv in str(eq.get("descripcion", "")).upper() for lv in light_terms) for eq in equipments)
+            if not has_light:
+                equipments.append({
+                    "id": "e-vehiculo-utilitario-cuadrilla",
+                    "codigo": "EQU-PES-054",
+                    "descripcion": "CAMION FORD F- 350 ESTACAS",
+                    "unidad": "día",
+                    "cantidad": 0.25,
+                    "depreciacion": 0.004429,
+                    "precio_unitario": 96278.52,
+                    "origen": "historico",
+                    "nota_calculo": "Logística de cuadrilla: Camión F-350 estacas (0.25 día) para transporte de cuadrilla, soldadora, cilindros y herramientas en sitio (degradado de maquinaria pesada de la base)."
+                })
+                notes.append(
+                    "Logística de cuadrilla calibrada: Se sustituyó maquinaria/transporte pesado de la base por Camión F-350 estacas a 0.25 día (adecuado a escala de obra)."
+                )
+
+        # 2. Preservar vehículos utilitarios livianos y acotar a escala razonable (0.25 a 0.50 día)
+        for eq in equipments:
+            eq_desc = str(eq.get("descripcion", "")).upper()
+            if any(lv in eq_desc for lv in light_terms):
+                curr_qty = float(eq.get("cantidad", 0.0) or 0.0)
+                if curr_qty > 0.50:
+                    eq["cantidad"] = 0.25
+                    notes.append(
+                        f"Logística de cuadrilla: Se acotó '{eq.get('descripcion')}' de {curr_qty:.2f} a 0.25 día para soporte logístico en sitio."
+                    )
+                elif curr_qty <= 0.0:
+                    eq["cantidad"] = 0.25
+
+        # 3. Sincronizar al Chofer con el vehículo de apoyo
+        has_any_vehicle = any(any(lv in str(eq.get("descripcion", "")).upper() for lv in light_terms) for eq in equipments)
+        if has_any_vehicle:
+            driver = next((l for l in labors if "CHOFER" in str(l.get("descripcion", "")).upper()), None)
+            if driver is not None:
+                curr_drv = float(driver.get("cantidad", 0.0) or 0.0)
+                if curr_drv > 0.50 or curr_drv <= 0.0:
+                    driver["cantidad"] = 0.25
+                    notes.append("Mano de obra logística: Chofer ajustado a 0.25 día en correspondencia con el vehículo de apoyo.")
+            else:
+                labors.append({
+                    "id": "mo-chofer-logistica",
+                    "codigo": "MO-OPR-12",
+                    "descripcion": "CHOFER DE 2DA (DE 3 A 8 TON) -N4",
+                    "unidad": "día",
+                    "cantidad": 0.25,
+                    "jornal": 2.74,
+                    "bono": 3.22,
+                    "origen": "historico",
+                    "nota_calculo": "Chofer para vehículo utilitario de transporte de cuadrilla y equipos (0.25 día)."
+                })
+                notes.append("Mano de obra logística: Se incorporó Chofer de 2da (0.25 día) sincronizado con el vehículo de apoyo.")
+
     return equipments, notes
 
 
@@ -741,9 +972,9 @@ def validate_and_calibrate_hh(
     p50 = benchmark["median"]
     p90 = benchmark["p90"]
 
-    # Margen de tolerancia elástico (50% sobre P90 y 50% bajo P10) antes de forzar ajuste
-    lower_bound = p10 * 0.50
-    upper_bound = p90 * 1.80
+    # Margen de tolerancia elástico (50% sobre P90 y 30% bajo P10) antes de forzar ajuste
+    lower_bound = p10 * 0.70
+    upper_bound = p90 * 1.50
 
     if current_hh < lower_bound:
         # Rendimiento excesivo / subdimensionamiento de HH
