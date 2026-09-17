@@ -97,7 +97,8 @@ export const generateAIApu = async (
   onlyPreprocess = false,
   bypassExactMatch = false,
   acceptExactMatchCode = null,
-  unit = null
+  unit = null,
+  generationMode = 'rag'
 ) => {
   const payload = {
     description,
@@ -107,6 +108,7 @@ export const generateAIApu = async (
     only_preprocess: onlyPreprocess,
     bypass_exact_match: bypassExactMatch,
     accept_exact_match_code: acceptExactMatchCode,
+    generation_mode: generationMode,
   };
   if (unit) {
     payload.unit = unit;

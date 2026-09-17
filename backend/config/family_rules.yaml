@@ -1,0 +1,252 @@
+# Matriz Ontológica Declarativa de Familias APU (COVENIN / Tabulador)
+# Permite clasificar y calibrar partidas de forma extensible sin modificar código Python.
+# Evaluación por scoring ponderado:
+# Score = 0.40 * match(keywords) + 0.30 * match(actions) + 0.20 * match(covenin_prefixes) + 0.10 * match(units)
+# Umbral mínimo de activación: 0.50
+
+rules:
+  # 1. Equipos de Bombeo e Hidráulica Especializada
+  - family: "EQUIPOS_BOMBEO"
+    priority: 10
+    keywords:
+      - "BOMBA SUMERGIBLE"
+      - "BOMBA CENTRIFUGA"
+      - "EQUIPO DE BOMBEO"
+      - "SISTEMA DE BOMBEO"
+      - "POZO PROFUNDO"
+      - "HIDRONEUMATICO"
+      - "SISTEMA HIDRONEUMATICO"
+      - "TABLERO DE BOMBEO"
+      - "ELECTROBOMBA"
+      - "MOTOBOMBA"
+    actions:
+      - "SUMINISTRO E INSTALACION"
+      - "SUMINISTRO TRANSPORTE E INSTALACION"
+      - "COLOCACION"
+      - "INSTALACION"
+      - "MONTAJE"
+    covenin_prefixes:
+      - "E51"
+      - "E52"
+      - "E53"
+      - "M5"
+      - "M6"
+    units:
+      - "und"
+      - "pza"
+      - "jgo"
+
+  # 2. Acarreo y Transporte Manual / a Distancia
+  - family: "ACARREO"
+    priority: 20
+    keywords:
+      - "ACARREO A MANO"
+      - "ACARREO EN CARRETILLA"
+      - "ACARREO"
+      - "TRANSPORTE A MANO"
+      - "BOTE DE ESCOMBROS A MANO"
+      - "CARRETILLA"
+    actions:
+      - "ACARREO"
+      - "TRANSPORTE"
+      - "CARGA Y BOTE"
+      - "TRASLADO"
+    covenin_prefixes:
+      - "R9"
+      - "E13"
+      - "C13"
+    units:
+      - "m3.m"
+      - "m3xm"
+      - "sac.m"
+      - "sacxm"
+      - "m3"
+      - "sac"
+
+  # 3. Demoliciones y Desmantelamientos
+  - family: "DEMOLICION"
+    priority: 30
+    keywords:
+      - "DEMOLICION"
+      - "DESMANTELAMIENTO"
+      - "DESMONTAJE"
+      - "PICA DE CONCRETO"
+      - "PICADO DE"
+      - "REMOCION DE PARED"
+    actions:
+      - "DEMOLER"
+      - "DESMANTELAR"
+      - "REMOVER"
+      - "PICAR"
+    covenin_prefixes:
+      - "R1"
+      - "R2"
+      - "R3"
+    units:
+      - "m3"
+      - "m2"
+      - "m"
+      - "und"
+
+  # 4. Pintura, Recubrimientos y Tratamiento Superficial
+  - family: "PINTURA_RECUBRIMIENTO"
+    priority: 40
+    keywords:
+      - "PINTURA"
+      - "ESMALTE"
+      - "FONDO ANTICORROSIVO"
+      - "ANTICORROSIVO"
+      - "FONDO ANTIALCALINO"
+      - "CONVERTIDOR DE OXIDO"
+      - "CROMATO DE ZINC"
+      - "LIMPIEZA DE SUPERFICIE"
+      - "LIMPIEZA DE SUPERFICIES"
+      - "DESENGRASANTE"
+      - "DESMANCHADO"
+      - "LAVADO DE SUPERFICIE"
+      - "BARNIZ"
+      - "EMPASTADO"
+    actions:
+      - "APLICACION"
+      - "PINTADO"
+      - "LIMPIEZA"
+      - "FONDEADO"
+      - "DESENGRASE"
+      - "ACABADO"
+    covenin_prefixes:
+      - "E8"
+      - "R8"
+      - "M8"
+    units:
+      - "m2"
+      - "m"
+      - "pza"
+      - "und"
+
+  # 5. Estructuras Metálicas y Herrería
+  - family: "ESTRUCTURAS_METALICAS"
+    priority: 50
+    keywords:
+      - "ESTRUCTURA METALICA"
+      - "ESTRUCTURAS METALICAS"
+      - "HERRERIA"
+      - "BARANDA METALICA"
+      - "PASAMANOS"
+      - "ESCALERA METALICA"
+      - "PORTON METALICO"
+      - "REJA DE HIERRO"
+      - "TUBO ESTRUCTURAL"
+      - "PERFIL ESTRUCTURAL"
+      - "VIGA METALICA"
+      - "COLUMNA METALICA"
+      - "SOLDADURA"
+    actions:
+      - "FABRICACION Y MONTAJE"
+      - "FABRICACION"
+      - "INSTALACION"
+      - "CONFECCION"
+      - "COLOCACION"
+    covenin_prefixes:
+      - "E36"
+      - "M36"
+      - "R36"
+    units:
+      - "kgf"
+      - "kg"
+      - "ton"
+      - "m"
+      - "m2"
+      - "pza"
+      - "und"
+
+  # 6. Concreto y Estructuras de Hormigón
+  - family: "CONCRETO"
+    priority: 60
+    keywords:
+      - "CONCRETO"
+      - "VACIADO DE CONCRETO"
+      - "LOSA DE CONCRETO"
+      - "VIGA DE CONCRETO"
+      - "COLUMNA DE CONCRETO"
+      - "ZAPATA DE CONCRETO"
+      - "PEDESTAL DE CONCRETO"
+    actions:
+      - "VACIADO"
+      - "CONSTRUCCION"
+      - "COLOCACION"
+    covenin_prefixes:
+      - "E31"
+      - "E32"
+    units:
+      - "m3"
+
+  # 7. Albañilería y Paredes
+  - family: "ALBANILERIA"
+    priority: 70
+    keywords:
+      - "PARED DE BLOQUE"
+      - "PARED DE LADRILLO"
+      - "ALBANILERIA"
+      - "MURO DE BLOQUE"
+      - "TABIQUERIA"
+    actions:
+      - "CONSTRUCCION"
+      - "LEVANTAMIENTO"
+    covenin_prefixes:
+      - "E411"
+      - "E412"
+      - "R41"
+    units:
+      - "m2"
+
+  # 8. Instalaciones Sanitarias Generales
+  - family: "INSTALACIONES_HIDRAULICAS"
+    priority: 80
+    keywords:
+      - "TUBERIA SANITARIA"
+      - "TUBERIA PVC"
+      - "AGUAS NEGRAS"
+      - "AGUAS BLANCAS"
+      - "GRIFERIA"
+      - "LAVAMANOS"
+      - "EXCUSADO"
+      - "POCETA"
+      - "DUCHA"
+      - "LLAVE DE PASO"
+      - "SUMIDERO"
+    actions:
+      - "SUMINISTRO E INSTALACION"
+      - "COLOCACION"
+    covenin_prefixes:
+      - "E5"
+    units:
+      - "m"
+      - "pza"
+      - "pto"
+      - "und"
+
+  # 9. Instalaciones Eléctricas
+  - family: "INSTALACIONES_ELECTRICAS"
+    priority: 90
+    keywords:
+      - "TUBERIA CONDUIT"
+      - "CABLE ELECTRICO"
+      - "CONDUCTOR ELECTRICO"
+      - "TABLERO ELECTRICO"
+      - "TOMACORRIENTE"
+      - "INTERRUPTOR"
+      - "LUMINARIA"
+      - "CAJETIN"
+      - "BREAKER"
+      - "TRANSFORMADOR"
+    actions:
+      - "SUMINISTRO E INSTALACION"
+      - "CABLEADO"
+      - "COLOCACION"
+    covenin_prefixes:
+      - "E6"
+    units:
+      - "m"
+      - "pza"
+      - "pto"
+      - "und"

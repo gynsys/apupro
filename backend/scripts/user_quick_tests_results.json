@@ -1,0 +1,104 @@
+[
+  {
+    "case_name": "Prueba 1: Acarreo a mano de piedra bruta en carretilla (40-50m)",
+    "description": "ACARREO A MANO DE PIEDRA BRUTA CON USO DE CARRETILLA, A DISTANCIAS ENTRE 40 Y 50m (IDA Y VUELTA) CON PENDIENTES DE 2-5%.",
+    "requested_unit": "m3.m",
+    "pipeline_a_baseline": {
+      "elapsed_seconds": 132.6,
+      "cod_par": "R9SC001",
+      "covenin_description": "ACARREO A MANO DE PIEDRA BRUTA CON USO DE CARRETILLA, EN DISTANCIAS COMPRENDIDAS ENTRE 40 Y 50 METROS (IDA Y VUELTA) CON PENDIENTES DE 2% A 5%, INCLUYE CARGA Y DESCARGA.",
+      "unit": "m3.m",
+      "performance": 150.0,
+      "labors_count": 2,
+      "labors": [
+        "6.0x OBRERO DE 1RA -N1 (1-1.1)",
+        "0.25x CAPORAL -N3 (11-1.3)"
+      ],
+      "equipments_count": 2,
+      "equipments": [
+        "5.0x CARRETILLA CAP= 55 LT CAUCHOS DE GOMA (Dep: 0.025, PU: $187.19)",
+        "3.0x PALA CON CABO DE MADERA BELLOTA O SIM # (Dep: 0.034, PU: $38.55)"
+      ],
+      "materials_count": 0,
+      "materials": [],
+      "warnings_count": 0
+    },
+    "pipeline_b_inverse": {
+      "elapsed_seconds": 6.76,
+      "cod_par": "R9SC001",
+      "covenin_description": "ACARREO A MANO DE PIEDRA BRUTA CON USO DE CARRETILLA, A DISTANCIAS ENTRE 40 Y 50M (IDA Y VUELTA) CON PENDIENTES DE 2-5%.",
+      "unit": "m3.m",
+      "performance": 3000.0,
+      "labors_count": 2,
+      "labors": [
+        "3.0x OBRERO DE 1RA (1-1.2)",
+        "0.2x CAPORAL -N3 (11-1.3)"
+      ],
+      "equipments_count": 3,
+      "equipments": [
+        "2.0x CARRETILLA CAP= 55 LT CAUCHOS DE GOMA (Dep: 0.025, PU: $187.19)",
+        "2.0x PALA REDONDA PUNTA DE ACERO (Dep: 0.015, PU: $18.0)",
+        "1.0x PICO DE ACERO CON MANGO DE MADERA (Dep: 0.015, PU: $22.0)"
+      ],
+      "materials_count": 1,
+      "materials": [
+        "0.0001 kg de LUBRICANTE PARA EJE DE CARRETILLA (GRASA) (PU: $8.5)"
+      ],
+      "warnings_count": 1
+    }
+  },
+  {
+    "case_name": "Prueba 2: Limpieza y desengrase de barandas y pasamanos metálicos",
+    "description": "LIMPIEZA DE SUPERFICIES EN BARANDAS Y PASAMANOS METÁLICOS: REMOCIÓN DE CONTAMINANTES Y DESMANCHADO DE LA ESTRUCTURA MEDIANTE LA APLICACIÓN DE DETERGENTES Y DESENGRASANTES CONVENCIONALES. INCLUYE MANO DE OBRA, INSUMOS DE LIMPIEZA Y RETIRO DE RESIDUOS",
+    "requested_unit": "m",
+    "pipeline_a_baseline": {
+      "elapsed_seconds": 14.6,
+      "cod_par": "E811SC001",
+      "covenin_description": "LIMPIEZA DE SUPERFICIES EN BARANDAS Y PASAMANOS METÁLICOS MEDIANTE REMOCIÓN DE CONTAMINANTES Y DESMANCHADO CON DETERGENTES Y DESENGRASANTES CONVENCIONALES. INCLUYE MANO DE OBRA, SUMINISTRO DE INSUMOS, RETIRO DE RESIDUOS Y LIMPIEZA FINAL DEL ÁREA DE TRABAJO.",
+      "unit": "m",
+      "performance": 13.85,
+      "labors_count": 2,
+      "labors": [
+        "1.0x PINTOR DE 1RA (1-1.1)",
+        "0.5x AYUDANTE - TABULADOR CONSTRUCCION -N2 (1-1.2)"
+      ],
+      "equipments_count": 2,
+      "equipments": [
+        "1.0x HERRAMIENTAS MENORES (Dep: 0.006, PU: $73.79)",
+        "1.0x AMOLADORA ANGULAR DE 4 1/2 PULG CON CEPILLO DE ALAMBRE (Dep: 0.01, PU: $55.0)"
+      ],
+      "materials_count": 2,
+      "materials": [
+        "0.003 kgf de ESTOPA EN FARDOS (PU: $2.96)",
+        "0.015 gln de DETERGENTE/DESENGRASANTE INDUSTRIAL (PU: $12.5)"
+      ],
+      "warnings_count": 1
+    },
+    "pipeline_b_inverse": {
+      "elapsed_seconds": 11.83,
+      "cod_par": "E811SC001",
+      "covenin_description": "LIMPIEZA DE SUPERFICIES EN BARANDAS Y PASAMANOS METÁLICOS: REMOCIÓN DE CONTAMINANTES Y DESMANCHADO DE LA ESTRUCTURA MEDIANTE LA APLICACIÓN DE DETERGENTES Y DESENGRASANTES CONVENCIONALES. INCLUYE MANO DE OBRA, INSUMOS DE LIMPIEZA Y RETIRO DE RESIDUOS.",
+      "unit": "m",
+      "performance": 18.46,
+      "labors_count": 3,
+      "labors": [
+        "1.0x PINTOR DE 1RA (19-221)",
+        "1.0x AYUDANTE - TABULADOR CONSTRUCCION -N2 (1-1.2)",
+        "0.2x CAPORAL -N3 (11-1.3)"
+      ],
+      "equipments_count": 1,
+      "equipments": [
+        "1.0x HERRAMIENTAS MENORES DE LIMPIEZA (BALDES, CEPILLOS, ESPONJAS, GUANTES) (Dep: 0.05, PU: $20.0)"
+      ],
+      "materials_count": 5,
+      "materials": [
+        "0.02 paq de LANA / LANILLA DE ACERO X 400 GRS (PU: $8.22)",
+        "0.01 und de PAÑO DE LIMPIEZA AMARILLO O SIMILAR (PU: $1.18)",
+        "0.05 pza de PLIEGO DE LIJA 9 X 11\" GRANO 280 MARCA 3 (PU: $3.28)",
+        "0.025 gln de SOLVENTE VENSOL PARA LIMPIEZA (PU: $14.85)",
+        "0.05 lit de DETERGENTE / DESENGRASANTE INDUSTRIAL CONCENTRADO (PU: $4.5)"
+      ],
+      "warnings_count": 1
+    }
+  }
+]

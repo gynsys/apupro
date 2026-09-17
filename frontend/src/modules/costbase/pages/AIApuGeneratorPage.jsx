@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Loader, Save, Calculator, Printer } from 'lucide-react';
+import { Loader, Save, Calculator, Printer, Sparkles } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import { AuthContext } from '../../../context/AuthContext';
@@ -33,6 +33,12 @@ export default function AIApuGeneratorPage() {
   const guidedParam = searchParams.get('guided');
 
   const { user } = useContext(AuthContext);
+  const isSuperAdmin = Boolean(
+    user?.is_superadmin === true ||
+    user?.email === 'admin@arko360.net' ||
+    user?.role === 'superadmin' ||
+    user?.is_admin === true
+  );
   const { costosConfig, updateCostosConfig } = useUserCostos();
 
   const [creationMode, setCreationMode] = useState(modeParam || 'ia');
@@ -465,6 +471,9 @@ export default function AIApuGeneratorPage() {
                 guided.lastEntrySourceRef.current = 'libre';
                 navigate('/cost360/ai-generator?mode=ia&guided=false', { replace: true });
               }}
+              isSuperAdmin={isSuperAdmin}
+              generationMode={generator.generationMode}
+              setGenerationMode={generator.setGenerationMode}
             />
           )}
 
@@ -497,6 +506,9 @@ export default function AIApuGeneratorPage() {
               guided.lastEntrySourceRef.current = 'libre';
               navigate('/cost360/ai-generator?mode=ia&guided=false', { replace: true });
             }}
+            isSuperAdmin={isSuperAdmin}
+            generationMode={generator.generationMode}
+            setGenerationMode={generator.setGenerationMode}
           />
         </div>
       )}
@@ -529,6 +541,21 @@ export default function AIApuGeneratorPage() {
                 <Calculator size={20} className="text-blue-500" />
                 APU EN EDICIÓN
               </h3>
+              {isSuperAdmin && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-2xs bg-slate-50 text-slate-700 border-slate-300">
+                  {generator.generationMode === 'inverse' ? (
+                    <>
+                      <Calculator size={13} className="text-blue-600" />
+                      <span>Modo Matemático</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={13} className="text-indigo-600" />
+                      <span>Modo Adaptativo</span>
+                    </>
+                  )}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <button

@@ -102,14 +102,25 @@ def _call_gemini(provider: LLMProvider, prompt: str, expect_json: bool) -> str:
             system_instruction=system_instruction,
             response_mime_type="application/json" if expect_json else "text/plain"
         )
-        response = client.models.generate_content(
-            model=model_name,
-            contents=prompt,
-            config=config
-        )
-        if not response or not response.text:
-            raise ValueError("Gemini returned empty or blocked response.")
-        return response.text.strip()
+        for attempt in range(1, 4):
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=config
+                )
+                if not response or not response.text:
+                    raise ValueError("Gemini returned empty or blocked response.")
+                return response.text.strip()
+            except Exception as e:
+                err_msg = str(e)
+                if ("503" in err_msg or "UNAVAILABLE" in err_msg or "429" in err_msg) and attempt < 3:
+                    sleep_time = attempt * 3
+                    logger.warning(f"[LLM] Gemini transitorio (intento {attempt}/3). Reintentando en {sleep_time}s...")
+                    time.sleep(sleep_time)
+                else:
+                    raise
+        raise ValueError("Gemini falló tras 3 intentos por congestión del proveedor.")
     else:
         # Fallback to old SDK
         genai.configure(api_key=api_key)

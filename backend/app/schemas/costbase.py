@@ -156,6 +156,8 @@ class AiApuGenerateRequest(BaseModel):
     # Control interactivo de Match Exacto
     bypass_exact_match: Optional[bool] = False
     accept_exact_match_code: Optional[str] = None
+    # Selector de Arquitectura de Motor ('rag' = Modo Adaptativo | 'inverse' = Modo Matemático)
+    generation_mode: Optional[str] = "rag"
 
 
 class SmartSelectRequest(BaseModel):

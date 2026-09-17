@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Bot, Edit2, AlertTriangle, Loader, Sparkles, CheckCircle2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import ArchitectureModeSelector from './ArchitectureModeSelector';
 
 export default function FreeTextPromptInput({
   prompt,
@@ -16,7 +17,10 @@ export default function FreeTextPromptInput({
   onOpenSubscriptionModal,
   onGenerate,
   onSwitchToGuided,
-  onSwitchToLibre
+  onSwitchToLibre,
+  isSuperAdmin = false,
+  generationMode = 'rag',
+  setGenerationMode
 }) {
   const [unitWarning, setUnitWarning] = useState(false);
 
@@ -43,12 +47,21 @@ export default function FreeTextPromptInput({
   return (
     <>
       {!isClarifying && (
-        <div className="flex items-center justify-between mb-4">
-          <label className="block text-sm font-bold text-slate-700 flex items-center gap-2">
-            {isSmartMode
-              ? 'Smart Selector: Selecciona las características'
-              : 'Descripción Estructurada (APU Builder)'}
-          </label>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-3">
+            <label className="block text-sm font-bold text-slate-700 flex items-center gap-2">
+              {isSmartMode
+                ? 'Smart Selector: Selecciona las características'
+                : 'Descripción Estructurada (APU Builder)'}
+            </label>
+            {isSuperAdmin && !isSmartMode && !isGuidedMode && (
+              <ArchitectureModeSelector
+                generationMode={generationMode}
+                onChange={setGenerationMode}
+                compact={true}
+              />
+            )}
+          </div>
 
           {!isSmartMode && (
             <div className="flex items-center gap-2">

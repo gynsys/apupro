@@ -1,0 +1,168 @@
+[
+  {
+    "case_name": "Caso 1: Mantenimiento de Peldaños Metálicos (Escala Puntual)",
+    "description": "Mantenimiento y aplicacion de fondo anticorrosivo y esmalte en peldanos de escalera metalica",
+    "requested_unit": "pza",
+    "pipeline_a_baseline": {
+      "elapsed_seconds": 22.06,
+      "cod_par": "E811SC001",
+      "covenin_description": "MANTENIMIENTO DE ESCALERA METÁLICA, INCLUYE LIJADO MANUAL DE PELDAÑOS, APLICACIÓN DE FONDO ANTICORROSIVO Y ESMALTE DE ACABADO FINAL, INCLUYE MATERIALES Y EQUIPOS MENORES.",
+      "unit": "pza",
+      "performance": 18.0,
+      "labors_count": 2,
+      "labors": [
+        "1.0x PINTOR DE 1RA (19-221)",
+        "1.0x AYUDANTE (1-1.2)"
+      ],
+      "equipments_count": 2,
+      "equipments": [
+        "1.0x EQUIPOS VARIOS DE PINTAR (MANUAL) (Dep: 0.02, PU: $84.8)",
+        "1.0x AMOLADORA ANGULAR DE 4 1/2 PULG CON CEPILLO DE ALAMBRE (Dep: 0.01, PU: $55.0)"
+      ],
+      "materials_count": 4,
+      "materials": [
+        "0.02 gln de PINTURA FONDO ANTICORROSIVO GRIS/ROJA (PU: $38.58)",
+        "0.005 gln de SOLVENTE PARA BROCHAS (PU: $26.18)",
+        "0.05 jgo de JUEGO DE LIJAS (PU: $11.03)",
+        "0.02 gln de ESMALTE ALQUIDAL DE ACABADO (PU: $45.0)"
+      ],
+      "warnings_count": 1
+    },
+    "pipeline_b_inverse": {
+      "elapsed_seconds": 13.46,
+      "cod_par": "E811SC001",
+      "covenin_description": "MANTENIMIENTO DE ESCALERA METÁLICA, INCLUYE PREPARACIÓN DE SUPERFICIE, APLICACIÓN DE FONDO ANTICORROSIVO Y ESMALTE DE ACABADO EN PELDAÑOS",
+      "unit": "pza",
+      "performance": 13.33,
+      "labors_count": 3,
+      "labors": [
+        "1.0x PINTOR DE 1RA (19-221)",
+        "1.0x AYUDANTE - TABULADOR CONSTRUCCION -N2 (1-1.2)",
+        "0.2x CAPORAL -N3 (11-1.3)"
+      ],
+      "equipments_count": 2,
+      "equipments": [
+        "1.0x HERRAMIENTAS MENORES (PINTURA, BROCHAS, RODILLOS) (Dep: 0.05, PU: $25.0)",
+        "1.0x AMOLADORA ANGULAR DE 4 1/2 PULG CON CEPILLO DE ALAMBRE (Dep: 0.01, PU: $55.0)"
+      ],
+      "materials_count": 4,
+      "materials": [
+        "2.0 pza de PLIEGO DE LIJA (PU: $2.39)",
+        "0.05 gln de PINTURA DE ESMALTE TIPO A (PU: $57.34)",
+        "0.05 gln de PINTURA FONDO ANTICORROSIVO ALQUÍDICO (PU: $71.65)",
+        "0.02 gln de SOLVENTE UNIVERSAL O THINNER (PU: $15.5)"
+      ],
+      "warnings_count": 1
+    }
+  },
+  {
+    "case_name": "Caso 2: Fabricación e Instalación de Barandas (Herrería)",
+    "description": "Fabricación e instalación de barandas de protección con pasamanos de tubo de acero galvanizado 2 pulg y parales cada 1.20m",
+    "requested_unit": "m",
+    "pipeline_a_baseline": {
+      "elapsed_seconds": 8.05,
+      "cod_par": "E360SC001",
+      "covenin_description": "FABRICACIÓN E INSTALACIÓN DE BARANDA DE PROTECCIÓN EN TUBO DE ACERO GALVANIZADO DE 2\" DE DIÁMETRO, CON PARALES CADA 1.20 METROS. INCLUYE ANCLAJES, ELEMENTOS DE FIJACIÓN, CORTE, SOLDADURA, ACABADO Y TRANSPORTE A SITIO DE OBRA.",
+      "unit": "m",
+      "performance": 18.0,
+      "labors_count": 3,
+      "labors": [
+        "1.0x HERRERO / SOLDADOR (24-216)",
+        "1.0x AYUDANTE DE SEGUNDA (1-1.2)",
+        "0.25x CHOFER DE 2DA (DE 3 A 8 TON) -N4 (MO-OPR-12)"
+      ],
+      "equipments_count": 4,
+      "equipments": [
+        "1.0x SOLDADORA ELECTRICA 180 AC 110/220 V (Dep: 1.0, PU: $9.88)",
+        "1.0x CORTADORA DE TUBOS MANUAL (Dep: 0.03, PU: $126.63)",
+        "0.2x CAMIONETA FORD F-150 (TRANSPORTE) (Dep: 0.004979, PU: $42943.28)",
+        "1.0x AMOLADORA ANGULAR DE 4 1/2 PULG CON CEPILLO DE ALAMBRE (Dep: 0.01, PU: $55.0)"
+      ],
+      "materials_count": 3,
+      "materials": [
+        "1.15 m de TUBO DE ACERO GALVANIZADO D= 2\" SERIE PESADA (PU: $34.72)",
+        "0.2 kg de ELECTRODO E6011 1/8\" (PU: $4.5)",
+        "0.85 jgo de TORNILLO, ARANDELA Y RAMPLUG P/ANCLAJE (PU: $0.21)"
+      ],
+      "warnings_count": 1
+    },
+    "pipeline_b_inverse": {
+      "elapsed_seconds": 8.59,
+      "cod_par": "E360SC001",
+      "covenin_description": "FABRICACIÓN E INSTALACIÓN DE BARANDAS DE PROTECCIÓN CON PASAMANOS DE TUBO DE ACERO GALVANIZADO DE 2 PULGADAS Y PARALES CADA 1.20 METROS",
+      "unit": "m",
+      "performance": 20.0,
+      "labors_count": 3,
+      "labors": [
+        "1.0x SOLDADOR DE 1RA (19-7.3)",
+        "1.0x AYUDANTE - TABULADOR CONSTRUCCION -N2 (1-1.2)",
+        "0.2x CAPORAL -N3 (11-1.3)"
+      ],
+      "equipments_count": 3,
+      "equipments": [
+        "1.0x MOTOSOLDADORA 80-575 Amp LINCOLN MOD.SAE-400 (Dep: 0.003, PU: $1200.0)",
+        "1.0x AMOLADORA ANGULAR DE 4 1/2 PULG CON CEPILLO DE ALAMBRE (Dep: 0.01, PU: $55.0)",
+        "1.0x HERRAMIENTAS MENORES HERRERIA (PRENSAS, ESCUADRAS) (Dep: 0.05, PU: $35.0)"
+      ],
+      "materials_count": 5,
+      "materials": [
+        "0.01 pza de DISCO ABRASIVO PARA ESMERIL 7\" (PU: $16.07)",
+        "0.001 cil de BOMBONA DE GAS ACETILENO (CONTENIDO) (PU: $385.72)",
+        "0.001 cil de BOMBONA DE OXIGENO INDUSTRIAL (CONTENIDO) (PU: $38.58)",
+        "1.15 m de TUBO ACERO GALVANIZADO 2 PULG (INCLUYE PARALES Y ACCESORIOS) (PU: $18.5)",
+        "0.15 kg de ELECTRODO PARA ACERO (E-6011) (PU: $4.5)"
+      ],
+      "warnings_count": 1
+    }
+  },
+  {
+    "case_name": "Caso 3: Demolición y Acarreo Manual de Piso de Concreto",
+    "description": "Demolición de piso de concreto e=10cm a mano y acarreo en carretilla a 40m",
+    "requested_unit": "m3",
+    "pipeline_a_baseline": {
+      "elapsed_seconds": 9.96,
+      "cod_par": "E111SC001",
+      "covenin_description": "DEMOLICIÓN DE PISO DE CONCRETO (ESPESOR 10 CM) EJECUTADA A MANO, INCLUYE ACARREO EN CARRETILLA A UNA DISTANCIA DE 40 METROS, APILAMIENTO Y BOTE EN SITIO.",
+      "unit": "m3",
+      "performance": 16.0,
+      "labors_count": 2,
+      "labors": [
+        "1.0x AYUDANTE - TABULADOR CONSTRUCCION -N2 (1-1.2)",
+        "6.0x OBRERO DE 1RA -N1 (1-1.1)"
+      ],
+      "equipments_count": 4,
+      "equipments": [
+        "4.0x CARRETILLA CAP= 55 LT CAUCHOS DE GOMA (Dep: 0.025, PU: $187.19)",
+        "2.0x BARRA METALICA DE 1.47 MTS (Dep: 0.03, PU: $84.8)",
+        "2.0x PALA CON CABO DE MADERA BELLOTA O SIM # (Dep: 0.034, PU: $38.55)",
+        "3.0x MANDARRIA MANGO CORTO 3 KG (Dep: 0.01, PU: $77.06)"
+      ],
+      "materials_count": 0,
+      "materials": [],
+      "warnings_count": 0
+    },
+    "pipeline_b_inverse": {
+      "elapsed_seconds": 5.27,
+      "cod_par": "E111SC001",
+      "covenin_description": "DEMOLICIÓN DE PISO DE CONCRETO E=10CM A MANO Y ACARREO EN CARRETILLA A 40M",
+      "unit": "m3",
+      "performance": 6.86,
+      "labors_count": 2,
+      "labors": [
+        "3.0x OBRERO DE 1RA (1-1.2)",
+        "0.2x CAPORAL -N3 (11-1.3)"
+      ],
+      "equipments_count": 3,
+      "equipments": [
+        "2.0x CARRETILLA CAP= 55 LT CAUCHOS DE GOMA (Dep: 0.025, PU: $187.19)",
+        "2.0x PALA REDONDA PUNTA DE ACERO (Dep: 0.015, PU: $18.0)",
+        "1.0x PICO DE ACERO CON MANGO DE MADERA (Dep: 0.015, PU: $22.0)"
+      ],
+      "materials_count": 1,
+      "materials": [
+        "0.05 gl de IMPLEMENTOS DE SEGURIDAD (CASCO, GUANTES, BOTAS) Y CONSUMIBLES MENORES (PU: $12.5)"
+      ],
+      "warnings_count": 1
+    }
+  }
+]

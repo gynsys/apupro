@@ -24,6 +24,24 @@ export function useApuGenerator({ setSettings }) {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [subscriptionErrorMsg, setSubscriptionErrorMsg] = useState(null);
 
+  // Modo de Generación: 'rag' (Modo Adaptativo) | 'inverse' (Modo Matemático)
+  const [generationMode, setGenerationMode] = useState(() => {
+    try {
+      return localStorage.getItem('cost360_superadmin_generation_mode') || 'rag';
+    } catch {
+      return 'rag';
+    }
+  });
+
+  const updateGenerationMode = useCallback((mode) => {
+    setGenerationMode(mode);
+    try {
+      localStorage.setItem('cost360_superadmin_generation_mode', mode);
+    } catch (e) {
+      console.warn('Could not save generation mode to localStorage', e);
+    }
+  }, []);
+
   const dismissClarification = useCallback(() => {
     setIsClarifying(false);
     setAiClarificationMessage('');
@@ -165,13 +183,13 @@ export function useApuGenerator({ setSettings }) {
       const prefixToSend = '';
 
       if (acceptExactMatchCode) {
-        const response = await generateAIApu(textToSubmit, prefixToSend, context, [], false, false, acceptExactMatchCode, unit);
+        const response = await generateAIApu(textToSubmit, prefixToSend, context, [], false, false, acceptExactMatchCode, unit, generationMode);
         processAIResponse(response, textToSubmit);
         return;
       }
 
       const newHistory = isClarifying ? [...chatHistory, { role: 'user', content: textToSubmit }] : [{ role: 'user', content: textToSubmit }];
-      const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory, onlyPreprocess, bypassExactMatch, null, unit);
+      const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory, onlyPreprocess, bypassExactMatch, null, unit, generationMode);
       processAIResponse(response, textToSubmit);
     } catch (error) {
       console.error('Error en generación APU con IA:', error);
@@ -191,7 +209,7 @@ export function useApuGenerator({ setSettings }) {
     } finally {
       setLoading(false);
     }
-  }, [chatHistory, isClarifying, processAIResponse]);
+  }, [chatHistory, isClarifying, processAIResponse, generationMode]);
 
   const handleAcceptExactMatch = useCallback(async () => {
     if (!exactMatchCandidate) return;
@@ -211,6 +229,8 @@ export function useApuGenerator({ setSettings }) {
     loading,
     item,
     setItem,
+    generationMode,
+    setGenerationMode: updateGenerationMode,
     isClarifying,
     setIsClarifying,
     aiClarificationMessage,

@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Sparkles, X, Check, Bot, Edit2, Loader2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { getParametricStep3Definition } from '../../constants/guidedBuilderConstants';
+import ArchitectureModeSelector from './ArchitectureModeSelector';
 
 export default function GuidedAssistantModal({
   isOpen = true,
@@ -14,7 +15,10 @@ export default function GuidedAssistantModal({
   setChatInputValue,
   handleChatSubmit,
   handleGoBack,
-  onSwitchToFreeText
+  onSwitchToFreeText,
+  isSuperAdmin = false,
+  generationMode = 'rag',
+  setGenerationMode
 }) {
   const chatEndRef = useRef(null);
 
@@ -52,14 +56,23 @@ export default function GuidedAssistantModal({
           <X size={20} />
         </button>
 
-        <div className="flex items-center gap-3 mb-3 border-b border-amber-200/50 pb-3 flex-shrink-0">
+        <div className="flex flex-wrap items-center gap-3 mb-3 border-b border-amber-200/50 pb-3 flex-shrink-0">
           <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold shadow-md shadow-amber-500/30">
             <Sparkles size={20} />
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-[140px]">
             <h3 className="font-bold text-amber-900">Asistente CostBase</h3>
             <p className="text-xs text-amber-800 truncate">Te guiaré paso a paso para crear tu APU.</p>
           </div>
+          {isSuperAdmin && (
+            <div className="mr-6 sm:mr-8">
+              <ArchitectureModeSelector
+                generationMode={generationMode}
+                onChange={setGenerationMode}
+                compact={true}
+              />
+            </div>
+          )}
         </div>
 
         {/* Stepper Interactivo de 5 Pasos */}

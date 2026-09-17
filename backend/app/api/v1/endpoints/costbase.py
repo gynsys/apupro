@@ -25,6 +25,7 @@ from app.schemas.costbase import (
 )
 from app.core.logging import logger
 from app.services.user_semantic_cache import lookup_user_semantic_cache
+from app.services.inverse_apu_synthesizer import synthesize_apu_inverse
 
 def set_schema_for_db(db: Session, database_id: str) -> None:
     """Establece de forma segura el search_path para el esquema de la base de datos solicitada.
@@ -1280,6 +1281,30 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             "guia_redaccion": "Selecciona la unidad requerida para que el APU calcule los materiales y el rendimiento exacto sin distorsión de costos."
         }
 
+    # --- SELECTOR DE ARQUITECTURA: MODO MATEMÁTICO (Síntesis Inversa Component-First) ---
+    # Disponible exclusivamente para el Superadministrador durante la fase de validación.
+    # Los usuarios normales siempre son procesados en Modo Adaptativo (RAG).
+    is_superadmin = (
+        getattr(current_user, 'is_superadmin', False) is True or
+        getattr(current_user, 'role', '') == 'superadmin' or
+        getattr(current_user, 'email', '') == 'admin@arko360.net' or
+        getattr(current_user, 'is_admin', False) is True
+    )
+    if payload.generation_mode == "inverse" and is_superadmin and not payload.only_preprocess:
+        logger.info(
+            "Despachando generación de APU en Modo Matemático (Síntesis Inversa) para superadmin %s: %.80s",
+            getattr(current_user, 'email', 'desconocido'),
+            payload.description
+        )
+        inverse_result = synthesize_apu_inverse(
+            user_description=payload.description,
+            unit=effective_unit or payload.unit,
+            covenin_prefix=payload.covenin_prefix or "",
+            db=db
+        )
+        inverse_result["generation_engine"] = "inverse"
+        return inverse_result
+
     # --- CAPA 0 (Semantic Cache Privado del Usuario): Búsqueda Ultra-Rápida en APUs Validados (< 50ms, 0 tokens) ---
     if current_user and payload.description and not payload.only_preprocess and not payload.base_partida_code and not payload.accept_exact_match_code:
         user_id = getattr(current_user, 'id', None)
@@ -1526,6 +1551,7 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
                 if db_user:
                     db_user.ai_apus_generated = getattr(db_user, 'ai_apus_generated', 0) + 1
                     adb.commit()
+        result["generation_engine"] = "rag"
         return result
 
     # 3. Preprocesamiento (BD + Estadísticas) + IA semantica (Fallback clásico sin base directa)
