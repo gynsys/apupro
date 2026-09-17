@@ -260,7 +260,8 @@ export const CHAT_STEP_DEFINITIONS = {
         'pza (Por Pieza / Peldaño)',
         'und (Por Unidad)',
         'm² (Superficie desarrollada)',
-        'm (Metro lineal)'
+        'm (Metro lineal)',
+        'Gl (Suma Global)'
       ]
     },
     acarreo: {
@@ -270,8 +271,7 @@ export const CHAT_STEP_DEFINITIONS = {
         'm3 (Metro cúbico)',
         'm3xkm (Metro cúbico x kilómetro)',
         'sac.m (Saco x metro)',
-        'viaje (Por viaje)',
-        'Sugerir por IA'
+        'viaje (Por viaje)'
       ]
     },
     general: {
@@ -285,8 +285,8 @@ export const CHAT_STEP_DEFINITIONS = {
         'm³',
         'kg',
         'pto',
-        'viaje',
-        'Sugerir por IA'
+        'Gl',
+        'viaje'
       ]
     },
     get text() { return this.general.text; },

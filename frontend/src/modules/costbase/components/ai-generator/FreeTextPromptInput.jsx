@@ -163,7 +163,8 @@ export default function FreeTextPromptInput({
               { id: 'pza', label: 'pza', sub: 'Por Pieza / Peldaño' },
               { id: 'und', label: 'und', sub: 'Por Unidad' },
               { id: 'm2', label: 'm²', sub: 'Superficie desarrollada' },
-              { id: 'm', label: 'm', sub: 'Metro Lineal' }
+              { id: 'm', label: 'm', sub: 'Metro Lineal' },
+              { id: 'Gl', label: 'Gl', sub: 'Suma Global' }
             ].map((item) => {
               const isSelected = selectedUnit === item.id;
               return (

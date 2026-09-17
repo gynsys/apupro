@@ -789,25 +789,33 @@ def update_master_item(
     item = db.query(CostItem).filter(
         or_(
             CostItem.CodPar == clean_code,
-            func.trim(CostItem.CodPar) == clean_code
+            func.trim(CostItem.CodPar) == clean_code,
+            CostItem.CovPar == clean_code,
+            func.trim(CostItem.CovPar) == clean_code,
+            getattr(CostItem, "ref_code", CostItem.CodPar) == clean_code
         )
     ).first()
     if not item:
         return None
     
-    if descri is not None:
-        item.Descri = descri.strip()
-    if unipar is not None:
-        item.UniPar = unipar.strip()
-    if renpar is not None:
-        try:
-            item.RenPar = float(renpar)
-        except (ValueError, TypeError):
-            pass
-        
-    db.commit()
-    db.refresh(item)
-    return item
+    try:
+        if descri is not None:
+            item.Descri = descri.strip()
+        if unipar is not None:
+            item.UniPar = unipar.strip()
+        if renpar is not None:
+            try:
+                item.RenPar = float(renpar)
+            except (ValueError, TypeError):
+                pass
+            
+        db.commit()
+        db.refresh(item)
+        return item
+    except Exception as exc:
+        db.rollback()
+        logger.error("Error al actualizar partida maestra %s: %s", clean_code, exc, exc_info=True)
+        raise
 
 def delete_master_item(db: Session, item_code: str) -> bool:
     clean_code = item_code.strip() if item_code else ""
@@ -817,22 +825,30 @@ def delete_master_item(db: Session, item_code: str) -> bool:
     item = db.query(CostItem).filter(
         or_(
             CostItem.CodPar == clean_code,
-            func.trim(CostItem.CodPar) == clean_code
+            func.trim(CostItem.CodPar) == clean_code,
+            CostItem.CovPar == clean_code,
+            func.trim(CostItem.CovPar) == clean_code,
+            getattr(CostItem, "ref_code", CostItem.CodPar) == clean_code
         )
     ).first()
     if not item:
         return False
     
-    actual_code = item.CodPar
-    # Cascade delete child relations manually to avoid FK constraint errors
-    db.query(CostAPUMaterial).filter(CostAPUMaterial.CodPar == actual_code).delete(synchronize_session=False)
-    db.query(CostAPUEquipment).filter(CostAPUEquipment.CodPar == actual_code).delete(synchronize_session=False)
-    db.query(CostAPULabor).filter(CostAPULabor.CodPar == actual_code).delete(synchronize_session=False)
-    
-    # Delete the main item
-    db.delete(item)
-    db.commit()
-    return True
+    try:
+        actual_code = item.CodPar
+        # Cascade delete child relations manually to avoid FK constraint errors
+        db.query(CostAPUMaterial).filter(CostAPUMaterial.CodPar == actual_code).delete(synchronize_session=False)
+        db.query(CostAPUEquipment).filter(CostAPUEquipment.CodPar == actual_code).delete(synchronize_session=False)
+        db.query(CostAPULabor).filter(CostAPULabor.CodPar == actual_code).delete(synchronize_session=False)
+        
+        # Delete the main item
+        db.delete(item)
+        db.commit()
+        return True
+    except Exception as exc:
+        db.rollback()
+        logger.error("Error al eliminar partida maestra %s: %s", clean_code, exc, exc_info=True)
+        raise
 
 def update_master_apu_details(
     db: Session,

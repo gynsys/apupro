@@ -187,7 +187,8 @@ export function useApuGenerator({ setSettings }) {
     bypassExactMatch = false,
     acceptExactMatchCode = null,
     entryMode = 'libre',
-    unit = null
+    unit = null,
+    executionDays = null
   ) => {
     if (!textToSubmit || !textToSubmit.trim()) {
       toast.error('Ingresa una descripción para generar el APU');
@@ -203,13 +204,13 @@ export function useApuGenerator({ setSettings }) {
       const prefixToSend = '';
 
       if (acceptExactMatchCode) {
-        const response = await generateAIApu(textToSubmit, prefixToSend, context, [], false, false, acceptExactMatchCode, unit, generationMode);
+        const response = await generateAIApu(textToSubmit, prefixToSend, context, [], false, false, acceptExactMatchCode, unit, generationMode, executionDays);
         processAIResponse(response, textToSubmit);
         return;
       }
 
       const newHistory = isClarifying ? [...chatHistory, { role: 'user', content: textToSubmit }] : [{ role: 'user', content: textToSubmit }];
-      const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory, onlyPreprocess, bypassExactMatch, null, unit, generationMode);
+      const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory, onlyPreprocess, bypassExactMatch, null, unit, generationMode, executionDays);
       processAIResponse(response, textToSubmit);
     } catch (error) {
       console.error('Error en generación APU con IA:', error);

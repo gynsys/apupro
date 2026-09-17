@@ -1118,6 +1118,25 @@ def validate_and_calibrate_hh(
     unit = str(partida.get("unit") or partida.get("unidad") or "").strip().lower()
     perf = float(partida.get("performance") or partida.get("rendimiento") or 0.0)
 
+    unit_clean = str(unit or "").strip().lower()
+    if unit_clean in ("gl", "sg", "global", "suma global"):
+        # INMUNIDAD UNIVERSAL PARA PARTIDAS GLOBALES:
+        # El rendimiento es estrictamente determinista por plazo: R = 1.0 / Días de trabajo.
+        # NUNCA aplicar benchmarks empíricos de piezas, m2 o m3.
+        perf = float(partida.get("performance") or partida.get("rendimiento") or 1.0)
+        if perf <= 0.0:
+            perf = 1.0
+        perf = max(0.05, min(perf, 2.0))
+        days_equiv = round(1.0 / perf, 2)
+        notes.append(
+            f"Rendimiento Global (Gl) certificado: {perf:.4f} Gl/día "
+            f"correspondiente a una duración estimada de {days_equiv} días de cuadrilla."
+        )
+        partida["performance"] = perf
+        if "rendimiento" in partida:
+            partida["rendimiento"] = perf
+        return partida, notes
+
     # Sumar total de personas en cuadrilla (incluyendo supervisión ponderada)
     total_crew_size = sum(float(l.get("cantidad", 1.0) or 1.0) for l in labors)
     if total_crew_size <= 0.0:

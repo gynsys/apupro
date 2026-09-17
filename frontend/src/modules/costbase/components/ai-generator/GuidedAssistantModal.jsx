@@ -18,7 +18,8 @@ export default function GuidedAssistantModal({
   onSwitchToFreeText,
   isSuperAdmin = false,
   generationMode = 'rag',
-  setGenerationMode
+  setGenerationMode,
+  waitingForGlobalDays = false
 }) {
   const chatEndRef = useRef(null);
 
@@ -209,11 +210,12 @@ export default function GuidedAssistantModal({
                   if (e.key === 'Enter') handleChatSubmit && handleChatSubmit(chatInputValue);
                 }}
                 placeholder={
+                  waitingForGlobalDays ? "Indica los días estimados (ej: 0.5, 1, 2, 3, 5)..." :
                   currentChatStep === 1 ? "Ej: Suministro e instalación, Suministro, Construcción..." :
                   currentChatStep === 2 ? (isSupplyOrInstall ? "Ej: Bomba centrífuga, Tablero eléctrico, Tubería PVC..." : "Ej: Paredes de bloques, Losa de concreto...") :
                   currentChatStep === 3 ? (isParametric ? "Ej: 2 HP, e=15 cm, 1/2 pulgada, 15 kVA, hasta 1.50 m..." : (isSupplyOrInstall ? "Ej: Para pozo profundo, para aguas blancas, en sala de bombas..." : "Ej: En planta baja, en sótano...")) :
                   currentChatStep === 4 ? "Ej: Incluye conexiones, todo incluido, solo mano de obra..." :
-                  currentChatStep === 5 ? (isMaintenance ? "Obligatorio: pza, und, m², m..." : "Ej: und, m², ml, pza...") :
+                  currentChatStep === 5 ? (isMaintenance ? "Obligatorio: pza, und, m², m, Gl..." : "Ej: und, m², ml, pza, Gl...") :
                   "Escribe tu respuesta..."
                 }
                 className="flex-1 bg-white border-2 border-amber-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-amber-900 placeholder:text-amber-700/50"

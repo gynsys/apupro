@@ -159,12 +159,13 @@ export function validateStepInput(text, step, isMaintenance = false) {
     if (isMaintenance && (cleanLower.includes('omitir') || cleanLower.includes('ninguno') || cleanLower.includes('sugerir'))) {
       return {
         isValid: false,
-        error: 'Para actividades de mantenimiento o reparación, la unidad de cómputo es obligatoria. Elige pza, und, m² o m.'
+        error: 'Para actividades de mantenimiento o reparación, la unidad de cómputo es obligatoria. Elige pza, und, m², m o Gl.'
       };
     }
     const VALID_UNITS = [
       'und', 'unidad', 'unidades', 'pza', 'pieza', 'piezas', 'm', 'ml', 'metro', 'metros',
       'm2', 'm²', 'm3', 'm³', 'kg', 'kgf', 'ton', 'tonf', 'pto', 'punto', 'puntos',
+      'gl', 'sg', 'global', 'suma global',
       'gln', 'galon', 'galones', 'jgo', 'juego', 'saco', 'sacos', 'sac', 'viaje', 'viajes',
       'mes', 'dia', 'hora', 'sugerir por ia', 'omitir', 'ninguno'
     ];
@@ -172,7 +173,7 @@ export function validateStepInput(text, step, isMaintenance = false) {
     if (!isRecognizedUnit && clean.length < 8) {
       return {
         isValid: false,
-        error: `"${clean}" no es una unidad de cómputo válida. Por favor selecciona o indica una unidad estándar (ej: und, pza, m², m³, m, kgf, pto).`
+        error: `"${clean}" no es una unidad de cómputo válida. Por favor selecciona o indica una unidad estándar (ej: und, pza, m², m³, m, Gl, kgf, pto).`
       };
     }
   }
@@ -196,6 +197,8 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
   const [chatbotLoadingStage, setChatbotLoadingStage] = useState(0);
   const [guidedMessages, setGuidedMessages] = useState([]);
   const [detectedFullPrompt, setDetectedFullPrompt] = useState(null);
+  const [waitingForGlobalDays, setWaitingForGlobalDays] = useState(false);
+  const [pendingPromptForGlobal, setPendingPromptForGlobal] = useState(null);
 
   // Inicializar mensaje de bienvenida según el usuario
   const createInitialMessage = useCallback(() => {
@@ -225,6 +228,13 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
 
   const handleGoBack = (targetStep = null) => {
     if (chatbotLoadingStage > 0) return;
+    if (waitingForGlobalDays) {
+      setWaitingForGlobalDays(false);
+      setPendingPromptForGlobal(null);
+      setChatInputValue('');
+      setGuidedMessages(prev => prev.slice(0, -2));
+      return;
+    }
     if (detectedFullPrompt) {
       const savedPrompt = detectedFullPrompt;
       setDetectedFullPrompt(null);
@@ -290,10 +300,12 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     setChatInputValue('');
     setChatbotLoadingStage(0);
     setDetectedFullPrompt(null);
+    setWaitingForGlobalDays(false);
+    setPendingPromptForGlobal(null);
     setGuidedMessages([createInitialMessage()]);
   };
 
-  const triggerGeneration = (promptToUse, unitToUse = null) => {
+  const triggerGeneration = (promptToUse, unitToUse = null, executionDays = null) => {
     setChatbotLoadingStage(1);
     setTimeout(() => setChatbotLoadingStage(2), 1200);
     setTimeout(() => setChatbotLoadingStage(3), 2500);
@@ -302,7 +314,7 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       setEntryModeSource('chat');
       lastEntrySourceRef.current = 'chat';
       if (onComplete) {
-        onComplete(promptToUse, 'chat', unitToUse);
+        onComplete(promptToUse, 'chat', unitToUse, executionDays);
       }
     }, 4500);
   };
@@ -311,25 +323,73 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     if (!text || !text.trim()) return;
     const cleanText = text.trim();
 
+    // 0. Manejo cuando se está esperando la cantidad de días para partida Global (Gl)
+    if (waitingForGlobalDays) {
+      const match = cleanText.match(/(\d+(?:[.,]\d+)?)/);
+      const parsedDays = match ? parseFloat(match[1].replace(',', '.')) : null;
+      if (!parsedDays || parsedDays <= 0 || isNaN(parsedDays)) {
+        toast.error('Por favor selecciona una opción o ingresa un número válido de días (ej: 0.5, 1, 2, 3, 5).', { id: 'days-val-error' });
+        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 5 };
+        const botRetryMsg = {
+          id: `bot-days-retry-${Date.now()}`,
+          sender: 'bot',
+          step: 5,
+          text: `"${cleanText}" no es un número de días válido.\n\nIndica cuántos días de trabajo tomará la cuadrilla:`,
+          chips: ['0.5 día', '1 día', '2 días', '3 días', '5 días']
+        };
+        setGuidedMessages(prev => [...prev, newUserMsg, botRetryMsg]);
+        setChatInputValue('');
+        return;
+      }
+
+      setWaitingForGlobalDays(false);
+      const promptToGenerate = pendingPromptForGlobal || detectedFullPrompt;
+      setPendingPromptForGlobal(null);
+      const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 5 };
+      setGuidedMessages(prev => [...prev, newUserMsg]);
+      setChatInputValue('');
+      triggerGeneration(promptToGenerate, 'Gl', parsedDays);
+      return;
+    }
+
     // 1. Manejo cuando se detectó previamente un prompt completo y estamos solicitando la unidad
     if (detectedFullPrompt) {
       const unitVal = validateStepInput(cleanText, 5, false);
       if (unitVal.isValid) {
-        let chosenUnit = cleanText.toLowerCase().replace('m²', 'm2').replace('m³', 'm3');
+        const cleanLower = cleanText.toLowerCase().trim();
+        const isGlobalUnit = ['gl', 'sg', 'global', 'suma global'].includes(cleanLower) || cleanText.trim() === 'Gl' || cleanText.includes('Gl (');
+
+        if (isGlobalUnit) {
+          setWaitingForGlobalDays(true);
+          setPendingPromptForGlobal(detectedFullPrompt);
+          const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 5 };
+          const botDaysMsg = {
+            id: `bot-global-days-${Date.now()}`,
+            sender: 'bot',
+            step: 5,
+            text: 'Has seleccionado unidad Global (Gl).\n\nIndica los días de trabajo estimados para la cuadrilla:',
+            chips: ['0.5 día', '1 día', '2 días', '3 días', '5 días']
+          };
+          setGuidedMessages(prev => [...prev, newUserMsg, botDaysMsg]);
+          setChatInputValue('');
+          return;
+        }
+
+        let chosenUnit = cleanLower.replace('m²', 'm2').replace('m³', 'm3');
         const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 5 };
         setGuidedMessages(prev => [...prev, newUserMsg]);
         setChatInputValue('');
         triggerGeneration(detectedFullPrompt, chosenUnit);
         return;
       } else {
-        toast.error(unitVal.error || 'Por favor indica una unidad válida (ej: und, pza, m², m, m³)', { id: 'chat-val-error', duration: 4500 });
+        toast.error(unitVal.error || 'Por favor indica una unidad válida (ej: und, pza, m², m, m³, Gl)', { id: 'chat-val-error', duration: 4500 });
         const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 5 };
         const botValMsg = {
           id: `bot-val-${Date.now()}`,
           sender: 'bot',
           step: 5,
-          text: `Aviso: "${cleanText}" no es una unidad de cómputo válida.\n\nPor favor selecciona una unidad o escribe una unidad estándar (und, pza, m², m, m³, kgf):`,
-          chips: ['und', 'pza', 'm²', 'm', 'm³']
+          text: `Aviso: "${cleanText}" no es una unidad de cómputo válida.\n\nPor favor selecciona una unidad o escribe una unidad estándar (und, pza, m², m, m³, Gl):`,
+          chips: ['und', 'pza', 'm²', 'm', 'm³', 'Gl']
         };
         setGuidedMessages(prev => [...prev, newUserMsg, botValMsg]);
         setChatInputValue('');
@@ -352,7 +412,8 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
           'pza',
           'm²',
           'm',
-          'm³'
+          'm³',
+          'Gl'
         ]
       };
       setGuidedMessages(prev => [...prev, newUserMsg, botMsg]);
@@ -572,6 +633,28 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
 
       // 5. Unidad de medida
       let extractedUnit = null;
+      let cleanLower = cleanText.toLowerCase().trim();
+      const isGlobalUnit = ['gl', 'sg', 'global', 'suma global'].includes(cleanLower) || cleanText.trim() === 'Gl' || cleanText.includes('Gl (');
+
+      if (isGlobalUnit) {
+        extractedUnit = 'Gl';
+        parts.push('unidad Gl');
+        const finalPrompt = parts.join(' ').replace(/\s+/g, ' ').trim();
+        setWaitingForGlobalDays(true);
+        setPendingPromptForGlobal(finalPrompt);
+        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 5 };
+        const botDaysMsg = {
+          id: `bot-global-days-${Date.now()}`,
+          sender: 'bot',
+          step: 5,
+          text: 'Has seleccionado unidad Global (Gl).\n\nIndica los días de trabajo estimados para la cuadrilla:',
+          chips: ['0.5 día', '1 día', '2 días', '3 días', '5 días']
+        };
+        setGuidedMessages(prev => [...prev, newUserMsg, botDaysMsg]);
+        setChatInputValue('');
+        return;
+      }
+
       if (cleanText && cleanText !== 'Sugerir por IA' && cleanText !== 'Ninguno / Omitir' && cleanText !== 'Ninguno' && cleanText !== 'Omitir') {
         let rawUnit = cleanText.includes('(') ? cleanText.split('(')[0].trim() : cleanText.trim();
         if (rawUnit === 'm²') rawUnit = 'm2';
@@ -582,6 +665,7 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
 
       const finalPrompt = parts.join(' ').replace(/\s+/g, ' ').trim();
       triggerGeneration(finalPrompt, extractedUnit);
+      return;
     }
 
     if (nextBotMsg) {
@@ -617,6 +701,7 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     guidedMessages,
     setGuidedMessages,
     detectedFullPrompt,
+    waitingForGlobalDays,
     handleChatSubmit,
     handleGoBack,
     resetChatbot

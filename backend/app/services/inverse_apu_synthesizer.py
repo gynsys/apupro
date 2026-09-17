@@ -384,7 +384,8 @@ def calculate_deterministic_performance(
     archetype: str,
     unit: str,
     description: str = "",
-    is_maintenance: bool = False
+    is_maintenance: bool = False,
+    execution_days: Optional[float] = None
 ) -> Tuple[float, List[str]]:
     """
     Calcula matemáticamente el rendimiento diario de la cuadrilla aplicando
@@ -413,6 +414,12 @@ def calculate_deterministic_performance(
     total_hh_daily = active_workers * 8.0  # Jornada laboral legal de 8 horas
 
     # 2. Casos especiales deterministas directos
+    if u_norm in ("gl", "sg", "global", "suma global"):
+        days = float(execution_days) if execution_days and float(execution_days) > 0 else 1.0
+        ren_global = round(1.0 / days, 4)
+        notes.append(f"Rendimiento global determinista: {ren_global:.4f} Gl/día ({days:g} días de cuadrilla).")
+        return ren_global, notes
+
     if archetype == "EQUIPOS_BOMBEO":
         if u_norm in ("und", "pza", "jgo"):
             ren_bomba = 1.0
@@ -1037,7 +1044,9 @@ def audit_apu_with_llm(
 
     # Extraer valores bloqueados
     locked_performance = float(candidate_apu.get("partida", {}).get("performance", 10.0))
-    locked_unit = str(candidate_apu.get("partida", {}).get("unit", "und")).strip().lower()
+    locked_unit = str(candidate_apu.get("partida", {}).get("unit", "und")).strip()
+    if locked_unit.lower() in ("gl", "sg", "global", "suma global"):
+        locked_unit = "Gl"
     locked_labors = candidate_apu.get("labors", [])
 
     audit_prompt = f"""
@@ -1055,6 +1064,7 @@ RENDIMIENTO MATEMÁTICO BLOQUEADO: {locked_performance} {locked_unit}/día
    - El rendimiento ({locked_performance}) y la lista de obreros/oficiales (labors) están validados por tabulador nacional y son 100% INMUTABLES. NO los modifiques ni alteres sus cantidades.
 2. AUDITORÍA DE MATERIALES:
    - Revisa si la descripción del usuario exige consumibles indispensables no incluidos en la receta de materiales (ej. si pidió expresamente fondo epóxico, solvente, electrodo 7018 o tornillería).
+   - Si la unidad es 'Gl' (Suma Global), dosifica los materiales en bulto total para el 100% de la obra descrita (por ejemplo galones, cuñetes, sacos o kilos requeridos en total para toda la obra descrita), y NO consumos unitarios por metro cuadrado o por pieza.
    - Si falta algún material requerido por el texto, agrégalo con origen "ia", consumo coherente para una unidad de '{locked_unit}' y precio referencial de mercado en USD.
 3. DESCRIPCIÓN TÉCNICA COVENIN:
    - Asegura que `partida.description` esté completamente en MAYÚSCULAS y redactada según especificación técnica formal COVENIN.
@@ -1100,6 +1110,7 @@ def synthesize_apu_inverse(
     requested_unit: Optional[str] = None,
     covenin_prefix: str = "",
     smart_answers: Optional[Dict[str, str]] = None,
+    execution_days: Optional[float] = None,
     db: Optional[Session] = None
 ) -> Dict[str, Any]:
     """
@@ -1118,6 +1129,8 @@ def synthesize_apu_inverse(
 
     raw_u = requested_unit or unit or "und"
     unit_clean = raw_u.strip().lower()
+    if unit_clean in ("gl", "sg", "global", "suma global"):
+        unit_clean = "Gl"
     notes_total: List[str] = []
 
     # Determinar si es mantenimiento en sitio
@@ -1145,7 +1158,7 @@ def synthesize_apu_inverse(
 
         # Paso 3: Calcular Rendimiento Matemático
         performance, ren_notes = calculate_deterministic_performance(
-            labors, archetype, unit_clean, description=user_description, is_maintenance=is_maintenance
+            labors, archetype, unit_clean, description=user_description, is_maintenance=is_maintenance, execution_days=execution_days
         )
         notes_total.extend(ren_notes)
 

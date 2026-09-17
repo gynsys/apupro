@@ -382,10 +382,14 @@ def update_master_item_route(
     database_id: str = "master",
     db: Session = Depends(get_db)
 ):
+    import urllib.parse
     set_schema_for_db(db, database_id)
-    updated_item = update_master_item(db, item_code, payload.Descri, payload.UniPar, payload.RenPar)
+    clean_code = urllib.parse.unquote(item_code)
+    updated_item = update_master_item(db, clean_code, payload.Descri, payload.UniPar, payload.RenPar)
+    if not updated_item and clean_code != item_code:
+        updated_item = update_master_item(db, item_code, payload.Descri, payload.UniPar, payload.RenPar)
     if not updated_item:
-        raise HTTPException(status_code=404, detail="Partida no encontrada")
+        raise HTTPException(status_code=404, detail=f"Partida '{clean_code}' no encontrada en la base de datos")
     return updated_item
 
 @router.put("/items/{item_code}/apu")
@@ -1255,10 +1259,12 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
     # Extraer unidad efectiva: preferir parámetro directo payload.unit, fallback a tokens en texto
     effective_unit = (payload.unit or "").strip().lower()
     if not effective_unit:
-        unit_match = re.search(r'\b(pza|und|unidad|piezas?|m2|m²|ml|mts?|metros?\s*lineales?|pto|puntos?)\b', raw_desc_lower)
+        unit_match = re.search(r'\b(gl|sg|global|suma\s*global|pza|und|unidad|piezas?|m2|m²|ml|mts?|metros?\s*lineales?|pto|puntos?)\b', raw_desc_lower)
         if unit_match:
             matched_u = unit_match.group(1)
-            if matched_u in ("pieza", "piezas"):
+            if matched_u in ("gl", "sg", "global", "suma global"):
+                effective_unit = "Gl"
+            elif matched_u in ("pieza", "piezas"):
                 effective_unit = "pza"
             elif matched_u == "unidad":
                 effective_unit = "und"
@@ -1311,6 +1317,7 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             inverse_result = synthesize_apu_inverse(
                 user_description=payload.description,
                 unit=effective_unit or payload.unit or "und",
+                execution_days=payload.execution_days,
                 covenin_prefix=payload.covenin_prefix or "",
                 db=db
             )
@@ -1478,6 +1485,7 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             smart_answers=payload.smart_answers or {},
             history=history_dicts,
             requested_unit=effective_unit or payload.unit,
+            execution_days=payload.execution_days,
             db=db,
         )
 

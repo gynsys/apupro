@@ -487,6 +487,7 @@ def generate_apu_with_ai_from_base(
     smart_answers: Optional[Dict[str, str]] = None,
     history: Optional[List[Dict]] = None,
     requested_unit: Optional[str] = None,
+    execution_days: Optional[float] = None,
     db: Optional[Session] = None,
 ) -> Dict[str, Any]:
     """
@@ -523,8 +524,27 @@ def generate_apu_with_ai_from_base(
             comp_text += "\n"
 
     unit_directive = ""
-    if requested_unit:
-        u_clean = str(requested_unit).strip().lower()
+    u_clean = str(requested_unit).strip().lower() if requested_unit else ""
+    is_global_unit = u_clean in ("gl", "sg", "global", "suma global")
+
+    if is_global_unit:
+        dias_val = float(execution_days) if execution_days and float(execution_days) > 0 else 1.0
+        target_perf = round(1.0 / dias_val, 4)
+        unit_directive = f"""
+# DIRECTIVA OBLIGATORIA DE UNIDAD GLOBAL (Gl / S.G. - SUMA GLOBAL)
+La partida DEBE estructurarse OBLIGATORIAMENTE con la unidad: 'Gl'.
+- El campo `unit` de `partida` DEBE ser exactamente 'Gl'.
+- La cantidad de la partida en el presupuesto es 1.00 Gl (suma alzada global por el paquete completo).
+- DURACIÓN Y RENDIMIENTO MATEMÁTICO ESTRICTO:
+  * La duración estimada de trabajo de cuadrilla es de {dias_val} días hábiles.
+  * El rendimiento diario DEBE ser estrictamente: performance = {target_perf} (es decir, R = 1.0 / {dias_val} días). NUNCA coloques otro rendimiento.
+- MATERIALES EN BULTO TOTAL (100% DE LA OBRA DESCRITA):
+  * En partidas 'Gl', los consumos de materiales NO son por m2 ni por pieza unitaria; DEBEN representar la totalidad acumulada de materiales físicos necesarios para completar el 100% de la obra descrita (ej: total de galones, perfiles, sacos, rollos, cables, tuberías o consumibles).
+  * Si el usuario especificó cantidades o dimensiones exactas en su solicitud, respétalas estrictamente.
+- MANO DE OBRA Y EQUIPOS:
+  * La cuadrilla y los equipos se asignan para la jornada diaria normal. La fórmula universal de costos dividirá su costo diario entre R, multiplicando exactamente por los {dias_val} días de duración.
+"""
+    elif requested_unit:
         unit_directive = f"""
 # DIRECTIVA OBLIGATORIA DE UNIDAD DE MEDIDA (DEFINIDA POR EL ANALISTA)
 La partida DEBE estructurarse OBLIGATORIAMENTE con la unidad: '{u_clean}'.
@@ -542,7 +562,14 @@ La partida DEBE estructurarse OBLIGATORIAMENTE con la unidad: '{u_clean}'.
     base_ren = base_apu.get('rendimiento') or base_apu.get('performance') or base_apu.get('RenPar') or 'N/A'
     req_u_clean = str(requested_unit).strip().lower() if requested_unit else base_unit
 
-    if req_u_clean and base_unit and req_u_clean != base_unit:
+    if is_global_unit:
+        dias_val = float(execution_days) if execution_days and float(execution_days) > 0 else 1.0
+        target_perf = round(1.0 / dias_val, 4)
+        performance_instruction = f"""2. CÁLCULO DE RENDIMIENTO PARA PARTIDA GLOBAL (Gl):
+   - La unidad solicitada es 'Gl' (Suma Global).
+   - El rendimiento diario DEBE ser obligatoriamente: performance = {target_perf} (correspondiente a 1.0 / {dias_val} días).
+   - En `notas_adaptacion`, explica que el rendimiento R = {target_perf} Gl/día corresponde a {dias_val} días de trabajo de cuadrilla."""
+    elif req_u_clean and base_unit and req_u_clean != base_unit:
         performance_instruction = f"""2. CÁLCULO DINÁMICO DE RENDIMIENTO (DESANCLAJE DIMENSIONAL OBLIGATORIO):
    - La partida base histórica tiene unidad '{base_unit}' (rendimiento {base_ren} {base_unit}/día), mientras que la partida requerida es '{req_u_clean}'.
    - ESTÁ TERMINANTEMENTE PROHIBIDO copiar o anclarte al número {base_ren}: una unidad de '{req_u_clean}' no equivale físicamente a una de '{base_unit}'.

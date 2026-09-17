@@ -158,6 +158,8 @@ class AiApuGenerateRequest(BaseModel):
     accept_exact_match_code: Optional[str] = None
     # Selector de Arquitectura de Motor ('rag' = Modo Adaptativo | 'inverse' = Modo Matemático)
     generation_mode: Optional[str] = "rag"
+    # Días estimados de ejecución para partidas Globales (Gl / S.G.)
+    execution_days: Optional[float] = None
 
 
 class SmartSelectRequest(BaseModel):

@@ -80,10 +80,10 @@ export default function AIApuGeneratorPage() {
   const guided = useGuidedAssistant({
     user,
     initialGuided: guidedParam !== null ? guidedParam === 'true' : true,
-    onComplete: (finalPrompt, source, unit) => {
+    onComplete: (finalPrompt, source, unit, executionDays) => {
       setPrompt(finalPrompt);
       if (unit) setSelectedUnit(unit);
-      generator.handleGenerate(finalPrompt, false, false, false, null, source, unit);
+      generator.handleGenerate(finalPrompt, false, false, false, null, source, unit, executionDays);
     }
   });
 
@@ -486,6 +486,7 @@ export default function AIApuGeneratorPage() {
               isSuperAdmin={isSuperAdmin}
               generationMode={generator.generationMode}
               setGenerationMode={generator.setGenerationMode}
+              waitingForGlobalDays={guided.waitingForGlobalDays}
             />
           )}
 
