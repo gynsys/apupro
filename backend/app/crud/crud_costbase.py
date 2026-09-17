@@ -1,4 +1,4 @@
-﻿from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, and_, text, case
 from typing import Optional, List, Tuple
 from app.db.models.costbase import (
@@ -15,6 +15,7 @@ import json
 import unicodedata
 import re
 import logging
+from app.services.user_semantic_cache import compute_description_embedding
 
 logger = logging.getLogger(__name__)
 
@@ -521,13 +522,22 @@ def save_custom_apu(
     apu_data: str,
     user_id: Optional[int] = None
 ) -> CustomCostItem:
+    emb_str: Optional[str] = None
+    try:
+        emb_vec = compute_description_embedding(description)
+        if emb_vec is not None:
+            emb_str = json.dumps(emb_vec.tolist())
+    except Exception as emb_err:
+        logger.error("Error al generar embedding para CustomCostItem: %s", emb_err, exc_info=True)
+
     new_item = CustomCostItem(
         id=str(uuid.uuid4()),
         user_id=user_id,
         description=description,
         unit=unit,
         performance=performance,
-        apu_data=apu_data
+        apu_data=apu_data,
+        embedding=emb_str
     )
     db.add(new_item)
     db.commit()

@@ -24,6 +24,7 @@ from app.schemas.costbase import (
     RagDiagnosticRequest
 )
 from app.core.logging import logger
+from app.services.user_semantic_cache import lookup_user_semantic_cache
 
 def set_schema_for_db(db: Session, database_id: str) -> None:
     """Establece de forma segura el search_path para el esquema de la base de datos solicitada.
@@ -1220,6 +1221,19 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
     # 2. Normalización y Expansión Técnica con Diccionario (Paso 1)
     if payload.description:
         payload.description = expand_technical_synonyms(payload.description)
+
+    # --- CAPA 0 (Semantic Cache Privado del Usuario): Búsqueda Ultra-Rápida en APUs Validados (< 50ms, 0 tokens) ---
+    if current_user and payload.description and not payload.only_preprocess and not payload.base_partida_code and not payload.accept_exact_match_code:
+        user_id = getattr(current_user, 'id', None)
+        cached_apu = lookup_user_semantic_cache(
+            db=db,
+            user_id=user_id,
+            description=payload.description,
+            threshold=0.96
+        )
+        if cached_apu:
+            logger.info("APU servido desde Semantic Cache para usuario %s: %.80s", user_id, payload.description)
+            return cached_apu
 
     # 2.1. Si es solo preproceso DEBUG, devolver resultado rapido
     if payload.only_preprocess:

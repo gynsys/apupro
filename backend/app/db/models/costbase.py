@@ -1,4 +1,4 @@
-﻿from sqlalchemy import Column, String, Float, ForeignKey, Integer, DateTime
+from sqlalchemy import Column, String, Float, ForeignKey, Integer, DateTime, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
@@ -110,6 +110,7 @@ class CustomCostItem(Base):
     performance = Column(Float, default=1.0)
     
     apu_data = Column(String)  # JSON encoded string
+    embedding = Column(Text, nullable=True)  # JSON-serialized embedding vector for user semantic cache
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 CustomCostbaseItem = CustomCostItem

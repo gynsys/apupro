@@ -127,9 +127,18 @@ export function useApuGenerator({ setSettings }) {
         materials: response.materials || [],
         equipments: response.equipments || [],
         labors: response.labors || [],
-        advertencias: advertenciasPublicas
+        advertencias: advertenciasPublicas,
+        source: response.source || null,
+        similarity: response.similarity || null
       });
-      toast.success('APU generado con éxito');
+      if (response.source === 'user_semantic_cache') {
+        toast.success(`⚡ APU recuperado de tus partidas guardadas (${Math.round((response.similarity || 1) * 100)}% similitud)`, {
+          duration: 4500,
+          icon: '⚡'
+        });
+      } else {
+        toast.success('APU generado con éxito');
+      }
     }
   }, [dismissClarification, setSettings]);
 
