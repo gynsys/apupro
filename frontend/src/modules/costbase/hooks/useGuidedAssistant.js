@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { toast } from 'react-hot-toast';
 import { CHAT_STEP_DEFINITIONS, getParametricStep3Definition } from '../constants/guidedBuilderConstants';
 
 export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
@@ -124,11 +125,24 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       currentUnidad = cleanText;
     }
 
-    const nextStep = currentChatStep === 0 ? 1 : currentChatStep + 1;
-    setCurrentChatStep(nextStep);
-
     const isSupplyOrInstall = /suministr|instalac|colocac|montaje/i.test(currentAccion || guidedAccion || '');
     const isAcarreo = /acarreo|acarrear|bote|botar|transporte|transportar|traslado/i.test(currentAccion || guidedAccion || '');
+    const isMaintenance = /mantenimiento|saneamiento|reconstrucci[oó]n|arreglo|reparaci[oó]n|rehabilitaci[oó]n|restauraci[oó]n/i.test(
+      `${currentAccion || guidedAccion || ''} ${currentMaterial || guidedMaterial || ''}`
+    );
+
+    if (currentChatStep === 5 && isMaintenance) {
+      const lower = cleanText.toLowerCase();
+      if (lower.includes('omitir') || lower.includes('ninguno') || lower.includes('sugerir')) {
+        toast.error('Para actividades de mantenimiento o reparación, la unidad de cómputo es obligatoria. Elige pza, und, m² o m.', {
+          id: 'chat-unit-required'
+        });
+        return;
+      }
+    }
+
+    const nextStep = currentChatStep === 0 ? 1 : currentChatStep + 1;
+    setCurrentChatStep(nextStep);
 
     let nextBotMsg = null;
     if (nextStep === 1) {
@@ -178,7 +192,15 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
         };
       }
     } else if (nextStep === 5) {
-      if (isAcarreo) {
+      if (isMaintenance) {
+        nextBotMsg = {
+          id: `bot-step-5-${Date.now()}`,
+          sender: 'bot',
+          step: 5,
+          text: CHAT_STEP_DEFINITIONS[5].mantenimiento.text,
+          chips: CHAT_STEP_DEFINITIONS[5].mantenimiento.chips
+        };
+      } else if (isAcarreo) {
         nextBotMsg = {
           id: `bot-step-5-${Date.now()}`,
           sender: 'bot',
@@ -240,16 +262,20 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
         }
 
         // 5. Unidad de medida
+        let extractedUnit = null;
         if (cleanText && cleanText !== 'Sugerir por IA' && cleanText !== 'Ninguno / Omitir' && cleanText !== 'Ninguno' && cleanText !== 'Omitir') {
-          const unitOnly = cleanText.includes('(') ? cleanText.split('(')[0].trim() : cleanText.trim();
-          parts.push(`unidad ${unitOnly}`);
+          let rawUnit = cleanText.includes('(') ? cleanText.split('(')[0].trim() : cleanText.trim();
+          if (rawUnit === 'm²') rawUnit = 'm2';
+          else if (rawUnit === 'm³') rawUnit = 'm3';
+          extractedUnit = rawUnit.toLowerCase();
+          parts.push(`unidad ${extractedUnit}`);
         }
 
         const finalPrompt = parts.join(' ').replace(/\s+/g, ' ').trim();
         setEntryModeSource('chat');
         lastEntrySourceRef.current = 'chat';
         if (onComplete) {
-          onComplete(finalPrompt, 'chat');
+          onComplete(finalPrompt, 'chat', extractedUnit);
         }
       }, 5000);
     }

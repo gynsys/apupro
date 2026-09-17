@@ -171,14 +171,29 @@ El motor de calibración se diseñó mediante un estudio exhaustivo de la base d
    - Detecta cargos de maestros de obra (`MAESTRO CABILLERO`, `MO-DIR`) y los normaliza como supervisión menor (`CAPORAL` $\le 0.25\text{ día}$) para que no inflen la cuadrilla operativa.
 6. **Racionalización de Ayudantes:**
    - En reparaciones y refuerzos en sitio, la mano de obra no calificada se acota a **máximo 1.0 ayudante por especialista**.
-7. **Sincronización de Herramientas Metalmecánicas:**
-   - 1 máquina soldadora por soldador activo y esmeril angular para corte y desbaste.
-8. **Anclaje Matemático de Rendimiento por Horas-Hombre (HH):**
-   $$\text{Rendimiento Calibrado} = \frac{\text{Total Personas Cuadrilla} \times 8.0\text{ horas}}{\text{HH Empírica de Referencia}}$$
-   - `ESTRUCTURAS_METALICAS_und`: 24.0 HH/und $\rightarrow$ **$1.0 - 1.5\text{ und/día}$** para cuadrilla típica de 3 personas.
-   - `ESTRUCTURAS_METALICAS_kgf`: 0.038 HH/kgf $\rightarrow$ **$630\text{ kgf/día}$**.
-   - `REPARACIONES_PUNTUALES_pza`: 2.4 HH/pza $\rightarrow$ **$8.0\text{ pza/día}$**.
-   - `REPARACIONES_PUNTUALES_und`: 16.0 HH/und $\rightarrow$ **$1.0\text{ und/día}$**.
+7. **Selección Inteligente de Herramientas Eléctricas Menores (Amoladora 4 1/2" vs Esmeril 7"):**
+   - **Mantenimiento en sitio (peldaños de escaleras $1\times 0.32\text{ m}$, barandas, rejas, marcos):** Se asigna exclusivamente una **Amoladora Angular de 4 1/2" con cepillo de alambre de acero** (`EQU-HER-045`, \$55, dep 0.01). Si el RAG o LLM introdujo un esmeril industrial pesado de 7", el calibrador lo sustituye automáticamente para respetar la ergonomía y accesibilidad física del elemento instalado.
+   - **Fabricación y montaje pesado de perfiles:** Se reserva el **Esmeril Angular Industrial de 7"** (`EQU-HER-056`, \$120) para corte y desbaste de planchas y perfiles estructurales en taller o patio.
+8. **Prioridad de la Acción de Pintura sobre el Sustrato Metálico:**
+   - En labores de mantenimiento o protección con esmalte/anticorrosivo sobre elementos de herrería instalados (escaleras, barandas, peldaños), la tipología operativa se clasifica como **`PINTURA`**, evitando que se aplique erróneamente la tasa de fabricación pesada de estructuras metálicas.
+9. **Blindaje Dimensional Estricto en HH y Nuevos Benchmarks:**
+   - Queda terminantemente prohibido el cruce de unidades físicas (nunca se compara un rendimiento en $\text{m}^2$ contra benchmarks en $\text{und}$ o $\text{kgf}$).
+   - Se incorporaron benchmarks directos empíricos:
+     - `PINTURA_m2`: Mediana 0.80 HH/m² $\rightarrow$ **$30 - 32\text{ m}^2/\text{día}$** para cuadrilla típica.
+     - `PINTURA_pza`: Mediana 1.20 HH/pza $\rightarrow$ **$20\text{ pza/día}$**.
+     - `PINTURA_und`: Mediana 1.50 HH/und $\rightarrow$ **$16\text{ und/día}$**.
+     - `ESTRUCTURAS_METALICAS_m2`: Mediana 4.00 HH/m² $\rightarrow$ **$6\text{ m}^2/\text{día}$**.
+     - `ESTRUCTURAS_METALICAS_und`: Mediana 24.00 HH/und $\rightarrow$ **$1.0 - 1.5\text{ und/día}$**.
+     - `REPARACIONES_PUNTUALES_pza`: Mediana 2.40 HH/pza $\rightarrow$ **$8.0\text{ pza/día}$**.
+
+### 5.3 Parámetro Obligatorio de Unidad para Mantenimiento y Reparación
+Para evitar que el LLM intente adivinar la unidad de medida y distorsione el rendimiento o el escalamiento de materiales, el sistema implementa una compuerta estricta:
+* **Términos Monitoreados:** `mantenimiento`, `saneamiento`, `reconstruccion`, `arreglo`, `reparacion`, `rehabilitacion`, `restauracion`.
+* **Parámetro de Primera Clase (`unit: str`):** La API recibe la unidad directamente como parámetro (`payload.unit`), transmitiéndose formalmente desde el frontend hasta la directiva estricta de Gemini.
+* **Compuerta Temprana Fail-Fast en API:** Si se detecta una actividad de mantenimiento y el analista no suministró la unidad, la API frena en Capa 1 y devuelve `clarification_needed` solicitando elegir entre:
+  `pza` (Por Pieza / Peldaño), `und` (Por Unidad), `m2` (Superficie desarrollada), `m` (Metro lineal).
+* **Experiencia en Modo Libre:** Un banner interactivo con chips de selección rápida se activa reactivamente en el input de texto libre y bloquea el envío hasta que la unidad esté seleccionada.
+* **Experiencia en Asistente Guiado (Chatbot):** El Paso 5 detecta la actividad de mantenimiento y despliega únicamente los chips válidos (`pza`, `und`, `m²`, `m`), eliminando la opción de *"Sugerir por IA"*.
 
 ---
 
@@ -208,32 +223,35 @@ El motor de calibración se diseñó mediante un estudio exhaustivo de la base d
 
 El frontend de generación y edición de APUs está organizado bajo principios de Clean Architecture y Responsabilidad Única (SRP):
 
-### 4.1 Custom Hooks de Negocio
+### 7.1 Custom Hooks de Negocio
 * **[`useApuGenerator.js`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/hooks/useApuGenerator.js):**
-  * Gestiona las peticiones a la API (`generateAIApu`).
+  * Gestiona las peticiones a la API (`generateAIApu`) aceptando el parámetro explícito de unidad (`unit: str`).
   * Controla estados de carga por fases (*Analizando semántica*, *Buscando en base COVENIN*, *Adaptando APU*).
   * Maneja respuestas de aclaratoria (`clarification_needed`) y match exacto (`exact_match_candidate`).
   * **Detección de Caché Semántico:** Identifica `response.source === 'user_semantic_cache'` y emite un toast reactivo instantáneo: `⚡ APU recuperado de tus partidas guardadas (X% similitud)`.
   * Administra la descarga automática del archivo de diagnóstico JSON (`debug_apu_*.json`) enriquecido con el listado completo de insumos de materiales, equipos y mano de obra.
 * **[`useGuidedAssistant.js`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/hooks/useGuidedAssistant.js):**
-  * Controla el asistente conversacional interactivo (Fases 0 a 5).
-  * Concatena dinámicamente las respuestas del usuario en un prompt estructurado: `[Acción] + [Elemento] + [Material] + [Alcance]`.
+  * Controla el asistente conversacional interactivo (Pasos 1 a 5).
+  * En el Paso 5, detecta actividades de mantenimiento/reparación y restringe las unidades válidas a `pza`, `und`, `m²` y `m`, bloqueando intentos de omitir o sugerir automáticamente por IA.
+  * Extrae la unidad seleccionada y la transmite como argumento independiente en `onComplete(finalPrompt, 'chat', extractedUnit)` hacia `handleGenerate`.
 
-### 4.2 Componentes UI Especializados
+### 7.2 Componentes UI Especializados
 * **[`ApuEditorUI.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/components/ApuEditorUI.jsx):**
   * Editor tabular interactivo universal para APUs generados, certificados y de presupuestos.
   * Realiza el cálculo reactivo en tiempo real de costos directos (materiales, equipos con factor de depreciación, mano de obra con FCAS e incidencias) y costos indirectos (administración, utilidad, IVA).
   * **Sincronización de Equipos y Depreciación:** Al hacer clic en la lupa de fila o en el botón general de búsqueda, propaga tanto el precio unitario de adquisición como el factor de depreciación diario (`depreciacion`), evitando que la fila conserve valores estáticos de `1.0`.
-* **[`ComponentSelectorModal.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/components/ComponentSelectorModal.jsx):**
-  * Modal de exploración y selección de insumos desde las bases de datos (materiales, equipos y mano de obra).
-  * Mapea robustamente el factor `deprec_factor`, infiriendo `CosDia / precio` cuando el registro histórico no lo tenga explícito.
+  * **Visibilidad de Acciones:** El botón de eliminación (ícono de papelera) permanece siempre visible en la fila para facilitar la remoción rápida de componentes.
+* **[`FreeTextPromptInput.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/components/ai-generator/FreeTextPromptInput.jsx):**
+  * Textarea con auto-ajuste de altura y conmutador entre modo Asistente y Entrada Libre.
+  * **Detección Reactiva de Mantenimiento:** Al escribir términos de mantenimiento/reparación, despliega dinámicamente el panel interactivo con chips de unidad obligatoria (`pza`, `und`, `m²`, `m`).
+  * **Validación Bloqueante:** Impide generar la partida si el usuario no ha seleccionado una unidad obligatoria, mostrando un aviso contextual antes del envío.
+* **[`GuidedAssistantModal.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/components/ai-generator/GuidedAssistantModal.jsx):**
+  * Modal interactivo del Asistente Guiado de 5 pasos con stepper visual y rebobinado reversible.
+  * En el Paso 5, presenta los chips de unidad técnica y adapta dinámicamente el placeholder del chat según la actividad.
 * **[`ClarificationAlertCard.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/components/ai-generator/ClarificationAlertCard.jsx):**
   * Tarjeta ámbar limpia sin botones de alternativas adivinadas.
   * Presenta la guía de **REDACCIÓN RECOMENDADA** y las preguntas clave.
   * Muestra los botones de acción: `[Usar Asistente Guiado Paso a Paso]` y `[Reiniciar Entrada Libre]` / `[Reiniciar Chatbot]`.
-* **[`FreeTextPromptInput.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/components/ai-generator/FreeTextPromptInput.jsx):**
-  * Textarea con auto-ajuste de altura y conmutador entre modo Asistente y Entrada Libre.
-  * **Ocultación Reactiva:** Si la entrada está en estado de aclaratoria por ser demasiado breve, oculta el botón "Generar APU" y el campo para obligar a reiniciar o usar el Asistente Guiado.
 * **[`ExactMatchCard.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/components/ai-generator/ExactMatchCard.jsx):**
   * Permite adoptar con un solo clic una partida existente en base de datos sin gastar cuota mensual de IA.
 

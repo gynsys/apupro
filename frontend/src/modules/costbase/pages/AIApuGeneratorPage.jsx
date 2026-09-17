@@ -37,6 +37,7 @@ export default function AIApuGeneratorPage() {
 
   const [creationMode, setCreationMode] = useState(modeParam || 'ia');
   const [prompt, setPrompt] = useState('');
+  const [selectedUnit, setSelectedUnit] = useState(null);
   const [saving, setSaving] = useState(false);
   const [databases, setDatabases] = useState([]);
   const [selectedDatabase, setSelectedDatabase] = useState('master');
@@ -73,9 +74,10 @@ export default function AIApuGeneratorPage() {
   const guided = useGuidedAssistant({
     user,
     initialGuided: guidedParam !== null ? guidedParam === 'true' : true,
-    onComplete: (finalPrompt, source) => {
+    onComplete: (finalPrompt, source, unit) => {
       setPrompt(finalPrompt);
-      generator.handleGenerate(finalPrompt, false, false, false, null, source);
+      if (unit) setSelectedUnit(unit);
+      generator.handleGenerate(finalPrompt, false, false, false, null, source, unit);
     }
   });
 
@@ -343,6 +345,7 @@ export default function AIApuGeneratorPage() {
   const handleBackNavigation = () => {
     if (generator.item) {
       generator.setItem(null);
+      setSelectedUnit(null);
       if (creationMode === 'import') {
         navigate('/cost360/ai-generator?mode=import');
       } else if (creationMode === 'manual') {
@@ -420,6 +423,7 @@ export default function AIApuGeneratorPage() {
                 guided.resetChatbot();
                 guided.setIsGuidedMode(true);
                 setPrompt('');
+                setSelectedUnit(null);
                 guided.setEntryModeSource('chat');
                 guided.lastEntrySourceRef.current = 'chat';
                 navigate('/cost360/ai-generator?mode=ia&guided=true', { replace: true });
@@ -428,6 +432,7 @@ export default function AIApuGeneratorPage() {
                 generator.dismissClarification();
                 guided.setIsGuidedMode(false);
                 setPrompt('');
+                setSelectedUnit(null);
                 guided.setEntryModeSource('libre');
                 guided.lastEntrySourceRef.current = 'libre';
                 navigate('/cost360/ai-generator?mode=ia&guided=false', { replace: true });
@@ -467,6 +472,8 @@ export default function AIApuGeneratorPage() {
           <FreeTextPromptInput
             prompt={prompt}
             setPrompt={setPrompt}
+            selectedUnit={selectedUnit}
+            setSelectedUnit={setSelectedUnit}
             isGuidedMode={guided.isGuidedMode}
             isSmartMode={false}
             isClarifying={generator.isClarifying}
@@ -474,13 +481,14 @@ export default function AIApuGeneratorPage() {
             exactMatchCandidate={generator.exactMatchCandidate}
             subscriptionErrorMsg={generator.subscriptionErrorMsg}
             onOpenSubscriptionModal={() => generator.setShowSubscriptionModal(true)}
-            onGenerate={(text) => generator.handleGenerate(text, false, false, false, null, 'libre')}
+            onGenerate={(text, unit) => generator.handleGenerate(text, false, false, false, null, 'libre', unit || selectedUnit)}
             onSwitchToGuided={() => {
               guided.resetChatbot();
               guided.setIsGuidedMode(true);
               guided.setEntryModeSource('chat');
               guided.lastEntrySourceRef.current = 'chat';
               setPrompt('');
+              setSelectedUnit(null);
               navigate('/cost360/ai-generator?mode=ia&guided=true', { replace: true });
             }}
             onSwitchToLibre={() => {

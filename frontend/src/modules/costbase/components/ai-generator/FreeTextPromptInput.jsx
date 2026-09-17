@@ -1,9 +1,12 @@
-import React from 'react';
-import { Bot, Edit2, AlertTriangle, Loader, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bot, Edit2, AlertTriangle, Loader, Sparkles, CheckCircle2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 export default function FreeTextPromptInput({
   prompt,
   setPrompt,
+  selectedUnit,
+  setSelectedUnit,
   isGuidedMode,
   isSmartMode,
   isClarifying,
@@ -15,6 +18,28 @@ export default function FreeTextPromptInput({
   onSwitchToGuided,
   onSwitchToLibre
 }) {
+  const [unitWarning, setUnitWarning] = useState(false);
+
+  // Detección reactiva de términos de mantenimiento / reparación
+  const isMaintenance = /mantenimiento|saneamiento|reconstrucci[oó]n|arreglo|reparaci[oó]n|rehabilitaci[oó]n|restauraci[oó]n/i.test(prompt || '');
+
+  const handleGenerateClick = () => {
+    if (!prompt.trim() || isSmartMode || loading) return;
+
+    if (isMaintenance && !selectedUnit) {
+      setUnitWarning(true);
+      toast.error('Para actividades de mantenimiento o reparación, debes seleccionar la unidad de cómputo obligatoria.', {
+        id: 'unit-required-toast',
+        duration: 4500,
+        icon: '⚠️'
+      });
+      return;
+    }
+
+    setUnitWarning(false);
+    onGenerate(prompt, selectedUnit);
+  };
+
   return (
     <>
       {!isClarifying && (
@@ -81,9 +106,7 @@ export default function FreeTextPromptInput({
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
-              if (prompt.trim() && !isSmartMode && !exactMatchCandidate) {
-                onGenerate(prompt);
-              }
+              handleGenerateClick();
             }
           }}
           disabled={isSmartMode || isGuidedMode}
@@ -94,12 +117,67 @@ export default function FreeTextPromptInput({
               ? 'Usa los selectores de arriba para formar la descripción...'
               : 'Modo experto: Escribe la partida libremente...'
           }
-          className={`w-full h-24 p-4 border rounded-xl focus:outline-none focus:ring-2 transition-all text-sm mb-4 disabled:opacity-50 disabled:cursor-not-allowed ${
+          className={`w-full h-24 p-4 border rounded-xl focus:outline-none focus:ring-2 transition-all text-sm mb-3 disabled:opacity-50 disabled:cursor-not-allowed ${
             isSmartMode
               ? 'bg-blue-50/50 border-blue-300 focus:border-blue-500 focus:ring-blue-500/20'
               : 'bg-slate-50 border-slate-300 hover:border-[#1D4ED8]/50 focus:bg-white focus:border-[#1D4ED8] focus:ring-[#1D4ED8]/25'
           }`}
         />
+      )}
+
+      {/* PANEL OBLIGATORIO DE UNIDAD PARA MANTENIMIENTO */}
+      {!isGuidedMode && !isSmartMode && !isClarifying && isMaintenance && (
+        <div className={`mb-4 p-3.5 rounded-xl border transition-all animate-in fade-in slide-in-from-top-1 duration-200 ${
+          unitWarning && !selectedUnit
+            ? 'bg-amber-50/90 border-amber-400 ring-2 ring-amber-400/30'
+            : 'bg-blue-50/70 border-blue-200'
+        }`}>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2">
+              <span className={`w-5 h-5 rounded-full inline-flex items-center justify-center text-xs font-bold shrink-0 ${
+                unitWarning && !selectedUnit ? 'bg-amber-500 text-white' : 'bg-blue-600 text-white'
+              }`}>
+                !
+              </span>
+              <span className="text-xs font-bold text-slate-800">
+                Actividad de mantenimiento/reparación detectada: <span className="text-blue-700 underline">Selecciona la unidad de cómputo</span>
+              </span>
+            </div>
+            {selectedUnit && (
+              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                <CheckCircle2 size={12} /> Unidad: {selectedUnit}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { id: 'pza', label: 'pza', sub: 'Por Pieza / Peldaño' },
+              { id: 'und', label: 'und', sub: 'Por Unidad' },
+              { id: 'm2', label: 'm²', sub: 'Superficie desarrollada' },
+              { id: 'm', label: 'm', sub: 'Metro Lineal' }
+            ].map((item) => {
+              const isSelected = selectedUnit === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedUnit(isSelected ? null : item.id);
+                    setUnitWarning(false);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
+                    isSelected
+                      ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-600/30'
+                      : 'bg-white text-slate-700 border border-slate-300 hover:border-blue-400 hover:bg-blue-50/60'
+                  }`}
+                >
+                  <span className={isSelected ? 'text-white' : 'text-blue-600 font-extrabold'}>{item.label}</span>
+                  <span className={`text-[11px] font-normal ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>({item.sub})</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {subscriptionErrorMsg && (
@@ -129,7 +207,7 @@ export default function FreeTextPromptInput({
         <div className="flex justify-end">
           <button
             type="button"
-            onClick={() => onGenerate(prompt)}
+            onClick={handleGenerateClick}
             disabled={loading || !prompt.trim() || isSmartMode}
             className="flex items-center gap-2 text-white px-6 py-3 rounded-xl transition-all shadow-md font-bold disabled:opacity-50 active:scale-95 cursor-pointer bg-[#1D4ED8] hover:bg-blue-800 shadow-blue-600/25"
           >

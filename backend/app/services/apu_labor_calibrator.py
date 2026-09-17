@@ -73,6 +73,22 @@ EMPERICAL_HH_BENCHMARKS: Dict[str, Dict[str, float]] = {
         "p90": 3.2776,
         "rendimiento_med": 40.0,
     },
+    "PINTURA_pza": {
+        "p10": 0.6000,
+        "p25": 0.9000,
+        "median": 1.2000,
+        "p75": 1.8000,
+        "p90": 2.5000,
+        "rendimiento_med": 20.0,
+    },
+    "PINTURA_und": {
+        "p10": 0.8000,
+        "p25": 1.1000,
+        "median": 1.5000,
+        "p75": 2.2000,
+        "p90": 3.0000,
+        "rendimiento_med": 16.0,
+    },
 
     # 5. Pisos y Pavimentos (E43)
     "PISOS_m2": {
@@ -237,6 +253,14 @@ EMPERICAL_HH_BENCHMARKS: Dict[str, Dict[str, float]] = {
         "p90": 1.6000,
         "rendimiento_med": 30.0,
     },
+    "ESTRUCTURAS_METALICAS_m2": {
+        "p10": 2.0000,
+        "p25": 3.0000,
+        "median": 4.0000,
+        "p75": 5.5000,
+        "p90": 7.0000,
+        "rendimiento_med": 6.0,
+    },
 
     # 15. Reparaciones y Reformas Puntuales en Sitio (R4/R6)
     "REPARACIONES_PUNTUALES_und": {
@@ -306,7 +330,22 @@ def classify_activity_typology(description: str, unit: str, covenin_code: str = 
     if cov_upper.startswith("R9"):
         return "ACARREO"
 
-    # 3. Estructuras Metálicas, Herrería y Soldadura (E36, M36, R36)
+    # 3. Pintura, Esmalte y Tratamientos de Superficie (Prioridad de acción sobre sustrato)
+    # Si la acción es pintar, aplicar esmalte, fondo anticorrosivo o tratamiento superficial, la disciplina es PINTURA,
+    # independientemente de que el sustrato sea metal (barandas, rejas, escaleras, peldaños, tuberías), madera o concreto.
+    is_paint_action = any(k in desc_clean for k in [
+        "PINTURA", "ESMALTE", "ANTICORROSIV", "CROMATO", "CONVERTIDOR DE OXIDO",
+        "FONDO DE ZINC", "FONDO ANTIALCALINO", "FONDO ANTICORROSIVO", "BARNIZ", "EMPASTADO",
+        "TRATAMIENTO ANTICORROSIVO"
+    ])
+    has_heavy_fabrication = any(k in desc_clean for k in [
+        "FABRICACION", "SUMINISTRO Y MONTAJE", "MONTAJE DE ESTRUCTURA", "SOLDADURA ESTRUCTURAL",
+        "MONTAJE DE VIGA", "MONTAJE DE COLUMNA", "ARMADO DE ESTRUCTURA"
+    ])
+    if is_paint_action and not has_heavy_fabrication:
+        return "PINTURA"
+
+    # 4. Estructuras Metálicas, Herrería y Soldadura (E36, M36, R36)
     if cov_upper.startswith("E36") or cov_upper.startswith("M36") or cov_upper.startswith("R36"):
         return "ESTRUCTURAS_METALICAS"
     if any(k in desc_clean for k in [
@@ -790,6 +829,38 @@ def balance_crew_and_equipments(
                             f"a {specialist_count:.0f} unidades (una por especialista activo)."
                         )
 
+        # Sincronización de herramientas eléctricas menores de preparación de superficie:
+        # Si la pintura incluye decapado, cepillado de óxido o preparación en elementos metálicos:
+        desc_c_paint = _normalize_str(description)
+        is_metal_prep = any(k in desc_c_paint for k in ["CEPILLADO", "OXIDO", "DECAPADO", "SANEAMIENTO", "PELDANO", "ESCALERA", "BARANDA", "REJA", "ANTICORROSIV", "METALIC"])
+        if is_metal_prep:
+            # 1. Sustituir esmeril industrial pesado de 7" por amoladora liviana de 4 1/2" para trabajo en sitio
+            for eq in equipments:
+                d_up = str(eq.get("descripcion", "")).upper()
+                if any(h in d_up for h in ["7 PULG", "7\"", "INDUSTRIAL", "BANCO", "TRONCHADORA"]) and any(e in d_up for e in ["ESMERIL", "AMOLADORA"]):
+                    eq["codigo"] = "EQU-HER-045"
+                    eq["descripcion"] = "AMOLADORA ANGULAR DE 4 1/2 PULG CON CEPILLO DE ALAMBRE"
+                    eq["depreciacion"] = 0.01
+                    eq["precio_unitario"] = 55.0
+                    eq["nota_calculo"] = "Sustituido esmeril industrial de 7\" por amoladora angular portátil de 4 1/2\" con cepillo circular de alambre de acero para trabajo ergonómico en elementos instalados en sitio."
+                    notes.append("Herramienta calibrada: Se sustituyó esmeril industrial de 7\" por Amoladora de 4 1/2\" con cepillo de alambre por accesibilidad en sitio.")
+
+            # 2. Si no tiene amoladora o cepillo, incorporar la de 4 1/2"
+            has_grinder = any(any(g in str(eq.get("descripcion", "")).upper() for g in ["ESMERIL", "AMOLADORA", "CEPILLO"]) for eq in equipments)
+            if not has_grinder:
+                equipments.append({
+                    "id": "e-ia-amoladora-4y12",
+                    "codigo": "EQU-HER-045",
+                    "descripcion": "AMOLADORA ANGULAR DE 4 1/2 PULG CON CEPILLO DE ALAMBRE",
+                    "unidad": "día",
+                    "cantidad": 1.0,
+                    "depreciacion": 0.01,
+                    "precio_unitario": 55.0,
+                    "origen": "historico",
+                    "nota_calculo": "Herramienta portátil de 4 1/2 pulg con cepillo circular de alambre de acero para decapado y desprendimiento mecánico de óxido en elementos instalados en sitio."
+                })
+                notes.append("Herramientas de preparación superficial: Se incorporó Amoladora Angular de 4 1/2\" con cepillo de alambre para desprendimiento mecánico de óxido en sitio.")
+
     # -----------------------------------------------------------------------
     # CASO D: ESTRUCTURAS METÁLICAS, HERRERÍA Y SOLDADURA
     # -----------------------------------------------------------------------
@@ -817,23 +888,57 @@ def balance_crew_and_equipments(
                 })
                 notes.append(f"Equipos metalmecánicos: Se incorporó máquina soldadora ({welders_count:.0f} un.) para soldadores activos.")
 
-        # Sincronizar esmeril angular si hay corte, desbaste o saneamiento
+        # Sincronizar amoladora angular según la escala operativa:
+        # A) Mantenimiento, reparación o decapado en elementos instalados en sitio (peldaños, barandas, rejas, marcos):
+        #    Amoladora portátil de 4 1/2" con cepillo de alambre de acero.
+        # B) Fabricación, montaje o corte pesado de perfiles estructurales en taller/obra:
+        #    Esmeril angular / amoladora industrial de 7".
         desc_c = _normalize_str(description)
-        if any(k in desc_c for k in ["CORTE", "DESBASTE", "ESMERIL", "PELDANO", "ZANCA", "TUBO", "PERFIL", "PLETINA", "SANEAMIENTO"]):
-            has_esmeril = any(any(g in str(eq.get("descripcion", "")).upper() for g in ["ESMERIL", "AMOLADORA", "TRONCHADORA"]) for eq in equipments)
-            if not has_esmeril:
-                equipments.append({
-                    "id": "e-ia-esmeril-angular",
-                    "codigo": "EQU-HER-056",
-                    "descripcion": "ESMERIL ANGULAR / AMOLADORA INDUSTRIAL 7 PULG",
-                    "unidad": "día",
-                    "cantidad": 1.0,
-                    "depreciacion": 0.01,
-                    "precio_unitario": 120.0,
-                    "origen": "historico",
-                    "nota_calculo": "Herramienta menor para corte y saneamiento de perfiles y zancas."
-                })
-                notes.append("Herramientas metalmecánicas: Se incorporó Esmeril Angular para corte y desbaste en sitio.")
+        is_site_maintenance = any(m in desc_c for m in ["MANTENIMIENTO", "SANEAMIENTO", "REPARACION", "RESTAURACION", "PELDANO", "BARANDA", "REJA", "PINTURA", "ANTICORROSIV"])
+        if is_site_maintenance:
+            # Sustituir esmeril de 7" por amoladora 4 1/2" con cepillo en sitio
+            for eq in equipments:
+                d_up = str(eq.get("descripcion", "")).upper()
+                if any(h in d_up for h in ["7 PULG", "7\"", "INDUSTRIAL", "BANCO", "TRONCHADORA"]) and any(e in d_up for e in ["ESMERIL", "AMOLADORA"]):
+                    eq["codigo"] = "EQU-HER-045"
+                    eq["descripcion"] = "AMOLADORA ANGULAR DE 4 1/2 PULG CON CEPILLO DE ALAMBRE"
+                    eq["depreciacion"] = 0.01
+                    eq["precio_unitario"] = 55.0
+                    eq["nota_calculo"] = "Sustituido esmeril industrial de 7\" por amoladora angular portátil de 4 1/2\" con cepillo circular de alambre de acero para trabajo en elementos instalados en sitio."
+                    notes.append("Herramienta calibrada: Se sustituyó esmeril industrial de 7\" por Amoladora de 4 1/2\" con cepillo de alambre para mantenimiento en sitio.")
+
+        if any(k in desc_c for k in [
+            "CORTE", "DESBASTE", "ESMERIL", "AMOLADORA", "PELDANO", "ZANCA", "TUBO", "PERFIL",
+            "PLETINA", "SANEAMIENTO", "CEPILLADO", "ANTICORROSIV", "DECAPADO", "OXIDO"
+        ]):
+            has_grinder = any(any(g in str(eq.get("descripcion", "")).upper() for g in ["ESMERIL", "AMOLADORA", "TRONCHADORA"]) for eq in equipments)
+            if not has_grinder:
+                if is_site_maintenance:
+                    equipments.append({
+                        "id": "e-ia-amoladora-4y12",
+                        "codigo": "EQU-HER-045",
+                        "descripcion": "AMOLADORA ANGULAR DE 4 1/2 PULG CON CEPILLO DE ALAMBRE",
+                        "unidad": "día",
+                        "cantidad": 1.0,
+                        "depreciacion": 0.01,
+                        "precio_unitario": 55.0,
+                        "origen": "historico",
+                        "nota_calculo": "Herramienta portátil de 4 1/2 pulg con cepillo circular de alambre de acero para remoción mecánica de óxido en elementos instalados en sitio."
+                    })
+                    notes.append("Herramientas metalmecánicas: Se incorporó Amoladora Angular de 4 1/2\" con cepillo de alambre para saneamiento en sitio.")
+                else:
+                    equipments.append({
+                        "id": "e-ia-esmeril-angular",
+                        "codigo": "EQU-HER-056",
+                        "descripcion": "ESMERIL ANGULAR / AMOLADORA INDUSTRIAL 7 PULG",
+                        "unidad": "día",
+                        "cantidad": 1.0,
+                        "depreciacion": 0.01,
+                        "precio_unitario": 120.0,
+                        "origen": "historico",
+                        "nota_calculo": "Herramienta industrial para corte y desbaste de perfiles pesados y planchas estructurales."
+                    })
+                    notes.append("Herramientas metalmecánicas: Se incorporó Esmeril Angular Industrial de 7\" para corte y desbaste estructural.")
 
     # -----------------------------------------------------------------------
     # CASO E: LOGÍSTICA INTELIGENTE DE VEHÍCULOS DE APOYO Y CHOFERES
@@ -953,19 +1058,25 @@ def validate_and_calibrate_hh(
 
     current_hh = total_hh_per_day / perf
 
-    # Buscar benchmark empírico por clave compuesta (ej: ACARREO_m3.m, ALBANILERIA_m2)
+    # Buscar benchmark empírico por clave compuesta exacta (ej: ACARREO_m3.m, ALBANILERIA_m2, PINTURA_pza)
     benchmark_key = f"{typology}_{unit}"
     benchmark = EMPERICAL_HH_BENCHMARKS.get(benchmark_key)
 
-    # Si no coincide exactamente unidad, buscar por prefijo de tipología
+    # Si no coincide exactamente, buscar SOLO dentro de benchmarks compatibles con la MISMA unidad física
     if not benchmark:
         for k, v in EMPERICAL_HH_BENCHMARKS.items():
-            if k.startswith(typology):
+            if k.endswith(f"_{unit}") and k.startswith(typology):
                 benchmark = v
                 break
 
-    # Si no hay benchmark disponible para esta tipología exótica, no forzar calibración
+    # Blindaje dimensional estricto: Si no hay benchmark para esta unidad física exacta,
+    # NUNCA cruzar dimensiones (ej. jamás comparar m2 con und, pza o kgf).
+    # Conservar el rendimiento propuesto por el analista / LLM y registrar nota explicativa.
     if not benchmark:
+        notes.append(
+            f"Rendimiento conservado: No se altera el rendimiento ({perf:.2f} {unit}/día) "
+            f"para {typology} en '{unit}' para garantizar consistencia dimensional estricta."
+        )
         return partida, notes
 
     p10 = benchmark["p10"]

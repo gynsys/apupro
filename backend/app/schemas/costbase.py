@@ -145,6 +145,7 @@ class MessageContext(BaseModel):
 
 class AiApuGenerateRequest(BaseModel):
     description: str
+    unit: Optional[str] = None
     covenin_prefix: Optional[str] = None
     covenin_context: Optional[str] = None
     history: Optional[List[MessageContext]] = []

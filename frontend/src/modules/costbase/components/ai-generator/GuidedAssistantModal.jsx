@@ -26,6 +26,9 @@ export default function GuidedAssistantModal({
 
   const isSupplyOrInstall = /suministr|instalac|colocac|montaje/i.test(guidedAccion || '');
   const isAcarreo = /acarreo|acarrear|bote|botar|transporte|transportar|traslado/i.test(guidedAccion || '');
+  const isMaintenance = /mantenimiento|saneamiento|reconstrucci[oó]n|arreglo|reparaci[oó]n|rehabilitaci[oó]n|restauraci[oó]n/i.test(
+    `${guidedAccion || ''} ${guidedMaterial || ''}`
+  );
   const isParametric = Boolean(getParametricStep3Definition(guidedMaterial, guidedAccion));
   const stepperItems = [
     { step: 1, label: 'Acción' },
@@ -197,7 +200,7 @@ export default function GuidedAssistantModal({
                   currentChatStep === 2 ? (isSupplyOrInstall ? "Ej: Bomba centrífuga, Tablero eléctrico, Tubería PVC..." : "Ej: Paredes de bloques, Losa de concreto...") :
                   currentChatStep === 3 ? (isParametric ? "Ej: 2 HP, e=15 cm, 1/2 pulgada, 15 kVA, hasta 1.50 m..." : (isSupplyOrInstall ? "Ej: Para pozo profundo, para aguas blancas, en sala de bombas..." : "Ej: En planta baja, en sótano...")) :
                   currentChatStep === 4 ? "Ej: Incluye conexiones, todo incluido, solo mano de obra..." :
-                  currentChatStep === 5 ? "Ej: und, m², ml, pza..." :
+                  currentChatStep === 5 ? (isMaintenance ? "Obligatorio: pza, und, m², m..." : "Ej: und, m², ml, pza...") :
                   "Escribe tu respuesta..."
                 }
                 className="flex-1 bg-white border-2 border-amber-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-amber-900 placeholder:text-amber-700/50"

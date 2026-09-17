@@ -96,17 +96,22 @@ export const generateAIApu = async (
   history = [],
   onlyPreprocess = false,
   bypassExactMatch = false,
-  acceptExactMatchCode = null
+  acceptExactMatchCode = null,
+  unit = null
 ) => {
-  const response = await cost360ApiClient.post('/generate-ai-apu', {
+  const payload = {
     description,
     covenin_prefix: coveninPrefix,
     covenin_context: coveninContext,
     history,
     only_preprocess: onlyPreprocess,
     bypass_exact_match: bypassExactMatch,
-    accept_exact_match_code: acceptExactMatchCode
-  });
+    accept_exact_match_code: acceptExactMatchCode,
+  };
+  if (unit) {
+    payload.unit = unit;
+  }
+  const response = await cost360ApiClient.post('/generate-ai-apu', payload);
   return response.data;
 };
 

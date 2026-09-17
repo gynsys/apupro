@@ -254,6 +254,15 @@ export const CHAT_STEP_DEFINITIONS = {
     get chips() { return this.general.chips; }
   },
   5: {
+    mantenimiento: {
+      text: 'Paso 5 de 5: Unidad de Medida Obligatoria\nPara actividades de mantenimiento o reparación, la unidad define el rendimiento y los materiales. ¿En qué unidad se computará?',
+      chips: [
+        'pza (Por Pieza / Peldaño)',
+        'und (Por Unidad)',
+        'm² (Superficie desarrollada)',
+        'm (Metro lineal)'
+      ]
+    },
     acarreo: {
       text: 'Paso 5 de 5: Unidad de Medida\nLas partidas de acarreo se computan por distancia o volumen. ¿En qué unidad se medirá?',
       chips: [

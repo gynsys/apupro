@@ -142,7 +142,15 @@ export function useApuGenerator({ setSettings }) {
     }
   }, [dismissClarification, setSettings]);
 
-  const handleGenerate = useCallback(async (textToSubmit, onlyPreprocess = false, bypassSmart = false, bypassExactMatch = false, acceptExactMatchCode = null) => {
+  const handleGenerate = useCallback(async (
+    textToSubmit,
+    onlyPreprocess = false,
+    bypassSmart = false,
+    bypassExactMatch = false,
+    acceptExactMatchCode = null,
+    entryMode = 'libre',
+    unit = null
+  ) => {
     if (!textToSubmit || !textToSubmit.trim()) {
       toast.error('Ingresa una descripción para generar el APU');
       return;
@@ -153,17 +161,17 @@ export function useApuGenerator({ setSettings }) {
     setExactMatchCandidate(null);
 
     try {
-      const context = 'Generación Libre de APU (Búsqueda Híbrida Inteligente)';
+      const context = entryMode === 'chat' ? 'Asistente Guiado de APU' : 'Generación Libre de APU (Búsqueda Híbrida Inteligente)';
       const prefixToSend = '';
 
       if (acceptExactMatchCode) {
-        const response = await generateAIApu(textToSubmit, prefixToSend, context, [], false, false, acceptExactMatchCode);
+        const response = await generateAIApu(textToSubmit, prefixToSend, context, [], false, false, acceptExactMatchCode, unit);
         processAIResponse(response, textToSubmit);
         return;
       }
 
       const newHistory = isClarifying ? [...chatHistory, { role: 'user', content: textToSubmit }] : [{ role: 'user', content: textToSubmit }];
-      const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory, onlyPreprocess, bypassExactMatch);
+      const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory, onlyPreprocess, bypassExactMatch, null, unit);
       processAIResponse(response, textToSubmit);
     } catch (error) {
       console.error('Error en generación APU con IA:', error);

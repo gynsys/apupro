@@ -486,6 +486,7 @@ def generate_apu_with_ai_from_base(
     covenin_context: str = "",
     smart_answers: Optional[Dict[str, str]] = None,
     history: Optional[List[Dict]] = None,
+    requested_unit: Optional[str] = None,
     db: Optional[Session] = None,
 ) -> Dict[str, Any]:
     """
@@ -521,13 +522,29 @@ def generate_apu_with_ai_from_base(
             comp_text += json.dumps(comp, ensure_ascii=False, indent=2)
             comp_text += "\n"
 
+    unit_directive = ""
+    if requested_unit:
+        u_clean = str(requested_unit).strip().lower()
+        unit_directive = f"""
+# DIRECTIVA OBLIGATORIA DE UNIDAD DE MEDIDA (DEFINIDA POR EL ANALISTA)
+La partida DEBE estructurarse OBLIGATORIAMENTE con la unidad: '{u_clean}'.
+- El campo `unit` de `partida` DEBE ser exactamente '{u_clean}'.
+- Si la unidad es 'pza' o 'und':
+  * Todos los consumos de materiales (pintura, solvente, convertidor, lijas, electrodos, pernos) DEBEN calcularse para UNA SOLA PIEZA individual (ej. 1 peldaño de 1x0.32m consume ~0.02 gln de pintura/fondo y 0.01 gln de convertidor). NUNCA dejes consumos por m2 si la unidad es pieza o unidad.
+  * El rendimiento diario de la cuadrilla DEBE expresarse en piezas o unidades al día (ej. 15 a 25 pza/día con amoladora portátil de 4 1/2 pulg).
+- Si la unidad es 'm2':
+  * Todos los consumos de materiales y el rendimiento diario se calculan por metro cuadrado de superficie desarrollada (25 a 35 m2/día).
+- Si la unidad es 'm' o 'ml':
+  * Todos los consumos y rendimientos se calculan por metro lineal de desarrollo.
+"""
+
     prompt = f"""
 # ROL
 Eres un Ingeniero Civil especialista en Análisis de Precios Unitarios (APU).
 El sistema ha seleccionado una partida histórica de la base de datos como BASE DE ADAPTACIÓN.
 Tu tarea es ADAPTAR ese APU base para la nueva partida solicitada por el usuario.
 NO debes inventar desde cero. Usa los insumos, precios y cantidades del APU base como referencia principal.
-
+{unit_directive}
 # SOLICITUD DEL USUARIO
 Descripción: {user_description}
 Categoría COVENIN: {covenin_context}
@@ -554,6 +571,7 @@ Prefijo COVENIN: {covenin_prefix}
     - NUNCA agregues advertencias sobre exclusiones de alcance (`[ALCANCE]`); el analista de costos ya conoce el alcance solicitado.
     - NUNCA menciones qué partida o código se utilizó como base histórica en `advertencias`.
     - Las notas de adaptación interna van EXCLUSIVAMENTE en `notas_adaptacion`, jamás en `advertencias`.
+11. UNIDAD OBLIGATORIA: Si se especifica una directiva de unidad obligatoria arriba, el campo `unit` de `partida` DEBE ser exactamente esa unidad, escalando los consumos de materiales y el rendimiento diario en correspondencia matemática estricta.
 
 
 # CRITERIO DE CLARIFICACIÓN VS GENERACIÓN (OBLIGATORIO EVALUAR ANTES DE GENERAR)
@@ -592,6 +610,10 @@ CUANDO solicites clarificación, responde con "options": []. ESTÁ TERMINANTEMEN
 
     if result.get("status") == "clarification_needed":
         result["options"] = []
+
+    # Salvaguarda determinista de unidad solicitada
+    if result.get("partida") and requested_unit:
+        result["partida"]["unit"] = requested_unit.strip().lower()
 
     _normalize_equipment_prices(result, base_apu)
     calibrate_apu_crew_and_equipment(result, base_apu)

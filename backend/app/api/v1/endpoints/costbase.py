@@ -1228,6 +1228,58 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
     if payload.description:
         payload.description = expand_technical_synonyms(payload.description)
 
+    # --- VALIDACIÓN DETERMINISTA DE UNIDAD PARA MANTENIMIENTO / REPARACIÓN ---
+    # En ingeniería de costos, el analista conoce la unidad. Para actividades de mantenimiento
+    # (mantenimiento, saneamiento, reconstrucción, reparación, rehabilitación, restauración, arreglo),
+    # el cálculo de insumos y rendimientos depende críticamente de la unidad (pza/und vs m2 vs m).
+    MAINTENANCE_KEYWORDS = [
+        "mantenimiento", "saneamiento", "reconstruccion", "reconstrucción",
+        "arreglo", "reparacion", "reparación", "rehabilitacion", "rehabilitación",
+        "restauracion", "restauración"
+    ]
+    raw_desc_lower = (raw_desc or "").lower()
+    is_maintenance_activity = any(kw in raw_desc_lower for kw in MAINTENANCE_KEYWORDS)
+
+    # Extraer unidad efectiva: preferir parámetro directo payload.unit, fallback a tokens en texto
+    effective_unit = (payload.unit or "").strip().lower()
+    if not effective_unit:
+        unit_match = re.search(r'\b(pza|und|unidad|piezas?|m2|m²|ml|mts?|metros?\s*lineales?|pto|puntos?)\b', raw_desc_lower)
+        if unit_match:
+            matched_u = unit_match.group(1)
+            if matched_u in ("pieza", "piezas"):
+                effective_unit = "pza"
+            elif matched_u == "unidad":
+                effective_unit = "und"
+            elif matched_u in ("m2", "m²"):
+                effective_unit = "m2"
+            elif matched_u in ("ml", "mt", "mts", "metro", "metros", "metros lineales"):
+                effective_unit = "m"
+            elif matched_u in ("pto", "puntos"):
+                effective_unit = "pto"
+            else:
+                effective_unit = matched_u
+
+    if is_maintenance_activity and not effective_unit and not payload.only_preprocess and not payload.accept_exact_match_code:
+        logger.info("Maintenance activity detected without explicit unit: %.80s", raw_desc)
+        return {
+            "status": "clarification_needed",
+            "clarification_message": (
+                "Has solicitado una labor de mantenimiento o reparación. En ingeniería de costos, "
+                "el dimensionamiento de insumos y rendimientos de la cuadrilla depende estrictamente de la unidad de medida "
+                "(por pieza individual, por superficie en m² o por longitud en m). Por favor selecciona la unidad de cómputo:"
+            ),
+            "options": [
+                "pza (Por Pieza / Peldaño / Elemento individual)",
+                "und (Por Unidad)",
+                "m2 (Por Metro Cuadrado de superficie)",
+                "m (Por Metro Lineal de desarrollo)"
+            ],
+            "questions": [
+                "1. ¿En qué unidad de medida se computará la partida (pza, und, m2, m)?"
+            ],
+            "guia_redaccion": "Selecciona la unidad requerida para que el APU calcule los materiales y el rendimiento exacto sin distorsión de costos."
+        }
+
     # --- CAPA 0 (Semantic Cache Privado del Usuario): Búsqueda Ultra-Rápida en APUs Validados (< 50ms, 0 tokens) ---
     if current_user and payload.description and not payload.only_preprocess and not payload.base_partida_code and not payload.accept_exact_match_code:
         user_id = getattr(current_user, 'id', None)
@@ -1385,6 +1437,7 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             covenin_context=payload.covenin_context or "",
             smart_answers=payload.smart_answers or {},
             history=history_dicts,
+            requested_unit=effective_unit or payload.unit,
             db=db,
         )
 
