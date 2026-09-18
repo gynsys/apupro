@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import SanitizationPanel from '../components/SanitizationPanel';
-import MarketIndicatorsPanel from '../components/MarketIndicatorsPanel';
 import DeduplicatePanel from '../components/DeduplicatePanel';
 
 const glassStrong = {
@@ -16,7 +15,6 @@ export default function MarketAdminPage() {
 
   const TABS = [
     { key: 'sanitization', label: 'Saneamiento IA' },
-    { key: 'indicators',   label: 'Update BD' },
     { key: 'dedup',        label: '🔍 Deduplicar Materiales' },
   ];
 
@@ -29,7 +27,7 @@ export default function MarketAdminPage() {
               Módulo de Automatización de Precios
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Saneamiento con IA, Importación e Indicadores de Mercado
+              Saneamiento con IA y Deduplicación de Materiales
             </p>
           </div>
         </div>
@@ -51,7 +49,6 @@ export default function MarketAdminPage() {
 
       <div className="flex-1 overflow-auto rounded-2xl" style={glassStrong}>
         {activeTab === 'sanitization' && <SanitizationPanel />}
-        {activeTab === 'indicators' && <MarketIndicatorsPanel />}
         {activeTab === 'dedup' && <DeduplicatePanel />}
       </div>
     </div>
