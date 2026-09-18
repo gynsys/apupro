@@ -152,9 +152,9 @@ def deterministic_extract_targets(raw_text: str, targets: List[Dict[str, Any]]) 
                 unit_price = nums[-2] if len(nums) >= 2 else nums[0]
 
             if unit_price and unit_price > 0:
-                # Caja de 8 piezas
-                price_pza = round(unit_price / 8.0, 4)
-                desc = f'YESO PINTADO 1.20x0.60 CAJA 8 ({unit_price:,.2f} Bs / 8 pzas = {price_pza:,.2f} Bs/pza)'
+                # La cotización de Matos ya viene expresada por lámina individual (unidad: LAM)
+                price_pza = round(unit_price, 4)
+                desc = f'YESO PINTADO 1.20x0.60 ({unit_price:,.2f} Bs / lámina)'
                 found.append({
                     "codmat": "MAT1623",
                     "descripcion_cotizada": desc,
