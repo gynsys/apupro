@@ -99,9 +99,10 @@ Estructura: [ACCIÓN TÉCNICA] + [ELEMENTO ESPECÍFICO] + [MATERIALES Y ESPECIFI
 
 _REGLAS_ORIGEN = """
 # CAMPO "origen" (OBLIGATORIO en cada insumo)
-- "historico": insumo y precio tomados del catálogo/partida base.
-- "ia": insumo técnico indispensable agregado o ajustado por ti que no estaba disponible en el catálogo.
+- "historico": todo insumo proveniente del catálogo oficial o de la partida base histórica (y partidas complementarias), independientemente de si su cantidad fue escalada o adaptada para la nueva partida o alcance global (Gl).
+- "ia": ÚNICAMENTE insumos técnicos indispensables NUEVOS agregados por ti que NO existían en el catálogo ni en la partida base.
 """
+
 
 _REGLAS_EQUIPOS_ESCALA = """
 # REGLA ESTRICTA DE MAQUINARIA Y ESCALA DE OBRA (¡CRÍTICO!)
@@ -396,6 +397,214 @@ def reconcile_equipment_with_database(result: Dict[str, Any], db: Optional[Sessi
             logger.error("Error al reconciliar equipos con base de datos: %s", exc, exc_info=True)
 
 
+def _execute_material_reconciliation(result: Dict[str, Any], db: Session) -> None:
+    """
+    Ejecuta la búsqueda y normalización de materiales contra cost360_materials.
+    Asigna el código oficial de la BD, precio unitario vigente y origen 'historico'.
+    """
+    materials = result.get("materials")
+    if not isinstance(materials, list) or not materials:
+        return
+
+    reconciled_terms: List[str] = []
+
+    for mat in materials:
+        if not isinstance(mat, dict):
+            continue
+
+        is_ia = (mat.get("origen") == "ia")
+        cod = str(mat.get("codigo") or "").strip()
+        no_cod = (not cod or cod.startswith("m-ia-") or cod.startswith("MAT-"))
+        zero_price = (float(mat.get("precio_unitario") or 0.0) <= 0.0)
+
+        # 1. Búsqueda directa por código exacto en la tabla de materiales
+        row = None
+        if cod and not cod.startswith("m-ia-"):
+            sql_cod = text("""
+                SELECT "CodMat", ref_code, "Descri", "UniMat", "CosMat"
+                FROM cost360_materials
+                WHERE UPPER(TRIM("CodMat")) = UPPER(TRIM(:c))
+                   OR (ref_code IS NOT NULL AND UPPER(TRIM(ref_code)) = UPPER(TRIM(:c)))
+                LIMIT 1;
+            """)
+            row = db.execute(sql_cod, {"c": cod}).fetchone()
+
+        # 2. Si no coincide por código o fue marcado como 'ia' / precio cero / código provisional,
+        # buscar por palabras clave léxicas en la descripción
+        tokens: List[str] = []
+        if not row and (is_ia or no_cod or zero_price):
+            desc = str(mat.get("descripcion", "")).strip()
+            clean = re.sub(r'[^A-Z0-9\s]', ' ', desc.upper())
+            tokens = [w for w in clean.split() if len(w) >= 3 and w not in _RECONCILE_STOPWORDS]
+            if not tokens:
+                continue
+
+            if len(tokens) >= 3:
+                sql3 = text("""
+                    SELECT "CodMat", ref_code, "Descri", "UniMat", "CosMat"
+                    FROM cost360_materials
+                    WHERE "Descri" ILIKE :kw1 AND "Descri" ILIKE :kw2 AND "Descri" ILIKE :kw3
+                    ORDER BY 
+                        CASE WHEN "Descri" ILIKE :kw_exact THEN 1 ELSE 2 END,
+                        length("Descri") ASC
+                    LIMIT 1;
+                """)
+                row = db.execute(sql3, {
+                    "kw1": f"%{tokens[0]}%",
+                    "kw2": f"%{tokens[1]}%",
+                    "kw3": f"%{tokens[2]}%",
+                    "kw_exact": f"%{desc[:15]}%"
+                }).fetchone()
+
+            if not row and len(tokens) >= 2:
+                sql2 = text("""
+                    SELECT "CodMat", ref_code, "Descri", "UniMat", "CosMat"
+                    FROM cost360_materials
+                    WHERE "Descri" ILIKE :kw1 AND "Descri" ILIKE :kw2
+                    ORDER BY 
+                        CASE WHEN "Descri" ILIKE :kw_exact THEN 1 ELSE 2 END,
+                        length("Descri") ASC
+                    LIMIT 1;
+                """)
+                row = db.execute(sql2, {
+                    "kw1": f"%{tokens[0]}%",
+                    "kw2": f"%{tokens[1]}%",
+                    "kw_exact": f"%{desc[:15]}%"
+                }).fetchone()
+
+            if not row:
+                sql1 = text("""
+                    SELECT "CodMat", ref_code, "Descri", "UniMat", "CosMat"
+                    FROM cost360_materials
+                    WHERE "Descri" ILIKE :kw1
+                    ORDER BY length("Descri") ASC
+                    LIMIT 1;
+                """)
+                row = db.execute(sql1, {"kw1": f"%{tokens[0]}%"}).fetchone()
+
+        if row:
+            matched_cod = row.CodMat or row.ref_code
+            matched_desc = row.Descri
+            matched_price = float(row.CosMat or 0.0)
+            matched_unit = row.UniMat
+
+            mat["codigo"] = matched_cod
+            if not mat.get("descripcion") or len(str(mat.get("descripcion")).strip()) < 5:
+                mat["descripcion"] = matched_desc
+            if matched_price > 0:
+                mat["precio_unitario"] = matched_price
+            if matched_unit and not mat.get("unidad"):
+                mat["unidad"] = matched_unit
+            mat["origen"] = "historico"
+            reconciled_terms.append(matched_desc.lower())
+            if tokens:
+                reconciled_terms.append(tokens[0].lower())
+
+    # Sanitizar advertencias de precios referenciales si el material fue reconciliado con catálogo
+    if "advertencias" in result and isinstance(result["advertencias"], list) and reconciled_terms:
+        clean_adv: List[str] = []
+        for adv in result["advertencias"]:
+            adv_str = str(adv)
+            if "[precio_referencial]" in adv_str.lower():
+                if any(term in adv_str.lower() for term in reconciled_terms):
+                    continue
+            clean_adv.append(adv)
+        result["advertencias"] = clean_adv
+
+
+def reconcile_materials_with_database(result: Dict[str, Any], db: Optional[Session] = None) -> None:
+    """
+    Reconcilia los materiales del APU con el catálogo certificado de Costbase (cost360_materials).
+    Si un material tiene origen 'ia' o precio referencial estimado, busca en la BD el material real para:
+    1. Asignar el código oficial de la BD (CodMat o ref_code).
+    2. Asignar el precio unitario oficial de la BD.
+    3. Cambiar 'origen' a 'historico'.
+    4. Purgar las advertencias de [PRECIO_REFERENCIAL] asociadas a dicho material.
+    """
+    if not result or not isinstance(result, dict) or "materials" not in result:
+        return
+
+    if db is not None:
+        _execute_material_reconciliation(result, db)
+    else:
+        try:
+            with get_db_session() as session:
+                _execute_material_reconciliation(result, session)
+        except Exception as exc:
+            logger.error("Error al reconciliar materiales con base de datos: %s", exc, exc_info=True)
+
+
+def _enforce_base_apu_material_heritage(
+    result: Dict[str, Any],
+    base_apu: Dict[str, Any],
+    complementary_apus: Optional[List[Dict[str, Any]]] = None
+) -> None:
+    """
+    Garantiza que todo insumo de material presente en el resultado que provenga
+    de la partida base histórica (o complementarias) mantenga 'origen': 'historico',
+    su código oficial de la base y su precio unitario de catálogo.
+    """
+    if not result or not isinstance(result, dict) or "materials" not in result:
+        return
+
+    materials = result.get("materials")
+    if not isinstance(materials, list) or not materials:
+        return
+
+    base_mats = base_apu.get("materiales", []) if isinstance(base_apu, dict) else []
+    comp_mats: List[Dict[str, Any]] = []
+    if complementary_apus:
+        for c in complementary_apus:
+            if isinstance(c, dict) and "materiales" in c:
+                comp_mats.extend(c.get("materiales", []))
+
+    all_reference_mats = base_mats + comp_mats
+    if not all_reference_mats:
+        return
+
+    def _norm(s: Any) -> str:
+        clean = re.sub(r'[^A-Z0-9]', '', str(s or '').upper())
+        return clean
+
+    ref_by_code: Dict[str, Dict[str, Any]] = {}
+    ref_by_desc: Dict[str, Dict[str, Any]] = {}
+    for rm in all_reference_mats:
+        if not isinstance(rm, dict):
+            continue
+        c = str(rm.get("codigo") or "").strip().upper()
+        if c:
+            ref_by_code[c] = rm
+        d = _norm(rm.get("descripcion", ""))
+        if d:
+            ref_by_desc[d] = rm
+
+    for mat in materials:
+        if not isinstance(mat, dict):
+            continue
+        mat_cod = str(mat.get("codigo") or "").strip().upper()
+        mat_desc_norm = _norm(mat.get("descripcion", ""))
+
+        matched_ref = None
+        if mat_cod and mat_cod in ref_by_code:
+            matched_ref = ref_by_code[mat_cod]
+        elif mat_desc_norm and mat_desc_norm in ref_by_desc:
+            matched_ref = ref_by_desc[mat_desc_norm]
+        else:
+            for r_norm, rm in ref_by_desc.items():
+                if len(r_norm) >= 8 and (r_norm in mat_desc_norm or mat_desc_norm in r_norm):
+                    matched_ref = rm
+                    break
+
+        if matched_ref:
+            mat["origen"] = "historico"
+            if matched_ref.get("codigo"):
+                mat["codigo"] = matched_ref["codigo"]
+            ref_price = float(matched_ref.get("precio_unitario") or 0.0)
+            if ref_price > 0:
+                mat["precio_unitario"] = ref_price
+
+
+
 def generate_apu_with_ai(payload_llm: Dict[str, Any], history: Optional[List[Dict[str, Any]]] = None, db: Optional[Session] = None) -> Dict[str, Any]:
     """
     Generación de APU usando el flujo clásico de preprocesamiento estadístico.
@@ -474,6 +683,7 @@ un catálogo de insumos filtrado y advertencias. Tu trabajo es estructurar un AP
     _normalize_equipment_prices(result)
     calibrate_apu_crew_and_equipment(result)
     reconcile_equipment_with_database(result, db)
+    reconcile_materials_with_database(result, db)
 
     return result
 
@@ -606,8 +816,10 @@ Prefijo COVENIN: {covenin_prefix}
 {performance_instruction}
 3. CONSERVA todos los insumos que sigan siendo relevantes para la nueva partida. Márcalos como `"origen": "historico"`.
 4. ELIMINA o SUSTITUYE los insumos que no aplican aplicando rigurosamente la MATRIZ OBLIGATORIA DE COMPATIBILIDAD FUNCIONAL EN 7 FAMILIAS (bombas, tuberías, cables, válvulas, concretos, tableros, impermeabilizaciones). Si el equipo o material principal de la base es incompatible, NO uses el insumo histórico. Reemplázalo por el insumo correcto con origen "ia", precio referencial de mercado en USD y emite la advertencia `[PRECIO_REFERENCIAL]`.
-5. AJUSTA cantidades cuando la nueva partida lo requiera (ej: distinta área, espesor, proporción).
-   Marca los insumos ajustados como `"origen": "ia"` y explica el ajuste en `nota_calculo`.
+5. AJUSTA cantidades cuando la nueva partida lo requiera (ej: distinta área, espesor, proporción, o cómputo global Gl).
+   Los insumos provenientes de la partida base o complementarias DEBEN CONSERVAR obligatoriamente `"origen": "historico"` (incluso si sus cantidades fueron escaladas).
+   Explica el ajuste métrico en `nota_calculo`.
+   Marca con `"origen": "ia"` ÚNICAMENTE los insumos nuevos que agregues tú y no existían en la base.
 6. AUTO-FUSIÓN: Si la descripción del usuario exige algo que falta en la Base (ej. Bote de material, Pintura, Andamios, Encofrado) pero que sí existe en las Partidas Complementarias, "róbalo" e intégralo conservando sus precios históricos.
 7. AGREGA insumos nuevos que la nueva partida requiera estrictamente y no estén ni en la base ni en las complementarias. Márcalos como `"origen": "ia"`, asígnales un precio unitario referencial estimado de mercado en USD (nunca 0.0) y agrega una advertencia con el prefijo `[PRECIO_REFERENCIAL]`.
 8. NUNCA alteres los precios unitarios de los insumos del APU base ni de las complementarias. Son precios reales de la BD.
@@ -662,7 +874,9 @@ CUANDO solicites clarificación, responde con "options": []. ESTÁ TERMINANTEMEN
 
     _normalize_equipment_prices(result, base_apu)
     calibrate_apu_crew_and_equipment(result, base_apu)
+    _enforce_base_apu_material_heritage(result, base_apu, complementary_apus)
     reconcile_equipment_with_database(result, db)
+    reconcile_materials_with_database(result, db)
 
     result["debug_base_apu"] = base_apu
     result["prompt_enviado_al_llm"] = prompt

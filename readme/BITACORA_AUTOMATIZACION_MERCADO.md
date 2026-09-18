@@ -43,3 +43,28 @@ Un panel moderno e interactivo en React (Vite + TailwindCSS + Lucide) permite al
 
 ## 6. Depuración Final
 Se identificó y eliminó una anomalía grave en la importación original: el material `MAT1255`, que tenía un precio de $1,297.40 por tratarse en realidad de una partida entera filtrada ("CONCRETO 200..."). Asimismo, se eliminaron partidas mal estructuradas (serie M111...) y sus dependencias huérfanas mediante el script `delete_apus.py`.
+
+## 7. Creación de Familias Yeso/Anime y Cobertura 100% de Insumos Líderes (Septiembre 2026)
+### 7.1. Diagnóstico Inicial
+Se auditó la totalidad de la base de datos `cost360_materials` (8.491 materiales) y `cost360_material_families`:
+- 1.404 materiales carecían de `family_id` (huérfanos).
+- 1.451 materiales carecían de `market_indicator_id` (sin líder asignado).
+- No existían familias dedicadas a **Yeso / Drywall** ni **Anime / EPS**, encontrándose sus materiales dispersos erróneamente en Cementos (`C.-Cementos, Cales y Otros`), Acero, Herrería o Índice General.
+- Existían 11 micro-familias secundarias sin líder asignado.
+
+### 7.2. Implementación de la Migración (`migrate_market_families_and_leaders.py`)
+1. **Respaldo Físico:** Se crearon copias de seguridad de las tablas (`cost360_materials_backup_20260917` y `cost360_material_families_backup_20260917`).
+2. **Nuevas Familias Oficiales:**
+   - `FAM-DRYWALL` (**Yeso, Drywall y Cielos Rasos**): Líder `ACA014` (*Lámina de Yeso 4' x 8' x 1/2"*), precio base $10.37/m². Abarca 52 materiales (láminas estándar, RH, vinyl, mastiques, pasta profesional, cintas y perfilería stud/omega).
+   - `FAM-ANIME` (**Anime y Poliestireno Expandido - EPS**): Líder `ESP004` (*Anime en lámina e=5cm*), precio base $12.13/m². Abarca 9 materiales (láminas de anime, bovedillas de losa nervada, conchas aislantes térmicas).
+3. **Fusión de Micro-Familias:** Las 10 micro-familias secundarias (`Tuberías y Conexiones`, `Instalaciones Eléctricas`, `Sistemas de Fijación`, `Aceros y Perfiles`, etc.) se consolidaron en sus familias matrices oficiales.
+4. **Clasificación Léxica de Huérfanos:** Los 1.404 materiales huérfanos se categorizaron mediante un clasificador léxico constructivo COVENIN/Cost360.
+5. **Cálculo Universal de Factores de Dispersión:** Para cada uno de los 8.491 materiales se vinculó su líder correspondiente y se calculó determinísticamente `market_factor = round(CosMat / CosMat_Lider, 6)` (con `market_factor = 1.0` en el insumo líder).
+
+### 7.3. Métricas Post-Migración
+- **Total de materiales en BD:** 8.491
+- **Huérfanos sin familia:** 0 (0.0%)
+- **Materiales sin líder asignado:** 0 (0.0%)
+- **Total familias activas:** 25 familias oficiales
+- **Cobertura de actualización en cascada:** **100.0%**
+

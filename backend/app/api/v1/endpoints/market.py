@@ -1,39 +1,56 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from sqlalchemy.orm import Session
-from sqlalchemy import text
 from typing import List, Dict, Any
-from app.db.base import get_db
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from sqlalchemy import text, func
+
+from app.core.logging import logger
+from app.db.base import get_db, engine
+from app.db.models.market import Base, CostMaterialFamily
+from app.db.models.cost360 import CostMaterial, CostAPUMaterial
+from app.db.models.llm_provider import LLMProvider
+from app.crud.llm import encrypt_api_key
+from app.crud.crud_market import get_unsanitized_materials, apply_sanitization_batch
 from app.services.ai_sanitization_service import sanitize_materials_batch
 from app.services.rule_sanitizer import sanitize_batch_rules
-from app.crud.crud_market import get_unsanitized_materials, apply_sanitization_batch
-from app.db.models.market import Base
-from app.db.base import engine
+from app.services.llm_router import invalidate_llm_cache
 
 router = APIRouter()
 
+
+class LeaderPriceUpdate(BaseModel):
+    leader_id: str
+    new_price: float
+
+
+class ChangeLeaderRequest(BaseModel):
+    new_leader_id: str
+
+
 @router.get("/upgrade-db")
-def upgrade_db_endpoint():
+def upgrade_db_endpoint() -> Dict[str, str]:
     Base.metadata.create_all(bind=engine)
     with engine.connect() as conn:
         try:
-            conn.execute(text("ALTER TABLE cost360_materials ADD COLUMN family_id VARCHAR"))
+            conn.execute(text("ALTER TABLE cost360_materials ADD COLUMN IF NOT EXISTS family_id VARCHAR"))
             conn.commit()
-        except: pass
+        except Exception as e:
+            logger.warning(f"Note on family_id column check: {e}")
         try:
-            conn.execute(text("ALTER TABLE cost360_materials ADD COLUMN market_indicator_id VARCHAR"))
+            conn.execute(text("ALTER TABLE cost360_materials ADD COLUMN IF NOT EXISTS market_indicator_id VARCHAR"))
             conn.commit()
-        except: pass
+        except Exception as e:
+            logger.warning(f"Note on market_indicator_id column check: {e}")
         try:
-            conn.execute(text("ALTER TABLE cost360_materials ADD COLUMN market_factor FLOAT DEFAULT 1.0"))
+            conn.execute(text("ALTER TABLE cost360_materials ADD COLUMN IF NOT EXISTS market_factor FLOAT DEFAULT 1.0"))
             conn.commit()
-        except: pass
+        except Exception as e:
+            logger.warning(f"Note on market_factor column check: {e}")
     return {"status": "Database upgraded successfully"}
 
-from app.db.models.llm_provider import LLMProvider
-from app.crud.llm import encrypt_api_key
 
 @router.get("/update-key")
-def update_key_endpoint(new_key: str, db: Session = Depends(get_db)):
+def update_key_endpoint(new_key: str, db: Session = Depends(get_db)) -> Dict[str, str]:
     providers = db.query(LLMProvider).filter(LLMProvider.provider_key == "gemini").all()
     if not providers:
         provider = LLMProvider(
@@ -53,7 +70,6 @@ def update_key_endpoint(new_key: str, db: Session = Depends(get_db)):
     db.commit()
     
     # Invalidate cache
-    from app.services.llm_router import invalidate_llm_cache
     invalidate_llm_cache()
     
     return {"status": "API key updated"}
@@ -100,18 +116,12 @@ def apply_sanitization(approved_items: List[Dict[str, Any]], db: Session = Depen
     result = apply_sanitization_batch(db, approved_items)
     return result
 
-from pydantic import BaseModel
-class LeaderPriceUpdate(BaseModel):
-    leader_id: str
-    new_price: float
-
 @router.post("/update-leader-price")
-def update_leader_price(payload: LeaderPriceUpdate, db: Session = Depends(get_db)):
+def update_leader_price(payload: LeaderPriceUpdate, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
     Actualiza el precio de un Insumo Líder (Material Fuerte) y aplica en cascada
     la fórmula de dispersión (precio_hijo = precio_líder * factor) a toda su familia.
     """
-    from app.db.models.cost360 import CostMaterial
     leader = db.query(CostMaterial).filter(CostMaterial.CodMat == payload.leader_id).first()
     if not leader:
         raise HTTPException(status_code=404, detail="Insumo líder no encontrado")
@@ -122,7 +132,7 @@ def update_leader_price(payload: LeaderPriceUpdate, db: Session = Depends(get_db
     count = 0
     for child in children:
         if child.CodMat != payload.leader_id:
-            factor = child.market_factor or 1.0
+            factor = child.market_factor if child.market_factor is not None else 1.0
             child.CosMat = payload.new_price * factor
             count += 1
             
@@ -135,12 +145,9 @@ def update_leader_price(payload: LeaderPriceUpdate, db: Session = Depends(get_db
     }
 
 
-# Aquí irán los endpoints para el CRUD de Insumos Líderes (Web Scraping)
+# Endpoints para el CRUD de Insumos Líderes
 @router.get("/indicators")
-def list_market_indicators(db: Session = Depends(get_db)):
-    from app.db.models.cost360 import CostMaterial
-    from sqlalchemy import func
-    
+def list_market_indicators(db: Session = Depends(get_db)) -> Dict[str, Any]:
     counts = db.query(CostMaterial.market_indicator_id, func.count(CostMaterial.CodMat)).group_by(CostMaterial.market_indicator_id).all()
     count_map = {c[0]: c[1] for c in counts if c[0]}
     
@@ -149,8 +156,6 @@ def list_market_indicators(db: Session = Depends(get_db)):
         return {"items": []}
         
     leaders = db.query(CostMaterial).filter(CostMaterial.CodMat.in_(indicator_ids)).all()
-    
-    from app.db.models.market import CostMaterialFamily
     families = {f.id: f.name for f in db.query(CostMaterialFamily).all()}
     
     results = []
@@ -169,20 +174,16 @@ def list_market_indicators(db: Session = Depends(get_db)):
     results.sort(key=lambda x: x["children_count"], reverse=True)
     return {"items": results}
 
+
 @router.put("/indicators/{indicator_id}/apply")
-def apply_market_indicator_prices(indicator_id: str, payload: LeaderPriceUpdate, db: Session = Depends(get_db)):
-    # Redirigir al nuevo endpoint update_leader_price
+def apply_market_indicator_prices(indicator_id: str, payload: LeaderPriceUpdate, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    # Redirigir al endpoint update_leader_price
     payload.leader_id = indicator_id
     return update_leader_price(payload, db)
 
-class ChangeLeaderRequest(BaseModel):
-    new_leader_id: str
 
 @router.get("/families/{family_id}/materials")
-def get_family_materials(family_id: str, db: Session = Depends(get_db)):
-    from app.db.models.cost360 import CostMaterial, CostAPUMaterial
-    from sqlalchemy import func
-    
+def get_family_materials(family_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
     mats = db.query(CostMaterial).filter(CostMaterial.family_id == family_id).all()
     if not mats:
         return {"items": []}
@@ -207,10 +208,9 @@ def get_family_materials(family_id: str, db: Session = Depends(get_db)):
     results.sort(key=lambda x: x["usages"], reverse=True)
     return {"items": results}
 
+
 @router.post("/families/{family_id}/change-leader")
-def change_family_leader(family_id: str, payload: ChangeLeaderRequest, db: Session = Depends(get_db)):
-    from app.db.models.cost360 import CostMaterial
-    
+def change_family_leader(family_id: str, payload: ChangeLeaderRequest, db: Session = Depends(get_db)) -> Dict[str, Any]:
     new_leader = db.query(CostMaterial).filter(CostMaterial.CodMat == payload.new_leader_id, CostMaterial.family_id == family_id).first()
     if not new_leader:
         raise HTTPException(status_code=404, detail="Nuevo líder no encontrado en esta familia")

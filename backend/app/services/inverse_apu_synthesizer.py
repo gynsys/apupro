@@ -27,7 +27,10 @@ from app.services.apu_labor_calibrator import (
     EMPERICAL_HH_BENCHMARKS,
     classify_activity_typology,
 )
-from app.services.ai_apu_service import reconcile_equipment_with_database
+from app.services.ai_apu_service import (
+    reconcile_equipment_with_database,
+    reconcile_materials_with_database,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -1228,6 +1231,9 @@ def synthesize_apu_inverse(
 
         # Paso 6: Auditoría con LLM
         final_apu = audit_apu_with_llm(candidate_apu, user_description)
+        if db is not None:
+            reconcile_equipment_with_database(final_apu, db)
+            reconcile_materials_with_database(final_apu, db)
         final_apu["debug_matematico_trace"] = debug_matematico_trace
         return final_apu
 

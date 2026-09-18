@@ -19,6 +19,7 @@
 7. [Arquitectura Frontend y Editor Universal de APUs](#7-arquitectura-frontend-y-editor-universal-de-apus)
 8. [Códigos Internos de Auditoría y Respuestas de la API](#8-códigos-internos-de-auditoría-y-respuestas-de-la-api)
 9. [Manual Práctico de Mantenimiento y Batería de Pruebas](#9-manual-práctico-de-mantenimiento-y-batería-de-pruebas)
+10. [Bitácora de Actualizaciones Críticas: 17 de Septiembre 2026](#10-bitácora-de-actualizaciones-críticas-17-de-septiembre-2026)
 
 ---
 
@@ -350,3 +351,52 @@ Abre [`backend/app/services/synonyms_service.py`](file:///c:/Users/pablo/Documen
    cd frontend
    npm run build
    ```
+
+---
+
+## 10. Bitácora de Actualizaciones Críticas: 17 de Septiembre 2026
+
+Durante esta jornada se ejecutaron cinco optimizaciones mayores sobre la arquitectura del Generador de APU y el Asistente Guiado:
+
+### 10.1 Detección Inteligente de Descripciones Completas en el Chatbot
+- **Problema previo:** Si el usuario pegaba una descripción completa de obra en el chat del Asistente Guiado, el asistente continuaba mecánicamente con las preguntas de los 5 pasos o presentaba la opción ambigua de *"Desglosar en 5 pasos"* vs *"Generar de inmediato"*, permitiendo además que el usuario escribiera en el input sin seleccionar una unidad técnica.
+- **Solución implementada:**
+  1. El chatbot ahora detecta cuando el texto contiene una descripción constructiva completa y comprensible.
+  2. Suprime los pasos intermedios redundantes y pasa de inmediato a preguntar la unidad de cómputo: `Indica la unidad de la partida`.
+  3. Los chips de selección rápida se limpiaron para mostrar exclusivamente el símbolo formal (`und`, `pza`, `m²`, `m`, `m³`, `Gl`) eliminando el prefijo repetitivo `"Unidad: "`.
+  4. El campo de entrada de texto libre y el botón de enviar se ocultan condicionalmente mientras existan botones de acción/decisión en pantalla, centrando los botones principales para guiar al usuario sin bifurcaciones accidentales.
+
+### 10.2 Soporte Arquitectónico de Partidas Globales (`Gl` / Suma Global / S.G.)
+- **Problema de ingeniería:** Aunque la norma COVENIN desalienta el uso indiscriminado de S.G., en proyectos reales existen partidas que se contratan a suma alzada por el paquete completo (ej. *"Aplicación de pintura en escalera metálica incluyendo barandas, pasamanos y descansos"*). Tratar de inventar rendimientos por IA introducía variables inestables y propensas a error.
+- **Modelo matemático adoptado:**
+  1. **Solicitud de Duración al Analista:** El sistema solicita los días hábiles estimados de trabajo de cuadrilla ($D$).
+  2. **Rendimiento Diario Estricto:** Se calcula deterministamente como:
+     $$R = \frac{1.0}{D} \quad \text{(ej. para } D = 5.0 \text{ días} \implies R = 0.20 \text{ Gl/día)}$$
+  3. **Cuadrilla y Equipos:** Trabajan a jornada diaria normal. Al aplicar la fórmula universal de APU, el costo diario dividido entre $R$ multiplica exactamente por los $D$ días de obra.
+  4. **Materiales en Bulto Total:** El consumo de materiales no es por metro cuadrado ni por metro lineal, sino el 100% acumulado de insumos físicos necesarios para completar toda la obra descrita (galones, perfiles, etc.).
+
+### 10.3 Corrección en Persistencia y Guardado de APUs con Errores
+- Se corrigieron los problemas de validación en el editor [`ApuEditorUI.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/components/ApuEditorUI.jsx) donde partidas con campos nulos o formatos numéricos no sanitizados disparaban alertas de error que impedían guardar y corregir partidas en la base de datos.
+
+### 10.4 Preservación de Procedencia de Materiales (`origen: "historico"` vs `"ia"`)
+- **Problema diagnosticado:** En el archivo de depuración `debug_apu_2026-09-17T23-10-55-743Z.json`, todos los materiales aparecían etiquetados con `"origen": "ia"` (mostrando el badge morado de IA en el editor), lo que generaba la impresión de que el sistema no tomó los materiales ni los precios de la base de datos.
+- **Causa raíz:** La Regla 5 del prompt ordenaba marcar como `"origen": "ia"` a cualquier insumo al que se le ajustara la cantidad. Al adaptar una partida a escala global `Gl`, el modelo escaló las cantidades y cambió automáticamente todos los tags a `"ia"`, a pesar de que los insumos y precios provenían íntegramente de la partida base histórica (`GEL258`).
+- **Solución implementada:**
+  1. Se actualizó `_REGLAS_ORIGEN` y la Regla 5 en [`ai_apu_service.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/ai_apu_service.py) instruyendo que los insumos de la partida base o complementarias **conservan obligatoriamente `"origen": "historico"`**, aun si sus cantidades fueron recalculadas o escaladas a bulto global.
+  2. Se creó la función `_enforce_base_apu_material_heritage` que analiza la respuesta previa a la entrega y garantiza que todo material coincidente con la base herede su procedencia histórica, su código oficial y su precio base.
+
+### 10.5 Reconciliador Determinista de Materiales contra Base de Datos
+- **Función:** [`reconcile_materials_with_database`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/ai_apu_service.py#L480) y [`_execute_material_reconciliation`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/ai_apu_service.py#L400).
+- **Mecanismo:**
+  1. **Búsqueda por Código:** Cruza los códigos contra `cost360_materials` (`CodMat` o `ref_code`).
+  2. **Búsqueda Léxica Multi-Token:** Para insumos nuevos con código provisional o etiqueta `ia`, busca en `cost360_materials` mediante filtrado de tokens significativos y descarte de stopwords.
+  3. **Anclaje Certificado:** Si el material existe en el catálogo, asigna su código oficial (`PIN003`, `PIN135`, etc.), su precio unitario de catálogo (`CosMat`), su unidad oficial (`UniMat`), cambia su procedencia a `historico` y purga la advertencia `[PRECIO_REFERENCIAL]`.
+  4. **Preservación de Sugerencias de IA:** Si el material sugerido por la IA no existe en la base de datos (material nuevo o especial), **se conserva intacto en el APU** con su precio referencial estimado y su respectiva alerta comercial para cotizarlo con proveedores.
+  5. **Integración:** El reconciliador quedó activo en el motor RAG adaptativo, en el motor clásico y en el motor matemático inverso ([`inverse_apu_synthesizer.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/inverse_apu_synthesizer.py)).
+
+### 10.6 Cobertura Total de Insumos Líderes y Familias Yeso/Anime
+- **Familias Oficiales:** Se crearon `FAM-DRYWALL` (*Yeso, Drywall y Cielos Rasos*, líder `ACA014`) y `FAM-ANIME` (*Anime y Poliestireno Expandido*, líder `ESP004`).
+- **Cobertura 100%:** Los 8.491 materiales de la base de datos (incluyendo los 1.404 huérfanos anteriores) quedaron asignados a sus 25 familias y vinculados a sus respectivos Insumos Líderes con su factor relativo `market_factor`.
+- **Impacto en el Generador:** Todo material asignado o reconciliado en los APUs se mantiene automáticamente actualizado en sus costos unitarios al modificar el precio de su Insumo Líder en el panel de mercado.
+
+
