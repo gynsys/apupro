@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FiUpload, FiFileText, FiX } from 'react-icons/fi';
 import { useBulkUpdate, parsePriceLines } from '../../hooks/useBulkUpdate';
 
-const BulkPriceModal = ({ onSuccess, onClose, resourceType = 'materials', selectedDatabase = 'master', title }) => {
+const BulkPriceModal = ({ onSuccess, onClose, resourceType: initialResourceType = 'materials', selectedDatabase = 'master', title }) => {
+  const [resourceType, setResourceType] = useState(initialResourceType || 'materials');
   const {
     priceText,
     setPriceText,
@@ -21,19 +23,17 @@ const BulkPriceModal = ({ onSuccess, onClose, resourceType = 'materials', select
   const parsedItems = parsePriceLines(priceText);
   const validCount = parsedItems.length;
 
-  const modalTitle = title
-    ? `Actualizar Precios de ${title} en Masa`
-    : resourceType === 'equipments'
-      ? 'Actualizar Precios de Equipos en Masa'
-      : resourceType === 'labors'
-        ? 'Actualizar Salarios de Mano de Obra en Masa'
-        : 'Actualizar Precios de Materiales en Masa';
+  const modalTitle = resourceType === 'equipments'
+    ? 'Actualizar Precios de Equipos'
+    : resourceType === 'labors'
+      ? 'Actualizar Salarios de Mano de Obra'
+      : 'Actualizar Precios de Materiales';
 
   const formatHelp = resourceType === 'equipments'
-    ? 'Pega desde Excel (Código [TAB] Precio, ej: EQU-868131	380,00) o adjunta tu archivo Excel (.xlsx / .xls)'
+    ? 'Pega desde Excel (Código [TAB] Precio, ej: EQU-868131\t380,00) o adjunta tu archivo Excel (.xlsx / .xls)'
     : resourceType === 'labors'
-      ? 'Pega desde Excel (Código [TAB] Jornal, ej: 1-1.1	2,26) o adjunta tu archivo Excel (.xlsx / .xls)'
-      : 'Pega desde Excel (Código [TAB] Precio, ej: ACA001	59,18) o adjunta tu archivo Excel (.xlsx / .xls)';
+      ? 'Pega desde Excel (Código [TAB] Jornal, ej: 1-1.1\t2,26) o adjunta tu archivo Excel (.xlsx / .xls)'
+      : 'Pega desde Excel (Código [TAB] Precio, ej: ACA001\t59,18) o adjunta tu archivo Excel (.xlsx / .xls)';
 
   const placeholderText = resourceType === 'equipments'
     ? 'EQU-868131\t380,00\nALB001\t450,00\nALB002\t120,50'
@@ -41,14 +41,54 @@ const BulkPriceModal = ({ onSuccess, onClose, resourceType = 'materials', select
       ? '1-1.1\t2,26\n1-1.2\t2,46\n11-2.4\t2,55'
       : 'ACA001\t59,18\nACA134\t0,45\nCEM041\t8,50';
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-slate-800">{modalTitle}</h2>
-          <p className="text-sm text-slate-600 mt-1">
-            {formatHelp}
-          </p>
+  return createPortal(
+    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-[99999] p-4 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col border border-slate-200 animate-slide-up">
+        <div className="p-6 border-b border-gray-200 flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h2 className="text-xl font-bold text-slate-800">{modalTitle}</h2>
+              <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                Base: {selectedDatabase === 'master' ? 'Base Maestra' : selectedDatabase}
+              </span>
+            </div>
+            <p className="text-sm text-slate-600 mt-1">
+              {formatHelp}
+            </p>
+            {/* Selector de tipo de recurso */}
+            <div className="flex items-center gap-1 mt-3 bg-slate-100 p-1 rounded-xl w-fit border border-slate-200">
+              {[
+                { key: 'materials', label: '📦 Materiales' },
+                { key: 'equipments', label: '🚜 Equipos' },
+                { key: 'labors', label: '👷 Mano de Obra' },
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => {
+                    setResourceType(tab.key);
+                    setPriceFile(null);
+                    setPriceText('');
+                  }}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                    resourceType === tab.key
+                      ? 'bg-white text-blue-700 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors shrink-0"
+            aria-label="Cerrar modal"
+          >
+            <FiX size={20} />
+          </button>
         </div>
         <div className="p-6 flex-1 flex flex-col gap-3 min-h-0 overflow-y-auto">
           <textarea
@@ -170,7 +210,8 @@ const BulkPriceModal = ({ onSuccess, onClose, resourceType = 'materials', select
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

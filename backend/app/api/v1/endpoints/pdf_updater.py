@@ -1,36 +1,39 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+import io
+import json
+import logging
+from typing import Any, Dict, List, Optional
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+import fitz  # PyMuPDF
+import google.generativeai as genai
+import PIL.Image
+from pydantic import BaseModel
+from sqlalchemy import text
 from sqlalchemy.orm import Session
+
+from app.api.v1.endpoints.costbase import set_schema_for_db
+from app.core.config import settings
+from app.crud.llm import decrypt_api_key
 from app.db.base import get_db
 from app.db.models.cost360 import CostMaterial, MaterialSynonym
-from app.core.config import settings
 from app.db.models.llm_provider import LLMProvider
-from app.crud.llm import decrypt_api_key
-import fitz  # PyMuPDF
-import json
-import io
-import PIL.Image
-from typing import List
-from pydantic import BaseModel
-import logging
-import google.generativeai as genai
+from app.services.llm_router import call_llm_json
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
 
 class ApproveItem(BaseModel):
     original_desc: str
     matched_codmat: str
     new_price: float
 
+
 class ApproveQuoteRequest(BaseModel):
     items: List[ApproveItem]
+    database_id: Optional[str] = "master"
 
 
-from app.services.llm_router import call_llm_json
-from sqlalchemy import text
-
-
-def lexical_search_materials(db: Session, query: str, limit: int = 5):
+def lexical_search_materials(db: Session, query: str, limit: int = 5) -> List[Dict[str, Any]]:
     words = [w for w in query.split() if len(w) > 2]
     if not words:
         return []
@@ -38,7 +41,7 @@ def lexical_search_materials(db: Session, query: str, limit: int = 5):
     sql = text('''
         SELECT "CodMat", "Descri", "CosMat", "UniMat",
                ts_rank(to_tsvector('spanish', "Descri"), to_tsquery('spanish', :tsquery)) as rank
-        FROM public.cost360_materials
+        FROM cost360_materials
         WHERE to_tsvector('spanish', "Descri") @@ to_tsquery('spanish', :tsquery)
         ORDER BY rank DESC
         LIMIT :limit
@@ -46,8 +49,15 @@ def lexical_search_materials(db: Session, query: str, limit: int = 5):
     results = db.execute(sql, {"tsquery": tsquery_str, "limit": limit}).fetchall()
     return [{"id": r.CodMat, "desc": r.Descri, "current_price": r.CosMat, "db_unit": r.UniMat} for r in results]
 
+
 @router.post('/analyze-quote')
-async def analyze_quote(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def analyze_quote(
+    file: UploadFile = File(...),
+    database_id: Optional[str] = "master",
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    if database_id and database_id != "master":
+        set_schema_for_db(db, database_id)
     file_bytes = await file.read()
     raw_text = ""
     
@@ -204,7 +214,10 @@ Datos a analizar:
     return {"status": "success", "items": items_finales}
 
 @router.post('/approve-quote')
-async def approve_quote(request: ApproveQuoteRequest, db: Session = Depends(get_db)):
+async def approve_quote(request: ApproveQuoteRequest, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    if request.database_id and request.database_id != "master":
+        set_schema_for_db(db, request.database_id)
+
     updated_count = 0
     for item in request.items:
         if item.matched_codmat:
@@ -213,7 +226,10 @@ async def approve_quote(request: ApproveQuoteRequest, db: Session = Depends(get_
                 mat.CosMat = item.new_price
                 
                 # Check for synonym
-                syn = db.query(MaterialSynonym).filter(MaterialSynonym.provider_text == item.original_desc, MaterialSynonym.CodMat == item.matched_codmat).first()
+                syn = db.query(MaterialSynonym).filter(
+                    MaterialSynonym.provider_text == item.original_desc,
+                    MaterialSynonym.CodMat == item.matched_codmat
+                ).first()
                 if not syn:
                     new_syn = MaterialSynonym(provider_text=item.original_desc, CodMat=item.matched_codmat)
                     db.add(new_syn)
@@ -221,4 +237,9 @@ async def approve_quote(request: ApproveQuoteRequest, db: Session = Depends(get_
                 updated_count += 1
     
     db.commit()
-    return {"status": "success", "updated_count": updated_count}
+    return {
+        "status": "success",
+        "updated_count": updated_count,
+        "database_id": request.database_id or "master",
+        "message": f"Se actualizaron {updated_count} precios en la base de datos seleccionada."
+    }

@@ -4,11 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { 
   Layers, Activity, TrendingUp, Save, Search, RefreshCw, Edit3, X, 
-  Database, Copy, Settings, Send 
+  Database, Copy, Settings, Send, FileSpreadsheet, FileText 
 } from 'lucide-react';
 import { marketService } from '../services/marketService';
 import DatabaseSelector from '../../costbase/components/layout/DatabaseSelector';
 import CloneDatabaseModal from '../../costbase/components/modals/CloneDatabaseModal';
+import BulkPriceModal from '../../costbase/components/modals/BulkPriceModal';
+import PDFUpdaterTab from '../../costbase/components/PDFUpdaterTab';
 import { useDatabaseContext } from '../../../contexts/DatabaseContext';
 
 export default function MarketIndicatorsPanel({
@@ -29,6 +31,7 @@ export default function MarketIndicatorsPanel({
   const currentDb = propCurrentDbObj || contextDatabases.find(db => db.id === currentDbId);
   const databasesList = contextDatabases;
 
+  const [activeMode, setActiveMode] = useState('leaders'); // 'leaders' | 'pdfs'
   const [indicators, setIndicators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
@@ -44,6 +47,9 @@ export default function MarketIndicatorsPanel({
 
   // Clone Modal State
   const [showCloneModal, setShowCloneModal] = useState(false);
+
+  // Bulk Price Modal State (Masivo & Excel)
+  const [showBulkPriceModal, setShowBulkPriceModal] = useState(false);
 
   useEffect(() => {
     fetchIndicators(currentDbId);
@@ -191,7 +197,7 @@ export default function MarketIndicatorsPanel({
               </div>
             </div>
 
-            {/* Acciones: Clonar BD, Gestión BD, Selector de BD y Botón Publicar */}
+            {/* Acciones: Clonar BD, Precios Masivos/Excel, Gestión BD, Selector de BD y Botón Publicar */}
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
               <button
                 type="button"
@@ -201,6 +207,16 @@ export default function MarketIndicatorsPanel({
               >
                 <Copy size={14} />
                 Clonar Base
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowBulkPriceModal(true)}
+                className="text-xs font-semibold px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-all flex items-center gap-1.5"
+                title="Actualizar precios masivamente pegando código y precio o cargando un archivo Excel"
+              >
+                <FileSpreadsheet size={14} />
+                Precios Masivos / Excel
               </button>
 
               <button
@@ -239,144 +255,192 @@ export default function MarketIndicatorsPanel({
           </div>
         </div>
       )}
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <Activity className="w-6 h-6 text-indigo-600" />
-            Update BD — Insumos Líderes
-          </h2>
-          <p className="text-slate-500 mt-1 max-w-2xl">
-            Estos son los materiales principales que arrastran el precio de sus familias.
-            Al actualizar un precio aquí, toda su familia se recalcula por dispersión.
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input 
-              type="text"
-              placeholder="Buscar insumo líder..."
-              className="pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-64 shadow-sm"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <button 
-            onClick={fetchIndicators}
-            className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors"
-            title="Recargar"
-          >
-            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
+      {/* Selector de Modo dentro de Update BD: Insumos Líderes vs PDFs */}
+      <div className="flex items-center gap-2 mb-6 border-b border-slate-200/80 pb-3">
+        <button
+          type="button"
+          onClick={() => setActiveMode('leaders')}
+          className={`flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer ${
+            activeMode === 'leaders'
+              ? 'bg-indigo-600 text-white shadow-sm font-bold'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Activity className="w-4 h-4" />
+          <span>Insumos Líderes & Familias</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveMode('pdfs')}
+          className={`flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer ${
+            activeMode === 'pdfs'
+              ? 'bg-indigo-600 text-white shadow-sm font-bold'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>Update desde PDFs (Cotizaciones IA)</span>
+        </button>
       </div>
 
-      {/* Main Content */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        {loading && indicators.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mb-4"></div>
-            <p className="text-slate-500">Cargando indicadores de mercado...</p>
+      {activeMode === 'leaders' ? (
+        <>
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <Activity className="w-6 h-6 text-indigo-600" />
+                Update BD — Insumos Líderes
+              </h2>
+              <p className="text-slate-500 mt-1 max-w-2xl">
+                Estos son los materiales principales que arrastran el precio de sus familias.
+                Al actualizar un precio aquí, toda su familia se recalcula por dispersión.
+              </p>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowBulkPriceModal(true)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 font-semibold text-xs rounded-lg transition-colors shadow-2xs"
+                title="Actualización masiva de precios pegando código y precio o cargando Excel"
+              >
+                <FileSpreadsheet size={14} />
+                <span>Precios Masivos / Archivo</span>
+              </button>
+
+              <div className="relative">
+                <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input 
+                  type="text"
+                  placeholder="Buscar insumo líder..."
+                  className="pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-64 shadow-sm"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <button 
+                onClick={fetchIndicators}
+                className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors"
+                title="Recargar"
+              >
+                <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-slate-500">
-            <Layers className="w-12 h-12 text-slate-300 mb-3" />
-            <p>No se encontraron insumos líderes.</p>
+
+          {/* Main Content */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            {loading && indicators.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mb-4"></div>
+                <p className="text-slate-500">Cargando indicadores de mercado...</p>
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+                <Layers className="w-12 h-12 text-slate-300 mb-3" />
+                <p>No se encontraron insumos líderes.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                    <tr>
+                      <th className="py-4 px-6 w-1/4">Familia / Referencia</th>
+                      <th className="py-4 px-6 w-1/3">Descripción del Líder</th>
+                      <th className="py-4 px-6">Unidad</th>
+                      <th className="py-4 px-6">Impacto (Familia)</th>
+                      <th className="py-4 px-6">Precio Actual ($)</th>
+                      <th className="py-4 px-6 text-right">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filtered.map(indicator => (
+                      <tr key={indicator.id} className="hover:bg-slate-50/50 transition-colors group">
+                        <td className="py-4 px-6">
+                          <div className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-1">
+                            {indicator.family_name}
+                          </div>
+                          <div className="text-slate-500 font-mono text-xs flex items-center gap-2">
+                            {indicator.id}
+                            <button 
+                              onClick={() => openLeaderModal(indicator)}
+                              className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-600 transition-colors"
+                              title="Cambiar insumo líder para esta familia"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="font-medium text-slate-800 line-clamp-2" title={indicator.description}>
+                            {indicator.description}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-medium uppercase">
+                            {indicator.unit}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-100">
+                              <TrendingUp className="w-3.5 h-3.5" />
+                              {indicator.children_count} insumos
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-400 font-medium">$</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editPrices[indicator.id] || ''}
+                              onChange={(e) => handlePriceChange(indicator.id, e.target.value)}
+                              className="w-24 px-3 py-1.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-700 transition-shadow"
+                            />
+                          </div>
+                        </td>
+                        <td className="py-4 px-6 text-right">
+                          <button
+                            onClick={() => handleUpdatePrice(indicator)}
+                            disabled={updating === indicator.id || Number(editPrices[indicator.id]) === indicator.price}
+                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
+                              ${updating === indicator.id 
+                                ? 'bg-indigo-100 text-indigo-400 cursor-not-allowed'
+                                : Number(editPrices[indicator.id]) === indicator.price
+                                  ? 'bg-slate-100 text-slate-400 cursor-default'
+                                  : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-indigo-500/20 active:scale-95'
+                              }`}
+                          >
+                            {updating === indicator.id ? (
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4" />
+                            )}
+                            <span>{updating === indicator.id ? 'Aplicando...' : 'Aplicar'}</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
-                <tr>
-                  <th className="py-4 px-6 w-1/4">Familia / Referencia</th>
-                  <th className="py-4 px-6 w-1/3">Descripción del Líder</th>
-                  <th className="py-4 px-6">Unidad</th>
-                  <th className="py-4 px-6">Impacto (Familia)</th>
-                  <th className="py-4 px-6">Precio Actual ($)</th>
-                  <th className="py-4 px-6 text-right">Acción</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filtered.map(indicator => (
-                  <tr key={indicator.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="py-4 px-6">
-                      <div className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-1">
-                        {indicator.family_name}
-                      </div>
-                      <div className="text-slate-500 font-mono text-xs flex items-center gap-2">
-                        {indicator.id}
-                        <button 
-                          onClick={() => openLeaderModal(indicator)}
-                          className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-600 transition-colors"
-                          title="Cambiar insumo líder para esta familia"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="font-medium text-slate-800 line-clamp-2" title={indicator.description}>
-                        {indicator.description}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-medium uppercase">
-                        {indicator.unit}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-100">
-                          <TrendingUp className="w-3.5 h-3.5" />
-                          {indicator.children_count} insumos
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-400 font-medium">$</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={editPrices[indicator.id] || ''}
-                          onChange={(e) => handlePriceChange(indicator.id, e.target.value)}
-                          className="w-24 px-3 py-1.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-700 transition-shadow"
-                        />
-                      </div>
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      <button
-                        onClick={() => handleUpdatePrice(indicator)}
-                        disabled={updating === indicator.id || Number(editPrices[indicator.id]) === indicator.price}
-                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
-                          ${updating === indicator.id 
-                            ? 'bg-indigo-100 text-indigo-400 cursor-not-allowed'
-                            : Number(editPrices[indicator.id]) === indicator.price
-                              ? 'bg-slate-100 text-slate-400 cursor-default'
-                              : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-indigo-500/20 active:scale-95'
-                          }`}
-                      >
-                        {updating === indicator.id ? (
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Save className="w-4 h-4" />
-                        )}
-                        <span>{updating === indicator.id ? 'Aplicando...' : 'Aplicar'}</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        </>
+      ) : (
+        <PDFUpdaterTab 
+          selectedDatabase={currentDbId}
+          onSuccess={() => fetchIndicators(currentDbId)}
+        />
+      )}
 
       {/* Change Leader Modal using Portal to escape backdrop-filter stacking context */}
       {showLeaderModal && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[85vh]">
             <div className="p-4 border-b border-slate-100 flex flex-shrink-0 items-start justify-between bg-slate-50">
               <div className="pr-4">
@@ -464,6 +528,20 @@ export default function MarketIndicatorsPanel({
         sourceDatabaseId={currentDbId}
         databases={databasesList}
       />
+
+      {/* Modal de Actualización de Precios Masivos y desde Archivo Excel */}
+      {showBulkPriceModal && (
+        <BulkPriceModal
+          resourceType="materials"
+          selectedDatabase={currentDbId}
+          title={currentDb?.name || currentDbId}
+          onClose={() => setShowBulkPriceModal(false)}
+          onSuccess={() => {
+            setShowBulkPriceModal(false);
+            fetchIndicators(currentDbId);
+          }}
+        />
+      )}
     </div>
   );
 }

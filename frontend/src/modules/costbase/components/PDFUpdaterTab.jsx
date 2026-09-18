@@ -1,11 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { FiUpload, FiCheck, FiX, FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
+import { FiUpload, FiCheck, FiX, FiRefreshCw, FiAlertCircle, FiFileText } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 
 // Fallback to generic API_URL if not defined differently
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
-const PDFUpdaterTab = () => {
+const PDFUpdaterTab = ({ selectedDatabase = 'master', onSuccess }) => {
   const [file, setFile] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState([]);
@@ -28,7 +28,8 @@ const PDFUpdaterTab = () => {
     formData.append('file', file);
     
     try {
-      const response = await fetch(`${API_URL}/pdf-updater/analyze-quote`, {
+      const queryParams = selectedDatabase ? `?database_id=${encodeURIComponent(selectedDatabase)}` : '';
+      const response = await fetch(`${API_URL}/pdf-updater/analyze-quote${queryParams}`, {
         method: 'POST',
         body: formData,
       });
@@ -84,7 +85,10 @@ const PDFUpdaterTab = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ items: itemsToApprove })
+        body: JSON.stringify({ 
+          items: itemsToApprove,
+          database_id: selectedDatabase || 'master'
+        })
       });
 
       if (!res.ok) {
@@ -100,6 +104,9 @@ const PDFUpdaterTab = () => {
       setResults(remainingItems);
       setSelectedItems({});
       
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       console.error(error);
       toast.error(error.message);
@@ -108,6 +115,24 @@ const PDFUpdaterTab = () => {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-100">
+        <div>
+          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <FiFileText className="text-indigo-600" />
+            Actualización de Precios vía Cotizaciones / PDFs (IA Gemini OCR)
+          </h3>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            Sube facturas o cotizaciones en PDF/imagen para extraer precios y cruzarlos con los materiales.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200/80 px-3 py-1.5 rounded-xl text-xs shrink-0 self-start sm:self-auto">
+          <span className="text-indigo-700 font-medium">Base de datos destino:</span>
+          <span className="font-bold text-indigo-900 bg-white px-2 py-0.5 rounded-md shadow-xs border border-indigo-100 font-mono">
+            {selectedDatabase}
+          </span>
+        </div>
+      </div>
+
        {!file && results.length === 0 && (
         <div 
           className="border-2 border-dashed border-blue-200 rounded-2xl p-12 text-center hover:bg-blue-50 transition-colors cursor-pointer"

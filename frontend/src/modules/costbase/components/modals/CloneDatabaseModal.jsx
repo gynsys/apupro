@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Copy, Loader2, CheckCircle2, Info } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { X, Copy, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { cost360DatabaseService } from '../../../../services/cost360DatabaseService';
 
@@ -64,8 +65,8 @@ export default function CloneDatabaseModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
       <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200 animate-slide-up">
         {/* Header */}
         <div className="bg-slate-900 p-6 text-white relative">
@@ -148,13 +149,6 @@ export default function CloneDatabaseModal({
             />
           </div>
 
-          <div className="p-3 bg-blue-50/70 border border-blue-200/60 rounded-xl flex items-start gap-2.5 text-xs text-blue-900">
-            <Info size={16} className="text-blue-600 shrink-0 mt-0.5" />
-            <span>
-              Al completarse la clonación, la nueva base se seleccionará automáticamente en esta pestaña para que puedas ajustar los precios de insumos líderes y publicar los cambios.
-            </span>
-          </div>
-
           {/* Actions */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
             <button
@@ -185,6 +179,7 @@ export default function CloneDatabaseModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

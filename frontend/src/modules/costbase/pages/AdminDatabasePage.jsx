@@ -10,7 +10,6 @@ import { useDatabaseContext } from '../../../contexts/DatabaseContext';
 import PartidasTab from '../components/tabs/PartidasTab';
 import CatalogTab from '../components/tabs/CatalogTab';
 import KeyIATab from '../components/tabs/KeyIATab';
-import PDFsTab from '../components/tabs/PDFsTab';
 import UsuariosTab from '../components/tabs/UsuariosTab';
 import RAGDiagnosticTab from '../components/tabs/RAGDiagnosticTab';
 import PublishDatabaseModal from '../components/modals/PublishDatabaseModal';
@@ -301,8 +300,6 @@ const AdminDatabasePage = () => {
         {activeTab === 'diagnostico_rag' && <RAGDiagnosticTab />}
 
         {activeTab === 'key_ia' && <KeyIATab />}
-
-        {activeTab === 'pdfs' && <PDFsTab />}
 
         {activeTab === 'prompt' && (
           <GlassCard className="rounded-2xl p-6 flex flex-col gap-4 overflow-y-auto max-h-full">
