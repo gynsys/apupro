@@ -233,20 +233,37 @@ def call_llm_json(prompt: str, use_case: str = "all") -> dict:
             logger.info(f"[LLM] Trying '{provider.display_name}' (priority={provider.priority})...")
             raw = _dispatch(provider, prompt, expect_json=True)
 
-            # Attempt direct JSON parse
+            # Strip possible markdown code fences (```json ... ``` or ``` ... ```)
+            cleaned = re.sub(r"^```(?:json)?\s*", "", raw.strip(), flags=re.IGNORECASE)
+            cleaned = re.sub(r"\s*```$", "", cleaned.strip())
+
+            # Attempt direct JSON parse on cleaned text
             try:
-                data = json.loads(raw)
+                data = json.loads(cleaned)
                 logger.info(f"[LLM] '{provider.display_name}' succeeded (direct JSON).")
                 return data
             except json.JSONDecodeError:
-                pass
+                logger.debug(f"[LLM] Direct JSON parse failed for '{provider.display_name}', attempting regex extraction.")
 
-            # Fallback: extract JSON block from text
-            json_match = re.search(r"(\{.*\})", raw, re.DOTALL)
-            if json_match:
-                data = json.loads(json_match.group(1))
-                logger.info(f"[LLM] '{provider.display_name}' succeeded (extracted JSON).")
-                return data
+            # Fallback 1: extract JSON object {...}
+            json_obj_match = re.search(r"(\{.*\})", cleaned, re.DOTALL)
+            if json_obj_match:
+                try:
+                    data = json.loads(json_obj_match.group(1))
+                    logger.info(f"[LLM] '{provider.display_name}' succeeded (extracted JSON object).")
+                    return data
+                except json.JSONDecodeError:
+                    logger.debug("Failed parsing regex-extracted JSON object.")
+
+            # Fallback 2: extract JSON array [...]
+            json_arr_match = re.search(r"(\[.*\])", cleaned, re.DOTALL)
+            if json_arr_match:
+                try:
+                    data = json.loads(json_arr_match.group(1))
+                    logger.info(f"[LLM] '{provider.display_name}' succeeded (extracted JSON array).")
+                    return data
+                except json.JSONDecodeError:
+                    logger.debug("Failed parsing regex-extracted JSON array.")
 
             raise ValueError("Response was not valid JSON.")
 

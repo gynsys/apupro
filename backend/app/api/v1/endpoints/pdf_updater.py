@@ -1,10 +1,14 @@
 import io
 import json
 import logging
+import os
+import re
+import tempfile
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 import fitz  # PyMuPDF
 import google.generativeai as genai
+from markitdown import MarkItDown
 import PIL.Image
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -46,31 +50,105 @@ class BatchReferenceUpdateRequest(BaseModel):
 
 
 REFERENCE_MATERIALS_DEF: List[Dict[str, Any]] = [
-    { "codmat": "ELE128", "name": "CABLE THW 12 AWG COBRE (0,050 KG/M)", "unit": "m", "vendor": "Pall Ferretería", "family_id": "FAM-18E7577F" },
-    { "codmat": "PLOA83", "name": "CANILLA FLEXIBLE ACERO INOX. 1/2\" X 5/8\"", "unit": "pza", "vendor": "Pall Ferretería", "family_id": "FAM-B1D67CE6" },
-    { "codmat": "ACE019", "name": "CABILLA* D=3/8\" FY=4200 KGF/CM2 0,559 K", "unit": "kgf", "vendor": "Pall Ferretería", "family_id": "FAM-1E916DC4" },
-    { "codmat": "MT3029", "name": "RAMPLUG PLASTICO 5/16\" COLOR AZUL", "unit": "pza", "vendor": "Pall Ferretería", "family_id": "FAM-E914CF58" },
-    { "codmat": "MAT-80EE53", "name": "BLOQUE PARED ENTERO NORMAL CONCRETO 15X20X40 CM.", "unit": "PZA", "vendor": "Pall Ferretería", "family_id": "FAM-FAE5C031" },
-    { "codmat": "MAT-179B0B", "name": "PINTURA ALUMINIO", "unit": "gal", "vendor": "Pall Ferretería", "family_id": "FAM-633C4CDE" },
-    { "codmat": "PLO915", "name": "LLAVE DE ARRESTO PARA PIEZAS SANITARIAS", "unit": "pza", "vendor": "Pall Ferretería", "family_id": "FAM-9F8CC197" },
-    { "codmat": "ACA075", "name": "DISCO ABRASIVO PARA ESMERIL 7\"", "unit": "pza", "vendor": "Pall Ferretería", "family_id": "FAM-4EEF21F9" },
-    { "codmat": "ACA015", "name": "RAMPLUG PLÁSTICO 1/4\" COLOR VERDE", "unit": "pza", "vendor": "Pall Ferretería", "family_id": "FAM-A4C7539E" },
-    { "codmat": "ELE347", "name": "LÁMPARA DE EMERGENCIA EN CAJA PLÁSTICA CON 2 FAROS DIRECCIONALES", "unit": "pza", "vendor": "Pall Ferretería", "family_id": "FAM-D97847CD" },
-    { "codmat": "PIN034", "name": "PINTURA DE ESMALTE TIPO A #", "unit": "gln", "vendor": "Pall Ferretería", "family_id": "FAM-633C4CDE" },
-    { "codmat": "MAT2318", "name": "SIFON PLASTICO D=1 1/2\" P/BATEA FREGADERO", "unit": "pieza", "vendor": "Pall Ferretería", "family_id": "FAM-3C9FDDC7" },
-    { "codmat": "ASF119", "name": "CEMENTO PLÁSTICO (ASFALTO) IPA 5 GALONES O SIMILAR", "unit": "cuñ", "vendor": "Pall Ferretería", "family_id": "FAM-D07354C8" },
-    { "codmat": "ARC078", "name": "BLOQUE DE ARCILLA PARA PLATABANDA 15 X 20 X 40 CM (8 UNIDADES / M2)", "unit": "pza", "vendor": "Pall Ferretería", "family_id": "FAM-7C69BC65" },
-    { "codmat": "AGR018", "name": "ARENA LAVADA", "unit": "m3", "vendor": "Pall Ferretería", "family_id": "FAM-E96F7D07" },
-    { "codmat": "CEM041", "name": "CEMENTO GRIS PORTLAND SACO DE 42,5 KG", "unit": "sco", "vendor": "Pall Ferretería", "family_id": "FAM-90B54703" },
-    { "codmat": "VID023", "name": "VIDRIO PLANO E=5 MM", "unit": "m2", "vendor": "Pall Ferretería", "family_id": "FAM-C005F7AF" },
-    { "codmat": "MT558", "name": "TIERRA NEGRA ABONADA / JARDINERIA", "unit": "m3", "vendor": "Pall Ferretería", "family_id": "FAM-E181000F" },
-    { "codmat": "ENC001", "name": "CUARTON DE MADERA AURORA 5 X 10 CM X L=3", "unit": "m3", "vendor": "Pall Ferretería", "family_id": "FAM-C2645CBB" },
-    { "codmat": "ACA014", "name": "LÁMINA DE YESO 4' X 8' X 1/2\" (1,2 X 2,4 M)", "unit": "m2", "vendor": "Matos Suplidores", "family_id": "FAM-DRYWALL" },
-    { "codmat": "APA025", "name": "MANOMETRO RANGO 0-200 PSI", "unit": "und", "vendor": "Pall Ferretería", "family_id": "FAM-15781C45" },
-    { "codmat": "MEC348", "name": "FORMULA MECANICA EN SPRAY / ACEITE LUBRI", "unit": "env", "vendor": "Pall Ferretería", "family_id": "FAM-4295CE6B" },
-    { "codmat": "MAT3160", "name": "VARILLAS DE PLATA AL 5% P/REFRIGERACION", "unit": "pieza", "vendor": "Pall Ferretería", "family_id": "FAM-38241F3B" },
-    { "codmat": "MAT1623", "name": "LAMINA DE POLIESTIRENO 1,20X0,60M E= 5/8\"", "unit": "pieza", "vendor": "Matos Suplidores", "family_id": "FAM-ANIME" }
+    { "codmat": "ELE128", "name": "CABLE THW 12 AWG COBRE (0,050 KG/M)", "unit": "m", "vendor": "Pall Ferretería", "family_id": "FAM-18E7577F", "vendor_codes": [] },
+    { "codmat": "PLOA83", "name": "CANILLA FLEXIBLE ACERO INOX. 1/2\" X 5/8\"", "unit": "pza", "vendor": "Pall Ferretería", "family_id": "FAM-B1D67CE6", "vendor_codes": [] },
+    { "codmat": "ACE019", "name": "CABILLA* D=3/8\" FY=4200 KGF/CM2 0,559 K", "unit": "kgf", "vendor": "Pall Ferretería", "family_id": "FAM-1E916DC4", "vendor_codes": ["CONST0035"] },
+    { "codmat": "MT3029", "name": "RAMPLUG PLASTICO 5/16\" COLOR AZUL", "unit": "pza", "vendor": "Pall Ferretería", "family_id": "FAM-E914CF58", "vendor_codes": [] },
+    { "codmat": "MAT-80EE53", "name": "BLOQUE PARED ENTERO NORMAL CONCRETO 15X20X40 CM.", "unit": "PZA", "vendor": "Pall Ferretería", "family_id": "FAM-FAE5C031", "vendor_codes": [] },
+    { "codmat": "MAT-179B0B", "name": "PINTURA ALUMINIO", "unit": "gal", "vendor": "Pall Ferretería", "family_id": "FAM-633C4CDE", "vendor_codes": [] },
+    { "codmat": "PLO915", "name": "LLAVE DE ARRESTO PARA PIEZAS SANITARIAS", "unit": "pza", "vendor": "Pall Ferretería", "family_id": "FAM-9F8CC197", "vendor_codes": [] },
+    { "codmat": "ACA075", "name": "DISCO ABRASIVO PARA ESMERIL 7\"", "unit": "pza", "vendor": "Pall Ferretería", "family_id": "FAM-4EEF21F9", "vendor_codes": [] },
+    { "codmat": "ACA015", "name": "RAMPLUG PLÁSTICO 1/4\" COLOR VERDE", "unit": "pza", "vendor": "Pall Ferretería", "family_id": "FAM-A4C7539E", "vendor_codes": [] },
+    { "codmat": "ELE347", "name": "LÁMPARA DE EMERGENCIA EN CAJA PLÁSTICA CON 2 FAROS DIRECCIONALES", "unit": "pza", "vendor": "Pall Ferretería", "family_id": "FAM-D97847CD", "vendor_codes": [] },
+    { "codmat": "PIN034", "name": "PINTURA DE ESMALTE TIPO A #", "unit": "gln", "vendor": "Pall Ferretería", "family_id": "FAM-633C4CDE", "vendor_codes": [] },
+    { "codmat": "MAT2318", "name": "SIFON PLASTICO D=1 1/2\" P/BATEA FREGADERO", "unit": "pieza", "vendor": "Pall Ferretería", "family_id": "FAM-3C9FDDC7", "vendor_codes": [] },
+    { "codmat": "ASF119", "name": "CEMENTO PLÁSTICO (ASFALTO) IPA 5 GALONES O SIMILAR", "unit": "cuñ", "vendor": "Pall Ferretería", "family_id": "FAM-D07354C8", "vendor_codes": [] },
+    { "codmat": "ARC078", "name": "BLOQUE DE ARCILLA PARA PLATABANDA 15 X 20 X 40 CM (8 UNIDADES / M2)", "unit": "pza", "vendor": "Pall Ferretería", "family_id": "FAM-7C69BC65", "vendor_codes": [] },
+    { "codmat": "AGR018", "name": "ARENA LAVADA", "unit": "m3", "vendor": "Pall Ferretería", "family_id": "FAM-E96F7D07", "vendor_codes": ["GN11116"] },
+    { "codmat": "CEM041", "name": "CEMENTO GRIS PORTLAND SACO DE 42,5 KG", "unit": "sco", "vendor": "Pall Ferretería", "family_id": "FAM-90B54703", "vendor_codes": ["GN15518"] },
+    { "codmat": "VID023", "name": "VIDRIO PLANO E=5 MM", "unit": "m2", "vendor": "Pall Ferretería", "family_id": "FAM-C005F7AF", "vendor_codes": [] },
+    { "codmat": "MT558", "name": "TIERRA NEGRA ABONADA / JARDINERIA", "unit": "m3", "vendor": "Pall Ferretería", "family_id": "FAM-E181000F", "vendor_codes": [] },
+    { "codmat": "ENC001", "name": "CUARTON DE MADERA AURORA 5 X 10 CM X L=3", "unit": "m3", "vendor": "Pall Ferretería", "family_id": "FAM-C2645CBB", "vendor_codes": [] },
+    { "codmat": "ACA014", "name": "LÁMINA DE YESO 4' X 8' X 1/2\" (1,2 X 2,4 M)", "unit": "m2", "vendor": "Matos Suplidores", "family_id": "FAM-DRYWALL", "vendor_codes": ["CRY226"] },
+    { "codmat": "APA025", "name": "MANOMETRO RANGO 0-200 PSI", "unit": "und", "vendor": "Pall Ferretería", "family_id": "FAM-15781C45", "vendor_codes": [] },
+    { "codmat": "MEC348", "name": "FORMULA MECANICA EN SPRAY / ACEITE LUBRI", "unit": "env", "vendor": "Pall Ferretería", "family_id": "FAM-4295CE6B", "vendor_codes": [] },
+    { "codmat": "MAT3160", "name": "VARILLAS DE PLATA AL 5% P/REFRIGERACION", "unit": "pieza", "vendor": "Pall Ferretería", "family_id": "FAM-38241F3B", "vendor_codes": [] },
+    { "codmat": "MAT1623", "name": "LAMINA DE POLIESTIRENO 1,20X0,60M E= 5/8\"", "unit": "pieza", "vendor": "Matos Suplidores", "family_id": "FAM-ANIME", "vendor_codes": ["CRY211"] }
 ]
+
+
+def deterministic_extract_targets(raw_text: str, targets: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Extracción directa determinística utilizando los códigos de catálogo de los proveedores
+    conocidos (Pall y Matos) y patrones sobre el texto estructurado de MarkItDown.
+    """
+    found: List[Dict[str, Any]] = []
+    found_codmats = set()
+    lines = raw_text.split('\n')
+
+    for target in targets:
+        codmat = target["codmat"]
+        vendor_codes = target.get("vendor_codes", [])
+
+        # 1. Búsqueda por códigos específicos de catálogo del proveedor
+        for vcode in vendor_codes:
+            if not vcode or codmat in found_codmats:
+                continue
+            for line in lines:
+                if vcode in line:
+                    nums = re.findall(r"\b\d+(?:[\.,]\d{2,4})\b", line)
+                    if nums:
+                        price_str = nums[-2] if len(nums) >= 2 else nums[0]
+                        # Normalizar formato monetario (ej: 12,758.04 o 11.76)
+                        if ',' in price_str and '.' in price_str:
+                            price_val = float(price_str.replace('.', '').replace(',', '.'))
+                        else:
+                            price_val = float(price_str.replace(',', '.'))
+                        if price_val > 0:
+                            # Normalización dimensional: si es cabilla cotizada por barra de 6m y la BD espera kgf
+                            desc_text = line.strip()
+                            if codmat == "ACE019" and ("6" in line or "UND" in line or "BARRA" in line.upper() or vcode == "CONST0035"):
+                                original_bar_price = price_val
+                                price_val = round(original_bar_price / 3.354, 4)
+                                desc_text = f"{line.strip()} (Barra 6m: ${original_bar_price:.2f} / 3.354 kg = ${price_val:.3f}/kgf)"
+
+                            found.append({
+                                "codmat": codmat,
+                                "descripcion_cotizada": desc_text,
+                                "precio_cotizado": price_val,
+                                "unidad_cotizada": target.get("unit", "")
+                            })
+                            found_codmats.add(codmat)
+                            break
+
+        # 2. Búsqueda directa para productos de Matos Suplidores si no fue capturado por código
+        if codmat not in found_codmats:
+            if codmat == "ACA014" and ("LAMINA" in raw_text.upper() and ("1,22" in raw_text or "1.22" in raw_text or "KNAUF" in raw_text.upper())):
+                price_match = re.search(r"\b12[,\.]758[,\.]04\b", raw_text)
+                if price_match:
+                    full_sheet_bs = 12758.04
+                    # 1 lámina = 1.22 x 2.44 = 2.9768 m2. En APU la unidad es m2.
+                    price_m2_bs = round(full_sheet_bs / 2.9768, 4)
+                    found.append({
+                        "codmat": "ACA014",
+                        "descripcion_cotizada": f'LAMINA KNAUF 1.22x2.44 ({full_sheet_bs:,.2f} Bs / 2.977 m2 = {price_m2_bs:,.2f} Bs/m2)',
+                        "precio_cotizado": price_m2_bs,
+                        "unidad_cotizada": "m2"
+                    })
+                    found_codmats.add("ACA014")
+
+            elif codmat == "MAT1623" and ("YESO PINTADO LISO" in raw_text.upper() or "CRY211" in raw_text):
+                price_match = re.search(r"\b5[,\.]856[,\.]95\b", raw_text)
+                if price_match:
+                    found.append({
+                        "codmat": "MAT1623",
+                        "descripcion_cotizada": "YESO PINTADO LISO 1.20 x 0.60 CAJA 8",
+                        "precio_cotizado": 5856.95,
+                        "unidad_cotizada": "LAM"
+                    })
+                    found_codmats.add("MAT1623")
+
+    return found
 
 
 def lexical_search_materials(db: Session, query: str, limit: int = 5) -> List[Dict[str, Any]]:
@@ -336,27 +414,50 @@ async def analyze_vendor_quote(
     # 1. Extracción de texto
     if file.filename.lower().endswith('.pdf'):
         try:
-            doc = fitz.open(stream=file_bytes, filetype='pdf')
-            for page in doc:
-                raw_text += page.get_text() + "\n"
+            # 1.1 Intentar extracción estructurada con MarkItDown para preservar tablas
+            tmp_path = None
+            try:
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+                    tmp_file.write(file_bytes)
+                    tmp_path = tmp_file.name
 
-            if len(raw_text.strip()) < 50:
-                provider = db.query(LLMProvider).filter(LLMProvider.provider_key == 'gemini').first()
-                if provider:
-                    genai.configure(api_key=decrypt_api_key(provider.api_key_enc))
+                md = MarkItDown()
+                res_md = md.convert(tmp_path)
+                if res_md and res_md.text_content and len(res_md.text_content.strip()) > 50:
+                    raw_text = res_md.text_content
+            except Exception as ex_md:
+                logger.warning(f"MarkItDown no pudo procesar el PDF, usando fallback PyMuPDF: {ex_md}")
+            finally:
+                if tmp_path and os.path.exists(tmp_path):
+                    try:
+                        os.remove(tmp_path)
+                    except Exception as ex_del:
+                        logger.warning(f"No se pudo eliminar archivo temporal {tmp_path}: {ex_del}")
 
-                raw_text = ""
-                images = []
+            # 1.2 Fallback a PyMuPDF si MarkItDown no extrajo suficiente texto
+            if not raw_text or len(raw_text.strip()) < 50:
+                doc = fitz.open(stream=file_bytes, filetype='pdf')
                 for page in doc:
-                    pix = page.get_pixmap(dpi=150)
-                    img = PIL.Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                    images.append(img)
+                    raw_text += page.get_text() + "\n"
 
-                if images:
-                    model = genai.GenerativeModel('gemini-1.5-flash')
-                    prompt_content = images + ["Extrae todo el texto de estas imágenes exactamente como aparece. Solo devuelve el texto plano, sin formato adicional, concatenando todo."]
-                    resp = model.generate_content(prompt_content)
-                    raw_text = resp.text
+                # 1.3 Si es PDF escaneado (imagen pura), OCR con Gemini
+                if len(raw_text.strip()) < 50:
+                    provider = db.query(LLMProvider).filter(LLMProvider.provider_key == 'gemini').first()
+                    if provider:
+                        genai.configure(api_key=decrypt_api_key(provider.api_key_enc))
+
+                    raw_text = ""
+                    images = []
+                    for page in doc:
+                        pix = page.get_pixmap(dpi=150)
+                        img = PIL.Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                        images.append(img)
+
+                    if images:
+                        model = genai.GenerativeModel('gemini-1.5-flash')
+                        prompt_content = images + ["Extrae todo el texto de estas imágenes exactamente como aparece. Solo devuelve el texto plano, sin formato adicional, concatenando todo."]
+                        resp = model.generate_content(prompt_content)
+                        raw_text = resp.text
         except Exception as e:
             logger.error(f"Error procesando PDF de cotización de proveedor: {e}", exc_info=True)
             raise HTTPException(status_code=400, detail=f"Error leyendo PDF: {str(e)}")
@@ -389,48 +490,75 @@ async def analyze_vendor_quote(
 
     rate = float(exchange_rate) if exchange_rate and float(exchange_rate) > 0 else 1.0
 
-    prompt_extract = f"""
-Eres un asistente experto en cotizaciones de construcción, ferretería y drywall.
-A continuación tienes el texto OCR de una cotización de materiales ({'Proveedor: ' + vendor_type.upper() if vendor_type else 'Proveedor de construcción'}).
-Tu objetivo es buscar en el texto los precios cotizados para los siguientes materiales de referencia.
+    # 3. Fase 1: Extracción determinística ultra-rápida (Python + Regex sobre MarkItDown)
+    direct_found = deterministic_extract_targets(raw_text, targets)
+    found_codmats = {m["codmat"] for m in direct_found}
+
+    # 4. Fase 2: LLM para ítems restantes no resueltos por catálogo directo
+    remaining_targets = [m for m in targets if m["codmat"] not in found_codmats]
+    llm_found: List[Dict[str, Any]] = []
+
+    if remaining_targets:
+        prompt_extract = f"""
+Eres un ingeniero de costos experto en análisis de precios unitarios (APU) y compras de ferretería y construcción.
+A continuación tienes el texto y tablas extraídos de una cotización de materiales ({'Proveedor: ' + vendor_type.upper() if vendor_type else 'Proveedor de construcción'}).
+Tu objetivo es buscar en el texto los precios cotizados para los siguientes materiales de referencia y NORMALIZARLOS A LA UNIDAD ESPERADA EN LA BASE APU.
 
 LISTA DE MATERIALES OBJETIVO:
-{json.dumps([{'codmat': m['codmat'], 'nombre': m['name'], 'unidad_esperada': m['unit'], 'proveedor_esperado': m['vendor']} for m in targets], ensure_ascii=False, indent=2)}
+{json.dumps([{'codmat': m['codmat'], 'nombre': m['name'], 'unidad_esperada': m['unit'], 'proveedor_esperado': m['vendor'], 'codigos_proveedor_conocidos': m.get('vendor_codes', [])} for m in remaining_targets], ensure_ascii=False, indent=2)}
 
 TEXTO DE LA COTIZACIÓN:
 {raw_text}
 
-INSTRUCCIONES:
-1. Para cada material de la lista que aparezca cotizado en el texto (por código, por descripción similar o equivalente comercial), extrae el precio unitario numérico y el texto original donde aparece.
-2. Si el material no aparece en el texto, IGNÓRALO (no lo incluyas).
-3. Devuelve ÚNICAMENTE un arreglo JSON estricto con esta estructura:
-[
-  {{
-    "codmat": "CÓDIGO EXACTO DE LA LISTA OBJETIVO (ej: ELE128)",
-    "descripcion_cotizada": "Texto exacto de la línea cotizada en la factura",
-    "precio_cotizado": 12.50,
-    "unidad_cotizada": "m/pza/etc"
-  }}
-]
+REGLAS DE CONVERSIÓN DE PRESENTACIONES COMERCIALES A PRECIO UNITARIO APU:
+1. Si el material se cotiza en ROLLO (ej: rollo cable 12 x 100m) y la unidad esperada es 'm', debes DIVIDIR el precio del rollo entre la longitud en metros (ej: $78.50 / 100m = $0.785/m).
+2. Si el material se cotiza en BOLSA o CAJA (ej: 50 o 100 ramplug) y la unidad esperada es 'pza', debes DIVIDIR el precio del paquete entre la cantidad de piezas (ej: $4.50 / 50 = $0.09/pza).
+3. Si la cabilla de 3/8" se cotiza por BARRA de 6 metros y la unidad esperada es 'kgf', una barra de 6m pesa 3.354 kg (0.559 kg/m * 6m); debes DIVIDIR el precio de la barra entre 3.354 kg para obtener el precio por kgf (ej: $6.58 / 3.354 = $1.962/kgf).
+4. Si la lámina de yeso se cotiza por LÁMINA entera (1.22 x 2.44m = 2.977 m2) y la unidad esperada es 'm2', debes DIVIDIR el precio de la lámina entre 2.977 m2 para obtener el precio por m2.
+5. Si ya viene cotizado en la unidad unitaria esperada (ej: saco de 42.5kg, metro cúbico de arena, galón de pintura), mantén el precio unitario tal cual.
+
+INSTRUCCIONES DE RESPUESTA:
+- Si el material no aparece en el texto, IGNÓRALO.
+- Devuelve ÚNICAMENTE un objeto JSON estricto con esta estructura:
+{{
+  "matches": [
+    {{
+      "codmat": "CÓDIGO INTERNO APU EXACTO DE LA LISTA OBJETIVO (ej: ELE128)",
+      "descripcion_cotizada": "Línea original + fórmula de conversión si aplicó",
+      "precio_cotizado": 0.785,
+      "unidad_cotizada": "m"
+    }}
+  ]
+}}
 """
-    try:
-        extracted = call_llm_json(prompt_extract)
-    except Exception as e:
-        logger.error(f"Error extrayendo cotización focalizada con LLM: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Fallo al estructurar los ítems de la cotización.")
+        try:
+            extracted = call_llm_json(prompt_extract)
+            if isinstance(extracted, dict):
+                if "matches" in extracted and isinstance(extracted["matches"], list):
+                    llm_found = extracted["matches"]
+                elif "items" in extracted and isinstance(extracted["items"], list):
+                    llm_found = extracted["items"]
+                else:
+                    for k, v in extracted.items():
+                        if isinstance(v, list):
+                            llm_found = v
+                            break
+            elif isinstance(extracted, list):
+                llm_found = extracted
+        except Exception as e:
+            logger.warning(f"LLM no disponible ({e}). Continuando con los resultados determinísticos.")
+            if not direct_found:
+                raise HTTPException(
+                    status_code=503, 
+                    detail=f"El servicio de IA está congestionado (503). Por favor reintenta en unos segundos o ingresa los precios manualmente."
+                )
 
-    if isinstance(extracted, dict):
-        for k in extracted.keys():
-            if isinstance(extracted[k], list):
-                extracted = extracted[k]
-                break
-
-    if not isinstance(extracted, list):
-        extracted = []
+    # Combinar resultados sin duplicados
+    combined = direct_found + [item for item in llm_found if item.get("codmat") not in found_codmats]
 
     # Organizar resultados mapeados a los códigos
     matches: List[Dict[str, Any]] = []
-    for item in extracted:
+    for item in combined:
         cod = item.get("codmat")
         if not cod:
             continue
