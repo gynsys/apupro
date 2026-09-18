@@ -50,11 +50,11 @@ LEADERS_MAP: Dict[str, str] = {
     "FAM-15781C45": "APA025",   # MANOMETRO RANGO 0-200 PSI
     "FAM-4295CE6B": "COM003",   # ACEITE PARA FORMALETA DE ENCOFRADOS
     "FAM-38241F3B": "MAT1665",  # LIMPIADOR REMOVEDOR PAVCO (ENV 760 GRMS.)
-    "FAM-919C5E43": "MEC216",   # ASCENSOR 6 PERS. PAR/IMP MAX=1 M/S RECOR
 }
 
 # Fusión de micro-familias secundarias sin líder a familias matrices
 MICRO_FAMILIES_MERGE: Dict[str, str] = {
+    "FAM-919C5E43": "FAM-2BFC515D",  # Y.-Ascensores (ELIMINADO 2007/2019) -> X.-Sistema de Ventilación Forzada
     "FAM-DA8C6444": "FAM-B1D67CE6",  # Tuberías y Conexiones -> Plomería
     "FAM-0BA9A275": "FAM-18E7577F",  # Instalaciones Eléctricas -> Eléctricos
     "FAM-716D202B": "FAM-4EEF21F9",  # Sistemas de Fijación -> Herrería
