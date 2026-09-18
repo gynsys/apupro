@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -14,6 +14,7 @@ from app.crud.crud_market import get_unsanitized_materials, apply_sanitization_b
 from app.services.ai_sanitization_service import sanitize_materials_batch
 from app.services.rule_sanitizer import sanitize_batch_rules
 from app.services.llm_router import invalidate_llm_cache
+from app.api.v1.endpoints.costbase import set_schema_for_db
 from scripts.migrate_market_families_and_leaders import run_migration
 
 router = APIRouter()
@@ -22,10 +23,12 @@ router = APIRouter()
 class LeaderPriceUpdate(BaseModel):
     leader_id: str
     new_price: float
+    database_id: Optional[str] = "master"
 
 
 class ChangeLeaderRequest(BaseModel):
     new_leader_id: str
+    database_id: Optional[str] = "master"
 
 
 @router.get("/upgrade-db")
@@ -126,7 +129,10 @@ def update_leader_price(payload: LeaderPriceUpdate, db: Session = Depends(get_db
     """
     Actualiza el precio de un Insumo Líder (Material Fuerte) y aplica en cascada
     la fórmula de dispersión (precio_hijo = precio_líder * factor) a toda su familia.
+    Soporta bases de datos maestras y clonadas mediante database_id.
     """
+    set_schema_for_db(db, payload.database_id or "master")
+    
     leader = db.query(CostMaterial).filter(CostMaterial.CodMat == payload.leader_id).first()
     if not leader:
         raise HTTPException(status_code=404, detail="Insumo líder no encontrado")
@@ -146,13 +152,16 @@ def update_leader_price(payload: LeaderPriceUpdate, db: Session = Depends(get_db
         "status": "success", 
         "updated_children": count, 
         "leader_id": payload.leader_id, 
-        "new_price": payload.new_price
+        "new_price": payload.new_price,
+        "database_id": payload.database_id or "master"
     }
 
 
 # Endpoints para el CRUD de Insumos Líderes
 @router.get("/indicators")
-def list_market_indicators(db: Session = Depends(get_db)) -> Dict[str, Any]:
+def list_market_indicators(database_id: Optional[str] = "master", db: Session = Depends(get_db)) -> Dict[str, Any]:
+    set_schema_for_db(db, database_id or "master")
+    
     counts = db.query(CostMaterial.market_indicator_id, func.count(CostMaterial.CodMat)).group_by(CostMaterial.market_indicator_id).all()
     count_map = {c[0]: c[1] for c in counts if c[0]}
     
@@ -188,7 +197,9 @@ def apply_market_indicator_prices(indicator_id: str, payload: LeaderPriceUpdate,
 
 
 @router.get("/families/{family_id}/materials")
-def get_family_materials(family_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
+def get_family_materials(family_id: str, database_id: Optional[str] = "master", db: Session = Depends(get_db)) -> Dict[str, Any]:
+    set_schema_for_db(db, database_id or "master")
+    
     mats = db.query(CostMaterial).filter(CostMaterial.family_id == family_id).all()
     if not mats:
         return {"items": []}
@@ -216,6 +227,8 @@ def get_family_materials(family_id: str, db: Session = Depends(get_db)) -> Dict[
 
 @router.post("/families/{family_id}/change-leader")
 def change_family_leader(family_id: str, payload: ChangeLeaderRequest, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    set_schema_for_db(db, payload.database_id or "master")
+    
     new_leader = db.query(CostMaterial).filter(CostMaterial.CodMat == payload.new_leader_id, CostMaterial.family_id == family_id).first()
     if not new_leader:
         raise HTTPException(status_code=404, detail="Nuevo líder no encontrado en esta familia")

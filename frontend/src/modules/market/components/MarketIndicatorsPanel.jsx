@@ -1,9 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import { 
+  Layers, Activity, TrendingUp, Save, Search, RefreshCw, Edit3, X, 
+  Database, Copy, Settings, Send 
+} from 'lucide-react';
 import { marketService } from '../services/marketService';
-import { Layers, Activity, TrendingUp, Save, Search, RefreshCw, Edit3, X } from 'lucide-react';
+import DatabaseSelector from '../../costbase/components/layout/DatabaseSelector';
+import CloneDatabaseModal from '../../costbase/components/modals/CloneDatabaseModal';
+import { useDatabaseContext } from '../../../contexts/DatabaseContext';
 
-export default function MarketIndicatorsPanel() {
+export default function MarketIndicatorsPanel({
+  selectedDatabase: propSelectedDatabase,
+  onDatabaseChange: propOnDatabaseChange,
+  currentDbObj: propCurrentDbObj,
+  onTogglePublish: propOnTogglePublish,
+  onManageDatabases,
+  onDatabaseCreated,
+  showDbControls = true
+}) {
+  const navigate = useNavigate();
+  const dbContext = useDatabaseContext();
+  const contextSelectedDb = dbContext?.activeDatabase?.id || 'master';
+  const contextDatabases = dbContext?.databases || [];
+  
+  const currentDbId = propSelectedDatabase || contextSelectedDb;
+  const currentDb = propCurrentDbObj || contextDatabases.find(db => db.id === currentDbId);
+  const databasesList = contextDatabases;
+
   const [indicators, setIndicators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
@@ -17,14 +42,17 @@ export default function MarketIndicatorsPanel() {
   const [loadingFamily, setLoadingFamily] = useState(false);
   const [savingNewLeader, setSavingNewLeader] = useState(false);
 
-  useEffect(() => {
-    fetchIndicators();
-  }, []);
+  // Clone Modal State
+  const [showCloneModal, setShowCloneModal] = useState(false);
 
-  const fetchIndicators = async () => {
+  useEffect(() => {
+    fetchIndicators(currentDbId);
+  }, [currentDbId]);
+
+  const fetchIndicators = async (dbId = currentDbId) => {
     setLoading(true);
     try {
-      const res = await marketService.getIndicators();
+      const res = await marketService.getIndicators(dbId);
       setIndicators(res.items || []);
       
       // Initialize edit state
@@ -35,6 +63,7 @@ export default function MarketIndicatorsPanel() {
       setEditPrices(initialPrices);
     } catch (error) {
       console.error("Error fetching indicators:", error);
+      toast.error("Error al cargar insumos líderes de la base seleccionada");
     } finally {
       setLoading(false);
     }
@@ -46,16 +75,19 @@ export default function MarketIndicatorsPanel() {
 
   const handleUpdatePrice = async (indicator) => {
     const newPrice = parseFloat(editPrices[indicator.id]);
-    if (isNaN(newPrice) || newPrice <= 0) return;
+    if (isNaN(newPrice) || newPrice <= 0) {
+      toast.error("Ingresa un precio numérico válido mayor a 0");
+      return;
+    }
     
     setUpdating(indicator.id);
     try {
-      await marketService.updateLeaderPrice(indicator.id, newPrice);
-      // Refresh to show it applied correctly
-      await fetchIndicators();
+      await marketService.updateLeaderPrice(indicator.id, newPrice, currentDbId);
+      toast.success(`Precio actualizado en "${currentDb?.name || currentDbId}". Cascada aplicada a ${indicator.children_count} insumos.`);
+      await fetchIndicators(currentDbId);
     } catch (error) {
       console.error("Error updating price:", error);
-      alert("Hubo un error al actualizar el precio en cascada.");
+      toast.error("Hubo un error al actualizar el precio en cascada.");
     } finally {
       setUpdating(null);
     }
@@ -66,10 +98,11 @@ export default function MarketIndicatorsPanel() {
     setShowLeaderModal(true);
     setLoadingFamily(true);
     try {
-      const res = await marketService.getFamilyMaterials(indicator.family_id);
+      const res = await marketService.getFamilyMaterials(indicator.family_id, currentDbId);
       setFamilyMaterials(res.items || []);
     } catch (error) {
       console.error("Error fetching family materials:", error);
+      toast.error("Error al cargar materiales de la familia");
     } finally {
       setLoadingFamily(false);
     }
@@ -78,14 +111,43 @@ export default function MarketIndicatorsPanel() {
   const handleChangeLeader = async (newLeaderId) => {
     setSavingNewLeader(true);
     try {
-      await marketService.changeFamilyLeader(selectedFamily.family_id, newLeaderId);
+      await marketService.changeFamilyLeader(selectedFamily.family_id, newLeaderId, currentDbId);
+      toast.success("Nuevo insumo líder asignado exitosamente.");
       setShowLeaderModal(false);
-      await fetchIndicators();
+      await fetchIndicators(currentDbId);
     } catch (error) {
       console.error("Error changing leader:", error);
-      alert(error.message || "Error al cambiar de líder");
+      toast.error(error.message || "Error al cambiar de líder");
     } finally {
       setSavingNewLeader(false);
+    }
+  };
+
+  const handleDbChange = (newDbId) => {
+    if (propOnDatabaseChange) {
+      propOnDatabaseChange(newDbId);
+    } else if (dbContext?.setActiveDatabase) {
+      const found = databasesList.find(d => d.id === newDbId);
+      if (found) dbContext.setActiveDatabase(found);
+    }
+  };
+
+  const handleManage = () => {
+    if (onManageDatabases) {
+      onManageDatabases();
+    } else {
+      navigate('/cost360/databases');
+    }
+  };
+
+  const handleDatabaseCloned = (newDb) => {
+    if (dbContext?.refreshDatabases) {
+      dbContext.refreshDatabases();
+    }
+    if (onDatabaseCreated) {
+      onDatabaseCreated(newDb);
+    } else {
+      handleDbChange(newDb.id);
     }
   };
 
@@ -98,6 +160,85 @@ export default function MarketIndicatorsPanel() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      {/* Barra de Base de Datos y Publicación */}
+      {showDbControls && (
+        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-4 sm:p-5 rounded-2xl text-white mb-6 shadow-md border border-slate-700/60">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            {/* Info de la base actual */}
+            <div className="flex items-center gap-3.5">
+              <div className="p-3 bg-blue-500/20 text-blue-400 rounded-xl border border-blue-500/30 shrink-0">
+                <Database className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-[11px] font-bold text-blue-300 uppercase tracking-widest">
+                  Base de Datos Seleccionada para Actualización
+                </div>
+                <div className="flex flex-wrap items-center gap-2.5 mt-1">
+                  <h3 className="font-bold text-lg text-white">
+                    {currentDb?.name || (currentDbId === 'master' ? 'Base Maestra Oficial' : currentDbId)}
+                  </h3>
+                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${
+                    currentDb?.is_published 
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' 
+                      : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                  }`}>
+                    {currentDb?.is_published ? '● Publicada' : '○ Borrador'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-1">
+                  Los precios editados aquí impactarán exclusivamente en esta base de datos aislada en PostgreSQL.
+                </p>
+              </div>
+            </div>
+
+            {/* Acciones: Clonar BD, Gestión BD, Selector de BD y Botón Publicar */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowCloneModal(true)}
+                className="text-xs font-semibold px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition-all flex items-center gap-1.5"
+                title="Clonar esta base para crear una nueva versión de precios"
+              >
+                <Copy size={14} />
+                Clonar Base
+              </button>
+
+              <button
+                type="button"
+                onClick={handleManage}
+                className="text-xs font-medium px-3.5 py-2 rounded-xl border border-slate-600 bg-slate-800/80 text-slate-200 hover:bg-slate-700/80 hover:text-white shadow-sm transition-all flex items-center gap-1.5"
+                title="Ir a Gestión de Bases de Datos"
+              >
+                <Settings size={14} />
+                Gestión BD
+              </button>
+
+              <div className="text-slate-800">
+                <DatabaseSelector
+                  value={currentDbId}
+                  onChange={handleDbChange}
+                />
+              </div>
+
+              {currentDb && (
+                <button 
+                  type="button"
+                  onClick={propOnTogglePublish}
+                  className={`text-xs font-bold px-4 py-2 rounded-xl shadow-md transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    currentDb.is_published 
+                      ? 'text-emerald-300 bg-emerald-950/60 border border-emerald-500/50 hover:bg-emerald-900/60' 
+                      : 'text-white bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 border border-emerald-500'
+                  }`}
+                  title={currentDb.is_published ? "Hacer clic para ocultar a los usuarios (volver a borrador)" : "Publicar esta base a los usuarios"}
+                >
+                  <Send size={14} />
+                  {currentDb.is_published ? 'Publicada' : 'Publicar Base'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
@@ -314,6 +455,15 @@ export default function MarketIndicatorsPanel() {
         </div>,
         document.body
       )}
+
+      {/* Modal de Clonar Base de Datos */}
+      <CloneDatabaseModal
+        isOpen={showCloneModal}
+        onClose={() => setShowCloneModal(false)}
+        onSuccess={handleDatabaseCloned}
+        sourceDatabaseId={currentDbId}
+        databases={databasesList}
+      />
     </div>
   );
 }

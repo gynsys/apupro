@@ -218,9 +218,9 @@ const AdminDatabasePage = () => {
         />
       </div>
 
-      <div className="flex justify-between items-center px-4 -mt-2">
-        <div className="flex gap-4 items-center">
-          {activeTab === 'visor_bd' && (
+      {activeTab === 'visor_bd' && (
+        <div className="flex justify-between items-center px-4 -mt-2">
+          <div className="flex gap-4 items-center">
             <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl border border-slate-300/60 shadow-inner">
               {[
                 { key: 'partidas', label: 'Partidas APU' },
@@ -241,38 +241,18 @@ const AdminDatabasePage = () => {
                 </button>
               ))}
             </div>
-          )}
-        </div>
-        <div className="flex gap-4 items-center">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate('/cost360/databases')}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 shadow-sm transition-all flex items-center gap-1"
-              title="Ir a Gestión de Bases de Datos"
-            >
-              <Database size={14} />
-              Gestión BD
-            </button>
-            <DatabaseSelector
-              value={selectedDatabase}
-              onChange={setSelectedDatabase}
-            />
-            {currentDbObj && (
-              <button 
-                onClick={handleTogglePublish}
-                className={`text-xs font-medium px-3 py-1.5 rounded-lg border shadow-sm transition-all whitespace-nowrap ${
-                  currentDbObj.is_published 
-                    ? 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100' 
-                    : 'text-slate-600 bg-slate-100 border-slate-200 hover:bg-slate-200'
-                }`}
-                title={currentDbObj.is_published ? "Ocultar esta base a los usuarios" : "Publicar esta base a los usuarios"}
-              >
-                {currentDbObj.is_published ? 'Publicada' : 'Borrador'}
-              </button>
-            )}
+          </div>
+          <div className="flex gap-4 items-center">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-slate-500">Visualizando:</span>
+              <DatabaseSelector
+                value={selectedDatabase}
+                onChange={setSelectedDatabase}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="flex-1 flex flex-col gap-4 min-h-0 mt-2">
         {activeTab === 'visor_bd' && visorSubTab === 'partidas' && (
@@ -384,7 +364,18 @@ const AdminDatabasePage = () => {
 
         {activeTab === 'update_bd' && (
           <div className="flex-1 overflow-y-auto bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-sm p-4">
-            <MarketIndicatorsPanel />
+            <MarketIndicatorsPanel 
+              selectedDatabase={selectedDatabase}
+              onDatabaseChange={setSelectedDatabase}
+              currentDbObj={currentDbObj}
+              onTogglePublish={handleTogglePublish}
+              onManageDatabases={() => navigate('/cost360/databases')}
+              onDatabaseCreated={(newDb) => {
+                reloadDatabases();
+                setSelectedDatabase(newDb.id);
+              }}
+              showDbControls={true}
+            />
           </div>
         )}
       </div>
