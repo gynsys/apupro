@@ -542,29 +542,39 @@ async def analyze_vendor_quote(
     if not raw_text.strip():
         raise HTTPException(status_code=400, detail="No se pudo extraer texto del documento.")
 
-    # 2. Filtrar lista objetivo según proveedor
-    if vendor_type == "matos":
+    raw_upper = raw_text.upper()
+
+    # 2. Detección automática del proveedor si es 'auto' o no especificado
+    detected_vendor = vendor_type
+    if vendor_type == "auto" or not vendor_type or vendor_type == "unknown":
+        if "PALL FERRETERIA" in raw_upper or "PALLFERRETERIA" in raw_upper or "J-30235324-6" in raw_upper:
+            detected_vendor = "pall"
+        elif "MATO SUPLIDORES" in raw_upper or "MATOS" in raw_upper or "J-00109827-5" in raw_upper:
+            detected_vendor = "matos"
+
+    # Filtrar lista objetivo según proveedor detectado
+    if detected_vendor == "matos":
         targets = [m for m in REFERENCE_MATERIALS_DEF if m["vendor"] == "Matos Suplidores"]
-    elif vendor_type == "pall":
+    elif detected_vendor == "pall":
         targets = [m for m in REFERENCE_MATERIALS_DEF if m["vendor"] == "Pall Ferretería"]
     else:
         targets = REFERENCE_MATERIALS_DEF
 
     rate = float(exchange_rate) if exchange_rate and float(exchange_rate) > 0 else 1.0
 
-    # 3. Fase 1: Extracción determinística ultra-rápida (Python + Regex sobre MarkItDown)
+    # 3. Fase 1: Extracción determinística ultra-rápida (Python + Regex sin LLM)
     direct_found = deterministic_extract_targets(raw_text, targets)
     found_codmats = {m["codmat"] for m in direct_found}
 
-    # 4. Fase 2: LLM solo si faltan materiales y NO es Matos
+    # 4. Fase 2: LLM SOLO para cotizaciones genéricas desconocidas
+    # Para Pall y Matos NUNCA se llama al LLM: evita 30s de demora innecesaria
     remaining_targets = [m for m in targets if m["codmat"] not in found_codmats]
     llm_found: List[Dict[str, Any]] = []
 
-    # Para Matos NUNCA se llama al LLM: todo se cruza por códigos directos y catálogo
-    if remaining_targets and vendor_type != "matos":
+    if remaining_targets and detected_vendor not in ("pall", "matos"):
         prompt_extract = f"""
 Eres un ingeniero de costos experto en análisis de precios unitarios (APU) y compras de ferretería y construcción.
-A continuación tienes el texto y tablas extraídos de una cotización de materiales ({'Proveedor: ' + vendor_type.upper() if vendor_type else 'Proveedor de construcción'}).
+A continuación tienes el texto y tablas extraídos de una cotización de materiales ({'Proveedor: ' + detected_vendor.upper() if detected_vendor else 'Proveedor de construcción'}).
 Tu objetivo es buscar en el texto los precios cotizados para los siguientes materiales de referencia y NORMALIZARLOS A LA UNIDAD ESPERADA EN LA BASE APU.
 
 LISTA DE MATERIALES OBJETIVO:
@@ -614,27 +624,43 @@ INSTRUCCIONES DE RESPUESTA:
     # Combinar resultados sin duplicados
     combined = direct_found + [item for item in llm_found if item.get("codmat") not in found_codmats]
 
-    # 5. Detección automática de moneda (VES vs USD) y auto-aplicación de tasa BCV oficial
-    is_ves = (
-        vendor_type == "matos" 
-        or "NETO BS" in raw_text.upper() 
-        or "BOLIVARES" in raw_text.upper() 
-        or any(it.get("precio_cotizado", 0) > 300 for it in combined)
-    )
-
-    effective_rate = rate
-    auto_bcv_used = False
-
-    # Si la cotización viene en bolívares y el usuario no colocó una tasa manual (> 1.0)
-    if is_ves and rate <= 1.0:
-        try:
-            bcv = get_bcv_rate()
-            if bcv and bcv > 1.0:
-                effective_rate = float(bcv)
+    # 5. Detección automática de moneda y tasa de cambio aplicable
+    if detected_vendor == "pall":
+        # Pall cotiza SIEMPRE en Dólares ($) directamente. Tasa = 1.0 fija.
+        is_ves = False
+        effective_rate = 1.0
+        auto_bcv_used = False
+    elif detected_vendor == "matos":
+        # Matos cotiza en Bolívares (VES)
+        is_ves = True
+        auto_bcv_used = False
+        if rate <= 1.0:
+            try:
+                bcv = get_bcv_rate()
+                if bcv and bcv > 1.0:
+                    effective_rate = float(bcv)
+                    auto_bcv_used = True
+            except Exception as ex_bcv:
+                logger.warning(f"Error consultando tasa BCV: {ex_bcv}")
+                effective_rate = 848.55
                 auto_bcv_used = True
-                logger.info(f"Tasa BCV oficial aplicada automáticamente a cotización en bolívares: {effective_rate}")
-        except Exception as ex_bcv:
-            logger.warning(f"Error al consultar tasa BCV oficial: {ex_bcv}")
+        else:
+            effective_rate = rate
+    else:
+        # Cotización genérica desconocida
+        is_ves = "NETO BS" in raw_upper or "BOLIVARES" in raw_upper or any(it.get("precio_cotizado", 0) > 300 for it in combined)
+        effective_rate = rate
+        auto_bcv_used = False
+        if is_ves and rate <= 1.0:
+            try:
+                bcv = get_bcv_rate()
+                if bcv and bcv > 1.0:
+                    effective_rate = float(bcv)
+                    auto_bcv_used = True
+            except Exception as ex_bcv:
+                logger.warning(f"Error al consultar tasa BCV oficial: {ex_bcv}")
+                effective_rate = 848.55
+                auto_bcv_used = True
 
     # Organizar resultados mapeados a los códigos
     matches: List[Dict[str, Any]] = []
@@ -651,7 +677,8 @@ INSTRUCCIONES DE RESPUESTA:
             if "BCV" not in orig_desc:
                 orig_desc = f"{orig_desc} ({orig_price:,.2f} Bs / {effective_rate:.2f} BCV = ${price_usd:.2f})"
         else:
-            price_usd = round(orig_price / rate, 4) if rate > 0 else orig_price
+            # En Pall o cotizaciones en USD el precio ya está en dólares
+            price_usd = orig_price
 
         matches.append({
             "codmat": cod,
@@ -659,12 +686,12 @@ INSTRUCCIONES DE RESPUESTA:
             "original_price": orig_price,
             "new_price": price_usd,
             "unit": item.get("unidad_cotizada", ""),
-            "vendor": vendor_type
+            "vendor": detected_vendor
         })
 
     return {
         "status": "success",
-        "vendor_type": vendor_type,
+        "vendor_type": detected_vendor,
         "database_id": database_id or "master",
         "total_matched": len(matches),
         "matches": matches,

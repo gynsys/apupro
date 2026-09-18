@@ -155,9 +155,18 @@ const PDFUpdaterTab = ({ selectedDatabase = 'master', onSuccess }) => {
       const data = await response.json();
       const matches = data.matches || [];
 
-      // Sincronizar tasa si el backend aplicó automáticamente la tasa BCV oficial
-      if (data.auto_bcv_used && data.applied_exchange_rate) {
+      // Sincronizar estado y tasa según la cotización detectada
+      if (data.vendor_type === 'pall' || data.currency_detected === 'USD') {
+        setExchangeRate(1);
+        if (vendorType === 'auto') {
+          setVendorType('pall');
+        }
+        toast.success('Cotización de Pall Ferretería detectada. Precios en Dólares ($).');
+      } else if (data.auto_bcv_used && data.applied_exchange_rate) {
         setExchangeRate(data.applied_exchange_rate);
+        if (vendorType === 'auto') {
+          setVendorType('matos');
+        }
         toast.success(
           `Cotización en Bolívares detectada. Precios convertidos a USD con Tasa BCV Oficial: ${Number(data.applied_exchange_rate).toFixed(2)} VES/USD`,
           { duration: 6000 }
