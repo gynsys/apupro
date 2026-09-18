@@ -191,4 +191,4 @@ pandas
 openpyxl==3.1.2
 google-auth
 cloudscraper==1.2.71
- 
+markitdown

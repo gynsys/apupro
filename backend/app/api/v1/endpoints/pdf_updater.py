@@ -8,7 +8,10 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 import fitz  # PyMuPDF
 import google.generativeai as genai
-from markitdown import MarkItDown
+try:
+    from markitdown import MarkItDown
+except ImportError:
+    MarkItDown = None  # type: ignore[assignment]
 import PIL.Image
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -414,25 +417,26 @@ async def analyze_vendor_quote(
     # 1. Extracción de texto
     if file.filename.lower().endswith('.pdf'):
         try:
-            # 1.1 Intentar extracción estructurada con MarkItDown para preservar tablas
-            tmp_path = None
-            try:
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-                    tmp_file.write(file_bytes)
-                    tmp_path = tmp_file.name
+            # 1.1 Intentar extracción estructurada con MarkItDown para preservar tablas si está disponible
+            if MarkItDown is not None:
+                tmp_path = None
+                try:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+                        tmp_file.write(file_bytes)
+                        tmp_path = tmp_file.name
 
-                md = MarkItDown()
-                res_md = md.convert(tmp_path)
-                if res_md and res_md.text_content and len(res_md.text_content.strip()) > 50:
-                    raw_text = res_md.text_content
-            except Exception as ex_md:
-                logger.warning(f"MarkItDown no pudo procesar el PDF, usando fallback PyMuPDF: {ex_md}")
-            finally:
-                if tmp_path and os.path.exists(tmp_path):
-                    try:
-                        os.remove(tmp_path)
-                    except Exception as ex_del:
-                        logger.warning(f"No se pudo eliminar archivo temporal {tmp_path}: {ex_del}")
+                    md = MarkItDown()
+                    res_md = md.convert(tmp_path)
+                    if res_md and res_md.text_content and len(res_md.text_content.strip()) > 50:
+                        raw_text = res_md.text_content
+                except Exception as ex_md:
+                    logger.warning(f"MarkItDown no pudo procesar el PDF, usando fallback PyMuPDF: {ex_md}")
+                finally:
+                    if tmp_path and os.path.exists(tmp_path):
+                        try:
+                            os.remove(tmp_path)
+                        except Exception as ex_del:
+                            logger.warning(f"No se pudo eliminar archivo temporal {tmp_path}: {ex_del}")
 
             # 1.2 Fallback a PyMuPDF si MarkItDown no extrajo suficiente texto
             if not raw_text or len(raw_text.strip()) < 50:
