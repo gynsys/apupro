@@ -14,6 +14,7 @@ from app.crud.crud_market import get_unsanitized_materials, apply_sanitization_b
 from app.services.ai_sanitization_service import sanitize_materials_batch
 from app.services.rule_sanitizer import sanitize_batch_rules
 from app.services.llm_router import invalidate_llm_cache
+from scripts.migrate_market_families_and_leaders import run_migration
 
 router = APIRouter()
 
@@ -46,7 +47,11 @@ def upgrade_db_endpoint() -> Dict[str, str]:
             conn.commit()
         except Exception as e:
             logger.warning(f"Note on market_factor column check: {e}")
-    return {"status": "Database upgraded successfully"}
+    try:
+        run_migration()
+    except Exception as e_mig:
+        logger.error(f"Error executing run_migration in upgrade_db_endpoint: {e_mig}", exc_info=True)
+    return {"status": "Database upgraded and market families migrated successfully"}
 
 
 @router.get("/update-key")

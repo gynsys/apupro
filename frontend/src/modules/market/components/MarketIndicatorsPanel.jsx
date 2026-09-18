@@ -91,7 +91,9 @@ export default function MarketIndicatorsPanel() {
 
   const filtered = indicators.filter(ind => 
     ind.description?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    ind.id?.toLowerCase().includes(searchTerm.toLowerCase())
+    ind.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ind.family_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ind.family_id?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -101,7 +103,7 @@ export default function MarketIndicatorsPanel() {
         <div>
           <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <Activity className="w-6 h-6 text-indigo-600" />
-            Insumos Líderes
+            Update BD — Insumos Líderes
           </h2>
           <p className="text-slate-500 mt-1 max-w-2xl">
             Estos son los materiales principales que arrastran el precio de sus familias.

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users } from 'lucide-react';
+import { Users, Activity } from 'lucide-react';
 import { TABS } from '../../constants/tabs.config';
 import { useUserCostos } from '../../../../context/UserCostosContext';
 import DecimalInput from '../../../../components/DecimalInput';
@@ -115,6 +115,19 @@ const TabNavigation = ({
           >
             <Users size={14} />
             <span>Usuarios</span>
+          </button>
+
+          <button
+            onClick={() => onTabChange('update_bd')}
+            className={`text-xs font-semibold px-3 py-1.5 rounded-lg border shadow-sm transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              activeTab === 'update_bd'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-blue-600'
+            }`}
+            title="Actualización de Precios e Insumos Líderes (Update BD)"
+          >
+            <Activity size={14} className={activeTab === 'update_bd' ? 'text-white' : 'text-indigo-600'} />
+            <span>Update BD</span>
           </button>
       </div>
 

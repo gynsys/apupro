@@ -14,6 +14,7 @@ import PDFsTab from '../components/tabs/PDFsTab';
 import UsuariosTab from '../components/tabs/UsuariosTab';
 import RAGDiagnosticTab from '../components/tabs/RAGDiagnosticTab';
 import PublishDatabaseModal from '../components/modals/PublishDatabaseModal';
+import MarketIndicatorsPanel from '../../market/components/MarketIndicatorsPanel';
 import { TABS } from '../constants/tabs.config';
 import { DEFAULT_APU_PROMPT } from '../constants/prompts.default';
 import GlassCard from '../../../components/shared/GlassCard';
@@ -380,6 +381,12 @@ const AdminDatabasePage = () => {
         )}
 
         {activeTab === 'usuarios' && <UsuariosTab />}
+
+        {activeTab === 'update_bd' && (
+          <div className="flex-1 overflow-y-auto bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-sm p-4">
+            <MarketIndicatorsPanel />
+          </div>
+        )}
       </div>
 
       <PublishDatabaseModal

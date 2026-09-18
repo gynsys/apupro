@@ -16,7 +16,7 @@ export default function MarketAdminPage() {
 
   const TABS = [
     { key: 'sanitization', label: 'Saneamiento IA' },
-    { key: 'indicators',   label: 'Insumos Líderes' },
+    { key: 'indicators',   label: 'Update BD' },
     { key: 'dedup',        label: '🔍 Deduplicar Materiales' },
   ];
 

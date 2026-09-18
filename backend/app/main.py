@@ -27,6 +27,7 @@ from app.api.v1.endpoints.users import process_plan_expirations
 from app.api.v1.endpoints.arko import get_current_arko_admin
 from app.db.models.arko import ArkoAdmin
 import app.db.models
+from scripts.migrate_market_families_and_leaders import run_migration
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +154,17 @@ try:
                 logger.info(f"Auto-migracion de {res_ra.rowcount} partidas de Redes Aereas a formato [numero]RA completada.")
         except Exception as ex_ra:
             logger.error(f"Error en auto-migracion de codigos RA: {ex_ra}", exc_info=True)
+
+        # Auto-migracion segura de familias Yeso/Anime y cobertura 100% de insumos lideres
+        try:
+            dw_exists = conn.execute(text("SELECT count(*) FROM cost360_material_families WHERE id = 'FAM-DRYWALL'")).scalar()
+            orphan_count = conn.execute(text("SELECT count(*) FROM cost360_materials WHERE family_id IS NULL OR family_id = ''")).scalar()
+            if not dw_exists or (orphan_count and orphan_count > 0):
+                logger.info(f"Detectada base de datos sin migración completa de mercado (huérfanos: {orphan_count}, Drywall: {dw_exists}). Ejecutando auto-migración...")
+                run_migration()
+                logger.info("Auto-migración de familias de mercado e insumos líderes completada.")
+        except Exception as ex_fam:
+            logger.error(f"Aviso en auto-migración de familias de mercado: {ex_fam}", exc_info=True)
 
     logger.info("Schema and data migrations for cost360 verified successfully.")
 except Exception as e:
