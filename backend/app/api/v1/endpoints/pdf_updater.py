@@ -80,76 +80,145 @@ REFERENCE_MATERIALS_DEF: List[Dict[str, Any]] = [
 ]
 
 
+def _parse_currency_num(val_str: str) -> Optional[float]:
+    val_str = val_str.strip().replace('$', '').replace('Bs', '').strip()
+    if not val_str:
+        return None
+    if ',' in val_str and '.' in val_str:
+        if val_str.rfind('.') > val_str.rfind(','):
+            val_str = val_str.replace(',', '')
+        else:
+            val_str = val_str.replace('.', '').replace(',', '.')
+    elif ',' in val_str:
+        val_str = val_str.replace(',', '.')
+    try:
+        n = float(val_str)
+        return n if n > 0 else None
+    except Exception:
+        return None
+
+
 def deterministic_extract_targets(raw_text: str, targets: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Extracción directa determinística utilizando los códigos de catálogo de los proveedores
-    conocidos (Pall y Matos) y patrones sobre el texto estructurado de MarkItDown.
+    conocidos (Pall y Matos) y patrones sobre el texto estructurado del documento sin requerir LLM.
     """
     found: List[Dict[str, Any]] = []
     found_codmats = set()
-    lines = raw_text.split('\n')
+    lines = [l.strip() for l in raw_text.splitlines() if l.strip()]
 
+    # 1. Búsqueda directa para Matos Suplidores (CRY226 y CRY211)
+    for i, line in enumerate(lines):
+        line_upper = line.upper()
+        # Lámina de yeso Knauf (ACA014): CRY226 o "LAMINA ... KNAUF"
+        if ("ACA014" not in found_codmats) and (
+            line == "CRY226" 
+            or ("CRY226" in line_upper)
+            or ("LAMINA" in line_upper and "KNAUF" in line_upper)
+            or ("LAMINA" in line_upper and "1,22" in line_upper and "2,44" in line_upper)
+        ):
+            window = lines[i:min(len(lines), i + 10)]
+            nums = [_parse_currency_num(x) for x in window if _parse_currency_num(x) is not None]
+            unit_price = None
+            if len(lines) > i + 5 and _parse_currency_num(lines[i + 5]):
+                unit_price = _parse_currency_num(lines[i + 5])
+            elif nums:
+                unit_price = nums[-2] if len(nums) >= 2 else nums[0]
+
+            if unit_price and unit_price > 0:
+                # 1 lámina = 1.22 x 2.44 = 2.9768 m2. En APU la unidad es m2.
+                price_m2 = round(unit_price / 2.9768, 4)
+                desc = f'LAMINA KNAUF 1.22x2.44 ({unit_price:,.2f} Bs / 2.977 m2 = {price_m2:,.2f} Bs/m2)'
+                found.append({
+                    "codmat": "ACA014",
+                    "descripcion_cotizada": desc,
+                    "precio_cotizado": price_m2,
+                    "unidad_cotizada": "m2"
+                })
+                found_codmats.add("ACA014")
+
+        # Yeso pintado / Anime (MAT1623): CRY211 o "YESO PINTADO LISO"
+        if ("MAT1623" not in found_codmats) and (
+            line == "CRY211"
+            or ("CRY211" in line_upper)
+            or ("YESO PINTADO" in line_upper and "1.20" in line_upper)
+        ):
+            window = lines[i:min(len(lines), i + 10)]
+            nums = [_parse_currency_num(x) for x in window if _parse_currency_num(x) is not None]
+            unit_price = None
+            if len(lines) > i + 5 and _parse_currency_num(lines[i + 5]):
+                unit_price = _parse_currency_num(lines[i + 5])
+            elif nums:
+                unit_price = nums[-2] if len(nums) >= 2 else nums[0]
+
+            if unit_price and unit_price > 0:
+                # Caja de 8 piezas
+                price_pza = round(unit_price / 8.0, 4)
+                desc = f'YESO PINTADO 1.20x0.60 CAJA 8 ({unit_price:,.2f} Bs / 8 pzas = {price_pza:,.2f} Bs/pza)'
+                found.append({
+                    "codmat": "MAT1623",
+                    "descripcion_cotizada": desc,
+                    "precio_cotizado": price_pza,
+                    "unidad_cotizada": "pieza"
+                })
+                found_codmats.add("MAT1623")
+
+    # 2. Búsqueda para Pall Ferretería y otros insumos por códigos de catálogo de proveedor
+    pall_units = {"SCO", "MT3", "UND", "PZA", "KGR", "CUÑ", "RLL", "GLN", "MTR", "KG"}
     for target in targets:
         codmat = target["codmat"]
+        if codmat in found_codmats:
+            continue
         vendor_codes = target.get("vendor_codes", [])
 
-        # 1. Búsqueda por códigos específicos de catálogo del proveedor
         for vcode in vendor_codes:
             if not vcode or codmat in found_codmats:
                 continue
-            for line in lines:
+            for i, line in enumerate(lines):
                 if vcode in line:
-                    nums = re.findall(r"\b\d+(?:[\.,]\d{2,4})\b", line)
-                    if nums:
-                        price_str = nums[-2] if len(nums) >= 2 else nums[0]
-                        # Normalizar formato monetario (ej: 12,758.04 o 11.76)
-                        if ',' in price_str and '.' in price_str:
-                            price_val = float(price_str.replace('.', '').replace(',', '.'))
-                        else:
-                            price_val = float(price_str.replace(',', '.'))
-                        if price_val > 0:
-                            # Normalización dimensional: si es cabilla cotizada por barra de 6m y la BD espera kgf
-                            desc_text = line.strip()
-                            if codmat == "ACE019" and ("6" in line or "UND" in line or "BARRA" in line.upper() or vcode == "CONST0035"):
-                                original_bar_price = price_val
-                                price_val = round(original_bar_price / 3.354, 4)
-                                desc_text = f"{line.strip()} (Barra 6m: ${original_bar_price:.2f} / 3.354 kg = ${price_val:.3f}/kgf)"
+                    window = lines[i:min(len(lines), i + 8)]
+                    unit_price = None
 
-                            found.append({
-                                "codmat": codmat,
-                                "descripcion_cotizada": desc_text,
-                                "precio_cotizado": price_val,
-                                "unidad_cotizada": target.get("unit", "")
-                            })
-                            found_codmats.add(codmat)
-                            break
+                    # Buscar inmediatamente tras la unidad de empaque (formato estándar Pall)
+                    for j, w in enumerate(window):
+                        if w.upper() in pall_units and j + 1 < len(window):
+                            cand = _parse_currency_num(window[j + 1])
+                            if cand is not None:
+                                unit_price = cand
+                                break
 
-        # 2. Búsqueda directa para productos de Matos Suplidores si no fue capturado por código
-        if codmat not in found_codmats:
-            if codmat == "ACA014" and ("LAMINA" in raw_text.upper() and ("1,22" in raw_text or "1.22" in raw_text or "KNAUF" in raw_text.upper())):
-                price_match = re.search(r"\b12[,\.]758[,\.]04\b", raw_text)
-                if price_match:
-                    full_sheet_bs = 12758.04
-                    # 1 lámina = 1.22 x 2.44 = 2.9768 m2. En APU la unidad es m2.
-                    price_m2_bs = round(full_sheet_bs / 2.9768, 4)
-                    found.append({
-                        "codmat": "ACA014",
-                        "descripcion_cotizada": f'LAMINA KNAUF 1.22x2.44 ({full_sheet_bs:,.2f} Bs / 2.977 m2 = {price_m2_bs:,.2f} Bs/m2)',
-                        "precio_cotizado": price_m2_bs,
-                        "unidad_cotizada": "m2"
-                    })
-                    found_codmats.add("ACA014")
+                    # Si el precio estaba en la misma línea
+                    if not unit_price:
+                        nums_inline = re.findall(r"\b\d+(?:[\.,]\d{2,4})\b", line)
+                        if nums_inline:
+                            unit_price = _parse_currency_num(nums_inline[-2] if len(nums_inline) >= 2 else nums_inline[0])
 
-            elif codmat == "MAT1623" and ("YESO PINTADO LISO" in raw_text.upper() or "CRY211" in raw_text):
-                price_match = re.search(r"\b5[,\.]856[,\.]95\b", raw_text)
-                if price_match:
-                    found.append({
-                        "codmat": "MAT1623",
-                        "descripcion_cotizada": "YESO PINTADO LISO 1.20 x 0.60 CAJA 8",
-                        "precio_cotizado": 5856.95,
-                        "unidad_cotizada": "LAM"
-                    })
-                    found_codmats.add("MAT1623")
+                    # O en las líneas inmediatas de la ventana
+                    if not unit_price:
+                        for w in window[1:]:
+                            parsed = _parse_currency_num(w)
+                            if parsed is not None:
+                                unit_price = parsed
+                                break
+
+                    if unit_price and unit_price > 0:
+                        desc_text = f"{vcode} - {target['name']}"
+                        price_val = unit_price
+
+                        # Conversión cabilla 3/8" (6m -> kgf)
+                        if codmat == "ACE019" and vcode == "CONST0035":
+                            orig_bar = unit_price
+                            price_val = round(orig_bar / 3.354, 4)
+                            desc_text = f"CABILLA 3/8\" 6M (Barra: ${orig_bar:.2f} / 3.354 kg = ${price_val:.3f}/kgf)"
+
+                        found.append({
+                            "codmat": codmat,
+                            "descripcion_cotizada": desc_text,
+                            "precio_cotizado": price_val,
+                            "unidad_cotizada": target.get("unit", "")
+                        })
+                        found_codmats.add(codmat)
+                        break
 
     return found
 
@@ -428,51 +497,29 @@ async def analyze_vendor_quote(
     # 1. Extracción de texto
     if file.filename.lower().endswith('.pdf'):
         try:
-            # 1.1 Intentar extracción estructurada con MarkItDown para preservar tablas si está disponible
-            if MarkItDown is not None:
-                tmp_path = None
-                try:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-                        tmp_file.write(file_bytes)
-                        tmp_path = tmp_file.name
+            # 1.1 Extracción rápida y precisa preservando la contigüidad de filas de la tabla con PyMuPDF
+            doc = fitz.open(stream=file_bytes, filetype='pdf')
+            for page in doc:
+                raw_text += page.get_text() + "\n"
 
-                    md = MarkItDown()
-                    res_md = md.convert(tmp_path)
-                    if res_md and res_md.text_content and len(res_md.text_content.strip()) > 50:
-                        raw_text = res_md.text_content
-                except Exception as ex_md:
-                    logger.warning(f"MarkItDown no pudo procesar el PDF, usando fallback PyMuPDF: {ex_md}")
-                finally:
-                    if tmp_path and os.path.exists(tmp_path):
-                        try:
-                            os.remove(tmp_path)
-                        except Exception as ex_del:
-                            logger.warning(f"No se pudo eliminar archivo temporal {tmp_path}: {ex_del}")
+            # 1.2 Si es un PDF escaneado (sin capa de texto), OCR con Gemini Vision
+            if len(raw_text.strip()) < 50:
+                provider = db.query(LLMProvider).filter(LLMProvider.provider_key == 'gemini').first()
+                if provider:
+                    genai.configure(api_key=decrypt_api_key(provider.api_key_enc))
 
-            # 1.2 Fallback a PyMuPDF si MarkItDown no extrajo suficiente texto
-            if not raw_text or len(raw_text.strip()) < 50:
-                doc = fitz.open(stream=file_bytes, filetype='pdf')
+                raw_text = ""
+                images = []
                 for page in doc:
-                    raw_text += page.get_text() + "\n"
+                    pix = page.get_pixmap(dpi=150)
+                    img = PIL.Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                    images.append(img)
 
-                # 1.3 Si es PDF escaneado (imagen pura), OCR con Gemini
-                if len(raw_text.strip()) < 50:
-                    provider = db.query(LLMProvider).filter(LLMProvider.provider_key == 'gemini').first()
-                    if provider:
-                        genai.configure(api_key=decrypt_api_key(provider.api_key_enc))
-
-                    raw_text = ""
-                    images = []
-                    for page in doc:
-                        pix = page.get_pixmap(dpi=150)
-                        img = PIL.Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                        images.append(img)
-
-                    if images:
-                        model = genai.GenerativeModel('gemini-1.5-flash')
-                        prompt_content = images + ["Extrae todo el texto de estas imágenes exactamente como aparece. Solo devuelve el texto plano, sin formato adicional, concatenando todo."]
-                        resp = model.generate_content(prompt_content)
-                        raw_text = resp.text
+                if images:
+                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    prompt_content = images + ["Extrae todo el texto de estas imágenes exactamente como aparece. Solo devuelve el texto plano, sin formato adicional, concatenando todo."]
+                    resp = model.generate_content(prompt_content)
+                    raw_text = resp.text
         except Exception as e:
             logger.error(f"Error procesando PDF de cotización de proveedor: {e}", exc_info=True)
             raise HTTPException(status_code=400, detail=f"Error leyendo PDF: {str(e)}")
@@ -509,11 +556,12 @@ async def analyze_vendor_quote(
     direct_found = deterministic_extract_targets(raw_text, targets)
     found_codmats = {m["codmat"] for m in direct_found}
 
-    # 4. Fase 2: LLM para ítems restantes no resueltos por catálogo directo
+    # 4. Fase 2: LLM solo si faltan materiales y NO es Matos
     remaining_targets = [m for m in targets if m["codmat"] not in found_codmats]
     llm_found: List[Dict[str, Any]] = []
 
-    if remaining_targets:
+    # Para Matos NUNCA se llama al LLM: todo se cruza por códigos directos y catálogo
+    if remaining_targets and vendor_type != "matos":
         prompt_extract = f"""
 Eres un ingeniero de costos experto en análisis de precios unitarios (APU) y compras de ferretería y construcción.
 A continuación tienes el texto y tablas extraídos de una cotización de materiales ({'Proveedor: ' + vendor_type.upper() if vendor_type else 'Proveedor de construcción'}).
@@ -561,12 +609,7 @@ INSTRUCCIONES DE RESPUESTA:
             elif isinstance(extracted, list):
                 llm_found = extracted
         except Exception as e:
-            logger.warning(f"LLM no disponible ({e}). Continuando con los resultados determinísticos.")
-            if not direct_found:
-                raise HTTPException(
-                    status_code=503, 
-                    detail=f"El servicio de IA está congestionado (503). Por favor reintenta en unos segundos o ingresa los precios manualmente."
-                )
+            logger.warning(f"LLM no disponible o congestionado ({e}). Continuando con resultados determinísticos directos.")
 
     # Combinar resultados sin duplicados
     combined = direct_found + [item for item in llm_found if item.get("codmat") not in found_codmats]
