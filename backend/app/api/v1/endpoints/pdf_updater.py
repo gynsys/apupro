@@ -22,7 +22,7 @@ from app.core.config import settings
 from app.crud.llm import decrypt_api_key
 from app.db.base import get_db
 from app.db.models.cost360 import CostMaterial, MaterialSynonym
-from app.db.models.llm_provider import LLMProvider
+from app.services.currency_service import get_bcv_rate
 from app.services.llm_router import call_llm_json
 
 router = APIRouter()
@@ -366,6 +366,17 @@ async def approve_quote(request: ApproveQuoteRequest, db: Session = Depends(get_
     }
 
 
+@router.get('/bcv-rate')
+def get_current_bcv_rate() -> Dict[str, Any]:
+    """Retorna la tasa oficial del BCV en tiempo real para cotizaciones en moneda nacional."""
+    try:
+        rate = get_bcv_rate()
+        return {"status": "success", "bcv_rate": rate}
+    except Exception as e:
+        logger.error(f"Error al obtener tasa BCV: {e}", exc_info=True)
+        return {"status": "error", "bcv_rate": 848.55, "message": str(e)}
+
+
 @router.get('/reference-items')
 def get_reference_items(database_id: Optional[str] = "master", db: Session = Depends(get_db)) -> Dict[str, Any]:
     if database_id and database_id != "master":
@@ -560,6 +571,28 @@ INSTRUCCIONES DE RESPUESTA:
     # Combinar resultados sin duplicados
     combined = direct_found + [item for item in llm_found if item.get("codmat") not in found_codmats]
 
+    # 5. Detección automática de moneda (VES vs USD) y auto-aplicación de tasa BCV oficial
+    is_ves = (
+        vendor_type == "matos" 
+        or "NETO BS" in raw_text.upper() 
+        or "BOLIVARES" in raw_text.upper() 
+        or any(it.get("precio_cotizado", 0) > 300 for it in combined)
+    )
+
+    effective_rate = rate
+    auto_bcv_used = False
+
+    # Si la cotización viene en bolívares y el usuario no colocó una tasa manual (> 1.0)
+    if is_ves and rate <= 1.0:
+        try:
+            bcv = get_bcv_rate()
+            if bcv and bcv > 1.0:
+                effective_rate = float(bcv)
+                auto_bcv_used = True
+                logger.info(f"Tasa BCV oficial aplicada automáticamente a cotización en bolívares: {effective_rate}")
+        except Exception as ex_bcv:
+            logger.warning(f"Error al consultar tasa BCV oficial: {ex_bcv}")
+
     # Organizar resultados mapeados a los códigos
     matches: List[Dict[str, Any]] = []
     for item in combined:
@@ -567,10 +600,19 @@ INSTRUCCIONES DE RESPUESTA:
         if not cod:
             continue
         orig_price = float(item.get("precio_cotizado", 0.0))
-        price_usd = round(orig_price / rate, 4) if rate > 0 else orig_price
+        orig_desc = item.get("descripcion_cotizada", "")
+
+        # Si está en VES, se convierte a USD dividiendo entre effective_rate
+        if is_ves and effective_rate > 1.0:
+            price_usd = round(orig_price / effective_rate, 4)
+            if "BCV" not in orig_desc:
+                orig_desc = f"{orig_desc} ({orig_price:,.2f} Bs / {effective_rate:.2f} BCV = ${price_usd:.2f})"
+        else:
+            price_usd = round(orig_price / rate, 4) if rate > 0 else orig_price
+
         matches.append({
             "codmat": cod,
-            "original_desc": item.get("descripcion_cotizada", ""),
+            "original_desc": orig_desc,
             "original_price": orig_price,
             "new_price": price_usd,
             "unit": item.get("unidad_cotizada", ""),
@@ -582,7 +624,10 @@ INSTRUCCIONES DE RESPUESTA:
         "vendor_type": vendor_type,
         "database_id": database_id or "master",
         "total_matched": len(matches),
-        "matches": matches
+        "matches": matches,
+        "currency_detected": "VES" if is_ves else "USD",
+        "applied_exchange_rate": effective_rate,
+        "auto_bcv_used": auto_bcv_used
     }
 
 

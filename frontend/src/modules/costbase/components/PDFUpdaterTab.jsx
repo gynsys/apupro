@@ -48,6 +48,8 @@ const PDFUpdaterTab = ({ selectedDatabase = 'master', onSuccess }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [vendorType, setVendorType] = useState('auto'); // 'auto' | 'pall' | 'matos'
   const [exchangeRate, setExchangeRate] = useState(1);
+  const [bcvRate, setBcvRate] = useState(null);
+  const [loadingBcv, setLoadingBcv] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterVendor, setFilterVendor] = useState('all'); // 'all' | 'pall' | 'matos'
   const fileInputRef = useRef(null);
@@ -56,6 +58,40 @@ const PDFUpdaterTab = ({ selectedDatabase = 'master', onSuccess }) => {
   useEffect(() => {
     fetchReferenceItems(selectedDatabase);
   }, [selectedDatabase]);
+
+  // Cargar tasa BCV oficial en tiempo real
+  useEffect(() => {
+    fetchBcvRate();
+  }, []);
+
+  const fetchBcvRate = async () => {
+    setLoadingBcv(true);
+    try {
+      const res = await fetch(`${API_URL}/pdf-updater/bcv-rate`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.bcv_rate) {
+          setBcvRate(Number(data.bcv_rate));
+        }
+      }
+    } catch (err) {
+      console.error('Error consultando tasa BCV:', err);
+    } finally {
+      setLoadingBcv(false);
+    }
+  };
+
+  const handleVendorSelect = (type) => {
+    setVendorType(type);
+    if (type === 'pall') {
+      setExchangeRate(1);
+    } else if (type === 'matos') {
+      if (bcvRate) {
+        setExchangeRate(bcvRate);
+        toast.success(`Tasa BCV oficial aplicada para Matos: ${bcvRate} VES/USD`);
+      }
+    }
+  };
 
   const fetchReferenceItems = async (dbId = selectedDatabase) => {
     setLoadingItems(true);
@@ -118,6 +154,15 @@ const PDFUpdaterTab = ({ selectedDatabase = 'master', onSuccess }) => {
 
       const data = await response.json();
       const matches = data.matches || [];
+
+      // Sincronizar tasa si el backend aplicó automáticamente la tasa BCV oficial
+      if (data.auto_bcv_used && data.applied_exchange_rate) {
+        setExchangeRate(data.applied_exchange_rate);
+        toast.success(
+          `Cotización en Bolívares detectada. Precios convertidos a USD con Tasa BCV Oficial: ${Number(data.applied_exchange_rate).toFixed(2)} VES/USD`,
+          { duration: 6000 }
+        );
+      }
 
       if (matches.length === 0) {
         toast('No se encontraron líneas correspondientes a los 24 insumos en este archivo.', {
@@ -309,7 +354,7 @@ const PDFUpdaterTab = ({ selectedDatabase = 'master', onSuccess }) => {
             </span>
             <button
               type="button"
-              onClick={() => setVendorType('auto')}
+              onClick={() => handleVendorSelect('auto')}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 vendorType === 'auto'
                   ? 'bg-indigo-600 text-white shadow-sm font-bold'
@@ -320,7 +365,7 @@ const PDFUpdaterTab = ({ selectedDatabase = 'master', onSuccess }) => {
             </button>
             <button
               type="button"
-              onClick={() => setVendorType('pall')}
+              onClick={() => handleVendorSelect('pall')}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                 vendorType === 'pall'
                   ? 'bg-blue-600 text-white shadow-sm font-bold'
@@ -332,7 +377,7 @@ const PDFUpdaterTab = ({ selectedDatabase = 'master', onSuccess }) => {
             </button>
             <button
               type="button"
-              onClick={() => setVendorType('matos')}
+              onClick={() => handleVendorSelect('matos')}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                 vendorType === 'matos'
                   ? 'bg-purple-600 text-white shadow-sm font-bold'
@@ -345,7 +390,7 @@ const PDFUpdaterTab = ({ selectedDatabase = 'master', onSuccess }) => {
           </div>
 
           {/* Tasa de cambio VES/USD */}
-          <div className="flex items-center gap-2 self-start md:self-auto">
+          <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
             <label className="text-xs font-medium text-slate-600 whitespace-nowrap">Tasa de Cambio:</label>
             <div className="flex items-center gap-1 bg-white px-2.5 py-1.5 border border-slate-200 rounded-xl shadow-2xs">
               <input
@@ -358,6 +403,19 @@ const PDFUpdaterTab = ({ selectedDatabase = 'master', onSuccess }) => {
               />
               <span className="text-[10px] font-semibold text-slate-400">VES/USD</span>
             </div>
+            {bcvRate && (
+              <button
+                type="button"
+                onClick={() => {
+                  setExchangeRate(bcvRate);
+                  toast.success(`Tasa BCV oficial aplicada: ${bcvRate} VES/USD`);
+                }}
+                className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
+                title="Hacer clic para usar la tasa oficial del Banco Central de Venezuela"
+              >
+                <span>BCV: <strong>{Number(bcvRate).toFixed(2)}</strong></span>
+              </button>
+            )}
           </div>
         </div>
 
