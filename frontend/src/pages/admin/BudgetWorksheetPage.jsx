@@ -800,12 +800,12 @@ export default function BudgetWorksheetPage() {
                   >
                     {budget.project_name || budget.name}
                   </h1>
+                  <span className="text-[10px] text-slate-500 font-medium leading-tight block mt-0.5">
+                    Total Partidas: {budget.items.filter(item => !item.is_chapter).length}
+                  </span>
                 </div>
               </div>
               <div className="flex md:hidden items-center shrink-0 gap-1.5">
-                <span className="text-xs text-slate-600 font-bold bg-slate-100 px-2 py-1 rounded">
-                  {budget.items.filter(item => !item.is_chapter).length} part.
-                </span>
                 <button 
                   onClick={() => setShowSettings(!showSettings)}
                   className="p-1.5 bg-white border border-slate-300 rounded text-slate-600 hover:bg-slate-50 transition-colors"
@@ -815,19 +815,12 @@ export default function BudgetWorksheetPage() {
                 </button>
                 <button 
                   onClick={() => setShowPrintModal(true)}
-                  className="p-1.5 bg-white border border-slate-300 rounded text-amber-700 hover:bg-amber-50 transition-colors"
+                  className="p-1.5 bg-white border border-slate-300 rounded text-slate-700 hover:bg-slate-50 transition-colors"
                   title="Imprimir Presupuesto"
                 >
                   <Printer size={17} />
                 </button>
               </div>
-            </div>
-
-            {/* Total Partidas count (Desktop) */}
-            <div className="hidden md:flex items-center shrink-0">
-              <span className="text-sm text-black font-bold whitespace-nowrap">
-                Total Partidas: {budget.items.filter(item => !item.is_chapter).length}
-              </span>
             </div>
 
             {/* Topbar Actions Portal */}
@@ -871,7 +864,7 @@ export default function BudgetWorksheetPage() {
                 <button 
                   onClick={handleSyncPrices}
                   disabled={syncing}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 text-blue-700 rounded hover:bg-blue-50 transition-colors font-medium text-sm"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 text-slate-700 rounded hover:bg-slate-50 transition-colors font-medium text-sm"
                 >
                   <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
                   {syncing ? 'Actualizando...' : 'Actualizar Precios'}
@@ -884,7 +877,7 @@ export default function BudgetWorksheetPage() {
                 </button>
                 <button 
                   onClick={() => setShowPrintModal(true)}
-                  className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 text-amber-700 rounded hover:bg-amber-50 transition-colors font-medium text-sm"
+                  className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 text-slate-700 rounded hover:bg-slate-50 transition-colors font-medium text-sm"
                 >
                   <Printer size={16} /> Imprimir
                 </button>
@@ -904,7 +897,7 @@ export default function BudgetWorksheetPage() {
               <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
                 <button  
                   onClick={() => { setChapterName(""); setShowChapterModal(true); }}
-                  className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-indigo-700 hover:bg-indigo-50 px-3 py-1.5 rounded font-medium transition-all text-xs sm:text-sm"
+                  className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded font-medium transition-all text-xs sm:text-sm"
                 >
                   <FolderPlus size={16} className="shrink-0" /> <span className="truncate">Agregar Capítulo</span>
                 </button>
@@ -933,7 +926,7 @@ export default function BudgetWorksheetPage() {
 
                 <button 
                   onClick={() => setShowPrintModal(true)}
-                  className="md:hidden flex items-center justify-center gap-2 bg-white border border-slate-300 text-amber-700 hover:bg-amber-50 px-3 py-1.5 rounded font-medium transition-all text-xs"
+                  className="md:hidden flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded font-medium transition-all text-xs"
                 >
                   <Printer size={16} className="shrink-0 text-amber-600" /> <span className="truncate">Imprimir</span>
                 </button>
