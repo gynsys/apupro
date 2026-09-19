@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Folder, FolderOpen, Plus, FileText, Trash2, Edit3, Copy, Search,
   Settings, Printer, FileSpreadsheet, CloudDownload, Upload,
-  MoreVertical, Clock, DollarSign, Loader, Share2, Link2, Calendar
+  MoreVertical, Clock, DollarSign, Loader, Share2, Link2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { budgetService } from '../../services/budgetService';
@@ -454,13 +454,6 @@ export default function BudgetHomePage() {
                     title="Exportar a Excel"
                   >
                     <FileSpreadsheet size={18} />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); navigate(`/budgets/${budget.id}/schedule`); }}
-                    className="btn-accion text-red-600 hover:text-red-700 hover:bg-red-50"
-                    title="Cronograma de Obra (CPM / Gantt)"
-                  >
-                    <Calendar size={18} />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleBackupExport(budget); }}
