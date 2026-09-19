@@ -788,7 +788,7 @@ export default function BudgetWorksheetPage() {
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <button 
                   onClick={() => navigate('/budgets')}
-                  className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm shrink-0"
+                  className="p-2 bg-white border border-slate-300 rounded hover:bg-slate-50 transition-colors shrink-0"
                   title="Volver a presupuestos"
                 >
                   <ArrowLeft size={20} className="text-slate-600" />
@@ -803,19 +803,19 @@ export default function BudgetWorksheetPage() {
                 </div>
               </div>
               <div className="flex md:hidden items-center shrink-0 gap-1.5">
-                <span className="text-xs text-slate-600 font-bold bg-slate-100 px-2 py-1 rounded-lg">
+                <span className="text-xs text-slate-600 font-bold bg-slate-100 px-2 py-1 rounded">
                   {budget.items.filter(item => !item.is_chapter).length} part.
                 </span>
                 <button 
                   onClick={() => setShowSettings(!showSettings)}
-                  className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors shadow-xs"
+                  className="p-1.5 bg-white border border-slate-300 rounded text-slate-600 hover:bg-slate-50 transition-colors"
                   title="Configuración Global"
                 >
                   <Settings size={17} />
                 </button>
                 <button 
                   onClick={() => setShowPrintModal(true)}
-                  className="p-1.5 bg-white border border-amber-200 rounded-lg text-amber-700 hover:bg-amber-50 transition-colors shadow-xs"
+                  className="p-1.5 bg-white border border-slate-300 rounded text-amber-700 hover:bg-amber-50 transition-colors"
                   title="Imprimir Presupuesto"
                 >
                   <Printer size={17} />
@@ -840,7 +840,7 @@ export default function BudgetWorksheetPage() {
                   onMouseLeave={() => setHeaderDbDropdownOpen(false)}
                 >
                   <button
-                    className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm text-sm"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 text-slate-700 rounded hover:bg-slate-50 transition-colors font-medium text-sm"
                   >
                     <Database size={16} />
                     Base de Datos
@@ -848,7 +848,7 @@ export default function BudgetWorksheetPage() {
                   </button>
                   {headerDbDropdownOpen && (
                     <div className="absolute top-full left-0 pt-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                      <div className="bg-white border border-slate-200 rounded-lg shadow-xl min-w-[200px] overflow-hidden py-1">
+                      <div className="bg-white border border-slate-300 rounded shadow-lg min-w-[200px] overflow-hidden py-1">
                         {databases.map(db => (
                           <button
                             key={db.id}
@@ -871,20 +871,20 @@ export default function BudgetWorksheetPage() {
                 <button 
                   onClick={handleSyncPrices}
                   disabled={syncing}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl hover:bg-blue-100 transition-colors font-medium shadow-sm text-sm"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 text-blue-700 rounded hover:bg-blue-50 transition-colors font-medium text-sm"
                 >
                   <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
                   {syncing ? 'Actualizando...' : 'Actualizar Precios'}
                 </button>
                 <button 
                   onClick={() => setShowSettings(!showSettings)}
-                  className="hidden md:flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm text-sm"
+                  className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 text-slate-700 rounded hover:bg-slate-50 transition-colors font-medium text-sm"
                 >
                   <Settings size={16} /> Configuración Global
                 </button>
                 <button 
                   onClick={() => setShowPrintModal(true)}
-                  className="hidden md:flex items-center gap-2 px-4 py-2 bg-white border border-amber-200 text-amber-700 rounded-xl hover:bg-amber-50 transition-colors font-medium shadow-sm text-sm"
+                  className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 text-amber-700 rounded hover:bg-amber-50 transition-colors font-medium text-sm"
                 >
                   <Printer size={16} /> Imprimir
                 </button>
@@ -896,7 +896,7 @@ export default function BudgetWorksheetPage() {
             <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
               <button  
                 onClick={handleOpenSearchModal}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2.5 sm:py-2 rounded-xl font-semibold shadow-lg shadow-blue-500/30 transition-all active:scale-95 text-sm"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded font-medium border border-blue-600 transition-all active:scale-95 text-sm"
               >
                 <Plus size={18} /> Agregar Partida
               </button>
@@ -904,7 +904,7 @@ export default function BudgetWorksheetPage() {
               <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
                 <button  
                   onClick={() => { setChapterName(""); setShowChapterModal(true); }}
-                  className="flex items-center justify-center gap-2 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 px-3 py-2 rounded-xl font-medium shadow-xs transition-all text-xs sm:text-sm"
+                  className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-indigo-700 hover:bg-indigo-50 px-3 py-1.5 rounded font-medium transition-all text-xs sm:text-sm"
                 >
                   <FolderPlus size={16} className="shrink-0" /> <span className="truncate">Agregar Capítulo</span>
                 </button>
@@ -912,7 +912,7 @@ export default function BudgetWorksheetPage() {
                 <button
                   onClick={handleExportBudgetToExcel}
                   disabled={exportingBudgetExcel}
-                  className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 px-3 py-2 rounded-xl font-medium shadow-xs transition-all disabled:opacity-50 text-xs sm:text-sm"
+                  className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded font-medium transition-all disabled:opacity-50 text-xs sm:text-sm"
                   title="Exportar presupuesto a Excel"
                 >
                   {exportingBudgetExcel ? (
@@ -926,14 +926,14 @@ export default function BudgetWorksheetPage() {
                 {/* VISIBLES EN MÓVIL (< md) */}
                 <button 
                   onClick={() => setShowSettings(!showSettings)}
-                  className="md:hidden flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-3 py-2 rounded-xl font-medium shadow-xs transition-all text-xs"
+                  className="md:hidden flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded font-medium transition-all text-xs"
                 >
                   <Settings size={16} className="shrink-0 text-slate-600" /> <span className="truncate">Configuración</span>
                 </button>
 
                 <button 
                   onClick={() => setShowPrintModal(true)}
-                  className="md:hidden flex items-center justify-center gap-2 bg-white border border-amber-200 text-amber-700 hover:bg-amber-50 px-3 py-2 rounded-xl font-medium shadow-xs transition-all text-xs"
+                  className="md:hidden flex items-center justify-center gap-2 bg-white border border-slate-300 text-amber-700 hover:bg-amber-50 px-3 py-1.5 rounded font-medium transition-all text-xs"
                 >
                   <Printer size={16} className="shrink-0 text-amber-600" /> <span className="truncate">Imprimir</span>
                 </button>
