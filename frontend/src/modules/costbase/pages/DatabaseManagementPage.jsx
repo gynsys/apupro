@@ -217,7 +217,7 @@ export default function DatabaseManagementPage() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Tarjeta Base Personalizada */}
-          <div className="tarjeta-presupuesto-ambar group cursor-default relative !flex !flex-col !items-stretch justify-between !h-[310px] !gap-0">
+          <div className="tarjeta-presupuesto-ambar group cursor-default relative !flex !flex-col !items-stretch justify-between !h-[250px] !gap-0">
             <div className="flex flex-col flex-1">
               {/* Header */}
               <div className="tarjeta-header !flex-none flex flex-col justify-start items-start pb-[3px] mb-2">
@@ -235,8 +235,8 @@ export default function DatabaseManagementPage() {
               </div>
 
               {/* Body */}
-              <div className="tarjeta-body flex-1 flex flex-col justify-between">
-                <p className="text-sm text-slate-600 group-hover:text-slate-700 mb-2 transition-colors">
+              <div className="tarjeta-body flex-1 flex flex-col">
+                <p className="text-sm text-center text-slate-600 group-hover:text-slate-700 mb-[5px] transition-colors">
                   Base de datos exclusiva para las partidas y APUs que creas desde cero o adaptas con el Generador IA.
                 </p>
 
@@ -251,7 +251,7 @@ export default function DatabaseManagementPage() {
                   </div>
                 </div>
 
-                <div className="tarjeta-detalles flex-col items-start gap-1">
+                <div className="tarjeta-detalles flex-col items-start gap-1 mt-auto">
                   <div className="detalle-fecha">
                     <Copy size={13} className="mini-icono" />
                     Origen: Creación propia / IA
