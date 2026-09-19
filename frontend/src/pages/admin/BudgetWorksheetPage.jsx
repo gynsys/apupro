@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { 
   ArrowLeft, Settings, Plus, Search, Layers, FileText, Printer,
-  DollarSign, Hash, Percent, Loader, X, Trash2, ArrowUp, ArrowDown, FolderPlus, RefreshCw, ChevronDown, Database, GripVertical, Download, Calculator
+  DollarSign, Hash, Percent, Loader, X, Trash2, ArrowUp, ArrowDown, FolderPlus, RefreshCw, ChevronDown, Database, GripVertical, Download, Calculator, Sparkles
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { toast } from 'react-hot-toast';
@@ -21,6 +21,7 @@ import { useCostbaseSearch as useCost360Search } from '../../modules/costbase/ho
 import { CostbaseSearchBar as Cost360SearchBar } from '../../modules/costbase/components/CostbaseSearchBar';
 import { SiteConfigContext } from '../../App';
 import { calculateItemPU, calculateBudgetTotals } from '../../utils/apuCalculations';
+import AIApuGeneratorModal from '../../modules/costbase/components/ai-generator/AIApuGeneratorModal';
 
 const ExcelIcon = ({ size = 20, className = "" }) => (
   <svg 
@@ -175,6 +176,7 @@ export default function BudgetWorksheetPage() {
 
   // Search DB Modal
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showAIApuModal, setShowAIApuModal] = useState(false);
   const {
     searchQuery, setSearchQuery,
     searchCovenin, setSearchCovenin,
@@ -439,6 +441,72 @@ export default function BudgetWorksheetPage() {
       } else {
         toast.error(error.message || 'Error agregando partida');
       }
+    }
+  };
+
+  const handleInsertAIApu = async (generatedItem) => {
+    if (!generatedItem) return;
+    try {
+      let targetOrder = 0;
+      if (selectedItemId && budget?.items) {
+        const selected = budget.items.find(i => i.id === selectedItemId);
+        if (selected) targetOrder = selected.order + 1;
+      }
+
+      const materials = (generatedItem.materials || []).map((m, idx) => ({
+        id: `m-${m.codigo || idx}`,
+        codigo: m.codigo || '',
+        descripcion: m.descripcion || '',
+        unidad: m.unidad || 'und',
+        cantidad: parseFloat(m.cantidad) || 0,
+        desperdicio: parseFloat(m.desperdicio) || 0,
+        precio_unitario: parseFloat(m.precio_unitario) || 0,
+        origen: 'base_personalizada'
+      }));
+
+      const equipments = (generatedItem.equipments || []).map((e, idx) => ({
+        id: `e-${e.codigo || idx}`,
+        codigo: e.codigo || '',
+        descripcion: e.descripcion || '',
+        unidad: e.unidad || 'día',
+        cantidad: parseFloat(e.cantidad) || 0,
+        depreciacion: parseFloat(e.depreciacion ?? 1.0) || 1.0,
+        precio_unitario: parseFloat(e.precio_unitario) || 0,
+        origen: 'base_personalizada'
+      }));
+
+      const labors = (generatedItem.labors || []).map((l, idx) => ({
+        id: `l-${l.codigo || idx}`,
+        codigo: l.codigo || '',
+        descripcion: l.descripcion || '',
+        unidad: l.unidad || 'día',
+        cantidad: parseFloat(l.cantidad) || 0,
+        jornal: parseFloat(l.jornal) || 0,
+        bono: parseFloat(l.bono) || 0,
+        precio_unitario: parseFloat(l.precio_unitario) || (parseFloat(l.jornal || 0) + parseFloat(l.bono || 0)),
+        origen: 'base_personalizada'
+      }));
+
+      await budgetService.addItem(id, {
+        cod_par: generatedItem.cod_par || generatedItem.codigo || `IA-${Date.now().toString().slice(-4)}`,
+        cov_par: generatedItem.cov_par || generatedItem.covenin || '',
+        description: generatedItem.description || generatedItem.descripcion || '',
+        unit: generatedItem.unit || generatedItem.unidad || 'UND',
+        quantity: 1.0,
+        performance: parseFloat(generatedItem.performance || generatedItem.rendimiento || 1.0) || 1.0,
+        order: targetOrder,
+        is_chapter: false,
+        materials,
+        equipments,
+        labors
+      });
+
+      await loadBudget();
+      toast.success('Partida generada con IA agregada exitosamente al presupuesto');
+    } catch (err) {
+      console.error('Error insertando APU de IA al presupuesto:', err);
+      toast.error(err.message || 'Error al agregar partida al presupuesto');
+      throw err;
     }
   };
 
@@ -1545,6 +1613,19 @@ export default function BudgetWorksheetPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* Botón Desde IA */}
+                  <button
+                    onClick={() => {
+                      setShowSearchModal(false);
+                      setShowAIApuModal(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 rounded-xl transition-colors font-semibold shadow-sm text-xs sm:text-sm cursor-pointer"
+                    title="Crear APU con Inteligencia Artificial e insertar directamente al presupuesto"
+                  >
+                    <Sparkles size={14} className="text-purple-600" />
+                    <span>Desde IA</span>
+                  </button>
                 </div>
               </div>
               <button 
@@ -1710,6 +1791,16 @@ export default function BudgetWorksheetPage() {
           </div>
         </div>,
         document.body
+      )}
+
+      {/* MODAL GENERADOR DE APU CON IA */}
+      {showAIApuModal && (
+        <AIApuGeneratorModal
+          isOpen={showAIApuModal}
+          onClose={() => setShowAIApuModal(false)}
+          onInsertToBudget={handleInsertAIApu}
+          budgetSettings={settings}
+        />
       )}
     </div>
   );
