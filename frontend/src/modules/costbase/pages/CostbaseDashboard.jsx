@@ -250,7 +250,7 @@ const Cost360Dashboard = () => {
               <button
                 onClick={handleSaveCostos}
                 disabled={!draft || loadingCostos}
-                className="px-3 py-2 sm:py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors touch-target flex items-center justify-center cursor-pointer"
+                className="px-3 py-2 sm:py-0 sm:h-[36px] sm:min-h-0 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors touch-target flex items-center justify-center cursor-pointer"
               >
                 {loadingCostos ? 'Guardando…' : 'Guardar'}
               </button>

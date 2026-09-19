@@ -174,8 +174,8 @@ const Cost360SearchBar = ({
           <label className="flex items-center cursor-pointer gap-2">
             <div className="relative">
               <input type="checkbox" className="sr-only" checked={searchDesc} onChange={(e) => setSearchDesc(e.target.checked)} />
-              <div className={`block w-10 h-6 rounded-full transition-colors ${searchDesc ? 'bg-blue-500' : 'bg-slate-300'}`}></div>
-              <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${searchDesc ? 'transform translate-x-4' : ''}`}></div>
+              <div className={`block w-8 h-[19px] rounded-full transition-colors ${searchDesc ? 'bg-blue-500' : 'bg-slate-300'}`}></div>
+              <div className={`absolute left-[3px] top-[3px] bg-white w-[13px] h-[13px] rounded-full transition-transform ${searchDesc ? 'transform translate-x-[13px]' : ''}`}></div>
             </div>
             <span className="text-slate-700 select-none font-medium">Descripción</span>
           </label>
@@ -183,8 +183,8 @@ const Cost360SearchBar = ({
           <label className="flex items-center cursor-pointer gap-2" title="Busca dentro de los Materiales, Equipos y Mano de Obra de las partidas">
             <div className="relative">
               <input type="checkbox" className="sr-only" checked={searchInsumos} onChange={(e) => setSearchInsumos(e.target.checked)} />
-              <div className={`block w-10 h-6 rounded-full transition-colors ${searchInsumos ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
-              <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${searchInsumos ? 'transform translate-x-4' : ''}`}></div>
+              <div className={`block w-8 h-[19px] rounded-full transition-colors ${searchInsumos ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
+              <div className={`absolute left-[3px] top-[3px] bg-white w-[13px] h-[13px] rounded-full transition-transform ${searchInsumos ? 'transform translate-x-[13px]' : ''}`}></div>
             </div>
             <span className="text-slate-700 select-none font-medium">Materiales</span>
           </label>
