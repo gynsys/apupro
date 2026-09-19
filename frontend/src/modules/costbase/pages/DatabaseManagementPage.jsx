@@ -220,7 +220,7 @@ export default function DatabaseManagementPage() {
           <div className="tarjeta-presupuesto-ambar group cursor-default relative !flex !flex-col !items-stretch justify-between !h-[310px] !gap-0">
             <div className="flex flex-col flex-1">
               {/* Header */}
-              <div className="tarjeta-header flex flex-col justify-center items-start mb-2">
+              <div className="tarjeta-header !flex-none flex flex-col justify-start items-start pb-[3px] mb-2">
                 <div className="flex items-center gap-3">
                   <div className="icono-archivo-ambar">
                     <Layers size={20} strokeWidth={2.2} />
