@@ -261,14 +261,14 @@ export default function DatabaseManagementPage() {
             </div>
 
             {/* Footer */}
-            <div className="pt-2 mt-[1px] border-t border-slate-200/70 group-hover:border-amber-200/80 flex flex-col gap-2 transition-colors">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+            <div className="pt-2 mt-[1px] border-t border-slate-200/70 group-hover:border-amber-200/80 flex items-center justify-between gap-2 transition-colors">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 shrink-0">
                 <CheckCircle size={15} />
                 <span>Activa</span>
               </div>
               <button
                 onClick={() => navigate('/cost360?db=personalizada')}
-                className="w-full flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:gap-2 cursor-pointer"
+                className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:gap-2 cursor-pointer shrink-0"
               >
                 <span>Ver Partidas</span>
                 <ArrowRight size={14} />
@@ -280,7 +280,7 @@ export default function DatabaseManagementPage() {
           {databases.map((db) => (
             <div
               key={db.id}
-              className="tarjeta-presupuesto-ambar group cursor-default relative !flex !flex-col !items-stretch justify-between !h-[310px]"
+              className="tarjeta-presupuesto-ambar group cursor-default relative !flex !flex-col !items-stretch justify-between !h-[250px]"
             >
               {/* Header */}
               <div className={`tarjeta-header flex flex-col justify-center ${db.is_master ? 'items-center pt-10' : 'items-start'}`}>
@@ -390,7 +390,7 @@ export default function DatabaseManagementPage() {
           {databases.length === 0 && (
             <div
               onClick={() => setShowCreateModal(true)}
-              className="rounded-2xl p-6 border-2 border-dashed border-slate-300 hover:border-blue-400 bg-white/40 hover:bg-blue-50/30 transition-all flex flex-col items-center justify-center text-center cursor-pointer min-h-[260px] group"
+              className="rounded-2xl p-6 border-2 border-dashed border-slate-300 hover:border-blue-400 bg-white/40 hover:bg-blue-50/30 transition-all flex flex-col items-center justify-center text-center cursor-pointer h-[250px] group"
             >
               <div className="w-12 h-12 rounded-full bg-slate-100 group-hover:bg-blue-100 text-slate-400 group-hover:text-blue-600 flex items-center justify-center mb-3 transition-colors">
                 <Plus size={24} />
