@@ -208,7 +208,7 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       id: 'msg-bot0',
       sender: 'bot',
       step: 0,
-      text: `¡Hola${greetingName}! Construir una descripción detallada de una partida es lo esencial para evitar ambigüedades al momento de la ejecución en campo, y es la clave para que la Inteligencia Artificial encuentre exactamente lo que necesitas.\n\nEn 5 pasos rápidos armaremos la mejor descripción basándonos en la información suministrada. ¿Comenzamos?`,
+      text: `¡Hola${greetingName}! Construir una descripción detallada de una partida es lo esencial para evitar ambigüedades al momento de la ejecución en campo.\n\nEn pocos pasos  armaremos la mejor descripción. \n¿Comenzamos?`,
       chips: ['Sí, comenzar']
     };
   }, [user]);
