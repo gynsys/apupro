@@ -794,7 +794,7 @@ export default function BudgetWorksheetPage() {
                   <ArrowLeft size={20} className="text-slate-600" />
                 </button>
                 <div className="min-w-0">
-                  <h1 className="text-lg sm:text-2xl font-bold text-slate-800 leading-tight truncate">
+                  <h1 className="text-[17px] font-bold text-slate-800 leading-tight truncate">
                     {budget.project_name || budget.name}
                   </h1>
                 </div>
