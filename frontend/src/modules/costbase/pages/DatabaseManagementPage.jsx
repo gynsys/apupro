@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Database, Plus, Trash2, Edit2, Copy, 
   TrendingUp, DollarSign, Users, Settings,
-  AlertTriangle, CheckCircle, X, Layers, ArrowRight
+  AlertTriangle, CheckCircle, X, Layers, ArrowRight, Calendar
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
@@ -336,7 +336,7 @@ export default function DatabaseManagementPage() {
               {/* Body */}
               <div className={`tarjeta-body flex-1 flex flex-col ${db.is_master ? 'items-center justify-center text-center' : ''}`}>
                 {db.description && (
-                  <p className={`text-sm text-slate-600 mb-2 ${db.is_master ? 'text-center my-auto px-2 max-w-[300px]' : ''}`}>{db.description}</p>
+                  <p className={`text-sm text-center text-slate-600 mb-2 ${db.is_master ? 'my-auto px-2 max-w-[300px]' : 'px-1'}`}>{db.description}</p>
                 )}
 
                 {/* Inflation Stats - Solo se muestra para el administrador / super admin (admin@arko360.net) */}
@@ -379,9 +379,16 @@ export default function DatabaseManagementPage() {
                     <Copy size={13} className="mini-icono" />
                     Origen: {db.source_database_id || 'master'}
                   </div>
-                  <div className={`detalle-fecha ${db.is_master ? 'text-center font-medium' : ''}`}>
+                  <div className={`detalle-fecha ${db.is_master ? 'text-center font-medium' : 'font-medium'}`}>
                     Total Partidas: {dbItemsCounts[db.id] !== undefined ? dbItemsCounts[db.id] : '...'}
                   </div>
+                  {(db.published_at || db.created_at) && (
+                    <div className={`detalle-fecha ${db.is_master ? 'flex items-center justify-center gap-1 text-center' : ''}`}>
+                      <Calendar size={13} className="mini-icono" />
+                      {db.is_published && db.published_at ? 'Publicación: ' : 'Actualización: '}
+                      {new Date(db.published_at || db.created_at).toLocaleDateString('es-VE')}
+                    </div>
+                  )}
                 </div>
               </div>
 
