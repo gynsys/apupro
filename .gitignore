@@ -62,3 +62,4 @@ scratch/
 *.db
 check_*.py
 test_*.py
+!backend/tests/*.py

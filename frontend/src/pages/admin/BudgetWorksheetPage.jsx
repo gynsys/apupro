@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { 
   ArrowLeft, Settings, Plus, Search, Layers, FileText, Printer,
-  DollarSign, Hash, Percent, Loader, X, Trash2, ArrowUp, ArrowDown, FolderPlus, RefreshCw, ChevronDown, Database, GripVertical, Download, Calculator
+  DollarSign, Hash, Percent, Loader, X, Trash2, ArrowUp, ArrowDown, FolderPlus, RefreshCw, ChevronDown, Database, GripVertical, Download, Calculator, Calendar
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { toast } from 'react-hot-toast';
@@ -918,6 +918,15 @@ export default function BudgetWorksheetPage() {
                     <ExcelIcon size={16} className="text-emerald-600 shrink-0" />
                   )}
                   <span className="truncate">Exportar Excel</span>
+                </button>
+
+                <button
+                  onClick={() => navigate(`/budgets/${id}/schedule`)}
+                  className="flex items-center justify-center gap-2 bg-white border border-red-200 text-red-700 hover:text-red-800 hover:bg-red-50 hover:border-red-300 px-3 py-2 rounded-xl font-medium shadow-xs transition-all text-xs sm:text-sm"
+                  title="Planificación y Cronograma de Obra (CPM / Gantt)"
+                >
+                  <Calendar size={16} className="text-red-600 shrink-0" />
+                  <span className="truncate">Cronograma CPM</span>
                 </button>
 
                 {/* VISIBLES EN MÓVIL (< md) */}

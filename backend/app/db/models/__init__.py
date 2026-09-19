@@ -6,6 +6,7 @@ from app.db.models.costbase import (
     CostbaseItem, CostbaseMaterial, CostbaseLabor, CostbaseEquipment
 )
 from app.db.models.costbase_database import Cost360Database, CostbaseDatabase
+from app.db.models.schedule import ScheduleProject, ScheduleActivity, ScheduleDependency
 
 __all__ = [
     "LLMProvider",
@@ -19,5 +20,8 @@ __all__ = [
     "CostMaterial",
     "CostLabor",
     "CostEquipment",
-    "Cost360Database"
+    "Cost360Database",
+    "ScheduleProject",
+    "ScheduleActivity",
+    "ScheduleDependency"
 ]

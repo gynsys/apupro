@@ -17,6 +17,8 @@ from app.api.v1.endpoints import notifications
 from app.api.v1.endpoints import payments
 from app.api.v1.endpoints.dedup import router_dedup
 from app.api.v1.endpoints import users as users_module
+from app.api.v1.endpoints import schedule
+
 api_router = APIRouter()
 
 # Arko Core Endpoints
@@ -41,3 +43,4 @@ api_router.include_router(notifications.router, prefix="/notifications", tags=["
 api_router.include_router(payments.router, prefix="/payments", tags=["payments"])
 api_router.include_router(router_dedup, prefix="/dedup", tags=["dedup"])
 api_router.include_router(users_module.router, prefix="/users", tags=["users"])
+api_router.include_router(schedule.router, prefix="/schedules", tags=["schedules"])

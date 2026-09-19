@@ -10,6 +10,7 @@ import BudgetHomePage from './pages/admin/BudgetHomePage.jsx';
 import BudgetWorksheetPage from './pages/admin/BudgetWorksheetPage.jsx';
 import BudgetAPUEditorPage from './pages/admin/BudgetAPUEditorPage.jsx';
 import SharedBudgetPage from './pages/admin/SharedBudgetPage.jsx';
+import SchedulePage from './pages/admin/SchedulePage.jsx';
 import CalculadoraFCASPage from './pages/tools/CalculadoraFCASPage.jsx';
 import CostbaseDashboard from './modules/costbase/pages/CostbaseDashboard.jsx';
 import APUViewer from './modules/costbase/pages/APUViewer.jsx';
@@ -153,6 +154,7 @@ function App() {
               <Route index element={<BudgetHomePage />} />
               <Route path=":id" element={<BudgetWorksheetPage />} />
               <Route path=":id/item/:itemId" element={<BudgetAPUEditorPage />} />
+              <Route path=":id/schedule" element={<SchedulePage />} />
             </Route>
 
             {/* Rutas para sitios clonados usando el slug (Obsoleto /login retirado) */}
