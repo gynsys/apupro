@@ -217,7 +217,7 @@ export default function DatabaseManagementPage() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Tarjeta Base Personalizada */}
-          <div className="tarjeta-presupuesto-ambar group cursor-default relative !flex !flex-col !items-stretch justify-between !h-[310px]">
+          <div className="tarjeta-presupuesto-ambar group cursor-default relative !flex !flex-col !items-stretch justify-between !h-[310px] !gap-0">
             <div className="flex flex-col flex-1">
               {/* Header */}
               <div className="tarjeta-header flex flex-col justify-center items-start mb-2">
@@ -261,7 +261,7 @@ export default function DatabaseManagementPage() {
             </div>
 
             {/* Footer */}
-            <div className="pt-2 mt-2 border-t border-slate-200/70 group-hover:border-amber-200/80 flex flex-col gap-2 transition-colors">
+            <div className="pt-2 mt-[1px] border-t border-slate-200/70 group-hover:border-amber-200/80 flex flex-col gap-2 transition-colors">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
                 <CheckCircle size={15} />
                 <span>Activa</span>
