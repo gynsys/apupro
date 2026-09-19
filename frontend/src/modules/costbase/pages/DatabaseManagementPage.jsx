@@ -25,6 +25,7 @@ export default function DatabaseManagementPage() {
   const { refreshDatabases: reloadDatabases } = useDatabaseContext();
   const [databases, setDatabases] = useState([]);
   const [customItemsCount, setCustomItemsCount] = useState(0);
+  const [dbItemsCounts, setDbItemsCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -61,11 +62,30 @@ export default function DatabaseManagementPage() {
     try {
       setLoading(true);
       const data = await cost360DatabaseService.getAll();
-      setDatabases(data.databases || []);
+      const dbs = data.databases || [];
+      setDatabases(dbs);
 
       try {
         const customRes = await cost360Service.fetchItems(0, 1, '', '', 'personalizada');
         setCustomItemsCount(customRes?.total || 0);
+      } catch (err) {
+        // Ignorar silenciosamente
+      }
+
+      // Obtener cantidad dinámica de partidas codificadas por cada base de datos
+      try {
+        const counts = {};
+        await Promise.all(
+          dbs.map(async (db) => {
+            try {
+              const res = await cost360Service.fetchItems(0, 1, '', '', db.id, true, false, '', true);
+              counts[db.id] = res?.total ?? 0;
+            } catch (e) {
+              counts[db.id] = 0;
+            }
+          })
+        );
+        setDbItemsCounts(counts);
       } catch (err) {
         // Ignorar silenciosamente
       }
@@ -283,7 +303,7 @@ export default function DatabaseManagementPage() {
               className="tarjeta-presupuesto-ambar group cursor-default relative !flex !flex-col !items-stretch justify-between !h-[250px]"
             >
               {/* Header */}
-              <div className={`tarjeta-header flex flex-col justify-center ${db.is_master ? 'items-center pt-10' : 'items-start'}`}>
+              <div className={`tarjeta-header flex flex-col !justify-center ${db.is_master ? 'items-center' : 'items-start'}`}>
                 <div className="flex items-center gap-3">
                   <div className="icono-archivo-ambar">
                     <Database size={20} strokeWidth={2} />
@@ -314,7 +334,7 @@ export default function DatabaseManagementPage() {
               )}
 
               {/* Body */}
-              <div className={`tarjeta-body flex-1 flex flex-col ${db.is_master ? 'items-center justify-center text-center -translate-y-[25px]' : ''}`}>
+              <div className={`tarjeta-body flex-1 flex flex-col ${db.is_master ? 'items-center justify-center text-center' : ''}`}>
                 {db.description && (
                   <p className={`text-sm text-slate-600 mb-2 ${db.is_master ? 'text-center my-auto px-2 max-w-[300px]' : ''}`}>{db.description}</p>
                 )}
@@ -359,15 +379,15 @@ export default function DatabaseManagementPage() {
                     <Copy size={13} className="mini-icono" />
                     Origen: {db.source_database_id || 'master'}
                   </div>
-                  <div className={`detalle-fecha ${db.is_master ? 'text-center' : ''}`}>
-                    Creado: {db.created_at ? new Date(db.created_at).toLocaleDateString('es-VE') : 'N/A'}
+                  <div className={`detalle-fecha ${db.is_master ? 'text-center font-medium' : ''}`}>
+                    Total Partidas: {dbItemsCounts[db.id] !== undefined ? dbItemsCounts[db.id] : '...'}
                   </div>
                 </div>
               </div>
 
               {/* Footer (Activa indicator) */}
               <div className={`flex items-center gap-2 text-sm pt-2 border-t border-slate-100 ${
-                db.is_master ? 'justify-center -translate-y-[25px]' : ''
+                db.is_master ? 'justify-center' : ''
               } ${
                 db.is_active ? 'text-green-600' : 'text-slate-400'
               }`}>
