@@ -375,10 +375,6 @@ export default function DatabaseManagementPage() {
 
                 {/* Metadata */}
                 <div className={`tarjeta-detalles flex-col ${db.is_master ? 'items-center justify-center text-center mt-auto' : 'items-start mt-auto'} gap-1`}>
-                  <div className={`detalle-fecha ${db.is_master ? 'flex items-center justify-center gap-1' : ''}`}>
-                    <Copy size={13} className="mini-icono" />
-                    Origen: {db.source_database_id || 'master'}
-                  </div>
                   <div className={`detalle-fecha ${db.is_master ? 'text-center font-medium' : 'font-medium'}`}>
                     Total Partidas: {dbItemsCounts[db.id] !== undefined ? dbItemsCounts[db.id] : '...'}
                   </div>
