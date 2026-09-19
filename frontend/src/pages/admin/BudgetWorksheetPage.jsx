@@ -782,10 +782,10 @@ export default function BudgetWorksheetPage() {
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex-1 flex flex-col relative overflow-hidden">
         {/* WORKSHEET HEADER BAR */}
         <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-200 bg-white shrink-0">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 min-w-0">
             {/* Project Name + Back Button */}
-            <div className="flex items-center justify-between w-full md:w-auto gap-3">
-              <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center justify-between w-full md:w-auto md:flex-1 min-w-0 gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 <button 
                   onClick={() => navigate('/budgets')}
                   className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm shrink-0"
@@ -793,8 +793,11 @@ export default function BudgetWorksheetPage() {
                 >
                   <ArrowLeft size={20} className="text-slate-600" />
                 </button>
-                <div className="min-w-0">
-                  <h1 className="text-[17px] font-bold text-slate-800 leading-tight truncate">
+                <div className="min-w-0 flex-1">
+                  <h1 
+                    className="text-[17px] font-bold text-slate-800 leading-tight truncate block max-w-full"
+                    title={budget.project_name || budget.name}
+                  >
                     {budget.project_name || budget.name}
                   </h1>
                 </div>
@@ -821,8 +824,8 @@ export default function BudgetWorksheetPage() {
             </div>
 
             {/* Total Partidas count (Desktop) */}
-            <div className="hidden md:flex items-center">
-              <span className="text-sm text-black font-bold">
+            <div className="hidden md:flex items-center shrink-0">
+              <span className="text-sm text-black font-bold whitespace-nowrap">
                 Total Partidas: {budget.items.filter(item => !item.is_chapter).length}
               </span>
             </div>
@@ -890,7 +893,7 @@ export default function BudgetWorksheetPage() {
             )}
 
             {/* Action Buttons: Partidas, Capítulos, Excel, Configuración, Imprimir */}
-            <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
               <button  
                 onClick={handleOpenSearchModal}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2.5 sm:py-2 rounded-xl font-semibold shadow-lg shadow-blue-500/30 transition-all active:scale-95 text-sm"
