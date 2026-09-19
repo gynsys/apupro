@@ -177,31 +177,6 @@ export default function AppLayout() {
             </div>
           )}
         </div>
-
-        {/* Botón Centro de Ayuda */}
-        <div className="group relative w-full pb-2">
-          <button
-            onClick={() => {
-              setSidebarOpen(false);
-              setShowHelpDrawer(true);
-            }}
-            className={`flex items-center ${
-              isMobile ? 'justify-start px-3.5 py-2.5 gap-3' : 'justify-center p-3'
-            } rounded-xl transition-all duration-200 text-slate-600 hover:bg-blue-50 hover:text-blue-600 w-full min-h-[44px] touch-target cursor-pointer`}
-            title="Centro de Ayuda"
-          >
-            <HelpCircle size={22} className="text-blue-500 shrink-0" />
-            {isMobile && (
-              <span className="text-sm font-medium tracking-tight truncate">Centro de Ayuda</span>
-            )}
-          </button>
-          {!isMobile && (
-            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
-              Centro de Ayuda
-              <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
-            </div>
-          )}
-        </div>
       </div>
     </nav>
   );
