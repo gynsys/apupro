@@ -776,7 +776,7 @@ export default function ApuEditorUI({
                       (% sobre el Costo Unitario de la Partida):
                     </td>
                     <td className="p-2 text-right border-b border-slate-300 bg-white font-black text-slate-800 border-l border-slate-200 shadow-inner">
-                      {incidenciaManoObra.toLocaleString('es-VE', {minimumFractionDigits:4, maximumFractionDigits:4})} %
+                      {incidenciaManoObra.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})} %
                     </td>
                   </tr>
                 </tbody>

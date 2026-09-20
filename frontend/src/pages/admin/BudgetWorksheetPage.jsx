@@ -856,7 +856,7 @@ export default function BudgetWorksheetPage() {
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <button 
                   onClick={() => navigate('/budgets')}
-                  className="p-2 bg-white border border-slate-300 rounded hover:bg-slate-50 transition-colors shrink-0"
+                  className="p-2 bg-white border border-slate-400 hover:border-slate-500 rounded hover:bg-slate-50 transition-colors shrink-0 cursor-pointer"
                   title="Volver a presupuestos"
                 >
                   <ArrowLeft size={20} className="text-slate-600" />
@@ -876,14 +876,14 @@ export default function BudgetWorksheetPage() {
               <div className="flex md:hidden items-center shrink-0 gap-1.5">
                 <button 
                   onClick={() => setShowSettings(!showSettings)}
-                  className="p-1.5 bg-white border border-slate-300 rounded text-slate-600 hover:bg-slate-50 transition-colors"
+                  className="p-1.5 bg-white border border-slate-400 hover:border-slate-500 rounded text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
                   title="Configuración Global"
                 >
                   <Settings size={17} />
                 </button>
                 <button 
                   onClick={() => setShowPrintModal(true)}
-                  className="p-1.5 bg-white border border-slate-300 rounded text-slate-700 hover:bg-slate-50 transition-colors"
+                  className="p-1.5 bg-white border border-slate-400 hover:border-slate-500 rounded text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
                   title="Imprimir Presupuesto"
                 >
                   <Printer size={17} />
@@ -901,7 +901,7 @@ export default function BudgetWorksheetPage() {
                   onMouseLeave={() => setHeaderDbDropdownOpen(false)}
                 >
                   <button
-                    className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 text-slate-700 rounded hover:bg-slate-50 transition-colors font-medium text-sm"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-400 hover:border-slate-500 text-slate-700 rounded hover:bg-slate-50 transition-colors font-medium text-sm cursor-pointer"
                   >
                     <Database size={16} />
                     Base de Datos
@@ -932,20 +932,20 @@ export default function BudgetWorksheetPage() {
                 <button 
                   onClick={handleSyncPrices}
                   disabled={syncing}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 text-slate-700 rounded hover:bg-slate-50 transition-colors font-medium text-sm"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-400 hover:border-slate-500 text-slate-700 rounded hover:bg-slate-50 transition-colors font-medium text-sm cursor-pointer"
                 >
                   <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
                   {syncing ? 'Actualizando...' : 'Actualizar Precios'}
                 </button>
                 <button 
                   onClick={() => setShowSettings(!showSettings)}
-                  className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 text-slate-700 rounded hover:bg-slate-50 transition-colors font-medium text-sm"
+                  className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-400 hover:border-slate-500 text-slate-700 rounded hover:bg-slate-50 transition-colors font-medium text-sm cursor-pointer"
                 >
                   <Settings size={16} /> Configuración Global
                 </button>
                 <button 
                   onClick={() => setShowPrintModal(true)}
-                  className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 text-slate-700 rounded hover:bg-slate-50 transition-colors font-medium text-sm"
+                  className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-400 hover:border-slate-500 text-slate-700 rounded hover:bg-slate-50 transition-colors font-medium text-sm cursor-pointer"
                 >
                   <Printer size={16} /> Imprimir
                 </button>
@@ -965,7 +965,7 @@ export default function BudgetWorksheetPage() {
               <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
                 <button  
                   onClick={() => { setChapterName(""); setShowChapterModal(true); }}
-                  className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded font-medium transition-all text-xs sm:text-sm"
+                  className="flex items-center justify-center gap-2 bg-white border border-slate-400 hover:border-slate-500 text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded font-medium transition-all text-xs sm:text-sm cursor-pointer"
                 >
                   <FolderPlus size={16} className="shrink-0" /> <span className="truncate">Agregar Capítulo</span>
                 </button>
@@ -973,7 +973,7 @@ export default function BudgetWorksheetPage() {
                 <button
                   onClick={handleExportBudgetToExcel}
                   disabled={exportingBudgetExcel}
-                  className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded font-medium transition-all disabled:opacity-50 text-xs sm:text-sm"
+                  className="flex items-center justify-center gap-2 bg-white border border-slate-400 hover:border-slate-500 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded font-medium transition-all disabled:opacity-50 text-xs sm:text-sm cursor-pointer"
                   title="Exportar presupuesto a Excel"
                 >
                   {exportingBudgetExcel ? (
@@ -987,14 +987,14 @@ export default function BudgetWorksheetPage() {
                 {/* VISIBLES EN MÓVIL (< md) */}
                 <button 
                   onClick={() => setShowSettings(!showSettings)}
-                  className="md:hidden flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded font-medium transition-all text-xs"
+                  className="md:hidden flex items-center justify-center gap-2 bg-white border border-slate-400 hover:border-slate-500 text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded font-medium transition-all text-xs cursor-pointer"
                 >
                   <Settings size={16} className="shrink-0 text-slate-600" /> <span className="truncate">Configuración</span>
                 </button>
 
                 <button 
                   onClick={() => setShowPrintModal(true)}
-                  className="md:hidden flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded font-medium transition-all text-xs"
+                  className="md:hidden flex items-center justify-center gap-2 bg-white border border-slate-400 hover:border-slate-500 text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded font-medium transition-all text-xs cursor-pointer"
                 >
                   <Printer size={16} className="shrink-0 text-amber-600" /> <span className="truncate">Imprimir</span>
                 </button>
