@@ -306,9 +306,9 @@ export default function BudgetPrintLayout({ budget, config }) {
         <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '12px', width: '100%', boxSizing: 'border-box' }}>
 
           {budget.notes && budget.notes.trim() !== '' ? (
-            <div style={{ flex: 1, marginRight: '20px', border: '1px solid #d1d5db', borderRadius: '4px', padding: '6px 10px', fontSize: '10px', backgroundColor: '#fff' }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '3px', textTransform: 'uppercase', color: '#111827', fontSize: '10px' }}>Nota:</div>
-              <div style={{ whiteSpace: 'pre-wrap', color: '#374151', lineHeight: '1.4' }}>{budget.notes}</div>
+            <div style={{ flex: 1, marginRight: '20px', border: '1px solid #d1d5db', borderRadius: '4px', padding: '6px 10px', fontSize: '14px', backgroundColor: '#fff' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '3px', textTransform: 'uppercase', color: '#111827', fontSize: '12px' }}>Nota:</div>
+              <div style={{ whiteSpace: 'pre-wrap', color: '#374151', lineHeight: '1.45', fontSize: '14px' }}>{budget.notes}</div>
             </div>
           ) : (
             <div style={{ flex: 1 }} />
