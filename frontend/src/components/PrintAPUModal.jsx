@@ -66,18 +66,6 @@ export default function PrintAPUModal({ isOpen, onClose, onPrint, budgetName = "
                   Imprimir APU Actual
                 </span>
               </label>
-
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <div onClick={() => handleChange('scope', 'all')} className="text-sky-600 transition-transform group-active:scale-95">
-                  {options.scope === 'all' ? <CheckSquare className="text-sky-600" size={20} /> : <Square className="text-sky-300" size={20} />}
-                </div>
-                <span
-                  className="text-sm font-medium text-slate-700 select-none group-hover:text-amber-900 transition-colors"
-                  onClick={() => handleChange('scope', 'all')}
-                >
-                  Imprimir Todos los APU
-                </span>
-              </label>
             </div>
           </div>
 

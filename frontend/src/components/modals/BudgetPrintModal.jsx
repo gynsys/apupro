@@ -117,7 +117,7 @@ export default function BudgetPrintModal({ onClose, onPrint, initialCurrency = '
                 <span className="text-sm font-medium text-slate-700 select-none group-hover:text-amber-900 transition-colors" onClick={() => handleTypeChange('capitulos')}>Presupuesto por Capítulos</span>
               </label>
 
-              <label className="flex items-center gap-3 cursor-pointer group mt-1 pt-1.5 border-t border-amber-600/15">
+              <label className="flex items-center gap-3 cursor-pointer group mt-1 border-t border-amber-600/15">
                 <div onClick={() => toggleCheckbox('includeAllApus')} className="text-sky-600 transition-transform group-active:scale-95">
                   {config.includeAllApus ? <CheckSquare className="text-sky-600" size={20} /> : <Square className="text-sky-300" size={20} />}
                 </div>
