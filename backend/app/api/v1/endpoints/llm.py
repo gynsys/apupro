@@ -30,6 +30,7 @@ from app.crud.llm import (
     decrypt_api_key
 )
 from app.services.llm_router import invalidate_llm_cache
+from app.services.typesafe_service import test_typesafe_connection
 
 router = APIRouter()
 
@@ -322,6 +323,15 @@ def test_ai_key(
                     latency_ms=latency,
                     error=f"HTTP {resp.status_code}: {resp.text[:120]}"
                 )
+
+        elif key_type == "typesafe":
+            success, latency, msg = test_typesafe_connection(plain_key, provider.model_name or "jev-latest")
+            return LLMProviderTestResult(
+                success=success,
+                latency_ms=latency,
+                response_preview=msg if success else None,
+                error=msg if not success else None
+            )
 
         else:
             latency = int((time.time() - start_time) * 1000)

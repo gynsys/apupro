@@ -98,7 +98,9 @@ export const generateAIApu = async (
   bypassExactMatch = false,
   acceptExactMatchCode = null,
   unit = null,
-  generationMode = 'rag'
+  generationMode = 'rag',
+  executionDays = null,
+  useTypesafeJev = false
 ) => {
   const payload = {
     description,
@@ -109,9 +111,13 @@ export const generateAIApu = async (
     bypass_exact_match: bypassExactMatch,
     accept_exact_match_code: acceptExactMatchCode,
     generation_mode: generationMode,
+    use_typesafe_jev: useTypesafeJev,
   };
   if (unit) {
     payload.unit = unit;
+  }
+  if (executionDays !== null && executionDays !== undefined) {
+    payload.execution_days = parseFloat(executionDays);
   }
   const response = await cost360ApiClient.post('/generate-ai-apu', payload);
   return response.data;

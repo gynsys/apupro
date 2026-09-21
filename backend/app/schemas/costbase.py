@@ -160,6 +160,8 @@ class AiApuGenerateRequest(BaseModel):
     generation_mode: Optional[str] = "rag"
     # Días estimados de ejecución para partidas Globales (Gl / S.G.)
     execution_days: Optional[float] = None
+    # Switch Superadmin para evaluación alternativa con TypeSafe AI (Jev System One)
+    use_typesafe_jev: Optional[bool] = False
 
 
 class SmartSelectRequest(BaseModel):
@@ -179,6 +181,7 @@ class AiApuResponse(BaseModel):
     equipments: Optional[List[dict]] = []
     labors: Optional[List[dict]] = []
     advertencias: Optional[List[str]] = []
+    jev_analysis: Optional[Dict[str, Any]] = None
 
 # Database Management Schemas
 class Cost360DatabaseBase(BaseModel):

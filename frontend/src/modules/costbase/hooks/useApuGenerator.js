@@ -33,12 +33,31 @@ export function useApuGenerator({ setSettings }) {
     }
   });
 
+  // Modo Alternativo TypeSafe AI (Jev System One) para SuperAdmin
+  const [useTypesafeJev, setUseTypesafeJev] = useState(() => {
+    try {
+      return localStorage.getItem('cost360_superadmin_typesafe_jev') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [jevAnalysis, setJevAnalysis] = useState(null);
+
   const updateGenerationMode = useCallback((mode) => {
     setGenerationMode(mode);
     try {
       localStorage.setItem('cost360_superadmin_generation_mode', mode);
     } catch (e) {
       console.warn('Could not save generation mode to localStorage', e);
+    }
+  }, []);
+
+  const updateUseTypesafeJev = useCallback((enabled) => {
+    setUseTypesafeJev(enabled);
+    try {
+      localStorage.setItem('cost360_superadmin_typesafe_jev', enabled ? 'true' : 'false');
+    } catch (e) {
+      console.warn('Could not save typesafe jev preference to localStorage', e);
     }
   }, []);
 
@@ -116,6 +135,12 @@ export function useApuGenerator({ setSettings }) {
       } catch (err) {
         console.error('Error al auto-descargar Debug JSON:', err);
       }
+    }
+
+    if (response.jev_analysis) {
+      setJevAnalysis(response.jev_analysis);
+    } else {
+      setJevAnalysis(null);
     }
 
     if (response.status === 'exact_match_candidate') {
@@ -198,19 +223,20 @@ export function useApuGenerator({ setSettings }) {
     setLoading(true);
     setItem(null);
     setExactMatchCandidate(null);
+    setJevAnalysis(null);
 
     try {
       const context = entryMode === 'chat' ? 'Asistente Guiado de APU' : 'Generación Libre de APU (Búsqueda Híbrida Inteligente)';
       const prefixToSend = '';
 
       if (acceptExactMatchCode) {
-        const response = await generateAIApu(textToSubmit, prefixToSend, context, [], false, false, acceptExactMatchCode, unit, generationMode, executionDays);
+        const response = await generateAIApu(textToSubmit, prefixToSend, context, [], false, false, acceptExactMatchCode, unit, generationMode, executionDays, useTypesafeJev);
         processAIResponse(response, textToSubmit);
         return;
       }
 
       const newHistory = isClarifying ? [...chatHistory, { role: 'user', content: textToSubmit }] : [{ role: 'user', content: textToSubmit }];
-      const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory, onlyPreprocess, bypassExactMatch, null, unit, generationMode, executionDays);
+      const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory, onlyPreprocess, bypassExactMatch, null, unit, generationMode, executionDays, useTypesafeJev);
       processAIResponse(response, textToSubmit);
     } catch (error) {
       console.error('Error en generación APU con IA:', error);
@@ -230,7 +256,7 @@ export function useApuGenerator({ setSettings }) {
     } finally {
       setLoading(false);
     }
-  }, [chatHistory, isClarifying, processAIResponse, generationMode]);
+  }, [chatHistory, isClarifying, processAIResponse, generationMode, useTypesafeJev]);
 
   const handleAcceptExactMatch = useCallback(async () => {
     if (!exactMatchCandidate) return;
@@ -252,6 +278,9 @@ export function useApuGenerator({ setSettings }) {
     setItem,
     generationMode,
     setGenerationMode: updateGenerationMode,
+    useTypesafeJev,
+    setUseTypesafeJev: updateUseTypesafeJev,
+    jevAnalysis,
     isClarifying,
     setIsClarifying,
     aiClarificationMessage,

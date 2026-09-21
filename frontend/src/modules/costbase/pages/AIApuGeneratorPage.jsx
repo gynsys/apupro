@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { Loader, Save, Printer } from 'lucide-react';
+import { Loader, Save, Printer, Zap, CheckCircle2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import { AuthContext } from '../../../context/AuthContext';
@@ -486,6 +486,8 @@ export default function AIApuGeneratorPage() {
               isSuperAdmin={isSuperAdmin}
               generationMode={generator.generationMode}
               setGenerationMode={generator.setGenerationMode}
+              useTypesafeJev={generator.useTypesafeJev}
+              setUseTypesafeJev={generator.setUseTypesafeJev}
               waitingForGlobalDays={guided.waitingForGlobalDays}
             />
           )}
@@ -522,6 +524,8 @@ export default function AIApuGeneratorPage() {
             isSuperAdmin={isSuperAdmin}
             generationMode={generator.generationMode}
             setGenerationMode={generator.setGenerationMode}
+            useTypesafeJev={generator.useTypesafeJev}
+            setUseTypesafeJev={generator.setUseTypesafeJev}
           />
         </div>
       )}
@@ -563,6 +567,81 @@ export default function AIApuGeneratorPage() {
               />
             </div>
           </div>
+
+          {/* COMPARATIVA CON TYPESAFE AI (JEV SYSTEM ONE) */}
+          {generator.jevAnalysis && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-teal-50/80 via-white to-emerald-50/70 border border-teal-300/80 rounded-2xl shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-teal-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-xs">
+                    <Zap size={16} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-bold text-slate-800">
+                        Evaluación Comparativa: TypeSafe AI (Jev System One)
+                      </h4>
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-teal-100 text-teal-800 border border-teal-200">
+                        {generator.jevAnalysis.model || 'jev-latest'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Decisión estructurada y tipada ejecutada en sub-segundo en paralelo a la síntesis principal.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-start sm:self-center">
+                  <span className="font-mono text-xs font-bold px-2.5 py-1 bg-white border border-teal-200 rounded-lg text-teal-700 shadow-xs flex items-center gap-1">
+                    ⚡ {generator.jevAnalysis.latency_ms || 450} ms
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="p-2.5 bg-white/80 rounded-xl border border-teal-100">
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Categoría Jev</div>
+                  <div className="font-bold text-slate-800 mt-0.5 capitalize truncate">
+                    {generator.jevAnalysis.detected_category ? generator.jevAnalysis.detected_category.replace(/_/g, ' ') : 'N/A'}
+                  </div>
+                  <div className="text-[10px] text-teal-600 font-medium mt-0.5">
+                    {Math.round((generator.jevAnalysis.category_confidence || 1) * 100)}% certeza
+                  </div>
+                </div>
+
+                <div className="p-2.5 bg-white/80 rounded-xl border border-teal-100">
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Unidad Sugerida</div>
+                  <div className="font-bold text-slate-800 mt-0.5">
+                    {generator.jevAnalysis.suggested_unit || 'm3'}
+                  </div>
+                  <div className="text-[10px] text-teal-600 font-medium mt-0.5">
+                    {Math.round((generator.jevAnalysis.unit_confidence || 1) * 100)}% certeza
+                  </div>
+                </div>
+
+                <div className="p-2.5 bg-white/80 rounded-xl border border-teal-100">
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Validez Técnica</div>
+                  <div className="font-bold text-emerald-700 mt-0.5 flex items-center gap-1">
+                    <CheckCircle2 size={13} className="text-emerald-600" />
+                    <span>{generator.jevAnalysis.is_valid_construction_prompt ? 'Partida Válida' : 'No Técnica'}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-medium mt-0.5">
+                    {Math.round((generator.jevAnalysis.construction_validity_confidence || 1) * 100)}% confianza
+                  </div>
+                </div>
+
+                <div className="p-2.5 bg-white/80 rounded-xl border border-teal-100">
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Complejidad Estimada</div>
+                  <div className="font-bold text-slate-800 mt-0.5 capitalize">
+                    {generator.jevAnalysis.complexity || 'media'}
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-medium mt-0.5">
+                    System One Decision
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           
           {generator.item.advertencias && generator.item.advertencias.length > 0 && (
             <div className="mb-6 p-4 bg-amber-50 border border-amber-300 rounded-xl shadow-sm">

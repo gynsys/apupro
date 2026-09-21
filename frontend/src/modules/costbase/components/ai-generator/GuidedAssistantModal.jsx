@@ -19,7 +19,9 @@ export default function GuidedAssistantModal({
   isSuperAdmin = false,
   generationMode = 'rag',
   setGenerationMode,
-  waitingForGlobalDays = false
+  waitingForGlobalDays = false,
+  useTypesafeJev = false,
+  setUseTypesafeJev = null
 }) {
   const chatEndRef = useRef(null);
 
@@ -71,6 +73,8 @@ export default function GuidedAssistantModal({
                 generationMode={generationMode}
                 onChange={setGenerationMode}
                 compact={true}
+                useTypesafeJev={useTypesafeJev}
+                onToggleTypesafeJev={setUseTypesafeJev}
               />
             </div>
           )}

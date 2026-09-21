@@ -87,6 +87,19 @@ const PROVIDER_PRESETS = {
     iconColor: 'text-purple-600',
     borderHighlight: 'border-purple-500/20'
   },
+  typesafe: {
+    label: 'TypeSafe AI (Jev System One)',
+    defaultModel: 'jev-latest',
+    suggestedModels: [
+      'jev-latest',
+      'jev-1.13.0',
+      'jev-1.12.0'
+    ],
+    placeholder: 'apikey_...',
+    badgeColor: 'bg-teal-100 text-teal-800 border-teal-200',
+    iconColor: 'text-teal-600',
+    borderHighlight: 'border-teal-500/20'
+  },
   custom: {
     label: 'Personalizado / Local',
     defaultModel: 'custom-model',
@@ -122,6 +135,22 @@ const KeyIATab = () => {
   const [saving, setSaving] = useState(false);
   const [revealedKeys, setRevealedKeys] = useState({});
   const [loadingRevealId, setLoadingRevealId] = useState(null);
+
+  // Estado para TypeSafe AI (Jev System One)
+  const [typesafeConfig, setTypesafeConfig] = useState({
+    is_configured: false,
+    has_key: false,
+    key_masked: '',
+    model: 'jev-latest',
+    is_active: false
+  });
+  const [typesafeApiKey, setTypesafeApiKey] = useState('');
+  const [typesafeModel, setTypesafeModel] = useState('jev-latest');
+  const [typesafeActive, setTypesafeActive] = useState(false);
+  const [testingTypesafe, setTestingTypesafe] = useState(false);
+  const [savingTypesafe, setSavingTypesafe] = useState(false);
+  const [typesafeTestResult, setTypesafeTestResult] = useState(null);
+  const [showTypesafeKey, setShowTypesafeKey] = useState(false);
 
   const toggleRevealKey = async (providerId) => {
     if (revealedKeys[providerId]) {
@@ -192,9 +221,91 @@ const KeyIATab = () => {
     }
   }, []);
 
+  const fetchTypesafeStatus = useCallback(async () => {
+    try {
+      const res = await apiGet('/costbase/admin/typesafe/status');
+      if (res.ok) {
+        const data = await res.json();
+        setTypesafeConfig(data);
+        setTypesafeActive(data.is_active || false);
+        setTypesafeModel(data.model || 'jev-latest');
+      }
+    } catch (e) {
+      console.error('Error fetching typesafe status:', e);
+    }
+  }, []);
+
   useEffect(() => {
     fetchProviders();
-  }, [fetchProviders]);
+    fetchTypesafeStatus();
+  }, [fetchProviders, fetchTypesafeStatus]);
+
+  const handleTestTypesafe = async () => {
+    setTestingTypesafe(true);
+    setTypesafeTestResult(null);
+    try {
+      const payload = {};
+      if (typesafeApiKey.trim()) payload.api_key = typesafeApiKey.trim();
+      if (typesafeModel.trim()) payload.model = typesafeModel.trim();
+
+      const res = await apiPost('/costbase/admin/typesafe/test', payload);
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTypesafeTestResult(data);
+        toast.success(`Prueba TypeSafe exitosa (${data.latency_ms} ms)`);
+      } else {
+        setTypesafeTestResult({ success: false, message: data.detail || data.message || 'Error en prueba' });
+        toast.error(data.detail || data.message || 'Error en prueba con TypeSafe');
+      }
+    } catch (e) {
+      setTypesafeTestResult({ success: false, message: 'Error de conexión con el servidor' });
+      toast.error('Error de red al probar TypeSafe');
+    } finally {
+      setTestingTypesafe(false);
+    }
+  };
+
+  const handleSaveTypesafe = async (targetActive = null) => {
+    setSavingTypesafe(true);
+    const activeState = targetActive !== null ? targetActive : typesafeActive;
+    try {
+      const payload = {
+        is_active: activeState,
+        model: typesafeModel.trim() || 'jev-latest'
+      };
+      if (typesafeApiKey.trim()) {
+        payload.api_key = typesafeApiKey.trim();
+      }
+      const res = await apiPost('/costbase/admin/typesafe/save', payload);
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(data.message || 'Configuración de TypeSafe guardada');
+        setTypesafeActive(data.is_active);
+        setTypesafeConfig((prev) => ({
+          ...prev,
+          is_configured: true,
+          has_key: typesafeApiKey.trim() ? true : prev.has_key,
+          key_masked: typesafeApiKey.trim() ? `apikey_...${typesafeApiKey.trim().slice(-6)}` : prev.key_masked,
+          is_active: data.is_active,
+          model: data.model
+        }));
+        setTypesafeApiKey('');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.detail || 'Error al guardar configuración');
+      }
+    } catch (e) {
+      toast.error('Error de red al guardar TypeSafe');
+    } finally {
+      setSavingTypesafe(false);
+    }
+  };
+
+  const handleToggleTypesafeActive = async () => {
+    const nextState = !typesafeActive;
+    setTypesafeActive(nextState);
+    await handleSaveTypesafe(nextState);
+  };
 
   const handleOpenCreateModal = () => {
     setModalMode('create');
@@ -516,6 +627,151 @@ const KeyIATab = () => {
           </div>
         </GlassCard>
       </div>
+
+      {/* MOTOR ALTERNATIVO: TYPESAFE AI (JEV SYSTEM ONE) */}
+      <GlassCard className="rounded-2xl p-6 border border-teal-500/25 bg-gradient-to-br from-teal-50/30 via-white/80 to-emerald-50/20 shadow-sm flex flex-col gap-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-teal-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-600 to-emerald-600 flex items-center justify-center text-white shadow-md shadow-teal-600/20 shrink-0">
+              <Zap className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-base font-bold text-slate-800">
+                  Motor Alternativo de Decisión: TypeSafe AI (Jev System One)
+                </h3>
+                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-teal-100 text-teal-800 border border-teal-200">
+                  Sub-segundo (~450ms)
+                </span>
+                {typesafeActive ? (
+                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    Activo en Generador APU
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                    Inactivo
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Modelo de decisiones estructuradas y tipadas (System One) para clasificar partidas y validar intenciones a velocidad ultrarrápida. Permite comparar resultados con los modelos generativos.
+              </p>
+            </div>
+          </div>
+
+          {/* Switch Activar / Desactivar */}
+          <div className="flex items-center gap-3 self-start sm:self-center shrink-0">
+            <span className="text-xs font-semibold text-slate-600">
+              {typesafeActive ? 'Habilitado' : 'Deshabilitado'}
+            </span>
+            <button
+              type="button"
+              onClick={handleToggleTypesafeActive}
+              disabled={savingTypesafe}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                typesafeActive ? 'bg-teal-600' : 'bg-slate-300'
+              }`}
+              title={typesafeActive ? 'Desactivar TypeSafe Jev' : 'Activar TypeSafe Jev'}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  typesafeActive ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* Inputs & Controls */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+          <div className="md:col-span-6">
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-slate-700">API Key de TypeSafe AI</label>
+              {typesafeConfig.has_key && (
+                <span className="text-[11px] font-normal text-teal-700">
+                  Clave actual: {typesafeConfig.key_masked}
+                </span>
+              )}
+            </div>
+            <div className="relative">
+              <input
+                type={showTypesafeKey ? 'text' : 'password'}
+                value={typesafeApiKey}
+                onChange={(e) => setTypesafeApiKey(e.target.value)}
+                placeholder={typesafeConfig.has_key ? 'Ingresa nueva clave para actualizar' : 'apikey_...'}
+                className="w-full px-3 py-2 pr-10 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 font-mono"
+              />
+              <button
+                type="button"
+                onClick={() => setShowTypesafeKey(!showTypesafeKey)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                {showTypesafeKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="md:col-span-3">
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Modelo Jev
+            </label>
+            <input
+              type="text"
+              value={typesafeModel}
+              onChange={(e) => setTypesafeModel(e.target.value)}
+              placeholder="jev-latest"
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 font-mono"
+            />
+          </div>
+
+          <div className="md:col-span-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleTestTypesafe}
+              disabled={testingTypesafe}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${testingTypesafe ? 'animate-spin text-teal-600' : ''}`} />
+              <span>{testingTypesafe ? 'Probando...' : 'Probar'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSaveTypesafe(null)}
+              disabled={savingTypesafe}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <span>{savingTypesafe ? 'Guardando...' : 'Guardar'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Live Test Feedback */}
+        {typesafeTestResult && (
+          <div
+            className={`p-3 rounded-xl border text-xs flex items-center gap-2.5 ${
+              typesafeTestResult.success
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                : 'bg-rose-50 border-rose-200 text-rose-800'
+            }`}
+          >
+            {typesafeTestResult.success ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            )}
+            <div className="flex-1 flex items-center justify-between">
+              <span>{typesafeTestResult.message || (typesafeTestResult.success ? 'Conexión exitosa' : 'Error en la prueba')}</span>
+              {typesafeTestResult.latency_ms !== undefined && (
+                <span className="font-mono font-bold bg-white/70 px-2 py-0.5 rounded text-[11px]">
+                  ⚡ {typesafeTestResult.latency_ms} ms
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </GlassCard>
 
       {/* PROVIDERS LIST */}
       <GlassCard className="rounded-2xl p-6 flex flex-col gap-4">

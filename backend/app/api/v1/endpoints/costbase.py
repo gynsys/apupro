@@ -26,6 +26,9 @@ from app.schemas.costbase import (
 from app.core.logging import logger
 from app.services.user_semantic_cache import lookup_user_semantic_cache
 from app.services.inverse_apu_synthesizer import synthesize_apu_inverse
+from app.db.models.llm_provider import LLMProvider
+from app.crud.llm import encrypt_api_key, decrypt_api_key
+from app.services.typesafe_service import evaluate_construction_prompt, test_typesafe_connection
 
 def set_schema_for_db(db: Session, database_id: str) -> None:
     """Establece de forma segura el search_path para el esquema de la base de datos solicitada.
@@ -1307,6 +1310,29 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
         getattr(current_user, 'email', '') == 'admin@arko360.net' or
         getattr(current_user, 'is_admin', False) is True
     )
+    # --- EVALUACIÓN DE DECISIÓN CON TYPESAFE AI (JEV SYSTEM ONE) ---
+    jev_analysis = None
+    if is_superadmin and payload.description:
+        typesafe_key = _get_active_typesafe_key(db)
+        if typesafe_key and payload.use_typesafe_jev:
+            logger.info("Evaluando decisión con TypeSafe AI (Jev) para Superadmin: %.80s", payload.description)
+            try:
+                jev_res = evaluate_construction_prompt(payload.description, typesafe_key)
+                if jev_res.get("success"):
+                    jev_analysis = jev_res
+                    logger.info(
+                        "TypeSafe Jev: rubro=%s (conf=%s) | unidad=%s (conf=%s) | latency=%sms",
+                        jev_res.get("category"),
+                        jev_res.get("category_confidence"),
+                        jev_res.get("recommended_unit"),
+                        jev_res.get("unit_confidence"),
+                        jev_res.get("latency_ms")
+                    )
+                    if not effective_unit and jev_res.get("unit_confidence", 0) >= 0.85:
+                        effective_unit = jev_res.get("recommended_unit")
+            except Exception as j_err:
+                logger.error("Error no fatal evaluando con TypeSafe Jev: %s", j_err, exc_info=True)
+
     if payload.generation_mode == "inverse" and is_superadmin and not payload.only_preprocess:
         logger.info(
             "Despachando generación de APU en Modo Matemático (Síntesis Inversa) para superadmin %s: %.80s",
@@ -1322,6 +1348,8 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
                 db=db
             )
             inverse_result["generation_engine"] = "inverse"
+            if jev_analysis:
+                inverse_result["jev_analysis"] = jev_analysis
             return inverse_result
         except Exception as exc:
             logger.error("Error al sintetizar APU en Modo Matemático: %s", exc, exc_info=True)
@@ -1575,6 +1603,8 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
                     db_user.ai_apus_generated = getattr(db_user, 'ai_apus_generated', 0) + 1
                     adb.commit()
         result["generation_engine"] = "rag"
+        if jev_analysis and isinstance(result, dict):
+            result["jev_analysis"] = jev_analysis
         return result
 
     # 3. Preprocesamiento (BD + Estadísticas) + IA semantica (Fallback clásico sin base directa)
@@ -1615,6 +1645,9 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             if db_user:
                 db_user.ai_apus_generated = getattr(db_user, 'ai_apus_generated', 0) + 1
                 adb.commit()
+
+    if jev_analysis and isinstance(result, dict):
+        result["jev_analysis"] = jev_analysis
 
     return result
 
@@ -1954,4 +1987,128 @@ def get_labor_apus(labor_id: str, db: Session = Depends(get_db)):
     ''')
     rows = db.execute(query, {"cod": labor_id}).fetchall()
     return [{"CodPar": r[0], "Descri": r[1], "CovPar": r[2]} for r in rows]
+
+
+def _get_active_typesafe_key(db: Session) -> Optional[str]:
+    """Obtiene la API key descifrada del proveedor 'typesafe' si existe y está activo."""
+    try:
+        provider = db.query(LLMProvider).filter(
+            LLMProvider.provider_key == "typesafe",
+            LLMProvider.is_active == True
+        ).first()
+        if provider and provider.api_key_enc:
+            return decrypt_api_key(provider.api_key_enc)
+    except Exception as e:
+        logger.error(f"Error al obtener TypeSafe key: {e}", exc_info=True)
+    return None
+
+
+@router.get("/admin/typesafe/status")
+def get_typesafe_status(
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin)
+) -> Dict[str, Any]:
+    """Obtiene el estado de la integración con TypeSafe AI (Jev) para el SuperAdmin."""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="No autenticado")
+    
+    provider = db.query(LLMProvider).filter(LLMProvider.provider_key == "typesafe").first()
+    if not provider:
+        return {
+            "configured": False,
+            "is_active": False,
+            "model_name": "jev-latest",
+            "masked_key": ""
+        }
+    
+    plain_key = ""
+    try:
+        if provider.api_key_enc:
+            plain_key = decrypt_api_key(provider.api_key_enc)
+    except Exception as e:
+        logger.error(f"Error descifrando TypeSafe key: {e}", exc_info=True)
+
+    masked = f"****{plain_key[-4:]}" if len(plain_key) > 4 else ("****" if plain_key else "")
+    return {
+        "configured": bool(plain_key),
+        "is_active": bool(provider.is_active),
+        "model_name": provider.model_name or "jev-latest",
+        "masked_key": masked
+    }
+
+
+@router.post("/admin/typesafe/test")
+def test_typesafe_endpoint(
+    payload: Dict[str, Any],
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin)
+) -> Dict[str, Any]:
+    """Prueba la conexión directa con TypeSafe AI (Jev)."""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="No autenticado")
+
+    api_key = payload.get("api_key")
+    if not api_key:
+        api_key = _get_active_typesafe_key(db)
+        if not api_key:
+            provider = db.query(LLMProvider).filter(LLMProvider.provider_key == "typesafe").first()
+            if provider and provider.api_key_enc:
+                try:
+                    api_key = decrypt_api_key(provider.api_key_enc)
+                except Exception as e:
+                    logger.error(f"Error descifrando clave TypeSafe: {e}", exc_info=True)
+
+    if not api_key:
+        raise HTTPException(status_code=400, detail="No se proporcionó API key para la prueba.")
+
+    success, latency, msg = test_typesafe_connection(api_key, payload.get("model_name", "jev-latest"))
+    return {
+        "success": success,
+        "latency_ms": latency,
+        "message": msg
+    }
+
+
+@router.post("/admin/typesafe/save")
+def save_typesafe_config(
+    payload: Dict[str, Any],
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin)
+) -> Dict[str, Any]:
+    """Guarda o actualiza la configuración y switch de TypeSafe AI en la base de datos."""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="No autenticado")
+
+    raw_key = (payload.get("api_key") or "").strip()
+    is_active = bool(payload.get("is_active", True))
+    model_name = (payload.get("model_name") or "jev-latest").strip()
+
+    provider = db.query(LLMProvider).filter(LLMProvider.provider_key == "typesafe").first()
+    if not provider:
+        if not raw_key:
+            raise HTTPException(status_code=400, detail="Debes proporcionar una API key de TypeSafe AI.")
+        provider = LLMProvider(
+            provider_key="typesafe",
+            display_name="TypeSafe AI (Jev System One)",
+            model_name=model_name,
+            api_key_enc=encrypt_api_key(raw_key),
+            is_active=is_active,
+            priority=10,
+            use_case="all"
+        )
+        db.add(provider)
+    else:
+        if raw_key:
+            provider.api_key_enc = encrypt_api_key(raw_key)
+        provider.is_active = is_active
+        provider.model_name = model_name
+
+    db.commit()
+    db.refresh(provider)
+    return {
+        "success": True,
+        "is_active": provider.is_active,
+        "model_name": provider.model_name,
+        "message": "Configuración de TypeSafe AI guardada correctamente."
+    }
 

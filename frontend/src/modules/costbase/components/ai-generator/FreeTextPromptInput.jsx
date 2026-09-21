@@ -20,7 +20,9 @@ export default function FreeTextPromptInput({
   onSwitchToLibre,
   isSuperAdmin = false,
   generationMode = 'rag',
-  setGenerationMode
+  setGenerationMode,
+  useTypesafeJev = false,
+  setUseTypesafeJev = null
 }) {
   const [unitWarning, setUnitWarning] = useState(false);
 
@@ -58,6 +60,8 @@ export default function FreeTextPromptInput({
               generationMode={generationMode}
               onChange={setGenerationMode}
               compact={true}
+              useTypesafeJev={useTypesafeJev}
+              onToggleTypesafeJev={setUseTypesafeJev}
             />
           )}
         </div>
