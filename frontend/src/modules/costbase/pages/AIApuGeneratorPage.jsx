@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { Loader, Save, Calculator, Printer, Sparkles } from 'lucide-react';
+import { Loader, Save, Printer } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import { AuthContext } from '../../../context/AuthContext';
@@ -355,7 +355,7 @@ export default function AIApuGeneratorPage() {
       if (creationMode === 'import') {
         navigate(`${basePath}/ai-generator?mode=import`);
       } else if (creationMode === 'manual') {
-        navigate(`${basePath}/ai-generator?mode=manual`);
+        navigate(basePath);
       } else if (creationMode === 'ia') {
         const targetSource = guided.lastEntrySourceRef.current || guided.entryModeSource;
         if (targetSource === 'libre') {
@@ -548,28 +548,7 @@ export default function AIApuGeneratorPage() {
       {/* EDITOR DE APU (CUANDO SE HA GENERADO O IMPORTADO UN ITEM) */}
       {generator.item && (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200">
-            <div className="flex items-center gap-3">
-              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <Calculator size={20} className="text-blue-500" />
-                APU EN EDICIÓN
-              </h3>
-              {isSuperAdmin && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-2xs bg-slate-50 text-slate-700 border-slate-300">
-                  {generator.generationMode === 'inverse' ? (
-                    <>
-                      <Calculator size={13} className="text-blue-600" />
-                      <span>Modo Matemático</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles size={13} className="text-indigo-600" />
-                      <span>Modo Adaptativo</span>
-                    </>
-                  )}
-                </span>
-              )}
-            </div>
+          <div className="flex items-center justify-end mb-4 pb-3 border-b border-slate-200">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setPrintModalOpen(true)}
