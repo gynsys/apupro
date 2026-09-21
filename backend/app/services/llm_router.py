@@ -148,24 +148,31 @@ def _call_openai_compatible(provider: LLMProvider, prompt: str, expect_json: boo
     url = f"{base_url}/chat/completions"
 
     extra = provider.extra_params or {}
+    key = provider.provider_key.lower()
+    
+    # DeepSeek no soporta response_format, usar solo system prompt
+    if key == "deepseek" and expect_json:
+        system_content = "Eres un ingeniero civil experto. Responde SIEMPRE en JSON válido. NUNCA alucines. RESPONDE SIEMPRE EN ESPAÑOL."
+    elif expect_json:
+        system_content = "Eres un experto en diseño estructural y contenido arquitectónico para redes sociales. Debes responder SIEMPRE en formato JSON cuando se te pida."
+    else:
+        system_content = "Eres un experto en redacción sobre arquitectura e ingeniería."
+
     payload: dict = {
         "model": provider.model_name,
         "messages": [
             {
                 "role": "system",
-                "content": (
-                    "Eres un experto en diseño estructural y contenido arquitectónico para redes sociales. "
-                    "Debes responder SIEMPRE en formato JSON cuando se te pida."
-                    if expect_json
-                    else "Eres un experto en redacción sobre arquitectura e ingeniería."
-                ),
+                "content": system_content,
             },
             {"role": "user", "content": prompt},
         ],
         "temperature": extra.get("temperature", 0.7),
         "max_tokens": extra.get("max_tokens", 2048),
     }
-    if expect_json:
+    
+    # Solo usar response_format para OpenAI real, no para compatibles
+    if expect_json and key == "openai":
         payload["response_format"] = {"type": "json_object"}
 
     headers = {
