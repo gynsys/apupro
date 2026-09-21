@@ -36,9 +36,10 @@ export function useApuGenerator({ setSettings }) {
   // Modo Alternativo TypeSafe AI (Jev System One) para SuperAdmin
   const [useTypesafeJev, setUseTypesafeJev] = useState(() => {
     try {
-      return localStorage.getItem('cost360_superadmin_typesafe_jev') === 'true';
+      const stored = localStorage.getItem('cost360_superadmin_typesafe_jev');
+      return stored !== 'false';
     } catch {
-      return false;
+      return true;
     }
   });
   const [jevAnalysis, setJevAnalysis] = useState(null);

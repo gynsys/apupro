@@ -1314,7 +1314,7 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
     jev_analysis = None
     if is_superadmin and payload.description:
         typesafe_key = _get_active_typesafe_key(db)
-        if typesafe_key and payload.use_typesafe_jev:
+        if typesafe_key:
             logger.info("Evaluando decisión con TypeSafe AI (Jev) para Superadmin: %.80s", payload.description)
             try:
                 jev_res = evaluate_construction_prompt(payload.description, typesafe_key)
