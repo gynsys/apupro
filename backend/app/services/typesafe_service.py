@@ -99,6 +99,8 @@ def evaluate_construction_prompt(
                     "acabados": "Pintura, cerámica, porcelanato, yeso, dry-wall, cielo raso",
                     "instalaciones_electricas": "Cables, breakers, tableros, iluminación, canalizaciones",
                     "instalaciones_sanitarias": "Tuberías de aguas blancas, negras, válvulas, piezas sanitarias",
+                    "equipos_electromecanicos": "Bombas sumergibles, equipos de bombeo, bombas de agua, motores, tableros hidroneumáticos",
+                    "instalaciones_hidraulicas": "Pozos profundos, perforación, tanques, impulsión, aducciones",
                     "demoliciones": "Demolición y desmantelamiento de elementos existentes"
                 }
             },
@@ -106,12 +108,12 @@ def evaluate_construction_prompt(
                 "type": "choice",
                 "instructions": "Determina la unidad de medida estándar recomendada para este cómputo métrico",
                 "criteria": {
+                    "und": "Unidad (equipos electromecánicos, bombas de agua, artefactos, piezas unitarias, tableros)",
+                    "pza": "Pieza (un elemento individual identifiable o prefabricado)",
                     "m3": "Metros cúbicos (volumen de concreto, excavación, relleno)",
                     "m2": "Metros cuadrados (superficie de paredes, frisos, pisos, pintura)",
                     "m": "Metros lineales (tuberías, barandas, cables, bordillos)",
                     "kg": "Kilogramos (acero de refuerzo, cabillas, perfiles pesados)",
-                    "pza": "Pieza (un elemento individual identifiable o prefabricado)",
-                    "und": "Unidad (equipos, artefactos, piezas unitarias)",
                     "pto": "Punto (puntos eléctricos o sanitarios)"
                 }
             },
@@ -142,17 +144,22 @@ def evaluate_construction_prompt(
             categoria_info = answers.get("categoria", {})
             unidad_info = answers.get("unidad_medida", {})
             completa_info = answers.get("es_completa", {})
+            is_valid = completa_info.get("noul", 0.5) >= 0.5
 
             return {
                 "success": True,
                 "engine": "typesafe_jev",
                 "model": data.get("model", model_name),
                 "latency_ms": latency_ms,
+                "detected_category": categoria_info.get("choice", "general"),
                 "category": categoria_info.get("choice", "general"),
                 "category_confidence": categoria_info.get("confidence", 0.0),
+                "suggested_unit": unidad_info.get("choice", "und"),
                 "recommended_unit": unidad_info.get("choice", "und"),
                 "unit_confidence": unidad_info.get("confidence", 0.0),
-                "is_complete_prob": completa_info.get("noul", 0.5),
+                "is_valid_construction_prompt": is_valid,
+                "construction_validity_confidence": completa_info.get("noul", 0.5),
+                "complexity": "alta" if any(w in clean_desc.lower() for w in ["sumergible", "bomba", "hp", "pozo"]) else "media",
                 "raw_answers": answers
             }
         else:
