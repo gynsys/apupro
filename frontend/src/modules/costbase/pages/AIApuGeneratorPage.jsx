@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Loader, Save, Calculator, Printer, Sparkles } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -28,9 +28,11 @@ import { useApuGenerator } from '../hooks/useApuGenerator';
 
 export default function AIApuGeneratorPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const modeParam = searchParams.get('mode');
   const guidedParam = searchParams.get('guided');
+  const basePath = location.pathname.startsWith('/cost360') ? '/cost360' : '/costbase';
 
   const { user } = useContext(AuthContext);
   const isSuperAdmin = Boolean(
@@ -129,28 +131,26 @@ export default function AIApuGeneratorPage() {
 
   // Manejo de parámetros de URL para sincronizar modos
   useEffect(() => {
-    if (modeParam === 'manual') {
-      setCreationMode('manual');
-      handleCreateManual();
-    } else if (modeParam === 'import') {
-      setCreationMode('import');
-      generator.setItem(null);
-    } else if (modeParam === 'ia') {
-      setCreationMode('ia');
-    }
-  }, [modeParam]);
+    const targetMode = modeParam || 'ia';
+    setCreationMode(targetMode);
 
-  useEffect(() => {
-    if (guidedParam === 'false') {
-      guided.setIsGuidedMode(false);
-      guided.setEntryModeSource('libre');
-      guided.lastEntrySourceRef.current = 'libre';
-    } else if (guidedParam === 'true') {
-      guided.setIsGuidedMode(true);
-      guided.setEntryModeSource('chat');
-      guided.lastEntrySourceRef.current = 'chat';
+    if (targetMode === 'manual') {
+      handleCreateManual();
+    } else if (targetMode === 'import') {
+      generator.setItem(null);
+    } else if (targetMode === 'ia') {
+      generator.setItem(null);
+      if (guidedParam === 'false') {
+        guided.setIsGuidedMode(false);
+        guided.setEntryModeSource('libre');
+        guided.lastEntrySourceRef.current = 'libre';
+      } else {
+        guided.setIsGuidedMode(true);
+        guided.setEntryModeSource('chat');
+        guided.lastEntrySourceRef.current = 'chat';
+      }
     }
-  }, [guidedParam]);
+  }, [modeParam, guidedParam]);
 
   const handleCreateManual = () => {
     setSettings(prev => ({ ...prev, iva_percent: 0 }));
@@ -353,25 +353,25 @@ export default function AIApuGeneratorPage() {
       generator.setItem(null);
       setSelectedUnit(null);
       if (creationMode === 'import') {
-        navigate('/cost360/ai-generator?mode=import');
+        navigate(`${basePath}/ai-generator?mode=import`);
       } else if (creationMode === 'manual') {
-        navigate('/cost360/ai-generator?mode=manual');
+        navigate(`${basePath}/ai-generator?mode=manual`);
       } else if (creationMode === 'ia') {
         const targetSource = guided.lastEntrySourceRef.current || guided.entryModeSource;
         if (targetSource === 'libre') {
           guided.setIsGuidedMode(false);
           guided.setEntryModeSource('libre');
           guided.lastEntrySourceRef.current = 'libre';
-          navigate('/cost360/ai-generator?mode=ia&guided=false');
+          navigate(`${basePath}/ai-generator?mode=ia&guided=false`);
         } else {
           guided.setIsGuidedMode(true);
           guided.setEntryModeSource('chat');
           guided.lastEntrySourceRef.current = 'chat';
-          navigate('/cost360/ai-generator?mode=ia&guided=true');
+          navigate(`${basePath}/ai-generator?mode=ia&guided=true`);
         }
       }
     } else {
-      navigate('/cost360');
+      navigate(basePath);
     }
   };
 
@@ -434,7 +434,7 @@ export default function AIApuGeneratorPage() {
                 guided.setIsGuidedMode(true);
                 guided.setEntryModeSource('chat');
                 guided.lastEntrySourceRef.current = 'chat';
-                navigate('/cost360/ai-generator?mode=ia&guided=true', { replace: true });
+                navigate(`${basePath}/ai-generator?mode=ia&guided=true`, { replace: true });
               }}
               onResetChatbot={() => {
                 generator.dismissClarification();
@@ -444,7 +444,7 @@ export default function AIApuGeneratorPage() {
                 setSelectedUnit(null);
                 guided.setEntryModeSource('chat');
                 guided.lastEntrySourceRef.current = 'chat';
-                navigate('/cost360/ai-generator?mode=ia&guided=true', { replace: true });
+                navigate(`${basePath}/ai-generator?mode=ia&guided=true`, { replace: true });
               }}
               onResetLibre={() => {
                 generator.dismissClarification();
@@ -453,7 +453,7 @@ export default function AIApuGeneratorPage() {
                 setSelectedUnit(null);
                 guided.setEntryModeSource('libre');
                 guided.lastEntrySourceRef.current = 'libre';
-                navigate('/cost360/ai-generator?mode=ia&guided=false', { replace: true });
+                navigate(`${basePath}/ai-generator?mode=ia&guided=false`, { replace: true });
               }}
             />
           )}
@@ -466,7 +466,7 @@ export default function AIApuGeneratorPage() {
                 guided.setIsGuidedMode(false);
                 guided.setEntryModeSource('libre');
                 guided.lastEntrySourceRef.current = 'libre';
-                navigate('/cost360/ai-generator?mode=ia&guided=false', { replace: true });
+                navigate(`${basePath}/ai-generator?mode=ia&guided=false`, { replace: true });
               }}
               currentChatStep={guided.currentChatStep}
               guidedMessages={guided.guidedMessages}
@@ -481,7 +481,7 @@ export default function AIApuGeneratorPage() {
                 guided.setIsGuidedMode(false);
                 guided.setEntryModeSource('libre');
                 guided.lastEntrySourceRef.current = 'libre';
-                navigate('/cost360/ai-generator?mode=ia&guided=false', { replace: true });
+                navigate(`${basePath}/ai-generator?mode=ia&guided=false`, { replace: true });
               }}
               isSuperAdmin={isSuperAdmin}
               generationMode={generator.generationMode}
@@ -511,13 +511,13 @@ export default function AIApuGeneratorPage() {
               guided.lastEntrySourceRef.current = 'chat';
               setPrompt('');
               setSelectedUnit(null);
-              navigate('/cost360/ai-generator?mode=ia&guided=true', { replace: true });
+              navigate(`${basePath}/ai-generator?mode=ia&guided=true`, { replace: true });
             }}
             onSwitchToLibre={() => {
               guided.setIsGuidedMode(false);
               guided.setEntryModeSource('libre');
               guided.lastEntrySourceRef.current = 'libre';
-              navigate('/cost360/ai-generator?mode=ia&guided=false', { replace: true });
+              navigate(`${basePath}/ai-generator?mode=ia&guided=false`, { replace: true });
             }}
             isSuperAdmin={isSuperAdmin}
             generationMode={generator.generationMode}

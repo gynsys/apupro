@@ -65,13 +65,26 @@ export default function AppLayout() {
       )}
 
       <div className={`space-y-2 flex-1 pb-4 w-full flex flex-col ${isMobile ? 'items-stretch' : 'items-center'}`}>
-        {getNavItems().map(({ name, href, Icon, exact }) => {
-          const active = exact ? location.pathname === href : location.pathname.startsWith(href);
+        {getNavItems().map(({ name, href, Icon, exact, altHrefs }) => {
+          const currentUrl = location.pathname + location.search;
+          let active = false;
+          if (href.includes('?')) {
+            active = currentUrl === href || (altHrefs && altHrefs.includes(currentUrl));
+          } else if (exact) {
+            active = location.pathname === href || (altHrefs && altHrefs.includes(location.pathname));
+          } else {
+            active = location.pathname.startsWith(href) || (altHrefs && altHrefs.some(alt => location.pathname.startsWith(alt)));
+          }
+
           return (
             <div key={href} className="group relative w-full">
               <Link
                 to={href}
-                onClick={() => setSidebarOpen(false)}
+                onClick={(e) => {
+                  setSidebarOpen(false);
+                  e.preventDefault();
+                  navigate(href);
+                }}
                 className={`flex items-center ${
                   isMobile ? 'justify-start px-3.5 py-2.5 gap-3' : 'justify-center p-3'
                 } rounded-xl transition-all duration-200 ${
