@@ -182,10 +182,10 @@ def _dispatch(provider: LLMProvider, prompt: str, expect_json: bool) -> str:
     key = provider.provider_key.lower()
     if key == "gemini":
         return _call_gemini(provider, prompt, expect_json)
-    elif key in ("groq", "openai", "custom", "mistral", "ollama"):
+    elif key in ("groq", "openai", "custom", "mistral", "ollama", "deepseek"):
         return _call_openai_compatible(provider, prompt, expect_json)
     else:
-        raise ValueError(f"Unknown provider_key: '{key}'. Supported: gemini, groq, openai, custom.")
+        raise ValueError(f"Unknown provider_key: '{key}'. Supported: gemini, groq, openai, custom, deepseek.")
 
 
 # ---------------------------------------------------------------------------
