@@ -140,7 +140,7 @@ def _call_gemini(provider: LLMProvider, prompt: str, expect_json: bool) -> str:
 
 def _call_openai_compatible(provider: LLMProvider, prompt: str, expect_json: bool) -> str:
     """
-    Call any OpenAI-compatible API (Groq, OpenAI, Mistral, Ollama, etc.).
+    Call any OpenAI-compatible API (Groq, OpenAI, DeepSeek, Mistral, Ollama, etc.).
     Uses base_url from the provider record.
     """
     api_key = decrypt_api_key(provider.api_key_enc)
@@ -149,37 +149,40 @@ def _call_openai_compatible(provider: LLMProvider, prompt: str, expect_json: boo
 
     extra = provider.extra_params or {}
     key = provider.provider_key.lower()
-    
-    # DeepSeek no soporta response_format, usar solo system prompt
-    if key == "deepseek" and expect_json:
-        system_content = "Eres un ingeniero civil experto. Responde SIEMPRE en JSON válido. NUNCA alucines. RESPONDE SIEMPRE EN ESPAÑOL."
-    elif expect_json:
-        system_content = "Eres un experto en diseño estructural y contenido arquitectónico para redes sociales. Debes responder SIEMPRE en formato JSON cuando se te pida."
+
+    if expect_json:
+        system_content = (
+            "Eres un Ingeniero Civil especialista en Análisis de Precios Unitarios (APU) venezolano. "
+            "Responde ÚNICAMENTE con JSON válido y completo, sin texto extra ni bloques markdown. "
+            "NUNCA truncues la respuesta. RESPONDE SIEMPRE EN ESPAÑOL."
+        )
     else:
-        system_content = "Eres un experto en redacción sobre arquitectura e ingeniería."
+        system_content = "Eres un experto en ingeniería civil y construcción. Responde en español."
+
+    # APU JSON requiere ~3000-4000 tokens de salida; default 8192 para no truncar
+    default_max_tokens = 8192 if key == "deepseek" else 4096
+    # DeepSeek puede tardar más con prompts largos de APU
+    timeout_secs = 90 if key == "deepseek" else 60
 
     payload: dict = {
         "model": provider.model_name,
         "messages": [
-            {
-                "role": "system",
-                "content": system_content,
-            },
+            {"role": "system", "content": system_content},
             {"role": "user", "content": prompt},
         ],
-        "temperature": extra.get("temperature", 0.7),
-        "max_tokens": extra.get("max_tokens", 2048),
+        "temperature": extra.get("temperature", 0.3),
+        "max_tokens": extra.get("max_tokens", default_max_tokens),
     }
-    
-    # Solo usar response_format para OpenAI real, no para compatibles
-    if expect_json and key == "openai":
+
+    # DeepSeek v3 y OpenAI soportan response_format json_object; evita JSON truncado o con markdown
+    if expect_json and key in ("openai", "deepseek"):
         payload["response_format"] = {"type": "json_object"}
 
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-    response = requests.post(url, headers=headers, json=payload, timeout=30)
+    response = requests.post(url, headers=headers, json=payload, timeout=timeout_secs)
     response.raise_for_status()
     return response.json()["choices"][0]["message"]["content"]
 
