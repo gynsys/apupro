@@ -1,4 +1,6 @@
 import React, { useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 import { Sparkles, X, Check, Bot, Edit2, Loader2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { getParametricStep3Definition } from '../../constants/guidedBuilderConstants';
 import ArchitectureModeSelector from './ArchitectureModeSelector';
@@ -24,6 +26,12 @@ export default function GuidedAssistantModal({
   setUseTypesafeJev = null
 }) {
   const chatEndRef = useRef(null);
+  const navigate = useNavigate();
+
+  const handleClose = () => {
+    if (onClose) onClose();
+    navigate('/budgets');
+  };
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -52,7 +60,7 @@ export default function GuidedAssistantModal({
         style={{ minHeight: '380px', maxHeight: '90dvh' }}
       >
         <button 
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute top-3 right-3 text-amber-700 hover:text-amber-900 hover:bg-amber-200/50 rounded-full p-2 touch-target flex items-center justify-center transition-colors cursor-pointer"
           aria-label="Cerrar asistente"
         >
