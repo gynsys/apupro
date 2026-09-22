@@ -733,6 +733,83 @@ def _prune_apu_for_prompt(apu: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+
+def _enforce_scope_exclusions(result: Dict[str, Any], user_description: str) -> None:
+    """
+    Salvaguarda determinista de exclusiones de alcance explícitas.
+
+    El LLM a veces ignora instrucciones como "no incluye suministro de materiales"
+    y de todas formas agrega materiales. Esta función detecta esas frases en la
+    descripción del usuario y limpia la sección correspondiente del resultado,
+    INDEPENDIENTEMENTE de lo que el LLM haya decidido.
+
+    Modifica `result` in-place. No retorna nada.
+    """
+    if not user_description or not isinstance(result, dict):
+        return
+
+    desc_lower = user_description.lower()
+
+    # --- EXCLUSIÓN DE MATERIALES / SUMINISTRO ---
+    _EXCL_MATERIALES = [
+        r"\bno\s+incluye?\s+(el\s+)?suministro\b",
+        r"\bsin\s+suministro\b",
+        r"\bno\s+incluye?\s+(los?\s+)?materiales?\b",
+        r"\bsin\s+materiales?\b",
+        r"\bno\s+incluye?\s+material\b",
+        r"\bexcluye?\s+(el\s+)?suministro\b",
+        r"\bexcluye?\s+(los?\s+)?materiales?\b",
+        r"\bsolo\s+(mano\s+de\s+obra|m\.?o\.?)\b",
+        r"\b(??nicamente|solo)\s+instalaci[oó]n\b",
+    ]
+    if any(re.search(pat, desc_lower) for pat in _EXCL_MATERIALES):
+        if result.get("materials"):
+            logger.info(
+                f"[ScopeExclusion] Descripción indica exclusión de materiales. "
+                f"Eliminando {len(result['materials'])} materiales del resultado LLM."
+            )
+            result["materials"] = []
+            result.setdefault("notas_adaptacion", []).append(
+                "EXCLUSIÓN DE ALCANCE: Materiales/suministro eliminados por instrucción explícita del usuario."
+            )
+
+    # --- EXCLUSIÓN DE MANO DE OBRA ---
+    _EXCL_MO = [
+        r"\bno\s+incluye?\s+(la\s+)?mano\s+de\s+obra\b",
+        r"\bsin\s+mano\s+de\s+obra\b",
+        r"\bexcluye?\s+(la\s+)?mano\s+de\s+obra\b",
+        r"\bno\s+incluye?\s+m\.?o\.?\b",
+        r"\bsolo\s+(suministro|materiales?)\b",
+    ]
+    if any(re.search(pat, desc_lower) for pat in _EXCL_MO):
+        if result.get("labors"):
+            logger.info(
+                f"[ScopeExclusion] Descripción indica exclusión de mano de obra. "
+                f"Eliminando {len(result['labors'])} obreros del resultado LLM."
+            )
+            result["labors"] = []
+            result.setdefault("notas_adaptacion", []).append(
+                "EXCLUSIÓN DE ALCANCE: Mano de obra eliminada por instrucción explícita del usuario."
+            )
+
+    # --- EXCLUSIÓN DE EQUIPOS ---
+    _EXCL_EQ = [
+        r"\bno\s+incluye?\s+(los?\s+)?equipos?\b",
+        r"\bsin\s+equipos?\b",
+        r"\bexcluye?\s+(los?\s+)?equipos?\b",
+    ]
+    if any(re.search(pat, desc_lower) for pat in _EXCL_EQ):
+        if result.get("equipments"):
+            logger.info(
+                f"[ScopeExclusion] Descripción indica exclusión de equipos. "
+                f"Eliminando {len(result['equipments'])} equipos del resultado LLM."
+            )
+            result["equipments"] = []
+            result.setdefault("notas_adaptacion", []).append(
+                "EXCLUSIÓN DE ALCANCE: Equipos eliminados por instrucción explícita del usuario."
+            )
+
+
 def generate_apu_with_ai_from_base(
     base_apu: Dict[str, Any],
     complementary_apus: Optional[List[Dict[str, Any]]] = None,
@@ -912,6 +989,9 @@ CUANDO solicites clarificación, responde con "options": []. ESTÁ TERMINANTEMEN
 
     if result.get("status") == "clarification_needed":
         result["options"] = []
+
+    # Salvaguarda determinista de exclusiones de alcance explícitas
+    _enforce_scope_exclusions(result, user_description)
 
     # Salvaguarda determinista de unidad solicitada
     if result.get("partida") and requested_unit:
