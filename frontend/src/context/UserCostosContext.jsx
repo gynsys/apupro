@@ -6,9 +6,15 @@ const COSTOS_DEFAULTS = {
   porcentajeAdministracion: 15,
   iva: 16,
   fcas: 417.0,
-  fcasSalarioBase: 240,
-  fcasBonoCestaticket: 40,
+  fcasSalarioBase: 80,
+  fcasBonoCestaticket: 174,
   fcasMetodo: 'estandar',
+  fcasBonoInFcas: false,
+  fcasLaborBonus: 5.72,
+  fcasDiasRendimiento: 56,
+  fcasCostoHcm: 450,
+  fcasCostoTransporte: 547.5,
+  fcasCostoEpp: 290,
   fcasSavedProfiles: {}, // Almacena calculos con nombre
 };
 

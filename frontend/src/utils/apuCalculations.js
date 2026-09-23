@@ -49,15 +49,20 @@ export function calculateItemPU(item, budget = {}) {
     return acc + (baseCost * (1 + (labInflation / 100)));
   }, 0);
 
-  const totBono = (item.labors || []).reduce((acc, curr) => {
-    const q = parseFloat(curr.cantidad ?? curr.quantity ?? 0);
-    const bBonus = parseFloat(curr.bono) || defaultLaborBonus;
-    const b = bBonus * exRate;
-    const baseCost = q * b;
-    return acc + (baseCost * (1 + (labInflation / 100)));
-  }, 0);
-
   const fcasPercent = parseFloat(budget?.fcas_percent ?? 417.0);
+  const bonoInFcas = budget?.bono_in_fcas === true || (budget?.bono_in_fcas !== false && fcasPercent >= 1000);
+
+  let totBono = 0;
+  if (!bonoInFcas) {
+    totBono = (item.labors || []).reduce((acc, curr) => {
+      const q = parseFloat(curr.cantidad ?? curr.quantity ?? 0);
+      const bBonus = parseFloat(curr.bono) || defaultLaborBonus;
+      const b = bBonus * exRate;
+      const baseCost = q * b;
+      return acc + (baseCost * (1 + (labInflation / 100)));
+    }, 0);
+  }
+
   const fcasMonto = totJornal * (fcasPercent / 100);
   const labTotalDay = totJornal + totBono + fcasMonto;
   const labCost = labTotalDay / perf;

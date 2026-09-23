@@ -121,6 +121,7 @@ class BudgetBase(BaseModel):
     profit_percent: float = 10.0
     iva_percent: float = 16.0
     labor_bonus: float = 0.0
+    bono_in_fcas: Optional[bool] = False
     material_inflation: float = 0.0
     labor_inflation: float = 0.0
     equipment_inflation: float = 0.0
@@ -144,6 +145,7 @@ class BudgetUpdate(BaseModel):
     profit_percent: Optional[float] = None
     iva_percent: Optional[float] = None
     labor_bonus: Optional[float] = None
+    bono_in_fcas: Optional[bool] = None
     material_inflation: Optional[float] = None
     labor_inflation: Optional[float] = None
     equipment_inflation: Optional[float] = None

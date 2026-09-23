@@ -20,6 +20,7 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
     currency: budget.currency || 'USD',
     exchange_rate: budget.exchange_rate ?? 1.0,
     fcas_percent: budget.fcas_percent ?? costosConfig?.fcas ?? 417.0,
+    bono_in_fcas: budget.bono_in_fcas ?? (costosConfig?.fcasBonoInFcas ?? false),
     admin_percent: budget.admin_percent ?? 15.0,
     profit_percent: budget.profit_percent ?? 10.0,
     iva_percent: budget.iva_percent ?? 16.0,
@@ -43,6 +44,7 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
         currency: budget.currency || prev.currency,
         exchange_rate: budget.exchange_rate ?? prev.exchange_rate,
         fcas_percent: budget.fcas_percent ?? prev.fcas_percent,
+        bono_in_fcas: budget.bono_in_fcas ?? prev.bono_in_fcas,
         admin_percent: budget.admin_percent ?? prev.admin_percent,
         profit_percent: budget.profit_percent ?? prev.profit_percent,
         iva_percent: budget.iva_percent ?? prev.iva_percent,
@@ -110,6 +112,7 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
         currency: settings.currency || 'USD',
         exchange_rate: parseFloat(settings.exchange_rate) || 1.0,
         fcas_percent: parseFloat(settings.fcas_percent) || 0.0,
+        bono_in_fcas: Boolean(settings.bono_in_fcas),
         admin_percent: parseFloat(settings.admin_percent) || 0.0,
         profit_percent: parseFloat(settings.profit_percent) || 0.0,
         iva_percent: parseFloat(settings.iva_percent) || 0.0,
@@ -288,7 +291,13 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                           if (e.target.value) {
                             const p = costosConfig.fcasSavedProfiles[e.target.value];
                             if (p && p.fcasPorcentaje != null) {
-                              setSettings(prev => ({ ...prev, fcas_percent: p.fcasPorcentaje }));
+                              const isBonoInFcas = p.bonoInFcas ?? (p.fcasPorcentaje >= 1000);
+                              setSettings(prev => ({ 
+                                ...prev, 
+                                fcas_percent: p.fcasPorcentaje,
+                                bono_in_fcas: isBonoInFcas,
+                                labor_bonus: isBonoInFcas ? 0.0 : (p.bonoDiario ?? prev.labor_bonus)
+                              }));
                               toast.success(`FCAS ${p.fcasPorcentaje}% cargado desde "${e.target.value}"`);
                             }
                             e.target.value = "";
@@ -311,6 +320,18 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                     onChange={val => setSettings({...settings, fcas_percent: val})}
                     className="px-2 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
                   />
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <input 
+                      type="checkbox" 
+                      id="budget_bono_in_fcas" 
+                      checked={Boolean(settings.bono_in_fcas)} 
+                      onChange={(e) => setSettings(prev => ({ ...prev, bono_in_fcas: e.target.checked }))} 
+                      className="rounded text-sky-600 focus:ring-sky-500 h-3.5 w-3.5 cursor-pointer"
+                    />
+                    <label htmlFor="budget_bono_in_fcas" className="text-[11px] font-medium text-slate-600 cursor-pointer select-none">
+                      Bono diluido en FCAS
+                    </label>
+                  </div>
                 </div>
               </div>
               
@@ -348,12 +369,17 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1 whitespace-nowrap">
-                    <DollarSign size={14}/> Bono
+                    <DollarSign size={14}/> Bono {settings.bono_in_fcas ? '(En FCAS)' : ''}
                   </label>
                   <DecimalInput 
-                    value={settings.labor_bonus}
+                    value={settings.bono_in_fcas ? 0 : settings.labor_bonus}
                     onChange={val => setSettings({...settings, labor_bonus: val})}
-                    className="px-2 py-1 border border-sky-200 rounded-xl text-sm text-sky-700 bg-sky-50 outline-none transition-all focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10"
+                    disabled={settings.bono_in_fcas}
+                    className={`px-2 py-1 border rounded-xl text-sm outline-none transition-all ${
+                      settings.bono_in_fcas 
+                        ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' 
+                        : 'border-sky-200 text-sky-700 bg-sky-50 focus:border-sky-600 focus:bg-sky-100 focus:ring-4 focus:ring-sky-700/10'
+                    }`}
                   />
                 </div>
               </div>

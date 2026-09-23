@@ -30,11 +30,13 @@ export default function ApuEditorUI({
     labor_inflation = 0,
     labor_bonus = 0,
     fcas_percent = 417,
+    bono_in_fcas,
     admin_percent = 15,
     profit_percent = 10,
     iva_percent = 0
   } = settings || {};
 
+  const isBonoInFcas = bono_in_fcas === true || (bono_in_fcas !== false && fcas_percent >= 1000);
   const exRate = currency === 'BS' ? (exchange_rate || 1.0) : 1.0;
 
   // ── Calculations ─────────────────────────────────────────────────────────
@@ -60,6 +62,7 @@ export default function ApuEditorUI({
   };
 
   const calculateLaborTotalBonoDay = () => {
+    if (isBonoInFcas) return 0;
     return item.labors?.reduce((sum, lab) => {
       const bBonus = lab.bono || labor_bonus || 0;
       const baseCost = lab.cantidad * (bBonus * exRate);

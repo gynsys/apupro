@@ -25,6 +25,7 @@ class Budget(Base):
     profit_percent = Column(Float, default=10.0) # % de Utilidad e Imprevistos
     iva_percent = Column(Float, default=16.0) # % de I.V.A.
     labor_bonus = Column(Float, default=0.0) # Bono global para mano de obra
+    bono_in_fcas = Column(Boolean, default=False) # True si el bono está integrado en la matriz FCAS
 
     # Índices de Inflación
     material_inflation = Column(Float, default=0.0)

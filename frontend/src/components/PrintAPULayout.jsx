@@ -17,6 +17,7 @@ export function APUPrintSheet({ partida, materiales = [], equipos = [], mano_obr
   const utilPercent = options?.profit_percent ?? options?.util_percent ?? partida.profit_percent ?? partida.util_percent ?? partida.settings?.profit_percent ?? 10;
   const fcasPercent = options?.fcas_percent ?? partida.fcas_percent ?? partida.settings?.fcas_percent ?? 417;
   const fcasFactor = fcasPercent / 100;
+  const bonoInFcas = options?.bono_in_fcas ?? partida?.bono_in_fcas ?? partida?.settings?.bono_in_fcas ?? (fcasPercent >= 1000);
 
   const calcMatTotal = () => materiales.reduce((acc, m) => {
     const q = parseFloat(m.cantidad ?? m.quantity ?? 0);
@@ -38,12 +39,15 @@ export function APUPrintSheet({ partida, materiales = [], equipos = [], mano_obr
     return acc + (lab.tot_jornal ?? (q * j));
   }, 0);
 
-  const calcLabTotalBonoDay = () => mano_obra.reduce((acc, lab) => {
-    const q = parseFloat(lab.cantidad ?? lab.quantity ?? 0);
-    const bBonus = parseFloat(lab.bono) || defaultLaborBonus;
-    const b = (bBonus * exRate) * (1 + (labInflation / 100));
-    return acc + (q * b);
-  }, 0);
+  const calcLabTotalBonoDay = () => {
+    if (bonoInFcas) return 0;
+    return mano_obra.reduce((acc, lab) => {
+      const q = parseFloat(lab.cantidad ?? lab.quantity ?? 0);
+      const bBonus = parseFloat(lab.bono) || defaultLaborBonus;
+      const b = (bBonus * exRate) * (1 + (labInflation / 100));
+      return acc + (q * b);
+    }, 0);
+  };
 
   const calcLabTotalDay = () => calcLabTotalJornalDay() * (1 + fcasFactor) + calcLabTotalBonoDay();
 
@@ -258,17 +262,17 @@ export function APUPrintSheet({ partida, materiales = [], equipos = [], mano_obr
             {mano_obra.map((lab, i) => {
               const q = parseFloat(lab.cantidad ?? lab.quantity ?? 0);
               const j = parseFloat(lab.jornal ?? 0);
-              const b = parseFloat(lab.bono ?? 0);
+              const b = bonoInFcas ? 0 : parseFloat(lab.bono ?? 0);
               const tj = lab.tot_jornal ?? (q * j);
-              const tb = lab.tot_bono ?? (q * b);
+              const tb = bonoInFcas ? 0 : (lab.tot_bono ?? (q * b));
               return (
                 <tr key={i}>
                   <td className="border border-black px-1 py-0.5 text-center">{i + 1}</td>
                   <td className="border border-black px-1 py-0.5 text-left uppercase">{lab.descripcion ?? lab.description ?? ''}</td>
                   <td className="border border-black px-1 py-0.5 text-right">{numFormat(q)}</td>
                   <td className="border border-black px-1 py-0.5 text-right">{numFormat(j)}</td>
-                  <td className="border border-black px-1 py-0.5 text-right">{numFormat(b)}</td>
-                  <td className="border border-black px-1 py-0.5 text-right">{numFormat(tb)}</td>
+                  <td className="border border-black px-1 py-0.5 text-right">{bonoInFcas ? '-' : numFormat(b)}</td>
+                  <td className="border border-black px-1 py-0.5 text-right">{bonoInFcas ? '-' : numFormat(tb)}</td>
                   <td className="border border-black px-1 py-0.5 text-right">{numFormat(tj)}</td>
                   <td className="border border-black px-1 py-0.5 text-right bg-gray-50">{numFormat((tj + tb) / rendimiento)}</td>
                 </tr>

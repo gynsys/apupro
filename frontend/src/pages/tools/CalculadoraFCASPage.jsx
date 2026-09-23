@@ -102,6 +102,12 @@ export default function CalculadoraFCASPage() {
         fcasSalarioBase: configToSave?.salarioBase,
         fcasBonoCestaticket: configToSave?.bonoCestaticket,
         fcasMetodo: configToSave?.metodo,
+        fcasBonoInFcas: configToSave?.bonoInFcas ?? false,
+        fcasLaborBonus: configToSave?.bonoDiario ?? 0.0,
+        fcasDiasRendimiento: configToSave?.diasRendimiento ?? 56,
+        fcasCostoHcm: configToSave?.costoHcm ?? 450,
+        fcasCostoTransporte: configToSave?.costoTransporte ?? 547.5,
+        fcasCostoEpp: configToSave?.costoEpp ?? 290,
       });
       toast.success(`FCAS predeterminado establecido en ${roundedFCAS}% para futuros presupuestos`);
     } catch (error) {
@@ -115,6 +121,11 @@ export default function CalculadoraFCASPage() {
         isPage={true}
         initialSalarioBase={costosConfig?.fcasSalarioBase}
         initialBonoCestaticket={costosConfig?.fcasBonoCestaticket}
+        initialBonoInFcas={costosConfig?.fcasBonoInFcas}
+        initialDiasRendimiento={costosConfig?.fcasDiasRendimiento}
+        initialCostoHcm={costosConfig?.fcasCostoHcm}
+        initialCostoTransporte={costosConfig?.fcasCostoTransporte}
+        initialCostoEpp={costosConfig?.fcasCostoEpp}
         initialMetodo={costosConfig?.fcasMetodo}
         savedProfiles={effectiveProfiles}
         onSaveProfile={handleSaveProfile}

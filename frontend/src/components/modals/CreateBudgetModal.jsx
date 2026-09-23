@@ -18,7 +18,8 @@ export default function CreateBudgetModal({ onClose, onSuccess, onLimitReached }
     currency: 'USD',
     exchange_rate: 1.0,
     fcas_percent: costosConfig?.fcas ?? 417.0,
-    labor_bonus: 0.0,
+    bono_in_fcas: costosConfig?.fcasBonoInFcas ?? false,
+    labor_bonus: costosConfig?.fcasBonoInFcas ? 0.0 : (costosConfig?.fcasLaborBonus ?? 0.0),
     admin_percent: costosConfig?.porcentajeAdministracion ?? 15.0,
     profit_percent: costosConfig?.porcentajeUtilidad ?? 10.0,
     iva_percent: costosConfig?.iva ?? 16.0
@@ -31,6 +32,8 @@ export default function CreateBudgetModal({ onClose, onSuccess, onLimitReached }
       setFormData(prev => ({
         ...prev,
         fcas_percent: costosConfig.fcas ?? prev.fcas_percent,
+        bono_in_fcas: costosConfig.fcasBonoInFcas ?? prev.bono_in_fcas,
+        labor_bonus: costosConfig.fcasBonoInFcas ? 0.0 : (costosConfig.fcasLaborBonus ?? prev.labor_bonus),
         admin_percent: costosConfig.porcentajeAdministracion ?? prev.admin_percent,
         profit_percent: costosConfig.porcentajeUtilidad ?? prev.profit_percent,
         iva_percent: costosConfig.iva ?? prev.iva_percent

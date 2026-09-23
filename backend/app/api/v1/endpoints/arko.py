@@ -571,9 +571,15 @@ class CostosConfigSchema(BaseModel):
     porcentajeAdministracion: float = 15.0
     iva: float = 16.0
     fcas: float = 417.0
-    fcasSalarioBase: Optional[float] = 240.0
-    fcasBonoCestaticket: Optional[float] = 40.0
+    fcasSalarioBase: Optional[float] = 80.0
+    fcasBonoCestaticket: Optional[float] = 174.0
     fcasMetodo: Optional[str] = "estandar"
+    fcasBonoInFcas: Optional[bool] = False
+    fcasLaborBonus: Optional[float] = 5.72
+    fcasDiasRendimiento: Optional[float] = 56.0
+    fcasCostoHcm: Optional[float] = 450.0
+    fcasCostoTransporte: Optional[float] = 547.50
+    fcasCostoEpp: Optional[float] = 290.0
     fcasSavedProfiles: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 class CostosConfigUpdate(BaseModel):
@@ -584,6 +590,12 @@ class CostosConfigUpdate(BaseModel):
     fcasSalarioBase: Optional[float] = None
     fcasBonoCestaticket: Optional[float] = None
     fcasMetodo: Optional[str] = None
+    fcasBonoInFcas: Optional[bool] = None
+    fcasLaborBonus: Optional[float] = None
+    fcasDiasRendimiento: Optional[float] = None
+    fcasCostoHcm: Optional[float] = None
+    fcasCostoTransporte: Optional[float] = None
+    fcasCostoEpp: Optional[float] = None
     fcasSavedProfiles: Optional[Dict[str, Any]] = None
 
 class ArkoMeUpdate(BaseModel):

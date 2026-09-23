@@ -67,6 +67,10 @@ def create_budget(budget_in: BudgetCreate, db: Session = Depends(get_db), curren
         budget_data["iva_percent"] = costos.iva
     if budget_data.get("fcas_percent") is None:
         budget_data["fcas_percent"] = costos.fcas
+    if budget_data.get("bono_in_fcas") is None:
+        budget_data["bono_in_fcas"] = getattr(costos, "fcasBonoInFcas", False)
+    if budget_data.get("labor_bonus") is None:
+        budget_data["labor_bonus"] = 0.0 if getattr(costos, "fcasBonoInFcas", False) else (getattr(costos, "fcasLaborBonus", 0.0) or 0.0)
 
     db_budget = Budget(**budget_data)
     db.add(db_budget)
@@ -81,6 +85,7 @@ def ensure_budget_share_columns(db: Session) -> None:
         db.execute(text("ALTER TABLE budgets ADD COLUMN IF NOT EXISTS share_token VARCHAR(255);"))
         db.execute(text("ALTER TABLE budgets ADD COLUMN IF NOT EXISTS is_public_share BOOLEAN DEFAULT FALSE;"))
         db.execute(text("ALTER TABLE budgets ADD COLUMN IF NOT EXISTS notes TEXT;"))
+        db.execute(text("ALTER TABLE budgets ADD COLUMN IF NOT EXISTS bono_in_fcas BOOLEAN DEFAULT FALSE;"))
         db.commit()
     except Exception as e:
         db.rollback()
