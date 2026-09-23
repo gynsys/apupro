@@ -93,8 +93,15 @@ def get_items_paginated(
             if all_filters:
                 query = query.filter(and_(*all_filters))
         
-        total = query.count()
-        custom_items = query.order_by(CustomCostItem.created_at.desc()).offset(skip).limit(limit).all()
+        query_with_count = query.add_columns(func.count().over().label("full_count"))
+        rows = query_with_count.order_by(CustomCostItem.created_at.desc()).offset(skip).limit(limit).all()
+        if rows:
+            total = rows[0][1]
+            custom_items = [r[0] for r in rows]
+        else:
+            total = query.count() if skip > 0 else 0
+            custom_items = []
+
         
         items = []
         for ci in custom_items:
@@ -276,13 +283,14 @@ def get_items_paginated(
             if hc:
                 query = query.filter(or_(CostItem.CovPar == None, ~CostItem.CovPar.startswith(hc)))
 
-    total = query.count()
-
     # Priorizar partidas con COVENIN completo (formato [LETRA].[9 DÍGITOS] como C.110800300)
     covenin_priority = case(
         (func.length(CostItem.CovPar) == 11, 0),  # COVENIN completo tiene 11 caracteres (LETRA + punto + 9 dígitos)
         else_=1  # Otros tienen prioridad 1
     )
+
+    # Optimización: SELECT COUNT(*) OVER() fusiona el conteo total con la consulta paginada en un único viaje a la BD
+    query_with_count = query.add_columns(func.count().over().label("full_count"))
 
     if search:
         clean_search = strip_accents(search).lower().strip()
@@ -293,9 +301,16 @@ def get_items_paginated(
         )
         sim_expr = func.similarity(func.lower(func.f_unaccent(CostItem.Descri)), clean_search)
         combined_score = (ts_rank_expr * 2.0) + sim_expr
-        items = query.order_by(combined_score.desc(), covenin_priority, CostItem.CodPar).offset(skip).limit(limit).all()
+        rows = query_with_count.order_by(combined_score.desc(), covenin_priority, CostItem.CodPar).offset(skip).limit(limit).all()
     else:
-        items = query.order_by(covenin_priority, CostItem.CodPar).offset(skip).limit(limit).all()
+        rows = query_with_count.order_by(covenin_priority, CostItem.CodPar).offset(skip).limit(limit).all()
+
+    if rows:
+        total = rows[0][1]
+        items = [r[0] for r in rows]
+    else:
+        total = query.count() if skip > 0 else 0
+        items = []
 
     return total, items
 
