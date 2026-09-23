@@ -584,12 +584,18 @@ Embeddings pre-generados: embeddings_gemini.npy (53MB en servidor)
    - Modificado en `crud_costbase.py` y `preprocessing_service.py` para usar `func.f_unaccent(column)`, permitiendo que SQLAlchemy coincida con los índices GIN funcionales.
 3. **Consolidación de Conteo:**
    - `total = query.count()` se ejecuta una única vez tras aplicar todos los filtros de categoría, actividad y permisos.
-4. **Ranking por Relevancia:**
-   - Cuando existe término de búsqueda, se ordena por `func.similarity(func.lower(func.f_unaccent(CostItem.Descri)), clean_search).desc()`, ubicando las partidas con mayor coincidencia léxica en las primeras posiciones.
-5. **Debounce en Frontend:**
-   - Verificado `debounceMs = 400` en los hooks `useCostbaseSearch` y `useCost360Search` para evitar saturación de peticiones por pulsación de tecla.
+4. **Ranking Híbrido por Relevancia (`ts_rank` + `similarity`):**
+   - Creado índice GIN `idx_costitem_descri_tsvector` sobre `to_tsvector('spanish', f_unaccent("Descri"))`.
+   - Cuando existe término de búsqueda, se ordena por una función combinada de relevancia:
+     $$\text{Score} = (\text{ts\_rank}(\text{to\_tsvector}, \text{plainto\_tsquery}) \times 2.0) + \text{similarity}(\text{Descri}, \text{query})$$
+   - Combina análisis morfológico en español (stemming: ej. "paredes" $\leftrightarrow$ "pared", "bloques" $\leftrightarrow$ "bloque") con ponderación de coincidencia exacta de subcadenas.
+5. **Debounce Optimizado y Cancelación en Frontend:**
+   - Intervalo afinado a `debounceMs = 300` en [`useCostbaseSearch`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/hooks/useCostbaseSearch.js) y [`useCost360Search`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/cost360/hooks/useCost360Search.js).
+   - Implementado control de IDs de petición (`requestIdRef`) para descartar respuestas desfasadas (race conditions de red).
+   - Cancelación inmediata del timeout pendiente al presionar Enter (`forceSearch`).
+   - Botón de limpieza rápida (icono `X`) en [`CostbaseSearchBar.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/components/CostbaseSearchBar.jsx).
 
 **Resultados de Benchmark (Producción):**
 - Búsqueda por prefijo COVENIN (`E411%`): de ~16ms a **0.26ms** (60× más rápido).
 - Búsqueda textual simple (`excavacion`): de ~210ms a **6-9ms** (23× más rápido).
-- Búsqueda multi-palabra con ranking (`pared bloque concreto`): **~64ms total** (end-to-end con conteo, ordenamiento por similitud y serialización de 20 partidas).
+- Búsqueda semántica con `ts_rank` + `similarity` (`pared bloque concreto`): **~36ms** en DB, **~72ms total HTTP** (con conteo, ordenamiento morfológico y serialización de 20 partidas).
