@@ -394,9 +394,172 @@ Durante esta jornada se ejecutaron cinco optimizaciones mayores sobre la arquite
   4. **Preservación de Sugerencias de IA:** Si el material sugerido por la IA no existe en la base de datos (material nuevo o especial), **se conserva intacto en el APU** con su precio referencial estimado y su respectiva alerta comercial para cotizarlo con proveedores.
   5. **Integración:** El reconciliador quedó activo en el motor RAG adaptativo, en el motor clásico y en el motor matemático inverso ([`inverse_apu_synthesizer.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/inverse_apu_synthesizer.py)).
 
-### 10.6 Cobertura Total de Insumos Líderes y Familias Yeso/Anime
+#### 10.6 Cobertura Total de Insumos Líderes y Familias Yeso/Anime
 - **Familias Oficiales:** Se crearon `FAM-DRYWALL` (*Yeso, Drywall y Cielos Rasos*, líder `ACA014`) y `FAM-ANIME` (*Anime y Poliestireno Expandido*, líder `ESP004`).
 - **Cobertura 100%:** Los 8.491 materiales de la base de datos (incluyendo los 1.404 huérfanos anteriores) quedaron asignados a sus 25 familias y vinculados a sus respectivos Insumos Líderes con su factor relativo `market_factor`.
 - **Impacto en el Generador:** Todo material asignado o reconciliado en los APUs se mantiene automáticamente actualizado en sus costos unitarios al modificar el precio de su Insumo Líder en el panel de mercado.
 
+---
 
+## 11. Bitácora de Actualizaciones Críticas: 21–22 de Septiembre 2026
+
+> **Contexto:** Ciclo de corrección de errores 500 en producción + optimización de tokens LLM + migración de proveedor a DeepSeek.
+
+### 11.1 Migración de Proveedor LLM: Gemini → DeepSeek (Primario)
+
+**Problema:** La cuota gratuita de Gemini (20 req/día, 5 req/min) se agotaba constantemente causando errores 500.
+
+**Solución implementada:**
+- Se registró **DeepSeek** (`deepseek-chat`) como proveedor LLM primario (`priority=1`, `use_case="cost360"`) con API de pago sin límite diario.
+- **Gemini** (`gemini-3.6-flash`) pasó a `priority=2`, `use_case="general"` — exclusivo para embeddings RAG.
+- Se actualizó [`llm_router.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/llm_router.py) agregando `"deepseek"` a la lista de proveedores compatibles con OpenAI.
+- `base_url` de DeepSeek en BD: `https://api.deepseek.com/v1` (requiere el `/v1` explícito).
+- `response_format: {"type": "json_object"}` habilitado para DeepSeek (soportado desde v3).
+
+**Arquitectura final de proveedores:**
+
+| Proveedor | Prioridad | Use Case | Propósito |
+|-----------|-----------|----------|-----------|
+| DeepSeek `deepseek-chat` | 1 | `cost360` | Generación de APU (sin cuota) |
+| Gemini `gemini-3.6-flash` | 2 | `general` | Embeddings RAG + fallback |
+
+---
+
+### 11.2 Optimización de Tokens de Entrada al LLM (3 Medidas)
+
+**Objetivo:** Reducir el contexto enviado al LLM de ~3.500 tokens a ~1.200 tokens.
+
+#### Medida 1 — JSON Compacto
+- **Archivo:** [`ai_apu_service.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/ai_apu_service.py)
+- **Cambio:** `json.dumps(apu, indent=2)` → `json.dumps(apu, separators=(',', ':'))`
+- **Impacto:** ~30% reducción de tokens en la serialización del APU base.
+
+#### Medida 2 — Podado del APU Base (`_prune_apu_for_prompt`)
+- **Función:** `_prune_apu_for_prompt(apu)` (línea ~692 en producción)
+- **Lógica:** Elimina campos `None`, strings vacíos, `desperdicio=0.0`, redondea precios a 4 decimales, mantiene solo los campos relevantes para el prompt.
+- **Campos eliminados por categoría:**
+  - Materiales: solo `codigo`, `descripcion`, `unidad`, `cantidad`, `precio_unitario`
+  - Equipos: solo `codigo`, `descripcion`, `cantidad`, `precio_unitario`
+  - MO: solo `codigo`, `descripcion`, `cantidad`, `jornal`, `bono`
+
+#### Medida 3 — Inyección Quirúrgica de Complementarias (`_extract_surgical_insumos`)
+- **Función:** `_extract_surgical_insumos(apu, user_description)` con `SECONDARY_ACTIVITY_PATTERNS`
+- **Lógica:** Si el usuario pide "bote", solo se inyecta el equipo de transporte (Camión volteo) de la complementaria, no toda la partida con insumos no relacionados.
+- **Patrones:** `key_insumo_pattern` + `insumo_types` en el diccionario `SECONDARY_ACTIVITY_PATTERNS`.
+
+---
+
+### 11.3 Corrección de Bug Crítico: `extra_params` String vs Dict
+
+**Error:** `'str' object has no attribute 'get'` — el campo `extra_params` de la tabla `llm_providers` se almacena como JSON string en PostgreSQL. SQLAlchemy lo retorna como `str`, y el código intentaba `extra.get("max_tokens")` directamente.
+
+**Fix en [`llm_router.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/llm_router.py):**
+```python
+extra = provider.extra_params or {}
+if isinstance(extra, str):
+    try:
+        extra = json.loads(extra)
+    except (json.JSONDecodeError, TypeError):
+        extra = {}
+```
+
+**Configuración correcta en BD para DeepSeek:**
+```json
+{"temperature": 0.3, "max_tokens": 8192}
+```
+
+> ⚠️ **Importante:** `max_tokens=8192` es crítico. Con 2048 (valor anterior), el JSON de un APU completo (~30 insumos) se truncaba y fallaba el parse.
+
+---
+
+### 11.4 Corrección de Bug: Números con Coma Decimal (`_safe_float`)
+
+**Error:** `ValueError: could not convert string to float: '7,5'`
+
+**Causa:** DeepSeek a veces devuelve valores numéricos con coma decimal española (`"7,5"`, `"3,5"`) en lugar de punto (`7.5`). Esto rompía todos los `float()` downstream.
+
+**Solución — dos funciones en [`ai_apu_service.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/ai_apu_service.py):**
+
+```python
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    """Convierte '7,5' → 7.5, None → default, int/float → float."""
+    if value is None: return default
+    if isinstance(value, (int, float)): return float(value)
+    if isinstance(value, str):
+        return float(value.strip().replace(",", "."))
+    return default
+
+def _sanitize_llm_numbers(result: Dict[str, Any]) -> None:
+    """Normaliza in-place todos los campos numéricos del resultado LLM."""
+    # Aplica _safe_float a: partida.performance/quantity,
+    # materials.cantidad/desperdicio/precio_unitario,
+    # equipments.cantidad/depreciacion/precio_unitario,
+    # labors.cantidad/jornal/bono
+```
+
+`_sanitize_llm_numbers` se llama **inmediatamente después de `call_llm_json`** en ambas funciones de generación, antes de cualquier otro procesado.
+
+---
+
+### 11.5 Salvaguarda Determinista de Exclusiones de Alcance (`_enforce_scope_exclusions`)
+
+**Problema:** Cuando el usuario escribía *"no incluye el suministro de los materiales"*, el LLM entendía la exclusión en la descripción de la partida pero igual incluía los materiales en `materials[]`. El modelo no es 100% confiable siguiendo instrucciones de exclusión.
+
+**Solución — función `_enforce_scope_exclusions(result, user_description)` en [`ai_apu_service.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/ai_apu_service.py):**
+
+| Patrón detectado | Sección eliminada |
+|-----------------|------------------|
+| `"no incluye suministro"`, `"sin suministro"`, `"no incluye materiales"`, `"solo mano de obra"` | `materials[]` → `[]` |
+| `"no incluye mano de obra"`, `"sin mano de obra"`, `"solo suministro"` | `labors[]` → `[]` |
+| `"no incluye equipos"`, `"sin equipos"`, `"excluye equipos"` | `equipments[]` → `[]` |
+
+La función usa `re.search` con patrones `\b` para evitar falsos positivos. Se llama **antes** de cualquier calibrador o reconciliador.
+
+---
+
+### 11.6 Corrección de Bug: JSON Double-Encoded en Parser LLM
+
+**Error:** El parser `call_llm_json` en [`llm_router.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/llm_router.py) retornaba un `str` en lugar de `dict` cuando el LLM devolvía JSON doblemente codificado.
+
+**Fix:**
+```python
+data = json.loads(cleaned)
+# Guardia: si el JSON parseó como string (double-encoded), reintentar
+if isinstance(data, str):
+    data = json.loads(data)
+if isinstance(data, (dict, list)):
+    return data
+raise ValueError(f"JSON parsed to unexpected type: {type(data).__name__}")
+```
+
+El mismo guard se aplica en los fallbacks de extracción regex (`{...}` y `[...]`).
+
+---
+
+### 11.7 Resumen de Commits (Sprint 21–22 Sep 2026)
+
+| Commit | Descripción |
+|--------|-------------|
+| `a65c16d` | Optimización tokens LLM: JSON compacto + `_prune_apu_for_prompt` + `_extract_surgical_insumos` |
+| `3596b12` | Fix DeepSeek: `max_tokens=8192`, `timeout=90s`, `response_format json_object`, `temp=0.3` |
+| `525242c` | Fix exclusiones de alcance deterministas (`_enforce_scope_exclusions`) |
+| `d59bd0b` | Fix `_safe_float` coma decimal + `_sanitize_llm_numbers` + `extra_params str→dict` in router |
+
+### 11.8 Configuración de Producción (Estado al 22 Sep 2026)
+
+```
+Servidor: root@167.172.115.154
+Container: apupro_platform-apupro-backend-1
+
+LLM Providers (tabla llm_providers):
+  ID=4  DeepSeek  deepseek-chat  priority=1  use_case=cost360
+        base_url=https://api.deepseek.com/v1
+        extra_params={"temperature": 0.3, "max_tokens": 8192}
+  ID=1  Gemini    gemini-3.6-flash  priority=2  use_case=general
+        (embeddings RAG + fallback)
+
+AI_EMBEDDING_PROVIDER=gemini  (archivo .env en container)
+Embeddings pre-generados: embeddings_gemini.npy (53MB en servidor)
+```
+
+> **Nota de mantenimiento:** Los cambios en `llm_providers` requieren `docker restart` del backend para invalidar el caché de 5 minutos de `_load_providers()` en `llm_router.py`. Alternativa: llamar `invalidate_llm_cache()` directamente.
