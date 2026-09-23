@@ -563,3 +563,33 @@ Embeddings pre-generados: embeddings_gemini.npy (53MB en servidor)
 ```
 
 > **Nota de mantenimiento:** Los cambios en `llm_providers` requieren `docker restart` del backend para invalidar el caché de 5 minutos de `_load_providers()` en `llm_router.py`. Alternativa: llamar `invalidate_llm_cache()` directamente.
+
+---
+
+### 11.9 Optimización del Motor de Búsqueda de Partidas (GIN Trigram + Relevancia)
+
+**Problema:**
+1. Las búsquedas de texto libre `ILIKE '%term%'` realizaban un **Sequential Scan** sobre las 17.408 partidas de `cost360_items` (latencias de ~150-250ms por query).
+2. Se ejecutaban hasta 4 llamadas redundantes a `query.count()` en cada petición de paginación.
+3. El orden de resultados era alfabético por código (`CodPar`), sin ponderar la relevancia del texto.
+
+**Solución Implementada:**
+1. **Índices GIN Trigram en PostgreSQL (`pg_trgm` + `unaccent`):**
+   - `idx_costitem_descri_lower_trgm` sobre `lower(f_unaccent("Descri")) gin_trgm_ops` (3.7 MB).
+   - `idx_costitem_covpar_lower_trgm` sobre `lower("CovPar") gin_trgm_ops`.
+   - `idx_costitem_codpar_lower_trgm` sobre `lower("CodPar") gin_trgm_ops`.
+   - `idx_costitem_covpar_lower_prefix` sobre `lower("CovPar") text_pattern_ops` (búsquedas por prefijo COVENIN en < 0.3ms).
+   - Índices GIN trigram en las tablas de insumos: `cost360_materials`, `cost360_labor`, `cost360_equipment`.
+2. **Actualización de `unaccent_col`:**
+   - Modificado en `crud_costbase.py` y `preprocessing_service.py` para usar `func.f_unaccent(column)`, permitiendo que SQLAlchemy coincida con los índices GIN funcionales.
+3. **Consolidación de Conteo:**
+   - `total = query.count()` se ejecuta una única vez tras aplicar todos los filtros de categoría, actividad y permisos.
+4. **Ranking por Relevancia:**
+   - Cuando existe término de búsqueda, se ordena por `func.similarity(func.lower(func.f_unaccent(CostItem.Descri)), clean_search).desc()`, ubicando las partidas con mayor coincidencia léxica en las primeras posiciones.
+5. **Debounce en Frontend:**
+   - Verificado `debounceMs = 400` en los hooks `useCostbaseSearch` y `useCost360Search` para evitar saturación de peticiones por pulsación de tecla.
+
+**Resultados de Benchmark (Producción):**
+- Búsqueda por prefijo COVENIN (`E411%`): de ~16ms a **0.26ms** (60× más rápido).
+- Búsqueda textual simple (`excavacion`): de ~210ms a **6-9ms** (23× más rápido).
+- Búsqueda multi-palabra con ranking (`pared bloque concreto`): **~64ms total** (end-to-end con conteo, ordenamiento por similitud y serialización de 20 partidas).
