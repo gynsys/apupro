@@ -38,7 +38,7 @@ def strip_accents(s: str) -> str:
     return ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
 
 def unaccent_col(column):
-    return func.translate(column, 'áéíóúÁÉÍÓÚäëïöüÄËÏÖÜ', 'aeiouAEIOUaeiouAEIOU')
+    return func.f_unaccent(column)
 
 # ---------------------------------------------------------------------------
 # Constantes de configuración

@@ -32,7 +32,7 @@ def strip_accents(s: str) -> str:
     return ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
 
 def unaccent_col(column):
-    return func.translate(column, 'Ã¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ¤Ã«Ã¯Ã¶Ã¼Ã„Ã‹ÃÃ–Ãœ', 'aeiouAEIOUaeiouAEIOU')
+    return func.f_unaccent(column)
 
 def normalize_covenin_code(code: Optional[str]) -> str:
     """
@@ -248,53 +248,49 @@ def get_items_paginated(
                         CostItem.CodPar.ilike(f"{clean_chap}%")
                     )
                 )
-                total = query_chap.count()
-                
-                if total == 0 and len(clean_chap) > 3:
+                if len(clean_chap) > 3 and query_chap.count() == 0:
                     fallback_chap = clean_chap[:-1]
                     while len(fallback_chap) >= 3:
-                        query_chap = query.filter(
+                        cand = query.filter(
                             or_(
                                 CostItem.CovPar.ilike(f"{fallback_chap}%"),
                                 CostItem.CodPar.ilike(f"{fallback_chap}%")
                             )
                         )
-                        total = query_chap.count()
-                        if total > 0:
+                        if cand.count() > 0:
+                            query_chap = cand
                             break
                         fallback_chap = fallback_chap[:-1]
-            total = query_chap.count()
             query = query_chap
-        else:
-            total = query.count()
-    else:
-        total = query.count()
-        
+
     if categoria:
         query = query.filter(CostItem.Categoria == categoria)
-        total = query.count() # re-count if categoria is applied
     if tipo_actividad:
         query = query.filter(CostItem.TipoActividad == tipo_actividad)
-        total = query.count() # re-count if tipo_actividad is applied
     if only_coded:
         query = query.filter(CostItem.CovPar.op('~')(r'(^[A-Za-z]{1,2}[\.\-]?[0-9\.]+$|^[0-9]+RA$)'))
-        total = query.count()
 
     if hidden_categories and not covenin and not chapter and not is_superadmin:
         hc_list = [hc.strip() for hc in hidden_categories.split(',')]
         for hc in hc_list:
             if hc:
                 query = query.filter(or_(CostItem.CovPar == None, ~CostItem.CovPar.startswith(hc)))
-        total = query.count()
-    
-    # Priorizar partidas con COVENIN completo (formato [LETRA].[9 DÃGITOS] como C.110800300)
-    # Usamos una funciÃ³n SQL nativa para mayor compatibilidad
+
+    total = query.count()
+
+    # Priorizar partidas con COVENIN completo (formato [LETRA].[9 DÍGITOS] como C.110800300)
     covenin_priority = case(
-        (func.length(CostItem.CovPar) == 11, 0),  # COVENIN completo tiene 11 caracteres (LETRA + punto + 9 dÃ­gitos)
+        (func.length(CostItem.CovPar) == 11, 0),  # COVENIN completo tiene 11 caracteres (LETRA + punto + 9 dígitos)
         else_=1  # Otros tienen prioridad 1
     )
-    
-    items = query.order_by(covenin_priority, CostItem.CodPar).offset(skip).limit(limit).all()
+
+    if search:
+        clean_search = strip_accents(search).lower().strip()
+        sim_order = func.similarity(func.lower(func.f_unaccent(CostItem.Descri)), clean_search).desc()
+        items = query.order_by(sim_order, covenin_priority, CostItem.CodPar).offset(skip).limit(limit).all()
+    else:
+        items = query.order_by(covenin_priority, CostItem.CodPar).offset(skip).limit(limit).all()
+
     return total, items
 
 def get_item_by_code(db: Session, item_code: str) -> Optional[CostItem]:
