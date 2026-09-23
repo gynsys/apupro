@@ -819,7 +819,7 @@ def _enforce_scope_exclusions(result: Dict[str, Any], user_description: str) -> 
         r"\bexcluye?\s+(el\s+)?suministro\b",
         r"\bexcluye?\s+(los?\s+)?materiales?\b",
         r"\bsolo\s+(mano\s+de\s+obra|m\.?o\.?)\b",
-        r"\b(??nicamente|solo)\s+instalaci[oó]n\b",
+        r"\b(únicamente|unicamente|solo)\s+instalaci[oó]n\b",
     ]
     if any(re.search(pat, desc_lower) for pat in _EXCL_MATERIALES):
         if result.get("materials"):
