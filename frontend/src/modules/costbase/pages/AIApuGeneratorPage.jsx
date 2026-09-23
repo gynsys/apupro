@@ -415,18 +415,20 @@ export default function AIApuGeneratorPage() {
               recommendation={generator.aiClarificationRecommendation}
               questions={generator.aiQuestions}
               options={generator.aiOptions}
+              internalCode={generator.aiClarificationCode}
+              clarificationType={generator.aiClarificationType}
               entryModeSource={guided.entryModeSource}
               onDismiss={generator.dismissClarification}
-              onClarificationSubmit={(answerText) => {
+              onClarificationSubmit={(answerText, unit) => {
                 const combined = prompt && prompt.trim()
                   ? `${prompt.trim()}, ${answerText.trim()}`
                   : answerText.trim();
                 setPrompt(combined);
+                if (unit) {
+                  setSelectedUnit(unit);
+                }
                 generator.dismissClarification();
-                generator.handleGenerate(combined, false, false, false, null, 'libre', selectedUnit);
-              }}
-              onEditOriginalPrompt={() => {
-                generator.dismissClarification();
+                generator.handleGenerate(combined, false, false, false, null, 'libre', unit || selectedUnit);
               }}
               onStartGuided={() => {
                 generator.dismissClarification();

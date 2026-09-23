@@ -894,6 +894,7 @@ def build_rejection_response(
     if codigo == "RAG_ACARREO_MISSING_UNIT":
         return {
             "status": "clarification_needed",
+            "clarification_type": "acarreo_unit_distance",
             "clarification_message": mensaje,
             "recommendation": "Indica la unidad de acarreo o la distancia para generar un APU preciso.",
             "options": [],

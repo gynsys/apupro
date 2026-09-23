@@ -13,6 +13,8 @@ export function useApuGenerator({ setSettings }) {
   const [aiOptions, setAiOptions] = useState([]);
   const [aiQuestions, setAiQuestions] = useState([]);
   const [aiGuiaRedaccion, setAiGuiaRedaccion] = useState(null);
+  const [aiClarificationCode, setAiClarificationCode] = useState(null);
+  const [aiClarificationType, setAiClarificationType] = useState(null);
   const [chatHistory, setChatHistory] = useState([]);
 
   // Estados de Match Exacto
@@ -69,6 +71,8 @@ export function useApuGenerator({ setSettings }) {
     setAiOptions([]);
     setAiQuestions([]);
     setAiGuiaRedaccion(null);
+    setAiClarificationCode(null);
+    setAiClarificationType(null);
   }, []);
 
   const processAIResponse = useCallback((response, textToSubmit) => {
@@ -159,6 +163,8 @@ export function useApuGenerator({ setSettings }) {
       setAiOptions(response.options || []);
       setAiQuestions(response.questions || []);
       setAiGuiaRedaccion(response.guia_redaccion || null);
+      setAiClarificationCode(response._internal_code || null);
+      setAiClarificationType(response.clarification_type || null);
       setIsClarifying(true);
       toast.error('Se requiere una descripción técnica estructurada.', { icon: '⚠️' });
     } else {
@@ -286,6 +292,8 @@ export function useApuGenerator({ setSettings }) {
     setIsClarifying,
     aiClarificationMessage,
     aiClarificationRecommendation,
+    aiClarificationCode,
+    aiClarificationType,
     aiOptions,
     aiQuestions,
     aiGuiaRedaccion,
