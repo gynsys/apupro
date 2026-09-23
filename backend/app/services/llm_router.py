@@ -148,6 +148,12 @@ def _call_openai_compatible(provider: LLMProvider, prompt: str, expect_json: boo
     url = f"{base_url}/chat/completions"
 
     extra = provider.extra_params or {}
+    # extra_params puede llegar como string JSON desde la BD en lugar de dict
+    if isinstance(extra, str):
+        try:
+            extra = json.loads(extra)
+        except (json.JSONDecodeError, TypeError):
+            extra = {}
     key = provider.provider_key.lower()
 
     if expect_json:
@@ -250,18 +256,27 @@ def call_llm_json(prompt: str, use_case: str = "all") -> dict:
             # Attempt direct JSON parse on cleaned text
             try:
                 data = json.loads(cleaned)
-                logger.info(f"[LLM] '{provider.display_name}' succeeded (direct JSON).")
-                return data
-            except json.JSONDecodeError:
-                logger.debug(f"[LLM] Direct JSON parse failed for '{provider.display_name}', attempting regex extraction.")
+                # Guardia: si el JSON parseó como string (double-encoded), intentar de nuevo
+                if isinstance(data, str):
+                    logger.debug(f"[LLM] '{provider.display_name}' returned double-encoded JSON, re-parsing...")
+                    data = json.loads(data)
+                if isinstance(data, (dict, list)):
+                    logger.info(f"[LLM] '{provider.display_name}' succeeded (direct JSON).")
+                    return data
+                raise ValueError(f"JSON parsed to unexpected type: {type(data).__name__}")
+            except (json.JSONDecodeError, ValueError) as parse_err:
+                logger.debug(f"[LLM] Direct JSON parse failed for '{provider.display_name}': {parse_err}, attempting regex extraction.")
 
             # Fallback 1: extract JSON object {...}
             json_obj_match = re.search(r"(\{.*\})", cleaned, re.DOTALL)
             if json_obj_match:
                 try:
                     data = json.loads(json_obj_match.group(1))
-                    logger.info(f"[LLM] '{provider.display_name}' succeeded (extracted JSON object).")
-                    return data
+                    if isinstance(data, str):
+                        data = json.loads(data)
+                    if isinstance(data, (dict, list)):
+                        logger.info(f"[LLM] '{provider.display_name}' succeeded (extracted JSON object).")
+                        return data
                 except json.JSONDecodeError:
                     logger.debug("Failed parsing regex-extracted JSON object.")
 
@@ -270,12 +285,14 @@ def call_llm_json(prompt: str, use_case: str = "all") -> dict:
             if json_arr_match:
                 try:
                     data = json.loads(json_arr_match.group(1))
-                    logger.info(f"[LLM] '{provider.display_name}' succeeded (extracted JSON array).")
-                    return data
+                    if isinstance(data, (dict, list)):
+                        logger.info(f"[LLM] '{provider.display_name}' succeeded (extracted JSON array).")
+                        return data
                 except json.JSONDecodeError:
                     logger.debug("Failed parsing regex-extracted JSON array.")
 
-            raise ValueError("Response was not valid JSON.")
+            raise ValueError("Response was not valid JSON dict/list.")
+
 
         except Exception as e:
             logger.warning(f"[LLM] '{provider.display_name}' failed: {e}")

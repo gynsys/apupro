@@ -20,6 +20,64 @@ from app.services.apu_labor_calibrator import calibrate_apu_crew_and_equipment
 
 
 # ---------------------------------------------------------------------------
+# Helpers numéricos seguros — DeepSeek puede devolver "7,5" (coma decimal)
+# ---------------------------------------------------------------------------
+
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    """
+    Convierte cualquier valor a float de forma segura.
+    Maneja strings con coma decimal ('7,5' → 7.5) que algunos LLMs generan.
+    """
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        cleaned = value.strip().replace(",", ".")
+        try:
+            return float(cleaned)
+        except ValueError:
+            return default
+    return default
+
+
+def _sanitize_llm_numbers(result: Dict[str, Any]) -> None:
+    """
+    Normaliza in-place todos los campos numéricos del resultado LLM.
+    Evita errores ValueError: could not convert string to float: '7,5'
+    cuando DeepSeek devuelve números con coma decimal en lugar de punto.
+    Modifica `result` directamente, no retorna nada.
+    """
+    NUM_FIELDS_MATERIAL  = {"cantidad", "desperdicio", "precio_unitario"}
+    NUM_FIELDS_EQUIP     = {"cantidad", "depreciacion", "precio_unitario"}
+    NUM_FIELDS_LABOR     = {"cantidad", "jornal", "bono"}
+    PARTIDA_NUM_FIELDS   = {"performance", "quantity"}
+
+    partida = result.get("partida")
+    if isinstance(partida, dict):
+        for f in PARTIDA_NUM_FIELDS:
+            if f in partida:
+                partida[f] = _safe_float(partida[f])
+
+    for mat in result.get("materials", []):
+        if isinstance(mat, dict):
+            for f in NUM_FIELDS_MATERIAL:
+                if f in mat:
+                    mat[f] = _safe_float(mat[f])
+
+    for eq in result.get("equipments", []):
+        if isinstance(eq, dict):
+            for f in NUM_FIELDS_EQUIP:
+                if f in eq:
+                    eq[f] = _safe_float(eq[f])
+
+    for lab in result.get("labors", []):
+        if isinstance(lab, dict):
+            for f in NUM_FIELDS_LABOR:
+                if f in lab:
+                    lab[f] = _safe_float(lab[f])
+
+# ---------------------------------------------------------------------------
 # Prompt base reutilizable: reglas COVENIN, insumos, formato de salida
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
@@ -668,6 +726,7 @@ un catálogo de insumos filtrado y advertencias. Tu trabajo es estructurar un AP
 {_FORMATO_SALIDA}
 """
     result = call_llm_json(prompt, use_case="cost360")
+    _sanitize_llm_numbers(result)
     if "advertencias" not in result:
         result["advertencias"] = []
 
@@ -982,6 +1041,7 @@ CUANDO solicites clarificación, responde con "options": []. ESTÁ TERMINANTEMEN
 {_FORMATO_SALIDA}
 """
     result = call_llm_json(prompt, use_case="cost360")
+    _sanitize_llm_numbers(result)
     if "advertencias" not in result:
         result["advertencias"] = []
     if "notas_adaptacion" not in result:
