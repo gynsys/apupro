@@ -6,7 +6,7 @@ export const useCost360Search = ({
   onlyCoded = null,
   limit = 50,
   autoSearch = true,
-  debounceMs = 400
+  debounceMs = 300
 } = {}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCovenin, setSearchCovenin] = useState('');
@@ -20,8 +20,10 @@ export const useCost360Search = ({
   const [hasMore, setHasMore] = useState(false);
   
   const searchTimeoutRef = useRef(null);
+  const requestIdRef = useRef(0);
 
   const fetchResults = useCallback(async (currentSkip = 0, append = false) => {
+    const currentRequestId = ++requestIdRef.current;
     try {
       setIsSearching(true);
       const cleanCovenin = normalizeCoveninCode(searchCovenin) || (searchCovenin ? searchCovenin.trim() : '');
@@ -37,6 +39,11 @@ export const useCost360Search = ({
         onlyCoded
       );
       
+      // Descartar respuestas si otra búsqueda más reciente ya fue disparada (evita race conditions)
+      if (currentRequestId !== requestIdRef.current) {
+        return;
+      }
+
       const newItems = response.items || [];
       const total = response.total || 0;
       
@@ -50,10 +57,14 @@ export const useCost360Search = ({
       setSearchSkip(currentSkip + limit);
       setHasMore(newItems.length === limit && (currentSkip + limit) < total);
     } catch (error) {
-      console.error('Error fetching Cost360 items:', error);
-      throw error; // Re-lanzar para que el componente maneje toasts si quiere
+      if (currentRequestId === requestIdRef.current) {
+        console.error('Error fetching Cost360 items:', error);
+        throw error;
+      }
     } finally {
-      setIsSearching(false);
+      if (currentRequestId === requestIdRef.current) {
+        setIsSearching(false);
+      }
     }
   }, [searchQuery, searchDesc, searchInsumos, searchCovenin, databaseId, onlyCoded, limit]);
 
@@ -61,13 +72,12 @@ export const useCost360Search = ({
     if (autoSearch) {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
       searchTimeoutRef.current = setTimeout(() => {
-        // Encerramos en un try catch para evitar errores no controlados si el frontend no los captura
         fetchResults(0, false).catch(e => console.error(e));
       }, debounceMs);
     }
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    }
+    };
   }, [fetchResults, autoSearch, debounceMs]);
 
   const loadMore = () => {
@@ -76,7 +86,10 @@ export const useCost360Search = ({
     }
   };
 
-  const forceSearch = () => fetchResults(0, false).catch(e => console.error(e));
+  const forceSearch = () => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    return fetchResults(0, false).catch(e => console.error(e));
+  };
 
   return {
     searchQuery, setSearchQuery,

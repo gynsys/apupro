@@ -286,8 +286,14 @@ def get_items_paginated(
 
     if search:
         clean_search = strip_accents(search).lower().strip()
-        sim_order = func.similarity(func.lower(func.f_unaccent(CostItem.Descri)), clean_search).desc()
-        items = query.order_by(sim_order, covenin_priority, CostItem.CodPar).offset(skip).limit(limit).all()
+        # Ranking multicapa: Full-Text Search en español (stemming) + Trigram Similarity (subcadenas)
+        ts_rank_expr = func.ts_rank(
+            func.to_tsvector('spanish', func.f_unaccent(CostItem.Descri)),
+            func.plainto_tsquery('spanish', clean_search)
+        )
+        sim_expr = func.similarity(func.lower(func.f_unaccent(CostItem.Descri)), clean_search)
+        combined_score = (ts_rank_expr * 2.0) + sim_expr
+        items = query.order_by(combined_score.desc(), covenin_priority, CostItem.CodPar).offset(skip).limit(limit).all()
     else:
         items = query.order_by(covenin_priority, CostItem.CodPar).offset(skip).limit(limit).all()
 

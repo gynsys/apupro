@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FiSearch } from 'react-icons/fi';
-import { Loader } from 'lucide-react';
+import { Loader, X } from 'lucide-react';
 import coveninTreeData from '../data/covenin_tree.json';
 import { SiteConfigContext } from '../../../App';
 
@@ -160,11 +160,23 @@ const Cost360SearchBar = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          {isSearching && (
-            <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-blue-500">
-               <Loader className="animate-spin" size={16} />
-            </div>
-          )}
+          <div className="absolute inset-y-0 right-0 pr-3 flex items-center gap-1.5">
+            {isSearching && (
+              <div className="text-blue-500 pointer-events-none">
+                <Loader className="animate-spin" size={16} />
+              </div>
+            )}
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200/60 transition-colors"
+                title="Limpiar búsqueda"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Búsqueda Inversa Toggles */}
