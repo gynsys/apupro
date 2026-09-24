@@ -1257,7 +1257,6 @@ export default function BudgetWorksheetPage() {
                   <th className="p-4 w-20 text-center bg-slate-50 border-b border-slate-200">Unidad</th>
                   <th className="p-4 w-28 text-center bg-slate-50 border-b border-slate-200">
                     <div className="inline-flex items-center justify-center gap-1.5 group/th relative cursor-help w-full">
-                      <Calculator size={13} className="text-amber-600 hover:text-amber-700 transition-colors shrink-0" />
                       <span>Cantidad</span>
                       
                       {/* Tooltip flotante con paleta ámbar de tarjeta de presupuesto */}

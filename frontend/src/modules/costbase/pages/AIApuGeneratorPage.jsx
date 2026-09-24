@@ -352,6 +352,10 @@ export default function AIApuGeneratorPage() {
     if (generator.item) {
       generator.setItem(null);
       setSelectedUnit(null);
+      setPrompt('');
+      if (guided?.setChatInputValue) {
+        guided.setChatInputValue('');
+      }
       if (creationMode === 'import') {
         navigate(`${basePath}/ai-generator?mode=import`);
       } else if (creationMode === 'manual') {
