@@ -223,6 +223,41 @@ _REGLAS_INSUMOS_PRECIOS = """
    - ESTÁ TERMINANTEMENTE PROHIBIDO escribir en 'advertencias' qué APU o código se usó de base histórica. Las advertencias son EXCLUSIVAS para precios referenciales estimados ([PRECIO_REFERENCIAL]).
 """
 
+_CRITERIO_CLARIFICACION = """
+# CRITERIO DE CLARIFICACIÓN VS GENERACIÓN (OBLIGATORIO EVALUAR ANTES DE GENERAR)
+
+GENERA el APU (status: "completed") SOLO SI la descripción cumple LOS TRES CRITERIOS:
+  C1. Contiene al menos UNA acción constructiva, aunque sea implícita o en jerga (demoler, instalar, construir, vaciar, revestir, frizar, tumbar, echar, etc.)
+  C2. Contiene al menos UN elemento constructivo específico sobre el que se actúa (pared, tubería, losa, piso, zanja, columna, etc.)
+  C3. La combinación C1+C2 es físicamente ejecutable y no contradictoria.
+
+IMPORTANTE — Tolerancia al orden y al lenguaje informal:
+  - El orden de las palabras NO importa. "terreno excavacion a mano" es equivalente a "excavacion a mano en terreno".
+  - La jerga venezolana de obra ES válida: "tumbar" = demoler, "frizar" = aplicar friso, "echar concreto" = vaciar concreto.
+  - Una descripción fragmentada o telegráfica (ej: "pared bloque 15 mortero 1:4") puede ser suficiente si C1 y C2 se infieren.
+
+SOLICITA CLARIFICACIÓN (status: "clarification_needed") SI Y SOLO SI:
+  - Falta C1: no hay ninguna acción constructiva identificable ni implícita.
+  - Falta C2: hay acción pero sin elemento constructivo (ej: solo "demolicion", "instalacion", "pintura").
+  - C3 falla: la combinación es un absurdo físico o una contradicción insalvable.
+  - La descripción es irrelevante para el dominio construcción (comida, geografía, entretenimiento, etc.).
+
+CUANDO solicites clarificación, responde con "options": []. ESTÁ TERMINANTEMENTE PROHIBIDO inventar o adivinar opciones o partidas alternativas no solicitadas. Limítate a explicar qué información técnica falta en questions y clarification_message.
+"""
+
+_APU_SYSTEM_PROMPT = f"""Eres un Ingeniero Civil especialista en Análisis de Precios Unitarios (APU) bajo normativa venezolana COVENIN.
+Tu misión es estructurar, calcular o adaptar análisis de precios unitarios realistas, técnicamente fundamentados y compatibles con las especificaciones de ingeniería y construcción.
+
+{_CRITERIO_CLARIFICACION}
+{_REGLAS_EQUIPOS_ESCALA}
+{_REGLAS_INSUMOS_PRECIOS}
+{_REGLAS_NUMERICAS}
+{_REGLAS_COVENIN}
+{_REGLAS_DESCRIPCION}
+{_REGLAS_ORIGEN}
+{_FORMATO_SALIDA}
+"""
+
 
 
 COMMON_CONSTRUCTION_TERMS: Set[str] = {
@@ -274,7 +309,11 @@ def is_code_input(text: str) -> bool:
     return False
 
 
-def _normalize_equipment_prices(result: Dict[str, Any], base_apu: Optional[Dict[str, Any]] = None) -> None:
+def _normalize_equipment_prices(
+    result: Dict[str, Any],
+    base_apu: Optional[Dict[str, Any]] = None,
+    complementary_apus: Optional[List[Dict[str, Any]]] = None,
+) -> None:
     """
     Normaliza y asegura que los precios unitarios y factores de depreciación de los equipos
     no sufran doble depreciación y mantengan coherencia con la fórmula del editor APU:
@@ -287,10 +326,18 @@ def _normalize_equipment_prices(result: Dict[str, Any], base_apu: Optional[Dict[
     if not isinstance(equipments, list):
         return
 
-    # Mapeo de equipos base históricos por código y descripción
+    # Mapeo de equipos base históricos y complementarios por código y descripción
     base_eq_map: Dict[str, Dict[str, Any]] = {}
-    if base_apu and isinstance(base_apu, dict) and "equipos" in base_apu:
-        for eq in base_apu.get("equipos", []):
+    sources: List[Dict[str, Any]] = []
+    if base_apu and isinstance(base_apu, dict):
+        sources.append(base_apu)
+    if complementary_apus and isinstance(complementary_apus, list):
+        for comp in complementary_apus:
+            if isinstance(comp, dict):
+                sources.append(comp)
+
+    for src in sources:
+        for eq in src.get("equipos", []):
             if isinstance(eq, dict):
                 cod = str(eq.get("codigo", "")).strip().upper()
                 if cod:
@@ -306,7 +353,7 @@ def _normalize_equipment_prices(result: Dict[str, Any], base_apu: Optional[Dict[
         cod = str(eq_item.get("codigo", "")).strip().upper()
         desc = str(eq_item.get("descripcion", "")).strip().upper()
 
-        # 1. Si coincide con un equipo histórico del APU base, anclar precio y depreciación exactos
+        # 1. Si coincide con un equipo histórico de la base o complementarias, anclar precio y depreciación exactos
         base_match = base_eq_map.get(cod) or base_eq_map.get(desc)
         if base_match:
             base_price = float(base_match.get("precio_unitario") or 0.0)
@@ -355,40 +402,59 @@ def _execute_equipment_reconciliation(result: Dict[str, Any], db: Session) -> No
         is_ia = (eq.get("origen") == "ia")
         no_cod = (not eq.get("codigo") or str(eq.get("codigo")).startswith("e-ia-"))
         zero_price = (float(eq.get("precio_unitario") or 0.0) <= 0.0)
+        suspicious_deprec = (
+            float(eq.get("depreciacion") or 1.0) == 1.0
+            and float(eq.get("precio_unitario") or 0.0) > 100.0
+        )
 
-        if is_ia or no_cod or zero_price:
-            desc = str(eq.get("descripcion", "")).strip()
-            clean = re.sub(r'[^A-Z0-9\s]', ' ', desc.upper())
-            tokens = [w for w in clean.split() if len(w) >= 3 and w not in _RECONCILE_STOPWORDS]
-            if not tokens:
-                continue
-
+        if is_ia or no_cod or zero_price or suspicious_deprec:
             row = None
-            if len(tokens) >= 2:
-                sql2 = text("""
-                    SELECT "CodEqu", ref_code, "Descri", "CosDia", precio, deprec_factor
-                    FROM cost360_equipment
-                    WHERE "Descri" ILIKE :kw1 AND "Descri" ILIKE :kw2
-                    ORDER BY 
-                        CASE WHEN "Descri" ILIKE :kw_exact THEN 1 ELSE 2 END,
-                        length("Descri") ASC
-                    LIMIT 1;
-                """)
-                row = db.execute(sql2, {
-                    "kw1": f"%{tokens[0]}%",
-                    "kw2": f"%{tokens[1]}%",
-                    "kw_exact": f"%{desc[:15]}%"
-                }).fetchone()
+            cod = str(eq.get("codigo") or "").strip()
 
-            if not row:
-                sql1 = text("""
+            # 1. Búsqueda exacta por código en cost360_equipment si está disponible
+            if cod and not cod.startswith("e-ia-"):
+                sql_cod = text("""
                     SELECT "CodEqu", ref_code, "Descri", "CosDia", precio, deprec_factor
                     FROM cost360_equipment
-                    WHERE "Descri" ILIKE :kw1
-                    ORDER BY length("Descri") ASC
+                    WHERE "CodEqu" = :cod OR ref_code = :cod
                     LIMIT 1;
                 """)
-                row = db.execute(sql1, {"kw1": f"%{tokens[0]}%"}).fetchone()
+                row = db.execute(sql_cod, {"cod": cod}).fetchone()
+
+            # 2. Si no se encontró por código, búsqueda semántica/léxica por descripción
+            tokens: List[str] = []
+            desc = str(eq.get("descripcion", "")).strip()
+            if not row:
+                clean = re.sub(r'[^A-Z0-9\s]', ' ', desc.upper())
+                tokens = [w for w in clean.split() if len(w) >= 3 and w not in _RECONCILE_STOPWORDS]
+                if not tokens:
+                    continue
+
+                if len(tokens) >= 2:
+                    sql2 = text("""
+                        SELECT "CodEqu", ref_code, "Descri", "CosDia", precio, deprec_factor
+                        FROM cost360_equipment
+                        WHERE "Descri" ILIKE :kw1 AND "Descri" ILIKE :kw2
+                        ORDER BY 
+                            CASE WHEN "Descri" ILIKE :kw_exact THEN 1 ELSE 2 END,
+                            length("Descri") ASC
+                        LIMIT 1;
+                    """)
+                    row = db.execute(sql2, {
+                        "kw1": f"%{tokens[0]}%",
+                        "kw2": f"%{tokens[1]}%",
+                        "kw_exact": f"%{desc[:15]}%"
+                    }).fetchone()
+
+                if not row:
+                    sql1 = text("""
+                        SELECT "CodEqu", ref_code, "Descri", "CosDia", precio, deprec_factor
+                        FROM cost360_equipment
+                        WHERE "Descri" ILIKE :kw1
+                        ORDER BY length("Descri") ASC
+                        LIMIT 1;
+                    """)
+                    row = db.execute(sql1, {"kw1": f"%{tokens[0]}%"}).fetchone()
 
             if row:
                 matched_cod = row.CodEqu or row.ref_code
@@ -405,7 +471,8 @@ def _execute_equipment_reconciliation(result: Dict[str, Any], db: Session) -> No
                 eq["precio_unitario"] = matched_price
                 eq["depreciacion"] = matched_deprec
                 eq["origen"] = "historico"
-                reconciled_terms.append(tokens[0].lower())
+                if tokens:
+                    reconciled_terms.append(tokens[0].lower())
                 reconciled_terms.append(matched_desc.lower())
 
     # Sanitizar advertencias: purgar cualquier [PRECIO_REFERENCIAL] cuyos insumos
@@ -698,15 +765,6 @@ def generate_apu_with_ai(payload_llm: Dict[str, Any], history: Optional[List[Dic
             history_text += f"{role}: {msg.get('content')}\n"
 
     prompt = f"""
-# ROL
-Eres un Ingeniero Civil especialista en Análisis de Precios Unitarios (APU) bajo normativa venezolana COVENIN.
-Recibes un payload con rendimientos históricos calculados a partir de partidas similares reales de la base de datos,
-un catálogo de insumos filtrado y advertencias. Tu trabajo es estructurar un APU técnico, robusto y profesional.
-
-# CRITERIO DE CLARIFICACIÓN VS GENERACIÓN
-- Si la solicitud es inteligible y describe una actividad de construcción válida (aunque sea breve o le falte algún detalle secundario), DEBES GENERAR EL APU con `status: "completed"`. Asume la hipótesis técnica más estándar según la práctica COVENIN y documenta cualquier suposición en `advertencias`.
-- ÚNICAMENTE si la entrada es ininteligible, una secuencia de palabras sin sentido constructivo ("casa caucho tumbar", caracteres aleatorios) o una contradicción física insalvable, responde con `status: "clarification_needed"` siguiendo el CASO 2 del formato de salida.
-
 # PAYLOAD DEL SISTEMA (datos históricos y catálogo)
 {json.dumps(payload_llm, ensure_ascii=False)}
 {history_text}
@@ -716,16 +774,8 @@ un catálogo de insumos filtrado y advertencias. Tu trabajo es estructurar un AP
 2. Usa `cantidad_promedio` como base para cada insumo.
 3. Insumos con presencia alta (> 70%) en las partidas históricas deben conservarse si aplican a la partida.
 4. Ancla el rendimiento al promedio de las partidas históricas más similares.
-
-{_REGLAS_EQUIPOS_ESCALA}
-{_REGLAS_INSUMOS_PRECIOS}
-{_REGLAS_NUMERICAS}
-{_REGLAS_COVENIN}
-{_REGLAS_DESCRIPCION}
-{_REGLAS_ORIGEN}
-{_FORMATO_SALIDA}
 """
-    result = call_llm_json(prompt, use_case="cost360")
+    result = call_llm_json(prompt, use_case="cost360", system_prompt=_APU_SYSTEM_PROMPT)
     _sanitize_llm_numbers(result)
     if "advertencias" not in result:
         result["advertencias"] = []
@@ -768,8 +818,8 @@ def _prune_apu_for_prompt(apu: Dict[str, Any]) -> Dict[str, Any]:
             if v is None:
                 continue
             if isinstance(v, float):
-                v = round(v, 4)
-                if v == 0.0 and k not in ("precio_unitario", "jornal", "bono"):
+                v = round(v, 6 if k == "depreciacion" else 4)
+                if v == 0.0 and k not in ("precio_unitario", "jornal", "bono", "depreciacion"):
                     continue
             if isinstance(v, str) and not v.strip():
                 continue
@@ -777,7 +827,7 @@ def _prune_apu_for_prompt(apu: Dict[str, Any]) -> Dict[str, Any]:
         return out
 
     mat_keys = ["codigo", "descripcion", "unidad", "cantidad", "precio_unitario"]
-    eq_keys  = ["codigo", "descripcion", "cantidad", "precio_unitario"]
+    eq_keys  = ["codigo", "descripcion", "cantidad", "depreciacion", "precio_unitario"]
     mo_keys  = ["codigo", "descripcion", "cantidad", "jornal", "bono"]
 
     return {
@@ -975,8 +1025,7 @@ La partida DEBE estructurarse OBLIGATORIAMENTE con la unidad: '{u_clean}'.
    - Explica el cálculo en `notas_adaptacion`."""
 
     prompt = f"""
-# ROL
-Eres un Ingeniero Civil especialista en Análisis de Precios Unitarios (APU).
+# MODO DE TRABAJO: ADAPTACIÓN DE APU BASE
 El sistema ha seleccionado una partida histórica de la base de datos como BASE DE ADAPTACIÓN.
 Tu tarea es ADAPTAR ese APU base para la nueva partida solicitada por el usuario.
 NO debes inventar desde cero. Usa los insumos, precios y cantidades del APU base como referencia principal.
@@ -992,11 +1041,11 @@ Prefijo COVENIN: {covenin_prefix}
 {comp_text}
 {history_text}
 
-# INSTRUCCIONES DE ADAPTACIÓN
+# INSTRUCCIONES ESPECÍFICAS DE ADAPTACIÓN
 1. El APU base es para una partida SIMILAR, no idéntica. Tu trabajo es adaptarlo para "{user_description}".
 {performance_instruction}
 3. CONSERVA todos los insumos que sigan siendo relevantes para la nueva partida. Márcalos como `"origen": "historico"`.
-4. ELIMINA o SUSTITUYE los insumos que no aplican aplicando rigurosamente la MATRIZ OBLIGATORIA DE COMPATIBILIDAD FUNCIONAL EN 7 FAMILIAS (bombas, tuberías, cables, válvulas, concretos, tableros, impermeabilizaciones). Si el equipo o material principal de la base es incompatible, NO uses el insumo histórico. Reemplázalo por el insumo correcto con origen "ia", precio referencial de mercado en USD y emite la advertencia `[PRECIO_REFERENCIAL]`.
+4. ELIMINA o SUSTITUYE los insumos que no aplican aplicando rigurosamente la MATRIZ OBLIGATORIA DE COMPATIBILIDAD FUNCIONAL EN 7 FAMILIAS. Si el equipo o material principal de la base es incompatible, NO uses el insumo histórico. Reemplázalo por el insumo correcto con origen "ia", precio referencial de mercado en USD y emite la advertencia `[PRECIO_REFERENCIAL]`.
 5. AJUSTA cantidades cuando la nueva partida lo requiera (ej: distinta área, espesor, proporción, o cómputo global Gl).
    Los insumos provenientes de la partida base o complementarias DEBEN CONSERVAR obligatoriamente `"origen": "historico"` (incluso si sus cantidades fueron escaladas).
    Explica el ajuste métrico en `nota_calculo`.
@@ -1010,37 +1059,8 @@ Prefijo COVENIN: {covenin_prefix}
     - NUNCA menciones qué partida o código se utilizó como base histórica en `advertencias`.
     - Las notas de adaptación interna van EXCLUSIVAMENTE en `notas_adaptacion`, jamás en `advertencias`.
 11. UNIDAD OBLIGATORIA: Si se especifica una directiva de unidad obligatoria arriba, el campo `unit` de `partida` DEBE ser exactamente esa unidad, escalando los consumos de materiales y el rendimiento diario en correspondencia matemática estricta.
-
-
-# CRITERIO DE CLARIFICACIÓN VS GENERACIÓN (OBLIGATORIO EVALUAR ANTES DE GENERAR)
-
-GENERA el APU (status: "completed") SOLO SI la descripción cumple LOS TRES CRITERIOS:
-  C1. Contiene al menos UNA acción constructiva, aunque sea implícita o en jerga (demoler, instalar, construir, vaciar, revestir, frizar, tumbar, echar, etc.)
-  C2. Contiene al menos UN elemento constructivo específico sobre el que se actúa (pared, tubería, losa, piso, zanja, columna, etc.)
-  C3. La combinación C1+C2 es físicamente ejecutable y no contradictoria.
-
-IMPORTANTE — Tolerancia al orden y al lenguaje informal:
-  - El orden de las palabras NO importa. "terreno excavacion a mano" es equivalente a "excavacion a mano en terreno".
-  - La jerga venezolana de obra ES válida: "tumbar" = demoler, "frizar" = aplicar friso, "echar concreto" = vaciar concreto.
-  - Una descripción fragmentada o telegráfica (ej: "pared bloque 15 mortero 1:4") puede ser suficiente si C1 y C2 se infieren.
-
-SOLICITA CLARIFICACIÓN (status: "clarification_needed") SI Y SOLO SI:
-  - Falta C1: no hay ninguna acción constructiva identificable ni implícita.
-  - Falta C2: hay acción pero sin elemento constructivo (ej: solo "demolicion", "instalacion", "pintura").
-  - C3 falla: la combinación es un absurdo físico o una contradicción insalvable.
-  - La descripción es irrelevante para el dominio construcción (comida, geografía, entretenimiento, etc.).
-
-CUANDO solicites clarificación, responde con "options": []. ESTÁ TERMINANTEMENTE PROHIBIDO inventar o adivinar opciones o partidas alternativas no solicitadas. Limítate a explicar qué información técnica falta en questions y clarification_message.
-
-{_REGLAS_EQUIPOS_ESCALA}
-{_REGLAS_INSUMOS_PRECIOS}
-{_REGLAS_NUMERICAS}
-{_REGLAS_COVENIN}
-{_REGLAS_DESCRIPCION}
-{_REGLAS_ORIGEN}
-{_FORMATO_SALIDA}
 """
-    result = call_llm_json(prompt, use_case="cost360")
+    result = call_llm_json(prompt, use_case="cost360", system_prompt=_APU_SYSTEM_PROMPT)
     _sanitize_llm_numbers(result)
     if "advertencias" not in result:
         result["advertencias"] = []
@@ -1057,7 +1077,7 @@ CUANDO solicites clarificación, responde con "options": []. ESTÁ TERMINANTEMEN
     if result.get("partida") and requested_unit:
         result["partida"]["unit"] = requested_unit.strip().lower()
 
-    _normalize_equipment_prices(result, base_apu)
+    _normalize_equipment_prices(result, base_apu, complementary_apus)
     calibrate_apu_crew_and_equipment(result, base_apu)
     _enforce_base_apu_material_heritage(result, base_apu, complementary_apus)
     reconcile_equipment_with_database(result, db)
@@ -1464,7 +1484,7 @@ def _extract_surgical_insumos(
         return {}
 
     mat_keys = ["codigo", "descripcion", "unidad", "cantidad", "precio_unitario"]
-    eq_keys  = ["codigo", "descripcion", "cantidad", "precio_unitario"]
+    eq_keys  = ["codigo", "descripcion", "cantidad", "depreciacion", "precio_unitario"]
     mo_keys  = ["codigo", "descripcion", "cantidad", "jornal", "bono"]
 
     def _filter_insumos(insumos: List[Dict[str, Any]], keys: List[str]) -> List[Dict[str, Any]]:
@@ -1480,8 +1500,8 @@ def _extract_surgical_insumos(
                     if v is None:
                         continue
                     if isinstance(v, float):
-                        v = round(v, 4)
-                        if v == 0.0 and k not in ("precio_unitario", "jornal", "bono"):
+                        v = round(v, 6 if k == "depreciacion" else 4)
+                        if v == 0.0 and k not in ("precio_unitario", "jornal", "bono", "depreciacion"):
                             continue
                     if isinstance(v, str) and not v.strip():
                         continue

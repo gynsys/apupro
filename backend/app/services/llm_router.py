@@ -83,16 +83,18 @@ def invalidate_llm_cache() -> None:
 # Provider-specific dispatch functions
 # ---------------------------------------------------------------------------
 
-def _call_gemini(provider: LLMProvider, prompt: str, expect_json: bool) -> str:
+def _call_gemini(provider: LLMProvider, prompt: str, expect_json: bool, system_prompt: Optional[str] = None) -> str:
     """Call Google Gemini using the new google.genai SDK."""
     api_key = decrypt_api_key(provider.api_key_enc)
     model_name = provider.model_name
 
     system_instruction = (
-        "Eres un ingeniero civil experto. Responde SIEMPRE en JSON válido cuando se te pida. "
-        "NUNCA alucines. RESPONDE SIEMPRE EN ESPAÑOL."
-        if expect_json else
-        "Eres un experto en arquitectura e ingeniería. RESPONDE SIEMPRE EN ESPAÑOL."
+        system_prompt if system_prompt else (
+            "Eres un ingeniero civil experto. Responde SIEMPRE en JSON válido cuando se te pida. "
+            "NUNCA alucines. RESPONDE SIEMPRE EN ESPAÑOL."
+            if expect_json else
+            "Eres un experto en arquitectura e ingeniería. RESPONDE SIEMPRE EN ESPAÑOL."
+        )
     )
 
     # Prefer new SDK (supports AQ. key format)
@@ -138,7 +140,7 @@ def _call_gemini(provider: LLMProvider, prompt: str, expect_json: bool) -> str:
         return response.text.strip()
 
 
-def _call_openai_compatible(provider: LLMProvider, prompt: str, expect_json: bool) -> str:
+def _call_openai_compatible(provider: LLMProvider, prompt: str, expect_json: bool, system_prompt: Optional[str] = None) -> str:
     """
     Call any OpenAI-compatible API (Groq, OpenAI, DeepSeek, Mistral, Ollama, etc.).
     Uses base_url from the provider record.
@@ -156,7 +158,9 @@ def _call_openai_compatible(provider: LLMProvider, prompt: str, expect_json: boo
             extra = {}
     key = provider.provider_key.lower()
 
-    if expect_json:
+    if system_prompt:
+        system_content = system_prompt
+    elif expect_json:
         system_content = (
             "Eres un Ingeniero Civil especialista en Análisis de Precios Unitarios (APU) venezolano. "
             "Responde ÚNICAMENTE con JSON válido y completo, sin texto extra ni bloques markdown. "
@@ -193,13 +197,13 @@ def _call_openai_compatible(provider: LLMProvider, prompt: str, expect_json: boo
     return response.json()["choices"][0]["message"]["content"]
 
 
-def _dispatch(provider: LLMProvider, prompt: str, expect_json: bool) -> str:
+def _dispatch(provider: LLMProvider, prompt: str, expect_json: bool, system_prompt: Optional[str] = None) -> str:
     """Route to the correct backend function based on provider_key."""
     key = provider.provider_key.lower()
     if key == "gemini":
-        return _call_gemini(provider, prompt, expect_json)
+        return _call_gemini(provider, prompt, expect_json, system_prompt=system_prompt)
     elif key in ("groq", "openai", "custom", "mistral", "ollama", "deepseek"):
-        return _call_openai_compatible(provider, prompt, expect_json)
+        return _call_openai_compatible(provider, prompt, expect_json, system_prompt=system_prompt)
     else:
         raise ValueError(f"Unknown provider_key: '{key}'. Supported: gemini, groq, openai, custom, deepseek.")
 
@@ -208,7 +212,7 @@ def _dispatch(provider: LLMProvider, prompt: str, expect_json: bool) -> str:
 # Public API
 # ---------------------------------------------------------------------------
 
-def call_llm_text(prompt: str, use_case: str = "all") -> str:
+def call_llm_text(prompt: str, use_case: str = "all", system_prompt: Optional[str] = None) -> str:
     """
     Generate free-text using the configured LLM providers in priority order.
     Raises ValueError if all providers fail.
@@ -221,7 +225,7 @@ def call_llm_text(prompt: str, use_case: str = "all") -> str:
     for provider in providers:
         try:
             logger.info(f"[LLM] Trying '{provider.display_name}' (priority={provider.priority})...")
-            result = _dispatch(provider, prompt, expect_json=False)
+            result = _dispatch(provider, prompt, expect_json=False, system_prompt=system_prompt)
             logger.info(f"[LLM] '{provider.display_name}' succeeded.")
             return result
         except Exception as e:
@@ -234,7 +238,7 @@ def call_llm_text(prompt: str, use_case: str = "all") -> str:
     )
 
 
-def call_llm_json(prompt: str, use_case: str = "all") -> dict:
+def call_llm_json(prompt: str, use_case: str = "all", system_prompt: Optional[str] = None) -> dict:
     """
     Generate and parse JSON using the configured LLM providers in priority order.
     Raises ValueError if all providers fail or no valid JSON is returned.
@@ -247,7 +251,7 @@ def call_llm_json(prompt: str, use_case: str = "all") -> dict:
     for provider in providers:
         try:
             logger.info(f"[LLM] Trying '{provider.display_name}' (priority={provider.priority})...")
-            raw = _dispatch(provider, prompt, expect_json=True)
+            raw = _dispatch(provider, prompt, expect_json=True, system_prompt=system_prompt)
 
             # Strip possible markdown code fences (```json ... ``` or ``` ... ```)
             cleaned = re.sub(r"^```(?:json)?\s*", "", raw.strip(), flags=re.IGNORECASE)
