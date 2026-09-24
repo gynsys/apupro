@@ -171,6 +171,13 @@ _REGLAS_EQUIPOS_ESCALA = """
    - Está PROHIBIDO sustituir un trompo mezclador (1 saco / equipo liviano) por un camión mixer premezclado o planta de concreto.
    - Está PROHIBIDO sustituir un camión grúa liviano (o polipasto) por una grúa telescópica de 50-100 toneladas para izajes menores.
    - Si el catálogo no tiene el equipo liviano adecuado, AGRÉGALO con origen "ia", asígnale una tarifa diaria referencial estimada de mercado en USD (nunca 0.0) y emite una advertencia con el prefijo `[PRECIO_REFERENCIAL]`.
+5. TRABAJOS A RAPEL O ACCESO VERTICAL POR CUERDAS (¡CRÍTICO!):
+   - Si la descripción técnica indica trabajos 'a rapel', 'por cuerdas', 'trabajo vertical', 'en silleta' o 'guindola':
+     * QUEDA TERMINANTEMENTE PROHIBIDO incluir andamios tubulares de marco o apoyados (ej: 'ANDAMIO TUBULAR DE UN CUERPO'). Si la partida base los contiene, DEBES ELIMINARLOS.
+     * DEBES INCLUIR obligatoriamente los equipos oficiales de rapel de catálogo:
+       - Código 'SEG020': "EQUIPO DE RAPEL P/FACHADAS C/LINEA DE VI" (tarifa de catálogo diaria, depreciación 1.0).
+       - Código 'SEG021': "EQUIPO DE APOYO Y TABLA P/PINTAR RAPEL F" (silleta de trabajo suspendido, depreciación 1.0).
+     * En la mano de obra, ajusta la cuadrilla para operarios/albañiles en labores de altura o rapelistas.
 """
 
 _REGLAS_NUMERICAS = """
@@ -195,7 +202,7 @@ _REGLAS_INSUMOS_PRECIOS = """
    - Si se requiere un insumo técnicamente indispensable que NO está en el catálogo provisto, agrégalo con `origen: "ia"`.
    - Asígnale un `precio_unitario` referencial estimado según valores de mercado actuales de la construcción en USD (NUNCA dejes precio 0.0).
    - En `advertencias`, agrega obligatoriamente una nota con el prefijo `[PRECIO_REFERENCIAL]` indicando el insumo y que dicho valor es un precio de mercado referencial estimado por la IA que se recomienda cotizar y validar con proveedores locales.
-3. MATRIZ OBLIGATORIA DE COMPATIBILIDAD FUNCIONAL EN 7 FAMILIAS (¡CRÍTICO!):
+3. MATRIZ OBLIGATORIA DE COMPATIBILIDAD FUNCIONAL EN 8 FAMILIAS (¡CRÍTICO!):
    Para CADA insumo del APU base, evalúa si su aplicación física coincide con la solicitada. Si hay incompatibilidad funcional, QUEDA TERMINANTEMENTE PROHIBIDO conservar el insumo histórico; DEBES sustituirlo por el adecuado con `origen: "ia"`, precio referencial estimado en USD y emitir `[PRECIO_REFERENCIAL]`:
    a) BOMBAS Y EQUIPOS HIDRÁULICOS:
       - Pozo Profundo / Agua Limpia: REQUIERE bomba tipo lapicero/multietapa en acero inoxidable. PROHIBIDO usar bombas de aguas negras, achique o trituradoras tipo Flygt.
@@ -216,6 +223,8 @@ _REGLAS_INSUMOS_PRECIOS = """
       - CONTROL DE ESCALA: No seleccionar tableros industriales o subestaciones mayores a 42 circuitos a menos que se solicite expresamente.
    g) IMPERMEABILIZACIÓN:
       - Manto Asfáltico: El insumo activo impermeabilizante es el manto termosoldado (3 o 4 mm). La pintura asfáltica es solo imprimación previa, nunca el impermeabilizante principal.
+   h) ACCESOS Y TRABAJOS EN ALTURA (RAPEL VS. ANDAMIOS):
+      - Trabajo a Rapel / Cuerdas: REQUIERE equipos oficiales de rapel ('SEG020' y 'SEG021', arnés de suspensión, silleta y cuerdas de seguridad). PROHIBIDO usar andamios tubulares apoyados de piso si la actividad se ejecuta a rapel.
 4. EXCLUSIONES DE ALCANCE:
    - Si el usuario indica explícitamente que NO incluye un componente (ejemplo: 'no incluye cable submarino', 'sin excavación', 'sin flete', 'sin tablero'), simplemente exclúyelo de la lista de insumos y refléjalo en la descripción técnica: '(NO INCLUYE ...)'.
    - NO agregues advertencias sobre exclusiones de alcance, el analista de costos ya lo conoce.
@@ -789,6 +798,21 @@ def generate_apu_with_ai(payload_llm: Dict[str, Any], history: Optional[List[Dic
     if payload_llm.get("advertencias_preprocesamiento"):
         result["advertencias"].extend(payload_llm["advertencias_preprocesamiento"])
 
+    user_desc = (
+        payload_llm.get("solicitud_usuario")
+        or payload_llm.get("description")
+        or payload_llm.get("user_description")
+        or ""
+    )
+    if not user_desc and history:
+        for msg in reversed(history):
+            if msg.get("role") == "user" and msg.get("content"):
+                user_desc = str(msg.get("content"))
+                break
+
+    _enforce_scope_exclusions(result, user_desc)
+    _enforce_rapel_and_height_equipment(result, user_desc)
+
     _normalize_equipment_prices(result)
     calibrate_apu_crew_and_equipment(result)
     reconcile_equipment_with_database(result, db)
@@ -917,6 +941,108 @@ def _enforce_scope_exclusions(result: Dict[str, Any], user_description: str) -> 
             result.setdefault("notas_adaptacion", []).append(
                 "EXCLUSIÓN DE ALCANCE: Equipos eliminados por instrucción explícita del usuario."
             )
+
+
+def _enforce_rapel_and_height_equipment(result: Dict[str, Any], user_description: str) -> None:
+    """
+    Salvaguarda determinista de seguridad para trabajos a rapel / trabajos verticales en altura.
+
+    Si la descripción del usuario indica trabajos a rapel, cuerdas o trabajos verticales:
+    1. Purga automáticamente cualquier andamio tubular o de marco que el LLM o la partida base
+       hayan heredado erróneamente (son incompatibles y redundantes con trabajo vertical de suspensión).
+    2. Garantiza la presencia obligatoria de los equipos oficiales de rapel del catálogo:
+       - SEG020: EQUIPO DE RAPEL P/FACHADAS C/LINEA DE VI (tarifa de catálogo diaria: 0.55055, depreciación: 1.0)
+       - SEG021: EQUIPO DE APOYO Y TABLA P/PINTAR RAPEL F (silleta de trabajo suspendido: 0.6056, depreciación: 1.0)
+    """
+    if not user_description or not isinstance(result, dict):
+        return
+
+    desc_lower = user_description.lower()
+    rapel_pattern = re.compile(
+        r"\b(rapel|r[aá]pel|cuerdas?|silletas?|gu[ií]ndolas?|trabajos?\s+vertical(es)?|trabajo\s+suspendido)\b",
+        re.IGNORECASE
+    )
+    if not rapel_pattern.search(desc_lower):
+        return
+
+    equipments = result.get("equipments")
+    if not isinstance(equipments, list):
+        equipments = []
+        result["equipments"] = equipments
+
+    # 1. Purgar andamios tubulares / de marco
+    scaffold_pattern = re.compile(
+        r"\b(andamio\s+tubular|andamio\s+de\s+un\s+cuerpo|andamio\s+de\s+marco|andamio\s+modular|EQU-HER-014)\b",
+        re.IGNORECASE
+    )
+    purged_scaffolds: List[str] = []
+    filtered_equipments: List[Dict[str, Any]] = []
+    for eq in equipments:
+        if not isinstance(eq, dict):
+            continue
+        cod = str(eq.get("codigo") or "").strip().upper()
+        desc = str(eq.get("descripcion") or "").strip()
+        if scaffold_pattern.search(desc) or cod == "EQU-HER-014":
+            purged_scaffolds.append(desc or cod)
+        else:
+            filtered_equipments.append(eq)
+
+    if purged_scaffolds:
+        logger.info(
+            f"[RapelEnforcement] Eliminados andamios incompatibles con rapel: {purged_scaffolds}"
+        )
+        result["equipments"] = filtered_equipments
+        result.setdefault("notas_adaptacion", []).append(
+            f"SEGURIDAD TÉCNICA: Se eliminaron andamios tubulares ({', '.join(purged_scaffolds)}) por incompatibilidad con el método de trabajo a rapel."
+        )
+
+    # Purgar andamios de materiales si el LLM los colocó erróneamente allí
+    materials = result.get("materials")
+    if isinstance(materials, list):
+        result["materials"] = [
+            m for m in materials
+            if not (isinstance(m, dict) and (scaffold_pattern.search(str(m.get("descripcion") or "")) or str(m.get("codigo") or "").strip().upper() == "EQU-HER-014"))
+        ]
+
+    # 2. Verificar e inyectar equipos de rapel oficiales si faltan
+    existing_codes = {str(eq.get("codigo") or "").strip().upper() for eq in result["equipments"] if isinstance(eq, dict)}
+    existing_descs = " ".join(str(eq.get("descripcion") or "").lower() for eq in result["equipments"] if isinstance(eq, dict))
+
+    has_seg020 = "SEG020" in existing_codes or "equipo de rapel" in existing_descs
+    has_seg021 = "SEG021" in existing_codes or ("tabla" in existing_descs and "rapel" in existing_descs) or "silleta" in existing_descs
+
+    injected: List[str] = []
+    if not has_seg020:
+        result["equipments"].append({
+            "codigo": "SEG020",
+            "descripcion": "EQUIPO DE RAPEL P/FACHADAS C/LINEA DE VI",
+            "unidad": "día",
+            "cantidad": 1.0,
+            "depreciacion": 1.0,
+            "precio_unitario": 0.55055,
+            "origen": "historico",
+            "nota_calculo": "Equipo de rapel y línea de vida para trabajos verticales suspendidos (catálogo oficial SEG020)."
+        })
+        injected.append("SEG020 (Equipo de Rapel c/Línea de Vida)")
+
+    if not has_seg021:
+        result["equipments"].append({
+            "codigo": "SEG021",
+            "descripcion": "EQUIPO DE APOYO Y TABLA P/PINTAR RAPEL F",
+            "unidad": "día",
+            "cantidad": 1.0,
+            "depreciacion": 1.0,
+            "precio_unitario": 0.6056,
+            "origen": "historico",
+            "nota_calculo": "Silleta / tabla de apoyo para operario en trabajo suspendido a rapel (catálogo oficial SEG021)."
+        })
+        injected.append("SEG021 (Silleta / Tabla de Apoyo)")
+
+    if injected:
+        logger.info(f"[RapelEnforcement] Inyectados equipos oficiales de rapel: {injected}")
+        result.setdefault("notas_adaptacion", []).append(
+            f"SEGURIDAD TÉCNICA: Se incorporaron los equipos normativos de rapel ({', '.join(injected)}) indispensables para la ejecución vertical."
+        )
 
 
 def generate_apu_with_ai_from_base(
@@ -1073,6 +1199,9 @@ Prefijo COVENIN: {covenin_prefix}
     # Salvaguarda determinista de exclusiones de alcance explícitas
     _enforce_scope_exclusions(result, user_description)
 
+    # Salvaguarda determinista de seguridad para trabajos a rapel / en altura
+    _enforce_rapel_and_height_equipment(result, user_description)
+
     # Salvaguarda determinista de unidad solicitada
     if result.get("partida") and requested_unit:
         result["partida"]["unit"] = requested_unit.strip().lower()
@@ -1119,6 +1248,12 @@ INCOMPATIBLE_POLARITY_RULES: List[Tuple[Set[str], Set[str], float]] = [
         {"fuerza", "motor", "ccm", "arrancador", "bomba trifasica"},
         {"alumbrado", "iluminacion", "tomacorriente", "tablero nlab"},
         0.20
+    ),
+    # 6. Trabajo Vertical a Rapel / Cuerdas VS Andamios Tubulares Apoyados de Piso
+    (
+        {"rapel", "a rapel", "cuerda", "silleta", "guindola", "trabajo vertical", "trabajo suspendido"},
+        {"andamio tubular", "andamio de marco", "andamio de un cuerpo", "andamio modular"},
+        0.25
     )
 ]
 
@@ -1342,13 +1477,43 @@ SECONDARY_ACTIVITY_PATTERNS: Dict[str, Dict[str, Any]] = {
         "insumo_types": ["materiales"],
     },
     "demolicion": {
-        "pattern": r"\b(demolicion|demolid[oa]|pica|tumbar)\b",
+        "pattern": r"\b(demolicion|demolici[oó]n|demolid[oa]|pica|tumbar|repicad[oa]|escarificad[oa]|escarificaci[oó]n)\b",
         "search_keywords": "demolicion pica",
         "key_insumo_pattern": r"\b(pica|mazo|combo|demoled|compresor|martillo)\b",
         "insumo_types": ["equipos", "mano_obra"],
     },
+    "escarificacion_picado": {
+        "pattern": r"\b(escarificad[oa]|escarificaci[oó]n|picad[oa]|repicad[oa]|cincelad[oa]|desconchado)\b",
+        "search_keywords": "repicado friso",
+        "key_insumo_pattern": r"\b(repicad|picad|cincel|martillo|rotomartillo|demoled|compresor|escarific)\b",
+        "insumo_types": ["equipos", "mano_obra"],
+    },
+    "rapel_trabajos_verticales": {
+        "pattern": r"\b(rapel|r[aá]pel|cuerdas?|silletas?|gu[ií]ndolas?|trabajos?\s+vertical(es)?|trabajo\s+suspendido)\b",
+        "search_keywords": "rapel fachadas",
+        "key_insumo_pattern": r"\b(rapel|silleta|arn[eé]s|cuerda|linea de vida|l[ií]nea de vida|seg020|seg021)\b",
+        "insumo_types": ["equipos"],
+    },
+    "hidrojet_lavado": {
+        "pattern": r"\b(hidrojet|hidrolavad[oa]|hidrolavadora|lavado\s+a\s+presi[oó]n|lavado\s+con\s+presi[oó]n)\b",
+        "search_keywords": "hidrojet",
+        "key_insumo_pattern": r"\b(hidrojet|hidrolavad|presi[oó]n|bomba)\b",
+        "insumo_types": ["equipos", "mano_obra"],
+    },
+    "soldadura_metalica": {
+        "pattern": r"\b(soldadura|soldad[oa]|electrodos?|oxiacetilen[oa])\b",
+        "search_keywords": "soldadura",
+        "key_insumo_pattern": r"\b(soldad|electrodo|oxiacetilen|careta|generador)\b",
+        "insumo_types": ["materiales", "equipos", "mano_obra"],
+    },
+    "limpieza_desmanchado": {
+        "pattern": r"\b(limpieza|desmanchad[oa]|desengrase|qu[ií]mico\s+de\s+limpieza)\b",
+        "search_keywords": "limpieza superficies",
+        "key_insumo_pattern": r"\b(limpieza|desmanch|qu[ií]mic|cepillo|acido)\b",
+        "insumo_types": ["materiales", "mano_obra", "equipos"],
+    },
     "excavacion": {
-        "pattern": r"\b(excavacion|excavad[oa]|zanja)\b",
+        "pattern": r"\b(excavacion|excavaci[oó]n|excavad[oa]|zanja)\b",
         "search_keywords": "excavacion zanja",
         "key_insumo_pattern": r"\b(excavad|retroexcavad|pala|zanja|pico)\b",
         "insumo_types": ["equipos", "mano_obra"],
@@ -1434,6 +1599,14 @@ def select_relevant_complementary_apus(
                     'ORDER BY length("Descri") ASC LIMIT 1'
                 )
                 row = db.execute(sql, {"kw1": f"%{kw}%", "kw2": f"%{kw2}%", "base_cod": base_cod}).fetchone()
+                if not row and kw != kw2:
+                    sql_single = text(
+                        'SELECT "CodPar" FROM cost360_items '
+                        'WHERE "Descri" ILIKE :kw1 '
+                        'AND "CodPar" != :base_cod '
+                        'ORDER BY length("Descri") ASC LIMIT 1'
+                    )
+                    row = db.execute(sql_single, {"kw1": f"%{kw}%", "base_cod": base_cod}).fetchone()
                 if row:
                     matched_item = db.query(CostItem).filter(CostItem.CodPar == row.CodPar).first()
             except Exception as e_search:
