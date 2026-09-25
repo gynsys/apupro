@@ -45,6 +45,7 @@ export default function GuidedAssistantModal({
     `${guidedAccion || ''} ${guidedMaterial || ''}`
   );
   const parametricDef = getParametricStep3Definition(guidedMaterial, guidedAccion);
+  const isParametric = Boolean(parametricDef);
   const stepperItems = [
     { step: 1, label: 'Acción' },
     { step: 2, label: isAcarreo ? 'Material' : (isSupplyOrInstall ? '¿Qué es?' : 'Elemento') },
