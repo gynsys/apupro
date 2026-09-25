@@ -1252,12 +1252,29 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
     # (mantenimiento, saneamiento, reconstrucción, reparación, rehabilitación, restauración, arreglo),
     # el cálculo de insumos y rendimientos depende críticamente de la unidad (pza/und vs m2 vs m).
     MAINTENANCE_KEYWORDS = [
-        "mantenimiento", "saneamiento", "reconstruccion", "reconstrucción",
-        "arreglo", "reparacion", "reparación", "rehabilitacion", "rehabilitación",
-        "restauracion", "restauración"
+        "mantenimiento", "mantener", "saneamiento", "sanear",
+        "reconstruccion", "reconstrucción", "reconstruir",
+        "arreglo", "arreglar", "reparacion", "reparación", "reparar",
+        "rehabilitacion", "rehabilitación", "rehabilitar",
+        "restauracion", "restauración", "restaurar",
+        "reacondicionamiento", "reacondicionar", "acondicionamiento", "acondicionar",
+        "recuperacion", "recuperación", "recuperar",
+        "adecuacion", "adecuación", "adecuar",
+        "refaccion", "refacción", "refaccionar",
+        "remodelacion", "remodelación", "remodelar",
+        "resane", "resanado", "resanar",
+        "repicado", "repicar", "repique",
+        "escarificacion", "escarificación", "escarificar",
+        "desmanchado", "desmanchar", "decapado", "decapar"
     ]
     raw_desc_lower = (raw_desc or "").lower()
-    is_maintenance_activity = any(kw in raw_desc_lower for kw in MAINTENANCE_KEYWORDS)
+    is_maintenance_activity = (
+        any(kw in raw_desc_lower for kw in MAINTENANCE_KEYWORDS)
+        or bool(re.search(
+            r"\b(mantenimiento|mantener|saneamiento|sanear|reconstrucci[oó]n|reconstruir|arreglo|arreglar|reparaci[oó]n|reparar|rehabilitaci[oó]n|rehabilitar|restauraci[oó]n|restaurar|reacondicionamiento|reacondicionar|acondicionamiento|acondicionar|recuperaci[oó]n|recuperar|adecuaci[oó]n|adecuar|refacci[oó]n|refaccionar|remodelaci[oó]n|remodelar|resane|resanado|resanar|escarificaci[oó]n|escarificar|repicado|repicar|desmanchado|desmanchar|decapado|decapar)\b",
+            raw_desc_lower
+        ))
+    )
 
     # Extraer unidad efectiva: preferir parámetro directo payload.unit, fallback a tokens en texto
     effective_unit = (payload.unit or "").strip().lower()
@@ -1284,19 +1301,22 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
         logger.info("Maintenance activity detected without explicit unit: %.80s", raw_desc)
         return {
             "status": "clarification_needed",
+            "clarification_type": "maintenance_unit_required",
+            "_internal_code": "RAG_MAINTENANCE_MISSING_UNIT",
             "clarification_message": (
-                "Has solicitado una labor de mantenimiento o reparación. En ingeniería de costos, "
+                "Has solicitado una labor de mantenimiento, reacondicionamiento o reparación. En ingeniería de costos, "
                 "el dimensionamiento de insumos y rendimientos de la cuadrilla depende estrictamente de la unidad de medida "
-                "(por pieza individual, por superficie en m² o por longitud en m). Por favor selecciona la unidad de cómputo:"
+                "(por pieza individual, por superficie en m², por longitud en m o por suma global Gl). Por favor selecciona la unidad de cómputo:"
             ),
             "options": [
                 "pza (Por Pieza / Peldaño / Elemento individual)",
                 "und (Por Unidad)",
                 "m2 (Por Metro Cuadrado de superficie)",
-                "m (Por Metro Lineal de desarrollo)"
+                "m (Por Metro Lineal de desarrollo)",
+                "Gl (Suma Global / Todo el paquete)"
             ],
             "questions": [
-                "1. ¿En qué unidad de medida se computará la partida (pza, und, m2, m)?"
+                "¿En qué unidad de medida se computará la partida (pza, und, m2, m, Gl)?"
             ],
             "guia_redaccion": "Selecciona la unidad requerida para que el APU calcule los materiales y el rendimiento exacto sin distorsión de costos."
         }

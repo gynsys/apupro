@@ -26,8 +26,8 @@ export default function FreeTextPromptInput({
 }) {
   const [unitWarning, setUnitWarning] = useState(false);
 
-  // Detección reactiva de términos de mantenimiento / reparación
-  const isMaintenance = /mantenimiento|saneamiento|reconstrucci[oó]n|arreglo|reparaci[oó]n|rehabilitaci[oó]n|restauraci[oó]n/i.test(prompt || '');
+  // Detección reactiva de términos de mantenimiento / reacondicionamiento / reparación
+  const isMaintenance = /\b(mantenimiento|mantener|saneamiento|sanear|reconstrucci[oó]n|reconstruir|arreglo|arreglar|reparaci[oó]n|reparar|rehabilitaci[oó]n|rehabilitar|restauraci[oó]n|restaurar|reacondicionamiento|reacondicionar|acondicionamiento|acondicionar|recuperaci[oó]n|recuperar|adecuaci[oó]n|adecuar|refacci[oó]n|refaccionar|remodelaci[oó]n|remodelar|resane|resanado|resanar|escarificaci[oó]n|escarificar|repicado|repicar|desmanchado|desmanchar|decapado|decapar)\b/i.test(prompt || '');
 
   const handleGenerateClick = () => {
     if (!prompt.trim() || isSmartMode || loading) return;

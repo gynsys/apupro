@@ -463,7 +463,7 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     }
 
     // 4. Validación de Entrada del Paso Actual (Pasos 1 a 5)
-    const isMaintenance = /mantenimiento|saneamiento|reconstrucci[oó]n|arreglo|reparaci[oó]n|rehabilitaci[oó]n|restauraci[oó]n/i.test(
+    const isMaintenance = /\b(mantenimiento|mantener|saneamiento|sanear|reconstrucci[oó]n|reconstruir|arreglo|arreglar|reparaci[oó]n|reparar|rehabilitaci[oó]n|rehabilitar|restauraci[oó]n|restaurar|reacondicionamiento|reacondicionar|acondicionamiento|acondicionar|recuperaci[oó]n|recuperar|adecuaci[oó]n|adecuar|refacci[oó]n|refaccionar|remodelaci[oó]n|remodelar|resane|resanado|resanar|escarificaci[oó]n|escarificar|repicado|repicar|desmanchado|desmanchar|decapado|decapar)\b/i.test(
       `${guidedAccion || ''} ${guidedMaterial || ''}`
     );
     const lastBotMsg = [...guidedMessages].reverse().find(m => m.sender === 'bot');

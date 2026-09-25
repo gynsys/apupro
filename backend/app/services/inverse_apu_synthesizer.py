@@ -559,7 +559,8 @@ def build_deterministic_equipments(
 
     # Identificar frentes de trabajo especiales
     is_maintenance = any(k in desc_clean for k in [
-        "MANTENIMIENTO", "SANEAMIENTO", "REPARACION", "RESTAURACION", "PELDANO",
+        "MANTENIMIENTO", "SANEAMIENTO", "REPARACION", "RESTAURACION", "REACONDICIONAMIENTO",
+        "ACONDICIONAMIENTO", "REHABILITACION", "PELDANO",
         "BARANDA", "REJA", "PINTURA", "ANTICORROSIV", "DECAPADO", "CEPILLADO"
     ])
 
@@ -1139,7 +1140,8 @@ def synthesize_apu_inverse(
     # Determinar si es mantenimiento en sitio
     desc_clean = _normalize_string(user_description)
     is_maintenance = any(k in desc_clean for k in [
-        "MANTENIMIENTO", "SANEAMIENTO", "REPARACION", "RESTAURACION", "PELDANO",
+        "MANTENIMIENTO", "SANEAMIENTO", "REPARACION", "RESTAURACION", "REACONDICIONAMIENTO",
+        "ACONDICIONAMIENTO", "REHABILITACION", "PELDANO",
         "BARANDA", "REJA", "PINTURA", "ANTICORROSIV", "DECAPADO", "CEPILLADO"
     ])
 

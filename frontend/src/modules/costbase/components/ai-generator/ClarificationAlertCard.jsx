@@ -113,7 +113,9 @@ export default function ClarificationAlertCard({
     } else {
       const fullAnswer = nextAnswers.join(', ');
       if (onClarificationSubmit) {
-        onClarificationSubmit(fullAnswer);
+        const matchUnit = fullAnswer.match(/\b(gl|sg|global|pza|und|m2|m²|ml|m|pto|kgf|ton)\b/i);
+        const detectedUnit = matchUnit ? matchUnit[1] : undefined;
+        onClarificationSubmit(fullAnswer, detectedUnit);
       }
     }
   };
@@ -402,6 +404,42 @@ export default function ClarificationAlertCard({
               <p className="text-xs text-slate-600">
                 {questions[0] || message || "Indica la especificación técnica faltante para continuar:"}
               </p>
+            </div>
+          )}
+
+          {/* Opciones seleccionables (si vienen provistas por la IA / backend) */}
+          {options && options.length > 0 && (
+            <div className="mb-3">
+              <span className="text-[11px] font-bold text-amber-900/80 uppercase tracking-wider block mb-1.5">
+                Opciones disponibles:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {options.map((opt, idx) => {
+                  const optLabel = typeof opt === 'string' ? opt : opt.label || opt.text || '';
+                  const unitMatch = optLabel.match(/^([a-zA-Z0-9²³]+)\s*\(/);
+                  const cleanUnit = unitMatch ? unitMatch[1] : optLabel.trim();
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setGenericCurrentInput(cleanUnit);
+                        if (onClarificationSubmit) {
+                          onClarificationSubmit(cleanUnit, cleanUnit);
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold border border-amber-300 bg-amber-50/80 hover:bg-amber-100 text-amber-950 transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1.5"
+                    >
+                      <span className="text-blue-700 font-extrabold">{cleanUnit}</span>
+                      {optLabel.includes('(') && (
+                        <span className="text-[11px] text-slate-600 font-normal">
+                          {optLabel.substring(optLabel.indexOf('('))}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 

@@ -41,14 +41,14 @@ export default function GuidedAssistantModal({
 
   const isSupplyOrInstall = /suministr|instalac|colocac|montaje/i.test(guidedAccion || '');
   const isAcarreo = /acarreo|acarrear|bote|botar|transporte|transportar|traslado/i.test(guidedAccion || '');
-  const isMaintenance = /mantenimiento|saneamiento|reconstrucci[oó]n|arreglo|reparaci[oó]n|rehabilitaci[oó]n|restauraci[oó]n/i.test(
+  const isMaintenance = /\b(mantenimiento|mantener|saneamiento|sanear|reconstrucci[oó]n|reconstruir|arreglo|arreglar|reparaci[oó]n|reparar|rehabilitaci[oó]n|rehabilitar|restauraci[oó]n|restaurar|reacondicionamiento|reacondicionar|acondicionamiento|acondicionar|recuperaci[oó]n|recuperar|adecuaci[oó]n|adecuar|refacci[oó]n|refaccionar|remodelaci[oó]n|remodelar|resane|resanado|resanar|escarificaci[oó]n|escarificar|repicado|repicar|desmanchado|desmanchar|decapado|decapar)\b/i.test(
     `${guidedAccion || ''} ${guidedMaterial || ''}`
   );
-  const isParametric = Boolean(getParametricStep3Definition(guidedMaterial, guidedAccion));
+  const parametricDef = getParametricStep3Definition(guidedMaterial, guidedAccion);
   const stepperItems = [
     { step: 1, label: 'Acción' },
     { step: 2, label: isAcarreo ? 'Material' : (isSupplyOrInstall ? '¿Qué es?' : 'Elemento') },
-    { step: 3, label: isAcarreo ? 'Distancia' : (isParametric ? 'Medida / Capacidad' : (isSupplyOrInstall ? '¿Para qué?' : 'Ubicación')) },
+    { step: 3, label: isAcarreo ? 'Distancia' : (parametricDef?.stepLabel || (isSupplyOrInstall ? '¿Para qué?' : 'Ubicación')) },
     { step: 4, label: isAcarreo ? 'Equipo' : 'Alcance' },
     { step: 5, label: 'Unidad' },
   ];

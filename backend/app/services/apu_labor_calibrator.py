@@ -1154,7 +1154,8 @@ def validate_and_calibrate_hh(
     desc_clean = _normalize_str(str(partida.get("description") or partida.get("descripcion") or ""))
     is_maintenance = any(k in desc_clean for k in [
         "MANTENIMIENTO", "SANEAMIENTO", "REPARACION", "RECONSTRUCCION", "RESTAURACION",
-        "REHABILITACION", "DEMOLICION", "REMOCION", "SUSTITUCION", "REEMPLAZO", "PELDANO"
+        "REHABILITACION", "REACONDICIONAMIENTO", "ACONDICIONAMIENTO", "DEMOLICION",
+        "REMOCION", "SUSTITUCION", "REEMPLAZO", "PELDANO"
     ])
     difficulty_factor = 1.30 if is_maintenance else 1.0
 
