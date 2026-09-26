@@ -1,5 +1,6 @@
 import json
 import re
+from difflib import SequenceMatcher
 from typing import Any, Dict, List, Optional, Tuple, Set
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -390,13 +391,105 @@ def _normalize_equipment_prices(
 _RECONCILE_STOPWORDS: Set[str] = {
     "DE", "LA", "EL", "EN", "PARA", "CON", "UN", "UNA", "Y", "O", "A", "LOS", "LAS",
     "DEL", "AL", "E", "POR", "SIN", "SOBRE", "TIPO", "USO", "CAPACIDAD", "ESTANDAR",
-    "MANUAL", "ALBAÑILERIA", "ALBANILERIA", "USOS", "VARIOS", "GENERAL"
+    "MANUAL", "ALBAÑILERIA", "ALBANILERIA", "USOS", "VARIOS", "GENERAL", "INCLUYE",
+    "SEGUN", "SEGÚN", "D=", "E="
 }
+
+_ACCESSORY_PREFIXES: Set[str] = {
+    "ANCLAJE", "SOPORTE", "BASE", "TAPA", "MARCO", "ABRAZADERA", "PERNO",
+    "TORNILLO", "KIT", "JUEGO", "MESA", "SILLA", "TABLERO", "CAJA",
+    "GABINETE", "VALVULA", "FLOTANTE", "CONEXION", "NIPLE"
+}
+
+
+def _extract_technical_specs(text_str: str) -> Dict[str, Set[str]]:
+    """
+    Extrae especificaciones técnicas clave (HP, pulgadas/diámetro, kVA, BTU, mm, galones)
+    para evitar reconciliaciones incompatibles (ej. 1 HP vs 2 HP, 1" vs 2", 15 kVA vs 50 kVA).
+    """
+    clean = text_str.upper()
+    specs: Dict[str, Set[str]] = {
+        "hp": set(),
+        "inches": set(),
+        "kva": set(),
+        "btu": set(),
+        "mm": set(),
+        "gallons": set(),
+    }
+
+    # HP (ej. 1 HP, 0.5 HP, 2 HP, 1/2 HP, 3/4 HP)
+    for m in re.finditer(r'(?:^|[^0-9A-Z])(\d+(?:[.,]\d+)?|\d+/\d+)\s*(?:HP|C\.?P\.?)(?:\b|$|[^0-9A-Z])', clean):
+        specs["hp"].add(m.group(1).replace(",", "."))
+
+    # Pulgadas (ej. 1", 2", 1/2", 3/4", 1 1/2", 1-1/2")
+    for m in re.finditer(r'(?:^|[^0-9A-Z])(\d+/\d+|\d+(?:[.,]\d+)?)\s*(?:"|\'\'|PULG|PULGADAS)(?:\b|$|[^0-9A-Z])', clean):
+        specs["inches"].add(m.group(1).replace(",", "."))
+
+    # kVA
+    for m in re.finditer(r'(?:^|[^0-9A-Z])(\d+(?:[.,]\d+)?)\s*KVA(?:\b|$|[^0-9A-Z])', clean):
+        specs["kva"].add(m.group(1).replace(",", "."))
+
+    # BTU
+    for m in re.finditer(r'(?:^|[^0-9A-Z])(\d+(?:[.,]\d+)?)\s*(?:BTU|TR|TON)(?:\b|$|[^0-9A-Z])', clean):
+        specs["btu"].add(m.group(1).replace(",", "."))
+
+    # Milímetros (diámetros o medidas)
+    for m in re.finditer(r'(?:^|[^0-9A-Z])(\d+)\s*MM(?:\b|$|[^0-9A-Z])', clean):
+        specs["mm"].add(m.group(1))
+
+    # Galones
+    for m in re.finditer(r'(?:^|[^0-9A-Z])(\d+)\s*(?:GAL|GALONES|GLN)(?:\b|$|[^0-9A-Z])', clean):
+        specs["gallons"].add(m.group(1))
+
+    return specs
+
+
+def _has_technical_spec_conflict(specs_a: Dict[str, Set[str]], specs_b: Dict[str, Set[str]]) -> bool:
+    """
+    Determina si dos descripciones tienen especificaciones incompatibles explícitas
+    (ej: una dice 1 HP y la otra 2 HP, o una dice 1" y la otra 2").
+    """
+    for key in ("hp", "inches", "kva", "btu", "mm", "gallons"):
+        vals_a = specs_a.get(key, set())
+        vals_b = specs_b.get(key, set())
+        if vals_a and vals_b and not (vals_a & vals_b):
+            return True
+    return False
+
+
+def _has_primary_noun_conflict(desc_query: str, desc_candidate: str) -> bool:
+    """
+    Evita que un accesorio o parte secundaria sea confundido con el equipo principal
+    (ej: que 'ANCLAJE P/TANQUES' haga match con 'TANQUE HIDRONEUMATICO',
+     o que 'MESA DE REUNION' haga match con 'UNIONES').
+    """
+    clean_q = re.sub(r'[^A-Z0-9\s]', ' ', desc_query.upper())
+    clean_c = re.sub(r'[^A-Z0-9\s]', ' ', desc_candidate.upper())
+
+    tokens_q = [w for w in clean_q.split() if len(w) >= 3 and w not in _RECONCILE_STOPWORDS]
+    tokens_c = [w for w in clean_c.split() if len(w) >= 3 and w not in _RECONCILE_STOPWORDS]
+
+    if not tokens_q or not tokens_c:
+        return False
+
+    first_q = tokens_q[0]
+    first_c = tokens_c[0]
+
+    # Si el candidato empieza con un accesorio (ANCLAJE, SOPORTE, BASE, TAPA) y la consulta no lo pidió:
+    if first_c in _ACCESSORY_PREFIXES and first_c not in tokens_q and first_q not in _ACCESSORY_PREFIXES:
+        return True
+
+    # Si el candidato empieza con una categoría ajena (ej. MESA) y la consulta busca conexiones/uniones:
+    if first_c == "MESA" and "MESA" not in tokens_q:
+        return True
+
+    return False
 
 
 def _execute_equipment_reconciliation(result: Dict[str, Any], db: Session) -> None:
     """
     Ejecuta la búsqueda y normalización de equipos contra cost360_equipment.
+    Aplica filtros estrictos semánticos y técnicos para prevenir asignaciones erróneas.
     """
     equipments = result.get("equipments")
     if not isinstance(equipments, list) or not equipments:
@@ -404,105 +497,124 @@ def _execute_equipment_reconciliation(result: Dict[str, Any], db: Session) -> No
 
     reconciled_terms: List[str] = []
 
-    for eq in equipments:
+    for i, eq in enumerate(equipments):
         if not isinstance(eq, dict):
             continue
 
         is_ia = (eq.get("origen") == "ia")
-        no_cod = (not eq.get("codigo") or str(eq.get("codigo")).startswith("e-ia-"))
+        cod = str(eq.get("codigo") or "").strip()
+        no_cod = (not cod or cod.startswith("e-ia-") or cod.startswith("EQU-IA-"))
         zero_price = (float(eq.get("precio_unitario") or 0.0) <= 0.0)
         suspicious_deprec = (
             float(eq.get("depreciacion") or 1.0) == 1.0
             and float(eq.get("precio_unitario") or 0.0) > 100.0
         )
 
-        if is_ia or no_cod or zero_price or suspicious_deprec:
-            row = None
-            cod = str(eq.get("codigo") or "").strip()
+        matched_row = None
 
-            # 1. Búsqueda exacta por código en cost360_equipment si está disponible
-            if cod and not cod.startswith("e-ia-"):
-                sql_cod = text("""
-                    SELECT "CodEqu", ref_code, "Descri", "CosDia", precio, deprec_factor
-                    FROM cost360_equipment
-                    WHERE "CodEqu" = :cod OR ref_code = :cod
-                    LIMIT 1;
-                """)
-                row = db.execute(sql_cod, {"cod": cod}).fetchone()
+        # 1. Búsqueda exacta por código en cost360_equipment si está disponible
+        if cod and not cod.startswith("e-ia-") and not cod.startswith("EQU-IA-"):
+            sql_cod = text("""
+                SELECT "CodEqu", ref_code, "Descri", "CosDia", precio, deprec_factor
+                FROM cost360_equipment
+                WHERE "CodEqu" = :cod OR ref_code = :cod
+                LIMIT 1;
+            """)
+            matched_row = db.execute(sql_cod, {"cod": cod}).fetchone()
 
-            # 2. Si no se encontró por código, búsqueda semántica/léxica por descripción
-            tokens: List[str] = []
-            desc = str(eq.get("descripcion", "")).strip()
-            if not row:
-                clean = re.sub(r'[^A-Z0-9\s]', ' ', desc.upper())
-                tokens = [w for w in clean.split() if len(w) >= 3 and w not in _RECONCILE_STOPWORDS]
-                if not tokens:
-                    continue
+        # 2. Si no se encontró por código, búsqueda semántica estricta multi-token
+        desc = str(eq.get("descripcion", "")).strip()
+        if not matched_row and (is_ia or no_cod or zero_price or suspicious_deprec):
+            clean = re.sub(r'[^A-Z0-9\s]', ' ', desc.upper())
+            tokens = [w for w in clean.split() if len(w) >= 3 and w not in _RECONCILE_STOPWORDS]
 
-                if len(tokens) >= 2:
+            # REGLA ESTRICTA: Mínimo 2 tokens. Se prohíbe la búsqueda por 1 solo token.
+            if len(tokens) >= 2:
+                candidates_rows = []
+                if len(tokens) >= 3:
+                    sql3 = text("""
+                        SELECT "CodEqu", ref_code, "Descri", "CosDia", precio, deprec_factor
+                        FROM cost360_equipment
+                        WHERE "Descri" ILIKE :kw1 AND "Descri" ILIKE :kw2 AND "Descri" ILIKE :kw3
+                        LIMIT 15;
+                    """)
+                    candidates_rows = db.execute(sql3, {
+                        "kw1": f"%{tokens[0]}%",
+                        "kw2": f"%{tokens[1]}%",
+                        "kw3": f"%{tokens[2]}%"
+                    }).fetchall()
+
+                if not candidates_rows and len(tokens) >= 2:
                     sql2 = text("""
                         SELECT "CodEqu", ref_code, "Descri", "CosDia", precio, deprec_factor
                         FROM cost360_equipment
                         WHERE "Descri" ILIKE :kw1 AND "Descri" ILIKE :kw2
-                        ORDER BY 
-                            CASE WHEN "Descri" ILIKE :kw_exact THEN 1 ELSE 2 END,
-                            length("Descri") ASC
-                        LIMIT 1;
+                        LIMIT 15;
                     """)
-                    row = db.execute(sql2, {
+                    candidates_rows = db.execute(sql2, {
                         "kw1": f"%{tokens[0]}%",
-                        "kw2": f"%{tokens[1]}%",
-                        "kw_exact": f"%{desc[:15]}%"
-                    }).fetchone()
+                        "kw2": f"%{tokens[1]}%"
+                    }).fetchall()
 
-                if not row:
-                    sql1 = text("""
-                        SELECT "CodEqu", ref_code, "Descri", "CosDia", precio, deprec_factor
-                        FROM cost360_equipment
-                        WHERE "Descri" ILIKE :kw1
-                        ORDER BY length("Descri") ASC
-                        LIMIT 1;
-                    """)
-                    row = db.execute(sql1, {"kw1": f"%{tokens[0]}%"}).fetchone()
+                best_cand = None
+                best_sim = 0.0
+                desc_specs = _extract_technical_specs(desc)
 
-            if row:
-                matched_cod = row.CodEqu or row.ref_code
-                matched_desc = row.Descri
-                matched_price = float(row.precio or 0.0)
-                matched_deprec = float(row.deprec_factor or 1.0)
-                matched_cosdia = float(row.CosDia or 0.0)
+                for cand in candidates_rows:
+                    cand_desc = str(cand.Descri or "").strip()
+                    cand_specs = _extract_technical_specs(cand_desc)
 
-                if matched_price <= 0 and matched_cosdia > 0 and matched_deprec > 0:
-                    matched_price = round(matched_cosdia / matched_deprec, 2)
+                    if _has_technical_spec_conflict(desc_specs, cand_specs):
+                        continue
+                    if _has_primary_noun_conflict(desc, cand_desc):
+                        continue
 
-                eq["codigo"] = matched_cod
-                eq["descripcion"] = matched_desc
-                eq["precio_unitario"] = matched_price
-                eq["depreciacion"] = matched_deprec
-                eq["origen"] = "historico"
-                if tokens:
-                    reconciled_terms.append(tokens[0].lower())
-                reconciled_terms.append(matched_desc.lower())
+                    norm_desc = re.sub(r'[^A-Z0-9]', ' ', desc.upper()).strip()
+                    norm_cand = re.sub(r'[^A-Z0-9]', ' ', cand_desc.upper()).strip()
+                    sim = SequenceMatcher(None, norm_desc, norm_cand).ratio()
 
-    # Sanitizar advertencias: purgar cualquier [PRECIO_REFERENCIAL] cuyos insumos
-    # ya cuenten con precios de catálogo de la base de datos o hayan sido eliminados.
+                    cand_words = set(norm_cand.split())
+                    desc_words = set(tokens)
+                    common = desc_words & cand_words
+                    jaccard = len(common) / len(desc_words | cand_words) if (desc_words | cand_words) else 0.0
+
+                    if (sim >= 0.65 or (jaccard >= 0.45 and len(common) >= 2)) and sim > best_sim:
+                        best_sim = sim
+                        best_cand = cand
+
+                if best_cand:
+                    matched_row = best_cand
+
+        if matched_row:
+            matched_cod = matched_row.CodEqu or matched_row.ref_code
+            matched_desc = matched_row.Descri
+            matched_price = float(matched_row.precio or 0.0)
+            matched_deprec = float(matched_row.deprec_factor or 1.0)
+            matched_cosdia = float(matched_row.CosDia or 0.0)
+
+            if matched_price <= 0 and matched_cosdia > 0 and matched_deprec > 0:
+                matched_price = round(matched_cosdia / matched_deprec, 2)
+
+            eq["codigo"] = matched_cod
+            eq["descripcion"] = matched_desc
+            eq["precio_unitario"] = matched_price
+            eq["depreciacion"] = matched_deprec
+            eq["origen"] = "historico"
+            reconciled_terms.append(matched_desc.lower())
+            reconciled_terms.append(desc.lower())
+        else:
+            if is_ia or no_cod or zero_price:
+                eq["origen"] = "ia"
+                if not eq.get("codigo") or eq.get("codigo").startswith("e-"):
+                    eq["codigo"] = f"EQU-IA-{i+1:03d}"
+
+    # Sanitizar advertencias de equipos
     if "advertencias" in result and isinstance(result["advertencias"], list):
-        current_eq_descs = [str(e.get("descripcion", "")).lower() for e in equipments if isinstance(e, dict) and e.get("origen") == "ia"]
-        current_mat_descs = [str(m.get("descripcion", "")).lower() for m in result.get("materials", []) if isinstance(m, dict) and m.get("origen") == "ia"]
-        active_ia_descs = current_eq_descs + current_mat_descs
-
         clean_adv: List[str] = []
         for adv in result["advertencias"]:
             adv_str = str(adv)
             if "[precio_referencial]" in adv_str.lower():
                 if any(term in adv_str.lower() for term in reconciled_terms):
-                    continue
-                quoted = re.findall(r"'([^']+)'", adv_str)
-                if quoted:
-                    insumo_name = quoted[0].lower()
-                    if not any(insumo_name in act or act in insumo_name for act in active_ia_descs):
-                        continue
-                elif not active_ia_descs:
                     continue
             clean_adv.append(adv)
         result["advertencias"] = clean_adv
@@ -533,8 +645,14 @@ def reconcile_equipment_with_database(result: Dict[str, Any], db: Optional[Sessi
 
 def _execute_material_reconciliation(result: Dict[str, Any], db: Session) -> None:
     """
-    Ejecuta la búsqueda y normalización de materiales contra cost360_materials.
-    Asigna el código oficial de la BD, precio unitario vigente y origen 'historico'.
+    Reconcilia los materiales del APU con el catálogo certificado de Costbase (cost360_materials).
+    Solo si existe coincidencia de alta fidelidad (semántica, tokens y sin conflicto técnico):
+    1. Asigna el código oficial de la BD (CodMat o ref_code).
+    2. Asigna la descripción certificada de la BD correspondiente al código.
+    3. Asigna el precio unitario oficial de la BD.
+    4. Cambia 'origen' a 'historico'.
+    Si NO hay coincidencia certera:
+    - El insumo se conserva estrictamente como 'ia' con su precio referencial de mercado y advertencia.
     """
     materials = result.get("materials")
     if not isinstance(materials, list) or not materials:
@@ -542,18 +660,19 @@ def _execute_material_reconciliation(result: Dict[str, Any], db: Session) -> Non
 
     reconciled_terms: List[str] = []
 
-    for mat in materials:
+    for i, mat in enumerate(materials):
         if not isinstance(mat, dict):
             continue
 
         is_ia = (mat.get("origen") == "ia")
         cod = str(mat.get("codigo") or "").strip()
-        no_cod = (not cod or cod.startswith("m-ia-") or cod.startswith("MAT-"))
+        no_cod = (not cod or cod.startswith("m-ia-") or cod.startswith("MAT-IA-") or cod.startswith("MAT-"))
         zero_price = (float(mat.get("precio_unitario") or 0.0) <= 0.0)
 
-        # 1. Búsqueda directa por código exacto en la tabla de materiales
-        row = None
-        if cod and not cod.startswith("m-ia-"):
+        matched_row = None
+
+        # 1. Búsqueda directa por código exacto en la tabla de materiales si ya es un código de catálogo
+        if cod and not cod.startswith("m-ia-") and not cod.startswith("MAT-IA-"):
             sql_cod = text("""
                 SELECT "CodMat", ref_code, "Descri", "UniMat", "CosMat"
                 FROM cost360_materials
@@ -561,78 +680,101 @@ def _execute_material_reconciliation(result: Dict[str, Any], db: Session) -> Non
                    OR (ref_code IS NOT NULL AND UPPER(TRIM(ref_code)) = UPPER(TRIM(:c)))
                 LIMIT 1;
             """)
-            row = db.execute(sql_cod, {"c": cod}).fetchone()
+            matched_row = db.execute(sql_cod, {"c": cod}).fetchone()
 
-        # 2. Si no coincide por código o fue marcado como 'ia' / precio cero / código provisional,
-        # buscar por palabras clave léxicas en la descripción
-        tokens: List[str] = []
-        if not row and (is_ia or no_cod or zero_price):
-            desc = str(mat.get("descripcion", "")).strip()
+        # 2. Si no coincide por código y es 'ia' o precio cero o código provisional,
+        # buscar por coincidencia estricta multi-token en la descripción
+        desc = str(mat.get("descripcion", "")).strip()
+        if not matched_row and (is_ia or no_cod or zero_price):
             clean = re.sub(r'[^A-Z0-9\s]', ' ', desc.upper())
             tokens = [w for w in clean.split() if len(w) >= 3 and w not in _RECONCILE_STOPWORDS]
-            if not tokens:
-                continue
 
-            if len(tokens) >= 3:
-                sql3 = text("""
-                    SELECT "CodMat", ref_code, "Descri", "UniMat", "CosMat"
-                    FROM cost360_materials
-                    WHERE "Descri" ILIKE :kw1 AND "Descri" ILIKE :kw2 AND "Descri" ILIKE :kw3
-                    ORDER BY 
-                        CASE WHEN "Descri" ILIKE :kw_exact THEN 1 ELSE 2 END,
-                        length("Descri") ASC
-                    LIMIT 1;
-                """)
-                row = db.execute(sql3, {
-                    "kw1": f"%{tokens[0]}%",
-                    "kw2": f"%{tokens[1]}%",
-                    "kw3": f"%{tokens[2]}%",
-                    "kw_exact": f"%{desc[:15]}%"
-                }).fetchone()
+            # REGLA ESTRICTA: Mínimo 2 tokens significativos. Se elimina la búsqueda por 1 solo token
+            # que provocaba que "TANQUE" hiciera match con "ANCLAJE P/TANQUES" o "UNION" con "MESA DE REUNION".
+            if len(tokens) >= 2:
+                candidates_rows = []
+                if len(tokens) >= 3:
+                    sql3 = text("""
+                        SELECT "CodMat", ref_code, "Descri", "UniMat", "CosMat"
+                        FROM cost360_materials
+                        WHERE "Descri" ILIKE :kw1 AND "Descri" ILIKE :kw2 AND "Descri" ILIKE :kw3
+                        LIMIT 15;
+                    """)
+                    candidates_rows = db.execute(sql3, {
+                        "kw1": f"%{tokens[0]}%",
+                        "kw2": f"%{tokens[1]}%",
+                        "kw3": f"%{tokens[2]}%"
+                    }).fetchall()
 
-            if not row and len(tokens) >= 2:
-                sql2 = text("""
-                    SELECT "CodMat", ref_code, "Descri", "UniMat", "CosMat"
-                    FROM cost360_materials
-                    WHERE "Descri" ILIKE :kw1 AND "Descri" ILIKE :kw2
-                    ORDER BY 
-                        CASE WHEN "Descri" ILIKE :kw_exact THEN 1 ELSE 2 END,
-                        length("Descri") ASC
-                    LIMIT 1;
-                """)
-                row = db.execute(sql2, {
-                    "kw1": f"%{tokens[0]}%",
-                    "kw2": f"%{tokens[1]}%",
-                    "kw_exact": f"%{desc[:15]}%"
-                }).fetchone()
+                if not candidates_rows and len(tokens) >= 2:
+                    sql2 = text("""
+                        SELECT "CodMat", ref_code, "Descri", "UniMat", "CosMat"
+                        FROM cost360_materials
+                        WHERE "Descri" ILIKE :kw1 AND "Descri" ILIKE :kw2
+                        LIMIT 15;
+                    """)
+                    candidates_rows = db.execute(sql2, {
+                        "kw1": f"%{tokens[0]}%",
+                        "kw2": f"%{tokens[1]}%"
+                    }).fetchall()
 
-            if not row:
-                sql1 = text("""
-                    SELECT "CodMat", ref_code, "Descri", "UniMat", "CosMat"
-                    FROM cost360_materials
-                    WHERE "Descri" ILIKE :kw1
-                    ORDER BY length("Descri") ASC
-                    LIMIT 1;
-                """)
-                row = db.execute(sql1, {"kw1": f"%{tokens[0]}%"}).fetchone()
+                best_cand = None
+                best_sim = 0.0
+                desc_specs = _extract_technical_specs(desc)
 
-        if row:
-            matched_cod = row.CodMat or row.ref_code
-            matched_desc = row.Descri
-            matched_price = float(row.CosMat or 0.0)
-            matched_unit = row.UniMat
+                for cand in candidates_rows:
+                    cand_desc = str(cand.Descri or "").strip()
+                    cand_specs = _extract_technical_specs(cand_desc)
+
+                    # 1. Filtro: Conflicto de especificaciones técnicas (ej: 1" vs 2", 1 HP vs 2 HP)
+                    if _has_technical_spec_conflict(desc_specs, cand_specs):
+                        continue
+
+                    # 2. Filtro: Conflicto de sustantivo primario / accesorio
+                    if _has_primary_noun_conflict(desc, cand_desc):
+                        continue
+
+                    norm_desc = re.sub(r'[^A-Z0-9]', ' ', desc.upper()).strip()
+                    norm_cand = re.sub(r'[^A-Z0-9]', ' ', cand_desc.upper()).strip()
+                    sim = SequenceMatcher(None, norm_desc, norm_cand).ratio()
+
+                    cand_words = set(norm_cand.split())
+                    desc_words = set(tokens)
+                    common = desc_words & cand_words
+                    jaccard = len(common) / len(desc_words | cand_words) if (desc_words | cand_words) else 0.0
+
+                    # Umbral estricto: Ratio >= 0.65 o (jaccard >= 0.45 y al menos 2 palabras clave coincidentes)
+                    if (sim >= 0.65 or (jaccard >= 0.45 and len(common) >= 2)) and sim > best_sim:
+                        best_sim = sim
+                        best_cand = cand
+
+                if best_cand:
+                    matched_row = best_cand
+
+        if matched_row:
+            matched_cod = matched_row.CodMat or matched_row.ref_code
+            matched_desc = matched_row.Descri
+            matched_price = float(matched_row.CosMat or 0.0)
+            matched_unit = matched_row.UniMat
 
             mat["codigo"] = matched_cod
-            if not mat.get("descripcion") or len(str(mat.get("descripcion")).strip()) < 5:
-                mat["descripcion"] = matched_desc
+            mat["descripcion"] = matched_desc  # REGLA DE INTEGRIDAD: Código de catálogo siempre lleva su descripción de catálogo
             if matched_price > 0:
                 mat["precio_unitario"] = matched_price
-            if matched_unit and not mat.get("unidad"):
+            if matched_unit:
                 mat["unidad"] = matched_unit
             mat["origen"] = "historico"
             reconciled_terms.append(matched_desc.lower())
-            if tokens:
-                reconciled_terms.append(tokens[0].lower())
+            reconciled_terms.append(desc.lower())
+        else:
+            # Si no hubo coincidencia estricta en el catálogo, DEBE PERMANECER COMO IA
+            if is_ia or no_cod or zero_price:
+                mat["origen"] = "ia"
+                if not mat.get("codigo") or mat.get("codigo").startswith("m-"):
+                    mat["codigo"] = f"MAT-IA-{i+1:03d}"
+                pu = float(mat.get("precio_unitario") or 0.0)
+                if pu <= 0:
+                    mat["precio_unitario"] = 10.0  # fallback mínimo referencial
 
     # Sanitizar advertencias de precios referenciales si el material fue reconciliado con catálogo
     if "advertencias" in result and isinstance(result["advertencias"], list) and reconciled_terms:
@@ -644,6 +786,17 @@ def _execute_material_reconciliation(result: Dict[str, Any], db: Session) -> Non
                     continue
             clean_adv.append(adv)
         result["advertencias"] = clean_adv
+
+    # Asegurar advertencia de precio referencial para insumos que permanecen como IA
+    for mat in materials:
+        if isinstance(mat, dict) and mat.get("origen") == "ia":
+            mat_desc = mat.get("descripcion", "")
+            mat_pu = float(mat.get("precio_unitario") or 0.0)
+            already_warned = any(mat_desc.lower() in str(a).lower() for a in result.get("advertencias", []))
+            if not already_warned:
+                result.setdefault("advertencias", []).append(
+                    f"[PRECIO_REFERENCIAL] Insumo estimado de mercado: '{mat_desc}' (${mat_pu:,.2f} USD). Verifique precio local."
+                )
 
 
 def reconcile_materials_with_database(result: Dict[str, Any], db: Optional[Session] = None) -> None:
@@ -1258,10 +1411,44 @@ INCOMPATIBLE_POLARITY_RULES: List[Tuple[Set[str], Set[str], float]] = [
 ]
 
 
-def _apply_polarity_penalties(query_text: str, item_desc: str, current_score: float) -> float:
+CORE_EQUIPMENT_KEYWORDS: List[str] = [
+    "hidroneumatico",
+    "bomba sumergible",
+    "bomba centrifuga",
+    "equipo de bombeo",
+    "sistema de bombeo",
+    "transformador",
+    "tablero electrico",
+    "tablero de distribucion",
+    "aire acondicionado",
+    "chiller",
+    "fancoil",
+    "planta electrica",
+    "grupo electrogeno",
+    "ascensor",
+    "montacargas",
+    "compresor",
+]
+
+AUXILIARY_CIVIL_OR_FITTING_TERMS: List[str] = [
+    "conexion domiciliaria",
+    "caja para medidor",
+    "caja troncoconica",
+    "acometida",
+    "meter joke",
+    "zanja",
+    "demolicion",
+    "bote de",
+    "acarreo de",
+]
+
+
+def _apply_technical_scoring_adjustments(query_text: str, item_desc: str, current_score: float) -> float:
     """
-    Aplica penalizaciones cruzadas si la consulta del usuario y la descripción del ítem
-    pertenecen a polos técnicos opuestos e incompatibles.
+    Ajusta el score de similitud técnica:
+    1. Aplica penalizaciones cruzadas a candidatos con polaridad técnica opuesta (agua limpia vs residual, etc.).
+    2. Bonifica fuertemente a candidatos que contienen el equipo o máquina principal solicitada (ej: hidroneumático, bomba, transformador).
+    3. Penaliza partidas de accesorios menores o conexiones domiciliarias cuando se solicitó la instalación del equipo electromecánico principal.
     """
     if not query_text or not item_desc:
         return current_score
@@ -1269,6 +1456,7 @@ def _apply_polarity_penalties(query_text: str, item_desc: str, current_score: fl
     q_lower = query_text.lower()
     i_lower = item_desc.lower()
 
+    # 1. Reglas de polaridad técnica opuesta
     for polo_a, polo_b, penalty in INCOMPATIBLE_POLARITY_RULES:
         q_has_a = any(t in q_lower for t in polo_a)
         q_has_b = any(t in q_lower for t in polo_b)
@@ -1279,6 +1467,19 @@ def _apply_polarity_penalties(query_text: str, item_desc: str, current_score: fl
             current_score = max(0.0, current_score - penalty)
         elif q_has_b and not q_has_a and i_has_a and not i_has_b:
             current_score = max(0.0, current_score - penalty)
+
+    # 2. Afinidad de Equipo / Sistema Principal
+    has_core_equipment = any(eq_term in q_lower for eq_term in CORE_EQUIPMENT_KEYWORDS)
+    if has_core_equipment:
+        matched_equipment = any(eq_term in i_lower for eq_term in CORE_EQUIPMENT_KEYWORDS)
+        if matched_equipment:
+            # Bonificación técnica por contener el equipo central solicitado
+            current_score = min(1.0, current_score + 0.12)
+        else:
+            # Si el candidato no tiene el equipo y solo es una conexión accesoria/obra civil
+            is_auxiliary = any(aux in i_lower for aux in AUXILIARY_CIVIL_OR_FITTING_TERMS)
+            if is_auxiliary:
+                current_score = max(0.0, current_score - 0.15)
 
     return current_score
 
@@ -1336,12 +1537,12 @@ def get_dynamic_candidates(
         items = db.query(CostItem).filter(CostItem.CodPar.in_(final_ids)).all()
         item_map = {i.CodPar: i for i in items}
         
-        # Aplicar penalización de polaridad técnica (Polos Opuestos)
+        # Aplicar penalización de polaridad técnica y afinidad de equipos principales
         scored_candidates = []
         for i, score in candidates_with_scores[:limit]:
             if i in item_map:
                 it = item_map[i]
-                adjusted_score = _apply_polarity_penalties(description, it.Descri or "", score)
+                adjusted_score = _apply_technical_scoring_adjustments(description, it.Descri or "", score)
                 scored_candidates.append({"item": it, "score": round(adjusted_score, 3)})
 
         # Re-ordenar por el score ajustado para priorizar candidatos afines
