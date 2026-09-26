@@ -59,24 +59,34 @@ def _sanitize_llm_numbers(result: Dict[str, Any]) -> None:
         for f in PARTIDA_NUM_FIELDS:
             if f in partida:
                 partida[f] = _safe_float(partida[f])
+        if "performance" in partida:
+            partida["performance"] = max(0.01, float(partida.get("performance") or 1.0))
+        if "quantity" in partida:
+            partida["quantity"] = max(0.0001, float(partida.get("quantity") or 1.0))
 
     for mat in result.get("materials", []):
         if isinstance(mat, dict):
             for f in NUM_FIELDS_MATERIAL:
                 if f in mat:
                     mat[f] = _safe_float(mat[f])
+            if "cantidad" in mat:
+                mat["cantidad"] = max(0.0, float(mat.get("cantidad") or 0.0))
 
     for eq in result.get("equipments", []):
         if isinstance(eq, dict):
             for f in NUM_FIELDS_EQUIP:
                 if f in eq:
                     eq[f] = _safe_float(eq[f])
+            if "cantidad" in eq:
+                eq["cantidad"] = max(0.0, float(eq.get("cantidad") or 0.0))
 
     for lab in result.get("labors", []):
         if isinstance(lab, dict):
             for f in NUM_FIELDS_LABOR:
                 if f in lab:
                     lab[f] = _safe_float(lab[f])
+            if "cantidad" in lab:
+                lab["cantidad"] = max(0.0, float(lab.get("cantidad") or 0.0))
 
 # ---------------------------------------------------------------------------
 # Prompt base reutilizable: reglas COVENIN, insumos, formato de salida
@@ -486,6 +496,113 @@ def _has_primary_noun_conflict(desc_query: str, desc_candidate: str) -> bool:
     return False
 
 
+def _normalize_unit(unit_str: Optional[str]) -> str:
+    """
+    Normaliza strings de unidades de medida (ej: 'MTS' -> 'm', 'm³' -> 'm3', 'sacos' -> 'saco').
+    """
+    if not unit_str or not isinstance(unit_str, str):
+        return ""
+    u = unit_str.strip().lower()
+    u = re.sub(r'[\.²³]', lambda m: {'²': '2', '³': '3', '.': ''}.get(m.group(0), ''), u)
+    u = u.replace(" ", "")
+
+    synonyms = {
+        "m": "m", "ml": "m", "mts": "m", "metro": "m", "metros": "m",
+        "m2": "m2", "mts2": "m2", "mt2": "m2",
+        "m3": "m3", "mts3": "m3", "mt3": "m3",
+        "kg": "kg", "kgs": "kg", "kilogramo": "kg", "kilogramos": "kg", "kilo": "kg", "kilos": "kg", "kgf": "kg",
+        "ton": "ton", "tonelada": "ton", "toneladas": "ton", "tn": "ton",
+        "saco": "saco", "sacos": "saco", "sc": "saco", "bto": "saco", "bulto": "saco", "bultos": "saco",
+        "l": "l", "lt": "l", "lts": "l", "litro": "l", "litros": "l",
+        "gal": "gal", "gln": "gal", "galon": "gal", "galones": "gal",
+        "cunete": "cunete", "cuñete": "cunete", "cunetes": "cunete", "cuñetes": "cunete",
+        "und": "und", "unid": "und", "unidad": "und", "unidades": "und", "pza": "und", "piezas": "und", "pieza": "und",
+        "rollo": "rollo", "rollos": "rollo", "rll": "rollo",
+        "caja": "caja", "cajas": "caja",
+        "par": "par", "pares": "par",
+        "jgo": "jgo", "juego": "jgo", "juegos": "jgo", "kit": "jgo",
+        "pto": "pto", "punto": "pto", "puntos": "pto",
+        "dia": "dia", "día": "dia", "dias": "dia", "días": "dia",
+        "mes": "mes", "meses": "mes",
+        "vje": "vje", "viaje": "vje", "viajes": "vje", "flete": "vje",
+    }
+    return synonyms.get(u, u)
+
+
+def _convert_material_quantity(
+    qty: float,
+    from_unit_raw: str,
+    to_unit_raw: str,
+    mat_desc: str
+) -> Tuple[Optional[float], bool]:
+    """
+    Convierte una cantidad de material entre dos unidades compatibles.
+    Retorna (nueva_cantidad, True) si son compatibles y se pudo convertir.
+    Retorna (None, False) si son dimensionalmente incompatibles (ej: m2 vs kg).
+    """
+    u_from = _normalize_unit(from_unit_raw)
+    u_to = _normalize_unit(to_unit_raw)
+    desc_upper = (mat_desc or "").upper()
+
+    if not u_from or not u_to:
+        return qty, True
+
+    if u_from == u_to:
+        return qty, True
+
+    # 1. Cemento (saco = 42.5 kg)
+    if "CEMENTO" in desc_upper:
+        if u_from == "kg" and u_to == "saco":
+            return round(qty / 42.5, 4), True
+        if u_from == "saco" and u_to == "kg":
+            return round(qty * 42.5, 4), True
+
+    # 2. Yeso o Cal (saco = 20 kg)
+    if "YESO" in desc_upper or "CAL" in desc_upper:
+        if u_from == "kg" and u_to == "saco":
+            return round(qty / 20.0, 4), True
+        if u_from == "saco" and u_to == "kg":
+            return round(qty * 20.0, 4), True
+
+    # 3. Peso general (ton <-> kg)
+    if u_from == "kg" and u_to == "ton":
+        return round(qty / 1000.0, 4), True
+    if u_from == "ton" and u_to == "kg":
+        return round(qty * 1000.0, 4), True
+
+    # 4. Volumen general (m3 <-> l)
+    if u_from == "l" and u_to == "m3":
+        return round(qty / 1000.0, 4), True
+    if u_from == "m3" and u_to == "l":
+        return round(qty * 1000.0, 4), True
+
+    # 5. Pinturas y líquidos (cuñete = 5 galones, 1 galón = 3.785 L, cuñete = 18.925 L)
+    if any(k in desc_upper for k in ["PINTURA", "ESMALTE", "FONDO", "SOLVENTE", "THINNER", "BARNIZ", "IMPERMEABILIZANTE", "EMULSION", "ADHESIVO", "RESINA"]):
+        if u_from == "gal" and u_to == "cunete":
+            return round(qty / 5.0, 4), True
+        if u_from == "cunete" and u_to == "gal":
+            return round(qty * 5.0, 4), True
+        if u_from == "l" and u_to == "gal":
+            return round(qty / 3.785, 4), True
+        if u_from == "gal" and u_to == "l":
+            return round(qty * 3.785, 4), True
+        if u_from == "l" and u_to == "cunete":
+            return round(qty / 18.925, 4), True
+        if u_from == "cunete" and u_to == "l":
+            return round(qty * 18.925, 4), True
+
+    # 6. Alambre / Manguera / Tubería en rollos típicos (sin especificación clara de longitud)
+    if "ROLLO" in u_to or "ROLLO" in u_from:
+        return None, False
+
+    # 7. Unidades discretas equivalentes (und / pza)
+    if u_from == "und" and u_to == "und":
+        return qty, True
+
+    # Incompatibilidad dimensional detectada (ej: m2 vs kg, m3 vs und, m vs kg)
+    return None, False
+
+
 def _execute_equipment_reconciliation(result: Dict[str, Any], db: Session) -> None:
     """
     Ejecuta la búsqueda y normalización de equipos contra cost360_equipment.
@@ -734,6 +851,18 @@ def _execute_material_reconciliation(result: Dict[str, Any], db: Session) -> Non
                     if _has_primary_noun_conflict(desc, cand_desc):
                         continue
 
+                    # 3. Filtro: Compatibilidad dimensional de unidad de medida
+                    current_mat_unit = str(mat.get("unidad") or "").strip()
+                    cand_unit = str(cand.UniMat or "").strip()
+                    _, is_compatible = _convert_material_quantity(
+                        qty=float(mat.get("cantidad") or 1.0),
+                        from_unit_raw=current_mat_unit,
+                        to_unit_raw=cand_unit,
+                        mat_desc=desc
+                    )
+                    if not is_compatible:
+                        continue
+
                     norm_desc = re.sub(r'[^A-Z0-9]', ' ', desc.upper()).strip()
                     norm_cand = re.sub(r'[^A-Z0-9]', ' ', cand_desc.upper()).strip()
                     sim = SequenceMatcher(None, norm_desc, norm_cand).ratio()
@@ -756,6 +885,17 @@ def _execute_material_reconciliation(result: Dict[str, Any], db: Session) -> Non
             matched_desc = matched_row.Descri
             matched_price = float(matched_row.CosMat or 0.0)
             matched_unit = matched_row.UniMat
+
+            # Recalcular cantidad si hubo conversión dimensional de unidad (ej. kg -> saco)
+            current_mat_unit = str(mat.get("unidad") or "").strip()
+            new_qty, is_comp = _convert_material_quantity(
+                qty=float(mat.get("cantidad") or 1.0),
+                from_unit_raw=current_mat_unit,
+                to_unit_raw=str(matched_unit or ""),
+                mat_desc=desc
+            )
+            if is_comp and new_qty is not None:
+                mat["cantidad"] = new_qty
 
             mat["codigo"] = matched_cod
             mat["descripcion"] = matched_desc  # REGLA DE INTEGRIDAD: Código de catálogo siempre lleva su descripción de catálogo
@@ -821,6 +961,127 @@ def reconcile_materials_with_database(result: Dict[str, Any], db: Optional[Sessi
             logger.error("Error al reconciliar materiales con base de datos: %s", exc, exc_info=True)
 
 
+def _execute_labor_reconciliation(result: Dict[str, Any], db: Session) -> None:
+    """
+    Reconcilia la mano de obra del APU con el tabulador oficial de Costbase (cost360_labor).
+    Garantiza que los cargos y salarios oficiales (Jornal y Bono) provengan 100% de la BD.
+    """
+    labors = result.get("labors")
+    if not isinstance(labors, list) or not labors:
+        return
+
+    for i, lab in enumerate(labors):
+        if not isinstance(lab, dict):
+            continue
+
+        cod = str(lab.get("codigo") or "").strip()
+        desc = str(lab.get("descripcion") or "").strip()
+        is_ia = (lab.get("origen") == "ia")
+        no_cod = (not cod or cod.startswith("l-ia-") or cod.startswith("LAB-IA-") or cod.startswith("LAB-") or cod.startswith("l-"))
+        zero_wage = (float(lab.get("jornal") or 0.0) <= 0.0)
+
+        matched_row = None
+
+        # 1. Búsqueda directa por código oficial en cost360_labor
+        if cod and not no_cod:
+            sql_cod = text("""
+                SELECT "CodMan", ref_code, "Descri", "Jornal", "Bono"
+                FROM cost360_labor
+                WHERE UPPER(TRIM("CodMan")) = UPPER(TRIM(:cod))
+                   OR (ref_code IS NOT NULL AND UPPER(TRIM(ref_code)) = UPPER(TRIM(:cod)))
+                LIMIT 1;
+            """)
+            matched_row = db.execute(sql_cod, {"cod": cod}).fetchone()
+
+        # 2. Búsqueda por coincidencia de cargo oficial
+        if not matched_row and (is_ia or no_cod or zero_wage):
+            clean = re.sub(r'[^A-Z0-9\s]', ' ', desc.upper())
+            tokens = [w for w in clean.split() if len(w) >= 3 and w not in _RECONCILE_STOPWORDS]
+
+            if tokens:
+                candidates_rows = []
+                if len(tokens) >= 2:
+                    sql2 = text("""
+                        SELECT "CodMan", ref_code, "Descri", "Jornal", "Bono"
+                        FROM cost360_labor
+                        WHERE "Descri" ILIKE :kw1 AND "Descri" ILIKE :kw2
+                        LIMIT 10;
+                    """)
+                    candidates_rows = db.execute(sql2, {
+                        "kw1": f"%{tokens[0]}%",
+                        "kw2": f"%{tokens[1]}%"
+                    }).fetchall()
+
+                if not candidates_rows and len(tokens) >= 1:
+                    sql1 = text("""
+                        SELECT "CodMan", ref_code, "Descri", "Jornal", "Bono"
+                        FROM cost360_labor
+                        WHERE "Descri" ILIKE :kw1
+                        LIMIT 10;
+                    """)
+                    candidates_rows = db.execute(sql1, {
+                        "kw1": f"%{tokens[0]}%"
+                    }).fetchall()
+
+                best_cand = None
+                best_sim = 0.0
+                norm_desc = re.sub(r'[^A-Z0-9]', '', desc.upper())
+
+                for cand in candidates_rows:
+                    cand_desc = str(cand.Descri or "").strip()
+                    norm_cand = re.sub(r'[^A-Z0-9]', '', cand_desc.upper())
+                    sim = SequenceMatcher(None, norm_desc, norm_cand).ratio()
+
+                    # Evitar cruce entre cargos de supervisión y obreros rasos
+                    is_cand_sup = any(s in cand_desc.upper() for s in ["MAESTRO", "CAPORAL", "INGENIERO", "TOPOGRAFO", "INSPECTOR"])
+                    is_desc_sup = any(s in desc.upper() for s in ["MAESTRO", "CAPORAL", "INGENIERO", "TOPOGRAFO", "INSPECTOR"])
+                    if is_cand_sup != is_desc_sup:
+                        continue
+
+                    if sim >= 0.55 and sim > best_sim:
+                        best_sim = sim
+                        best_cand = cand
+
+                if best_cand:
+                    matched_row = best_cand
+
+        if matched_row:
+            matched_cod = matched_row.CodMan or matched_row.ref_code
+            matched_desc = matched_row.Descri
+            matched_jornal = float(matched_row.Jornal or 0.0)
+            matched_bono = float(matched_row.Bono or 0.0)
+
+            lab["codigo"] = matched_cod
+            lab["descripcion"] = matched_desc
+            lab["jornal"] = matched_jornal
+            lab["bono"] = matched_bono
+            lab["origen"] = "historico"
+        else:
+            if is_ia or no_cod or zero_wage:
+                lab["origen"] = "ia"
+                if not lab.get("codigo") or lab.get("codigo").startswith("l-"):
+                    lab["codigo"] = f"LAB-IA-{i+1:03d}"
+                if float(lab.get("jornal") or 0.0) <= 0.0:
+                    lab["jornal"] = 5.0  # fallback mínimo referencial
+
+
+def reconcile_labor_with_database(result: Dict[str, Any], db: Optional[Session] = None) -> None:
+    """
+    Reconcilia la mano de obra del APU con el tabulador oficial de Costbase (cost360_labor).
+    """
+    if not result or not isinstance(result, dict) or "labors" not in result:
+        return
+
+    if db is not None:
+        _execute_labor_reconciliation(result, db)
+    else:
+        try:
+            with get_db_session() as session:
+                _execute_labor_reconciliation(result, session)
+        except Exception as exc:
+            logger.error("Error al reconciliar mano de obra con base de datos: %s", exc, exc_info=True)
+
+
 def _enforce_base_apu_material_heritage(
     result: Dict[str, Any],
     base_apu: Dict[str, Any],
@@ -877,18 +1138,54 @@ def _enforce_base_apu_material_heritage(
         elif mat_desc_norm and mat_desc_norm in ref_by_desc:
             matched_ref = ref_by_desc[mat_desc_norm]
         else:
+            mat_raw_desc = str(mat.get("descripcion") or "")
+            mat_specs = _extract_technical_specs(mat_raw_desc)
+            clean_mat = re.sub(r'[^A-Z0-9\s]', ' ', mat_raw_desc.upper())
+            tokens_mat = set(w for w in clean_mat.split() if len(w) >= 3 and w not in _RECONCILE_STOPWORDS)
+
+            best_sim = 0.0
             for r_norm, rm in ref_by_desc.items():
-                if len(r_norm) >= 8 and (r_norm in mat_desc_norm or mat_desc_norm in r_norm):
+                rm_raw_desc = str(rm.get("descripcion") or "")
+                rm_specs = _extract_technical_specs(rm_raw_desc)
+
+                # 1. Filtro: Conflicto de especificaciones técnicas (ej: 1" vs 2", 1 HP vs 2 HP)
+                if _has_technical_spec_conflict(mat_specs, rm_specs):
+                    continue
+
+                # 2. Filtro: Conflicto de accesorio vs sustantivo principal
+                if _has_primary_noun_conflict(mat_raw_desc, rm_raw_desc):
+                    continue
+
+                # 3. Similitud estricta por tokens y secuencia
+                clean_rm = re.sub(r'[^A-Z0-9\s]', ' ', rm_raw_desc.upper())
+                tokens_rm = set(w for w in clean_rm.split() if len(w) >= 3 and w not in _RECONCILE_STOPWORDS)
+                common = tokens_mat & tokens_rm
+                jaccard = len(common) / len(tokens_mat | tokens_rm) if (tokens_mat | tokens_rm) else 0.0
+                ratio = SequenceMatcher(None, mat_desc_norm, r_norm).ratio()
+
+                if (ratio >= 0.70 or (jaccard >= 0.50 and len(common) >= 2)) and ratio > best_sim:
+                    best_sim = ratio
                     matched_ref = rm
-                    break
 
         if matched_ref:
             mat["origen"] = "historico"
             if matched_ref.get("codigo"):
                 mat["codigo"] = matched_ref["codigo"]
+            mat["descripcion"] = matched_ref.get("descripcion", mat.get("descripcion"))
             ref_price = float(matched_ref.get("precio_unitario") or 0.0)
             if ref_price > 0:
                 mat["precio_unitario"] = ref_price
+            ref_unit = matched_ref.get("unidad")
+            if ref_unit:
+                new_qty, is_comp = _convert_material_quantity(
+                    qty=float(mat.get("cantidad") or 1.0),
+                    from_unit_raw=str(mat.get("unidad") or ""),
+                    to_unit_raw=str(ref_unit),
+                    mat_desc=str(mat.get("descripcion") or "")
+                )
+                if is_comp and new_qty is not None:
+                    mat["cantidad"] = new_qty
+                    mat["unidad"] = ref_unit
 
 
 
@@ -970,6 +1267,7 @@ def generate_apu_with_ai(payload_llm: Dict[str, Any], history: Optional[List[Dic
     calibrate_apu_crew_and_equipment(result)
     reconcile_equipment_with_database(result, db)
     reconcile_materials_with_database(result, db)
+    reconcile_labor_with_database(result, db)
 
     return result
 
@@ -1364,6 +1662,7 @@ Prefijo COVENIN: {covenin_prefix}
     _enforce_base_apu_material_heritage(result, base_apu, complementary_apus)
     reconcile_equipment_with_database(result, db)
     reconcile_materials_with_database(result, db)
+    reconcile_labor_with_database(result, db)
 
     result["debug_base_apu"] = base_apu
     result["prompt_enviado_al_llm"] = prompt
@@ -1719,6 +2018,24 @@ SECONDARY_ACTIVITY_PATTERNS: Dict[str, Dict[str, Any]] = {
         "key_insumo_pattern": r"\b(excavad|retroexcavad|pala|zanja|pico)\b",
         "insumo_types": ["equipos", "mano_obra"],
     },
+    "tratamiento_oxido_fondo": {
+        "pattern": r"\b(fondo\s+anticorrosivo|anticorrosiv[oa]|desoxidad[oa]|remoci[oó]n\s+de\s+[oó]xido|eliminar\s+[oó]xido|minio|minio\s+de\s+plomo)\b",
+        "search_keywords": "fondo anticorrosivo",
+        "key_insumo_pattern": r"\b(fondo|anticorrosiv|minio|desoxidad|solvente|thinner|brocha|cepillo)\b",
+        "insumo_types": ["materiales", "mano_obra"],
+    },
+    "sellado_juntas": {
+        "pattern": r"\b(sellado|sellad[oa]|silic[oó]n|poliuretano|calafateo|junta\s+de\s+dilataci[oó]n)\b",
+        "search_keywords": "sellado juntas",
+        "key_insumo_pattern": r"\b(silic|poliuretano|sellad|pistola|cordon|fondo)\b",
+        "insumo_types": ["materiales", "mano_obra"],
+    },
+    "pruebas_hidrostaticas": {
+        "pattern": r"\b(prueba\s+hidrost[aá]tica|prueba\s+de\s+presi[oó]n|desinfecci[oó]n\s+de\s+tuber[ií]a)\b",
+        "search_keywords": "prueba hidrostatica tuberia",
+        "key_insumo_pattern": r"\b(bomba\s+de\s+prueba|man[oó]metro|prueba|presi[oó]n)\b",
+        "insumo_types": ["equipos", "mano_obra"],
+    },
 }
 
 
@@ -1797,6 +2114,7 @@ def select_relevant_complementary_apus(
                     'SELECT "CodPar" FROM cost360_items '
                     'WHERE "Descri" ILIKE :kw1 AND "Descri" ILIKE :kw2 '
                     'AND "CodPar" != :base_cod '
+                    'AND length("Descri") >= 20 '
                     'ORDER BY length("Descri") ASC LIMIT 1'
                 )
                 row = db.execute(sql, {"kw1": f"%{kw}%", "kw2": f"%{kw2}%", "base_cod": base_cod}).fetchone()
@@ -1805,6 +2123,7 @@ def select_relevant_complementary_apus(
                         'SELECT "CodPar" FROM cost360_items '
                         'WHERE "Descri" ILIKE :kw1 '
                         'AND "CodPar" != :base_cod '
+                        'AND length("Descri") >= 20 '
                         'ORDER BY length("Descri") ASC LIMIT 1'
                     )
                     row = db.execute(sql_single, {"kw1": f"%{kw}%", "base_cod": base_cod}).fetchone()

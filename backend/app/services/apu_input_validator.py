@@ -605,7 +605,16 @@ def _check_parametric_missing_specification(
     # 3. Paredes de Bloques / Muros (no demolición)
     has_wall = bool(re.search(r"\b(pared|paredes|muro|muros|tabique|tabiques)\b", lower))
     has_block = bool(re.search(r"\b(bloque|bloques|ladrillo|ladrillos|arcilla)\b", lower))
-    if has_wall and has_block and not is_demolition:
+    is_surface_action = bool(re.search(
+        r"\b(pintura|pintar|pintad[oa]|esmalte|caucho|fondo|lavado|limpieza|hidrojet|sellado|impermeabiliz)\b",
+        lower
+    ))
+    is_construction_or_masonry = bool(re.search(
+        r"\b(construcci[oó]n|construir|levantamiento|levantar|pegar|pegado|mamposter[ií]a|reparaci[oó]n|reparar|refacci[oó]n|reconstrucci[oó]n)\b",
+        lower
+    ))
+    # Si la acción es puramente superficial o de acabado y no es construcción/mampostería, NO pedir espesor
+    if has_wall and has_block and not is_demolition and not (is_surface_action and not is_construction_or_masonry):
         has_thickness = bool(
             re.search(
                 r"\be\s*=\s*\d+|\b\d+\s*(cm|cms)\b|\b\d+x\d+x\d+\b|\b(10|12|15|20)\s*(cm|cms)\b",
@@ -741,7 +750,39 @@ def _check_parametric_missing_specification(
                 ["12000 BTU", "18000 BTU", "24000 BTU", "36000 BTU", "5 TR"],
             )
 
-    return None
+def _check_maintenance_missing_unit(
+    query: str,
+) -> Optional[Tuple[str, str, str, List[str]]]:
+    """
+    Verifica si una consulta describe una actividad de mantenimiento, reparación,
+    reacondicionamiento o restauración y carece de unidad de medida comercial explícita.
+    En partidas de mantenimiento, siempre es prioritario solicitar la aclaratoria del usuario
+    para evitar heredar unidades inapropiadas de obra nueva (como kgf para peldaños de escalera).
+    """
+    lower = query.lower()
+
+    # Detectar verbos y términos de mantenimiento
+    is_maintenance = bool(re.search(
+        r"\b(mantenimiento|reacondicionamiento|reacondicionar|reparaci[oó]n|reparar|restauraci[oó]n|restaurar|refacci[oó]n|rehabilitaci[oó]n|rehabilitar)\b",
+        lower
+    ))
+    if not is_maintenance:
+        return None
+
+    # Verificar si el usuario ya especificó una unidad de medida comercial explícita en el texto
+    has_explicit_unit = bool(re.search(
+        r"\b(unidad|unidades|und|pza|piezas?|metro|metros|ml|m2|mt2|mts2|m3|mt3|mts3|pto|puntos?|kg|kgf|ton|viaje|flete|gl|global)\b|(?:\b|\d)\s*(?:m2|m3|ml|pza|und|pto)\b",
+        lower
+    ))
+    if has_explicit_unit:
+        return None
+
+    return (
+        "clarification_needed",
+        "Para partidas de mantenimiento o reacondicionamiento, ¿en qué unidad de medida comercial deseas computar el trabajo?",
+        "RAG_MAINTENANCE_MISSING_UNIT",
+        ["pza (por pieza / elemento)", "m (por metro lineal)", "m2 (por área intervenida)", "und (unidad global)", "pto (por punto)"],
+    )
 
 
 def validate_rag_signals(
@@ -840,6 +881,12 @@ def validate_rag_signals(
         logger.info("Parametric query missing dimension intercepted by Capa 2 [%s]: %.80s", parametric_check[2], query)
         return parametric_check
 
+    # ── CHECK 2.5: Validación de Unidad en Partidas de Mantenimiento / Reacondicionamiento ──
+    maintenance_check = _check_maintenance_missing_unit(query)
+    if maintenance_check is not None:
+        logger.info("Maintenance query missing commercial unit intercepted by Capa 2 [%s]: %.80s", maintenance_check[2], query)
+        return maintenance_check
+
     # ── CHECK 3: Evaluación de Candidatos RAG (si fueron proporcionados) ──
     if candidates is not None:
         if not candidates:
@@ -917,12 +964,34 @@ def build_rejection_response(
             "_internal_code": codigo,
         }
 
+    if codigo == "RAG_MAINTENANCE_MISSING_UNIT":
+        return {
+            "status": "clarification_needed",
+            "clarification_type": "unit_selection",
+            "clarification_message": mensaje,
+            "recommendation": "Selecciona la unidad de medida comercial en la que deseas computar este mantenimiento.",
+            "options": rag_candidates or ["pza (por pieza / elemento)", "m (por metro lineal)", "m2 (por área intervenida)", "und (unidad global)", "pto (por punto)"],
+            "questions": [
+                "¿En qué unidad comercial deseas computar este mantenimiento? (pza: por pieza/peldaño, m: por metro lineal, m2: por área, und: unidad global, pto: por punto)"
+            ],
+            "guia_redaccion": (
+                "Estructura recomendada: agrega la unidad de medida comercial a tu descripción. "
+                "Ejemplo: 'Reacondicionamiento de estructura metálica de peldaños de escalera unidad pza' o 'en m2'."
+            ),
+            "partida": None,
+            "materials": [],
+            "equipments": [],
+            "labors": [],
+            "advertencias": [],
+            "_internal_code": codigo,
+        }
+
     if codigo.startswith("RAG_PARAMETRIC_MISSING_"):
         return {
             "status": "clarification_needed",
             "clarification_message": mensaje,
             "recommendation": "Indica este parámetro técnico para seleccionar o construir el APU con el costo exacto.",
-            "options": [],
+            "options": rag_candidates or [],
             "questions": [mensaje],
             "guia_redaccion": f"Estructura recomendada: agrega la especificación técnica requerida a tu descripción ({mensaje}).",
             "partida": None,
