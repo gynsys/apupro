@@ -49,6 +49,33 @@ MATERIAL_CATEGORIES: Dict[str, Dict[str, List[str]]] = {
         "ADOBE": [r"\bADOBE(S)?\b", r"\bTIERRA\s+CRUDA\b", r"\bBARRO\b"],
         "BLOQUE_CONCRETO": [r"\bBLOQUE(S)?\s+DE\s+CONCRETO\b", r"\bBLOQUE(S)?\s+CONCRETO\b"],
         "CONCRETO_ESTRUCTURAL": [r"\bCONCRETO\b", r"\bMACHON(ES)?\b", r"\bVIGA(S)?\s+DE\s+CORONA\b"],
+    },
+    "pintura_recubrimiento": {
+        "EPOXICA": [r"\bEPOXI\w*\b"],
+        "ESMALTE": [r"\bESMALTE\b", r"\bALQUIDIC\w*\b", r"\bPINTURA\s+DE\s+ACEITE\b"],
+        "CAUCHO": [r"\bCAUCHO\b", r"\bLATEX\b", r"\bEMULSION\b", r"\bVINILICA\b"],
+        "POLIURETANO": [r"\bPOLIURETANO\b"],
+        "TRAFICO": [r"\bTRAFICO\b", r"\bTERMOPLASTIC\w*\b"],
+        "ANTICORROSIVO": [r"\bANTICORROSIV\w*\b", r"\bCROMATO\b", r"\bMINIO\b", r"\bFONDO\s+DE\s+HERRERIA\b"],
+    },
+    "pisos_revestimiento": {
+        "PORCELANATO": [r"\bPORCELANATO\b", r"\bPORCELANICO\b"],
+        "CERAMICA": [r"\bCERAMIC\w*\b", r"\bBALDOSA\b", r"\bAZULEJO\b"],
+        "CAICO": [r"\bCAICO\b", r"\bTERRACOTA\b", r"\bARCILLA\s+VITRIFICADA\b"],
+        "GRANITO": [r"\bGRANITO\b", r"\bMARMOL\b"],
+        "VINIL": [r"\bVINIL\w*\b", r"\bPVC\s+PISO\b", r"\bLINOLEO\b"],
+        "CEMENTO_PULIDO": [r"\bCEMENTO\s+PULIDO\b", r"\bMICROCEMENTO\b"],
+    },
+    "impermeabilizacion": {
+        "MANTO_ASFALTICO": [r"\bMANTO\b", r"\bTERMOSOLDABLE\b", r"\bEDIL\b"],
+        "PINTURA_ASFALTICA": [r"\bPRIMER\s+ASFALTICO\b", r"\bIMPRIMACION\b", r"\bPINTURA\s+ASFALTICA\b"],
+        "MEMBRANA_LIQUIDA": [r"\bPOLIURETANO\s+LIQUIDO\b", r"\bMEMBRANA\s+ACRILICA\b", r"\bIMPERMEABILIZANTE\s+ACRILICO\b"],
+    },
+    "cubiertas_techos": {
+        "ACEROLIT": [r"\bACEROLIT\b", r"\bLAMINA\s+TERMOACUSTICA\b", r"\bTERMOACUSTIC\w*\b"],
+        "TEJA": [r"\bTEJA\b", r"\bCRIOLITA\b"],
+        "MACHIHEMBRADO": [r"\bMACHIHEMBRADO\b", r"\bMACHIMBRADO\b"],
+        "LOSACERO": [r"\bLOSACERO\b", r"\bSOFALIT\b", r"\bLAMINA\s+DE\s+LOSA\b"],
     }
 }
 

@@ -4,7 +4,7 @@ echo    Despliegue de CostBase Platform (CI/CD)
 echo ==========================================
 
 echo.
-echo [1/2] Añadiendo cambios a Git...
+echo [1/2] Anadiendo cambios a Git...
 git add .
 set /p commit_msg="Ingresa el mensaje del commit (deja vacio para 'Actualizacion'): "
 if "%commit_msg%"=="" set commit_msg=Actualizacion
@@ -17,7 +17,7 @@ git push
 
 echo.
 echo ==========================================
-echo    ¡Despliegue iniciado en GitHub Actions!
+echo    Despliegue iniciado en GitHub Actions!
 echo ==========================================
 echo El proceso de compilacion y despliegue en DigitalOcean 
 echo ahora se esta ejecutando automaticamente en la nube de GitHub.

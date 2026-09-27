@@ -6,6 +6,7 @@ def run_ssh_command(cmd: str) -> str:
     """Ejecuta un comando SSH en el servidor de producción."""
     ssh_cmd = [
         "ssh", 
+        "-n",
         "-i", "C:/Users/pablo/.ssh/id_ed25519", 
         "root@167.172.115.154", 
         cmd

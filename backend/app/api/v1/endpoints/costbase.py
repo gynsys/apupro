@@ -174,6 +174,7 @@ from app.services.ai_apu_service import (
     get_dynamic_candidates,
     fetch_base_apu_for_prompt,
     select_relevant_complementary_apus,
+    infer_covenin_prefix,
 )
 from app.api.v1.endpoints.export_utils import generate_excel_workbook
 from app.services.synonyms_service import expand_technical_synonyms
@@ -1547,20 +1548,22 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             current_cod = (partida_data.get("cod_par") or "").strip()
             base_cod_val = getattr(base_apu, "get", lambda k, d=None: d)("codpar", base_code) or base_code
             
-            # Si el LLM conservó el código de la partida base o un código temporal/XXX o sin SC:
+            # Determinar el prefijo formal esperado para la actividad constructiva
+            expected_prefix = (payload.covenin_prefix or "").strip().replace(".", "").replace("-", "")
+            if not expected_prefix or len(expected_prefix) < 3:
+                expected_prefix = infer_covenin_prefix(payload.description, base_apu.get("covenin") or base_code or "")
+            
+            # Si el LLM conservó el código de la base, un código temporal, omitió 'SC',
+            # o si el prefijo asignado discrepa con el capítulo técnico esperado (ej: copió E411 para pintura epóxica E465):
+            current_prefix = current_cod[:len(expected_prefix)].upper() if len(current_cod) >= len(expected_prefix) else ""
             if (
                 current_cod == base_cod_val or 
                 current_cod.upper().startswith("XXX") or 
                 not current_cod or 
-                "SC" not in current_cod.upper()
+                "SC" not in current_cod.upper() or
+                (expected_prefix and current_prefix != expected_prefix.upper())
             ):
-                prefix = (payload.covenin_prefix or "").strip().replace(".", "").replace("-", "")
-                if not prefix or len(prefix) < 3:
-                    base_cov = (base_apu.get("covenin") or base_code or "E").replace(".", "").replace("-", "")
-                    clean_pref = re.sub(r'[^A-Za-z0-9]', '', base_cov)
-                    prefix = clean_pref[:4] if len(clean_pref) >= 4 else "E511"
-                
-                new_sc_code = f"{prefix.upper()}SC001"
+                new_sc_code = f"{expected_prefix.upper()}SC001"
                 partida_data["cod_par"] = new_sc_code
                 partida_data["cov_par"] = new_sc_code
 

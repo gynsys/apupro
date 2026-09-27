@@ -151,10 +151,23 @@ _REGLAS_COVENIN = """
    - Una partida generada o adaptada por IA es una partida nueva/especial no tipificada en el tabulador original.
    - ESTÁ TERMINANTEMENTE PROHIBIDO asignar o conservar el código de la partida base (ej: 'XXX028', 'CCS086', etc.) en el campo `cod_par` de la partida adaptada.
 2. Toda partida generada o adaptada por IA DEBE llevar obligatoriamente un código de Partida Especial (convención formal SC = Sin Código / No Tipificada):
-   - Prefijo de sector y capítulo según la actividad (ej. E511 para instalaciones hidráulicas/bombas, E313 para estructuras de concreto, E411 para albañilería, etc.). Si se proporciona `covenin_prefix`, úsalo como raíz eliminando ceros sobrantes.
+   - Prefijo de sector y capítulo según la actividad constructiva real:
+     * Pinturas Especiales / Epóxicas / Poliuretano: 'E465'
+     * Pinturas de Caucho / Emulsión: 'E461'
+     * Esmaltes y Barnices: 'E462'
+     * Revestimientos de Pisos / Pavimentos: 'E431'
+     * Albañilería / Mampostería de Paredes: 'E411'
+     * Tabiquería Liviana / Drywall: 'E412'
+     * Impermeabilizaciones: 'E451'
+     * Instalaciones Hidráulicas / Bombas: 'E511'
+     * Instalaciones Sanitarias / Drenajes: 'E521'
+     * Instalaciones Eléctricas: 'E611'
+     * Estructuras de Concreto: 'E313'
+     * Estructuras Metálicas: 'E321'
+     Si se proporciona `covenin_prefix`, úsalo como raíz eliminando ceros sobrantes.
    - Seguido de 'SC' (Partida Especial / Sin Código).
    - Seguido de un correlativo de tres dígitos '001'.
-   - Ejemplos obligatorios: 'E511SC001', 'E313SC001', 'E411SC001', 'C311SC001'.
+   - Ejemplos obligatorios: 'E465SC001', 'E431SC001', 'E511SC001', 'E313SC001', 'E411SC001'.
    - PROHIBIDO inventar códigos puramente numéricos falsos que simulen ser normas oficiales tipificadas.
 """
 
@@ -213,7 +226,14 @@ _REGLAS_INSUMOS_PRECIOS = """
    - Si se requiere un insumo técnicamente indispensable que NO está en el catálogo provisto, agrégalo con `origen: "ia"`.
    - Asígnale un `precio_unitario` referencial estimado según valores de mercado actuales de la construcción en USD (NUNCA dejes precio 0.0).
    - En `advertencias`, agrega obligatoriamente una nota con el prefijo `[PRECIO_REFERENCIAL]` indicando el insumo y que dicho valor es un precio de mercado referencial estimado por la IA que se recomienda cotizar y validar con proveedores locales.
-3. MATRIZ OBLIGATORIA DE COMPATIBILIDAD FUNCIONAL EN 8 FAMILIAS (¡CRÍTICO!):
+3. REGLA UNIVERSAL DE INSUMO PREPONDERANTE ÚNICO (¡CRÍTICO! - EXCLUSIÓN MUTUA DE MATERIALES Y EQUIPOS PRINCIPALES):
+   En toda partida de construcción existe un INSUMO PREPONDERANTE O PRINCIPAL (ej: el tipo de pintura, el tipo de revestimiento de piso, el tipo de bloque/tabiquería, el tipo de tubería, el tipo de impermeabilizante, el tipo de bomba o motor).
+   Si la partida solicitada por el usuario define un material o equipo preponderante diferente al del APU base histórico:
+   - QUEDA TERMINANTEMENTE PROHIBIDO dejar coexistir ambos insumos en el presupuesto (ej: PROHIBIDO tener Pintura Epóxica + Pintura de Esmalte en la misma partida; PROHIBIDO tener Baldosa de Porcelanato + Caico; PROHIBIDO tener Drywall + Bloques de Arcilla; PROHIBIDO tener Manto Asfáltico + Membrana Acrílica).
+   - El insumo histórico incompatible DEBE SER ELIMINADO TOTALMENTE de la lista de materiales o equipos.
+   - Igualmente DEBEN ELIMINARSE sus insumos satélites incompatibles (solventes/diluyentes no afines, pegas o fijaciones que no corresponden al nuevo material).
+   - Sustitúyelo por el insumo correcto con origen "ia", precio referencial de mercado en USD y emite la advertencia `[PRECIO_REFERENCIAL]`.
+4. MATRIZ OBLIGATORIA DE COMPATIBILIDAD FUNCIONAL EN 12 FAMILIAS (¡CRÍTICO!):
    Para CADA insumo del APU base, evalúa si su aplicación física coincide con la solicitada. Si hay incompatibilidad funcional, QUEDA TERMINANTEMENTE PROHIBIDO conservar el insumo histórico; DEBES sustituirlo por el adecuado con `origen: "ia"`, precio referencial estimado en USD y emitir `[PRECIO_REFERENCIAL]`:
    a) BOMBAS Y EQUIPOS HIDRÁULICOS:
       - Pozo Profundo / Agua Limpia: REQUIERE bomba tipo lapicero/multietapa en acero inoxidable. PROHIBIDO usar bombas de aguas negras, achique o trituradoras tipo Flygt.
@@ -234,12 +254,30 @@ _REGLAS_INSUMOS_PRECIOS = """
       - CONTROL DE ESCALA: No seleccionar tableros industriales o subestaciones mayores a 42 circuitos a menos que se solicite expresamente.
    g) IMPERMEABILIZACIÓN:
       - Manto Asfáltico: El insumo activo impermeabilizante es el manto termosoldado (3 o 4 mm). La pintura asfáltica es solo imprimación previa, nunca el impermeabilizante principal.
+      - Membrana Líquida / Poliuretano: Sustituye completamente al manto y al soplete.
    h) ACCESOS Y TRABAJOS EN ALTURA (RAPEL VS. ANDAMIOS):
       - Trabajo a Rapel / Cuerdas: REQUIERE equipos oficiales de rapel ('SEG020' y 'SEG021', arnés de suspensión, silleta y cuerdas de seguridad). PROHIBIDO usar andamios tubulares apoyados de piso si la actividad se ejecuta a rapel.
-4. EXCLUSIONES DE ALCANCE:
+   i) PINTURAS Y RECUBRIMIENTOS (¡CRÍTICO!):
+      - Pintura Epóxica (2 componentes): Para pisos industriales, laboratorios, clínicas, tanques de agua o ambientes corrosivos. REQUIERE kit epóxico (resina + catalizador/endurecedor) y solvente epóxico. PROHIBIDO usar esmalte sintético/alquídico ni pintura de caucho. Si la partida base contiene esmalte, caucho o thinner común, ELIMÍNALOS por completo.
+      - Esmalte Alquídico / Aceite: Para herrería, puertas, rejas, marcos y carpintería. REQUIERE fondo anticorrosivo y solvente mineral/thinner. PROHIBIDO en pisos de alto tráfico o mampostería sin sellador.
+      - Pintura de Caucho / Látex / Emulsión: Para paredes interiores y exteriores de mampostería. PROHIBIDO en metales sin fondo o en pisos de tránsito.
+      - Poliuretano Alifático: Para exteriores con alta radiación UV o pisos de acabado espejo.
+      - Pintura de Tráfico: Con resina alquídica o acrílica de secado rápido y microesferas de vidrio reflectivas para pavimentos y vialidad.
+   j) PISOS, PAVIMENTOS Y REVESTIMIENTOS:
+      - Porcelanato / Baldosas de Cerámica: REQUIERE mortero adhesivo premezclado (pega gris o pega blanca flexible/bondex) y carateo/lechada de junta. PROHIBIDO usar mortero tradicional de arena y cemento como única pega sin aditivo polimérico.
+      - Baldosas de Caico / Arcilla Cocida: REQUIERE mortero tradicional cemento:arena 1:4 y carateo rústico.
+      - Piso de Granito Vaciado en Sitio: REQUIERE granito/mármol molido, cemento blanco o gris, flejes de dilatación (bronce, aluminio o plástico) y máquina pulidora con piedras de carburo y ácido oxálico.
+   k) MAMPOSTERÍA, TABIQUERÍA Y CERRAMIENTOS:
+      - Bloques de Arcilla / Concreto: REQUIERE mortero de pega cemento-arena, acero de refuerzo para machones/vigas de corona y friso base.
+      - Tabiquería de Drywall / Cartón-Yeso: REQUIERE perfilería liviana de acero galvanizado (canales y montantes), láminas de yeso (STD 1/2" o RH resistente a humedad), tornillos dry-wall tipo wafer y punta broca, cinta de fibra de vidrio/papel y pasta profesional para juntas. PROHIBIDO conservar bloques, cemento, arena ni cabillas si la actividad es tabiquería de drywall.
+   l) TECHOS, CUBIERTAS Y ENCOFRADOS:
+      - Cubiertas Ligeras (Acerolit / Termoacústicas / Losacero): REQUIERE tornillos autoperforantes con arandela de neopreno y ganchos de fijación sobre correas metálicas.
+      - Cubiertas de Teja Criolla / Arcilla: REQUIERE mortero de asiento o fijaciones sobre machihembrado de madera y manto impermeabilizante previo.
+      - Encofrados: Distinguir encofrado de madera (madera aserrada, tablas, cuartones y desmoldante) de formaleta metálica modular.
+5. EXCLUSIONES DE ALCANCE:
    - Si el usuario indica explícitamente que NO incluye un componente (ejemplo: 'no incluye cable submarino', 'sin excavación', 'sin flete', 'sin tablero'), simplemente exclúyelo de la lista de insumos y refléjalo en la descripción técnica: '(NO INCLUYE ...)'.
    - NO agregues advertencias sobre exclusiones de alcance, el analista de costos ya lo conoce.
-5. NUNCA MENCIONES LA PARTIDA BASE EN 'ADVERTENCIAS':
+6. NUNCA MENCIONES LA PARTIDA BASE EN 'ADVERTENCIAS':
    - ESTÁ TERMINANTEMENTE PROHIBIDO escribir en 'advertencias' qué APU o código se usó de base histórica. Las advertencias son EXCLUSIVAS para precios referenciales estimados ([PRECIO_REFERENCIAL]).
 """
 
@@ -1262,6 +1300,7 @@ def generate_apu_with_ai(payload_llm: Dict[str, Any], history: Optional[List[Dic
 
     _enforce_scope_exclusions(result, user_desc)
     _enforce_rapel_and_height_equipment(result, user_desc)
+    _enforce_primary_materials_mutual_exclusion(result, user_desc)
 
     _normalize_equipment_prices(result)
     calibrate_apu_crew_and_equipment(result)
@@ -1496,6 +1535,170 @@ def _enforce_rapel_and_height_equipment(result: Dict[str, Any], user_description
         )
 
 
+def infer_covenin_prefix(description: str, base_code: str = "") -> str:
+    """
+    Infiere heurísticamente el prefijo normativo de capítulo COVENIN más adecuado
+    según la naturaleza técnica de la actividad descrita.
+    Garantiza que una partida libre sin prefijo previo no copie códigos arbitrarios (ej. E411).
+    """
+    if not description or not isinstance(description, str):
+        return "E511"
+
+    d = description.upper()
+
+    # 1. Pinturas y Acabados Especiales (E46)
+    if any(k in d for k in ["EPOXI", "POLIURETANO", "TRAFICO", "MICROESFERA"]):
+        return "E465"  # Pinturas especiales / epóxicas
+    if any(k in d for k in ["ESMALTE", "ALQUIDIC", "ANTICORROSIV"]):
+        return "E462"  # Esmaltes y barnices
+    if any(k in d for k in ["PINTURA", "CAUCHO", "LATEX", "EMULSION"]):
+        return "E461"  # Pintura de caucho / emulsión
+
+    # 2. Revestimientos de Pisos y Pavimentos (E43)
+    if any(k in d for k in ["PORCELANATO", "CERAMICA", "BALDOSA", "GRANITO PULIDO", "CAICO", "PISO VINIL"]):
+        return "E431"  # Revestimientos de pisos
+
+    # 3. Albañilería, Paredes y Tabiquería (E41)
+    if any(k in d for k in ["DRYWALL", "TABIQUERIA", "YESO", "PLYCEM", "SUPERBOARD"]):
+        return "E412"  # Tabiquería liviana
+    if any(k in d for k in ["BLOQUE", "PARED", "ALBAÑILERIA", "LADRILLO", "FRISO", "REVOQUE", "TARRAJEO"]):
+        return "E411"  # Mampostería / Albañilería
+
+    # 4. Impermeabilización (E45)
+    if any(k in d for k in ["IMPERMEABILIZ", "MANTO", "PRIMER ASFALTICO", "ASFALTIC"]):
+        return "E451"
+
+    # 5. Instalaciones Hidráulicas / Aguas Claras (E51)
+    if any(k in d for k in ["BOMBA", "HIDRONEUMATICO", "POZO", "AGUAS BLANCAS", "TUBERIA PVC PRESION", "PPR", "CPVC", "VALVULA"]):
+        return "E511"
+
+    # 6. Instalaciones Sanitarias / Aguas Servidas (E52)
+    if any(k in d for k in ["AGUAS SERVIDAS", "AGUAS NEGRAS", "CLOACA", "DRENAJE", "PVC SANITARI", "BAJANTE"]):
+        return "E521"
+
+    # 7. Instalaciones Eléctricas (E6)
+    if any(k in d for k in ["TABLERO", "CABLE", "TRANSFORMADOR", "ACOMETIDA", "TOMACORRIENTE", "INTERRUPTOR", "LUMINARIA", "PUESTA A TIERRA", "COPPERWELD"]):
+        return "E611"
+
+    # 8. Estructuras de Concreto (E31) y Metálicas (E32)
+    if any(k in d for k in ["CONCRETO ARMADO", "VACIADO DE CONCRETO", "VIGA", "COLUMNA", "LOSA", "FUNDACION", "CABILLA"]):
+        return "E313"
+    if any(k in d for k in ["ESTRUCTURA METALICA", "PERFIL CONDUVEN", "VIGA IPE", "SOLDADURA"]):
+        return "E321"
+
+    # 9. Movimiento de Tierras (E1) y Demoliciones (E2)
+    if any(k in d for k in ["EXCAVACION", "RELLENO", "COMPACTACION", "MOVIMIENTO DE TIERRA", "ZANJA"]):
+        return "E121"
+    if any(k in d for k in ["DEMOLICION", "BOTE", "DESMANTELAMIENTO"]):
+        return "E211"
+
+    # Si se pasó un base_code y tiene prefijo COVENIN válido de 3 o 4 letras:
+    if base_code:
+        clean = re.sub(r'[^A-Z0-9]', '', str(base_code).upper())
+        if len(clean) >= 3 and clean[0] in ("E", "C", "U") and clean[1:3].isdigit():
+            return clean[:4] if len(clean) >= 4 else clean[:3]
+
+    return "E511"
+
+
+def _enforce_primary_materials_mutual_exclusion(result: Dict[str, Any], user_description: str) -> None:
+    """
+    Salvaguarda determinista de backend para garantizar la Regla Universal de
+    Insumo Preponderante Único (Mutual Exclusion of Primary Functional Inputs).
+
+    Si en el APU resultante coexisten insumos de la misma familia de acabado o material
+    técnicamente incompatibles (ejemplo: un insumo nuevo con origen 'ia' de Pintura Epóxica
+    y un insumo histórico con origen 'historico' de Pintura de Esmalte o Caucho), purga
+    automáticamente el insumo histórico incompatible y sus insumos satélites (solventes ajenos).
+    """
+    if not isinstance(result, dict) or not user_description:
+        return
+
+    materials = result.get("materials")
+    if not isinstance(materials, list) or len(materials) < 2:
+        return
+
+    # Familias de exclusión mutua estricta en materiales
+    MUTUAL_EXCLUSION_GROUPS = {
+        "pinturas": {
+            "EPOXICA": [r"\bEPOXI\w*\b"],
+            "ESMALTE": [r"\bESMALTE\b", r"\bALQUIDIC\w*\b", r"\bACEITE\b"],
+            "CAUCHO": [r"\bCAUCHO\b", r"\bLATEX\b", r"\bEMULSION\b"],
+            "POLIURETANO": [r"\bPOLIURETANO\b"],
+        },
+        "pisos": {
+            "PORCELANATO": [r"\bPORCELANATO\b", r"\bPORCELANICO\b"],
+            "CERAMICA": [r"\bCERAMIC\w*\b", r"\bAZULEJO\b"],
+            "CAICO": [r"\bCAICO\b", r"\bTERRACOTA\b"],
+            "GRANITO": [r"\bGRANITO\b", r"\bMARMOL\b"],
+        },
+        "tabiqueria": {
+            "DRYWALL": [r"\bDRYWALL\b", r"\bYESO\b", r"\bTABLAYESO\b"],
+            "MAMPOSTERIA": [r"\bBLOQUE(S)?\b", r"\bARCILLA\b", r"\bLADRILLO(S)?\b"],
+        },
+        "impermeabilizacion": {
+            "MANTO": [r"\bMANTO\b", r"\bTERMOSOLDABLE\b"],
+            "MEMBRANA": [r"\bMEMBRANA\s+LIQUIDA\b", r"\bPOLIURETANO\s+LIQUIDO\b"],
+        }
+    }
+
+    user_desc_upper = user_description.upper()
+    purged_items: List[str] = []
+    retained_materials: List[Dict[str, Any]] = []
+
+    for group_name, subtypes in MUTUAL_EXCLUSION_GROUPS.items():
+        active_subtypes: Set[str] = set()
+        for st_name, patterns in subtypes.items():
+            if any(re.search(pat, user_desc_upper) for pat in patterns):
+                active_subtypes.add(st_name)
+
+        # Si el usuario no lo nombró explícitamente en su texto, verificar si un insumo 'ia' lo introdujo
+        if not active_subtypes:
+            for m in materials:
+                if isinstance(m, dict) and str(m.get("origen", "")).lower() == "ia":
+                    m_desc = str(m.get("descripcion", "")).upper()
+                    for st_name, patterns in subtypes.items():
+                        if any(re.search(pat, m_desc) for pat in patterns):
+                            active_subtypes.add(st_name)
+
+        if active_subtypes:
+            for m in materials:
+                if not isinstance(m, dict):
+                    continue
+                m_desc = str(m.get("descripcion", "")).upper()
+                m_origen = str(m.get("origen", "")).lower()
+
+                is_conflicting = False
+                for st_name, patterns in subtypes.items():
+                    if st_name not in active_subtypes:
+                        if any(re.search(pat, m_desc) for pat in patterns):
+                            if m_origen == "historico":
+                                is_conflicting = True
+                                break
+
+                # Purgar solventes incompatibles heredados (ej: thinner común o aguarrás si es epóxica)
+                if "EPOXICA" in active_subtypes and m_origen == "historico":
+                    if re.search(r"\b(THINNER\s+COMUN|AGUARRAS|SOLVENTE\s+MINERAL)\b", m_desc):
+                        is_conflicting = True
+
+                if is_conflicting:
+                    purged_items.append(m.get("descripcion") or m.get("codigo") or "Insumo incompatible")
+                else:
+                    retained_materials.append(m)
+
+            if purged_items:
+                materials = retained_materials
+
+    if purged_items:
+        result["materials"] = materials
+        logger.info(
+            f"[MutualExclusionEnforcement] Eliminados insumos incompatibles heredados de la base: {purged_items}"
+        )
+        result.setdefault("notas_adaptacion", []).append(
+            f"COMPATIBILIDAD TÉCNICA: Se eliminaron automáticamente insumos incompatibles heredados ({', '.join(purged_items)}) en cumplimiento de la Regla de Insumo Preponderante Único."
+        )
+
+
 def generate_apu_with_ai_from_base(
     base_apu: Dict[str, Any],
     complementary_apus: Optional[List[Dict[str, Any]]] = None,
@@ -1540,6 +1743,10 @@ def generate_apu_with_ai_from_base(
             comp_text += f"## Complementaria {i+1} [{comp.get('codpar', 'N/A')}] — {comp.get('descripcion', '')[:80]}\n"
             comp_text += json.dumps(_prune_apu_for_prompt(comp), ensure_ascii=False, separators=(',', ':'))
             comp_text += "\n"
+
+    effective_cov_prefix = (covenin_prefix or "").strip()
+    if not effective_cov_prefix:
+        effective_cov_prefix = infer_covenin_prefix(user_description, base_apu.get("covenin") or base_apu.get("codpar") or "")
 
     unit_directive = ""
     u_clean = str(requested_unit).strip().lower() if requested_unit else ""
@@ -1610,7 +1817,7 @@ NO debes inventar desde cero. Usa los insumos, precios y cantidades del APU base
 # SOLICITUD DEL USUARIO
 Descripción: {user_description}
 Categoría COVENIN: {covenin_context}
-Prefijo COVENIN: {covenin_prefix}
+Prefijo COVENIN: {effective_cov_prefix}
 {answers_text}
 
 # APU BASE SELECCIONADO (partida histórica real de la base de datos)
@@ -1622,7 +1829,7 @@ Prefijo COVENIN: {covenin_prefix}
 1. El APU base es para una partida SIMILAR, no idéntica. Tu trabajo es adaptarlo para "{user_description}".
 {performance_instruction}
 3. CONSERVA todos los insumos que sigan siendo relevantes para la nueva partida. Márcalos como `"origen": "historico"`.
-4. ELIMINA o SUSTITUYE los insumos que no aplican aplicando rigurosamente la MATRIZ OBLIGATORIA DE COMPATIBILIDAD FUNCIONAL EN 7 FAMILIAS. Si el equipo o material principal de la base es incompatible, NO uses el insumo histórico. Reemplázalo por el insumo correcto con origen "ia", precio referencial de mercado en USD y emite la advertencia `[PRECIO_REFERENCIAL]`.
+4. REGLA DE INSUMO PREPONDERANTE ÚNICO Y MATRIZ DE COMPATIBILIDAD EN 12 FAMILIAS: Si la nueva partida requiere un material o equipo preponderante diferente al de la base (ej: epóxica vs esmalte, porcelanato vs caico, drywall vs bloque de arcilla, etc.), ELIMINA POR COMPLETO el insumo histórico y sus solventes/fijaciones no afines. QUEDA ESTRICTAMENTE PROHIBIDO conservar ambos insumos en el APU. Sustitúyelo por el insumo correcto con origen "ia", precio referencial de mercado en USD y emite la advertencia `[PRECIO_REFERENCIAL]`.
 5. AJUSTA cantidades cuando la nueva partida lo requiera (ej: distinta área, espesor, proporción, o cómputo global Gl).
    Los insumos provenientes de la partida base o complementarias DEBEN CONSERVAR obligatoriamente `"origen": "historico"` (incluso si sus cantidades fueron escaladas).
    Explica el ajuste métrico en `nota_calculo`.
@@ -1652,6 +1859,9 @@ Prefijo COVENIN: {covenin_prefix}
 
     # Salvaguarda determinista de seguridad para trabajos a rapel / en altura
     _enforce_rapel_and_height_equipment(result, user_description)
+
+    # Salvaguarda determinista de exclusión mutua de materiales preponderantes
+    _enforce_primary_materials_mutual_exclusion(result, user_description)
 
     # Salvaguarda determinista de unidad solicitada
     if result.get("partida") and requested_unit:
