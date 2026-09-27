@@ -435,8 +435,12 @@ export default function AIApuGeneratorPage() {
                 generator.handleGenerate(combined, false, false, false, null, 'libre', unit || selectedUnit);
               }}
               onStartGuided={() => {
+                const currentPrompt = prompt;
                 generator.dismissClarification();
                 guided.resetChatbot();
+                if (currentPrompt && currentPrompt.trim()) {
+                  guided.setChatInputValue(currentPrompt.trim());
+                }
                 guided.setIsGuidedMode(true);
                 guided.setEntryModeSource('chat');
                 guided.lastEntrySourceRef.current = 'chat';

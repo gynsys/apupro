@@ -1002,23 +1002,17 @@ def build_rejection_response(
             "_internal_code": codigo,
         }
 
-    questions = [
-        "1. Accion principal: Que actividad deseas presupuestar (demolicion, construccion, instalacion)?",
-        "2. Elemento constructivo: Sobre que elemento se actua (pared, tuberia, losa, piso)?",
-        "3. Material o especificacion: Que material o resistencia tiene (bloque, PVC 1/2\", concreto 210 kg/cm2)?",
-        "4. Metodo y alcance: Se realiza a mano o con maquinaria? Incluye acarreo, bote o transporte?",
-    ]
-
     if veredicto == "reject":
         return {
             "status": "clarification_needed",
+            "clarification_type": "redirect_to_guided",
             "clarification_message": mensaje,
-            "recommendation": "Te recomendamos utilizar el Asistente Guiado para estructurar tu descripción paso a paso.",
+            "recommendation": "La descripción ingresada es demasiado breve o incompleta para estructurar un APU preciso. Te redirigimos al Asistente Guiado para completar los datos técnicos con unos pocos clics.",
             "options": [],
-            "questions": questions,
+            "questions": [],
             "guia_redaccion": (
-                "Estructura recomendada: [Accion] + [Elemento] + [Material/Especificacion] + [Metodo]. "
-                "Ejemplo: 'Demolicion de ceramica en paredes interiores, incluye acarreo de escombros'."
+                "Estructura recomendada: [Acción] + [Elemento] + [Material/Especificación] + [Método o Ubicación]. "
+                "Ejemplo: 'Demolición de pared de bloques de arcilla, incluye acarreo de escombros'."
             ),
             "partida": None,
             "materials": [],
@@ -1031,13 +1025,14 @@ def build_rejection_response(
     # clarification_needed
     return {
         "status": "clarification_needed",
+        "clarification_type": "redirect_to_guided",
         "clarification_message": mensaje,
-        "recommendation": "Te recomendamos utilizar el Asistente Guiado para estructurar tu descripción paso a paso.",
+        "recommendation": "La descripción ingresada es demasiado breve o incompleta para estructurar un APU preciso. Te redirigimos al Asistente Guiado para completar los datos técnicos con unos pocos clics.",
         "options": [],
-        "questions": questions,
+        "questions": [],
         "guia_redaccion": (
-            "Estructura recomendada: [Accion] + [Elemento] + [Material/Especificacion] + [Metodo]. "
-            "Ejemplo: 'Excavacion a mano en terreno blando para zanjas 0.60x0.80m, incluye bote'."
+            "Estructura recomendada: [Acción] + [Elemento] + [Material/Especificación] + [Método o Ubicación]. "
+            "Ejemplo: 'Excavación a mano en terreno blando para zanjas 0.60x0.80m, incluye bote'."
         ),
         "partida": None,
         "materials": [],

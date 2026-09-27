@@ -172,11 +172,20 @@ _REGLAS_COVENIN = """
 """
 
 _REGLAS_DESCRIPCION = """
-# DESCRIPCIÓN DE LA PARTIDA
-En el campo `description` de `partida`, NO copies la solicitud del usuario literalmente.
-MEJORA Y EXPANDE para crear una descripción técnica profesional completa, en MAYÚSCULAS,
-siguiendo las especificaciones de las normas COVENIN de construcción.
-Estructura: [ACCIÓN TÉCNICA] + [ELEMENTO ESPECÍFICO] + [MATERIALES Y ESPECIFICACIÓN] + [ALCANCES Y CONDICIONES].
+# REGLAS DE REDACCIÓN DE LA DESCRIPCIÓN TÉCNICA DE LA PARTIDA (NORMATIVA COVENIN)
+1. ESTRUCTURA FORMAL:
+   En el campo `description` de `partida`, NO copies la solicitud del usuario literalmente.
+   MEJORA Y EXPANDE para crear una descripción técnica profesional completa, en MAYÚSCULAS,
+   siguiendo las especificaciones de las normas COVENIN de construcción.
+   Estructura: [ACCIÓN TÉCNICA] + [MATERIALES Y ESPECIFICACIÓN] + [ELEMENTO ESPECÍFICO] + [ALCANCES Y CONDICIONES].
+2. PROHIBIDO ESPECIFICAR DESTINOS O TIPOS DE INMUEBLE PARTICULARES (CASA, QUINTA, APARTAMENTO, APTO, CHALET, OFICINA, LOCAL):
+   - Las partidas de presupuesto son especificaciones técnicas generales de obra aplicables por unidad de elemento constructivo.
+   - NUNCA agregues frases como 'EN CASA', 'EN QUINTA', 'EN APARTAMENTO', 'EN MI CASA', 'EN RESIDENCIA PRIVADA' ni calificativos de propiedad.
+   - La ubicación debe limitarse exclusivamente al elemento o ambiente físico constructivo general (ejemplo: 'EN PISOS DE CONCRETO', 'EN PAREDES INTERIORES', 'EN FACHADAS', 'EN SÓTANO', 'A PIE DE OBRA').
+   - Si el usuario mencionó 'casa', 'apto' o 'quinta' en su solicitud coloquial, OMÍTELO en la descripción de la partida.
+3. CONCISIÓN TÉCNICA:
+   - Evita redundancias y textos narrativos.
+   - No inventes alcances no solicitados.
 """
 
 _REGLAS_ORIGEN = """
@@ -202,6 +211,10 @@ _REGLAS_EQUIPOS_ESCALA = """
        - Código 'SEG020': "EQUIPO DE RAPEL P/FACHADAS C/LINEA DE VI" (tarifa de catálogo diaria, depreciación 1.0).
        - Código 'SEG021': "EQUIPO DE APOYO Y TABLA P/PINTAR RAPEL F" (silleta de trabajo suspendido, depreciación 1.0).
      * En la mano de obra, ajusta la cuadrilla para operarios/albañiles en labores de altura o rapelistas.
+6. PROHIBICIÓN TERMINANTE DE EQUIPOS DE ALTURA EN TRABAJOS A NIVEL DE PISO O SUELO (¡CRÍTICO!):
+   - Si la actividad constructiva se realiza sobre pisos, pavimentos, aceras, losas de fundación, soleras o radieres a ras de suelo (ej: pintura de pisos, colocación de cerámica/porcelanato en pisos, vaciado de losas de piso o pavimentos):
+   - QUEDA TERMINANTEMENTE PROHIBIDO incluir arneses de seguridad para altura, líneas de vida, andamios tubulares o escaleras extensibles de torre.
+   - Si el APU base histórico los contiene, DEBES ELIMINARLOS POR COMPLETO de la lista de equipos y materiales.
 """
 
 _REGLAS_NUMERICAS = """
@@ -1300,7 +1313,9 @@ def generate_apu_with_ai(payload_llm: Dict[str, Any], history: Optional[List[Dic
 
     _enforce_scope_exclusions(result, user_desc)
     _enforce_rapel_and_height_equipment(result, user_desc)
+    _enforce_floor_ground_equipment(result, user_desc)
     _enforce_primary_materials_mutual_exclusion(result, user_desc)
+    _sanitize_partida_description(result, user_desc)
 
     _normalize_equipment_prices(result)
     calibrate_apu_crew_and_equipment(result)
@@ -1533,6 +1548,132 @@ def _enforce_rapel_and_height_equipment(result: Dict[str, Any], user_description
         result.setdefault("notas_adaptacion", []).append(
             f"SEGURIDAD TÉCNICA: Se incorporaron los equipos normativos de rapel ({', '.join(injected)}) indispensables para la ejecución vertical."
         )
+
+
+def _enforce_floor_ground_equipment(result: Dict[str, Any], user_description: str) -> None:
+    """
+    Salvaguarda determinista de backend para trabajos a nivel de piso / suelo / pavimentos.
+
+    Si la actividad constructiva se realiza sobre pisos, pavimentos, aceras, losas de fundación,
+    radieres o suelo, y NO es un trabajo en altura explícito (torres, rapel, fachadas, techos):
+    Purga automáticamente cualquier equipo o material de trabajo en altura heredado del APU base
+    o propuesto erróneamente por el LLM:
+    - Arneses de seguridad y líneas de vida (ARNES, LINEA DE VIDA, EQU-GEN-023, ARB010, SEG020, etc.)
+    - Escaleras extensibles de torre o gran altura (ESCALERA EXTENSIBLE, 16 TRAMOS, SUB072, EQU-GEN-466)
+    - Andamios tubulares (ANDAMIO, EQU-HER-014)
+    """
+    if not isinstance(result, dict) or not user_description:
+        return
+
+    partida_desc = str(result.get("partida", {}).get("description", "")) if isinstance(result.get("partida"), dict) else ""
+    combined_text = f"{user_description} {partida_desc}".lower()
+
+    # Indicadores de trabajo a ras de piso / suelo / pavimento
+    floor_pattern = re.compile(
+        r"\b(pisos?|pavimentos?|aceras?|radieres?|contrapisos?|sobrepisos?|losa(s)?\s+de\s+piso|losa(s)?\s+de\s+fundaci[oó]n|calzadas?|vialidad(es)?|brocales?|sub[- ]?base)\b",
+        re.IGNORECASE
+    )
+
+    # Indicadores de trabajo en altura legítimo
+    height_pattern = re.compile(
+        r"\b(rapel|r[aá]pel|torres?|fachadas?|techos?|cubiertas?|cielorrasos?|postes?|aleros?|cornisas?|guindolas?|trabajos?\s+vertical(es)?|trabajo\s+en\s+altura)\b",
+        re.IGNORECASE
+    )
+
+    is_floor = bool(floor_pattern.search(combined_text))
+    is_legit_height = bool(height_pattern.search(user_description.lower()))
+
+    # Solo purgar si es trabajo de piso y el usuario NO pidió expresamente trabajos de altura
+    if not is_floor or is_legit_height:
+        return
+
+    # Patrones de equipos de trabajo en altura / arneses / escaleras extensibles
+    height_equipment_pattern = re.compile(
+        r"\b(arn[eé]s|l[ií]nea\s+de\s+vida|escalera\s+extensible|escalera\s+de\s+aluminio\s+16|escalera\s+16\s+tramos|andamio|silleta|guindola)\b",
+        re.IGNORECASE
+    )
+    height_equipment_codes = {"EQU-GEN-023", "ARB010", "SUB072", "EQU-GEN-466", "EQU-HER-014", "SEG020", "SEG021"}
+
+    purged_items: List[str] = []
+
+    # 1. Purgar de equipments
+    equipments = result.get("equipments")
+    if isinstance(equipments, list):
+        filtered_eq: List[Dict[str, Any]] = []
+        for eq in equipments:
+            if not isinstance(eq, dict):
+                continue
+            desc = str(eq.get("descripcion") or "").strip()
+            cod = str(eq.get("codigo") or "").strip().upper()
+            if height_equipment_pattern.search(desc) or cod in height_equipment_codes:
+                purged_items.append(desc or cod)
+            else:
+                filtered_eq.append(eq)
+        result["equipments"] = filtered_eq
+
+    # 2. Purgar de materials por si el LLM los colocó allí
+    materials = result.get("materials")
+    if isinstance(materials, list):
+        filtered_mat: List[Dict[str, Any]] = []
+        for mat in materials:
+            if not isinstance(mat, dict):
+                continue
+            desc = str(mat.get("descripcion") or "").strip()
+            cod = str(mat.get("codigo") or "").strip().upper()
+            if height_equipment_pattern.search(desc) or cod in height_equipment_codes:
+                purged_items.append(desc or cod)
+            else:
+                filtered_mat.append(mat)
+        result["materials"] = filtered_mat
+
+    if purged_items:
+        logger.info(
+            f"[FloorGroundEnforcement] Purgados equipos de altura en trabajo de piso: {purged_items}"
+        )
+        result.setdefault("notas_adaptacion", []).append(
+            f"SEGURIDAD TÉCNICA: Se eliminaron equipos de trabajo en altura ({', '.join(purged_items)}) por incompatibilidad física con actividades a nivel de piso/pavimento."
+        )
+
+
+def _sanitize_partida_description(result: Dict[str, Any], user_description: str = "") -> None:
+    """
+    Limpia y normaliza la descripción técnica de la partida COVENIN generada o adaptada.
+
+    Reglas:
+    1. Elimina tipos de inmueble coloquiales particulares ('EN CASA', 'EN QUINTA', 'EN APARTAMENTO',
+       'EN MI CASA', 'EN RESIDENCIA PRIVADA', 'EN APTO') que no corresponden a especificaciones técnicas
+       generales de partidas presupuestarias. Conserva términos técnicos de obra como 'CASA DE BOMBAS'
+       o 'CASA DE MÁQUINAS'.
+    2. Limpia puntuación redundante generada por la podadura (comas consecutivas, espacios dobles, etc.).
+    """
+    if not isinstance(result, dict) or "partida" not in result:
+        return
+    partida = result.get("partida")
+    if not isinstance(partida, dict) or "description" not in partida:
+        return
+
+    desc = str(partida.get("description") or "").strip()
+    if not desc:
+        return
+
+    # Patrón para eliminar tipos de inmuebles particulares
+    # Excluye 'casa de bombas', 'casa de maquinas', 'casa de válvulas' mediante negative lookahead
+    residential_pattern = re.compile(
+        r"\b(?:EN|DE|SOBRE|PARA)\s+(?:UNA?\s+|LA\s+|MI\s+|SU\s+)?(?:CASA|QUINTA|APARTAMENTO|APTO|CHALET|RESIDENCIA\s+PRIVADA|VIVIENDA\s+UNIFAMILIAR)(?!\s+DE\s+(?:BOMBAS?|M[AÁ]QUINAS?|VALVULAS?|EQUIPOS?|GENERADORES?|FUERZA))\b",
+        re.IGNORECASE
+    )
+
+    cleaned_desc = residential_pattern.sub("", desc)
+
+    # Limpieza de puntuaciones y espacios dobles
+    cleaned_desc = re.sub(r"\s+,\s*", ", ", cleaned_desc)
+    cleaned_desc = re.sub(r",\s*,+", ", ", cleaned_desc)
+    cleaned_desc = re.sub(r"\s{2,}", " ", cleaned_desc)
+    cleaned_desc = re.sub(r"\s+\.", ".", cleaned_desc)
+    cleaned_desc = re.sub(r"\(\s*\)", "", cleaned_desc)
+    cleaned_desc = cleaned_desc.strip(" ,")
+
+    partida["description"] = cleaned_desc
 
 
 def infer_covenin_prefix(description: str, base_code: str = "") -> str:
@@ -1860,8 +2001,14 @@ Prefijo COVENIN: {effective_cov_prefix}
     # Salvaguarda determinista de seguridad para trabajos a rapel / en altura
     _enforce_rapel_and_height_equipment(result, user_description)
 
+    # Salvaguarda determinista para trabajos a nivel de piso / suelo
+    _enforce_floor_ground_equipment(result, user_description)
+
     # Salvaguarda determinista de exclusión mutua de materiales preponderantes
     _enforce_primary_materials_mutual_exclusion(result, user_description)
+
+    # Limpieza determinista de la descripción de la partida (remoción de tipologías coloquiales como 'en casa')
+    _sanitize_partida_description(result, user_description)
 
     # Salvaguarda determinista de unidad solicitada
     if result.get("partida") and requested_unit:
@@ -1916,6 +2063,12 @@ INCOMPATIBLE_POLARITY_RULES: List[Tuple[Set[str], Set[str], float]] = [
         {"rapel", "a rapel", "cuerda", "silleta", "guindola", "trabajo vertical", "trabajo suspendido"},
         {"andamio tubular", "andamio de marco", "andamio de un cuerpo", "andamio modular"},
         0.25
+    ),
+    # 7. Trabajos a Nivel de Piso / Pavimento VS Trabajos en Altura / Torres / Fachadas
+    (
+        {"piso", "pisos", "pavimento", "pavimentos", "acera", "aceras", "radier", "contrapiso", "sobrepiso"},
+        {"torre", "torres", "rapel", "escalerilla", "guia de onda", "fachada"},
+        0.30
     )
 ]
 

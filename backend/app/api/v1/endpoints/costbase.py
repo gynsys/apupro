@@ -1233,14 +1233,11 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
                 }
         return {
             "status": "clarification_needed",
-            "clarification_message": f"El texto ingresado ('{raw_desc}')  no es una descripción técnica de obra.",
+            "clarification_type": "redirect_to_guided",
+            "clarification_message": f"El texto ingresado ('{raw_desc}') no es una descripción técnica de obra.",
             "recommendation": "Te recomendamos utilizar el Asistente Guiado para estructurar tu descripción paso a paso.",
             "options": [],
-            "questions": [
-                "1. ¿Cuál es la actividad técnica principal que deseas presupuestar? (Acción + Elemento)",
-                "2. ¿Qué especificaciones, materiales o condiciones aplican?",
-                "3. ¿En qué unidad de medida se computa la partida (m2, m3, und, kg, etc.)?"
-            ],
+            "questions": [],
             "guia_redaccion": "Estructura recomendada: [Acción] + [Elemento] + [Especificaciones/Materiales] + [Unidad]."
         }
 

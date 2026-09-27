@@ -64,6 +64,18 @@ export default function ClarificationAlertCard({
     return hasAcarreoTerm && hasUnitAndDist;
   }, [clarificationType, internalCode, message, questions]);
 
+  // Detección de redirección al Asistente Guiado (Opción B)
+  // Se activa cuando la entrada es escueta/ambigua, cuando el backend envía "redirect_to_guided"
+  // o cuando no hay preguntas estructuradas específicas (evita el viejo interrogatorio secuencial genérico)
+  const isRedirectToGuided = useMemo(() => {
+    if (clarificationType === 'redirect_to_guided') return true;
+    if (isAcarreo) return false;
+    if ((!options || options.length === 0) && (!questions || questions.length === 0 || questions.length >= 3)) {
+      return true;
+    }
+    return false;
+  }, [clarificationType, isAcarreo, options, questions]);
+
   // Estados para flujo de Acarreo (Paso 1: Unidad, Paso 2: Distancia)
   const [acarreoStep, setAcarreoStep] = useState(1);
   const [selectedUnit, setSelectedUnit] = useState('m3.m');
@@ -149,9 +161,38 @@ export default function ClarificationAlertCard({
       </div>
 
       {/* ========================================================================= */}
-      {/* CASO A: FLUJO SECUENCIAL ACARREO / TRANSPORTE (UNIDAD LUEGO DISTANCIA)     */}
+      {/* CASO A: REDIRECCIÓN DIRECTA AL ASISTENTE GUIADO (OPCIÓN B)                */}
       {/* ========================================================================= */}
-      {isAcarreo ? (
+      {isRedirectToGuided ? (
+        <div className="my-4 p-5 bg-white border border-amber-300 rounded-2xl shadow-xs animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-200">
+                <Sparkles size={12} className="text-amber-600" />
+                Redirección Asistida
+              </span>
+              <h5 className="text-sm font-bold text-slate-800 leading-snug">
+                Estructura tu partida con el Asistente Guiado
+              </h5>
+              <p className="text-xs text-slate-600 leading-relaxed max-w-xl">
+                {recommendation || "La descripción ingresada es muy breve o incompleta para calcular rendimientos confiables y costos exactos. Te invitamos a utilizar el Asistente Guiado para completar los datos técnicos paso a paso."}
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={onStartGuided}
+                className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+              >
+                <Sparkles size={15} />
+                <span>Continuar con Asistente Guiado</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : isAcarreo ? (
         <div className="my-4 p-4 bg-white border border-amber-300 rounded-2xl shadow-xs">
           {/* STEPPER VISUAL */}
           <div className="flex items-center gap-2 mb-4 pb-3 border-b border-amber-100 text-xs font-bold">
@@ -475,12 +516,22 @@ export default function ClarificationAlertCard({
 
       {/* ACCIONES DE SALIDA Y REINICIO */}
       <div className="mt-3 pt-3 border-t border-amber-200/70 flex flex-wrap items-center gap-3">
+        {!isRedirectToGuided && (
+          <button
+            type="button"
+            onClick={onStartGuided}
+            className="px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-700 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
+          >
+            <Sparkles size={14} /> Usar Asistente Guiado Paso a Paso
+          </button>
+        )}
+
         <button
           type="button"
-          onClick={onStartGuided}
-          className="px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-700 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
+          onClick={onDismiss}
+          className="px-3.5 py-2 bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
         >
-          <Sparkles size={14} /> Usar Asistente Guiado Paso a Paso
+          Editar texto en Entrada Libre
         </button>
 
         {entryModeSource === 'chat' ? (
