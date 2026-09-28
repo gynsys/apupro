@@ -105,192 +105,683 @@ export const customSelectStyles = {
   })
 };
 
+export function getElementChips(accion) {
+  const acc = (accion || '').toLowerCase();
+  if (/pintur|pintar/i.test(acc)) {
+    return [
+      'Paredes',
+      'Cielos rasos',
+      'Rejas y herrería',
+      'Estructura metálica',
+      'Fachadas',
+      'Pisos',
+      'Puertas y marcos',
+      'Tanques',
+      'Tuberías',
+      'Brocales',
+      'Omitir'
+    ];
+  }
+  if (/demolic|demoler|derrib/i.test(acc)) {
+    return [
+      'Paredes de bloques',
+      'Losas de concreto',
+      'Pisos / Pavimento',
+      'Frisos / Revoques',
+      'Cielo raso',
+      'Estructuras metálicas',
+      'Aceras y brocales',
+      'Omitir'
+    ];
+  }
+  if (/vaciado|concreto/i.test(acc)) {
+    return [
+      'Losas de concreto',
+      'Columnas',
+      'Vigas',
+      'Fundaciones / Zapatas',
+      'Pavimento',
+      'Muros de contención',
+      'Aceras',
+      'Brocales',
+      'Omitir'
+    ];
+  }
+  if (/excavac|zanja/i.test(acc)) {
+    return [
+      'Zanjas para tuberías',
+      'Fundaciones / Zapatas',
+      'Fosas para tanques',
+      'Sótanos',
+      'Canales de drenaje',
+      'Omitir'
+    ];
+  }
+  if (/suministr|instalac|colocac|montaje/i.test(acc)) {
+    return [
+      'Bomba de agua',
+      'Tablero eléctrico',
+      'Tubería',
+      'Cable conductor',
+      'Transformador',
+      'Piezas sanitarias',
+      'Aire acondicionado',
+      'Tanque de agua',
+      'Concertina de seguridad',
+      'Luminarias LED',
+      'Válvula compuerta',
+      'Omitir'
+    ];
+  }
+  if (/acarreo|acarrear|bote|traslado/i.test(acc)) {
+    return [
+      'Escombros de demolición',
+      'Tierra de excavación',
+      'Arena lavada',
+      'Piedra picada',
+      'Sacos de cemento',
+      'Bloques de arcilla',
+      'Bloques de concreto',
+      'Madera de encofrado',
+      'Omitir'
+    ];
+  }
+  if (/impermeabiliz/i.test(acc)) {
+    return [
+      'Losa de techo',
+      'Jardineras',
+      'Terrazas',
+      'Muros enterrados',
+      'Tanques de agua',
+      'Canaletas',
+      'Omitir'
+    ];
+  }
+  if (/reparac|mantenimiento|reacondicion|restaurac|saneamiento/i.test(acc)) {
+    return [
+      'Paredes / Muros',
+      'Tuberías / Fugas',
+      'Estructuras metálicas',
+      'Cielos rasos',
+      'Bombas y motores',
+      'Pisos y pavimentos',
+      'Fachadas',
+      'Omitir'
+    ];
+  }
+  if (/limpieza|lavado/i.test(acc)) {
+    return [
+      'Fachadas',
+      'Pisos y pavimentos',
+      'Tanques de agua',
+      'Vidrios y ventanales',
+      'Estructuras metálicas',
+      'Terreno / Desmalezado',
+      'Omitir'
+    ];
+  }
+  return [
+    'Paredes de bloques',
+    'Losas de concreto',
+    'Pavimento',
+    'Columnas y vigas',
+    'Tabiquería Drywall',
+    'Aceras y brocales',
+    'Cercas perimetrales',
+    'Friso en paredes',
+    'Omitir'
+  ];
+}
+
+export function getMaterialChips(accion, elemento) {
+  const acc = (accion || '').toLowerCase();
+  const elem = (elemento || '').toLowerCase();
+
+  if (/pintur|pintar/i.test(acc)) {
+    if (/reja|herrer|metal|porton|portón|puerta|marco|hierro|acero|tubo|tuber/i.test(elem)) {
+      return [
+        'Esmalte sintético alquídico',
+        'Fondo anticorrosivo alquídico',
+        'Fondo cromato de zinc',
+        'Pintura epóxica para metal',
+        'Fondo epóxico poliamida',
+        'Esmalte secado rápido',
+        'Poliuretano alifático',
+        'Omitir'
+      ];
+    }
+    if (/piso|pavimento|cancha/i.test(elem)) {
+      return [
+        'Pintura epóxica alto tráfico',
+        'Pintura para tráfico / vial',
+        'Poliuretano para pisos',
+        'Pintura acrílica para concreto',
+        'Esmalte para pisos',
+        'Omitir'
+      ];
+    }
+    if (/pared|muro|cielo|techo|fachada|friso/i.test(elem)) {
+      return [
+        'Pintura de caucho clase A',
+        'Pintura de caucho clase B',
+        'Pintura elastomérica',
+        'Pintura satinada',
+        'Pintura de esmalte',
+        'Pintura antihongos / antibacterial',
+        'Fondo antialcalino',
+        'Omitir'
+      ];
+    }
+    return [
+      'Pintura de caucho clase A',
+      'Pintura de esmalte sintético',
+      'Fondo anticorrosivo alquídico',
+      'Fondo cromato de zinc',
+      'Pintura elastomérica',
+      'Pintura epóxica',
+      'Fondo antialcalino',
+      'Omitir'
+    ];
+  }
+
+  if (/pared|muro|tabique|bloque|ladrillo/i.test(elem) || (/construc|coloca/i.test(acc) && /bloque/i.test(elem))) {
+    return [
+      'Bloque de concreto e=10 cm',
+      'Bloque de concreto e=15 cm',
+      'Bloque de concreto e=20 cm',
+      'Bloque de arcilla e=10 cm',
+      'Bloque de arcilla e=15 cm',
+      'Bloque de arcilla e=20 cm',
+      'Ladrillo macizo de arcilla',
+      'Bloque de ventilación calado',
+      'Omitir'
+    ];
+  }
+
+  if (/concreto|losa|columna|viga|zapata|fundacion|fundación|pavimento|acera|brocal/i.test(elem) || /vaciado/i.test(acc)) {
+    return [
+      "Concreto f'c=210 kg/cm²",
+      "Concreto f'c=250 kg/cm²",
+      "Concreto f'c=280 kg/cm²",
+      "Concreto f'c=300 kg/cm²",
+      "Concreto pobre f'c=150 kg/cm²",
+      'Mortero 1:3 arena lavada',
+      'Mortero 1:4 con cal',
+      'Omitir'
+    ];
+  }
+
+  if (/tuber|valvul|plomer/i.test(elem)) {
+    return [
+      'Tubería PVC 1/2"',
+      'Tubería PVC 3/4"',
+      'Tubería PVC 1"',
+      'Tubería PVC 2"',
+      'Tubería PVC 3"',
+      'Tubería PVC 4"',
+      'Tubería de acero HG 1/2"',
+      'Tubería de cobre 1/2"',
+      'Válvula compuerta 1/2"',
+      'Omitir'
+    ];
+  }
+
+  if (/bomba/i.test(elem)) {
+    return [
+      'Potencia 0.5 HP',
+      'Potencia 1 HP',
+      'Potencia 1.5 HP',
+      'Potencia 2 HP',
+      'Potencia 3 HP',
+      'Potencia 5 HP',
+      'Potencia 7.5 HP',
+      'Potencia 10 HP',
+      'Omitir'
+    ];
+  }
+
+  if (/tablero/i.test(elem)) {
+    return [
+      '8 circuitos bifásico',
+      '12 circuitos bifásico',
+      '18 circuitos trifásico',
+      '24 circuitos trifásico',
+      '30 circuitos trifásico',
+      '42 circuitos trifásico',
+      'Omitir'
+    ];
+  }
+
+  if (/cable|conductor/i.test(elem)) {
+    return [
+      'Calibre #14 AWG THHN',
+      'Calibre #12 AWG THHN',
+      'Calibre #10 AWG THHN',
+      'Calibre #8 AWG THHN',
+      'Calibre #6 AWG TTU',
+      'Calibre #4 AWG TTU',
+      'Calibre #2 AWG TTU',
+      'Omitir'
+    ];
+  }
+
+  if (/tanque/i.test(elem)) {
+    return [
+      'Capacidad 500 litros',
+      'Capacidad 1,000 litros',
+      'Capacidad 1,500 litros',
+      'Capacidad 2,000 litros',
+      'Capacidad 5,000 litros',
+      'Capacidad 10,000 litros',
+      'Omitir'
+    ];
+  }
+
+  if (/aire|split|climatiz/i.test(elem)) {
+    return [
+      '12,000 BTU (1 TR)',
+      '18,000 BTU (1.5 TR)',
+      '24,000 BTU (2 TR)',
+      '36,000 BTU (3 TR)',
+      '60,000 BTU (5 TR)',
+      'Omitir'
+    ];
+  }
+
+  if (/concertina/i.test(elem)) {
+    return [
+      'Diámetro 30 cm (12")',
+      'Diámetro 45 cm (18")',
+      'Diámetro 60 cm (24")',
+      'Diámetro 90 cm (36")',
+      'Omitir'
+    ];
+  }
+
+  if (/demolic/i.test(acc)) {
+    return [
+      'Espesor e=10 cm',
+      'Espesor e=15 cm',
+      'Espesor e=20 cm',
+      'Espesor e=25 cm',
+      'En concreto armado',
+      'En concreto simple',
+      'En albañilería / bloques',
+      'Omitir'
+    ];
+  }
+
+  if (/impermeabiliz/i.test(acc)) {
+    return [
+      'Manto asfáltico 3 mm',
+      'Manto asfáltico 4 mm',
+      'Manto con acabado de aluminio',
+      'Membrana líquida elastomérica',
+      'Primer imprimador asfáltico',
+      'Pintura reflectiva de aluminio',
+      'Omitir'
+    ];
+  }
+
+  if (/acarreo|traslado/i.test(acc)) {
+    return [
+      'A mano en carretilla',
+      'A mano en sacos / tobos',
+      'En camión volteo 7 m³',
+      'En minishovel / bobcat',
+      'Con carguío manual',
+      'Con carguío mecánico',
+      'Omitir'
+    ];
+  }
+
+  return [
+    "Concreto f'c=250 kg/cm²",
+    'Acero de refuerzo fy=4200 kg/cm²',
+    'Mortero de pega 1:4',
+    'Madera cepillada',
+    'Perfiles tubulares de hierro',
+    'Omitir'
+  ];
+}
+
+export function getUbicacionChips(accion, elemento, material) {
+  const acc = (accion || '').toLowerCase();
+
+  if (/pintur|pintar/i.test(acc)) {
+    return [
+      'En interiores',
+      'En exteriores / fachadas',
+      'En altura con andamios',
+      'A rapel (trabajo con cuerdas)',
+      'En planta baja',
+      'En pisos superiores',
+      'En cielo raso',
+      'En sótano',
+      'Omitir'
+    ];
+  }
+
+  if (/acarreo|bote|traslado/i.test(acc)) {
+    return [
+      'Distancia hasta 20 metros',
+      'Distancia hasta 50 metros',
+      'Distancia hasta 100 metros',
+      'Distancia mayor a 100 metros',
+      'En planta baja',
+      'En pisos superiores',
+      'En sótano',
+      'Hacia botadero oficial',
+      'Omitir'
+    ];
+  }
+
+  if (/excavac/i.test(acc)) {
+    return [
+      'Hasta 1.50 m de profundidad (a mano)',
+      'Hasta 1.50 m de profundidad (a máquina)',
+      'De 1.50 a 3.00 m (a máquina)',
+      'Mayor a 3.00 m (a máquina)',
+      'En zanja estrecha',
+      'A cielo abierto',
+      'Omitir'
+    ];
+  }
+
+  if (/suministr|instalac/i.test(acc)) {
+    return [
+      'Para pozo profundo',
+      'Para sistema hidroneumático',
+      'Para aguas blancas',
+      'Para aguas servidas',
+      'En sala de bombas / máquinas',
+      'En red general de distribución',
+      'En exteriores',
+      'En interiores',
+      'Omitir'
+    ];
+  }
+
+  return [
+    'En planta baja',
+    'En pisos superiores',
+    'En sótano',
+    'En fundaciones / bajo tierra',
+    'En exteriores',
+    'En interiores',
+    'En altura con andamios',
+    'Omitir'
+  ];
+}
+
+export function getIncluyeChips(accion, elemento, material, ubicacion) {
+  const acc = (accion || '').toLowerCase();
+  const elem = (elemento || '').toLowerCase();
+  const mat = (material || '').toLowerCase();
+
+  if (/pintur|pintar/i.test(acc)) {
+    if (/reja|herrer|metal|acero|hierro|tubo/i.test(elem) || /esmalte|anticorrosiv|cromato/i.test(mat)) {
+      return [
+        'Incluye preparación con lija y cepillo',
+        'Incluye fondo anticorrosivo alquídico',
+        'Incluye fondo cromato de zinc',
+        'Incluye convertidor de óxido',
+        'A 2 manos de acabado',
+        'Todo incluido (Mat + MO + Eq)',
+        'Solo mano de obra',
+        'Omitir'
+      ];
+    }
+    return [
+      'Incluye preparación y empastado de grietas',
+      'Incluye fondo antialcalino fijador',
+      'Incluye lija y limpieza superficial',
+      'Incluye andamios tubulares',
+      'A 2 manos de acabado',
+      'A 3 manos de acabado',
+      'Todo incluido (Mat + MO + Eq)',
+      'Solo mano de obra',
+      'Omitir'
+    ];
+  }
+
+  if (/acarreo|bote|traslado/i.test(acc)) {
+    return [
+      'Incluye carguío y descarga manual',
+      'Incluye carguío mecánico',
+      'En carretilla a mano',
+      'En camión volteo 7 m³',
+      'Incluye tarifa de botadero',
+      'Todo incluido',
+      'Solo mano de obra',
+      'Omitir'
+    ];
+  }
+
+  if (/suministr|instalac/i.test(acc)) {
+    return [
+      'Incluye conexiones y accesorios',
+      'Incluye pruebas de presión y estanqueidad',
+      'Incluye puesta en marcha y calibración',
+      'Incluye base de soporte y anclajes',
+      'Todo incluido (Mat + MO + Eq)',
+      'Solo suministro e instalación',
+      'Solo mano de obra',
+      'Omitir'
+    ];
+  }
+
+  if (/concreto|vaciado|construc/i.test(acc) || /losa|columna|viga|pared/i.test(elem)) {
+    return [
+      'Incluye encofrado y desencofrado',
+      'Incluye acero de refuerzo cabillas',
+      'Incluye preparación y mezclado en sitio',
+      'Incluye curado del concreto',
+      'Incluye friso rústico base',
+      'Todo incluido (Mat + MO + Eq)',
+      'Solo mano de obra',
+      'Omitir'
+    ];
+  }
+
+  return [
+    'Todo incluido (Mat + MO + Eq)',
+    'Solo mano de obra',
+    'Solo suministro',
+    'Incluye andamios',
+    'Incluye transporte de materiales',
+    'Omitir'
+  ];
+}
+
+export function getUnitChips(accion, elemento, material) {
+  const acc = (accion || '').toLowerCase();
+  const elem = (elemento || '').toLowerCase();
+
+  if (/acarreo|bote|traslado/i.test(acc)) {
+    return [
+      'm3.m (m³ por metro)',
+      'm3 (Metro cúbico)',
+      'm3xkm (m³ por kilómetro)',
+      'sac.m (Saco por metro)',
+      'viaje (Por viaje)',
+      'Gl (Suma global)'
+    ];
+  }
+
+  if (/pintur|pintar/i.test(acc)) {
+    if (/reja|porton|portón|puerta|marco|ventana/i.test(elem)) {
+      return ['m²', 'pza (Pieza)', 'und (Unidad)', 'ml (Metro lineal)', 'Gl (Suma global)'];
+    }
+    if (/tubo|tuber|brocal/i.test(elem)) {
+      return ['ml (Metro lineal)', 'm²', 'und', 'Gl (Suma global)'];
+    }
+    return ['m²', 'ml', 'Gl (Suma global)'];
+  }
+
+  if (/mantenimiento|reparac|reacondicion|restaurac/i.test(acc)) {
+    return [
+      'pza (Por Pieza)',
+      'und (Por Unidad)',
+      'm² (Superficie desarrollada)',
+      'm (Metro lineal)',
+      'Gl (Suma Global)'
+    ];
+  }
+
+  if (/excavac|fosa|zanja/i.test(acc) || /concreto|vaciado|zapata|fundacion|columna|viga/i.test(elem)) {
+    return ['m³', 'm²', 'ml', 'Gl'];
+  }
+
+  if (/pared|bloque|losa|piso|pavimento|friso|impermeabiliz/i.test(elem) || /impermeabiliz/i.test(acc)) {
+    return ['m²', 'ml', 'm³', 'pza', 'Gl'];
+  }
+
+  if (/tuber|cable|conductor|acera|brocal/i.test(elem)) {
+    return ['ml', 'm', 'pto (Punto)', 'und', 'Gl'];
+  }
+
+  if (/bomba|tablero|transformador|aire|tanque|pieza sanitaria/i.test(elem) || /suministr|instalac/i.test(acc)) {
+    return ['und', 'pza', 'pto', 'jgo (Juego)', 'Gl'];
+  }
+
+  return ['und', 'pza', 'm²', 'ml', 'm³', 'pto', 'Gl'];
+}
+
+export function getDynamicStepDefinition(step, { accion, elemento, material, ubicacion, incluye } = {}) {
+  switch (step) {
+    case 1:
+      return {
+        text: 'Defina la Acción\n¿Qué acción o proceso constructivo se va a realizar?',
+        chips: [
+          'Suministro e instalación',
+          'Construcción',
+          'Demolición',
+          'Pintura',
+          'Vaciado de concreto',
+          'Excavación',
+          'Acarreo',
+          'Colocación',
+          'Reparación',
+          'Mantenimiento',
+          'Impermeabilización',
+          'Desmontaje',
+          'Limpieza'
+        ]
+      };
+    case 2:
+      return {
+        text: 'Defina el Elemento o Estructura\n¿Qué elemento o estructura se va a intervenir o construir?',
+        chips: getElementChips(accion)
+      };
+    case 3:
+      return {
+        text: 'Defina el Material o Especificación Técnica\n¿Qué tipo de material, pintura o especificación técnica se utilizará?',
+        chips: getMaterialChips(accion, elemento)
+      };
+    case 4:
+      return {
+        text: 'Defina la Ubicación o Entorno\n¿En qué ubicación, altura o condición se ejecutará el trabajo?',
+        chips: getUbicacionChips(accion, elemento, material)
+      };
+    case 5:
+      return {
+        text: 'Defina el Alcance y Condiciones\n¿Qué alcance adicional o condiciones contempla la partida?',
+        chips: getIncluyeChips(accion, elemento, material, ubicacion)
+      };
+    case 6:
+      return {
+        text: 'Defina la Unidad de Medida\n¿En qué unidad de medida se computará la partida?',
+        chips: getUnitChips(accion, elemento, material)
+      };
+    default:
+      return {
+        text: 'Escribe tu respuesta:',
+        chips: ['Omitir']
+      };
+  }
+}
+
 export const CHAT_STEP_DEFINITIONS = {
   1: {
-    text: 'Paso 1 de 5: La Acción\n¿Qué acción o proceso constructivo se va a realizar?',
+    text: 'Defina la Acción\n¿Qué acción o proceso constructivo se va a realizar?',
     chips: [
       'Suministro e instalación',
-      'Suministro',
-      'Instalación',
       'Construcción',
-      'Colocación',
       'Demolición',
-      'Excavación',
-      'Vaciado de concreto',
       'Pintura',
+      'Vaciado de concreto',
+      'Excavación',
       'Acarreo',
+      'Colocación',
       'Reparación',
       'Mantenimiento',
+      'Impermeabilización',
       'Desmontaje',
       'Limpieza'
     ]
   },
   2: {
+    general: {
+      text: 'Defina el Elemento o Estructura\n¿Qué elemento o estructura se va a intervenir o construir?',
+      chips: getElementChips()
+    },
     supplyOrInstall: (accion) => ({
-      text: `Paso 2 de 5: ¿Qué se va a ${accion ? accion.toLowerCase() : 'suministrar o instalar'}?\nIndica el equipo, material o elemento específico:`,
-      chips: [
-        'Bomba sumergible',
-        'Bomba centrífuga',
-        'Concertina de seguridad',
-        'Tablero eléctrico',
-        'Tubería PVC',
-        'Tubería de acero',
-        'Válvula compuerta',
-        'Transformador',
-        'Luminaria LED',
-        'Tanque de agua',
-        'Cable de cobre',
-        'Aire acondicionado',
-        'Piezas sanitarias',
-        'Omitir'
-      ]
+      text: 'Defina el Elemento o Estructura\n¿Qué equipo, elemento o estructura específica se va a suministrar o instalar?',
+      chips: getElementChips(accion)
     }),
     acarreo: {
-      text: 'Paso 2 de 5: Material a Acarrear o Trasladar\n¿Qué material o elemento se va a acarrear?',
-      chips: [
-        'Escombros de demolición',
-        'Tierra de excavación',
-        'Arena',
-        'Piedra picada',
-        'Sacos de cemento',
-        'Bloques de arcilla',
-        'Bloques de concreto',
-        'Madera de encofrado',
-        'Omitir'
-      ]
-    },
-    general: {
-      text: 'Paso 2 de 5: El Elemento o Material\n¿Qué elemento, estructura o material se va a intervenir o construir?',
-      chips: [
-        'Paredes de bloques',
-        'Losa de concreto',
-        'Pavimento',
-        'Acera',
-        'Excavación de zanjas',
-        'Columnas',
-        'Vigas',
-        'Zapatas',
-        'Fundaciones',
-        'Acero de refuerzo',
-        'Friso en paredes',
-        'Pintura en interiores',
-        'Pintura en exteriores',
-        'Omitir'
-      ]
+      text: 'Defina el Material a Trasladar\n¿Qué material o elemento se va a acarrear?',
+      chips: getElementChips('Acarreo')
     }
   },
   3: {
+    general: {
+      text: 'Defina el Material o Especificación Técnica\n¿Qué tipo de material, pintura o especificación técnica se utilizará?',
+      chips: getMaterialChips()
+    },
     supplyOrInstall: {
-      text: 'Paso 3 de 5: ¿Para qué sería o dónde?\nIndica el uso, destino, sistema o lugar de instalación (ej: para pozo profundo):',
-      chips: [
-        'Para pozo profundo',
-        'Para sistema hidroneumático',
-        'Para aguas blancas',
-        'Para aguas servidas',
-        'Para sistema contra incendio',
-        'Para red eléctrica',
-        'En sala de máquinas',
-        'En exteriores',
-        'En interiores',
-        'Omitir'
-      ]
+      text: 'Defina la Especificación Técnica o Capacidad\nIndica la capacidad, potencia o especificación técnica requerida:',
+      chips: getMaterialChips('Suministro e instalación')
     },
     acarreo: {
-      text: 'Paso 3 de 5: Entorno o Distancia del Traslado\n¿En qué entorno o a qué distancia se realizará el acarreo?',
-      chips: [
-        'En planta baja',
-        'En pisos superiores',
-        'En sótano',
-        'En exteriores',
-        'Distancia hasta 20 metros',
-        'Distancia hasta 50 metros',
-        'Distancia mayor a 50 metros',
-        'Hacia botadero externo',
-        'Omitir'
-      ]
-    },
-    general: {
-      text: 'Paso 3 de 5: Ubicación o Especificación\n¿En qué lugar, nivel o con qué especificación?',
-      chips: [
-        "Concreto f'c=210 kg/cm²",
-        "Concreto f'c=250 kg/cm²",
-        'En planta baja',
-        'En pisos superiores',
-        'En sótano',
-        'En fundaciones',
-        'En exteriores',
-        'En interiores',
-        'Omitir'
-      ]
+      text: 'Defina el Medio o Equipo de Acarreo\n¿Qué medio o equipo se utilizará para el traslado?',
+      chips: getMaterialChips('Acarreo')
     }
   },
   4: {
-    acarreo: {
-      text: 'Paso 4 de 5: Medio y Equipo de Acarreo\n¿Qué medio o equipo específico se utilizará?',
-      chips: [
-        'A mano en carretilla',
-        'A mano en tobos',
-        'A mano en sacos',
-        'En camión volteo 7 m³',
-        'En minishovel',
-        'Incluye carguío y descarga',
-        'Omitir'
-      ]
-    },
     general: {
-      text: 'Paso 4 de 5: Alcance y Condiciones\n¿Qué incluye o excluye la partida?',
-      chips: [
-        'Incluye conexiones y accesorios',
-        'Incluye pruebas y puesta en marcha',
-        'Todo incluido (Mat + MO + Eq)',
-        'Solo suministro',
-        'Solo mano de obra',
-        'Incluye transporte',
-        'No incluye acometida',
-        'Omitir'
-      ]
+      text: 'Defina la Ubicación o Entorno\n¿En qué ubicación, altura o condición se ejecutará el trabajo?',
+      chips: getUbicacionChips()
     },
-    get text() { return this.general.text; },
-    get chips() { return this.general.chips; }
+    acarreo: {
+      text: 'Defina la Distancia o Entorno del Traslado\n¿En qué entorno o a qué distancia se realizará el acarreo?',
+      chips: getUbicacionChips('Acarreo')
+    }
   },
   5: {
-    mantenimiento: {
-      text: 'Paso 5 de 5: Unidad de Medida Obligatoria\nPara actividades de mantenimiento o reparación, la unidad define el rendimiento y los materiales. ¿En qué unidad se computará?',
-      chips: [
-        'pza (Por Pieza / Peldaño)',
-        'und (Por Unidad)',
-        'm² (Superficie desarrollada)',
-        'm (Metro lineal)',
-        'Gl (Suma Global)'
-      ]
+    general: {
+      text: 'Defina el Alcance y Condiciones\n¿Qué alcance adicional o condiciones contempla la partida?',
+      chips: getIncluyeChips()
     },
     acarreo: {
-      text: 'Paso 5 de 5: Unidad de Medida\nLas partidas de acarreo se computan por distancia o volumen. ¿En qué unidad se medirá?',
-      chips: [
-        'm3.m (Metro cúbico x metro)',
-        'm3 (Metro cúbico)',
-        'm3xkm (Metro cúbico x kilómetro)',
-        'sac.m (Saco x metro)',
-        'viaje (Por viaje)'
-      ]
-    },
+      text: 'Defina el Alcance y Condiciones\n¿Qué condiciones adicionales contempla el traslado?',
+      chips: getIncluyeChips('Acarreo')
+    }
+  },
+  6: {
     general: {
-      text: 'Paso 5 de 5: Unidad de Medida\n¿En qué unidad de medida se computará la partida?',
-      chips: [
-        'und',
-        'pza',
-        'm',
-        'ml',
-        'm²',
-        'm³',
-        'kg',
-        'pto',
-        'Gl',
-        'viaje'
-      ]
+      text: 'Defina la Unidad de Medida\n¿En qué unidad de medida se computará la partida?',
+      chips: getUnitChips()
     },
-    get text() { return this.general.text; },
-    get chips() { return this.general.chips; }
+    mantenimiento: {
+      text: 'Defina la Unidad de Medida Obligatoria\nPara actividades de mantenimiento o reparación, la unidad define el rendimiento. ¿En qué unidad se computará?',
+      chips: getUnitChips('Mantenimiento')
+    },
+    acarreo: {
+      text: 'Defina la Unidad de Medida\nLas partidas de acarreo se computan por distancia o volumen. ¿En qué unidad se medirá?',
+      chips: getUnitChips('Acarreo')
+    }
   }
 };
 
@@ -311,7 +802,7 @@ export function getParametricStep3Definition(material, accion) {
   // 1. Bombas y Equipos Hidráulicos
   if (/bomba|electrobomba|motobomba/i.test(mat)) {
     return {
-      text: 'Paso 3 de 5: Potencia o Capacidad de la Bomba\n¿Qué potencia (HP/kW) o caudal tiene el equipo?',
+      text: 'Potencia o Capacidad de la Bomba\n¿Qué potencia (HP/kW) o caudal tiene el equipo?',
       chips: ['0.5 HP', '1 HP', '1.5 HP', '2 HP', '3 HP', '5 HP', '7.5 HP', '10 HP', 'Omitir'],
       stepLabel: 'Potencia'
     };
@@ -320,106 +811,104 @@ export function getParametricStep3Definition(material, accion) {
   // 2. Concertina de Seguridad
   if (/concertina/i.test(mat)) {
     return {
-      text: 'Paso 3 de 5: Diámetro de la Concertina\n¿Qué diámetro de espiral tiene la concertina?',
+      text: 'Diámetro de la Concertina\n¿Qué diámetro de espiral tiene la concertina?',
       chips: ['Diámetro 30 cm (12")', 'Diámetro 45 cm (18")', 'Diámetro 60 cm (24")', 'Diámetro 90 cm (36")', 'Omitir'],
       stepLabel: 'Diámetro'
     };
   }
 
-  // 3. Pintura / Recubrimientos (Prioritario: El espesor del elemento NO influye)
+  // 3. Pintura / Recubrimientos
   if (isPainting) {
     return {
-      text: 'Paso 3 de 5: Tipo de Pintura o Ubicación\n¿Qué tipo de pintura o dónde se aplicará (ej: caucho, esmalte, interiores, fachadas, a rapel)?',
+      text: 'Tipo de Pintura o Acabado\n¿Qué tipo de pintura o especificación técnica se aplicará?',
       chips: [
-        'En interiores',
-        'En exteriores / fachadas',
-        'A rapel (en altura)',
-        'Pintura de caucho',
-        'Pintura de esmalte',
+        'Pintura de caucho clase A',
+        'Pintura de esmalte sintético',
+        'Fondo anticorrosivo alquídico',
+        'Fondo cromato de zinc',
         'Pintura elastomérica',
         'Pintura epóxica',
-        'Incluye fondo antialcalino',
+        'Fondo antialcalino',
         'Omitir'
       ],
-      stepLabel: 'Tipo / Ubicación'
+      stepLabel: 'Tipo de Pintura'
     };
   }
 
-  // 4. Friso / Revoque / Tarrajeo (El espesor de la pared NO influye)
+  // 4. Friso / Revoque / Tarrajeo
   if (isPlastering) {
     return {
-      text: 'Paso 3 de 5: Tipo de Friso o Acabado\n¿Qué tipo de acabado o especificación tiene el friso?',
+      text: 'Tipo de Friso o Acabado\n¿Qué tipo de acabado o especificación tiene el friso?',
       chips: ['Friso rústico', 'Friso base', 'Friso liso con pasta', 'En interiores', 'En fachadas', 'En exteriores', 'Omitir'],
       stepLabel: 'Tipo / Acabado'
     };
   }
 
-  // 5. Limpieza / Hidrojet / Lavado (El espesor NO influye)
+  // 5. Limpieza / Hidrojet / Lavado
   if (isCleaning) {
     return {
-      text: 'Paso 3 de 5: Método o Ubicación de Limpieza\n¿Cómo o dónde se realizará la limpieza?',
+      text: 'Método de Limpieza\n¿Cómo o con qué método se realizará la limpieza?',
       chips: [
         'Con agua a presión (hidrojet)',
-        'En fachadas / a rapel',
         'Limpieza química / desengrasante',
         'Limpieza manual con cepillo',
+        'En fachadas / a rapel',
         'En interiores',
         'En exteriores',
         'Omitir'
       ],
-      stepLabel: 'Método / Ubic.'
+      stepLabel: 'Método'
     };
   }
 
   // 6. Impermeabilización
   if (isWaterproofing) {
     return {
-      text: 'Paso 3 de 5: Sistema o Ubicación de Impermeabilización\n¿Qué tipo de sistema o dónde se aplicará?',
+      text: 'Sistema de Impermeabilización\n¿Qué tipo de sistema o especificación se aplicará?',
       chips: [
         'Manto asfáltico 3mm',
         'Manto asfáltico 4mm',
         'Con pintura de aluminio',
-        'En losas de techo',
-        'En jardineras / terrazas',
         'Membrana líquida elastomérica',
+        'Primer imprimador asfáltico',
         'Omitir'
       ],
-      stepLabel: 'Sistema / Ubic.'
+      stepLabel: 'Sistema'
     };
   }
 
-  // 7. Paredes de Bloques / Muros (REGLA: El espesor solo se pide donde INFLUYE: Construcción, Demolición, Reparación o Refacción)
+  // 7. Paredes de Bloques / Muros
   const isWall = /pared|muro|tabique|bloque|ladrillo/i.test(mat) || /pared|muro|tabique/i.test(acc);
   const isWallThicknessInfluential = isWall && (isConstruction || isDemolition || isRepairOrRefaction);
 
   if (isWallThicknessInfluential) {
     if (isDemolition) {
       return {
-        text: 'Paso 3 de 5: Espesor de la Pared o Muro a Demoler\n¿De qué espesor o medida es la pared o muro a demoler?',
+        text: 'Espesor de la Pared o Muro a Demoler\n¿De qué espesor o medida es la pared o muro a demoler?',
         chips: ['Espesor e=10 cm', 'Espesor e=12 cm', 'Espesor e=15 cm', 'Espesor e=20 cm', 'Espesor e=25 cm', 'Omitir'],
         stepLabel: 'Espesor'
       };
     }
     if (isRepairOrRefaction) {
       return {
-        text: 'Paso 3 de 5: Espesor de la Pared o Muro a Reparar / Refaccionar\n¿De qué espesor es la pared o muro donde se realizará la reparación o refacción?',
+        text: 'Espesor de la Pared o Muro a Reparar / Refaccionar\n¿De qué espesor es la pared o muro donde se realizará la reparación o refacción?',
         chips: ['Espesor e=10 cm', 'Espesor e=12 cm', 'Espesor e=15 cm', 'Espesor e=20 cm', 'Espesor e=25 cm', 'Omitir'],
         stepLabel: 'Espesor'
       };
     }
     if (isConstruction || /bloque|ladrillo/i.test(mat)) {
       return {
-        text: 'Paso 3 de 5: Espesor de la Pared o Bloque a Construir\n¿De qué espesor o medida es el bloque o pared a construir?',
+        text: 'Espesor de la Pared o Bloque a Construir\n¿De qué espesor o medida es el bloque o pared a construir?',
         chips: ['Espesor e=10 cm', 'Espesor e=12 cm', 'Espesor e=15 cm', 'Espesor e=20 cm', 'Omitir'],
         stepLabel: 'Espesor'
       };
     }
   }
 
-  // 8. Reacondicionamiento / Mantenimiento en muros o fachadas (donde el espesor no influye)
+  // 8. Reacondicionamiento / Mantenimiento en muros o fachadas
   if (isRefurbish && /pared|fachada|muro/i.test(mat) && !isDemolition && !isConstruction && !isRepairOrRefaction) {
     return {
-      text: 'Paso 3 de 5: Ubicación o Método de Intervención\n¿En qué lugar, altura o con qué método se ejecutará?',
+      text: 'Ubicación o Método de Intervención\n¿En qué lugar, altura o con qué método se ejecutará?',
       chips: [
         'En interiores',
         'En exteriores / fachadas',
@@ -429,7 +918,7 @@ export function getParametricStep3Definition(material, accion) {
         'En pisos superiores',
         'Omitir'
       ],
-      stepLabel: 'Ubicación / Método'
+      stepLabel: 'Ubicación'
     };
   }
 
@@ -437,8 +926,8 @@ export function getParametricStep3Definition(material, accion) {
   if (/losa/i.test(mat)) {
     return {
       text: isDemolition
-        ? 'Paso 3 de 5: Espesor de la Losa a Demoler\n¿Cuál es el espesor de la losa a demoler?'
-        : 'Paso 3 de 5: Espesor de la Losa\n¿Cuál es el espesor de la losa?',
+        ? 'Espesor de la Losa a Demoler\n¿Cuál es el espesor de la losa a demoler?'
+        : 'Espesor de la Losa\n¿Cuál es el espesor de la losa?',
       chips: ['Espesor e=15 cm', 'Espesor e=20 cm', 'Espesor e=25 cm', 'Espesor e=30 cm', 'Omitir'],
       stepLabel: 'Espesor'
     };
@@ -448,8 +937,8 @@ export function getParametricStep3Definition(material, accion) {
   if (/pavimento|acera|brocal/i.test(mat)) {
     return {
       text: isDemolition
-        ? 'Paso 3 de 5: Espesor del Pavimento / Acera a Demoler\n¿De qué espesor es el vaciado a demoler?'
-        : 'Paso 3 de 5: Espesor del Pavimento / Acera\n¿De qué espesor es el vaciado?',
+        ? 'Espesor del Pavimento / Acera a Demoler\n¿De qué espesor es el vaciado a demoler?'
+        : 'Espesor del Pavimento / Acera\n¿De qué espesor es el vaciado?',
       chips: ['Espesor e=10 cm', 'Espesor e=15 cm', 'Espesor e=20 cm', 'Espesor e=25 cm', 'Omitir'],
       stepLabel: 'Espesor'
     };
@@ -458,16 +947,16 @@ export function getParametricStep3Definition(material, accion) {
   // 11. Excavación
   if (/excavac|zanja/i.test(mat) || /excavac/i.test(acc)) {
     return {
-      text: 'Paso 3 de 5: Profundidad y Método de Excavación\n¿Qué profundidad tiene y cómo se ejecutará?',
+      text: 'Profundidad y Método de Excavación\n¿Qué profundidad tiene y cómo se ejecutará?',
       chips: ['Hasta 1.50 m (a mano)', 'Hasta 1.50 m (a máquina)', 'De 1.50 a 3.00 m (a máquina)', 'Mayor a 3.00 m (a máquina)', 'Omitir'],
       stepLabel: 'Profundidad'
     };
   }
 
-  // 12. Tuberías y Válvulas (no demolición)
+  // 12. Tuberías y Válvulas
   if (/tuber|valvul/i.test(mat) && !isDemolition) {
     return {
-      text: 'Paso 3 de 5: Diámetro de la Tubería o Válvula\n¿Qué diámetro nominal tiene?',
+      text: 'Diámetro de la Tubería o Válvula\n¿Qué diámetro nominal tiene?',
       chips: ['1/2"', '3/4"', '1"', '1-1/2"', '2"', '3"', '4"', '6"', 'Omitir'],
       stepLabel: 'Diámetro'
     };
@@ -476,7 +965,7 @@ export function getParametricStep3Definition(material, accion) {
   // 13. Transformador
   if (/transformador/i.test(mat)) {
     return {
-      text: 'Paso 3 de 5: Capacidad del Transformador\n¿Qué capacidad en kVA tiene el transformador?',
+      text: 'Capacidad del Transformador\n¿Qué capacidad en kVA tiene el transformador?',
       chips: ['15 kVA', '25 kVA', '37.5 kVA', '50 kVA', '75 kVA', '100 kVA', '150 kVA', 'Omitir'],
       stepLabel: 'Capacidad'
     };
@@ -485,7 +974,7 @@ export function getParametricStep3Definition(material, accion) {
   // 14. Tablero Eléctrico
   if (/tablero/i.test(mat)) {
     return {
-      text: 'Paso 3 de 5: Capacidad del Tablero Eléctrico\n¿Cuántos circuitos o polos tiene el tablero?',
+      text: 'Capacidad del Tablero Eléctrico\n¿Cuántos circuitos o polos tiene el tablero?',
       chips: ['8 circuitos', '12 circuitos', '18 circuitos', '24 circuitos', '30 circuitos', '42 circuitos', 'Omitir'],
       stepLabel: 'Circuitos'
     };
@@ -494,7 +983,7 @@ export function getParametricStep3Definition(material, accion) {
   // 15. Cable / Conductor
   if (/cable|conductor/i.test(mat)) {
     return {
-      text: 'Paso 3 de 5: Calibre del Cable\n¿Qué calibre o sección tiene el conductor?',
+      text: 'Calibre del Cable\n¿Qué calibre o sección tiene el conductor?',
       chips: ['Calibre #14 AWG', 'Calibre #12 AWG', 'Calibre #10 AWG', 'Calibre #8 AWG', 'Calibre #6 AWG', 'Calibre #4 AWG', 'Omitir'],
       stepLabel: 'Calibre'
     };
@@ -503,7 +992,7 @@ export function getParametricStep3Definition(material, accion) {
   // 16. Tanque
   if (/tanque/i.test(mat)) {
     return {
-      text: 'Paso 3 de 5: Capacidad del Tanque\n¿De qué capacidad o volumen es el tanque?',
+      text: 'Capacidad del Tanque\n¿De qué capacidad o volumen es el tanque?',
       chips: ['500 litros', '1,000 litros', '1,500 litros', '2,000 litros', '5,000 litros', '10,000 litros', 'Omitir'],
       stepLabel: 'Capacidad'
     };
@@ -512,7 +1001,7 @@ export function getParametricStep3Definition(material, accion) {
   // 17. Aire Acondicionado
   if (/aire|split|climatiz/i.test(mat)) {
     return {
-      text: 'Paso 3 de 5: Capacidad del Aire Acondicionado\n¿De qué capacidad frigorífica es el equipo?',
+      text: 'Capacidad del Aire Acondicionado\n¿De qué capacidad frigorífica es el equipo?',
       chips: ['12,000 BTU (1 TR)', '18,000 BTU (1.5 TR)', '24,000 BTU (2 TR)', '36,000 BTU (3 TR)', '60,000 BTU (5 TR)', 'Omitir'],
       stepLabel: 'Capacidad'
     };

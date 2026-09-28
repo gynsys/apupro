@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
-import { CHAT_STEP_DEFINITIONS, getParametricStep3Definition } from '../constants/guidedBuilderConstants.js';
+import {
+  CHAT_STEP_DEFINITIONS,
+  getParametricStep3Definition,
+  getDynamicStepDefinition
+} from '../constants/guidedBuilderConstants.js';
 
 // Raíces y términos de procesos y acciones constructivas reconocibles
 export const CONSTRUCTION_ACTION_ROOTS = [
@@ -113,7 +117,7 @@ export function validateStepInput(text, step, isMaintenance = false) {
 
   // Opciones estándar de omisión
   const isSkip = /^(omitir|ninguno|ninguno \/ omitir|sugerir por ia|sugerir)$/i.test(clean);
-  if (isSkip && step !== 1 && (step !== 5 || !isMaintenance)) {
+  if (isSkip && step !== 1 && (step !== 6 || !isMaintenance)) {
     return { isValid: true };
   }
 
@@ -137,24 +141,31 @@ export function validateStepInput(text, step, isMaintenance = false) {
     if (clean.length < 2) {
       return {
         isValid: false,
-        error: 'Por favor indica qué material, equipo o elemento se va a intervenir (ej: Bomba sumergible, Bloques de arcilla, Tubería PVC), o selecciona "Omitir".'
+        error: 'Por favor indica qué elemento o estructura se va a intervenir o construir (ej: Paredes, Rejas y herrería, Losas, Tuberías), o selecciona una opción sugerida.'
       };
     }
   } else if (step === 3) {
     if (clean.length < 2) {
       return {
         isValid: false,
-        error: 'Por favor indica la ubicación o especificación técnica (ej: En planta baja, 2 HP, e=15 cm), o selecciona "Omitir".'
+        error: 'Por favor indica el material, tipo de pintura o especificación técnica (ej: Pintura de caucho clase A, Fondo cromato de zinc, Concreto f\'c=250), o selecciona "Omitir".'
       };
     }
   } else if (step === 4) {
     if (clean.length < 2) {
       return {
         isValid: false,
-        error: 'Por favor describe el alcance adicional (ej: Incluye andamios, Incluye acarreo), o selecciona "Omitir".'
+        error: 'Por favor indica la ubicación o entorno de trabajo (ej: En interiores, En fachadas exteriores, A rapel, En altura), o selecciona "Omitir".'
       };
     }
   } else if (step === 5) {
+    if (clean.length < 2) {
+      return {
+        isValid: false,
+        error: 'Por favor describe el alcance adicional o condiciones (ej: Incluye preparación de superficie, Todo incluido, Solo mano de obra), o selecciona "Omitir".'
+      };
+    }
+  } else if (step === 6) {
     const cleanLower = clean.toLowerCase();
     if (isMaintenance && (cleanLower.includes('omitir') || cleanLower.includes('ninguno') || cleanLower.includes('sugerir'))) {
       return {
@@ -187,8 +198,9 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
   const lastEntrySourceRef = useRef(initialGuided ? 'chat' : 'libre');
 
   const [guidedAccion, setGuidedAccion] = useState(null);
-  const [guidedUbicacion, setGuidedUbicacion] = useState(null);
+  const [guidedElemento, setGuidedElemento] = useState(null);
   const [guidedMaterial, setGuidedMaterial] = useState(null);
+  const [guidedUbicacion, setGuidedUbicacion] = useState(null);
   const [guidedIncluye, setGuidedIncluye] = useState(null);
   const [guidedUnidad, setGuidedUnidad] = useState(null);
 
@@ -219,10 +231,11 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
 
   const getStepValue = (step) => {
     if (step === 1) return guidedAccion;
-    if (step === 2) return guidedMaterial;
-    if (step === 3) return guidedUbicacion;
-    if (step === 4) return guidedIncluye;
-    if (step === 5) return guidedUnidad;
+    if (step === 2) return guidedElemento;
+    if (step === 3) return guidedMaterial;
+    if (step === 4) return guidedUbicacion;
+    if (step === 5) return guidedIncluye;
+    if (step === 6) return guidedUnidad;
     return '';
   };
 
@@ -240,14 +253,15 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       setDetectedFullPrompt(null);
       setCurrentChatStep(1);
       setChatInputValue(savedPrompt);
+      const step1Def = getDynamicStepDefinition(1);
       setGuidedMessages([
         createInitialMessage(),
         {
           id: 'bot-step-1',
           sender: 'bot',
           step: 1,
-          text: CHAT_STEP_DEFINITIONS[1].text,
-          chips: CHAT_STEP_DEFINITIONS[1].chips
+          text: step1Def.text,
+          chips: step1Def.chips
         }
       ]);
       return;
@@ -258,6 +272,7 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     if (prevStep === 0) {
       setCurrentChatStep(0);
       setGuidedAccion(null);
+      setGuidedElemento(null);
       setGuidedMaterial(null);
       setGuidedUbicacion(null);
       setGuidedIncluye(null);
@@ -270,10 +285,11 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     setCurrentChatStep(prevStep);
 
     // Limpiar campos posteriores
-    if (prevStep < 5) setGuidedUnidad(null);
-    if (prevStep < 4) setGuidedIncluye(null);
-    if (prevStep < 3) setGuidedUbicacion(null);
-    if (prevStep < 2) setGuidedMaterial(null);
+    if (prevStep < 6) setGuidedUnidad(null);
+    if (prevStep < 5) setGuidedIncluye(null);
+    if (prevStep < 4) setGuidedUbicacion(null);
+    if (prevStep < 3) setGuidedMaterial(null);
+    if (prevStep < 2) setGuidedElemento(null);
     if (prevStep < 1) setGuidedAccion(null);
 
     const prevVal = getStepValue(prevStep);
@@ -292,8 +308,9 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
 
   const resetChatbot = (startAtStep = 0, initialInput = '') => {
     setGuidedAccion(null);
-    setGuidedUbicacion(null);
+    setGuidedElemento(null);
     setGuidedMaterial(null);
+    setGuidedUbicacion(null);
     setGuidedIncluye(null);
     setGuidedUnidad(null);
     setChatInputValue(initialInput || '');
@@ -304,13 +321,14 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
 
     if (startAtStep === 1) {
       setCurrentChatStep(1);
+      const step1Def = getDynamicStepDefinition(1);
       setGuidedMessages([
         {
           id: `bot-step-1-${Date.now()}`,
           sender: 'bot',
           step: 1,
-          text: CHAT_STEP_DEFINITIONS[1].text,
-          chips: CHAT_STEP_DEFINITIONS[1].chips
+          text: step1Def.text,
+          chips: step1Def.chips
         }
       ]);
     } else {
@@ -343,11 +361,11 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       const parsedDays = match ? parseFloat(match[1].replace(',', '.')) : null;
       if (!parsedDays || parsedDays <= 0 || isNaN(parsedDays)) {
         toast.error('Por favor selecciona una opción o ingresa un número válido de días (ej: 0.5, 1, 2, 3, 5).', { id: 'days-val-error' });
-        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 5 };
+        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 6 };
         const botRetryMsg = {
           id: `bot-days-retry-${Date.now()}`,
           sender: 'bot',
-          step: 5,
+          step: 6,
           text: `"${cleanText}" no es un número de días válido.\n\nIndica cuántos días de trabajo tomará la cuadrilla:`,
           chips: ['0.5 día', '1 día', '2 días', '3 días', '5 días']
         };
@@ -359,7 +377,7 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       setWaitingForGlobalDays(false);
       const promptToGenerate = pendingPromptForGlobal || detectedFullPrompt;
       setPendingPromptForGlobal(null);
-      const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 5 };
+      const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 6 };
       setGuidedMessages(prev => [...prev, newUserMsg]);
       setChatInputValue('');
       triggerGeneration(promptToGenerate, 'Gl', parsedDays);
@@ -368,7 +386,7 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
 
     // 1. Manejo cuando se detectó previamente un prompt completo y estamos solicitando la unidad
     if (detectedFullPrompt) {
-      const unitVal = validateStepInput(cleanText, 5, false);
+      const unitVal = validateStepInput(cleanText, 6, false);
       if (unitVal.isValid) {
         const cleanLower = cleanText.toLowerCase().trim();
         const isGlobalUnit = ['gl', 'sg', 'global', 'suma global'].includes(cleanLower) || cleanText.trim() === 'Gl' || cleanText.includes('Gl (');
@@ -376,11 +394,11 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
         if (isGlobalUnit) {
           setWaitingForGlobalDays(true);
           setPendingPromptForGlobal(detectedFullPrompt);
-          const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 5 };
+          const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 6 };
           const botDaysMsg = {
             id: `bot-global-days-${Date.now()}`,
             sender: 'bot',
-            step: 5,
+            step: 6,
             text: 'Has seleccionado unidad Global (Gl).\n\nIndica los días de trabajo estimados para la cuadrilla:',
             chips: ['0.5 día', '1 día', '2 días', '3 días', '5 días']
           };
@@ -390,18 +408,18 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
         }
 
         let chosenUnit = cleanLower.replace('m²', 'm2').replace('m³', 'm3');
-        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 5 };
+        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 6 };
         setGuidedMessages(prev => [...prev, newUserMsg]);
         setChatInputValue('');
         triggerGeneration(detectedFullPrompt, chosenUnit);
         return;
       } else {
         toast.error(unitVal.error || 'Por favor indica una unidad válida (ej: und, pza, m², m, m³, Gl)', { id: 'chat-val-error', duration: 4500 });
-        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 5 };
+        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 6 };
         const botValMsg = {
           id: `bot-val-${Date.now()}`,
           sender: 'bot',
-          step: 5,
+          step: 6,
           text: `Aviso: "${cleanText}" no es una unidad de cómputo válida.\n\nPor favor selecciona una unidad o escribe una unidad estándar (und, pza, m², m, m³, Gl):`,
           chips: ['und', 'pza', 'm²', 'm', 'm³', 'Gl']
         };
@@ -414,12 +432,12 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     // 2. Detección Inteligente de Descripción Completa (en paso 0, 1 o 2)
     if ((currentChatStep === 0 || currentChatStep === 1 || currentChatStep === 2) && isComprehensiveDescription(cleanText)) {
       setDetectedFullPrompt(cleanText);
-      setCurrentChatStep(5);
+      setCurrentChatStep(6);
       const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: currentChatStep };
       const botMsg = {
         id: `bot-full-prompt-${Date.now()}`,
         sender: 'bot',
-        step: 5,
+        step: 6,
         text: `«${cleanText}»\n\nIndica la unidad de la partida:`,
         chips: [
           'und',
@@ -440,12 +458,13 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       if (cleanText === 'Sí, comenzar' || cleanText === 'Comenzar') {
         const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 0 };
         setCurrentChatStep(1);
+        const step1Def = getDynamicStepDefinition(1);
         const nextBotMsg = {
           id: `bot-step-1-${Date.now()}`,
           sender: 'bot',
           step: 1,
-          text: CHAT_STEP_DEFINITIONS[1].text,
-          chips: CHAT_STEP_DEFINITIONS[1].chips
+          text: step1Def.text,
+          chips: step1Def.chips
         };
         setGuidedMessages(prev => [...prev, newUserMsg, nextBotMsg]);
         setChatInputValue('');
@@ -457,17 +476,14 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
         setGuidedAccion(cleanText);
         setCurrentChatStep(2);
         const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 0 };
-        const isSupplyOrInstall = /suministr|instalac|colocac|montaje/i.test(cleanText);
-        const isAcarreo = /acarreo|acarrear|bote|botar|transporte|transportar|traslado/i.test(cleanText);
-        let nextBotMsg;
-        if (isAcarreo) {
-          nextBotMsg = { id: `bot-step-2-${Date.now()}`, sender: 'bot', step: 2, text: CHAT_STEP_DEFINITIONS[2].acarreo.text, chips: CHAT_STEP_DEFINITIONS[2].acarreo.chips };
-        } else if (isSupplyOrInstall) {
-          const def = CHAT_STEP_DEFINITIONS[2].supplyOrInstall(cleanText);
-          nextBotMsg = { id: `bot-step-2-${Date.now()}`, sender: 'bot', step: 2, text: def.text, chips: def.chips };
-        } else {
-          nextBotMsg = { id: `bot-step-2-${Date.now()}`, sender: 'bot', step: 2, text: CHAT_STEP_DEFINITIONS[2].general.text, chips: CHAT_STEP_DEFINITIONS[2].general.chips };
-        }
+        const step2Def = getDynamicStepDefinition(2, { accion: cleanText });
+        const nextBotMsg = {
+          id: `bot-step-2-${Date.now()}`,
+          sender: 'bot',
+          step: 2,
+          text: step2Def.text,
+          chips: step2Def.chips
+        };
         setGuidedMessages(prev => [...prev, newUserMsg, nextBotMsg]);
         setChatInputValue('');
         return;
@@ -476,9 +492,9 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       return;
     }
 
-    // 4. Validación de Entrada del Paso Actual (Pasos 1 a 5)
+    // 4. Validación de Entrada del Paso Actual (Pasos 1 a 6)
     const isMaintenance = /\b(mantenimiento|mantener|saneamiento|sanear|reconstrucci[oó]n|reconstruir|arreglo|arreglar|reparaci[oó]n|reparar|rehabilitaci[oó]n|rehabilitar|restauraci[oó]n|restaurar|reacondicionamiento|reacondicionar|acondicionamiento|acondicionar|recuperaci[oó]n|recuperar|adecuaci[oó]n|adecuar|refacci[oó]n|refaccionar|remodelaci[oó]n|remodelar|resane|resanado|resanar|escarificaci[oó]n|escarificar|repicado|repicar|desmanchado|desmanchar|decapado|decapar)\b/i.test(
-      `${guidedAccion || ''} ${guidedMaterial || ''}`
+      `${guidedAccion || ''} ${guidedElemento || ''} ${guidedMaterial || ''}`
     );
     const lastBotMsg = [...guidedMessages].reverse().find(m => m.sender === 'bot');
     const isChipSelection = lastBotMsg?.chips?.includes(cleanText);
@@ -505,6 +521,7 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: currentChatStep };
 
     let currentAccion = guidedAccion;
+    let currentElemento = guidedElemento;
     let currentMaterial = guidedMaterial;
     let currentUbicacion = guidedUbicacion;
     let currentIncluye = guidedIncluye;
@@ -514,99 +531,42 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       setGuidedAccion(cleanText);
       currentAccion = cleanText;
     } else if (currentChatStep === 2) {
+      setGuidedElemento(cleanText);
+      currentElemento = cleanText;
+    } else if (currentChatStep === 3) {
       setGuidedMaterial(cleanText);
       currentMaterial = cleanText;
-    } else if (currentChatStep === 3) {
+    } else if (currentChatStep === 4) {
       setGuidedUbicacion(cleanText);
       currentUbicacion = cleanText;
-    } else if (currentChatStep === 4) {
+    } else if (currentChatStep === 5) {
       setGuidedIncluye(cleanText);
       currentIncluye = cleanText;
-    } else if (currentChatStep === 5) {
+    } else if (currentChatStep === 6) {
       setGuidedUnidad(cleanText);
       currentUnidad = cleanText;
     }
-
-    const isSupplyOrInstall = /suministr|instalac|colocac|montaje/i.test(currentAccion || guidedAccion || '');
-    const isAcarreo = /acarreo|acarrear|bote|botar|transporte|transportar|traslado/i.test(currentAccion || guidedAccion || '');
 
     const nextStep = currentChatStep === 0 ? 1 : currentChatStep + 1;
     setCurrentChatStep(nextStep);
 
     let nextBotMsg = null;
-    if (nextStep === 1) {
+    if (nextStep >= 1 && nextStep <= 6) {
+      const stepDef = getDynamicStepDefinition(nextStep, {
+        accion: currentAccion,
+        elemento: currentElemento,
+        material: currentMaterial,
+        ubicacion: currentUbicacion,
+        incluye: currentIncluye
+      });
       nextBotMsg = {
-        id: `bot-step-1-${Date.now()}`,
+        id: `bot-step-${nextStep}-${Date.now()}`,
         sender: 'bot',
-        step: 1,
-        text: CHAT_STEP_DEFINITIONS[1].text,
-        chips: CHAT_STEP_DEFINITIONS[1].chips
+        step: nextStep,
+        text: stepDef.text,
+        chips: stepDef.chips
       };
-    } else if (nextStep === 2) {
-      if (isAcarreo) {
-        nextBotMsg = { id: `bot-step-2-${Date.now()}`, sender: 'bot', step: 2, text: CHAT_STEP_DEFINITIONS[2].acarreo.text, chips: CHAT_STEP_DEFINITIONS[2].acarreo.chips };
-      } else if (isSupplyOrInstall) {
-        const def = CHAT_STEP_DEFINITIONS[2].supplyOrInstall(currentAccion);
-        nextBotMsg = { id: `bot-step-2-${Date.now()}`, sender: 'bot', step: 2, text: def.text, chips: def.chips };
-      } else {
-        nextBotMsg = { id: `bot-step-2-${Date.now()}`, sender: 'bot', step: 2, text: CHAT_STEP_DEFINITIONS[2].general.text, chips: CHAT_STEP_DEFINITIONS[2].general.chips };
-      }
-    } else if (nextStep === 3) {
-      const parametricDef = getParametricStep3Definition(currentMaterial, currentAccion);
-      if (parametricDef) {
-        nextBotMsg = { id: `bot-step-3-${Date.now()}`, sender: 'bot', step: 3, text: parametricDef.text, chips: parametricDef.chips };
-      } else if (isAcarreo) {
-        nextBotMsg = { id: `bot-step-3-${Date.now()}`, sender: 'bot', step: 3, text: CHAT_STEP_DEFINITIONS[3].acarreo.text, chips: CHAT_STEP_DEFINITIONS[3].acarreo.chips };
-      } else if (isSupplyOrInstall) {
-        nextBotMsg = { id: `bot-step-3-${Date.now()}`, sender: 'bot', step: 3, text: CHAT_STEP_DEFINITIONS[3].supplyOrInstall.text, chips: CHAT_STEP_DEFINITIONS[3].supplyOrInstall.chips };
-      } else {
-        nextBotMsg = { id: `bot-step-3-${Date.now()}`, sender: 'bot', step: 3, text: CHAT_STEP_DEFINITIONS[3].general.text, chips: CHAT_STEP_DEFINITIONS[3].general.chips };
-      }
-    } else if (nextStep === 4) {
-      if (isAcarreo) {
-        nextBotMsg = {
-          id: `bot-step-4-${Date.now()}`,
-          sender: 'bot',
-          step: 4,
-          text: CHAT_STEP_DEFINITIONS[4].acarreo.text,
-          chips: CHAT_STEP_DEFINITIONS[4].acarreo.chips
-        };
-      } else {
-        nextBotMsg = {
-          id: `bot-step-4-${Date.now()}`,
-          sender: 'bot',
-          step: 4,
-          text: CHAT_STEP_DEFINITIONS[4].text,
-          chips: CHAT_STEP_DEFINITIONS[4].chips
-        };
-      }
-    } else if (nextStep === 5) {
-      if (isMaintenance) {
-        nextBotMsg = {
-          id: `bot-step-5-${Date.now()}`,
-          sender: 'bot',
-          step: 5,
-          text: CHAT_STEP_DEFINITIONS[5].mantenimiento.text,
-          chips: CHAT_STEP_DEFINITIONS[5].mantenimiento.chips
-        };
-      } else if (isAcarreo) {
-        nextBotMsg = {
-          id: `bot-step-5-${Date.now()}`,
-          sender: 'bot',
-          step: 5,
-          text: CHAT_STEP_DEFINITIONS[5].acarreo.text,
-          chips: CHAT_STEP_DEFINITIONS[5].acarreo.chips
-        };
-      } else {
-        nextBotMsg = {
-          id: `bot-step-5-${Date.now()}`,
-          sender: 'bot',
-          step: 5,
-          text: CHAT_STEP_DEFINITIONS[5].text,
-          chips: CHAT_STEP_DEFINITIONS[5].chips
-        };
-      }
-    } else if (nextStep === 6) {
+    } else if (nextStep === 7) {
       const parts = [];
 
       // 1. Acción
@@ -614,38 +574,57 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
         parts.push(currentAccion);
       }
 
-      // 2. Material / Equipo / Elemento
+      // 2. Elemento o Estructura
+      if (currentElemento && currentElemento !== 'Omitir' && currentElemento !== 'Ninguno' && currentElemento !== 'Ninguno / Omitir') {
+        const accLower = (currentAccion || '').toLowerCase();
+        if (accLower.endsWith(' en') || accLower.endsWith(' de') || accLower.endsWith(' para')) {
+          parts.push(currentElemento);
+        } else if (/pintur/i.test(accLower)) {
+          parts.push(`en ${currentElemento}`);
+        } else if (/vaciado/i.test(accLower)) {
+          parts.push(`en ${currentElemento}`);
+        } else {
+          parts.push(`de ${currentElemento}`);
+        }
+      }
+
+      // 3. Material o Especificación Técnica
       if (currentMaterial && currentMaterial !== 'Omitir' && currentMaterial !== 'Ninguno' && currentMaterial !== 'Ninguno / Omitir') {
         const matLower = currentMaterial.toLowerCase();
         const accLower = (currentAccion || '').toLowerCase();
-        if (!accLower.endsWith('de') && !accLower.endsWith('en') && !matLower.startsWith('de ') && !matLower.startsWith('del ') && !matLower.startsWith('en ')) {
-          parts.push(`de ${currentMaterial}`);
-        } else {
+        if (matLower.startsWith('con ') || matLower.startsWith('de ') || matLower.startsWith('en ') || matLower.startsWith('a base de ')) {
           parts.push(currentMaterial);
+        } else if (/pintur/i.test(accLower)) {
+          parts.push(`con ${currentMaterial}`);
+        } else if (/bloque|ladrillo/i.test(matLower)) {
+          parts.push(`con ${currentMaterial}`);
+        } else {
+          parts.push(`con ${currentMaterial}`);
         }
       }
 
-      // 3. Destino / Ubicación / Distancia / Parámetro técnico
+      // 4. Ubicación o Entorno
       if (currentUbicacion && currentUbicacion !== 'Omitir' && currentUbicacion !== 'Ninguno' && currentUbicacion !== 'Ninguno / Omitir') {
         const ubiLower = currentUbicacion.toLowerCase();
         const hasPrep = ubiLower.startsWith('para ') || ubiLower.startsWith('en ') || ubiLower.startsWith('sobre ') || ubiLower.startsWith('hacia ') || ubiLower.startsWith('bajo ') || ubiLower.startsWith('distancia ') || ubiLower.startsWith('a ') || ubiLower.startsWith('de ') || ubiLower.startsWith('hasta ');
-        const isParametric = /^(espesor|di[aá]metro|calibre|\d|e\s*=|d\s*=|hasta\s*\d)/i.test(ubiLower);
-        if (isParametric) {
+        if (hasPrep) {
           parts.push(currentUbicacion);
-        } else if (!hasPrep) {
-          const isSupply = /suministr|instalac|colocac|montaje/i.test(currentAccion || '');
-          parts.push(isSupply ? `para ${currentUbicacion}` : `en ${currentUbicacion}`);
         } else {
-          parts.push(currentUbicacion);
+          parts.push(`en ${currentUbicacion}`);
         }
       }
 
-      // 4. Alcance y Condiciones
+      // 5. Alcance y Condiciones
       if (currentIncluye && currentIncluye !== 'Omitir' && currentIncluye !== 'Ninguno' && currentIncluye !== 'Ninguno / Omitir') {
-        parts.push(currentIncluye);
+        const incLower = currentIncluye.toLowerCase();
+        if (incLower.startsWith('incluye ') || incLower.startsWith('con ') || incLower.startsWith('sin ') || incLower.startsWith('todo ') || incLower.startsWith('solo ')) {
+          parts.push(currentIncluye);
+        } else {
+          parts.push(`incluye ${currentIncluye}`);
+        }
       }
 
-      // 5. Unidad de medida
+      // 6. Unidad de medida
       let extractedUnit = null;
       let cleanLower = cleanText.toLowerCase().trim();
       const isGlobalUnit = ['gl', 'sg', 'global', 'suma global'].includes(cleanLower) || cleanText.trim() === 'Gl' || cleanText.includes('Gl (');
@@ -656,11 +635,11 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
         const finalPrompt = parts.join(' ').replace(/\s+/g, ' ').trim();
         setWaitingForGlobalDays(true);
         setPendingPromptForGlobal(finalPrompt);
-        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 5 };
+        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 6 };
         const botDaysMsg = {
           id: `bot-global-days-${Date.now()}`,
           sender: 'bot',
-          step: 5,
+          step: 6,
           text: 'Has seleccionado unidad Global (Gl).\n\nIndica los días de trabajo estimados para la cuadrilla:',
           chips: ['0.5 día', '1 día', '2 días', '3 días', '5 días']
         };
@@ -698,6 +677,8 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     lastEntrySourceRef,
     guidedAccion,
     setGuidedAccion,
+    guidedElemento,
+    setGuidedElemento,
     guidedUbicacion,
     setGuidedUbicacion,
     guidedMaterial,

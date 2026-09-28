@@ -522,6 +522,7 @@ export default function AIApuGeneratorPage() {
               currentChatStep={guided.currentChatStep}
               guidedMessages={guided.guidedMessages}
               guidedAccion={guided.guidedAccion}
+              guidedElemento={guided.guidedElemento}
               guidedMaterial={guided.guidedMaterial}
               chatbotLoadingStage={guided.chatbotLoadingStage}
               chatInputValue={guided.chatInputValue}
