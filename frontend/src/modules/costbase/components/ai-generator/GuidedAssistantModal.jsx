@@ -46,13 +46,6 @@ export default function GuidedAssistantModal({
   );
   const parametricDef = getParametricStep3Definition(guidedMaterial, guidedAccion);
   const isParametric = Boolean(parametricDef);
-  const stepperItems = [
-    { step: 1, label: 'Acción' },
-    { step: 2, label: isAcarreo ? 'Material' : (isSupplyOrInstall ? '¿Qué es?' : 'Elemento') },
-    { step: 3, label: isAcarreo ? 'Distancia' : (parametricDef?.stepLabel || (isSupplyOrInstall ? '¿Para qué?' : 'Ubicación')) },
-    { step: 4, label: isAcarreo ? 'Equipo' : 'Alcance' },
-    { step: 5, label: 'Unidad' },
-  ];
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4 overflow-hidden animate-in fade-in duration-200">
@@ -88,39 +81,6 @@ export default function GuidedAssistantModal({
             </div>
           )}
         </div>
-
-        {/* Stepper Interactivo de 5 Pasos */}
-        {currentChatStep > 0 && chatbotLoadingStage === 0 && (
-          <div className="mb-3 pb-3 border-b border-amber-200/50 flex-shrink-0">
-            <div className="flex items-center justify-between gap-1 text-[11px]">
-              {stepperItems.map(({ step, label }) => {
-                const isDone = currentChatStep > step;
-                const isCurrent = currentChatStep === step;
-                return (
-                  <button
-                    key={step}
-                    type="button"
-                    disabled={!isDone}
-                    onClick={() => isDone && handleGoBack && handleGoBack(step)}
-                    className={`flex-1 flex flex-col items-center py-1 px-1 rounded-lg transition-all ${
-                      isCurrent
-                        ? 'bg-amber-500 text-white font-bold shadow-xs'
-                        : isDone
-                        ? 'bg-amber-200/80 text-amber-900 font-semibold hover:bg-amber-300/80 cursor-pointer'
-                        : 'text-amber-800/40 cursor-not-allowed'
-                    }`}
-                    title={isDone ? `Volver al paso ${step}: ${label}` : label}
-                  >
-                    <span className="flex items-center gap-0.5">
-                      {isDone && <Check size={10} className="text-amber-900" />}
-                      <span>{step}. {label}</span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         <div className="flex-1 overflow-y-auto pr-2 space-y-6 flex flex-col pb-4 scrollbar-thin scrollbar-thumb-amber-200">
           {guidedMessages.map((msg, idx) => (

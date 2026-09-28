@@ -143,55 +143,59 @@ export default function ClarificationAlertCard({
     }
   };
 
-  // CASO ESPECIAL: MODAL DE REDIRECCIÓN AL ASISTENTE GUIADO (FONDO LIMPIO Y CENTRADO)
+  // CASO ESPECIAL: MODAL DE REDIRECCIÓN AL ASISTENTE GUIADO (ESTILO HOMOGÉNEO CON EL CHATBOT)
   if (isRedirectToGuided) {
     return (
       <div 
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200"
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-4 overflow-hidden animate-in fade-in duration-200"
         onClick={(e) => {
           if (e.target === e.currentTarget) handleCancel();
         }}
       >
-        <div className="w-[95%] max-w-xl bg-white border border-amber-300 rounded-2xl shadow-2xl p-4 sm:p-5 animate-in zoom-in-95 duration-200 relative">
-          <div className="flex items-start gap-3.5">
-            <div className="p-2.5 bg-amber-500 text-white rounded-xl shrink-0 shadow-sm shadow-amber-500/25 mt-0.5">
+        <div className="bg-[#FEF3C7] border-2 border-[#FEF3C7] rounded-2xl p-4 sm:p-6 relative flex flex-col max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="absolute top-3 right-3 text-amber-700 hover:text-amber-900 hover:bg-amber-200/50 rounded-full p-2 flex items-center justify-center transition-colors cursor-pointer"
+            title="Cerrar aviso"
+            aria-label="Cerrar aviso"
+          >
+            <HiXMark className="w-5 h-5" />
+          </button>
+
+          <div className="flex items-center gap-3 mb-4 pb-3 border-b border-amber-200/50">
+            <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold shadow-md shadow-amber-500/30 shrink-0">
               <HiSparkles className="w-5 h-5" />
             </div>
-
-            <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed">
-                La descripción ingresada es demasiado breve o incompleta para estructurar un APU preciso. Te redirigimos al Asistente Guiado para ayudarte a generar una descripción técnica.
-              </p>
-
-              <div className="flex items-center justify-end gap-2.5 mt-3 pt-1">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onStartGuided}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-amber-600/25 flex items-center gap-1.5 cursor-pointer active:scale-95"
-                >
-                  <LuBot className="w-4 h-4" />
-                  <span>Abrir Asistente</span>
-                  <HiArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
+            <div>
+              <h3 className="font-bold text-amber-900 text-base">Asistente CostBase</h3>
+              <p className="text-xs text-amber-800">Generación técnica estructurada</p>
             </div>
+          </div>
 
+          <div className="bg-white/90 rounded-2xl p-4 border border-amber-200/60 mb-5 shadow-xs">
+            <p className="text-xs sm:text-sm text-slate-800 leading-relaxed font-medium">
+              La descripción ingresada es demasiado breve o incompleta para estructurar un APU preciso. Te redirigimos al Asistente Guiado para ayudarte a generar una descripción técnica.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 pt-1">
             <button
               type="button"
               onClick={handleCancel}
-              className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
-              title="Cerrar aviso"
-              aria-label="Cerrar aviso"
+              className="px-4 py-2 text-xs font-semibold text-amber-900 hover:text-amber-950 hover:bg-amber-200/60 rounded-xl transition-colors cursor-pointer"
             >
-              <HiXMark className="w-4 h-4" />
+              Cancelar
+            </button>
+
+            <button
+              type="button"
+              onClick={onStartGuided}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-amber-600/30 flex items-center gap-1.5 cursor-pointer active:scale-95"
+            >
+              <LuBot className="w-4 h-4" />
+              <span>Abrir Asistente</span>
+              <HiArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>

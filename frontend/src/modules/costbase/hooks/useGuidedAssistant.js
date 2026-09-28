@@ -305,7 +305,6 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     if (startAtStep === 1) {
       setCurrentChatStep(1);
       setGuidedMessages([
-        createInitialMessage(),
         {
           id: `bot-step-1-${Date.now()}`,
           sender: 'bot',
