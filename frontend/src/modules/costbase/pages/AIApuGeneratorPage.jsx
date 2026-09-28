@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { Loader, Save, Printer, Zap, CheckCircle2 } from 'lucide-react';
+import { Loader, Save, Printer, Zap, CheckCircle2, AlertCircle, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import { AuthContext } from '../../../context/AuthContext';
@@ -49,6 +49,8 @@ export default function AIApuGeneratorPage() {
   const [saving, setSaving] = useState(false);
   const [databases, setDatabases] = useState([]);
   const [selectedDatabase, setSelectedDatabase] = useState('master');
+  const [saveAlertState, setSaveAlertState] = useState(null);
+  const [isRedirectingToBot, setIsRedirectingToBot] = useState(false);
 
   // Print state
   const [printModalOpen, setPrintModalOpen] = useState(false);
@@ -226,14 +228,12 @@ export default function AIApuGeneratorPage() {
       const perf = parseFloat(generator.item.performance || generator.item.rendimiento || 1.0) || 1.0;
 
       if (!desc.trim()) {
-        toast.custom((t) => (
-          <div className={`${t.visible ? 'animate-in fade-in zoom-in-95' : 'animate-out fade-out zoom-out-95'} fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] bg-rose-950/95 text-white p-4 sm:p-5 rounded-2xl shadow-2xl flex items-center gap-3.5 max-w-md w-[90%] border border-rose-800 backdrop-blur-md`}>
-            <div>
-              <h4 className="font-bold text-white text-sm">Descripción Requerida</h4>
-              <p className="text-xs text-rose-200">La partida debe tener una descripción para guardarse.</p>
-            </div>
-          </div>
-        ), { duration: 3000 });
+        setSaveAlertState({
+          type: 'warning',
+          title: 'Descripción Requerida',
+          message: 'La partida debe tener una descripción para guardarse.'
+        });
+        setTimeout(() => setSaveAlertState(null), 3000);
         return;
       }
 
@@ -244,42 +244,41 @@ export default function AIApuGeneratorPage() {
         apu_data: JSON.stringify(generator.item)
       });
 
-      // Alert tipo toast centrado en el medio de la pantalla
-      toast.custom((t) => (
-        <div className={`${t.visible ? 'animate-in fade-in zoom-in-95' : 'animate-out fade-out zoom-out-95'} fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] bg-slate-900/95 text-white p-4 sm:p-5 rounded-2xl shadow-2xl flex items-center gap-3.5 max-w-md w-[90%] border border-slate-700 backdrop-blur-md`}>
-          <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shadow-md shadow-emerald-500/30 shrink-0">
-            <CheckCircle2 className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="font-bold text-white text-sm">APU Guardado Exitosamente</h4>
-            <p className="text-xs text-slate-300">Redirigiendo al Asistente Guiado...</p>
-          </div>
-        </div>
-      ), { duration: 2000 });
+      // 1. Quitar el APU inmediatamente
+      generator.setItem(null);
+      setPrompt('');
+      setSelectedUnit(null);
 
-      // Quitar el APU y mostrar la pantalla del chat bot
+      // 2. Prevenir la apertura del chatbot mientras el alert esté visible
+      setIsRedirectingToBot(true);
+
+      // 3. Mostrar el alert centrado en pantalla con colores estándar
+      setSaveAlertState({
+        type: 'success',
+        title: 'APU Guardado Exitosamente',
+        message: 'Redirigiendo al Asistente Guiado...'
+      });
+
+      // 4. Una vez ocultado el alert, abrir la pantalla del chatbot
       setTimeout(() => {
-        generator.setItem(null);
-        setPrompt('');
-        setSelectedUnit(null);
+        setSaveAlertState(null);
+        setIsRedirectingToBot(false);
         guided.resetChatbot(1, '');
         guided.setIsGuidedMode(true);
         guided.setEntryModeSource('chat');
         guided.lastEntrySourceRef.current = 'chat';
         navigate(`${basePath}/ai-generator?mode=ia&guided=true`, { replace: true });
-      }, 1200);
+      }, 1800);
 
     } catch (error) {
       console.error('Error al guardar APU personalizado:', error);
       const msg = error.response?.data?.detail || error.message || 'Error al guardar APU';
-      toast.custom((t) => (
-        <div className={`${t.visible ? 'animate-in fade-in zoom-in-95' : 'animate-out fade-out zoom-out-95'} fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] bg-rose-950/95 text-white p-4 sm:p-5 rounded-2xl shadow-2xl flex items-center gap-3.5 max-w-md w-[90%] border border-rose-800 backdrop-blur-md`}>
-          <div>
-            <h4 className="font-bold text-white text-sm">Error al guardar APU</h4>
-            <p className="text-xs text-rose-200">{typeof msg === 'string' ? msg : 'Error al guardar APU'}</p>
-          </div>
-        </div>
-      ), { duration: 3500 });
+      setSaveAlertState({
+        type: 'error',
+        title: 'Error al guardar APU',
+        message: typeof msg === 'string' ? msg : 'Error al guardar APU'
+      });
+      setTimeout(() => setSaveAlertState(null), 3500);
     } finally {
       setSaving(false);
     }
@@ -510,7 +509,7 @@ export default function AIApuGeneratorPage() {
           )}
 
           {/* MODAL DEL ASISTENTE GUIADO (CHATBOT) */}
-          {guided.isGuidedMode && !generator.isClarifying && !generator.item && (
+          {guided.isGuidedMode && !isRedirectingToBot && !generator.isClarifying && !generator.item && (
             <GuidedAssistantModal
               isOpen={guided.isGuidedMode}
               onClose={() => {
@@ -741,6 +740,33 @@ export default function AIApuGeneratorPage() {
               {saving ? <Loader className="animate-spin" size={20} /> : <Save size={20} />}
               {saving ? 'Guardando...' : 'Guardar APU Generado'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ALERT TIPO TOAST CENTRADO EN PANTALLA CON COLORES ESTÁNDAR */}
+      {saveAlertState && (
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center pointer-events-none p-4 animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-2xl flex items-center gap-3.5 max-w-md w-full pointer-events-auto animate-in zoom-in-95 duration-200">
+            {saveAlertState.type === 'success' && (
+              <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              </div>
+            )}
+            {saveAlertState.type === 'error' && (
+              <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center font-bold shrink-0">
+                <AlertCircle className="w-5 h-5 text-rose-600" />
+              </div>
+            )}
+            {saveAlertState.type === 'warning' && (
+              <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+              </div>
+            )}
+            <div className="flex-1">
+              <h4 className="font-bold text-slate-800 text-sm sm:text-base">{saveAlertState.title}</h4>
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{saveAlertState.message}</p>
+            </div>
           </div>
         </div>
       )}
