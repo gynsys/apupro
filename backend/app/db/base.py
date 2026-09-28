@@ -27,6 +27,7 @@ from app.db.models.arko import ArkoPost, ArkoProject, ArkoAdmin
 from app.db.models.costbase import CostItem, CostMaterial, CostEquipment, CostLabor, CostAPUMaterial, CostAPUEquipment, CostAPULabor
 from app.db.models.costbase_database import Cost360Database
 from app.db.models.budget import Budget, BudgetItem, BudgetAPUMaterial, BudgetAPUEquipment, BudgetAPULabor
+from app.db.models.strategic_ally import StrategicAlly
 
 
 def get_db():

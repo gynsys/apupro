@@ -7,6 +7,7 @@ from app.db.models.costbase import (
 )
 from app.db.models.costbase_database import Cost360Database, CostbaseDatabase
 from app.db.models.schedule import ScheduleProject, ScheduleActivity, ScheduleDependency
+from app.db.models.strategic_ally import StrategicAlly
 
 __all__ = [
     "LLMProvider",
@@ -23,5 +24,6 @@ __all__ = [
     "Cost360Database",
     "ScheduleProject",
     "ScheduleActivity",
-    "ScheduleDependency"
+    "ScheduleDependency",
+    "StrategicAlly"
 ]

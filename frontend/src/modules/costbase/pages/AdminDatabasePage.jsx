@@ -12,6 +12,7 @@ import CatalogTab from '../components/tabs/CatalogTab';
 import KeyIATab from '../components/tabs/KeyIATab';
 import UsuariosTab from '../components/tabs/UsuariosTab';
 import RAGDiagnosticTab from '../components/tabs/RAGDiagnosticTab';
+import AlliesManagementTab from '../components/tabs/AlliesManagementTab';
 import PublishDatabaseModal from '../components/modals/PublishDatabaseModal';
 import MarketIndicatorsPanel from '../../market/components/MarketIndicatorsPanel';
 import { TABS } from '../constants/tabs.config';
@@ -358,6 +359,8 @@ const AdminDatabasePage = () => {
         )}
 
         {activeTab === 'usuarios' && <UsuariosTab />}
+
+        {activeTab === 'aliados' && <AlliesManagementTab />}
 
         {activeTab === 'update_bd' && (
           <div className="flex-1 overflow-y-auto bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-sm p-4">
