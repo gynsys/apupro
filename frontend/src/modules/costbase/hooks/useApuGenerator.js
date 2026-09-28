@@ -166,7 +166,6 @@ export function useApuGenerator({ setSettings }) {
       setAiClarificationCode(response._internal_code || null);
       setAiClarificationType(response.clarification_type || null);
       setIsClarifying(true);
-      toast.error('Se requiere una descripción técnica estructurada.', { icon: '⚠️' });
     } else {
       dismissClarification();
       setChatHistory([]);

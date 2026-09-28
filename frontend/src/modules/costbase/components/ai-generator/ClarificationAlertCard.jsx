@@ -143,50 +143,57 @@ export default function ClarificationAlertCard({
     }
   };
 
-  // CASO ESPECIAL: ALERTA TIPO TOAST FLOTANTE PARA REDIRECCIÓN AL ASISTENTE GUIADO (OPCIÓN B)
+  // CASO ESPECIAL: MODAL DE REDIRECCIÓN AL ASISTENTE GUIADO (FONDO LIMPIO Y CENTRADO)
   if (isRedirectToGuided) {
     return (
-      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-xl bg-white border border-amber-300 rounded-2xl shadow-2xl p-4 sm:p-5 animate-in fade-in slide-in-from-top-4 duration-300">
-        <div className="flex items-start gap-3.5">
-          <div className="p-2.5 bg-amber-500 text-white rounded-xl shrink-0 shadow-sm shadow-amber-500/25 mt-0.5">
-            <HiSparkles className="w-5 h-5" />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <p className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed">
-              La descripción ingresada es demasiado breve o incompleta para estructurar un APU preciso. Te redirigimos al Asistente Guiado para ayudarte a generar una descripción técnica.
-            </p>
-
-            <div className="flex items-center justify-end gap-2.5 mt-3 pt-1">
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                onClick={onStartGuided}
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-amber-600/25 flex items-center gap-1.5 cursor-pointer active:scale-95"
-              >
-                <LuBot className="w-4 h-4" />
-                <span>Abrir Asistente</span>
-                <HiArrowRight className="w-3.5 h-3.5" />
-              </button>
+      <div 
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) handleCancel();
+        }}
+      >
+        <div className="w-[95%] max-w-xl bg-white border border-amber-300 rounded-2xl shadow-2xl p-4 sm:p-5 animate-in zoom-in-95 duration-200 relative">
+          <div className="flex items-start gap-3.5">
+            <div className="p-2.5 bg-amber-500 text-white rounded-xl shrink-0 shadow-sm shadow-amber-500/25 mt-0.5">
+              <HiSparkles className="w-5 h-5" />
             </div>
-          </div>
 
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
-            title="Cerrar aviso"
-            aria-label="Cerrar aviso"
-          >
-            <HiXMark className="w-4 h-4" />
-          </button>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed">
+                La descripción ingresada es demasiado breve o incompleta para estructurar un APU preciso. Te redirigimos al Asistente Guiado para ayudarte a generar una descripción técnica.
+              </p>
+
+              <div className="flex items-center justify-end gap-2.5 mt-3 pt-1">
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onStartGuided}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-amber-600/25 flex items-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <LuBot className="w-4 h-4" />
+                  <span>Abrir Asistente</span>
+                  <HiArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
+              title="Cerrar aviso"
+              aria-label="Cerrar aviso"
+            >
+              <HiXMark className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     );
