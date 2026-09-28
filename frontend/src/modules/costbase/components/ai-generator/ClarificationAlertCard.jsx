@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Sparkles, X, RotateCcw, Check, ArrowRight, ArrowLeft, Send, Ruler, Truck } from 'lucide-react';
+import { HiSparkles, HiArrowRight, HiXMark } from 'react-icons/hi2';
+import { LuBot } from 'react-icons/lu';
 
 const ACARREO_UNITS = [
   {
@@ -48,11 +50,20 @@ export default function ClarificationAlertCard({
   clarificationType,
   entryModeSource = 'libre',
   onDismiss,
+  onCancel,
   onStartGuided,
   onResetChatbot,
   onResetLibre,
   onClarificationSubmit
 }) {
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+    } else if (onDismiss) {
+      onDismiss();
+    }
+  };
+
   // Detección de aclaratoria de acarreo/transporte (unidad + distancia)
   const isAcarreo = useMemo(() => {
     if (clarificationType === 'acarreo_unit_distance' || internalCode === 'RAG_ACARREO_MISSING_UNIT') {
@@ -132,6 +143,55 @@ export default function ClarificationAlertCard({
     }
   };
 
+  // CASO ESPECIAL: ALERTA TIPO TOAST FLOTANTE PARA REDIRECCIÓN AL ASISTENTE GUIADO (OPCIÓN B)
+  if (isRedirectToGuided) {
+    return (
+      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-xl bg-white border border-amber-300 rounded-2xl shadow-2xl p-4 sm:p-5 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="flex items-start gap-3.5">
+          <div className="p-2.5 bg-amber-500 text-white rounded-xl shrink-0 shadow-sm shadow-amber-500/25 mt-0.5">
+            <HiSparkles className="w-5 h-5" />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <p className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed">
+              La descripción ingresada es demasiado breve o incompleta para estructurar un APU preciso. Te redirigimos al Asistente Guiado para ayudarte a generar una descripción técnica.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 mt-3 pt-1">
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={onStartGuided}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-amber-600/25 flex items-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <LuBot className="w-4 h-4" />
+                <span>Abrir Asistente</span>
+                <HiArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
+            title="Cerrar aviso"
+            aria-label="Cerrar aviso"
+          >
+            <HiXMark className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mb-6 p-5 bg-amber-50/90 border-2 border-amber-200 rounded-2xl shadow-sm animate-in fade-in zoom-in-95 duration-300">
       {/* CABECERA DEL MENSAJE */}
@@ -161,38 +221,9 @@ export default function ClarificationAlertCard({
       </div>
 
       {/* ========================================================================= */}
-      {/* CASO A: REDIRECCIÓN DIRECTA AL ASISTENTE GUIADO (OPCIÓN B)                */}
+      {/* CASO A: FLUJO SECUENCIAL ACARREO / TRANSPORTE (UNIDAD LUEGO DISTANCIA)     */}
       {/* ========================================================================= */}
-      {isRedirectToGuided ? (
-        <div className="my-4 p-5 bg-white border border-amber-300 rounded-2xl shadow-xs animate-in fade-in duration-200">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1.5">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-200">
-                <Sparkles size={12} className="text-amber-600" />
-                Redirección Asistida
-              </span>
-              <h5 className="text-sm font-bold text-slate-800 leading-snug">
-                Estructura tu partida con el Asistente Guiado
-              </h5>
-              <p className="text-xs text-slate-600 leading-relaxed max-w-xl">
-                {recommendation || "La descripción ingresada es muy breve o incompleta para calcular rendimientos confiables y costos exactos. Te invitamos a utilizar el Asistente Guiado para completar los datos técnicos paso a paso."}
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={onStartGuided}
-                className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95"
-              >
-                <Sparkles size={15} />
-                <span>Continuar con Asistente Guiado</span>
-                <ArrowRight size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : isAcarreo ? (
+      {isAcarreo ? (
         <div className="my-4 p-4 bg-white border border-amber-300 rounded-2xl shadow-xs">
           {/* STEPPER VISUAL */}
           <div className="flex items-center gap-2 mb-4 pb-3 border-b border-amber-100 text-xs font-bold">

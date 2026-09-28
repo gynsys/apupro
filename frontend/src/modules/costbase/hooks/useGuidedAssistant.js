@@ -290,19 +290,34 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     });
   };
 
-  const resetChatbot = () => {
-    setCurrentChatStep(0);
+  const resetChatbot = (startAtStep = 0, initialInput = '') => {
     setGuidedAccion(null);
     setGuidedUbicacion(null);
     setGuidedMaterial(null);
     setGuidedIncluye(null);
     setGuidedUnidad(null);
-    setChatInputValue('');
+    setChatInputValue(initialInput || '');
     setChatbotLoadingStage(0);
     setDetectedFullPrompt(null);
     setWaitingForGlobalDays(false);
     setPendingPromptForGlobal(null);
-    setGuidedMessages([createInitialMessage()]);
+
+    if (startAtStep === 1) {
+      setCurrentChatStep(1);
+      setGuidedMessages([
+        createInitialMessage(),
+        {
+          id: `bot-step-1-${Date.now()}`,
+          sender: 'bot',
+          step: 1,
+          text: CHAT_STEP_DEFINITIONS[1].text,
+          chips: CHAT_STEP_DEFINITIONS[1].chips
+        }
+      ]);
+    } else {
+      setCurrentChatStep(0);
+      setGuidedMessages([createInitialMessage()]);
+    }
   };
 
   const triggerGeneration = (promptToUse, unitToUse = null, executionDays = null) => {

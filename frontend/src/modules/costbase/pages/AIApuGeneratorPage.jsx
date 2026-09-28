@@ -423,6 +423,10 @@ export default function AIApuGeneratorPage() {
               clarificationType={generator.aiClarificationType}
               entryModeSource={guided.entryModeSource}
               onDismiss={generator.dismissClarification}
+              onCancel={() => {
+                generator.dismissClarification();
+                navigate(`${basePath}/ai-generator?mode=ia`, { replace: true });
+              }}
               onClarificationSubmit={(answerText, unit) => {
                 const combined = prompt && prompt.trim()
                   ? `${prompt.trim()}, ${answerText.trim()}`
@@ -437,10 +441,7 @@ export default function AIApuGeneratorPage() {
               onStartGuided={() => {
                 const currentPrompt = prompt;
                 generator.dismissClarification();
-                guided.resetChatbot();
-                if (currentPrompt && currentPrompt.trim()) {
-                  guided.setChatInputValue(currentPrompt.trim());
-                }
+                guided.resetChatbot(1, currentPrompt);
                 guided.setIsGuidedMode(true);
                 guided.setEntryModeSource('chat');
                 guided.lastEntrySourceRef.current = 'chat';
