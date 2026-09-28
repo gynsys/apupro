@@ -226,7 +226,14 @@ export default function AIApuGeneratorPage() {
       const perf = parseFloat(generator.item.performance || generator.item.rendimiento || 1.0) || 1.0;
 
       if (!desc.trim()) {
-        toast.error('La partida debe tener una descripción para guardarse.');
+        toast.custom((t) => (
+          <div className={`${t.visible ? 'animate-in fade-in zoom-in-95' : 'animate-out fade-out zoom-out-95'} fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] bg-rose-950/95 text-white p-4 sm:p-5 rounded-2xl shadow-2xl flex items-center gap-3.5 max-w-md w-[90%] border border-rose-800 backdrop-blur-md`}>
+            <div>
+              <h4 className="font-bold text-white text-sm">Descripción Requerida</h4>
+              <p className="text-xs text-rose-200">La partida debe tener una descripción para guardarse.</p>
+            </div>
+          </div>
+        ), { duration: 3000 });
         return;
       }
 
@@ -236,11 +243,43 @@ export default function AIApuGeneratorPage() {
         performance: perf,
         apu_data: JSON.stringify(generator.item)
       });
-      toast.success('APU guardado exitosamente en tu base personalizada');
+
+      // Alert tipo toast centrado en el medio de la pantalla
+      toast.custom((t) => (
+        <div className={`${t.visible ? 'animate-in fade-in zoom-in-95' : 'animate-out fade-out zoom-out-95'} fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] bg-slate-900/95 text-white p-4 sm:p-5 rounded-2xl shadow-2xl flex items-center gap-3.5 max-w-md w-[90%] border border-slate-700 backdrop-blur-md`}>
+          <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shadow-md shadow-emerald-500/30 shrink-0">
+            <CheckCircle2 className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="font-bold text-white text-sm">APU Guardado Exitosamente</h4>
+            <p className="text-xs text-slate-300">Redirigiendo al Asistente Guiado...</p>
+          </div>
+        </div>
+      ), { duration: 2000 });
+
+      // Quitar el APU y mostrar la pantalla del chat bot
+      setTimeout(() => {
+        generator.setItem(null);
+        setPrompt('');
+        setSelectedUnit(null);
+        guided.resetChatbot(1, '');
+        guided.setIsGuidedMode(true);
+        guided.setEntryModeSource('chat');
+        guided.lastEntrySourceRef.current = 'chat';
+        navigate(`${basePath}/ai-generator?mode=ia&guided=true`, { replace: true });
+      }, 1200);
+
     } catch (error) {
       console.error('Error al guardar APU personalizado:', error);
       const msg = error.response?.data?.detail || error.message || 'Error al guardar APU';
-      toast.error(typeof msg === 'string' ? msg : 'Error al guardar APU');
+      toast.custom((t) => (
+        <div className={`${t.visible ? 'animate-in fade-in zoom-in-95' : 'animate-out fade-out zoom-out-95'} fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] bg-rose-950/95 text-white p-4 sm:p-5 rounded-2xl shadow-2xl flex items-center gap-3.5 max-w-md w-[90%] border border-rose-800 backdrop-blur-md`}>
+          <div>
+            <h4 className="font-bold text-white text-sm">Error al guardar APU</h4>
+            <p className="text-xs text-rose-200">{typeof msg === 'string' ? msg : 'Error al guardar APU'}</p>
+          </div>
+        </div>
+      ), { duration: 3500 });
     } finally {
       setSaving(false);
     }

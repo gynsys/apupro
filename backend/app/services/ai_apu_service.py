@@ -1767,6 +1767,18 @@ def _enforce_primary_materials_mutual_exclusion(result: Dict[str, Any], user_des
             "CAUCHO": [r"\bCAUCHO\b", r"\bLATEX\b", r"\bEMULSION\b"],
             "POLIURETANO": [r"\bPOLIURETANO\b"],
         },
+        "fondos_anticorrosivos": {
+            "CROMATO_ZINC": [r"\bCROMATO\b", r"\bCROMATO\s+DE\s+ZINC\b"],
+            "FONDO_HERRERIA": [
+                r"\bFONDO\s+(DE\s+)?HERRERIA\b",
+                r"\bFONDO\s+ANTICORROSIV\w*\b(?!\s*(\/|-)?\s*CROMATO)",
+                r"\bANTICORROSIV\w*\b(?!\s*(\/|-)?\s*CROMATO)",
+                r"\bMINIO\b"
+            ],
+            "FONDO_EPOXICO": [r"\bFONDO\s+EPOXI\w*\b", r"\bPRIMER\s+EPOXI\w*\b"],
+            "FONDO_ANTIALCALINO": [r"\bFONDO\s+ANTIALCALIN\w*\b", r"\bANTIALCALIN\w*\b"],
+            "SELLADOR": [r"\bSELLADOR\b"],
+        },
         "pisos": {
             "PORCELANATO": [r"\bPORCELANATO\b", r"\bPORCELANICO\b"],
             "CERAMICA": [r"\bCERAMIC\w*\b", r"\bAZULEJO\b"],
@@ -1801,6 +1813,17 @@ def _enforce_primary_materials_mutual_exclusion(result: Dict[str, Any], user_des
                     for st_name, patterns in subtypes.items():
                         if any(re.search(pat, m_desc) for pat in patterns):
                             active_subtypes.add(st_name)
+
+        if group_name == "fondos_anticorrosivos":
+            # Si el APU contiene Cromato de Zinc o el usuario lo especificó,
+            # Cromato de Zinc tiene precedencia técnica absoluta sobre Fondo de Herrería genérico.
+            has_cromato = "CROMATO_ZINC" in active_subtypes or any(
+                isinstance(m, dict) and any(re.search(pat, str(m.get("descripcion", "")).upper()) for pat in subtypes["CROMATO_ZINC"])
+                for m in materials
+            )
+            if has_cromato:
+                active_subtypes.add("CROMATO_ZINC")
+                active_subtypes.discard("FONDO_HERRERIA")
 
         if active_subtypes:
             for m in materials:
