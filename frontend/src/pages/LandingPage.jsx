@@ -29,10 +29,10 @@ export default function LandingPage() {
     <div className="font-sans antialiased text-slate-900 bg-slate-950 selection:bg-blue-500/30">
       <Header onLoginClick={() => setIsLoginModalOpen(true)} />
       <HeroSection onLoginClick={() => setIsLoginModalOpen(true)} />
-      <StrategicAlliesSection />
       <FeaturesSection />
       <PreviewSection />
       <PricingSection onRegisterClick={() => setIsRegisterModalOpen(true)} />
+      <StrategicAlliesSection />
       <Footer />
       <LoginModal 
         isOpen={isLoginModalOpen} 
