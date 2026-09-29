@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { FiSearch, FiEdit2, FiTrash2, FiCheck, FiX, FiDownload, FiExternalLink } from 'react-icons/fi';
+import { Loader2, X } from 'lucide-react';
 import { apiFetch, apiPut, apiDelete, apiPatch } from '../../../lib/apiHelper';
 import { AuthContext } from '../../../context/AuthContext';
 import DecimalInput from '../../../components/DecimalInput';
@@ -59,16 +60,21 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
     }
   };
 
+  const searchTimeoutRef = useRef(null);
+  const requestIdRef = useRef(0);
+
   const fetchItems = async (searchQuery = '', currentSkip = 0, append = false) => {
+    const currentRequestId = ++requestIdRef.current;
     setLoading(true);
     try {
       const dbParam = selectedDatabase && selectedDatabase !== 'master' ? `&database_id=${selectedDatabase}` : '';
       const res = await apiFetch(`/cost360/${resourceType}?search=${encodeURIComponent(searchQuery)}&skip=${currentSkip}&limit=${limit}${dbParam}`);
+      if (currentRequestId !== requestIdRef.current) return;
       if (res.ok) {
         const data = await res.json();
         // Since backend was updated to return { total, items }
-        const newItems = Array.isArray(data) ? data : data.items;
-        const total = Array.isArray(data) ? data.length : data.total;
+        const newItems = Array.isArray(data) ? data : (data.items || []);
+        const total = Array.isArray(data) ? data.length : (data.total || 0);
         
         if (append) {
           setItems(prev => [...prev, ...newItems]);
@@ -81,18 +87,30 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
         setSkip(currentSkip);
       }
     } catch (e) {
-      toast.error('Error cargando ' + title);
+      if (currentRequestId === requestIdRef.current) {
+        toast.error('Error cargando ' + title);
+      }
     } finally {
-      setLoading(false);
+      if (currentRequestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchItems(search);
-  }, []);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      fetchItems(search.trim(), 0, false);
+    }, 280);
+
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, [search, selectedDatabase, resourceType]);
 
   const handleSearch = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     fetchItems(search.trim(), 0, false);
   };
 
@@ -268,7 +286,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
             </div>
             <input
               type="text"
-              className="block w-full pl-11 pr-4 py-3 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+              className="block w-full pl-11 pr-10 py-3 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-medium"
               style={{
                 background: 'rgba(255,255,255,0.8)',
                 border: '1px solid rgba(148,163,255,0.35)',
@@ -278,14 +296,24 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center gap-1.5">
+              {loading && (
+                <div className="text-blue-500 pointer-events-none">
+                  <Loader2 className="animate-spin" size={16} />
+                </div>
+              )}
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200/60 transition-colors cursor-pointer"
+                  title="Limpiar búsqueda"
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </div>
           </div>
-          <button
-            type="submit"
-            className="px-6 py-3 rounded-xl text-sm font-bold text-white transition-all duration-300 hover:opacity-100 hover:shadow-[0_8px_25px_rgba(37,99,235,0.5)] hover:-translate-y-0.5 active:scale-95"
-            style={{ background: 'linear-gradient(135deg,#2563eb,#4f46e5)', boxShadow: '0 4px 14px rgba(37,99,235,0.3)' }}
-          >
-            Buscar
-          </button>
         </form>
         {totalItems > 0 && (
           <div className="mt-3 flex items-center justify-between">
