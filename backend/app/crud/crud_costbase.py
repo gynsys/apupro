@@ -390,25 +390,6 @@ def get_apu_labors(db: Session, item_code: str):
         .join(CostLabor, CostAPULabor.CodIns == CostLabor.CodMan)\
         .filter(CostAPULabor.CodPar == item_code).all()
 
-def _get_valid_coded_apu_item_codes_subquery(db: Session):
-    """
-    Subconsulta con los códigos identificadores de todas las partidas codificadas
-    COVENIN y Redes Aéreas (RA) válidas (tanto CodPar como CovPar).
-    """
-    covenin_regex = r'^\s*([A-Za-z]{1,2}[\.\-\s]?[0-9\.\-\s]+|[0-9\.\-\s]+RA|RA[\.\-\s]?[0-9]+)\s*$'
-    valid_cond = or_(
-        CostItem.CovPar.op('~*')(covenin_regex),
-        CostItem.CodPar.op('~*')(covenin_regex),
-        CostItem.Categoria == 'RA'
-    )
-    codpar_q = db.query(CostItem.CodPar).filter(valid_cond)
-    covpar_q = db.query(CostItem.CovPar).filter(
-        CostItem.CovPar.isnot(None),
-        CostItem.CovPar != '',
-        valid_cond
-    )
-    return codpar_q.union(covpar_q).subquery()
-
 def search_materials_paginated(
     db: Session,
     skip: int,
@@ -419,10 +400,17 @@ def search_materials_paginated(
     if all_items:
         query = db.query(CostMaterial)
     else:
-        valid_apus_subq = _get_valid_coded_apu_item_codes_subquery(db)
-        used_materials = db.query(CostAPUMaterial.CodIns).filter(
-            CostAPUMaterial.CodPar.in_(db.query(valid_apus_subq.c.CodPar))
+        covenin_regex = r'^\s*([A-Za-z]{1,2}[\.\-\s]?[0-9\.\-\s]+|[0-9\.\-\s]+RA|RA[\.\-\s]?[0-9]+)\s*$'
+        valid_items_condition = or_(
+            CostItem.CovPar.op('~*')(covenin_regex),
+            CostItem.CodPar.op('~*')(covenin_regex),
+            CostItem.Categoria == 'RA'
         )
+        used_materials = db.query(CostAPUMaterial.CodIns).join(
+            CostItem,
+            CostAPUMaterial.CodPar == CostItem.CodPar
+        ).filter(valid_items_condition).distinct()
+
         query = db.query(CostMaterial).filter(
             or_(
                 CostMaterial.CodMat.in_(used_materials),
@@ -451,10 +439,17 @@ def search_equipments_paginated(
     if all_items:
         query = db.query(CostEquipment)
     else:
-        valid_apus_subq = _get_valid_coded_apu_item_codes_subquery(db)
-        used_equipments = db.query(CostAPUEquipment.CodIns).filter(
-            CostAPUEquipment.CodPar.in_(db.query(valid_apus_subq.c.CodPar))
+        covenin_regex = r'^\s*([A-Za-z]{1,2}[\.\-\s]?[0-9\.\-\s]+|[0-9\.\-\s]+RA|RA[\.\-\s]?[0-9]+)\s*$'
+        valid_items_condition = or_(
+            CostItem.CovPar.op('~*')(covenin_regex),
+            CostItem.CodPar.op('~*')(covenin_regex),
+            CostItem.Categoria == 'RA'
         )
+        used_equipments = db.query(CostAPUEquipment.CodIns).join(
+            CostItem,
+            CostAPUEquipment.CodPar == CostItem.CodPar
+        ).filter(valid_items_condition).distinct()
+
         query = db.query(CostEquipment).filter(
             or_(
                 CostEquipment.CodEqu.in_(used_equipments),
@@ -483,10 +478,17 @@ def search_labors_paginated(
     if all_items:
         query = db.query(CostLabor)
     else:
-        valid_apus_subq = _get_valid_coded_apu_item_codes_subquery(db)
-        used_labors = db.query(CostAPULabor.CodIns).filter(
-            CostAPULabor.CodPar.in_(db.query(valid_apus_subq.c.CodPar))
+        covenin_regex = r'^\s*([A-Za-z]{1,2}[\.\-\s]?[0-9\.\-\s]+|[0-9\.\-\s]+RA|RA[\.\-\s]?[0-9]+)\s*$'
+        valid_items_condition = or_(
+            CostItem.CovPar.op('~*')(covenin_regex),
+            CostItem.CodPar.op('~*')(covenin_regex),
+            CostItem.Categoria == 'RA'
         )
+        used_labors = db.query(CostAPULabor.CodIns).join(
+            CostItem,
+            CostAPULabor.CodPar == CostItem.CodPar
+        ).filter(valid_items_condition).distinct()
+
         query = db.query(CostLabor).filter(
             or_(
                 CostLabor.CodMan.in_(used_labors),
