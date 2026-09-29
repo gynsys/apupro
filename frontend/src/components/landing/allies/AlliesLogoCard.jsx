@@ -20,7 +20,7 @@ export default function AlliesLogoCard({ ally }) {
   const logoSrc = getFullLogoUrl(ally.logo_url);
 
   const CardContent = (
-    <div className="group relative flex flex-col items-center justify-center p-4 sm:p-5 rounded-2xl bg-white/95 hover:bg-white border border-slate-200/80 shadow-md hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 transform hover:-translate-y-1 min-w-[200px] max-w-[260px] h-[130px] sm:h-[140px] select-none">
+    <div className="group relative flex flex-col items-center justify-center p-4 sm:p-5 rounded-2xl bg-white/95 hover:bg-white border border-slate-200/80 shadow-md hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 transform hover:-translate-y-1 w-[220px] sm:w-[250px] h-[130px] sm:h-[140px] select-none shrink-0">
       {/* Contenedor del Logo */}
       <div className="w-full h-16 sm:h-20 flex items-center justify-center p-2 overflow-hidden">
         {!imageError && logoSrc ? (
@@ -33,7 +33,7 @@ export default function AlliesLogoCard({ ally }) {
           />
         ) : (
           <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
-            <Building2 size={22} className="text-blue-600" />
+            <Building2 size={22} className="text-blue-600 shrink-0" />
             <span className="truncate max-w-[150px]">{ally.name}</span>
           </div>
         )}
@@ -66,7 +66,7 @@ export default function AlliesLogoCard({ ally }) {
         href={ally.website_url}
         target="_blank"
         rel="noopener noreferrer"
-        className="block focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-2xl cursor-pointer"
+        className="block shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-2xl cursor-pointer"
         title={`Visitar sitio web de ${ally.name}`}
       >
         {CardContent}

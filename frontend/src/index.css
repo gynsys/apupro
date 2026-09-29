@@ -300,3 +300,31 @@ input[type="number"],
   appearance: textfield !important;
 }
 
+/* Animación de Carrusel / Marquee Infinito para Aliados Estratégicos */
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee-infinite {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll 35s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-infinite:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee-infinite {
+    animation-play-state: paused;
+  }
+}
+
+
