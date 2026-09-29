@@ -27,7 +27,6 @@ export default function StrategicAlliesSection() {
           setAllies(data);
         }
       } catch (err) {
-        // En caso de fallo de red, se mantiene el fallback por defecto
         console.warn('Usando aliados locales por defecto:', err.message);
       } finally {
         if (isMounted) setLoading(false);
@@ -54,7 +53,7 @@ export default function StrategicAlliesSection() {
   if (!allies || allies.length === 0) return null;
 
   return (
-    <section className="relative py-16 sm:py-20 bg-slate-950 text-white overflow-hidden border-y border-white/5">
+    <section className="relative py-12 sm:py-16 bg-slate-950 text-white overflow-hidden border-y border-white/5">
       {/* Resplandor ambiental de fondo */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[250px] bg-blue-600/10 rounded-full blur-[120px]" />
@@ -62,7 +61,7 @@ export default function StrategicAlliesSection() {
 
       <div className="container mx-auto px-4 sm:px-6 relative z-10">
         {/* Encabezado de la sección */}
-        <div className="max-w-3xl mx-auto text-center mb-10 sm:mb-12">
+        <div className="max-w-3xl mx-auto text-center mb-8 sm:mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
             Red de Colaboración
@@ -78,16 +77,16 @@ export default function StrategicAlliesSection() {
         </div>
       </div>
 
-      {/* Carrusel Marquee Continuo (ancho completo con gradientes de difuminado lateral) */}
-      <div className="relative w-full overflow-hidden py-4 z-10">
-        {/* Sombra de desvanecimiento lateral izquierda */}
-        <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-36 z-20 pointer-events-none bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent" />
+      {/* Franja / Fondo blanco corrido continuo de extremo a extremo */}
+      <div className="relative w-full overflow-hidden bg-white py-5 sm:py-7 border-y border-slate-200/80 shadow-xs z-10">
+        {/* Sombra de desvanecimiento lateral izquierda (hacia blanco) */}
+        <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-36 z-20 pointer-events-none bg-gradient-to-r from-white via-white/80 to-transparent" />
         
-        {/* Sombra de desvanecimiento lateral derecha */}
-        <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-36 z-20 pointer-events-none bg-gradient-to-l from-slate-950 via-slate-950/80 to-transparent" />
+        {/* Sombra de desvanecimiento lateral derecha (hacia blanco) */}
+        <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-36 z-20 pointer-events-none bg-gradient-to-l from-white via-white/80 to-transparent" />
 
         {/* Pista continua con animación infinita y pausa en hover */}
-        <div className="animate-marquee-infinite flex items-center gap-6 sm:gap-8">
+        <div className="animate-marquee-infinite flex items-center gap-8 sm:gap-14">
           {marqueeItems.map((ally, index) => (
             <AlliesLogoCard key={`${ally.id}-${index}`} ally={ally} />
           ))}
