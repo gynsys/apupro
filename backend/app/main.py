@@ -287,6 +287,7 @@ upload_dir = settings.UPLOAD_DIR
 if not os.path.exists(upload_dir):
     os.makedirs(upload_dir, exist_ok=True)
 app.mount("/uploads", SecureStaticFiles(directory=upload_dir), name="uploads")
+app.mount("/api/v1/uploads", SecureStaticFiles(directory=upload_dir), name="api_uploads")
 
 
 def check_system_health() -> Tuple[Dict[str, Any], int]:

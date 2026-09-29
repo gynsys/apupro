@@ -92,11 +92,19 @@ export default function AllyFormModal({ isOpen, onClose, onSaved, ally = null })
   const getEffectiveLogoPreview = () => {
     if (filePreview) return filePreview;
     if (formData.logo_url) {
-      if (formData.logo_url.startsWith('http://') || formData.logo_url.startsWith('https://') || formData.logo_url.startsWith('data:')) {
+      if (formData.logo_url.startsWith('data:')) {
         return formData.logo_url;
       }
-      if (formData.logo_url.startsWith('/uploads')) {
-        return `${API_URL.replace('/api/v1', '')}${formData.logo_url}`;
+      if (formData.logo_url.startsWith('http://') || formData.logo_url.startsWith('https://')) {
+        return formData.logo_url;
+      }
+      if (formData.logo_url.includes('/uploads/')) {
+        const filename = formData.logo_url.split('/').pop();
+        return `${API_URL}/allies/logo/${filename}`;
+      }
+      if (formData.logo_url.startsWith('/api/v1/')) {
+        const baseHost = API_URL.replace('/api/v1', '');
+        return `${baseHost}${formData.logo_url}`;
       }
       return formData.logo_url;
     }

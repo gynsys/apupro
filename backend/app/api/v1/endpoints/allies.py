@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -217,6 +218,25 @@ def delete_ally(
         )
 
 
+@router.get("/logo/{filename}")
+def get_ally_logo(filename: str):
+    """
+    Endpoint público para servir los logos de los aliados estratégicos
+    directamente a través de la ruta API reverse-proxied.
+    """
+    safe_filename = Path(filename).name
+    file_path = ALLIES_UPLOAD_DIR / safe_filename
+    if not file_path.exists() or not file_path.is_file():
+        alt_path = UPLOAD_DIR / safe_filename
+        if alt_path.exists() and alt_path.is_file():
+            return FileResponse(alt_path)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Logo no encontrado"
+        )
+    return FileResponse(file_path)
+
+
 @router.post("/upload-logo", status_code=status.HTTP_200_OK)
 async def upload_ally_logo(
     file: UploadFile = File(...),
@@ -243,8 +263,7 @@ async def upload_ally_logo(
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        relative_path = file_path.relative_to(UPLOAD_DIR)
-        url_path = f"/uploads/{relative_path.as_posix()}"
+        url_path = f"/api/v1/allies/logo/{filename}"
         return {"message": "Logo subido exitosamente", "logo_url": url_path, "url": url_path}
     except Exception as e:
         logger.error(f"Error uploading ally logo: {str(e)}", exc_info=True)

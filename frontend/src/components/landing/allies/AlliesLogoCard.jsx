@@ -4,14 +4,24 @@ import { API_URL } from '../../../services/api';
 export default function AlliesLogoCard({ ally }) {
   const [imageError, setImageError] = useState(false);
 
-  // Normalizar la URL del logo: si es relativa (/uploads o /images), asegurar ruta correcta
+  // Normalizar la URL del logo: soporta rutas relativas estáticas, API de logos o subidas
   const getFullLogoUrl = (url) => {
     if (!url) return '';
-    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    if (url.startsWith('data:')) {
       return url;
     }
-    if (url.startsWith('/uploads')) {
-      return `${API_URL.replace('/api/v1', '')}${url}`;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    // Si apunta a /uploads/... (compatibilidad hacia atrás)
+    if (url.includes('/uploads/')) {
+      const filename = url.split('/').pop();
+      return `${API_URL}/allies/logo/${filename}`;
+    }
+    // Si ya apunta a la ruta de la API
+    if (url.startsWith('/api/v1/')) {
+      const baseHost = API_URL.replace('/api/v1', '');
+      return `${baseHost}${url}`;
     }
     return url;
   };
