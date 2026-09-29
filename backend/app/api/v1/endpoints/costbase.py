@@ -441,7 +441,7 @@ def search_materials_route(
     limit: int = 50,
     search: str = "",
     database_id: str = "master",
-    all_items: bool = True,
+    all_items: Optional[bool] = None,
     current_user: Optional[ArkoAdmin] = Depends(get_optional_arko_admin),
     db: Session = Depends(get_db)
 ) -> dict:
@@ -453,8 +453,17 @@ def search_materials_route(
             getattr(current_user, 'role', '') in ['admin', 'superadmin']
         )
     set_schema_for_db(db, database_id)
-    total, items = search_materials_paginated(db, skip, limit, search, all_items=(all_items or is_superadmin))
-    # Aplicar factor de inflaciÃ³n de materiales si la base no es maestra
+    # Regla: Admin accede a base ampliada (all_items=True por defecto para admin).
+    # Usuarios normales en base maestra solo ven insumos de partidas codificadas (all_items=False).
+    if database_id and database_id != "master":
+        effective_all_items = True
+    elif is_superadmin:
+        effective_all_items = True if all_items is None else all_items
+    else:
+        effective_all_items = False
+
+    total, items = search_materials_paginated(db, skip, limit, search, all_items=effective_all_items)
+    # Aplicar factor de inflación de materiales si la base no es maestra
     if database_id and database_id != "master":
         db_config = get_database_by_id(db, database_id)
         if db_config and db_config.material_inflation:
@@ -483,7 +492,7 @@ def search_equipments_route(
     limit: int = 50,
     search: str = "",
     database_id: str = "master",
-    all_items: bool = True,
+    all_items: Optional[bool] = None,
     current_user: Optional[ArkoAdmin] = Depends(get_optional_arko_admin),
     db: Session = Depends(get_db)
 ) -> dict:
@@ -495,8 +504,17 @@ def search_equipments_route(
             getattr(current_user, 'role', '') in ['admin', 'superadmin']
         )
     set_schema_for_db(db, database_id)
-    total, items = search_equipments_paginated(db, skip, limit, search, all_items=(all_items or is_superadmin))
-    # Aplicar factor de inflaciÃ³n de equipos si la base no es maestra
+    # Regla: Admin accede a base ampliada (all_items=True por defecto para admin).
+    # Usuarios normales en base maestra solo ven insumos de partidas codificadas (all_items=False).
+    if database_id and database_id != "master":
+        effective_all_items = True
+    elif is_superadmin:
+        effective_all_items = True if all_items is None else all_items
+    else:
+        effective_all_items = False
+
+    total, items = search_equipments_paginated(db, skip, limit, search, all_items=effective_all_items)
+    # Aplicar factor de inflación de equipos si la base no es maestra
     factor = 1.0
     if database_id and database_id != "master":
         db_config = get_database_by_id(db, database_id)
@@ -536,7 +554,7 @@ def search_labors_route(
     limit: int = 50,
     search: str = "",
     database_id: str = "master",
-    all_items: bool = True,
+    all_items: Optional[bool] = None,
     current_user: Optional[ArkoAdmin] = Depends(get_optional_arko_admin),
     db: Session = Depends(get_db)
 ) -> dict:
@@ -548,8 +566,17 @@ def search_labors_route(
             getattr(current_user, 'role', '') in ['admin', 'superadmin']
         )
     set_schema_for_db(db, database_id)
-    total, items = search_labors_paginated(db, skip, limit, search, all_items=(all_items or is_superadmin))
-    # Aplicar factor de inflaciÃ³n de mano de obra si la base no es maestra
+    # Regla: Admin accede a base ampliada (all_items=True por defecto para admin).
+    # Usuarios normales en base maestra solo ven insumos de partidas codificadas (all_items=False).
+    if database_id and database_id != "master":
+        effective_all_items = True
+    elif is_superadmin:
+        effective_all_items = True if all_items is None else all_items
+    else:
+        effective_all_items = False
+
+    total, items = search_labors_paginated(db, skip, limit, search, all_items=effective_all_items)
+    # Aplicar factor de inflación de mano de obra si la base no es maestra
     factor = 1.0
     if database_id and database_id != "master":
         db_config = get_database_by_id(db, database_id)
