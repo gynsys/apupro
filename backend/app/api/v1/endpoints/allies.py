@@ -121,19 +121,14 @@ def create_ally(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="El nombre de la empresa aliada es obligatorio"
         )
-    if not ally_in.logo_url or not ally_in.logo_url.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El logo de la empresa aliada es obligatorio"
-        )
 
     try:
         new_ally = StrategicAlly(
             name=ally_in.name.strip(),
-            logo_url=ally_in.logo_url.strip(),
-            website_url=ally_in.website_url.strip() if ally_in.website_url else None,
-            category=ally_in.category.strip() if ally_in.category else None,
-            description=ally_in.description.strip() if ally_in.description else None,
+            logo_url=ally_in.logo_url.strip() if ally_in.logo_url and ally_in.logo_url.strip() else None,
+            website_url=ally_in.website_url.strip() if ally_in.website_url and ally_in.website_url.strip() else None,
+            category=ally_in.category.strip() if ally_in.category and ally_in.category.strip() else None,
+            description=ally_in.description.strip() if ally_in.description and ally_in.description.strip() else None,
             is_active=ally_in.is_active,
             order=ally_in.order,
             created_at=datetime.now(timezone.utc),
@@ -250,7 +245,7 @@ async def upload_ally_logo(
 
         relative_path = file_path.relative_to(UPLOAD_DIR)
         url_path = f"/uploads/{relative_path.as_posix()}"
-        return {"message": "Logo subido exitosamente", "logo_url": url_path}
+        return {"message": "Logo subido exitosamente", "logo_url": url_path, "url": url_path}
     except Exception as e:
         logger.error(f"Error uploading ally logo: {str(e)}", exc_info=True)
         raise HTTPException(

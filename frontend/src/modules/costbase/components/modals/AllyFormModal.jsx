@@ -114,21 +114,22 @@ export default function AllyFormModal({ isOpen, onClose, onSaved, ally = null })
 
     setIsSubmitting(true);
     try {
-      let finalLogoUrl = formData.logo_url.trim();
+      let finalLogoUrl = (formData.logo_url || '').trim();
 
       // Si seleccionó un archivo local, subirlo primero
       if (selectedFile) {
         const uploadResult = await alliesService.uploadLogo(selectedFile);
-        if (uploadResult && uploadResult.url) {
-          finalLogoUrl = uploadResult.url;
+        const uploadedUrl = uploadResult?.url || uploadResult?.logo_url;
+        if (uploadedUrl) {
+          finalLogoUrl = uploadedUrl;
         }
       }
 
       const payload = {
         name: trimmedName,
-        category: formData.category.trim() || null,
-        website_url: formData.website_url.trim() || null,
-        description: formData.description.trim() || null,
+        category: formData.category ? formData.category.trim() : null,
+        website_url: formData.website_url ? formData.website_url.trim() : null,
+        description: formData.description ? formData.description.trim() : null,
         order: parseInt(formData.order, 10) || 0,
         is_active: Boolean(formData.is_active),
         logo_url: finalLogoUrl || null

@@ -4,6 +4,19 @@ const getAuthHeaders = () => ({
   'Content-Type': 'application/json'
 });
 
+const parseErrorDetail = (err, defaultMsg) => {
+  if (!err) return defaultMsg;
+  if (typeof err.detail === 'string') return err.detail;
+  if (Array.isArray(err.detail) && err.detail.length > 0) {
+    return err.detail.map(d => {
+      const field = Array.isArray(d.loc) ? d.loc.filter(l => l !== 'body').join('.') : '';
+      return field ? `${field}: ${d.msg}` : d.msg;
+    }).join(' | ');
+  }
+  if (err.message && typeof err.message === 'string') return err.message;
+  return defaultMsg;
+};
+
 export const alliesService = {
   // Obtener lista pública de aliados para la landing page (Home)
   getAllies: async () => {
@@ -14,7 +27,7 @@ export const alliesService = {
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || 'Error al obtener aliados estratégicos');
+      throw new Error(parseErrorDetail(err, 'Error al obtener aliados estratégicos'));
     }
     return response.json();
   },
@@ -27,7 +40,7 @@ export const alliesService = {
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || 'Error al obtener aliados en administración');
+      throw new Error(parseErrorDetail(err, 'Error al obtener aliados en administración'));
     }
     return response.json();
   },
@@ -42,7 +55,7 @@ export const alliesService = {
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || 'Error al crear aliado estratégico');
+      throw new Error(parseErrorDetail(err, 'Error al crear aliado estratégico'));
     }
     return response.json();
   },
@@ -57,7 +70,7 @@ export const alliesService = {
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || 'Error al actualizar aliado estratégico');
+      throw new Error(parseErrorDetail(err, 'Error al actualizar aliado estratégico'));
     }
     return response.json();
   },
@@ -71,7 +84,7 @@ export const alliesService = {
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || 'Error al eliminar aliado estratégico');
+      throw new Error(parseErrorDetail(err, 'Error al eliminar aliado estratégico'));
     }
     return response.json();
   },
@@ -89,7 +102,7 @@ export const alliesService = {
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || 'Error al subir logo');
+      throw new Error(parseErrorDetail(err, 'Error al subir logo'));
     }
     return response.json();
   }

@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 class StrategicAllyBase(BaseModel):
     name: str
-    logo_url: str
+    logo_url: Optional[str] = None
     website_url: Optional[str] = None
     category: Optional[str] = None
     description: Optional[str] = None

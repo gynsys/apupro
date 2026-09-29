@@ -8,7 +8,7 @@ class StrategicAlly(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
-    logo_url = Column(Text, nullable=False)
+    logo_url = Column(Text, nullable=True)
     website_url = Column(String(500), nullable=True)
     category = Column(String(150), nullable=True)
     description = Column(Text, nullable=True)
