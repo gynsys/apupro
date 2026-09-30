@@ -666,14 +666,77 @@ export default function CalculadoraFCAS({
           </div>
 
           {/* =========================================================================
-              BLOQUE 3: COMPENSACIONES COMERCIALES Y OPERACIÓN DE CAMPO EN USD
+              BLOQUE 3: MATRIZ DE BENEFICIOS Y PASIVOS LEGALES (LOTTT Y CCU)
+             ========================================================================= */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <div className="flex items-center gap-2">
+                <Layers size={16} className="text-indigo-600" />
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                  3. Matriz de Beneficios y Pasivos Legales (LOTTT y CCU)
+                </h4>
+              </div>
+              <span className="text-xs font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-200">
+                Subtotal Legal = {diasBeneficiosLegales.toFixed(2)} días
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {conceptos.map((c, idx) => (
+                <div
+                  key={c.id}
+                  className={`p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 ${
+                    c.activo 
+                      ? 'bg-white border-slate-300 shadow-sm hover:border-blue-400' 
+                      : 'bg-slate-50 border-slate-200 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-start gap-3 min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={c.activo}
+                      onChange={() => toggleConcepto(idx)}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <span className="text-xs font-bold text-slate-900 block truncate">
+                        {c.nombre}
+                      </span>
+                      <span className="text-[10px] text-slate-500 block truncate">
+                        {c.info}
+                      </span>
+                      {c.id === 'prestaciones' && c.activo && (
+                        <span className="text-[10px] text-indigo-600 font-bold block mt-0.5">
+                          Equiv. {(c.dias * alicuotaSalarioIntegral).toFixed(2)} días (Alícuota Art. 122: {alicuotaSalarioIntegral.toFixed(4)})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Input de días editable */}
+                  <div className="shrink-0 flex items-center gap-1.5">
+                    <DecimalInput
+                      value={c.dias}
+                      onChange={(val) => handleConceptoDiasChange(idx, val)}
+                      disabled={!c.activo}
+                      className="w-16 bg-slate-50 rounded-lg border border-slate-300 px-2 py-1 text-xs text-right font-black text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
+                    />
+                    <span className="text-[11px] font-bold text-slate-500">días</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* =========================================================================
+              BLOQUE 4: COMPENSACIONES COMERCIALES Y OPERACIÓN DE CAMPO EN USD
              ========================================================================= */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <div className="flex items-center gap-2">
                 <HardHat size={16} className="text-emerald-600" />
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                  3. Logística de Campo y Compensaciones en USD (Días Equivalentes)
+                  4. Logística de Campo y Compensaciones en USD (Días Equivalentes)
                 </h4>
               </div>
               <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
@@ -770,69 +833,6 @@ export default function CalculadoraFCAS({
                   {bonoInFcas ? 'Incluido en numerador FCAS' : '0.00 días (se cobra en APU)'}
                 </p>
               </div>
-            </div>
-          </div>
-
-          {/* =========================================================================
-              BLOQUE 4: MATRIZ DE BENEFICIOS Y PASIVOS LEGALES (LOTTT Y CCU)
-             ========================================================================= */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-              <div className="flex items-center gap-2">
-                <Layers size={16} className="text-indigo-600" />
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                  4. Matriz de Beneficios y Pasivos Legales (LOTTT y CCU)
-                </h4>
-              </div>
-              <span className="text-xs font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-200">
-                Subtotal Legal = {diasBeneficiosLegales.toFixed(2)} días
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {conceptos.map((c, idx) => (
-                <div
-                  key={c.id}
-                  className={`p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 ${
-                    c.activo 
-                      ? 'bg-white border-slate-300 shadow-sm hover:border-blue-400' 
-                      : 'bg-slate-50 border-slate-200 opacity-60'
-                  }`}
-                >
-                  <div className="flex items-start gap-3 min-w-0">
-                    <input
-                      type="checkbox"
-                      checked={c.activo}
-                      onChange={() => toggleConcepto(idx)}
-                      className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
-                    />
-                    <div className="min-w-0">
-                      <span className="text-xs font-bold text-slate-900 block truncate">
-                        {c.nombre}
-                      </span>
-                      <span className="text-[10px] text-slate-500 block truncate">
-                        {c.info}
-                      </span>
-                      {c.id === 'prestaciones' && c.activo && (
-                        <span className="text-[10px] text-indigo-600 font-bold block mt-0.5">
-                          Equiv. {(c.dias * alicuotaSalarioIntegral).toFixed(2)} días (Alícuota Art. 122: {alicuotaSalarioIntegral.toFixed(4)})
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Input de días editable */}
-                  <div className="shrink-0 flex items-center gap-1.5">
-                    <DecimalInput
-                      value={c.dias}
-                      onChange={(val) => handleConceptoDiasChange(idx, val)}
-                      disabled={!c.activo}
-                      className="w-16 bg-slate-50 rounded-lg border border-slate-300 px-2 py-1 text-xs text-right font-black text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
-                    />
-                    <span className="text-[11px] font-bold text-slate-500">días</span>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
 
@@ -998,56 +998,6 @@ export default function CalculadoraFCAS({
               <p className="text-[11px] text-slate-600 mt-2 font-medium">
                 Base nómina ({diasBaseNomina}) + Ley ({diasBeneficiosLegales.toFixed(1)}) + Campo ({dpCampoTotal.toFixed(1)}).
               </p>
-            </div>
-          </div>
-
-          {/* =========================================================================
-              MEMORIA AUDITABLE: ECUACIÓN Y SÍNTESIS FINANCIERA
-             ========================================================================= */}
-          <div className="bg-slate-100/80 p-5 rounded-2xl border border-slate-200 space-y-3">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-700 block">
-              Memoria de Cálculo y Ecuación Expandida
-            </span>
-            <div className="bg-white p-3.5 rounded-xl border border-slate-300 font-mono text-xs text-slate-800 overflow-x-auto space-y-1">
-              <p>
-                <strong>FCAS (%)</strong> = [ (DP Total / DT) - 1 ] &times; 100
-              </p>
-              <p>
-                <strong>FCAS (%)</strong> = [ ({dpTotal.toFixed(2)} días / {dtLaborados.toFixed(2)} días) - 1 ] &times; 100
-              </p>
-              <p className="text-blue-700 font-bold">
-                <strong>FCAS (%)</strong> = [ { (dpTotal / dtLaborados).toFixed(5) } - 1 ] &times; 100 = <strong>{fcasPorcentaje.toFixed(2)}%</strong>
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
-              <div className="p-3 bg-white rounded-xl border border-slate-200">
-                <span className="font-bold text-slate-700 block">Impacto en Hoja de APU:</span>
-                <p className="text-slate-600 mt-1">
-                  Jornal Básico ($Sb) = <strong>${salarioDiario.toFixed(2)}</strong> &times; Multiplicador ({fcasMultiplicador.toFixed(4)}) = <strong>${(salarioDiario * fcasMultiplicador).toFixed(2)}/día</strong>.
-                  {!bonoInFcas && (
-                    <span className="text-blue-700 block font-bold mt-0.5">
-                      + Bono Diario en APU: ${bonoDiarioApu.toFixed(2)}/día &rarr; Jornal Total: ${costoJornalObra.toFixed(2)}/día.
-                    </span>
-                  )}
-                  {bonoInFcas && (
-                    <span className="text-emerald-700 block font-bold mt-0.5">
-                      Bono Directo en APU = $0.00 (Totalmente absorbido en el FCAS de {fcasPorcentaje.toFixed(2)}%).
-                    </span>
-                  )}
-                </p>
-              </div>
-
-              <div className="p-3 bg-white rounded-xl border border-slate-200">
-                <span className="font-bold text-slate-700 block">Criterio de Aplicación:</span>
-                <p className="text-slate-600 mt-1">
-                  {bonoInFcas ? (
-                    <span>Ideal para <strong>auditorías públicas, ministerios y entes gubernamentales</strong> que exigen que toda compensación de nómina esté integrada en el factor FCAS.</span>
-                  ) : (
-                    <span>Ideal para <strong>licitaciones privadas e inspecciones comerciales</strong> que solicitan salarios y bonos separados en renglones directos en la tarjeta de APU.</span>
-                  )}
-                </p>
-              </div>
             </div>
           </div>
 
