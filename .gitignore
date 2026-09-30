@@ -63,3 +63,7 @@ scratch/
 check_*.py
 test_*.py
 !backend/tests/*.py
+
+# Graphify
+graphify-out/
+.graphify/

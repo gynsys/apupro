@@ -58,7 +58,9 @@ export default function CalculadoraFCAS({
 }) {
   // ── 1. Parámetros Económicos Maestros (100% Editables) ───────────────────
   const [salarioBase, setSalarioBase] = useState(initialSalarioBase || 80); // $ mensuales
-  const [salarioDiario, setSalarioDiario] = useState((initialSalarioBase || 80) / 30); // $ diario (Sb)
+  const [salarioDiario, setSalarioDiario] = useState(
+    Number(((initialSalarioBase || 80) / 30).toFixed(2))
+  ); // $ diario (Sb) redondeado a 2 decimales
   const [bonoCestaticket, setBonoCestaticket] = useState(initialBonoCestaticket || 174); // $ mensuales
   const [bonoInFcas, setBonoInFcas] = useState(
     initialBonoInFcas != null 
@@ -92,7 +94,7 @@ export default function CalculadoraFCAS({
   useEffect(() => {
     if (initialSalarioBase != null) {
       setSalarioBase(initialSalarioBase);
-      setSalarioDiario(initialSalarioBase / 30);
+      setSalarioDiario(Number((initialSalarioBase / 30).toFixed(2)));
     }
     if (initialBonoCestaticket != null) setBonoCestaticket(initialBonoCestaticket);
     if (initialBonoInFcas != null) {
@@ -106,13 +108,13 @@ export default function CalculadoraFCAS({
   const handleSalarioBaseChange = (val) => {
     const sMensual = Math.max(0, val);
     setSalarioBase(sMensual);
-    setSalarioDiario(sMensual > 0 ? sMensual / 30 : 0);
+    setSalarioDiario(sMensual > 0 ? Number((sMensual / 30).toFixed(2)) : 0);
   };
 
   const handleSalarioDiarioChange = (val) => {
-    const sDiario = Math.max(0, val);
+    const sDiario = Math.max(0, Number(Number(val).toFixed(2)));
     setSalarioDiario(sDiario);
-    setSalarioBase(sDiario * 30);
+    setSalarioBase(Number((sDiario * 30).toFixed(2)));
   };
 
   // Cálculo automático de días de descanso (Ti)
@@ -181,7 +183,7 @@ export default function CalculadoraFCAS({
 
   // C. Días Equivalentes Comerciales y de Operación de Campo en USD
   const { diasHcm, diasTransporte, diasEpp, diasBono, dpCampoTotal } = useMemo(() => {
-    const sDia = salarioDiario > 0 ? salarioDiario : (salarioBase > 0 ? salarioBase / 30 : 2.6667);
+    const sDia = salarioDiario > 0 ? salarioDiario : (salarioBase > 0 ? Number((salarioBase / 30).toFixed(2)) : 2.67);
     const dHcm = sDia > 0 ? (costoHcm * factorTemporal) / sDia : 0;
     const dTransp = sDia > 0 ? (costoTransporte * factorTemporal) / sDia : 0;
     const dEpp = sDia > 0 ? costoEpp / sDia : 0; // Fijo inmutable ante obras cortas
@@ -239,7 +241,7 @@ export default function CalculadoraFCAS({
 
   const resetearValores = () => {
     setSalarioBase(initialSalarioBase || 80);
-    setSalarioDiario((initialSalarioBase || 80) / 30);
+    setSalarioDiario(Number(((initialSalarioBase || 80) / 30).toFixed(2)));
     setBonoCestaticket(initialBonoCestaticket || 174);
     setBonoInFcas(false);
     setDiasContratados(365);
@@ -266,7 +268,7 @@ export default function CalculadoraFCAS({
     }
     const profileData = {
       salarioBase,
-      salarioDiario: parseFloat(salarioDiario.toFixed(4)),
+      salarioDiario: parseFloat(salarioDiario.toFixed(2)),
       bonoCestaticket,
       bonoInFcas,
       diasContratados,
@@ -296,9 +298,9 @@ export default function CalculadoraFCAS({
     if (!p) return;
     if (p.salarioBase != null) setSalarioBase(p.salarioBase);
     if (p.salarioDiario != null) {
-      setSalarioDiario(p.salarioDiario);
+      setSalarioDiario(Number(Number(p.salarioDiario).toFixed(2)));
     } else if (p.salarioBase != null) {
-      setSalarioDiario(p.salarioBase / 30);
+      setSalarioDiario(Number((p.salarioBase / 30).toFixed(2)));
     }
     if (p.bonoCestaticket != null) setBonoCestaticket(p.bonoCestaticket);
     if (p.bonoInFcas != null) {
@@ -337,7 +339,7 @@ export default function CalculadoraFCAS({
     if (onUseFCAS) {
       onUseFCAS(roundedFCAS, {
         salarioBase,
-        salarioDiario: parseFloat(salarioDiario.toFixed(4)),
+        salarioDiario: parseFloat(salarioDiario.toFixed(2)),
         bonoCestaticket,
         bonoInFcas,
         bonoDiario: parseFloat(bonoDiarioApu.toFixed(4)),
@@ -616,7 +618,7 @@ export default function CalculadoraFCAS({
                   <DecimalInput
                     value={salarioDiario}
                     onChange={handleSalarioDiarioChange}
-                    decimals={4}
+                    decimals={2}
                     className="w-full bg-slate-50 rounded-xl border border-slate-300 pl-7 pr-3 py-2 text-sm text-slate-900 font-bold focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
                   />
                 </div>
