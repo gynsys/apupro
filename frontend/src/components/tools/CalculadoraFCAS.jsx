@@ -232,18 +232,27 @@ export default function CalculadoraFCAS({
     return sDia > 0 ? (bonoCestaticket * 12 * factorTemporal) / sDia : 0;
   }, [salarioDiario, salarioBase, bonoCestaticket, factorTemporal]);
 
+  // DP sin bono (Base + Ley + Campo ordinario)
+  const dpSinBono = useMemo(() => {
+    return diasBaseNomina + diasBeneficiosLegales + (diasHcm + diasTransporte + diasEpp);
+  }, [diasBaseNomina, diasBeneficiosLegales, diasHcm, diasTransporte, diasEpp]);
+
+  // DP con bono integrado
+  const dpConBono = useMemo(() => {
+    return dpSinBono + diasBonoPotenciales;
+  }, [dpSinBono, diasBonoPotenciales]);
+
   // FCAS puro de Ley y Campo (sin bono Cestaticket)
   const fcasPuro = useMemo(() => {
     if (dtLaborados <= 0) return 0;
-    const dpSinBono = diasBaseNomina + diasBeneficiosLegales + (diasHcm + diasTransporte + diasEpp);
     return Math.max(0, ((dpSinBono / dtLaborados) - 1) * 100);
-  }, [dtLaborados, diasBaseNomina, diasBeneficiosLegales, diasHcm, diasTransporte, diasEpp]);
+  }, [dtLaborados, dpSinBono]);
 
-  // Incidencia porcentual que agrega el Cestaticket
-  const incidenciaBonoPorcentaje = useMemo(() => {
+  // FCAS con bono integrado
+  const fcasConBono = useMemo(() => {
     if (dtLaborados <= 0) return 0;
-    return (diasBonoPotenciales / dtLaborados) * 100;
-  }, [dtLaborados, diasBonoPotenciales]);
+    return Math.max(0, ((dpConBono / dtLaborados) - 1) * 100);
+  }, [dtLaborados, dpConBono]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const toggleConcepto = (idx) => {
@@ -353,15 +362,18 @@ export default function CalculadoraFCAS({
     setProfileToDelete(null);
   };
 
-  const handleUseFCAS = () => {
-    const roundedFCAS = parseFloat(fcasPorcentaje.toFixed(2));
+  const handleUseFCAS = (targetBonoInFcas) => {
+    const isEnFcas = typeof targetBonoInFcas === 'boolean' ? targetBonoInFcas : Boolean(bonoInFcas);
+    setBonoInFcas(isEnFcas);
+    const targetFcas = isEnFcas ? fcasConBono : fcasPuro;
+    const roundedFCAS = parseFloat(targetFcas.toFixed(2));
     if (onUseFCAS) {
       onUseFCAS(roundedFCAS, {
         salarioBase,
         salarioDiario: parseFloat(salarioDiario.toFixed(2)),
         bonoCestaticket,
-        bonoInFcas,
-        bonoDiario: parseFloat(bonoDiarioApu.toFixed(4)),
+        bonoInFcas: isEnFcas,
+        bonoDiario: isEnFcas ? 0.0 : parseFloat(bonoDiarioApu.toFixed(4)),
         diasContratados,
         diasNoTrabajados,
         diasVacaciones,
@@ -371,7 +383,7 @@ export default function CalculadoraFCAS({
         costoTransporte,
         costoEpp,
         conceptos,
-        metodo: bonoInFcas ? 'indexado' : 'estandar'
+        metodo: isEnFcas ? 'indexado' : 'estandar'
       });
     }
   };
@@ -459,12 +471,16 @@ export default function CalculadoraFCAS({
             {/* Botón Usar FCAS */}
             <button
               type="button"
-              onClick={handleUseFCAS}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-emerald-600/20"
+              onClick={() => handleUseFCAS(bonoInFcas)}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-white text-xs font-bold rounded-xl transition-all shadow-md ${
+                bonoInFcas 
+                  ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20' 
+                  : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
+              }`}
               title="Aplicar este porcentaje FCAS y configuración de bono al presupuesto activo o perfil de costos"
             >
               <Check size={14} />
-              <span>Usar FCAS</span>
+              <span>Usar FCAS ({(bonoInFcas ? fcasConBono : fcasPuro).toFixed(2)}%)</span>
             </button>
 
             {/* Imprimir */}
@@ -837,167 +853,152 @@ export default function CalculadoraFCAS({
           </div>
 
           {/* =========================================================================
-              BLOQUE 5: ASIGNACIÓN Y TRATAMIENTO DEL CESTATICKET / BONO
+              BLOQUE 5: TRATAMIENTO DEL BONO Y RESULTADOS DEL FCAS
              ========================================================================= */}
-          <div className={`p-5 rounded-2xl border-2 transition-all ${
-            bonoInFcas 
-              ? 'bg-gradient-to-r from-emerald-50/90 via-teal-50/60 to-emerald-50/90 border-emerald-400 shadow-sm'
-              : 'bg-gradient-to-r from-blue-50/90 via-sky-50/60 to-blue-50/90 border-blue-400 shadow-sm'
-          }`}>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/70">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider ${
-                    bonoInFcas ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white'
-                  }`}>
-                    {bonoInFcas ? 'Bono Absorbido en FCAS' : 'Bono Directo en APU'}
-                  </span>
-                  <span className="text-xs font-bold text-slate-500">Configuración de Cestaticket</span>
-                </div>
-                <h3 className="text-sm sm:text-base font-extrabold text-slate-900 leading-snug">
-                  ¿Cómo procesar el Cestaticket / Bono de Ingreso Mínimo (${bonoCestaticket.toFixed(2)}/mes)?
-                </h3>
-                <p className="text-xs text-slate-600 max-w-2xl">
-                  {bonoInFcas ? (
-                    <span>
-                      <strong className="text-emerald-800">ACTIVADO:</strong> El bono se convierte en <strong className="text-emerald-800">{diasBonoPotenciales.toFixed(2)} días equivalentes</strong> dentro del numerador del FCAS, elevando el porcentaje. En la tarjeta de APU <strong className="text-emerald-800">no se suma bono directo ($0.00)</strong> para evitar duplicidad (Recomendado para auditorías públicas).
-                    </span>
-                  ) : (
-                    <span>
-                      <strong className="text-blue-800">DESACTIVADO:</strong> El bono se excluye del numerador del FCAS (<strong className="text-blue-800">0.00 días</strong>), manteniendo el porcentaje más bajo. El bono se transfiere linealmente como costo directo diario (<strong className="text-blue-800">${bonoDiarioApu.toFixed(2)}/día</strong>) dentro del APU (Recomendado para licitaciones privadas).
-                    </span>
-                  )}
-                </p>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+              <div className="flex items-center gap-2">
+                <Layers size={16} className="text-slate-700" />
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                  5. Tratamiento del Bono y Resultados del FCAS
+                </h4>
               </div>
-
-              {/* Botón Toggle Interactivo */}
-              <div className="shrink-0 flex items-center gap-3 bg-white/80 p-2.5 rounded-2xl border border-slate-200/80 shadow-sm">
-                <label className="relative inline-flex items-center cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={bonoInFcas}
-                    onChange={(e) => setBonoInFcas(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-14 h-7 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[4px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-600"></div>
-                </label>
-                <div className="text-left pr-1">
-                  <span className="block text-xs font-black text-slate-800">
-                    {bonoInFcas ? 'En FCAS' : 'En APU'}
-                  </span>
-                  <span className="block text-[10px] font-semibold text-slate-500">
-                    {bonoInFcas ? 'Diluido en %' : 'Costo directo'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* TABLA DE VALORES CONCRETOS (SIN FÓRMULAS ABSTRACTAS) */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3.5">
-              {/* Valor 1: Monto del Bono */}
-              <div className="bg-white/90 p-3 rounded-xl border border-slate-200 shadow-2xs">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                  1. Cestaticket por Trabajador
-                </span>
-                <div className="mt-1 flex items-baseline gap-2">
-                  <span className="text-base font-black text-slate-900">
-                    ${bonoCestaticket.toFixed(2)} <span className="text-xs font-medium text-slate-500">/mes</span>
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-600 mt-0.5">
-                  Monto anual: <strong>${(bonoCestaticket * 12).toFixed(2)}/año</strong>
-                </p>
-              </div>
-
-              {/* Valor 2: Días que suma */}
-              <div className="bg-white/90 p-3 rounded-xl border border-slate-200 shadow-2xs">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                  2. Días Equivalentes en Matriz
-                </span>
-                <div className="mt-1 flex items-baseline gap-1.5">
-                  <span className={`text-base font-black ${bonoInFcas ? 'text-emerald-700' : 'text-blue-700'}`}>
-                    {bonoInFcas ? `+${diasBonoPotenciales.toFixed(2)} días` : '0.00 días'}
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-600 mt-0.5">
-                  {bonoInFcas ? (
-                    <span>${(bonoCestaticket * 12).toFixed(2)} ÷ ${salarioDiario.toFixed(2)}/día Sb</span>
-                  ) : (
-                    <span>Excluido de la matriz (se paga directo)</span>
-                  )}
-                </p>
-              </div>
-
-              {/* Valor 3: Desglose porcentual */}
-              <div className="bg-white/90 p-3 rounded-xl border border-slate-200 shadow-2xs">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                  3. Composición del FCAS
-                </span>
-                <div className="mt-1 flex items-baseline gap-1.5">
-                  <span className="text-base font-black text-slate-900">
-                    {fcasPorcentaje.toFixed(2)}%
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-600 mt-0.5">
-                  {bonoInFcas ? (
-                    <span>Ley ({fcasPuro.toFixed(1)}%) + Cestaticket (+{incidenciaBonoPorcentaje.toFixed(1)}%)</span>
-                  ) : (
-                    <span>FCAS Puro de Ley y Campo (sin bono)</span>
-                  )}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* =========================================================================
-              RESULTADO FINAL DEL FCAS Y MÉTRICAS CLAVE
-             ========================================================================= */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            {/* Visualizador Principal FCAS */}
-            <div className="sm:col-span-2 rounded-2xl p-5 bg-white border-2 border-slate-300 shadow-sm flex flex-col items-center justify-center text-center">
-              <span className="text-xs font-black tracking-widest uppercase text-slate-600">
-                Factor F.C.A.S. Calculado
+              <span className="text-xs font-black text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                DT = {dtLaborados.toFixed(0)} días laborados
               </span>
-              <div className="mt-1 flex items-baseline justify-center gap-2">
-                <span className={`text-4xl sm:text-5xl font-black tracking-tight ${
-                  bonoInFcas ? 'text-emerald-600' : 'text-blue-600'
-                }`}>
-                  {fcasPorcentaje.toFixed(2)}%
-                </span>
-              </div>
-              <p className="text-xs text-slate-600 font-bold mt-1">
-                Multiplicador Jornal: <strong className="text-slate-900 font-black">{fcasMultiplicador.toFixed(4)}</strong> (1 + FCAS/100)
-              </p>
             </div>
 
-            {/* Denominador DT */}
-            <div className="rounded-2xl p-4 bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
-              <div>
-                <span className="text-[11px] font-bold tracking-wider uppercase text-slate-500 block">
-                  Denominador (DT)
-                </span>
-                <span className="text-2xl font-black text-slate-800">
-                  {dtLaborados.toFixed(0)} <span className="text-xs font-semibold text-slate-500">días</span>
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-600 mt-2 font-medium">
-                Días efectivamente laborados en obra deducidos paradas y rendimiento.
-              </p>
-            </div>
+            {/* CÁLCULOS SIMULTÁNEOS LADO A LADO */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              {/* OPCIÓN 1: BONO EN FCAS */}
+              <div 
+                onClick={() => setBonoInFcas(true)}
+                className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                  bonoInFcas 
+                    ? 'bg-gradient-to-br from-emerald-50/90 via-white to-emerald-50/40 border-emerald-500 shadow-md ring-2 ring-emerald-500/20' 
+                    : 'bg-white border-slate-200 hover:border-emerald-300 shadow-sm opacity-90'
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-emerald-600 text-white">
+                      Bono en FCAS
+                    </span>
+                    {bonoInFcas && (
+                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <Check size={12} /> Seleccionado
+                      </span>
+                    )}
+                  </div>
 
-            {/* Numerador DP */}
-            <div className="rounded-2xl p-4 bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
-              <div>
-                <span className="text-[11px] font-bold tracking-wider uppercase text-slate-500 block">
-                  Numerador (DP Total)
-                </span>
-                <span className="text-2xl font-black text-slate-800">
-                  {dpTotal.toFixed(2)} <span className="text-xs font-semibold text-slate-500">días</span>
-                </span>
+                  {/* Porcentaje Gigante */}
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                      Factor FCAS Calculado
+                    </span>
+                    <div className="text-4xl sm:text-5xl font-black text-emerald-600 tracking-tight mt-1">
+                      {fcasConBono.toFixed(2)}%
+                    </div>
+                    <p className="text-xs text-slate-600 font-bold mt-1">
+                      Multiplicador: <strong className="text-slate-900 font-black">{(1 + fcasConBono / 100).toFixed(4)}</strong>
+                    </p>
+                  </div>
+
+                  {/* Desglose de Parámetros */}
+                  <div className="bg-white/80 rounded-xl p-3 border border-slate-200/80 space-y-2 text-xs">
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span>Días sumados por bono:</span>
+                      <strong className="text-emerald-700 font-bold">+{diasBonoPotenciales.toFixed(2)} días</strong>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span>Total Días Pagados (DP):</span>
+                      <strong className="text-slate-900 font-bold">{dpConBono.toFixed(2)} días</strong>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span>Cobro directo en APU:</span>
+                      <strong className="text-slate-500 font-bold">$0.00 (absorbido)</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botón Usar FCAS (Bono en FCAS) */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleUseFCAS(true);
+                  }}
+                  className="w-full mt-4 flex items-center justify-center gap-2 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm rounded-xl shadow-md transition-all active:scale-95"
+                >
+                  <Check size={16} /> Usar FCAS ({fcasConBono.toFixed(2)}%)
+                </button>
               </div>
-              <p className="text-[11px] text-slate-600 mt-2 font-medium">
-                Base nómina ({diasBaseNomina}) + Ley ({diasBeneficiosLegales.toFixed(1)}) + Campo ({dpCampoTotal.toFixed(1)}).
-              </p>
+
+              {/* OPCIÓN 2: BONO EN APU */}
+              <div 
+                onClick={() => setBonoInFcas(false)}
+                className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                  !bonoInFcas 
+                    ? 'bg-gradient-to-br from-blue-50/90 via-white to-blue-50/40 border-blue-500 shadow-md ring-2 ring-blue-500/20' 
+                    : 'bg-white border-slate-200 hover:border-blue-300 shadow-sm opacity-90'
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-blue-600 text-white">
+                      Bono en APU
+                    </span>
+                    {!bonoInFcas && (
+                      <span className="text-[11px] font-bold text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <Check size={12} /> Seleccionado
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Porcentaje Gigante */}
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                      Factor FCAS Calculado
+                    </span>
+                    <div className="text-4xl sm:text-5xl font-black text-blue-600 tracking-tight mt-1">
+                      {fcasPuro.toFixed(2)}%
+                    </div>
+                    <p className="text-xs text-slate-600 font-bold mt-1">
+                      Multiplicador: <strong className="text-slate-900 font-black">{(1 + fcasPuro / 100).toFixed(4)}</strong>
+                    </p>
+                  </div>
+
+                  {/* Desglose de Parámetros */}
+                  <div className="bg-white/80 rounded-xl p-3 border border-slate-200/80 space-y-2 text-xs">
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span>Días sumados por bono:</span>
+                      <strong className="text-slate-500 font-bold">0.00 días (Puro Ley)</strong>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span>Total Días Pagados (DP):</span>
+                      <strong className="text-slate-900 font-bold">{dpSinBono.toFixed(2)} días</strong>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span>Cobro directo en APU:</span>
+                      <strong className="text-blue-700 font-bold">${bonoDiarioApu.toFixed(2)}/día por obrero</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botón Usar FCAS (Bono en APU) */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleUseFCAS(false);
+                  }}
+                  className="w-full mt-4 flex items-center justify-center gap-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-black text-sm rounded-xl shadow-md transition-all active:scale-95"
+                >
+                  <Check size={16} /> Usar FCAS ({fcasPuro.toFixed(2)}%)
+                </button>
+              </div>
+
             </div>
           </div>
 
