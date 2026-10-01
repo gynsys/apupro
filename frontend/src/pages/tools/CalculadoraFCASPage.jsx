@@ -108,6 +108,9 @@ export default function CalculadoraFCASPage() {
         fcasCostoHcm: configToSave?.costoHcm ?? 450,
         fcasCostoTransporte: configToSave?.costoTransporte ?? 547.5,
         fcasCostoEpp: configToSave?.costoEpp ?? 290,
+        fcasActivoHcm: configToSave?.activoHcm ?? true,
+        fcasActivoTransporte: configToSave?.activoTransporte ?? true,
+        fcasActivoEpp: configToSave?.activoEpp ?? true,
       });
       toast.success(`FCAS predeterminado establecido en ${roundedFCAS}% para futuros presupuestos`);
     } catch (error) {
@@ -126,6 +129,9 @@ export default function CalculadoraFCASPage() {
         initialCostoHcm={costosConfig?.fcasCostoHcm}
         initialCostoTransporte={costosConfig?.fcasCostoTransporte}
         initialCostoEpp={costosConfig?.fcasCostoEpp}
+        initialActivoHcm={costosConfig?.fcasActivoHcm}
+        initialActivoTransporte={costosConfig?.fcasActivoTransporte}
+        initialActivoEpp={costosConfig?.fcasActivoEpp}
         initialMetodo={costosConfig?.fcasMetodo}
         savedProfiles={effectiveProfiles}
         onSaveProfile={handleSaveProfile}

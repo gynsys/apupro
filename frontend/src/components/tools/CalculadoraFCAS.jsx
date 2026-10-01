@@ -51,6 +51,9 @@ export default function CalculadoraFCAS({
   initialCostoHcm = 450,
   initialCostoTransporte = 547.5,
   initialCostoEpp = 290,
+  initialActivoHcm = true,
+  initialActivoTransporte = true,
+  initialActivoEpp = true,
   initialMetodo = 'estandar',
   savedProfiles = {},
   onSaveProfile = null,
@@ -80,6 +83,9 @@ export default function CalculadoraFCAS({
   const [costoHcm, setCostoHcm] = useState(initialCostoHcm ?? 450); // $ anual póliza gremial
   const [costoTransporte, setCostoTransporte] = useState(initialCostoTransporte ?? 547.5); // $ anual ruta obligatoria
   const [costoEpp, setCostoEpp] = useState(initialCostoEpp ?? 290); // $ anual uniformes y botas
+  const [activoHcm, setActivoHcm] = useState(initialActivoHcm ?? true);
+  const [activoTransporte, setActivoTransporte] = useState(initialActivoTransporte ?? true);
+  const [activoEpp, setActivoEpp] = useState(initialActivoEpp ?? true);
 
   // ── 4. Matriz de Conceptos de Ley ────────────────────────────────────────
   const [conceptos, setConceptos] = useState(CONCEPTOS_DEFAULT);
@@ -102,7 +108,10 @@ export default function CalculadoraFCAS({
     } else if (initialMetodo) {
       setBonoInFcas(initialMetodo === 'indexado');
     }
-  }, [initialSalarioBase, initialBonoCestaticket, initialBonoInFcas, initialMetodo]);
+    if (initialActivoHcm != null) setActivoHcm(Boolean(initialActivoHcm));
+    if (initialActivoTransporte != null) setActivoTransporte(Boolean(initialActivoTransporte));
+    if (initialActivoEpp != null) setActivoEpp(Boolean(initialActivoEpp));
+  }, [initialSalarioBase, initialBonoCestaticket, initialBonoInFcas, initialMetodo, initialActivoHcm, initialActivoTransporte, initialActivoEpp]);
 
   // Manejar cambio bidireccional entre Sueldo Mensual y Salario Básico Diario
   const handleSalarioBaseChange = (val) => {
@@ -184,9 +193,9 @@ export default function CalculadoraFCAS({
   // C. Días Equivalentes Comerciales y de Operación de Campo en USD
   const { diasHcm, diasTransporte, diasEpp, diasBono, dpCampoTotal } = useMemo(() => {
     const sDia = salarioDiario > 0 ? salarioDiario : (salarioBase > 0 ? Number((salarioBase / 30).toFixed(2)) : 2.67);
-    const dHcm = sDia > 0 ? (costoHcm * factorTemporal) / sDia : 0;
-    const dTransp = sDia > 0 ? (costoTransporte * factorTemporal) / sDia : 0;
-    const dEpp = sDia > 0 ? costoEpp / sDia : 0; // Fijo inmutable ante obras cortas
+    const dHcm = (activoHcm && sDia > 0) ? (costoHcm * factorTemporal) / sDia : 0;
+    const dTransp = (activoTransporte && sDia > 0) ? (costoTransporte * factorTemporal) / sDia : 0;
+    const dEpp = (activoEpp && sDia > 0) ? costoEpp / sDia : 0; // Fijo inmutable ante obras cortas
     const dBono = (bonoInFcas && sDia > 0) ? (bonoCestaticket * 12 * factorTemporal) / sDia : 0;
 
     return {
@@ -196,7 +205,7 @@ export default function CalculadoraFCAS({
       diasBono: dBono,
       dpCampoTotal: dHcm + dTransp + dEpp + dBono
     };
-  }, [salarioDiario, salarioBase, costoHcm, costoTransporte, costoEpp, bonoInFcas, bonoCestaticket, factorTemporal]);
+  }, [salarioDiario, salarioBase, costoHcm, costoTransporte, costoEpp, bonoInFcas, bonoCestaticket, factorTemporal, activoHcm, activoTransporte, activoEpp]);
 
   // Total Días Pagados y Equivalentes (DP Total)
   const dpTotal = useMemo(() => {
@@ -281,6 +290,9 @@ export default function CalculadoraFCAS({
     setCostoHcm(initialCostoHcm ?? 450);
     setCostoTransporte(initialCostoTransporte ?? 547.5);
     setCostoEpp(initialCostoEpp ?? 290);
+    setActivoHcm(true);
+    setActivoTransporte(true);
+    setActivoEpp(true);
     setConceptos(CONCEPTOS_DEFAULT.map(c => ({ ...c })));
     toast.success('Valores de la matriz restaurados a configuración base');
   };
@@ -308,6 +320,9 @@ export default function CalculadoraFCAS({
       costoHcm,
       costoTransporte,
       costoEpp,
+      activoHcm,
+      activoTransporte,
+      activoEpp,
       conceptos,
       fcasPorcentaje: parseFloat(fcasPorcentaje.toFixed(2)),
       bonoDiario: parseFloat(bonoDiarioApu.toFixed(4)),
@@ -348,6 +363,9 @@ export default function CalculadoraFCAS({
     if (p.costoHcm != null) setCostoHcm(p.costoHcm);
     if (p.costoTransporte != null) setCostoTransporte(p.costoTransporte);
     if (p.costoEpp != null) setCostoEpp(p.costoEpp);
+    if (p.activoHcm != null) setActivoHcm(Boolean(p.activoHcm));
+    if (p.activoTransporte != null) setActivoTransporte(Boolean(p.activoTransporte));
+    if (p.activoEpp != null) setActivoEpp(Boolean(p.activoEpp));
     if (Array.isArray(p.conceptos) && p.conceptos.length > 0) {
       setConceptos(p.conceptos);
     }
@@ -379,9 +397,12 @@ export default function CalculadoraFCAS({
         diasVacaciones,
         diasPermisos,
         diasRendimiento,
-        costoHcm,
-        costoTransporte,
-        costoEpp,
+        costoHcm: activoHcm ? costoHcm : 0,
+        costoTransporte: activoTransporte ? costoTransporte : 0,
+        costoEpp: activoEpp ? costoEpp : 0,
+        activoHcm,
+        activoTransporte,
+        activoEpp,
         conceptos,
         metodo: isEnFcas ? 'indexado' : 'estandar'
       });
@@ -762,12 +783,22 @@ export default function CalculadoraFCAS({
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               {/* Póliza HCM */}
-              <div className="space-y-1.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 uppercase flex items-center gap-1.5">
-                    <HeartPulse size={14} className="text-rose-500" /> Póliza HCM
-                  </span>
-                  <span className="text-[11px] font-black text-blue-700">
+              <div className={`space-y-1.5 p-3 rounded-xl border transition-all ${
+                activoHcm ? 'border-slate-300 bg-white shadow-2xs' : 'border-slate-200 bg-slate-50 opacity-60'
+              }`}>
+                <div className="flex items-center justify-between gap-1">
+                  <label className="flex items-center gap-2 cursor-pointer min-w-0 select-none">
+                    <input
+                      type="checkbox"
+                      checked={activoHcm}
+                      onChange={(e) => setActivoHcm(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                    />
+                    <span className="text-xs font-bold text-slate-700 uppercase flex items-center gap-1.5 truncate">
+                      <HeartPulse size={14} className="text-rose-500 shrink-0" /> Póliza HCM
+                    </span>
+                  </label>
+                  <span className={`text-[11px] font-black shrink-0 ${activoHcm ? 'text-blue-700' : 'text-slate-400'}`}>
                     {diasHcm.toFixed(2)} días
                   </span>
                 </div>
@@ -776,19 +807,34 @@ export default function CalculadoraFCAS({
                   <DecimalInput
                     value={costoHcm}
                     onChange={(val) => setCostoHcm(Math.max(0, val))}
-                    className="w-full bg-white rounded-lg border border-slate-300 pl-6 pr-2.5 py-1.5 text-sm font-bold text-slate-900 focus:outline-none focus:border-blue-500"
+                    disabled={!activoHcm}
+                    className={`w-full rounded-lg border pl-6 pr-2.5 py-1.5 text-sm font-bold transition-all ${
+                      activoHcm 
+                        ? 'bg-white border-slate-300 text-slate-900 focus:outline-none focus:border-blue-500' 
+                        : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                    }`}
                   />
                 </div>
                 <p className="text-[10px] text-slate-500">Costo anual póliza gremial por trabajador</p>
               </div>
 
               {/* Transporte Obligatorio */}
-              <div className="space-y-1.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 uppercase flex items-center gap-1.5">
-                    <Truck size={14} className="text-blue-500" /> Transporte
-                  </span>
-                  <span className="text-[11px] font-black text-blue-700">
+              <div className={`space-y-1.5 p-3 rounded-xl border transition-all ${
+                activoTransporte ? 'border-slate-300 bg-white shadow-2xs' : 'border-slate-200 bg-slate-50 opacity-60'
+              }`}>
+                <div className="flex items-center justify-between gap-1">
+                  <label className="flex items-center gap-2 cursor-pointer min-w-0 select-none">
+                    <input
+                      type="checkbox"
+                      checked={activoTransporte}
+                      onChange={(e) => setActivoTransporte(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                    />
+                    <span className="text-xs font-bold text-slate-700 uppercase flex items-center gap-1.5 truncate">
+                      <Truck size={14} className="text-blue-500 shrink-0" /> Transporte
+                    </span>
+                  </label>
+                  <span className={`text-[11px] font-black shrink-0 ${activoTransporte ? 'text-blue-700' : 'text-slate-400'}`}>
                     {diasTransporte.toFixed(2)} días
                   </span>
                 </div>
@@ -797,19 +843,34 @@ export default function CalculadoraFCAS({
                   <DecimalInput
                     value={costoTransporte}
                     onChange={(val) => setCostoTransporte(Math.max(0, val))}
-                    className="w-full bg-white rounded-lg border border-slate-300 pl-6 pr-2.5 py-1.5 text-sm font-bold text-slate-900 focus:outline-none focus:border-blue-500"
+                    disabled={!activoTransporte}
+                    className={`w-full rounded-lg border pl-6 pr-2.5 py-1.5 text-sm font-bold transition-all ${
+                      activoTransporte 
+                        ? 'bg-white border-slate-300 text-slate-900 focus:outline-none focus:border-blue-500' 
+                        : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                    }`}
                   />
                 </div>
                 <p className="text-[10px] text-slate-500">Logística de ruta diaria de personal</p>
               </div>
 
               {/* Dotación EPP e Uniformes */}
-              <div className="space-y-1.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 uppercase flex items-center gap-1.5">
-                    <ShieldCheck size={14} className="text-amber-500" /> Dotación EPP
-                  </span>
-                  <span className="text-[11px] font-black text-blue-700">
+              <div className={`space-y-1.5 p-3 rounded-xl border transition-all ${
+                activoEpp ? 'border-slate-300 bg-white shadow-2xs' : 'border-slate-200 bg-slate-50 opacity-60'
+              }`}>
+                <div className="flex items-center justify-between gap-1">
+                  <label className="flex items-center gap-2 cursor-pointer min-w-0 select-none">
+                    <input
+                      type="checkbox"
+                      checked={activoEpp}
+                      onChange={(e) => setActivoEpp(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                    />
+                    <span className="text-xs font-bold text-slate-700 uppercase flex items-center gap-1.5 truncate">
+                      <ShieldCheck size={14} className="text-amber-500 shrink-0" /> Dotación EPP
+                    </span>
+                  </label>
+                  <span className={`text-[11px] font-black shrink-0 ${activoEpp ? 'text-blue-700' : 'text-slate-400'}`}>
                     {diasEpp.toFixed(2)} días
                   </span>
                 </div>
@@ -818,21 +879,34 @@ export default function CalculadoraFCAS({
                   <DecimalInput
                     value={costoEpp}
                     onChange={(val) => setCostoEpp(Math.max(0, val))}
-                    className="w-full bg-white rounded-lg border border-slate-300 pl-6 pr-2.5 py-1.5 text-sm font-bold text-slate-900 focus:outline-none focus:border-blue-500"
+                    disabled={!activoEpp}
+                    className={`w-full rounded-lg border pl-6 pr-2.5 py-1.5 text-sm font-bold transition-all ${
+                      activoEpp 
+                        ? 'bg-white border-slate-300 text-slate-900 focus:outline-none focus:border-blue-500' 
+                        : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                    }`}
                   />
                 </div>
                 <p className="text-[10px] text-slate-500">Uniformes, botas de seguridad y cascos</p>
               </div>
 
-              {/* Cestaticket en Matriz */}
-              <div className={`space-y-1.5 p-3 rounded-xl border ${
-                bonoInFcas ? 'border-emerald-300 bg-emerald-50/60' : 'border-slate-200 bg-slate-100 opacity-60'
+              {/* Bono en Matriz */}
+              <div className={`space-y-1.5 p-3 rounded-xl border transition-all ${
+                bonoInFcas ? 'border-emerald-300 bg-emerald-50/60' : 'border-slate-200 bg-slate-50 opacity-60'
               }`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 uppercase flex items-center gap-1.5">
-                    <DollarSign size={14} className="text-emerald-600" /> Cestaticket Matriz
-                  </span>
-                  <span className={`text-[11px] font-black ${bonoInFcas ? 'text-emerald-700' : 'text-slate-500'}`}>
+                <div className="flex items-center justify-between gap-1">
+                  <label className="flex items-center gap-2 cursor-pointer min-w-0 select-none">
+                    <input
+                      type="checkbox"
+                      checked={bonoInFcas}
+                      onChange={(e) => setBonoInFcas(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
+                    />
+                    <span className="text-xs font-bold text-slate-700 uppercase flex items-center gap-1.5 truncate">
+                      <DollarSign size={14} className="text-emerald-600 shrink-0" /> Bono en Matriz
+                    </span>
+                  </label>
+                  <span className={`text-[11px] font-black shrink-0 ${bonoInFcas ? 'text-emerald-700' : 'text-slate-400'}`}>
                     {diasBono.toFixed(2)} días
                   </span>
                 </div>
@@ -846,7 +920,7 @@ export default function CalculadoraFCAS({
                   />
                 </div>
                 <p className="text-[10px] text-slate-600">
-                  {bonoInFcas ? 'Incluido en numerador FCAS' : '0.00 días (se cobra en APU)'}
+                  {bonoInFcas ? 'Absorbido en numerador FCAS' : '0.00 días (se cobra directo en APU)'}
                 </p>
               </div>
             </div>
