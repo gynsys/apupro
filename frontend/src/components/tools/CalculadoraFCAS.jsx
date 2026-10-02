@@ -489,21 +489,6 @@ export default function CalculadoraFCAS({
               <span>Restaurar</span>
             </button>
 
-            {/* Botón Usar FCAS */}
-            <button
-              type="button"
-              onClick={() => handleUseFCAS(bonoInFcas)}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-white text-xs font-bold rounded-xl transition-all shadow-md ${
-                bonoInFcas 
-                  ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20' 
-                  : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
-              }`}
-              title="Aplicar este porcentaje FCAS y configuración de bono al presupuesto activo o perfil de costos"
-            >
-              <Check size={14} />
-              <span>Usar FCAS ({(bonoInFcas ? fcasConBono : fcasPuro).toFixed(2)}%)</span>
-            </button>
-
             {/* Imprimir */}
             <button
               type="button"
