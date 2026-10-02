@@ -191,33 +191,57 @@ export default function CalculadoraFCAS({
   }, [conceptos, alicuotaSalarioIntegral, factorTemporal]);
 
   // C. Días Equivalentes Comerciales y de Operación de Campo en USD
-  const { diasHcm, diasTransporte, diasEpp, diasBono, dpCampoTotal } = useMemo(() => {
+  const { diasHcm, diasTransporte, diasEpp, dpCampoTotal } = useMemo(() => {
     const sDia = salarioDiario > 0 ? salarioDiario : (salarioBase > 0 ? Number((salarioBase / 30).toFixed(2)) : 2.67);
     const dHcm = (activoHcm && sDia > 0) ? (costoHcm * factorTemporal) / sDia : 0;
     const dTransp = (activoTransporte && sDia > 0) ? (costoTransporte * factorTemporal) / sDia : 0;
     const dEpp = (activoEpp && sDia > 0) ? costoEpp / sDia : 0; // Fijo inmutable ante obras cortas
-    const dBono = (bonoInFcas && sDia > 0) ? (bonoCestaticket * 12 * factorTemporal) / sDia : 0;
 
     return {
       diasHcm: dHcm,
       diasTransporte: dTransp,
       diasEpp: dEpp,
-      diasBono: dBono,
-      dpCampoTotal: dHcm + dTransp + dEpp + dBono
+      dpCampoTotal: dHcm + dTransp + dEpp
     };
-  }, [salarioDiario, salarioBase, costoHcm, costoTransporte, costoEpp, bonoInFcas, bonoCestaticket, factorTemporal, activoHcm, activoTransporte, activoEpp]);
+  }, [salarioDiario, salarioBase, costoHcm, costoTransporte, costoEpp, factorTemporal, activoHcm, activoTransporte, activoEpp]);
 
-  // Total Días Pagados y Equivalentes (DP Total)
-  const dpTotal = useMemo(() => {
+  // Días que aporta el bono si se absorbe en el FCAS
+  const diasBonoPotenciales = useMemo(() => {
+    const sDia = salarioDiario > 0 ? salarioDiario : (salarioBase > 0 ? Number((salarioBase / 30).toFixed(2)) : 2.67);
+    return sDia > 0 ? (bonoCestaticket * 12 * factorTemporal) / sDia : 0;
+  }, [salarioDiario, salarioBase, bonoCestaticket, factorTemporal]);
+
+  // DP sin bono (Base + Ley + Campo ordinario)
+  const dpSinBono = useMemo(() => {
     return diasBaseNomina + diasBeneficiosLegales + dpCampoTotal;
   }, [diasBaseNomina, diasBeneficiosLegales, dpCampoTotal]);
 
-  // ── FCAS RESULTANTE (%) ──────────────────────────────────────────────────
-  // Ecuación Universal Expandida: FCAS (%) = [(DP Total / DT) - 1] * 100
-  const fcasPorcentaje = useMemo(() => {
+  // DP con bono integrado
+  const dpConBono = useMemo(() => {
+    return dpSinBono + diasBonoPotenciales;
+  }, [dpSinBono, diasBonoPotenciales]);
+
+  // Total Días Pagados y Equivalentes según opción activa
+  const dpTotal = useMemo(() => {
+    return bonoInFcas ? dpConBono : dpSinBono;
+  }, [bonoInFcas, dpConBono, dpSinBono]);
+
+  // FCAS puro de Ley y Campo (sin bono Cestaticket)
+  const fcasPuro = useMemo(() => {
     if (dtLaborados <= 0) return 0;
-    return Math.max(0, ((dpTotal / dtLaborados) - 1) * 100);
-  }, [dpTotal, dtLaborados]);
+    return Math.max(0, ((dpSinBono / dtLaborados) - 1) * 100);
+  }, [dtLaborados, dpSinBono]);
+
+  // FCAS con bono integrado
+  const fcasConBono = useMemo(() => {
+    if (dtLaborados <= 0) return 0;
+    return Math.max(0, ((dpConBono / dtLaborados) - 1) * 100);
+  }, [dtLaborados, dpConBono]);
+
+  // FCAS resultante según opción activa (%)
+  const fcasPorcentaje = useMemo(() => {
+    return bonoInFcas ? fcasConBono : fcasPuro;
+  }, [bonoInFcas, fcasConBono, fcasPuro]);
 
   // Multiplicador sobre el Jornal Básico (1 + FCAS/100)
   const fcasMultiplicador = useMemo(() => {
@@ -234,34 +258,6 @@ export default function CalculadoraFCAS({
     const jornalConFcas = salarioDiario * fcasMultiplicador;
     return bonoInFcas ? jornalConFcas : (jornalConFcas + bonoDiarioApu);
   }, [salarioDiario, fcasMultiplicador, bonoInFcas, bonoDiarioApu]);
-
-  // Días que aportaría el bono si estuviera activo (para comparar con valores reales)
-  const diasBonoPotenciales = useMemo(() => {
-    const sDia = salarioDiario > 0 ? salarioDiario : (salarioBase > 0 ? Number((salarioBase / 30).toFixed(2)) : 2.67);
-    return sDia > 0 ? (bonoCestaticket * 12 * factorTemporal) / sDia : 0;
-  }, [salarioDiario, salarioBase, bonoCestaticket, factorTemporal]);
-
-  // DP sin bono (Base + Ley + Campo ordinario)
-  const dpSinBono = useMemo(() => {
-    return diasBaseNomina + diasBeneficiosLegales + (diasHcm + diasTransporte + diasEpp);
-  }, [diasBaseNomina, diasBeneficiosLegales, diasHcm, diasTransporte, diasEpp]);
-
-  // DP con bono integrado
-  const dpConBono = useMemo(() => {
-    return dpSinBono + diasBonoPotenciales;
-  }, [dpSinBono, diasBonoPotenciales]);
-
-  // FCAS puro de Ley y Campo (sin bono Cestaticket)
-  const fcasPuro = useMemo(() => {
-    if (dtLaborados <= 0) return 0;
-    return Math.max(0, ((dpSinBono / dtLaborados) - 1) * 100);
-  }, [dtLaborados, dpSinBono]);
-
-  // FCAS con bono integrado
-  const fcasConBono = useMemo(() => {
-    if (dtLaborados <= 0) return 0;
-    return Math.max(0, ((dpConBono / dtLaborados) - 1) * 100);
-  }, [dtLaborados, dpConBono]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const toggleConcepto = (idx) => {
@@ -766,7 +762,7 @@ export default function CalculadoraFCAS({
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Póliza HCM */}
               <div className={`space-y-1.5 p-3 rounded-xl border transition-all ${
                 activoHcm ? 'border-slate-300 bg-white shadow-2xs' : 'border-slate-200 bg-slate-50 opacity-60'
@@ -873,40 +869,6 @@ export default function CalculadoraFCAS({
                   />
                 </div>
                 <p className="text-[10px] text-slate-500">Uniformes, botas de seguridad y cascos</p>
-              </div>
-
-              {/* Bono en Matriz */}
-              <div className={`space-y-1.5 p-3 rounded-xl border transition-all ${
-                bonoInFcas ? 'border-emerald-300 bg-emerald-50/60' : 'border-slate-200 bg-slate-50 opacity-60'
-              }`}>
-                <div className="flex items-center justify-between gap-1">
-                  <label className="flex items-center gap-2 cursor-pointer min-w-0 select-none">
-                    <input
-                      type="checkbox"
-                      checked={bonoInFcas}
-                      onChange={(e) => setBonoInFcas(e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
-                    />
-                    <span className="text-xs font-bold text-slate-700 uppercase flex items-center gap-1.5 truncate">
-                      <DollarSign size={14} className="text-emerald-600 shrink-0" /> Bono en Matriz
-                    </span>
-                  </label>
-                  <span className={`text-[11px] font-black shrink-0 ${bonoInFcas ? 'text-emerald-700' : 'text-slate-400'}`}>
-                    {diasBono.toFixed(2)} días
-                  </span>
-                </div>
-                <div className="relative">
-                  <span className="absolute left-2.5 top-2 text-xs font-bold text-slate-400">$</span>
-                  <input
-                    type="text"
-                    readOnly
-                    value={(bonoCestaticket * 12).toFixed(2)}
-                    className="w-full bg-white/80 rounded-lg border border-slate-300 pl-6 pr-2.5 py-1.5 text-sm font-bold text-slate-800 cursor-not-allowed"
-                  />
-                </div>
-                <p className="text-[10px] text-slate-600">
-                  {bonoInFcas ? 'Absorbido en numerador FCAS' : '0.00 días (se cobra directo en APU)'}
-                </p>
               </div>
             </div>
           </div>
