@@ -894,23 +894,13 @@ export default function CalculadoraFCAS({
               
               {/* OPCIÓN 1: BONO EN FCAS */}
               <div 
-                onClick={() => setBonoInFcas(true)}
-                className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
-                  bonoInFcas 
-                    ? 'bg-gradient-to-br from-emerald-50/90 via-white to-emerald-50/40 border-emerald-500 shadow-md ring-2 ring-emerald-500/20' 
-                    : 'bg-white border-slate-200 hover:border-emerald-300 shadow-sm opacity-90'
-                }`}
+                className="p-5 rounded-2xl border-2 transition-all flex flex-col justify-between bg-gradient-to-br from-emerald-50/80 via-white to-emerald-50/30 border-emerald-400 shadow-sm"
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-emerald-600 text-white">
                       Bono en FCAS
                     </span>
-                    {bonoInFcas && (
-                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <Check size={12} /> Seleccionado
-                      </span>
-                    )}
                   </div>
 
                   {/* Porcentaje Gigante */}
@@ -921,9 +911,6 @@ export default function CalculadoraFCAS({
                     <div className="text-4xl sm:text-5xl font-black text-emerald-600 tracking-tight mt-1">
                       {fcasConBono.toFixed(2)}%
                     </div>
-                    <p className="text-xs text-slate-600 font-bold mt-1">
-                      Multiplicador: <strong className="text-slate-900 font-black">{(1 + fcasConBono / 100).toFixed(4)}</strong>
-                    </p>
                   </div>
 
                   {/* Desglose de Parámetros */}
@@ -936,20 +923,13 @@ export default function CalculadoraFCAS({
                       <span>Total Días Pagados (DP):</span>
                       <strong className="text-slate-900 font-bold">{dpConBono.toFixed(2)} días</strong>
                     </div>
-                    <div className="flex justify-between items-center text-slate-600">
-                      <span>Cobro directo en APU:</span>
-                      <strong className="text-slate-500 font-bold">$0.00 (absorbido)</strong>
-                    </div>
                   </div>
                 </div>
 
                 {/* Botón Usar FCAS (Bono en FCAS) */}
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleUseFCAS(true);
-                  }}
+                  onClick={() => handleUseFCAS(true)}
                   className="w-full mt-4 flex items-center justify-center gap-2 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm rounded-xl shadow-md transition-all active:scale-95"
                 >
                   <Check size={16} /> Usar FCAS ({fcasConBono.toFixed(2)}%)
@@ -958,23 +938,13 @@ export default function CalculadoraFCAS({
 
               {/* OPCIÓN 2: BONO EN APU */}
               <div 
-                onClick={() => setBonoInFcas(false)}
-                className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
-                  !bonoInFcas 
-                    ? 'bg-gradient-to-br from-blue-50/90 via-white to-blue-50/40 border-blue-500 shadow-md ring-2 ring-blue-500/20' 
-                    : 'bg-white border-slate-200 hover:border-blue-300 shadow-sm opacity-90'
-                }`}
+                className="p-5 rounded-2xl border-2 transition-all flex flex-col justify-between bg-gradient-to-br from-blue-50/80 via-white to-blue-50/30 border-blue-400 shadow-sm"
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-blue-600 text-white">
                       Bono en APU
                     </span>
-                    {!bonoInFcas && (
-                      <span className="text-[11px] font-bold text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <Check size={12} /> Seleccionado
-                      </span>
-                    )}
                   </div>
 
                   {/* Porcentaje Gigante */}
@@ -985,9 +955,6 @@ export default function CalculadoraFCAS({
                     <div className="text-4xl sm:text-5xl font-black text-blue-600 tracking-tight mt-1">
                       {fcasPuro.toFixed(2)}%
                     </div>
-                    <p className="text-xs text-slate-600 font-bold mt-1">
-                      Multiplicador: <strong className="text-slate-900 font-black">{(1 + fcasPuro / 100).toFixed(4)}</strong>
-                    </p>
                   </div>
 
                   {/* Desglose de Parámetros */}
@@ -1000,20 +967,13 @@ export default function CalculadoraFCAS({
                       <span>Total Días Pagados (DP):</span>
                       <strong className="text-slate-900 font-bold">{dpSinBono.toFixed(2)} días</strong>
                     </div>
-                    <div className="flex justify-between items-center text-slate-600">
-                      <span>Cobro directo en APU:</span>
-                      <strong className="text-blue-700 font-bold">${bonoDiarioApu.toFixed(2)}/día por obrero</strong>
-                    </div>
                   </div>
                 </div>
 
                 {/* Botón Usar FCAS (Bono en APU) */}
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleUseFCAS(false);
-                  }}
+                  onClick={() => handleUseFCAS(false)}
                   className="w-full mt-4 flex items-center justify-center gap-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-black text-sm rounded-xl shadow-md transition-all active:scale-95"
                 >
                   <Check size={16} /> Usar FCAS ({fcasPuro.toFixed(2)}%)
