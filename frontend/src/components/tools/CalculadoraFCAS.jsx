@@ -428,15 +428,8 @@ export default function CalculadoraFCAS({
                 <Layers size={18} />
               </span>
               <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight leading-none">
-                Matriz Unificada Dinámica del FCAS
+                Calculo del Factor de Costos Asociados al Salario (FCAS)
               </h1>
-              <span className={`px-2.5 py-0.5 rounded-full text-xs font-black border transition-all ${
-                bonoInFcas 
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300' 
-                  : 'bg-blue-50 text-blue-700 border-blue-300'
-              }`}>
-                FCAS: {fcasPorcentaje.toFixed(2)}%
-              </span>
             </div>
             <p className="text-xs text-slate-500 mt-1">
               Fórmula Expandida de Base Anual (LOTTT, Convención Colectiva y CostBase) • Todos los campos 100% editables
