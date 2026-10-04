@@ -260,6 +260,16 @@ export default function CalculadoraFCAS({
   }, [salarioDiario, fcasMultiplicador, bonoInFcas, bonoDiarioApu]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
+  const todosCampoActivos = Boolean(activoHcm && activoTransporte && activoEpp);
+  const algunoCampoActivo = Boolean(activoHcm || activoTransporte || activoEpp);
+
+  const handleToggleTodosCampo = () => {
+    const nuevoEstado = !algunoCampoActivo;
+    setActivoHcm(nuevoEstado);
+    setActivoTransporte(nuevoEstado);
+    setActivoEpp(nuevoEstado);
+  };
+
   const toggleConcepto = (idx) => {
     setConceptos(prev =>
       prev.map((c, i) => (i === idx ? { ...c, activo: !c.activo } : c))
@@ -744,11 +754,24 @@ export default function CalculadoraFCAS({
              ========================================================================= */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-              <div className="flex items-center gap-2">
-                <HardHat size={16} className="text-emerald-600" />
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                  4. Logística de Campo y Compensaciones en USD (Días Equivalentes)
-                </h4>
+              <div className="flex items-center gap-2.5">
+                <input
+                  type="checkbox"
+                  id="toggle-todos-campo"
+                  checked={algunoCampoActivo}
+                  ref={(el) => {
+                    if (el) el.indeterminate = algunoCampoActivo && !todosCampoActivos;
+                  }}
+                  onChange={handleToggleTodosCampo}
+                  className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
+                  title="Activar o desactivar todos los ítems de logística de campo"
+                />
+                <label htmlFor="toggle-todos-campo" className="flex items-center gap-2 cursor-pointer select-none">
+                  <HardHat size={16} className="text-emerald-600" />
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                    4. Logística de Campo y Compensaciones en USD (Días Equivalentes)
+                  </h4>
+                </label>
               </div>
               <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
                 Subtotal Campo = {dpCampoTotal.toFixed(2)} días
