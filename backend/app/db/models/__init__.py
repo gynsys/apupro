@@ -6,7 +6,6 @@ from app.db.models.costbase import (
     CostbaseItem, CostbaseMaterial, CostbaseLabor, CostbaseEquipment
 )
 from app.db.models.costbase_database import Cost360Database, CostbaseDatabase
-from app.db.models.schedule import ScheduleProject, ScheduleActivity, ScheduleDependency
 from app.db.models.strategic_ally import StrategicAlly
 
 __all__ = [
@@ -22,8 +21,5 @@ __all__ = [
     "CostLabor",
     "CostEquipment",
     "Cost360Database",
-    "ScheduleProject",
-    "ScheduleActivity",
-    "ScheduleDependency",
     "StrategicAlly"
 ]
