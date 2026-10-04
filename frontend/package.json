@@ -10,15 +10,11 @@
     "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
-    "@ffmpeg/core": "^0.12.10",
-    "@ffmpeg/ffmpeg": "^0.12.15",
-    "@ffmpeg/util": "^0.12.2",
     "@headlessui/react": "^2.2.10",
     "@hello-pangea/dnd": "^18.0.1",
     "@react-oauth/google": "^0.13.5",
     "@sanity/client": "^7.22.1",
     "axios": "^1.18.1",
-    "fix-webm-duration": "^1.0.6",
     "framer-motion": "^11.2.10",
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
