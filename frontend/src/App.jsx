@@ -3,9 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
-import AdminLayout from './components/layout/AdminLayout.jsx';
-import ProfilePage from './pages/admin/ProfilePage.jsx';
-import MaterialsPage from './pages/admin/MaterialsPage.jsx';
 import BudgetHomePage from './pages/admin/BudgetHomePage.jsx';
 import BudgetWorksheetPage from './pages/admin/BudgetWorksheetPage.jsx';
 import BudgetAPUEditorPage from './pages/admin/BudgetAPUEditorPage.jsx';
@@ -79,18 +76,8 @@ function App() {
           <BrowserRouter basename={window.location.pathname.startsWith('/app') ? '/app' : ''}>
           <Routes>
                                                 <Route path="/" element={<LandingPage />} />
-            <Route 
-              path="/admin/*" 
-              element={
-                <ProtectedRoute>
-                  <AdminLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Navigate to="/admin/profile" replace />} />
-              <Route path="profile" element={<ProfilePage />} />
-              <Route path="materials" element={<MaterialsPage />} />
-            </Route>
+            {/* Redirección retrocompatible de rutas admin obsoletas */}
+            <Route path="/admin/*" element={<Navigate to="/budgets" replace />} />
 
             {/* FCAS Calculator Route */}
             <Route
@@ -155,20 +142,9 @@ function App() {
               <Route path=":id/item/:itemId" element={<BudgetAPUEditorPage />} />
             </Route>
 
-            {/* Rutas para sitios clonados usando el slug (Obsoleto /login retirado) */}
-            <Route path="/:slug" element={<Navigate to="admin" replace />} />
-            <Route 
-              path="/:slug/admin/*" 
-              element={
-                <ProtectedRoute>
-                  <AdminLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Navigate to="profile" replace />} />
-              <Route path="profile" element={<ProfilePage />} />
-              <Route path="materials" element={<MaterialsPage />} />
-            </Route>
+            {/* Rutas retrocompatibles usando el slug */}
+            <Route path="/:slug" element={<Navigate to="/budgets" replace />} />
+            <Route path="/:slug/admin/*" element={<Navigate to="/budgets" replace />} />
 
             <Route
               path="/:slug/costbase"

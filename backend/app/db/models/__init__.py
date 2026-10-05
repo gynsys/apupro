@@ -1,5 +1,4 @@
 from app.db.models.llm_provider import LLMProvider
-from app.db.models.material import MaterialPrice
 from app.db.models.budget import Budget, BudgetItem, BudgetAPUMaterial, BudgetAPUEquipment, BudgetAPULabor
 from app.db.models.costbase import (
     CostItem, CostMaterial, CostLabor, CostEquipment,
@@ -10,7 +9,6 @@ from app.db.models.strategic_ally import StrategicAlly
 
 __all__ = [
     "LLMProvider",
-    "MaterialPrice",
     "Budget",
     "BudgetItem",
     "BudgetAPUMaterial",
