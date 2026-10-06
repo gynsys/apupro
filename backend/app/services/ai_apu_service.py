@@ -18,6 +18,7 @@ from app.db.models.cost360 import (
 )
 from app.services.ai_search import ai_engine
 from app.services.apu_labor_calibrator import calibrate_apu_crew_and_equipment
+from app.services.web_price_researcher import research_material_web_price
 
 
 # ---------------------------------------------------------------------------
@@ -772,9 +773,9 @@ def _execute_equipment_reconciliation(result: Dict[str, Any], db: Session) -> No
             reconciled_terms.append(desc.lower())
         else:
             if is_ia or no_cod or zero_price:
-                eq["origen"] = "ia"
-                if not eq.get("codigo") or eq.get("codigo").startswith("e-"):
-                    eq["codigo"] = f"EQU-IA-{i+1:03d}"
+                eq["origen"] = "referencial"
+                if not eq.get("codigo") or eq.get("codigo").startswith("e-") or eq.get("codigo").startswith("EQU-IA-"):
+                    eq["codigo"] = "S/C"
 
     # Sanitizar advertencias de equipos
     if "advertencias" in result and isinstance(result["advertencias"], list):
@@ -958,14 +959,29 @@ def _execute_material_reconciliation(result: Dict[str, Any], db: Session) -> Non
             reconciled_terms.append(matched_desc.lower())
             reconciled_terms.append(desc.lower())
         else:
-            # Si no hubo coincidencia estricta en el catálogo, DEBE PERMANECER COMO IA
+            # Si no hubo coincidencia estricta en el catálogo, es un material referencial
             if is_ia or no_cod or zero_price:
-                mat["origen"] = "ia"
-                if not mat.get("codigo") or mat.get("codigo").startswith("m-"):
-                    mat["codigo"] = f"MAT-IA-{i+1:03d}"
-                pu = float(mat.get("precio_unitario") or 0.0)
-                if pu <= 0:
-                    mat["precio_unitario"] = 10.0  # fallback mínimo referencial
+                mat["origen"] = "referencial"
+                if not mat.get("codigo") or mat.get("codigo").startswith("m-") or mat.get("codigo").startswith("MAT-IA-"):
+                    mat["codigo"] = "S/C"
+
+                # Investigar precio promedio en internet para el insumo faltante
+                mat_desc = mat.get("descripcion", "")
+                mat_unit = mat.get("unidad", "")
+                try:
+                    web_info = research_material_web_price(mat_desc, mat_unit)
+                    if web_info and web_info.get("precio_promedio"):
+                        mat["precio_unitario"] = float(web_info["precio_promedio"])
+                        mat["precio_web_info"] = web_info
+                    else:
+                        pu = float(mat.get("precio_unitario") or 0.0)
+                        if pu <= 0:
+                            mat["precio_unitario"] = 10.0  # fallback mínimo referencial
+                except Exception as w_err:
+                    logger.warning("Error al buscar precio web para material '%s': %s", mat_desc, w_err)
+                    pu = float(mat.get("precio_unitario") or 0.0)
+                    if pu <= 0:
+                        mat["precio_unitario"] = 10.0
 
     # Sanitizar advertencias de precios referenciales si el material fue reconciliado con catálogo
     if "advertencias" in result and isinstance(result["advertencias"], list) and reconciled_terms:
@@ -978,16 +994,25 @@ def _execute_material_reconciliation(result: Dict[str, Any], db: Session) -> Non
             clean_adv.append(adv)
         result["advertencias"] = clean_adv
 
-    # Asegurar advertencia de precio referencial para insumos que permanecen como IA
+    # Asegurar advertencia de precio referencial para insumos no presentes en catálogo
     for mat in materials:
-        if isinstance(mat, dict) and mat.get("origen") == "ia":
+        if isinstance(mat, dict) and mat.get("origen") in ("ia", "referencial"):
             mat_desc = mat.get("descripcion", "")
             mat_pu = float(mat.get("precio_unitario") or 0.0)
+            web_info = mat.get("precio_web_info")
             already_warned = any(mat_desc.lower() in str(a).lower() for a in result.get("advertencias", []))
             if not already_warned:
-                result.setdefault("advertencias", []).append(
-                    f"[PRECIO_REFERENCIAL] Insumo estimado de mercado: '{mat_desc}' (${mat_pu:,.2f} USD). Verifique precio local."
-                )
+                if web_info:
+                    adv_text = (
+                        f"[PRECIO_REFERENCIAL] Insumo estimado de mercado web: '{mat_desc}' "
+                        f"(${mat_pu:,.2f} USD). Promedio investigado en internet. Verifique precio local."
+                    )
+                else:
+                    adv_text = (
+                        f"[PRECIO_REFERENCIAL] Insumo estimado de mercado: '{mat_desc}' "
+                        f"(${mat_pu:,.2f} USD). Verifique precio local con proveedores."
+                    )
+                result.setdefault("advertencias", []).append(adv_text)
 
 
 def reconcile_materials_with_database(result: Dict[str, Any], db: Optional[Session] = None) -> None:

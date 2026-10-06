@@ -107,11 +107,12 @@ export default function ApuEditorUI({
   };
 
   const renderOrigenTag = (origen) => {
-    if (!origen || origen.toUpperCase() === 'HISTORICO') return null;
+    if (!origen) return null;
+    const norm = origen.toUpperCase();
+    if (norm === 'HISTORICO' || norm === 'IA' || norm === 'AI' || norm === 'REFERENCIAL') return null;
     if (origen === 'master') return <span className="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase border border-blue-200">Maestra</span>;
     if (origen === 'custom') return <span className="bg-purple-100 text-purple-800 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase border border-purple-200">Personalizada</span>;
-    if (origen === 'ai') return <span className="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase border border-emerald-200 flex items-center gap-1 w-fit"><Sparkles size={10}/> Generado IA</span>;
-    return <span className="bg-slate-100 text-slate-800 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase border border-slate-200">{origen}</span>;
+    return null;
   };
 
   const costos = calculateCostosDirectos();
