@@ -510,11 +510,11 @@ class CostosConfigSchema(BaseModel):
     porcentajeAdministracion: float = 15.0
     iva: float = 16.0
     fcas: float = 417.0
-    fcasSalarioBase: Optional[float] = 80.0
-    fcasBonoCestaticket: Optional[float] = 174.0
+    fcasSalarioBase: Optional[float] = 73.2
+    fcasBonoCestaticket: Optional[float] = 175.0
     fcasMetodo: Optional[str] = "estandar"
     fcasBonoInFcas: Optional[bool] = False
-    fcasLaborBonus: Optional[float] = 5.72
+    fcasLaborBonus: Optional[float] = 5.75
     fcasDiasRendimiento: Optional[float] = 56.0
     fcasCostoHcm: Optional[float] = 450.0
     fcasCostoTransporte: Optional[float] = 547.50

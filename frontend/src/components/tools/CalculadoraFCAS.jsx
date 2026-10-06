@@ -44,8 +44,8 @@ export default function CalculadoraFCAS({
   onClose, 
   onUseFCAS, 
   isPage = false,
-  initialSalarioBase = 80,
-  initialBonoCestaticket = 174,
+  initialSalarioBase = 73.2,
+  initialBonoCestaticket = 175,
   initialBonoInFcas = false,
   initialDiasRendimiento = 56,
   initialCostoHcm = 450,
@@ -60,11 +60,11 @@ export default function CalculadoraFCAS({
   onDeleteProfile = null
 }) {
   // ── 1. Parámetros Económicos Maestros (100% Editables) ───────────────────
-  const [salarioBase, setSalarioBase] = useState(initialSalarioBase || 80); // $ mensuales
+  const [salarioBase, setSalarioBase] = useState(initialSalarioBase || 73.2); // $ mensuales (73.20$ = 2.44$/día * 30)
   const [salarioDiario, setSalarioDiario] = useState(
-    Number(((initialSalarioBase || 80) / 30).toFixed(2))
-  ); // $ diario (Sb) redondeado a 2 decimales
-  const [bonoCestaticket, setBonoCestaticket] = useState(initialBonoCestaticket || 174); // $ mensuales
+    Number(((initialSalarioBase || 73.2) / 30).toFixed(2))
+  ); // $ diario (Sb = 2.44) redondeado a 2 decimales
+  const [bonoCestaticket, setBonoCestaticket] = useState(initialBonoCestaticket || 175); // $ mensuales
   const [bonoInFcas, setBonoInFcas] = useState(
     initialBonoInFcas != null 
       ? Boolean(initialBonoInFcas) 
@@ -192,7 +192,7 @@ export default function CalculadoraFCAS({
 
   // C. Días Equivalentes Comerciales y de Operación de Campo en USD
   const { diasHcm, diasTransporte, diasEpp, dpCampoTotal } = useMemo(() => {
-    const sDia = salarioDiario > 0 ? salarioDiario : (salarioBase > 0 ? Number((salarioBase / 30).toFixed(2)) : 2.67);
+    const sDia = salarioDiario > 0 ? salarioDiario : (salarioBase > 0 ? Number((salarioBase / 30).toFixed(2)) : 2.44);
     const dHcm = (activoHcm && sDia > 0) ? (costoHcm * factorTemporal) / sDia : 0;
     const dTransp = (activoTransporte && sDia > 0) ? (costoTransporte * factorTemporal) / sDia : 0;
     const dEpp = (activoEpp && sDia > 0) ? costoEpp / sDia : 0; // Fijo inmutable ante obras cortas
@@ -207,7 +207,7 @@ export default function CalculadoraFCAS({
 
   // Días que aporta el bono si se absorbe en el FCAS
   const diasBonoPotenciales = useMemo(() => {
-    const sDia = salarioDiario > 0 ? salarioDiario : (salarioBase > 0 ? Number((salarioBase / 30).toFixed(2)) : 2.67);
+    const sDia = salarioDiario > 0 ? salarioDiario : (salarioBase > 0 ? Number((salarioBase / 30).toFixed(2)) : 2.44);
     return sDia > 0 ? (bonoCestaticket * 12 * factorTemporal) / sDia : 0;
   }, [salarioDiario, salarioBase, bonoCestaticket, factorTemporal]);
 
@@ -283,9 +283,9 @@ export default function CalculadoraFCAS({
   };
 
   const resetearValores = () => {
-    setSalarioBase(initialSalarioBase || 80);
-    setSalarioDiario(Number(((initialSalarioBase || 80) / 30).toFixed(2)));
-    setBonoCestaticket(initialBonoCestaticket || 174);
+    setSalarioBase(initialSalarioBase || 73.2);
+    setSalarioDiario(Number(((initialSalarioBase || 73.2) / 30).toFixed(2)));
+    setBonoCestaticket(initialBonoCestaticket || 175);
     setBonoInFcas(false);
     setDiasContratados(365);
     setDiasNoTrabajados(115);
@@ -976,10 +976,6 @@ export default function CalculadoraFCAS({
                   {/* Desglose de Parámetros */}
                   <div className="bg-white/80 rounded-xl p-3 border border-slate-200/80 space-y-2 text-xs">
                     <div className="flex justify-between items-center text-slate-600">
-                      <span>Días sumados por bono:</span>
-                      <strong className="text-slate-500 font-bold">0.00 días (Puro Ley)</strong>
-                    </div>
-                    <div className="flex justify-between items-center text-slate-600">
                       <span>Total Días Pagados (DP):</span>
                       <strong className="text-slate-900 font-bold">{dpSinBono.toFixed(2)} días</strong>
                     </div>
@@ -1084,9 +1080,9 @@ export default function CalculadoraFCAS({
                         </div>
 
                         <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
-                          <span>Base: <strong className="text-slate-700">${data.salarioBase || 80}</strong></span>
+                          <span>Base: <strong className="text-slate-700">${data.salarioBase || 73.2}</strong></span>
                           <span>•</span>
-                          <span>Bono: <strong className="text-slate-700">${data.bonoCestaticket || 174}</strong></span>
+                          <span>Bono: <strong className="text-slate-700">${data.bonoCestaticket || 175}</strong></span>
                           {data.diasRendimiento && (
                             <>
                               <span>•</span>
