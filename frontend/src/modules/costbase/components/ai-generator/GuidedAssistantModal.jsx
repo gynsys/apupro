@@ -30,8 +30,11 @@ export default function GuidedAssistantModal({
   const navigate = useNavigate();
 
   const handleClose = () => {
-    if (onClose) onClose();
-    navigate('/budgets');
+    if (onClose) {
+      onClose();
+    } else {
+      navigate('/budgets');
+    }
   };
 
   useEffect(() => {
@@ -54,13 +57,26 @@ export default function GuidedAssistantModal({
         className="bg-[#FEF3C7] border-2 border-[#FEF3C7] rounded-2xl p-3.5 sm:p-6 relative flex flex-col max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200" 
         style={{ minHeight: '380px', maxHeight: '90dvh' }}
       >
-        <button 
-          onClick={handleClose}
-          className="absolute top-3 right-3 text-amber-700 hover:text-amber-900 hover:bg-amber-200/50 rounded-full p-2 touch-target flex items-center justify-center transition-colors cursor-pointer"
-          aria-label="Cerrar asistente"
-        >
-          <X size={20} />
-        </button>
+        <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
+          {onSwitchToFreeText && (
+            <button
+              type="button"
+              onClick={onSwitchToFreeText}
+              className="bg-white/90 hover:bg-white border border-amber-300 hover:border-amber-500 text-amber-900 font-bold text-xs px-3 py-1.5 rounded-full shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+              title="Cambiar al modo de texto libre"
+            >
+              <Edit2 size={12} className="text-amber-700" />
+              <span>Escribir libremente</span>
+            </button>
+          )}
+          <button 
+            onClick={handleClose}
+            className="text-amber-700 hover:text-amber-900 hover:bg-amber-200/50 rounded-full p-2 touch-target flex items-center justify-center transition-colors cursor-pointer"
+            aria-label="Cerrar asistente"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
         <div className="flex flex-wrap items-center gap-3 mb-3 border-b border-amber-200/50 pb-3 flex-shrink-0">
           <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold shadow-md shadow-amber-500/30">
@@ -118,13 +134,14 @@ export default function GuidedAssistantModal({
                       {chip}
                     </button>
                   ))}
-                  {currentChatStep === 0 && (
+                  {onSwitchToFreeText && (currentChatStep === 0 || currentChatStep === 1) && (
                     <button 
                       type="button"
                       onClick={onSwitchToFreeText}
-                      className="bg-white/80 border border-amber-400 hover:bg-amber-200/60 text-amber-900 font-bold text-sm px-4 py-2 rounded-xl transition-all shadow-sm cursor-pointer active:scale-95"
+                      className="bg-white/90 border border-amber-400 hover:bg-amber-200/60 text-amber-900 font-bold text-xs sm:text-sm px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-all shadow-sm cursor-pointer active:scale-95 flex items-center gap-1.5"
                     >
-                      Escribir libremente
+                      <Edit2 size={13} className="text-amber-700" />
+                      <span>Escribir libremente</span>
                     </button>
                   )}
                 </div>
