@@ -74,8 +74,10 @@ def get_items_paginated(
     if database_id == "personalizada":
         # Base de datos personalizada: buscar en CustomCostItem
         query = db.query(CustomCostItem)
-        if not is_superadmin and user_id is not None:
-            query = query.filter(or_(CustomCostItem.user_id == user_id, CustomCostItem.user_id == None))
+        if user_id is not None:
+            query = query.filter(or_(CustomCostItem.user_id == user_id, CustomCostItem.user_id.is_(None)))
+        else:
+            query = query.filter(CustomCostItem.user_id.is_(None))
 
         if search:
             words = search.split()
@@ -106,20 +108,39 @@ def get_items_paginated(
         items = []
         for ci in custom_items:
             try:
-                data = json.loads(ci.apu_data)
-                cod_par = data.get("cod_par", "CUST-" + ci.id[:4].upper())
+                data = json.loads(ci.apu_data) if isinstance(ci.apu_data, str) else ci.apu_data
+                if not isinstance(data, dict):
+                    data = {}
+                cod_par = (
+                    data.get("cod_par") or
+                    data.get("CodPar") or
+                    (data.get("partida", {}).get("cod_par") if isinstance(data.get("partida"), dict) else None) or
+                    (data.get("partida", {}).get("CodPar") if isinstance(data.get("partida"), dict) else None) or
+                    ("CUST-" + ci.id[:4].upper())
+                )
+                cov_par = (
+                    data.get("cov_par") or
+                    data.get("CovPar") or
+                    (data.get("partida", {}).get("cov_par") if isinstance(data.get("partida"), dict) else None) or
+                    (data.get("partida", {}).get("CovPar") if isinstance(data.get("partida"), dict) else None)
+                )
+
+                materials_list = data.get('materials') or data.get('materiales') or []
+                equipments_list = data.get('equipments') or data.get('equipos') or []
+                labors_list = data.get('labors') or data.get('labor') or data.get('mano_obra') or []
                 
-                mat_total = sum(m.get('cantidad', 0) * m.get('precio_unitario', 0) * (1 + m.get('desperdicio', 0)/100) for m in data.get('materials', []))
-                eq_total = sum(e.get('cantidad', 0) * e.get('depreciacion', 1.0) * e.get('precio_unitario', 0) for e in data.get('equipments', [])) / (ci.performance or 1)
+                mat_total = sum(m.get('cantidad', 0) * m.get('precio_unitario', 0) * (1 + m.get('desperdicio', 0)/100) for m in materials_list)
+                eq_total = sum(e.get('cantidad', 0) * e.get('depreciacion', 1.0) * e.get('precio_unitario', 0) for e in equipments_list) / (ci.performance or 1)
                 
-                lab_jornal = sum(l.get('cantidad', 0) * l.get('jornal', 0) for l in data.get('labors', []))
-                lab_bono = sum(l.get('cantidad', 0) * l.get('bono', 0) for l in data.get('labors', []))
+                lab_jornal = sum(l.get('cantidad', 0) * l.get('jornal', 0) for l in labors_list)
+                lab_bono = sum(l.get('cantidad', 0) * l.get('bono', 0) for l in labors_list)
                 lab_total = (lab_jornal + lab_bono + (lab_jornal * 4.17)) / (ci.performance or 1)
                 
                 subtotal_a = mat_total + eq_total + lab_total
-                pre_uni = subtotal_a * 1.15 * 1.10
+                pre_uni = round(subtotal_a * 1.15 * 1.10, 4)
             except Exception:
                 cod_par = "CUST-" + ci.id[:4].upper()
+                cov_par = None
                 pre_uni = 0.0
 
             items.append({
@@ -127,7 +148,7 @@ def get_items_paginated(
                 "user_id": ci.user_id,
                 "CodPar": cod_par,
                 "Descri": ci.description,
-                "CovPar": None,
+                "CovPar": cov_par,
                 "UniPar": ci.unit,
                 "PreUni": pre_uni,
                 "RenPar": ci.performance,
