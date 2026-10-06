@@ -134,16 +134,6 @@ export default function GuidedAssistantModal({
                       {chip}
                     </button>
                   ))}
-                  {onSwitchToFreeText && (currentChatStep === 0 || currentChatStep === 1) && (
-                    <button 
-                      type="button"
-                      onClick={onSwitchToFreeText}
-                      className="bg-white/90 border border-amber-400 hover:bg-amber-200/60 text-amber-900 font-bold text-xs sm:text-sm px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-all shadow-sm cursor-pointer active:scale-95 flex items-center gap-1.5"
-                    >
-                      <Edit2 size={13} className="text-amber-700" />
-                      <span>Escribir libremente</span>
-                    </button>
-                  )}
                 </div>
               )}
             </div>
