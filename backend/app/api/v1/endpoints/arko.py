@@ -563,18 +563,23 @@ COSTOS_DEFAULTS = CostosConfigSchema()
 
 def _get_costos_config(user: ArkoAdmin) -> CostosConfigSchema:
     """Devuelve costos_config del usuario con fallback a site_config.costos y luego defaults."""
-    if user.costos_config:
-        return CostosConfigSchema(**{
-            **COSTOS_DEFAULTS.model_dump(),
-            **user.costos_config,
-        })
-    # Fallback a config global del admin
-    if user.site_config and isinstance(user.site_config.get("costos"), dict):
-        return CostosConfigSchema(**{
-            **COSTOS_DEFAULTS.model_dump(),
-            **user.site_config["costos"],
-        })
-    return COSTOS_DEFAULTS
+    raw_data: Dict[str, Any] = {}
+    if user.costos_config and isinstance(user.costos_config, dict):
+        raw_data = dict(user.costos_config)
+    elif user.site_config and isinstance(user.site_config.get("costos"), dict):
+        raw_data = dict(user.site_config["costos"])
+
+    merged = {
+        **COSTOS_DEFAULTS.model_dump(),
+        **raw_data,
+    }
+
+    if merged.get("fcasSalarioBase") in (240.0, 80.0, 240, 80):
+        merged["fcasSalarioBase"] = 73.2
+    if merged.get("fcasBonoCestaticket") in (40.0, 174.0, 174.3, 40, 174):
+        merged["fcasBonoCestaticket"] = 175.0
+
+    return CostosConfigSchema(**merged)
 
 @router.get("/me", response_model=ArkoMeResponse)
 def get_current_admin_me(

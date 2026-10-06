@@ -122,8 +122,16 @@ export default function CalculadoraFCASPage() {
     <div className="absolute inset-0 p-4 md:p-6 overflow-hidden flex flex-col bg-slate-50 print:static print:h-auto print:overflow-visible print:bg-white print:p-0">
       <CalculadoraFCAS
         isPage={true}
-        initialSalarioBase={costosConfig?.fcasSalarioBase}
-        initialBonoCestaticket={costosConfig?.fcasBonoCestaticket}
+        initialSalarioBase={
+          (costosConfig?.fcasSalarioBase === 240 || costosConfig?.fcasSalarioBase === 80 || !costosConfig?.fcasSalarioBase)
+            ? 73.2
+            : costosConfig.fcasSalarioBase
+        }
+        initialBonoCestaticket={
+          (costosConfig?.fcasBonoCestaticket === 40 || costosConfig?.fcasBonoCestaticket === 174 || costosConfig?.fcasBonoCestaticket === 174.3 || !costosConfig?.fcasBonoCestaticket)
+            ? 175
+            : costosConfig.fcasBonoCestaticket
+        }
         initialBonoInFcas={costosConfig?.fcasBonoInFcas}
         initialDiasRendimiento={costosConfig?.fcasDiasRendimiento}
         initialCostoHcm={costosConfig?.fcasCostoHcm}

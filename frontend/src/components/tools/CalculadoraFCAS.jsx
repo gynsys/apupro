@@ -99,10 +99,14 @@ export default function CalculadoraFCAS({
   // Sincronizar props iniciales si cambian
   useEffect(() => {
     if (initialSalarioBase != null) {
-      setSalarioBase(initialSalarioBase);
-      setSalarioDiario(Number((initialSalarioBase / 30).toFixed(2)));
+      const baseFinal = (initialSalarioBase === 240 || initialSalarioBase === 80) ? 73.2 : initialSalarioBase;
+      setSalarioBase(baseFinal);
+      setSalarioDiario(Number((baseFinal / 30).toFixed(2)));
     }
-    if (initialBonoCestaticket != null) setBonoCestaticket(initialBonoCestaticket);
+    if (initialBonoCestaticket != null) {
+      const bonoFinal = (initialBonoCestaticket === 40 || initialBonoCestaticket === 174 || initialBonoCestaticket === 174.3) ? 175 : initialBonoCestaticket;
+      setBonoCestaticket(bonoFinal);
+    }
     if (initialBonoInFcas != null) {
       setBonoInFcas(Boolean(initialBonoInFcas));
     } else if (initialMetodo) {
@@ -283,9 +287,9 @@ export default function CalculadoraFCAS({
   };
 
   const resetearValores = () => {
-    setSalarioBase(initialSalarioBase || 73.2);
-    setSalarioDiario(Number(((initialSalarioBase || 73.2) / 30).toFixed(2)));
-    setBonoCestaticket(initialBonoCestaticket || 175);
+    setSalarioBase(73.2);
+    setSalarioDiario(2.44);
+    setBonoCestaticket(175);
     setBonoInFcas(false);
     setDiasContratados(365);
     setDiasNoTrabajados(115);

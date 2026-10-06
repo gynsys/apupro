@@ -23,6 +23,12 @@ const getInitialCostos = () => {
     const cached = localStorage.getItem('costos_config');
     if (cached) {
       const parsed = JSON.parse(cached);
+      if (parsed.fcasSalarioBase === 240 || parsed.fcasSalarioBase === 80) {
+        parsed.fcasSalarioBase = 73.2;
+      }
+      if (parsed.fcasBonoCestaticket === 40 || parsed.fcasBonoCestaticket === 174 || parsed.fcasBonoCestaticket === 174.3) {
+        parsed.fcasBonoCestaticket = 175;
+      }
       return { ...COSTOS_DEFAULTS, ...parsed };
     }
   } catch (_) {}
@@ -79,7 +85,14 @@ export function UserCostosProvider({ children }) {
       }
       const data = await response.json();
       if (data.costos_config) {
-        const merged = { ...COSTOS_DEFAULTS, ...data.costos_config };
+        const cleanCostos = { ...data.costos_config };
+        if (cleanCostos.fcasSalarioBase === 240 || cleanCostos.fcasSalarioBase === 80) {
+          cleanCostos.fcasSalarioBase = 73.2;
+        }
+        if (cleanCostos.fcasBonoCestaticket === 40 || cleanCostos.fcasBonoCestaticket === 174 || cleanCostos.fcasBonoCestaticket === 174.3) {
+          cleanCostos.fcasBonoCestaticket = 175;
+        }
+        const merged = { ...COSTOS_DEFAULTS, ...cleanCostos };
         setCostosConfigState(merged);
         try {
           localStorage.setItem('costos_config', JSON.stringify(merged));
