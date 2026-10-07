@@ -81,11 +81,12 @@ export default function ClarificationAlertCard({
   const isRedirectToGuided = useMemo(() => {
     if (clarificationType === 'redirect_to_guided') return true;
     if (isAcarreo) return false;
+    if (clarificationType === 'deep_well_depth_required' || internalCode === 'RAG_DEEP_WELL_MISSING_DEPTH') return false;
     if ((!options || options.length === 0) && (!questions || questions.length === 0 || questions.length >= 3)) {
       return true;
     }
     return false;
-  }, [clarificationType, isAcarreo, options, questions]);
+  }, [clarificationType, isAcarreo, internalCode, options, questions]);
 
   // Estados para flujo de Acarreo (Paso 1: Unidad, Paso 2: Distancia)
   const [acarreoStep, setAcarreoStep] = useState(1);
@@ -504,8 +505,9 @@ export default function ClarificationAlertCard({
               <div className="flex flex-wrap gap-2">
                 {options.map((opt, idx) => {
                   const optLabel = typeof opt === 'string' ? opt : opt.label || opt.text || '';
-                  const unitMatch = optLabel.match(/^([a-zA-Z0-9²³]+)\s*\(/);
-                  const cleanUnit = unitMatch ? unitMatch[1] : optLabel.trim();
+                  const parenIdx = optLabel.indexOf('(');
+                  const cleanUnit = parenIdx !== -1 ? optLabel.substring(0, parenIdx).trim() : optLabel.trim();
+                  const subLabel = parenIdx !== -1 ? optLabel.substring(parenIdx).trim() : null;
                   const effectiveUnitToSend = isUnitClarification ? cleanUnit : undefined;
                   return (
                     <button
@@ -520,9 +522,9 @@ export default function ClarificationAlertCard({
                       className="px-3 py-1.5 rounded-xl text-xs font-bold border border-amber-300 bg-amber-50/80 hover:bg-amber-100 text-amber-950 transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1.5"
                     >
                       <span className="text-blue-700 font-extrabold">{cleanUnit}</span>
-                      {optLabel.includes('(') && (
+                      {subLabel && (
                         <span className="text-[11px] text-slate-600 font-normal">
-                          {optLabel.substring(optLabel.indexOf('('))}
+                          {subLabel}
                         </span>
                       )}
                     </button>

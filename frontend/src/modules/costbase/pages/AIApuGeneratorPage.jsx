@@ -86,6 +86,9 @@ export default function AIApuGeneratorPage() {
     initialGuided: guidedParam !== null ? guidedParam === 'true' : true,
     onComplete: (finalPrompt, source, unit, executionDays) => {
       setPrompt(finalPrompt);
+      if (generator?.setBasePrompt) {
+        generator.setBasePrompt(finalPrompt);
+      }
       if (unit) setSelectedUnit(unit);
       generator.handleGenerate(finalPrompt, false, false, false, null, source, unit, executionDays);
     }
@@ -466,14 +469,18 @@ export default function AIApuGeneratorPage() {
                 navigate(`${basePath}/ai-generator?mode=ia`, { replace: true });
               }}
               onClarificationSubmit={(answerText, unit) => {
-                const combined = prompt && prompt.trim()
-                  ? `${prompt.trim()}, ${answerText.trim()}`
-                  : answerText.trim();
+                const currentBase = (prompt && prompt.trim())
+                  || (generator.basePrompt && generator.basePrompt.trim())
+                  || (generator.chatHistory?.length > 0 ? generator.chatHistory[generator.chatHistory.length - 1].content?.trim() : '')
+                  || '';
+                const combined = currentBase ? `${currentBase}, ${answerText.trim()}` : answerText.trim();
                 setPrompt(combined);
+                if (generator?.setBasePrompt) {
+                  generator.setBasePrompt(combined);
+                }
                 if (unit) {
                   setSelectedUnit(unit);
                 }
-                generator.dismissClarification();
                 generator.handleGenerate(combined, false, false, false, null, 'libre', unit || selectedUnit);
               }}
               onStartGuided={() => {

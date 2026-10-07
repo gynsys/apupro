@@ -32,7 +32,7 @@ def parse_fraction(s: str) -> Optional[float]:
         return None
 
     try:
-        cleaned = s.strip().replace('-', ' ')
+        cleaned = s.strip().replace(',', '.').replace('-', ' ')
         parts = cleaned.split()
         if len(parts) == 2:
             whole = float(parts[0])

@@ -1553,6 +1553,29 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
     # 1. Early Validation & Detección de Código vs Descripción de Obra
     raw_desc = (payload.description or "").strip()
 
+    # Reconstrucción y unificación de contexto si es una respuesta a aclaratoria con historial
+    if payload.history and raw_desc:
+        last_user_msg = next(
+            (
+                getattr(msg, "content", "").strip()
+                for msg in reversed(payload.history)
+                if getattr(msg, "role", "") == "user"
+                and getattr(msg, "content", "").strip()
+                and getattr(msg, "content", "").strip().lower() != raw_desc.lower()
+            ),
+            None
+        )
+        if last_user_msg:
+            raw_tokens = raw_desc.lower().split()
+            has_action = any(
+                act in raw_desc.lower()
+                for act in ("suministro", "instalacion", "construccion", "demolicion", "vaciado", "colocacion", "montaje", "acarreo")
+            )
+            if len(raw_tokens) <= 6 or not has_action:
+                logger.info("Unificando respuesta de aclaratoria con mensaje previo: '%.80s' + '%.80s'", last_user_msg, raw_desc)
+                raw_desc = f"{last_user_msg}, {raw_desc}"
+                payload.description = raw_desc
+
     # --- CAPA 1: Validación de entrada (costo cero — sin LLM, sin red) ---
     capa1_result = validate_apu_input(raw_desc)
     if capa1_result is not None:
@@ -1678,6 +1701,15 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
         bool(re.search(r"\b(pozo\s+profundo|pozo\s+de\s+agua|pozo\s+tubular|bomba\s+(?:tipo\s+)?lapicero)\b", raw_desc_lower))
         or (bool(re.search(r"\bbomba\s+sumergible\b", raw_desc_lower)) and not is_sewage_or_drainage)
     )
+    if not is_deep_well_pump and payload.history:
+        for msg in reversed(payload.history):
+            c_low = (getattr(msg, "content", "") or "").lower()
+            if (
+                bool(re.search(r"\b(pozo\s+profundo|pozo\s+de\s+agua|pozo\s+tubular|bomba\s+(?:tipo\s+)?lapicero)\b", c_low))
+                or (bool(re.search(r"\bbomba\s+sumergible\b", c_low)) and not is_sewage_or_drainage)
+            ):
+                is_deep_well_pump = True
+                break
 
     effective_depth: Optional[float] = None
     if is_deep_well_pump:

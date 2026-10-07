@@ -3,7 +3,7 @@
 
 > **Módulo:** `costbase` / `cost360`  
 > **Funcionalidad:** Generador de Análisis de Precios Unitarios (APU) con Inteligencia Artificial (Función Premium)  
-> **Última Actualización:** Septiembre 2026  
+> **Última Actualización:** Octubre 2026  
 > **Normativa de Referencia:** COVENIN 2000:1992 (Sector Construcción Venezuela)  
 > **Base de Datos Oficial:** PostgreSQL (`cost360_items`) con **17.408 partidas** históricas y codificadas  
 
@@ -20,6 +20,8 @@
 8. [Códigos Internos de Auditoría y Respuestas de la API](#8-códigos-internos-de-auditoría-y-respuestas-de-la-api)
 9. [Manual Práctico de Mantenimiento y Batería de Pruebas](#9-manual-práctico-de-mantenimiento-y-batería-de-pruebas)
 10. [Bitácora de Actualizaciones Críticas: 17 de Septiembre 2026](#10-bitácora-de-actualizaciones-críticas-17-de-septiembre-2026)
+11. [Bitácora de Actualizaciones Críticas: 21–22 de Septiembre 2026](#11-bitácora-de-actualizaciones-críticas-2122-de-septiembre-2026)
+12. [Bitácora de Actualizaciones Críticas: Octubre 2026 (Pozos Profundos, Aclaratorias y Blindaje Frontend)](#12-bitácora-de-actualizaciones-críticas-octubre-2026-pozos-profundos-aclaratorias-y-blindaje-frontend)
 
 ---
 
@@ -273,6 +275,8 @@ La API `/generate-ai-apu` devuelve una estructura JSON estándar con códigos de
 | `RAG_AMBIGUOUS_ACTION_ONLY` | 200 | `clarification_needed` | Entrada con verbo constructivo pero sin elemento físico (*"demolicion"*, *"instalacion"*). |
 | `RAG_AMBIGUOUS_ELEMENT_ONLY` | 200 | `clarification_needed` | Entrada con elemento constructivo pero sin acción técnica (*"tuberia"*, *"valdosas"*). |
 | `RAG_ACARREO_MISSING_UNIT` | 200 | `clarification_needed` | Entrada de acarreo/transporte sin unidad (`m3.m`, `m3`, `m3xkm`, `sac.m`, `vje`) ni distancia o método. |
+| `RAG_MAINTENANCE_MISSING_UNIT` | 200 | `clarification_needed` | Actividad de mantenimiento o reparación sin unidad comercial explícita (`pza`, `und`, `m2`, `m`, `Gl`). |
+| `RAG_DEEP_WELL_MISSING_DEPTH` | 200 | `clarification_needed` | Suministro e instalación de bomba sumergible en pozo profundo sin profundidad de instalación especificada en metros. |
 | `RAG_NO_CANDIDATES` | 200 | `reject` | La búsqueda vectorial no arrojó ninguna partida afín en el catálogo. |
 | `exact_match_candidate` | 200 | `exact_match_candidate` | Partida oficial de catálogo con coincidencia exacta de texto y material. |
 
@@ -600,3 +604,98 @@ Embeddings pre-generados: embeddings_gemini.npy (53MB en servidor)
 - Búsqueda por prefijo COVENIN (`E411%`): de ~16ms a **0.26ms** (60× más rápido).
 - Búsqueda textual simple (`excavacion`): de ~210ms a **6-9ms** (23× más rápido).
 - Búsqueda semántica con `ts_rank` + `similarity` (`pared bloque concreto`): **~36ms** en DB, **~72ms total HTTP** (con conteo, ordenamiento morfológico y serialización de 20 partidas).
+
+---
+
+## 12. Bitácora de Actualizaciones Críticas: Octubre 2026 (Pozos Profundos, Aclaratorias y Blindaje Frontend)
+
+> **Contexto:** Incorporación de validación electromecánica de profundidad para bombas sumergibles de pozo profundo, dimensionamiento dinámico de columna/cable/guaya, purgado de bombas duplicadas, restauración de advertencias referenciales y resolución del bloqueo en cascada al responder aclaratorias en el frontend.
+
+### 12.1 Validación Determinista de Profundidad para Bombas Sumergibles de Pozo Profundo
+
+**Problema de ingeniería:**
+En obras hidráulicas y de pozos profundos, el suministro e instalación de una bomba sumergible (tipo lapicero o de pozo) requiere calcular insumos cuyo metraje depende directamente de la profundidad del pozo:
+1. Columna de tubería de impulsión (tubería galvanizada HG o PVC de alta presión).
+2. Cable sumergible plano tripular (ej. 3x10 AWG o 3x8 AWG).
+3. Guaya de suspensión de acero inoxidable para sujeción y maniobra de la bomba.
+
+Si el usuario solicita *"Suministro e instalación de bomba sumergible de 5 HP para pozo profundo"* sin indicar los metros, el LLM o el RAG asumían distancias aleatorias (ej. 50 metros fijos) o adaptaban partidas de bombas centrífugas superficiales que omitían la tubería de columna y el cable sumergible.
+
+**Solución Implementada:**
+1. **Detección Determinista (`is_deep_well_pump`):**
+   - Detecta términos de pozo profundo (`pozo profundo`, `pozo de agua`, `pozo tubular`, `bomba tipo lapicero`) o `bomba sumergible` sin términos de drenaje o aguas negras/servidas (`aguas negras`, `achique`, `fosa`, `triturador`, `cloaca`).
+   - Si la descripción actual no los contiene (ej. si el usuario respondió solo `"50 metros"`), inspecciona el historial de conversación (`payload.history`) para preservar la intención técnica.
+2. **Extracción Paramétrica de Profundidad (`effective_depth`):**
+   - Expresiones regulares para capturar profundidad en metros o pies:
+     `r'(?:profundidad|columna|descenso|hondo|nivel\s+din[aá]mico)?\s*(?:de|a)?\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:m|mts|metros?|pie|pies|ft)\b'`
+   - Fallback a tokens numéricos con unidad métrica (`r'\b(\d{1,3})\s*(?:m|mts|metros)\b'`).
+   - Si no está en el texto actual, lo extrae de los mensajes previos en `payload.history`.
+3. **Compuerta Interactiva de Aclaratoria (`RAG_DEEP_WELL_MISSING_DEPTH`):**
+   - Si falta la profundidad, la API detiene el procesamiento inmediatamente antes del RAG y responde con:
+     - `status: "clarification_needed"`
+     - `clarification_type: "deep_well_depth_required"`
+     - `_internal_code: "RAG_DEEP_WELL_MISSING_DEPTH"`
+     - `options: ["30 metros de profundidad", "50 metros de profundidad", "80 metros de profundidad", "100 metros de profundidad", "120 metros de profundidad"]`
+     - `questions: ["¿A qué profundidad en metros se instalará la bomba sumergible en el pozo profundo?"]`
+4. **Protección de la Unidad de Medida:**
+   - Para partidas de bomba de pozo profundo, se garantiza que `effective_unit` sea siempre `'und'`, evitando que la presencia de la palabra "metros" en la aclaratoria distorsione la unidad a `'m'` o `'ml'`.
+
+### 12.2 Dimensionamiento Dinámico de Materiales y Purgado de Bombas Duplicadas
+
+**Mejoras en el Adaptador / Sintetizador (`ai_apu_service.py`):**
+1. **Dimensionamiento Proporcional de Insumos según Profundidad ($H$ metros):**
+   - **Tubería de impulsión:** Se asigna la columna de tubería correspondiente a $H$ metros lineales (con su factor de desperdicio y accesorios de unión).
+   - **Cable eléctrico sumergible:** Se dimensiona como $H \times 1.05$ metros de cable sumergible (ej. 3x10 AWG).
+   - **Guaya de suspensión:** Se dimensiona como $H \times 1.05$ metros de guaya de acero inoxidable 1/4" con perritos de sujeción.
+2. **Purgado Determinista de Bombas Duplicadas:**
+   - Si la partida base del RAG era de una bomba centrífuga superficial y el LLM añadió la bomba sumergible sin retirar la bomba original, el post-procesador purga cualquier bomba redundante, asegurando que solo exista **una única bomba sumergible** en el APU.
+3. **Restauración de Advertencias Comerciales (`[precio_referencial]`):**
+   - Se ajustó el filtro de advertencias públicas para que insumos de procedencia `ia` o `referencial` que no estén en la base de datos oficial mantengan sus alertas comerciales visibles en el panel de advertencias para que el presupuestista las cotice en mercado.
+
+### 12.3 Corrección del Bloqueo en Cascada ("La descripción ingresada es demasiado breve o incompleta...")
+
+**Diagnóstico de la Causa Raíz:**
+Cuando el usuario recibía la tarjeta de aclaratoria de profundidad y respondía seleccionando un chip (ej. `[50 metros de profundidad]`) o escribiendo en el campo de texto (ej. `50 metros`), el sistema caía en un modal amarillo bloqueante:
+> *"La descripción ingresada es demasiado breve o incompleta para estructurar un APU preciso. Te redirigimos al Asistente Guiado para ayudarte a generar una descripción técnica."*
+
+**Secuencia del Bug:**
+1. En el frontend, `onClarificationSubmit` calculaba:
+   `const combined = prompt && prompt.trim() ? `${prompt.trim()}, ${answerText.trim()}` : answerText.trim();`
+2. Si el usuario venía del Asistente Guiado (chatbot) o el estado local `prompt` estaba vacío, `combined` era únicamente `"50 metros de profundidad"`.
+3. Inmediatamente antes de llamar a `handleGenerate()`, el frontend ejecutaba `generator.dismissClarification()`, lo que reseteaba `isClarifying = false` y provocaba que `handleGenerate` construyera `newHistory` únicamente con el mensaje actual (`["50 metros de profundidad"]`), desechando el historial previo.
+4. La Capa 2 Pre-RAG del backend (`validate_rag_signals`) recibía `"50 metros de profundidad"`, evaluaba que carecía de verbo constructivo y elemento físico, y emitía `veredicto = "reject"` con código `RAG_OFF_TOPIC`.
+5. Al recibir `"reject"`, la función `build_rejection_response` generaba `clarification_type: "redirect_to_guided"`.
+6. En el frontend, `ClarificationAlertCard` interpretaba `redirect_to_guided` y desplegaba el modal de redirección forzada.
+
+**Arquitectura de Doble Blindaje Implementada:**
+
+#### Blindaje en Backend (`backend/app/api/v1/endpoints/costbase.py`)
+- **Unificación de Contexto Temprana:** Antes de ejecutar las Capas 1 y 2, si la descripción actual es breve ($\le 6$ tokens) o carece de verbo constructivo y existe historial de conversación (`payload.history`), el backend busca en orden inverso el último mensaje del usuario diferente a la descripción actual y los unifica automáticamente:
+  ```python
+  raw_desc = f"{last_user_msg}, {raw_desc}"
+  payload.description = raw_desc
+  ```
+- **Fallback en Detección de Pozos:** Si la descripción actual es solo la respuesta de la aclaratoria, `is_deep_well_pump` y `effective_depth` leen el historial para no perder el contexto de la bomba.
+
+#### Blindaje en Frontend
+- **Persistencia en Hook (`useApuGenerator.js`):**
+  - Se guarda `setBasePrompt(textToSubmit)` al inicio de `handleGenerate` y cuando la API devuelve `status === 'clarification_needed'`.
+  - En `handleGenerate`, `newHistory` conserva el historial si `isClarifying` está activo o si `chatHistory.length > 0`, evitando pérdidas si el estado de aclaratoria se altera externamente.
+- **Cascada de Recuperación en Páginas (`AIApuGeneratorPage.jsx` y `AIApuGeneratorModal.jsx`):**
+  - `onClarificationSubmit` ensambla la descripción base usando cascada de tres niveles de seguridad:
+    ```javascript
+    const currentBase = (prompt && prompt.trim()) 
+      || (generator.basePrompt && generator.basePrompt.trim()) 
+      || (generator.chatHistory?.length > 0 ? generator.chatHistory[generator.chatHistory.length - 1].content?.trim() : '')
+      || '';
+    const combined = currentBase ? `${currentBase}, ${answerText.trim()}` : answerText.trim();
+    ```
+  - Se eliminó la llamada prematura a `dismissClarification()` antes de `handleGenerate()`; el ciclo de vida del hook descarta la aclaratoria de forma limpia cuando la respuesta es exitosa.
+  - Al completar el chatbot en `useGuidedAssistant` (`onComplete`), se invoca `generator.setBasePrompt(finalPrompt)`.
+- **Salvaguarda en Tarjeta de Aclaratoria (`ClarificationAlertCard.jsx`):**
+  - En `isRedirectToGuided`, se añadió exclusión explícita para que si `clarificationType === 'deep_well_depth_required'` o `internalCode === 'RAG_DEEP_WELL_MISSING_DEPTH'`, **nunca** evalúe a `true`.
+  - Normalización en renderizado de chips: separación de la etiqueta técnica limpia (texto previo al paréntesis) del subtítulo explicativo, evitando pasar descripciones largas o unidades erróneas.
+- **Chips Guiados de Ubicación (`guidedBuilderConstants.js`):**
+  - Al seleccionar una bomba en el Asistente Guiado, el paso de Ubicación despliega directamente opciones con profundidad explícita:
+    `'En pozo profundo a 50m'`, `'En pozo profundo a 30m'`, `'En pozo profundo a 80m'`, `'Para pozo profundo'`.
+

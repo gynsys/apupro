@@ -157,6 +157,7 @@ export function useApuGenerator({ setSettings }) {
     }
 
     if (response.status === 'clarification_needed') {
+      setBasePrompt(textToSubmit);
       setChatHistory(prev => [...prev, { role: 'user', content: textToSubmit }]);
       setAiClarificationMessage(response.clarification_message || 'No se pudo interpretar una partida técnica válida.');
       setAiClarificationRecommendation(response.recommendation || 'Te recomendamos utilizar el Asistente Guiado para estructurar tu descripción paso a paso.');
@@ -226,6 +227,7 @@ export function useApuGenerator({ setSettings }) {
       return;
     }
 
+    setBasePrompt(textToSubmit);
     setLoading(true);
     setItem(null);
     setExactMatchCandidate(null);
@@ -241,7 +243,9 @@ export function useApuGenerator({ setSettings }) {
         return;
       }
 
-      const newHistory = isClarifying ? [...chatHistory, { role: 'user', content: textToSubmit }] : [{ role: 'user', content: textToSubmit }];
+      const newHistory = (isClarifying || (chatHistory && chatHistory.length > 0))
+        ? [...chatHistory, { role: 'user', content: textToSubmit }]
+        : [{ role: 'user', content: textToSubmit }];
       const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory, onlyPreprocess, bypassExactMatch, null, unit, generationMode, executionDays, useTypesafeJev);
       processAIResponse(response, textToSubmit);
     } catch (error) {

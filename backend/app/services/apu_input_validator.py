@@ -571,7 +571,8 @@ def _check_parametric_missing_specification(
     )
 
     # 1. Bomba / Equipo Hidráulico
-    if re.search(r"\b(bomba|bombas|electrobomba|electrobombas|motobomba|motobombas)\b", lower):
+    is_pump = bool(re.search(r"\b(bomba|bombas|electrobomba|electrobombas|motobomba|motobombas)\b", lower))
+    if is_pump:
         has_hp_or_flow = bool(
             re.search(
                 r"\b\d+([\.,]\d+)?\s*(hp|cv|kw|lps|gpm)\b|\b(0\.5|1\.5|1\/2|3\/4)\s*hp\b",
@@ -674,8 +675,8 @@ def _check_parametric_missing_specification(
                 ["hasta 1.50 m a mano", "1.50 a 3.00 m a máquina", "hasta 1.50 m a máquina", "mayor a 3.00 m a máquina"],
             )
 
-    # 7. Tubería / Válvula (no demolición)
-    if re.search(r"\b(tuberia|tuberias|tubo|tubos|valvula|valvulas)\b", lower) and not is_demolition:
+    # 7. Tubería / Válvula (no demolición y no accesorio de bomba)
+    if re.search(r"\b(tuberia|tuberias|tubo|tubos|valvula|valvulas)\b", lower) and not is_demolition and not is_pump:
         has_diam = bool(
             re.search(
                 r"\bd\s*=\s*|\b\d+(\.\d+)?\s*(pulg|pulgadas?|\"|mm)\b|\b\d+\s*\/\s*\d+\s*(pulg|\"|mm)?\b|\b\d+\s*mm\b|\b(1\/2|3\/4|1|1-1\/2|2|3|4|6)\s*(pulg|\"|in)?\b|\bdiametro\b",
@@ -712,8 +713,8 @@ def _check_parametric_missing_specification(
                 ["8 circuitos", "12 circuitos", "18 circuitos", "24 circuitos", "30 circuitos", "42 circuitos"],
             )
 
-    # 10. Cable / Conductor
-    if re.search(r"\b(cable|cables|conductor|conductores)\b", lower) and re.search(r"\b(cobre|aluminio|thw|thhn|tw|tt|electrico|electricos|sumergible)\b", lower):
+    # 10. Cable / Conductor (no accesorio de bomba)
+    if re.search(r"\b(cable|cables|conductor|conductores)\b", lower) and re.search(r"\b(cobre|aluminio|thw|thhn|tw|tt|electrico|electricos|sumergible)\b", lower) and not is_pump:
         has_gauge = bool(
             re.search(
                 r"\b(n[°º\.]?\s*\d+|\d+\s*awg|\d+\s*mcm|\d+(\.\d+)?\s*mm2|calibre\s*#?\s*\d+)\b",

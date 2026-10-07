@@ -159,6 +159,7 @@ export function getElementChips(accion) {
   }
   if (/suministr|instalac|colocac|montaje/i.test(acc)) {
     return [
+      'Bomba sumergible para pozo',
       'Bomba de agua',
       'Tablero eléctrico',
       'Tubería',
@@ -484,6 +485,21 @@ export function getUbicacionChips(accion, elemento, material) {
       'Mayor a 3.00 m (a máquina)',
       'En zanja estrecha',
       'A cielo abierto',
+      'Omitir'
+    ];
+  }
+
+  if (/bomba/i.test(elem)) {
+    return [
+      'En pozo profundo a 50m',
+      'En pozo profundo a 30m',
+      'En pozo profundo a 80m',
+      'Para pozo profundo',
+      'Para sistema hidroneumático',
+      'En sala de bombas / máquinas',
+      'Para aguas blancas',
+      'Para aguas servidas / fosa',
+      'En exteriores',
       'Omitir'
     ];
   }
