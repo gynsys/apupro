@@ -116,6 +116,23 @@ def lookup_user_semantic_cache(
                 "quantity": 1.0
             }
 
+            cached_advs = list(apu_dict.get("advertencias") or [])
+            if not cached_advs:
+                for m in apu_dict.get("materials", []):
+                    if isinstance(m, dict) and str(m.get("origen", "")).lower() in ("ia", "referencial"):
+                        m_desc = m.get("descripcion", "")
+                        m_pu = float(m.get("precio_unitario") or 0.0)
+                        cached_advs.append(
+                            f"[PRECIO_REFERENCIAL] Insumo incorporado (precio referencial de mercado): '{m_desc}' (${m_pu:,.2f} USD). Verifique precio local con proveedores."
+                        )
+                for e in apu_dict.get("equipments", []):
+                    if isinstance(e, dict) and str(e.get("origen", "")).lower() in ("ia", "referencial"):
+                        e_desc = e.get("descripcion", "")
+                        e_pu = float(e.get("precio_unitario") or 0.0)
+                        cached_advs.append(
+                            f"[PRECIO_REFERENCIAL] Equipo incorporado (precio referencial de mercado): '{e_desc}' (${e_pu:,.2f} USD). Verifique costo diario con proveedores locales."
+                        )
+
             cached_result = {
                 "status": "completed",
                 "source": "user_semantic_cache",
@@ -130,7 +147,7 @@ def lookup_user_semantic_cache(
                     f"⚡ APU recuperado instantáneamente de tus partidas guardadas "
                     f"(similitud {best_score * 100:.1f}%, 0 tokens consumidos)."
                 ],
-                "advertencias": []
+                "advertencias": cached_advs
             }
             return cached_result
 

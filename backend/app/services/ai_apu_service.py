@@ -670,7 +670,7 @@ def _execute_equipment_reconciliation(result: Dict[str, Any], db: Session) -> No
         if not isinstance(eq, dict):
             continue
 
-        is_ia = (eq.get("origen") == "ia")
+        is_ia = (str(eq.get("origen", "")).lower() in ("ia", "referencial"))
         cod = str(eq.get("codigo") or "").strip()
         no_cod = (not cod or cod.startswith("e-ia-") or cod.startswith("EQU-IA-"))
         zero_price = (float(eq.get("precio_unitario") or 0.0) <= 0.0)
@@ -788,6 +788,30 @@ def _execute_equipment_reconciliation(result: Dict[str, Any], db: Session) -> No
             clean_adv.append(adv)
         result["advertencias"] = clean_adv
 
+    # Asegurar advertencia de precio referencial para equipos no presentes en catálogo
+    referential_eqs = [
+        eq for eq in equipments
+        if isinstance(eq, dict) and str(eq.get("origen", "")).lower() in ("ia", "referencial")
+    ]
+    for eq in referential_eqs:
+        eq_desc = str(eq.get("descripcion", "")).strip()
+        eq_pu = float(eq.get("precio_unitario") or 0.0)
+
+        if "advertencias" in result and isinstance(result["advertencias"], list):
+            result["advertencias"] = [
+                a for a in result["advertencias"]
+                if not (
+                    "[precio_referencial]" in str(a).lower() and
+                    (eq_desc.lower() in str(a).lower() or f"'{eq_desc.lower()}'" in str(a).lower())
+                )
+            ]
+
+        adv_text = (
+            f"[PRECIO_REFERENCIAL] Equipo incorporado (precio referencial de mercado): '{eq_desc}' "
+            f"(${eq_pu:,.2f} USD). Verifique costo diario con proveedores locales."
+        )
+        result.setdefault("advertencias", []).append(adv_text)
+
 
 def reconcile_equipment_with_database(result: Dict[str, Any], db: Optional[Session] = None) -> None:
     """
@@ -833,7 +857,7 @@ def _execute_material_reconciliation(result: Dict[str, Any], db: Session) -> Non
         if not isinstance(mat, dict):
             continue
 
-        is_ia = (mat.get("origen") == "ia")
+        is_ia = (str(mat.get("origen", "")).lower() in ("ia", "referencial"))
         cod = str(mat.get("codigo") or "").strip()
         no_cod = (not cod or cod.startswith("m-ia-") or cod.startswith("MAT-IA-") or cod.startswith("MAT-"))
         zero_price = (float(mat.get("precio_unitario") or 0.0) <= 0.0)
@@ -995,24 +1019,35 @@ def _execute_material_reconciliation(result: Dict[str, Any], db: Session) -> Non
         result["advertencias"] = clean_adv
 
     # Asegurar advertencia de precio referencial para insumos no presentes en catálogo
-    for mat in materials:
-        if isinstance(mat, dict) and mat.get("origen") in ("ia", "referencial"):
-            mat_desc = mat.get("descripcion", "")
-            mat_pu = float(mat.get("precio_unitario") or 0.0)
-            web_info = mat.get("precio_web_info")
-            already_warned = any(mat_desc.lower() in str(a).lower() for a in result.get("advertencias", []))
-            if not already_warned:
-                if web_info:
-                    adv_text = (
-                        f"[PRECIO_REFERENCIAL] Insumo estimado de mercado web: '{mat_desc}' "
-                        f"(${mat_pu:,.2f} USD). Promedio investigado en internet. Verifique precio local."
-                    )
-                else:
-                    adv_text = (
-                        f"[PRECIO_REFERENCIAL] Insumo estimado de mercado: '{mat_desc}' "
-                        f"(${mat_pu:,.2f} USD). Verifique precio local con proveedores."
-                    )
-                result.setdefault("advertencias", []).append(adv_text)
+    referential_mats = [
+        mat for mat in materials
+        if isinstance(mat, dict) and str(mat.get("origen", "")).lower() in ("ia", "referencial")
+    ]
+    for mat in referential_mats:
+        mat_desc = str(mat.get("descripcion", "")).strip()
+        mat_pu = float(mat.get("precio_unitario") or 0.0)
+        web_info = mat.get("precio_web_info")
+
+        if "advertencias" in result and isinstance(result["advertencias"], list):
+            result["advertencias"] = [
+                a for a in result["advertencias"]
+                if not (
+                    "[precio_referencial]" in str(a).lower() and
+                    (mat_desc.lower() in str(a).lower() or f"'{mat_desc.lower()}'" in str(a).lower())
+                )
+            ]
+
+        if web_info:
+            adv_text = (
+                f"[PRECIO_REFERENCIAL] Insumo incorporado (precio web investigado): '{mat_desc}' "
+                f"(${mat_pu:,.2f} USD). Promedio investigado en internet. Verifique precio local."
+            )
+        else:
+            adv_text = (
+                f"[PRECIO_REFERENCIAL] Insumo incorporado (precio referencial de mercado): '{mat_desc}' "
+                f"(${mat_pu:,.2f} USD). Verifique precio local con proveedores."
+            )
+        result.setdefault("advertencias", []).append(adv_text)
 
 
 def reconcile_materials_with_database(result: Dict[str, Any], db: Optional[Session] = None) -> None:
@@ -1340,6 +1375,7 @@ def generate_apu_with_ai(payload_llm: Dict[str, Any], history: Optional[List[Dic
     _enforce_rapel_and_height_equipment(result, user_desc)
     _enforce_floor_ground_equipment(result, user_desc)
     _enforce_primary_materials_mutual_exclusion(result, user_desc)
+    _enforce_deep_well_dimensions(result, user_desc)
     _sanitize_partida_description(result, user_desc)
 
     _normalize_equipment_prices(result)
@@ -1817,12 +1853,33 @@ def _enforce_primary_materials_mutual_exclusion(result: Dict[str, Any], user_des
         "impermeabilizacion": {
             "MANTO": [r"\bMANTO\b", r"\bTERMOSOLDABLE\b"],
             "MEMBRANA": [r"\bMEMBRANA\s+LIQUIDA\b", r"\bPOLIURETANO\s+LIQUIDO\b"],
+        },
+        "bombas": {
+            "BOMBA_SUMERGIBLE": [
+                r"\bSUMERGIBLE\b",
+                r"\bPOZO\s+PROFUNDO\b",
+                r"\bLAPICERO\b",
+                r"\bMULTIE?TAPA\b"
+            ],
+            "BOMBA_CENTRIFUGA": [
+                r"\bCENTRIFUGA\b",
+                r"\bSUPERFICIE\b",
+                r"\bPRESION\s+CONSTANTE\b",
+                r"\bEJE\s+HORIZONTAL\b",
+                r"\bCARCASA\s+ESPIRAL\b"
+            ],
+            "BOMBA_ACHIQUE": [
+                r"\bACHIQUE\b",
+                r"\bAGUAS?\s+NEGRAS?\b",
+                r"\bAGUAS?\s+SERVIDAS?\b",
+                r"\bFLIH?GT\b",
+                r"\bTRITURADOR\w*\b"
+            ]
         }
     }
 
     user_desc_upper = user_description.upper()
     purged_items: List[str] = []
-    retained_materials: List[Dict[str, Any]] = []
 
     for group_name, subtypes in MUTUAL_EXCLUSION_GROUPS.items():
         active_subtypes: Set[str] = set()
@@ -1830,18 +1887,16 @@ def _enforce_primary_materials_mutual_exclusion(result: Dict[str, Any], user_des
             if any(re.search(pat, user_desc_upper) for pat in patterns):
                 active_subtypes.add(st_name)
 
-        # Si el usuario no lo nombró explícitamente en su texto, verificar si un insumo 'ia' lo introdujo
+        # Si el usuario no lo nombró explícitamente en su texto, verificar si un insumo 'ia' o 'referencial' lo introdujo
         if not active_subtypes:
             for m in materials:
-                if isinstance(m, dict) and str(m.get("origen", "")).lower() == "ia":
+                if isinstance(m, dict) and str(m.get("origen", "")).lower() in ("ia", "referencial"):
                     m_desc = str(m.get("descripcion", "")).upper()
                     for st_name, patterns in subtypes.items():
                         if any(re.search(pat, m_desc) for pat in patterns):
                             active_subtypes.add(st_name)
 
         if group_name == "fondos_anticorrosivos":
-            # Si el APU contiene Cromato de Zinc o el usuario lo especificó,
-            # Cromato de Zinc tiene precedencia técnica absoluta sobre Fondo de Herrería genérico.
             has_cromato = "CROMATO_ZINC" in active_subtypes or any(
                 isinstance(m, dict) and any(re.search(pat, str(m.get("descripcion", "")).upper()) for pat in subtypes["CROMATO_ZINC"])
                 for m in materials
@@ -1851,6 +1906,7 @@ def _enforce_primary_materials_mutual_exclusion(result: Dict[str, Any], user_des
                 active_subtypes.discard("FONDO_HERRERIA")
 
         if active_subtypes:
+            retained_materials: List[Dict[str, Any]] = []
             for m in materials:
                 if not isinstance(m, dict):
                     continue
@@ -1870,13 +1926,41 @@ def _enforce_primary_materials_mutual_exclusion(result: Dict[str, Any], user_des
                     if re.search(r"\b(THINNER\s+COMUN|AGUARRAS|SOLVENTE\s+MINERAL)\b", m_desc):
                         is_conflicting = True
 
+                # Purgar cualquier bomba de superficie o centrífuga si la requerida es sumergible
+                if "BOMBA_SUMERGIBLE" in active_subtypes and m_origen == "historico":
+                    if re.search(r"\bBOMBA\b", m_desc) and not re.search(r"\b(SUMERGIBLE|LAPICERO)\b", m_desc):
+                        is_conflicting = True
+
                 if is_conflicting:
                     purged_items.append(m.get("descripcion") or m.get("codigo") or "Insumo incompatible")
                 else:
                     retained_materials.append(m)
 
-            if purged_items:
-                materials = retained_materials
+            materials = retained_materials
+
+            # Purgar también bombas incompatibles si están en equipos
+            if group_name == "bombas" and result.get("equipments"):
+                retained_equipments: List[Dict[str, Any]] = []
+                for eq in result["equipments"]:
+                    if not isinstance(eq, dict):
+                        continue
+                    eq_desc = str(eq.get("descripcion", "")).upper()
+                    eq_origen = str(eq.get("origen", "")).lower()
+                    is_conflicting_eq = False
+                    for st_name, patterns in subtypes.items():
+                        if st_name not in active_subtypes:
+                            if any(re.search(pat, eq_desc) for pat in patterns):
+                                if eq_origen == "historico":
+                                    is_conflicting_eq = True
+                                    break
+                    if "BOMBA_SUMERGIBLE" in active_subtypes and eq_origen == "historico":
+                        if re.search(r"\bBOMBA\b", eq_desc) and not re.search(r"\b(SUMERGIBLE|LAPICERO)\b", eq_desc):
+                            is_conflicting_eq = True
+                    if is_conflicting_eq:
+                        purged_items.append(eq.get("descripcion") or eq.get("codigo") or "Equipo incompatible")
+                    else:
+                        retained_equipments.append(eq)
+                result["equipments"] = retained_equipments
 
     if purged_items:
         result["materials"] = materials
@@ -1886,6 +1970,185 @@ def _enforce_primary_materials_mutual_exclusion(result: Dict[str, Any], user_des
         result.setdefault("notas_adaptacion", []).append(
             f"COMPATIBILIDAD TÉCNICA: Se eliminaron automáticamente insumos incompatibles heredados ({', '.join(purged_items)}) en cumplimiento de la Regla de Insumo Preponderante Único."
         )
+
+
+def _enforce_deep_well_dimensions(
+    result: Dict[str, Any],
+    user_description: str,
+    depth_meters: Optional[float] = None
+) -> None:
+    """
+    Salvaguarda técnica determinista para suministro e instalación de bombas sumergibles en pozo profundo:
+    1. Si se detectó una profundidad (ej. 50 metros), sincroniza matemáticamente las cantidades de:
+       - Tubería de impulsión / columna de tubería (cantidad = profundidad).
+       - Cable sumergible plano o bajo goma (cantidad = profundidad * 1.05 holgura).
+       - Guaya de seguridad / suspensión de acero (cantidad = profundidad * 1.05 holgura).
+    2. Garantiza estrictamente que exista UNA SOLA BOMBA SUMERGIBLE y purga cualquier bomba centrífuga,
+       de superficie o duplicada heredada de la base histórica.
+    3. Asegura que la descripción técnica oficial de la partida refleje los metros de profundidad.
+    """
+    if not result or not isinstance(result, dict):
+        return
+
+    desc_lower = (user_description or "").lower()
+    is_sewage = bool(re.search(r"\b(aguas?\s+negras?|aguas?\s+servidas?|residuales?|achique|fosa|cloaca|triturador\w*)\b", desc_lower))
+    is_deep_well = (
+        bool(re.search(r"\b(pozo\s+profundo|pozo\s+de\s+agua|pozo\s+tubular|bomba\s+(tipo\s+)?lapicero)\b", desc_lower))
+        or (bool(re.search(r"\bbomba\s+sumergible\b", desc_lower)) and not is_sewage)
+    )
+
+    if not is_deep_well:
+        return
+
+    # 1. Extraer profundidad si no fue suministrada explícitamente
+    effective_depth = depth_meters
+    if not effective_depth:
+        dm = re.search(
+            r'(?:profundidad|columna|descenso|hondo|nivel\s+din[aá]mico)?\s*(?:de|a)?\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:m|mts|metros?|pie|pies|ft)\b',
+            desc_lower
+        )
+        if not dm:
+            dm = re.search(r'\b(\d{1,3})\s*(?:m|mts|metros)\b', desc_lower)
+        if dm:
+            try:
+                effective_depth = float(dm.group(1).replace(",", "."))
+            except ValueError:
+                effective_depth = None
+
+    materials = result.get("materials", [])
+    equipments = result.get("equipments", [])
+
+    # 2. Purgar bombas incompatibles o duplicadas (Centrífugas, de superficie, presión constante)
+    clean_materials: List[Dict[str, Any]] = []
+    seen_submersible_pump = False
+
+    for m in materials:
+        if not isinstance(m, dict):
+            continue
+        m_desc = str(m.get("descripcion", "")).upper()
+        is_pump = bool(re.search(r"\bBOMBA\b", m_desc))
+        is_submersible = bool(re.search(r"\b(SUMERGIBLE|LAPICERO|MULTIE?TAPA)\b", m_desc))
+
+        if is_pump:
+            if not is_submersible:
+                # Bomba centrífuga, de superficie o de presión constante heredada: PURGAR
+                logger.info("[DeepWellEnforcement] Purgada bomba no sumergible de materiales: %s", m_desc)
+                continue
+            if seen_submersible_pump and not any(k in desc_lower for k in ("duplex", "dos bombas", "alterno", "triplex", "2 bombas")):
+                # Duplicado de bomba sumergible: conservar solo una
+                logger.info("[DeepWellEnforcement] Purgada bomba sumergible duplicada de materiales: %s", m_desc)
+                continue
+            seen_submersible_pump = True
+
+        # Sincronizar dimensiones con la profundidad si se conoce
+        if effective_depth and effective_depth > 0:
+            # Cable sumergible
+            if re.search(r"\b(CABLE\s+SUMERGIBLE|CABLE\s+PLANO|CABLE\s+VULCANIZADO|CABLE\s+SUBMARINO)\b", m_desc):
+                m["cantidad"] = round(effective_depth * 1.05, 2)
+                m["unidad"] = "m"
+                m["nota_calculo"] = f"Longitud de cable sumergible para pozo de {int(effective_depth)} m (+5% holgura)."
+            # Tubería de impulsión / columna
+            elif re.search(r"\b(TUBO|TUBERIA|COLUMNA)\b", m_desc) and re.search(r"\b(IMPULSION|DESCARGA|POZO|ADDUCCION)\b", m_desc):
+                m["cantidad"] = round(effective_depth, 2)
+                m["unidad"] = "m"
+                m["nota_calculo"] = f"Columna de impulsión calculada para profundidad de {int(effective_depth)} m."
+            # Guaya de soporte / suspensión
+            elif re.search(r"\b(GUAYA|CABLE\s+DE\s+ACERO|MANILA|CUERDA\s+DE\s+SEGURIDAD)\b", m_desc):
+                m["cantidad"] = round(effective_depth * 1.05, 2)
+                m["unidad"] = "m"
+                m["nota_calculo"] = f"Guaya de seguridad/soporte para profundidad de {int(effective_depth)} m."
+
+        clean_materials.append(m)
+
+    # 3. Garantizar que exista al menos una bomba sumergible en la partida
+    has_sub_pump = any(
+        bool(re.search(r"\bBOMBA\b", str(m.get("descripcion", "")).upper()))
+        and bool(re.search(r"\b(SUMERGIBLE|LAPICERO|MULTIE?TAPA)\b", str(m.get("descripcion", "")).upper()))
+        for m in clean_materials if isinstance(m, dict)
+    )
+    if not has_sub_pump:
+        hp_match = re.search(r'\b(\d+(?:[.,]\d+)?)\s*(?:hp|caballos?|cv)\b', desc_lower)
+        hp_str = f" DE {hp_match.group(1)} HP" if hp_match else " DE 5 HP"
+        clean_materials.insert(0, {
+            "id": "m-deepwell-pump",
+            "codigo": "S/C",
+            "descripcion": f"BOMBA SUMERGIBLE PARA POZO PROFUNDO{hp_str.upper()}, INCLUYE MOTOR Y CUERPO DE IMPULSIÓN",
+            "unidad": "und",
+            "cantidad": 1.0,
+            "desperdicio": 0.0,
+            "precio_unitario": 1850.00,
+            "origen": "referencial",
+            "nota_calculo": "Bomba sumergible para pozo profundo requerida por la partida."
+        })
+        result.setdefault("advertencias", []).append(
+            f"[PRECIO_REFERENCIAL] Insumo incorporado (precio referencial de mercado): 'BOMBA SUMERGIBLE PARA POZO PROFUNDO{hp_str.upper()}, INCLUYE MOTOR Y CUERPO DE IMPULSIÓN' ($1,850.00 USD). Verifique precio local con proveedores."
+        )
+
+    # 4. Garantizar presencia de cable sumergible y tubería de impulsión si la profundidad es conocida
+    if effective_depth and effective_depth > 0:
+        has_cable = any(
+            bool(re.search(r"\b(CABLE\s+SUMERGIBLE|CABLE\s+PLANO|CABLE\s+VULCANIZADO|CABLE\s+SUBMARINO)\b", str(m.get("descripcion", "")).upper()))
+            for m in clean_materials if isinstance(m, dict)
+        )
+        if not has_cable:
+            clean_materials.append({
+                "id": "m-deepwell-cable",
+                "codigo": "S/C",
+                "descripcion": f"CABLE SUMERGIBLE PLANO DE 3x10 AWG PARA POZO PROFUNDO ({int(effective_depth)} M)",
+                "unidad": "m",
+                "cantidad": round(effective_depth * 1.05, 2),
+                "desperdicio": 0.0,
+                "precio_unitario": 12.50,
+                "origen": "referencial",
+                "nota_calculo": f"Cable sumergible para pozo de {int(effective_depth)} m (+5% holgura)."
+            })
+            result.setdefault("advertencias", []).append(
+                f"[PRECIO_REFERENCIAL] Insumo incorporado (precio referencial de mercado): 'CABLE SUMERGIBLE PLANO DE 3x10 AWG PARA POZO PROFUNDO ({int(effective_depth)} M)' ($12.50 USD). Verifique precio local con proveedores."
+            )
+
+        has_pipe = any(
+            bool(re.search(r"\b(TUBO|TUBERIA|COLUMNA)\b", str(m.get("descripcion", "")).upper()))
+            and bool(re.search(r"\b(IMPULSION|DESCARGA|POZO|ADDUCCION)\b", str(m.get("descripcion", "")).upper()))
+            for m in clean_materials if isinstance(m, dict)
+        )
+        if not has_pipe:
+            clean_materials.append({
+                "id": "m-deepwell-pipe",
+                "codigo": "S/C",
+                "descripcion": f"TUBERÍA DE IMPULSIÓN PARA POZO PROFUNDO DE 2\" ({int(effective_depth)} M)",
+                "unidad": "m",
+                "cantidad": round(effective_depth, 2),
+                "desperdicio": 0.0,
+                "precio_unitario": 28.00,
+                "origen": "referencial",
+                "nota_calculo": f"Columna de impulsión calculada para profundidad de {int(effective_depth)} m."
+            })
+            result.setdefault("advertencias", []).append(
+                f"[PRECIO_REFERENCIAL] Insumo incorporado (precio referencial de mercado): 'TUBERÍA DE IMPULSIÓN PARA POZO PROFUNDO DE 2\" ({int(effective_depth)} M)' ($28.00 USD). Verifique precio local con proveedores."
+            )
+
+    result["materials"] = clean_materials
+
+    # Purgar también bombas centrífugas si se colaron en equipos
+    if equipments:
+        clean_equipments: List[Dict[str, Any]] = []
+        for eq in equipments:
+            if not isinstance(eq, dict):
+                continue
+            eq_desc = str(eq.get("descripcion", "")).upper()
+            if re.search(r"\bBOMBA\b", eq_desc) and not re.search(r"\b(SUMERGIBLE|LAPICERO)\b", eq_desc):
+                logger.info("[DeepWellEnforcement] Purgada bomba no sumergible de equipos: %s", eq_desc)
+                continue
+            clean_equipments.append(eq)
+        result["equipments"] = clean_equipments
+
+    # 5. Reflejar la profundidad en la descripción técnica de la partida COVENIN
+    if effective_depth and effective_depth > 0 and result.get("partida"):
+        partida = result["partida"]
+        cur_desc = str(partida.get("description", "")).strip()
+        depth_tag = f"PROFUNDIDAD {int(effective_depth)} M"
+        if depth_tag not in cur_desc.upper() and f"{int(effective_depth)} METROS" not in cur_desc.upper() and f"{int(effective_depth)} M" not in cur_desc.upper():
+            partida["description"] = f"{cur_desc}, A {int(effective_depth)} M DE PROFUNDIDAD".strip(", ")
 
 
 def generate_apu_with_ai_from_base(
@@ -1899,6 +2162,7 @@ def generate_apu_with_ai_from_base(
     requested_unit: Optional[str] = None,
     execution_days: Optional[float] = None,
     db: Optional[Session] = None,
+    deep_well_depth: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
     Generación de APU usando una partida base seleccionada por el usuario
@@ -1997,12 +2261,30 @@ La partida DEBE estructurarse OBLIGATORIAMENTE con la unidad: '{u_clean}'.
    - En actividades de mantenimiento o rehabilitación en sitio, el rendimiento suele reducirse entre un 25% y 40% respecto a obra nueva.
    - Explica el cálculo en `notas_adaptacion`."""
 
+    deep_well_directive = ""
+    u_desc_lower = (user_description or "").lower()
+    is_deep_well_req = (
+        bool(re.search(r"\b(pozo\s+profundo|pozo\s+de\s+agua|pozo\s+tubular|bomba\s+(?:tipo\s+)?lapicero)\b", u_desc_lower))
+        or (bool(re.search(r"\bbomba\s+sumergible\b", u_desc_lower)) and not bool(re.search(r"\b(aguas?\s+negras?|aguas?\s+servidas?|residuales?|achique|fosa|cloaca|triturador\w*)\b", u_desc_lower)))
+    )
+    if is_deep_well_req:
+        depth_val = deep_well_depth or 50.0
+        deep_well_directive = f"""
+# DIRECTIVA CRÍTICA OBLIGATORIA PARA BOMBA SUMERGIBLE / POZO PROFUNDO:
+- Profundidad de instalación calculada: {int(depth_val)} METROS.
+- La partida requiere UNA SOLA BOMBA SUMERGIBLE (tipo lapicero para pozo profundo con motor y cuerpo de impulsión) de la potencia solicitada.
+- QUEDA TERMINANTEMENTE PROHIBIDO incluir o conservar bombas centrífugas, de superficie o de presión constante heredadas de la base histórica.
+- Dimensiona estrictamente la columna de tubería de impulsión en {int(depth_val)} metros.
+- Dimensiona el cable sumergible plano y la guaya de suspensión de acero en {round(depth_val * 1.05, 1)} metros (+5% de holgura).
+- Incluye válvula de retención (check) para pozo profundo y accesorios de conexión."""
+
     prompt = f"""
 # MODO DE TRABAJO: ADAPTACIÓN DE APU BASE
 El sistema ha seleccionado una partida histórica de la base de datos como BASE DE ADAPTACIÓN.
 Tu tarea es ADAPTAR ese APU base para la nueva partida solicitada por el usuario.
 NO debes inventar desde cero. Usa los insumos, precios y cantidades del APU base como referencia principal.
 {unit_directive}
+{deep_well_directive}
 # SOLICITUD DEL USUARIO
 Descripción: {user_description}
 Categoría COVENIN: {covenin_context}
@@ -2058,6 +2340,9 @@ Prefijo COVENIN: {effective_cov_prefix}
     # Limpieza determinista de la descripción de la partida (remoción de tipologías coloquiales como 'en casa')
     _sanitize_partida_description(result, user_description)
 
+    # Salvaguarda determinista de pozo profundo y bombas sumergibles
+    _enforce_deep_well_dimensions(result, user_description, deep_well_depth)
+
     # Salvaguarda determinista de unidad solicitada
     if result.get("partida") and requested_unit:
         result["partida"]["unit"] = requested_unit.strip().lower()
@@ -2068,6 +2353,9 @@ Prefijo COVENIN: {effective_cov_prefix}
     reconcile_equipment_with_database(result, db)
     reconcile_materials_with_database(result, db)
     reconcile_labor_with_database(result, db)
+
+    # Salvaguarda final de pozo profundo tras reconciliación con base de datos
+    _enforce_deep_well_dimensions(result, user_description, deep_well_depth)
 
     result["debug_base_apu"] = base_apu
     result["prompt_enviado_al_llm"] = prompt

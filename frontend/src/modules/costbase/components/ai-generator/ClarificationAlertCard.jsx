@@ -123,6 +123,8 @@ export default function ClarificationAlertCard({
     }
   };
 
+  const isUnitClarification = clarificationType === 'maintenance_unit_required' || internalCode === 'RAG_MAINTENANCE_MISSING_UNIT';
+
   // Manejador del flujo genérico
   const handleGenericSubmit = (e) => {
     if (e) e.preventDefault();
@@ -136,8 +138,11 @@ export default function ClarificationAlertCard({
     } else {
       const fullAnswer = nextAnswers.join(', ');
       if (onClarificationSubmit) {
-        const matchUnit = fullAnswer.match(/\b(gl|sg|global|pza|und|m2|m²|ml|m|pto|kgf|ton)\b/i);
-        const detectedUnit = matchUnit ? matchUnit[1] : undefined;
+        let detectedUnit = undefined;
+        if (isUnitClarification) {
+          const matchUnit = fullAnswer.match(/\b(gl|sg|global|pza|und|m2|m²|ml|m|pto|kgf|ton)\b/i);
+          detectedUnit = matchUnit ? matchUnit[1] : undefined;
+        }
         onClarificationSubmit(fullAnswer, detectedUnit);
       }
     }
@@ -501,6 +506,7 @@ export default function ClarificationAlertCard({
                   const optLabel = typeof opt === 'string' ? opt : opt.label || opt.text || '';
                   const unitMatch = optLabel.match(/^([a-zA-Z0-9²³]+)\s*\(/);
                   const cleanUnit = unitMatch ? unitMatch[1] : optLabel.trim();
+                  const effectiveUnitToSend = isUnitClarification ? cleanUnit : undefined;
                   return (
                     <button
                       key={idx}
@@ -508,7 +514,7 @@ export default function ClarificationAlertCard({
                       onClick={() => {
                         setGenericCurrentInput(cleanUnit);
                         if (onClarificationSubmit) {
-                          onClarificationSubmit(cleanUnit, cleanUnit);
+                          onClarificationSubmit(cleanUnit, effectiveUnitToSend);
                         }
                       }}
                       className="px-3 py-1.5 rounded-xl text-xs font-bold border border-amber-300 bg-amber-50/80 hover:bg-amber-100 text-amber-950 transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1.5"

@@ -1666,6 +1666,81 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             "guia_redaccion": "Selecciona la unidad requerida para que el APU calcule los materiales y el rendimiento exacto sin distorsión de costos."
         }
 
+    # --- VALIDACIÓN DETERMINISTA DE PROFUNDIDAD PARA POZO PROFUNDO / BOMBA SUMERGIBLE ---
+    # En obras hidráulicas y de pozos profundos, el dimensionamiento de la columna de impulsión (tubería),
+    # el cable sumergible y la guaya de suspensión depende estrictamente de la profundidad del pozo en metros.
+    # Si no se indica la profundidad, se debe solicitar aclaratoria previa.
+    is_sewage_or_drainage = bool(re.search(
+        r"\b(aguas?\s+negras?|aguas?\s+servidas?|residuales?|achique|fosa|cloaca|triturador\w*|drenaje\s+pluvial)\b",
+        raw_desc_lower
+    ))
+    is_deep_well_pump = (
+        bool(re.search(r"\b(pozo\s+profundo|pozo\s+de\s+agua|pozo\s+tubular|bomba\s+(?:tipo\s+)?lapicero)\b", raw_desc_lower))
+        or (bool(re.search(r"\bbomba\s+sumergible\b", raw_desc_lower)) and not is_sewage_or_drainage)
+    )
+
+    effective_depth: Optional[float] = None
+    if is_deep_well_pump:
+        # 1. Intentar extraer la profundidad de la descripción actual
+        dm = re.search(
+            r'(?:profundidad|columna|descenso|hondo|nivel\s+din[aá]mico)?\s*(?:de|a)?\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:m|mts|metros?|pie|pies|ft)\b',
+            raw_desc_lower
+        )
+        if not dm:
+            dm = re.search(r'\b(\d{1,3})\s*(?:m|mts|metros)\b', raw_desc_lower)
+        if dm:
+            try:
+                effective_depth = float(dm.group(1).replace(",", "."))
+            except ValueError:
+                effective_depth = None
+
+        # 2. Si no está en el texto actual, revisar en el historial de conversación (payload.history)
+        if not effective_depth and payload.history:
+            for msg in reversed(payload.history):
+                content_lower = (getattr(msg, "content", "") or "").lower()
+                h_dm = re.search(
+                    r'(?:profundidad|columna|descenso|hondo|nivel\s+din[aá]mico)?\s*(?:de|a)?\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:m|mts|metros?|pie|pies|ft)\b',
+                    content_lower
+                )
+                if not h_dm:
+                    h_dm = re.search(r'\b(\d{1,3})\s*(?:m|mts|metros)\b', content_lower)
+                if h_dm:
+                    try:
+                        effective_depth = float(h_dm.group(1).replace(",", "."))
+                        break
+                    except ValueError:
+                        pass
+
+        # 3. Si falta la profundidad y no es preprocesamiento ni match exacto, solicitar aclaratoria
+        if not effective_depth and not payload.only_preprocess and not payload.accept_exact_match_code:
+            logger.info("Deep well pump activity detected without explicit depth: %.80s", raw_desc)
+            return {
+                "status": "clarification_needed",
+                "clarification_type": "deep_well_depth_required",
+                "_internal_code": "RAG_DEEP_WELL_MISSING_DEPTH",
+                "clarification_message": (
+                    "Has solicitado el suministro e instalación de una bomba sumergible para pozo profundo. "
+                    "En ingeniería de costos y obras electromecánicas, el dimensionamiento de la columna de tubería "
+                    "de impulsión, la longitud del cable sumergible y la guaya de suspensión dependen estrictamente "
+                    "de la profundidad de instalación del pozo. Por favor selecciona o indica la profundidad en metros:"
+                ),
+                "options": [
+                    "30 metros de profundidad",
+                    "50 metros de profundidad",
+                    "80 metros de profundidad",
+                    "100 metros de profundidad",
+                    "120 metros de profundidad"
+                ],
+                "questions": [
+                    "¿A qué profundidad en metros se instalará la bomba sumergible en el pozo profundo?"
+                ],
+                "guia_redaccion": "Indica la profundidad en metros (ej: 50m) para calcular la cantidad exacta de cable sumergible, tubería de impulsión y accesorios."
+            }
+
+        # Asegurar que para bombas la unidad de partida no se sobreescriba erróneamente por 'm' o 'metros'
+        if not effective_unit or effective_unit in ("m", "ml", "metro", "metros", "mts") or "metro" in effective_unit:
+            effective_unit = "und"
+
     # --- SELECTOR DE ARQUITECTURA: MODO MATEMÁTICO (Síntesis Inversa Component-First) ---
     # Disponible exclusivamente para el Superadministrador durante la fase de validación.
     # Los usuarios normales siempre son procesados en Modo Adaptativo (RAG).
@@ -1880,6 +1955,7 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
             requested_unit=effective_unit or payload.unit,
             execution_days=payload.execution_days,
             db=db,
+            deep_well_depth=effective_depth,
         )
 
         # -------------------------------------------------------------
@@ -1920,8 +1996,16 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
         if "advertencias" in result and isinstance(result["advertencias"], list):
             clean_adv = []
             base_code_lower = (base_code or "").strip().lower()
-            current_eq_descs = [str(e.get("descripcion", "")).lower() for e in result.get("equipments", []) if isinstance(e, dict) and e.get("origen") == "ia"]
-            current_mat_descs = [str(m.get("descripcion", "")).lower() for m in result.get("materials", []) if isinstance(m, dict) and m.get("origen") == "ia"]
+            current_eq_descs = [
+                str(e.get("descripcion", "")).lower() 
+                for e in result.get("equipments", []) 
+                if isinstance(e, dict) and str(e.get("origen", "")).lower() in ("ia", "referencial")
+            ]
+            current_mat_descs = [
+                str(m.get("descripcion", "")).lower() 
+                for m in result.get("materials", []) 
+                if isinstance(m, dict) and str(m.get("origen", "")).lower() in ("ia", "referencial")
+            ]
             active_ia_descs = current_eq_descs + current_mat_descs
 
             for adv in result["advertencias"]:
@@ -1935,10 +2019,15 @@ def generate_ai_apu_route(payload: AiApuGenerateRequest, db: Session = Depends(g
                 if base_code_lower and base_code_lower in adv_lower:
                     continue
                 if "[precio_referencial]" in adv_lower:
-                    quoted = re.findall(r"'([^']+)'", adv)
-                    if quoted:
+                    quoted = re.findall(r"['\"]([^'\"]+)['\"]", adv)
+                    if quoted and active_ia_descs:
                         insumo_name = quoted[0].lower()
-                        if not any(insumo_name in act or act in insumo_name for act in active_ia_descs):
+                        insumo_tokens = set(re.findall(r'\w+', insumo_name)) - {"de", "la", "el", "en", "para", "con", "por", "un", "una", "y", "o"}
+                        has_overlap = any(
+                            insumo_name in act or act in insumo_name or (insumo_tokens and len(insumo_tokens & set(re.findall(r'\w+', act))) >= 2)
+                            for act in active_ia_descs
+                        )
+                        if not has_overlap:
                             continue
                     elif not active_ia_descs:
                         continue
