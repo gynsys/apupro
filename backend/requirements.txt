@@ -193,3 +193,4 @@ google-auth
 cloudscraper==1.2.71
 markitdown
 ddgs>=9.16.0
+duckduckgo-search>=6.0.0

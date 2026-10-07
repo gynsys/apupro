@@ -6,7 +6,14 @@ que no se encuentran en el catálogo local de CostBase.
 import re
 import logging
 from typing import Optional, Dict, Any, List
-from ddgs import DDGS
+try:
+    from duckduckgo_search import DDGS
+except ImportError:
+    try:
+        from ddgs import DDGS
+    except ImportError:
+        DDGS = None
+
 from app.services.llm_router import call_llm_json
 
 logger = logging.getLogger(__name__)
@@ -32,6 +39,10 @@ def research_material_web_price(description: str, unit: str = "") -> Optional[Di
     Busca en internet el precio promedio de un material en USD para el mercado de construcción.
     Retorna un diccionario con precio_promedio, rango_min, rango_max y resumen, o None si no hay datos.
     """
+    if DDGS is None:
+        logger.warning("[WEB_PRICE] duckduckgo_search no disponible en el entorno. Omitiendo búsqueda web.")
+        return None
+
     if not description or not description.strip():
         return None
 
