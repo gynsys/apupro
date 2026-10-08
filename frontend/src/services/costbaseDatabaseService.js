@@ -1,9 +1,14 @@
 import { API_URL } from './api';
 
 const getAuthHeaders = () => {
-  return {
+  const token = localStorage.getItem('arko_admin_token') || localStorage.getItem('token') || localStorage.getItem('access_token');
+  const headers = {
     'Content-Type': 'application/json',
   };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
 };
 
 export const costbaseDatabaseService = {

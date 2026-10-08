@@ -9,7 +9,13 @@ export const AuthContext = createContext(null);
  */
 async function fetchCurrentUser() {
   try {
+    const token = localStorage.getItem('arko_admin_token') || localStorage.getItem('token') || localStorage.getItem('access_token');
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
     const response = await fetch(`${API_URL}/arko/me`, {
+      headers,
       credentials: 'include',
     });
     if (!response.ok) return null;
