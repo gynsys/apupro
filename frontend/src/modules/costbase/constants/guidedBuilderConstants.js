@@ -448,6 +448,8 @@ export function getMaterialChips(accion, elemento) {
 
 export function getUbicacionChips(accion, elemento, material) {
   const acc = (accion || '').toLowerCase();
+  const elem = (elemento || '').toLowerCase();
+  const mat = (material || '').toLowerCase();
 
   if (/pintur|pintar/i.test(acc)) {
     return [
