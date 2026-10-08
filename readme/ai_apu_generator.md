@@ -53,7 +53,7 @@ apupro_platform/
 │   │   │   ├── apu_input_validator.py       # Capas 1 y 2: Sanitización, Guardia Léxica y Fonética
 │   │   │   ├── synonyms_service.py          # Normalización de modismos y siglas técnicas
 │   │   │   ├── ai_search.py                 # Motor RAG: Embeddings, BM25 y Re-ranking
-│   │   │   ├── ai_apu_service.py            # Capa 4: Prompting LLM, adaptación y podado
+│   │   │   ├── ai_apu_service/              # Capa 4: Paquete modular (Facade, prompts, domain_rules, reconciliation, rag, generator)
 │   │   │   ├── apu_labor_calibrator.py      # Capa 5: Calibrador determinista de cuadrillas, equipos y HH
 │   │   │   ├── llm_router.py                # Abstracción multi-proveedor (Gemini, OpenAI, etc.)
 │   │   │   └── data/
@@ -698,4 +698,41 @@ Cuando el usuario recibía la tarjeta de aclaratoria de profundidad y respondía
 - **Chips Guiados de Ubicación (`guidedBuilderConstants.js`):**
   - Al seleccionar una bomba en el Asistente Guiado, el paso de Ubicación despliega directamente opciones con profundidad explícita:
     `'En pozo profundo a 50m'`, `'En pozo profundo a 30m'`, `'En pozo profundo a 80m'`, `'Para pozo profundo'`.
+
+---
+
+## 13. Modularización y Desacoplamiento del Motor (`ai_apu_service/`)
+
+En octubre de 2026, el archivo monolítico `ai_apu_service.py` (~2.939 líneas) fue refactorizado y transformado en un **paquete modular Python** bajo principios SOLID y Clean Architecture, manteniendo compatibilidad total hacia atrás (**Zero Breaking Changes**):
+
+### 13.1 Estructura del Paquete
+```
+backend/app/services/ai_apu_service/
+├── __init__.py                    # Facade principal: re-exporta todas las funciones históricas
+├── helpers.py                     # Sanitización numérica (_safe_float, _sanitize_llm_numbers, is_code_input)
+├── prompts.py                     # Plantillas maestras de prompts y JSON schemas (COVENIN, SC, formato estricto)
+├── reconciliation/                # Submódulo: Reconciliación con BD y precios de mercado
+│   ├── specs_matcher.py           # Extracción de specs técnicas (HP, pulgadas, kVA), unidades y compatibilidad
+│   ├── equipment.py               # Reconciliación de maquinaria con cost360_equipment y normalización de precios
+│   ├── materials.py               # Reconciliación de materiales con cost360_materials, herencia y DuckDuckGo Search
+│   └── labor.py                   # Reconciliación de cargos y salarios con cost360_labor
+├── domain_rules/                  # Submódulo: Reglas de ingeniería civil y salvaguardas físicas
+│   ├── deep_well.py               # Dimensionamiento de pozos profundos, tuberías y bombas sumergibles
+│   ├── scope_exclusions.py        # Exclusiones de alcance solicitadas ("sin mixer", "sin mano de obra", etc.)
+│   ├── safety_height.py           # Inyección de equipos oficiales de rapel y purga de andamios en altura suspendida
+│   ├── floor_ground.py            # Purga de arneses y andamios en trabajos a ras de suelo o pavimento
+│   ├── material_conflicts.py      # Regla de Insumo Preponderante Único (exclusión mutua en 12 familias de acabados)
+│   └── sanitize_partida.py        # Limpieza de tipologías residenciales ("en casa") e inferencia de prefijo COVENIN
+├── rag_context/                   # Submódulo: Recuperación RAG y poda de contexto
+│   ├── candidates.py              # Búsqueda híbrida en base de datos y scoring técnico con penalizaciones polares
+│   ├── base_apu_fetcher.py        # Extracción y estructuración de APU base histórico desde PostgreSQL
+│   ├── complementary_selector.py  # Detección de actividades faltantes e inyección quirúrgica de complementarios
+│   └── pruning.py                 # Poda de metadatos para optimizar ventana de contexto LLM
+└── generator/                     # Submódulo: Orquestación del pipeline LLM
+    ├── free_generator.py          # Generación libre asistida por RAG (generate_apu_with_ai)
+    └── anchored_generator.py      # Adaptación anclada desde APU base histórico (generate_apu_with_ai_from_base)
+```
+
+### 13.2 Patrón Fachada (Facade Backward-Compatible)
+El archivo [`__init__.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/ai_apu_service/__init__.py) actúa como fachada unificada. Cualquier servicio externo (`costbase.py`, `inverse_apu_synthesizer.py`, `preprocessing_service.py`) o prueba unitaria continúa importando directamente desde `app.services.ai_apu_service` sin requerir modificaciones en sus llamadas ni romper sus dependencias.
 
