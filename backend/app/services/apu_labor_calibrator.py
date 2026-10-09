@@ -380,7 +380,7 @@ def classify_activity_typology(description: str, unit: str, covenin_code: str = 
     # 1. Demoliciones y Desmantelamientos (prioridad máxima sobre elementos constructivos)
     if cov_upper.startswith("R1") or cov_upper.startswith("R2") or cov_upper.startswith("R3"):
         return "DEMOLICION"
-    if any(k in desc_clean for k in ["DEMOLICION", "DESMANTELAMIENTO", "PICA DE CONCRETO", "PICADO DE"]):
+    if any(k in desc_clean for k in ["DEMOLICION", "DESMANTELAMIENTO", "PICA DE CONCRETO", "PICADO DE", "DESMONTAJE", "RETIRO DE"]):
         return "DEMOLICION"
 
     # 2. Acarreo y transporte manual / distancia
@@ -1157,23 +1157,71 @@ def validate_and_calibrate_hh(
         "REHABILITACION", "REACONDICIONAMIENTO", "ACONDICIONAMIENTO", "DEMOLICION",
         "REMOCION", "SUSTITUCION", "REEMPLAZO", "PELDANO"
     ])
-    difficulty_factor = 1.30 if is_maintenance else 1.0
+    # Para tipologías que intrínsecamente ya son de mantenimiento o reparación puntual,
+    # el benchmark empírico ya incorpora la dificultad de campo (factor neutro 1.0)
+    if typology in ("REPARACIONES_PUNTUALES", "MANTENIMIENTO_ELECTROMECANICO"):
+        difficulty_factor = 1.0
+    else:
+        difficulty_factor = 1.30 if is_maintenance else 1.0
 
-    # 1. Buscar benchmark empírico por clave compuesta exacta (ej: ACARREO_m3.m, ALBANILERIA_m2, PINTURA_pza)
+    # 1. Buscar benchmark empírico por clave compuesta exacta (ej: ACARREO_m3.m, ALBANILERIA_m2, PINTURA_pza, ESTRUCTURAS_METALICAS_und)
     benchmark_key = f"{typology}_{unit}"
     benchmark = EMPERICAL_HH_BENCHMARKS.get(benchmark_key)
 
-    # 1.1 Benchmark especializado para reparaciones y mantenimiento localizado de estructuras metálicas en und/pza
-    if typology == "ESTRUCTURAS_METALICAS" and is_maintenance and unit in ("und", "pza"):
-        benchmark = {
-            "p10": 2.5000,
-            "p25": 3.8000,
-            "median": 5.2000,
-            "p75": 7.0000,
-            "p90": 9.5000,
-            "rendimiento_med": 5.0,
-        }
-        difficulty_factor = 1.0
+    # 1.2 Benchmark especializado para pozo profundo, bombas y desmontajes electromecánicos en und/pza
+    is_mech_elec = any(k in desc_clean for k in [
+        "BOMBA", "MOTOR", "COMPRESOR", "TABLERO", "TRANSFORMADOR",
+        "AIRE ACONDICIONADO", "SPLIT", "ELECTROMECANIC", "POZO"
+    ])
+    is_dismantling = any(k in desc_clean for k in [
+        "DESMONTAJE", "DESCONEXION", "DESMANTELAMIENTO", "EXTRACCION", "RETIRO"
+    ])
+
+    if not benchmark and unit in ("und", "pza"):
+        # Pozo profundo / bomba sumergible en pozo
+        if any(k in desc_clean for k in ["POZO PROFUNDO", "POZO TUBULAR", "80M", "100M", "50M", "60M"]):
+            benchmark = {
+                "p10": 16.0000,
+                "p25": 24.0000,
+                "median": 32.0000,
+                "p75": 48.0000,
+                "p90": 64.0000,
+                "rendimiento_med": 1.0,
+            }
+            difficulty_factor = 1.0
+        # Desmontaje electromecánico / hidráulico general
+        elif (is_dismantling or typology == "DEMOLICION") and is_mech_elec:
+            benchmark = {
+                "p10": 4.0000,
+                "p25": 6.0000,
+                "median": 10.0000,
+                "p75": 16.0000,
+                "p90": 24.0000,
+                "rendimiento_med": 2.5,
+            }
+            difficulty_factor = 1.0
+        # Desmontaje liviano no electromecánico
+        elif is_dismantling or typology == "DEMOLICION":
+            benchmark = {
+                "p10": 3.0000,
+                "p25": 5.0000,
+                "median": 8.0000,
+                "p75": 14.0000,
+                "p90": 20.0000,
+                "rendimiento_med": 3.0,
+            }
+            difficulty_factor = 1.0
+        # Mantenimiento electromecánico general
+        elif is_mech_elec or typology == "MANTENIMIENTO_ELECTROMECANICO":
+            benchmark = {
+                "p10": 6.0000,
+                "p25": 10.0000,
+                "median": 16.0000,
+                "p75": 22.0000,
+                "p90": 30.0000,
+                "rendimiento_med": 1.5,
+            }
+            difficulty_factor = 1.0
 
     # Si no coincide exactamente, buscar SOLO dentro de benchmarks compatibles con la MISMA unidad física
     if not benchmark:
@@ -1182,7 +1230,7 @@ def validate_and_calibrate_hh(
                 benchmark = v
                 break
 
-    # Fallback inteligente para unidades discretas (und / pza) si la tipología no tenía clave directa
+    # Fallback inteligente para unidades discretas (und / pza) si la tipología es explícitamente civil/albañilería
     if not benchmark and unit in ("und", "pza"):
         if typology in ("ALBANILERIA", "FRISOS", "CONCRETO", "PISOS"):
             benchmark = EMPERICAL_HH_BENCHMARKS.get(f"{typology}_{unit}") or EMPERICAL_HH_BENCHMARKS.get(f"ALBANILERIA_{unit}")
@@ -1190,16 +1238,14 @@ def validate_and_calibrate_hh(
             benchmark = EMPERICAL_HH_BENCHMARKS.get(f"PINTURA_{unit}")
         elif typology == "ESTRUCTURAS_METALICAS":
             benchmark = EMPERICAL_HH_BENCHMARKS.get(f"ESTRUCTURAS_METALICAS_{unit}")
-        else:
-            benchmark = EMPERICAL_HH_BENCHMARKS.get("ALBANILERIA_und")
 
-    # Blindaje dimensional estricto: Si no hay benchmark para esta unidad física exacta,
-    # NUNCA cruzar dimensiones (ej. jamás comparar m2 con und, pza o kgf).
+    # Blindaje dimensional estricto: Si no hay benchmark para esta unidad física exacta o disciplina,
+    # NUNCA cruzar dimensiones ni imponer albañilería a disciplinas mecánicas o eléctricas.
     # Conservar el rendimiento propuesto por el analista / LLM y registrar nota explicativa.
     if not benchmark:
         notes.append(
-            f"Rendimiento conservado: No se altera el rendimiento ({perf:.2f} {unit}/día) "
-            f"para {typology} en '{unit}' para garantizar consistencia dimensional estricta."
+            f"Rendimiento conservado: Se preserva el rendimiento propuesto ({perf:.2f} {unit}/día) "
+            f"para {typology} en '{unit}' para evitar distorsiones con benchmarks ajenos a la disciplina."
         )
         return partida, notes
 

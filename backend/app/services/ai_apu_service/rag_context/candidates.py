@@ -50,7 +50,39 @@ INCOMPATIBLE_POLARITY_RULES: List[Tuple[Set[str], Set[str], float]] = [
     )
 ]
 
+TECHNICAL_DISCIPLINE_CLUSTERS: Dict[str, Set[str]] = {
+    "BOMBEO_HIDRAULICA": {
+        "bomba", "bombas", "bombeo", "hidroneumatico", "pozo", "pozo profundo",
+        "lapicero", "sumergible", "centrifuga", "presion constante", "achique",
+        "electrobomba", "motobomba", "eyector"
+    },
+    "HVAC_CLIMATIZACION": {
+        "aire acondicionado", "split", "chiller", "fancoil", "climatizacion",
+        "refrigeracion", "condensadora", "evaporadora", "ducteria", "difusor",
+        "unidad de ventana", "uma", "vrf", "vrv"
+    },
+    "ELECTRICO_FUERZA": {
+        "transformador", "subestacion", "tablero electrico", "tablero de distribucion",
+        "planta electrica", "grupo electrogeno", "ccm", "arrancador", "banco de transformadores",
+        "poste", "linea de alta tension", "linea de baja tension", "seccionador"
+    },
+    "ESTRUCTURAS_METALICAS": {
+        "estructura metalica", "viga metalica", "columna metalica", "perfil metalico",
+        "cercha", "tijera metalica", "correa metalica", "baranda metalica", "escalera metalica",
+        "porton metalico", "reja de hierro", "galpon", "cubierta metalica"
+    },
+    "ELEVACION_TRANSPORTE": {
+        "ascensor", "montacargas", "escalera mecanica"
+    },
+    "OBRA_CIVIL_ALBANILERIA": {
+        "pared de bloque", "friso", "revoque", "losa", "concreto", "viga de concreto",
+        "columna de concreto", "zapata", "mamposteria", "piso de granito", "ceramica", "porcelanato"
+    }
+}
+
 CORE_EQUIPMENT_KEYWORDS: List[str] = [
+    "bomba",
+    "bombas",
     "hidroneumatico",
     "bomba sumergible",
     "bomba centrifuga",
@@ -86,8 +118,10 @@ def _apply_technical_scoring_adjustments(query_text: str, item_desc: str, curren
     """
     Ajusta el score de similitud técnica:
     1. Aplica penalizaciones cruzadas a candidatos con polaridad técnica opuesta (agua limpia vs residual, etc.).
-    2. Bonifica fuertemente a candidatos que contienen el equipo o máquina principal solicitada (ej: hidroneumático, bomba, transformador).
-    3. Penaliza partidas de accesorios menores o conexiones domiciliarias cuando se solicitó la instalación del equipo electromecánico principal.
+    2. Valida disciplina técnica tecnológica: penaliza severamente candidatos de disciplinas cruzadas incompatibles
+       (ej: split de aire acondicionado cuando se solicita bomba/bombeo) y bonifica a la misma disciplina.
+    3. Bonifica coincidencia de acción (desmontaje vs desmontaje).
+    4. Penaliza partidas de accesorios menores o conexiones domiciliarias cuando se solicitó equipo principal.
     """
     if not query_text or not item_desc:
         return current_score
@@ -107,18 +141,37 @@ def _apply_technical_scoring_adjustments(query_text: str, item_desc: str, curren
         elif q_has_b and not q_has_a and i_has_a and not i_has_b:
             current_score = max(0.0, current_score - penalty)
 
-    # 2. Afinidad de Equipo / Sistema Principal
-    has_core_equipment = any(eq_term in q_lower for eq_term in CORE_EQUIPMENT_KEYWORDS)
-    if has_core_equipment:
-        matched_equipment = any(eq_term in i_lower for eq_term in CORE_EQUIPMENT_KEYWORDS)
-        if matched_equipment:
-            # Bonificación técnica por contener el equipo central solicitado
-            current_score = min(1.0, current_score + 0.12)
+    # 2. Afinidad y Discordancia por Disciplina Tecnológica
+    q_disciplines: Set[str] = set()
+    for disc_name, terms in TECHNICAL_DISCIPLINE_CLUSTERS.items():
+        if any(term in q_lower for term in terms):
+            q_disciplines.add(disc_name)
+
+    i_disciplines: Set[str] = set()
+    for disc_name, terms in TECHNICAL_DISCIPLINE_CLUSTERS.items():
+        if any(term in i_lower for term in terms):
+            i_disciplines.add(disc_name)
+
+    if q_disciplines:
+        if i_disciplines:
+            shared = q_disciplines & i_disciplines
+            if shared:
+                # Misma disciplina técnica: bonificación alta
+                current_score = min(1.0, current_score + 0.20)
+            else:
+                # Conflicto severo de disciplina cruzada (ej. bomba vs aire acondicionado)
+                current_score = max(0.0, current_score - 0.40)
         else:
-            # Si el candidato no tiene el equipo y solo es una conexión accesoria/obra civil
+            # El candidato no tiene ninguna de las disciplinas principales del query
             is_auxiliary = any(aux in i_lower for aux in AUXILIARY_CIVIL_OR_FITTING_TERMS)
             if is_auxiliary:
-                current_score = max(0.0, current_score - 0.15)
+                current_score = max(0.0, current_score - 0.20)
+
+    # 3. Afinidad de Verbo Rector (Desmontaje / Demolición)
+    q_is_removal = any(r in q_lower for r in ["desmontaje", "demolicion", "retiro", "desinstalacion", "extraccion", "desmantelamiento"])
+    i_is_removal = any(r in i_lower for r in ["desmontaje", "demolicion", "retiro", "desinstalacion", "extraccion", "desmantelamiento", "desconexion"])
+    if q_is_removal and i_is_removal:
+        current_score = min(1.0, current_score + 0.08)
 
     return current_score
 

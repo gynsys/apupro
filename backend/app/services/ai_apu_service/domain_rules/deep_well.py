@@ -28,7 +28,28 @@ def _enforce_deep_well_dimensions(
         or (bool(re.search(r"\bbomba\s+sumergible\b", desc_lower)) and not is_sewage)
     )
 
+    is_removal = bool(re.search(r"\b(desmontaje|demolici[oó]n|retiro|desinstalaci[oó]n|extracci[oó]n|desmantelamiento)\b", desc_lower))
+
     if not is_deep_well:
+        return
+
+    # Si la partida es estrictamente de DESMONTAJE o EXTRACCIÓN,
+    # purgar cualquier suministro de bomba, tubería o cable nuevo y retornar.
+    if is_removal:
+        logger.info("[DeepWellEnforcement] Partida de DESMONTAJE/EXTRACCIÓN de pozo profundo detectada. Purgando suministros nuevos.")
+        materials = result.get("materials", [])
+        clean_materials = [
+            m for m in materials
+            if isinstance(m, dict) and not bool(re.search(r"\b(BOMBA|CABLE\s+SUMERGIBLE|TUBO|TUBERIA|COLUMNA\s+DE\s+IMPULSION)\b", str(m.get("descripcion", "")).upper()))
+        ]
+        result["materials"] = clean_materials
+
+        # Limpiar advertencias asociadas a suministro de bomba, cable o tubería
+        if "advertencias" in result and isinstance(result["advertencias"], list):
+            result["advertencias"] = [
+                a for a in result["advertencias"]
+                if not any(k in a.upper() for k in ["BOMBA SUMERGIBLE", "CABLE SUMERGIBLE", "TUBERÍA DE IMPULSIÓN", "TUBERIA DE IMPULSION"])
+            ]
         return
 
     # 1. Extraer profundidad si no fue suministrada explícitamente

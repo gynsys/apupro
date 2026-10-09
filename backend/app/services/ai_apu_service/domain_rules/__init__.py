@@ -10,6 +10,7 @@ from app.services.ai_apu_service.domain_rules.sanitize_partida import (
 )
 from app.services.ai_apu_service.domain_rules.material_conflicts import _enforce_primary_materials_mutual_exclusion
 from app.services.ai_apu_service.domain_rules.deep_well import _enforce_deep_well_dimensions
+from app.services.ai_apu_service.domain_rules.discordant_pruning import enforce_discordant_inputs_purging
 
 __all__ = [
     "_enforce_scope_exclusions",
@@ -19,4 +20,6 @@ __all__ = [
     "infer_covenin_prefix",
     "_enforce_primary_materials_mutual_exclusion",
     "_enforce_deep_well_dimensions",
+    "enforce_discordant_inputs_purging",
 ]
+

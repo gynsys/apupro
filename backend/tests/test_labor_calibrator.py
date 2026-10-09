@@ -537,10 +537,10 @@ class TestApuLaborCalibrator(unittest.TestCase):
             ],
         }
 
-        with patch("app.services.ai_apu_service.get_db_session") as mock_session_ctx:
+        with patch("app.services.ai_apu_service.reconciliation.equipment.get_db_session") as mock_session_ctx:
             mock_session = MagicMock()
             mock_session_ctx.return_value.__enter__.return_value = mock_session
-            with patch("app.services.ai_apu_service._execute_equipment_reconciliation") as mock_exec:
+            with patch("app.services.ai_apu_service.reconciliation.equipment._execute_equipment_reconciliation") as mock_exec:
                 def fake_reconcile(res: Dict[str, Any], session: Any) -> None:
                     res["equipments"][0]["origen"] = "historico"
                     res["equipments"][0]["codigo"] = "ALB112"

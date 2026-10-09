@@ -60,6 +60,7 @@ from app.services.ai_apu_service.domain_rules.sanitize_partida import (
 )
 from app.services.ai_apu_service.domain_rules.material_conflicts import _enforce_primary_materials_mutual_exclusion
 from app.services.ai_apu_service.domain_rules.deep_well import _enforce_deep_well_dimensions
+from app.services.ai_apu_service.domain_rules.discordant_pruning import enforce_discordant_inputs_purging
 
 # 5. RAG y contexto histórico
 from app.services.ai_apu_service.rag_context.pruning import _prune_apu_for_prompt

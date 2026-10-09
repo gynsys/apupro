@@ -11,6 +11,7 @@ from app.services.ai_apu_service.domain_rules.safety_height import _enforce_rape
 from app.services.ai_apu_service.domain_rules.floor_ground import _enforce_floor_ground_equipment
 from app.services.ai_apu_service.domain_rules.material_conflicts import _enforce_primary_materials_mutual_exclusion
 from app.services.ai_apu_service.domain_rules.deep_well import _enforce_deep_well_dimensions
+from app.services.ai_apu_service.domain_rules.discordant_pruning import enforce_discordant_inputs_purging
 from app.services.ai_apu_service.domain_rules.sanitize_partida import (
     _sanitize_partida_description,
     infer_covenin_prefix,
@@ -139,14 +140,24 @@ La partida DEBE estructurarse OBLIGATORIAMENTE con la unidad: '{u_clean}'.
 
     deep_well_directive = ""
     u_desc_lower = (user_description or "").lower()
+    is_removal_task = bool(re.search(r"\b(desmontaje|demolici[oó]n|retiro|desinstalaci[oó]n|extracci[oó]n|desmantelamiento)\b", u_desc_lower))
     is_deep_well_req = (
         bool(re.search(r"\b(pozo\s+profundo|pozo\s+de\s+agua|pozo\s+tubular|bomba\s+(?:tipo\s+)?lapicero)\b", u_desc_lower))
         or (bool(re.search(r"\bbomba\s+sumergible\b", u_desc_lower)) and not bool(re.search(r"\b(aguas?\s+negras?|aguas?\s+servidas?|residuales?|achique|fosa|cloaca|triturador\w*)\b", u_desc_lower)))
     )
     if is_deep_well_req:
         depth_val = deep_well_depth or 50.0
-        deep_well_directive = f"""
-# DIRECTIVA CRÍTICA OBLIGATORIA PARA BOMBA SUMERGIBLE / POZO PROFUNDO:
+        if is_removal_task:
+            deep_well_directive = f"""
+# DIRECTIVA CRÍTICA OBLIGATORIA PARA DESMONTAJE / EXTRACCIÓN EN POZO PROFUNDO:
+- Profundidad de extracción: {int(depth_val)} METROS.
+- QUEDA TERMINANTEMENTE PROHIBIDO incluir o cotizar el suministro o compra de una bomba sumergible nueva, tubería de impulsión nueva o cable sumergible nuevo. Esta es una partida de DESMONTAJE/EXTRACCIÓN.
+- La partida consiste exclusivamente en la extracción de la columna ({int(depth_val)} m), cable y bomba existente, desacople de tramos y movilización interna.
+- Equipos: trípode/malacate o grúa de extracción y herramientas mecánicas de desacople.
+- Rendimiento diario típico de extracción: 1 und/día (la jornada de trabajo de la cuadrilla para izar y desacoplar tramos a {int(depth_val)} m)."""
+        else:
+            deep_well_directive = f"""
+# DIRECTIVA CRÍTICA OBLIGATORIA PARA BOMBA SUMERGIBLE / POZO PROFUNDO (OBRA NUEVA):
 - Profundidad de instalación calculada: {int(depth_val)} METROS.
 - La partida requiere UNA SOLA BOMBA SUMERGIBLE (tipo lapicero para pozo profundo con motor y cuerpo de impulsión) de la potencia solicitada.
 - QUEDA TERMINANTEMENTE PROHIBIDO incluir o conservar bombas centrífugas, de superficie o de presión constante heredadas de la base histórica.
@@ -184,12 +195,18 @@ Prefijo COVENIN: {effective_cov_prefix}
 6. AUTO-FUSIÓN: Si la descripción del usuario exige algo que falta en la Base (ej. Bote de material, Pintura, Andamios, Encofrado) pero que sí existe en las Partidas Complementarias, "róbalo" e intégralo conservando sus precios históricos.
 7. AGREGA insumos nuevos que la nueva partida requiera estrictamente y no estén ni en la base ni en las complementarias. Márcalos como `"origen": "ia"`, asígnales un precio unitario referencial estimado de mercado en USD (nunca 0.0) y agrega una advertencia con el prefijo `[PRECIO_REFERENCIAL]`.
 8. NUNCA alteres los precios unitarios de los insumos del APU base ni de las complementarias. Son precios reales de la BD.
-9. Registra SIEMPRE en `notas_adaptacion` (para el log técnico de depuración) que el APU fue adaptado desde la partida base [{base_apu.get('codpar', 'N/A')}], qué insumos se podaron y la justificación del rendimiento.
-10. El campo `advertencias` es EXCLUSIVAMENTE para alertas de precios referenciales de mercado estimados por IA con el prefijo `[PRECIO_REFERENCIAL]` (cuando un insumo indispensable no existe en el catálogo histórico o cuando se sustituyó un equipo o material incompatible de la base).
+9. DIRECTIVA OBLIGATORIA: PODA Y ELIMINACIÓN DE EQUIPOS Y MATERIALES DISCORDANTES DE LA BASE:
+   - TIENES LA OBLIGACIÓN ESTRICTA DE ELIMINAR del APU cualquier material o equipo de la base que resulte discordante o sobredimensionado frente a la solicitud del usuario:
+     * Si la partida solicitada es un DESMONTAJE o DEMOLICIÓN, queda TERMINANTEMENTE PROHIBIDO incluir la compra o suministro del activo que se está desmontando (ej: comprar una bomba nueva, aire acondicionado nuevo, transformador nuevo, o tuberías/cables de obra nueva). Un desmontaje NO compra activos.
+     * Si el objeto es liviano o mecánico menor (ej: bomba de 1 a 10 HP, motor pequeño, puertas, artefactos), ELIMINA equipos de oxicorte/sopletes de alta temperatura y señoritas pesadas de 5 TON si no se justifican físicamente; sustitúyelos por herramientas mecánicas (llaves, dados) y acarreo liviano.
+     * Si la disciplina del insumo de la base no corresponde a la nueva partida (ej: gases refrigerantes en bombas hidráulicas), ELIMÍNALO SIN DUDAR.
+     * NO inventes justificaciones forzadas en notas_adaptacion para retener insumos absurdos de la base.
+10. Registra SIEMPRE en `notas_adaptacion` (para el log técnico de depuración) que el APU fue adaptado desde la partida base [{base_apu.get('codpar', 'N/A')}], qué insumos se podaron y la justificación del rendimiento.
+11. El campo `advertencias` es EXCLUSIVAMENTE para alertas de precios referenciales de mercado estimados por IA con el prefijo `[PRECIO_REFERENCIAL]` (cuando un insumo indispensable no existe en el catálogo histórico o cuando se sustituyó un equipo o material incompatible de la base).
     - NUNCA agregues advertencias sobre exclusiones de alcance (`[ALCANCE]`); el analista de costos ya conoce el alcance solicitado.
     - NUNCA menciones qué partida o código se utilizó como base histórica en `advertencias`.
     - Las notas de adaptación interna van EXCLUSIVAMENTE en `notas_adaptacion`, jamás en `advertencias`.
-11. UNIDAD OBLIGATORIA: Si se especifica una directiva de unidad obligatoria arriba, el campo `unit` de `partida` DEBE ser exactamente esa unidad, escalando los consumos de materiales y el rendimiento diario en correspondencia matemática estricta.
+12. UNIDAD OBLIGATORIA: Si se especifica una directiva de unidad obligatoria arriba, el campo `unit` de `partida` DEBE ser exactamente esa unidad, escalando los consumos de materiales y el rendimiento diario en correspondencia matemática estricta.
 """
     result = call_llm_json(prompt, use_case="cost360", system_prompt=_APU_SYSTEM_PROMPT)
     _sanitize_llm_numbers(result)
@@ -213,6 +230,9 @@ Prefijo COVENIN: {effective_cov_prefix}
     # Salvaguarda determinista de exclusión mutua de materiales preponderantes
     _enforce_primary_materials_mutual_exclusion(result, user_description)
 
+    # Poda determinista de insumos y equipos discordantes o sobredimensionados
+    enforce_discordant_inputs_purging(result, user_description, base_apu)
+
     # Limpieza determinista de la descripción de la partida (remoción de tipologías coloquiales como 'en casa')
     _sanitize_partida_description(result, user_description)
 
@@ -230,7 +250,8 @@ Prefijo COVENIN: {effective_cov_prefix}
     reconcile_materials_with_database(result, db)
     reconcile_labor_with_database(result, db)
 
-    # Salvaguarda final de pozo profundo tras reconciliación con base de datos
+    # Poda final de discordancia y deduplicación tras reconciliaciones
+    enforce_discordant_inputs_purging(result, user_description, base_apu)
     _enforce_deep_well_dimensions(result, user_description, deep_well_depth)
 
     result["debug_base_apu"] = base_apu
