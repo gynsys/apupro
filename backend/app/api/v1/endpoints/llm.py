@@ -3,6 +3,7 @@ Controlador de endpoints para la gestión segura de proveedores y llaves de IA.
 Permite registrar, listar (enmascaradas), actualizar, eliminar y probar la conexión
 de API keys de Google Gemini, OpenAI, Groq, Anthropic y servicios asociados.
 """
+import json
 import time
 import requests
 from datetime import datetime, timezone
@@ -61,7 +62,15 @@ def _build_response_schema(provider: LLMProvider) -> LLMProviderResponse:
         logger.error(f"Error descifrando clave para provider {provider.id}: {e}", exc_info=True)
         plain_key = ""
 
-    extra_params = provider.extra_params if isinstance(provider.extra_params, dict) else None
+    extra_params = provider.extra_params
+    if isinstance(extra_params, str):
+        try:
+            extra_params = json.loads(extra_params)
+        except Exception:
+            extra_params = None
+    if not isinstance(extra_params, dict):
+        extra_params = None
+
     priority = provider.priority if isinstance(provider.priority, int) and provider.priority >= 1 else 1
 
     return LLMProviderResponse(
