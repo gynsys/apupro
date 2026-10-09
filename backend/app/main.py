@@ -105,13 +105,29 @@ try:
             "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS is_public_share BOOLEAN DEFAULT FALSE;",
             "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS ubicacion VARCHAR(255);",
             "UPDATE budgets SET user_id = '1' WHERE user_id IS NULL;",
-            "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS embedding TEXT;"
+            "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS embedding TEXT;",
+            """
+            CREATE TABLE IF NOT EXISTS llm_providers (
+                id SERIAL PRIMARY KEY,
+                provider_key VARCHAR NOT NULL,
+                display_name VARCHAR NOT NULL,
+                api_key_enc TEXT NOT NULL,
+                model_name VARCHAR NOT NULL,
+                base_url VARCHAR,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                priority INTEGER NOT NULL DEFAULT 1,
+                use_case VARCHAR NOT NULL DEFAULT 'all',
+                extra_params JSONB,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE
+            );
+            """
         ]
         for stmt in budget_schema_statements:
             try:
                 conn.execute(text(stmt))
             except Exception as ex:
-                logger.warning(f"Aviso en auto-migración de esquema budgets: {ex}")
+                logger.warning(f"Aviso en auto-migración de esquema: {ex}")
         conn.commit()
 
         # Limpieza automatica en produccion de descripciones parasitarias (F.C.A.S., etc.)

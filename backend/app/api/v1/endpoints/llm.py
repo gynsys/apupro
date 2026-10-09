@@ -5,6 +5,7 @@ de API keys de Google Gemini, OpenAI, Groq, Anthropic y servicios asociados.
 """
 import time
 import requests
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -45,7 +46,14 @@ def _mask_key(plain_key: str) -> str:
 
 
 def _build_response_schema(provider: LLMProvider) -> LLMProviderResponse:
-    """Construye el esquema seguro LLMProviderResponse sin exponer la clave encriptada cruda."""
+    """Construye el esquema seguro LLMProviderResponse sin exponer la clave encriptada cruda.
+
+    Normaliza valores legados/inconsistentes de la BD (created_at nulo, priority < 1,
+    use_case nulo, extra_params no-dict) para que una fila defectuosa no rompa la validación.
+    """
+    if provider is None:
+        raise ValueError("provider es obligatorio")
+
     plain_key = ""
     try:
         plain_key = decrypt_api_key(provider.api_key_enc)
@@ -53,20 +61,33 @@ def _build_response_schema(provider: LLMProvider) -> LLMProviderResponse:
         logger.error(f"Error descifrando clave para provider {provider.id}: {e}", exc_info=True)
         plain_key = ""
 
+    extra_params = provider.extra_params if isinstance(provider.extra_params, dict) else None
+    priority = provider.priority if isinstance(provider.priority, int) and provider.priority >= 1 else 1
+
     return LLMProviderResponse(
         id=provider.id,
-        provider_key=provider.provider_key,
-        display_name=provider.display_name,
-        model_name=provider.model_name,
+        provider_key=provider.provider_key or "custom",
+        display_name=provider.display_name or provider.provider_key or f"Proveedor {provider.id}",
+        model_name=provider.model_name or "",
         base_url=provider.base_url,
-        is_active=provider.is_active,
-        priority=provider.priority,
-        use_case=provider.use_case,
-        extra_params=provider.extra_params,
+        is_active=bool(provider.is_active) if provider.is_active is not None else False,
+        priority=priority,
+        use_case=provider.use_case or "all",
+        extra_params=extra_params,
         api_key_masked=_mask_key(plain_key),
-        created_at=provider.created_at,
+        created_at=provider.created_at or datetime.now(timezone.utc),
         updated_at=provider.updated_at
     )
+
+
+def ensure_llm_providers_table(db: Session) -> None:
+    """Asegura que la tabla llm_providers exista en la base de datos."""
+    try:
+        LLMProvider.__table__.create(bind=db.get_bind(), checkfirst=True)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error asegurando tabla llm_providers: {e}", exc_info=True)
 
 
 @router.get("/keys", response_model=List[LLMProviderResponse])
@@ -77,13 +98,27 @@ def list_ai_keys(
     """Lista todos los proveedores de IA configurados con sus claves enmascaradas."""
     try:
         providers = get_all_providers(db)
-        return [_build_response_schema(p) for p in providers]
     except Exception as e:
-        logger.error(f"Error listando proveedores LLM: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al listar llaves de IA: {str(e)}"
-        )
+        db.rollback()
+        logger.warning(f"Error consultando proveedores LLM, asegurando tabla: {e}")
+        try:
+            ensure_llm_providers_table(db)
+            providers = get_all_providers(db)
+        except Exception as ex2:
+            db.rollback()
+            logger.error(f"Fallo definitivo al consultar proveedores LLM: {ex2}", exc_info=True)
+            return []
+
+    results: List[LLMProviderResponse] = []
+    for provider in providers:
+        try:
+            results.append(_build_response_schema(provider))
+        except Exception as e:
+            logger.error(
+                f"Proveedor LLM id={getattr(provider, 'id', '?')} omitido por datos inválidos: {e}",
+                exc_info=True
+            )
+    return results
 
 
 @router.post("/keys", response_model=LLMProviderResponse, status_code=status.HTTP_201_CREATED)
@@ -112,7 +147,13 @@ def create_ai_key(
             "use_case": payload.use_case or "all",
             "extra_params": payload.extra_params
         }
-        new_provider = create_provider(db, provider_data)
+        try:
+            new_provider = create_provider(db, provider_data)
+        except Exception:
+            db.rollback()
+            ensure_llm_providers_table(db)
+            new_provider = create_provider(db, provider_data)
+
         invalidate_llm_cache()
         logger.info(f"Admin {current_user.email} registró proveedor de IA '{new_provider.display_name}' (ID: {new_provider.id})")
         return _build_response_schema(new_provider)
@@ -164,7 +205,11 @@ def update_ai_key(
         invalidate_llm_cache()
         logger.info(f"Admin {current_user.email} actualizó proveedor de IA ID {provider_id}")
         return _build_response_schema(updated_provider)
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
+        db.rollback()
         logger.error(f"Error actualizando proveedor LLM ID {provider_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -179,7 +224,16 @@ def reveal_ai_key(
     current_user: ArkoAdmin = Depends(get_current_arko_admin)
 ) -> Dict[str, Any]:
     """Retorna la API Key desencriptada exclusivamente para administradores autenticados."""
-    provider = get_provider_by_id(db, provider_id)
+    try:
+        provider = get_provider_by_id(db, provider_id)
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error consultando proveedor {provider_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error de base de datos: {str(e)}"
+        )
+
     if not provider:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -204,7 +258,16 @@ def delete_ai_key(
     current_user: ArkoAdmin = Depends(get_current_arko_admin)
 ) -> Dict[str, Any]:
     """Elimina la configuración y credenciales de un proveedor de IA."""
-    provider = get_provider_by_id(db, provider_id)
+    try:
+        provider = get_provider_by_id(db, provider_id)
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error consultando proveedor {provider_id} para eliminar: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error de base de datos: {str(e)}"
+        )
+
     if not provider:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -216,7 +279,11 @@ def delete_ai_key(
         invalidate_llm_cache()
         logger.info(f"Admin {current_user.email} eliminó proveedor de IA ID {provider_id}")
         return {"status": "deleted", "id": provider_id, "message": "Proveedor eliminado exitosamente"}
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
+        db.rollback()
         logger.error(f"Error eliminando proveedor LLM ID {provider_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

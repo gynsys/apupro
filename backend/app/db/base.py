@@ -22,12 +22,12 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 # Import all models so Alembic can detect them
-# Import all models so Alembic can detect them
 from app.db.models.arko import ArkoAdmin
 from app.db.models.costbase import CostItem, CostMaterial, CostEquipment, CostLabor, CostAPUMaterial, CostAPUEquipment, CostAPULabor
 from app.db.models.costbase_database import Cost360Database
 from app.db.models.budget import Budget, BudgetItem, BudgetAPUMaterial, BudgetAPUEquipment, BudgetAPULabor
 from app.db.models.strategic_ally import StrategicAlly
+from app.db.models.llm_provider import LLMProvider
 
 
 def get_db():
