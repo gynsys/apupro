@@ -6,6 +6,9 @@ from app.db.models.costbase import (
 )
 from app.db.models.costbase_database import Cost360Database, CostbaseDatabase
 from app.db.models.strategic_ally import StrategicAlly
+from app.db.models.market import CostMaterialFamily, CostMarketIndicator
+from app.db.models.backup_logs import BackupLog
+from app.db.models.notification import Notification
 
 __all__ = [
     "LLMProvider",
@@ -19,5 +22,11 @@ __all__ = [
     "CostLabor",
     "CostEquipment",
     "Cost360Database",
-    "StrategicAlly"
+    "CostbaseDatabase",
+    "StrategicAlly",
+    "CostMaterialFamily",
+    "CostMarketIndicator",
+    "BackupLog",
+    "Notification"
 ]
+
