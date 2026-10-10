@@ -1,11 +1,14 @@
 import re
 import subprocess
+import time
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.core.logging import logger
 from app.db.base import get_db
+from app.db.arko_base import ArkoSessionLocal
 from app.api.v1.endpoints.arko import get_current_arko_admin
 from app.middleware.plan_limits import check_ai_access
 from app.schemas.costbase import (
@@ -31,8 +34,9 @@ from app.services.ai_apu_service import (
     infer_covenin_prefix
 )
 from app.services.synonyms_service import expand_technical_synonyms
-from app.services.ai_search import detect_materials
+from app.services.ai_search import detect_materials, ai_engine
 from app.services.apu_input_validator import validate_apu_input, validate_rag_signals, build_rejection_response
+from app.services.ai_apu_service.domain_rules.parametric_ontology import evaluate_parametric_ontology_contract
 from app.services.user_semantic_cache import lookup_user_semantic_cache
 from app.services.inverse_apu_synthesizer import synthesize_apu_inverse
 from app.services.typesafe_service import evaluate_construction_prompt
@@ -53,6 +57,7 @@ def generate_ai_apu_route(
 ) -> Any:
     # Verificar acceso a IA
     check_ai_access(current_user)
+    t_route_start = time.time()
 
     # 0. Si el usuario aceptó la partida de Match Exacto ("Sí, es esa"), devolver APU de BD directamente
     if payload.accept_exact_match_code:
@@ -190,6 +195,18 @@ def generate_ai_apu_route(
     # 2. Normalización y Expansión Técnica con Diccionario
     if payload.description:
         payload.description = expand_technical_synonyms(payload.description)
+
+    # --- VALIDACIÓN ONTOLÓGICA PARAMÉTRICA GLOBAL (PRE-RAG) ---
+    # Verifica si la descripción pertenece a una familia constructiva y carece de especificaciones críticas (espesor, mezcla, etc.)
+    ontology_eval = evaluate_parametric_ontology_contract(payload.description)
+    if ontology_eval and not payload.only_preprocess and not payload.accept_exact_match_code:
+        logger.info("Ontology pre-RAG contract intercepted missing specifications [%s]: %.80s", ontology_eval["_internal_code"], payload.description)
+        ontology_eval.setdefault("partida", None)
+        ontology_eval.setdefault("materials", [])
+        ontology_eval.setdefault("equipments", [])
+        ontology_eval.setdefault("labors", [])
+        ontology_eval.setdefault("advertencias", [])
+        return ontology_eval
 
     # --- VALIDACIÓN DETERMINISTA DE UNIDAD PARA MANTENIMIENTO / REPARACIÓN ---
     MAINTENANCE_KEYWORDS = [
@@ -405,7 +422,6 @@ def generate_ai_apu_route(
 
     # 2.1. Si es solo preproceso DEBUG, devolver resultado rápido
     if payload.only_preprocess:
-        from app.services.ai_search import ai_engine
         debug_data = fast_preprocess_debug(
             db, payload.description, payload.covenin_prefix, payload.covenin_context
         )
@@ -431,8 +447,11 @@ def generate_ai_apu_route(
 
     # 2.2. Búsqueda RAG Híbrida Automática
     candidates = []
+    rag_latency_ms = 0.0
     if not candidates and not payload.only_preprocess:
+        t_rag_start = time.time()
         candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
+        rag_latency_ms = round((time.time() - t_rag_start) * 1000, 2)
 
     # --- CAPA 2 (Post-RAG): Validación de Relevancia Semántica ---
     capa2_result = validate_rag_signals(payload.description, candidates)
@@ -513,7 +532,13 @@ def generate_ai_apu_route(
             if not candidates:
                 candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=15)
             all_candidates_trace = [
-                {"codpar": c["item"].CodPar, "covenin": c["item"].CovPar, "descripcion": c["item"].Descri, "score": c["score"]}
+                {
+                    "codpar": c["item"].CodPar,
+                    "covenin": c["item"].CovPar,
+                    "descripcion": c["item"].Descri,
+                    "score": c["score"],
+                    "scoring_breakdown": c.get("scoring_breakdown", {}),
+                }
                 for c in candidates
             ]
             complementary_apus = select_relevant_complementary_apus(
@@ -527,6 +552,7 @@ def generate_ai_apu_route(
             logger.error("Error fetching complementary APUs: %s", exc, exc_info=True)
 
         history_dicts = [msg.model_dump() for msg in payload.history] if payload.history else []
+        t_base_gen_start = time.time()
         result = generate_apu_with_ai_from_base(
             base_apu=base_apu,
             complementary_apus=complementary_apus,
@@ -540,6 +566,7 @@ def generate_ai_apu_route(
             db=db,
             deep_well_depth=effective_depth,
         )
+        t_base_gen_end = time.time()
 
         # 1. CÓDIGO DE PARTIDA: SC001 para adaptaciones IA
         if result.get("partida"):
@@ -621,8 +648,46 @@ def generate_ai_apu_route(
             ],
             "top_candidatas_evaluadas": all_candidates_trace
         }
+
+        second_cand = candidates[1] if len(candidates) > 1 else None
+        result["debug_base_selection"] = {
+            "criterio": "seleccion_manual_usuario" if payload.base_partida_code else "seleccion_automatica_rag",
+            "partida_ganadora": {
+                "codpar": base_apu.get("codpar"),
+                "covenin": base_apu.get("covenin"),
+                "descripcion": base_apu.get("descripcion"),
+                "score": candidates[0]["score"] if candidates else None
+            },
+            "segunda_opcion": {
+                "codpar": second_cand["item"].CodPar,
+                "covenin": second_cand["item"].CovPar,
+                "descripcion": second_cand["item"].Descri,
+                "score": second_cand["score"]
+            } if second_cand else None,
+            "gap_score": round(candidates[0]["score"] - second_cand["score"], 3) if (candidates and second_cand) else 0.0,
+            "umbral_aceptacion": 0.35,
+            "supera_umbral": (candidates[0]["score"] >= 0.35) if candidates else False
+        }
+
+        total_latency_ms = round((time.time() - t_route_start) * 1000, 2)
+        llm_latency_ms = float(result.get("debug_llm_latency_ms") or 0.0)
+        postproc_latency_ms = round(max(0.0, (t_base_gen_end - t_base_gen_start) * 1000 - llm_latency_ms), 2)
+
+        result["debug_meta"] = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "motor_generacion": "RAG Híbrido + Adaptación Anclada de Partida Base",
+            "modelo_llm": "Router LLM (Gemini / Providers Activos)",
+            "latencia_total_ms": total_latency_ms,
+            "latencia_rag_ms": rag_latency_ms,
+            "latencia_llm_ms": llm_latency_ms,
+            "latencia_postproceso_ms": postproc_latency_ms,
+            "conteo_candidatos_rag": len(candidates),
+            "conteo_complementarias": len(complementary_apus),
+            "solicitud_unidad": effective_unit or payload.unit,
+            "usuario_rol": "superadmin" if is_superadmin else "regular",
+            "usuario_id": getattr(current_user, "id", None)
+        }
         if (result.get("status") in ("success", "completed")) and result.get("partida"):
-            from app.db.arko_base import ArkoSessionLocal
             with ArkoSessionLocal() as adb:
                 db_user = adb.query(current_user.__class__).filter_by(id=current_user.id).first()
                 if db_user:
@@ -664,7 +729,6 @@ def generate_ai_apu_route(
                 adv for adv in result["advertencias"]
                 if adv and isinstance(adv, str) and "[alcance]" not in adv.lower() and "alcance:" not in adv.lower()
             ]
-        from app.db.arko_base import ArkoSessionLocal
         with ArkoSessionLocal() as adb:
             db_user = adb.query(current_user.__class__).filter_by(id=current_user.id).first()
             if db_user:

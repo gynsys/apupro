@@ -93,6 +93,13 @@ def enforce_discordant_inputs_purging(
     if not result or not isinstance(result, dict):
         return
 
+    pruning_trace = result.setdefault("debug_pruning_trace", {
+        "insumos_purgados": [],
+        "equipos_purgados": [],
+        "advertencias_purgadas": [],
+        "total_eliminados": 0
+    })
+
     desc_lower = (user_description or "").lower()
     is_removal = _is_removal_activity(user_description)
 
@@ -121,6 +128,12 @@ def enforce_discordant_inputs_purging(
             # Deduplicación
             if mat_key and mat_key in seen_mat_keys:
                 logger.info("[DiscordantPruning] Eliminado material duplicado: %s", mat_desc)
+                pruning_trace["insumos_purgados"].append({
+                    "descripcion": mat_desc,
+                    "codigo": mat.get("codigo"),
+                    "motivo": "Material duplicado",
+                    "regla": "DEDUPLICACION"
+                })
                 continue
 
             # Si es DESMONTAJE: No debe comprarse el activo que se está desmontando
@@ -129,18 +142,36 @@ def enforce_discordant_inputs_purging(
                 is_new_bulk_supply = bool(re.search(r"\b(CABLE\s+SUMERGIBLE|COLUMNA\s+DE\s+IMPULSION|TUBERIA\s+DE\s+IMPULSION)\b", mat_desc_upper))
                 if is_asset_supply or is_new_bulk_supply:
                     logger.info("[DiscordantPruning] Purgado material de obra nueva en desmontaje: %s", mat_desc)
+                    pruning_trace["insumos_purgados"].append({
+                        "descripcion": mat_desc,
+                        "codigo": mat.get("codigo"),
+                        "motivo": "Suministro de obra nueva incompatible con desmontaje/retiro",
+                        "regla": "ZERO_SUPPLY_DESMONTAJE"
+                    })
                     continue
 
             # Poda de gases de oxicorte para elementos livianos si no fue solicitado expresamente
             if is_lightweight and not explicit_cutting:
                 if any(bool(re.search(pat, mat_desc_upper)) for pat in HEAVY_OXY_CUTTING_PATTERNS):
                     logger.info("[DiscordantPruning] Purgado material de oxicorte discordante en maniobra liviana: %s", mat_desc)
+                    pruning_trace["insumos_purgados"].append({
+                        "descripcion": mat_desc,
+                        "codigo": mat.get("codigo"),
+                        "motivo": "Gases de oxicorte en maniobra liviana sin corte térmico solicitado",
+                        "regla": "OXICORTE_DISCORDANTE"
+                    })
                     continue
 
             # Poda de gases refrigerantes si la partida no es de climatización/HVAC
             if not any(k in desc_lower for k in ["aire acondicionado", "refrigeracion", "chiller", "split", "fancoil"]):
                 if re.search(r"\b(REFRIGERANTE|R-?22|R-?410|R-?134|GAS\s+REFRIGERANTE)\b", mat_desc_upper):
                     logger.info("[DiscordantPruning] Purgado insumo de refrigeración en partida no-HVAC: %s", mat_desc)
+                    pruning_trace["insumos_purgados"].append({
+                        "descripcion": mat_desc,
+                        "codigo": mat.get("codigo"),
+                        "motivo": "Insumo de refrigeración en partida no perteneciente a HVAC",
+                        "regla": "DISCIPLINA_AJENA_HVAC"
+                    })
                     continue
 
             seen_mat_keys.add(mat_key)
@@ -173,18 +204,36 @@ def enforce_discordant_inputs_purging(
             # Deduplicación
             if eq_key and eq_key in seen_eq_keys:
                 logger.info("[DiscordantPruning] Eliminado equipo duplicado: %s", eq_desc)
+                pruning_trace["equipos_purgados"].append({
+                    "descripcion": eq_desc,
+                    "codigo": eq.get("codigo"),
+                    "motivo": "Equipo duplicado",
+                    "regla": "DEDUPLICACION"
+                })
                 continue
 
             # Poda de equipo de oxicorte en desmontaje de equipo liviano sin corte térmico
             if is_lightweight and not explicit_cutting:
                 if re.search(r"\b(OXICORTE|EQUIPO\s+DE\s+OXICORTE|SOPLETE\s+DE\s+CORTE)\b", eq_desc_upper):
                     logger.info("[DiscordantPruning] Purgado equipo de oxicorte discordante en equipo liviano: %s", eq_desc)
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Equipo de oxicorte discordante en maniobra liviana",
+                        "regla": "OXICORTE_DISCORDANTE"
+                    })
                     continue
 
             # Poda de señorita de 5 TON si el equipo es liviano (<150 kg) a nivel de piso
             if is_lightweight and not is_deep_well:
                 if re.search(r"\b(SENORITA\s+DE\s+CADENA|POLIPASTO)\s+DE\s+(CAPACIDAD\s*=\s*)?(?:5|10|15|20)\s*TON\b", eq_desc_upper):
                     logger.info("[DiscordantPruning] Purgada señorita de 5 TON sobredimensionada para maniobra liviana: %s", eq_desc)
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Señorita de 5 TON sobredimensionada para maniobra liviana",
+                        "regla": "EQUIPO_SOBREDIMENSIONADO"
+                    })
                     continue
 
             seen_eq_keys.add(eq_key)
@@ -211,6 +260,11 @@ def enforce_discordant_inputs_purging(
 
             # Si es desmontaje, purgar advertencias de activos suministrados
             if is_removal and any(k in adv_strip.upper() for k in ["BOMBA SUMERGIBLE", "BOMBA CENTRIFUGA", "TUBERÍA DE IMPULSIÓN", "TUBERIA DE IMPULSION", "CABLE SUMERGIBLE"]):
+                pruning_trace["advertencias_purgadas"].append({
+                    "advertencia": adv_strip,
+                    "motivo": "Advertencia de activo suministrado purgada en desmontaje",
+                    "regla": "ZERO_SUPPLY_DESMONTAJE"
+                })
                 continue
 
             seen_adv_keys.add(adv_key)
@@ -218,7 +272,13 @@ def enforce_discordant_inputs_purging(
 
         result["advertencias"] = clean_advertencias
 
-    # Actualizar conteos
+    # Actualizar conteos y totales en pruning_trace
+    pruning_trace["total_eliminados"] = (
+        len(pruning_trace["insumos_purgados"])
+        + len(pruning_trace["equipos_purgados"])
+        + len(pruning_trace["advertencias_purgadas"])
+    )
+    result["debug_pruning_trace"] = pruning_trace
     result["conteo_materiales"] = len(result.get("materials", []))
     result["conteo_equipos"] = len(result.get("equipments", []))
     result["conteo_mano_obra"] = len(result.get("labors", []))

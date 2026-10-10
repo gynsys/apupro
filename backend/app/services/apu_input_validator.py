@@ -29,6 +29,7 @@ from collections import Counter
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from app.core.logging import logger
+from app.services.ai_apu_service.domain_rules.parametric_ontology import evaluate_parametric_ontology_contract
 
 # ---------------------------------------------------------------------------
 # Constantes de configuración — Capa 1
@@ -559,12 +560,22 @@ def _check_parametric_missing_specification(
 ) -> Optional[Tuple[str, str, str, List[str]]]:
     """
     Verifica si una consulta involucra una familia constructiva paramétrica crítica
-    (bombas, paredes de bloques, losas, pavimentos, excavaciones, concertinas, tuberías, etc.)
+    (bombas, sobrepisos, paredes de bloques, losas, pavimentos, excavaciones, concertinas, tuberías, etc.)
     y carece de su parámetro físico, dimensional o de capacidad esencial.
 
     Retorna una tupla (veredicto, mensaje, codigo_interno, opciones) si falta el parámetro,
     o None si la especificación es suficiente o no aplica.
     """
+    # 0. Evaluación universal mediante Ontología Paramétrica Data-Driven
+    ontology_res = evaluate_parametric_ontology_contract(query)
+    if ontology_res is not None:
+        return (
+            "clarification_needed",
+            ontology_res.get("clarification_message", ""),
+            ontology_res.get("_internal_code", "ONTOLOGY_MISSING_PARAM"),
+            ontology_res.get("options", []),
+        )
+
     lower = query.lower()
     is_demolition = bool(
         re.search(r"\b(demolicion|demoler|picar|tumbar|derribar|desmontaje|desmontar)\b", lower)
@@ -987,14 +998,15 @@ def build_rejection_response(
             "_internal_code": codigo,
         }
 
-    if codigo.startswith("RAG_PARAMETRIC_MISSING_"):
+    if codigo.startswith("RAG_PARAMETRIC_MISSING_") or codigo.startswith("ONTOLOGY_MISSING_"):
         return {
             "status": "clarification_needed",
+            "clarification_type": "parametric_specification_required",
             "clarification_message": mensaje,
-            "recommendation": "Indica este parámetro técnico para seleccionar o construir el APU con el costo exacto.",
+            "recommendation": "Indica este parámetro técnico para seleccionar o dimensionar el APU con el costo exacto.",
             "options": rag_candidates or [],
             "questions": [mensaje],
-            "guia_redaccion": f"Estructura recomendada: agrega la especificación técnica requerida a tu descripción ({mensaje}).",
+            "guia_redaccion": f"Estructura recomendada: agrega la especificación técnica requerida a tu descripción.",
             "partida": None,
             "materials": [],
             "equipments": [],

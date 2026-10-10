@@ -56,6 +56,24 @@ def _enforce_rapel_and_height_equipment(result: Dict[str, Any], user_description
         result.setdefault("notas_adaptacion", []).append(
             f"SEGURIDAD TÉCNICA: Se eliminaron andamios tubulares ({', '.join(purged_scaffolds)}) por incompatibilidad con el método de trabajo a rapel."
         )
+        pruning_trace = result.setdefault("debug_pruning_trace", {
+            "insumos_purgados": [],
+            "equipos_purgados": [],
+            "advertencias_purgadas": [],
+            "total_eliminados": 0
+        })
+        for item_desc in purged_scaffolds:
+            pruning_trace["equipos_purgados"].append({
+                "descripcion": item_desc,
+                "codigo": None,
+                "motivo": "Andamio tubular incompatible con método de trabajo suspendido a rapel",
+                "regla": "SEGURIDAD_RAPEL_SUSPENSION"
+            })
+        pruning_trace["total_eliminados"] = (
+            len(pruning_trace["insumos_purgados"])
+            + len(pruning_trace["equipos_purgados"])
+            + len(pruning_trace["advertencias_purgadas"])
+        )
 
     # Purgar andamios de materiales si el LLM los colocó erróneamente allí
     materials = result.get("materials")

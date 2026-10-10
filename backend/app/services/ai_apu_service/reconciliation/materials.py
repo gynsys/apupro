@@ -35,6 +35,13 @@ def _execute_material_reconciliation(result: Dict[str, Any], db: Session) -> Non
         return
 
     reconciled_terms: List[str] = []
+    recon_trace = result.setdefault("debug_reconciliation_trace", {
+        "materiales": {"total_insumos": len(materials), "reconciliados_historico": [], "mantenidos_referencial": []},
+        "equipos": {"total_insumos": 0, "reconciliados_historico": [], "mantenidos_referencial": []},
+        "mano_obra": {"total_insumos": 0, "reconciliados_historico": [], "mantenidos_referencial": []}
+    })
+    mat_trace = recon_trace["materiales"]
+    mat_trace["total_insumos"] = len(materials)
 
     for mat in materials:
         if not isinstance(mat, dict):
@@ -164,6 +171,14 @@ def _execute_material_reconciliation(result: Dict[str, Any], db: Session) -> Non
             mat["origen"] = "historico"
             reconciled_terms.append(matched_desc.lower())
             reconciled_terms.append(desc.lower())
+            mat_trace["reconciliados_historico"].append({
+                "original_llm": desc,
+                "cod_mat": matched_cod,
+                "ref_code": getattr(matched_row, "ref_code", None),
+                "descripcion_bd": matched_desc,
+                "unidad_bd": matched_unit,
+                "precio_unitario_bd": matched_price,
+            })
         else:
             # Si no hubo coincidencia estricta en el catálogo, es un material referencial
             if is_ia or no_cod or zero_price:
@@ -188,6 +203,14 @@ def _execute_material_reconciliation(result: Dict[str, Any], db: Session) -> Non
                     pu = float(mat.get("precio_unitario") or 0.0)
                     if pu <= 0:
                         mat["precio_unitario"] = 10.0
+
+                mat_trace["mantenidos_referencial"].append({
+                    "descripcion": mat_desc or desc,
+                    "unidad": mat_unit or str(mat.get("unidad") or ""),
+                    "precio_referencial": float(mat.get("precio_unitario") or 0.0),
+                    "fuente_precio": "investigacion_web" if mat.get("precio_web_info") else "estimacion_llm",
+                    "motivo": "Sin coincidencia en catálogo certificado de Costbase"
+                })
 
     # Sanitizar advertencias de precios referenciales si el material fue reconciliado con catálogo
     if "advertencias" in result and isinstance(result["advertencias"], list) and reconciled_terms:

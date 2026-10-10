@@ -171,3 +171,21 @@ def _enforce_primary_materials_mutual_exclusion(result: Dict[str, Any], user_des
         result.setdefault("notas_adaptacion", []).append(
             f"COMPATIBILIDAD TÉCNICA: Se eliminaron automáticamente insumos incompatibles heredados ({', '.join(purged_items)}) en cumplimiento de la Regla de Insumo Preponderante Único."
         )
+        pruning_trace = result.setdefault("debug_pruning_trace", {
+            "insumos_purgados": [],
+            "equipos_purgados": [],
+            "advertencias_purgadas": [],
+            "total_eliminados": 0
+        })
+        for item_desc in purged_items:
+            pruning_trace["insumos_purgados"].append({
+                "descripcion": item_desc,
+                "codigo": None,
+                "motivo": "Insumo incompatible con el material/equipo preponderante seleccionado",
+                "regla": "EXCLUSION_MUTUA_PREPONDERANTE"
+            })
+        pruning_trace["total_eliminados"] = (
+            len(pruning_trace["insumos_purgados"])
+            + len(pruning_trace["equipos_purgados"])
+            + len(pruning_trace["advertencias_purgadas"])
+        )

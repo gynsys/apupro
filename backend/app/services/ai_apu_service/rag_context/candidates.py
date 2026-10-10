@@ -114,20 +114,48 @@ AUXILIARY_CIVIL_OR_FITTING_TERMS: List[str] = [
 ]
 
 
-def _apply_technical_scoring_adjustments(query_text: str, item_desc: str, current_score: float) -> float:
+def _apply_technical_scoring_adjustments_detailed(
+    query_text: str,
+    item_desc: str,
+    current_score: float,
+    base_hybrid_info: Optional[Dict[str, Any]] = None,
+    prefix_bonus: float = 0.0,
+) -> Tuple[float, Dict[str, Any]]:
     """
-    Ajusta el score de similitud técnica:
+    Ajusta el score de similitud técnica y genera el desglose de trazabilidad (breakdown):
     1. Aplica penalizaciones cruzadas a candidatos con polaridad técnica opuesta (agua limpia vs residual, etc.).
     2. Valida disciplina técnica tecnológica: penaliza severamente candidatos de disciplinas cruzadas incompatibles
        (ej: split de aire acondicionado cuando se solicita bomba/bombeo) y bonifica a la misma disciplina.
     3. Bonifica coincidencia de acción (desmontaje vs desmontaje).
     4. Penaliza partidas de accesorios menores o conexiones domiciliarias cuando se solicitó equipo principal.
     """
+    raw_base = float(base_hybrid_info.get("score", current_score - prefix_bonus) if base_hybrid_info else (current_score - prefix_bonus))
+    sem_score = float(base_hybrid_info.get("sem_score", 0.0) if base_hybrid_info else 0.0)
+    lex_score = float(base_hybrid_info.get("lex_score", 0.0) if base_hybrid_info else 0.0)
+
+    adjustment_details: List[str] = []
+    if prefix_bonus > 0.0:
+        adjustment_details.append(f"Bonificación por prefijo/familia COVENIN: +{prefix_bonus:.2f}")
+
     if not query_text or not item_desc:
-        return current_score
+        breakdown = {
+            "raw_hybrid_score": round(raw_base, 4),
+            "sem_score": round(sem_score, 4),
+            "lex_score": round(lex_score, 4),
+            "prefix_bonus": round(prefix_bonus, 4),
+            "polarity_penalty": 0.0,
+            "discipline_adjustment": 0.0,
+            "action_bonus": 0.0,
+            "final_score": round(current_score, 3),
+            "detalles_ajustes": adjustment_details,
+        }
+        return current_score, breakdown
 
     q_lower = query_text.lower()
     i_lower = item_desc.lower()
+    total_polarity_penalty = 0.0
+    discipline_adjustment = 0.0
+    action_bonus = 0.0
 
     # 1. Reglas de polaridad técnica opuesta
     for polo_a, polo_b, penalty in INCOMPATIBLE_POLARITY_RULES:
@@ -138,8 +166,12 @@ def _apply_technical_scoring_adjustments(query_text: str, item_desc: str, curren
 
         if q_has_a and not q_has_b and i_has_b and not i_has_a:
             current_score = max(0.0, current_score - penalty)
+            total_polarity_penalty += penalty
+            adjustment_details.append(f"Penalización por polaridad técnica opuesta: -{penalty:.2f}")
         elif q_has_b and not q_has_a and i_has_a and not i_has_b:
             current_score = max(0.0, current_score - penalty)
+            total_polarity_penalty += penalty
+            adjustment_details.append(f"Penalización por polaridad técnica opuesta: -{penalty:.2f}")
 
     # 2. Afinidad y Discordancia por Disciplina Tecnológica
     q_disciplines: Set[str] = set()
@@ -158,22 +190,49 @@ def _apply_technical_scoring_adjustments(query_text: str, item_desc: str, curren
             if shared:
                 # Misma disciplina técnica: bonificación alta
                 current_score = min(1.0, current_score + 0.20)
+                discipline_adjustment += 0.20
+                adjustment_details.append(f"Bonificación por disciplina técnica coincidente ({', '.join(shared)}): +0.20")
             else:
                 # Conflicto severo de disciplina cruzada (ej. bomba vs aire acondicionado)
                 current_score = max(0.0, current_score - 0.40)
+                discipline_adjustment -= 0.40
+                adjustment_details.append(f"Penalización por conflicto de disciplina tecnológica cruzada: -0.40")
         else:
             # El candidato no tiene ninguna de las disciplinas principales del query
             is_auxiliary = any(aux in i_lower for aux in AUXILIARY_CIVIL_OR_FITTING_TERMS)
             if is_auxiliary:
                 current_score = max(0.0, current_score - 0.20)
+                discipline_adjustment -= 0.20
+                adjustment_details.append("Penalización por partida auxiliar/accesoria frente a equipo principal: -0.20")
 
     # 3. Afinidad de Verbo Rector (Desmontaje / Demolición)
     q_is_removal = any(r in q_lower for r in ["desmontaje", "demolicion", "retiro", "desinstalacion", "extraccion", "desmantelamiento"])
     i_is_removal = any(r in i_lower for r in ["desmontaje", "demolicion", "retiro", "desinstalacion", "extraccion", "desmantelamiento", "desconexion"])
     if q_is_removal and i_is_removal:
         current_score = min(1.0, current_score + 0.08)
+        action_bonus += 0.08
+        adjustment_details.append("Bonificación por coincidencia de acción rectora (desmontaje/retiro): +0.08")
 
-    return current_score
+    final_score = round(current_score, 3)
+    breakdown = {
+        "raw_hybrid_score": round(raw_base, 4),
+        "sem_score": round(sem_score, 4),
+        "lex_score": round(lex_score, 4),
+        "prefix_bonus": round(prefix_bonus, 4),
+        "polarity_penalty": round(total_polarity_penalty, 4),
+        "discipline_adjustment": round(discipline_adjustment, 4),
+        "action_bonus": round(action_bonus, 4),
+        "final_score": final_score,
+        "detalles_ajustes": adjustment_details,
+    }
+
+    return final_score, breakdown
+
+
+def _apply_technical_scoring_adjustments(query_text: str, item_desc: str, current_score: float) -> float:
+    """Función de compatibilidad histórica que devuelve solo el score escalar ajustado."""
+    score, _ = _apply_technical_scoring_adjustments_detailed(query_text, item_desc, current_score)
+    return score
 
 
 def get_dynamic_candidates(
@@ -193,49 +252,65 @@ def get_dynamic_candidates(
     try:
         if not getattr(ai_engine, "is_loaded", False):
             ai_engine.load_brain()
-            
+
         hybrid_results = ai_engine.hybrid_search(db, description, limit=limit * 3)
         if not hybrid_results:
             return [], 0.0
-            
+
         best_score = float(hybrid_results[0]["score"])
-        
+        hybrid_info_map: Dict[str, Dict[str, Any]] = {r["id"]: r for r in hybrid_results}
+
         tipo_obra = covenin_prefix[0] if covenin_prefix else ""
         prefixes = [covenin_prefix] if covenin_prefix else []
-        
-        candidates_with_scores: List[Tuple[str, float]] = []
-        
+
+        candidates_with_scores: List[Tuple[str, float, float]] = []
+        prefix_bonuses: Dict[str, float] = {}
+
         for result in hybrid_results:
             item_id = result["id"]
             score = float(result["score"])
-            
+
             is_strict = any(item_id.startswith(p) for p in prefixes) if prefixes else False
             is_family = item_id.startswith(tipo_obra) if tipo_obra else False
-            
+
+            p_bonus = 0.0
             if is_strict:
-                score += 0.15
+                p_bonus = 0.15
             elif is_family:
-                score += 0.05
-                
+                p_bonus = 0.05
+
+            score += p_bonus
+            prefix_bonuses[item_id] = p_bonus
+
             if score >= 0.30:
-                candidates_with_scores.append((item_id, score))
-                
+                candidates_with_scores.append((item_id, score, p_bonus))
+
         candidates_with_scores.sort(key=lambda x: x[1], reverse=True)
         final_ids = [c[0] for c in candidates_with_scores[:limit]]
-            
+
         if not final_ids:
             return [], best_score
-            
+
         items = db.query(CostItem).filter(CostItem.CodPar.in_(final_ids)).all()
         item_map = {i.CodPar: i for i in items}
-        
+
         # Aplicar penalización de polaridad técnica y afinidad de equipos principales
         scored_candidates: List[Dict[str, Any]] = []
-        for i, score in candidates_with_scores[:limit]:
+        for i, score, p_bonus in candidates_with_scores[:limit]:
             if i in item_map:
                 it = item_map[i]
-                adjusted_score = _apply_technical_scoring_adjustments(description, it.Descri or "", score)
-                scored_candidates.append({"item": it, "score": round(adjusted_score, 3)})
+                adjusted_score, breakdown = _apply_technical_scoring_adjustments_detailed(
+                    query_text=description,
+                    item_desc=it.Descri or "",
+                    current_score=score,
+                    base_hybrid_info=hybrid_info_map.get(i),
+                    prefix_bonus=p_bonus,
+                )
+                scored_candidates.append({
+                    "item": it,
+                    "score": round(adjusted_score, 3),
+                    "scoring_breakdown": breakdown,
+                })
 
         # Re-ordenar por el score ajustado para priorizar candidatos afines
         scored_candidates.sort(key=lambda x: x["score"], reverse=True)

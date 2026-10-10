@@ -82,6 +82,7 @@ export default function ClarificationAlertCard({
     if (clarificationType === 'redirect_to_guided') return true;
     if (isAcarreo) return false;
     if (clarificationType === 'deep_well_depth_required' || internalCode === 'RAG_DEEP_WELL_MISSING_DEPTH') return false;
+    if (clarificationType === 'parametric_specification_required' || (internalCode && internalCode.startsWith('ONTOLOGY_MISSING_'))) return false;
     if ((!options || options.length === 0) && (!questions || questions.length === 0 || questions.length >= 3)) {
       return true;
     }

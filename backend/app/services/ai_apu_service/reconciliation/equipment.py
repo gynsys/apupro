@@ -95,6 +95,13 @@ def _execute_equipment_reconciliation(result: Dict[str, Any], db: Session) -> No
         return
 
     reconciled_terms: List[str] = []
+    recon_trace = result.setdefault("debug_reconciliation_trace", {
+        "materiales": {"total_insumos": 0, "reconciliados_historico": [], "mantenidos_referencial": []},
+        "equipos": {"total_insumos": len(equipments), "reconciliados_historico": [], "mantenidos_referencial": []},
+        "mano_obra": {"total_insumos": 0, "reconciliados_historico": [], "mantenidos_referencial": []}
+    })
+    eq_trace = recon_trace["equipos"]
+    eq_trace["total_insumos"] = len(equipments)
 
     for eq in equipments:
         if not isinstance(eq, dict):
@@ -201,11 +208,25 @@ def _execute_equipment_reconciliation(result: Dict[str, Any], db: Session) -> No
             eq["origen"] = "historico"
             reconciled_terms.append(matched_desc.lower())
             reconciled_terms.append(desc.lower())
+            eq_trace["reconciliados_historico"].append({
+                "original_llm": desc,
+                "cod_equ": matched_cod,
+                "ref_code": getattr(matched_row, "ref_code", None),
+                "descripcion_bd": matched_desc,
+                "precio_bd": matched_price,
+                "depreciacion_bd": matched_deprec,
+            })
         else:
             if is_ia or no_cod or zero_price:
                 eq["origen"] = "referencial"
                 if not eq.get("codigo") or eq.get("codigo").startswith("e-") or eq.get("codigo").startswith("EQU-IA-"):
                     eq["codigo"] = "S/C"
+                eq_trace["mantenidos_referencial"].append({
+                    "descripcion": desc,
+                    "precio_referencial": float(eq.get("precio_unitario") or 0.0),
+                    "depreciacion": float(eq.get("depreciacion") or 1.0),
+                    "motivo": "Sin coincidencia en catálogo certificado de equipos de Costbase"
+                })
 
     # Sanitizar advertencias de equipos
     if "advertencias" in result and isinstance(result["advertencias"], list):

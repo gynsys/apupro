@@ -20,6 +20,14 @@ def _execute_labor_reconciliation(result: Dict[str, Any], db: Session) -> None:
     if not isinstance(labors, list) or not labors:
         return
 
+    recon_trace = result.setdefault("debug_reconciliation_trace", {
+        "materiales": {"total_insumos": 0, "reconciliados_historico": [], "mantenidos_referencial": []},
+        "equipos": {"total_insumos": 0, "reconciliados_historico": [], "mantenidos_referencial": []},
+        "mano_obra": {"total_insumos": len(labors), "reconciliados_historico": [], "mantenidos_referencial": []}
+    })
+    mo_trace = recon_trace["mano_obra"]
+    mo_trace["total_insumos"] = len(labors)
+
     for i, lab in enumerate(labors):
         if not isinstance(lab, dict):
             continue
@@ -106,6 +114,14 @@ def _execute_labor_reconciliation(result: Dict[str, Any], db: Session) -> None:
             lab["jornal"] = matched_jornal
             lab["bono"] = matched_bono
             lab["origen"] = "historico"
+            mo_trace["reconciliados_historico"].append({
+                "original_llm": desc,
+                "cod_man": matched_cod,
+                "ref_code": getattr(matched_row, "ref_code", None),
+                "descripcion_bd": matched_desc,
+                "jornal_bd": matched_jornal,
+                "bono_bd": matched_bono,
+            })
         else:
             if is_ia or no_cod or zero_wage:
                 lab["origen"] = "ia"
@@ -113,6 +129,12 @@ def _execute_labor_reconciliation(result: Dict[str, Any], db: Session) -> None:
                     lab["codigo"] = f"LAB-IA-{i+1:03d}"
                 if float(lab.get("jornal") or 0.0) <= 0.0:
                     lab["jornal"] = 5.0  # fallback mínimo referencial
+                mo_trace["mantenidos_referencial"].append({
+                    "descripcion": desc,
+                    "jornal": float(lab.get("jornal") or 0.0),
+                    "bono": float(lab.get("bono") or 0.0),
+                    "motivo": "Cargo no tabulado en tabulador oficial de Costbase"
+                })
 
 
 def reconcile_labor_with_database(result: Dict[str, Any], db: Optional[Session] = None) -> None:

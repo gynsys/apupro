@@ -38,6 +38,19 @@ def _enforce_scope_exclusions(result: Dict[str, Any], user_description: str) -> 
                 "Eliminando %d materiales del resultado LLM.",
                 len(result["materials"])
             )
+            pruning_trace = result.setdefault("debug_pruning_trace", {
+                "insumos_purgados": [],
+                "equipos_purgados": [],
+                "advertencias_purgadas": [],
+                "total_eliminados": 0
+            })
+            for m in result["materials"]:
+                pruning_trace["insumos_purgados"].append({
+                    "descripcion": m.get("descripcion") if isinstance(m, dict) else str(m),
+                    "codigo": m.get("codigo") if isinstance(m, dict) else None,
+                    "motivo": "Material excluido por instrucción explícita del usuario",
+                    "regla": "EXCLUSION_ALCANCE_MATERIALES"
+                })
             result["materials"] = []
             result.setdefault("notas_adaptacion", []).append(
                 "EXCLUSIÓN DE ALCANCE: Materiales/suministro eliminados por instrucción explícita del usuario."
@@ -58,6 +71,19 @@ def _enforce_scope_exclusions(result: Dict[str, Any], user_description: str) -> 
                 "Eliminando %d obreros del resultado LLM.",
                 len(result["labors"])
             )
+            pruning_trace = result.setdefault("debug_pruning_trace", {
+                "insumos_purgados": [],
+                "equipos_purgados": [],
+                "advertencias_purgadas": [],
+                "total_eliminados": 0
+            })
+            for l in result["labors"]:
+                pruning_trace["insumos_purgados"].append({
+                    "descripcion": l.get("descripcion") if isinstance(l, dict) else str(l),
+                    "codigo": l.get("codigo") if isinstance(l, dict) else None,
+                    "motivo": "Mano de obra excluida por instrucción explícita del usuario",
+                    "regla": "EXCLUSION_ALCANCE_MANO_OBRA"
+                })
             result["labors"] = []
             result.setdefault("notas_adaptacion", []).append(
                 "EXCLUSIÓN DE ALCANCE: Mano de obra eliminada por instrucción explícita del usuario."
@@ -76,7 +102,24 @@ def _enforce_scope_exclusions(result: Dict[str, Any], user_description: str) -> 
                 "Eliminando %d equipos del resultado LLM.",
                 len(result["equipments"])
             )
+            pruning_trace = result.setdefault("debug_pruning_trace", {
+                "insumos_purgados": [],
+                "equipos_purgados": [],
+                "advertencias_purgadas": [],
+                "total_eliminados": 0
+            })
+            for eq in result["equipments"]:
+                pruning_trace["equipos_purgados"].append({
+                    "descripcion": eq.get("descripcion") if isinstance(eq, dict) else str(eq),
+                    "codigo": eq.get("codigo") if isinstance(eq, dict) else None,
+                    "motivo": "Equipo excluido por instrucción explícita del usuario",
+                    "regla": "EXCLUSION_ALCANCE_EQUIPOS"
+                })
             result["equipments"] = []
             result.setdefault("notas_adaptacion", []).append(
                 "EXCLUSIÓN DE ALCANCE: Equipos eliminados por instrucción explícita del usuario."
             )
+
+    if "debug_pruning_trace" in result:
+        pt = result["debug_pruning_trace"]
+        pt["total_eliminados"] = len(pt.get("insumos_purgados", [])) + len(pt.get("equipos_purgados", [])) + len(pt.get("advertencias_purgadas", []))

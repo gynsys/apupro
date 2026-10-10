@@ -87,3 +87,21 @@ def _enforce_floor_ground_equipment(result: Dict[str, Any], user_description: st
         result.setdefault("notas_adaptacion", []).append(
             f"SEGURIDAD TÉCNICA: Se eliminaron equipos de trabajo en altura ({', '.join(purged_items)}) por incompatibilidad física con actividades a nivel de piso/pavimento."
         )
+        pruning_trace = result.setdefault("debug_pruning_trace", {
+            "insumos_purgados": [],
+            "equipos_purgados": [],
+            "advertencias_purgadas": [],
+            "total_eliminados": 0
+        })
+        for item_desc in purged_items:
+            pruning_trace["equipos_purgados"].append({
+                "descripcion": item_desc,
+                "codigo": None,
+                "motivo": "Equipo de trabajo en altura incompatible con actividad a nivel de piso",
+                "regla": "SEGURIDAD_ALTURA_PISO"
+            })
+        pruning_trace["total_eliminados"] = (
+            len(pruning_trace["insumos_purgados"])
+            + len(pruning_trace["equipos_purgados"])
+            + len(pruning_trace["advertencias_purgadas"])
+        )

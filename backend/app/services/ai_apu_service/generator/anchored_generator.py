@@ -1,5 +1,6 @@
 import json
 import re
+import time
 from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 from app.services.llm_router import call_llm_json
@@ -208,8 +209,11 @@ Prefijo COVENIN: {effective_cov_prefix}
     - Las notas de adaptación interna van EXCLUSIVAMENTE en `notas_adaptacion`, jamás en `advertencias`.
 12. UNIDAD OBLIGATORIA: Si se especifica una directiva de unidad obligatoria arriba, el campo `unit` de `partida` DEBE ser exactamente esa unidad, escalando los consumos de materiales y el rendimiento diario en correspondencia matemática estricta.
 """
+    t_llm_start = time.time()
     result = call_llm_json(prompt, use_case="cost360", system_prompt=_APU_SYSTEM_PROMPT)
+    llm_duration_ms = round((time.time() - t_llm_start) * 1000, 2)
     _sanitize_llm_numbers(result)
+    result["debug_llm_latency_ms"] = llm_duration_ms
     if "advertencias" not in result:
         result["advertencias"] = []
     if "notas_adaptacion" not in result:

@@ -1100,8 +1100,9 @@ def balance_crew_and_equipments(
 def validate_and_calibrate_hh(
     partida: Dict[str, Any],
     labors: List[Dict[str, Any]],
-    typology: str
-) -> Tuple[Dict[str, Any], List[str]]:
+    typology: str,
+    return_trace: bool = False,
+) -> Any:
     """
     Filtro 4: Verificador Paramétrico de Horas-Hombre (HH/unidad).
     Calcula:
@@ -1112,7 +1113,10 @@ def validate_and_calibrate_hh(
     - Si HH > P90 (rendimiento raquítico o cuadrilla hiperinflada): recalibra al P50.
     """
     if not isinstance(partida, dict) or not isinstance(labors, list) or not labors:
-        return partida or {}, []
+        empty_res = (partida or {}, [])
+        if return_trace:
+            return empty_res[0], empty_res[1], {}
+        return empty_res
 
     notes: List[str] = []
     unit = str(partida.get("unit") or partida.get("unidad") or "").strip().lower()
@@ -1135,11 +1139,24 @@ def validate_and_calibrate_hh(
         partida["performance"] = perf
         if "rendimiento" in partida:
             partida["rendimiento"] = perf
+        gl_trace = {
+            "hh_iniciales": None,
+            "hh_finales": None,
+            "tipo_rendimiento": "global_deterministico",
+            "dias_estimados": days_equiv,
+            "benchmark_encontrado": False,
+            "calibracion_aplicada": False,
+        }
+        if return_trace:
+            return partida, notes, gl_trace
         return partida, notes
 
     # Sumar total de personas en cuadrilla (incluyendo supervisión ponderada)
     total_crew_size = sum(float(l.get("cantidad", 1.0) or 1.0) for l in labors)
     if total_crew_size <= 0.0:
+        empty_crew_trace = {"error": "cuadrilla_vacia", "calibracion_aplicada": False}
+        if return_trace:
+            return partida, notes, empty_crew_trace
         return partida, notes
 
     total_hh_per_day = total_crew_size * 8.0
@@ -1247,6 +1264,18 @@ def validate_and_calibrate_hh(
             f"Rendimiento conservado: Se preserva el rendimiento propuesto ({perf:.2f} {unit}/día) "
             f"para {typology} en '{unit}' para evitar distorsiones con benchmarks ajenos a la disciplina."
         )
+        no_bench_trace = {
+            "hh_iniciales": round(current_hh, 4),
+            "hh_finales": round(current_hh, 4),
+            "total_hh_jornada_cuadrilla": round(total_hh_per_day, 2),
+            "tamano_cuadrilla": round(total_crew_size, 2),
+            "factor_dificultad": round(difficulty_factor, 2),
+            "benchmark_encontrado": False,
+            "motivo_sin_benchmark": f"Sin benchmark empírico para {typology}_{unit}; preservado para evitar distorsión dimensional.",
+            "calibracion_aplicada": False,
+        }
+        if return_trace:
+            return partida, notes, no_bench_trace
         return partida, notes
 
     p10 = benchmark["p10"]
@@ -1256,6 +1285,8 @@ def validate_and_calibrate_hh(
     adjusted_p50 = p50 * difficulty_factor
     lower_bound = p10 * difficulty_factor if is_maintenance else p10 * 0.80
     upper_bound = p90 * 1.30 * difficulty_factor
+    new_hh = current_hh
+    calibrated_perf = perf
 
     if current_hh < lower_bound:
         # Rendimiento excesivo / subdimensionamiento de HH
@@ -1311,10 +1342,12 @@ def validate_and_calibrate_hh(
     }
     cap_key = f"{typology}_{unit}"
     max_cap_single = CAPS_PER_LEAD_WORKER.get(cap_key)
+    biomechanical_triggered = False
     if max_cap_single:
         max_physical_perf = round(max_cap_single * lead_worker_count, 2)
         current_perf_val = float(partida.get("performance") or partida.get("rendimiento") or 0.0)
         if current_perf_val > max_physical_perf:
+            biomechanical_triggered = True
             notes.append(
                 f"Fusible biomecánico activado: Rendimiento acotado de {current_perf_val:.2f} a "
                 f"{max_physical_perf:.2f} {unit}/día (límite físico máximo de {max_cap_single:.1f} {unit}/jornada "
@@ -1323,7 +1356,35 @@ def validate_and_calibrate_hh(
             partida["performance"] = max_physical_perf
             if "rendimiento" in partida:
                 partida["rendimiento"] = max_physical_perf
+            new_hh = total_hh_per_day / max_physical_perf
 
+    hh_trace = {
+        "hh_iniciales": round(current_hh, 4),
+        "hh_finales": round(new_hh, 4),
+        "total_hh_jornada_cuadrilla": round(total_hh_per_day, 2),
+        "tamano_cuadrilla": round(total_crew_size, 2),
+        "factor_dificultad": round(difficulty_factor, 2),
+        "benchmark_encontrado": True,
+        "benchmark_aplicado": {
+            "p10": benchmark.get("p10"),
+            "mediana_p50": benchmark.get("median"),
+            "p90": benchmark.get("p90"),
+            "rendimiento_mediano": benchmark.get("rendimiento_med"),
+        },
+        "banda_inferior_hh": round(lower_bound, 4),
+        "banda_superior_hh": round(upper_bound, 4),
+        "dentro_de_banda": (lower_bound <= current_hh <= upper_bound),
+        "calibracion_aplicada": (calibrated_perf != perf or biomechanical_triggered),
+        "fusible_biomecanico": {
+            "activado": biomechanical_triggered,
+            "limite_oficial_lider": max_cap_single,
+            "oficiales_lideres": lead_worker_count,
+            "rendimiento_techo": round(max_cap_single * lead_worker_count, 2) if max_cap_single else None,
+        } if max_cap_single else None,
+    }
+
+    if return_trace:
+        return partida, notes, hh_trace
     return partida, notes
 
 
@@ -1366,6 +1427,7 @@ def calibrate_apu_crew_and_equipment(
         description = str(partida.get("description") or partida.get("descripcion") or "")
         unit = str(partida.get("unit") or partida.get("unidad") or "")
         covenin = str(partida.get("cod_par") or partida.get("cov_par") or "")
+        perf_orig = float(partida.get("performance") or partida.get("rendimiento") or 0.0)
 
         # 0. Clasificar tipología constructiva
         typology = classify_activity_typology(description, unit, covenin)
@@ -1400,8 +1462,8 @@ def calibrate_apu_crew_and_equipment(
                 ]
 
         # 4. Calibración paramétrica de Horas-Hombre (HH)
-        calibrated_partida, hh_notes = validate_and_calibrate_hh(
-            partida, balanced_labors, typology
+        calibrated_partida, hh_notes, hh_trace = validate_and_calibrate_hh(
+            partida, balanced_labors, typology, return_trace=True
         )
         all_calibration_notes.extend(hh_notes)
 
@@ -1417,6 +1479,26 @@ def calibrate_apu_crew_and_equipment(
         for note in all_calibration_notes:
             if note not in result["notas_adaptacion"]:
                 result["notas_adaptacion"].append(note)
+
+        # Inyectar trazabilidad completa del calibrador para el archivo de Debug
+        perf_final = float(calibrated_partida.get("performance") or calibrated_partida.get("rendimiento") or 0.0)
+        result["debug_calibrator_trace"] = {
+            "tipologia_constructiva": typology,
+            "unidad": unit,
+            "rendimiento_inicial_llm": perf_orig,
+            "rendimiento_calibrado_final": perf_final,
+            "ajuste_rendimiento_aplicado": (perf_orig != perf_final),
+            "metricas_horas_hombre": hh_trace,
+            "cuadrilla": {
+                "total_trabajadores": round(sum(float(l.get("cantidad", 1.0) or 1.0) for l in balanced_labors if isinstance(l, dict)), 2),
+                "supervision_notas": sup_notes,
+                "especialidades_notas": trade_notes,
+            },
+            "equipos": {
+                "notas": eq_notes,
+            },
+            "todas_las_notas_calibracion": all_calibration_notes
+        }
 
         logger.info(
             "Calibración de APU completada satisfactoriamente para tipología '%s' (%d notas técnicas generadas).",
