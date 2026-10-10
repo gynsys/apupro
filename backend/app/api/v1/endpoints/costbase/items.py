@@ -422,23 +422,6 @@ def get_apu(
     )
 
 
-@router.put("/items/{item_code:path}")
-def update_master_item_route(
-    item_code: str,
-    payload: MasterItemUpdate,
-    database_id: str = "master",
-    db: Session = Depends(get_db)
-) -> Any:
-    set_schema_for_db(db, database_id)
-    clean_code = urllib.parse.unquote(item_code)
-    updated_item = update_master_item(db, clean_code, payload.Descri, payload.UniPar, payload.RenPar)
-    if not updated_item and clean_code != item_code:
-        updated_item = update_master_item(db, item_code, payload.Descri, payload.UniPar, payload.RenPar)
-    if not updated_item:
-        raise HTTPException(status_code=404, detail=f"Partida '{clean_code}' no encontrada en la base de datos")
-    return updated_item
-
-
 @router.put("/items/{item_code}/apu")
 def update_master_apu_route(
     item_code: str,
@@ -457,8 +440,10 @@ def update_master_apu_route(
             getattr(current_user, 'role', '') in ['admin', 'superadmin']
         )
 
-    if database_id == "personalizada" or item_code.startswith("CUST-"):
-        ci = _find_custom_cost_item(db, item_code, user_id=user_id, is_superadmin=is_superadmin)
+    clean_code = urllib.parse.unquote(item_code).strip()
+
+    if database_id == "personalizada" or clean_code.startswith("CUST-") or item_code.startswith("CUST-"):
+        ci = _find_custom_cost_item(db, clean_code, user_id=user_id, is_superadmin=is_superadmin) or _find_custom_cost_item(db, item_code, user_id=user_id, is_superadmin=is_superadmin)
         if ci:
             if not is_superadmin and ci.user_id is not None and user_id is not None and ci.user_id != user_id:
                 raise HTTPException(status_code=403, detail="No tienes permisos para editar esta partida")
@@ -494,13 +479,13 @@ def update_master_apu_route(
             db.commit()
             db.refresh(ci)
 
-            resp = _build_custom_apu_response(ci, item_code)
+            resp = _build_custom_apu_response(ci, clean_code)
             partida_info = resp.get("partida", {})
             return {
                 "status": "ok",
                 "message": "APU personalizado actualizado correctamente",
                 "item": {
-                    "CodPar": partida_info.get("CodPar", item_code),
+                    "CodPar": partida_info.get("CodPar", clean_code),
                     "CovPar": partida_info.get("CovPar"),
                     "Descri": ci.description,
                     "UniPar": ci.unit,
@@ -511,7 +496,7 @@ def update_master_apu_route(
 
     updated_item = update_master_apu_details(
         db=db,
-        item_code=item_code,
+        item_code=clean_code,
         description=payload.description,
         unit=payload.unit,
         performance=payload.performance,
@@ -519,8 +504,20 @@ def update_master_apu_route(
         equipments=[e.model_dump() for e in payload.equipments] if payload.equipments is not None else None,
         labors=[l.model_dump() for l in payload.labors] if payload.labors is not None else None
     )
+    if not updated_item and clean_code != item_code:
+        updated_item = update_master_apu_details(
+            db=db,
+            item_code=item_code,
+            description=payload.description,
+            unit=payload.unit,
+            performance=payload.performance,
+            materials=[m.model_dump() for m in payload.materials] if payload.materials is not None else None,
+            equipments=[e.model_dump() for e in payload.equipments] if payload.equipments is not None else None,
+            labors=[l.model_dump() for l in payload.labors] if payload.labors is not None else None
+        )
+
     if not updated_item:
-        ci = _find_custom_cost_item(db, item_code, user_id=user_id, is_superadmin=is_superadmin)
+        ci = _find_custom_cost_item(db, clean_code, user_id=user_id, is_superadmin=is_superadmin) or _find_custom_cost_item(db, item_code, user_id=user_id, is_superadmin=is_superadmin)
         if ci:
             if not is_superadmin and ci.user_id is not None and user_id is not None and ci.user_id != user_id:
                 raise HTTPException(status_code=403, detail="No tienes permisos para editar esta partida")
@@ -551,13 +548,13 @@ def update_master_apu_route(
             ci.apu_data = json.dumps(data)
             db.commit()
             db.refresh(ci)
-            resp = _build_custom_apu_response(ci, item_code)
+            resp = _build_custom_apu_response(ci, clean_code)
             partida_info = resp.get("partida", {})
             return {
                 "status": "ok",
                 "message": "APU personalizado actualizado correctamente",
                 "item": {
-                    "CodPar": partida_info.get("CodPar", item_code),
+                    "CodPar": partida_info.get("CodPar", clean_code),
                     "CovPar": partida_info.get("CovPar"),
                     "Descri": ci.description,
                     "UniPar": ci.unit,
@@ -578,6 +575,23 @@ def update_master_apu_route(
             "PreUni": updated_item.PreUni
         }
     }
+
+
+@router.put("/items/{item_code:path}")
+def update_master_item_route(
+    item_code: str,
+    payload: MasterItemUpdate,
+    database_id: str = "master",
+    db: Session = Depends(get_db)
+) -> Any:
+    set_schema_for_db(db, database_id)
+    clean_code = urllib.parse.unquote(item_code)
+    updated_item = update_master_item(db, clean_code, payload.Descri, payload.UniPar, payload.RenPar)
+    if not updated_item and clean_code != item_code:
+        updated_item = update_master_item(db, item_code, payload.Descri, payload.UniPar, payload.RenPar)
+    if not updated_item:
+        raise HTTPException(status_code=404, detail=f"Partida '{clean_code}' no encontrada en la base de datos")
+    return updated_item
 
 
 @router.delete("/items/{item_code:path}")
