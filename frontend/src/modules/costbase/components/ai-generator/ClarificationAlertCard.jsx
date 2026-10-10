@@ -48,12 +48,11 @@ export default function ClarificationAlertCard({
   options = [],
   internalCode,
   clarificationType,
-  entryModeSource = 'libre',
+  entryModeSource = 'chat',
   onDismiss,
   onCancel,
   onStartGuided,
   onResetChatbot,
-  onResetLibre,
   onClarificationSubmit
 }) {
   const handleCancel = () => {
@@ -579,29 +578,11 @@ export default function ClarificationAlertCard({
 
         <button
           type="button"
-          onClick={onDismiss}
+          onClick={onResetChatbot}
           className="px-3.5 py-2 bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
         >
-          Editar texto en Entrada Libre
+          <RotateCcw size={14} /> Reiniciar Asistente Guiado
         </button>
-
-        {entryModeSource === 'chat' ? (
-          <button
-            type="button"
-            onClick={onResetChatbot}
-            className="px-3 py-2 bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
-          >
-            <RotateCcw size={14} /> Reiniciar Chatbot
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={onResetLibre}
-            className="px-3 py-2 bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
-          >
-            <RotateCcw size={14} /> Reiniciar Entrada Libre
-          </button>
-        )}
       </div>
     </div>
   );

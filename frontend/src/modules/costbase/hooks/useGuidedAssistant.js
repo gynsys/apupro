@@ -193,9 +193,9 @@ export function validateStepInput(text, step, isMaintenance = false) {
 }
 
 export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
-  const [isGuidedMode, setIsGuidedMode] = useState(initialGuided);
-  const [entryModeSource, setEntryModeSource] = useState(initialGuided ? 'chat' : 'libre');
-  const lastEntrySourceRef = useRef(initialGuided ? 'chat' : 'libre');
+  const [isGuidedMode, setIsGuidedMode] = useState(true);
+  const [entryModeSource, setEntryModeSource] = useState('chat');
+  const lastEntrySourceRef = useRef('chat');
 
   const [guidedAccion, setGuidedAccion] = useState(null);
   const [guidedElemento, setGuidedElemento] = useState(null);

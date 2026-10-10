@@ -19,8 +19,6 @@ import ApuGeneratorHeader from '../components/ai-generator/ApuGeneratorHeader';
 import ExactMatchCard from '../components/ai-generator/ExactMatchCard';
 import ClarificationAlertCard from '../components/ai-generator/ClarificationAlertCard';
 import GuidedAssistantModal from '../components/ai-generator/GuidedAssistantModal';
-import FreeTextPromptInput from '../components/ai-generator/FreeTextPromptInput';
-import SmartFilterCard from '../components/ai-generator/SmartFilterCard';
 import ImportFromDbPanel from '../components/ai-generator/ImportFromDbPanel';
 
 import { useGuidedAssistant } from '../hooks/useGuidedAssistant';
@@ -145,15 +143,9 @@ export default function AIApuGeneratorPage() {
       generator.setItem(null);
     } else if (targetMode === 'ia') {
       generator.setItem(null);
-      if (guidedParam === 'false') {
-        guided.setIsGuidedMode(false);
-        guided.setEntryModeSource('libre');
-        guided.lastEntrySourceRef.current = 'libre';
-      } else {
-        guided.setIsGuidedMode(true);
-        guided.setEntryModeSource('chat');
-        guided.lastEntrySourceRef.current = 'chat';
-      }
+      guided.setIsGuidedMode(true);
+      guided.setEntryModeSource('chat');
+      guided.lastEntrySourceRef.current = 'chat';
     }
   }, [modeParam, guidedParam]);
 
@@ -402,18 +394,10 @@ export default function AIApuGeneratorPage() {
       } else if (creationMode === 'manual') {
         navigate(basePath);
       } else if (creationMode === 'ia') {
-        const targetSource = guided.lastEntrySourceRef.current || guided.entryModeSource;
-        if (targetSource === 'libre') {
-          guided.setIsGuidedMode(false);
-          guided.setEntryModeSource('libre');
-          guided.lastEntrySourceRef.current = 'libre';
-          navigate(`${basePath}/ai-generator?mode=ia&guided=false`);
-        } else {
-          guided.setIsGuidedMode(true);
-          guided.setEntryModeSource('chat');
-          guided.lastEntrySourceRef.current = 'chat';
-          navigate(`${basePath}/ai-generator?mode=ia&guided=true`);
-        }
+        guided.setIsGuidedMode(true);
+        guided.setEntryModeSource('chat');
+        guided.lastEntrySourceRef.current = 'chat';
+        navigate(`${basePath}/ai-generator?mode=ia`);
       }
     } else {
       navigate(basePath);
@@ -481,7 +465,7 @@ export default function AIApuGeneratorPage() {
                 if (unit) {
                   setSelectedUnit(unit);
                 }
-                generator.handleGenerate(combined, false, false, false, null, 'libre', unit || selectedUnit);
+                generator.handleGenerate(combined, false, false, false, null, 'chat', unit || selectedUnit);
               }}
               onStartGuided={() => {
                 generator.dismissClarification();
@@ -491,7 +475,7 @@ export default function AIApuGeneratorPage() {
                 guided.setIsGuidedMode(true);
                 guided.setEntryModeSource('chat');
                 guided.lastEntrySourceRef.current = 'chat';
-                navigate(`${basePath}/ai-generator?mode=ia&guided=true`, { replace: true });
+                navigate(`${basePath}/ai-generator?mode=ia`, { replace: true });
               }}
               onResetChatbot={() => {
                 generator.dismissClarification();
@@ -501,30 +485,16 @@ export default function AIApuGeneratorPage() {
                 setSelectedUnit(null);
                 guided.setEntryModeSource('chat');
                 guided.lastEntrySourceRef.current = 'chat';
-                navigate(`${basePath}/ai-generator?mode=ia&guided=true`, { replace: true });
-              }}
-              onResetLibre={() => {
-                generator.dismissClarification();
-                guided.setIsGuidedMode(false);
-                setPrompt('');
-                setSelectedUnit(null);
-                guided.setEntryModeSource('libre');
-                guided.lastEntrySourceRef.current = 'libre';
-                navigate(`${basePath}/ai-generator?mode=ia&guided=false`, { replace: true });
+                navigate(`${basePath}/ai-generator?mode=ia`, { replace: true });
               }}
             />
           )}
 
-          {/* MODAL DEL ASISTENTE GUIADO (CHATBOT) */}
-          {guided.isGuidedMode && !isRedirectingToBot && !generator.isClarifying && !generator.item && (
+          {/* ASISTENTE GUIADO (CHATBOT) - MODO ÚNICO */}
+          {!isRedirectingToBot && !generator.isClarifying && !generator.item && (
             <GuidedAssistantModal
-              isOpen={guided.isGuidedMode}
-              onClose={() => {
-                guided.setIsGuidedMode(false);
-                guided.setEntryModeSource('libre');
-                guided.lastEntrySourceRef.current = 'libre';
-                navigate(`${basePath}/ai-generator?mode=ia&guided=false`, { replace: true });
-              }}
+              isOpen={true}
+              onClose={() => navigate(basePath)}
               currentChatStep={guided.currentChatStep}
               guidedMessages={guided.guidedMessages}
               guidedAccion={guided.guidedAccion}
@@ -535,12 +505,6 @@ export default function AIApuGeneratorPage() {
               setChatInputValue={guided.setChatInputValue}
               handleChatSubmit={guided.handleChatSubmit}
               handleGoBack={guided.handleGoBack}
-              onSwitchToFreeText={() => {
-                guided.setIsGuidedMode(false);
-                guided.setEntryModeSource('libre');
-                guided.lastEntrySourceRef.current = 'libre';
-                navigate(`${basePath}/ai-generator?mode=ia&guided=false`, { replace: true });
-              }}
               isSuperAdmin={isSuperAdmin}
               generationMode={generator.generationMode}
               setGenerationMode={generator.setGenerationMode}
@@ -549,42 +513,6 @@ export default function AIApuGeneratorPage() {
               waitingForGlobalDays={guided.waitingForGlobalDays}
             />
           )}
-
-          {/* INPUT DE TEXTO LIBRE Y BOTÓN GENERAR */}
-          <FreeTextPromptInput
-            prompt={prompt}
-            setPrompt={setPrompt}
-            selectedUnit={selectedUnit}
-            setSelectedUnit={setSelectedUnit}
-            isGuidedMode={guided.isGuidedMode}
-            isSmartMode={false}
-            isClarifying={generator.isClarifying}
-            loading={generator.loading}
-            exactMatchCandidate={generator.exactMatchCandidate}
-            subscriptionErrorMsg={generator.subscriptionErrorMsg}
-            onOpenSubscriptionModal={() => generator.setShowSubscriptionModal(true)}
-            onGenerate={(text, unit) => generator.handleGenerate(text, false, false, false, null, 'libre', unit || selectedUnit)}
-            onSwitchToGuided={() => {
-              guided.resetChatbot();
-              guided.setIsGuidedMode(true);
-              guided.setEntryModeSource('chat');
-              guided.lastEntrySourceRef.current = 'chat';
-              setPrompt('');
-              setSelectedUnit(null);
-              navigate(`${basePath}/ai-generator?mode=ia&guided=true`, { replace: true });
-            }}
-            onSwitchToLibre={() => {
-              guided.setIsGuidedMode(false);
-              guided.setEntryModeSource('libre');
-              guided.lastEntrySourceRef.current = 'libre';
-              navigate(`${basePath}/ai-generator?mode=ia&guided=false`, { replace: true });
-            }}
-            isSuperAdmin={isSuperAdmin}
-            generationMode={generator.generationMode}
-            setGenerationMode={generator.setGenerationMode}
-            useTypesafeJev={generator.useTypesafeJev}
-            setUseTypesafeJev={generator.setUseTypesafeJev}
-          />
         </div>
       )}
 

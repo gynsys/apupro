@@ -18,7 +18,6 @@ export default function GuidedAssistantModal({
   setChatInputValue,
   handleChatSubmit,
   handleGoBack,
-  onSwitchToFreeText,
   isSuperAdmin = false,
   generationMode = 'rag',
   setGenerationMode,
@@ -58,17 +57,6 @@ export default function GuidedAssistantModal({
         style={{ minHeight: '380px', maxHeight: '90dvh' }}
       >
         <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
-          {onSwitchToFreeText && (
-            <button
-              type="button"
-              onClick={onSwitchToFreeText}
-              className="bg-white/90 hover:bg-white border border-amber-300 hover:border-amber-500 text-amber-900 font-bold text-xs px-3 py-1.5 rounded-full shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-              title="Cambiar al modo de texto libre"
-            >
-              <Edit2 size={12} className="text-amber-700" />
-              <span>Escribir libremente</span>
-            </button>
-          )}
           <button 
             onClick={handleClose}
             className="text-amber-700 hover:text-amber-900 hover:bg-amber-200/50 rounded-full p-2 touch-target flex items-center justify-center transition-colors cursor-pointer"

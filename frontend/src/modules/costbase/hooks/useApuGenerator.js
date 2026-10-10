@@ -226,7 +226,7 @@ export function useApuGenerator({ setSettings }) {
     bypassSmart = false,
     bypassExactMatch = false,
     acceptExactMatchCode = null,
-    entryMode = 'libre',
+    entryMode = 'chat',
     unit = null,
     executionDays = null
   ) => {
@@ -242,7 +242,7 @@ export function useApuGenerator({ setSettings }) {
     setJevAnalysis(null);
 
     try {
-      const context = entryMode === 'chat' ? 'Asistente Guiado de APU' : 'Generación Libre de APU (Búsqueda Híbrida Inteligente)';
+      const context = 'Asistente Guiado de APU';
       const prefixToSend = '';
 
       if (acceptExactMatchCode) {

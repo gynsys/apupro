@@ -13,8 +13,6 @@ import SubscriptionRequestModal from '../../../../components/SubscriptionRequest
 import ExactMatchCard from './ExactMatchCard';
 import ClarificationAlertCard from './ClarificationAlertCard';
 import GuidedAssistantModal from './GuidedAssistantModal';
-import FreeTextPromptInput from './FreeTextPromptInput';
-import SmartFilterCard from './SmartFilterCard';
 
 import { useGuidedAssistant } from '../../hooks/useGuidedAssistant';
 import { useApuGenerator } from '../../hooks/useApuGenerator';
@@ -295,7 +293,7 @@ export default function AIApuGeneratorModal({
                     if (unit) {
                       setSelectedUnit(unit);
                     }
-                    generator.handleGenerate(combined, false, false, false, null, 'libre', unit || selectedUnit);
+                    generator.handleGenerate(combined, false, false, false, null, 'chat', unit || selectedUnit);
                   }}
                   onStartGuided={() => {
                     generator.dismissClarification();
@@ -313,89 +311,30 @@ export default function AIApuGeneratorModal({
                     guided.setEntryModeSource('chat');
                     guided.lastEntrySourceRef.current = 'chat';
                   }}
-                  onResetLibre={() => {
-                    generator.dismissClarification();
-                    guided.resetChatbot();
-                    guided.setIsGuidedMode(false);
-                    setPrompt('');
-                    setSelectedUnit(null);
-                    guided.setEntryModeSource('libre');
-                    guided.lastEntrySourceRef.current = 'libre';
-                  }}
                 />
               )}
 
-              {/* MODAL DEL ASISTENTE GUIADO (CHATBOT) */}
-              {guided.isGuidedMode && !generator.isClarifying && !generator.item && (
+              {/* ASISTENTE GUIADO (CHATBOT) - MODO ÚNICO */}
+              {!generator.isClarifying && !generator.item && (
                 <GuidedAssistantModal
-                  isOpen={guided.isGuidedMode}
-                  onClose={() => {
-                    guided.setIsGuidedMode(false);
-                    guided.setEntryModeSource('libre');
-                    guided.lastEntrySourceRef.current = 'libre';
-                  }}
+                  isOpen={true}
+                  onClose={onClose}
                   currentChatStep={guided.currentChatStep}
                   guidedMessages={guided.guidedMessages}
                   guidedAccion={guided.guidedAccion}
+                  guidedElemento={guided.guidedElemento}
                   guidedMaterial={guided.guidedMaterial}
                   chatbotLoadingStage={guided.chatbotLoadingStage}
                   chatInputValue={guided.chatInputValue}
                   setChatInputValue={guided.setChatInputValue}
                   handleChatSubmit={guided.handleChatSubmit}
                   handleGoBack={guided.handleGoBack}
-                  onSwitchToFreeText={() => {
-                    guided.setIsGuidedMode(false);
-                    guided.setEntryModeSource('libre');
-                    guided.lastEntrySourceRef.current = 'libre';
-                  }}
                   isSuperAdmin={isSuperAdmin}
                   generationMode={generator.generationMode}
                   setGenerationMode={generator.setGenerationMode}
                   waitingForGlobalDays={guided.waitingForGlobalDays}
                 />
               )}
-
-              {/* INPUT DE TEXTO LIBRE Y BOTÓN GENERAR */}
-              <FreeTextPromptInput
-                prompt={prompt}
-                setPrompt={setPrompt}
-                selectedUnit={selectedUnit}
-                setSelectedUnit={setSelectedUnit}
-                isGuidedMode={guided.isGuidedMode}
-                isSmartMode={false}
-                isClarifying={generator.isClarifying}
-                loading={generator.loading}
-                exactMatchCandidate={generator.exactMatchCandidate}
-                subscriptionErrorMsg={generator.subscriptionErrorMsg}
-                onOpenSubscriptionModal={() => generator.setShowSubscriptionModal(true)}
-                onGenerate={(text, unit) => generator.handleGenerate(text, false, false, false, null, 'libre', unit || selectedUnit)}
-                onSwitchToGuided={() => {
-                  guided.resetChatbot();
-                  guided.setIsGuidedMode(true);
-                  guided.setEntryModeSource('chat');
-                  guided.lastEntrySourceRef.current = 'chat';
-                  setPrompt('');
-                  setSelectedUnit(null);
-                }}
-                onSwitchToLibre={() => {
-                  guided.setIsGuidedMode(false);
-                  guided.setEntryModeSource('libre');
-                  guided.lastEntrySourceRef.current = 'libre';
-                }}
-                isSuperAdmin={isSuperAdmin}
-                generationMode={generator.generationMode}
-                setGenerationMode={generator.setGenerationMode}
-              />
-
-              {/* Filtro Rápido Inteligente */}
-              <SmartFilterCard
-                selectedUnit={selectedUnit}
-                setSelectedUnit={setSelectedUnit}
-                onPresetClick={(presetText) => {
-                  setPrompt(presetText);
-                  generator.handleGenerate(presetText, false, false, false, null, 'libre', selectedUnit);
-                }}
-              />
             </div>
           )}
 

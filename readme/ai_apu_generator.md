@@ -86,9 +86,7 @@ apupro_platform/
             ├── ApuGeneratorHeader.jsx       # Encabezado contextual y tabs de modo
             ├── ClarificationAlertCard.jsx   # Tarjeta ámbar sin opciones adivinadas
             ├── ExactMatchCard.jsx           # Tarjeta interactiva de match exacto
-            ├── GuidedAssistantModal.jsx     # Modal del Asistente Guiado paso a paso
-            ├── FreeTextPromptInput.jsx      # Input de texto libre y botón Generar APU
-            ├── SmartFilterCard.jsx          # Tarjeta de preguntas discriminantes
+            ├── GuidedAssistantModal.jsx     # Modal del Asistente Guiado paso a paso (Modo Único Exclusivo)
             ├── ImportFromDbPanel.jsx        # Panel de clonación de bases de datos
             └── DatabasePreviewList.jsx      # Visor colapsable de partidas históricas
 ```
@@ -244,17 +242,14 @@ El frontend de generación y edición de APUs está organizado bajo principios d
   * Realiza el cálculo reactivo en tiempo real de costos directos (materiales, equipos con factor de depreciación, mano de obra con FCAS e incidencias) y costos indirectos (administración, utilidad, IVA).
   * **Sincronización de Equipos y Depreciación:** Al hacer clic en la lupa de fila o en el botón general de búsqueda, propaga tanto el precio unitario de adquisición como el factor de depreciación diario (`depreciacion`), evitando que la fila conserve valores estáticos de `1.0`.
   * **Visibilidad de Acciones:** El botón de eliminación (ícono de papelera) permanece siempre visible en la fila para facilitar la remoción rápida de componentes.
-* **[`FreeTextPromptInput.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/components/ai-generator/FreeTextPromptInput.jsx):**
-  * Textarea con auto-ajuste de altura y conmutador entre modo Asistente y Entrada Libre.
-  * **Detección Reactiva de Mantenimiento:** Al escribir términos de mantenimiento/reparación, despliega dinámicamente el panel interactivo con chips de unidad obligatoria (`pza`, `und`, `m²`, `m`).
-  * **Validación Bloqueante:** Impide generar la partida si el usuario no ha seleccionado una unidad obligatoria, mostrando un aviso contextual antes del envío.
 * **[`GuidedAssistantModal.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/components/ai-generator/GuidedAssistantModal.jsx):**
-  * Modal interactivo del Asistente Guiado de 5 pasos con stepper visual y rebobinado reversible.
+  * Modal interactivo del Asistente Guiado de 5 pasos con stepper visual, validación paramétrica y rebobinado reversible.
+  * **Modo Exclusivo de Entrada:** Es el canal único y obligatorio para la redacción de partidas, estructurando: Acción, Elemento, Material, Entorno/Ubicación, Alcance y Unidad de Cómputo para eliminar ambigüedades e inconsistencias de entrada libre.
   * En el Paso 5, presenta los chips de unidad técnica y adapta dinámicamente el placeholder del chat según la actividad.
 * **[`ClarificationAlertCard.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/components/ai-generator/ClarificationAlertCard.jsx):**
-  * Tarjeta ámbar limpia sin botones de alternativas adivinadas.
+  * Tarjeta ámbar limpia sin botones de alternativas adivinadas ni modos de texto libre.
   * Presenta la guía de **REDACCIÓN RECOMENDADA** y las preguntas clave.
-  * Muestra los botones de acción: `[Usar Asistente Guiado Paso a Paso]` y `[Reiniciar Entrada Libre]` / `[Reiniciar Chatbot]`.
+  * Muestra el botón de acción: `[Reiniciar Asistente Guiado]`.
 * **[`ExactMatchCard.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/components/ai-generator/ExactMatchCard.jsx):**
   * Permite adoptar con un solo clic una partida existente en base de datos sin gastar cuota mensual de IA.
 
