@@ -174,6 +174,19 @@ def enforce_discordant_inputs_purging(
                     })
                     continue
 
+            # Poda de tuberías de concreto, alcantarillado o drenaje pesado en partidas de pisos y acabados
+            is_floor_finish = any(f in desc_lower for f in ["piso", "sobrepiso", "pavimento", "acera", "revestimiento de piso", "requemado", "afinado", "friso", "mortero de piso"])
+            if is_floor_finish:
+                if re.search(r"\b(TUBO\s+DE\s+CONCRETO|TUBERIA\s+DE\s+CONCRETO|JUNTA\s+GOMA|ALCANTARILLA|DRENAJE\s+PLUVIAL|COLECTOR)\b", mat_desc_upper):
+                    logger.info("[DiscordantPruning] Purgada tubería pesada/subterránea discordante en piso/acabado: %s", mat_desc)
+                    pruning_trace["insumos_purgados"].append({
+                        "descripcion": mat_desc,
+                        "codigo": mat.get("codigo"),
+                        "motivo": "Tubería pesada o elemento de alcantarillado incompatible con partida de piso o acabado",
+                        "regla": "DISCIPLINA_AJENA_PISOS"
+                    })
+                    continue
+
             seen_mat_keys.add(mat_key)
             clean_materials.append(mat)
 
@@ -233,6 +246,19 @@ def enforce_discordant_inputs_purging(
                         "codigo": eq.get("codigo"),
                         "motivo": "Señorita de 5 TON sobredimensionada para maniobra liviana",
                         "regla": "EQUIPO_SOBREDIMENSIONADO"
+                    })
+                    continue
+
+            # Poda de maquinaria pesada de corte de cabilla en partidas de pisos y acabados
+            is_floor_finish = any(f in desc_lower for f in ["piso", "sobrepiso", "pavimento", "acera", "revestimiento de piso", "requemado", "afinado", "friso", "mortero de piso"])
+            if is_floor_finish:
+                if re.search(r"\b(CORTADORA\s+(?:AUTOMATICA\s+)?DE\s+CABILLA|DOBLADORA\s+DE\s+CABILLA|CIZALLA\s+HIDRAULICA)\b", eq_desc_upper):
+                    logger.info("[DiscordantPruning] Purgado equipo de corte de acero pesado discordante en piso/acabado: %s", eq_desc)
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Equipo de corte de cabilla industrial incompatible con partida de piso o acabado",
+                        "regla": "EQUIPO_DISCORDANTE_PISOS"
                     })
                     continue
 

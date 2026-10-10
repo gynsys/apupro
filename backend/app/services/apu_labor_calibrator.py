@@ -904,17 +904,20 @@ def balance_crew_and_equipments(
 
         # Sincronización de herramientas eléctricas menores de preparación de superficie:
         # Si la pintura incluye decapado, cepillado de óxido o preparación en elementos metálicos:
+        # NOTA: Ignorar si 'óxido' se refiere a pigmento mineral colorante en pisos/morteros (óxido negro, rojo, etc.)
         desc_c_paint = _normalize_str(description)
-        is_metal_prep = any(k in desc_c_paint for k in ["CEPILLADO", "OXIDO", "DECAPADO", "SANEAMIENTO", "PELDANO", "ESCALERA", "BARANDA", "REJA", "ANTICORROSIV", "METALIC"])
+        is_pigment_color = any(p in desc_c_paint for p in ["OXIDO NEGRO", "OXIDO ROJO", "OXIDO AMARILLO", "OXIDO VERDE", "PIGMENTO", "COLOR", "PISO", "SOBREPISO", "REQUEMADO", "MORTERO"])
+        is_metal_prep = (not is_pigment_color) and any(k in desc_c_paint for k in ["CEPILLADO", "OXIDO", "DECAPADO", "SANEAMIENTO", "PELDANO", "ESCALERA", "BARANDA", "REJA", "ANTICORROSIV", "METALIC"])
         if is_metal_prep:
             # 1. Sustituir esmeril industrial pesado de 7" por amoladora liviana de 4 1/2" para trabajo en sitio
             for eq in equipments:
                 d_up = str(eq.get("descripcion", "")).upper()
                 if any(h in d_up for h in ["7 PULG", "7\"", "INDUSTRIAL", "BANCO", "TRONCHADORA"]) and any(e in d_up for e in ["ESMERIL", "AMOLADORA"]):
-                    eq["codigo"] = "EQU-HER-045"
+                    eq["codigo"] = "EQU-IA-AMOLADORA"
                     eq["descripcion"] = "AMOLADORA ANGULAR DE 4 1/2 PULG CON CEPILLO DE ALAMBRE"
                     eq["depreciacion"] = 0.01
                     eq["precio_unitario"] = 55.0
+                    eq["origen"] = "ia"
                     eq["nota_calculo"] = "Sustituido esmeril industrial de 7\" por amoladora angular portátil de 4 1/2\" con cepillo circular de alambre de acero para trabajo ergonómico en elementos instalados en sitio."
                     notes.append("Herramienta calibrada: Se sustituyó esmeril industrial de 7\" por Amoladora de 4 1/2\" con cepillo de alambre por accesibilidad en sitio.")
 
@@ -923,13 +926,13 @@ def balance_crew_and_equipments(
             if not has_grinder:
                 equipments.append({
                     "id": "e-ia-amoladora-4y12",
-                    "codigo": "EQU-HER-045",
+                    "codigo": "EQU-IA-AMOLADORA",
                     "descripcion": "AMOLADORA ANGULAR DE 4 1/2 PULG CON CEPILLO DE ALAMBRE",
                     "unidad": "día",
                     "cantidad": 1.0,
                     "depreciacion": 0.01,
                     "precio_unitario": 55.0,
-                    "origen": "historico",
+                    "origen": "ia",
                     "nota_calculo": "Herramienta portátil de 4 1/2 pulg con cepillo circular de alambre de acero para decapado y desprendimiento mecánico de óxido en elementos instalados en sitio."
                 })
                 notes.append("Herramientas de preparación superficial: Se incorporó Amoladora Angular de 4 1/2\" con cepillo de alambre para desprendimiento mecánico de óxido en sitio.")
@@ -973,10 +976,11 @@ def balance_crew_and_equipments(
             for eq in equipments:
                 d_up = str(eq.get("descripcion", "")).upper()
                 if any(h in d_up for h in ["7 PULG", "7\"", "INDUSTRIAL", "BANCO", "TRONCHADORA"]) and any(e in d_up for e in ["ESMERIL", "AMOLADORA"]):
-                    eq["codigo"] = "EQU-HER-045"
+                    eq["codigo"] = "EQU-IA-AMOLADORA"
                     eq["descripcion"] = "AMOLADORA ANGULAR DE 4 1/2 PULG CON CEPILLO DE ALAMBRE"
                     eq["depreciacion"] = 0.01
                     eq["precio_unitario"] = 55.0
+                    eq["origen"] = "ia"
                     eq["nota_calculo"] = "Sustituido esmeril industrial de 7\" por amoladora angular portátil de 4 1/2\" con cepillo circular de alambre de acero para trabajo en elementos instalados en sitio."
                     notes.append("Herramienta calibrada: Se sustituyó esmeril industrial de 7\" por Amoladora de 4 1/2\" con cepillo de alambre para mantenimiento en sitio.")
 
@@ -989,13 +993,13 @@ def balance_crew_and_equipments(
                 if is_site_maintenance:
                     equipments.append({
                         "id": "e-ia-amoladora-4y12",
-                        "codigo": "EQU-HER-045",
+                        "codigo": "EQU-IA-AMOLADORA",
                         "descripcion": "AMOLADORA ANGULAR DE 4 1/2 PULG CON CEPILLO DE ALAMBRE",
                         "unidad": "día",
                         "cantidad": 1.0,
                         "depreciacion": 0.01,
                         "precio_unitario": 55.0,
-                        "origen": "historico",
+                        "origen": "ia",
                         "nota_calculo": "Herramienta portátil de 4 1/2 pulg con cepillo circular de alambre de acero para remoción mecánica de óxido en elementos instalados en sitio."
                     })
                     notes.append("Herramientas metalmecánicas: Se incorporó Amoladora Angular de 4 1/2\" con cepillo de alambre para saneamiento en sitio.")
