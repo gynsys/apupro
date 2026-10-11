@@ -53,8 +53,10 @@ export default function GuidedAssistantModal({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4 overflow-hidden animate-in fade-in duration-200">
       <div 
-        className="bg-[#FEF3C7] border-2 border-[#FEF3C7] rounded-2xl p-3.5 sm:p-6 relative flex flex-col max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200" 
-        style={{ minHeight: '380px', maxHeight: '90dvh' }}
+        className={`bg-[#FEF3C7] border-2 border-[#FEF3C7] rounded-2xl p-3.5 sm:p-6 relative flex flex-col max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200 ${
+          currentChatStep === 0 ? '!pb-[23px]' : ''
+        }`} 
+        style={{ minHeight: currentChatStep === 0 ? 'auto' : '380px', maxHeight: '90dvh' }}
       >
         <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
           <button 
@@ -87,7 +89,9 @@ export default function GuidedAssistantModal({
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto pr-2 space-y-6 flex flex-col pb-4 scrollbar-thin scrollbar-thumb-amber-200">
+        <div className={`flex-1 overflow-y-auto pr-2 flex flex-col scrollbar-thin scrollbar-thumb-amber-200 ${
+          currentChatStep === 0 ? 'pb-0' : 'space-y-6 pb-4'
+        }`}>
           {guidedMessages.map((msg, idx) => (
             <div key={msg.id || idx} className={`animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-3 ${msg.sender === 'user' ? 'items-end' : ''}`}>
               <div className={`flex items-end gap-2 ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}>
@@ -153,7 +157,7 @@ export default function GuidedAssistantModal({
               </div>
             </div>
           )}
-          <div ref={chatEndRef} />
+          {currentChatStep > 0 && <div ref={chatEndRef} />}
         </div>
 
         {/* Chat Input: Solo renderizar una vez iniciado el flujo (paso 1+) */}
