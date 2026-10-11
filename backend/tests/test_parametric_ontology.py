@@ -134,6 +134,13 @@ class TestParametricOntology(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertEqual(result["_internal_code"], "ONTOLOGY_MISSING_ESPESOR")
 
+    def test_pintura_impermeabilizante_en_losas_validate_rag_signals(self) -> None:
+        """Pintura en losas con pintura impermeabilizante pasa validate_rag_signals sin pedir espesor de losa."""
+        query = "Pintura en losas con pintura impermeabilizante en exteriores todo incluido unidad m2"
+        res = validate_rag_signals(query, candidates=None)
+        self.assertIsNone(res)
+
 
 if __name__ == "__main__":
     unittest.main()
+

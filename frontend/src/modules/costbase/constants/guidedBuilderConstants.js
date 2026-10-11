@@ -261,7 +261,19 @@ export function getMaterialChips(accion, elemento) {
         'Omitir'
       ];
     }
-    if (/pared|muro|cielo|techo|fachada|friso/i.test(elem)) {
+    if (/losa|techo/i.test(elem)) {
+      return [
+        'Pintura impermeabilizante elastomérica',
+        'Pintura de caucho clase A',
+        'Pintura de caucho clase B',
+        'Pintura reflectiva de aluminio',
+        'Pintura elastomérica antihongos',
+        'Pintura epóxica para losas',
+        'Pintura satinada',
+        'Omitir'
+      ];
+    }
+    if (/pared|muro|cielo|fachada|friso/i.test(elem)) {
       return [
         'Pintura de caucho clase A',
         'Pintura de caucho clase B',
@@ -285,6 +297,18 @@ export function getMaterialChips(accion, elemento) {
     ];
   }
 
+  if (/sobrepiso|nivelaci[oó]n|afinado/i.test(elem) || /sobrepiso/i.test(acc)) {
+    return [
+      'Mortero cemento-arena 1:3 e=2.5 cm',
+      'Mortero cemento-arena 1:3 e=3.0 cm',
+      'Mortero cemento-arena 1:4 e=3.0 cm',
+      'Mortero cemento-arena 1:3 e=4.0 cm',
+      'Mortero cemento-arena 1:4 e=5.0 cm',
+      "Concreto f'c=150 kg/cm² e=5.0 cm",
+      'Omitir'
+    ];
+  }
+
   if (/pared|muro|tabique|bloque|ladrillo/i.test(elem) || (/construc|coloca/i.test(acc) && /bloque/i.test(elem))) {
     return [
       'Bloque de concreto e=10 cm',
@@ -299,7 +323,42 @@ export function getMaterialChips(accion, elemento) {
     ];
   }
 
-  if (/concreto|losa|columna|viga|zapata|fundacion|fundación|pavimento|acera|brocal/i.test(elem) || /vaciado/i.test(acc)) {
+  if (/losa/i.test(elem) && (/vaciado|construc|coloca/i.test(acc) || !acc)) {
+    return [
+      "Concreto f'c=210 kg/cm² e=10 cm",
+      "Concreto f'c=210 kg/cm² e=15 cm",
+      "Concreto f'c=210 kg/cm² e=20 cm",
+      "Concreto f'c=250 kg/cm² e=15 cm",
+      "Concreto f'c=250 kg/cm² e=20 cm",
+      "Concreto f'c=250 kg/cm² e=25 cm",
+      "Concreto f'c=280 kg/cm² e=20 cm",
+      'Omitir'
+    ];
+  }
+
+  if (/pavimento|acera|brocal/i.test(elem) && (/vaciado|construc|coloca/i.test(acc) || !acc)) {
+    return [
+      "Concreto f'c=210 kg/cm² e=10 cm",
+      "Concreto f'c=210 kg/cm² e=12 cm",
+      "Concreto f'c=250 kg/cm² e=15 cm",
+      "Concreto f'c=250 kg/cm² e=20 cm",
+      "Concreto f'c=280 kg/cm² e=20 cm",
+      'Omitir'
+    ];
+  }
+
+  if (/excavac|zanja/i.test(elem) || /excavac/i.test(acc)) {
+    return [
+      'Hasta 1.50 m (a mano)',
+      'Hasta 1.50 m (a máquina)',
+      'De 1.50 a 3.00 m (a máquina)',
+      'Mayor a 3.00 m (a máquina)',
+      'En zanjas hasta 1.50 m a mano',
+      'Omitir'
+    ];
+  }
+
+  if (/concreto|columna|viga|zapata|fundacion|fundación/i.test(elem) || /vaciado/i.test(acc)) {
     return [
       "Concreto f'c=210 kg/cm²",
       "Concreto f'c=250 kg/cm²",
@@ -692,11 +751,28 @@ export function getDynamicStepDefinition(step, { accion, elemento, material, ubi
         text: 'Defina el Elemento o Estructura\n¿Qué elemento o estructura se va a intervenir o construir?',
         chips: getElementChips(accion)
       };
-    case 3:
+    case 3: {
+      let promptText3 = 'Defina el Material o Especificación Técnica\n¿Qué tipo de material, pintura o especificación técnica se utilizará?';
+      if (/vaciado|construc/i.test(accion) && /losa/i.test(elemento)) {
+        promptText3 = "Defina la Resistencia y Espesor de la Losa\nSeleccione la resistencia del concreto (f'c) y el espesor de la losa:";
+      } else if (/sobrepiso/i.test(elemento) || /sobrepiso/i.test(accion)) {
+        promptText3 = 'Defina la Dosificación y Espesor del Sobrepiso\nSeleccione la proporción del mortero y el espesor de nivelación:';
+      } else if (/excavac/i.test(accion) || /excavac|zanja/i.test(elemento)) {
+        promptText3 = 'Defina la Profundidad y Método de Excavación\nSeleccione la profundidad estimada y método de excavación:';
+      } else if (/pintur/i.test(accion)) {
+        promptText3 = 'Defina el Tipo de Pintura o Acabado\nSeleccione el tipo de pintura o recubrimiento a aplicar:';
+      } else if (/impermeabiliz/i.test(accion)) {
+        promptText3 = 'Defina el Sistema de Impermeabilización\nSeleccione el manto o membrana impermeabilizante:';
+      } else if (/bomba/i.test(elemento)) {
+        promptText3 = 'Defina la Potencia del Equipo\nSeleccione la potencia (HP/kW) o capacidad:';
+      } else if (/tuber|valvul/i.test(elemento)) {
+        promptText3 = 'Defina el Diámetro y Material\nSeleccione el diámetro nominal y tipo de tubería:';
+      }
       return {
-        text: 'Defina el Material o Especificación Técnica\n¿Qué tipo de material, pintura o especificación técnica se utilizará?',
+        text: promptText3,
         chips: getMaterialChips(accion, elemento)
       };
+    }
     case 4:
       return {
         text: 'Defina la Ubicación o Entorno\n¿En qué ubicación, altura o condición se ejecutará el trabajo?',

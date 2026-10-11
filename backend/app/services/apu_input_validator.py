@@ -618,7 +618,7 @@ def _check_parametric_missing_specification(
     has_wall = bool(re.search(r"\b(pared|paredes|muro|muros|tabique|tabiques)\b", lower))
     has_block = bool(re.search(r"\b(bloque|bloques|ladrillo|ladrillos|arcilla)\b", lower))
     is_surface_action = bool(re.search(
-        r"\b(pintura|pintar|pintad[oa]|esmalte|caucho|fondo|lavado|limpieza|hidrojet|sellado|impermeabiliz)\b",
+        r"\b(pintura|pintar|pintad[oa]|esmalte|caucho|fondo|lavado|limpieza|hidrojet|sellado|impermeabiliz|manto|impermeabilizaci[oó]n|revestimiento|friso|frisar|tarrajeo|enlucido|estuco)\b",
         lower
     ))
     is_construction_or_masonry = bool(re.search(
@@ -641,8 +641,8 @@ def _check_parametric_missing_specification(
                 ["e=10 cm", "e=12 cm", "e=15 cm", "e=20 cm"],
             )
 
-    # 4. Losa de Concreto / Techo / Entrepiso (no demolición)
-    if re.search(r"\b(losa|losas)\b", lower) and not is_demolition:
+    # 4. Losa de Concreto / Techo / Entrepiso (no demolición y no acabado/tratamiento superficial)
+    if re.search(r"\b(losa|losas)\b", lower) and not is_demolition and not is_surface_action:
         has_thickness = bool(
             re.search(r"\be\s*=\s*\d+|\b\d+\s*(cm|cms)\b|\bespesor\b", lower)
         )
@@ -654,8 +654,8 @@ def _check_parametric_missing_specification(
                 ["e=10 cm", "e=12 cm", "e=15 cm", "e=20 cm", "e=25 cm", "e=30 cm"],
             )
 
-    # 5. Pavimento / Acera / Brocal (no demolición)
-    if re.search(r"\b(pavimento|pavimentos|acera|aceras)\b", lower) and not is_demolition:
+    # 5. Pavimento / Acera / Brocal (no demolición y no acabado/tratamiento superficial)
+    if re.search(r"\b(pavimento|pavimentos|acera|aceras)\b", lower) and not is_demolition and not is_surface_action:
         has_thickness = bool(
             re.search(r"\be\s*=\s*\d+|\b\d+\s*(cm|cms)\b|\bespesor\b", lower)
         )
