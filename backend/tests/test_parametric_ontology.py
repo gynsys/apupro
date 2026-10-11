@@ -114,6 +114,25 @@ class TestParametricOntology(unittest.TestCase):
         self.assertEqual(veredicto, "clarification_needed")
         self.assertEqual(codigo, "ONTOLOGY_MISSING_ESPESOR_AND_TIPO_MEZCLA")
         self.assertTrue(len(options) >= 3)
+ 
+    def test_pintura_impermeabilizante_en_losas_not_asking_slab_thickness(self) -> None:
+        """Pintura o acabado impermeabilizante sobre losa no debe activar contrato de losa de concreto ni pedir espesor."""
+        query = "Pintura en losas con pintura impermeabilizante en exteriores todo incluido unidad m2"
+        result = evaluate_parametric_ontology_contract(query)
+        self.assertIsNone(result)
+
+    def test_impermeabilizacion_con_pintura_impermeabilizante_passes(self) -> None:
+        """Impermeabilización con pintura impermeabilizante especificada pasa ontología sin requerir aclaratorias."""
+        query = "Impermeabilizacion de losa de techo con pintura impermeabilizante elastomerica en exteriores unidad m2"
+        result = evaluate_parametric_ontology_contract(query)
+        self.assertIsNone(result)
+
+    def test_construccion_losa_concreto_missing_thickness_triggers(self) -> None:
+        """Vaciado o construcción de losa de concreto sin espesor sí debe activar ONTOLOGY_MISSING_ESPESOR."""
+        query = "Construccion de losa maciza de concreto en entrepiso f'c=250 kgf/cm2"
+        result = evaluate_parametric_ontology_contract(query)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["_internal_code"], "ONTOLOGY_MISSING_ESPESOR")
 
 
 if __name__ == "__main__":

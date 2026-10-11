@@ -534,52 +534,15 @@ export default function ClarificationAlertCard({
             </div>
           )}
 
-          <form onSubmit={handleGenericSubmit} className="flex gap-2 mt-2">
-            <input
-              type="text"
-              value={genericCurrentInput}
-              onChange={(e) => setGenericCurrentInput(e.target.value)}
-              placeholder="Ingresa la respuesta aquí..."
-              className="flex-1 px-3 py-2 text-xs sm:text-sm bg-white border border-amber-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-800 placeholder-slate-400"
-              autoFocus
-            />
-            <button
-              type="submit"
-              disabled={!genericCurrentInput.trim()}
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-95 shrink-0"
-            >
-              {questions.length > 1 && genericStep < questions.length - 1 ? (
-                <>
-                  <span>Siguiente</span>
-                  <ArrowRight size={14} />
-                </>
-              ) : (
-                <>
-                  <Check size={14} />
-                  <span>Responder y Generar</span>
-                </>
-              )}
-            </button>
-          </form>
         </div>
       )}
 
       {/* ACCIONES DE SALIDA Y REINICIO */}
       <div className="mt-3 pt-3 border-t border-amber-200/70 flex flex-wrap items-center gap-3">
-        {!isRedirectToGuided && (
-          <button
-            type="button"
-            onClick={onStartGuided}
-            className="px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-700 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
-          >
-            <Sparkles size={14} /> Usar Asistente Guiado Paso a Paso
-          </button>
-        )}
-
         <button
           type="button"
           onClick={onResetChatbot}
-          className="px-3.5 py-2 bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
+          className="px-4 py-2 bg-amber-600 text-white hover:bg-amber-700 rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
         >
           <RotateCcw size={14} /> Reiniciar Asistente Guiado
         </button>

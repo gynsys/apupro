@@ -35,6 +35,15 @@ DEMOLITION_OR_REMOVAL_PATTERNS: List[re.Pattern] = [
     re.compile(r"\b(demolici[oó]n|demoler|picar|picado|tumbar|derribar|desmontaje|desmontar|desinstalaci[oó]n|desinstalar|retiro|retirar|desmantelamiento|desmantelar|desarme|desarmar|extracci[oó]n|extraer)\b", re.IGNORECASE)
 ]
 
+# Patrones de acabados, pinturas, impermeabilizaciones y tratamientos superficiales
+# (donde no aplica exigir espesores de vaciado estructural, dosificación de concreto o espesor de losa)
+SURFACE_TREATMENTS_AND_FINISHES_PATTERNS: List[re.Pattern] = [
+    re.compile(
+        r"\b(pintura|pintar|esmaltar?|esmalte|caucho|[oó]leo|acrilic[oa]|epoxi\w*|impermeabili\w+|manto|asfalto|asf[aá]ltic[oa]|sellador|sellado|lavado|limpieza|demarcaci[oó]n|revestimiento|acabado|fondo|anticorrosivo|estuco|empastado|friso|frisado)\b",
+        re.IGNORECASE
+    )
+]
+
 
 @dataclass
 class ParametricRequirement:
@@ -69,7 +78,7 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
         activation_patterns=[
             re.compile(r"\b(sobrepiso|sobrepisos|sobre-piso|nivelaci[oó]n\s+de\s+piso|carpeta\s+de\s+nivelaci[oó]n|afinado\s+de\s+piso|mortero\s+de\s+piso|requemado)\b", re.IGNORECASE)
         ],
-        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + SURFACE_TREATMENTS_AND_FINISHES_PATTERNS,
         required_parameters=[
             ParametricRequirement(
                 param_id="espesor",
@@ -109,7 +118,7 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
         activation_patterns=[
             re.compile(r"\b(viga|vigas|columna|columnas|zapata|zapatas|fundaci[oó]n|fundaciones|pedestal|pedestales|muro\s+de\s+concreto|losa\s+de\s+techo|losa\s+de\s+concreto|losa\s+de\s+entrepiso)\b", re.IGNORECASE)
         ],
-        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + SURFACE_TREATMENTS_AND_FINISHES_PATTERNS,
         required_parameters=[
             ParametricRequirement(
                 param_id="resistencia_concreto",
@@ -131,9 +140,9 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
         family_id="LOSAS_CONCRETO_ESPESOR",
         name="Losas de Concreto (Espesor)",
         activation_patterns=[
-            re.compile(r"\b(losa|losas)\b", re.IGNORECASE)
+            re.compile(r"\b(construcci[oó]n|vaciado|elaboraci[oó]n|fabricaci[oó]n|suministro\s+y\s+vaciado|suministro\s+y\s+colocaci[oó]n)\b.*\b(losa|losas)\b|\b(losa|losas)\b.*\b(concreto|maciza|macizas|nervada|nervadas|reticular|reticulares|entrepiso|entrepisos|aligerada|aligeradas)\b", re.IGNORECASE)
         ],
-        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + SURFACE_TREATMENTS_AND_FINISHES_PATTERNS,
         required_parameters=[
             ParametricRequirement(
                 param_id="espesor",
@@ -181,7 +190,7 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
         activation_patterns=[
             re.compile(r"\b(pavimento|pavimentos|acera|aceras|brocal|brocales)\b", re.IGNORECASE)
         ],
-        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + SURFACE_TREATMENTS_AND_FINISHES_PATTERNS,
         required_parameters=[
             ParametricRequirement(
                 param_id="espesor",
@@ -281,7 +290,7 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
                 param_id="tipo_manto_espesor",
                 label="Tipo de Manto o Sistema Impermeabilizante",
                 detection_patterns=[
-                    re.compile(r"\b(3\s*mm|4\s*mm|poliester|fibra|aluminio|autoprotegido|emulsi[oó]n|primer|elastom[eé]ric[ao])\b", re.IGNORECASE)
+                    re.compile(r"\b(3\s*mm|4\s*mm|poliester|fibra|aluminio|autoprotegido|emulsi[oó]n|primer|elastom[eé]ric[ao]|pintura|impermeabilizante|acr[ií]lic[ao]|poliuretano|membrana|cemento|silic[oó]n)\b", re.IGNORECASE)
                 ],
                 question="¿Qué tipo de manto o sistema impermeabilizante se aplicará? (Ej: Manto asfáltico 3 mm autoprotegido con aluminio, Manto 4 mm poliéster)",
                 default_options=[
