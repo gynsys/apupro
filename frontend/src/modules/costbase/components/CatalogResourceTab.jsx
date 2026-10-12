@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { FiSearch, FiEdit2, FiTrash2, FiCheck, FiX, FiDownload, FiExternalLink } from 'react-icons/fi';
+import { FiSearch, FiEdit2, FiTrash2, FiCheck, FiX, FiDownload, FiExternalLink, FiFilter } from 'react-icons/fi';
 import { Loader2, X } from 'lucide-react';
 import { apiFetch, apiPut, apiDelete, apiPatch } from '../../../lib/apiHelper';
 import { AuthContext } from '../../../context/AuthContext';
@@ -15,6 +15,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [deprecFilter, setDeprecFilter] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [totalItems, setTotalItems] = useState(0);
@@ -68,7 +69,8 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
     setLoading(true);
     try {
       const dbParam = selectedDatabase && selectedDatabase !== 'master' ? `&database_id=${selectedDatabase}` : '';
-      const res = await apiFetch(`/cost360/${resourceType}?search=${encodeURIComponent(searchQuery)}&skip=${currentSkip}&limit=${limit}${dbParam}`);
+      const filterParam = resourceType === 'equipments' && deprecFilter ? `&deprec_filter=${encodeURIComponent(deprecFilter)}` : '';
+      const res = await apiFetch(`/cost360/${resourceType}?search=${encodeURIComponent(searchQuery)}&skip=${currentSkip}&limit=${limit}${dbParam}${filterParam}`);
       if (currentRequestId !== requestIdRef.current) return;
       if (res.ok) {
         const data = await res.json();
@@ -106,7 +108,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     };
-  }, [search, selectedDatabase, resourceType]);
+  }, [search, selectedDatabase, resourceType, deprecFilter]);
 
   const handleSearch = (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -122,7 +124,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
     setEditingId(item[safeConfig.idKey]);
     const form = {};
     safeConfig.editableFields.forEach(f => {
-      form[f.key] = item[f.key] || 0;
+      form[f.key] = (f.type === 'text' || f.key === safeConfig.descKey) ? (item[f.key] || '') : (item[f.key] ?? 0);
     });
     setEditForm(form);
   };
@@ -174,7 +176,8 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
     let exportItems = [];
     try {
       const dbParam = selectedDatabase && selectedDatabase !== 'master' ? `&database_id=${selectedDatabase}` : '';
-      const res = await apiFetch(`/cost360/${resourceType}?search=${encodeURIComponent(search)}&skip=0&limit=50000${dbParam}`);
+      const filterParam = resourceType === 'equipments' && deprecFilter ? `&deprec_filter=${encodeURIComponent(deprecFilter)}` : '';
+      const res = await apiFetch(`/cost360/${resourceType}?search=${encodeURIComponent(search)}&skip=0&limit=50000${dbParam}${filterParam}`);
       if (res.ok) {
         const data = await res.json();
         exportItems = Array.isArray(data) ? data : (data.items || []);
@@ -321,16 +324,34 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
               <span className="font-bold text-slate-700">{new Intl.NumberFormat('es-VE').format(totalItems)}</span>{' '}
               {search ? 'coincidencias' : `Total ${title}`}
             </p>
-            {isSuperAdmin && (
-              <button
-                onClick={handleExportToExcel}
-                type="button"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors cursor-pointer"
-              >
-                <FiDownload size={12} />
-                Exportar a Excel
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {resourceType === 'equipments' && (
+                <div className="flex items-center gap-1.5">
+                  <FiFilter className="text-slate-400" size={13} />
+                  <select
+                    value={deprecFilter}
+                    onChange={(e) => setDeprecFilter(e.target.value)}
+                    className="text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm cursor-pointer hover:border-slate-300 transition-colors"
+                  >
+                    <option value="">Todas las depreciaciones</option>
+                    <option value="equal_1">Depreciación = 1.0 (Alquiler / Tarifa diaria)</option>
+                    <option value="less_1">Depreciación &lt; 1.0 (Equipo propio)</option>
+                    <option value="minor_tools">Herramientas menores / manuales</option>
+                    <option value="zero_price">Sin precio asignado ($0)</option>
+                  </select>
+                </div>
+              )}
+              {isSuperAdmin && (
+                <button
+                  onClick={handleExportToExcel}
+                  type="button"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors cursor-pointer"
+                >
+                  <FiDownload size={12} />
+                  Exportar a Excel
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -357,6 +378,9 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                 {safeConfig.editableFields?.map(f => (
                   <th key={f.key} className={`px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider ${f.type === 'text' || f.key === safeConfig.descKey ? 'text-left' : 'text-right'}`}>{f.label}</th>
                 ))}
+                {resourceType === 'equipments' && (
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Depreciación</th>
+                )}
                 {resourceType !== 'items' && (
                   <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Uso en Partidas</th>
                 )}
@@ -402,29 +426,42 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                     )}
                     
                     {safeConfig.editableFields?.map(f => (
-                      <td key={f.key} className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${f.type === 'text' || f.key === safeConfig.descKey ? 'text-left' : 'text-right'}`}>
+                      <td key={f.key} className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${f.type === 'text' || f.key === safeConfig.descKey ? 'text-left min-w-[280px]' : 'text-right'}`}>
                         {editingId === item[safeConfig.idKey] ? (
                           f.type === 'text' || f.key === safeConfig.descKey ? (
                             <input
                               type="text"
-                              className="w-full min-w-[120px] text-left border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-2 py-1"
+                              className="w-full min-w-[200px] text-left border border-slate-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-2 py-1 text-xs text-slate-800"
                               value={editForm[f.key] || ''}
                               onChange={(e) => setEditForm({ ...editForm, [f.key]: e.target.value })}
                             />
                           ) : (
                             <DecimalInput
-                              className="w-24 text-right border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-2 py-1"
+                              className="w-24 text-right border border-slate-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-2 py-1"
                               value={editForm[f.key]}
                               onChange={(val) => setEditForm({ ...editForm, [f.key]: val })}
                             />
                           )
                         ) : (
-                          <span className={f.type === 'text' || f.key === safeConfig.descKey ? 'text-gray-900 text-left whitespace-normal' : 'text-gray-900'}>
+                          <span className={f.type === 'text' || f.key === safeConfig.descKey ? 'text-slate-800 text-left whitespace-normal text-xs font-medium' : 'text-slate-900 text-xs font-semibold'}>
                             {f.type === 'text' || f.key === safeConfig.descKey ? (item[f.key] || '') : `$${(item[f.key] || 0).toFixed(2)}`}
                           </span>
                         )}
                       </td>
                     ))}
+                    {resourceType === 'equipments' && (
+                      <td className="px-6 py-4 whitespace-nowrap text-center text-xs">
+                        {item.deprec_factor === 1.0 || item.deprec_factor >= 0.99 ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200" title="Tarifa diaria directa (Alquiler)">
+                            1.0 (Alquiler)
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200" title="Tasa de desgaste diario (Equipo propio)">
+                            {item.deprec_factor ? `${(item.deprec_factor * 100).toFixed(2)}% / día` : 'N/A'}
+                          </span>
+                        )}
+                      </td>
+                    )}
                     {resourceType !== 'items' && (
                       <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
                         <button 
@@ -445,7 +482,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                           </div>
                         ) : (
                           <div className="flex justify-end gap-2">
-                            <button onClick={() => startEdit(item)} className="text-blue-600 hover:text-blue-900 bg-blue-50 p-2 rounded-full transition-colors" title="Editar Precio"><FiEdit2 size={16} /></button>
+                            <button onClick={() => startEdit(item)} className="text-blue-600 hover:text-blue-900 bg-blue-50 p-2 rounded-full transition-colors" title="Editar"><FiEdit2 size={16} /></button>
                             <button onClick={() => handleDelete(item[safeConfig.idKey])} className="text-red-600 hover:text-red-900 bg-red-50 p-2 rounded-full transition-colors" title="Eliminar"><FiTrash2 size={16} /></button>
                           </div>
                         )}

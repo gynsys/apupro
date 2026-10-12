@@ -13,6 +13,108 @@ from app.services.ai_apu_service.reconciliation.specs_matcher import (
 )
 
 
+def is_minor_or_manual_tool(description: str, code: str = "") -> bool:
+    """
+    Identifica si un equipo corresponde a herramientas manuales o menores
+    (palas, picos, carretillas, andamios simples, herramientas de albañilería/demolición manual, etc.)
+    que deben operar en modalidad de equipo propio (amortización diaria < 1.0)
+    en lugar de modalidad de alquiler directo (1.0).
+    """
+    if not description and not code:
+        return False
+    desc = str(description or "").upper()
+    code_clean = str(code or "").upper()
+
+    # 1. Exclusiones taxativas: maquinaria pesada, vehículos, equipos motorizados o eléctricos de potencia
+    heavy_exclusions = (
+        "RETROEXCAVADORA", "EXCAVADORA", "MINICARGADOR", "BOBCAT", "CARGADOR FRONTAL",
+        "CAMION", "CAMIÓN", "TRACTOR", "GRUA", "GRÚA", "VIBROCOMPACTADOR", "RODILLO",
+        "MEZCLADORA", "TROMPO", "COMPRESOR", "MOTOBOMBA", "PLANTA ELECTRICA", "GENERADOR",
+        "DEMOLEDOR", "MARTILLO DEMOLEDOR", "ROTOMARTILLO", "CORE DRILL", "CORTADORA DE PAVIMENTO",
+        "SIERRA CIRCULAR", "SOLDADORA", "EQUIPO DE BOMBEO", "MONTACARGA"
+    )
+    if any(h in desc for h in heavy_exclusions):
+        return False
+
+    # 2. Códigos conocidos de herramientas menores de albañilería / manuales en la base maestra
+    known_minor_codes = ("ALB084", "ALB013", "COM024", "COM026", "ALB004", "ALB052", "ALB067", "SUB023")
+    if any(code_clean.startswith(c) for c in known_minor_codes):
+        return True
+
+    # 3. Patrones semánticos de herramientas manuales o menores
+    minor_patterns = (
+        "PALA", "PICO", "PIQUETA", "CHICURA", "CHÍCURA",
+        "CARRETILL", "CARRUCHA", "CARRETON", "CARRETÓN", "BUGGI", "BUGGY",
+        "ANDAMIO",
+        "MANDARRIA", "MAZO", "CINCEL", "CORTAFRIO", "CORTAFRÍO", "PATA DE CABRA",
+        "BARRA METALICA", "BARRA METÁLICA", "BARRA OCTOGONAL", "BARRA PARA HOYAR", "PALANQUETA", "BARRETA",
+        "HERRAMIENTAS MENORES", "HERRAMIENTAS MANUALES", "JUEGO DE HERRAMIENTAS",
+        "ALBAÑILERIA", "ALBAÑIL",
+        "PALUSTRA", "CUCHARA DE ALBAÑIL", "LLANA", "ESPATULA", "ESPÁTULA",
+        "CEPILLO CARRETERO", "CEPILLO ALBAÑILERIA", "TOBO", "BALDE",
+        "CIZALLA MANUAL", "PLOMADA", "NIVEL DE MANO"
+    )
+    return any(p in desc for p in minor_patterns)
+
+
+def get_default_minor_tool_deprec(description: str) -> float:
+    """
+    Determina la tasa de depreciación diaria estándar (deprec < 1.0) para una herramienta menor o andamio:
+    - Andamios simples (tubulares/colgantes): 0.008 (0.8% diario, vida útil ~125 días).
+    - Herramientas manuales de demolición/excavación/carga (palas, picos, carretillas, barras, mandarrias): 0.025 (2.5% diario, vida útil ~40 días).
+    - Herramientas generales o juegos de albañilería: 0.02 (2% diario, vida útil ~50 días).
+    """
+    desc = str(description or "").upper()
+    if "ANDAMIO" in desc:
+        return 0.008
+    if any(k in desc for k in ("PALA", "PICO", "CARRETILL", "MANDARRIA", "BARRA", "CINCEL", "CORTAFRIO", "PIQUETA", "CHICURA")):
+        return 0.025
+    return 0.02
+
+
+def enforce_minor_tools_amortization(result: Dict[str, Any]) -> None:
+    """
+    Regla automática:
+    Fuerza la modalidad de amortización / equipo propio (deprec < 1.0) para todas las herramientas
+    manuales o menores (palas, picos, carretillas, andamios simples, kits de albañilería).
+    Si el equipo proviene de una partida base antigua con el vicio de depreciación = 1.0 (alquiler),
+    recalibra la depreciación a la tasa de desgaste diario real y escala el precio unitario al valor
+    de reposición/compra nuevo, manteniendo la equivalencia matemática del costo diario de operación.
+    """
+    if not result or not isinstance(result, dict):
+        return
+
+    equipments_key = "equipments" if "equipments" in result else "equipos" if "equipos" in result else None
+    if not equipments_key:
+        return
+
+    equipments = result.get(equipments_key)
+    if not isinstance(equipments, list):
+        return
+
+    for eq in equipments:
+        if not isinstance(eq, dict):
+            continue
+
+        desc = str(eq.get("descripcion") or "").strip()
+        cod = str(eq.get("codigo") or "").strip()
+        deprec = float(eq.get("depreciacion") or 1.0)
+        pu = float(eq.get("precio_unitario") or 0.0)
+
+        if is_minor_or_manual_tool(desc, cod) and deprec >= 0.9:
+            f_deprec = get_default_minor_tool_deprec(desc)
+            eq["depreciacion"] = f_deprec
+            if pu > 0:
+                # El precio representaba el costo diario: escalar a valor de adquisición nuevo
+                eq["precio_unitario"] = round(pu / f_deprec, 2)
+
+            if "nota_calculo" in eq and isinstance(eq["nota_calculo"], str) and eq["nota_calculo"]:
+                orig_nota = eq["nota_calculo"]
+                eq["nota_calculo"] = f"{orig_nota} (Modalidad equipo propio: amortización diaria calibrada al {f_deprec*100:.1f}%)."
+            else:
+                eq["nota_calculo"] = f"Herramienta propia: amortización diaria calibrada al {f_deprec*100:.1f}%."
+
+
 def _normalize_equipment_prices(
     result: Dict[str, Any],
     base_apu: Optional[Dict[str, Any]] = None,
@@ -68,15 +170,26 @@ def _normalize_equipment_prices(
                 eq_item["depreciacion"] = base_deprec
             if base_match.get("codigo"):
                 eq_item["codigo"] = base_match["codigo"]
+
+            # Si es herramienta menor / manual y la base tenía deprec = 1.0, forzar amortización propia
+            match_desc = desc or str(base_match.get("descripcion", ""))
+            if is_minor_or_manual_tool(match_desc, cod) and eq_item["depreciacion"] >= 0.9:
+                f_dep = get_default_minor_tool_deprec(match_desc)
+                eq_item["depreciacion"] = f_dep
+                if eq_item["precio_unitario"] > 0:
+                    eq_item["precio_unitario"] = round(eq_item["precio_unitario"] / f_dep, 2)
             continue
 
         # 2. Si es un equipo nuevo agregado por IA (ej. carretilla, pala nueva, etc.)
         deprec = float(eq_item.get("depreciacion") or 1.0)
         pu = float(eq_item.get("precio_unitario") or 0.0)
 
-        # Si el LLM puso depreciación menor a 0.05 (ej: 0.01) pero un precio unitario diminuto (< 1.50)
-        # significa que colocó el costo diario en lugar del valor de adquisición (provocando doble depreciación)
-        if 0 < deprec < 0.05 and 0 < pu < 2.0:
+        if is_minor_or_manual_tool(desc, cod) and deprec >= 0.9:
+            f_dep = get_default_minor_tool_deprec(desc)
+            eq_item["depreciacion"] = f_dep
+            if pu > 0:
+                eq_item["precio_unitario"] = round(pu / f_dep, 2)
+        elif 0 < deprec < 0.05 and 0 < pu < 2.0:
             eq_item["precio_unitario"] = round(pu / deprec, 2)
         elif pu > 0 and deprec <= 0:
             eq_item["depreciacion"] = 1.0
@@ -179,6 +292,11 @@ def _execute_equipment_reconciliation(result: Dict[str, Any], db: Session) -> No
                     norm_cand = re.sub(r'[^A-Z0-9]', ' ', cand_desc.upper()).strip()
                     sim = SequenceMatcher(None, norm_desc, norm_cand).ratio()
 
+                    # Si es herramienta menor o andamio, priorizar registros con deprec < 1.0 (equipo propio)
+                    cand_dep = float(cand.deprec_factor or 1.0)
+                    if is_minor_or_manual_tool(desc) and cand_dep < 0.9:
+                        sim += 0.05
+
                     cand_words = set(norm_cand.split())
                     desc_words = set(tokens)
                     common = desc_words & cand_words
@@ -198,8 +316,16 @@ def _execute_equipment_reconciliation(result: Dict[str, Any], db: Session) -> No
             matched_deprec = float(matched_row.deprec_factor or 1.0)
             matched_cosdia = float(matched_row.CosDia or 0.0)
 
-            if matched_price <= 0 and matched_cosdia > 0 and matched_deprec > 0:
-                matched_price = round(matched_cosdia / matched_deprec, 2)
+            # Si es herramienta menor o manual y la BD maestra traía deprec_factor = 1.0, recalibrar a equipo propio
+            if is_minor_or_manual_tool(matched_desc or desc, matched_cod) and matched_deprec >= 0.9:
+                f_dep = get_default_minor_tool_deprec(matched_desc or desc)
+                daily_cost = matched_price if matched_price > 0 else matched_cosdia
+                matched_deprec = f_dep
+                if daily_cost > 0:
+                    matched_price = round(daily_cost / f_dep, 2)
+            else:
+                if matched_price <= 0 and matched_cosdia > 0 and matched_deprec > 0:
+                    matched_price = round(matched_cosdia / matched_deprec, 2)
 
             eq["codigo"] = matched_cod
             eq["descripcion"] = matched_desc
@@ -273,6 +399,7 @@ def reconcile_equipment_with_database(result: Dict[str, Any], db: Optional[Sessi
     3. Asignar el precio de compra y factor de depreciación oficiales de la BD.
     4. Cambiar 'origen' a 'historico'.
     5. Purgar las advertencias de [PRECIO_REFERENCIAL] asociadas a dicho equipo.
+    6. Forzar la modalidad de amortización (deprec < 1.0) para herramientas menores.
     """
     if not result or not isinstance(result, dict) or "equipments" not in result:
         return
@@ -285,3 +412,6 @@ def reconcile_equipment_with_database(result: Dict[str, Any], db: Optional[Sessi
                 _execute_equipment_reconciliation(result, session)
         except Exception as exc:
             logger.error("Error al reconciliar equipos con base de datos: %s", exc, exc_info=True)
+
+    # Salvaguarda final: ninguna herramienta menor/manual puede salir con deprec = 1.0
+    enforce_minor_tools_amortization(result)

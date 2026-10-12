@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.core.logging import logger
 from app.db.base import get_db
 from app.api.v1.endpoints.arko import get_optional_arko_admin
 from app.db.models.arko import ArkoAdmin
@@ -86,6 +87,7 @@ def search_equipments_route(
     skip: int = 0,
     limit: int = 50,
     search: str = "",
+    deprec_filter: Optional[str] = None,
     database_id: str = "master",
     all_items: Optional[bool] = None,
     current_user: Optional[ArkoAdmin] = Depends(get_optional_arko_admin),
@@ -108,7 +110,9 @@ def search_equipments_route(
     else:
         effective_all_items = False
 
-    total, items = search_equipments_paginated(db, skip, limit, search, all_items=effective_all_items)
+    total, items = search_equipments_paginated(
+        db, skip, limit, search, all_items=effective_all_items, deprec_filter=deprec_filter
+    )
     # Aplicar factor de inflación de equipos si la base no es maestra
     factor = 1.0
     if database_id and database_id != "master":
@@ -202,46 +206,110 @@ def get_categories_tree_route(db: Session = Depends(get_db)) -> Any:
 
 
 @router.patch("/materials/{codigo}")
-def update_material_route(codigo: str, payload: CostMaterialUpdate, db: Session = Depends(get_db)) -> Any:
-    mat = update_material(db, codigo, payload)
-    if not mat:
-        raise HTTPException(status_code=404, detail="Material no encontrado")
-    return mat
+def update_material_route(
+    codigo: str,
+    payload: CostMaterialUpdate,
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    if not codigo or not codigo.strip():
+        raise HTTPException(status_code=400, detail="El código de material no puede estar vacío")
+    try:
+        mat = update_material(db, codigo.strip(), payload)
+        if not mat:
+            raise HTTPException(status_code=404, detail="Material no encontrado")
+        return {
+            "CodMat": mat.CodMat,
+            "ref_code": mat.ref_code,
+            "Descri": mat.Descri,
+            "UniMat": mat.UniMat,
+            "CosMat": mat.CosMat,
+            "family_id": getattr(mat, "family_id", None),
+            "market_indicator_id": getattr(mat, "market_indicator_id", None),
+            "market_factor": getattr(mat, "market_factor", None),
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Error actualizando material {codigo}: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error interno al actualizar el material")
 
 
 @router.delete("/materials/{codigo}")
 def delete_material_route(codigo: str, db: Session = Depends(get_db)) -> Dict[str, str]:
-    if not delete_material(db, codigo):
+    if not codigo or not codigo.strip():
+        raise HTTPException(status_code=400, detail="El código de material no puede estar vacío")
+    if not delete_material(db, codigo.strip()):
         raise HTTPException(status_code=404, detail="Material no encontrado")
     return {"status": "ok"}
 
 
 @router.patch("/equipments/{codigo}")
-def update_equipment_route(codigo: str, payload: CostEquipmentUpdate, db: Session = Depends(get_db)) -> Any:
-    eq = update_equipment(db, codigo, payload)
-    if not eq:
-        raise HTTPException(status_code=404, detail="Equipo no encontrado")
-    return eq
+def update_equipment_route(
+    codigo: str,
+    payload: CostEquipmentUpdate,
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    if not codigo or not codigo.strip():
+        raise HTTPException(status_code=400, detail="El código de equipo no puede estar vacío")
+    try:
+        eq = update_equipment(db, codigo.strip(), payload)
+        if not eq:
+            raise HTTPException(status_code=404, detail="Equipo no encontrado")
+        return {
+            "CodEqu": eq.CodEqu,
+            "ref_code": eq.ref_code,
+            "Descri": eq.Descri,
+            "CosDia": eq.CosDia,
+            "precio": eq.precio,
+            "deprec_factor": eq.deprec_factor,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Error actualizando equipo {codigo}: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error interno al actualizar el equipo")
 
 
 @router.delete("/equipments/{codigo}")
 def delete_equipment_route(codigo: str, db: Session = Depends(get_db)) -> Dict[str, str]:
-    if not delete_equipment(db, codigo):
+    if not codigo or not codigo.strip():
+        raise HTTPException(status_code=400, detail="El código de equipo no puede estar vacío")
+    if not delete_equipment(db, codigo.strip()):
         raise HTTPException(status_code=404, detail="Equipo no encontrado")
     return {"status": "ok"}
 
 
 @router.patch("/labors/{codigo}")
-def update_labor_route(codigo: str, payload: CostLaborUpdate, db: Session = Depends(get_db)) -> Any:
-    labor = update_labor(db, codigo, payload)
-    if not labor:
-        raise HTTPException(status_code=404, detail="Mano de obra no encontrada")
-    return labor
+def update_labor_route(
+    codigo: str,
+    payload: CostLaborUpdate,
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    if not codigo or not codigo.strip():
+        raise HTTPException(status_code=400, detail="El código de mano de obra no puede estar vacío")
+    try:
+        labor = update_labor(db, codigo.strip(), payload)
+        if not labor:
+            raise HTTPException(status_code=404, detail="Mano de obra no encontrada")
+        return {
+            "CodMan": labor.CodMan,
+            "ref_code": labor.ref_code,
+            "Descri": labor.Descri,
+            "Jornal": labor.Jornal,
+            "Bono": labor.Bono,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Error actualizando mano de obra {codigo}: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error interno al actualizar la mano de obra")
 
 
 @router.delete("/labors/{codigo}")
 def delete_labor_route(codigo: str, db: Session = Depends(get_db)) -> Dict[str, str]:
-    if not delete_labor(db, codigo):
+    if not codigo or not codigo.strip():
+        raise HTTPException(status_code=400, detail="El código de mano de obra no puede estar vacío")
+    if not delete_labor(db, codigo.strip()):
         raise HTTPException(status_code=404, detail="Mano de obra no encontrada")
     return {"status": "ok"}
 

@@ -455,7 +455,8 @@ def search_equipments_paginated(
     skip: int,
     limit: int,
     search: str,
-    all_items: bool = True
+    all_items: bool = True,
+    deprec_filter: Optional[str] = None
 ) -> Tuple[int, List[CostEquipment]]:
     if all_items:
         query = db.query(CostEquipment)
@@ -485,6 +486,46 @@ def search_equipments_paginated(
             CostEquipment.CodEqu.ilike(search_term) |
             CostEquipment.Descri.ilike(search_term)
         )
+
+    if deprec_filter:
+        clean_filter = deprec_filter.strip().lower()
+        if clean_filter in ("equal_1", "1", "1.0"):
+            query = query.filter(
+                or_(
+                    CostEquipment.deprec_factor == 1.0,
+                    CostEquipment.deprec_factor >= 0.99,
+                    CostEquipment.deprec_factor.is_(None)
+                )
+            )
+        elif clean_filter in ("less_1", "<1", "own"):
+            query = query.filter(
+                CostEquipment.deprec_factor < 0.99,
+                CostEquipment.deprec_factor > 0
+            )
+        elif clean_filter == "minor_tools":
+            query = query.filter(
+                or_(
+                    CostEquipment.Descri.ilike("%PALA%"),
+                    CostEquipment.Descri.ilike("%PICO%"),
+                    CostEquipment.Descri.ilike("%PIQUETA%"),
+                    CostEquipment.Descri.ilike("%CARRETILL%"),
+                    CostEquipment.Descri.ilike("%ANDAMIO%"),
+                    CostEquipment.Descri.ilike("%MANDARRIA%"),
+                    CostEquipment.Descri.ilike("%BARRA%"),
+                    CostEquipment.Descri.ilike("%HERRAMIENTA%"),
+                    CostEquipment.CodEqu.in_(("ALB084", "ALB013", "COM024", "COM026", "ALB004", "ALB052", "ALB067", "SUB023"))
+                )
+            )
+        elif clean_filter == "zero_price":
+            query = query.filter(
+                or_(
+                    CostEquipment.precio.is_(None),
+                    CostEquipment.precio == 0,
+                    CostEquipment.CosDia.is_(None),
+                    CostEquipment.CosDia == 0
+                )
+            )
+
     total = query.count()
     items = query.order_by(CostEquipment.ref_code, CostEquipment.CodEqu).offset(skip).limit(limit).all()
     return total, items
@@ -565,7 +606,7 @@ def delete_material(db: Session, codigo: str):
         return True
     return False
 
-def update_equipment(db: Session, codigo: str, payload: CostEquipmentUpdate):
+def update_equipment(db: Session, codigo: str, payload: CostEquipmentUpdate) -> Optional[CostEquipment]:
     eq = db.query(CostEquipment).filter(CostEquipment.CodEqu == codigo).first()
     if eq:
         factor = eq.deprec_factor if (eq.deprec_factor and eq.deprec_factor > 0) else 1.0
@@ -585,7 +626,7 @@ def update_equipment(db: Session, codigo: str, payload: CostEquipmentUpdate):
         db.refresh(eq)
     return eq
 
-def delete_equipment(db: Session, codigo: str):
+def delete_equipment(db: Session, codigo: str) -> bool:
     eq = db.query(CostEquipment).filter(CostEquipment.CodEqu == codigo).first()
     if eq:
         db.delete(eq)
@@ -593,7 +634,7 @@ def delete_equipment(db: Session, codigo: str):
         return True
     return False
 
-def update_labor(db: Session, codigo: str, payload: CostLaborUpdate):
+def update_labor(db: Session, codigo: str, payload: CostLaborUpdate) -> Optional[CostLabor]:
     labor = db.query(CostLabor).filter(CostLabor.CodMan == codigo).first()
     if labor:
         if payload.Jornal is not None:
@@ -606,7 +647,7 @@ def update_labor(db: Session, codigo: str, payload: CostLaborUpdate):
         db.refresh(labor)
     return labor
 
-def delete_labor(db: Session, codigo: str):
+def delete_labor(db: Session, codigo: str) -> bool:
     labor = db.query(CostLabor).filter(CostLabor.CodMan == codigo).first()
     if labor:
         db.delete(labor)

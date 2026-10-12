@@ -278,7 +278,10 @@ const AdminDatabasePage = () => {
             selectedDatabase={selectedDatabase}
             config={{
               idKey: 'CodEqu', descKey: 'Descri',
-              editableFields: [{ key: 'precio', label: 'Precio ($)' }]
+              editableFields: [
+                { key: 'Descri', label: 'Descripción', type: 'text' },
+                { key: 'precio', label: 'Precio ($)', type: 'number' }
+              ]
             }}
           />
         )}

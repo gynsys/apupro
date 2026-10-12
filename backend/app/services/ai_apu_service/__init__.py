@@ -39,6 +39,9 @@ from app.services.ai_apu_service.reconciliation.equipment import (
     _normalize_equipment_prices,
     _execute_equipment_reconciliation,
     reconcile_equipment_with_database,
+    is_minor_or_manual_tool,
+    get_default_minor_tool_deprec,
+    enforce_minor_tools_amortization,
 )
 from app.services.ai_apu_service.reconciliation.materials import (
     _execute_material_reconciliation,
@@ -111,6 +114,9 @@ __all__ = [
     "_normalize_equipment_prices",
     "_execute_equipment_reconciliation",
     "reconcile_equipment_with_database",
+    "is_minor_or_manual_tool",
+    "get_default_minor_tool_deprec",
+    "enforce_minor_tools_amortization",
     "_execute_material_reconciliation",
     "reconcile_materials_with_database",
     "_enforce_base_apu_material_heritage",
