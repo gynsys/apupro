@@ -30,6 +30,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 from app.core.logging import logger
 from app.services.ai_apu_service.domain_rules.parametric_ontology import evaluate_parametric_ontology_contract
+from app.services.parametric_contract_engine.contract_evaluator import evaluate_parametric_contract
 
 # ---------------------------------------------------------------------------
 # Constantes de configuración — Capa 1
@@ -566,7 +567,17 @@ def _check_parametric_missing_specification(
     Retorna una tupla (veredicto, mensaje, codigo_interno, opciones) si falta el parámetro,
     o None si la especificación es suficiente o no aplica.
     """
-    # 0. Evaluación universal mediante Ontología Paramétrica Data-Driven
+    # 0. Evaluación universal mediante Motor de Contratos Paramétricos Empíricos
+    engine_res = evaluate_parametric_contract(query)
+    if engine_res is not None:
+        return (
+            "clarification_needed",
+            engine_res.get("clarification_message", ""),
+            engine_res.get("_internal_code", "PARAMETRIC_ENGINE_MISSING_PARAM"),
+            engine_res.get("options", []),
+        )
+
+    # 0.1 Evaluación secundaria de ontología previa
     ontology_res = evaluate_parametric_ontology_contract(query)
     if ontology_res is not None:
         return (

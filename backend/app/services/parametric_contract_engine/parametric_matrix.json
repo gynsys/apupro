@@ -1,0 +1,138 @@
+{
+  "metadatos": {
+    "total_partidas_escaneadas": 17343,
+    "disciplinas_identificadas": 49
+  },
+  "top_disciplinas": {
+    "ESTRUCTURAS": 1818,
+    "OTROS": 1387,
+    "INSTALACIONES ELÉCTRICAS": 983,
+    "ACABADOS": 902,
+    "AIRE ACONDICIONADO": 736,
+    "SIN CLASIFICAR": 538,
+    "SUMINISTRO": 520,
+    "DRENAJE": 517,
+    "LOGÍSTICA": 515,
+    "INSTALACIONES HIDRÁULICAS": 497,
+    "INSTALACIONES SANITARIAS": 464,
+    "CARPINTERÍA": 442,
+    "PAVIMENTOS ASFÁLTICOS": 337,
+    "MOVIMIENTO DE TIERRAS": 306,
+    "LOGÍSTICA Y TRANSPORTE": 253,
+    "REPARACIONES": 226,
+    "SUMINISTRO DE MATERIALES": 195,
+    "MONTAJE Y LOGÍSTICA": 173,
+    "OBRAS PREPARATORIAS": 152,
+    "CABLEADO Y FIBRA ÓPTICA": 130
+  },
+  "top_unidades": {
+    "pza": 3840,
+    "m": 3160,
+    "m2": 3028,
+    "und": 1747,
+    "m3": 1575,
+    "kgf": 995,
+    "m3.m": 657,
+    "m3xkm": 448,
+    "m3.km": 394,
+    "pto": 320,
+    "jgo": 245,
+    "tfxkm": 180,
+    "tonf": 141,
+    "tf.km": 88,
+    "km": 77
+  },
+  "familias_parametricas": {
+    "concreto_fc": {
+      "f'c=250 kg/cm²": 164,
+      "f'c=200 kg/cm²": 94,
+      "f'c=300 kg/cm²": 59,
+      "f'c=350 kg/cm²": 59,
+      "f'c=150 kg/cm²": 57,
+      "f'c=400 kg/cm²": 47,
+      "f'c=210 kg/cm²": 40,
+      "f'c=180 kg/cm²": 18,
+      "f'c=28 kg/cm²": 10,
+      "f'c=100 kg/cm²": 6
+    },
+    "diametros_tuberia": {
+      "d=1-feb\"": 346,
+      "d=4\"": 168,
+      "d=2\"": 129,
+      "d=1\"": 129,
+      "d=3\"": 123,
+      "d=3-abr\"": 116,
+      "d=6\"": 114,
+      "d=12\"": 103,
+      "d=8\"": 95,
+      "d=5-ago\"": 94,
+      "d=10\"": 84,
+      "d=24\"": 67,
+      "d=1-abr\"": 48,
+      "d=16\"": 45,
+      "d=20\"": 45
+    },
+    "espesores_losas": {
+      "e=10 cm": 31,
+      "e=20 cm": 30,
+      "e=8 cm": 29,
+      "e=12 cm": 28,
+      "e=25 cm": 27,
+      "e=35 cm": 25,
+      "e=30 cm": 24,
+      "e=15 cm": 19,
+      "e=4 cm": 14,
+      "e=5 cm": 14
+    },
+    "espesores_bloques": {
+      "Bloque e=15 cm": 20,
+      "Bloque e=10 cm": 1
+    },
+    "espesores_sobrepisos": {},
+    "dosificaciones_mortero": {},
+    "tipos_pintura": {
+      "Esmalte sintético": 171,
+      "Pintura de caucho": 93,
+      "Pintura reflectiva de aluminio": 62,
+      "Pintura epóxica": 62,
+      "Pintura para tráfico / vial": 28
+    },
+    "impermeabilizacion": {
+      "Manto asfáltico 3 mm": 9,
+      "Manto asfáltico 4 mm": 8
+    },
+    "excavacion": {
+      "Excavación a mano": 109,
+      "Excavación a máquina": 34
+    },
+    "electricidad_calibres": {
+      "2/0": 119,
+      "4/0": 72,
+      "0 AWG": 50,
+      "2": 36,
+      "4": 29,
+      "3": 18,
+      "10": 17,
+      "8": 14,
+      "12": 13,
+      "2 AWG": 12
+    },
+    "electricidad_circuitos_tableros": {
+      "18 circuitos": 16,
+      "12 circuitos": 15,
+      "24 circuitos": 13,
+      "42 circuitos": 11,
+      "30 circuitos": 9,
+      "36 circuitos": 7,
+      "4 circuitos": 5,
+      "16 circuitos": 4
+    },
+    "bombas_potencia": {
+      "Potencia 5 HP": 7,
+      "Potencia 2 HP": 5,
+      "Potencia 15 HP": 1,
+      "Potencia 20 HP": 1,
+      "Potencia 10 HP": 1
+    }
+  }
+}

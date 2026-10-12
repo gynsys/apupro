@@ -1,3 +1,5 @@
+import { getEmpiricalMaterialChips, getEmpiricalStep3Prompt, USE_PARAMETRIC_ENGINE } from '../parametric-engine/index.js';
+
 export const ACCIONES_OPCIONES = [
   { value: 'Suministro e instalación de', label: 'Suministro e instalación de' },
   { value: 'Suministro de', label: 'Suministro de' },
@@ -235,6 +237,10 @@ export function getElementChips(accion) {
 }
 
 export function getMaterialChips(accion, elemento) {
+  if (USE_PARAMETRIC_ENGINE) {
+    const empirical = getEmpiricalMaterialChips(accion, elemento);
+    if (empirical) return empirical;
+  }
   const acc = (accion || '').toLowerCase();
   const elem = (elemento || '').toLowerCase();
 
@@ -753,20 +759,25 @@ export function getDynamicStepDefinition(step, { accion, elemento, material, ubi
       };
     case 3: {
       let promptText3 = 'Defina el Material o Especificación Técnica\n¿Qué tipo de material, pintura o especificación técnica se utilizará?';
-      if (/vaciado|construc/i.test(accion) && /losa/i.test(elemento)) {
-        promptText3 = "Defina la Resistencia y Espesor de la Losa\nSeleccione la resistencia del concreto (f'c) y el espesor de la losa:";
-      } else if (/sobrepiso/i.test(elemento) || /sobrepiso/i.test(accion)) {
-        promptText3 = 'Defina la Dosificación y Espesor del Sobrepiso\nSeleccione la proporción del mortero y el espesor de nivelación:';
-      } else if (/excavac/i.test(accion) || /excavac|zanja/i.test(elemento)) {
-        promptText3 = 'Defina la Profundidad y Método de Excavación\nSeleccione la profundidad estimada y método de excavación:';
-      } else if (/pintur/i.test(accion)) {
-        promptText3 = 'Defina el Tipo de Pintura o Acabado\nSeleccione el tipo de pintura o recubrimiento a aplicar:';
-      } else if (/impermeabiliz/i.test(accion)) {
-        promptText3 = 'Defina el Sistema de Impermeabilización\nSeleccione el manto o membrana impermeabilizante:';
-      } else if (/bomba/i.test(elemento)) {
-        promptText3 = 'Defina la Potencia del Equipo\nSeleccione la potencia (HP/kW) o capacidad:';
-      } else if (/tuber|valvul/i.test(elemento)) {
-        promptText3 = 'Defina el Diámetro y Material\nSeleccione el diámetro nominal y tipo de tubería:';
+      if (USE_PARAMETRIC_ENGINE) {
+        const empiricalPrompt = getEmpiricalStep3Prompt(accion, elemento);
+        if (empiricalPrompt) promptText3 = empiricalPrompt;
+      } else {
+        if (/vaciado|construc/i.test(accion) && /losa/i.test(elemento)) {
+          promptText3 = "Defina la Resistencia y Espesor de la Losa\nSeleccione la resistencia del concreto (f'c) y el espesor de la losa:";
+        } else if (/sobrepiso/i.test(elemento) || /sobrepiso/i.test(accion)) {
+          promptText3 = 'Defina la Dosificación y Espesor del Sobrepiso\nSeleccione la proporción del mortero y el espesor de nivelación:';
+        } else if (/excavac/i.test(accion) || /excavac|zanja/i.test(elemento)) {
+          promptText3 = 'Defina la Profundidad y Método de Excavación\nSeleccione la profundidad estimada y método de excavación:';
+        } else if (/pintur/i.test(accion)) {
+          promptText3 = 'Defina el Tipo de Pintura o Acabado\nSeleccione el tipo de pintura o recubrimiento a aplicar:';
+        } else if (/impermeabiliz/i.test(accion)) {
+          promptText3 = 'Defina el Sistema de Impermeabilización\nSeleccione el manto o membrana impermeabilizante:';
+        } else if (/bomba/i.test(elemento)) {
+          promptText3 = 'Defina la Potencia del Equipo\nSeleccione la potencia (HP/kW) o capacidad:';
+        } else if (/tuber|valvul/i.test(elemento)) {
+          promptText3 = 'Defina el Diámetro y Material\nSeleccione el diámetro nominal y tipo de tubería:';
+        }
       }
       return {
         text: promptText3,
