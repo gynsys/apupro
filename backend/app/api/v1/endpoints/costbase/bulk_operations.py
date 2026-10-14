@@ -245,6 +245,7 @@ async def bulk_update_prices_excel_route(
             r = rows[r_idx]
             c_idx = None
             p_idx = None
+            p_candidate = None
             for idx, header in enumerate(r):
                 if header is None:
                     continue
@@ -252,8 +253,19 @@ async def bulk_update_prices_excel_route(
                 h_clean = h_norm.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
                 if c_idx is None and any(k in h_clean for k in ["codigo", "codmat", "codequ", "codman", "cod.", "cod_", "código", "ref_code", "referencia"]):
                     c_idx = idx
-                elif p_idx is None and any(k in h_clean for k in ["precio", "costo", "cosmat", "jornal", "cosdia", "monto", "valor", "p.u", "pu", "tarifa", "salario"]):
+
+                # Prioridad absoluta a "Precio Nuevo" si el archivo contiene comparativa de precios
+                if any(k in h_clean for k in ["precio nuevo", "nuevo precio", "precio_nuevo", "valor nuevo"]):
                     p_idx = idx
+                elif any(k in h_clean for k in ["precio", "costo", "cosmat", "jornal", "cosdia", "monto", "valor", "p.u", "pu", "tarifa", "salario"]):
+                    if "actual" not in h_clean and "anterior" not in h_clean:
+                        p_candidate = idx
+                    elif p_candidate is None:
+                        p_candidate = idx
+
+            if p_idx is None and p_candidate is not None:
+                p_idx = p_candidate
+
             if c_idx is not None:
                 codigo_col_idx = c_idx
                 header_row_idx = r_idx

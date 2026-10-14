@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { FiSearch, FiEdit2, FiTrash2, FiCheck, FiX, FiDownload, FiExternalLink, FiFilter } from 'react-icons/fi';
+import { FiSearch, FiEdit2, FiTrash2, FiCheck, FiX, FiDownload, FiExternalLink, FiFilter, FiUpload } from 'react-icons/fi';
 import { Loader2, X } from 'lucide-react';
 import { apiFetch, apiPut, apiDelete, apiPatch } from '../../../lib/apiHelper';
 import { AuthContext } from '../../../context/AuthContext';
 import DecimalInput from '../../../components/DecimalInput';
+import BulkPriceModal from './modals/BulkPriceModal';
 
 const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adminMode = false }) => {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
   const [hasMore, setHasMore] = useState(false);
   
   const [usesModal, setUsesModal] = useState({ isOpen: false, item: null, apus: [], loading: false });
+  const [showBulkModal, setShowBulkModal] = useState(false);
 
   // Default config values based on resource type - matching backend keys
   const defaultConfig = {
@@ -342,14 +344,25 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                 </div>
               )}
               {isSuperAdmin && (
-                <button
-                  onClick={handleExportToExcel}
-                  type="button"
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors cursor-pointer"
-                >
-                  <FiDownload size={12} />
-                  Exportar a Excel
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowBulkModal(true)}
+                    type="button"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer shadow-sm"
+                    title={`Cargar o actualizar precios de ${title} masivamente desde archivo Excel`}
+                  >
+                    <FiUpload size={12} />
+                    Cargar Precios Excel
+                  </button>
+                  <button
+                    onClick={handleExportToExcel}
+                    type="button"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors cursor-pointer"
+                  >
+                    <FiDownload size={12} />
+                    Exportar a Excel
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -596,6 +609,20 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
               </div>
             </div>
           </div>
+        )}
+
+        {/* Modal de Carga Masiva de Precios Excel */}
+        {showBulkModal && (
+          <BulkPriceModal
+            resourceType={resourceType}
+            selectedDatabase={selectedDatabase || 'master'}
+            title={title}
+            onClose={() => setShowBulkModal(false)}
+            onSuccess={() => {
+              setShowBulkModal(false);
+              fetchItems(search.trim(), 0, false);
+            }}
+          />
         )}
       </div>
   );

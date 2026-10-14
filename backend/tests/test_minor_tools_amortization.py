@@ -102,12 +102,13 @@ class TestMinorToolsAmortization(unittest.TestCase):
         self.assertAlmostEqual(alb048["depreciacion"], 0.03, places=3)
         self.assertAlmostEqual(alb048["precio_unitario"], 127.79, places=2)
 
-        # ALB084 debe convertirse a equipo propio con deprec < 1.0
+        # ALB084 debe convertirse a equipo propio con precio de adquisición real ($85) y depreciación diaria
         self.assertAlmostEqual(alb084["depreciacion"], 0.025, places=3)
-        self.assertAlmostEqual(alb084["precio_unitario"], 996.40, places=2)
-        # Costo diario equivalente preservado: 996.40 * 0.025 == 24.91
+        self.assertAlmostEqual(alb084["precio_unitario"], 85.00, places=2)
+        # Costo diario calibrado a valor de mercado realista: 85.00 * 0.025 = $2.13/día (nunca $24.91)
         costo_diario_alb084 = round(alb084["precio_unitario"] * alb084["depreciacion"], 2)
-        self.assertAlmostEqual(costo_diario_alb084, 24.91, places=1)
+        self.assertAlmostEqual(costo_diario_alb084, 2.125, delta=0.05)
+        self.assertNotEqual(costo_diario_alb084, 24.91)
 
         # DEM011 (martillo eléctrico) NO es herramienta menor: mantiene deprec=1.0 de alquiler
         self.assertAlmostEqual(dem011["depreciacion"], 1.0, places=3)
@@ -116,7 +117,7 @@ class TestMinorToolsAmortization(unittest.TestCase):
     def test_normalize_equipment_prices_from_base_apu(self) -> None:
         """
         Verifica que al heredar equipos de una partida base antigua con deprec=1.0,
-        _normalize_equipment_prices aplique automáticamente la regla.
+        _normalize_equipment_prices aplique automáticamente la regla con precio de mercado.
         """
         base_apu = {
             "equipos": [
@@ -146,7 +147,7 @@ class TestMinorToolsAmortization(unittest.TestCase):
         eq = generated_result["equipments"][0]
         self.assertLess(eq["depreciacion"], 1.0, "La depreciación no debe ser 1.0")
         self.assertEqual(eq["depreciacion"], 0.025)
-        self.assertAlmostEqual(eq["precio_unitario"], 996.40, places=2)
+        self.assertAlmostEqual(eq["precio_unitario"], 85.00, places=2)
 
 
 if __name__ == "__main__":
