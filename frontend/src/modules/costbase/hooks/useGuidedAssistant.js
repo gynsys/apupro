@@ -211,6 +211,20 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
   const [detectedFullPrompt, setDetectedFullPrompt] = useState(null);
   const [waitingForGlobalDays, setWaitingForGlobalDays] = useState(false);
   const [pendingPromptForGlobal, setPendingPromptForGlobal] = useState(null);
+  const [waitingForClarification, setWaitingForClarification] = useState(false);
+  const [pendingClarification, setPendingClarification] = useState(null);
+  const loadingTimeoutsRef = useRef([]);
+
+  const clearLoadingTimeouts = useCallback(() => {
+    loadingTimeoutsRef.current.forEach(t => clearTimeout(t));
+    loadingTimeoutsRef.current = [];
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      loadingTimeoutsRef.current.forEach(t => clearTimeout(t));
+    };
+  }, []);
 
   // Inicializar mensaje de bienvenida según el usuario
   const createInitialMessage = useCallback(() => {
@@ -241,6 +255,14 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
 
   const handleGoBack = (targetStep = null) => {
     if (chatbotLoadingStage > 0) return;
+    if (waitingForClarification) {
+      clearLoadingTimeouts();
+      setWaitingForClarification(false);
+      setPendingClarification(null);
+      setChatInputValue('');
+      setGuidedMessages(prev => prev.filter(m => !m.id.startsWith('bot-clarification-')));
+      return;
+    }
     if (waitingForGlobalDays) {
       setWaitingForGlobalDays(false);
       setPendingPromptForGlobal(null);
@@ -307,6 +329,7 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
   };
 
   const resetChatbot = (startAtStep = 0, initialInput = '') => {
+    clearLoadingTimeouts();
     setGuidedAccion(null);
     setGuidedElemento(null);
     setGuidedMaterial(null);
@@ -318,6 +341,8 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     setDetectedFullPrompt(null);
     setWaitingForGlobalDays(false);
     setPendingPromptForGlobal(null);
+    setWaitingForClarification(false);
+    setPendingClarification(null);
 
     if (startAtStep === 1) {
       setCurrentChatStep(1);
@@ -338,22 +363,62 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
   };
 
   const triggerGeneration = (promptToUse, unitToUse = null, executionDays = null) => {
+    clearLoadingTimeouts();
     setChatbotLoadingStage(1);
-    setTimeout(() => setChatbotLoadingStage(2), 1200);
-    setTimeout(() => setChatbotLoadingStage(3), 2500);
-    setTimeout(() => setChatbotLoadingStage(4), 3800);
-    setTimeout(() => {
+    loadingTimeoutsRef.current.push(setTimeout(() => setChatbotLoadingStage(2), 1200));
+    loadingTimeoutsRef.current.push(setTimeout(() => setChatbotLoadingStage(3), 2500));
+    loadingTimeoutsRef.current.push(setTimeout(() => setChatbotLoadingStage(4), 3800));
+    loadingTimeoutsRef.current.push(setTimeout(() => {
       setEntryModeSource('chat');
       lastEntrySourceRef.current = 'chat';
       if (onComplete) {
         onComplete(promptToUse, 'chat', unitToUse, executionDays);
       }
-    }, 4500);
+    }, 4500));
   };
+
+  const injectClarification = useCallback(({ message, options, prompt: promptBase, unit }) => {
+    clearLoadingTimeouts();
+    setChatbotLoadingStage(0);
+    setWaitingForClarification(true);
+    setPendingClarification({
+      prompt: promptBase,
+      unit: unit
+    });
+    setCurrentChatStep(prev => Math.max(prev, 1));
+
+    const botClarificationMsg = {
+      id: `bot-clarification-${Date.now()}`,
+      sender: 'bot',
+      step: 7,
+      text: message || 'Se requiere una aclaratoria técnica para dimensionar el APU:',
+      chips: options && Array.isArray(options) && options.length > 0 ? options : null
+    };
+
+    setGuidedMessages(prev => [...prev, botClarificationMsg]);
+    setChatInputValue('');
+  }, [clearLoadingTimeouts]);
 
   const handleChatSubmit = (text) => {
     if (!text || !text.trim()) return;
     const cleanText = text.trim();
+
+    // -1. Manejo de Aclaratorias Técnicas de la IA (kVA, profundidad de pozo, tubería, etc.)
+    if (waitingForClarification && pendingClarification) {
+      clearLoadingTimeouts();
+      const clarifPrompt = pendingClarification.prompt || '';
+      const clarifUnit = pendingClarification.unit || guidedUnidad;
+      const combined = clarifPrompt ? `${clarifPrompt}, ${cleanText}` : cleanText;
+
+      setWaitingForClarification(false);
+      setPendingClarification(null);
+
+      const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 7 };
+      setGuidedMessages(prev => [...prev, newUserMsg]);
+      setChatInputValue('');
+      triggerGeneration(combined, clarifUnit);
+      return;
+    }
 
     // 0. Manejo cuando se está esperando la cantidad de días para partida Global (Gl)
     if (waitingForGlobalDays) {
@@ -697,6 +762,9 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     setGuidedMessages,
     detectedFullPrompt,
     waitingForGlobalDays,
+    waitingForClarification,
+    injectClarification,
+    clearLoadingTimeouts,
     handleChatSubmit,
     handleGoBack,
     resetChatbot

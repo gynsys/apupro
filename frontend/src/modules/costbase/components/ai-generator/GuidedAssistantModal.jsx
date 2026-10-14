@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { Sparkles, X, Check, Bot, Edit2, Loader2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Sparkles, X, Check, Bot, Edit2, Loader2, ArrowRight } from 'lucide-react';
 import { getParametricStep3Definition } from '../../constants/guidedBuilderConstants';
 import ArchitectureModeSelector from './ArchitectureModeSelector';
 
@@ -22,6 +22,7 @@ export default function GuidedAssistantModal({
   generationMode = 'rag',
   setGenerationMode,
   waitingForGlobalDays = false,
+  waitingForClarification = false,
   useTypesafeJev = false,
   setUseTypesafeJev = null
 }) {
@@ -160,21 +161,10 @@ export default function GuidedAssistantModal({
           {currentChatStep > 0 && <div ref={chatEndRef} />}
         </div>
 
-        {/* Chat Input: Solo renderizar una vez iniciado el flujo (paso 1+) */}
-        {currentChatStep > 0 && chatbotLoadingStage === 0 && (
+        {/* Chat Input: Renderizar si se inició el flujo o se espera aclaratoria */}
+        {(currentChatStep > 0 || waitingForClarification) && chatbotLoadingStage === 0 && (
           <div className="mt-4 pt-4 border-t border-amber-200 flex-shrink-0">
             <div className="flex gap-2 items-center">
-              {currentChatStep > 0 && (
-                <button 
-                  type="button"
-                  onClick={() => handleGoBack && handleGoBack()}
-                  title="Volver al paso anterior"
-                  className="bg-white border-2 border-amber-300 hover:bg-amber-100 text-amber-900 rounded-full px-3 py-2 text-xs font-bold flex items-center gap-1 transition-all shrink-0 shadow-xs cursor-pointer active:scale-95"
-                >
-                  <ArrowLeft size={14} />
-                  <span className="hidden sm:inline">Atrás</span>
-                </button>
-              )}
               <input 
                 type="text"
                 value={chatInputValue}
@@ -184,6 +174,7 @@ export default function GuidedAssistantModal({
                 }}
                 placeholder={
                   waitingForGlobalDays ? "Indica los días estimados (ej: 0.5, 1, 2, 3, 5)..." :
+                  waitingForClarification ? "Selecciona una opción o escribe tu respuesta..." :
                   currentChatStep === 1 ? "Ej: Suministro e instalación, Pintura, Construcción, Vaciado..." :
                   currentChatStep === 2 ? "Ej: Paredes, Rejas y herrería, Losas, Tuberías, Fachadas..." :
                   currentChatStep === 3 ? "Ej: Pintura de caucho clase A, Fondo cromato de zinc, Concreto f'c=250..." :

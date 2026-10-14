@@ -381,11 +381,50 @@ export default function AIApuGeneratorPage() {
     });
   };
 
+  // Limpiar temporizadores de carga en cuanto se genera el APU
+  useEffect(() => {
+    if (generator.item) {
+      if (guided?.clearLoadingTimeouts) {
+        guided.clearLoadingTimeouts();
+      }
+      if (guided?.setChatbotLoadingStage) {
+        guided.setChatbotLoadingStage(0);
+      }
+    }
+  }, [generator.item]);
+
+  // Sincronizar aclaratoria técnica de la IA directamente en el flujo del Chatbot Guiado
+  useEffect(() => {
+    if (generator.isClarifying && generator.aiClarificationMessage) {
+      if (guided?.injectClarification) {
+        const currentBase = (prompt && prompt.trim())
+          || (generator.basePrompt && generator.basePrompt.trim())
+          || '';
+        guided.injectClarification({
+          message: generator.aiClarificationMessage,
+          options: generator.aiOptions || [],
+          prompt: currentBase,
+          unit: selectedUnit
+        });
+        generator.dismissClarification();
+      }
+    }
+  }, [generator.isClarifying, generator.aiClarificationMessage, generator.aiOptions, prompt, selectedUnit, generator.basePrompt]);
+
   const handleBackNavigation = () => {
     if (generator.item) {
       generator.setItem(null);
       setSelectedUnit(null);
       setPrompt('');
+      if (generator?.dismissClarification) {
+        generator.dismissClarification();
+      }
+      if (guided?.clearLoadingTimeouts) {
+        guided.clearLoadingTimeouts();
+      }
+      if (guided?.resetChatbot) {
+        guided.resetChatbot(0, '');
+      }
       if (guided?.setChatInputValue) {
         guided.setChatInputValue('');
       }
@@ -437,8 +476,8 @@ export default function AIApuGeneratorPage() {
             onReject={generator.handleRejectExactMatch}
           />
 
-          {/* TARJETA ÁMBAR DE ACLARATORIA */}
-          {generator.isClarifying && (
+          {/* FALLBACK: TARJETA ÁMBAR DE ACLARATORIA (solo si no hay chatbot) */}
+          {generator.isClarifying && !guided?.injectClarification && (
             <ClarificationAlertCard
               message={generator.aiClarificationMessage}
               recommendation={generator.aiClarificationRecommendation}
@@ -479,7 +518,7 @@ export default function AIApuGeneratorPage() {
               }}
               onResetChatbot={() => {
                 generator.dismissClarification();
-                guided.resetChatbot();
+                guided.resetChatbot(0, '');
                 guided.setIsGuidedMode(true);
                 setPrompt('');
                 setSelectedUnit(null);
@@ -491,7 +530,7 @@ export default function AIApuGeneratorPage() {
           )}
 
           {/* ASISTENTE GUIADO (CHATBOT) - MODO ÚNICO */}
-          {!isRedirectingToBot && !generator.isClarifying && !generator.item && (
+          {!isRedirectingToBot && !generator.item && (!generator.isClarifying || guided?.injectClarification) && (
             <GuidedAssistantModal
               isOpen={true}
               onClose={() => navigate(basePath)}
@@ -511,6 +550,7 @@ export default function AIApuGeneratorPage() {
               useTypesafeJev={generator.useTypesafeJev}
               setUseTypesafeJev={generator.setUseTypesafeJev}
               waitingForGlobalDays={guided.waitingForGlobalDays}
+              waitingForClarification={guided.waitingForClarification}
             />
           )}
         </div>
