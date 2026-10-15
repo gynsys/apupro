@@ -18,9 +18,9 @@ const NAV_ITEMS = [
   { name: 'Presupuestos', href: '/budgets',           Icon: FileText },
   { name: 'Visor Bases de Datos', href: '/costbase',   altHrefs: ['/cost360'], Icon: Database, exact: true  },
   { name: 'Gestion Bases de Datos', href: '/costbase/databases', altHrefs: ['/cost360/databases'], Icon: Server   },
-  { name: 'Nuevo (Desde Cero)', href: '/costbase/ai-generator?mode=manual', altHrefs: ['/cost360/ai-generator?mode=manual', '/cost360/ai-generator'], Icon: FileText },
-  { name: 'Importar / Clonar', href: '/costbase/ai-generator?mode=import', altHrefs: ['/cost360/ai-generator?mode=import'], Icon: Copy },
-  { name: 'Crear con IA', href: '/costbase/ai-generator?mode=ia', altHrefs: ['/cost360/ai-generator?mode=ia'], Icon: Cpu }
+  { name: 'Crear APU nuevo', href: '/costbase/ai-generator?mode=manual', altHrefs: ['/cost360/ai-generator?mode=manual', '/cost360/ai-generator'], Icon: FileText },
+  { name: 'Crear APU desde existente', href: '/costbase/ai-generator?mode=import', altHrefs: ['/cost360/ai-generator?mode=import'], Icon: Copy },
+  { name: 'Crear APU con IA', href: '/costbase/ai-generator?mode=ia', altHrefs: ['/cost360/ai-generator?mode=ia'], Icon: Cpu }
 ];
 
 export default function AppLayout() {
