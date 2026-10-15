@@ -146,6 +146,7 @@ def _call_openai_compatible(provider: LLMProvider, prompt: str, expect_json: boo
     Uses base_url from the provider record.
     """
     api_key = decrypt_api_key(provider.api_key_enc)
+    key = provider.provider_key.lower()
     default_base_url = "https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1" if key == "qwen" else "https://api.openai.com/v1"
     base_url = (provider.base_url or default_base_url).rstrip("/")
     url = f"{base_url}/chat/completions"
@@ -157,7 +158,6 @@ def _call_openai_compatible(provider: LLMProvider, prompt: str, expect_json: boo
             extra = json.loads(extra)
         except (json.JSONDecodeError, TypeError):
             extra = {}
-    key = provider.provider_key.lower()
 
     if system_prompt:
         system_content = system_prompt

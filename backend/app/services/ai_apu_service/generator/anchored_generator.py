@@ -222,7 +222,8 @@ Prefijo COVENIN: {effective_cov_prefix}
         result["notas_adaptacion"] = []
 
     if result.get("status") == "clarification_needed":
-        result["options"] = []
+        if "options" not in result or not isinstance(result["options"], list):
+            result["options"] = []
 
     # Salvaguarda determinista de exclusiones de alcance explícitas
     _enforce_scope_exclusions(result, user_description)

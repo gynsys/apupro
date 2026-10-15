@@ -76,7 +76,8 @@ def generate_apu_with_ai(
     result["debug_preprocesamiento"] = payload_llm
 
     if result.get("status") == "clarification_needed":
-        result["options"] = []
+        if "options" not in result or not isinstance(result["options"], list):
+            result["options"] = []
         return result
 
     if payload_llm.get("advertencias_preprocesamiento"):

@@ -301,6 +301,35 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
                 ]
             )
         ]
+    ),
+
+    # 10. SOPORTES Y MONTAJE DE TELEVISORES / PANTALLAS
+    ConstructionFamilyOntology(
+        family_id="SOPORTES_PANTALLAS_TV",
+        name="Soportes y Montaje de Televisores y Pantallas",
+        activation_patterns=[
+            re.compile(r"\b(televisor|televisores|pantalla|pantallas|tv|smart\s*tv|monitor|monitores)\b", re.IGNORECASE)
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        required_parameters=[
+            ParametricRequirement(
+                param_id="tamano_pulgadas",
+                label="Tamaño de la pantalla en pulgadas",
+                detection_patterns=[
+                    re.compile(r"\b\d{2}\s*(pulg|pulgadas?|plg|\"|'|in|inch)\b", re.IGNORECASE),
+                    re.compile(r"\b(32|40|42|43|50|55|60|65|70|75|80|85)\b", re.IGNORECASE),
+                    re.compile(r"\b(pulgadas?|tamano|medida)\b", re.IGNORECASE),
+                ],
+                question="¿De cuántas pulgadas es el televisor o pantalla que se va a instalar? (Ej: 32\", 40\"-43\", 50\"-55\", 65\"-75\")",
+                default_options=[
+                    '32" (32 pulgadas)',
+                    '40" - 43" (40 a 43 pulgadas)',
+                    '50" - 55" (50 a 55 pulgadas)',
+                    '65" - 75" (65 a 75 pulgadas)',
+                    'Mayor a 75" (Gran formato)'
+                ]
+            )
+        ]
     )
 ]
 

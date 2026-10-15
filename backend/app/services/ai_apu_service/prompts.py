@@ -204,23 +204,26 @@ _REGLAS_INSUMOS_PRECIOS = """
 _CRITERIO_CLARIFICACION = """
 # CRITERIO DE CLARIFICACIÓN VS GENERACIÓN (OBLIGATORIO EVALUAR ANTES DE GENERAR)
 
-GENERA el APU (status: "completed") SOLO SI la descripción cumple LOS TRES CRITERIOS:
+GENERA el APU (status: "completed") SOLO SI la descripción cumple LOS CUATRO CRITERIOS:
   C1. Contiene al menos UNA acción constructiva, aunque sea implícita o en jerga (demoler, instalar, construir, vaciar, revestir, frizar, tumbar, echar, etc.)
-  C2. Contiene al menos UN elemento constructivo específico sobre el que se actúa (pared, tubería, losa, piso, zanja, columna, etc.)
+  C2. Contiene al menos UN elemento constructivo específico sobre el que se actúa (pared, tubería, losa, piso, zanja, columna, televisor, aire acondicionado, tanque, etc.)
   C3. La combinación C1+C2 es físicamente ejecutable y no contradictoria.
+  C4. Contiene la especificación dimensional, métrica o de capacidad crítica cuando el elemento o equipo lo requiera indispensablemente para dimensionar costos de insumos, cuadrillas o anclajes (ejemplos: tamaño en pulgadas de pantallas/televisores, capacidad en BTU o toneladas de aires acondicionados, capacidad en litros de tanques de agua o calentadores, potencia en kVA o HP de generadores/bombas, espesor o resistencia cuando no sea inferible de forma unívoca). ESTÁ PROHIBIDO asumir o inventar dimensiones críticas por defecto.
 
 IMPORTANTE — Tolerancia al orden y al lenguaje informal:
   - El orden de las palabras NO importa. "terreno excavacion a mano" es equivalente a "excavacion a mano en terreno".
   - La jerga venezolana de obra ES válida: "tumbar" = demoler, "frizar" = aplicar friso, "echar concreto" = vaciar concreto.
   - Una descripción fragmentada o telegráfica (ej: "pared bloque 15 mortero 1:4") puede ser suficiente si C1 y C2 se infieren.
 
-SOLICITA CLARIFICACIÓN (status: "clarification_needed") SI Y SOLO SI:
+SOLICITA CLARIFICACIÓN (status: "clarification_needed") SI:
   - Falta C1: no hay ninguna acción constructiva identificable ni implícita.
   - Falta C2: hay acción pero sin elemento constructivo (ej: solo "demolicion", "instalacion", "pintura").
   - C3 falla: la combinación es un absurdo físico o una contradicción insalvable.
-  - La descripción es irrelevante para el dominio construcción (comida, geografía, entretenimiento, etc.).
-
-CUANDO solicites clarificación, responde con "options": []. ESTÁ TERMINANTEMENTE PROHIBIDO inventar o adivinar opciones o partidas alternativas no solicitadas. Limítate a explicar qué información técnica falta en questions y clarification_message.
+  - Falta C4: el elemento constructivo o equipo requiere indispensablemente una dimensión, capacidad o especificación crítica y el usuario NO la proporcionó. En este caso:
+      * Explica con claridad qué parámetro falta en `clarification_message`.
+      * Formula la pregunta exacta en `questions` (ej: "¿De cuántos BTU es el aire acondicionado a instalar?").
+      * Proporciona entre 3 y 5 opciones comerciales estándar en `options` (ej: ["12,000 BTU", "18,000 BTU", "24,000 BTU", "36,000 BTU"]).
+  - La descripción es irrelevante para el dominio construcción (comida, geografía, entretenimiento, etc.). En este caso `options` debe ser [].
 """
 
 _APU_SYSTEM_PROMPT = f"""Eres un Ingeniero Civil especialista en Análisis de Precios Unitarios (APU) bajo normativa venezolana COVENIN.
