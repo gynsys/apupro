@@ -24,14 +24,14 @@ import GlassCard from '../../../../components/shared/GlassCard';
 const PROVIDER_PRESETS = {
   gemini: {
     label: 'Google Gemini',
-    defaultModel: 'gemini-2.0-flash',
+    defaultModel: 'gemini-3.8-flash',
     suggestedModels: [
-      'gemini-2.0-flash',
-      'gemini-1.5-flash',
-      'gemini-1.5-pro',
-      'gemini-2.0-pro-exp-02-05'
+      'gemini-3.8-flash',
+      'gemini-3.6-flash',
+      'gemini-2.5-flash',
+      'gemini-2.5-pro'
     ],
-    placeholder: 'AIzaSy...',
+    placeholder: 'AIzaSy... o AQ....',
     badgeColor: 'bg-blue-100 text-blue-700 border-blue-200',
     iconColor: 'text-blue-600',
     borderHighlight: 'border-blue-500/20'
@@ -47,6 +47,22 @@ const PROVIDER_PRESETS = {
     badgeColor: 'bg-cyan-100 text-cyan-800 border-cyan-200',
     iconColor: 'text-cyan-600',
     borderHighlight: 'border-cyan-500/20'
+  },
+  qwen: {
+    label: 'Alibaba Qwen',
+    defaultModel: 'qwen3.8-flash',
+    defaultBaseUrl: 'https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1',
+    suggestedModels: [
+      'qwen3.8-flash',
+      'qwen-plus',
+      'qwen-turbo',
+      'qwen-max',
+      'qwen-2.5-72b-instruct'
+    ],
+    placeholder: 'sk-...',
+    badgeColor: 'bg-orange-100 text-orange-800 border-orange-200',
+    iconColor: 'text-orange-600',
+    borderHighlight: 'border-orange-500/20'
   },
   openai: {
     label: 'OpenAI GPT',
@@ -113,8 +129,8 @@ const PROVIDER_PRESETS = {
 
 const INITIAL_FORM_STATE = {
   provider_key: 'gemini',
-  display_name: 'Google Gemini Pro / Flash',
-  model_name: 'gemini-2.0-flash',
+  display_name: 'Google Gemini Flash',
+  model_name: 'gemini-3.8-flash',
   api_key: '',
   base_url: '',
   priority: 1,
@@ -357,7 +373,8 @@ const KeyIATab = () => {
       ...prev,
       provider_key: selectedKey,
       display_name: preset.label,
-      model_name: preset.defaultModel
+      model_name: preset.defaultModel,
+      base_url: preset.defaultBaseUrl || ''
     }));
   };
 

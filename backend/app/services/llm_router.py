@@ -146,7 +146,8 @@ def _call_openai_compatible(provider: LLMProvider, prompt: str, expect_json: boo
     Uses base_url from the provider record.
     """
     api_key = decrypt_api_key(provider.api_key_enc)
-    base_url = (provider.base_url or "https://api.openai.com/v1").rstrip("/")
+    default_base_url = "https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1" if key == "qwen" else "https://api.openai.com/v1"
+    base_url = (provider.base_url or default_base_url).rstrip("/")
     url = f"{base_url}/chat/completions"
 
     extra = provider.extra_params or {}
@@ -170,9 +171,9 @@ def _call_openai_compatible(provider: LLMProvider, prompt: str, expect_json: boo
         system_content = "Eres un experto en ingeniería civil y construcción. Responde en español."
 
     # APU JSON requiere ~3000-4000 tokens de salida; default 8192 para no truncar
-    default_max_tokens = 8192 if key == "deepseek" else 4096
-    # DeepSeek puede tardar más con prompts largos de APU
-    timeout_secs = 90 if key == "deepseek" else 60
+    default_max_tokens = 8192 if key in ("deepseek", "qwen") else 4096
+    # Timeout optimizado para conmutar rápido a Gemini si DeepSeek se congestiona
+    timeout_secs = 20 if key == "deepseek" else 30
 
     payload: dict = {
         "model": provider.model_name,
@@ -184,8 +185,8 @@ def _call_openai_compatible(provider: LLMProvider, prompt: str, expect_json: boo
         "max_tokens": extra.get("max_tokens", default_max_tokens),
     }
 
-    # DeepSeek v3 y OpenAI soportan response_format json_object; evita JSON truncado o con markdown
-    if expect_json and key in ("openai", "deepseek"):
+    # DeepSeek v3, OpenAI y Qwen soportan response_format json_object; evita JSON truncado o con markdown
+    if expect_json and key in ("openai", "deepseek", "qwen"):
         payload["response_format"] = {"type": "json_object"}
 
     headers = {
@@ -194,7 +195,10 @@ def _call_openai_compatible(provider: LLMProvider, prompt: str, expect_json: boo
     }
     response = requests.post(url, headers=headers, json=payload, timeout=timeout_secs)
     response.raise_for_status()
-    return response.json()["choices"][0]["message"]["content"]
+    res_data = response.json()
+    if not isinstance(res_data, dict) or "choices" not in res_data or not res_data["choices"]:
+        raise ValueError(f"Respuesta inesperada del proveedor '{provider.display_name}': {str(res_data)[:200]}")
+    return res_data["choices"][0]["message"]["content"]
 
 
 def _dispatch(provider: LLMProvider, prompt: str, expect_json: bool, system_prompt: Optional[str] = None) -> str:
@@ -202,10 +206,10 @@ def _dispatch(provider: LLMProvider, prompt: str, expect_json: bool, system_prom
     key = provider.provider_key.lower()
     if key == "gemini":
         return _call_gemini(provider, prompt, expect_json, system_prompt=system_prompt)
-    elif key in ("groq", "openai", "custom", "mistral", "ollama", "deepseek"):
+    elif key in ("groq", "openai", "custom", "mistral", "ollama", "deepseek", "qwen"):
         return _call_openai_compatible(provider, prompt, expect_json, system_prompt=system_prompt)
     else:
-        raise ValueError(f"Unknown provider_key: '{key}'. Supported: gemini, groq, openai, custom, deepseek.")
+        raise ValueError(f"Unknown provider_key: '{key}'. Supported: gemini, groq, openai, custom, deepseek, qwen.")
 
 
 # ---------------------------------------------------------------------------
