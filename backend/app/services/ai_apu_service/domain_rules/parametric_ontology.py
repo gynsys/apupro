@@ -32,7 +32,7 @@ def _strip_accents(text: str) -> str:
 
 # Patrones genéricos de demolición y desmontaje (donde no aplica exigir dosificación de mezcla o fabricación nueva)
 DEMOLITION_OR_REMOVAL_PATTERNS: List[re.Pattern] = [
-    re.compile(r"\b(demolici[oó]n|demoler|picar|picado|tumbar|derribar|desmontaje|desmontar|desinstalaci[oó]n|desinstalar|retiro|retirar|desmantelamiento|desmantelar|desarme|desarmar|extracci[oó]n|extraer)\b", re.IGNORECASE)
+    re.compile(r"\b(demolici[oó]n|demoler|picar|picado|tumbar|derribar|desmontaje|desmontar|desmonte|desmontes|desinstalaci[oó]n|desinstalar|retiro|retirar|desmantelamiento|desmantelar|desarme|desarmar|extracci[oó]n|extraer)\b", re.IGNORECASE)
 ]
 
 # Patrones de acabados, pinturas, impermeabilizaciones y tratamientos superficiales
@@ -118,7 +118,9 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
         activation_patterns=[
             re.compile(r"\b(viga|vigas|columna|columnas|zapata|zapatas|fundaci[oó]n|fundaciones|pedestal|pedestales|muro\s+de\s+concreto|losa\s+de\s+techo|losa\s+de\s+concreto|losa\s+de\s+entrepiso)\b", re.IGNORECASE)
         ],
-        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + SURFACE_TREATMENTS_AND_FINISHES_PATTERNS,
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + SURFACE_TREATMENTS_AND_FINISHES_PATTERNS + [
+            re.compile(r"\b(met[aá]lic[ao]s?|de\s+acero|de\s+madera|de\s+hierro|conduven|ipe|hea|heb)\b", re.IGNORECASE)
+        ],
         required_parameters=[
             ParametricRequirement(
                 param_id="resistencia_concreto",
@@ -328,6 +330,356 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
                     '65" - 75" (65 a 75 pulgadas)',
                     'Mayor a 75" (Gran formato)'
                 ]
+            )
+        ]
+    ),
+
+    # 11. AIRE ACONDICIONADO Y CLIMATIZACIÓN
+    ConstructionFamilyOntology(
+        family_id="CLIMATIZACION_AIRE_ACONDICIONADO",
+        name="Aire Acondicionado y Climatización",
+        activation_patterns=[
+            re.compile(r"\b(aire\s+acondicionado|splits?|climatizaci[oó]n|fan\s*coils?|chillers?|uma|fancoil)\b", re.IGNORECASE)
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        required_parameters=[
+            ParametricRequirement(
+                param_id="capacidad_termica",
+                label="Capacidad térmica (BTU o Toneladas)",
+                detection_patterns=[
+                    re.compile(r"\b\d{1,2}(?:[.,]000|000)?\s*btu\b", re.IGNORECASE),
+                    re.compile(r"\b\d+(?:[.,]\d+)?\s*(ton|toneladas?|tr)\b", re.IGNORECASE),
+                    re.compile(r"\b(12000|18000|24000|36000|48000|60000)\b", re.IGNORECASE),
+                    re.compile(r"\b(1\s*ton|1\.5\s*ton|2\s*ton|3\s*ton|5\s*ton)\b", re.IGNORECASE),
+                    re.compile(r"\b(capacidad|toneladas?|btu)\b", re.IGNORECASE),
+                ],
+                question="¿Qué capacidad térmica tiene el equipo de aire acondicionado? (Ej: 12.000 BTU, 18.000 BTU, 24.000 BTU, 3 Ton, 5 Ton)",
+                default_options=[
+                    "12.000 BTU (1 Ton)",
+                    "18.000 BTU (1.5 Ton)",
+                    "24.000 BTU (2 Ton)",
+                    "36.000 BTU (3 Ton)",
+                    "5 Toneladas (60.000 BTU)"
+                ]
+            )
+        ]
+    ),
+
+    # 12. CABLES Y CONDUCTORES ELÉCTRICOS
+    ConstructionFamilyOntology(
+        family_id="CABLES_CONDUCTORES_ELECTRICOS",
+        name="Cables y Conductores Eléctricos",
+        activation_patterns=[
+            re.compile(r"\b(cables?|conductor(?:es)?)\b.*\b(cobre|aluminio|thw|thhn|ttu|awg|mcm|el[eé]ctrico[s]?)\b|\b(cable\s+thw|cable\s+thhn|cable\s+ttu|cable\s+el[eé]ctrico|tendido\s+de\s+cables?|cableado\s+el[eé]ctrico)\b", re.IGNORECASE)
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + [
+            re.compile(r"\b(tuber[ií]as?|tubos?|canaletas?|bandejas?|escalerillas?)\s+para\s+cables?\b", re.IGNORECASE)
+        ],
+        required_parameters=[
+            ParametricRequirement(
+                param_id="calibre_conductor",
+                label="Calibre del conductor (AWG o MCM)",
+                detection_patterns=[
+                    re.compile(r"\bcalibre\s*#?\s*\d+\b", re.IGNORECASE),
+                    re.compile(r"\b#\s*\d+\b", re.IGNORECASE),
+                    re.compile(r"\b\d+\s*awg\b", re.IGNORECASE),
+                    re.compile(r"\b[1-4]\/0\s*(?:awg)?\b", re.IGNORECASE),
+                    re.compile(r"\b\d{2,3}\s*mcm\b", re.IGNORECASE),
+                    re.compile(r"\b(calibre|secci[oó]n|seccion)\b", re.IGNORECASE),
+                ],
+                question="¿Qué calibre tiene el cable o conductor eléctrico? (Ej: #14 AWG, #12 AWG, #10 AWG, #8 AWG, #6 AWG, 2/0 AWG, 4/0 AWG)",
+                default_options=[
+                    "#14 AWG",
+                    "#12 AWG",
+                    "#10 AWG",
+                    "#8 AWG",
+                    "#6 AWG",
+                    "#4 AWG",
+                    "#2 AWG",
+                    "2/0 AWG",
+                    "4/0 AWG"
+                ]
+            )
+        ]
+    ),
+
+    # 13. TABLEROS ELÉCTRICOS Y DISTRIBUCIÓN
+    ConstructionFamilyOntology(
+        family_id="TABLEROS_ELECTRICOS",
+        name="Tableros Eléctricos y Distribución",
+        activation_patterns=[
+            re.compile(r"\b(tableros?\s+el[eé]ctricos?|tableros?\s+principal(?:es)?|tableros?\s+de\s+distribuci[oó]n|tableros?\s+secundarios?|tableros?\s+de\s+fuerza|tableros?\s+de\s+alumbrado|tablero\s+tipo\s+nlab|tablero\s+tipo\s+cpl|centro\s+de\s+carga)\b", re.IGNORECASE),
+            re.compile(r"\b(suministro\s+y\s+colocaci[oó]n|instalaci[oó]n|montaje)\b.*\btablero[s]?\b", re.IGNORECASE)
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        required_parameters=[
+            ParametricRequirement(
+                param_id="capacidad_circuitos",
+                label="Capacidad de circuitos o polos",
+                detection_patterns=[
+                    re.compile(r"\b\d{1,2}\s*(?:circuitos?|polos?|ctos?|m[oó]dulos?|posici[oó]n(?:es)?)\b", re.IGNORECASE),
+                    re.compile(r"\bcircuitos?\b", re.IGNORECASE),
+                ],
+                question="¿De cuántos circuitos o polos es el tablero eléctrico? (Ej: 12 circuitos, 18 circuitos, 24 circuitos, 30 circuitos, 42 circuitos)",
+                default_options=[
+                    "12 circuitos",
+                    "18 circuitos",
+                    "24 circuitos",
+                    "30 circuitos",
+                    "42 circuitos"
+                ]
+            )
+        ]
+    ),
+
+    # 14. TRANSFORMADORES ELÉCTRICOS Y SUBESTACIONES
+    ConstructionFamilyOntology(
+        family_id="TRANSFORMADORES_ELECTRICOS",
+        name="Transformadores Eléctricos y Subestaciones",
+        activation_patterns=[
+            re.compile(r"\b(transformador(?:es)?|subestaci[oó]n(?:es)?|banco\s+de\s+transformaci[oó]n|transformador\s+monof[aá]sico|transformador\s+trif[aá]sico|transformador\s+padmounted?)\b", re.IGNORECASE)
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        required_parameters=[
+            ParametricRequirement(
+                param_id="potencia_kva",
+                label="Potencia nominal (kVA)",
+                detection_patterns=[
+                    re.compile(r"\b\d+(?:[.,]\d+)?\s*(kva|kwa?|kvar)\b", re.IGNORECASE),
+                    re.compile(r"\b(potencia|capacidad)\b", re.IGNORECASE),
+                ],
+                question="¿Qué capacidad o potencia en kVA tiene el transformador? (Ej: 15 kVA, 25 kVA, 37.5 kVA, 50 kVA, 75 kVA, 150 kVA)",
+                default_options=[
+                    "15 kVA",
+                    "25 kVA",
+                    "37.5 kVA",
+                    "50 kVA",
+                    "75 kVA",
+                    "150 kVA"
+                ]
+            )
+        ]
+    ),
+
+    # 15. LUMINARIAS, LÁMPARAS Y REFLECTORES
+    ConstructionFamilyOntology(
+        family_id="LUMINARIAS_ILUMINACION",
+        name="Luminarias, Lámparas y Reflectores",
+        activation_patterns=[
+            re.compile(r"\b(luminarias?|reflector(?:es)?|panel(?:es)?\s+led|l[aá]mparas?|focos?\s+led)\b", re.IGNORECASE)
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + [
+            re.compile(r"\b(poste|postes|torre\s+de\s+iluminaci[oó]n)\b", re.IGNORECASE)
+        ],
+        required_parameters=[
+            ParametricRequirement(
+                param_id="tipo_o_potencia",
+                label="Tipo y potencia de la luminaria (Watts/Formato)",
+                detection_patterns=[
+                    re.compile(r"\b\d{1,3}\s*w(?:atts?)?\b", re.IGNORECASE),
+                    re.compile(r"\b60\s*x\s*60\b", re.IGNORECASE),
+                    re.compile(r"\b30\s*x\s*120\b", re.IGNORECASE),
+                    re.compile(r"\b[1-4]\s*x\s*(?:18|32|36|40|54)\s*w?\b", re.IGNORECASE),
+                    re.compile(r"\b(ojo\s+de\s+buey|downlight|campana|high\s*bay|cobra|alumbrado\s+p[uú]blico)\b", re.IGNORECASE),
+                    re.compile(r"\b(potencia|watts?)\b", re.IGNORECASE),
+                ],
+                question="¿Qué tipo y potencia tiene la luminaria o reflector? (Ej: Panel LED 60x60 cm 40W, Reflector LED 50W, 100W, 200W, Fluorescente 2x32W)",
+                default_options=[
+                    "Panel LED 60x60 cm (40W)",
+                    "Reflector LED 50W",
+                    "Reflector LED 100W",
+                    "Reflector LED 200W",
+                    "Luminaria Fluorescente 2x32W",
+                    "Downlight / Ojo de buey LED 18W"
+                ]
+            )
+        ]
+    ),
+
+    # 16. BOTES Y ACARREOS DE ESCOMBROS Y TIERRA
+    ConstructionFamilyOntology(
+        family_id="BOTES_ACARREOS_ESCOMBROS",
+        name="Carga, Acarreos y Bote de Escombros",
+        activation_patterns=[
+            re.compile(r"\b(bote\s+de\s+escombros?|transporte\s+de\s+escombros?|desalojo\s+de\s+escombros?|aca[r]{1,2}eo\s+de\s+escombros?|bote\s+a\s+botadero|bote\s+de\s+tierra|aca[r]{1,2}eo\s+de\s+tierra)\b", re.IGNORECASE),
+            re.compile(r"\b(carga\s+y\s+transporte|carga\s+y\s+bote)\b", re.IGNORECASE),
+            re.compile(r"\b(bote|desalojo|aca[r]{1,2}eo)\b.*\b(escombros?|material\s+sobrante|desechos?)\b", re.IGNORECASE),
+        ],
+        exclusion_patterns=[
+            re.compile(r"\b(carretilla|a\s+mano\s+hasta\s+\d+\s*m|m3\.m|m3xm|m3\*m)\b", re.IGNORECASE)
+        ],
+        required_parameters=[
+            ParametricRequirement(
+                param_id="distancia_km",
+                label="Distancia al botadero (km)",
+                detection_patterns=[
+                    re.compile(r"\b\d+([\.,]\d+)?\s*(km|kms|kil[oó]metros?)\b", re.IGNORECASE),
+                    re.compile(r"\b(hasta\s*\d+\s*km|distancia|primer\s*km|km\s*adicional)\b", re.IGNORECASE),
+                ],
+                question="¿A qué distancia se encuentra el botadero autorizado? (Ej: hasta 5 km, 10 km, 15 km, 20 km)",
+                default_options=["Hasta 5 km", "Hasta 10 km", "Hasta 15 km", "Hasta 20 km", "Mayor a 20 km"]
+            ),
+            ParametricRequirement(
+                param_id="metodo_carga",
+                label="Método de carga (manual o mecánica)",
+                detection_patterns=[
+                    re.compile(r"\b(a\s+mano|manual|manualmente|a\s+m[aá]quina|mecanic[ao]|con\s+retro|retroexcavadora|minicargador|cargador|bobcat)\b", re.IGNORECASE),
+                ],
+                question="¿Cómo se efectuará la carga al camión? (Ej: Carga a mano / manual, Carga a máquina / mecánica)",
+                default_options=["Carga a máquina (mecánica)", "Carga manual (a mano)"]
+            )
+        ],
+        composite_options_generator=lambda missing_ids: [
+            "Hasta 5 km, Carga a máquina",
+            "Hasta 5 km, Carga manual",
+            "Hasta 10 km, Carga a máquina",
+            "Hasta 15 km, Carga a máquina",
+            "Hasta 20 km, Carga a máquina"
+        ] if set(missing_ids) == {"distancia_km", "metodo_carga"} else None
+    ),
+
+    # 17. PINTURAS Y ACABADOS DE PAREDES Y TECHOS
+    ConstructionFamilyOntology(
+        family_id="PINTURAS_ACABADOS_SUPERFICIALES",
+        name="Pinturas y Revestimientos de Paredes y Techos",
+        activation_patterns=[
+            re.compile(r"\b(pintura|pintar|aplicaci[oó]n\s+de\s+pintura)\b.*\b(pared|paredes|muros?|techos?|cielo\s*raso|fachada|interior(?:es)?|exterior(?:es)?)\b|\b(pintura\s+de\s+caucho|pintura\s+de\s+esmalte|pintura\s+ep[oó]xica|pintura\s+para\s+tr[aá]fico|fondo\s+anticorrosivo)\b", re.IGNORECASE),
+            re.compile(r"\b(pintar\s+(?:las?\s+)?(?:pared|paredes|techos?|fachadas?))\b", re.IGNORECASE),
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + [
+            re.compile(r"\b(demarcaci[oó]n|se[nñ]alizaci[oó]n|impermeabili\w+|manto)\b", re.IGNORECASE)
+        ],
+        required_parameters=[
+            ParametricRequirement(
+                param_id="tipo_pintura",
+                label="Tipo de pintura",
+                detection_patterns=[
+                    re.compile(r"\b(caucho|esmalte|ep[oó]xic[ao]|oleo|[oó]leo|satinad[ao]|anticorrosivo|fondo|acrilic[ao]|poliuretano|tr[aá]fico|clase\s+[abc])\b", re.IGNORECASE),
+                    re.compile(r"\b(tipo\s+caucho|tipo\s+esmalte)\b", re.IGNORECASE),
+                ],
+                question="¿Qué tipo de pintura se va a aplicar? (Ej: Pintura de Caucho Clase A, Esmalte brillante, Epóxica, Fondo anticorrosivo)",
+                default_options=[
+                    "Pintura de Caucho Clase A (Interiores/Exteriores)",
+                    "Pintura de Esmalte Sintético Brillante",
+                    "Pintura Epóxica de alta resistencia",
+                    "Pintura Satinada / Seda",
+                    "Fondo Anticorrosivo"
+                ]
+            )
+        ]
+    ),
+
+    # 18. PUERTAS, VENTANAS Y PORTONES
+    ConstructionFamilyOntology(
+        family_id="PUERTAS_VENTANAS_CARPINTERIA",
+        name="Puertas, Ventanas y Portones",
+        activation_patterns=[
+            re.compile(r"\b(suministro\s+(?:y|e)\s+(?:instalaci[oó]n|colocaci[oó]n)|instalaci[oó]n|fabricaci[oó]n|montaje)\b.*\b(puertas?|ventanas?|port[oó]n|portones)\b|\b(puertas?|ventanas?|port[oó]n|portones)\b.*\b(madera|hierro|metal|met[aá]lic[ao]|aluminio|entamborad[ao]|arrollable)\b", re.IGNORECASE),
+            re.compile(r"\b(puertas?\s+de\s+madera|puertas?\s+de\s+hierro|puertas?\s+de\s+aluminio|ventanas?\s+de\s+aluminio|port[oó]n\s+met[aá]lico|port[oó]n\s+de\s+hierro)\b", re.IGNORECASE),
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + [
+            re.compile(r"\b(cerradura|cerrojo|pomos?|manilla|bisagra|mantenimiento|reparaci[oó]n)\b", re.IGNORECASE)
+        ],
+        required_parameters=[
+            ParametricRequirement(
+                param_id="tipo_material_dimensiones",
+                label="Dimensiones y material de la puerta o ventana",
+                detection_patterns=[
+                    re.compile(r"\b\d+([\.,]\d+)?\s*x\s*\d+([\.,]\d+)?\s*(m|cms?|metros?)?\b", re.IGNORECASE),
+                    re.compile(r"\b(0\.90\s*x\s*2\.10|0\.80\s*x\s*2\.10|0\.70\s*x\s*2\.10|1\.00\s*x\s*2\.10|1\.20\s*x\s*1\.50|1\.50\s*x\s*1\.50)\b", re.IGNORECASE),
+                    re.compile(r"\b(medidas?|dimensi[oó]n(?:es)?|ancho|alto)\b", re.IGNORECASE),
+                ],
+                question="¿Qué dimensiones (Ancho x Alto) y material tiene la puerta o ventana? (Ej: 0.90x2.10 m madera entamborada, 1.20x1.50 m aluminio y vidrio)",
+                default_options=[
+                    "Puerta 0.90 x 2.10 m Madera Entamborada",
+                    "Puerta 0.80 x 2.10 m Madera Entamborada",
+                    "Puerta 0.90 x 2.10 m Metálica (Hierro/Lámina)",
+                    "Ventana 1.20 x 1.50 m Aluminio y Vidrio",
+                    "Ventana 1.50 x 1.50 m Aluminio y Vidrio",
+                    "Portón Metálico Corredizo"
+                ]
+            )
+        ]
+    ),
+
+    # 19. ESTRUCTURAS METÁLICAS Y ACERO ESTRUCTURAL
+    ConstructionFamilyOntology(
+        family_id="ESTRUCTURAS_METALICAS_ACERO",
+        name="Estructuras Metálicas y Perfiles de Acero",
+        activation_patterns=[
+            re.compile(r"\b(estructura\s+met[aá]lica|estructuras\s+met[aá]licas|acero\s+estructural)\b", re.IGNORECASE),
+            re.compile(r"\b(suministro\s+(?:y|e)\s+(?:instalaci[oó]n|colocaci[oó]n)|fabricaci[oó]n|montaje)\b.*\b(vigas?\s+met[aá]licas?|columnas?\s+met[aá]licas?|perfil\s+ipe|perfil\s+hea|perfil\s+heb|tubo\s+estructural|conduven)\b", re.IGNORECASE),
+            re.compile(r"\b(perfil\s+ipe|perfil\s+hea|perfil\s+heb|perfil\s+conduven|viga\s+ipe|columna\s+hea)\b", re.IGNORECASE),
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + [
+            re.compile(r"\b(pintura|fondo|anticorrosivo)\b", re.IGNORECASE)
+        ],
+        required_parameters=[
+            ParametricRequirement(
+                param_id="tipo_perfil_dimension",
+                label="Tipo de perfil o sección estructural",
+                detection_patterns=[
+                    re.compile(r"\b(ipe|hea|heb|conduven|upn|ipn|w)\s*[- ]?\d+\b", re.IGNORECASE),
+                    re.compile(r"\b\d+\s*x\s*\d+\s*(?:mm|\"|pulg)?\b", re.IGNORECASE),
+                    re.compile(r"\b\d+([\.,]\d+)?\s*(kg\/m|kgf\/m)\b", re.IGNORECASE),
+                    re.compile(r"\b(perfil|secci[oó]n|dimensi[oó]n(?:es)?)\b", re.IGNORECASE),
+                ],
+                question="¿Qué tipo de perfil o sección estructural de acero se utilizará? (Ej: IPE-160, IPE-200, HEA-200, Tubo Conduven 100x100, Conduven 140x140)",
+                default_options=[
+                    "Perfil IPE-160",
+                    "Perfil IPE-200",
+                    "Perfil HEA-200",
+                    "Tubo Estructural Conduven 100x100 mm",
+                    "Tubo Estructural Conduven 140x140 mm",
+                    "Perfil Ángulo 2\" x 2\" x 1/4\""
+                ]
+            )
+        ]
+    ),
+
+    # 20. CERRAMIENTOS Y CONCERTINAS DE SEGURIDAD
+    ConstructionFamilyOntology(
+        family_id="CERRAMIENTOS_CONCERTINAS_SEGURIDAD",
+        name="Concertinas y Cerramientos de Seguridad",
+        activation_patterns=[
+            re.compile(r"\b(concertinas?|cercado\s+de\s+seguridad|alambre\s+de\s+p[uú]as|concertina\s+de\s+seguridad)\b", re.IGNORECASE)
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        required_parameters=[
+            ParametricRequirement(
+                param_id="diametro",
+                label="Diámetro de la concertina",
+                detection_patterns=[
+                    re.compile(r"\b\d+([\.,]\d+)?\s*(cm|cms|pulgadas?|\"|mm)\b", re.IGNORECASE),
+                    re.compile(r"\b(di[aá]metro|medida)\b", re.IGNORECASE),
+                ],
+                question="¿Qué diámetro o formato tiene la concertina de seguridad? (Ej: 45 cm / 18\", 60 cm / 24\")",
+                default_options=["45 cm (18\")", "60 cm (24\")", "75 cm (30\")", "90 cm (36\")"]
+            )
+        ]
+    ),
+
+    # 21. TANQUES DE AGUA Y ALMACENAMIENTO
+    ConstructionFamilyOntology(
+        family_id="TANQUES_ALMACENAMIENTO_AGUA",
+        name="Tanques de Agua y Almacenamiento",
+        activation_patterns=[
+            re.compile(r"\b(tanques?\s+de\s+agua|tanques?\s+pl[aá]sticos?|tanques?\s+para\s+agua|tanques?\s+a[eé]reos?|tanques?\s+subterr[aá]neos?|tanques?\s+cil[ií]ndricos?|tanques?\s+tipo\s+botella)\b|\b(instalaci[oó]n|suministro|suministro\s+e\s+instalaci[oó]n|colocaci[oó]n)\b.*\btanques?\b", re.IGNORECASE),
+            re.compile(r"\btanques?\s+(?:de\s+reserva|hidroneum[aá]ticos?)\b", re.IGNORECASE),
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + [
+            re.compile(r"\b(lavado|limpieza|desinfecci[oó]n|mantenimiento|reparaci[oó]n)\b", re.IGNORECASE)
+        ],
+        required_parameters=[
+            ParametricRequirement(
+                param_id="capacidad_volumen",
+                label="Capacidad o volumen del tanque",
+                detection_patterns=[
+                    re.compile(r"\b\d+([\.,]\d+)?\s*(lts?|litros?|m3|m³|gal|galones?)\b", re.IGNORECASE),
+                    re.compile(r"\b(capacidad|volumen)\b", re.IGNORECASE),
+                ],
+                question="¿De qué capacidad o volumen es el tanque de agua? (Ej: 500 lts, 1000 lts, 1500 lts, 2000 lts, 5000 lts)",
+                default_options=["500 Litros", "1000 Litros", "1500 Litros", "2000 Litros", "2500 Litros", "5000 Litros"]
             )
         ]
     )
