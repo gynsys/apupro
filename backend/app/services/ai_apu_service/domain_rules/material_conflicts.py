@@ -75,6 +75,43 @@ def _enforce_primary_materials_mutual_exclusion(result: Dict[str, Any], user_des
                 r"\bFLIH?GT\b",
                 r"\bTRITURADOR\w*\b"
             ]
+        },
+        "tuberias": {
+            "SANITARIAS_AGUA": [
+                r"\bPPR\b",
+                r"\bPOLIPROPILENO\b",
+                r"\bTERMOFUSI[OÓ]N\b",
+                r"\bAGUA(S)?\s+BLANCA(S)?\b",
+                r"\bAGUA(S)?\s+CLARA(S)?\b",
+                r"\bAGUA\s+POTABLE\b",
+                r"\bPVC\s+PRESI[OÓ]N\b",
+                r"\bPVC\s+AGUA(S)?\b",
+                r"\bCOBRE\b",
+                r"\bCPVC\b",
+                r"\bPE-?AL-?PE\b",
+                r"\bPEAD\b",
+                r"\bPOLIETILENO\b"
+            ],
+            "ELECTRICAS_CONDUIT": [
+                r"\bELECTRICIDAD\b",
+                r"\bELECTRIC\w*\b",
+                r"\bCONDUIT\b",
+                r"\bEMT\b",
+                r"\bUNISTRU[TD]\b",
+                r"\bCONDULET\b",
+                r"\bCAJETIN\b",
+                r"\bBX\b",
+                r"\bFLEXIBLE\s+CORRUGAD\w*\b"
+            ],
+            "SANITARIAS_DESAGUE": [
+                r"\bAGUAS?\s+NEGRAS?\b",
+                r"\bAGUAS?\s+SERVIDAS?\b",
+                r"\bPVC\s+SANIDAD?\b",
+                r"\bPVC\s+VENTILACI[OÓ]N\b",
+                r"\bNORMA\s+656\b",
+                r"\bDESAG[UÜ]E\b",
+                r"\bBAJANTE\b"
+            ]
         }
     }
 
@@ -131,6 +168,11 @@ def _enforce_primary_materials_mutual_exclusion(result: Dict[str, Any], user_des
                     if re.search(r"\bBOMBA\b", m_desc) and not re.search(r"\b(SUMERGIBLE|LAPICERO)\b", m_desc):
                         is_conflicting = True
 
+                # Purgar rieles unistrut y tuberías eléctricas si la tubería activa es de agua / sanitaria
+                if "SANITARIAS_AGUA" in active_subtypes and m_origen == "historico":
+                    if re.search(r"\b(UNISTRU[TD]|CONDUIT|CONDULET|ELECTRICIDAD|CANALIZACION|CAJETIN)\b", m_desc):
+                        is_conflicting = True
+
                 if is_conflicting:
                     purged_items.append(m.get("descripcion") or m.get("codigo") or "Insumo incompatible")
                 else:
@@ -157,6 +199,19 @@ def _enforce_primary_materials_mutual_exclusion(result: Dict[str, Any], user_des
                         if re.search(r"\bBOMBA\b", eq_desc) and not re.search(r"\b(SUMERGIBLE|LAPICERO)\b", eq_desc):
                             is_conflicting_eq = True
                     if is_conflicting_eq:
+                        purged_items.append(eq.get("descripcion") or eq.get("codigo") or "Equipo incompatible")
+                    else:
+                        retained_equipments.append(eq)
+                result["equipments"] = retained_equipments
+
+            # Purgar equipos de tubería eléctrica si el grupo activo es tubería de agua
+            if group_name == "tuberias" and "SANITARIAS_AGUA" in active_subtypes and result.get("equipments"):
+                retained_equipments: List[Dict[str, Any]] = []
+                for eq in result["equipments"]:
+                    if not isinstance(eq, dict):
+                        continue
+                    eq_desc = str(eq.get("descripcion", "")).upper()
+                    if re.search(r"\b(EQUIPO\s+PARA\s+TUBERIA\s+ELECTRICA|DOBLADORA\s+DE\s+CONDUIT|TERRAJA\s+ELECTRICA)\b", eq_desc):
                         purged_items.append(eq.get("descripcion") or eq.get("codigo") or "Equipo incompatible")
                     else:
                         retained_equipments.append(eq)

@@ -23,6 +23,41 @@ REBAR_MAP: Dict[int, Tuple[float, str]] = {
 }
 
 
+# Equivalencia nominal pulgadas <-> diámetro externo métrico ISO 4065 (PPR / PEAD / termofusión)
+INCH_TO_METRIC_PLASTIC_OD_MM: List[Tuple[float, float]] = [
+    (0.50, 20.0),   # 1/2"   <-> 20 mm
+    (0.75, 25.0),   # 3/4"   <-> 25 mm
+    (1.00, 32.0),   # 1"     <-> 32 mm
+    (1.25, 40.0),   # 1 1/4" <-> 40 mm
+    (1.50, 50.0),   # 1 1/2" <-> 50 mm
+    (2.00, 63.0),   # 2"     <-> 63 mm
+    (2.50, 75.0),   # 2 1/2" <-> 75 mm
+    (3.00, 90.0),   # 3"     <-> 90 mm
+    (4.00, 110.0),  # 4"     <-> 110 mm
+    (6.00, 160.0),  # 6"     <-> 160 mm
+]
+
+_INTERNAL_DIAMETER_PARENS_RE = re.compile(
+    r"\(\s*DIAMETRO\s+(?:INTERNO|NOMINAL)[^)]*\)",
+    re.IGNORECASE,
+)
+_PIPE_CONTEXT_CUES: Tuple[str, ...] = (
+    "TUBERIA", "TUBERÍA", "TUBO", "PPR", "POLIPROPILENO", "TERMOFUSION",
+    "TERMOFUSIÓN", "POLIFUSION", "POLIFUSIÓN", "PVC", "CPVC", "PEAD", "HDPE", "HG",
+)
+_PLASTIC_METRIC_CUES: Tuple[str, ...] = (
+    "POLIPROPILENO", "PPR", "TERMOFUSION", "TERMOFUSIÓN", "POLIFUSION", "POLIFUSIÓN", "PEAD", "HDPE",
+)
+
+
+def _nominal_bore_mm_for_plastic_od(od_mm: float) -> Optional[float]:
+    """Convierte un diámetro externo métrico ISO 4065 (ej. 20 mm, 25 mm, 32 mm) a su nominal en mm (pulg * 25.4)."""
+    for inches, ref_od in INCH_TO_METRIC_PLASTIC_OD_MM:
+        if abs(od_mm - ref_od) <= 0.6:
+            return round(inches * 25.4, 2)
+    return None
+
+
 def parse_fraction(s: str) -> Optional[float]:
     """
     Convierte cadenas numéricas fraccionarias o enteras ('1/2', '3/4', '1-1/2', '1 1/2', '2') a float.
@@ -56,12 +91,19 @@ def parse_fraction(s: str) -> Optional[float]:
 class DimensionToken:
     """Representa una magnitud técnica dimensional normalizada a unidades canónicas."""
 
-    def __init__(self, dim_type: str, canonical_value: float, raw_text: str) -> None:
+    def __init__(
+        self,
+        dim_type: str,
+        canonical_value: float,
+        raw_text: str,
+        metric_od_mm: Optional[float] = None,
+    ) -> None:
         if not dim_type or not isinstance(dim_type, str):
             raise ValueError("dim_type debe ser un string no vacío")
         self.dim_type: str = dim_type
         self.canonical_value: float = float(canonical_value)
         self.raw_text: str = str(raw_text)
+        self.metric_od_mm: Optional[float] = float(metric_od_mm) if metric_od_mm is not None else None
 
     def __repr__(self) -> str:
         return f"<{self.dim_type}: {self.canonical_value} (raw: '{self.raw_text}')>"
@@ -71,9 +113,19 @@ class DimensionToken:
         if not isinstance(other, DimensionToken) or self.dim_type != other.dim_type:
             return False
 
-        # Para diámetros, tolerancia de 1.2 mm o 4% para contemplar redondeos (12.7 mm ~ 13 mm)
+        # Para diámetros: si ambos vienen en mm explícitos se compara el mm directo;
+        # si uno viene en pulgadas y otro en mm nominal PPR/PEAD se compara canonical_value.
         if self.dim_type == "diameter_mm":
-            return abs(self.canonical_value - other.canonical_value) <= max(1.2, 0.04 * self.canonical_value)
+            if self.metric_od_mm is not None and other.metric_od_mm is not None:
+                ref = max(self.metric_od_mm, other.metric_od_mm)
+                if abs(self.metric_od_mm - other.metric_od_mm) <= max(1.2, 0.04 * ref):
+                    return True
+            ref_c = max(self.canonical_value, other.canonical_value)
+            return abs(self.canonical_value - other.canonical_value) <= max(1.2, 0.04 * ref_c)
+
+        # Para espesores en cm (ej. e=20 cm vs 0.20 m de espesor)
+        if self.dim_type == "thickness_cm":
+            return abs(self.canonical_value - other.canonical_value) <= max(0.5, 0.05 * self.canonical_value)
 
         # Para voltaje, 110V coincide con 115V o 120V (misma clase residencial), 208V con 220V/240V
         if self.dim_type == "voltage_v":
@@ -120,20 +172,50 @@ def extract_unified_dimensions(text_input: str) -> List[DimensionToken]:
     tokens: List[DimensionToken] = []
 
     try:
-        # 1. Diámetros métricos en mm: ej. 20 mm, 90 mm, 110 mm
-        for m in re.finditer(r"(?<![\d.,])(\d+(?:[.,]\d+)?)\s*mm\b", text_input, re.IGNORECASE):
-            val = float(m.group(1).replace(",", "."))
-            tokens.append(DimensionToken("diameter_mm", round(val, 2), m.group(0)))
+        cleaned_input = _INTERNAL_DIAMETER_PARENS_RE.sub(" ", text_input)
+        upper_input = cleaned_input.upper()
+        is_plastic_metric = any(cue in upper_input for cue in _PLASTIC_METRIC_CUES)
 
-        # 2. Diámetros en pulgadas: ej. 1/2", 3/4", 1", 1-1/2", 2 pulg
-        for m in re.finditer(r"(?<![\d.,])(\d+(?:\s*[-/]\s*\d+)?|\d+(?:[.,]\d+)?)\s*(?:[\"”]|pulg(?:adas?)?|plg\b)", text_input, re.IGNORECASE):
+        # 1. Diámetros métricos en mm: ej. 20 mm, 90 mm, 110 mm (excluyendo espesores "e = 3.2 mm")
+        for m in re.finditer(r"(?<![\d.,])(\d+(?:[.,]\d+)?)\s*mm\b", cleaned_input, re.IGNORECASE):
+            prefix = cleaned_input[max(0, m.start() - 14):m.start()]
+            if re.search(r"(?:\be\s*=\s*|\bespesor\s*=?\s*)$", prefix, re.IGNORECASE):
+                continue
+            val = float(m.group(1).replace(",", "."))
+            nominal_mm = _nominal_bore_mm_for_plastic_od(val) if is_plastic_metric else None
+            canonical = nominal_mm if nominal_mm is not None else round(val, 2)
+            tok = DimensionToken("diameter_mm", canonical, m.group(0), metric_od_mm=round(val, 2))
+            if not any(existing.dim_type == "diameter_mm" and existing.matches(tok) for existing in tokens):
+                tokens.append(tok)
+
+        # 2. Diámetros en pulgadas: ej. 2 1/2", 1-1/2", 1/2", 3/4", 1", 2 pulg
+        for m in re.finditer(
+            r"(?<!\d\s)(?<![\d.,/-])(\d+\s*[- ]\s*\d+\s*/\s*\d+|\d+\s*/\s*\d+|\d+(?:[.,]\d+)?)\s*(?:[\"”]|pulg(?:adas?)?|plg\b)",
+            cleaned_input,
+            re.IGNORECASE,
+        ):
             frac = parse_fraction(m.group(1))
             if frac is not None and frac > 0:
-                mm_val = frac * 25.4
-                tokens.append(DimensionToken("diameter_mm", round(mm_val, 2), m.group(0)))
+                mm_val = round(frac * 25.4, 2)
+                tok = DimensionToken("diameter_mm", mm_val, m.group(0))
+                if not any(existing.dim_type == "diameter_mm" and existing.matches(tok) for existing in tokens):
+                    tokens.append(tok)
+
+        # 2b. Fracciones de pulgada sin comillas en contexto de tubería (ej. "ppr 1/2", "tubería 1 1/2")
+        has_diameter = any(t.dim_type == "diameter_mm" for t in tokens)
+        if not has_diameter and any(cue in upper_input for cue in _PIPE_CONTEXT_CUES):
+            m_frac = re.search(
+                r"(?<!\d\s)(?<![\d.,/:-])(\d+\s*[- ]\s*\d+\s*/\s*\d+|\d+\s*/\s*\d+)(?![\d.,/:])",
+                cleaned_input,
+            )
+            if m_frac:
+                frac_val = parse_fraction(m_frac.group(1))
+                if frac_val is not None and 0.20 <= frac_val <= 12.0:
+                    mm_val = round(frac_val * 25.4, 2)
+                    tokens.append(DimensionToken("diameter_mm", mm_val, m_frac.group(0)))
 
         # 3. Cabillas de refuerzo (#3, #4, #5, #6, #8, cabilla #4)
-        for m in re.finditer(r"(?:cabilla|acero)?\s*(?:#|n[°o]\.?\s*)(\d+)\b", text_input, re.IGNORECASE):
+        for m in re.finditer(r"(?:cabilla|acero)?\s*(?:#|n[°o]\.?\s*)(\d+)\b", cleaned_input, re.IGNORECASE):
             num = int(m.group(1))
             if num in REBAR_MAP:
                 mm_val, _ = REBAR_MAP[num]
@@ -141,21 +223,22 @@ def extract_unified_dimensions(text_input: str) -> List[DimensionToken]:
                 tokens.append(DimensionToken("rebar_num", float(num), m.group(0)))
 
         # 4. Concreto / Mortero: kg/cm2 o f'c = 210
-        for m in re.finditer(r"(?:f'?c\s*=?\s*|(?<![\d.,]))(\d+(?:[.,]\d+)?)\s*(?:kg/?cm2|kgf/?cm2)\b", text_input, re.IGNORECASE):
+        for m in re.finditer(r"(?:f'?c\s*=?\s*|(?<![\d.,]))(\d+(?:[.,]\d+)?)\s*(?:kg/?cm2|kgf/?cm2)\b", cleaned_input, re.IGNORECASE):
             val = float(m.group(1).replace(",", "."))
             tokens.append(DimensionToken("concrete_kg_cm2", val, m.group(0)))
-        for m in re.finditer(r"\bf'?c\s*=?\s*(\d{2,3})\b", text_input, re.IGNORECASE):
+        for m in re.finditer(r"\bf'?c\s*=?\s*(\d{2,3})\b", cleaned_input, re.IGNORECASE):
             val = float(m.group(1))
-            tokens.append(DimensionToken("concrete_kg_cm2", val, m.group(0)))
+            if not any(t.dim_type == "concrete_kg_cm2" and abs(t.canonical_value - val) <= 1.0 for t in tokens):
+                tokens.append(DimensionToken("concrete_kg_cm2", val, m.group(0)))
 
         # 5. Presión Nominal PN y SDR: PN 16, SDR 11
-        for m in re.finditer(r"\b(pn|sdr)\s*(\d+(?:[.,]\d+)?)\b", text_input, re.IGNORECASE):
+        for m in re.finditer(r"\b(pn|sdr)\s*(\d+(?:[.,]\d+)?)\b", cleaned_input, re.IGNORECASE):
             tipo = m.group(1).lower()
             val = float(m.group(2).replace(",", "."))
             tokens.append(DimensionToken(f"pressure_{tipo}", val, m.group(0)))
 
         # 6. Voltaje: soporta voltajes simples (110v, 220v) y duales (110/220v, 220/440v)
-        for m in re.finditer(r"(?<![\d.,])(\d+(?:[.,]\d+)?)(?:\s*/\s*(\d+(?:[.,]\d+)?))?\s*(v|kv|volt(?:ios?)?)\b", text_input, re.IGNORECASE):
+        for m in re.finditer(r"(?<![\d.,])(\d+(?:[.,]\d+)?)(?:\s*/\s*(\d+(?:[.,]\d+)?))?\s*(v|kv|volt(?:ios?)?)\b", cleaned_input, re.IGNORECASE):
             unit_str = (m.group(3) or "").lower()
             multiplier = 1000.0 if unit_str == "kv" else 1.0
             v1 = float(m.group(1).replace(",", ".")) * multiplier
@@ -165,7 +248,7 @@ def extract_unified_dimensions(text_input: str) -> List[DimensionToken]:
                 tokens.append(DimensionToken("voltage_v", v2, m.group(0)))
 
         # 7. Potencia: hp, kw
-        for m in re.finditer(r"(?<![\d.,])(\d+(?:\s*[-/]\s*\d+)?|\d+(?:[.,]\d+)?)\s*(hp|kw)\b", text_input, re.IGNORECASE):
+        for m in re.finditer(r"(?<![\d.,])(\d+(?:\s*[-/]\s*\d+)?|\d+(?:[.,]\d+)?)\s*(hp|kw)\b", cleaned_input, re.IGNORECASE):
             frac = parse_fraction(m.group(1))
             unit_str = (m.group(2) or "").lower()
             if frac is not None:
@@ -173,10 +256,25 @@ def extract_unified_dimensions(text_input: str) -> List[DimensionToken]:
                 tokens.append(DimensionToken("power_hp", round(hp_val, 2), m.group(0)))
 
         # 8. Calibre de cables AWG
-        for m in re.finditer(r"(?<![\d.,])(\d+)\s*(?:awg|calibre\s*#?\s*(\d+))\b", text_input, re.IGNORECASE):
+        for m in re.finditer(r"(?<![\d.,])(\d+)\s*(?:awg|calibre\s*#?\s*(\d+))\b", cleaned_input, re.IGNORECASE):
             num_str = m.group(1) or m.group(2)
             if num_str:
                 tokens.append(DimensionToken("gauge_awg", float(int(num_str)), m.group(0)))
+
+        # 9. Espesores en cm o m: "e=20 cm", "espesor 10 cm", "espesor 25 cms", "0.10 m de espesor"
+        for m_th in re.finditer(
+            r"(?:\be\s*=\s*|\bespesor\s*(?:de\s*)?=?\s*)(\d+(?:[.,]\d+)?)\s*(cm|cms|m|mm)\b"
+            r"|(?<![\d.,])(\d+(?:[.,]\d+)?)\s*(cm|cms|m)\s+de\s+espesor\b",
+            cleaned_input,
+            re.IGNORECASE,
+        ):
+            num_s = m_th.group(1) or m_th.group(3)
+            unit_s = (m_th.group(2) or m_th.group(4) or "cm").lower()
+            val = float(num_s.replace(",", "."))
+            cm_val = val * 100.0 if unit_s == "m" else (val / 10.0 if unit_s == "mm" else val)
+            tok_th = DimensionToken("thickness_cm", round(cm_val, 2), m_th.group(0))
+            if not any(existing.dim_type == "thickness_cm" and existing.matches(tok_th) for existing in tokens):
+                tokens.append(tok_th)
 
     except Exception as exc:
         logger.error("Error extrayendo dimensiones de texto '%s': %s", text_input, exc, exc_info=True)

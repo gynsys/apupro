@@ -187,6 +187,19 @@ def enforce_discordant_inputs_purging(
                     })
                     continue
 
+            # Poda de tuberías eléctricas y rieles unistrut en partidas sanitarias/agua potable
+            is_sanitary_water = any(k in desc_lower for k in ["ppr", "polipropileno", "agua potable", "aguas blancas", "aguas claras", "plomeria", "fontaneria", "sanitaria", "sanitarias", "termofusion"])
+            if is_sanitary_water:
+                if re.search(r"\b(TUBO\s+PVC\s+ELECTRICIDAD|CONDUIT|UNISTRU[TD]|CONDULET|CAJETIN|TABLERO\s+ELECTRICO|BREAKER|CABLE\s+THW|TUBERIA\s+ELECTRICA)\b", mat_desc_upper):
+                    logger.info("[DiscordantPruning] Purgado material eléctrico discordante en partida de agua potable/sanitaria: %s", mat_desc)
+                    pruning_trace["insumos_purgados"].append({
+                        "descripcion": mat_desc,
+                        "codigo": mat.get("codigo"),
+                        "motivo": "Material de canalización eléctrica incompatible con partida de agua potable/sanitaria",
+                        "regla": "DISCIPLINA_AJENA_SANITARIAS"
+                    })
+                    continue
+
             seen_mat_keys.add(mat_key)
             clean_materials.append(mat)
 
@@ -259,6 +272,19 @@ def enforce_discordant_inputs_purging(
                         "codigo": eq.get("codigo"),
                         "motivo": "Equipo de corte de cabilla industrial incompatible con partida de piso o acabado",
                         "regla": "EQUIPO_DISCORDANTE_PISOS"
+                    })
+                    continue
+
+            # Poda de equipo de tubería eléctrica en partidas de agua potable/sanitarias
+            is_sanitary_water = any(k in desc_lower for k in ["ppr", "polipropileno", "agua potable", "aguas blancas", "aguas claras", "plomeria", "fontaneria", "sanitaria", "sanitarias", "termofusion"])
+            if is_sanitary_water:
+                if re.search(r"\b(EQUIPO\s+PARA\s+TUBERIA\s+ELECTRICA|DOBLADORA\s+DE\s+CONDUIT|TERRAJA\s+ELECTRICA|ROSCADORA\s+ELECTRICA)\b", eq_desc_upper):
+                    logger.info("[DiscordantPruning] Purgado equipo eléctrico discordante en partida de agua potable/sanitaria: %s", eq_desc)
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Equipo de tubería eléctrica incompatible con partida de agua potable/sanitaria",
+                        "regla": "EQUIPO_DISCORDANTE_SANITARIAS"
                     })
                     continue
 

@@ -1,0 +1,164 @@
+[
+ {
+  "query": "instalación de bomba sumergible de 3 hp en pozo profundo",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-09-21T12-27-34-871Z.json"
+ },
+ {
+  "query": "acondicionamiento de marco metálico, incluye el cepillado y lijado con esmeril, aplicación de masilla de fibra de vidrio, fondo de cromato de zinc y pintura de esmalte",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-09-21T19-12-43-510Z.json"
+ },
+ {
+  "query": "construccion de pared de bloque de cemento e=20 cm rellenos con concreto. no incluye el suministro de los materiales",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-09-22T01-16-08-805Z.json"
+ },
+ {
+  "query": "construcción de pared de bloque de cemento e=20 cm rellenos con concreto. no incluye el suministro de los materiales",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-09-23T01-05-18-120Z.json"
+ },
+ {
+  "query": "acarreo a mano de piedra bruta en terrenos plano de 40 m de distancia. no incluye el suministro de la piedra bruta",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-09-23T01-21-09-939Z.json"
+ },
+ {
+  "query": "Acarreo de piedra bruta para la construcción de muro de gaviones. Incluye el suministro de la piedra, m3.m, 50m",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-09-23T22-40-13-173Z.json"
+ },
+ {
+  "query": "reacondicionamiento de superficie, repicando el friso base, aplicando salpicado de mortero, reconstruyendo  friso base y mezclilla",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-09-24T00-24-41-761Z.json"
+ },
+ {
+  "query": "REACONDICIONAMIENTO DE SUPERFICIE DE PAREDES a rapel: REPICADO DE FRISO BASE EXISTENTE, RECONSTRUCCIÓN DE FRISO BASE CON MORTERO DE CAL, ARENA Y CEMENTO 1:2 + 10%, Y APLICACIÓN DE ACABADO SALPICADO CON SALPICADORA. INCLUYE PICADO, LIMPIEZA, RETIRO DE ESCOMBROS, ANDAMIOS Y HERRAMIENTAS MENORES. NO INCLUYE PINTURA.",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-09-24T00-25-59-242Z.json"
+ },
+ {
+  "query": "reacondicionamiento de paredes a rapel, mediante la escarificación de friso base dañado, salpicado con motero, reconstruccion de friso base y aplicación de mezclilla. No incluye el suministro de materiales",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-09-24T13-07-17-109Z.json"
+ },
+ {
+  "query": "reacondicionamiento de estructura metalica de peldaños de escalera, incluye la remocion de oxido y aplicacion de fondo anticorrosivo",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-09-25T02-43-56-157Z.json"
+ },
+ {
+  "query": "Pintura de paredes a rapel unidad m2",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-09-25T02-55-10-978Z.json"
+ },
+ {
+  "query": "Instalación de equipo hidroneumatico para vivienda unifamiliar Incluye conexiones y accesorios unidad und, 1 hp",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-09-26T02-16-55-655Z.json"
+ },
+ {
+  "query": "pintura, pintura, pisos, pintura epoxica, a mano, incluye el suministro de la pintura",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-09-27T01-34-11-877Z.json"
+ },
+ {
+  "query": "Pintura de paredes en epoxica interiores incluye suministro de mayeriales unidad m2",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-09-27T02-04-38-734Z.json"
+ },
+ {
+  "query": "casa, aplicacion, piso, epoxica, a mano",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-09-27T13-04-07-277Z.json"
+ },
+ {
+  "query": "construccion de muro de gaviones con piedra bruta. no incluye el suministro de piedra bruta",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-10-06T11-15-51-745Z.json"
+ },
+ {
+  "query": "suministro e instalacion de bomba sumergible de 5 hp para pozo profundo",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-10-07T01-41-08-155Z.json"
+ },
+ {
+  "query": "Desmontaje de Bomba sumergible para pozo con Potencia 3 HP En pozo profundo a 80m unidad und",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-10-09T12-53-59-045Z.json"
+ },
+ {
+  "query": "desmontaje de estrucutura metalica correspondiente a escalera",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-10-09T13-05-36-098Z.json"
+ },
+ {
+  "query": "desmontaje de bomba centrifuga, 3 HP",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-10-09T13-06-44-683Z.json"
+ },
+ {
+  "query": "costruccion de sobrepiso requemado utilizando oxido color negro",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-10-10T03-14-43-893Z.json"
+ },
+ {
+  "query": "construccion de piso requemado utilizando oxido negro, e=2.5 cm, Mortero Cemento-Arena 1:3",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-10-10T11-49-06-590Z.json"
+ },
+ {
+  "query": "Construcción de Columnas y vigas con utilizando varilla de fibra como refuerzo y concreto fc 250 En exteriores incluye el suministro de los materiales unidad m3",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-10-10T12-12-15-304Z.json"
+ },
+ {
+  "query": "Reparación de escalera metalica incluye la remoción de óxidos con equipo liviano y aplicacion de fondo anticorrosivo a base de zinc unidad Gl",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-10-12T06-51-18-270Z.json"
+ },
+ {
+  "query": "demolicion de pios con Espesor e=10 cm incluye no incluye bote de escombros unidad m2",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-10-12T07-56-25-859Z.json"
+ },
+ {
+  "query": "reconstruccion de de friso en paredes a rapel unidad m2",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-10-14T11-12-37-415Z.json"
+ },
+ {
+  "query": "Suministro e instalación de Transformador En exteriores unidad pza, 15 kVA",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-10-14T11-15-15-321Z.json"
+ },
+ {
+  "query": "Reparación de escalera metálica incluye la remocion de oxidos con equipos livianos, aplicacion de fondo anticorrosivo a bse de zinc y pintura esmalte unidad Gl",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-10-14T12-27-24-693Z.json"
+ },
+ {
+  "query": "Suministro e instalación de paneles solares en vivienda unifamiliar unidad und",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-10-15T03-31-55-969Z.json"
+ },
+ {
+  "query": "Suministro e instalación de televisor led unidad und",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-10-15T04-52-45-421Z.json"
+ },
+ {
+  "query": "Suministro e instalación de Tubería Para aguas blancas unidad ml, 10\", 6\"",
+  "acceptable_ids": [],
+  "source": "debug_apu_2026-10-15T12-24-48-234Z.json"
+ },
+ {
+  "query": "Suministro e instalación de Tubería con ppr 1/2 en instalaciones domesticas Incluye conexiones y accesorios unidad ml",
+  "acceptable_ids": [
+   "EST253"
+  ],
+  "source": "debug_apu_2026-10-16T01-09-49-244Z.json"
+ }
+]

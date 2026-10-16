@@ -645,13 +645,35 @@ def balance_crew_specialties(labors: List[Dict[str, Any]], typology: str) -> Tup
         else:
             others.append(item)
 
-    # Sustitución de oficios incompatibles para ESTRUCTURAS_METALICAS
+    # Sustitución de oficios incompatibles para disciplinas especializadas
     if typology == "ESTRUCTURAS_METALICAS":
         for s in specialists:
             s_desc = str(s.get("descripcion", "")).upper()
             if any(inc in s_desc for inc in ["CABILLERO", "CARPINTERO", "ALBAÑIL", "PLOMERO"]):
                 s["descripcion"] = "HERRERO DE 1RA"
                 notes.append(f"Oficio especializado calibrado: Se sustituyó cargo incompatible '{s_desc}' de la base por HERRERO DE 1RA.")
+    elif typology == "SANITARIAS":
+        for s in specialists:
+            s_desc = str(s.get("descripcion", "")).upper()
+            if any(inc in s_desc for inc in ["ELECTRICISTA", "CABILLERO", "CARPINTERO", "PINTOR"]):
+                s["descripcion"] = "PLOMERO DE 1RA"
+                notes.append(f"Oficio especializado calibrado: Se sustituyó cargo incompatible '{s_desc}' de la base por PLOMERO DE 1RA.")
+        for o in others:
+            o_desc = str(o.get("descripcion", "")).upper()
+            if "ELECTRICISTA" in o_desc:
+                o["descripcion"] = "MAESTRO PLOMERO -N7"
+                notes.append(f"Supervisión calibrada: Se sustituyó supervisión incompatible '{o_desc}' de la base por MAESTRO PLOMERO.")
+    elif typology == "ELECTRICAS":
+        for s in specialists:
+            s_desc = str(s.get("descripcion", "")).upper()
+            if any(inc in s_desc for inc in ["PLOMERO", "CABILLERO", "CARPINTERO", "PINTOR"]):
+                s["descripcion"] = "ELECTRICISTA DE 1RA"
+                notes.append(f"Oficio especializado calibrado: Se sustituyó cargo incompatible '{s_desc}' de la base por ELECTRICISTA DE 1RA.")
+        for o in others:
+            o_desc = str(o.get("descripcion", "")).upper()
+            if "PLOMERO" in o_desc:
+                o["descripcion"] = "MAESTRO ELECTRICISTA -N7"
+                notes.append(f"Supervisión calibrada: Se sustituyó supervisión incompatible '{o_desc}' de la base por MAESTRO ELECTRICISTA.")
 
     spec_count = sum(float(s.get("cantidad", 1.0) or 1.0) for s in specialists)
     help_count = sum(float(h.get("cantidad", 1.0) or 1.0) for h in helpers)

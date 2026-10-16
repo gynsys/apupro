@@ -47,10 +47,43 @@ INCOMPATIBLE_POLARITY_RULES: List[Tuple[Set[str], Set[str], float]] = [
         {"piso", "pisos", "pavimento", "pavimentos", "acera", "aceras", "radier", "contrapiso", "sobrepiso"},
         {"torre", "torres", "rapel", "escalerilla", "guia de onda", "fachada"},
         0.30
+    ),
+    # 8. Tuberías Sanitarias / Agua Potable / Plomería / PPR VS Canalizaciones Eléctricas / Conduit / Ductos Eléctricos
+    (
+        {"ppr", "polipropileno", "agua potable", "agua limpia", "aguas blancas", "aguas claras", "sanitaria", "sanitarias", "plomeria", "fontaneria", "termofusion", "griferia", "tuberia de agua", "valvula", "llave de paso"},
+        {"electrica", "electricas", "electricidad", "conduit", "emt", "cables", "cableado", "tablero electrico", "fuerza", "alumbrado", "alta tension", "baja tension", "condulet", "unistrut", "unistrud", "lampara", "luminaria", "tubo led", "tubo fluorescente"},
+        0.50
+    ),
+    # 9. Tuberías / Plomería / Agua Potable VS Pavimentos / Concreto / Asfalto
+    (
+        {"tuberia", "tuberias", "tubo ppr", "ppr", "agua potable", "aguas blancas", "aguas negras", "aguas servidas", "plomeria", "fontaneria", "griferia"},
+        {"pavimento", "pavimentos", "asfalto", "carpeta asfaltica", "concreto premezclado", "vaciado de losa", "acera de concreto", "brocal"},
+        0.50
+    ),
+    # 10. Tuberías Sanitarias / Agua Potable VS Climatización / HVAC / Fancoils
+    (
+        {"ppr", "polipropileno", "agua potable", "aguas blancas", "aguas claras", "plomeria", "fontaneria", "sanitarias"},
+        {"aire acondicionado", "split", "fancoil", "chiller", "condensadora", "evaporadora", "ducteria", "climatizacion"},
+        0.50
     )
 ]
 
 TECHNICAL_DISCIPLINE_CLUSTERS: Dict[str, Set[str]] = {
+    "INSTALACIONES_SANITARIAS_AGUA": {
+        "tuberia sanitaria", "tuberia de agua", "ppr", "polipropileno",
+        "aguas blancas", "aguas claras", "agua potable", "aguas servidas", "aguas negras",
+        "plomeria", "fontaneria", "sanitaria", "sanitarias", "termofusion", "pvc presion",
+        "pvc sanitario", "griferia", "llave de paso", "valvula", "inodoro", "lavamanos",
+        "piezas sanitarias", "artefactos sanitarios", "tuberia con ppr", "tuberia ppr"
+    },
+    "CANALIZACIONES_E_INSTALACIONES_ELECTRICAS": {
+        "instalaciones electricas", "instalacion electrica", "tuberia electrica",
+        "tubo conduit", "conduit", "tuberia emt", "emt", "tubo pvc electricidad",
+        "canalizacion electrica", "banco de ductos", "cajetin", "tablero electrico",
+        "cable electrico", "conductor electrico", "luminaria", "lampara", "reflector",
+        "tubo led", "tubo fluorescente", "tomacorriente", "interruptor", "breaker",
+        "subestacion", "transformador", "unistrut", "unistrud", "condulet"
+    },
     "BOMBEO_HIDRAULICA": {
         "bomba", "bombas", "bombeo", "hidroneumatico", "pozo", "pozo profundo",
         "lapicero", "sumergible", "centrifuga", "presion constante", "achique",
@@ -77,6 +110,10 @@ TECHNICAL_DISCIPLINE_CLUSTERS: Dict[str, Set[str]] = {
     "OBRA_CIVIL_ALBANILERIA": {
         "pared de bloque", "friso", "revoque", "losa", "concreto", "viga de concreto",
         "columna de concreto", "zapata", "mamposteria", "piso de granito", "ceramica", "porcelanato"
+    },
+    "PAVIMENTOS_VIALIDAD": {
+        "pavimento", "pavimentos", "acera", "aceras", "brocal", "brocales",
+        "asfalto", "carpeta asfaltica", "bacheo", "pavimento de concreto"
     }
 }
 

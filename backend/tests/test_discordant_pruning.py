@@ -8,7 +8,10 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from app.services.ai_apu_service.domain_rules.discordant_pruning import (
     enforce_discordant_inputs_purging,
 )
-from app.services.apu_labor_calibrator import balance_crew_and_equipments
+from app.services.apu_labor_calibrator import (
+    balance_crew_and_equipments,
+    balance_crew_specialties,
+)
 
 
 class TestDiscordantPruningAndCalibration(unittest.TestCase):
@@ -143,6 +146,80 @@ class TestDiscordantPruningAndCalibration(unittest.TestCase):
         self.assertEqual(amoladora.get("origen"), "ia")
         self.assertIn("CEPILLO DE ALAMBRE", amoladora.get("descripcion", ""))
 
+    def test_purge_electrical_conduit_and_unistrut_in_potable_water(self) -> None:
+        """
+        Verifica que en una partida de tubería de agua potable / PPR:
+        1. Se purguen los insumos eléctricos (tubo PVC electricidad, riel unistrut).
+        2. Se purgue el equipo eléctrico ('EQUIPO PARA TUBERIA ELECTRICA').
+        3. Se preserven la tubería PPR y herramientas manuales.
+        """
+        description = "Suministro e instalación de Tubería con ppr 1/2 en instalaciones domesticas Incluye conexiones y accesorios unidad ml"
+        apu_result: Dict[str, Any] = {
+            "materials": [
+                {"codigo": "ELE798", "descripcion": "TUBO PVC ELECTRICIDAD DIÁMETRO = 1\" RÍGIDO/PESADO", "cantidad": 1.0, "unidad": "m", "origen": "historico"},
+                {"codigo": "ELE550", "descripcion": "PERFIL RIEL UNISTRUD 1 1/2\" X 3/4\" L= 2,", "cantidad": 0.5, "unidad": "pza", "origen": "historico"},
+                {"codigo": "MAT-PPR-01", "descripcion": "TUBERÍA DE POLIPROPILENO PPR D=1/2\" PN20", "cantidad": 1.05, "unidad": "m", "origen": "ia"},
+                {"codigo": "MAT-PPR-02", "descripcion": "CONEXIONES Y ACCESORIOS PPR D=1/2\"", "cantidad": 1.0, "unidad": "pza", "origen": "ia"},
+            ],
+            "equipments": [
+                {"codigo": "ELE005", "descripcion": "EQUIPO PARA TUBERIA ELECTRICA", "cantidad": 1.0, "unidad": "dia"},
+                {"codigo": "ESP012", "descripcion": "HERRAMIENTAS MENORES", "cantidad": 1.0, "unidad": "dia"},
+            ],
+            "labor": [
+                {"codigo": "19-215", "descripcion": "ELECTRICISTA DE 1RA -N5", "cantidad": 1.0, "unidad": "dia"},
+                {"codigo": "1-1.2", "descripcion": "AYUDANTE - TABULADOR CONSTRUCCION -N2", "cantidad": 1.0, "unidad": "dia"}
+            ]
+        }
+
+        enforce_discordant_inputs_purging(
+            result=apu_result,
+            user_description=description,
+            base_apu={"partida_code": "EIB275", "descripcion": description},
+        )
+
+        clean_mat = apu_result["materials"]
+        clean_eq = apu_result["equipments"]
+        trace = apu_result.get("debug_pruning_trace", {})
+
+        # Materiales: deben quedar solo los PPR
+        self.assertEqual(len(clean_mat), 2)
+        mat_descs = [m["descripcion"] for m in clean_mat]
+        self.assertNotIn("TUBO PVC ELECTRICIDAD DIÁMETRO = 1\" RÍGIDO/PESADO", mat_descs)
+        self.assertNotIn("PERFIL RIEL UNISTRUD 1 1/2\" X 3/4\" L= 2,", mat_descs)
+        self.assertIn("TUBERÍA DE POLIPROPILENO PPR D=1/2\" PN20", mat_descs)
+
+        # Equipos: debe quedar solo herramientas menores
+        self.assertEqual(len(clean_eq), 1)
+        eq_descs = [e["descripcion"] for e in clean_eq]
+        self.assertNotIn("EQUIPO PARA TUBERIA ELECTRICA", eq_descs)
+        self.assertIn("HERRAMIENTAS MENORES", eq_descs)
+
+        # Traza
+        purgados_mat = trace.get("insumos_purgados", [])
+        purgados_eq = trace.get("equipos_purgados", [])
+        self.assertTrue(any(p.get("regla") == "DISCIPLINA_AJENA_SANITARIAS" for p in purgados_mat))
+        self.assertTrue(any(p.get("regla") == "EQUIPO_DISCORDANTE_SANITARIAS" for p in purgados_eq))
+
+    def test_sanitary_labor_calibration_replaces_electrician(self) -> None:
+        """
+        Verifica que en una partida con tipología SANITARIAS, si la base histórica
+        traía un electricista, el calibrador de mano de obra lo sustituya por PLOMERO DE 1RA.
+        """
+        labors: List[Dict[str, Any]] = [
+            {"codigo": "19-215", "descripcion": "ELECTRICISTA DE 1RA -N5", "cantidad": 1.0, "unidad": "dia"},
+            {"codigo": "1-1.2", "descripcion": "AYUDANTE - TABULADOR CONSTRUCCION -N2", "cantidad": 1.0, "unidad": "dia"}
+        ]
+
+        balanced_labors, notes = balance_crew_specialties(
+            labors=labors,
+            typology="SANITARIAS"
+        )
+
+        specialist_names = [l["descripcion"] for l in balanced_labors]
+        self.assertIn("PLOMERO DE 1RA", specialist_names)
+        self.assertNotIn("ELECTRICISTA DE 1RA -N5", specialist_names)
+
 
 if __name__ == "__main__":
     unittest.main()
+

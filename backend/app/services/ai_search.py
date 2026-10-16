@@ -1,5 +1,8 @@
+import math
 import os
 import re
+import unicodedata
+from collections import defaultdict
 from typing import List, Dict, Any, Tuple, Set, Optional
 import numpy as np
 import pandas as pd
@@ -27,6 +30,61 @@ except ImportError:
     genai = None  # type: ignore
     HAVE_GEMINI = False
 
+_UI_UNIT_CLAUSE_RE = re.compile(
+    r"\bunidad\s+(?:ml|m2|m3|m|und|pza|pto|kgf|kg|ton|gl|sg|l|lt|lts|gal|km|ha|mes|dia|hr|h)\b",
+    re.IGNORECASE,
+)
+_LEX_TOKEN_RE = re.compile(r"[A-Z0-9]+")
+_LEX_MAX_DF_RATIO: float = 0.18
+
+# Muletillas contractuales, preposiciones y verbos genéricos que no definen disciplina ni insumo
+_CONTRACTUAL_STOP_STEMS: Set[str] = {
+    "CON", "PARA", "POR", "SIN", "DEL", "LOS", "LAS", "UNA", "UNO", "ENTRE", "HASTA",
+    "DESDE", "SEGUN", "COMO", "MAS", "MENO", "MAYOR", "MENOR", "IGUAL", "SIMILAR",
+    "TIPO", "USO", "EMPLEO", "MEDIANTE", "UTILIZANDO", "EMPLEANDO", "CORRESPONDIENTE",
+    "SUMINISTRO", "TRANSPORTE", "INSTALACION", "COLOCACION", "CONSTRUCCION", "APLICACION",
+    "ELABORACION", "EJECUCION", "INCLUYE", "EXCLUYE", "INCLUIDO", "UNIDAD", "UND",
+    "MATERIAL", "INSUMO", "EQUIPO", "HERRAMIENTA", "OBRA", "SITIO",
+}
+
+
+def _strip_accents_upper(value: str) -> str:
+    """Normaliza una cadena a mayúsculas sin tildes."""
+    if not value or not isinstance(value, str):
+        return ""
+    decomposed = unicodedata.normalize("NFKD", value.upper())
+    return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+
+
+def _stem_spanish_token(token: str) -> str:
+    """
+    Stemming plural fonotáctico del español técnico:
+    - '-CES' -> '-Z' (LUCES -> LUZ, CRUCES -> CRUZ)
+    - Vocal + [DLNR] + 'ES' -> quita 'ES' (PAREDES -> PARED, PANELES -> PANEL,
+      MATERIALES -> MATERIAL, INTERIORES -> INTERIOR, CONEXIONES -> CONEXION)
+    - Consonante + [DLNR] + 'ES' o vocal + 'S' -> quita 'S' (CABLES -> CABLE,
+      COBRES -> COBRE, BLOQUES -> BLOQUE, TUBERIAS -> TUBERIA)
+    """
+    if len(token) > 4 and token.endswith("CES"):
+        return token[:-3] + "Z"
+    if len(token) > 4 and token.endswith("ES") and token[-3] in "DLNR" and token[-4] in "AEIOU":
+        return token[:-2]
+    if len(token) > 3 and token.endswith("S"):
+        return token[:-1]
+    return token
+
+
+def _tokenize_for_lexical_idf(value: str) -> List[str]:
+    """Extrae tokens alfanuméricos normalizados (>=3 caracteres, no puramente numéricos) con stemming."""
+    if not value or not isinstance(value, str):
+        return []
+    cleaned = _UI_UNIT_CLAUSE_RE.sub(" ", value)
+    return [
+        _stem_spanish_token(tok)
+        for tok in _LEX_TOKEN_RE.findall(_strip_accents_upper(cleaned))
+        if len(tok) >= 3 and not tok.isdigit()
+    ]
+
 
 MATERIAL_CATEGORIES: Dict[str, Dict[str, List[str]]] = {
     "tuberia": {
@@ -36,7 +94,14 @@ MATERIAL_CATEGORIES: Dict[str, Dict[str, List[str]]] = {
         "COBRE": [r"\bCOBRE\b"],
         "HIERRO_GALVANIZADO": [r"\bHIERRO GALVANIZADO\b", r"\bHG\b", r"\bGALVANIZADO\b"],
         "HIERRO_FUNDIDO": [r"\bHIERRO FUNDIDO\b", r"\bHF\b"],
-        "ACERO": [r"\bACERO AL CARBONO\b", r"\bACERO INOXIDABLE\b", r"\bACERO NEGRO\b"],
+        "ACERO": [
+            r"\bACERO AL CARBONO\b",
+            r"\bACERO INOXIDABLE\b",
+            r"\bACERO NEGRO\b",
+            r"\bTUBERIA\s+DE\s+ACERO\b",
+            r"\bTUBO\s+DE\s+ACERO\b",
+            r"\bASTM\s+A-?53\b",
+        ],
     },
     "estructuras": {
         "CONCRETO": [r"\bCONCRETO\b", r"\bHORMIGON\b"],
@@ -144,6 +209,10 @@ class AISearchEngine:
             cls._instance.ids_mapping = []
             cls._instance.provider = "local"
             cls._instance.is_loaded = False
+            cls._instance._lex_postings = {}
+            cls._instance._lex_idf = {}
+            cls._instance._lex_stops = set()
+            cls._instance._lex_desc_map = {}
         return cls._instance
 
     def _resolve_gemini_api_key(self) -> Optional[str]:
@@ -371,43 +440,131 @@ class AISearchEngine:
         results.sort(key=lambda x: x["score"], reverse=True)
         return results
 
+    def _ensure_lexical_index(self, db: Session) -> None:
+        """
+        Inicializa una sola vez en memoria el índice invertido IDF sobre cost360_items.
+        Elimina el sesgo de muletillas contractuales y el corte duro de 1000 filas.
+        """
+        if self._lex_postings:
+            return
+        if db is None:
+            raise ValueError("La sesion de base de datos es requerida para construir el indice lexico.")
+
+        try:
+            rows = db.execute(
+                text('SELECT "CodPar", "Descri" FROM public.cost360_items WHERE "CodPar" IS NOT NULL')
+            ).fetchall()
+            postings: Dict[str, List[str]] = defaultdict(list)
+            df_counts: Dict[str, int] = defaultdict(int)
+            desc_map: Dict[str, str] = {}
+
+            for row in rows:
+                cod = str(row.CodPar)
+                desc = str(row.Descri or "")
+                desc_map[cod] = desc
+                unique_stems = set(_tokenize_for_lexical_idf(desc))
+                for stem in unique_stems:
+                    postings[stem].append(cod)
+                    df_counts[stem] += 1
+
+            n_docs = max(len(desc_map), 1)
+            idf_map = {
+                stem: math.log((n_docs + 1.0) / (count + 1.0))
+                for stem, count in df_counts.items()
+            }
+            df_stops = {
+                stem for stem, count in df_counts.items()
+                if (count / n_docs) > _LEX_MAX_DF_RATIO
+            }
+
+            self._lex_postings = dict(postings)
+            self._lex_idf = idf_map
+            self._lex_stops = df_stops | _CONTRACTUAL_STOP_STEMS
+            self._lex_desc_map = desc_map
+            logger.info(
+                "Indice lexico IDF en memoria inicializado con %d partidas y %d terminos.",
+                n_docs,
+                len(idf_map),
+            )
+        except Exception as exc:
+            db.rollback()
+            logger.error("Error inicializando el indice lexico IDF en memoria: %s", exc, exc_info=True)
+
     def extract_main_chunk(self, query: str) -> str:
         """
-        Divide la consulta y extrae solo la parte principal ignorando modificadores
-        como 'sin incluir', 'no incluye', 'utilizando', 'con'.
-        Esto evita que la IA se distraiga con palabras secundarias.
+        Limpia el sufijo de serialización de unidad de la UI ('unidad ml', 'unidad und', etc.)
+        y recorta únicamente cláusulas de exclusión negativa ('sin incluir', 'no incluye', 'sin mixer').
         """
         if not query or not isinstance(query, str):
             return ""
 
-        # Expresión regular para separar la frase en base a palabras clave de exclusión/condición
+        cleaned = _UI_UNIT_CLAUSE_RE.sub(" ", query)
         splitters = re.compile(
-            r'\b(sin incluir|no incluye|sin empleo de|sin uso de|sin maquinaria|sin equipo|sin mixer|utilizando|con empleo de|empleando)\b',
+            r'\b(sin incluir|no incluye|sin empleo de|sin uso de|sin maquinaria|sin equipo|sin mixer)\b',
             re.IGNORECASE,
         )
-        parts = splitters.split(query)
+        parts = splitters.split(cleaned)
         if parts:
-            # La primera parte suele ser la intención principal de búsqueda
             main_chunk = parts[0].strip(" ,.-")
-            return main_chunk if len(main_chunk) > 5 else query
-        return query
+            return main_chunk if len(main_chunk) > 5 else cleaned.strip(" ,.-")
+        return cleaned.strip(" ,.-")
 
     def lexical_search(self, db: Session, query: str, limit: int = 50) -> List[Dict[str, Any]]:
         """
-        Búsqueda Tradicional (Full-Text Search) usando PostgreSQL.
-        Busca coincidencias exactas de las palabras en el campo Descri.
+        Búsqueda Léxica ponderada por IDF con stemming técnico en español y filtrado
+        de muletillas contractuales. Si el índice en memoria está disponible, evalúa el
+        catálogo completo sin sesgo por longitud ni corte prematuro; de lo contrario,
+        usa PostgreSQL Full-Text Search como respaldo.
         """
-        if not query or not isinstance(query, str):
+        if not query or not isinstance(query, str) or db is None:
             return []
 
-        # Extraer únicamente tokens alfanuméricos limpios (sin comas, puntos ni caracteres especiales)
-        raw_words = re.findall(r'[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]+', query)
+        self._ensure_lexical_index(db)
+        if self._lex_postings:
+            q_stems = _tokenize_for_lexical_idf(query)
+            unique_stems: List[str] = []
+            seen: Set[str] = set()
+            for stem in q_stems:
+                if stem not in seen:
+                    seen.add(stem)
+                    unique_stems.append(stem)
+
+            informative = [
+                stem for stem in unique_stems
+                if stem not in self._lex_stops and stem in self._lex_idf
+            ]
+            if not informative:
+                informative = [stem for stem in unique_stems if stem in self._lex_idf]
+            if not informative:
+                return []
+
+            scores: Dict[str, float] = defaultdict(float)
+            for stem in informative:
+                weight = self._lex_idf[stem]
+                for cod in self._lex_postings.get(stem, ()):
+                    scores[cod] += weight
+
+            if not scores:
+                return []
+
+            ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:limit]
+            return [
+                {
+                    "id": cod,
+                    "score": float(sc),
+                    "desc": self._lex_desc_map.get(cod, ""),
+                }
+                for cod, sc in ranked
+            ]
+
+        # Respaldo en PostgreSQL si el índice en memoria no pudo construirse
+        cleaned = _UI_UNIT_CLAUSE_RE.sub(" ", query)
+        raw_words = re.findall(r'[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]+', cleaned)
         words = [w.lower() for w in raw_words if len(w) > 2]
         if not words:
             return []
-        
+
         tsquery_str = " | ".join(words)
-        
         sql = text('''
             SELECT "CodPar", "CovPar", "Descri",
                    ts_rank(to_tsvector('spanish', "Descri"), to_tsquery('spanish', :tsquery)) as rank
@@ -416,7 +573,7 @@ class AISearchEngine:
             ORDER BY rank DESC
             LIMIT :limit
         ''')
-        
+
         try:
             results = db.execute(sql, {"tsquery": tsquery_str, "limit": limit}).fetchall()
             return [
@@ -431,7 +588,7 @@ class AISearchEngine:
     def hybrid_search(self, db: Session, query: str, valid_ids: Optional[List[str]] = None, limit: int = 40) -> List[Dict[str, Any]]:
         """
         Búsqueda Híbrida que combina el score Semántico (SentenceTransformers o Gemini)
-        con el score Léxico (PostgreSQL ts_rank).
+        con el score Léxico ponderado por IDF sobre el catálogo completo.
         Si valid_ids se proporciona, solo busca en esos IDs.
         """
         if not query or not isinstance(query, str):
@@ -443,8 +600,10 @@ class AISearchEngine:
         expanded_query = expand_technical_synonyms(query)
         main_query = self.extract_main_chunk(expanded_query)
 
-        # 2. Puntaje Léxico (Traditional en PostgreSQL)
-        lexical_results = self.lexical_search(db, main_query, limit=1000)
+        # 2. Puntaje Léxico IDF sobre todo el catálogo (sin corte arbitrario de 1000 filas)
+        self._ensure_lexical_index(db)
+        lex_limit = max(len(self._lex_desc_map), 1000)
+        lexical_results = self.lexical_search(db, main_query, limit=lex_limit)
         lexical_scores = {r['id']: r['score'] for r in lexical_results}
         max_lex_score = max(lexical_scores.values()) if lexical_scores else 1.0
         if max_lex_score == 0:
@@ -519,18 +678,29 @@ class AISearchEngine:
             top_eval_count = min(len(hybrid_results), max(limit * 5, 200))
             top_candidates = hybrid_results[:top_eval_count]
             remaining_candidates = hybrid_results[top_eval_count:]
-            
+
             eval_ids = [c["id"] for c in top_candidates]
             if eval_ids:
                 try:
-                    sql_desc = text('SELECT "CodPar", "Descri" FROM cost360_items WHERE "CodPar" IN :id_tuple')
-                    desc_rows = db.execute(sql_desc, {"id_tuple": tuple(eval_ids)}).fetchall()
-                    desc_map = {row.CodPar: row.Descri for row in desc_rows}
-                    
+                    desc_map: Dict[str, str] = {}
+                    missing_ids: List[str] = []
+                    for cid in eval_ids:
+                        cached_desc = self._lex_desc_map.get(cid)
+                        if cached_desc is not None:
+                            desc_map[cid] = cached_desc
+                        else:
+                            missing_ids.append(cid)
+
+                    if missing_ids:
+                        sql_desc = text('SELECT "CodPar", "Descri" FROM cost360_items WHERE "CodPar" IN :id_tuple')
+                        desc_rows = db.execute(sql_desc, {"id_tuple": tuple(missing_ids)}).fetchall()
+                        for row in desc_rows:
+                            desc_map[row.CodPar] = row.Descri
+
                     for candidate in top_candidates:
                         desc = desc_map.get(candidate["id"], "")
                         score_mod = 0.0
-                        
+
                         # 4a. Ponderación por Material Técnico
                         if query_mats:
                             item_mats = detect_materials(desc)
@@ -556,9 +726,9 @@ class AISearchEngine:
                                 if re.search(r"\b" + re.escape(ex) + r"\b", desc_upper):
                                     score_mod -= 0.35
                                     break
-                                
+
                         candidate["score"] = candidate["score"] + score_mod
-                    
+
                     top_candidates.sort(key=lambda x: x["score"], reverse=True)
                     hybrid_results = top_candidates + remaining_candidates
                 except Exception as exc:
