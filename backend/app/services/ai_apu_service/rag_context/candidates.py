@@ -3,6 +3,10 @@ from sqlalchemy.orm import Session
 from app.core.logging import logger
 from app.db.models.cost360 import CostItem
 from app.services.ai_search import ai_engine
+from app.services.ai_apu_service.domain_rules.discordant_pruning import (
+    classify_pipe_mounting_condition,
+    is_pipe_or_conduit_activity,
+)
 
 
 INCOMPATIBLE_POLARITY_RULES: List[Tuple[Set[str], Set[str], float]] = [
@@ -14,7 +18,7 @@ INCOMPATIBLE_POLARITY_RULES: List[Tuple[Set[str], Set[str], float]] = [
     ),
     # 2. Tuberías a Presión / Agua Blanca VS Tuberías Sanitarias / Desagüe / Ventilación
     (
-        {"presion", "aduccion", "distribucion", "astm d-2241", "ppr", "termofusion", "agua blanca"},
+        {"presion", "aduccion", "distribucion", "astm d-2241", "ppr", "cpvc", "termofusion", "agua blanca"},
         {"ventilacion", "sanitaria", "desague", "bajante", "norma 656", "aguas servidas"},
         0.25
     ),
@@ -50,19 +54,19 @@ INCOMPATIBLE_POLARITY_RULES: List[Tuple[Set[str], Set[str], float]] = [
     ),
     # 8. Tuberías Sanitarias / Agua Potable / Plomería / PPR VS Canalizaciones Eléctricas / Conduit / Ductos Eléctricos
     (
-        {"ppr", "polipropileno", "agua potable", "agua limpia", "aguas blancas", "aguas claras", "sanitaria", "sanitarias", "plomeria", "fontaneria", "termofusion", "griferia", "tuberia de agua", "valvula", "llave de paso"},
+        {"ppr", "polipropileno", "cpvc", "agua potable", "agua limpia", "aguas blancas", "aguas claras", "sanitaria", "sanitarias", "plomeria", "fontaneria", "termofusion", "griferia", "tuberia de agua", "valvula", "llave de paso"},
         {"electrica", "electricas", "electricidad", "conduit", "emt", "cables", "cableado", "tablero electrico", "fuerza", "alumbrado", "alta tension", "baja tension", "condulet", "unistrut", "unistrud", "lampara", "luminaria", "tubo led", "tubo fluorescente"},
         0.50
     ),
     # 9. Tuberías / Plomería / Agua Potable VS Pavimentos / Concreto / Asfalto
     (
-        {"tuberia", "tuberias", "tubo ppr", "ppr", "agua potable", "aguas blancas", "aguas negras", "aguas servidas", "plomeria", "fontaneria", "griferia"},
+        {"tuberia", "tuberias", "tubo ppr", "ppr", "cpvc", "agua potable", "aguas blancas", "aguas negras", "aguas servidas", "plomeria", "fontaneria", "griferia"},
         {"pavimento", "pavimentos", "asfalto", "carpeta asfaltica", "concreto premezclado", "vaciado de losa", "acera de concreto", "brocal"},
         0.50
     ),
     # 10. Tuberías Sanitarias / Agua Potable VS Climatización / HVAC / Fancoils
     (
-        {"ppr", "polipropileno", "agua potable", "aguas blancas", "aguas claras", "plomeria", "fontaneria", "sanitarias"},
+        {"ppr", "polipropileno", "cpvc", "agua potable", "aguas blancas", "aguas claras", "plomeria", "fontaneria", "sanitarias"},
         {"aire acondicionado", "split", "fancoil", "chiller", "condensadora", "evaporadora", "ducteria", "climatizacion"},
         0.50
     )
@@ -70,11 +74,11 @@ INCOMPATIBLE_POLARITY_RULES: List[Tuple[Set[str], Set[str], float]] = [
 
 TECHNICAL_DISCIPLINE_CLUSTERS: Dict[str, Set[str]] = {
     "INSTALACIONES_SANITARIAS_AGUA": {
-        "tuberia sanitaria", "tuberia de agua", "ppr", "polipropileno",
+        "tuberia sanitaria", "tuberia de agua", "ppr", "polipropileno", "cpvc",
         "aguas blancas", "aguas claras", "agua potable", "aguas servidas", "aguas negras",
         "plomeria", "fontaneria", "sanitaria", "sanitarias", "termofusion", "pvc presion",
         "pvc sanitario", "griferia", "llave de paso", "valvula", "inodoro", "lavamanos",
-        "piezas sanitarias", "artefactos sanitarios", "tuberia con ppr", "tuberia ppr"
+        "piezas sanitarias", "artefactos sanitarios", "tuberia con ppr", "tuberia ppr", "tuberia con cpvc", "tuberia cpvc"
     },
     "CANALIZACIONES_E_INSTALACIONES_ELECTRICAS": {
         "instalaciones electricas", "instalacion electrica", "tuberia electrica",
@@ -250,6 +254,27 @@ def _apply_technical_scoring_adjustments_detailed(
         action_bonus += 0.08
         adjustment_details.append("Bonificación por coincidencia de acción rectora (desmontaje/retiro): +0.08")
 
+    # 4. Afinidad Global por Condición de Montaje de Tuberías (EMBUTIDA vs ENTERRADA vs SUPERFICIAL_COLGANTE)
+    mounting_adjustment = 0.0
+    if is_pipe_or_conduit_activity(query_text) and is_pipe_or_conduit_activity(item_desc):
+        q_mount = classify_pipe_mounting_condition(query_text)
+        i_mount = classify_pipe_mounting_condition(item_desc)
+        if q_mount in ("EMBUTIDA", "ENTERRADA", "SUPERFICIAL_COLGANTE") and i_mount != "NO_ESPECIFICADA":
+            if q_mount == i_mount:
+                current_score = min(1.25, current_score + 0.10)
+                mounting_adjustment = 0.10
+                adjustment_details.append(f"Bonificación por condición de montaje de tubería coincidente ({q_mount}): +0.10")
+            elif i_mount == "AMBIGUA_EMBUTIDA_ENTERRADA" and q_mount in ("EMBUTIDA", "ENTERRADA"):
+                current_score = min(1.25, current_score + 0.05)
+                mounting_adjustment = 0.05
+                adjustment_details.append(f"Bonificación por partida base dual compatible con tubería {q_mount}: +0.05")
+            else:
+                current_score = max(0.0, current_score - 0.15)
+                mounting_adjustment = -0.15
+                adjustment_details.append(
+                    f"Penalización por condición de montaje de tubería discordante (solicitada={q_mount} vs candidato={i_mount}): -0.15"
+                )
+
     final_score = round(current_score, 3)
     breakdown = {
         "raw_hybrid_score": round(raw_base, 4),
@@ -259,6 +284,7 @@ def _apply_technical_scoring_adjustments_detailed(
         "polarity_penalty": round(total_polarity_penalty, 4),
         "discipline_adjustment": round(discipline_adjustment, 4),
         "action_bonus": round(action_bonus, 4),
+        "mounting_adjustment": round(mounting_adjustment, 4),
         "final_score": final_score,
         "detalles_ajustes": adjustment_details,
     }

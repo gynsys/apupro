@@ -1,10 +1,12 @@
 import json
 import re
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple
 from sqlalchemy.orm import Session
 from app.services.llm_router import call_llm_json
 from app.services.apu_labor_calibrator import calibrate_apu_crew_and_equipment
+from app.services.ai_search import detect_materials, _strip_accents_upper
+from app.services.synonyms_service import expand_technical_synonyms
 from app.services.ai_apu_service.helpers import _sanitize_llm_numbers
 from app.services.ai_apu_service.prompts import _APU_SYSTEM_PROMPT
 from app.services.ai_apu_service.domain_rules.scope_exclusions import _enforce_scope_exclusions
@@ -12,7 +14,13 @@ from app.services.ai_apu_service.domain_rules.safety_height import _enforce_rape
 from app.services.ai_apu_service.domain_rules.floor_ground import _enforce_floor_ground_equipment
 from app.services.ai_apu_service.domain_rules.material_conflicts import _enforce_primary_materials_mutual_exclusion
 from app.services.ai_apu_service.domain_rules.deep_well import _enforce_deep_well_dimensions
-from app.services.ai_apu_service.domain_rules.discordant_pruning import enforce_discordant_inputs_purging
+from app.services.ai_apu_service.domain_rules.discordant_pruning import (
+    _HANGING_AND_SURFACE_EQUIPMENT_PATTERNS,
+    _TRENCH_AND_TOPOGRAPHY_EQUIPMENT_PATTERNS,
+    enforce_discordant_inputs_purging,
+    is_pipe_or_conduit_activity,
+    resolve_effective_pipe_mounting,
+)
 from app.services.ai_apu_service.domain_rules.sanitize_partida import (
     _sanitize_partida_description,
     infer_covenin_prefix,
@@ -27,6 +35,173 @@ from app.services.ai_apu_service.reconciliation.materials import (
 )
 from app.services.ai_apu_service.reconciliation.labor import reconcile_labor_with_database
 from app.services.ai_apu_service.rag_context.pruning import _prune_apu_for_prompt
+from app.services.ai_apu_service.rag_context.candidates import (
+    INCOMPATIBLE_POLARITY_RULES,
+    TECHNICAL_DISCIPLINE_CLUSTERS,
+)
+
+_PRIMARY_SYSTEM_CATEGORIES: Tuple[str, ...] = (
+    "tuberia",
+    "mamposteria",
+    "pisos_revestimiento",
+    "cubiertas_techos",
+    "carpinteria_cerramientos",
+    "cercas_perimetrales",
+    "conductores_electricos",
+    "impermeabilizacion",
+)
+
+_UNIT_EQUIVALENCE_GROUPS: Tuple[Set[str], ...] = (
+    {"m", "ml", "mts", "mt", "metro", "metros", "metro lineal", "metros lineales"},
+    {"m2", "mt2", "mts2", "metro cuadrado", "metros cuadrados"},
+    {"m3", "mt3", "mts3", "metro cubico", "metros cubicos"},
+    {"und", "unid", "u", "unidad", "pza", "pieza"},
+    {"kg", "kgf", "kilo", "kilos", "kilogramo", "kilogramos"},
+    {"ton", "tonf", "t", "tf", "tonelada", "toneladas"},
+    {"pto", "ptos", "punto", "puntos"},
+    {"gl", "sg", "global", "suma global"},
+)
+
+
+def _are_units_physically_equivalent(u1: str, u2: str) -> bool:
+    """
+    Determina si dos cadenas de unidad representan exactamente la misma magnitud física
+    (ej. 'ml' y 'm' son ambas metro lineal; 'und' y 'pza' son unidades discretas).
+    """
+    c1 = _strip_accents_upper(u1 or "").lower().strip()
+    c2 = _strip_accents_upper(u2 or "").lower().strip()
+    if c1 == c2:
+        return True
+    for grp in _UNIT_EQUIVALENCE_GROUPS:
+        if c1 in grp and c2 in grp:
+            return True
+    return False
+
+
+def evaluate_specialty_and_system_coherence(
+    user_description: str,
+    base_apu: Optional[Dict[str, Any]],
+) -> Tuple[bool, str]:
+    """
+    Evalúa el Contrato de Coherencia de Especialidad y Sistema Constructivo entre
+    la solicitud del usuario (D_user, M_user) y la partida base (D_base, M_base).
+    Retorna (es_coherente, motivo_desanclaje).
+    """
+    if not user_description or not isinstance(user_description, str):
+        return True, ""
+    if not base_apu or not isinstance(base_apu, dict):
+        return True, ""
+
+    base_desc = str(base_apu.get("descripcion") or base_apu.get("description") or "").strip()
+    if not base_desc:
+        return True, ""
+
+    u_exp = expand_technical_synonyms(user_description)
+    b_exp = expand_technical_synonyms(base_desc)
+    u_lower = _strip_accents_upper(u_exp).lower()
+    b_lower = _strip_accents_upper(b_exp).lower()
+
+    # 1. Coherencia de Disciplina Tecnológica (D_user vs D_base)
+    u_disciplines: Set[str] = {
+        disc for disc, terms in TECHNICAL_DISCIPLINE_CLUSTERS.items()
+        if any(term in u_lower for term in terms)
+    }
+    b_disciplines: Set[str] = {
+        disc for disc, terms in TECHNICAL_DISCIPLINE_CLUSTERS.items()
+        if any(term in b_lower for term in terms)
+    }
+    if u_disciplines and b_disciplines and not (u_disciplines & b_disciplines):
+        return (
+            False,
+            f"Divergencia de disciplina tecnológica: solicitada={sorted(u_disciplines)} vs base={sorted(b_disciplines)}",
+        )
+
+    # 2. Reglas de Polaridad Funcional Opuesta Severa
+    for polo_a, polo_b, penalty in INCOMPATIBLE_POLARITY_RULES:
+        if penalty < 0.40:
+            continue
+        u_has_a = any(t in u_lower for t in polo_a)
+        u_has_b = any(t in u_lower for t in polo_b)
+        b_has_a = any(t in b_lower for t in polo_a)
+        b_has_b = any(t in b_lower for t in polo_b)
+        if (u_has_a and not u_has_b and b_has_b and not b_has_a) or (
+            u_has_b and not u_has_a and b_has_a and not b_has_b
+        ):
+            return (
+                False,
+                "Polaridad funcional opuesta entre la especialidad solicitada y la partida base",
+            )
+
+    # 3. Coherencia de Sistema Material Constructivo (M_user vs M_base)
+    u_mats = detect_materials(u_exp)
+    b_mats = detect_materials(b_exp)
+    for cat in _PRIMARY_SYSTEM_CATEGORIES:
+        u_set = u_mats.get(cat, set())
+        b_set = b_mats.get(cat, set())
+        if u_set and b_set and not (u_set & b_set):
+            return (
+                False,
+                f"Divergencia de familia material en '{cat}': solicitado={sorted(u_set)} vs base={sorted(b_set)}",
+            )
+
+    return True, ""
+
+
+def apply_specialty_coherence_contract_to_base(
+    pruned_base: Dict[str, Any],
+    user_description: str,
+) -> Tuple[Dict[str, Any], bool, str]:
+    """
+    Aplica determinísticamente el Principio 3 (Desanclaje Automático por Contrato Abstracto):
+    Si la disciplina o familia material de la base (D_base) no coincide con la solicitada (D_user),
+    revoca automáticamente el ancla de materiales y equipos específicos antes de construir el prompt,
+    conservando únicamente la escala de rendimiento, cuadrilla y herramientas menores porcentuales.
+    Asimismo, si es una partida de tubería, filtra preventivamente los equipos de la base que no
+    correspondan a la condición de montaje (EMBUTIDA vs ENTERRADA vs SUPERFICIAL_COLGANTE).
+    """
+    if not pruned_base or not isinstance(pruned_base, dict):
+        return {}, True, ""
+
+    is_coherent, reason = evaluate_specialty_and_system_coherence(user_description, pruned_base)
+    if not is_coherent:
+        decoupled: Dict[str, Any] = dict(pruned_base)
+        decoupled["materiales"] = []
+        decoupled["equipos"] = [
+            eq for eq in pruned_base.get("equipos", [])
+            if isinstance(eq, dict) and "HERRAMIENTAS" in str(eq.get("descripcion", "")).upper()
+        ]
+        return decoupled, False, reason
+
+    base_desc = str(pruned_base.get("descripcion") or pruned_base.get("description") or "")
+    if is_pipe_or_conduit_activity(user_description) or is_pipe_or_conduit_activity(base_desc):
+        pipe_mode = resolve_effective_pipe_mounting(user_description, base_desc)
+        u_up = _strip_accents_upper(user_description or "")
+        explicit_earthwork = bool(re.search(
+            r"\b(?:EXCAVACION|ZANJA|BOTE\s+DE|ESCOMBRO|DEMOLICION|CONCRETO|MORTERO|RELLENO|COMPACTACION)\b",
+            u_up,
+        ))
+        explicit_height = bool(re.search(
+            r"\b(?:ANDAMIO|ALTURA|COLGANTE|SUSPENDID[OA]|EN\s+TECHO|BAJO\s+LOSA|AERE[OA])\b",
+            u_up,
+        ))
+        filtered_base: Dict[str, Any] = dict(pruned_base)
+        raw_eqs = pruned_base.get("equipos", [])
+        clean_eqs: List[Dict[str, Any]] = []
+        for eq in raw_eqs:
+            if not isinstance(eq, dict):
+                continue
+            eq_up = _strip_accents_upper(str(eq.get("descripcion") or ""))
+            if pipe_mode in ("EMBUTIDA", "SUPERFICIAL_COLGANTE") and not explicit_earthwork:
+                if any(bool(re.search(pat, eq_up)) for pat in _TRENCH_AND_TOPOGRAPHY_EQUIPMENT_PATTERNS):
+                    continue
+            if pipe_mode in ("EMBUTIDA", "ENTERRADA") and not explicit_height:
+                if any(bool(re.search(pat, eq_up)) for pat in _HANGING_AND_SURFACE_EQUIPMENT_PATTERNS):
+                    continue
+            clean_eqs.append(eq)
+        filtered_base["equipos"] = clean_eqs
+        return filtered_base, True, ""
+
+    return pruned_base, True, ""
 
 
 def generate_apu_with_ai_from_base(
@@ -48,8 +223,8 @@ def generate_apu_with_ai_from_base(
 
     Este modo:
     - Proporciona al LLM el APU completo de la partida histórica (insumos, precios, cantidades reales)
-    - Le pide ADAPTAR (no crear desde cero)
-    - Reduce drásticamente el riesgo de alucinaciones
+    - Si detecta divergencia de disciplina o sistema material (D_base != D_user), revoca
+      automáticamente el ancla de materiales y equipos específicos (Principio 3).
     """
     history_text = ""
     if history:
@@ -64,7 +239,15 @@ def generate_apu_with_ai_from_base(
         for _, answer in smart_answers.items():
             answers_text += f"- {answer}\n"
 
-    base_json = json.dumps(_prune_apu_for_prompt(base_apu), ensure_ascii=False, separators=(',', ':')) if base_apu else "No disponible"
+    pruned_base = _prune_apu_for_prompt(base_apu) if base_apu else {}
+    effective_base_for_prompt, is_specialty_coherent, unanchor_reason = apply_specialty_coherence_contract_to_base(
+        pruned_base, user_description
+    )
+    base_json = (
+        json.dumps(effective_base_for_prompt, ensure_ascii=False, separators=(',', ':'))
+        if effective_base_for_prompt
+        else "No disponible"
+    )
 
     comp_text = ""
     if complementary_apus:
@@ -125,7 +308,7 @@ La partida DEBE estructurarse OBLIGATORIAMENTE con la unidad: '{u_clean}'.
    - La unidad solicitada es 'Gl' (Suma Global).
    - El rendimiento diario DEBE ser obligatoriamente: performance = {target_perf} (correspondiente a 1.0 / {dias_val} días).
    - En `notas_adaptacion`, explica que el rendimiento R = {target_perf} Gl/día corresponde a {dias_val} días de trabajo de cuadrilla."""
-    elif req_u_clean and base_unit and req_u_clean != base_unit:
+    elif req_u_clean and base_unit and not _are_units_physically_equivalent(req_u_clean, base_unit):
         performance_instruction = f"""2. CÁLCULO DINÁMICO DE RENDIMIENTO (DESANCLAJE DIMENSIONAL OBLIGATORIO):
    - La partida base histórica tiene unidad '{base_unit}' (rendimiento {base_ren} {base_unit}/día), mientras que la partida requerida es '{req_u_clean}'.
    - ESTÁ TERMINANTEMENTE PROHIBIDO copiar o anclarte al número {base_ren}: una unidad de '{req_u_clean}' no equivale físicamente a una de '{base_unit}'.
@@ -166,13 +349,46 @@ La partida DEBE estructurarse OBLIGATORIAMENTE con la unidad: '{u_clean}'.
 - Dimensiona el cable sumergible plano y la guaya de suspensión de acero en {round(depth_val * 1.05, 1)} metros (+5% de holgura).
 - Incluye válvula de retención (check) para pozo profundo y accesorios de conexión."""
 
+    pipe_mounting_directive = ""
+    base_desc_str = str(base_apu.get("descripcion") or base_apu.get("description") or "")
+    if is_pipe_or_conduit_activity(user_description) or is_pipe_or_conduit_activity(base_desc_str):
+        eff_pipe_mode = resolve_effective_pipe_mounting(user_description, base_desc_str)
+        if eff_pipe_mode == "EMBUTIDA":
+            pipe_mounting_directive = """
+# DIRECTIVA GLOBAL DE MODALIDAD DE INSTALACIÓN DE TUBERÍA: EMBUTIDA / EN INTERIORES
+- La tubería solicitada corresponde a instalación EMBUTIDA (o en interiores de edificación, NO enterrada en zanja).
+- En la descripción de `partida`, especifica únicamente la condición 'EMBUTIDA' (o 'EN INTERIORES'); QUEDA PROHIBIDO copiar la cláusula ambigua 'EMBUTIDA O ENTERRADA' o la palabra 'ENTERRADA'.
+- QUEDA TERMINANTEMENTE PROHIBIDO incluir equipos de movimiento de tierra, zanja o topografía vial (carretillas, cinta métrica de topógrafo de 25m/50m, pico, pala, compactador) ni abrazaderas colgantes."""
+        elif eff_pipe_mode == "ENTERRADA":
+            pipe_mounting_directive = """
+# DIRECTIVA GLOBAL DE MODALIDAD DE INSTALACIÓN DE TUBERÍA: ENTERRADA / SUBTERRÁNEA
+- La tubería solicitada corresponde a instalación ENTERRADA (subterránea / en zanja).
+- En la descripción de `partida`, especifica únicamente la condición 'ENTERRADA'; QUEDA PROHIBIDO copiar la cláusula ambigua 'EMBUTIDA O ENTERRADA', 'EMBUTIDA' o 'COLGANTE'.
+- QUEDA PROHIBIDO incluir equipos de fijación aérea/colgante (andamios, escaleras, pistola de fijación, abrazaderas colgantes)."""
+        elif eff_pipe_mode == "SUPERFICIAL_COLGANTE":
+            pipe_mounting_directive = """
+# DIRECTIVA GLOBAL DE MODALIDAD DE INSTALACIÓN DE TUBERÍA: SUPERFICIAL / COLGANTE / A LA VISTA
+- La tubería solicitada corresponde a instalación SUPERFICIAL o COLGANTE (a la vista, adosada o suspendida).
+- En la descripción de `partida`, especifica la condición 'SUPERFICIAL' o 'COLGANTE' según lo solicitado; QUEDA PROHIBIDO usar 'EMBUTIDA O ENTERRADA'.
+- Incluye los elementos de fijación/soportería correspondientes y EXCLUYE equipos de excavación/zanja/topografía (carretilla, cinta de topógrafo)."""
+
+    coherence_contract_directive = ""
+    if not is_specialty_coherent:
+        coherence_contract_directive = f"""
+# CONTRATO DE COHERENCIA DE ESPECIALIDAD (DESANCLAJE AUTOMÁTICO DE INSUMOS ACTIVADO):
+- Diagnóstico técnico: {unanchor_reason}.
+- La disciplina o el sistema constructivo de la partida base (D_base) NO coincide plenamente con la partida solicitada (D_user).
+- El ancla de materiales y equipos específicos de la partida base ha quedado AUTOMÁTICAMENTE REVOCADA.
+- Conserva de la base únicamente la escala referencial del rendimiento, la estructura de cuadrilla y las herramientas menores porcentuales, y SINTETIZA el 100% de los materiales y equipos específicos directamente desde los principios técnicos de la disciplina solicitada."""
+
     prompt = f"""
 # MODO DE TRABAJO: ADAPTACIÓN DE APU BASE
 El sistema ha seleccionado una partida histórica de la base de datos como BASE DE ADAPTACIÓN.
 Tu tarea es ADAPTAR ese APU base para la nueva partida solicitada por el usuario.
-NO debes inventar desde cero. Usa los insumos, precios y cantidades del APU base como referencia principal.
 {unit_directive}
 {deep_well_directive}
+{pipe_mounting_directive}
+{coherence_contract_directive}
 # SOLICITUD DEL USUARIO
 Descripción: {user_description}
 Categoría COVENIN: {covenin_context}
@@ -187,20 +403,20 @@ Prefijo COVENIN: {effective_cov_prefix}
 # INSTRUCCIONES ESPECÍFICAS DE ADAPTACIÓN
 1. El APU base es para una partida SIMILAR, no idéntica. Tu trabajo es adaptarlo para "{user_description}".
 {performance_instruction}
-3. CONSERVA todos los insumos que sigan siendo relevantes para la nueva partida. Márcalos como `"origen": "historico"`.
-4. REGLA DE INSUMO PREPONDERANTE ÚNICO Y MATRIZ DE COMPATIBILIDAD EN FAMILIAS: Si la nueva partida requiere un material o equipo preponderante diferente al de la base (ej: epóxica vs esmalte, porcelanato vs caico, tubería de agua potable/PPR vs tubería de electricidad/conduit, drywall vs bloque de arcilla, etc.), ELIMINA POR COMPLETO el insumo histórico y sus solventes/fijaciones no afines (como rieles unistrut o tuberías conduit). QUEDA ESTRICTAMENTE PROHIBIDO conservar ambos insumos en el APU. Sustitúyelo por el insumo correcto con origen "ia", precio referencial de mercado en USD y emite la advertencia `[PRECIO_REFERENCIAL]`.
+3. CONSERVA únicamente los insumos de la base que pertenezcan legítimamente a la especialidad y sistema constructivo de la nueva partida. Márcalos como `"origen": "historico"`.
+4. CONTRATO DE COHERENCIA DE ESPECIALIDAD Y SISTEMA CONSTRUCTIVO: Si la disciplina o familia material de la partida base ($D_{{base}}, M_{{base}}$) no coincide plenamente con la disciplina o familia material solicitada ($D_{{user}}, M_{{user}}$), el ancla de materiales y equipos específicos queda revocada. Conserva de la base únicamente la escala del rendimiento y herramientas menores porcentuales, y sintetiza el 100% de los materiales y equipos específicos directamente desde los principios técnicos de la disciplina solicitada, marcándolos con `"origen": "ia"`, precio referencial de mercado en USD y advertencia `[PRECIO_REFERENCIAL]`.
 5. AJUSTA cantidades cuando la nueva partida lo requiera (ej: distinta área, espesor, proporción, o cómputo global Gl).
-   Los insumos provenientes de la partida base o complementarias DEBEN CONSERVAR obligatoriamente `"origen": "historico"` (incluso si sus cantidades fueron escaladas).
+   Los insumos provenientes de la partida base o complementarias que sean técnicamente compatibles DEBEN CONSERVAR obligatoriamente `"origen": "historico"` (incluso si sus cantidades fueron escaladas).
    Explica el ajuste métrico en `nota_calculo`.
    Marca con `"origen": "ia"` ÚNICAMENTE los insumos nuevos que agregues tú y no existían en la base.
-6. AUTO-FUSIÓN: Si la descripción del usuario exige algo que falta en la Base (ej. Bote de material, Pintura, Andamios, Encofrado) pero que sí existe en las Partidas Complementarias, "róbalo" e intégralo conservando sus precios históricos.
+6. AUTO-FUSIÓN: Si la descripción del usuario exige algo que falta en la Base (ej. Bote de material, Pintura, Andamios, Encofrado) pero que sí existe en las Partidas Complementarias y es afín a la especialidad, intégralo conservando sus precios históricos.
 7. AGREGA insumos nuevos que la nueva partida requiera estrictamente y no estén ni en la base ni en las complementarias. Márcalos como `"origen": "ia"`, asígnales un precio unitario referencial estimado de mercado en USD (nunca 0.0) y agrega una advertencia con el prefijo `[PRECIO_REFERENCIAL]`.
 8. NUNCA alteres los precios unitarios de los insumos del APU base ni de las complementarias. Son precios reales de la BD.
 9. DIRECTIVA OBLIGATORIA: PODA Y ELIMINACIÓN DE EQUIPOS Y MATERIALES DISCORDANTES O CORRUPTOS DE LA BASE:
    - TIENES LA OBLIGACIÓN ESTRICTA DE ELIMINAR del APU cualquier material o equipo de la base que resulte discordante, sobredimensionado o manifiestamente corrupto:
-     * Si la partida solicitada es un DESMONTAJE o DEMOLICIÓN, queda TERMINANTEMENTE PROHIBIDO incluir la compra o suministro del activo que se está desmontando (ej: comprar una bomba nueva, aire acondicionado nuevo, transformador nuevo, o tuberías/cables de obra nueva). Un desmontaje NO compra activos.
-     * Si el objeto es liviano o mecánico menor (ej: bomba de 1 a 10 HP, motor pequeño, puertas, artefactos), ELIMINA equipos de oxicorte/sopletes de alta temperatura y señoritas pesadas de 5 TON si no se justifican físicamente; sustitúyelos por herramientas mecánicas (llaves, dados) y acarreo liviano.
-     * Si la disciplina del insumo de la base no corresponde a la nueva partida (ej: gases refrigerantes en bombas hidráulicas, tuberías pesadas/colectores de concreto en acabados de pisos/sobrepisos, o tuberías/equipos eléctricos como rieles unistrut o equipo para tubería eléctrica en tuberías de agua potable/sanitarias), ELIMÍNALO SIN DUDAR.
+     * Si la partida solicitada es un DESMONTAJE o DEMOLICIÓN, queda TERMINANTEMENTE PROHIBIDO incluir la compra o suministro del activo que se está desmontando. Un desmontaje NO compra activos.
+     * Si el objeto es liviano o mecánico menor (ej: bomba de 1 a 10 HP, motor pequeño, puertas, artefactos), ELIMINA equipos de oxicorte/sopletes de alta temperatura y señoritas pesadas de 5 TON si no se justifican físicamente; sustitúyelos por herramientas mecánicas y acarreo liviano.
+     * Si un insumo o equipo de la base pertenece a otra especialidad o proceso constructivo incompatible con la actividad solicitada, ELIMÍNALO SIN DUDAR.
      * Si un insumo histórico presenta unidades absurdas para su descripción (ej. tubos medidos en kgf o sacos en partidas de acabados), es un error de digitación en la base histórica. DESCÁRTALO INMEDIATAMENTE. ESTÁ PROHIBIDO justificarlo con 'posible error de codificación pero se conserva'.
      * REFUERZO DE VARILLAS DE FIBRA DE VIDRIO (FRP / GFRP): La fibra de vidrio estructural tiene una densidad de ~2.0 g/cm³ (1/4 del peso del acero de construcción tradicional que pesa 7.85 g/cm³). Para una cuantía estructural equivalente al 1% en volumen de concreto (m³), la cantidad de varilla FRP es de 20 a 25 kgf por m³ de concreto, NUNCA 80-100 kgf como si fuera acero de cabilla pesada.
      * NO inventes justificaciones forzadas en notas_adaptacion para retener insumos absurdos de la base.
@@ -250,9 +466,14 @@ Prefijo COVENIN: {effective_cov_prefix}
     if result.get("partida") and requested_unit:
         result["partida"]["unit"] = requested_unit.strip().lower()
 
-    _normalize_equipment_prices(result, base_apu, complementary_apus)
+    effective_base_for_heritage = (
+        base_apu
+        if is_specialty_coherent
+        else {"equipos": effective_base_for_prompt.get("equipos", []), "materiales": []}
+    )
+    _normalize_equipment_prices(result, effective_base_for_heritage, complementary_apus)
     calibrate_apu_crew_and_equipment(result, base_apu)
-    _enforce_base_apu_material_heritage(result, base_apu, complementary_apus)
+    _enforce_base_apu_material_heritage(result, effective_base_for_heritage, complementary_apus)
     reconcile_equipment_with_database(result, db)
     reconcile_materials_with_database(result, db)
     reconcile_labor_with_database(result, db)
@@ -262,6 +483,10 @@ Prefijo COVENIN: {effective_cov_prefix}
     _enforce_deep_well_dimensions(result, user_description, deep_well_depth)
 
     result["debug_base_apu"] = base_apu
+    result["debug_specialty_coherence"] = {
+        "is_coherent": is_specialty_coherent,
+        "unanchor_reason": unanchor_reason,
+    }
     result["prompt_enviado_al_llm"] = prompt
 
     return result

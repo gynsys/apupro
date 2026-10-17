@@ -1,6 +1,6 @@
 import re
 import unicodedata
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Set, Tuple
 from app.core.logging import logger
 
 
@@ -71,24 +71,217 @@ def _normalize_text_key(text: str) -> str:
     return clean
 
 
+def normalize_labor_role_key(desc: str) -> str:
+    """
+    Normaliza la descripción de un cargo de mano de obra eliminando sufijos de tabulador
+    ('-N1' a '-N9', '- TABULADOR CONSTRUCCION', puntos de abreviatura '1RA.') para detectar
+    duplicados exactos de oficio cuando una partida histórica mezcla dos tabuladores.
+    """
+    if not desc or not isinstance(desc, str):
+        return ""
+    up = _strip_accents(desc).upper().strip()
+    up = re.sub(r"\s*-\s*TABULADOR\s+CONSTRUCCION\b", "", up)
+    up = re.sub(r"\bTABULADOR\s+CONSTRUCCION\b", "", up)
+    up = re.sub(r"\s*-\s*N\d+\b", "", up)
+    up = re.sub(r"\bN\d+\b", "", up)
+    up = re.sub(r"\b(1RA|2DA|3RA)\.", r"\1", up)
+    up = re.sub(r"[^A-Z0-9\s/()]", " ", up)
+    up = re.sub(r"\s{2,}", " ", up).strip()
+    return up
+
+
+def deduplicate_labor_items(
+    labors: List[Dict[str, Any]],
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """
+    Deduplica cargos de mano de obra equivalentes (ej. 'PLOMERO DE 1RA -N5' y 'PLOMERO DE 1ra.')
+    conservando una única línea por oficio y priorizando el registro con mayor salario integral (jornal + bono).
+    Retorna (lista_limpia, lista_purgados).
+    """
+    if not isinstance(labors, list) or not labors:
+        return [], []
+
+    by_role: Dict[str, Dict[str, Any]] = {}
+    role_order: List[str] = []
+    purged: List[Dict[str, Any]] = []
+
+    for item in labors:
+        if not isinstance(item, dict):
+            continue
+        desc = str(item.get("descripcion") or "").strip()
+        role_key = normalize_labor_role_key(desc)
+        if not role_key:
+            role_key = _normalize_text_key(desc) or f" IDX_{len(role_order)}"
+
+        jornal = float(item.get("jornal") or 0.0)
+        bono = float(item.get("bono") or 0.0)
+        total_comp = jornal + bono
+
+        if role_key not in by_role:
+            by_role[role_key] = item
+            role_order.append(role_key)
+        else:
+            existing = by_role[role_key]
+            ex_comp = float(existing.get("jornal") or 0.0) + float(existing.get("bono") or 0.0)
+            if total_comp > ex_comp:
+                purged.append(existing)
+                by_role[role_key] = item
+            else:
+                purged.append(item)
+
+    clean_list = [by_role[k] for k in role_order]
+    return clean_list, purged
+
+
+_PIPE_ACTIVITY_PATTERNS: List[str] = [
+    r"\bTUBERIA(S)?\b",
+    r"\bTUBO(S)?\s+(?:DE\s+)?(?:PVC|CPVC|PPR|POLIPROPILENO|PEAD|POLIETILENO|HG|HIERRO\s+GALVANIZADO|ACERO\s+GALVANIZADO|HIERRO\s+FUNDIDO|HF|COBRE|CONDUIT|EMT)\b",
+    r"\bCONDUIT\b",
+    r"\bTUBERIA\s+EMT\b",
+    r"\bAGUAS\s+CLARAS\b",
+    r"\bAGUAS\s+BLANCAS\b",
+    r"\bAGUAS\s+SERVIDAS\b",
+    r"\bAGUAS\s+NEGRAS\b",
+    r"\bAGUAS\s+RESIDUALES\b",
+    r"\bCANALIZACION(ES)?\s+ELECTRICA(S)?\b",
+]
+
+_STRUCTURAL_STEEL_EXCLUSIONS: List[str] = [
+    r"\bTUBO(S)?\s+ESTRUCTURAL(ES)?\b",
+    r"\bCONDUVEN\b",
+    r"\bCERCHA(S)?\b",
+    r"\bBARANDA(S)?\b",
+    r"\bREJA(S)?\b",
+    r"\bPORTON(ES)?\b",
+    r"\bESCALERA(S)?\s+METALICA(S)?\b",
+]
+
+
+def is_pipe_or_conduit_activity(text_input: str) -> bool:
+    """
+    Determina de forma global si una descripción corresponde a una partida de instalación,
+    reparación o suministro de tuberías (hidrosanitarias, aguas claras/servidas, gas, incendio,
+    climatización o canalizaciones eléctricas), excluyendo herrería/tubos estructurales.
+    """
+    if not text_input or not isinstance(text_input, str):
+        return False
+    up = _strip_accents(text_input).upper()
+    if any(re.search(pat, up) for pat in _STRUCTURAL_STEEL_EXCLUSIONS):
+        return False
+    return any(re.search(pat, up) for pat in _PIPE_ACTIVITY_PATTERNS)
+
+
+def classify_pipe_mounting_condition(text_input: str) -> str:
+    """
+    Clasifica de forma global la condición de montaje constructivo de una tubería:
+    - 'AMBIGUA_EMBUTIDA_ENTERRADA': cuando el texto contiene la cláusula dual 'EMBUTIDA O ENTERRADA'.
+    - 'ENTERRADA': enterrada, subterránea, en zanja, bajo tierra, excavación de zanja.
+    - 'SUPERFICIAL_COLGANTE': colgante, suspendida, fijada a la superficie, superficial, a la vista, adosada, aérea.
+    - 'EMBUTIDA': embutida, empotrada, en pared, en muro, en tabique, en losa, regata, ranurado, en interiores.
+    - 'NO_ESPECIFICADA': cuando no menciona condición explícita de montaje.
+    """
+    if not text_input or not isinstance(text_input, str):
+        return "NO_ESPECIFICADA"
+
+    up = _strip_accents(text_input).upper()
+
+    if re.search(r"\b(?:EMBUTIDA\s+O\s+ENTERRADA|ENTERRADA\s+O\s+EMBUTIDA|EMBUTIDO\s+O\s+ENTERRADO)\b", up):
+        return "AMBIGUA_EMBUTIDA_ENTERRADA"
+
+    has_buried = bool(re.search(
+        r"\b(?:ENTERRAD[OA]S?|SUBTERRANE[OA]S?|EN\s+ZANJA|BAJO\s+TIERRA|RED\s+EXTERIOR\s+ENTERRADA|BANCADA\s+SUBTERRANEA)\b",
+        up,
+    ))
+    has_exposed_hanging = bool(re.search(
+        r"\b(?:COLGANTE(S)?|SUSPENDID[OA]S?|FIJAD[OA]S?\s+A\s+LA\s+SUPERFICIE|SUPERFICIAL(ES)?|A\s+LA\s+VISTA|ADOSAD[OA]S?|SOBRE\s+PARED|AERE[OA]S?|EN\s+BANDEJA)\b",
+        up,
+    ))
+    has_embedded = bool(re.search(
+        r"\b(?:EMBUTID[OA]S?|EMPOTRAD[OA]S?|EN\s+PARED(ES)?|EN\s+MURO(S)?|EN\s+TABIQUE(S)?|EN\s+LOSA|REGATA(S)?|RANURADO|EN\s+INTERIOR(ES)?|INTERIOR(ES)?)\b",
+        up,
+    ))
+
+    if has_buried and not has_embedded and not has_exposed_hanging:
+        return "ENTERRADA"
+    if has_exposed_hanging and not has_buried:
+        return "SUPERFICIAL_COLGANTE"
+    if has_embedded and not has_buried:
+        return "EMBUTIDA"
+    if has_buried and has_embedded:
+        return "AMBIGUA_EMBUTIDA_ENTERRADA"
+
+    return "NO_ESPECIFICADA"
+
+
+def resolve_effective_pipe_mounting(user_description: str, base_description: str = "") -> str:
+    """
+    Resuelve la modalidad efectiva de montaje de tubería combinando la solicitud del usuario
+    con la partida base y desambiguando el término dual 'EMBUTIDA O ENTERRADA':
+    - Si el usuario especifica 'ENTERRADA', 'EMBUTIDA' o 'SUPERFICIAL_COLGANTE', prevalece la del usuario.
+    - Si el usuario no especifica condición y la base es 'AMBIGUA_EMBUTIDA_ENTERRADA', se desambigua a
+      'EMBUTIDA' (a menos que el usuario mencione excavación, zanja, movimiento de tierra o exteriores).
+    """
+    user_mode = classify_pipe_mounting_condition(user_description)
+    if user_mode in ("ENTERRADA", "EMBUTIDA", "SUPERFICIAL_COLGANTE"):
+        return user_mode
+
+    up_user = _strip_accents(user_description or "").upper()
+    if re.search(r"\b(?:EXCAVACION|ZANJA|EXTERIOR(ES)?|URBANISMO|CALLE|ACERA|VIALIDAD)\b", up_user):
+        return "ENTERRADA"
+
+    base_mode = classify_pipe_mounting_condition(base_description)
+    if base_mode in ("ENTERRADA", "EMBUTIDA", "SUPERFICIAL_COLGANTE"):
+        return base_mode
+
+    return "EMBUTIDA"
+
+
+# Patrones de equipos exclusivos de zanja / movimiento de tierra / topografía vial y albañilería gruesa
+_TRENCH_AND_TOPOGRAPHY_EQUIPMENT_PATTERNS: List[str] = [
+    r"\bCARRETILLA\b",
+    r"\bCINTA\s+METRICA\s+(?:T/|P/|PARA\s+)?TOPOGRAFO\b",
+    r"\bCINTA\s+METRICA\s+(?:DE\s+)?(?:LARGO\s*=\s*)?(?:25|30|50|100)\s*M(?:TS|T)?\b",
+    r"\bESCUADRA\s+METALICA\s+(?:DE\s+)?ALUMINIO\b",
+    r"\bPICO\s+CON\s+CABO\b",
+    r"\bPALA\s+(?:REDONDA|CUADRADA|CON\s+CABO)\b",
+    r"\bCOMPACTADOR\b",
+    r"\bVIBROCOMPACTADOR\b",
+    r"\bRETROEXCAVADORA\b",
+]
+
+# Patrones de equipos exclusivos de montaje aéreo / colgante / fijación en altura
+_HANGING_AND_SURFACE_EQUIPMENT_PATTERNS: List[str] = [
+    r"\bANDAMIO\s+TUBULAR\b",
+    r"\bESCALERA\s+TIPO\s+TIJERA\b",
+    r"\bPISTOLA\s+DE\s+FIJACION\b",
+]
+
+# Patrones de materiales exclusivos de suspensión / fijación aérea o superficial
+_HANGING_SUPPORT_MATERIAL_PATTERNS: List[str] = [
+    r"\bABRAZADERA(S)?\s+(?:COLGANTE|METALICA|DE\s+HIERRO|GALVANIZADA|TIPO\s+PERA|TIPO\s+OMEGA|PARA\s+TUBERIA)\b",
+    r"\bRIEL(ES)?\s+UNISTRU[TD]\b",
+    r"\bBARRA(S)?\s+ROSCADA(S)?\b",
+    r"\bTIRANTE(S)?\s+ROSCADO(S)?\b",
+]
+
+
 def enforce_discordant_inputs_purging(
     result: Dict[str, Any],
     user_description: str,
     base_apu: Dict[str, Any]
 ) -> None:
     """
-    Salvaguarda determinista de eliminación de discordancia de insumos y equipos:
+    Salvaguarda determinista de eliminación de discordancia de insumos, equipos y mano de obra:
     1. Regla Zero-Supply para Desmontajes / Demoliciones:
        - En actividades de desmontaje/retiro, purga cualquier material que represente
          el suministro del activo nuevo a desmontar o tuberías/cables de obra nueva.
-    2. Poda de Equipos Sobredimensionados o Discordantes:
-       - Si la actividad es liviana o mecánica simple (bomba <= 10 HP, puertas, artefactos),
-         purga equipos de oxicorte y señoritas pesadas de 5 TON si el usuario no pidió corte térmico.
-    3. Poda de Insumos de Disciplinas Ajenas heredados de la base:
-       - Si la solicitud es hidráulica/bombas y la base era refrigeración/HVAC, purga
-         refrigerantes, gases y accesorios de climatización.
-    4. Deduplicación Estricta:
-       - Elimina materiales, equipos y advertencias duplicadas en la salida.
+    2. Poda Global por Modalidad de Instalación de Tubería (EMBUTIDA vs ENTERRADA vs SUPERFICIAL/COLGANTE):
+       - Si la tubería es EMBUTIDA o SUPERFICIAL/COLGANTE (o en interiores sin excavación),
+         purga carretillas, cintas métricas de topógrafo de 25-50m, escuadras de albañilería y equipos de zanja.
+       - Si la tubería es ENTERRADA, purga andamios, escaleras, pistolas de fijación y abrazaderas colgantes.
+       - Si la tubería es estrictamente EMBUTIDA, purga abrazaderas colgantes y equipos de fijación superficial.
+    3. Poda de Equipos Sobredimensionados o de Disciplinas Ajenas.
+    4. Deduplicación Estricta de Materiales, Equipos, Mano de Obra (doble tabulador) y Advertencias.
     """
     if not result or not isinstance(result, dict):
         return
@@ -96,12 +289,27 @@ def enforce_discordant_inputs_purging(
     pruning_trace = result.setdefault("debug_pruning_trace", {
         "insumos_purgados": [],
         "equipos_purgados": [],
+        "mano_obra_purgada": [],
         "advertencias_purgadas": [],
         "total_eliminados": 0
     })
+    pruning_trace.setdefault("mano_obra_purgada", [])
 
     desc_lower = (user_description or "").lower()
+    desc_upper = _strip_accents(user_description or "").upper()
+    base_desc = str((base_apu or {}).get("descripcion") or (base_apu or {}).get("description") or "")
     is_removal = _is_removal_activity(user_description)
+
+    is_pipe_task = is_pipe_or_conduit_activity(user_description) or is_pipe_or_conduit_activity(base_desc)
+    pipe_mounting_mode = resolve_effective_pipe_mounting(user_description, base_desc) if is_pipe_task else "NO_APLICA"
+    explicit_earthwork_or_masonry = bool(re.search(
+        r"\b(?:EXCAVACION|ZANJA|BOTE\s+DE|ESCOMBRO|DEMOLICION|CONCRETO|MORTERO|RELLENO|COMPACTACION|ACARREO\s+EN\s+CARRETILLA)\b",
+        desc_upper,
+    ))
+    explicit_height_or_scaffold = bool(re.search(
+        r"\b(?:ANDAMIO|ALTURA|COLGANTE|SUSPENDID[OA]|EN\s+TECHO|BAJO\s+LOSA|AERE[OA])\b",
+        desc_upper,
+    ))
 
     # -------------------------------------------------------------------------
     # 1. PODA EN MATERIALES
@@ -150,6 +358,22 @@ def enforce_discordant_inputs_purging(
                     })
                     continue
 
+            # Poda por modalidad de tubería: si es EMBUTIDA o ENTERRADA, no lleva soportes/abrazaderas colgantes
+            if is_pipe_task and pipe_mounting_mode in ("EMBUTIDA", "ENTERRADA"):
+                if any(bool(re.search(pat, mat_desc_upper)) for pat in _HANGING_SUPPORT_MATERIAL_PATTERNS):
+                    logger.info(
+                        "[DiscordantPruning] Purgado soporte/abrazadera aérea en tubería %s: %s",
+                        pipe_mounting_mode,
+                        mat_desc,
+                    )
+                    pruning_trace["insumos_purgados"].append({
+                        "descripcion": mat_desc,
+                        "codigo": mat.get("codigo"),
+                        "motivo": f"Elemento de fijación superficial/colgante incompatible con tubería {pipe_mounting_mode}",
+                        "regla": f"TUBERIA_{pipe_mounting_mode}_SIN_SOPORTE_AEREO",
+                    })
+                    continue
+
             # Poda de gases de oxicorte para elementos livianos si no fue solicitado expresamente
             if is_lightweight and not explicit_cutting:
                 if any(bool(re.search(pat, mat_desc_upper)) for pat in HEAVY_OXY_CUTTING_PATTERNS):
@@ -188,7 +412,7 @@ def enforce_discordant_inputs_purging(
                     continue
 
             # Poda de tuberías eléctricas y rieles unistrut en partidas sanitarias/agua potable
-            is_sanitary_water = any(k in desc_lower for k in ["ppr", "polipropileno", "agua potable", "aguas blancas", "aguas claras", "plomeria", "fontaneria", "sanitaria", "sanitarias", "termofusion"])
+            is_sanitary_water = any(k in desc_lower for k in ["ppr", "polipropileno", "cpvc", "agua potable", "aguas blancas", "aguas claras", "plomeria", "fontaneria", "sanitaria", "sanitarias", "termofusion"])
             if is_sanitary_water:
                 if re.search(r"\b(TUBO\s+PVC\s+ELECTRICIDAD|CONDUIT|UNISTRU[TD]|CONDULET|CAJETIN|TABLERO\s+ELECTRICO|BREAKER|CABLE\s+THW|TUBERIA\s+ELECTRICA)\b", mat_desc_upper):
                     logger.info("[DiscordantPruning] Purgado material eléctrico discordante en partida de agua potable/sanitaria: %s", mat_desc)
@@ -238,6 +462,54 @@ def enforce_discordant_inputs_purging(
                 })
                 continue
 
+            # Poda Global por Modalidad de Instalación de Tuberías (EMBUTIDA vs ENTERRADA vs SUPERFICIAL/COLGANTE)
+            if is_pipe_task:
+                # Caso A: Tubería EMBUTIDA o SUPERFICIAL/COLGANTE (no enterrada) -> purgar carretilla, cinta de topógrafo 50m, escuadra de albañilería y equipos de zanja
+                if pipe_mounting_mode in ("EMBUTIDA", "SUPERFICIAL_COLGANTE") and not explicit_earthwork_or_masonry:
+                    if any(bool(re.search(pat, eq_desc_upper)) for pat in _TRENCH_AND_TOPOGRAPHY_EQUIPMENT_PATTERNS):
+                        logger.info(
+                            "[DiscordantPruning] Purgado equipo de zanja/topografía/acarreo (%s) en tubería modalidad %s",
+                            eq_desc,
+                            pipe_mounting_mode,
+                        )
+                        pruning_trace["equipos_purgados"].append({
+                            "descripcion": eq_desc,
+                            "codigo": eq.get("codigo"),
+                            "motivo": f"Equipo de excavación/topografía/acarreo incompatible con tubería {pipe_mounting_mode} sin movimiento de tierra",
+                            "regla": f"TUBERIA_{pipe_mounting_mode}_SIN_EQUIPO_ZANJA",
+                        })
+                        continue
+
+                # Si es estrictamente EMBUTIDA y no solicitó altura/andamio/colgante -> purgar equipos de fijación aérea/colgante
+                if pipe_mounting_mode == "EMBUTIDA" and not explicit_height_or_scaffold:
+                    if any(bool(re.search(pat, eq_desc_upper)) for pat in _HANGING_AND_SURFACE_EQUIPMENT_PATTERNS):
+                        logger.info(
+                            "[DiscordantPruning] Purgado equipo de montaje aéreo/superficial (%s) en tubería EMBUTIDA",
+                            eq_desc,
+                        )
+                        pruning_trace["equipos_purgados"].append({
+                            "descripcion": eq_desc,
+                            "codigo": eq.get("codigo"),
+                            "motivo": "Equipo de fijación aérea/colgante incompatible con tubería embutida",
+                            "regla": "TUBERIA_EMBUTIDA_SIN_EQUIPO_COLGANTE",
+                        })
+                        continue
+
+                # Caso B: Tubería ENTERRADA -> purgar andamios, escaleras de tijera y pistolas de fijación en techo/pared
+                if pipe_mounting_mode == "ENTERRADA" and not explicit_height_or_scaffold:
+                    if any(bool(re.search(pat, eq_desc_upper)) for pat in _HANGING_AND_SURFACE_EQUIPMENT_PATTERNS):
+                        logger.info(
+                            "[DiscordantPruning] Purgado equipo de montaje en altura/superficie (%s) en tubería ENTERRADA",
+                            eq_desc,
+                        )
+                        pruning_trace["equipos_purgados"].append({
+                            "descripcion": eq_desc,
+                            "codigo": eq.get("codigo"),
+                            "motivo": "Equipo de montaje aéreo/superficial incompatible con tubería enterrada en zanja",
+                            "regla": "TUBERIA_ENTERRADA_SIN_EQUIPO_ALTURA",
+                        })
+                        continue
+
             # Poda de equipo de oxicorte en desmontaje de equipo liviano sin corte térmico
             if is_lightweight and not explicit_cutting:
                 if re.search(r"\b(OXICORTE|EQUIPO\s+DE\s+OXICORTE|SOPLETE\s+DE\s+CORTE)\b", eq_desc_upper):
@@ -276,7 +548,7 @@ def enforce_discordant_inputs_purging(
                     continue
 
             # Poda de equipo de tubería eléctrica en partidas de agua potable/sanitarias
-            is_sanitary_water = any(k in desc_lower for k in ["ppr", "polipropileno", "agua potable", "aguas blancas", "aguas claras", "plomeria", "fontaneria", "sanitaria", "sanitarias", "termofusion"])
+            is_sanitary_water = any(k in desc_lower for k in ["ppr", "polipropileno", "cpvc", "agua potable", "aguas blancas", "aguas claras", "plomeria", "fontaneria", "sanitaria", "sanitarias", "termofusion"])
             if is_sanitary_water:
                 if re.search(r"\b(EQUIPO\s+PARA\s+TUBERIA\s+ELECTRICA|DOBLADORA\s+DE\s+CONDUIT|TERRAJA\s+ELECTRICA|ROSCADORA\s+ELECTRICA)\b", eq_desc_upper):
                     logger.info("[DiscordantPruning] Purgado equipo eléctrico discordante en partida de agua potable/sanitaria: %s", eq_desc)
@@ -291,7 +563,39 @@ def enforce_discordant_inputs_purging(
             seen_eq_keys.add(eq_key)
             clean_equipments.append(eq)
 
+        # Garantizar que nunca quede la lista de equipos vacía tras podar herramientas de zanja
+        if not clean_equipments and equipments:
+            clean_equipments.append({
+                "id": "e-ia-herramientas-menores",
+                "codigo": "HER001",
+                "descripcion": "HERRAMIENTAS MENORES",
+                "unidad": "día",
+                "cantidad": 1.0,
+                "depreciacion": 0.05,
+                "precio_unitario": 15.0,
+                "origen": "historico",
+                "nota_calculo": "Dotación de herramientas menores manuales para la cuadrilla de instalación.",
+            })
+
         result["equipments"] = clean_equipments
+
+    # -------------------------------------------------------------------------
+    # 2.5. DEDUPLICACIÓN DE MANO DE OBRA (DOBLE TABULADOR / ROLES EQUIVALENTES)
+    # -------------------------------------------------------------------------
+    labors = result.get("labors", [])
+    if isinstance(labors, list) and labors:
+        clean_labors, purged_labors = deduplicate_labor_items(labors)
+        if purged_labors:
+            for pl in purged_labors:
+                p_desc = str(pl.get("descripcion") or "").strip()
+                logger.info("[DiscordantPruning] Eliminado cargo de mano de obra duplicado por doble tabulador: %s", p_desc)
+                pruning_trace["mano_obra_purgada"].append({
+                    "descripcion": p_desc,
+                    "codigo": pl.get("codigo"),
+                    "motivo": "Oficio duplicado en doble tabulador (se conserva una sola línea con salario integral vigente)",
+                    "regla": "DEDUPLICACION_MANO_OBRA_TABULADOR",
+                })
+        result["labors"] = clean_labors
 
     # -------------------------------------------------------------------------
     # 3. DEDUPLICACIÓN Y FILTRADO DE ADVERTENCIAS
@@ -328,9 +632,11 @@ def enforce_discordant_inputs_purging(
     pruning_trace["total_eliminados"] = (
         len(pruning_trace["insumos_purgados"])
         + len(pruning_trace["equipos_purgados"])
+        + len(pruning_trace["mano_obra_purgada"])
         + len(pruning_trace["advertencias_purgadas"])
     )
     result["debug_pruning_trace"] = pruning_trace
     result["conteo_materiales"] = len(result.get("materials", []))
     result["conteo_equipos"] = len(result.get("equipments", []))
     result["conteo_mano_obra"] = len(result.get("labors", []))
+

@@ -1,5 +1,9 @@
 import re
 from typing import Any, Dict
+from app.services.ai_apu_service.domain_rules.discordant_pruning import (
+    is_pipe_or_conduit_activity,
+    resolve_effective_pipe_mounting,
+)
 
 
 def _sanitize_partida_description(result: Dict[str, Any], user_description: str = "") -> None:
@@ -11,7 +15,9 @@ def _sanitize_partida_description(result: Dict[str, Any], user_description: str 
        'EN MI CASA', 'EN RESIDENCIA PRIVADA', 'EN APTO') que no corresponden a especificaciones técnicas
        generales de partidas presupuestarias. Conserva términos técnicos de obra como 'CASA DE BOMBAS'
        o 'CASA DE MÁQUINAS'.
-    2. Limpia puntuación redundante generada por la podadura (comas consecutivas, espacios dobles, etc.).
+    2. Desambigua globalmente la condición de montaje en partidas de tuberías ('EMBUTIDA O ENTERRADA')
+       según la modalidad efectiva solicitada ('EMBUTIDA', 'ENTERRADA' o 'SUPERFICIAL/COLGANTE').
+    3. Limpia puntuación redundante generada por la podadura (comas consecutivas, espacios dobles, etc.).
     """
     if not isinstance(result, dict) or "partida" not in result:
         return
@@ -31,6 +37,22 @@ def _sanitize_partida_description(result: Dict[str, Any], user_description: str 
     )
 
     cleaned_desc = residential_pattern.sub("", desc)
+
+    # Desambiguación global de condición de montaje de tuberías (EMBUTIDA vs ENTERRADA vs SUPERFICIAL/COLGANTE)
+    if is_pipe_or_conduit_activity(cleaned_desc) or is_pipe_or_conduit_activity(user_description):
+        effective_mounting = resolve_effective_pipe_mounting(user_description, cleaned_desc)
+        dual_mounting_re = re.compile(
+            r"\b(?:EMBUTIDA\s+O\s+ENTERRADA|ENTERRADA\s+O\s+EMBUTIDA|EMBUTIDO\s+O\s+ENTERRADO)\b",
+            re.IGNORECASE,
+        )
+        if effective_mounting == "ENTERRADA":
+            cleaned_desc = dual_mounting_re.sub("ENTERRADA", cleaned_desc)
+        elif effective_mounting == "SUPERFICIAL_COLGANTE":
+            u_up = (user_description or "").upper()
+            target_label = "COLGANTE" if "COLGANTE" in u_up else "SUPERFICIAL"
+            cleaned_desc = dual_mounting_re.sub(target_label, cleaned_desc)
+        elif effective_mounting == "EMBUTIDA":
+            cleaned_desc = dual_mounting_re.sub("EMBUTIDA", cleaned_desc)
 
     # Limpieza de puntuaciones y espacios dobles
     cleaned_desc = re.sub(r"\s+,\s*", ", ", cleaned_desc)
@@ -76,22 +98,27 @@ def infer_covenin_prefix(description: str, base_code: str = "") -> str:
     if any(k in d for k in ["IMPERMEABILIZ", "MANTO", "PRIMER ASFALTICO", "ASFALTIC"]):
         return "E451"
 
-    # 5. Instalaciones Hidráulicas / Aguas Claras (E51)
-    if any(k in d for k in ["BOMBA", "HIDRONEUMATICO", "POZO", "AGUAS BLANCAS", "TUBERIA PVC PRESION", "PPR", "CPVC", "VALVULA"]):
+    # 5. Instalaciones Hidráulicas / Aguas Claras (E51 / E61)
+    if any(k in d for k in [
+        "BOMBA", "HIDRONEUMATICO", "POZO", "AGUAS BLANCAS", "AGUAS CLARAS", "AGUA POTABLE",
+        "TUBERIA PVC PRESION", "PPR", "POLIPROPILENO", "CPVC", "PEAD", "VALVULA", "LLAVE DE PASO"
+    ]):
         return "E511"
 
-    # 6. Instalaciones Sanitarias / Aguas Servidas (E52)
-    if any(k in d for k in ["AGUAS SERVIDAS", "AGUAS NEGRAS", "CLOACA", "DRENAJE", "PVC SANITARI", "BAJANTE"]):
+    # 6. Instalaciones Sanitarias / Aguas Servidas (E52 / E62)
+    if any(k in d for k in ["AGUAS SERVIDAS", "AGUAS NEGRAS", "AGUAS RESIDUALES", "CLOACA", "DRENAJE", "PVC SANITARI", "BAJANTE"]):
         return "E521"
 
     # 7. Instalaciones Eléctricas (E6)
-    if any(k in d for k in ["TABLERO", "CABLE", "TRANSFORMADOR", "ACOMETIDA", "TOMACORRIENTE", "INTERRUPTOR", "LUMINARIA", "PUESTA A TIERRA", "COPPERWELD"]):
+    if any(k in d for k in ["TABLERO", "CABLE", "TRANSFORMADOR", "ACOMETIDA", "TOMACORRIENTE", "INTERRUPTOR", "LUMINARIA", "PUESTA A TIERRA", "COPPERWELD", "CONDUIT", "TUBERIA EMT"]):
         return "E611"
 
     # 8. Estructuras de Concreto (E31) y Metálicas (E32)
     if any(k in d for k in ["CONCRETO ARMADO", "VACIADO DE CONCRETO", "VIGA", "COLUMNA", "LOSA", "FUNDACION", "CABILLA"]):
         return "E313"
-    if any(k in d for k in ["ESTRUCTURA METALICA", "PERFIL CONDUVEN", "VIGA IPE", "SOLDADURA"]):
+    if any(k in d for k in ["ESTRUCTURA METALICA", "PERFIL CONDUVEN", "VIGA IPE"]) or (
+        "SOLDADURA" in d and not any(p in d for p in ["SOLDADURA LIQUIDA", "PVC", "CPVC", "AGUAS CLARAS", "AGUAS BLANCAS", "AGUAS RESIDUALES", "AGUAS NEGRAS"])
+    ):
         return "E321"
 
     # 9. Movimiento de Tierras (E1) y Demoliciones (E2)

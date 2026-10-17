@@ -141,15 +141,44 @@ MATERIAL_CATEGORIES: Dict[str, Dict[str, List[str]]] = {
         "TEJA": [r"\bTEJA\b", r"\bCRIOLITA\b"],
         "MACHIHEMBRADO": [r"\bMACHIHEMBRADO\b", r"\bMACHIMBRADO\b"],
         "LOSACERO": [r"\bLOSACERO\b", r"\bSOFALIT\b", r"\bLAMINA\s+DE\s+LOSA\b"],
-    }
+    },
+    "conductores_electricos": {
+        "COBRE": [r"\bCABLE\w*\s+(?:DE\s+)?COBRE\b", r"\bCONDUCTOR\w*\s+(?:DE\s+)?COBRE\b"],
+        "ALUMINIO": [
+            r"\bCABLE\w*\s+(?:DE\s+)?ALUMINIO\b",
+            r"\bCONDUCTOR\w*\s+(?:DE\s+)?ALUMINIO\b",
+            r"\bARVIDAL\b",
+            r"\bACSR\b",
+        ],
+    },
+    "carpinteria_cerramientos": {
+        "MADERA": [r"\bPUERTA\w*\s+(?:DE\s+)?MADERA\b", r"\bENTAMBORAD\w*\b", r"\bVENTANA\w*\s+(?:DE\s+)?MADERA\b"],
+        "HIERRO_ACERO": [
+            r"\bPUERTA\w*\s+METALIC\w*\b",
+            r"\bPUERTA\w*\s+(?:DE\s+)?HIERRO\b",
+            r"\bVENTANA\w*\s+(?:DE\s+)?HIERRO\b",
+            r"\bREJA\w*\s+(?:DE\s+)?HIERRO\b",
+        ],
+        "ALUMINIO_VIDRIO": [
+            r"\bVENTANA\w*\s+(?:DE\s+)?ALUMINIO\b",
+            r"\bPUERTA\w*\s+(?:DE\s+)?ALUMINIO\b",
+            r"\bVIDRIO\s+TEMPLADO\b",
+            r"\bCARPINTERIA\s+DE\s+ALUMINIO\b",
+        ],
+    },
+    "cercas_perimetrales": {
+        "MALLA_CICLON": [r"\bMALLA\s+CICLON\b", r"\bALFAJOL\b"],
+        "CONCERTINA": [r"\bCONCERTINA\b"],
+        "ALAMBRE_PUAS": [r"\bALAMBRE\s+DE\s+PUAS\b"],
+    },
 }
 
 
 def detect_materials(text_input: str) -> Dict[str, Set[str]]:
-    """Detecta materiales técnicos por categoría en un texto dado."""
+    """Detecta materiales técnicos por categoría en un texto dado (insensible a tildes)."""
     if not text_input or not isinstance(text_input, str):
         return {}
-    upper = text_input.upper()
+    upper = _strip_accents_upper(text_input)
     found: Dict[str, Set[str]] = {}
     for cat_name, materials in MATERIAL_CATEGORIES.items():
         for mat_name, patterns in materials.items():

@@ -3,6 +3,7 @@ import re
 import unicodedata
 from typing import Any, Dict, List, Optional, Tuple
 from app.core.logging import logger
+from app.services.ai_apu_service.domain_rules.discordant_pruning import deduplicate_labor_items
 
 
 # ---------------------------------------------------------------------------
@@ -402,18 +403,35 @@ def classify_activity_typology(description: str, unit: str, covenin_code: str = 
         "FONDO DE ZINC", "FONDO ANTIALCALINO", "FONDO ANTICORROSIVO", "BARNIZ", "EMPASTADO",
         "TRATAMIENTO ANTICORROSIVO"
     ])
-    has_metalwork_action = any(k in desc_clean for k in [
-        "FABRICACION", "SUMINISTRO Y MONTAJE", "MONTAJE DE ESTRUCTURA", "SOLDADURA",
-        "OXICORTE", "CORTE DE PERFIL", "MONTAJE DE VIGA", "MONTAJE DE COLUMNA",
-        "ARMADO DE ESTRUCTURA", "REFUERZO DE ESTRUCTURA", "REFUERZO EN ESTRUCTURA",
-        "REFUERZO METALICO", "REPARACION DE ESTRUCTURA", "REPARACION Y REFUERZO",
-        "REPARACION DE DANOS", "DESMONTAJE Y MONTAJE", "HERRERIA"
-    ]) or (
-        any(e in desc_clean for e in ["ESTRUCTURA METALICA", "ESTRUCTURAS METALICAS", "BARANDA METALICA", "VIGA METALICA", "COLUMNA METALICA", "VIGAS DE APOYO"])
-        and any(w in desc_clean for w in ["REPARACION", "REFUERZO", "SOLDADURA", "OXICORTE", "CORTE", "DESMONTAJE"])
+    is_plastic_or_hydraulic_pipe = any(p in desc_clean for p in [
+        "PVC", "CPVC", "PPR", "POLIPROPILENO", "PEAD", "POLIETILENO", "TERMOFUSION",
+        "SOLDADURA LIQUIDA", "JUNTA SOLDADA", "AGUAS CLARAS", "AGUAS BLANCAS",
+        "AGUAS NEGRAS", "AGUAS RESIDUALES", "AGUAS SERVIDAS", "AGUA POTABLE", "TUBERIA SANITARIA"
+    ])
+    has_metalwork_action = (not is_plastic_or_hydraulic_pipe) and (
+        any(k in desc_clean for k in [
+            "FABRICACION", "SUMINISTRO Y MONTAJE", "MONTAJE DE ESTRUCTURA", "SOLDADURA",
+            "OXICORTE", "CORTE DE PERFIL", "MONTAJE DE VIGA", "MONTAJE DE COLUMNA",
+            "ARMADO DE ESTRUCTURA", "REFUERZO DE ESTRUCTURA", "REFUERZO EN ESTRUCTURA",
+            "REFUERZO METALICO", "REPARACION DE ESTRUCTURA", "REPARACION Y REFUERZO",
+            "REPARACION DE DANOS", "DESMONTAJE Y MONTAJE", "HERRERIA"
+        ]) or (
+            any(e in desc_clean for e in ["ESTRUCTURA METALICA", "ESTRUCTURAS METALICAS", "BARANDA METALICA", "VIGA METALICA", "COLUMNA METALICA", "VIGAS DE APOYO"])
+            and any(w in desc_clean for w in ["REPARACION", "REFUERZO", "SOLDADURA", "OXICORTE", "CORTE", "DESMONTAJE"])
+        )
     )
     if is_paint_action and not has_metalwork_action:
         return "PINTURA"
+
+    # 3.5. Instalaciones Sanitarias e Hidráulicas de Tuberías (prioridad sobre 'SOLDADURA' metalmecánica)
+    if any(k in desc_clean for k in [
+        "TUBERIA SANITARIA", "TUBERIA DE AGUAS CLARAS", "TUBERIA AGUAS CLARAS",
+        "TUBERIA DE AGUAS BLANCAS", "TUBERIA AGUAS BLANCAS", "TUBERIA DE AGUAS RESIDUALES",
+        "TUBERIA AGUAS RESIDUALES", "AGUAS NEGRAS", "AGUAS BLANCAS", "AGUAS CLARAS",
+        "AGUAS SERVIDAS", "AGUA POTABLE", "PVC SANITARIO", "CPVC", "PPR", "POLIPROPILENO",
+        "TERMOFUSION", "GRIFERIA", "LAVAMANOS", "EXCUSADO", "POCETA", "DUCHA", "LLAVE DE PASO", "SUMIDERO"
+    ]):
+        return "SANITARIAS"
 
     # 4. Estructuras Metálicas, Herrería y Soldadura (E36, M36, R36, C22, E22)
     if (
@@ -421,7 +439,7 @@ def classify_activity_typology(description: str, unit: str, covenin_code: str = 
         or cov_upper.startswith("C22") or cov_upper.startswith("E22")
     ):
         return "ESTRUCTURAS_METALICAS"
-    if any(k in desc_clean for k in [
+    if (not is_plastic_or_hydraulic_pipe) and any(k in desc_clean for k in [
         "ESTRUCTURA METALICA", "ESTRUCTURAS METALICAS", "HERRERIA", "SOLDADURA", "OXICORTE",
         "TUBO ESTRUCTURAL", "TUBOS ESTRUCTURALES", "PERFIL ESTRUCTURAL", "PERFILES DE ACERO",
         "VIGA METALICA", "COLUMNA METALICA", "VIGAS DE APOYO", "ZANCA", "ZANCAS", "PLETINA", "PLETINAS",
@@ -476,16 +494,14 @@ def classify_activity_typology(description: str, unit: str, covenin_code: str = 
         if u_norm not in ("kgf", "kg", "ton"):
             return "CONCRETO"
 
-    # 10. Instalaciones Sanitarias e Hidráulicas
-    if cov_upper.startswith("E5"):
-        return "SANITARIAS"
-    if any(k in desc_clean for k in ["TUBERIA SANITARIA", "AGUAS NEGRAS", "AGUAS BLANCAS", "PVC SANITARIO", "GRIFERIA", "LAVAMANOS", "EXCUSADO", "POCETA", "DUCHA", "LLAVE DE PASO", "SUMIDERO"]):
-        return "SANITARIAS"
-
-    # 11. Instalaciones Eléctricas
-    if cov_upper.startswith("E6"):
+    # 10. Instalaciones Eléctricas
+    if any(k in desc_clean for k in ["TUBERIA CONDUIT", "TUBERIA EMT", "CABLE", "CONDUCTOR ELECTRICO", "TABLERO ELECTRICO", "TOMACORRIENTE", "INTERRUPTOR", "LUMINARIA", "CAJETIN", "BREAKER"]):
         return "ELECTRICAS"
-    if any(k in desc_clean for k in ["TUBERIA CONDUIT", "CABLE", "CONDUCTOR ELECTRICO", "TABLERO ELECTRICO", "TOMACORRIENTE", "INTERRUPTOR", "LUMINARIA", "CAJETIN", "BREAKER"]):
+
+    # 11. Instalaciones Sanitarias e Hidráulicas por prefijo
+    if cov_upper.startswith("E5") or cov_upper.startswith("M61") or cov_upper.startswith("M62") or cov_upper.startswith("R61") or cov_upper.startswith("R62"):
+        return "SANITARIAS"
+    if cov_upper.startswith("E6"):
         return "ELECTRICAS"
 
     # 12. Excavación y Movimiento de Tierra
@@ -535,8 +551,9 @@ def is_supervisory_role(role_desc: str, code: str = "") -> bool:
 
 def consolidate_labor_crew(labors: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[str]]:
     """
-    Filtro 1: Deduplica y consolida las asignaciones de supervisión (Caporal).
-    Suma líneas redundantes y acota la fracción según el tamaño de cuadrilla activa:
+    Filtro 1: Deduplica oficios operativos con doble tabulador y consolida las asignaciones
+    de supervisión (Caporal / Maestro).
+    Suma líneas redundantes de supervisión y acota la fracción según el tamaño de cuadrilla activa:
     - Cuadrilla activa <= 12 trabajadores: 0.10 <= Caporal <= 0.25
     - Cuadrilla activa > 12 trabajadores: 0.20 <= Caporal <= 0.50
     """
@@ -545,7 +562,7 @@ def consolidate_labor_crew(labors: List[Dict[str, Any]]) -> Tuple[List[Dict[str,
 
     notes: List[str] = []
     supervision_items: List[Dict[str, Any]] = []
-    active_workers: List[Dict[str, Any]] = []
+    raw_active_workers: List[Dict[str, Any]] = []
 
     for item in labors:
         if not isinstance(item, dict):
@@ -555,11 +572,19 @@ def consolidate_labor_crew(labors: List[Dict[str, Any]]) -> Tuple[List[Dict[str,
         if is_supervisory_role(desc, code):
             supervision_items.append(item)
         else:
-            active_workers.append(item)
+            raw_active_workers.append(item)
 
-    # Si no hay supervisión, no hay nada que consolidar
+    # Deduplicar trabajadores operativos cuando una partida base mezcla dos tabuladores (ej. '-N5' y 'DE 1ra.')
+    active_workers, purged_workers = deduplicate_labor_items(raw_active_workers)
+    if purged_workers:
+        notes.append(
+            f"Cuadrilla operativa depurada: Se eliminaron {len(purged_workers)} líneas duplicadas por doble tabulador "
+            f"en la partida base, conservando una única asignación por oficio con salario integral vigente."
+        )
+
+    # Si no hay supervisión, retornar los trabajadores operativos ya deduplicados
     if not supervision_items:
-        return labors, notes
+        return active_workers, notes
 
     # Calcular el tamaño total de la cuadrilla operativa directa
     total_active_count = sum(float(w.get("cantidad", 1.0) or 1.0) for w in active_workers)
@@ -1207,8 +1232,9 @@ def validate_and_calibrate_hh(
     else:
         difficulty_factor = 1.30 if is_maintenance else 1.0
 
-    # 1. Buscar benchmark empírico por clave compuesta exacta (ej: ACARREO_m3.m, ALBANILERIA_m2, PINTURA_pza, ESTRUCTURAS_METALICAS_und)
-    benchmark_key = f"{typology}_{unit}"
+    # 1. Buscar benchmark empírico por clave compuesta exacta (normalizando 'ml' -> 'm' por equivalencia lineal)
+    bench_unit = "m" if unit in ("ml", "mts", "mt", "metro", "metros", "metro lineal") else unit
+    benchmark_key = f"{typology}_{bench_unit}"
     benchmark = EMPERICAL_HH_BENCHMARKS.get(benchmark_key)
 
     # 1.2 Benchmark especializado para pozo profundo, bombas y desmontajes electromecánicos en und/pza
@@ -1269,7 +1295,7 @@ def validate_and_calibrate_hh(
     # Si no coincide exactamente, buscar SOLO dentro de benchmarks compatibles con la MISMA unidad física
     if not benchmark:
         for k, v in EMPERICAL_HH_BENCHMARKS.items():
-            if k.endswith(f"_{unit}") and k.startswith(typology):
+            if k.endswith(f"_{bench_unit}") and k.startswith(typology):
                 benchmark = v
                 break
 

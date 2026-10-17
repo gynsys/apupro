@@ -48,6 +48,11 @@ _PIPE_CONTEXT_CUES: Tuple[str, ...] = (
 _PLASTIC_METRIC_CUES: Tuple[str, ...] = (
     "POLIPROPILENO", "PPR", "TERMOFUSION", "TERMOFUSIÓN", "POLIFUSION", "POLIFUSIÓN", "PEAD", "HDPE",
 )
+_HVAC_CONTEXT_CUES: Tuple[str, ...] = (
+    "AIRE ACONDICIONADO", "CLIMATIZACION", "CLIMATIZACIÓN", "SPLIT", "CHILLER",
+    "FANCOIL", "FAN COIL", "UMA", "REFRIGERACION", "REFRIGERACIÓN", "EVAPORADOR",
+    "CONDENSADOR", "CONDENSADORA", "BTU",
+)
 
 
 def _nominal_bore_mm_for_plastic_od(od_mm: float) -> Optional[float]:
@@ -56,6 +61,22 @@ def _nominal_bore_mm_for_plastic_od(od_mm: float) -> Optional[float]:
         if abs(od_mm - ref_od) <= 0.6:
             return round(inches * 25.4, 2)
     return None
+
+
+def _parse_thousand_aware_float(raw_num: str) -> Optional[float]:
+    """
+    Convierte cadenas numéricas reconociendo separadores de miles como '12.000', '24.000', '1.500'
+    cuando tienen exactamente 3 dígitos tras el punto/coma, o decimales estándar ('1.5', '37,5').
+    """
+    if not raw_num or not isinstance(raw_num, str):
+        return None
+    s = raw_num.strip()
+    if re.match(r"^\d{1,3}(?:[.,]\d{3})+$", s):
+        return float(re.sub(r"[.,]", "", s))
+    try:
+        return float(s.replace(",", "."))
+    except ValueError:
+        return None
 
 
 def parse_fraction(s: str) -> Optional[float]:
@@ -150,6 +171,35 @@ class DimensionToken:
         if self.dim_type == "power_hp":
             return abs(self.canonical_value - other.canonical_value) <= 0.1
 
+        # Para potencia aparente en kVA (transformadores, plantas eléctricas)
+        if self.dim_type == "power_kva":
+            ref_kva = max(self.canonical_value, other.canonical_value, 1.0)
+            return abs(self.canonical_value - other.canonical_value) <= max(0.5, 0.03 * ref_kva)
+
+        # Para capacidad térmica en BTU (climatización: 1 TR = 12.000 BTU)
+        if self.dim_type == "thermal_btu":
+            ref_btu = max(self.canonical_value, other.canonical_value, 1.0)
+            return abs(self.canonical_value - other.canonical_value) <= max(600.0, 0.05 * ref_btu)
+
+        # Para capacidad volumétrica en litros (tanques: 1 galón = 3.785 L, ej. 82 gal ≈ 310 L)
+        if self.dim_type == "volume_liters":
+            ref_vol = max(self.canonical_value, other.canonical_value, 1.0)
+            return abs(self.canonical_value - other.canonical_value) <= max(10.0, 0.06 * ref_vol)
+
+        # Para distancia de acarreo/transporte en km
+        if self.dim_type == "distance_km":
+            ref_km = max(self.canonical_value, other.canonical_value, 1.0)
+            return abs(self.canonical_value - other.canonical_value) <= max(0.5, 0.05 * ref_km)
+
+        # Para cantidad de circuitos en tableros eléctricos
+        if self.dim_type == "circuits_count":
+            return abs(self.canonical_value - other.canonical_value) <= 0.1
+
+        # Para secciones o formatos bidimensionales en cm (ej. 60x60 cm, 15x20x40 cm)
+        if self.dim_type == "section_cm":
+            ref_sec = max(self.canonical_value, other.canonical_value, 1.0)
+            return abs(self.canonical_value - other.canonical_value) <= max(0.5, 0.04 * ref_sec)
+
         # Para calibre AWG
         if self.dim_type == "gauge_awg":
             return abs(self.canonical_value - other.canonical_value) <= 0.1
@@ -176,10 +226,10 @@ def extract_unified_dimensions(text_input: str) -> List[DimensionToken]:
         upper_input = cleaned_input.upper()
         is_plastic_metric = any(cue in upper_input for cue in _PLASTIC_METRIC_CUES)
 
-        # 1. Diámetros métricos en mm: ej. 20 mm, 90 mm, 110 mm (excluyendo espesores "e = 3.2 mm")
-        for m in re.finditer(r"(?<![\d.,])(\d+(?:[.,]\d+)?)\s*mm\b", cleaned_input, re.IGNORECASE):
+        # 1. Diámetros métricos en mm: ej. 20 mm, 90 mm, 110 mm (excluyendo espesores "e = 3.2 mm" y secciones "100x100 mm")
+        for m in re.finditer(r"(?<![\d.,xX×])(\d+(?:[.,]\d+)?)\s*mm\b", cleaned_input, re.IGNORECASE):
             prefix = cleaned_input[max(0, m.start() - 14):m.start()]
-            if re.search(r"(?:\be\s*=\s*|\bespesor\s*=?\s*)$", prefix, re.IGNORECASE):
+            if re.search(r"(?:\be\s*=\s*|\bespesor\s*=?\s*|[xX×]\s*)$", prefix, re.IGNORECASE):
                 continue
             val = float(m.group(1).replace(",", "."))
             nominal_mm = _nominal_bore_mm_for_plastic_od(val) if is_plastic_metric else None
@@ -214,8 +264,15 @@ def extract_unified_dimensions(text_input: str) -> List[DimensionToken]:
                     mm_val = round(frac_val * 25.4, 2)
                     tokens.append(DimensionToken("diameter_mm", mm_val, m_frac.group(0)))
 
-        # 3. Cabillas de refuerzo (#3, #4, #5, #6, #8, cabilla #4)
+        # 3. Cabillas de refuerzo (#3, #4, #5, #6, #8, cabilla #4), excluyendo calibres eléctricos (#8 AWG, #10 AWG)
         for m in re.finditer(r"(?:cabilla|acero)?\s*(?:#|n[°o]\.?\s*)(\d+)\b", cleaned_input, re.IGNORECASE):
+            suffix = cleaned_input[m.end():m.end() + 10]
+            if re.match(r"^\s*awg\b", suffix, re.IGNORECASE):
+                continue
+            if ("AWG" in upper_input or "CABLE" in upper_input or "CONDUCTOR" in upper_input) and not (
+                "CABILLA" in upper_input or "REFUERZO" in upper_input
+            ):
+                continue
             num = int(m.group(1))
             if num in REBAR_MAP:
                 mm_val, _ = REBAR_MAP[num]
@@ -247,19 +304,31 @@ def extract_unified_dimensions(text_input: str) -> List[DimensionToken]:
                 v2 = float(m.group(2).replace(",", ".")) * multiplier
                 tokens.append(DimensionToken("voltage_v", v2, m.group(0)))
 
-        # 7. Potencia: hp, kw
-        for m in re.finditer(r"(?<![\d.,])(\d+(?:\s*[-/]\s*\d+)?|\d+(?:[.,]\d+)?)\s*(hp|kw)\b", cleaned_input, re.IGNORECASE):
+        # 7. Potencia mecánica: hp, kw
+        for m in re.finditer(r"(?<!\d\s)(?<![\d.,/-])(\d+\s*[- ]\s*\d+\s*/\s*\d+|\d+\s*/\s*\d+|\d+(?:[.,]\d+)?)\s*(hp|kw)\b", cleaned_input, re.IGNORECASE):
             frac = parse_fraction(m.group(1))
             unit_str = (m.group(2) or "").lower()
             if frac is not None:
                 hp_val = frac * 1.341 if unit_str == "kw" else frac
                 tokens.append(DimensionToken("power_hp", round(hp_val, 2), m.group(0)))
 
-        # 8. Calibre de cables AWG
-        for m in re.finditer(r"(?<![\d.,])(\d+)\s*(?:awg|calibre\s*#?\s*(\d+))\b", cleaned_input, re.IGNORECASE):
+        # 8. Calibre de cables AWG (incluye #12 AWG, 12 AWG, calibre #12 y 1/0 a 4/0 AWG)
+        for m_zero in re.finditer(r"(?<![\d.,])([1-4])\s*/\s*0\s*awg\b", cleaned_input, re.IGNORECASE):
+            zero_val = -float(int(m_zero.group(1)))
+            tok_z = DimensionToken("gauge_awg", zero_val, m_zero.group(0))
+            if not any(existing.dim_type == "gauge_awg" and existing.matches(tok_z) for existing in tokens):
+                tokens.append(tok_z)
+
+        for m in re.finditer(
+            r"(?:calibre\s*(?:#|n[°o]\.?)?\s*(\d+)\b|(?:#|n[°o]\.?\s*)?(?<![\d.,/])(\d+)\s*awg\b)",
+            cleaned_input,
+            re.IGNORECASE,
+        ):
             num_str = m.group(1) or m.group(2)
             if num_str:
-                tokens.append(DimensionToken("gauge_awg", float(int(num_str)), m.group(0)))
+                tok_awg = DimensionToken("gauge_awg", float(int(num_str)), m.group(0))
+                if not any(existing.dim_type == "gauge_awg" and existing.matches(tok_awg) for existing in tokens):
+                    tokens.append(tok_awg)
 
         # 9. Espesores en cm o m: "e=20 cm", "espesor 10 cm", "espesor 25 cms", "0.10 m de espesor"
         for m_th in re.finditer(
@@ -275,6 +344,95 @@ def extract_unified_dimensions(text_input: str) -> List[DimensionToken]:
             tok_th = DimensionToken("thickness_cm", round(cm_val, 2), m_th.group(0))
             if not any(existing.dim_type == "thickness_cm" and existing.matches(tok_th) for existing in tokens):
                 tokens.append(tok_th)
+
+        # 10. Capacidad Térmica (Climatización): BTU <-> TR / Toneladas de Refrigeración (1 TR = 12.000 BTU)
+        for m_btu in re.finditer(
+            r"(?<![\d.,])(\d{1,3}(?:[.,]\d{3})+|\d+(?:[.,]\d+)?)\s*btu(?:/h(?:r)?)?\b",
+            cleaned_input,
+            re.IGNORECASE,
+        ):
+            btu_val = _parse_thousand_aware_float(m_btu.group(1))
+            if btu_val is not None and btu_val >= 3000.0:
+                tok_btu = DimensionToken("thermal_btu", round(btu_val, 1), m_btu.group(0))
+                if not any(existing.dim_type == "thermal_btu" and existing.matches(tok_btu) for existing in tokens):
+                    tokens.append(tok_btu)
+
+        for m_tr in re.finditer(
+            r"(?<!\d\s)(?<![\d.,/-])(\d+\s*[- ]\s*\d+\s*/\s*\d+|\d+\s*/\s*\d+|\d+(?:[.,]\d+)?)\s*tr\b",
+            cleaned_input,
+            re.IGNORECASE,
+        ):
+            tr_val = parse_fraction(m_tr.group(1))
+            if tr_val is not None and 0.5 <= tr_val <= 500.0:
+                tok_tr = DimensionToken("thermal_btu", round(tr_val * 12000.0, 1), m_tr.group(0))
+                if not any(existing.dim_type == "thermal_btu" and existing.matches(tok_tr) for existing in tokens):
+                    tokens.append(tok_tr)
+
+        if any(cue in upper_input for cue in _HVAC_CONTEXT_CUES):
+            for m_ton in re.finditer(
+                r"(?<!\d\s)(?<![\d.,/-])(\d+\s*[- ]\s*\d+\s*/\s*\d+|\d+\s*/\s*\d+|\d+(?:[.,]\d+)?)\s*ton(?:eladas?)?\b",
+                cleaned_input,
+                re.IGNORECASE,
+            ):
+                ton_val = parse_fraction(m_ton.group(1))
+                if ton_val is not None and 0.5 <= ton_val <= 200.0:
+                    tok_ton = DimensionToken("thermal_btu", round(ton_val * 12000.0, 1), m_ton.group(0))
+                    if not any(existing.dim_type == "thermal_btu" and existing.matches(tok_ton) for existing in tokens):
+                        tokens.append(tok_ton)
+
+        # 11. Potencia Aparente Eléctrica: kVA / MVA (Transformadores y Plantas Eléctricas)
+        for m_kva in re.finditer(r"(?<![\d.,])(\d+(?:[.,]\d+)?)\s*(kva|mva)\b", cleaned_input, re.IGNORECASE):
+            val_kva = float(m_kva.group(1).replace(",", "."))
+            if m_kva.group(2).lower() == "mva":
+                val_kva *= 1000.0
+            tok_kva = DimensionToken("power_kva", round(val_kva, 2), m_kva.group(0))
+            if not any(existing.dim_type == "power_kva" and existing.matches(tok_kva) for existing in tokens):
+                tokens.append(tok_kva)
+
+        # 12. Capacidad Volumétrica: Litros <-> Galones (1 gal US = 3.78541 L)
+        for m_vol in re.finditer(
+            r"(?<![\d.,])(\d{1,3}(?:[.,]\d{3})+|\d+(?:[.,]\d+)?)\s*(litros?|lts?|gal(?:ones?)?)\b",
+            cleaned_input,
+            re.IGNORECASE,
+        ):
+            u_vol = m_vol.group(2).lower()
+            raw_v = m_vol.group(1)
+            v_num = _parse_thousand_aware_float(raw_v) if not u_vol.startswith("gal") else float(raw_v.replace(",", "."))
+            if v_num is not None and v_num > 0:
+                liters = v_num * 3.78541 if u_vol.startswith("gal") else v_num
+                tok_vol = DimensionToken("volume_liters", round(liters, 1), m_vol.group(0))
+                if not any(existing.dim_type == "volume_liters" and existing.matches(tok_vol) for existing in tokens):
+                    tokens.append(tok_vol)
+
+        # 13. Distancia de Acarreo/Transporte (km) y Cantidad de Circuitos en Tableros
+        for m_km in re.finditer(r"(?<![\d.,])(\d+(?:[.,]\d+)?)\s*(?:km|kil[oó]metros?)\b", cleaned_input, re.IGNORECASE):
+            val_km = float(m_km.group(1).replace(",", "."))
+            if val_km > 0:
+                tok_km = DimensionToken("distance_km", round(val_km, 2), m_km.group(0))
+                if not any(existing.dim_type == "distance_km" and existing.matches(tok_km) for existing in tokens):
+                    tokens.append(tok_km)
+
+        for m_cir in re.finditer(r"(?<![\d.,])(\d+)\s*(?:circuitos?|ctos?)\b", cleaned_input, re.IGNORECASE):
+            val_cir = float(int(m_cir.group(1)))
+            if val_cir > 0:
+                tok_cir = DimensionToken("circuits_count", val_cir, m_cir.group(0))
+                if not any(existing.dim_type == "circuits_count" and existing.matches(tok_cir) for existing in tokens):
+                    tokens.append(tok_cir)
+
+        # 14. Secciones y Formatos Bidimensionales/Tridimensionales: ej. "60x60 cm", "15x20x40 cm", "100x100 mm"
+        for m_sec in re.finditer(
+            r"(?<![\d.,])(\d+(?:[.,]\d+)?)\s*[xX×]\s*(\d+(?:[.,]\d+)?)(?:\s*[xX×]\s*(\d+(?:[.,]\d+)?))?\s*(cm|cms|mm|m)\b",
+            cleaned_input,
+            re.IGNORECASE,
+        ):
+            u_sec = m_sec.group(4).lower()
+            mult_cm = 100.0 if u_sec == "m" else (0.1 if u_sec == "mm" else 1.0)
+            raw_sides = [m_sec.group(1), m_sec.group(2)]
+            if m_sec.group(3):
+                raw_sides.append(m_sec.group(3))
+            sides_cm = sorted(round(float(s.replace(",", ".")) * mult_cm, 2) for s in raw_sides)
+            for s_cm in sides_cm:
+                tokens.append(DimensionToken("section_cm", s_cm, m_sec.group(0)))
 
     except Exception as exc:
         logger.error("Error extrayendo dimensiones de texto '%s': %s", text_input, exc, exc_info=True)

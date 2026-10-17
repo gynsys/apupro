@@ -8,8 +8,26 @@ from app.services.ai_search import (
     _stem_spanish_token,
     _tokenize_for_lexical_idf,
     ai_engine,
+    detect_materials,
 )
 from app.services.synonyms_service import expand_technical_synonyms
+from app.services.ai_apu_service.generator.anchored_generator import (
+    _are_units_physically_equivalent,
+    apply_specialty_coherence_contract_to_base,
+)
+from app.services.ai_apu_service.domain_rules.discordant_pruning import (
+    classify_pipe_mounting_condition,
+    enforce_discordant_inputs_purging,
+    resolve_effective_pipe_mounting,
+)
+from app.services.ai_apu_service.domain_rules.sanitize_partida import (
+    _sanitize_partida_description,
+    infer_covenin_prefix,
+)
+from app.services.apu_labor_calibrator import (
+    classify_activity_typology,
+    consolidate_labor_crew,
+)
 
 
 class TestHybridSearchRootFixes(unittest.TestCase):
@@ -81,6 +99,74 @@ class TestHybridSearchRootFixes(unittest.TestCase):
         self.assertAlmostEqual(delta_demol_ok, 0.15)
         self.assertLess(delta_demol_bad, 0.0)
 
+    def test_universal_dimensions_across_disciplines(self) -> None:
+        """
+        Verifica equivalencias físicas universales en otras disciplinas:
+        - Climatización: BTU <-> TR / Toneladas (24.000 BTU == 2 TR == 2 Toneladas)
+        - Transformadores: kVA (37.5 kVA == 37,5 kVA != 75 kVA)
+        - Tanques: Galones <-> Litros (82 galones ≈ 310 litros != 1.500 litros)
+        - Vialidad/Acarreo: km (15 km != 5 km) y Tableros: circuitos (12 circuitos == 12 ctos != 24 circuitos)
+        - Conductores eléctricos: #8 AWG y 2/0 AWG sin confundirse con cabillas (#8 rebar)
+        - Secciones/Formatos: 60x60 cm == 0.60x0.60 m != 30x30 cm
+        """
+        # 1. Climatización BTU <-> TR <-> Toneladas
+        q_hvac = extract_unified_dimensions("Suministro e instalación de aire acondicionado split de 24.000 BTU")
+        it_2tr = extract_unified_dimensions("UNIDAD DE AIRE ACONDICIONADO TIPO SPLIT DE 2 TR")
+        it_2ton = extract_unified_dimensions("SUMINISTRO E INSTALACION DE AIRE ACONDICIONADO DE 2 TONELADAS")
+        it_5tr = extract_unified_dimensions("UNIDAD DE AIRE ACONDICIONADO TIPO SPLIT DE 5 TR")
+        self.assertAlmostEqual(score_dimension_match(q_hvac, it_2tr)[0], 0.15)
+        self.assertAlmostEqual(score_dimension_match(q_hvac, it_2ton)[0], 0.15)
+        self.assertLess(score_dimension_match(q_hvac, it_5tr)[0], 0.0)
+
+        # 2. Transformadores kVA
+        q_kva = extract_unified_dimensions("Suministro de transformador monofásico de 37.5 kVA")
+        it_kva_ok = extract_unified_dimensions("TRANSFORMADOR DE DISTRIBUCION MONOFASICO DE 37,5 KVA")
+        it_kva_bad = extract_unified_dimensions("TRANSFORMADOR DE DISTRIBUCION MONOFASICO DE 75 KVA")
+        self.assertAlmostEqual(score_dimension_match(q_kva, it_kva_ok)[0], 0.15)
+        self.assertLess(score_dimension_match(q_kva, it_kva_bad)[0], 0.0)
+
+        # 3. Tanques: Galones <-> Litros (82 gal ≈ 310.4 L)
+        q_tank = extract_unified_dimensions("Tanque hidroneumático de 82 galones")
+        it_tank_ok = extract_unified_dimensions("TANQUE DE PRESION HIDRONEUMATICO DE 310 LITROS")
+        it_tank_bad = extract_unified_dimensions("TANQUE DE AGUA DE POLIETILENO DE 1.500 LTS")
+        self.assertAlmostEqual(score_dimension_match(q_tank, it_tank_ok)[0], 0.15)
+        self.assertLess(score_dimension_match(q_tank, it_tank_bad)[0], 0.0)
+
+        # 4. Acarreo (km) y Tableros (circuitos)
+        q_km = extract_unified_dimensions("Acarreo de escombros en camión volteo a 15 km")
+        it_km_ok = extract_unified_dimensions("TRANSPORTE DE ESCOMBROS HASTA 15 KM")
+        it_km_bad = extract_unified_dimensions("TRANSPORTE DE ESCOMBROS HASTA 5 KM")
+        self.assertAlmostEqual(score_dimension_match(q_km, it_km_ok)[0], 0.15)
+        self.assertLess(score_dimension_match(q_km, it_km_bad)[0], 0.0)
+
+        q_tab = extract_unified_dimensions("Instalación de tablero eléctrico de 12 circuitos")
+        it_tab_ok = extract_unified_dimensions("TABLERO METALICO EMBUTIDO DE 12 CTOS")
+        it_tab_bad = extract_unified_dimensions("TABLERO METALICO EMBUTIDO DE 24 CIRCUITOS")
+        self.assertAlmostEqual(score_dimension_match(q_tab, it_tab_ok)[0], 0.15)
+        self.assertLess(score_dimension_match(q_tab, it_tab_bad)[0], 0.0)
+
+        # 5. Calibres AWG (#8 AWG y 2/0 AWG) sin colisión con cabilla #8
+        q_awg8 = extract_unified_dimensions("Suministro de cable de cobre #8 AWG")
+        self.assertFalse(any(t.dim_type == "rebar_num" for t in q_awg8), "#8 AWG no debe extraerse como cabilla #8")
+        self.assertTrue(any(t.dim_type == "gauge_awg" and t.canonical_value == 8.0 for t in q_awg8))
+
+        q_awg20 = extract_unified_dimensions("Conductor de cobre calibre 2/0 AWG")
+        it_awg40 = extract_unified_dimensions("CONDUCTOR DE COBRE 4/0 AWG")
+        self.assertLess(score_dimension_match(q_awg20, it_awg40)[0], 0.0)
+
+        # 6. Secciones / Formatos Bidimensionales (60x60 cm vs 0.60x0.60 m vs 30x30 cm)
+        q_tile = extract_unified_dimensions("Piso de porcelanato formato 60x60 cm")
+        it_tile_ok = extract_unified_dimensions("PISO DE PORCELANATO DE 0,60 X 0,60 M")
+        it_tile_bad = extract_unified_dimensions("PISO DE PORCELANATO DE 30 X 30 CM")
+        self.assertAlmostEqual(score_dimension_match(q_tile, it_tile_ok)[0], 0.25)
+        self.assertLess(score_dimension_match(q_tile, it_tile_bad)[0], 0.0)
+
+        # 7. Categorías de materiales insensibles a tildes
+        mats_cu = detect_materials("Suministro de cable de cobre THW #12 AWG")
+        self.assertIn("COBRE", mats_cu.get("conductores_electricos", set()))
+        mats_cer = detect_materials("Revestimiento de cerámica en paredes")
+        self.assertIn("CERAMICA", mats_cer.get("pisos_revestimiento", set()))
+
     def test_spanish_phonotactic_stemming_and_ui_unit_stripping(self) -> None:
         """Verifica la regla fonotáctica de plurales en español y la limpieza del sufijo 'unidad <u_med>'."""
         self.assertEqual(_stem_spanish_token("PAREDES"), "PARED")
@@ -106,6 +192,202 @@ class TestHybridSearchRootFixes(unittest.TestCase):
         self.assertIn("varilla de fibra", chunk)
         self.assertIn("concreto fc 250", chunk)
         self.assertNotIn("unidad m3", chunk.lower())
+
+    def test_principio3_specialty_coherence_contract_unanchoring(self) -> None:
+        """
+        Verifica el Principio 3 (Desanclaje Automático por Contrato de Coherencia de Especialidad):
+        - Cuando D_base == D_user y M_base == M_user, conserva materiales y equipos intactos.
+        - Cuando D_base != D_user o M_base != M_user, revoca materiales y equipos específicos,
+          conservando únicamente rendimiento, mano de obra y herramientas menores.
+        """
+        # 1. Caso coherente: solicitud de PPR 1/2" con base EST253 (PPR 20 mm)
+        coherent_base = {
+            "codpar": "EST253",
+            "descripcion": "TUBERIA DE AGUAS CLARAS DE PLASTICO POLIPROPILENO, DIAMETRO 20 MM, TERMOFUSION",
+            "unidad": "m",
+            "rendimiento": 25.0,
+            "materiales": [{"codigo": "M1", "descripcion": "TUBO PPR 20 MM"}],
+            "equipos": [
+                {"codigo": "E1", "descripcion": "MAQUINA POLIFUSORA"},
+                {"codigo": "E2", "descripcion": "HERRAMIENTAS MENORES"},
+            ],
+            "mano_obra": [{"codigo": "O1", "descripcion": "PLOMERO DE 1RA"}],
+        }
+        out_ok, is_ok, reason_ok = apply_specialty_coherence_contract_to_base(
+            coherent_base,
+            "Suministro e instalación de Tubería con ppr 1/2 en instalaciones domesticas",
+        )
+        self.assertTrue(is_ok, f"Debe ser coherente: {reason_ok}")
+        self.assertEqual(len(out_ok["materiales"]), 1)
+        self.assertEqual(len(out_ok["equipos"]), 2)
+
+        # 2. Caso incoherente de especialidad: solicitud de agua potable PPR con base eléctrica EIB275
+        divergent_base = {
+            "codpar": "EIB275",
+            "descripcion": 'SUMINISTRO E INSTALACION DE TUBERIA PVC ELECTRICIDAD D=1/2" CON RIEL UNISTRUT',
+            "unidad": "m",
+            "rendimiento": 20.0,
+            "materiales": [
+                {"codigo": "M_ELEC", "descripcion": 'TUBO PVC ELECTRICIDAD 1/2"'},
+                {"codigo": "M_UNI", "descripcion": 'PERFIL RIEL UNISTRUT 1 1/2" X 3/4"'},
+            ],
+            "equipos": [
+                {"codigo": "EQ_ELEC", "descripcion": "EQUIPO PARA TUBERIA ELECTRICA"},
+                {"codigo": "EQ_HM", "descripcion": "HERRAMIENTAS MENORES"},
+            ],
+            "mano_obra": [{"codigo": "O_EL", "descripcion": "ELECTRICISTA DE 1RA"}],
+        }
+        out_div, is_div, reason_div = apply_specialty_coherence_contract_to_base(
+            divergent_base,
+            "Suministro e instalación de Tubería con ppr 1/2 en instalaciones domesticas",
+        )
+        self.assertFalse(is_div)
+        self.assertTrue(len(reason_div) > 0)
+        self.assertEqual(out_div["materiales"], [], "El ancla de materiales debe quedar revocada")
+        self.assertEqual(len(out_div["equipos"]), 1, "Solo debe conservar herramientas menores")
+        self.assertEqual(out_div["equipos"][0]["descripcion"], "HERRAMIENTAS MENORES")
+        self.assertEqual(out_div["rendimiento"], 20.0)
+
+    def test_global_pipe_mounting_classification_and_pruning(self) -> None:
+        """
+        Verifica la diferenciación global de tuberías según condición de montaje:
+        - EMBUTIDA / EN INTERIORES: purga carretilla, cinta de topógrafo 50m y escuadra metálica 60x40cm,
+          y desambigua 'EMBUTIDA O ENTERRADA' a 'EMBUTIDA'.
+        - ENTERRADA / EN ZANJA: conserva carretilla y cinta de topógrafo, pero purga andamios/escaleras/abrazaderas
+          y desambigua 'EMBUTIDA O ENTERRADA' a 'ENTERRADA'.
+        - SUPERFICIAL / COLGANTE: conserva soportes/andamios y purga carretilla y cinta de topógrafo.
+        """
+        base_m611081013 = {
+            "codpar": "M611081013",
+            "descripcion": 'TUBERIA DE AGUAS CLARAS, DE PVC CPVC SOLDADA PARA AGUA CALIENTE, DIAMETRO 1/2" (13mm), ASTM, EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.',
+        }
+        self.assertEqual(classify_pipe_mounting_condition(base_m611081013["descripcion"]), "AMBIGUA_EMBUTIDA_ENTERRADA")
+        self.assertEqual(
+            resolve_effective_pipe_mounting(
+                'Suministro e instalación de Tubería con CPVC 1/2" En interiores Incluye conexiones y accesorios unidad ml',
+                base_m611081013["descripcion"],
+            ),
+            "EMBUTIDA",
+        )
+        self.assertEqual(
+            resolve_effective_pipe_mounting(
+                'Suministro e instalación de Tubería de PVC 2" enterrada en zanja exterior',
+                base_m611081013["descripcion"],
+            ),
+            "ENTERRADA",
+        )
+        self.assertEqual(
+            resolve_effective_pipe_mounting(
+                'Tubería de acero galvanizado 2" colgante en techo',
+                base_m611081013["descripcion"],
+            ),
+            "SUPERFICIAL_COLGANTE",
+        )
+
+        # Caso 1: Tubería EMBUTIDA / en interiores -> elimina carretilla, cinta de topógrafo y escuadra 60x40
+        apu_embutida = {
+            "partida": {
+                "description": 'SUMINISTRO E INSTALACIÓN DE TUBERÍA DE CPVC 1/2" (13MM), ASTM, EMBUTIDA O ENTERRADA EN INTERIORES.'
+            },
+            "materials": [
+                {"codigo": "MAT-TUB-392", "descripcion": 'TUBO DE AGUA CALIENTE CPVC D= 1/2"'},
+                {"codigo": "MAT-SOP-001", "descripcion": 'ABRAZADERA COLGANTE TIPO PERA D= 1/2"'},
+            ],
+            "equipments": [
+                {"codigo": "EQU-BOM-024", "descripcion": "BOMBA MANUAL PARA PRUEBAS HIDRAULICAS C/FILTRO"},
+                {"codigo": "EQU-HER-030", "descripcion": "CARRETILLA DE RUEDAS NEUMATICAS DE CAPACIDAD= 55 l"},
+                {"codigo": "EQU-GEN-170", "descripcion": "CINTA METRICA T/TOPOGRAFO DE LARGO= 50 m, MARCA STANLEY"},
+                {"codigo": "EQU-GEN-491", "descripcion": "ESCUADRA METALICA DE ALUMINIO DE 60x40 cm"},
+                {"codigo": "EQU-GEN-847", "descripcion": 'NIVEL DE 3 BURBUJAS DE LARGO= 14", MARCA STANLEY'},
+                {"codigo": "EQU-GEN-964", "descripcion": "SEGUETA AJUSTABLE"},
+            ],
+            "labors": [],
+        }
+        enforce_discordant_inputs_purging(
+            apu_embutida,
+            'Suministro e instalación de Tubería con CPVC 1/2" En interiores Incluye conexiones y accesorios unidad ml',
+            base_m611081013,
+        )
+        _sanitize_partida_description(
+            apu_embutida,
+            'Suministro e instalación de Tubería con CPVC 1/2" En interiores Incluye conexiones y accesorios unidad ml',
+        )
+        eq_descs = [e["descripcion"] for e in apu_embutida["equipments"]]
+        mat_descs = [m["descripcion"] for m in apu_embutida["materials"]]
+        self.assertNotIn("CARRETILLA DE RUEDAS NEUMATICAS DE CAPACIDAD= 55 l", eq_descs)
+        self.assertNotIn("CINTA METRICA T/TOPOGRAFO DE LARGO= 50 m, MARCA STANLEY", eq_descs)
+        self.assertNotIn("ESCUADRA METALICA DE ALUMINIO DE 60x40 cm", eq_descs)
+        self.assertIn("BOMBA MANUAL PARA PRUEBAS HIDRAULICAS C/FILTRO", eq_descs)
+        self.assertNotIn('ABRAZADERA COLGANTE TIPO PERA D= 1/2"', mat_descs)
+        self.assertIn("EMBUTIDA", apu_embutida["partida"]["description"])
+        self.assertNotIn("ENTERRADA", apu_embutida["partida"]["description"])
+
+        # Caso 2: Tubería ENTERRADA -> conserva carretilla y cinta de topógrafo, pero elimina andamios/abrazaderas
+        apu_enterrada = {
+            "partida": {
+                "description": 'TUBERÍA DE AGUAS CLARAS PVC 2", EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.'
+            },
+            "materials": [
+                {"codigo": "MAT-TUB-001", "descripcion": 'TUBO PVC D= 2"'},
+                {"codigo": "MAT-SOP-001", "descripcion": 'ABRAZADERA COLGANTE TIPO PERA D= 2"'},
+            ],
+            "equipments": [
+                {"codigo": "EQU-HER-030", "descripcion": "CARRETILLA DE RUEDAS NEUMATICAS DE CAPACIDAD= 55 l"},
+                {"codigo": "EQU-GEN-170", "descripcion": "CINTA METRICA T/TOPOGRAFO DE LARGO= 50 m, MARCA STANLEY"},
+                {"codigo": "EQU-AND-001", "descripcion": "ANDAMIO TUBULAR 2,00 x 1,20 x 1,80 m"},
+                {"codigo": "EQU-HIL-001", "descripcion": "PISTOLA DE FIJACION HILTI DX460"},
+            ],
+            "labors": [],
+        }
+        enforce_discordant_inputs_purging(
+            apu_enterrada,
+            'Suministro e instalación de Tubería de aguas claras PVC 2" enterrada en zanja',
+            base_m611081013,
+        )
+        _sanitize_partida_description(
+            apu_enterrada,
+            'Suministro e instalación de Tubería de aguas claras PVC 2" enterrada en zanja',
+        )
+        eq_ent_descs = [e["descripcion"] for e in apu_enterrada["equipments"]]
+        self.assertIn("CARRETILLA DE RUEDAS NEUMATICAS DE CAPACIDAD= 55 l", eq_ent_descs)
+        self.assertIn("CINTA METRICA T/TOPOGRAFO DE LARGO= 50 m, MARCA STANLEY", eq_ent_descs)
+        self.assertNotIn("ANDAMIO TUBULAR 2,00 x 1,20 x 1,80 m", eq_ent_descs)
+        self.assertNotIn("PISTOLA DE FIJACION HILTI DX460", eq_ent_descs)
+        self.assertIn("ENTERRADA", apu_enterrada["partida"]["description"])
+        self.assertNotIn("EMBUTIDA", apu_enterrada["partida"]["description"])
+
+    def test_dual_tabulator_labor_deduplication_and_cpvc_typology(self) -> None:
+        """
+        Verifica que la cuadrilla contaminada por doble tabulador en M611081013
+        (Plomero -N5 + Plomero de 1ra., Ayudante -N2 + Ayudante, Obrero -N1 + Obrero de 1ra.)
+        se consolide a 1 Plomero, 1 Ayudante, 1 Obrero y 0.25 Caporal, y que la tipología
+        sea SANITARIAS (no ESTRUCTURAS_METALICAS) y unidad 'ml' == 'm'.
+        """
+        raw_labors = [
+            {"codigo": "MO-DIR-58", "descripcion": "MAESTRO PLOMERO DE 1ra.", "cantidad": 0.25, "jornal": 4.24, "bono": 0.0},
+            {"codigo": "MO-DIR-59", "descripcion": "MAESTRO PLOMERO DE 1RA -N7", "cantidad": 0.25, "jornal": 3.18, "bono": 3.22},
+            {"codigo": "MO-OBR-07", "descripcion": "AYUDANTE", "cantidad": 1.0, "jornal": 4.0, "bono": 0.0},
+            {"codigo": "MO-OBR-20", "descripcion": "AYUDANTE - TABULADOR CONSTRUCCION -N2", "cantidad": 1.0, "jornal": 2.44, "bono": 3.22},
+            {"codigo": "MO-OBR-25", "descripcion": "OBRERO DE 1ra.", "cantidad": 1.0, "jornal": 4.0, "bono": 0.0},
+            {"codigo": "MO-OBR-26", "descripcion": "OBRERO DE 1RA -N1", "cantidad": 1.0, "jornal": 2.25, "bono": 3.22},
+            {"codigo": "MO-OFI-127", "descripcion": "PLOMERO DE 1ra.", "cantidad": 1.0, "jornal": 4.0, "bono": 0.0},
+            {"codigo": "MO-OFI-128", "descripcion": "PLOMERO DE 1RA -N5", "cantidad": 1.0, "jornal": 3.0, "bono": 3.22},
+        ]
+        consolidated, notes = consolidate_labor_crew(raw_labors)
+        self.assertEqual(len(consolidated), 4, f"Deben quedar 4 cargos únicos, obtuvo {consolidated}")
+        codes = {item["codigo"] for item in consolidated}
+        self.assertIn("MO-OFI-128", codes)
+        self.assertIn("MO-OBR-20", codes)
+        self.assertIn("MO-OBR-26", codes)
+        self.assertIn("MO-DIR-59", codes)
+        self.assertTrue(any("doble tabulador" in n for n in notes))
+
+        # Tipología y equivalencia de unidades
+        desc_cpvc = 'SUMINISTRO E INSTALACION DE TUBERIA DE AGUAS CLARAS DE CPVC SOLDADA PARA AGUA CALIENTE D= 1/2"'
+        self.assertEqual(classify_activity_typology(desc_cpvc, "ml", "E511SC001"), "SANITARIAS")
+        self.assertEqual(infer_covenin_prefix(desc_cpvc, "M611081013"), "E511")
+        self.assertTrue(_are_units_physically_equivalent("ml", "m"))
+        self.assertFalse(_are_units_physically_equivalent("und", "m"))
 
 
 if __name__ == "__main__":
