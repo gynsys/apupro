@@ -18,6 +18,7 @@ from app.services.ai_apu_service.domain_rules.discordant_pruning import (
     _HANGING_AND_SURFACE_EQUIPMENT_PATTERNS,
     _TRENCH_AND_TOPOGRAPHY_EQUIPMENT_PATTERNS,
     enforce_discordant_inputs_purging,
+    is_explicit_mortar_without_coarse_concrete,
     is_pipe_or_conduit_activity,
     resolve_effective_pipe_mounting,
 )
@@ -43,6 +44,7 @@ from app.services.ai_apu_service.rag_context.candidates import (
 _PRIMARY_SYSTEM_CATEGORIES: Tuple[str, ...] = (
     "tuberia",
     "mamposteria",
+    "elemento_constructivo_civil",
     "pisos_revestimiento",
     "cubiertas_techos",
     "carpinteria_cerramientos",
@@ -156,8 +158,11 @@ def apply_specialty_coherence_contract_to_base(
     Si la disciplina o familia material de la base (D_base) no coincide con la solicitada (D_user),
     revoca automáticamente el ancla de materiales y equipos específicos antes de construir el prompt,
     conservando únicamente la escala de rendimiento, cuadrilla y herramientas menores porcentuales.
-    Asimismo, si es una partida de tubería, filtra preventivamente los equipos de la base que no
-    correspondan a la condición de montaje (EMBUTIDA vs ENTERRADA vs SUPERFICIAL_COLGANTE).
+    Asimismo:
+    - Si es una partida de tubería, filtra preventivamente los equipos de la base que no
+      correspondan a la condición de montaje (EMBUTIDA vs ENTERRADA vs SUPERFICIAL_COLGANTE).
+    - Si la solicitud especifica mortero de arena-cemento (sin concreto grueso), filtra preventivamente
+      la piedra picada y el vibrador de inmersión, preservando el acero de refuerzo en elementos a flexión.
     """
     if not pruned_base or not isinstance(pruned_base, dict):
         return {}, True, ""
@@ -172,10 +177,52 @@ def apply_specialty_coherence_contract_to_base(
         ]
         return decoupled, False, reason
 
-    base_desc = str(pruned_base.get("descripcion") or pruned_base.get("description") or "")
+    u_up = _strip_accents_upper(user_description or "")
+    is_mortar_only = is_explicit_mortar_without_coarse_concrete(user_description)
+    is_indoor = bool(re.search(r"\bEN\s+INTERIOR(ES)?\b", u_up)) and not bool(re.search(r"\bCARRETILLA\b", u_up))
+    explicit_mixer = bool(re.search(r"\b(?:MEZCLADORA|TROMPO)\b", u_up))
+
+    filtered_base: Dict[str, Any] = dict(pruned_base)
+    if is_mortar_only or is_indoor:
+        if is_mortar_only and isinstance(filtered_base.get("materiales"), list):
+            filtered_base["materiales"] = [
+                m for m in filtered_base["materiales"]
+                if isinstance(m, dict)
+                and not re.search(
+                    r"\b(?:PIEDRA\s+PICADA|GRAVA\s+PICADA|GRANZA\s+PARA\s+CONCRETO|FLETE\s*/\s*TRANSPORTE\s+DE\s+AGREGADOS|TRANSPORTE\s+URBANO\s+DE\s+CEMENTO)\b",
+                    _strip_accents_upper(str(m.get("descripcion") or "")),
+                )
+            ]
+        if isinstance(filtered_base.get("equipos"), list):
+            clean_m_eqs: List[Dict[str, Any]] = []
+            for eq in filtered_base["equipos"]:
+                if not isinstance(eq, dict):
+                    continue
+                eq_up = _strip_accents_upper(str(eq.get("descripcion") or ""))
+                if is_mortar_only and re.search(r"\bVIBRADOR\b", eq_up):
+                    continue
+                if is_mortar_only and is_indoor and not explicit_mixer and re.search(r"\b(?:MEZCLADORA|TROMPO)\b", eq_up):
+                    continue
+                if is_indoor and re.search(r"\bCARRETILLA\b", eq_up):
+                    continue
+                clean_m_eqs.append(eq)
+            filtered_base["equipos"] = clean_m_eqs
+        if is_mortar_only and isinstance(filtered_base.get("mano_obra"), list):
+            has_mixer = any(
+                re.search(r"\b(?:MEZCLADORA|TROMPO)\b", _strip_accents_upper(str(e.get("descripcion") or "")))
+                for e in filtered_base.get("equipos", [])
+                if isinstance(e, dict)
+            )
+            if not has_mixer:
+                filtered_base["mano_obra"] = [
+                    mo for mo in filtered_base["mano_obra"]
+                    if isinstance(mo, dict)
+                    and "MAQUINISTA DE CONCRETO" not in _strip_accents_upper(str(mo.get("descripcion") or ""))
+                ]
+
+    base_desc = str(filtered_base.get("descripcion") or filtered_base.get("description") or "")
     if is_pipe_or_conduit_activity(user_description) or is_pipe_or_conduit_activity(base_desc):
         pipe_mode = resolve_effective_pipe_mounting(user_description, base_desc)
-        u_up = _strip_accents_upper(user_description or "")
         explicit_earthwork = bool(re.search(
             r"\b(?:EXCAVACION|ZANJA|BOTE\s+DE|ESCOMBRO|DEMOLICION|CONCRETO|MORTERO|RELLENO|COMPACTACION)\b",
             u_up,
@@ -184,8 +231,7 @@ def apply_specialty_coherence_contract_to_base(
             r"\b(?:ANDAMIO|ALTURA|COLGANTE|SUSPENDID[OA]|EN\s+TECHO|BAJO\s+LOSA|AERE[OA])\b",
             u_up,
         ))
-        filtered_base: Dict[str, Any] = dict(pruned_base)
-        raw_eqs = pruned_base.get("equipos", [])
+        raw_eqs = filtered_base.get("equipos", [])
         clean_eqs: List[Dict[str, Any]] = []
         for eq in raw_eqs:
             if not isinstance(eq, dict):
@@ -201,7 +247,7 @@ def apply_specialty_coherence_contract_to_base(
         filtered_base["equipos"] = clean_eqs
         return filtered_base, True, ""
 
-    return pruned_base, True, ""
+    return filtered_base, True, ""
 
 
 def generate_apu_with_ai_from_base(
@@ -251,12 +297,19 @@ def generate_apu_with_ai_from_base(
 
     comp_text = ""
     if complementary_apus:
-        comp_text = "\n# INSUMOS COMPLEMENTARIOS DE APOYO (actividades accesorias faltantes en la base)\n"
-        comp_text += "Usa SOLO los insumos de esta sección para la actividad accesoria indicada (ej. bote, friso, pintura). Conserva sus precios sin modificación.\n\n"
-        for i, comp in enumerate(complementary_apus):
-            comp_text += f"## Complementaria {i+1} [{comp.get('codpar', 'N/A')}] — {comp.get('descripcion', '')[:80]}\n"
-            comp_text += json.dumps(_prune_apu_for_prompt(comp), ensure_ascii=False, separators=(',', ':'))
-            comp_text += "\n"
+        valid_comps: List[Tuple[str, str, Dict[str, Any]]] = []
+        for comp in complementary_apus:
+            pruned_c = _prune_apu_for_prompt(comp)
+            filtered_c, _, _ = apply_specialty_coherence_contract_to_base(pruned_c, user_description)
+            if any(filtered_c.get(k) for k in ("materiales", "equipos", "mano_obra")):
+                valid_comps.append((str(comp.get("codpar", "N/A")), str(comp.get("descripcion", ""))[:80], filtered_c))
+        if valid_comps:
+            comp_text = "\n# INSUMOS COMPLEMENTARIOS DE APOYO (actividades accesorias faltantes en la base)\n"
+            comp_text += "Usa SOLO los insumos de esta sección para la actividad accesoria indicada (ej. bote, friso, pintura). Conserva sus precios sin modificación.\n\n"
+            for i, (c_cod, c_desc, c_dict) in enumerate(valid_comps):
+                comp_text += f"## Complementaria {i+1} [{c_cod}] — {c_desc}\n"
+                comp_text += json.dumps(c_dict, ensure_ascii=False, separators=(',', ':'))
+                comp_text += "\n"
 
     effective_cov_prefix = (covenin_prefix or "").strip()
     if not effective_cov_prefix:

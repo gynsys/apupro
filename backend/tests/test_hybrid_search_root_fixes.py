@@ -6,6 +6,7 @@ from app.services.dimension_service import (
 )
 from app.services.ai_search import (
     _stem_spanish_token,
+    _strip_negative_exclusion_clauses,
     _tokenize_for_lexical_idf,
     ai_engine,
     detect_materials,
@@ -18,13 +19,21 @@ from app.services.ai_apu_service.generator.anchored_generator import (
 from app.services.ai_apu_service.domain_rules.discordant_pruning import (
     classify_pipe_mounting_condition,
     enforce_discordant_inputs_purging,
+    is_explicit_mortar_without_coarse_concrete,
     resolve_effective_pipe_mounting,
 )
 from app.services.ai_apu_service.domain_rules.sanitize_partida import (
     _sanitize_partida_description,
     infer_covenin_prefix,
 )
+from app.services.ai_apu_service.rag_context.candidates import (
+    _apply_technical_scoring_adjustments_detailed,
+)
+from app.services.ai_apu_service.reconciliation.specs_matcher import (
+    _build_canonical_material_queries,
+)
 from app.services.apu_labor_calibrator import (
+    EMPERICAL_HH_BENCHMARKS,
     classify_activity_typology,
     consolidate_labor_crew,
 )
@@ -389,6 +398,119 @@ class TestHybridSearchRootFixes(unittest.TestCase):
         self.assertTrue(_are_units_physically_equivalent("ml", "m"))
         self.assertFalse(_are_units_physically_equivalent("und", "m"))
 
+    def test_dinteles_mortero_five_root_fixes(self) -> None:
+        """
+        Verifica integralmente las 5 correcciones raíz para el caso de dinteles con mortero:
+        1. B02007 ('S/C DE DINTELES Y MACHONES...') supera a B04001 ('CONSTRUCCION DE MEDIA CANA...')
+           y las cláusulas negativas ('NO INCLUYE MACHONES, DINTELES...') son recortadas antes de indexar.
+        2. infer_covenin_prefix asigna 'E334' a dinteles/machones (y nunca 'E511' de plomería).
+        3. Cuando el usuario solicita 'con mortero de arena - cemento En interiores', se conservan
+           el acero de refuerzo (CABILLA + ALAMBRE) y el encofrado ligero (MADERA + CLAVOS), pero
+           se podan la PIEDRA PICADA, el VIBRADOR, la MEZCLADORA pesada y la CARRETILLA en interiores.
+        4. El calibrador clasifica la partida compuesta en 'ml'/'m' como 'ALBANILERIA' (con benchmark
+           'ALBANILERIA_m' ~ 22 m/día) y NO como 'ACERO' (700 kgf/día).
+        5. El generador de consultas canónicas de materiales mapea cabilla 3/8", madera de encofrado,
+           clavos y alambre N° 18 a la nomenclatura de cost360_materials.
+        """
+        q_dintel = "Construcción de dinteles con mortero de arena - cemento En interiores unidad ml"
+
+        # 1a. Recorte de cláusulas negativas en paredes de bloques (E411011015)
+        desc_pared_con_exclusion = (
+            "CONSTRUCCION DE PAREDES DE BLOQUES HUECOS DE ARCILLA E=15 CM. "
+            "NO INCLUYE MACHONES, DINTELES NI VIGAS DE CORONA."
+        )
+        stripped = _strip_negative_exclusion_clauses(desc_pared_con_exclusion)
+        self.assertNotIn("DINTELES", stripped.upper())
+        tokens_pared = _tokenize_for_lexical_idf(desc_pared_con_exclusion)
+        self.assertNotIn(_stem_spanish_token("DINTELES"), tokens_pared)
+
+        # 1b. Identidad de elemento constructivo civil y equivalencia física de unidad (ml == m)
+        mats_q = detect_materials(q_dintel)
+        self.assertIn("DINTEL_MACHON", mats_q.get("elemento_constructivo_civil", []))
+
+        adj_b02007, _ = _apply_technical_scoring_adjustments_detailed(
+            query_text=q_dintel,
+            item_desc="S/C DE DINTELES Y MACHONES, INCLUYE ACERO DE REFUERZO",
+            current_score=0.58,
+            item_unit="m",
+        )
+        adj_b04001, _ = _apply_technical_scoring_adjustments_detailed(
+            query_text=q_dintel,
+            item_desc="CONSTRUCCION DE MEDIA CANA CON MORTERO DE CEMENTO-ARENA",
+            current_score=0.61,
+            item_unit="m3",
+        )
+        self.assertGreater(
+            adj_b02007,
+            adj_b04001,
+            f"B02007 ({adj_b02007}) debe superar ampliamente a B04001 ({adj_b04001})",
+        )
+
+        # 2. Prefijo COVENIN correcto E334 (nunca E511)
+        self.assertEqual(infer_covenin_prefix(q_dintel, "B04001"), "E334")
+        self.assertEqual(infer_covenin_prefix("Construcción de media caña con mortero", "B04001"), "E418")
+
+        # 3. Contrato de coherencia y poda: mortero sin concreto conserva acero y encofrado,
+        #    pero elimina piedra picada, vibrador, mezcladora pesada y carretilla en interiores
+        self.assertTrue(is_explicit_mortar_without_coarse_concrete(q_dintel))
+        base_dintel = {
+            "codpar": "B02007",
+            "descripcion": "S/C DE DINTELES Y MACHONES, INCLUYE ACERO DE REFUERZO",
+            "unidad": "m",
+            "rendimiento": 25.0,
+            "materiales": [
+                {"codigo": "MAT-CON-0090", "descripcion": "CEMENTO GRIS PORTLAND SACO DE 42,5 KG", "unidad": "saco", "cantidad": 0.14},
+                {"codigo": "MAT-CON-0028", "descripcion": "ARENA LAVADA", "unidad": "m3", "cantidad": 0.015},
+                {"codigo": "MAT-AGR-009", "descripcion": "PIEDRA PICADA", "unidad": "m3", "cantidad": 0.025},
+                {"codigo": "MAT-VAR-0783", "descripcion": "CABILLA ESTRIADA N60 FY = 4200 KGF/CM2", "unidad": "kgf", "cantidad": 2.25},
+            ],
+            "equipos": [
+                {"codigo": "EQU-HER-001", "descripcion": "HERRAMIENTAS MENORES", "cantidad": 0.05},
+                {"codigo": "EQU-GEN-599", "descripcion": "HERRAMIENTAS P/CORTAR Y DOBLAR ACERO/CAB", "cantidad": 0.1},
+                {"codigo": "EQU-CON-045", "descripcion": "VIBRADOR A GASOLINA", "cantidad": 0.25},
+                {"codigo": "EQU-CON-028", "descripcion": "MEZCLADORA DE CONCRETO TROMPO DE CAP= 0,40 M3 (1 SACO)", "cantidad": 0.25},
+                {"codigo": "EQU-HER-030", "descripcion": "CARRETILLA DECAP= 55 LITROS CAUCHOS NEUMATICOS", "cantidad": 1.0},
+            ],
+            "mano_obra": [
+                {"codigo": "MO-OFI-011", "descripcion": "ALBAÑIL DE 1RA -N5", "cantidad": 1.0},
+                {"codigo": "MO-OFI-109", "descripcion": "MAQUINISTA DE CONCRETO DE 1RA -N5", "cantidad": 1.0},
+                {"codigo": "MO-OBR-26", "descripcion": "OBRERO DE 1RA -N1", "cantidad": 2.0},
+            ],
+        }
+        adapted_base, is_coherent, _ = apply_specialty_coherence_contract_to_base(base_dintel, q_dintel)
+        self.assertTrue(is_coherent)
+        adapted_mats = [m["descripcion"] for m in adapted_base["materiales"]]
+        adapted_eqs = [e["descripcion"] for e in adapted_base["equipos"]]
+        adapted_labs = [l["descripcion"] for l in adapted_base["mano_obra"]]
+        self.assertIn("CABILLA ESTRIADA N60 FY = 4200 KGF/CM2", adapted_mats)
+        self.assertNotIn("PIEDRA PICADA", adapted_mats)
+        self.assertNotIn("VIBRADOR A GASOLINA", adapted_eqs)
+        self.assertNotIn("MEZCLADORA DE CONCRETO TROMPO DE CAP= 0,40 M3 (1 SACO)", adapted_eqs)
+        self.assertNotIn("CARRETILLA DECAP= 55 LITROS CAUCHOS NEUMATICOS", adapted_eqs)
+        self.assertNotIn("MAQUINISTA DE CONCRETO DE 1RA -N5", adapted_labs)
+
+        # 4. Clasificación de tipología y benchmark lineal en calibrador
+        desc_generada = "S/C DE DINTELES CON MORTERO DE ARENA-CEMENTO EN INTERIORES, INCLUYE ACERO DE REFUERZO, ENCOFRADO Y DESENCOFRADO."
+        self.assertEqual(classify_activity_typology(desc_generada, "ml", "E334SC001"), "ALBANILERIA")
+        self.assertIn("ALBANILERIA_m", EMPERICAL_HH_BENCHMARKS)
+        self.assertIn("CONCRETO_m", EMPERICAL_HH_BENCHMARKS)
+        # Verificar que una partida real de acero en kgf sigue clasificándose como ACERO
+        self.assertEqual(
+            classify_activity_typology("PREPARACION Y COLOCACION DE ACERO DE REFUERZO FY=4200 KGF/CM2", "kgf", "E351"),
+            "ACERO",
+        )
+
+        # 5. Consultas canónicas para reconciliación de materiales de obra civil
+        q_cab = _build_canonical_material_queries('CABILLA DE ACERO CORRUGADO 3/8" (9.5 mm) GRADO 60', "kgf")
+        self.assertTrue(any(kws == ["CABILLA", "3/8"] for kws, _ in q_cab))
+        q_mad = _build_canonical_material_queries("MADERA ASERRADA PARA ENCOFRADO (TABLAS Y CUARTONES)", "m2")
+        self.assertTrue(any(kws == ["ENCOFRADO", "MADERA"] for kws, _ in q_mad))
+        q_clv = _build_canonical_material_queries('CLAVOS PARA ENCOFRADO DE 2 1/2"', "kg")
+        self.assertTrue(any(kws[:2] == ["CLAVOS", "ACERO"] for kws, _ in q_clv))
+        q_ala = _build_canonical_material_queries("ALAMBRE NEGRO N° 18 PARA AMARRE", "kg")
+        self.assertTrue(any("ALAMBRE" in kws and "18" in kws for kws, _ in q_ala))
+
 
 if __name__ == "__main__":
     unittest.main()
+

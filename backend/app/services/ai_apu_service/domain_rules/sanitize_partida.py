@@ -72,7 +72,7 @@ def infer_covenin_prefix(description: str, base_code: str = "") -> str:
     Garantiza que una partida libre sin prefijo previo no copie códigos arbitrarios (ej. E411).
     """
     if not description or not isinstance(description, str):
-        return "E511"
+        return "E411"
 
     d = description.upper()
 
@@ -85,13 +85,17 @@ def infer_covenin_prefix(description: str, base_code: str = "") -> str:
         return "E461"  # Pintura de caucho / emulsión
 
     # 2. Revestimientos de Pisos y Pavimentos (E43)
-    if any(k in d for k in ["PORCELANATO", "CERAMICA", "BALDOSA", "GRANITO PULIDO", "CAICO", "PISO VINIL"]):
+    if any(k in d for k in ["PORCELANATO", "CERAMICA", "BALDOSA", "GRANITO PULIDO", "CAICO", "PISO VINIL", "RODAPIE"]):
         return "E431"  # Revestimientos de pisos
 
-    # 3. Albañilería, Paredes y Tabiquería (E41)
+    # 3. Albañilería, Paredes, Dinteles, Machones y Tabiquería (E334 / E41)
     if any(k in d for k in ["DRYWALL", "TABIQUERIA", "YESO", "PLYCEM", "SUPERBOARD"]):
         return "E412"  # Tabiquería liviana
-    if any(k in d for k in ["BLOQUE", "PARED", "ALBAÑILERIA", "LADRILLO", "FRISO", "REVOQUE", "TARRAJEO"]):
+    if any(k in d for k in ["DINTEL", "DINTELES", "MACHON", "MACHONES", "VIGA DE CORONA", "VIGAS DE CORONA", "ARRIOSTRAMIENTO"]):
+        return "E334"  # Elementos de confinamiento: dinteles, machones y vigas de corona
+    if any(k in d for k in ["MEDIA CAÑA", "MEDIA CANA", "GOTERO", "ALFEIZAR", "PENDIENTE EN LOSA", "PENDIENTES EN LOSA"]):
+        return "E418"  # Obras varias de albañilería y remates de mortero
+    if any(k in d for k in ["BLOQUE", "PARED", "ALBAÑILERIA", "ALBANILERIA", "LADRILLO", "FRISO", "REVOQUE", "TARRAJEO", "REPELLO", "ENCAMISADO"]):
         return "E411"  # Mampostería / Albañilería
 
     # 4. Impermeabilización (E45)
@@ -114,7 +118,7 @@ def infer_covenin_prefix(description: str, base_code: str = "") -> str:
         return "E611"
 
     # 8. Estructuras de Concreto (E31) y Metálicas (E32)
-    if any(k in d for k in ["CONCRETO ARMADO", "VACIADO DE CONCRETO", "VIGA", "COLUMNA", "LOSA", "FUNDACION", "CABILLA"]):
+    if any(k in d for k in ["CONCRETO ARMADO", "VACIADO DE CONCRETO", "VIGA", "COLUMNA", "LOSA", "FUNDACION", "CABILLA", "BROCAL"]):
         return "E313"
     if any(k in d for k in ["ESTRUCTURA METALICA", "PERFIL CONDUVEN", "VIGA IPE"]) or (
         "SOLDADURA" in d and not any(p in d for p in ["SOLDADURA LIQUIDA", "PVC", "CPVC", "AGUAS CLARAS", "AGUAS BLANCAS", "AGUAS RESIDUALES", "AGUAS NEGRAS"])
@@ -126,6 +130,8 @@ def infer_covenin_prefix(description: str, base_code: str = "") -> str:
         return "E121"
     if any(k in d for k in ["DEMOLICION", "BOTE", "DESMANTELAMIENTO"]):
         return "E211"
+    if "MORTERO" in d:
+        return "E411"
 
     # Si se pasó un base_code y tiene prefijo COVENIN válido de 3 o 4 letras:
     if base_code:
@@ -133,4 +139,4 @@ def infer_covenin_prefix(description: str, base_code: str = "") -> str:
         if len(clean) >= 3 and clean[0] in ("E", "C", "U") and clean[1:3].isdigit():
             return clean[:4] if len(clean) >= 4 else clean[:3]
 
-    return "E511"
+    return "E411"

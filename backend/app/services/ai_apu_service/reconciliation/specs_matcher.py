@@ -205,3 +205,67 @@ def _convert_material_quantity(
 
     # Incompatibilidad dimensional detectada (ej: m2 vs kg, m3 vs und, m vs kg)
     return None, False
+
+
+def _strip_explanatory_parentheticals(text_str: str) -> str:
+    """
+    Elimina paréntesis meramente explicativos o de equivalencia métrica (ej. '(9.5 mm)',
+    '(TABLAS Y CUARTONES)', '(PARA AMARRE)') que diluyen la similitud léxica contra el catálogo.
+    """
+    if not text_str:
+        return ""
+    cleaned = re.sub(r'\([^)]*\)', ' ', text_str)
+    return re.sub(r'\s+', ' ', cleaned).strip()
+
+
+def _build_canonical_material_queries(desc: str, unit_raw: Optional[str] = None) -> list[ tuple[list[str], str] ]:
+    """
+    Genera variantes canónicas de búsqueda (pares/tríos de tokens SQL + descripción canónica
+    para evaluación de similitud) que traducen fraseos académicos del LLM a la nomenclatura
+    oficial del catálogo cost360_materials (COVENIN / DataLaing / Lulowin).
+    """
+    if not desc:
+        return []
+
+    u_norm = _normalize_unit(unit_raw)
+    desc_no_paren = _strip_explanatory_parentheticals(desc).upper()
+    clean = re.sub(r'[^A-Z0-9\s]', ' ', desc_no_paren)
+    tokens = [w for w in clean.split() if len(w) >= 3 and w not in _RECONCILE_STOPWORDS]
+
+    queries: list[tuple[list[str], str]] = []
+
+    # 1. Sinónimos canónicos de Obra Civil (Acero de refuerzo, Encofrado, Clavos, Alambre)
+    if any(k in desc_no_paren for k in ["CABILLA", "ACERO CORRUGADO", "ACERO DE REFUERZO", "BARRA DE ACERO"]):
+        # Detectar si especifica diámetro en pulgadas (ej. 3/8", 1/2", 5/8", 3/4", 1")
+        m_inch = re.search(r'(\d+/\d+|\d+)\s*(?:"|\'\'|PULG)', desc.upper())
+        if m_inch:
+            inch_val = m_inch.group(1)
+            queries.append(([f"CABILLA", f"{inch_val}"], f"CABILLA D={inch_val} FY=4200 KGF/CM2"))
+        queries.append((["CABILLA", "ESTRIADA"], "CABILLA ESTRIADA N60 FY = 4200 KGF/CM2"))
+        queries.append((["CABILLA", "4200"], "CABILLA ESTRIADA N60 FY = 4200 KGF/CM2"))
+
+    if "MADERA" in desc_no_paren and any(k in desc_no_paren for k in ["ENCOFRADO", "FORMALETA", "TABLAS", "CUARTONES"]):
+        if u_norm in ("m2", ""):
+            queries.append((["ENCOFRADO", "MADERA"], "ENCOFRADO DE MADERA"))
+
+    if any(k in desc_no_paren for k in ["CLAVO", "CLAVOS"]) and any(k in desc_no_paren for k in ["ENCOFRADO", "MADERA", "ACERO", "PUNTA"]):
+        if u_norm in ("kg", ""):
+            queries.append((["CLAVOS", "ACERO", "CALIBRE"], 'CLAVOS DE ACERO LARGO = 3" CALIBRE 10'))
+            queries.append((["CLAVOS", "ACERO"], "CLAVOS DE ACERO RANURADO ROBUSTO ESTRIADO"))
+
+    if "ALAMBRE" in desc_no_paren and any(k in desc_no_paren for k in ["AMARRE", "NEGRO", "18", "CAL", "CALIBRE"]):
+        if u_norm in ("kg", ""):
+            queries.append((["ALAMBRE", "CALIBRE", "18"], "ALAMBRE LISO GALVANIZADO CALIBRE 18"))
+            queries.append((["ALAMBRE", "18"], "ALAMBRE LISO GALVANIZADO CALIBRE 18"))
+
+    # 2. Combinaciones estándar de tokens significativos sin paréntesis
+    if len(tokens) >= 3:
+        queries.append(([tokens[0], tokens[1], tokens[2]], desc_no_paren))
+    if len(tokens) >= 2:
+        queries.append(([tokens[0], tokens[1]], desc_no_paren))
+    if len(tokens) >= 3:
+        # Si el segundo token es un adjetivo secundario (ej. MADERA [ASERRADA] ENCOFRADO), probar 1º + 3º
+        queries.append(([tokens[0], tokens[2]], desc_no_paren))
+
+    return queries
+

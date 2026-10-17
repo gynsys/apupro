@@ -257,12 +257,26 @@ _HANGING_AND_SURFACE_EQUIPMENT_PATTERNS: List[str] = [
 ]
 
 # Patrones de materiales exclusivos de suspensión / fijación aérea o superficial
+# Patrones de materiales exclusivos de suspensión / fijación aérea o superficial
 _HANGING_SUPPORT_MATERIAL_PATTERNS: List[str] = [
     r"\bABRAZADERA(S)?\s+(?:COLGANTE|METALICA|DE\s+HIERRO|GALVANIZADA|TIPO\s+PERA|TIPO\s+OMEGA|PARA\s+TUBERIA)\b",
     r"\bRIEL(ES)?\s+UNISTRU[TD]\b",
     r"\bBARRA(S)?\s+ROSCADA(S)?\b",
     r"\bTIRANTE(S)?\s+ROSCADO(S)?\b",
 ]
+
+
+def is_explicit_mortar_without_coarse_concrete(text_input: str) -> bool:
+    """
+    Determina si la solicitud del usuario especifica explícitamente mortero de arena-cemento
+    (aglomerante fino sin agregado grueso) y NO solicita concreto ni piedra picada/grava.
+    """
+    if not text_input or not isinstance(text_input, str):
+        return False
+    up = _strip_accents(text_input).upper()
+    has_mortar = bool(re.search(r"\bMORTERO\b", up))
+    has_coarse_concrete = bool(re.search(r"\b(?:CONCRETO|HORMIGON|PIEDRA\s+PICADA|GRAVA|GRANZA)\b", up))
+    return has_mortar and not has_coarse_concrete
 
 
 def enforce_discordant_inputs_purging(
@@ -280,8 +294,10 @@ def enforce_discordant_inputs_purging(
          purga carretillas, cintas métricas de topógrafo de 25-50m, escuadras de albañilería y equipos de zanja.
        - Si la tubería es ENTERRADA, purga andamios, escaleras, pistolas de fijación y abrazaderas colgantes.
        - Si la tubería es estrictamente EMBUTIDA, purga abrazaderas colgantes y equipos de fijación superficial.
-    3. Poda de Equipos Sobredimensionados o de Disciplinas Ajenas.
-    4. Deduplicación Estricta de Materiales, Equipos, Mano de Obra (doble tabulador) y Advertencias.
+    3. Respeto Estricto a Mortero de Arena-Cemento vs Concreto con Agregado Grueso:
+       - Cuando el usuario pide explícitamente mortero (sin concreto), purga piedra picada y vibrador de inmersión,
+         preservando el acero de refuerzo y encofrado en elementos que trabajan a flexión (ej. dinteles).
+    4. Poda de Equipos Sobredimensionados o de Disciplinas Ajenas y Deduplicación Estricta.
     """
     if not result or not isinstance(result, dict):
         return
@@ -299,6 +315,11 @@ def enforce_discordant_inputs_purging(
     desc_upper = _strip_accents(user_description or "").upper()
     base_desc = str((base_apu or {}).get("descripcion") or (base_apu or {}).get("description") or "")
     is_removal = _is_removal_activity(user_description)
+    is_mortar_only = is_explicit_mortar_without_coarse_concrete(user_description)
+    is_indoor_work = bool(re.search(r"\bEN\s+INTERIOR(ES)?\b", desc_upper)) and not bool(
+        re.search(r"\bCARRETILLA\b", desc_upper)
+    )
+    explicit_mixer = bool(re.search(r"\b(?:MEZCLADORA|TROMPO)\b", desc_upper))
 
     is_pipe_task = is_pipe_or_conduit_activity(user_description) or is_pipe_or_conduit_activity(base_desc)
     pipe_mounting_mode = resolve_effective_pipe_mounting(user_description, base_desc) if is_pipe_task else "NO_APLICA"
@@ -355,6 +376,24 @@ def enforce_discordant_inputs_purging(
                         "codigo": mat.get("codigo"),
                         "motivo": "Suministro de obra nueva incompatible con desmontaje/retiro",
                         "regla": "ZERO_SUPPLY_DESMONTAJE"
+                    })
+                    continue
+
+            # Poda de agregado grueso (piedra picada / grava) cuando el usuario exige explícitamente MORTERO
+            if is_mortar_only:
+                if re.search(
+                    r"\b(?:PIEDRA\s+PICADA|GRAVA\s+PICADA|GRANZA\s+PARA\s+CONCRETO|FLETE\s*/\s*TRANSPORTE\s+DE\s+AGREGADOS|TRANSPORTE\s+URBANO\s+DE\s+CEMENTO)\b",
+                    mat_desc_upper,
+                ):
+                    logger.info(
+                        "[DiscordantPruning] Purgado agregado grueso/flete de concreto (%s) en partida explícita de mortero",
+                        mat_desc,
+                    )
+                    pruning_trace["insumos_purgados"].append({
+                        "descripcion": mat_desc,
+                        "codigo": mat.get("codigo"),
+                        "motivo": "Agregado grueso de concreto incompatible con especificación explícita de mortero de arena-cemento",
+                        "regla": "MORTERO_SIN_AGREGADO_GRUESO",
                     })
                     continue
 
@@ -459,6 +498,38 @@ def enforce_discordant_inputs_purging(
                     "codigo": eq.get("codigo"),
                     "motivo": "Equipo duplicado",
                     "regla": "DEDUPLICACION"
+                })
+                continue
+
+            # Poda de vibrador de concreto (y trompo pesado si es interior) cuando la partida es explícitamente de MORTERO
+            if is_mortar_only:
+                if re.search(r"\bVIBRADOR\b", eq_desc_upper):
+                    logger.info("[DiscordantPruning] Purgado vibrador de concreto (%s) en partida de mortero", eq_desc)
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Vibrador de inmersión para concreto incompatible con partida de mortero de arena-cemento",
+                        "regla": "MORTERO_SIN_VIBRADOR_CONCRETO",
+                    })
+                    continue
+                if is_indoor_work and not explicit_mixer and re.search(r"\b(?:MEZCLADORA|TROMPO)\b", eq_desc_upper):
+                    logger.info("[DiscordantPruning] Purgada mezcladora industrial (%s) en partida de mortero en interiores", eq_desc)
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Mezcladora pesada de concreto sobredimensionada para mortero de arena-cemento en interiores",
+                        "regla": "MORTERO_INTERIORES_SIN_TROMPO_PESADO",
+                    })
+                    continue
+
+            # Poda de carretilla en trabajos explícitamente en interiores (sin acarreo en carretilla solicitado)
+            if is_indoor_work and re.search(r"\bCARRETILLA\b", eq_desc_upper):
+                logger.info("[DiscordantPruning] Purgada carretilla (%s) en trabajo en interiores", eq_desc)
+                pruning_trace["equipos_purgados"].append({
+                    "descripcion": eq_desc,
+                    "codigo": eq.get("codigo"),
+                    "motivo": "Carretilla incompatible con trabajo en interiores (acarreo manual en tobos)",
+                    "regla": "INTERIORES_SIN_CARRETILLA",
                 })
                 continue
 
@@ -595,6 +666,28 @@ def enforce_discordant_inputs_purging(
                     "motivo": "Oficio duplicado en doble tabulador (se conserva una sola línea con salario integral vigente)",
                     "regla": "DEDUPLICACION_MANO_OBRA_TABULADOR",
                 })
+
+        # Si no hay mezcladora/trompo en equipos y es partida de mortero, purgar maquinista de concreto huérfano
+        has_active_mixer = any(
+            re.search(r"\b(?:MEZCLADORA|TROMPO)\b", _strip_accents(str(e.get("descripcion") or "")).upper())
+            for e in result.get("equipments", [])
+            if isinstance(e, dict)
+        )
+        if is_mortar_only and not has_active_mixer:
+            retained_labors: List[Dict[str, Any]] = []
+            for l_item in clean_labors:
+                l_up = _strip_accents(str(l_item.get("descripcion") or "")).upper()
+                if "MAQUINISTA DE CONCRETO" in l_up:
+                    pruning_trace["mano_obra_purgada"].append({
+                        "descripcion": str(l_item.get("descripcion") or ""),
+                        "codigo": l_item.get("codigo"),
+                        "motivo": "Maquinista de concreto sin mezcladora activa en partida de mortero",
+                        "regla": "OPERADOR_SIN_EQUIPO_MEZCLADORA",
+                    })
+                else:
+                    retained_labors.append(l_item)
+            clean_labors = retained_labors
+
         result["labors"] = clean_labors
 
     # -------------------------------------------------------------------------
@@ -604,6 +697,11 @@ def enforce_discordant_inputs_purging(
     if isinstance(advertencias, list) and advertencias:
         clean_advertencias: List[str] = []
         seen_adv_keys: Set[str] = set()
+        purged_mat_names = [
+            str(pm.get("descripcion") or "").upper()
+            for pm in pruning_trace.get("insumos_purgados", [])
+            if isinstance(pm, dict) and pm.get("descripcion")
+        ]
 
         for adv in advertencias:
             if not adv or not isinstance(adv, str):
@@ -620,6 +718,14 @@ def enforce_discordant_inputs_purging(
                     "advertencia": adv_strip,
                     "motivo": "Advertencia de activo suministrado purgada en desmontaje",
                     "regla": "ZERO_SUPPLY_DESMONTAJE"
+                })
+                continue
+
+            if purged_mat_names and any(pm_name in adv_strip.upper() for pm_name in purged_mat_names):
+                pruning_trace["advertencias_purgadas"].append({
+                    "advertencia": adv_strip,
+                    "motivo": "Advertencia asociada a insumo discordante purgado",
+                    "regla": "INSUMO_DISCORDANTE_PURGADO",
                 })
                 continue
 

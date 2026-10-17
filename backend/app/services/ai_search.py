@@ -34,8 +34,21 @@ _UI_UNIT_CLAUSE_RE = re.compile(
     r"\bunidad\s+(?:ml|m2|m3|m|und|pza|pto|kgf|kg|ton|gl|sg|l|lt|lts|gal|km|ha|mes|dia|hr|h)\b",
     re.IGNORECASE,
 )
+_NEGATIVE_CLAUSE_SPLIT_RE = re.compile(
+    r"\b(?:NO\s+INCLUYE|SIN\s+INCLUIR|EXCLUYE(?:NDO)?|SIN\s+EMPLEO\s+DE|SIN\s+USO\s+DE|SIN\s+MAQUINARIA|SIN\s+EQUIPO|SIN\s+MIXER|EXCEPTUANDO)\b",
+    re.IGNORECASE,
+)
 _LEX_TOKEN_RE = re.compile(r"[A-Z0-9]+")
 _LEX_MAX_DF_RATIO: float = 0.18
+
+# Sustantivos núcleo de elementos constructivos civiles cuya identidad prevalece sobre el aglomerante genérico
+_PRIMARY_CONSTRUCTIVE_ELEMENT_STEMS: Set[str] = {
+    "DINTEL", "MACHON", "BROCAL", "CUNETA", "GOTERO", "RODAPIE",
+    "ALFEIZAR", "TANQUILLA", "SUMIDERO", "ZAPATA", "PEDESTAL", "ESCALON", "PELDANO",
+}
+_GENERIC_BINDER_STEMS: Set[str] = {
+    "MORTERO", "ARENA", "CEMENTO", "AGUA", "MEZCLA", "INTERIOR", "EXTERIOR",
+}
 
 # Muletillas contractuales, preposiciones y verbos genéricos que no definen disciplina ni insumo
 _CONTRACTUAL_STOP_STEMS: Set[str] = {
@@ -54,6 +67,21 @@ def _strip_accents_upper(value: str) -> str:
         return ""
     decomposed = unicodedata.normalize("NFKD", value.upper())
     return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+
+
+def _strip_negative_exclusion_clauses(value: str) -> str:
+    """
+    Recorta cláusulas contractuales negativas ('NO INCLUYE MACHONES, DINTELES...', 'EXCLUYE...', 'SIN INCLUIR...')
+    para evitar que los elementos excluidos contaminen el índice léxico IDF o disparen falsos positivos.
+    """
+    if not value or not isinstance(value, str):
+        return ""
+    parts = _NEGATIVE_CLAUSE_SPLIT_RE.split(value)
+    if parts:
+        head = parts[0].strip(" ,.-")
+        if len(head) > 5:
+            return head
+    return value
 
 
 def _stem_spanish_token(token: str) -> str:
@@ -78,7 +106,7 @@ def _tokenize_for_lexical_idf(value: str) -> List[str]:
     """Extrae tokens alfanuméricos normalizados (>=3 caracteres, no puramente numéricos) con stemming."""
     if not value or not isinstance(value, str):
         return []
-    cleaned = _UI_UNIT_CLAUSE_RE.sub(" ", value)
+    cleaned = _UI_UNIT_CLAUSE_RE.sub(" ", _strip_negative_exclusion_clauses(value))
     return [
         _stem_spanish_token(tok)
         for tok in _LEX_TOKEN_RE.findall(_strip_accents_upper(cleaned))
@@ -114,6 +142,28 @@ MATERIAL_CATEGORIES: Dict[str, Dict[str, List[str]]] = {
         "ADOBE": [r"\bADOBE(S)?\b", r"\bTIERRA\s+CRUDA\b", r"\bBARRO\b"],
         "BLOQUE_CONCRETO": [r"\bBLOQUE(S)?\s+DE\s+CONCRETO\b", r"\bBLOQUE(S)?\s+CONCRETO\b"],
         "CONCRETO_ESTRUCTURAL": [r"\bCONCRETO\b", r"\bMACHON(ES)?\b", r"\bVIGA(S)?\s+DE\s+CORONA\b"],
+    },
+    "elemento_constructivo_civil": {
+        "DINTEL_MACHON": [
+            r"(?<!PARA\s)(?<!EN\s)\bDINTEL(ES)?\b",
+            r"\bMACHON(ES)?\b",
+            r"\bVIGA(S)?\s+DE\s+CORONA\b",
+            r"\bVIGA(S)?\s+DE\s+RIOSTRA\b",
+        ],
+        "MEDIA_CANA": [r"\bMEDIA\s+CANA\b"],
+        "PENDIENTE_LOSA": [
+            r"\bPENDIENTE(S)?\s+EN\s+LOSA(S)?\b",
+            r"\bCONSTRUCCION\s+DE\s+PENDIENTE(S)?\b",
+        ],
+        "BROCAL_CUNETA": [r"\bBROCAL(ES)?\b", r"\bCUNETA(S)?\b"],
+        "RODAPIE": [r"\bRODAPIE(S)?\b"],
+        "GOTERO": [r"\bGOTERO(S)?\b"],
+        "FRISO_REVESTIMIENTO": [
+            r"\bFRISO(S)?\b",
+            r"\bREVOQUE(S)?\b",
+            r"\bREVESTIMIENTO\s+(?:INTERIOR|EXTERIOR|DE\s+PARED(ES)?|EN\s+PARED(ES)?)\b",
+            r"\bENLUCIDO\b",
+        ],
     },
     "pintura_recubrimiento": {
         "EPOXICA": [r"\bEPOXI\w*\b"],
@@ -175,13 +225,16 @@ MATERIAL_CATEGORIES: Dict[str, Dict[str, List[str]]] = {
 
 
 def detect_materials(text_input: str) -> Dict[str, Set[str]]:
-    """Detecta materiales técnicos por categoría en un texto dado (insensible a tildes)."""
+    """Detecta materiales y elementos constructivos técnicos por categoría en un texto dado (insensible a tildes y excluyendo cláusulas negativas)."""
     if not text_input or not isinstance(text_input, str):
         return {}
-    upper = _strip_accents_upper(text_input)
+    upper = _strip_accents_upper(_strip_negative_exclusion_clauses(text_input))
+    is_signage = any(s in upper for s in ["SENAL", "FOTOLUMINISCENTE", "MODULO DE IDENTIFICACION"])
     found: Dict[str, Set[str]] = {}
     for cat_name, materials in MATERIAL_CATEGORIES.items():
         for mat_name, patterns in materials.items():
+            if cat_name == "elemento_constructivo_civil" and mat_name == "DINTEL_MACHON" and is_signage:
+                continue
             for pat in patterns:
                 if re.search(pat, upper):
                     if cat_name not in found:
@@ -567,9 +620,17 @@ class AISearchEngine:
             if not informative:
                 return []
 
+            has_primary_elem = any(s in _PRIMARY_CONSTRUCTIVE_ELEMENT_STEMS for s in informative)
+            has_generic_binder = any(s in _GENERIC_BINDER_STEMS for s in informative)
+
             scores: Dict[str, float] = defaultdict(float)
             for stem in informative:
                 weight = self._lex_idf[stem]
+                if has_primary_elem and has_generic_binder:
+                    if stem in _PRIMARY_CONSTRUCTIVE_ELEMENT_STEMS:
+                        weight *= 2.5
+                    elif stem in _GENERIC_BINDER_STEMS:
+                        weight *= 0.45
                 for cod in self._lex_postings.get(stem, ()):
                     scores[cod] += weight
 
@@ -730,17 +791,19 @@ class AISearchEngine:
                         desc = desc_map.get(candidate["id"], "")
                         score_mod = 0.0
 
-                        # 4a. Ponderación por Material Técnico
+                        # 4a. Ponderación por Material Técnico y Elemento Constructivo
                         if query_mats:
                             item_mats = detect_materials(desc)
                             for cat, q_mat_set in query_mats.items():
                                 it_mat_set = item_mats.get(cat, set())
-                                # Coincidencia exacta del material solicitado
+                                match_bonus = 0.18 if cat == "elemento_constructivo_civil" else 0.12
+                                conflict_pen = 0.18 if cat == "elemento_constructivo_civil" else 0.08
+                                # Coincidencia exacta del material o elemento constructivo solicitado
                                 if q_mat_set & it_mat_set:
-                                    score_mod += 0.12
-                                # Conflicto con material incompatible de la misma categoría
+                                    score_mod += match_bonus
+                                # Conflicto con material o elemento constructivo incompatible de la misma categoría
                                 elif it_mat_set and not (q_mat_set & it_mat_set):
-                                    score_mod -= 0.08
+                                    score_mod -= conflict_pen
 
                         # 4b. Ponderación por Dimensiones Técnicas (Exact Match & Conflict Penalty)
                         if query_dims:

@@ -1,8 +1,10 @@
+import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 from sqlalchemy.orm import Session
 from app.core.logging import logger
 from app.db.models.cost360 import CostItem
-from app.services.ai_search import ai_engine
+from app.services.ai_search import ai_engine, detect_materials
+from app.services.ai_apu_service.reconciliation.specs_matcher import _normalize_unit
 from app.services.ai_apu_service.domain_rules.discordant_pruning import (
     classify_pipe_mounting_condition,
     is_pipe_or_conduit_activity,
@@ -113,7 +115,8 @@ TECHNICAL_DISCIPLINE_CLUSTERS: Dict[str, Set[str]] = {
     },
     "OBRA_CIVIL_ALBANILERIA": {
         "pared de bloque", "friso", "revoque", "losa", "concreto", "viga de concreto",
-        "columna de concreto", "zapata", "mamposteria", "piso de granito", "ceramica", "porcelanato"
+        "columna de concreto", "zapata", "mamposteria", "piso de granito", "ceramica", "porcelanato",
+        "dintel", "dinteles", "machon", "machones", "viga de corona", "media cana", "mortero", "gotero"
     },
     "PAVIMENTOS_VIALIDAD": {
         "pavimento", "pavimentos", "acera", "aceras", "brocal", "brocales",
@@ -161,6 +164,7 @@ def _apply_technical_scoring_adjustments_detailed(
     current_score: float,
     base_hybrid_info: Optional[Dict[str, Any]] = None,
     prefix_bonus: float = 0.0,
+    item_unit: str = "",
 ) -> Tuple[float, Dict[str, Any]]:
     """
     Ajusta el score de similitud técnica y genera el desglose de trazabilidad (breakdown):
@@ -168,7 +172,7 @@ def _apply_technical_scoring_adjustments_detailed(
     2. Valida disciplina técnica tecnológica: penaliza severamente candidatos de disciplinas cruzadas incompatibles
        (ej: split de aire acondicionado cuando se solicita bomba/bombeo) y bonifica a la misma disciplina.
     3. Bonifica coincidencia de acción (desmontaje vs desmontaje).
-    4. Penaliza partidas de accesorios menores o conexiones domiciliarias cuando se solicitó equipo principal.
+    4. Valida identidad del elemento constructivo civil (dintel vs media caña vs pendiente de losa) y compatibilidad de unidad.
     """
     raw_base = float(base_hybrid_info.get("score", current_score - prefix_bonus) if base_hybrid_info else (current_score - prefix_bonus))
     sem_score = float(base_hybrid_info.get("sem_score", 0.0) if base_hybrid_info else 0.0)
@@ -237,7 +241,7 @@ def _apply_technical_scoring_adjustments_detailed(
                 # Conflicto severo de disciplina cruzada (ej. bomba vs aire acondicionado)
                 current_score = max(0.0, current_score - 0.40)
                 discipline_adjustment -= 0.40
-                adjustment_details.append(f"Penalización por conflicto de disciplina tecnológica cruzada: -0.40")
+                adjustment_details.append("Penalización por conflicto de disciplina tecnológica cruzada: -0.40")
         else:
             # El candidato no tiene ninguna de las disciplinas principales del query
             is_auxiliary = any(aux in i_lower for aux in AUXILIARY_CIVIL_OR_FITTING_TERMS)
@@ -245,6 +249,21 @@ def _apply_technical_scoring_adjustments_detailed(
                 current_score = max(0.0, current_score - 0.20)
                 discipline_adjustment -= 0.20
                 adjustment_details.append("Penalización por partida auxiliar/accesoria frente a equipo principal: -0.20")
+
+    # 2.5. Identidad del Elemento Constructivo Civil (ej. Dintel/Machón vs Media Caña vs Pendiente de Losa)
+    q_civil_elem = detect_materials(query_text).get("elemento_constructivo_civil", set())
+    i_civil_elem = detect_materials(item_desc).get("elemento_constructivo_civil", set())
+    if q_civil_elem:
+        if q_civil_elem & i_civil_elem:
+            current_score = min(1.25, current_score + 0.15)
+            discipline_adjustment += 0.15
+            adjustment_details.append(f"Bonificación por identidad de elemento constructivo ({', '.join(q_civil_elem & i_civil_elem)}): +0.15")
+        elif i_civil_elem and not (q_civil_elem & i_civil_elem):
+            current_score = max(0.0, current_score - 0.20)
+            discipline_adjustment -= 0.20
+            adjustment_details.append(
+                f"Penalización por elemento constructivo discordante (solicitado={sorted(q_civil_elem)} vs candidato={sorted(i_civil_elem)}): -0.20"
+            )
 
     # 3. Afinidad de Verbo Rector (Desmontaje / Demolición)
     q_is_removal = any(r in q_lower for r in ["desmontaje", "demolicion", "retiro", "desinstalacion", "extraccion", "desmantelamiento"])
@@ -275,6 +294,26 @@ def _apply_technical_scoring_adjustments_detailed(
                     f"Penalización por condición de montaje de tubería discordante (solicitada={q_mount} vs candidato={i_mount}): -0.15"
                 )
 
+    # 5. Afinidad por Unidad Física de Medida (ej. 'ml'/'m' vs 'm3'/'m2')
+    unit_adjustment = 0.0
+    unit_match = re.search(
+        r"\bunidad\s+(ml|m2|m3|m|und|pza|pto|kgf|kg|ton|gl|sg)\b",
+        q_lower,
+        re.IGNORECASE,
+    )
+    if unit_match and item_unit:
+        req_u_norm = _normalize_unit(unit_match.group(1))
+        cand_u_norm = _normalize_unit(item_unit)
+        if req_u_norm and cand_u_norm and req_u_norm not in ("gl", "sg"):
+            if req_u_norm == cand_u_norm:
+                current_score = min(1.30, current_score + 0.10)
+                unit_adjustment = 0.10
+                adjustment_details.append(f"Bonificación por equivalencia física de unidad ({req_u_norm}): +0.10")
+            else:
+                current_score = max(0.0, current_score - 0.08)
+                unit_adjustment = -0.08
+                adjustment_details.append(f"Penalización por divergencia dimensional de unidad (solicitada={req_u_norm} vs candidato={cand_u_norm}): -0.08")
+
     final_score = round(current_score, 3)
     breakdown = {
         "raw_hybrid_score": round(raw_base, 4),
@@ -285,6 +324,7 @@ def _apply_technical_scoring_adjustments_detailed(
         "discipline_adjustment": round(discipline_adjustment, 4),
         "action_bonus": round(action_bonus, 4),
         "mounting_adjustment": round(mounting_adjustment, 4),
+        "unit_adjustment": round(unit_adjustment, 4),
         "final_score": final_score,
         "detalles_ajustes": adjustment_details,
     }
@@ -368,6 +408,7 @@ def get_dynamic_candidates(
                     current_score=score,
                     base_hybrid_info=hybrid_info_map.get(i),
                     prefix_bonus=p_bonus,
+                    item_unit=str(getattr(it, "UniPar", "") or ""),
                 )
                 scored_candidates.append({
                     "item": it,

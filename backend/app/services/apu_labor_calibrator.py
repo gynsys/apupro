@@ -62,6 +62,14 @@ EMPERICAL_HH_BENCHMARKS: Dict[str, Dict[str, float]] = {
         "p90": 5.5000,
         "rendimiento_med": 7.5,
     },
+    "ALBANILERIA_m": {
+        "p10": 0.4000,
+        "p25": 0.8000,
+        "median": 1.2800,
+        "p75": 2.1000,
+        "p90": 3.2000,
+        "rendimiento_med": 22.0,
+    },
 
     # 3. Frisos y Revoques (E413/E414)
     "FRISOS_m2": {
@@ -149,7 +157,7 @@ EMPERICAL_HH_BENCHMARKS: Dict[str, Dict[str, float]] = {
         "rendimiento_med": 7.0,
     },
 
-    # 6. Concreto Estructural (E31/E32)
+    # 6. Concreto Estructural (E31/E32/E33)
     "CONCRETO_m3": {
         "p10": 1.5000,
         "p25": 4.0000,
@@ -157,6 +165,14 @@ EMPERICAL_HH_BENCHMARKS: Dict[str, Dict[str, float]] = {
         "p75": 11.5000,
         "p90": 15.1600,
         "rendimiento_med": 12.0,
+    },
+    "CONCRETO_m": {
+        "p10": 0.5000,
+        "p25": 0.9000,
+        "median": 1.4000,
+        "p75": 2.4000,
+        "p90": 3.6000,
+        "rendimiento_med": 20.0,
     },
     "CONCRETO_und": {
         "p10": 3.0000,
@@ -449,16 +465,58 @@ def classify_activity_typology(description: str, unit: str, covenin_code: str = 
         if not (u_norm in ("kgf", "kg", "ton", "tonf") and any(c in desc_clean for c in ["CABILLA", "ACERO DE REFUERZO", "MALLA ELECTROSOLDADA"])):
             return "ESTRUCTURAS_METALICAS"
 
-    # 4. Acero de Refuerzo / Cabillas (prioridad sobre Concreto por unidad de medida kgf/ton)
+    # Detectar elementos constructivos civiles compuestos (ej. dinteles, machones, vigas, losas, brocales)
+    # donde el acero de refuerzo o el encofrado son insumos incluidos ("INCLUYE ACERO...", "INCLUYE ENCOFRADO...")
+    # y NO la actividad principal por peso (kgf) ni de carpintería de encofrado aislada (E34).
+    has_composite_civil_element = any(k in desc_clean for k in [
+        "DINTEL", "DINTELES", "MACHON", "MACHONES", "VIGA DE CORONA", "VIGAS DE CORONA",
+        "VIGA DE RIOSTRA", "VIGAS DE RIOSTRA", "BROCAL", "BROCALES", "CUNETA", "CUNETAS",
+        "ACERA", "ACERAS", "LOSA", "LOSAS", "ZAPATA", "ZAPATAS", "PEDESTAL", "PEDESTALES",
+        "TANQUILLA", "TANQUILLAS", "FUNDACION", "FUNDACIONES", "MEDIA CANA", "MEDIA CAÑA",
+        "GOTERO", "FILO DE ESCALERA", "PENDIENTE EN LOSA", "PENDIENTES EN LOSA"
+    ])
+    steel_is_included_clause = bool(
+        re.search(r'\b(?:INCLUYE|INCLUYENDO|CON)\b[^.;]*\b(?:ACERO|CABILLA|CABILLAS|ARMADURA|MALLA)\b', desc_clean)
+    )
+    formwork_is_included_clause = bool(
+        re.search(r'\b(?:INCLUYE|INCLUYENDO|CON)\b[^.;]*\b(?:ENCOFRADO|DESENCOFRADO|FORMALETA)\b', desc_clean)
+    )
+
+    # 4. Acero de Refuerzo / Cabillas (exclusivo para partidas medidas en peso kgf/ton o E35,
+    # o suministro directo de acero/malla cuando no es un elemento civil compuesto)
     if u_norm in ("kgf", "kg", "ton", "tonf") and any(k in desc_clean for k in ["ACERO", "CABILLA", "ARMADURA", "HIERRO", "MALLA"]):
         return "ACERO"
-    if any(k in desc_clean for k in ["ACERO DE REFUERZO", "CABILLA", "ARMADURA DE ACERO", "MALLA ELECTROSOLDADA"]):
+    if cov_upper.startswith("E35") and u_norm in ("kgf", "kg", "ton", "tonf"):
+        return "ACERO"
+    if (
+        not has_composite_civil_element
+        and not steel_is_included_clause
+        and u_norm in ("kgf", "kg", "ton", "tonf")
+        and any(k in desc_clean for k in ["ACERO DE REFUERZO", "CABILLA", "ARMADURA DE ACERO", "MALLA ELECTROSOLDADA"])
+    ):
+        return "ACERO"
+    if (
+        not has_composite_civil_element
+        and not steel_is_included_clause
+        and any(k in desc_clean for k in ["MALLA ELECTROSOLDADA", "MALLA TRUCKSON", "PREPARACION Y COLOCACION DE ACERO", "SUMINISTRO Y COLOCACION DE ACERO", "S/C DE ACERO DE REFUERZO"])
+    ):
         return "ACERO"
 
-    # 4. Albañilería y Paredes
-    if cov_upper.startswith("E411") or cov_upper.startswith("E412"):
+    # 4b. Elementos constructivos civiles con mortero (dinteles con mortero, media caña, goteros, pendientes)
+    if any(k in desc_clean for k in [
+        "DINTEL", "DINTELES", "MACHON", "MACHONES", "VIGA DE CORONA", "VIGAS DE CORONA",
+        "MEDIA CANA", "MEDIA CAÑA", "GOTERO", "FILO DE ESCALERA", "PENDIENTE EN LOSA", "PENDIENTES EN LOSA"
+    ]):
+        if "MORTERO" in desc_clean or any(k in desc_clean for k in ["MEDIA CANA", "MEDIA CAÑA", "GOTERO", "FILO DE ESCALERA"]):
+            return "ALBANILERIA"
+        if "CONCRETO" in desc_clean or cov_upper.startswith("E33") or cov_upper.startswith("E32"):
+            return "CONCRETO"
         return "ALBANILERIA"
-    if any(k in desc_clean for k in ["PARED DE BLOQUE", "PARED DE LADRILLO", "ALBANILERIA", "MURO DE BLOQUE", "TABIQUERIA DE BLOQUE"]):
+
+    # 4c. Albañilería y Paredes
+    if cov_upper.startswith("E411") or cov_upper.startswith("E412") or cov_upper.startswith("E418"):
+        return "ALBANILERIA"
+    if any(k in desc_clean for k in ["PARED DE BLOQUE", "PARED DE LADRILLO", "ALBANILERIA", "MURO DE BLOQUE", "TABIQUERIA DE BLOQUE", "MORTERO DE ARENA"]):
         return "ALBANILERIA"
 
     # 5. Frisos y Revoques
@@ -479,19 +537,22 @@ def classify_activity_typology(description: str, unit: str, covenin_code: str = 
     if any(k in desc_clean for k in ["PISO DE", "BALDOSA", "PORCELANATO", "CERAMICA", "GRANITO", "RODAPIE"]):
         return "PISOS"
 
-    # 8. Encofrados
-    if any(k in desc_clean for k in ["ENCOFRADO", "DESENCOFRADO", "FORMALETA"]):
+    # 8. Encofrados (solo cuando el encofrado es la actividad principal, no una cláusula "INCLUYE ENCOFRADO")
+    if cov_upper.startswith("E34"):
         return "ENCOFRADOS"
-    if cov_upper.startswith("E33") or cov_upper.startswith("E34") or cov_upper.startswith("E35"):
-        if "ACERO" not in desc_clean and "CABILLA" not in desc_clean and u_norm not in ("kgf", "kg", "ton"):
+    if any(k in desc_clean for k in ["ENCOFRADO", "DESENCOFRADO", "FORMALETA"]):
+        if not formwork_is_included_clause and not has_composite_civil_element:
             return "ENCOFRADOS"
 
     # 9. Concreto Estructural
-    if cov_upper.startswith("E31") or cov_upper.startswith("E32"):
-        if u_norm not in ("kgf", "kg", "ton"):
+    if cov_upper.startswith("E31") or cov_upper.startswith("E32") or cov_upper.startswith("E33"):
+        if u_norm not in ("kgf", "kg", "ton", "tonf"):
             return "CONCRETO"
-    if any(k in desc_clean for k in ["CONCRETO", "VACIADO DE CONCRETO", "LOSA DE CONCRETO", "VIGA DE CONCRETO", "COLUMNA DE CONCRETO", "ZAPATA"]):
-        if u_norm not in ("kgf", "kg", "ton"):
+    if any(k in desc_clean for k in [
+        "CONCRETO", "VACIADO DE CONCRETO", "LOSA DE CONCRETO", "VIGA DE CONCRETO",
+        "COLUMNA DE CONCRETO", "ZAPATA", "BROCAL", "CUNETA", "PEDESTAL"
+    ]):
+        if u_norm not in ("kgf", "kg", "ton", "tonf"):
             return "CONCRETO"
 
     # 10. Instalaciones Eléctricas

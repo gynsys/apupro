@@ -11,6 +11,7 @@ from app.services.ai_apu_service.reconciliation.specs_matcher import (
     _has_technical_spec_conflict,
     _has_primary_noun_conflict,
     _convert_material_quantity,
+    _build_canonical_material_queries,
     _RECONCILE_STOPWORDS,
 )
 
@@ -66,58 +67,70 @@ def _execute_material_reconciliation(result: Dict[str, Any], db: Session) -> Non
             matched_row = db.execute(sql_cod, {"c": cod}).fetchone()
 
         # 2. Si no coincide por código y es 'ia' o precio cero o código provisional,
-        # buscar por coincidencia estricta multi-token en la descripción
+        # buscar por coincidencia estricta multi-token y variantes canónicas en la descripción
         desc = str(mat.get("descripcion", "")).strip()
+        current_mat_unit = str(mat.get("unidad") or "").strip()
         if not matched_row and (is_ia or no_cod or zero_price):
-            clean = re.sub(r'[^A-Z0-9\s]', ' ', desc.upper())
-            tokens = [w for w in clean.split() if len(w) >= 3 and w not in _RECONCILE_STOPWORDS]
+            query_variants = _build_canonical_material_queries(desc, current_mat_unit)
+            sql3 = text("""
+                SELECT "CodMat", ref_code, "Descri", "UniMat", "CosMat"
+                FROM cost360_materials
+                WHERE "Descri" ILIKE :kw1 AND "Descri" ILIKE :kw2 AND "Descri" ILIKE :kw3
+                LIMIT 15;
+            """)
+            sql2 = text("""
+                SELECT "CodMat", ref_code, "Descri", "UniMat", "CosMat"
+                FROM cost360_materials
+                WHERE "Descri" ILIKE :kw1 AND "Descri" ILIKE :kw2
+                LIMIT 15;
+            """)
 
-            # REGLA ESTRICTA: Mínimo 2 tokens significativos. Se elimina la búsqueda por 1 solo token.
-            if len(tokens) >= 2:
-                candidates_rows = []
-                if len(tokens) >= 3:
-                    sql3 = text("""
-                        SELECT "CodMat", ref_code, "Descri", "UniMat", "CosMat"
-                        FROM cost360_materials
-                        WHERE "Descri" ILIKE :kw1 AND "Descri" ILIKE :kw2 AND "Descri" ILIKE :kw3
-                        LIMIT 15;
-                    """)
+            desc_specs_raw = _extract_technical_specs(desc)
+            norm_desc_raw = re.sub(r'[^A-Z0-9]', ' ', desc.upper()).strip()
+            raw_tokens = {w for w in norm_desc_raw.split() if len(w) >= 3 and w not in _RECONCILE_STOPWORDS}
+
+            for kw_list, canonical_desc in query_variants:
+                if len(kw_list) < 2:
+                    continue
+                if len(kw_list) >= 3:
                     candidates_rows = db.execute(sql3, {
-                        "kw1": f"%{tokens[0]}%",
-                        "kw2": f"%{tokens[1]}%",
-                        "kw3": f"%{tokens[2]}%"
+                        "kw1": f"%{kw_list[0]}%",
+                        "kw2": f"%{kw_list[1]}%",
+                        "kw3": f"%{kw_list[2]}%"
+                    }).fetchall()
+                else:
+                    candidates_rows = db.execute(sql2, {
+                        "kw1": f"%{kw_list[0]}%",
+                        "kw2": f"%{kw_list[1]}%"
                     }).fetchall()
 
-                if not candidates_rows and len(tokens) >= 2:
-                    sql2 = text("""
-                        SELECT "CodMat", ref_code, "Descri", "UniMat", "CosMat"
-                        FROM cost360_materials
-                        WHERE "Descri" ILIKE :kw1 AND "Descri" ILIKE :kw2
-                        LIMIT 15;
-                    """)
-                    candidates_rows = db.execute(sql2, {
-                        "kw1": f"%{tokens[0]}%",
-                        "kw2": f"%{tokens[1]}%"
-                    }).fetchall()
+                if not candidates_rows:
+                    continue
 
                 best_cand = None
                 best_sim = 0.0
-                desc_specs = _extract_technical_specs(desc)
+                # Para clavos de encofrado vendidos por kgf, usar la especificación canónica
+                effective_specs = (
+                    _extract_technical_specs(canonical_desc)
+                    if ("CLAVOS" in canonical_desc and "ENCOFRADO" in desc.upper())
+                    else desc_specs_raw
+                )
+                norm_canon = re.sub(r'[^A-Z0-9]', ' ', canonical_desc.upper()).strip()
+                canon_tokens = {w for w in norm_canon.split() if len(w) >= 2 and w not in _RECONCILE_STOPWORDS}
 
                 for cand in candidates_rows:
                     cand_desc = str(cand.Descri or "").strip()
                     cand_specs = _extract_technical_specs(cand_desc)
 
                     # 1. Filtro: Conflicto de especificaciones técnicas (ej: 1" vs 2", 1 HP vs 2 HP)
-                    if _has_technical_spec_conflict(desc_specs, cand_specs):
+                    if _has_technical_spec_conflict(effective_specs, cand_specs):
                         continue
 
                     # 2. Filtro: Conflicto de sustantivo primario / accesorio
-                    if _has_primary_noun_conflict(desc, cand_desc):
+                    if _has_primary_noun_conflict(canonical_desc, cand_desc) and _has_primary_noun_conflict(desc, cand_desc):
                         continue
 
                     # 3. Filtro: Compatibilidad dimensional de unidad de medida
-                    current_mat_unit = str(mat.get("unidad") or "").strip()
                     cand_unit = str(cand.UniMat or "").strip()
                     _, is_compatible = _convert_material_quantity(
                         qty=float(mat.get("cantidad") or 1.0),
@@ -128,22 +141,27 @@ def _execute_material_reconciliation(result: Dict[str, Any], db: Session) -> Non
                     if not is_compatible:
                         continue
 
-                    norm_desc = re.sub(r'[^A-Z0-9]', ' ', desc.upper()).strip()
                     norm_cand = re.sub(r'[^A-Z0-9]', ' ', cand_desc.upper()).strip()
-                    sim = SequenceMatcher(None, norm_desc, norm_cand).ratio()
+                    sim_raw = SequenceMatcher(None, norm_desc_raw, norm_cand).ratio()
+                    sim_canon = SequenceMatcher(None, norm_canon, norm_cand).ratio()
+                    sim = max(sim_raw, sim_canon)
 
-                    cand_words = set(norm_cand.split())
-                    desc_words = set(tokens)
-                    common = desc_words & cand_words
-                    jaccard = len(common) / len(desc_words | cand_words) if (desc_words | cand_words) else 0.0
+                    cand_words = {w for w in norm_cand.split() if len(w) >= 2 and w not in _RECONCILE_STOPWORDS}
+                    common_raw = raw_tokens & cand_words
+                    common_canon = canon_tokens & cand_words
+                    jacc_raw = len(common_raw) / len(raw_tokens | cand_words) if (raw_tokens | cand_words) else 0.0
+                    jacc_canon = len(common_canon) / len(canon_tokens | cand_words) if (canon_tokens | cand_words) else 0.0
+                    jaccard = max(jacc_raw, jacc_canon)
+                    max_common = max(len(common_raw), len(common_canon))
 
-                    # Umbral estricto: Ratio >= 0.65 o (jaccard >= 0.45 y al menos 2 palabras clave coincidentes)
-                    if (sim >= 0.65 or (jaccard >= 0.45 and len(common) >= 2)) and sim > best_sim:
+                    # Umbral estricto: Ratio >= 0.65 o (jaccard >= 0.40 y al menos 2 palabras clave coincidentes)
+                    if (sim >= 0.65 or (jaccard >= 0.40 and max_common >= 2)) and sim > best_sim:
                         best_sim = sim
                         best_cand = cand
 
                 if best_cand:
                     matched_row = best_cand
+                    break
 
         if matched_row:
             matched_cod = matched_row.CodMat or matched_row.ref_code
