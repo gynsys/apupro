@@ -11,11 +11,11 @@ const glassStrong = {
 };
 
 export default function MarketAdminPage() {
-  const [activeTab, setActiveTab] = useState('sanitization');
+  const [activeTab, setActiveTab] = useState('dedup');
 
   const TABS = [
-    { key: 'sanitization', label: 'Saneamiento IA' },
-    { key: 'dedup',        label: '🔍 Deduplicar Materiales' },
+    { key: 'dedup',        label: '🔍 Desduplicar Catálogos (Materiales, Equipos y M.O.)' },
+    { key: 'sanitization', label: '✨ Saneamiento IA de Descripciones' },
   ];
 
   return (
@@ -24,10 +24,10 @@ export default function MarketAdminPage() {
         <div className="px-6 py-5 flex items-center gap-4 border-b border-slate-200">
           <div>
             <h1 className="text-xl font-extrabold text-slate-800 tracking-tight leading-none">
-              Módulo de Automatización de Precios
+              Centro de Saneamiento y Desduplicación de Base de Datos
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Saneamiento con IA y Deduplicación de Materiales
+              Desduplicación inteligente de Materiales, Equipos y Mano de Obra con trazabilidad de Partidas APU
             </p>
           </div>
         </div>
@@ -37,8 +37,8 @@ export default function MarketAdminPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 text-sm font-semibold rounded-t-xl border-b-2 transition-colors ${
-                activeTab === tab.key ? 'text-blue-700 border-blue-600 bg-blue-50/60' : 'text-slate-500 border-transparent'
+              className={`px-4 py-2 text-sm font-semibold rounded-t-xl border-b-2 transition-colors cursor-pointer ${
+                activeTab === tab.key ? 'text-blue-700 border-blue-600 bg-blue-50/60' : 'text-slate-500 border-transparent hover:text-slate-700'
               }`}
             >
               {tab.label}
@@ -48,8 +48,8 @@ export default function MarketAdminPage() {
       </div>
 
       <div className="flex-1 overflow-auto rounded-2xl" style={glassStrong}>
-        {activeTab === 'sanitization' && <SanitizationPanel />}
         {activeTab === 'dedup' && <DeduplicatePanel />}
+        {activeTab === 'sanitization' && <SanitizationPanel />}
       </div>
     </div>
   );

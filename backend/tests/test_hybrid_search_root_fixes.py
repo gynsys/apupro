@@ -639,6 +639,7 @@ class TestHybridSearchRootFixes(unittest.TestCase):
         2. Descripciones truncadas que terminan en ' D' o ' D=' (sin diámetro) generen conflicto
            cuando la consulta pide un diámetro específico (ej. 1/2" o 13 mm).
         """
+        specs_query = _extract_technical_specs('LLAVE DE PASO TIPO COMPUERTA DE BRONCE D= 1/2"')
         specs_half = _extract_technical_specs('LLAVE DE PASO TIPO COMPUERTA DE BRONCE D= 1/2" (13 MM)')
         specs_two_half = _extract_technical_specs('LLAVE DE PASO TIPO COMPUERTA DE BRONCE D= 2 1/2" (64 MM)')
         specs_trunc = _extract_technical_specs("LLAVE DE PASO TIPO COMPUERTA DE BRONCE D")
@@ -647,24 +648,9 @@ class TestHybridSearchRootFixes(unittest.TestCase):
         self.assertEqual(specs_two_half["inches"], {"2 1/2"})
         self.assertEqual(specs_trunc["truncated_diam"], {"TRUNCATED"})
 
-        self.assertFalse(
-            _has_technical_spec_conflict(
-                'LLAVE DE PASO TIPO COMPUERTA DE BRONCE D= 1/2"',
-                'LLAVE DE PASO TIPO COMPUERTA DE BRONCE D= 1/2" (13 MM)',
-            )
-        )
-        self.assertTrue(
-            _has_technical_spec_conflict(
-                'LLAVE DE PASO TIPO COMPUERTA DE BRONCE D= 1/2"',
-                'LLAVE DE PASO TIPO COMPUERTA DE BRONCE D= 2 1/2" (64 MM)',
-            )
-        )
-        self.assertTrue(
-            _has_technical_spec_conflict(
-                'LLAVE DE PASO TIPO COMPUERTA DE BRONCE D= 1/2"',
-                "LLAVE DE PASO TIPO COMPUERTA DE BRONCE D",
-            )
-        )
+        self.assertFalse(_has_technical_spec_conflict(specs_query, specs_half))
+        self.assertTrue(_has_technical_spec_conflict(specs_query, specs_two_half))
+        self.assertTrue(_has_technical_spec_conflict(specs_query, specs_trunc))
 
 
 if __name__ == "__main__":
