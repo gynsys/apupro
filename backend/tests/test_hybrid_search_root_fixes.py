@@ -32,6 +32,8 @@ from app.services.ai_apu_service.rag_context.candidates import (
 )
 from app.services.ai_apu_service.reconciliation.specs_matcher import (
     _build_canonical_material_queries,
+    _extract_technical_specs,
+    _has_technical_spec_conflict,
 )
 from app.services.ai_apu_service.domain_rules.structural_requirements import (
     align_description_with_requested_mix,
@@ -630,7 +632,42 @@ class TestHybridSearchRootFixes(unittest.TestCase):
         enforce_reinforcement_for_structural_elements(apu3, "friso liso unidad m2")
         self.assertEqual(apu3["materials"], [])
 
+    def test_valve_mixed_inches_and_truncated_diameter_guard(self) -> None:
+        """
+        Verifica que en specs_matcher:
+        1. Pulgadas mixtas ('1 1/2"', '2 1/2"') NO se extraigan como '1/2"' y generen conflicto contra '1/2"'.
+        2. Descripciones truncadas que terminan en ' D' o ' D=' (sin diámetro) generen conflicto
+           cuando la consulta pide un diámetro específico (ej. 1/2" o 13 mm).
+        """
+        specs_half = _extract_technical_specs('LLAVE DE PASO TIPO COMPUERTA DE BRONCE D= 1/2" (13 MM)')
+        specs_two_half = _extract_technical_specs('LLAVE DE PASO TIPO COMPUERTA DE BRONCE D= 2 1/2" (64 MM)')
+        specs_trunc = _extract_technical_specs("LLAVE DE PASO TIPO COMPUERTA DE BRONCE D")
+
+        self.assertEqual(specs_half["inches"], {"1/2"})
+        self.assertEqual(specs_two_half["inches"], {"2 1/2"})
+        self.assertEqual(specs_trunc["truncated_diam"], {"TRUNCATED"})
+
+        self.assertFalse(
+            _has_technical_spec_conflict(
+                'LLAVE DE PASO TIPO COMPUERTA DE BRONCE D= 1/2"',
+                'LLAVE DE PASO TIPO COMPUERTA DE BRONCE D= 1/2" (13 MM)',
+            )
+        )
+        self.assertTrue(
+            _has_technical_spec_conflict(
+                'LLAVE DE PASO TIPO COMPUERTA DE BRONCE D= 1/2"',
+                'LLAVE DE PASO TIPO COMPUERTA DE BRONCE D= 2 1/2" (64 MM)',
+            )
+        )
+        self.assertTrue(
+            _has_technical_spec_conflict(
+                'LLAVE DE PASO TIPO COMPUERTA DE BRONCE D= 1/2"',
+                "LLAVE DE PASO TIPO COMPUERTA DE BRONCE D",
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
+
 

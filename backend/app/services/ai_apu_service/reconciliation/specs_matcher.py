@@ -19,7 +19,8 @@ _ACCESSORY_PREFIXES: Set[str] = {
 def _extract_technical_specs(text_str: str) -> Dict[str, Set[str]]:
     """
     Extrae especificaciones técnicas clave (HP, pulgadas/diámetro, kVA, BTU, mm, galones)
-    para evitar reconciliaciones incompatibles (ej. 1 HP vs 2 HP, 1" vs 2", 15 kVA vs 50 kVA).
+    para evitar reconciliaciones incompatibles (ej. 1 HP vs 2 HP, 1/2" vs 2 1/2", 15 kVA vs 50 kVA)
+    o contra registros truncados a 40 caracteres que terminan en ' D' o ' D=' sin diámetro.
     """
     clean = text_str.upper()
     specs: Dict[str, Set[str]] = {
@@ -29,15 +30,20 @@ def _extract_technical_specs(text_str: str) -> Dict[str, Set[str]]:
         "btu": set(),
         "mm": set(),
         "gallons": set(),
+        "truncated_diam": set(),
     }
 
     # HP (ej. 1 HP, 0.5 HP, 2 HP, 1/2 HP, 3/4 HP)
     for m in re.finditer(r'(?:^|[^0-9A-Z])(\d+(?:[.,]\d+)?|\d+/\d+)\s*(?:HP|C\.?P\.?)(?:\b|$|[^0-9A-Z])', clean):
         specs["hp"].add(m.group(1).replace(",", "."))
 
-    # Pulgadas (ej. 1", 2", 1/2", 3/4", 1 1/2", 1-1/2")
-    for m in re.finditer(r'(?:^|[^0-9A-Z])(\d+/\d+|\d+(?:[.,]\d+)?)\s*(?:"|\'\'|PULG|PULGADAS)(?:\b|$|[^0-9A-Z])', clean):
-        specs["inches"].add(m.group(1).replace(",", "."))
+    # Pulgadas simples y mixtas (ej. 1", 2", 1/2", 3/4", 1 1/2", 2 1/2", 1-1/2", 1/2 PLG)
+    for m in re.finditer(
+        r'(?:^|[^0-9A-Z/])(\d+\s*[- ]\s*\d+/\d+|\d+/\d+|\d+(?:[.,]\d+)?)\s*(?:"|\'\'|PULG|PULGADAS|PLG)(?:\b|$|[^0-9A-Z])',
+        clean,
+    ):
+        raw_in = re.sub(r'\s*[- ]\s*', ' ', m.group(1).replace(",", ".")).strip()
+        specs["inches"].add(raw_in)
 
     # kVA
     for m in re.finditer(r'(?:^|[^0-9A-Z])(\d+(?:[.,]\d+)?)\s*KVA(?:\b|$|[^0-9A-Z])', clean):
@@ -55,19 +61,33 @@ def _extract_technical_specs(text_str: str) -> Dict[str, Set[str]]:
     for m in re.finditer(r'(?:^|[^0-9A-Z])(\d+)\s*(?:GAL|GALONES|GLN)(?:\b|$|[^0-9A-Z])', clean):
         specs["gallons"].add(m.group(1))
 
+    # Detectar descripciones truncadas al final justo en el marcador de diámetro ('... D' o '... D=')
+    if re.search(r'\sD=?\s*$', clean.strip()) and not specs["inches"] and not specs["mm"]:
+        specs["truncated_diam"].add("TRUNCATED")
+
     return specs
 
 
 def _has_technical_spec_conflict(specs_a: Dict[str, Set[str]], specs_b: Dict[str, Set[str]]) -> bool:
     """
     Determina si dos descripciones tienen especificaciones incompatibles explícitas
-    (ej: una dice 1 HP y la otra 2 HP, o una dice 1" y la otra 2").
+    (ej: una dice 1 HP y la otra 2 HP, o una dice 1/2" y la otra 2 1/2", o el candidato
+    tiene el diámetro truncado al final '... D' cuando la consulta exige un diámetro específico).
     """
     for key in ("hp", "inches", "kva", "btu", "mm", "gallons"):
         vals_a = specs_a.get(key, set())
         vals_b = specs_b.get(key, set())
         if vals_a and vals_b and not (vals_a & vals_b):
             return True
+
+    # Si una descripción exige un diámetro específico (inches o mm) y la otra tiene el diámetro truncado ('... D')
+    a_has_diam = bool(specs_a.get("inches") or specs_a.get("mm"))
+    b_has_diam = bool(specs_b.get("inches") or specs_b.get("mm"))
+    if a_has_diam and specs_b.get("truncated_diam"):
+        return True
+    if b_has_diam and specs_a.get("truncated_diam"):
+        return True
+
     return False
 
 
