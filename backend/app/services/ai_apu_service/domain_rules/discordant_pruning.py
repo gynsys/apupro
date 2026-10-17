@@ -266,17 +266,37 @@ _HANGING_SUPPORT_MATERIAL_PATTERNS: List[str] = [
 ]
 
 
+_FINE_MIX_PATTERN = re.compile(
+    r"\bMORTERO\b|\bARENA\s*(?:-|/|Y|E|\+)\s*CEMENTO\b|\bCEMENTO\s*(?:-|/|Y|E|\+)\s*ARENA\b"
+)
+_COARSE_CONCRETE_PATTERN = re.compile(r"\b(?:CONCRETO|HORMIGON|PIEDRA\s+PICADA|GRAVA|GRANZA)\b")
+_MANUAL_MIXING_PATTERN = re.compile(
+    r"\b(?:HECH[OA]|ELABORAD[OA]|PREPARAD[OA]|MEZCLAD[OA])\s+(?:A\s+MANO|MANUAL(?:MENTE)?)\b"
+    r"|\bMEZCLA\s+MANUAL\b|\bMANUALMENTE\b|\bA\s+MANO\b"
+)
+
+
 def is_explicit_mortar_without_coarse_concrete(text_input: str) -> bool:
     """
-    Determina si la solicitud del usuario especifica explícitamente mortero de arena-cemento
-    (aglomerante fino sin agregado grueso) y NO solicita concreto ni piedra picada/grava.
+    Determina si la solicitud del usuario especifica explícitamente una mezcla fina de arena-cemento
+    (mortero, 'mezcla arena-cemento', 'arena y cemento') SIN agregado grueso, y NO solicita concreto
+    ni piedra picada/grava.
     """
     if not text_input or not isinstance(text_input, str):
         return False
     up = _strip_accents(text_input).upper()
-    has_mortar = bool(re.search(r"\bMORTERO\b", up))
-    has_coarse_concrete = bool(re.search(r"\b(?:CONCRETO|HORMIGON|PIEDRA\s+PICADA|GRAVA|GRANZA)\b", up))
-    return has_mortar and not has_coarse_concrete
+    return bool(_FINE_MIX_PATTERN.search(up)) and not bool(_COARSE_CONCRETE_PATTERN.search(up))
+
+
+def is_manual_mixing_requested(text_input: str) -> bool:
+    """
+    Determina si el usuario pidió explícitamente elaborar la mezcla a mano
+    ('hecha manualmente', 'mezcla manual', 'a mano'): sin mezcladora ni operador de mezcladora.
+    """
+    if not text_input or not isinstance(text_input, str):
+        return False
+    return bool(_MANUAL_MIXING_PATTERN.search(_strip_accents(text_input).upper()))
+
 
 
 def enforce_discordant_inputs_purging(
@@ -316,6 +336,7 @@ def enforce_discordant_inputs_purging(
     base_desc = str((base_apu or {}).get("descripcion") or (base_apu or {}).get("description") or "")
     is_removal = _is_removal_activity(user_description)
     is_mortar_only = is_explicit_mortar_without_coarse_concrete(user_description)
+    is_manual_mix = is_manual_mixing_requested(user_description)
     is_indoor_work = bool(re.search(r"\bEN\s+INTERIOR(ES)?\b", desc_upper)) and not bool(
         re.search(r"\bCARRETILLA\b", desc_upper)
     )
@@ -501,6 +522,17 @@ def enforce_discordant_inputs_purging(
                 })
                 continue
 
+            # Poda de mezcladora/trompo cuando el usuario pidió elaborar la mezcla manualmente
+            if is_manual_mix and not explicit_mixer and re.search(r"\b(?:MEZCLADORA|TROMPO|REVOLVEDORA)\b", eq_desc_upper):
+                logger.info("[DiscordantPruning] Purgada mezcladora (%s) con mezcla manual solicitada", eq_desc)
+                pruning_trace["equipos_purgados"].append({
+                    "descripcion": eq_desc,
+                    "codigo": eq.get("codigo"),
+                    "motivo": "Mezcladora incompatible con elaboración manual de la mezcla solicitada por el usuario",
+                    "regla": "MEZCLA_MANUAL_SIN_MEZCLADORA",
+                })
+                continue
+
             # Poda de vibrador de concreto (y trompo pesado si es interior) cuando la partida es explícitamente de MORTERO
             if is_mortar_only:
                 if re.search(r"\bVIBRADOR\b", eq_desc_upper):
@@ -673,7 +705,7 @@ def enforce_discordant_inputs_purging(
             for e in result.get("equipments", [])
             if isinstance(e, dict)
         )
-        if is_mortar_only and not has_active_mixer:
+        if (is_mortar_only or is_manual_mix) and not has_active_mixer:
             retained_labors: List[Dict[str, Any]] = []
             for l_item in clean_labors:
                 l_up = _strip_accents(str(l_item.get("descripcion") or "")).upper()

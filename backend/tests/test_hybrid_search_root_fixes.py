@@ -20,6 +20,7 @@ from app.services.ai_apu_service.domain_rules.discordant_pruning import (
     classify_pipe_mounting_condition,
     enforce_discordant_inputs_purging,
     is_explicit_mortar_without_coarse_concrete,
+    is_manual_mixing_requested,
     resolve_effective_pipe_mounting,
 )
 from app.services.ai_apu_service.domain_rules.sanitize_partida import (
@@ -32,10 +33,17 @@ from app.services.ai_apu_service.rag_context.candidates import (
 from app.services.ai_apu_service.reconciliation.specs_matcher import (
     _build_canonical_material_queries,
 )
+from app.services.ai_apu_service.domain_rules.structural_requirements import (
+    align_description_with_requested_mix,
+    enforce_fine_mix_plausibility,
+    enforce_reinforcement_for_structural_elements,
+)
+from app.services.element_geometry import extract_linear_length_m, is_linear_element
 from app.services.apu_labor_calibrator import (
     EMPERICAL_HH_BENCHMARKS,
     classify_activity_typology,
     consolidate_labor_crew,
+    validate_and_calibrate_hh,
 )
 
 
@@ -509,6 +517,118 @@ class TestHybridSearchRootFixes(unittest.TestCase):
         self.assertTrue(any(kws[:2] == ["CLAVOS", "ACERO"] for kws, _ in q_clv))
         q_ala = _build_canonical_material_queries("ALAMBRE NEGRO N° 18 PARA AMARRE", "kg")
         self.assertTrue(any("ALAMBRE" in kws and "18" in kws for kws, _ in q_ala))
+
+    def test_linear_element_by_unit_generalized_fixes(self) -> None:
+        """
+        Verifica las correcciones globales (no específicas de dintel) para elementos lineales pedidos en 'und':
+        geometría, afinidad de unidad por longitud, benchmark lineal escalado, mezcla manual y refuerzo por defecto.
+        """
+        q = "Construcción de dintel entre 0.80 y 1.00 m con mezcla arena-cemento hecha manualmente En interiores unidad und"
+
+        # Geometría compartida
+        self.assertEqual(extract_linear_length_m(q), 0.9)
+        self.assertEqual(extract_linear_length_m("viga de corona L=2.50 m"), 2.5)
+        self.assertEqual(extract_linear_length_m("losa de 0.15 m de espesor"), None)
+        self.assertTrue(is_linear_element(q))
+        self.assertFalse(is_linear_element("pintura de paredes"))
+
+        # Detección de mezcla fina y manual con distintas redacciones
+        self.assertTrue(is_explicit_mortar_without_coarse_concrete(q))
+        self.assertTrue(is_explicit_mortar_without_coarse_concrete("dintel con mezcla de arena y cemento"))
+        self.assertFalse(is_explicit_mortar_without_coarse_concrete("dintel de concreto con mezcla arena-cemento"))
+        self.assertTrue(is_manual_mixing_requested(q))
+        self.assertFalse(is_manual_mixing_requested("dintel con mortero En interiores"))
+
+        # A. Afinidad de unidad: 'und' + longitud declarada se comporta como 'm' y castiga bases volumétricas
+        linear_score, linear_bd = _apply_technical_scoring_adjustments_detailed(
+            query_text=q, item_desc="S/C DE DINTELES Y MACHONES, INCLUYE ACERO DE REFUERZO",
+            current_score=0.60, item_unit="m",
+        )
+        volumetric_score, volumetric_bd = _apply_technical_scoring_adjustments_detailed(
+            query_text=q, item_desc="CONCRETO DE F'C 180 PARA DINTELES, MACHONES Y VIGAS DE CORONA",
+            current_score=0.60, item_unit="m3",
+        )
+        self.assertGreater(linear_score, volumetric_score + 0.20)
+
+        # B. Calibrador: benchmark lineal escalado (CONCRETO_m x 0.9 m), no el CONCRETO_und de piezas pesadas
+        labors = [
+            {"codigo": "MO-OFI-06", "descripcion": "ALBAÑIL DE 1RA -N5", "cantidad": 0.5},
+            {"codigo": "MO-OBR-26", "descripcion": "OBRERO DE 1RA -N1", "cantidad": 1.0},
+        ]
+        partida = {
+            "description": "DINTEL DE MORTERO ARMADO ENTRE 0,80 Y 1,00 M DE LONGITUD, INCLUYE ENCOFRADO",
+            "unit": "und",
+            "performance": 6.0,
+        }
+        _, notes, trace = validate_and_calibrate_hh(partida, labors, "CONCRETO", return_trace=True)
+        expected_p50 = round(EMPERICAL_HH_BENCHMARKS["CONCRETO_m"]["median"] * 0.9, 4)
+        self.assertEqual(trace["benchmark_aplicado"]["mediana_p50"], expected_p50)
+        self.assertLess(trace["benchmark_aplicado"]["mediana_p50"], 2.0)
+        self.assertEqual(partida["performance"], 6.0, "HH=2.0 está dentro de banda: no se debe forzar rendimiento")
+
+        # Sin longitud declarada: se preserva el rendimiento, jamás se impone CONCRETO_und
+        partida_sin_largo = {"description": "DINTEL DE MORTERO ARMADO", "unit": "und", "performance": 6.0}
+        _, _, trace2 = validate_and_calibrate_hh(partida_sin_largo, labors, "CONCRETO", return_trace=True)
+        self.assertFalse(trace2["calibracion_aplicada"])
+        self.assertEqual(partida_sin_largo["performance"], 6.0)
+
+        # C. Poda: mezcla manual elimina mezcladora y operador; mortero elimina vibrador y piedra picada
+        result = {
+            "partida": {"description": "DINTEL", "unit": "und"},
+            "materials": [{"codigo": "M1", "descripcion": "PIEDRA PICADA PARA CONCRETO", "unidad": "m3", "cantidad": 0.02}],
+            "equipments": [
+                {"codigo": "E1", "descripcion": "MEZCLADORA P/CONCRETO CAP=0,40 M3 12,2 H", "cantidad": 0.1},
+                {"codigo": "E2", "descripcion": "VIBRADOR A GASOLINA PARA CONCRETO", "cantidad": 1},
+                {"codigo": "E3", "descripcion": "HERRAMIENTAS MENORES", "cantidad": 1},
+            ],
+            "labors": [
+                {"codigo": "L1", "descripcion": "MAQUINISTA DE CONCRETO DE 2DA -N3", "cantidad": 1},
+                {"codigo": "L2", "descripcion": "ALBAÑIL DE 1RA -N5", "cantidad": 1},
+            ],
+        }
+        enforce_discordant_inputs_purging(result, q, {})
+        eq_names = [e["descripcion"] for e in result["equipments"]]
+        self.assertEqual(eq_names, ["HERRAMIENTAS MENORES"])
+        self.assertEqual([m["descripcion"] for m in result["materials"]], [])
+        self.assertEqual([l["descripcion"] for l in result["labors"]], ["ALBAÑIL DE 1RA -N5"])
+
+        # D/E. Refuerzo por defecto, descripción coherente con la mezcla pedida y dosificación plausible
+        apu = {
+            "partida": {
+                "description": "CONSTRUCCIÓN DE DINTEL DE CONCRETO ARMADO ENTRE 0,80 Y 1,00 M DE LONGITUD. NO INCLUYE REFUERZO METÁLICO.",
+                "unit": "und",
+            },
+            "materials": [
+                {"descripcion": "CEMENTO GRIS PORTLAND SACO DE 42,5 KG", "unidad": "sco", "cantidad": 0.45},
+                {"descripcion": "ARENA LAVADA", "unidad": "m3", "cantidad": 0.01},
+                {"descripcion": "AGUA PARA USO INDUSTRIAL - RED HIDROVEN", "unidad": "m3", "cantidad": 0.1},
+            ],
+            "notas_adaptacion": [],
+        }
+        align_description_with_requested_mix(apu, q)
+        enforce_reinforcement_for_structural_elements(apu, q)
+        enforce_fine_mix_plausibility(apu, q)
+        mats = {m["descripcion"]: m for m in apu["materials"]}
+        steel = next(m for d, m in mats.items() if d.startswith("CABILLA"))
+        self.assertAlmostEqual(steel["cantidad"], round(2.8 * 0.9, 3))
+        self.assertTrue(any(d.startswith("ALAMBRE") for d in mats))
+        self.assertTrue(any(d.startswith("MADERA") for d in mats))
+        self.assertNotIn("NO INCLUYE REFUERZO", apu["partida"]["description"].upper().replace("Á", "A"))
+        self.assertIn("INCLUYE ACERO DE REFUERZO", apu["partida"]["description"].upper())
+        self.assertNotIn("CONCRETO", apu["partida"]["description"].upper())
+        self.assertGreaterEqual(mats["ARENA LAVADA"]["cantidad"], 0.45 * 0.06)
+        self.assertLessEqual(mats["AGUA PARA USO INDUSTRIAL - RED HIDROVEN"]["cantidad"], 0.45 * 0.05 + 1e-9)
+        self.assertTrue(any("[SUPUESTO]" in n for n in apu["notas_adaptacion"]))
+
+        # El usuario puede excluir explícitamente el acero: se respeta
+        apu2 = {"partida": {"description": "DINTEL", "unit": "m"}, "materials": [], "notas_adaptacion": []}
+        enforce_reinforcement_for_structural_elements(apu2, "dintel sin acero de refuerzo ni encofrado unidad m")
+        self.assertEqual(apu2["materials"], [])
+
+        # Elementos no estructurales no reciben refuerzo
+        apu3 = {"partida": {"description": "FRISO", "unit": "m2"}, "materials": [], "notas_adaptacion": []}
+        enforce_reinforcement_for_structural_elements(apu3, "friso liso unidad m2")
+        self.assertEqual(apu3["materials"], [])
 
 
 if __name__ == "__main__":

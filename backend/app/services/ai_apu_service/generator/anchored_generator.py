@@ -19,8 +19,14 @@ from app.services.ai_apu_service.domain_rules.discordant_pruning import (
     _TRENCH_AND_TOPOGRAPHY_EQUIPMENT_PATTERNS,
     enforce_discordant_inputs_purging,
     is_explicit_mortar_without_coarse_concrete,
+    is_manual_mixing_requested,
     is_pipe_or_conduit_activity,
     resolve_effective_pipe_mounting,
+)
+from app.services.ai_apu_service.domain_rules.structural_requirements import (
+    align_description_with_requested_mix,
+    enforce_fine_mix_plausibility,
+    enforce_reinforcement_for_structural_elements,
 )
 from app.services.ai_apu_service.domain_rules.sanitize_partida import (
     _sanitize_partida_description,
@@ -179,11 +185,12 @@ def apply_specialty_coherence_contract_to_base(
 
     u_up = _strip_accents_upper(user_description or "")
     is_mortar_only = is_explicit_mortar_without_coarse_concrete(user_description)
+    is_manual_mix = is_manual_mixing_requested(user_description)
     is_indoor = bool(re.search(r"\bEN\s+INTERIOR(ES)?\b", u_up)) and not bool(re.search(r"\bCARRETILLA\b", u_up))
     explicit_mixer = bool(re.search(r"\b(?:MEZCLADORA|TROMPO)\b", u_up))
 
     filtered_base: Dict[str, Any] = dict(pruned_base)
-    if is_mortar_only or is_indoor:
+    if is_mortar_only or is_indoor or is_manual_mix:
         if is_mortar_only and isinstance(filtered_base.get("materiales"), list):
             filtered_base["materiales"] = [
                 m for m in filtered_base["materiales"]
@@ -201,13 +208,15 @@ def apply_specialty_coherence_contract_to_base(
                 eq_up = _strip_accents_upper(str(eq.get("descripcion") or ""))
                 if is_mortar_only and re.search(r"\bVIBRADOR\b", eq_up):
                     continue
+                if is_manual_mix and not explicit_mixer and re.search(r"\b(?:MEZCLADORA|TROMPO|REVOLVEDORA)\b", eq_up):
+                    continue
                 if is_mortar_only and is_indoor and not explicit_mixer and re.search(r"\b(?:MEZCLADORA|TROMPO)\b", eq_up):
                     continue
                 if is_indoor and re.search(r"\bCARRETILLA\b", eq_up):
                     continue
                 clean_m_eqs.append(eq)
             filtered_base["equipos"] = clean_m_eqs
-        if is_mortar_only and isinstance(filtered_base.get("mano_obra"), list):
+        if (is_mortar_only or is_manual_mix) and isinstance(filtered_base.get("mano_obra"), list):
             has_mixer = any(
                 re.search(r"\b(?:MEZCLADORA|TROMPO)\b", _strip_accents_upper(str(e.get("descripcion") or "")))
                 for e in filtered_base.get("equipos", [])
@@ -518,6 +527,12 @@ Prefijo COVENIN: {effective_cov_prefix}
     # Salvaguarda determinista de unidad solicitada
     if result.get("partida") and requested_unit:
         result["partida"]["unit"] = requested_unit.strip().lower()
+
+    # Coherencia de la mezcla pedida (arena-cemento vs concreto), refuerzo/encofrado por defecto
+    # en elementos estructurales y plausibilidad física de la dosificación fina
+    align_description_with_requested_mix(result, user_description)
+    enforce_reinforcement_for_structural_elements(result, user_description)
+    enforce_fine_mix_plausibility(result, user_description)
 
     effective_base_for_heritage = (
         base_apu

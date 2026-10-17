@@ -4,6 +4,7 @@ import unicodedata
 from typing import Any, Dict, List, Optional, Tuple
 from app.core.logging import logger
 from app.services.ai_apu_service.domain_rules.discordant_pruning import deduplicate_labor_items
+from app.services.element_geometry import extract_linear_length_m, is_linear_element
 
 
 # ---------------------------------------------------------------------------
@@ -1298,6 +1299,29 @@ def validate_and_calibrate_hh(
     benchmark_key = f"{typology}_{bench_unit}"
     benchmark = EMPERICAL_HH_BENCHMARKS.get(benchmark_key)
 
+    # 1.1 Elementos constructivos lineales pedidos por unidad discreta (ej. 'dintel de 0.80-1.00 m' en und):
+    # el benchmark por pieza (CONCRETO_und = pedestales/dados) NO aplica. Se deriva desde el benchmark
+    # lineal de la misma tipología escalado por la longitud típica declarada; sin longitud, se preserva
+    # el rendimiento propuesto en lugar de imponer un benchmark dimensionalmente ajeno.
+    skip_discrete_benchmark = False
+    if unit in ("und", "pza", "u") and is_linear_element(desc_clean):
+        linear_len = extract_linear_length_m(str(partida.get("description") or partida.get("descripcion") or ""))
+        linear_bench = EMPERICAL_HH_BENCHMARKS.get(f"{typology}_m")
+        if linear_len and linear_bench:
+            benchmark = {
+                key: round(value * linear_len, 4)
+                for key, value in linear_bench.items()
+                if key != "rendimiento_med"
+            }
+            benchmark["rendimiento_med"] = round(linear_bench["rendimiento_med"] / linear_len, 2)
+            notes.append(
+                f"Benchmark lineal escalado: {typology}_m x {linear_len:.2f} m de longitud típica por unidad "
+                f"(P50 {benchmark['median']:.4f} HH/{unit})."
+            )
+        else:
+            benchmark = None
+            skip_discrete_benchmark = True
+
     # 1.2 Benchmark especializado para pozo profundo, bombas y desmontajes electromecánicos en und/pza
     is_mech_elec = any(k in desc_clean for k in [
         "BOMBA", "MOTOR", "COMPRESOR", "TABLERO", "TRANSFORMADOR",
@@ -1307,7 +1331,7 @@ def validate_and_calibrate_hh(
         "DESMONTAJE", "DESCONEXION", "DESMANTELAMIENTO", "EXTRACCION", "RETIRO"
     ])
 
-    if not benchmark and unit in ("und", "pza"):
+    if not benchmark and not skip_discrete_benchmark and unit in ("und", "pza"):
         # Pozo profundo / bomba sumergible en pozo
         if any(k in desc_clean for k in ["POZO PROFUNDO", "POZO TUBULAR", "80M", "100M", "50M", "60M"]):
             benchmark = {
@@ -1354,14 +1378,14 @@ def validate_and_calibrate_hh(
             difficulty_factor = 1.0
 
     # Si no coincide exactamente, buscar SOLO dentro de benchmarks compatibles con la MISMA unidad física
-    if not benchmark:
+    if not benchmark and not skip_discrete_benchmark:
         for k, v in EMPERICAL_HH_BENCHMARKS.items():
             if k.endswith(f"_{bench_unit}") and k.startswith(typology):
                 benchmark = v
                 break
 
     # Fallback inteligente para unidades discretas (und / pza) si la tipología es explícitamente civil/albañilería
-    if not benchmark and unit in ("und", "pza"):
+    if not benchmark and not skip_discrete_benchmark and unit in ("und", "pza"):
         if typology in ("ALBANILERIA", "FRISOS", "CONCRETO", "PISOS"):
             benchmark = EMPERICAL_HH_BENCHMARKS.get(f"{typology}_{unit}") or EMPERICAL_HH_BENCHMARKS.get(f"ALBANILERIA_{unit}")
         elif typology == "PINTURA":

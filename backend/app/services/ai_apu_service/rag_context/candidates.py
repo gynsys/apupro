@@ -9,6 +9,7 @@ from app.services.ai_apu_service.domain_rules.discordant_pruning import (
     classify_pipe_mounting_condition,
     is_pipe_or_conduit_activity,
 )
+from app.services.element_geometry import extract_linear_length_m, is_linear_element
 
 
 INCOMPATIBLE_POLARITY_RULES: List[Tuple[Set[str], Set[str], float]] = [
@@ -304,15 +305,29 @@ def _apply_technical_scoring_adjustments_detailed(
     if unit_match and item_unit:
         req_u_norm = _normalize_unit(unit_match.group(1))
         cand_u_norm = _normalize_unit(item_unit)
+        # Un elemento lineal pedido por unidad con longitud típica declarada (ej. 'dintel de 0.80-1.00 m' en und)
+        # es físicamente equivalente a una partida por metro lineal escalada por esa longitud.
+        is_linear_by_length = (
+            req_u_norm in ("und", "pza")
+            and is_linear_element(query_text)
+            and extract_linear_length_m(query_text) is not None
+        )
+        if is_linear_by_length:
+            req_u_norm = "m"
         if req_u_norm and cand_u_norm and req_u_norm not in ("gl", "sg"):
             if req_u_norm == cand_u_norm:
                 current_score = min(1.30, current_score + 0.10)
                 unit_adjustment = 0.10
                 adjustment_details.append(f"Bonificación por equivalencia física de unidad ({req_u_norm}): +0.10")
             else:
-                current_score = max(0.0, current_score - 0.08)
-                unit_adjustment = -0.08
-                adjustment_details.append(f"Penalización por divergencia dimensional de unidad (solicitada={req_u_norm} vs candidato={cand_u_norm}): -0.08")
+                is_volumetric_supply = is_linear_by_length and cand_u_norm in ("m3", "m2")
+                unit_penalty = 0.14 if is_volumetric_supply else 0.08
+                current_score = max(0.0, current_score - unit_penalty)
+                unit_adjustment = -unit_penalty
+                adjustment_details.append(
+                    f"Penalización por divergencia dimensional de unidad "
+                    f"(solicitada={req_u_norm} vs candidato={cand_u_norm}): -{unit_penalty:.2f}"
+                )
 
     final_score = round(current_score, 3)
     breakdown = {
