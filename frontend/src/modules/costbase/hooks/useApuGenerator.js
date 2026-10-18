@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { generateAIApu } from '../services/cost360Service';
+import { saveDebugJsonFile } from '../../../utils/debugStorage';
 
 export function useApuGenerator({ setSettings }) {
   const [loading, setLoading] = useState(false);
@@ -132,22 +133,20 @@ export function useApuGenerator({ setSettings }) {
       setDebugInfo(null);
     }
 
-    // Auto-descarga de Debug JSON si está habilitado desde Utilitarios
+    // Auto-guardado de Debug JSON si está habilitado desde Utilitarios
     const shouldDownloadDebug = localStorage.getItem('auto_download_debug_json') === 'true';
     if (shouldDownloadDebug && currentDebug) {
-      try {
-        const blob = new Blob([JSON.stringify(currentDebug, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `debug_apu_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        toast.success('Debug JSON descargado automáticamente', { icon: '📥' });
-      } catch (err) {
-        console.error('Error al auto-descargar Debug JSON:', err);
-      }
+      saveDebugJsonFile(currentDebug)
+        .then((result) => {
+          if (result && result.method === 'filesystem') {
+            toast.success(`Debug guardado en ${result.dirName}/${result.filename}`, { icon: '📁' });
+          } else {
+            toast.success('Debug JSON descargado automáticamente', { icon: '📥' });
+          }
+        })
+        .catch((err) => {
+          console.error('Error al auto-guardar Debug JSON:', err);
+        });
     }
 
     if (response.jev_analysis) {

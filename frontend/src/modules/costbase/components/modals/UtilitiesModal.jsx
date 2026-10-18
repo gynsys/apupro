@@ -12,12 +12,20 @@ import {
   Layers, 
   ExternalLink, 
   CheckCircle2, 
-  AlertTriangle 
+  AlertTriangle,
+  Folder,
+  FolderPlus
 } from 'lucide-react';
 import { FiDatabase, FiCpu } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { apiPost, apiGet } from '../../../../lib/apiHelper';
+import { 
+  isFileSystemAccessSupported, 
+  pickDebugDirectory, 
+  getSavedDebugDirectoryName, 
+  clearDebugDirectoryHandle 
+} from '../../../../utils/debugStorage';
 import CategoryManager from '../CategoryManager';
 
 export default function UtilitiesModal({
@@ -33,6 +41,8 @@ export default function UtilitiesModal({
 }) {
   const navigate = useNavigate();
   const [autoDownloadDebugJson, setAutoDownloadDebugJson] = useState(false);
+  const [debugDirName, setDebugDirName] = useState(null);
+  const [isFSSupported, setIsFSSupported] = useState(false);
   const [isUpdatingRAG, setIsUpdatingRAG] = useState(false);
   const [healthData, setHealthData] = useState(null);
   const [loadingHealth, setLoadingHealth] = useState(false);
@@ -60,6 +70,8 @@ export default function UtilitiesModal({
     if (isOpen) {
       const saved = localStorage.getItem('auto_download_debug_json') === 'true';
       setAutoDownloadDebugJson(saved);
+      setIsFSSupported(isFileSystemAccessSupported());
+      setDebugDirName(getSavedDebugDirectoryName());
       fetchHealth();
     }
   }, [isOpen]);
@@ -94,15 +106,40 @@ export default function UtilitiesModal({
 
   if (!isOpen) return null;
 
-  const handleToggleDebug = (e) => {
+  const handleToggleDebug = async (e) => {
     const checked = e.target.checked;
     setAutoDownloadDebugJson(checked);
     localStorage.setItem('auto_download_debug_json', checked ? 'true' : 'false');
     if (checked) {
+      if (isFileSystemAccessSupported() && !getSavedDebugDirectoryName()) {
+        toast('Selecciona la carpeta "debug" para archivar directamente allí', { icon: '📁', duration: 4000 });
+        const res = await pickDebugDirectory();
+        if (res.success) {
+          setDebugDirName(res.name);
+          toast.success(`Carpeta "${res.name}" configurada para Debug JSON`, { icon: '📁' });
+          return;
+        }
+      }
       toast.success('Descarga automática de Debug JSON ACTIVADA');
     } else {
       toast('Descarga automática de Debug JSON DESACTIVADA', { icon: 'ℹ️' });
     }
+  };
+
+  const handleSelectDirectory = async () => {
+    const res = await pickDebugDirectory();
+    if (res.success) {
+      setDebugDirName(res.name);
+      toast.success(`Carpeta "${res.name}" configurada para Debug JSON`, { icon: '📁' });
+    } else if (res.error) {
+      toast.error(res.error);
+    }
+  };
+
+  const handleClearDirectory = async () => {
+    await clearDebugDirectoryHandle();
+    setDebugDirName(null);
+    toast('Carpeta personalizada removida. Se usará la carpeta de Descargas estándar.', { icon: 'ℹ️' });
   };
 
   const handleRAGUpdate = async () => {
@@ -220,11 +257,49 @@ export default function UtilitiesModal({
 
             {/* Status info de Debug JSON */}
             {autoDownloadDebugJson && (
-              <div className="flex items-start gap-2 text-xs text-emerald-800 bg-emerald-50/80 p-3 rounded-xl border border-emerald-200">
-                <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-semibold">Debug JSON Activo:</span> Cada vez que generes un APU con IA, se descargará un archivo <code className="bg-emerald-100/80 px-1 py-0.5 rounded font-mono text-[11px]">debug_apu_*.json</code> con el árbol semántico y respuestas del LLM.
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-emerald-900 bg-emerald-50/90 p-3.5 rounded-xl border border-emerald-200 shadow-xs">
+                <div className="flex items-start gap-2.5">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <div>
+                      <span className="font-bold">Debug JSON Activo:</span> Cada vez que generes un APU con IA, se archivará el archivo <code className="bg-emerald-100/80 px-1 py-0.5 rounded font-mono text-[11px] text-emerald-950 font-semibold">debug_apu_*.json</code>.
+                    </div>
+                    {debugDirName ? (
+                      <div className="flex items-center gap-1.5 text-emerald-800 font-medium">
+                        <Folder className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>Carpeta de destino configurada: <strong className="font-mono bg-emerald-200/70 text-emerald-950 px-1.5 py-0.5 rounded font-bold">{debugDirName}/</strong></span>
+                      </div>
+                    ) : (
+                      <div className="text-slate-600 text-[11px]">
+                        Destino actual: Carpeta de <span className="font-semibold text-slate-800">Descargas</span> estándar.
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {isFSSupported && (
+                  <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                    <button
+                      type="button"
+                      onClick={handleSelectDirectory}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all hover:scale-[1.02] cursor-pointer"
+                      title="Seleccionar carpeta específica en tu equipo (ej. Descargas/debug)"
+                    >
+                      <FolderPlus className="w-3.5 h-3.5" />
+                      {debugDirName ? 'Cambiar carpeta' : 'Elegir carpeta destino'}
+                    </button>
+                    {debugDirName && (
+                      <button
+                        type="button"
+                        onClick={handleClearDirectory}
+                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        title="Restablecer a descargas predeterminadas"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
