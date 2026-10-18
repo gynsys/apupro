@@ -24,7 +24,8 @@ def _enforce_deep_well_dimensions(
     desc_lower = (user_description or "").lower()
     is_sewage = bool(re.search(r"\b(aguas?\s+negras?|aguas?\s+servidas?|residuales?|achique|fosa|cloaca|triturador\w*)\b", desc_lower))
     is_deep_well = (
-        bool(re.search(r"\b(pozo\s+profundo|pozo\s+de\s+agua|pozo\s+tubular|bomba\s+(tipo\s+)?lapicero)\b", desc_lower))
+        bool(re.search(r"\b(pozo\s+profundo|pozo\s+p[eo]fundo|pozo\s+de\s+agua|pozo\s+tubular|bomba\s+(tipo\s+)?lapicero)\b", desc_lower))
+        or (bool(re.search(r"\bpozo\b", desc_lower)) and bool(re.search(r"\bbomba\b", desc_lower)) and not is_sewage)
         or (bool(re.search(r"\bbomba\s+sumergible\b", desc_lower)) and not is_sewage)
     )
 
@@ -181,18 +182,49 @@ def _enforce_deep_well_dimensions(
 
     result["materials"] = clean_materials
 
-    # Purgar también bombas centrífugas si se colaron en equipos
-    if equipments:
-        clean_equipments: List[Dict[str, Any]] = []
-        for eq in equipments:
-            if not isinstance(eq, dict):
-                continue
-            eq_desc = str(eq.get("descripcion", "")).upper()
-            if re.search(r"\bBOMBA\b", eq_desc) and not re.search(r"\b(SUMERGIBLE|LAPICERO)\b", eq_desc):
-                logger.info("[DeepWellEnforcement] Purgada bomba no sumergible de equipos: %s", eq_desc)
-                continue
-            clean_equipments.append(eq)
-        result["equipments"] = clean_equipments
+    # 5. Purgar equipos discordantes (bombas centrífugas, carretillas) y asegurar transporte vehicular
+    clean_equipments: List[Dict[str, Any]] = []
+    has_transport_vehicle = False
+
+    for eq in equipments:
+        if not isinstance(eq, dict):
+            continue
+        eq_desc = str(eq.get("descripcion", "")).upper()
+        # Purgar bombas no sumergibles coladas en equipos
+        if re.search(r"\bBOMBA\b", eq_desc) and not re.search(r"\b(SUMERGIBLE|LAPICERO)\b", eq_desc):
+            logger.info("[DeepWellEnforcement] Purgada bomba no sumergible de equipos: %s", eq_desc)
+            continue
+        # Purgar carretillas y herramientas manuales de movimiento de tierras inoperativas en pozo profundo
+        if re.search(r"\b(CARRETILL\w*|CARRUCH\w*|BUGG\w*|PALA\w*|PICO\w*|CHICUR\w*)\b", eq_desc):
+            logger.info("[DeepWellEnforcement] Purgada carretilla/herramienta manual inadecuada en pozo profundo: %s", eq_desc)
+            continue
+        if re.search(r"\b(CAMIONETA|PICK[- ]?UP|CAMION\s+350|CAMI[OÓ]N\s+350|VEHICULO|F-150)\b", eq_desc):
+            has_transport_vehicle = True
+        clean_equipments.append(eq)
+
+    # Limpiar advertencias asociadas a carretilla si las hubiera
+    if "advertencias" in result and isinstance(result["advertencias"], list):
+        result["advertencias"] = [
+            a for a in result["advertencias"]
+            if not any(k in a.upper() for k in ["CARRETILLA", "CARRUCHA", "BUGGY"])
+        ]
+
+    # Garantizar presencia de vehículo de transporte liviano para cuadrilla, tecle y tubería de 6 m
+    if not has_transport_vehicle and not is_removal:
+        clean_equipments.append({
+            "id": "eq-deepwell-pickup",
+            "codigo": "EQU-TRA-002",
+            "descripcion": "CAMIONETA PICK-UP TIPO FORD F-150 / 350 (TRANSPORTE DE CUADRILLA, TUBERÍA Y EQUIPOS)",
+            "unidad": "día",
+            "cantidad": 0.5,
+            "depreciacion": 0.0044,
+            "precio_unitario": 92128.60,
+            "origen": "historico",
+            "nota_calculo": "Vehículo de apoyo logístico para traslado de cuadrilla, tecle, bomba y tubería de 6 m al sitio del pozo (0.5 día)."
+        })
+        logger.info("[DeepWellEnforcement] Inyectada camioneta pick-up de transporte para pozo profundo.")
+
+    result["equipments"] = clean_equipments
 
     # 5. Reflejar la profundidad en la descripción técnica de la partida COVENIN
     if effective_depth and effective_depth > 0 and result.get("partida"):
