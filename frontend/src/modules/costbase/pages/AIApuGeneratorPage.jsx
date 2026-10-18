@@ -551,6 +551,7 @@ export default function AIApuGeneratorPage() {
               setUseTypesafeJev={generator.setUseTypesafeJev}
               waitingForGlobalDays={guided.waitingForGlobalDays}
               waitingForClarification={guided.waitingForClarification}
+              chatPlaceholder={guided.chatPlaceholder}
             />
           )}
         </div>

@@ -1,4 +1,13 @@
 import { getEmpiricalMaterialChips, getEmpiricalStep3Prompt, USE_PARAMETRIC_ENGINE } from '../parametric-engine/index.js';
+export {
+  ACCIONES_STEP1_CHIPS,
+  ACTION_FLOW_PIPELINES,
+  DEFAULT_PIPELINE,
+  getActionPipeline,
+  buildPipelinePrompt,
+  extractCleanUnit,
+  isOmitted
+} from './actionPipelines.js';
 
 export const ACCIONES_OPCIONES = [
   { value: 'Suministro e instalación de', label: 'Suministro e instalación de' },
@@ -30,6 +39,10 @@ export const ACCIONES_OPCIONES = [
   { value: 'Revoque de', label: 'Revoque de' },
   { value: 'Enlucido de', label: 'Enlucido de' },
   { value: 'Pintura en', label: 'Pintura en' },
+  { value: 'Restauración de', label: 'Restauración de' },
+  { value: 'Saneamiento de', label: 'Saneamiento de' },
+  { value: 'Confección de', label: 'Confección de' },
+  { value: 'Tratamiento de', label: 'Tratamiento de' },
   { value: 'Suministro e instalación de pisos de', label: 'Suministro e instalación de pisos de' },
   { value: 'Revestimiento de', label: 'Revestimiento de' },
   { value: 'Canalización de tuberías para', label: 'Canalización de tuberías para' },
@@ -994,27 +1007,7 @@ export function getDynamicStepDefinition(step, { accion, elemento, material, ubi
     case 1:
       return {
         text: 'Defina la Acción\n¿Qué acción o proceso constructivo se va a realizar?',
-        chips: [
-          'Suministro e instalación',
-          'Instalación',
-          'Construcción',
-          'Demolición',
-          'Remoción',
-          'Pintura',
-          'Vaciado de concreto',
-          'Excavación',
-          'Compactación',
-          'Relleno',
-          'Acarreo',
-          'Transporte',
-          'Deforestación',
-          'Colocación',
-          'Reparación',
-          'Mantenimiento',
-          'Impermeabilización',
-          'Desmontaje',
-          'Limpieza'
-        ]
+        chips: ACCIONES_STEP1_CHIPS
       };
     case 2: {
       const acc = (accion || '').toLowerCase();
@@ -1121,27 +1114,7 @@ export function getDynamicStepDefinition(step, { accion, elemento, material, ubi
 export const CHAT_STEP_DEFINITIONS = {
   1: {
     text: 'Defina la Acción\n¿Qué acción o proceso constructivo se va a realizar?',
-    chips: [
-      'Suministro e instalación',
-      'Instalación',
-      'Construcción',
-      'Demolición',
-      'Remoción',
-      'Pintura',
-      'Vaciado de concreto',
-      'Excavación',
-      'Compactación',
-      'Relleno',
-      'Acarreo',
-      'Transporte',
-      'Deforestación',
-      'Colocación',
-      'Reparación',
-      'Mantenimiento',
-      'Impermeabilización',
-      'Desmontaje',
-      'Limpieza'
-    ]
+    chips: ACCIONES_STEP1_CHIPS
   },
   2: {
     general: {

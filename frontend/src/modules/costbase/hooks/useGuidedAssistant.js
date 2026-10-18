@@ -5,6 +5,14 @@ import {
   getParametricStep3Definition,
   getDynamicStepDefinition
 } from '../constants/guidedBuilderConstants.js';
+import {
+  ACCIONES_STEP1_CHIPS,
+  getActionPipeline,
+  buildPipelinePrompt,
+  extractCleanUnit,
+  isOmitted,
+  DEFAULT_PIPELINE
+} from '../constants/actionPipelines.js';
 
 // Raíces y términos de procesos y acciones constructivas reconocibles
 export const CONSTRUCTION_ACTION_ROOTS = [
@@ -16,7 +24,8 @@ export const CONSTRUCTION_ACTION_ROOTS = [
   'traslad', 'transpor', 'carg', 'bote', 'botar', 'elimin', 'limpiez', 'limpiar',
   'desmalez', 'deshierb', 'deforest', 'remoc', 'remov', 'trazo', 'replant', 'nivel', 'perfil', 'rellen', 'compact',
   'soldad', 'soldar', 'oxicort', 'cort', 'perfor', 'canaliz', 'cablead', 'cablear',
-  'conexion', 'empalm', 'prueb', 'impermeabiliz', 'aislam'
+  'conexion', 'empalm', 'prueb', 'impermeabiliz', 'aislam',
+  'confecc', 'tratam'
 ];
 
 // Raíces de elementos o materiales constructivos
@@ -110,15 +119,16 @@ export function decomposeComprehensivePrompt(prompt) {
 /**
  * Validador estricto para cada paso del asistente guiado
  */
-export function validateStepInput(text, step, isMaintenance = false) {
+export function validateStepInput(text, step, isMaintenance = false, currentStepDef = null) {
   if (!text || typeof text !== 'string') {
     return { isValid: false, error: 'Por favor ingresa una respuesta válida.' };
   }
   const clean = text.trim();
+  const isUnitStep = Boolean(currentStepDef?.isUnit || step === 6);
 
   // Opciones estándar de omisión
   const isSkip = /^(omitir|ninguno|ninguno \/ omitir|sugerir por ia|sugerir)$/i.test(clean);
-  if (isSkip && step !== 1 && (step !== 6 || !isMaintenance)) {
+  if (isSkip && step !== 1 && (!isUnitStep || !isMaintenance)) {
     return { isValid: true };
   }
 
@@ -138,35 +148,7 @@ export function validateStepInput(text, step, isMaintenance = false) {
         error: `"${clean}" no describe un proceso constructivo. Indica qué acción se va a realizar (ej: Suministro e instalación, Construcción, Demolición, Reparación, Vaciado de concreto, Pintura) o selecciona una opción.`
       };
     }
-  } else if (step === 2) {
-    if (clean.length < 2) {
-      return {
-        isValid: false,
-        error: 'Por favor indica qué elemento o estructura se va a intervenir o construir (ej: Paredes, Rejas y herrería, Losas, Tuberías), o selecciona una opción sugerida.'
-      };
-    }
-  } else if (step === 3) {
-    if (clean.length < 2) {
-      return {
-        isValid: false,
-        error: 'Por favor indica el material, tipo de pintura o especificación técnica (ej: Pintura de caucho clase A, Fondo cromato de zinc, Concreto f\'c=250), o selecciona "Omitir".'
-      };
-    }
-  } else if (step === 4) {
-    if (clean.length < 2) {
-      return {
-        isValid: false,
-        error: 'Por favor indica la ubicación o entorno de trabajo (ej: En interiores, En fachadas exteriores, A rapel, En altura), o selecciona "Omitir".'
-      };
-    }
-  } else if (step === 5) {
-    if (clean.length < 2) {
-      return {
-        isValid: false,
-        error: 'Por favor describe el alcance adicional o condiciones (ej: Incluye preparación de superficie, Todo incluido, Solo mano de obra), o selecciona "Omitir".'
-      };
-    }
-  } else if (step === 6) {
+  } else if (isUnitStep) {
     const cleanLower = clean.toLowerCase();
     if (isMaintenance && (cleanLower.includes('omitir') || cleanLower.includes('ninguno') || cleanLower.includes('sugerir'))) {
       return {
@@ -179,7 +161,7 @@ export function validateStepInput(text, step, isMaintenance = false) {
       'm2', 'm²', 'm3', 'm³', 'kg', 'kgf', 'ton', 'tonf', 'pto', 'punto', 'puntos',
       'gl', 'sg', 'global', 'suma global',
       'gln', 'galon', 'galones', 'jgo', 'juego', 'saco', 'sacos', 'sac', 'viaje', 'viajes',
-      'mes', 'dia', 'hora', 'sugerir por ia', 'omitir', 'ninguno'
+      'mes', 'dia', 'hora', 'sugerir por ia', 'omitir', 'ninguno', 'm3-km', 'm³-km', 't-km', 'ton-km'
     ];
     const isRecognizedUnit = VALID_UNITS.some(u => cleanLower.includes(u));
     if (!isRecognizedUnit && clean.length < 8) {
@@ -188,6 +170,11 @@ export function validateStepInput(text, step, isMaintenance = false) {
         error: `"${clean}" no es una unidad de cómputo válida. Por favor selecciona o indica una unidad estándar (ej: und, pza, m², m³, m, Gl, kgf, pto).`
       };
     }
+  } else if (clean.length < 2) {
+    return {
+      isValid: false,
+      error: 'Por favor indica una especificación constructiva válida o selecciona una opción sugerida.'
+    };
   }
 
   return { isValid: true };
@@ -198,12 +185,19 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
   const [entryModeSource, setEntryModeSource] = useState('chat');
   const lastEntrySourceRef = useRef('chat');
 
+  // Estados de partida sincronizados con el pipeline
   const [guidedAccion, setGuidedAccion] = useState(null);
   const [guidedElemento, setGuidedElemento] = useState(null);
   const [guidedMaterial, setGuidedMaterial] = useState(null);
   const [guidedUbicacion, setGuidedUbicacion] = useState(null);
   const [guidedIncluye, setGuidedIncluye] = useState(null);
   const [guidedUnidad, setGuidedUnidad] = useState(null);
+
+  // Estados de Pipeline Dinámico
+  const [activePipeline, setActivePipeline] = useState(null);
+  const activePipelineRef = useRef(null);
+  const [stepAnswers, setStepAnswers] = useState({});
+  const stepAnswersRef = useRef({});
 
   const [currentChatStep, setCurrentChatStep] = useState(0);
   const [chatInputValue, setChatInputValue] = useState('');
@@ -235,7 +229,7 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       id: 'msg-bot0',
       sender: 'bot',
       step: 0,
-      text: `¡Hola${greetingName}! Construir una descripción detallada de una partida es lo esencial para evitar ambigüedades al momento de la ejecución en campo.\n\nEn pocos pasos  armaremos la mejor descripción. \n¿Comenzamos?`,
+      text: `¡Hola${greetingName}! Construir una descripción detallada de una partida es lo esencial para evitar ambigüedades al momento de la ejecución en campo.\n\nEn pocos pasos armaremos la mejor descripción.\n¿Comenzamos?`,
       chips: ['Sí, comenzar']
     };
   }, [user]);
@@ -246,6 +240,14 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
 
   const getStepValue = (step) => {
     if (step === 1) return guidedAccion;
+    const pipeline = activePipelineRef.current || (guidedAccion ? getActionPipeline(guidedAccion) : null);
+    if (pipeline) {
+      const idx = step - 2;
+      const stepDef = pipeline[idx];
+      if (stepDef) {
+        return stepAnswersRef.current[stepDef.id] || '';
+      }
+    }
     if (step === 2) return guidedElemento;
     if (step === 3) return guidedMaterial;
     if (step === 4) return guidedUbicacion;
@@ -280,7 +282,7 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       setGuidedMessages([
         createInitialMessage(),
         {
-          id: 'bot-step-1',
+          id: `bot-step-1-${Date.now()}`,
           sender: 'bot',
           step: 1,
           text: step1Def.text,
@@ -289,11 +291,16 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       ]);
       return;
     }
+
     const prevStep = targetStep !== null ? targetStep : currentChatStep - 1;
     if (prevStep < 0) return;
 
     if (prevStep === 0) {
       setCurrentChatStep(0);
+      setActivePipeline(null);
+      activePipelineRef.current = null;
+      setStepAnswers({});
+      stepAnswersRef.current = {};
       setGuidedAccion(null);
       setGuidedElemento(null);
       setGuidedMaterial(null);
@@ -305,32 +312,104 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       return;
     }
 
+    if (prevStep === 1) {
+      setCurrentChatStep(1);
+      setActivePipeline(null);
+      activePipelineRef.current = null;
+      setStepAnswers({});
+      stepAnswersRef.current = {};
+      setGuidedElemento(null);
+      setGuidedMaterial(null);
+      setGuidedUbicacion(null);
+      setGuidedIncluye(null);
+      setGuidedUnidad(null);
+      const prevAction = guidedAccion;
+      setChatInputValue(prevAction && !isOmitted(prevAction) ? prevAction : '');
+      const step1Def = getDynamicStepDefinition(1);
+      setGuidedMessages([
+        createInitialMessage(),
+        {
+          id: `bot-step-1-${Date.now()}`,
+          sender: 'bot',
+          step: 1,
+          text: step1Def.text,
+          chips: step1Def.chips
+        }
+      ]);
+      return;
+    }
+
+    // prevStep >= 2: Volver a un paso dentro del pipeline
+    const pipeline = activePipelineRef.current || (guidedAccion ? getActionPipeline(guidedAccion) : DEFAULT_PIPELINE);
+    const targetIdx = prevStep - 2;
+    const targetStepDef = pipeline[targetIdx];
+
     setCurrentChatStep(prevStep);
 
-    // Limpiar campos posteriores
-    if (prevStep < 6) setGuidedUnidad(null);
-    if (prevStep < 5) setGuidedIncluye(null);
-    if (prevStep < 4) setGuidedUbicacion(null);
-    if (prevStep < 3) setGuidedMaterial(null);
-    if (prevStep < 2) setGuidedElemento(null);
-    if (prevStep < 1) setGuidedAccion(null);
+    // Filtrar stepAnswers para conservar solo las respuestas anteriores a targetIdx
+    const keptAnswers = {};
+    for (let i = 0; i < targetIdx; i++) {
+      const s = pipeline[i];
+      if (s && stepAnswersRef.current[s.id] !== undefined) {
+        keptAnswers[s.id] = stepAnswersRef.current[s.id];
+      }
+    }
+    setStepAnswers(keptAnswers);
+    stepAnswersRef.current = keptAnswers;
 
-    const prevVal = getStepValue(prevStep);
-    setChatInputValue(prevVal && prevVal !== 'Omitir' && prevVal !== 'Ninguno' && prevVal !== 'Ninguno / Omitir' ? prevVal : '');
+    // Resincronizar variables legadas
+    setGuidedElemento(null);
+    setGuidedMaterial(null);
+    setGuidedUbicacion(null);
+    setGuidedIncluye(null);
+    setGuidedUnidad(null);
+    for (let i = 0; i < targetIdx; i++) {
+      const s = pipeline[i];
+      const val = keptAnswers[s.id];
+      if (val && !isOmitted(val)) {
+        if (s.field === 'elemento') setGuidedElemento(val);
+        else if (s.field === 'material') setGuidedMaterial(val);
+        else if (s.field === 'ubicacion') setGuidedUbicacion(val);
+        else if (s.field === 'incluye') setGuidedIncluye(val);
+        else if (s.field === 'unidad') setGuidedUnidad(val);
+      }
+    }
 
-    // Rebobinar mensajes
+    // Colocar respuesta anterior en input si existía
+    const prevAnswer = stepAnswersRef.current[targetStepDef?.id];
+    setChatInputValue(prevAnswer && !isOmitted(prevAnswer) ? prevAnswer : '');
+
+    // Rebobinar mensajes del chat
+    const targetChips = targetStepDef
+      ? (typeof targetStepDef.chips === 'function' ? targetStepDef.chips(keptAnswers) : targetStepDef.chips)
+      : [];
+
     setGuidedMessages(prev => {
-      return prev.filter(m => {
+      const filtered = prev.filter(m => {
         if (m.id === 'msg-bot0' || m.step === 0) return true;
         if (typeof m.step === 'number' && m.step < prevStep) return true;
         if (m.step === prevStep && m.sender === 'bot') return true;
         return false;
+      });
+      return filtered.map(m => {
+        if (m.step === prevStep && m.sender === 'bot' && targetStepDef) {
+          return {
+            ...m,
+            text: targetStepDef.text,
+            chips: targetChips
+          };
+        }
+        return m;
       });
     });
   };
 
   const resetChatbot = (startAtStep = 0, initialInput = '') => {
     clearLoadingTimeouts();
+    setActivePipeline(null);
+    activePipelineRef.current = null;
+    setStepAnswers({});
+    stepAnswersRef.current = {};
     setGuidedAccion(null);
     setGuidedElemento(null);
     setGuidedMaterial(null);
@@ -427,11 +506,11 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       const parsedDays = match ? parseFloat(match[1].replace(',', '.')) : null;
       if (!parsedDays || parsedDays <= 0 || isNaN(parsedDays)) {
         toast.error('Por favor selecciona una opción o ingresa un número válido de días (ej: 0.5, 1, 2, 3, 5).', { id: 'days-val-error' });
-        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 6 };
+        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: currentChatStep };
         const botRetryMsg = {
           id: `bot-days-retry-${Date.now()}`,
           sender: 'bot',
-          step: 6,
+          step: currentChatStep,
           text: `"${cleanText}" no es un número de días válido.\n\nIndica cuántos días de trabajo tomará la cuadrilla:`,
           chips: ['0.5 día', '1 día', '2 días', '3 días', '5 días']
         };
@@ -443,7 +522,7 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       setWaitingForGlobalDays(false);
       const promptToGenerate = pendingPromptForGlobal || detectedFullPrompt;
       setPendingPromptForGlobal(null);
-      const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 6 };
+      const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: currentChatStep };
       setGuidedMessages(prev => [...prev, newUserMsg]);
       setChatInputValue('');
       triggerGeneration(promptToGenerate, 'Gl', parsedDays);
@@ -539,17 +618,29 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       // Si el usuario escribe una acción directamente en paso 0
       const actionVal = validateStepInput(cleanText, 1, false);
       if (actionVal.isValid) {
+        const pipeline = getActionPipeline(cleanText);
         setGuidedAccion(cleanText);
-        setCurrentChatStep(2);
+        setActivePipeline(pipeline);
+        activePipelineRef.current = pipeline;
+        setStepAnswers({});
+        stepAnswersRef.current = {};
+        setGuidedElemento(null);
+        setGuidedMaterial(null);
+        setGuidedUbicacion(null);
+        setGuidedIncluye(null);
+        setGuidedUnidad(null);
+
+        const firstStep = pipeline[0] || DEFAULT_PIPELINE[0];
+        const chips = typeof firstStep.chips === 'function' ? firstStep.chips({}) : (firstStep.chips || []);
         const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 0 };
-        const step2Def = getDynamicStepDefinition(2, { accion: cleanText });
         const nextBotMsg = {
           id: `bot-step-2-${Date.now()}`,
           sender: 'bot',
           step: 2,
-          text: step2Def.text,
-          chips: step2Def.chips
+          text: firstStep.text,
+          chips
         };
+        setCurrentChatStep(2);
         setGuidedMessages(prev => [...prev, newUserMsg, nextBotMsg]);
         setChatInputValue('');
         return;
@@ -558,15 +649,68 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       return;
     }
 
-    // 4. Validación de Entrada del Paso Actual (Pasos 1 a 6)
+    // 4. Manejo de Paso 1 (Selección de Acción Constructiva)
+    if (currentChatStep === 1) {
+      const isChipSelection = ACCIONES_STEP1_CHIPS.includes(cleanText);
+      const actionVal = isChipSelection ? { isValid: true } : validateStepInput(cleanText, 1, false);
+
+      if (!actionVal.isValid) {
+        toast.error(actionVal.error, { id: 'chat-val-error', duration: 4500 });
+        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 1 };
+        const botValMsg = {
+          id: `bot-val-step-1-${Date.now()}`,
+          sender: 'bot',
+          step: 1,
+          text: `Aviso: La respuesta ingresada ("${cleanText}") no es una acción constructiva válida.\n\n${actionVal.error}`,
+          chips: ACCIONES_STEP1_CHIPS
+        };
+        setGuidedMessages(prev => [...prev, newUserMsg, botValMsg]);
+        setChatInputValue('');
+        return;
+      }
+
+      const pipeline = getActionPipeline(cleanText);
+      setGuidedAccion(cleanText);
+      setActivePipeline(pipeline);
+      activePipelineRef.current = pipeline;
+      setStepAnswers({});
+      stepAnswersRef.current = {};
+      setGuidedElemento(null);
+      setGuidedMaterial(null);
+      setGuidedUbicacion(null);
+      setGuidedIncluye(null);
+      setGuidedUnidad(null);
+
+      const firstStep = pipeline[0] || DEFAULT_PIPELINE[0];
+      const chips = typeof firstStep.chips === 'function' ? firstStep.chips({}) : (firstStep.chips || []);
+      const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 1 };
+      const nextBotMsg = {
+        id: `bot-step-2-${Date.now()}`,
+        sender: 'bot',
+        step: 2,
+        text: firstStep.text,
+        chips
+      };
+      setCurrentChatStep(2);
+      setGuidedMessages(prev => [...prev, newUserMsg, nextBotMsg]);
+      setChatInputValue('');
+      return;
+    }
+
+    // 5. Manejo de Pasos Dinámicos del Pipeline (Paso k >= 2)
+    const pipeline = activePipelineRef.current || (guidedAccion ? getActionPipeline(guidedAccion) : DEFAULT_PIPELINE);
+    const stepIdx = currentChatStep - 2;
+    const currentStepDef = pipeline[stepIdx] || DEFAULT_PIPELINE[stepIdx] || DEFAULT_PIPELINE[0];
+
     const isMaintenance = /\b(mantenimiento|mantener|saneamiento|sanear|reconstrucci[oó]n|reconstruir|arreglo|arreglar|reparaci[oó]n|reparar|rehabilitaci[oó]n|rehabilitar|restauraci[oó]n|restaurar|reacondicionamiento|reacondicionar|acondicionamiento|acondicionar|recuperaci[oó]n|recuperar|adecuaci[oó]n|adecuar|refacci[oó]n|refaccionar|remodelaci[oó]n|remodelar|resane|resanado|resanar|escarificaci[oó]n|escarificar|repicado|repicar|desmanchado|desmanchar|decapado|decapar)\b/i.test(
       `${guidedAccion || ''} ${guidedElemento || ''} ${guidedMaterial || ''}`
     );
+
     const lastBotMsg = [...guidedMessages].reverse().find(m => m.sender === 'bot');
     const isChipSelection = lastBotMsg?.chips?.includes(cleanText);
 
     if (!isChipSelection) {
-      const validation = validateStepInput(cleanText, currentChatStep, isMaintenance);
+      const validation = validateStepInput(cleanText, currentChatStep, isMaintenance, currentStepDef);
       if (!validation.isValid) {
         toast.error(validation.error, { id: 'chat-val-error', duration: 4500 });
         const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: currentChatStep };
@@ -583,157 +727,89 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       }
     }
 
-    // 5. Asignación de Estado de Paso Válido
+    // Registrar respuesta en stepAnswers
+    const newAnswers = { ...stepAnswersRef.current, [currentStepDef.id]: cleanText };
+    setStepAnswers(newAnswers);
+    stepAnswersRef.current = newAnswers;
+
+    // Resincronizar campos legados para retrocompatibilidad
+    if (currentStepDef.field === 'elemento') setGuidedElemento(cleanText);
+    else if (currentStepDef.field === 'material') setGuidedMaterial(cleanText);
+    else if (currentStepDef.field === 'ubicacion') setGuidedUbicacion(cleanText);
+    else if (currentStepDef.field === 'incluye') setGuidedIncluye(cleanText);
+    else if (currentStepDef.field === 'unidad') setGuidedUnidad(cleanText);
+
     const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: currentChatStep };
+    const nextStepIdx = stepIdx + 1;
+    const nextStepNum = currentChatStep + 1;
 
-    let currentAccion = guidedAccion;
-    let currentElemento = guidedElemento;
-    let currentMaterial = guidedMaterial;
-    let currentUbicacion = guidedUbicacion;
-    let currentIncluye = guidedIncluye;
-    let currentUnidad = guidedUnidad;
-
-    if (currentChatStep === 1) {
-      setGuidedAccion(cleanText);
-      currentAccion = cleanText;
-    } else if (currentChatStep === 2) {
-      setGuidedElemento(cleanText);
-      currentElemento = cleanText;
-    } else if (currentChatStep === 3) {
-      setGuidedMaterial(cleanText);
-      currentMaterial = cleanText;
-    } else if (currentChatStep === 4) {
-      setGuidedUbicacion(cleanText);
-      currentUbicacion = cleanText;
-    } else if (currentChatStep === 5) {
-      setGuidedIncluye(cleanText);
-      currentIncluye = cleanText;
-    } else if (currentChatStep === 6) {
-      setGuidedUnidad(cleanText);
-      currentUnidad = cleanText;
-    }
-
-    const nextStep = currentChatStep === 0 ? 1 : currentChatStep + 1;
-    setCurrentChatStep(nextStep);
-
-    let nextBotMsg = null;
-    if (nextStep >= 1 && nextStep <= 6) {
-      const stepDef = getDynamicStepDefinition(nextStep, {
-        accion: currentAccion,
-        elemento: currentElemento,
-        material: currentMaterial,
-        ubicacion: currentUbicacion,
-        incluye: currentIncluye
-      });
-      nextBotMsg = {
-        id: `bot-step-${nextStep}-${Date.now()}`,
+    // ¿Hay más pasos en el pipeline?
+    if (nextStepIdx < pipeline.length) {
+      const nextStepDef = pipeline[nextStepIdx];
+      const chips = typeof nextStepDef.chips === 'function' ? nextStepDef.chips(newAnswers) : (nextStepDef.chips || []);
+      const nextBotMsg = {
+        id: `bot-step-${nextStepNum}-${Date.now()}`,
         sender: 'bot',
-        step: nextStep,
-        text: stepDef.text,
-        chips: stepDef.chips
+        step: nextStepNum,
+        text: nextStepDef.text,
+        chips
       };
-    } else if (nextStep === 7) {
-      const parts = [];
-
-      // 1. Acción
-      if (currentAccion && currentAccion !== 'Omitir' && currentAccion !== 'Ninguno' && currentAccion !== 'Ninguno / Omitir') {
-        parts.push(currentAccion);
-      }
-
-      // 2. Elemento o Estructura
-      if (currentElemento && currentElemento !== 'Omitir' && currentElemento !== 'Ninguno' && currentElemento !== 'Ninguno / Omitir') {
-        const accLower = (currentAccion || '').toLowerCase();
-        if (accLower.endsWith(' en') || accLower.endsWith(' de') || accLower.endsWith(' para')) {
-          parts.push(currentElemento);
-        } else if (/pintur/i.test(accLower)) {
-          parts.push(`en ${currentElemento}`);
-        } else if (/vaciado/i.test(accLower)) {
-          parts.push(`en ${currentElemento}`);
-        } else {
-          parts.push(`de ${currentElemento}`);
-        }
-      }
-
-      // 3. Material o Especificación Técnica
-      if (currentMaterial && currentMaterial !== 'Omitir' && currentMaterial !== 'Ninguno' && currentMaterial !== 'Ninguno / Omitir') {
-        const matLower = currentMaterial.toLowerCase();
-        const accLower = (currentAccion || '').toLowerCase();
-        if (matLower.startsWith('con ') || matLower.startsWith('de ') || matLower.startsWith('en ') || matLower.startsWith('a base de ')) {
-          parts.push(currentMaterial);
-        } else if (/pintur/i.test(accLower)) {
-          parts.push(`con ${currentMaterial}`);
-        } else if (/bloque|ladrillo/i.test(matLower)) {
-          parts.push(`con ${currentMaterial}`);
-        } else {
-          parts.push(`con ${currentMaterial}`);
-        }
-      }
-
-      // 4. Ubicación o Entorno
-      if (currentUbicacion && currentUbicacion !== 'Omitir' && currentUbicacion !== 'Ninguno' && currentUbicacion !== 'Ninguno / Omitir') {
-        const ubiLower = currentUbicacion.toLowerCase();
-        const hasPrep = ubiLower.startsWith('para ') || ubiLower.startsWith('en ') || ubiLower.startsWith('sobre ') || ubiLower.startsWith('hacia ') || ubiLower.startsWith('bajo ') || ubiLower.startsWith('distancia ') || ubiLower.startsWith('a ') || ubiLower.startsWith('de ') || ubiLower.startsWith('hasta ');
-        if (hasPrep) {
-          parts.push(currentUbicacion);
-        } else {
-          parts.push(`en ${currentUbicacion}`);
-        }
-      }
-
-      // 5. Alcance y Condiciones
-      if (currentIncluye && currentIncluye !== 'Omitir' && currentIncluye !== 'Ninguno' && currentIncluye !== 'Ninguno / Omitir') {
-        const incLower = currentIncluye.toLowerCase();
-        if (incLower.startsWith('incluye ') || incLower.startsWith('con ') || incLower.startsWith('sin ') || incLower.startsWith('todo ') || incLower.startsWith('solo ')) {
-          parts.push(currentIncluye);
-        } else {
-          parts.push(`incluye ${currentIncluye}`);
-        }
-      }
-
-      // 6. Unidad de medida
-      let extractedUnit = null;
-      let cleanLower = cleanText.toLowerCase().trim();
-      const isGlobalUnit = ['gl', 'sg', 'global', 'suma global'].includes(cleanLower) || cleanText.trim() === 'Gl' || cleanText.includes('Gl (');
-
-      if (isGlobalUnit) {
-        extractedUnit = 'Gl';
-        parts.push('unidad Gl');
-        const finalPrompt = parts.join(' ').replace(/\s+/g, ' ').trim();
-        setWaitingForGlobalDays(true);
-        setPendingPromptForGlobal(finalPrompt);
-        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 6 };
-        const botDaysMsg = {
-          id: `bot-global-days-${Date.now()}`,
-          sender: 'bot',
-          step: 6,
-          text: 'Has seleccionado unidad Global (Gl).\n\nIndica los días de trabajo estimados para la cuadrilla:',
-          chips: ['0.5 día', '1 día', '2 días', '3 días', '5 días']
-        };
-        setGuidedMessages(prev => [...prev, newUserMsg, botDaysMsg]);
-        setChatInputValue('');
-        return;
-      }
-
-      if (cleanText && cleanText !== 'Sugerir por IA' && cleanText !== 'Ninguno / Omitir' && cleanText !== 'Ninguno' && cleanText !== 'Omitir') {
-        let rawUnit = cleanText.includes('(') ? cleanText.split('(')[0].trim() : cleanText.trim();
-        if (rawUnit === 'm²') rawUnit = 'm2';
-        else if (rawUnit === 'm³') rawUnit = 'm3';
-        extractedUnit = rawUnit.toLowerCase();
-        parts.push(`unidad ${extractedUnit}`);
-      }
-
-      const finalPrompt = parts.join(' ').replace(/\s+/g, ' ').trim();
-      triggerGeneration(finalPrompt, extractedUnit);
+      setCurrentChatStep(nextStepNum);
+      setGuidedMessages(prev => [...prev, newUserMsg, nextBotMsg]);
+      setChatInputValue('');
       return;
     }
 
-    if (nextBotMsg) {
-      setGuidedMessages(prev => [...prev, newUserMsg, nextBotMsg]);
-    } else {
-      setGuidedMessages(prev => [...prev, newUserMsg]);
+    // Si terminó el pipeline, ensamblar prompt técnico y verificar unidad
+    const { finalPrompt, unit, isGlobal } = buildPipelinePrompt(guidedAccion, newAnswers, pipeline);
+
+    if (isGlobal) {
+      setWaitingForGlobalDays(true);
+      setPendingPromptForGlobal(finalPrompt);
+      const botDaysMsg = {
+        id: `bot-global-days-${Date.now()}`,
+        sender: 'bot',
+        step: currentChatStep,
+        text: 'Has seleccionado unidad Global (Gl).\n\nIndica los días de trabajo estimados para la cuadrilla:',
+        chips: ['0.5 día', '1 día', '2 días', '3 días', '5 días']
+      };
+      setGuidedMessages(prev => [...prev, newUserMsg, botDaysMsg]);
+      setChatInputValue('');
+      return;
     }
+
+    // Disparar generación del APU con IA
+    setGuidedMessages(prev => [...prev, newUserMsg]);
     setChatInputValue('');
+    triggerGeneration(finalPrompt, unit);
   };
+
+  const chatPlaceholder = (() => {
+    if (waitingForGlobalDays) {
+      return 'Indica los días estimados (ej: 0.5, 1, 2, 3, 5)...';
+    }
+    if (waitingForClarification) {
+      return 'Selecciona una opción o escribe tu respuesta...';
+    }
+    if (currentChatStep === 0) {
+      return 'Haz clic en "Sí, comenzar" o describe la acción constructiva...';
+    }
+    if (currentChatStep === 1) {
+      return 'Ej: Suministro e instalación, Construcción, Compactación, Transporte...';
+    }
+    const pipeline = activePipelineRef.current || (guidedAccion ? getActionPipeline(guidedAccion) : null);
+    if (pipeline) {
+      const idx = currentChatStep - 2;
+      const currentStepDef = pipeline[idx];
+      if (currentStepDef) {
+        if (currentStepDef.isUnit) {
+          return 'Ej: m², ml, und, pza, m³, Gl...';
+        }
+        return 'Selecciona una opción sugerida o escribe tu respuesta...';
+      }
+    }
+    return 'Escribe tu respuesta...';
+  })();
 
   return {
     isGuidedMode,
@@ -753,10 +829,13 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     setGuidedIncluye,
     guidedUnidad,
     setGuidedUnidad,
+    activePipeline,
+    stepAnswers,
     currentChatStep,
     setCurrentChatStep,
     chatInputValue,
     setChatInputValue,
+    chatPlaceholder,
     chatbotLoadingStage,
     setChatbotLoadingStage,
     guidedMessages,

@@ -24,7 +24,8 @@ export default function GuidedAssistantModal({
   waitingForGlobalDays = false,
   waitingForClarification = false,
   useTypesafeJev = false,
-  setUseTypesafeJev = null
+  setUseTypesafeJev = null,
+  chatPlaceholder = ''
 }) {
   const chatEndRef = useRef(null);
   const navigate = useNavigate();
@@ -173,15 +174,17 @@ export default function GuidedAssistantModal({
                   if (e.key === 'Enter') handleChatSubmit && handleChatSubmit(chatInputValue);
                 }}
                 placeholder={
-                  waitingForGlobalDays ? "Indica los días estimados (ej: 0.5, 1, 2, 3, 5)..." :
-                  waitingForClarification ? "Selecciona una opción o escribe tu respuesta..." :
-                  currentChatStep === 1 ? "Ej: Suministro e instalación, Pintura, Construcción, Vaciado..." :
-                  currentChatStep === 2 ? "Ej: Paredes, Rejas y herrería, Losas, Tuberías, Fachadas..." :
-                  currentChatStep === 3 ? "Ej: Pintura de caucho clase A, Fondo cromato de zinc, Concreto f'c=250..." :
-                  currentChatStep === 4 ? "Ej: En interiores, En fachadas exteriores, A rapel, En altura..." :
-                  currentChatStep === 5 ? "Ej: Incluye preparación de superficie, Todo incluido, Solo mano de obra..." :
-                  currentChatStep === 6 ? (isMaintenance ? "Obligatorio: pza, und, m², m, Gl..." : "Ej: m², ml, und, pza, m³, Gl...") :
-                  "Escribe tu respuesta..."
+                  chatPlaceholder || (
+                    waitingForGlobalDays ? "Indica los días estimados (ej: 0.5, 1, 2, 3, 5)..." :
+                    waitingForClarification ? "Selecciona una opción o escribe tu respuesta..." :
+                    currentChatStep === 1 ? "Ej: Suministro e instalación, Pintura, Construcción, Vaciado..." :
+                    currentChatStep === 2 ? "Ej: Paredes, Rejas y herrería, Losas, Tuberías, Fachadas..." :
+                    currentChatStep === 3 ? "Ej: Pintura de caucho clase A, Fondo cromato de zinc, Concreto f'c=250..." :
+                    currentChatStep === 4 ? "Ej: En interiores, En fachadas exteriores, A rapel, En altura..." :
+                    currentChatStep === 5 ? "Ej: Incluye preparación de superficie, Todo incluido, Solo mano de obra..." :
+                    currentChatStep === 6 ? (isMaintenance ? "Obligatorio: pza, und, m², m, Gl..." : "Ej: m², ml, und, pza, m³, Gl...") :
+                    "Escribe tu respuesta..."
+                  )
                 }
                 className="flex-1 bg-white border-2 border-amber-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-amber-900 placeholder:text-amber-700/50"
               />

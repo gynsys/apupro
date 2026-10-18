@@ -363,6 +363,7 @@ export default function AIApuGeneratorModal({
                   setGenerationMode={generator.setGenerationMode}
                   waitingForGlobalDays={guided.waitingForGlobalDays}
                   waitingForClarification={guided.waitingForClarification}
+                  chatPlaceholder={guided.chatPlaceholder}
                 />
               )}
             </div>
