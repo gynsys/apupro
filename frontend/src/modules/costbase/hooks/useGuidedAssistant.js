@@ -14,7 +14,7 @@ export const CONSTRUCTION_ACTION_ROOTS = [
   'reconstru', 'rehabilit', 'restaur', 'arregl', 'adecuac', 'revest', 'fris', 'tarraj',
   'revoqu', 'enluc', 'salpic', 'estuc', 'empast', 'pint', 'esmalt', 'fond', 'acarr',
   'traslad', 'transpor', 'carg', 'bote', 'botar', 'elimin', 'limpiez', 'limpiar',
-  'desmalez', 'deshierb', 'trazo', 'replant', 'nivel', 'perfil', 'rellen', 'compact',
+  'desmalez', 'deshierb', 'deforest', 'remoc', 'remov', 'trazo', 'replant', 'nivel', 'perfil', 'rellen', 'compact',
   'soldad', 'soldar', 'oxicort', 'cort', 'perfor', 'canaliz', 'cablead', 'cablear',
   'conexion', 'empalm', 'prueb', 'impermeabiliz', 'aislam'
 ];
@@ -27,7 +27,8 @@ export const ELEMENT_ROOTS = [
   'pasamano', 'bomba', 'motor', 'tablero', 'cable', 'conductor', 'luminaria',
   'aire', 'tanque', 'valvula', 'puerta', 'ventana', 'reja', 'porton', 'descanso',
   'techo', 'cielorraso', 'cubierta', 'mortero', 'friso', 'escombro', 'tierra', 'zanja',
-  'armadura', 'cabilla', 'acometida', 'breake', 'drenaje', 'alcantarill', 'estructura'
+  'armadura', 'cabilla', 'acometida', 'breake', 'drenaje', 'alcantarill', 'estructura',
+  'terraplen', 'subbase', 'base', 'vegetac', 'arbol', 'bosque', 'capote', 'descapote'
 ];
 
 /**

@@ -5,14 +5,18 @@ export const ACCIONES_OPCIONES = [
   { value: 'Suministro de', label: 'Suministro de' },
   { value: 'Instalación de', label: 'Instalación de' },
   { value: 'Limpieza de terreno', label: 'Limpieza de terreno' },
+  { value: 'Deforestación de', label: 'Deforestación de' },
+  { value: 'Remoción de', label: 'Remoción de' },
   { value: 'Trazo y replanteo', label: 'Trazo y replanteo' },
   { value: 'Demolición de', label: 'Demolición de' },
   { value: 'Desmontaje de', label: 'Desmontaje de' },
   { value: 'Acarreo de', label: 'Acarreo de' },
+  { value: 'Transporte de', label: 'Transporte de' },
   { value: 'Eliminación de', label: 'Eliminación de' },
   { value: 'Excavación manual de', label: 'Excavación manual de' },
   { value: 'Excavación mecánica de', label: 'Excavación mecánica de' },
   { value: 'Perfilar y nivelar', label: 'Perfilar y nivelar' },
+  { value: 'Relleno de', label: 'Relleno de' },
   { value: 'Relleno con material propio', label: 'Relleno con material propio' },
   { value: 'Relleno con material de préstamo', label: 'Relleno con material de préstamo' },
   { value: 'Compactación de', label: 'Compactación de' },
@@ -28,7 +32,6 @@ export const ACCIONES_OPCIONES = [
   { value: 'Pintura en', label: 'Pintura en' },
   { value: 'Suministro e instalación de pisos de', label: 'Suministro e instalación de pisos de' },
   { value: 'Revestimiento de', label: 'Revestimiento de' },
-  { value: 'Suministro e instalación de', label: 'Suministro e instalación de' },
   { value: 'Canalización de tuberías para', label: 'Canalización de tuberías para' },
   { value: 'Cableado de conductores para', label: 'Cableado de conductores para' },
   { value: 'Conexión y empalme de', label: 'Conexión y empalme de' },
@@ -176,6 +179,20 @@ export function getElementChips(accion) {
       'Omitir'
     ];
   }
+  if (/transporte|transportar/i.test(acc)) {
+    return [
+      'Escombros de demolición',
+      'Tierra de excavación',
+      'Material granular / granzón',
+      'Arena lavada',
+      'Piedra picada',
+      'Sacos de cemento',
+      'Bloques de concreto',
+      'Tuberías y perfiles metálicos',
+      'Maquinaria y equipos',
+      'Omitir'
+    ];
+  }
   if (/acarreo|acarrear|bote|traslado/i.test(acc)) {
     return [
       'Escombros de demolición',
@@ -186,6 +203,51 @@ export function getElementChips(accion) {
       'Bloques de arcilla',
       'Bloques de concreto',
       'Madera de encofrado',
+      'Omitir'
+    ];
+  }
+  if (/deforest|desmonte|tala/i.test(acc)) {
+    return [
+      'Terreno boscoso / árboles',
+      'Vegetación media y alta',
+      'Matorrales y vegetación baja',
+      'Troncos y raíces',
+      'Área de servidumbre / vial',
+      'Capa vegetal / capote',
+      'Omitir'
+    ];
+  }
+  if (/remoci[oó]n|remover/i.test(acc)) {
+    return [
+      'Capa vegetal / descapote',
+      'Pavimento asfáltico',
+      'Concreto existente',
+      'Tuberías y conductos',
+      'Estructuras metálicas',
+      'Cercas perimetrales',
+      'Escombros acumulados',
+      'Omitir'
+    ];
+  }
+  if (/compactac|compactar/i.test(acc)) {
+    return [
+      'Fondo de zanja',
+      'Terraplenes',
+      'Subbase granular',
+      'Base granular',
+      'Relleno de fundaciones',
+      'Relleno para pisos / losas',
+      'Omitir'
+    ];
+  }
+  if (/rellen|rellenar/i.test(acc)) {
+    return [
+      'Zanjas para tuberías',
+      'Fundaciones / Zapatas',
+      'Terraplenes',
+      'Bases de pavimento',
+      'Fosas y excavaciones',
+      'Sobrepiso',
       'Omitir'
     ];
   }
@@ -489,6 +551,17 @@ export function getMaterialChips(accion, elemento) {
     ];
   }
 
+  if (/transporte/i.test(acc)) {
+    return [
+      'En camión volteo 7 m³',
+      'En camión volteo 15 m³',
+      'En camión plataforma / batea',
+      'Con carguío mecánico',
+      'Con carguío manual',
+      'Omitir'
+    ];
+  }
+
   if (/acarreo|traslado/i.test(acc)) {
     return [
       'A mano en carretilla',
@@ -497,6 +570,54 @@ export function getMaterialChips(accion, elemento) {
       'En minishovel / bobcat',
       'Con carguío manual',
       'Con carguío mecánico',
+      'Omitir'
+    ];
+  }
+
+  if (/deforest|desmonte|tala/i.test(acc)) {
+    return [
+      'Manual con cuadrilla (machete, hacha, motosierra)',
+      'Mecánico con tractor de orugas (bulldozer)',
+      'Mecánico con retroexcavadora',
+      'Corte y desraizamiento manual',
+      'Corte, troceado y apilado en sitio',
+      'Omitir'
+    ];
+  }
+
+  if (/remoci[oó]n|remover/i.test(acc)) {
+    return [
+      'A mano con herramientas menores',
+      'Con martillo demoledor / compresor',
+      'Con retroexcavadora / equipo pesado',
+      'Espesor hasta 10 cm',
+      'Espesor de 10 a 20 cm',
+      'Espesor mayor a 20 cm',
+      'Omitir'
+    ];
+  }
+
+  if (/compactac/i.test(acc)) {
+    return [
+      'Con vibrocompactador tipo canguro / rana',
+      'Con rodillo vibratorio manual / trench',
+      'Con rodillo vibratorio autopropulsado',
+      'En capas de 10 cm',
+      'En capas de 20 cm',
+      'En capas de 30 cm',
+      'Al 95% del Proctor Modificado',
+      'Omitir'
+    ];
+  }
+
+  if (/rellen/i.test(acc)) {
+    return [
+      'Con material propio de la excavación',
+      'Con material de préstamo granular (granzón/base)',
+      'Con piedra picada / grava',
+      'Con arena lavada',
+      'Con tierra seleccionada libre de materia orgánica',
+      'En capas compactadas de 20 cm',
       'Omitir'
     ];
   }
@@ -530,6 +651,21 @@ export function getUbicacionChips(accion, elemento, material) {
     ];
   }
 
+  if (/transporte/i.test(acc)) {
+    return [
+      'Distancia hasta 5 km',
+      'Distancia hasta 10 km',
+      'Distancia hasta 20 km',
+      'Distancia hasta 50 km',
+      'Distancia mayor a 50 km',
+      'Hacia botadero autorizado',
+      'De cantera a obra',
+      'En vías urbanas',
+      'En vías no pavimentadas',
+      'Omitir'
+    ];
+  }
+
   if (/acarreo|bote|traslado/i.test(acc)) {
     return [
       'Distancia hasta 20 metros',
@@ -540,6 +676,40 @@ export function getUbicacionChips(accion, elemento, material) {
       'En pisos superiores',
       'En sótano',
       'Hacia botadero oficial',
+      'Omitir'
+    ];
+  }
+
+  if (/deforest|desmonte/i.test(acc)) {
+    return [
+      'En terreno plano',
+      'En terreno con pendiente moderada',
+      'En terreno con fuerte pendiente',
+      'En área urbana perimetral',
+      'En área rural / campo abierto',
+      'En derecho de vía',
+      'Omitir'
+    ];
+  }
+
+  if (/remoci[oó]n/i.test(acc)) {
+    return [
+      'En exteriores / explanaciones',
+      'En calzadas / vías de acceso',
+      'Bajo rasante',
+      'En interiores de edificación',
+      'En planta baja',
+      'Omitir'
+    ];
+  }
+
+  if (/compactac|rellen/i.test(acc)) {
+    return [
+      'En zanjas para tuberías',
+      'En zapatas y fundaciones',
+      'Bajo losas de piso / sobrepiso',
+      'En terraplenes / vialidad',
+      'En taludes y banquetas',
       'Omitir'
     ];
   }
@@ -628,6 +798,18 @@ export function getIncluyeChips(accion, elemento, material, ubicacion) {
     ];
   }
 
+  if (/transporte/i.test(acc)) {
+    return [
+      'Incluye carguío mecánico y descarga',
+      'Incluye carguío manual y descarga',
+      'Incluye tarifa de peajes y permisos',
+      'Incluye cobertura / enlonado del material',
+      'Solo transporte de carga (flete)',
+      'Todo incluido',
+      'Omitir'
+    ];
+  }
+
   if (/acarreo|bote|traslado/i.test(acc)) {
     return [
       'Incluye carguío y descarga manual',
@@ -637,6 +819,50 @@ export function getIncluyeChips(accion, elemento, material, ubicacion) {
       'Incluye tarifa de botadero',
       'Todo incluido',
       'Solo mano de obra',
+      'Omitir'
+    ];
+  }
+
+  if (/deforest|desmonte/i.test(acc)) {
+    return [
+      'Incluye tala, desraizamiento y apilado',
+      'Incluye retiro y disposición de ramas y maleza',
+      'Incluye corte en trozas manejables',
+      'Todo incluido (Cuadrilla + Maquinaria)',
+      'Solo mano de obra',
+      'Omitir'
+    ];
+  }
+
+  if (/remoci[oó]n/i.test(acc)) {
+    return [
+      'Incluye acopio en sitio para bote',
+      'Incluye corte previo con disco diamantado',
+      'Incluye carguío y retiro a botadero',
+      'Todo incluido (MO + Herramientas)',
+      'Solo mano de obra',
+      'Omitir'
+    ];
+  }
+
+  if (/compactac/i.test(acc)) {
+    return [
+      'Incluye control de humedad óptima (riego)',
+      'Incluye ensayos de densidad de campo / Proctor',
+      'Incluye pase de rodillo y perfilado',
+      'Todo incluido (Equipo + MO + Combustible)',
+      'Solo mano de obra y equipo',
+      'Omitir'
+    ];
+  }
+
+  if (/rellen/i.test(acc)) {
+    return [
+      'Incluye extendido y compactación en capas',
+      'Incluye suministro del material granular',
+      'Incluye acarreo interno y nivelación',
+      'Todo incluido (Material + MO + Equipos)',
+      'Solo colocación y mano de obra',
       'Omitir'
     ];
   }
@@ -681,6 +907,17 @@ export function getUnitChips(accion, elemento, material) {
   const acc = (accion || '').toLowerCase();
   const elem = (elemento || '').toLowerCase();
 
+  if (/transporte/i.test(acc)) {
+    return [
+      'm3xkm (m³ por kilómetro)',
+      'tonxkm (Tonelada por km)',
+      'viaje (Por viaje)',
+      'm³ (Metro cúbico)',
+      'ton (Tonelada)',
+      'Gl (Suma global)'
+    ];
+  }
+
   if (/acarreo|bote|traslado/i.test(acc)) {
     return [
       'm3.m (m³ por metro)',
@@ -690,6 +927,27 @@ export function getUnitChips(accion, elemento, material) {
       'viaje (Por viaje)',
       'Gl (Suma global)'
     ];
+  }
+
+  if (/deforest|desmonte/i.test(acc)) {
+    return [
+      'ha (Hectárea)',
+      'm² (Metro cuadrado)',
+      'und (Por árbol / tocón)',
+      'Gl (Suma global)'
+    ];
+  }
+
+  if (/remoci[oó]n/i.test(acc)) {
+    return ['m²', 'm³', 'ml', 'pza', 'und', 'Gl (Suma global)'];
+  }
+
+  if (/compactac/i.test(acc)) {
+    return ['m²', 'm³', 'ml', 'Gl (Suma global)'];
+  }
+
+  if (/rellen/i.test(acc)) {
+    return ['m³', 'm²', 'ml', 'Gl (Suma global)'];
   }
 
   if (/pintur|pintar/i.test(acc)) {
@@ -738,12 +996,18 @@ export function getDynamicStepDefinition(step, { accion, elemento, material, ubi
         text: 'Defina la Acción\n¿Qué acción o proceso constructivo se va a realizar?',
         chips: [
           'Suministro e instalación',
+          'Instalación',
           'Construcción',
           'Demolición',
+          'Remoción',
           'Pintura',
           'Vaciado de concreto',
           'Excavación',
+          'Compactación',
+          'Relleno',
           'Acarreo',
+          'Transporte',
+          'Deforestación',
           'Colocación',
           'Reparación',
           'Mantenimiento',
@@ -752,30 +1016,63 @@ export function getDynamicStepDefinition(step, { accion, elemento, material, ubi
           'Limpieza'
         ]
       };
-    case 2:
+    case 2: {
+      const acc = (accion || '').toLowerCase();
+      let promptText2 = 'Defina el Elemento o Estructura\n¿Qué elemento o estructura se va a intervenir o construir?';
+      if (/transporte/i.test(acc)) {
+        promptText2 = 'Defina el Material o Carga a Transportar\n¿Qué material, escombros o maquinaria se va a transportar?';
+      } else if (/acarreo/i.test(acc)) {
+        promptText2 = 'Defina el Material a Trasladar\n¿Qué material o elemento se va a acarrear?';
+      } else if (/deforest|desmonte|tala/i.test(acc)) {
+        promptText2 = 'Defina la Vegetación o Zona a Intervenir\n¿Qué tipo de terreno, vegetación o árboles se va a deforestar?';
+      } else if (/remoci[oó]n|remover/i.test(acc)) {
+        promptText2 = 'Defina el Elemento o Capa a Remover\n¿Qué capa, pavimento o elemento existente se va a remover?';
+      } else if (/compactac/i.test(acc)) {
+        promptText2 = 'Defina la Zona o Capa a Compactar\n¿Qué base, fondo de zanja o terraplén se va a compactar?';
+      } else if (/rellen/i.test(acc)) {
+        promptText2 = 'Defina la Zona o Elemento a Rellenar\n¿Qué zanjas, fundaciones o áreas se van a rellenar?';
+      } else if (/suministr|instalac/i.test(acc)) {
+        promptText2 = 'Defina el Elemento o Equipo\n¿Qué equipo, tubería o elemento constructivo se va a instalar?';
+      }
       return {
-        text: 'Defina el Elemento o Estructura\n¿Qué elemento o estructura se va a intervenir o construir?',
+        text: promptText2,
         chips: getElementChips(accion)
       };
+    }
     case 3: {
       let promptText3 = 'Defina el Material o Especificación Técnica\n¿Qué tipo de material, pintura o especificación técnica se utilizará?';
+      const acc = (accion || '').toLowerCase();
+      const elem = (elemento || '').toLowerCase();
       if (USE_PARAMETRIC_ENGINE) {
         const empiricalPrompt = getEmpiricalStep3Prompt(accion, elemento);
         if (empiricalPrompt) promptText3 = empiricalPrompt;
-      } else {
-        if (/vaciado|construc/i.test(accion) && /losa/i.test(elemento)) {
+      }
+      if (promptText3 === 'Defina el Material o Especificación Técnica\n¿Qué tipo de material, pintura o especificación técnica se utilizará?') {
+        if (/transporte/i.test(acc)) {
+          promptText3 = 'Defina el Medio o Vehículo de Transporte\n¿Qué tipo de camión o vehículo se utilizará para el transporte?';
+        } else if (/acarreo/i.test(acc)) {
+          promptText3 = 'Defina el Medio o Equipo de Acarreo\n¿Qué medio de acarreo (carretilla, sacos, minishovel) se empleará?';
+        } else if (/deforest|desmonte|tala/i.test(acc)) {
+          promptText3 = 'Defina el Método y Equipamiento\n¿Se ejecutará con cuadrilla manual (motosierra, hacha) o con maquinaria pesada (tractor/retro)?';
+        } else if (/remoci[oó]n/i.test(acc)) {
+          promptText3 = 'Defina el Método y Espesor de Remoción\n¿Qué método (manual, martillo, retroexcavadora) y espesor contempla?';
+        } else if (/compactac/i.test(acc)) {
+          promptText3 = 'Defina el Equipo de Compactación y Espesor de Capa\n¿Qué equipo (canguro/rana, rodillo) y espesor de capas se utilizará?';
+        } else if (/rellen/i.test(acc)) {
+          promptText3 = 'Defina el Material de Relleno\n¿Se utilizará material propio de la excavación o material de préstamo granular seleccionado?';
+        } else if (/vaciado|construc/i.test(acc) && /losa/i.test(elem)) {
           promptText3 = "Defina la Resistencia y Espesor de la Losa\nSeleccione la resistencia del concreto (f'c) y el espesor de la losa:";
-        } else if (/sobrepiso/i.test(elemento) || /sobrepiso/i.test(accion)) {
+        } else if (/sobrepiso/i.test(elem) || /sobrepiso/i.test(acc)) {
           promptText3 = 'Defina la Dosificación y Espesor del Sobrepiso\nSeleccione la proporción del mortero y el espesor de nivelación:';
-        } else if (/excavac/i.test(accion) || /excavac|zanja/i.test(elemento)) {
+        } else if (/excavac/i.test(acc) || /excavac|zanja/i.test(elem)) {
           promptText3 = 'Defina la Profundidad y Método de Excavación\nSeleccione la profundidad estimada y método de excavación:';
-        } else if (/pintur/i.test(accion)) {
+        } else if (/pintur/i.test(acc)) {
           promptText3 = 'Defina el Tipo de Pintura o Acabado\nSeleccione el tipo de pintura o recubrimiento a aplicar:';
         } else if (/impermeabiliz/i.test(accion)) {
           promptText3 = 'Defina el Sistema de Impermeabilización\nSeleccione el manto o membrana impermeabilizante:';
-        } else if (/bomba/i.test(elemento)) {
+        } else if (/bomba/i.test(elem)) {
           promptText3 = 'Defina la Potencia del Equipo\nSeleccione la potencia (HP/kW) o capacidad:';
-        } else if (/tuber|valvul/i.test(elemento)) {
+        } else if (/tuber|valvul/i.test(elem)) {
           promptText3 = 'Defina el Diámetro y Material\nSeleccione el diámetro nominal y tipo de tubería:';
         }
       }
@@ -784,16 +1081,30 @@ export function getDynamicStepDefinition(step, { accion, elemento, material, ubi
         chips: getMaterialChips(accion, elemento)
       };
     }
-    case 4:
+    case 4: {
+      let promptText4 = 'Defina la Ubicación o Entorno\n¿En qué ubicación, altura o condición se ejecutará el trabajo?';
+      const acc = (accion || '').toLowerCase();
+      if (/transporte/i.test(acc)) {
+        promptText4 = 'Defina la Distancia y Entorno de Transporte\n¿A qué distancia aproximada o tipo de ruta se realizará el flete?';
+      } else if (/acarreo/i.test(acc)) {
+        promptText4 = 'Defina la Distancia o Entorno del Traslado\n¿En qué entorno o a qué distancia se realizará el acarreo?';
+      }
       return {
-        text: 'Defina la Ubicación o Entorno\n¿En qué ubicación, altura o condición se ejecutará el trabajo?',
+        text: promptText4,
         chips: getUbicacionChips(accion, elemento, material)
       };
-    case 5:
+    }
+    case 5: {
+      let promptText5 = 'Defina el Alcance y Condiciones\n¿Qué alcance adicional o condiciones contempla la partida?';
+      const acc = (accion || '').toLowerCase();
+      if (/transporte/i.test(acc)) {
+        promptText5 = 'Defina el Alcance del Transporte\n¿Incluye carguío y descarga, peajes o solo el servicio de flete?';
+      }
       return {
-        text: 'Defina el Alcance y Condiciones\n¿Qué alcance adicional o condiciones contempla la partida?',
+        text: promptText5,
         chips: getIncluyeChips(accion, elemento, material, ubicacion)
       };
+    }
     case 6:
       return {
         text: 'Defina la Unidad de Medida\n¿En qué unidad de medida se computará la partida?',
@@ -812,12 +1123,18 @@ export const CHAT_STEP_DEFINITIONS = {
     text: 'Defina la Acción\n¿Qué acción o proceso constructivo se va a realizar?',
     chips: [
       'Suministro e instalación',
+      'Instalación',
       'Construcción',
       'Demolición',
+      'Remoción',
       'Pintura',
       'Vaciado de concreto',
       'Excavación',
+      'Compactación',
+      'Relleno',
       'Acarreo',
+      'Transporte',
+      'Deforestación',
       'Colocación',
       'Reparación',
       'Mantenimiento',
