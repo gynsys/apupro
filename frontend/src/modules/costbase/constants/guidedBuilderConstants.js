@@ -1,5 +1,5 @@
 import { getEmpiricalMaterialChips, getEmpiricalStep3Prompt, USE_PARAMETRIC_ENGINE } from '../parametric-engine/index.js';
-export {
+import {
   ACCIONES_STEP1_CHIPS,
   ACTION_FLOW_PIPELINES,
   DEFAULT_PIPELINE,
@@ -8,6 +8,16 @@ export {
   extractCleanUnit,
   isOmitted
 } from './actionPipelines.js';
+
+export {
+  ACCIONES_STEP1_CHIPS,
+  ACTION_FLOW_PIPELINES,
+  DEFAULT_PIPELINE,
+  getActionPipeline,
+  buildPipelinePrompt,
+  extractCleanUnit,
+  isOmitted
+};
 
 export const ACCIONES_OPCIONES = [
   { value: 'Suministro e instalación de', label: 'Suministro e instalación de' },
