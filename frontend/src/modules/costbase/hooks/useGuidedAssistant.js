@@ -442,7 +442,7 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     }
   };
 
-  const triggerGeneration = (promptToUse, unitToUse = null, executionDays = null) => {
+  const triggerGeneration = (promptToUse, unitToUse = null, executionDays = null, bypassOntology = false) => {
     clearLoadingTimeouts();
     setChatbotLoadingStage(1);
     loadingTimeoutsRef.current.push(setTimeout(() => setChatbotLoadingStage(2), 1200));
@@ -452,7 +452,7 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       setEntryModeSource('chat');
       lastEntrySourceRef.current = 'chat';
       if (onComplete) {
-        onComplete(promptToUse, 'chat', unitToUse, executionDays);
+        onComplete(promptToUse, 'chat', unitToUse, executionDays, bypassOntology);
       }
     }, 4500));
   };
@@ -496,7 +496,7 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 7 };
       setGuidedMessages(prev => [...prev, newUserMsg]);
       setChatInputValue('');
-      triggerGeneration(combined, clarifUnit);
+      triggerGeneration(combined, clarifUnit, null, true);
       return;
     }
 

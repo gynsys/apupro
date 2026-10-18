@@ -100,7 +100,8 @@ export const generateAIApu = async (
   unit = null,
   generationMode = 'rag',
   executionDays = null,
-  useTypesafeJev = false
+  useTypesafeJev = false,
+  bypassOntology = false
 ) => {
   const payload = {
     description,
@@ -112,6 +113,7 @@ export const generateAIApu = async (
     accept_exact_match_code: acceptExactMatchCode,
     generation_mode: generationMode,
     use_typesafe_jev: useTypesafeJev,
+    bypass_ontology: bypassOntology,
   };
   if (unit) {
     payload.unit = unit;

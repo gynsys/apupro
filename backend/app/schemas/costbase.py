@@ -162,6 +162,8 @@ class AiApuGenerateRequest(BaseModel):
     execution_days: Optional[float] = None
     # Switch Superadmin para evaluación alternativa con TypeSafe AI (Jev System One)
     use_typesafe_jev: Optional[bool] = False
+    # Flag para omitir re-evaluación ontológica cuando el usuario ya respondió una aclaratoria
+    bypass_ontology: Optional[bool] = False
 
 
 class SmartSelectRequest(BaseModel):

@@ -130,6 +130,8 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
                     re.compile(r"\b\d{3}\s*(kgf?\/cm2?|psi)\b", re.IGNORECASE),
                     re.compile(r"\bconcreto\s+\d{3}\b", re.IGNORECASE),
                     re.compile(r"\br[- ]\d{3}\b", re.IGNORECASE),
+                    re.compile(r"\b(150|180|200|210|250|280|300|350)\b", re.IGNORECASE),
+                    re.compile(r"\b(resistencia|est[aá]ndar|convencional|seg[uú]n\s+c[aá]lculo|seg[uú]n\s+plano)\b", re.IGNORECASE),
                 ],
                 question="¿Qué resistencia a la compresión (f'c) tiene el concreto estructural? (Ej: 210 kgf/cm², 250 kgf/cm², 280 kgf/cm²)",
                 default_options=["f'c = 210 kgf/cm²", "f'c = 250 kgf/cm²", "f'c = 280 kgf/cm²", "f'c = 300 kgf/cm²"]
@@ -176,8 +178,10 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
                 label="Espesor del bloque",
                 detection_patterns=[
                     re.compile(r"\be\s*=\s*\d+", re.IGNORECASE),
-                    re.compile(r"\b(10|12|15|20)\s*(cm|cms)\b", re.IGNORECASE),
+                    re.compile(r"\b(10|12|15|20)\s*(?:cm|cms)?\b", re.IGNORECASE),
                     re.compile(r"\b\d+x\d+x\d+\b", re.IGNORECASE),
+                    re.compile(r"\b(?:bloques?\s+de\s+|de\s+)(10|12|15|20)\b", re.IGNORECASE),
+                    re.compile(r"\b(espesor|est[aá]ndar|convencional|seg[uú]n\s+plano)\b", re.IGNORECASE),
                 ],
                 question="¿De qué espesor o medida es el bloque de la pared? (Ej: e=10 cm, e=12 cm, e=15 cm, e=20 cm)",
                 default_options=["e=10 cm", "e=12 cm", "e=15 cm", "e=20 cm"]
@@ -227,7 +231,7 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
                     re.compile(r"\b\d+([\.,]\d+)?\s*(pulg|pulgadas?|\"|mm)\b", re.IGNORECASE),
                     re.compile(r"\b\d+\s*\/\s*\d+\s*(pulg|\"|mm)?\b", re.IGNORECASE),
                     re.compile(r"\b(1\/2|3\/4|1|1-1\/2|2|3|4|6)\s*(pulg|\"|in)?\b", re.IGNORECASE),
-                    re.compile(r"\bdiametro\b", re.IGNORECASE),
+                    re.compile(r"\b(diametro|di[aá]metro|media\s+pulgada|tres\s+cuartos|una\s+pulgada|dos\s+pulgadas|est[aá]ndar|comercial|seg[uú]n\s+plano)\b", re.IGNORECASE),
                 ],
                 question="¿Qué diámetro nominal tiene la tubería o válvula? (Ej: 1/2\", 3/4\", 1\", 2\", 3\", 4\")",
                 default_options=['1/2"', '3/4"', '1"', '1 1/2"', '2"', '3"', '4"', '6"']
@@ -587,9 +591,9 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
                 param_id="tipo_material_dimensiones",
                 label="Dimensiones y material de la puerta o ventana",
                 detection_patterns=[
-                    re.compile(r"\b\d+([\.,]\d+)?\s*x\s*\d+([\.,]\d+)?\s*(m|cms?|metros?)?\b", re.IGNORECASE),
+                    re.compile(r"\b\d+([\.,]\d+)?\s*(?:m|mts|mt|cm|cms|mm)?\s*(?:x|\*|por)\s*\d+([\.,]\d+)?(?:\s*(?:m|mts|mt|cm|cms|mm))?\b", re.IGNORECASE),
                     re.compile(r"\b(0\.90\s*x\s*2\.10|0\.80\s*x\s*2\.10|0\.70\s*x\s*2\.10|1\.00\s*x\s*2\.10|1\.20\s*x\s*1\.50|1\.50\s*x\s*1\.50)\b", re.IGNORECASE),
-                    re.compile(r"\b(medidas?|dimensi[oó]n(?:es)?|ancho|alto)\b", re.IGNORECASE),
+                    re.compile(r"\b(medidas?|dimensi[oó]n(?:es)?|ancho|alto|altura|largo|est[aá]ndar|comercial|seg[uú]n\s+plano)\b", re.IGNORECASE),
                 ],
                 question="¿Qué dimensiones (Ancho x Alto) y material tiene la puerta o ventana? (Ej: 0.90x2.10 m madera entamborada, 1.20x1.50 m aluminio y vidrio)",
                 default_options=[
@@ -598,7 +602,7 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
                     "Puerta 0.90 x 2.10 m Metálica (Hierro/Lámina)",
                     "Ventana 1.20 x 1.50 m Aluminio y Vidrio",
                     "Ventana 1.50 x 1.50 m Aluminio y Vidrio",
-                    "Portón Metálico Corredizo"
+                    "Portón 3.00 x 2.00 m Metálico Corredizo"
                 ]
             )
         ]
@@ -614,7 +618,8 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
             re.compile(r"\b(perfil\s+ipe|perfil\s+hea|perfil\s+heb|perfil\s+conduven|viga\s+ipe|columna\s+hea)\b", re.IGNORECASE),
         ],
         exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + [
-            re.compile(r"\b(pintura|fondo|anticorrosivo)\b", re.IGNORECASE)
+            re.compile(r"\b(pintura|fondo|anticorrosivo)\b", re.IGNORECASE),
+            re.compile(r"\b(reja|rejas|protector(?:es)?\s+de\s+ventana|baranda|barandas|pasamanos?)\b", re.IGNORECASE)
         ],
         required_parameters=[
             ParametricRequirement(
@@ -720,7 +725,7 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
     # 23. HERRERÍA Y CARPINTERÍA METÁLICA (Portones, Rejas, Puertas Metálicas, Protectores)
     ConstructionFamilyOntology(
         family_id="HERRERIA_ESTRUCTURAS_MET_DISCRETAS",
-        name="Portones, Rejas y Estructuras Metálicas",
+        name="Portones, Rejas y Herrería Metálica",
         activation_patterns=[
             re.compile(r"\b(port[oó]n|portones|reja|rejas|puerta\s+met[aá]lica|puertas\s+met[aá]licas|protector(?:es)?\s+de\s+ventana|protectores?\s+para\s+ventanas?|baranda|barandas|pasamanos?)\b", re.IGNORECASE)
         ],
@@ -732,9 +737,9 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
                 param_id="dimensiones_herreria",
                 label="Dimensiones del elemento metálico (Ancho x Alto)",
                 detection_patterns=[
-                    re.compile(r"\b\d+([\.,]\d+)?\s*(?:x|\*|por)\s*\d+([\.,]\d+)?\b", re.IGNORECASE),
+                    re.compile(r"\b\d+([\.,]\d+)?\s*(?:m|mts|mt|cm|cms|mm)?\s*(?:x|\*|por)\s*\d+([\.,]\d+)?(?:\s*(?:m|mts|mt|cm|cms|mm))?\b", re.IGNORECASE),
                     re.compile(r"\b\d+([\.,]\d+)?\s*(?:m2|m²|mts2|metros\s+cuadrados)\b", re.IGNORECASE),
-                    re.compile(r"\b(?:medidas?|dimensiones?|ancho|alto|largo)\b", re.IGNORECASE),
+                    re.compile(r"\b(?:medidas?|dimensiones?|ancho|alto|altura|largo|secci[oó]n|est[aá]ndar|comercial|seg[uú]n\s+plano|vehicular|residencial|amplio)\b", re.IGNORECASE),
                 ],
                 question="¿Cuáles son las dimensiones aproximadas (Ancho x Alto) del elemento de herrería o estructura metálica?",
                 default_options=[
@@ -762,8 +767,8 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
                 label="Área aproximada de superficie (m²)",
                 detection_patterns=[
                     re.compile(r"\b\d+([\.,]\d+)?\s*(?:m2|m²|mts2|metros\s+cuadrados)\b", re.IGNORECASE),
-                    re.compile(r"\b\d+([\.,]\d+)?\s*(?:x|\*|por)\s*\d+([\.,]\d+)?\b", re.IGNORECASE),
-                    re.compile(r"\b(?:[aá]rea|superficie|desarrollo)\b", re.IGNORECASE),
+                    re.compile(r"\b\d+([\.,]\d+)?\s*(?:m|mts|mt|cm|cms|mm)?\s*(?:x|\*|por)\s*\d+([\.,]\d+)?(?:\s*(?:m|mts|mt|cm|cms|mm))?\b", re.IGNORECASE),
+                    re.compile(r"\b(?:[aá]rea|superficie|desarrollo|est[aá]ndar|aprox|mediano)\b", re.IGNORECASE),
                 ],
                 question="¿Cuál es el área o desarrollo aproximado de superficie a pintar o tratar?",
                 default_options=[
@@ -847,8 +852,8 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
                 label="Área o dimensiones del tabique",
                 detection_patterns=[
                     re.compile(r"\b\d+([\.,]\d+)?\s*(?:m2|m²|mts2|metros\s+cuadrados)\b", re.IGNORECASE),
-                    re.compile(r"\b\d+([\.,]\d+)?\s*(?:x|\*|por)\s*\d+([\.,]\d+)?\b", re.IGNORECASE),
-                    re.compile(r"\b(?:[aá]rea|superficie|medidas?|dimensiones?)\b", re.IGNORECASE),
+                    re.compile(r"\b\d+([\.,]\d+)?\s*(?:m|mts|mt|cm|cms|mm)?\s*(?:x|\*|por)\s*\d+([\.,]\d+)?(?:\s*(?:m|mts|mt|cm|cms|mm))?\b", re.IGNORECASE),
+                    re.compile(r"\b(?:[aá]rea|superficie|medidas?|dimensiones?|est[aá]ndar|comercial)\b", re.IGNORECASE),
                 ],
                 question="¿Cuál es el área (m²) o las dimensiones aproximadas (Largo x Alto) del tabique de drywall?",
                 default_options=[
@@ -986,7 +991,7 @@ def evaluate_parametric_ontology_contract(
         ))
         is_demolition = any(p.search(raw_query) or p.search(norm_query) for p in DEMOLITION_OR_REMOVAL_PATTERNS)
         has_dimensions_or_specs = bool(re.search(
-            r"\b\d+([\.,]\d+)?\s*(?:m|mts|cm|cms|mm|m2|m²|m3|m³|pulg|\"|kg|kgf|hp|kva|btu|x|\*|por)\b",
+            r"\b\d+([\.,]\d+)?\s*(?:m|mts|mt|cm|cms|mm|m2|m²|m3|m³|pulg|\"|kg|kgf|hp|kva|btu|x|\*|por)\b|\b(?:est[aá]ndar|estandar|comercial|seg[uú]n\s+plano|dimensiones?|medidas?)\b",
             norm_query
         ))
         if is_discrete_fabrication and not is_demolition and not has_dimensions_or_specs:

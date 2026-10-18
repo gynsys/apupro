@@ -165,7 +165,11 @@ export function useApuGenerator({ setSettings }) {
 
     if (response.status === 'clarification_needed') {
       setBasePrompt(textToSubmit);
-      setChatHistory(prev => [...prev, { role: 'user', content: textToSubmit }]);
+      setChatHistory(prev => [
+        ...prev,
+        { role: 'user', content: textToSubmit },
+        { role: 'assistant', content: response.clarification_message || 'Aclaratoria técnica requerida' }
+      ]);
       setAiClarificationMessage(response.clarification_message || 'No se pudo interpretar una partida técnica válida.');
       setAiClarificationRecommendation(response.recommendation || 'Te recomendamos utilizar el Asistente Guiado para estructurar tu descripción paso a paso.');
       setAiOptions(response.options || []);
@@ -227,7 +231,8 @@ export function useApuGenerator({ setSettings }) {
     acceptExactMatchCode = null,
     entryMode = 'chat',
     unit = null,
-    executionDays = null
+    executionDays = null,
+    bypassOntology = false
   ) => {
     if (!textToSubmit || !textToSubmit.trim()) {
       toast.error('Ingresa una descripción para generar el APU');
@@ -245,7 +250,7 @@ export function useApuGenerator({ setSettings }) {
       const prefixToSend = '';
 
       if (acceptExactMatchCode) {
-        const response = await generateAIApu(textToSubmit, prefixToSend, context, [], false, false, acceptExactMatchCode, unit, generationMode, executionDays, useTypesafeJev);
+        const response = await generateAIApu(textToSubmit, prefixToSend, context, [], false, false, acceptExactMatchCode, unit, generationMode, executionDays, useTypesafeJev, bypassOntology);
         processAIResponse(response, textToSubmit);
         return;
       }
@@ -253,7 +258,7 @@ export function useApuGenerator({ setSettings }) {
       const newHistory = (isClarifying || (chatHistory && chatHistory.length > 0))
         ? [...chatHistory, { role: 'user', content: textToSubmit }]
         : [{ role: 'user', content: textToSubmit }];
-      const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory, onlyPreprocess, bypassExactMatch, null, unit, generationMode, executionDays, useTypesafeJev);
+      const response = await generateAIApu(textToSubmit, prefixToSend, context, newHistory, onlyPreprocess, bypassExactMatch, null, unit, generationMode, executionDays, useTypesafeJev, bypassOntology);
       processAIResponse(response, textToSubmit);
     } catch (error) {
       console.error('Error en generación APU con IA:', error);

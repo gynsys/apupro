@@ -243,7 +243,55 @@ class TestParametricOntology(unittest.TestCase):
         # Agua acotada al máximo físico admisible (0.0036 m3 redondeado a 4 decimales)
         self.assertLessEqual(water["cantidad"], 0.004)
 
+    def test_herreria_reja_options_and_free_text_satisfied(self) -> None:
+        """
+        Verifica que las opciones sugeridas por la aclaratoria y las respuestas libres
+        con dimensiones intermedias (1.50 m x 1.20 m) o palabras estándar pasen sin volver a pedir aclaratoria.
+        """
+        # Caso 1: Opción sugerida por el chatbot con unidades intermedias ('m x')
+        query_chip = "Construcción de portones, rejas y estructuras metálicas, Reja para ventana 1.50 m x 1.20 m"
+        result_chip = evaluate_parametric_ontology_contract(query_chip)
+        self.assertIsNone(result_chip, "El chip '1.50 m x 1.20 m' no debe volver a pedir aclaratoria (anti-loop)")
+
+        # Caso 2: Opción de portón vehicular amplio
+        query_porton = "Fabricación de portón 4.00 m x 2.50 m (Vehicular amplio)"
+        result_porton = evaluate_parametric_ontology_contract(query_porton)
+        self.assertIsNone(result_porton)
+
+        # Caso 3: Entrada libre con medida estándar
+        query_std = "Construcción de reja metálica para ventana medida estándar"
+        result_std = evaluate_parametric_ontology_contract(query_std)
+        self.assertIsNone(result_std)
+
+        # Caso 4: Entrada libre 'según plano'
+        query_plano = "Fabricación de portón metálico de dos hojas según plano"
+        result_plano = evaluate_parametric_ontology_contract(query_plano)
+        self.assertIsNone(result_plano)
+
+    def test_puertas_ventanas_options_satisfied(self) -> None:
+        """Verifica que 'Portón 3.00 x 2.00 m Metálico Corredizo' y puertas con medidas pasen limpiamente."""
+        query_corredizo = "Suministro e instalación de Portón 3.00 x 2.00 m Metálico Corredizo"
+        result_corredizo = evaluate_parametric_ontology_contract(query_corredizo)
+        self.assertIsNone(result_corredizo)
+
+        query_madera = "Puerta 0.90 x 2.10 m Madera Entamborada"
+        result_madera = evaluate_parametric_ontology_contract(query_madera)
+        self.assertIsNone(result_madera)
+
+    def test_flexible_numeric_and_standard_inputs(self) -> None:
+        """Verifica que respuestas flexibles numéricas o con 'estándar' sean aceptadas."""
+        # Concreto con solo el número de resistencia
+        self.assertIsNone(evaluate_parametric_ontology_contract("vaciado de concreto en vigas de carga 250"))
+        self.assertIsNone(evaluate_parametric_ontology_contract("columnas de concreto resistencia estándar"))
+
+        # Mampostería con 'bloque de 15'
+        self.assertIsNone(evaluate_parametric_ontology_contract("construcción de pared con bloque de 15"))
+
+        # Tubería con 'diámetro estándar'
+        self.assertIsNone(evaluate_parametric_ontology_contract("instalación de tubería pvc diámetro estándar"))
+
 
 if __name__ == "__main__":
     unittest.main()
+
 

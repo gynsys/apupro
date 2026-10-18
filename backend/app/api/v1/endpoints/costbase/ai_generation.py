@@ -221,15 +221,28 @@ def generate_ai_apu_route(
 
     # --- VALIDACIÓN ONTOLÓGICA PARAMÉTRICA GLOBAL (PRE-RAG) ---
     # Verifica si la descripción pertenece a una familia constructiva y carece de especificaciones críticas (espesor, mezcla, etc.)
-    ontology_eval = evaluate_parametric_ontology_contract(payload.description, effective_unit)
-    if ontology_eval and not payload.only_preprocess and not payload.accept_exact_match_code:
-        logger.info("Ontology pre-RAG contract intercepted missing specifications [%s]: %.80s", ontology_eval["_internal_code"], payload.description)
-        ontology_eval.setdefault("partida", None)
-        ontology_eval.setdefault("materials", [])
-        ontology_eval.setdefault("equipments", [])
-        ontology_eval.setdefault("labors", [])
-        ontology_eval.setdefault("advertencias", [])
-        return ontology_eval
+    # Si la petición ya viene de una aclaratoria previa o tiene bypass_ontology activo, no volver a interceptar (anti-loop)
+    has_prior_clarification = bool(
+        payload.bypass_ontology or (
+            payload.history and any(
+                getattr(msg, "role", "") == "assistant" or (
+                    getattr(msg, "role", "") == "user" and getattr(msg, "content", "").strip() != (payload.description or "").strip()
+                )
+                for msg in payload.history
+            )
+        )
+    )
+
+    if not has_prior_clarification and not payload.only_preprocess and not payload.accept_exact_match_code:
+        ontology_eval = evaluate_parametric_ontology_contract(payload.description, effective_unit)
+        if ontology_eval:
+            logger.info("Ontology pre-RAG contract intercepted missing specifications [%s]: %.80s", ontology_eval["_internal_code"], payload.description)
+            ontology_eval.setdefault("partida", None)
+            ontology_eval.setdefault("materials", [])
+            ontology_eval.setdefault("equipments", [])
+            ontology_eval.setdefault("labors", [])
+            ontology_eval.setdefault("advertencias", [])
+            return ontology_eval
 
     # --- VALIDACIÓN DETERMINISTA DE UNIDAD PARA MANTENIMIENTO / REPARACIÓN ---
     MAINTENANCE_KEYWORDS = [

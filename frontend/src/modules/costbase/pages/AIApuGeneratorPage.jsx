@@ -82,13 +82,13 @@ export default function AIApuGeneratorPage() {
   const guided = useGuidedAssistant({
     user,
     initialGuided: guidedParam !== null ? guidedParam === 'true' : true,
-    onComplete: (finalPrompt, source, unit, executionDays) => {
+    onComplete: (finalPrompt, source, unit, executionDays, bypassOntology = false) => {
       setPrompt(finalPrompt);
       if (generator?.setBasePrompt) {
         generator.setBasePrompt(finalPrompt);
       }
       if (unit) setSelectedUnit(unit);
-      generator.handleGenerate(finalPrompt, false, false, false, null, source, unit, executionDays);
+      generator.handleGenerate(finalPrompt, false, false, false, null, source, unit, executionDays, bypassOntology);
     }
   });
 
@@ -504,7 +504,7 @@ export default function AIApuGeneratorPage() {
                 if (unit) {
                   setSelectedUnit(unit);
                 }
-                generator.handleGenerate(combined, false, false, false, null, 'chat', unit || selectedUnit);
+                generator.handleGenerate(combined, false, false, false, null, 'chat', unit || selectedUnit, null, true);
               }}
               onStartGuided={() => {
                 generator.dismissClarification();
