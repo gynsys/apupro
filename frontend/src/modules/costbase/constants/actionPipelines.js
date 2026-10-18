@@ -188,8 +188,10 @@ export const ACTION_FLOW_PIPELINES = {
         return [
           'Cortes masivos de terreno',
           'Zanjas para colectores',
-          'Sótanos y fosas de ascensor',
-          'Zapatas y fundaciones masivas',
+          'Sótanos',
+          'Fosas de ascensor',
+          'Zapatas',
+          'Fundaciones masivas',
           'Lagunas de retención',
           'Omitir'
         ];
@@ -425,9 +427,10 @@ export const ACTION_FLOW_PIPELINES = {
       field: 'material',
       text: 'Defina el Procedimiento o Equipo de Limpieza\n¿Cómo se ejecutará la limpieza?',
       chips: () => [
-        'Manual a mano de obra',
-        'Con máquina hidrolavadora a presión',
-        'Con equipo mecánico y minishovel',
+        'Manual',
+        'Con hidrolavadora a presión',
+        'Con minishovel',
+        'Con barredora mecánica',
         'Con compresor de aire industrial',
         'Omitir'
       ],
@@ -439,11 +442,13 @@ export const ACTION_FLOW_PIPELINES = {
       text: 'Defina el Área o Elemento a Limpiar\n¿Qué zona, terreno o superficie se limpiará?',
       chips: (answers = {}) => {
         const metodo = (answers.metodo || '').toLowerCase();
-        if (metodo.includes('minishovel') || metodo.includes('mecánico')) {
+        if (metodo.includes('minishovel') || metodo.includes('mecánica') || metodo.includes('barredora')) {
           return [
             'Terreno con maleza liviana',
-            'Terreno con escombros y basura',
-            'Patios de maniobras y galpones',
+            'Terreno con escombros',
+            'Terreno con desechos sólidos',
+            'Patios de maniobras',
+            'Galpones industriales',
             'Omitir'
           ];
         }
@@ -452,17 +457,26 @@ export const ACTION_FLOW_PIPELINES = {
             'Fachadas exteriores',
             'Pisos de concreto',
             'Pisos de porcelanato',
-            'Tanques de agua subterráneos',
-            'Techos y cubiertas',
+            'Tanques de agua',
+            'Techos',
+            'Omitir'
+          ];
+        }
+        if (metodo.includes('compresor')) {
+          return [
+            'Estructuras metálicas',
+            'Juntas de dilatación en pavimentos',
+            'Ductos de ventilación',
             'Omitir'
           ];
         }
         return [
+          'Pisos de concreto posconstrucción',
+          'Pisos de porcelanato posconstrucción',
           'Terreno con maleza liviana',
-          'Pisos de concreto pos-construcción',
-          'Pisos de porcelanato pos-construcción',
+          'Terreno con escombros',
           'Canaletas de lluvia',
-          'Ventanas y vidrios',
+          'Ventanas',
           'Omitir'
         ];
       },
@@ -472,13 +486,51 @@ export const ACTION_FLOW_PIPELINES = {
       id: 'alcance',
       field: 'incluye',
       text: 'Defina el Alcance de la Limpieza\n¿Qué operaciones de tratamiento contempla?',
-      chips: () => [
-        'Incluye recolección en sacos y bote',
-        'Incluye desinfección con cloro industrial',
-        'Incluye desengrase químico profundo',
-        'Solo barrido y limpieza superficial',
-        'Omitir'
-      ],
+      chips: (answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('terreno') || elem.includes('patio') || elem.includes('galpón')) {
+          return [
+            'Incluye recolección en sacos y bote',
+            'Incluye desmalezado y apilado en sitio',
+            'Solo barrido y despeje superficial',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('piso')) {
+          return [
+            'Incluye desengrase químico profundo',
+            'Incluye decapado de manchas y lavado neutro',
+            'Solo barrido y mopeado superficial',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('tanque')) {
+          return [
+            'Incluye desinfección con hipoclorito de sodio',
+            'Incluye achique de fondo y lavado a presión',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('fachada') || elem.includes('techo')) {
+          return [
+            'Incluye retiro de moho con fungicida',
+            'Solo lavado con agua a presión',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('ventana')) {
+          return [
+            'Incluye desmanchado de marcos y limpieza de vidrios',
+            'Solo lavado de vidrios',
+            'Omitir'
+          ];
+        }
+        return [
+          'Incluye recolección en sacos y bote',
+          'Solo barrido y limpieza superficial',
+          'Omitir'
+        ];
+      },
       format: (v) => v
     },
     {
@@ -486,7 +538,16 @@ export const ACTION_FLOW_PIPELINES = {
       field: 'unidad',
       isUnit: true,
       text: 'Defina la Unidad de Medida\n¿En qué unidad se computará la limpieza?',
-      chips: () => ['m² (Metro cuadrado)', 'Gl (Suma global)', 'und (Por área/tanque)', 'ml (Metro lineal)'],
+      chips: (answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('tanque')) {
+          return ['und (Por tanque)', 'm³ (Metro cúbico)', 'Gl (Suma global)'];
+        }
+        if (elem.includes('canaleta') || elem.includes('junta')) {
+          return ['ml (Metro lineal)', 'Gl (Suma global)'];
+        }
+        return ['m² (Metro cuadrado)', 'Gl (Suma global)', 'und (Por unidad)'];
+      },
       format: (v) => `unidad ${extractCleanUnit(v)}`
     }
   ],
@@ -593,7 +654,8 @@ export const ACTION_FLOW_PIPELINES = {
         'Arena lavada',
         'Piedra picada',
         'Cabillas de acero',
-        'Cerámicas y porcelanatos',
+        'Cerámicas',
+        'Porcelanatos',
         'Omitir'
       ],
       format: (v) => `de ${v.toLowerCase()}`
@@ -672,8 +734,10 @@ export const ACTION_FLOW_PIPELINES = {
       field: 'elemento',
       text: 'Defina la Vegetación o Zona a Intervenir\n¿Qué tipo de vegetación se va a deforestar?',
       chips: () => [
-        'Maleza liviana y rastrojo (hasta 1 m de altura)',
-        'Matorral denso y arbustos medianos',
+        'Maleza liviana (hasta 1 m de altura)',
+        'Rastrojo',
+        'Matorral denso',
+        'Arbustos medianos',
         'Árboles delgados con diámetro menor a 20 cm',
         'Árboles medianos con diámetro de 20 a 40 cm',
         'Árboles grandes con diámetro mayor a 40 cm',
@@ -758,7 +822,8 @@ export const ACTION_FLOW_PIPELINES = {
         'Con material de préstamo granular (granzón)',
         'Con arena lavada',
         'Con piedra picada',
-        'Con ripio / piedra bola',
+        'Con ripio',
+        'Con piedra bola',
         'Omitir'
       ],
       format: (v) => (v.startsWith('con ') || v.startsWith('Con ') ? v : `con ${v}`)
@@ -1018,12 +1083,14 @@ export const ACTION_FLOW_PIPELINES = {
         'Tubería de aguas servidas PVC',
         'Tubería de gas en cobre',
         'Tableros eléctricos',
-        'Breakers y protecciones eléctricas',
+        'Breakers termomagnéticos',
+        'Protecciones eléctricas',
         'Transformadores eléctricos',
         'Bombas de agua',
         'Inodoros',
         'Lavamanos',
-        'Griferías y llaves de paso',
+        'Griferías',
+        'Llaves de paso',
         'Luminarias LED',
         'Aires acondicionados split',
         'Puertas de madera',
@@ -1076,13 +1143,29 @@ export const ACTION_FLOW_PIPELINES = {
             'Omitir'
           ];
         }
-        if (elem.includes('tablero') || elem.includes('breaker')) {
+        if (elem.includes('breaker') || elem.includes('protección')) {
+          return [
+            'Breaker termomagnético 1x20A',
+            'Breaker termomagnético 2x20A',
+            'Breaker termomagnético 3x50A',
+            'Protección contra sobretensiones (DPS)',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('tablero')) {
           return [
             'Tablero de 12 circuitos',
             'Tablero de 24 circuitos',
             'Tablero de 42 circuitos',
-            'Breaker termomagnético 1x20A',
-            'Breaker termomagnético 2x20A',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('grifería') || elem.includes('llave')) {
+          return [
+            'Diámetro 1/2"',
+            'Diámetro 3/4"',
+            'Diámetro 1"',
+            'Cromada de lavamanos monomando',
             'Omitir'
           ];
         }
@@ -1174,7 +1257,7 @@ export const ACTION_FLOW_PIPELINES = {
         'Bordillos',
         'Demarcación vial',
         'Pasos peatonales',
-        'Madera y carpintería',
+        'Madera',
         'Omitir'
       ],
       format: (v) => `en ${v.toLowerCase()}`
@@ -1231,7 +1314,8 @@ export const ACTION_FLOW_PIPELINES = {
             'Esmalte sintético brillante sobre fondo anticorrosivo',
             'Esmalte sintético satinado',
             'Fondo anticorrosivo alquídico (solo fondo)',
-            'Fondo cromato de zinc / epóxico para ambientes corrosivos',
+            'Fondo cromato de zinc',
+            'Fondo epóxico anticorrosivo',
             'Omitir'
           ];
         }
@@ -1254,7 +1338,9 @@ export const ACTION_FLOW_PIPELINES = {
         if (sup.includes('madera')) {
           return [
             'Barniz marino transparente de alta resistencia',
-            'Sellador nitrocelulósico y laca brillante',
+            'Sellador nitrocelulósico',
+            'Laca brillante',
+            'Lasur protector microporoso para exteriores',
             'Esmalte sintético para madera',
             'Omitir'
           ];
@@ -1363,7 +1449,8 @@ export const ACTION_FLOW_PIPELINES = {
       field: 'elemento',
       text: 'Defina el Elemento o Área a Impermeabilizar\n¿En qué elemento o cubierta se aplicará la impermeabilización?',
       chips: () => [
-        'Techos y losas de concreto',
+        'Techos de concreto',
+        'Losas de entrepiso',
         'Techos de machihembrado de madera',
         'Jardineras',
         'Muros de contención enterrados',
@@ -1409,13 +1496,24 @@ export const ACTION_FLOW_PIPELINES = {
       id: 'acabado',
       field: 'incluye',
       text: 'Defina el Acabado y Protección Térmica\n¿Qué recubrimiento de acabado y protección incluye?',
-      chips: () => [
-        'Con pintura de aluminio reflectiva',
-        'Con acabado de tejas asfálticas',
-        'Con sobrepiso de mortero de protección',
-        'Sin acabado adicional',
-        'Omitir'
-      ],
+      chips: (answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('tanque') || elem.includes('muro') || elem.includes('jardinera') || elem.includes('foso')) {
+          return [
+            'Con sobrepiso de mortero hidrófugo de protección',
+            'Con sellador epóxico grado alimenticio',
+            'Sin acabado adicional',
+            'Omitir'
+          ];
+        }
+        return [
+          'Con pintura de aluminio reflectiva',
+          'Con acabado de tejas asfálticas',
+          'Con sobrepiso de mortero de protección',
+          'Sin acabado adicional',
+          'Omitir'
+        ];
+      },
       format: (v) => v
     },
     {
@@ -1502,13 +1600,49 @@ export const ACTION_FLOW_PIPELINES = {
       id: 'alcance',
       field: 'incluye',
       text: 'Defina el Alcance de Acabado y Juntas\n¿Qué operaciones de acabado contempla la partida?',
-      chips: () => [
-        'Incluye emboquillado con pastina antimoho',
-        'Incluye nivelación y corte de piezas',
-        'Todo incluido (material de fijación + mano de obra)',
-        'Solo colocación y mano de obra',
-        'Omitir'
-      ],
+      chips: (answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('cerámica') || elem.includes('porcelanato') || elem.includes('azulejo')) {
+          return [
+            'Incluye emboquillado con pastina antimoho',
+            'Incluye nivelación y corte de piezas',
+            'Todo incluido (material de fijación + mano de obra)',
+            'Solo colocación y mano de obra',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('puerta') || elem.includes('ventana')) {
+          return [
+            'Incluye cerraduras, bisagras y accesorios',
+            'Incluye sellado perimetral con silicón',
+            'Todo incluido (suministro de fijación + montaje)',
+            'Solo mano de obra',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('techo')) {
+          return [
+            'Incluye caballetes y remates de cumbrera',
+            'Incluye fijaciones y sellado de solapes',
+            'Todo incluido (fijaciones + montaje)',
+            'Solo mano de obra',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('adoquín') || elem.includes('brocal') || elem.includes('bordillo')) {
+          return [
+            'Incluye alineación, nivelación y emboquillado de juntas',
+            'Todo incluido (material de asiento + mano de obra)',
+            'Solo colocación y mano de obra',
+            'Omitir'
+          ];
+        }
+        return [
+          'Todo incluido (materiales + mano de obra)',
+          'Solo colocación y mano de obra',
+          'Omitir'
+        ];
+      },
       format: (v) => v
     },
     {
@@ -1715,13 +1849,16 @@ export const ACTION_FLOW_PIPELINES = {
       text: 'Defina el Elemento Patrimonial o Histórico\n¿Qué elemento o estructura se va a restaurar?',
       chips: () => [
         'Fachadas históricas',
-        'Cornisas y molduras coloniales',
+        'Cornisas coloniales',
+        'Molduras coloniales',
         'Portones de madera antigua',
         'Ventanas de madera antigua',
         'Rejas de herrería forjada colonial',
         'Muros de mampostería tradicional',
-        'Muros de tapia y adobe',
-        'Techos de caña brava y teja criolla',
+        'Muros de tapia',
+        'Muros de adobe',
+        'Techos de caña brava',
+        'Techos de teja criolla',
         'Omitir'
       ],
       format: (v) => `de ${v.toLowerCase()}`
@@ -1732,7 +1869,7 @@ export const ACTION_FLOW_PIPELINES = {
       text: 'Defina el Tipo de Intervención de Restauración\n¿Qué técnica de conservación o recuperación se aplicará?',
       chips: (answers = {}) => {
         const elem = (answers.elemento || '').toLowerCase();
-        if (elem.includes('madera')) {
+        if (elem.includes('madera') || elem.includes('portón') || elem.includes('ventana')) {
           return [
             'Decapado manual, tratamiento antipolilla e hidratación con aceites',
             'Sustitución de piezas podridas con madera curada similar',
@@ -1746,7 +1883,7 @@ export const ACTION_FLOW_PIPELINES = {
             'Omitir'
           ];
         }
-        if (elem.includes('muro') || elem.includes('fachada') || elem.includes('cornisa')) {
+        if (elem.includes('muro') || elem.includes('fachada') || elem.includes('cornisa') || elem.includes('moldura')) {
           return [
             'Consolidación estructural y cosido de grietas con grapas de acero',
             'Limpieza suave con agua nebulizada y cepillo de cerdas naturales',
@@ -1766,13 +1903,31 @@ export const ACTION_FLOW_PIPELINES = {
       id: 'material',
       field: 'incluye',
       text: 'Defina los Materiales Tradicionales Compatibles\n¿Con qué materiales nobles o morteros se trabajará?',
-      chips: () => [
-        'Con morteros tradicionales de cal hidráulica y arena lavada',
-        'Con preservantes y aceites naturales para madera',
-        'Con inhibidores de corrosión y pasivadores para metal',
-        'Con pintura a base de cal y pigmentos minerales',
-        'Omitir'
-      ],
+      chips: (answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('madera') || elem.includes('portón') || elem.includes('ventana')) {
+          return [
+            'Con preservantes y aceites naturales para madera',
+            'Con goma laca y cera protectora de abeja',
+            'Con lasur protector para intemperie',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('herrería') || elem.includes('reja')) {
+          return [
+            'Con inhibidores de corrosión y pasivadores para metal',
+            'Con esmalte anticorrosivo acabado forja tradicional',
+            'Con cera microcristalina protectora',
+            'Omitir'
+          ];
+        }
+        return [
+          'Con morteros tradicionales de cal hidráulica y arena lavada',
+          'Con pintura a base de cal y pigmentos minerales',
+          'Con lechada de cal viva apagada',
+          'Omitir'
+        ];
+      },
       format: (v) => v
     },
     {
@@ -1804,12 +1959,12 @@ export const ACTION_FLOW_PIPELINES = {
       field: 'elemento',
       text: 'Defina la Zona o Problema a Sanear\n¿Qué área contaminada o saturada requiere saneamiento?',
       chips: () => [
-        'Terreno saturado y barro en fondo de excavación',
-        'Muros con salitre y humedad ascendente',
+        'Trampas de grasa colapsadas',
+        'Fosas sépticas saturadas',
         'Colectores de drenaje obstruidos',
         'Tuberías de aguas servidas colapsadas',
-        'Fosas sépticas saturadas',
-        'Trampas de grasa colapsadas',
+        'Terreno saturado en fondo de excavación',
+        'Muros con salitre y humedad ascendente',
         'Taludes inestables',
         'Omitir'
       ],
@@ -1821,9 +1976,32 @@ export const ACTION_FLOW_PIPELINES = {
       text: 'Defina el Método de Saneamiento\n¿Cómo se corregirá la patología o contaminación?',
       chips: (answers = {}) => {
         const prob = (answers.zona_problema || '').toLowerCase();
+        if (prob.includes('trampa')) {
+          return [
+            'Vaciado y limpieza profunda con camión váctor',
+            'Limpieza manual y extracción de grasas en cuñetes',
+            'Hidrolavado a alta presión y succión de lodos',
+            'Omitir'
+          ];
+        }
+        if (prob.includes('fosa')) {
+          return [
+            'Vaciado y succión con camión váctor',
+            'Limpieza manual y extracción de lodos digeridos',
+            'Omitir'
+          ];
+        }
+        if (prob.includes('colector') || prob.includes('tubería')) {
+          return [
+            'Desazolve con equipo hidroneumático de alta presión',
+            'Vaciado y limpieza profunda con camión váctor',
+            'Limpieza mecánica con guayas de acero rotativas',
+            'Omitir'
+          ];
+        }
         if (prob.includes('terreno')) {
           return [
-            'Achique continuo con bomba sumergible y dragado manual',
+            'Achique continuo con bomba sumergible',
             'Excavación y extracción de fango con retroexcavadora',
             'Omitir'
           ];
@@ -1831,21 +2009,13 @@ export const ACTION_FLOW_PIPELINES = {
         if (prob.includes('muro') || prob.includes('salitre')) {
           return [
             'Picado de friso contaminado, cepillado y lavado a presión',
-            'Inyección de barrera química impermeabilizante contra capilaridad',
-            'Omitir'
-          ];
-        }
-        if (prob.includes('colector') || prob.includes('tubería') || prob.includes('fosa') || prob.includes('trampa')) {
-          return [
-            'Desazolve con equipo hidroneumático de alta presión',
-            'Vaciado y limpieza profunda con camión váctor',
-            'Limpieza manual con guayas y desinfección química',
+            'Inyección de barrera química impermeabilizante',
             'Omitir'
           ];
         }
         if (prob.includes('talud')) {
           return [
-            'Perfilado de talud y colocación de drenes franceses',
+            'Perfilado de talud y retiro de material inestable',
             'Omitir'
           ];
         }
@@ -1860,14 +2030,67 @@ export const ACTION_FLOW_PIPELINES = {
     {
       id: 'sustitucion',
       field: 'incluye',
-      text: 'Defina la Sustitución o Estabilización\n¿Qué material o barrera de reposición se colocará?',
-      chips: () => [
-        'Reemplazo con pedraplén de piedra picada y geotextil no tejido',
-        'Refrisado con mortero hidrófugo impermeabilizante',
-        'Desinfección profunda con bactericida y neutralizador de olores',
-        'Sustitución de tramo colapsado con tubería corrugada de PEAD',
-        'Omitir'
-      ],
+      text: 'Defina el Tratamiento Complementario o Reposición\n¿Qué disposición, desinfección o reposición contempla?',
+      chips: (answers = {}) => {
+        const prob = (answers.zona_problema || '').toLowerCase();
+        if (prob.includes('trampa')) {
+          return [
+            'Disposición final de grasas en planta autorizada',
+            'Desinfección profunda con bactericida y neutralizador de olores',
+            'Lavado hidroneumático con desengrasante biodegradable',
+            'Sellado interior con mortero hidrófugo',
+            'Sustitución de deflector interior en PVC',
+            'Suministro y reemplazo de tapa de inspección',
+            'Omitir'
+          ];
+        }
+        if (prob.includes('fosa')) {
+          return [
+            'Disposición y descarga de aguas en planta de tratamiento',
+            'Reactivación biológica con bacterias digestoras',
+            'Lavado y desinfección profunda de paredes interiores',
+            'Sellado e impermeabilización interior con mortero hidrófugo',
+            'Omitir'
+          ];
+        }
+        if (prob.includes('colector') || prob.includes('tubería')) {
+          return [
+            'Inspección con cámara CCTV robotizada poslimpieza',
+            'Sustitución de tramo colapsado con tubería de PVC cloacas',
+            'Sustitución de tramo colapsado con tubería corrugada de PEAD',
+            'Reconstrucción de media caña en boca de visita',
+            'Omitir'
+          ];
+        }
+        if (prob.includes('terreno')) {
+          return [
+            'Reemplazo con pedraplén de piedra picada y geotextil no tejido',
+            'Estabilización de fondo con piedra rajón',
+            'Colocación de tubería ranurada para drenaje francés',
+            'Omitir'
+          ];
+        }
+        if (prob.includes('muro') || prob.includes('salitre')) {
+          return [
+            'Refrisado con mortero hidrófugo impermeabilizante',
+            'Aplicación de fondo antialcalino y sellador antihumedad',
+            'Omitir'
+          ];
+        }
+        if (prob.includes('talud')) {
+          return [
+            'Colocación de geomalla para control de erosión',
+            'Construcción de cuneta de coronación en concreto',
+            'Siembra de cobertura vegetal estabilizadora',
+            'Omitir'
+          ];
+        }
+        return [
+          'Desinfección profunda con bactericida',
+          'Sellado con mortero hidrófugo',
+          'Omitir'
+        ];
+      },
       format: (v) => v
     },
     {
@@ -1877,11 +2100,17 @@ export const ACTION_FLOW_PIPELINES = {
       text: 'Defina la Unidad de Medida\n¿En qué unidad se computará el saneamiento?',
       chips: (answers = {}) => {
         const prob = (answers.zona_problema || '').toLowerCase();
-        if (prob.includes('fosa') || prob.includes('trampa')) {
-          return ['und (Por fosa/trampa)', 'm³ (Metro cúbico)', 'Gl (Suma global)'];
+        if (prob.includes('trampa')) {
+          return ['und (Por trampa)', 'viaje (Por camión váctor)', 'm³ (Metro cúbico)', 'Gl (Suma global)'];
+        }
+        if (prob.includes('fosa')) {
+          return ['und (Por fosa)', 'viaje (Por camión váctor)', 'm³ (Metro cúbico)', 'Gl (Suma global)'];
         }
         if (prob.includes('colector') || prob.includes('tubería')) {
           return ['ml (Metro lineal)', 'm³ (Metro cúbico)', 'Gl (Suma global)'];
+        }
+        if (prob.includes('muro')) {
+          return ['m² (Metro cuadrado)', 'ml (Metro lineal)', 'Gl (Suma global)'];
         }
         return ['m³ (Metro cúbico)', 'm² (Metro cuadrado)', 'ml (Metro lineal)', 'Gl (Suma global)'];
       },
@@ -1899,14 +2128,16 @@ export const ACTION_FLOW_PIPELINES = {
         'Armaduras de cabilla para columnas',
         'Armaduras de cabilla para vigas',
         'Armaduras de cabilla para zapatas',
-        'Encofrados de madera para vigas y columnas',
+        'Encofrados para vigas',
+        'Encofrados para columnas',
         'Encofrados de madera para losas',
         'Rejas de protección metálica',
         'Puertas metálicas',
         'Portones metálicos',
         'Canaletas de lluvia en lámina galvanizada',
         'Bajantes de lluvia en lámina galvanizada',
-        'Pasamanos y barandas de acero',
+        'Pasamanos de acero',
+        'Barandas de acero',
         'Omitir'
       ],
       format: (v) => `de ${v.toLowerCase()}`
@@ -1975,7 +2206,7 @@ export const ACTION_FLOW_PIPELINES = {
       chips: (answers = {}) => {
         const elem = (answers.elemento || '').toLowerCase();
         if (elem.includes('armadura') || elem.includes('cabilla')) {
-          return ['kgf (Kilogramo fuerza / peso de acero)', 'ton (Tonelada)', 'Gl (Suma global)'];
+          return ['kgf (Kilogramo fuerza)', 'ton (Tonelada)', 'Gl (Suma global)'];
         }
         if (elem.includes('encofrado')) {
           return ['m² (Metro cuadrado de contacto)', 'Gl (Suma global)'];
@@ -2056,8 +2287,10 @@ export const ACTION_FLOW_PIPELINES = {
       field: 'ubicacion',
       text: 'Defina el Método de Aplicación\n¿Cómo se aplicará el producto?',
       chips: () => [
-        'Con equipo aspersor / compresor de aire',
-        'Con brocha y rodillo de pelo corto',
+        'Con equipo aspersor',
+        'Con compresor de aire industrial',
+        'Con brocha',
+        'Con rodillo de pelo corto',
         'Con pistola de calafateo manual',
         'Por inyección a presión',
         'Omitir'
