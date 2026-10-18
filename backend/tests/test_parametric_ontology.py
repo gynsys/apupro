@@ -290,6 +290,70 @@ class TestParametricOntology(unittest.TestCase):
         # Tubería con 'diámetro estándar'
         self.assertIsNone(evaluate_parametric_ontology_contract("instalación de tubería pvc diámetro estándar"))
 
+    def test_reparacion_puertas_metalicas_gl_passes(self) -> None:
+        """Caso real del usuario: Reparación de puertas metálicas con unidad Gl (2 días) no debe pedir aclaratorias."""
+        query = "Reparación de puertas metálicas cepillado de óxido, aplicación de fondo anticorrosivo y esmalte unidad Gl 2 días"
+        result = evaluate_parametric_ontology_contract(query, "Gl")
+        self.assertIsNone(result, "Reparación en Gl con días de cuadrilla no debe pedir dimensiones físicas de fabricación")
+
+    def test_reparacion_puertas_metalicas_pza_passes(self) -> None:
+        """Reparación o cepillado de puertas metálicas en unidad pza no debe pedir fabricación nueva."""
+        query = "Reparación de puertas metálicas cepillado de óxido, aplicación de fondo anticorrosivo y esmalte unidad pza"
+        result = evaluate_parametric_ontology_contract(query, "pza")
+        self.assertIsNone(result, "Reparación de elemento existente no debe pedir dimensiones de fabricación de taller")
+
+    def test_contextual_chips_puerta_prioritizes_doors(self) -> None:
+        """Cuando la obra es una fabricación de puerta nueva, las opciones deben ser de puertas y no mezclar portones/rejas."""
+        query = "Fabricación e instalación de puertas metálicas en exteriores unidad und"
+        result = evaluate_parametric_ontology_contract(query, "und")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["status"], "clarification_needed")
+        self.assertIn("puertas metálicas", result["clarification_message"])
+        # Las opciones sugeridas deben contener medidas de puertas
+        options = result["options"]
+        self.assertTrue(any("0.90 m x 2.10 m" in opt for opt in options))
+        self.assertTrue(any("doble hoja" in opt for opt in options))
+        self.assertTrue(all("Portón" not in opt and "Reja" not in opt for opt in options))
+
+    def test_contextual_chips_porton_prioritizes_gates(self) -> None:
+        """Cuando la obra es un portón nuevo, las opciones deben ser de portones."""
+        query = "Fabricación de portón de lámina estriada unidad und"
+        result = evaluate_parametric_ontology_contract(query, "und")
+        self.assertIsNotNone(result)
+        self.assertIn("portones", result["clarification_message"])
+        options = result["options"]
+        self.assertTrue(any("3.00 m x 2.00 m" in opt for opt in options))
+        self.assertTrue(all("Reja" not in opt and "Puerta metálica" not in opt for opt in options))
+
+    def test_contextual_chips_reja_prioritizes_window_grilles(self) -> None:
+        """Cuando la obra es una reja nueva, las opciones deben ser de rejas de ventana."""
+        query = "Construcción de reja para ventana con cabilla cuadrada unidad und"
+        result = evaluate_parametric_ontology_contract(query, "und")
+        self.assertIsNotNone(result)
+        self.assertIn("rejas", result["clarification_message"])
+        options = result["options"]
+        self.assertTrue(any("1.50 m x 1.20 m" in opt for opt in options))
+        self.assertTrue(any("1.00 m x 1.00 m" in opt for opt in options))
+        self.assertTrue(all("Portón" not in opt and "Puerta metálica" not in opt for opt in options))
+
+    def test_saneamiento_trampa_grasa_vactor_passes(self) -> None:
+        """Saneamiento de trampa de grasa colapsada con camión váctor no debe pedir tuberías ni concreto."""
+        query = "Saneamiento de trampas de grasa colapsadas vaciado y limpieza profunda con camión váctor unidad Gl"
+        result = evaluate_parametric_ontology_contract(query, "Gl")
+        self.assertIsNone(result)
+
+    def test_mantenimiento_bomba_passes(self) -> None:
+        """Mantenimiento preventivo de bomba de agua no debe pedir HP."""
+        query = "Mantenimiento preventivo y revisión de electrobomba hidroneumática unidad Gl"
+        result = evaluate_parametric_ontology_contract(query, "Gl")
+        self.assertIsNone(result)
+
+    def test_resane_vigas_concreto_passes(self) -> None:
+        """Resane o reparación de fisuras en vigas de concreto no debe pedir f'c estructural."""
+        query = "Reparación y resanado superficial de fisuras en vigas de concreto con mortero epóxico unidad ml"
+        result = evaluate_parametric_ontology_contract(query, "ml")
+        self.assertIsNone(result)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -44,6 +44,22 @@ SURFACE_TREATMENTS_AND_FINISHES_PATTERNS: List[re.Pattern] = [
     )
 ]
 
+# Patrones genéricos de mantenimiento correctivo, reparación, resanado y reacondicionamiento
+# (donde no aplica exigir parámetros de fabricación nueva como f'c, dosificación de mezcla o dimensiones de taller)
+MAINTENANCE_AND_REPAIR_PATTERNS: List[re.Pattern] = [
+    re.compile(
+        r"\b(mantenimiento|mantener|reparaci[oó]n|reparar|arreglo|arreglar|rehabilitaci[oó]n|rehabilitar|reacondicionamiento|reacondicionar|recuperaci[oó]n|recuperar|refacci[oó]n|refaccionar|resane|resanado|resanar|cepillado|cepillar|lavado|limpieza|desinfecci[oó]n|saneamiento|destape|destapar|achique|achicar|repicado|repicar|escarificaci[oó]n|escarificar|desmanchado|desmanchar|decapado|decapar)\b",
+        re.IGNORECASE
+    )
+]
+
+# Combinación universal para familias de fabricación estructural y física nueva
+NON_FABRICATION_EXCLUSION_PATTERNS: List[re.Pattern] = (
+    DEMOLITION_OR_REMOVAL_PATTERNS
+    + SURFACE_TREATMENTS_AND_FINISHES_PATTERNS
+    + MAINTENANCE_AND_REPAIR_PATTERNS
+)
+
 
 @dataclass
 class ParametricRequirement:
@@ -78,7 +94,7 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
         activation_patterns=[
             re.compile(r"\b(sobrepiso|sobrepisos|sobre-piso|nivelaci[oó]n\s+de\s+piso|carpeta\s+de\s+nivelaci[oó]n|afinado\s+de\s+piso|mortero\s+de\s+piso|requemado)\b", re.IGNORECASE)
         ],
-        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + SURFACE_TREATMENTS_AND_FINISHES_PATTERNS,
+        exclusion_patterns=NON_FABRICATION_EXCLUSION_PATTERNS,
         required_parameters=[
             ParametricRequirement(
                 param_id="espesor",
@@ -118,7 +134,7 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
         activation_patterns=[
             re.compile(r"\b(viga|vigas|columna|columnas|zapata|zapatas|fundaci[oó]n|fundaciones|pedestal|pedestales|muro\s+de\s+concreto|losa\s+de\s+techo|losa\s+de\s+concreto|losa\s+de\s+entrepiso)\b", re.IGNORECASE)
         ],
-        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + SURFACE_TREATMENTS_AND_FINISHES_PATTERNS + [
+        exclusion_patterns=NON_FABRICATION_EXCLUSION_PATTERNS + [
             re.compile(r"\b(met[aá]lic[ao]s?|de\s+acero|de\s+madera|de\s+hierro|conduven|ipe|hea|heb)\b", re.IGNORECASE)
         ],
         required_parameters=[
@@ -146,7 +162,7 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
         activation_patterns=[
             re.compile(r"\b(construcci[oó]n|vaciado|elaboraci[oó]n|fabricaci[oó]n|suministro\s+y\s+vaciado|suministro\s+y\s+colocaci[oó]n)\b.*\b(losa|losas)\b|\b(losa|losas)\b.*\b(concreto|maciza|macizas|nervada|nervadas|reticular|reticulares|entrepiso|entrepisos|aligerada|aligeradas)\b", re.IGNORECASE)
         ],
-        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + SURFACE_TREATMENTS_AND_FINISHES_PATTERNS,
+        exclusion_patterns=NON_FABRICATION_EXCLUSION_PATTERNS,
         required_parameters=[
             ParametricRequirement(
                 param_id="espesor",
@@ -169,9 +185,7 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
         activation_patterns=[
             re.compile(r"\b(pared|paredes|muro|muros|tabique|tabiques)\b.*\b(bloque|bloques|ladrillo|ladrillos|arcilla)\b|\b(bloque|bloques|ladrillo|ladrillos)\b.*\b(pared|paredes|muro|muros)\b", re.IGNORECASE)
         ],
-        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + [
-            re.compile(r"\b(pintura|pintar|esmalte|caucho|lavado|limpieza|sellado)\b", re.IGNORECASE)
-        ],
+        exclusion_patterns=NON_FABRICATION_EXCLUSION_PATTERNS,
         required_parameters=[
             ParametricRequirement(
                 param_id="espesor_bloque",
@@ -196,7 +210,7 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
         activation_patterns=[
             re.compile(r"\b(pavimento|pavimentos|acera|aceras|brocal|brocales)\b", re.IGNORECASE)
         ],
-        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + SURFACE_TREATMENTS_AND_FINISHES_PATTERNS,
+        exclusion_patterns=NON_FABRICATION_EXCLUSION_PATTERNS,
         required_parameters=[
             ParametricRequirement(
                 param_id="espesor",
@@ -220,7 +234,8 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
             re.compile(r"\b(tuberia|tuberias|tubo|tubos|valvula|valvulas)\b", re.IGNORECASE)
         ],
         exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + [
-            re.compile(r"\b(bomba|bombas|electrobomba|motobomba)\b", re.IGNORECASE)
+            re.compile(r"\b(bomba|bombas|electrobomba|motobomba)\b", re.IGNORECASE),
+            re.compile(r"\b(destape|destapar|achique|achicar|limpieza|lavado|desinfecci[oó]n|saneamiento|v[aá]ctor|desobstrucci[oó]n|sondeo)\b", re.IGNORECASE)
         ],
         required_parameters=[
             ParametricRequirement(
@@ -246,7 +261,9 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
         activation_patterns=[
             re.compile(r"\b(bomba|bombas|electrobomba|electrobombas|motobomba|motobombas)\b", re.IGNORECASE)
         ],
-        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + [
+            re.compile(r"\b(mantenimiento|reparaci[oó]n|revisi[oó]n|inspecci[oó]n|servicio|limpieza|lavado)\b", re.IGNORECASE)
+        ],
         required_parameters=[
             ParametricRequirement(
                 param_id="potencia",
@@ -583,8 +600,9 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
             re.compile(r"\b(suministro\s+(?:y|e)\s+(?:instalaci[oó]n|colocaci[oó]n)|instalaci[oó]n|fabricaci[oó]n|montaje)\b.*\b(puertas?|ventanas?|port[oó]n|portones)\b|\b(puertas?|ventanas?|port[oó]n|portones)\b.*\b(madera|hierro|metal|met[aá]lic[ao]|aluminio|entamborad[ao]|arrollable)\b", re.IGNORECASE),
             re.compile(r"\b(puertas?\s+de\s+madera|puertas?\s+de\s+hierro|puertas?\s+de\s+aluminio|ventanas?\s+de\s+aluminio|port[oó]n\s+met[aá]lico|port[oó]n\s+de\s+hierro)\b", re.IGNORECASE),
         ],
-        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + [
-            re.compile(r"\b(cerradura|cerrojo|pomos?|manilla|bisagra|mantenimiento|reparaci[oó]n)\b", re.IGNORECASE)
+        exclusion_patterns=NON_FABRICATION_EXCLUSION_PATTERNS + [
+            re.compile(r"\b(cerradura|cerrojo|pomos?|manilla|bisagra)\b", re.IGNORECASE),
+            re.compile(r"\b(reja|rejas|protector(?:es)?\s+de\s+ventana|protectores?\s+para\s+ventanas?|baranda|barandas|pasamanos?)\b", re.IGNORECASE)
         ],
         required_parameters=[
             ParametricRequirement(
@@ -617,7 +635,7 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
             re.compile(r"\b(suministro\s+(?:y|e)\s+(?:instalaci[oó]n|colocaci[oó]n)|fabricaci[oó]n|montaje)\b.*\b(vigas?\s+met[aá]licas?|columnas?\s+met[aá]licas?|perfil\s+ipe|perfil\s+hea|perfil\s+heb|tubo\s+estructural|conduven)\b", re.IGNORECASE),
             re.compile(r"\b(perfil\s+ipe|perfil\s+hea|perfil\s+heb|perfil\s+conduven|viga\s+ipe|columna\s+hea)\b", re.IGNORECASE),
         ],
-        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + [
+        exclusion_patterns=NON_FABRICATION_EXCLUSION_PATTERNS + [
             re.compile(r"\b(pintura|fondo|anticorrosivo)\b", re.IGNORECASE),
             re.compile(r"\b(reja|rejas|protector(?:es)?\s+de\s+ventana|baranda|barandas|pasamanos?)\b", re.IGNORECASE)
         ],
@@ -698,7 +716,7 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
         activation_patterns=[
             re.compile(r"\b(dintel|dinteles|machon|machones|viga\s+de\s+corona|vigas?\s+corona|brocal|brocales|pedestal|pedestales|riostra|riostras|pollete|polletes|mes[oó]n|mesones|tope\s+de\s+mamposter[ií]a|topes?\s+en\s+mamposter[ií]a|peldano|peldaño|peldanos|peldaños)\b", re.IGNORECASE)
         ],
-        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        exclusion_patterns=NON_FABRICATION_EXCLUSION_PATTERNS,
         required_parameters=[
             ParametricRequirement(
                 param_id="dimensiones_seccion",
@@ -729,7 +747,7 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
         activation_patterns=[
             re.compile(r"\b(port[oó]n|portones|reja|rejas|puerta\s+met[aá]lica|puertas\s+met[aá]licas|protector(?:es)?\s+de\s+ventana|protectores?\s+para\s+ventanas?|baranda|barandas|pasamanos?)\b", re.IGNORECASE)
         ],
-        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + [
+        exclusion_patterns=NON_FABRICATION_EXCLUSION_PATTERNS + [
             re.compile(r"\b(cerradura|cerrojo|candado|bisagra|manilla|cilindro|manillar|llave)\b", re.IGNORECASE)
         ],
         required_parameters=[
@@ -845,7 +863,7 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
         activation_patterns=[
             re.compile(r"\b(drywall|durlock|cart[oó]n[- ]yeso|yeso[- ]cart[oó]n|tabiquer[ií]a\s+liviana)\b", re.IGNORECASE)
         ],
-        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        exclusion_patterns=NON_FABRICATION_EXCLUSION_PATTERNS,
         required_parameters=[
             ParametricRequirement(
                 param_id="dimensiones_area_drywall",
@@ -866,6 +884,136 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
         ]
     )
 ]
+
+
+# ---------------------------------------------------------------------------
+# SELECTOR DINÁMICO DE OPCIONES CONTEXTUALIZADAS POR ELEMENTO
+# ---------------------------------------------------------------------------
+
+def get_contextual_options(
+    family_id: str,
+    param_id: str,
+    raw_query: str,
+    norm_query: str,
+    default_options: List[str]
+) -> List[str]:
+    """
+    Selecciona chips de opciones dinámicamente contextualizados según el elemento específico
+    mencionado en la consulta del usuario (ej: puertas vs portones vs rejas vs barandas).
+    """
+    # 1. Herrería y carpintería metálica
+    if family_id == "HERRERIA_ESTRUCTURAS_MET_DISCRETAS":
+        if re.search(r"\bpuertas?\b", norm_query):
+            return [
+                "Puerta metálica 0.90 m x 2.10 m (Paso estándar)",
+                "Puerta metálica 1.00 m x 2.10 m (Paso amplio)",
+                "Puerta metálica 0.80 m x 2.10 m (Paso secundario)",
+                "Puerta metálica doble hoja 1.80 m x 2.10 m",
+                "Puerta metálica de seguridad 0.90 m x 2.10 m"
+            ]
+        if re.search(r"\b(porton|portones)\b", norm_query):
+            return [
+                "Portón 3.00 m x 2.00 m (Vehicular residencial)",
+                "Portón 4.00 m x 2.50 m (Vehicular amplio)",
+                "Portón corredizo 3.50 m x 2.20 m",
+                "Portón batiente de dos hojas 3.00 m x 2.20 m",
+                "Portón peatonal / vehicular 2.50 m x 2.00 m"
+            ]
+        if re.search(r"\b(rejas?|protector(?:es)?)\b", norm_query):
+            return [
+                "Reja para ventana 1.50 m x 1.20 m",
+                "Reja para ventana 1.00 m x 1.00 m",
+                "Reja para ventana 1.20 m x 1.50 m",
+                "Reja para ventana 2.00 m x 1.50 m",
+                "Reja de protección perimetral 2.00 m x 2.00 m"
+            ]
+        if re.search(r"\b(barandas?|pasamanos?)\b", norm_query):
+            return [
+                "Baranda metálica h=0.90 m",
+                "Baranda metálica h=1.00 m con pasamanos",
+                "Pasamanos en tubo redondo 2 pulg",
+                "Baranda para escalera con parales y tubos horizontales"
+            ]
+
+    # 2. Puertas, ventanas y carpintería general
+    elif family_id == "PUERTAS_VENTANAS_CARPINTERIA":
+        if re.search(r"\bpuertas?\b", norm_query):
+            if re.search(r"\b(metal|met[aá]lic[ao]|hierro|chapa|l[aá]mina)\b", norm_query):
+                return [
+                    "Puerta metálica 0.90 m x 2.10 m (Paso estándar)",
+                    "Puerta metálica 1.00 m x 2.10 m (Paso amplio)",
+                    "Puerta metálica 0.80 m x 2.10 m (Paso secundario)",
+                    "Puerta metálica doble hoja 1.80 m x 2.10 m",
+                    "Puerta metálica de seguridad 0.90 m x 2.10 m"
+                ]
+            return [
+                "Puerta 0.90 m x 2.10 m Madera Entamborada",
+                "Puerta 0.80 m x 2.10 m Madera Entamborada",
+                "Puerta 1.00 m x 2.10 m Madera Maciza",
+                "Puerta metálica 0.90 m x 2.10 m (Hierro/Lámina)",
+                "Puerta doble hoja 1.80 m x 2.10 m"
+            ]
+        if re.search(r"\bventanas?\b", norm_query):
+            return [
+                "Ventana 1.20 m x 1.50 m Aluminio y Vidrio",
+                "Ventana 1.50 m x 1.50 m Aluminio y Vidrio",
+                "Ventana 1.00 m x 1.00 m Aluminio y Vidrio",
+                "Ventana corrediza 2.00 m x 1.50 m",
+                "Ventana basculante 0.60 m x 0.40 m"
+            ]
+        if re.search(r"\b(porton|portones)\b", norm_query):
+            return [
+                "Portón 3.00 m x 2.00 m (Vehicular residencial)",
+                "Portón 4.00 m x 2.50 m (Vehicular amplio)",
+                "Portón corredizo 3.50 m x 2.20 m",
+                "Portón batiente de dos hojas 3.00 m x 2.20 m",
+                "Portón peatonal / vehicular 2.50 m x 2.00 m"
+            ]
+
+    # 3. Pinturas y recubrimientos de elementos discretos
+    elif family_id == "PINTURA_RECUBRIMIENTOS_DISCRETOS":
+        if re.search(r"\bpuertas?\b", norm_query):
+            return [
+                "Puerta 1 hoja ambas caras (aprox. 4 m²)",
+                "Puerta doble hoja ambas caras (aprox. 8 m²)",
+                "Puertas varias (aprox. 15 m²)"
+            ]
+        if re.search(r"\b(rejas?|protector(?:es)?)\b", norm_query):
+            return [
+                "Reja para ventana (aprox. 3 m²)",
+                "Reja mediana / cerca (aprox. 8 m²)",
+                "Rejas perimetrales (aprox. 20 m²)"
+            ]
+        if re.search(r"\b(porton|portones)\b", norm_query):
+            return [
+                "Portón mediano ambas caras (aprox. 12 m²)",
+                "Portón amplio ambas caras (aprox. 20 m²)",
+                "Portón grande industrial (aprox. 35 m²)"
+            ]
+
+    # 4. Elementos estructurales discretos (Dinteles, Machones, Vigas de Corona)
+    elif family_id == "ELEMENTOS_ESTRUCTURALES_DISCRETOS":
+        if re.search(r"\bdintel(?:es)?\b", norm_query):
+            return [
+                "0.90 m x 15 cm x 5 cm (Dintel puerta estándar)",
+                "1.00 m x 10 cm x 5 cm (Dintel tabique fino)",
+                "1.20 m x 15 cm x 10 cm (Dintel / Machón mediano)",
+                "1.50 m x 20 cm x 15 cm (Dintel amplio)"
+            ]
+        if re.search(r"\b(machon|machones|columnetas?)\b", norm_query):
+            return [
+                "Machón 15 cm x 15 cm x 2.50 m de altura",
+                "Machón 20 cm x 20 cm x 3.00 m de altura",
+                "Machón de amarre 15 cm x 20 cm"
+            ]
+        if re.search(r"\b(vigas?\s+corona|viga\s+de\s+corona|corona)\b", norm_query):
+            return [
+                "Viga de corona 15 cm x 20 cm",
+                "Viga de corona 20 cm x 20 cm",
+                "Viga de corona 15 cm x 15 cm"
+            ]
+
+    return default_options
 
 
 # ---------------------------------------------------------------------------
@@ -904,6 +1052,23 @@ def evaluate_parametric_ontology_contract(
         )
         if u_match:
             eff_unit = (u_match.group(1) or u_match.group(2) or "").strip().lower()
+
+    # 0. Inmunidad ontológica para Unidades Globales (Gl / Sg) o Labores de Cuadrilla / Mantenimiento / Servicio
+    eff_unit_lower = eff_unit.lower()
+    is_global_unit = eff_unit_lower in ("gl", "sg", "global", "suma global") or bool(
+        re.search(r"\b(?:unidad\s+)?(?:gl|sg|suma\s+global|global)\b", norm_query)
+    )
+
+    is_maintenance_or_service = any(
+        p.search(raw_query) or p.search(norm_query)
+        for p in (MAINTENANCE_AND_REPAIR_PATTERNS + SURFACE_TREATMENTS_AND_FINISHES_PATTERNS + DEMOLITION_OR_REMOVAL_PATTERNS)
+    ) or bool(
+        re.search(r"\b(servicio|inspecci[oó]n|revisi[oó]n|d[ií]as?|jornad[ao]|cuadrilla|mano\s+de\s+obra|hora|horas)\b", norm_query)
+    )
+
+    if is_global_unit or (is_maintenance_or_service and eff_unit_lower in ("gl", "sg", "dia", "dias", "jornada", "hh", "mes", "")):
+        logger.info("Ontology contract bypassed: unit '%s' or maintenance/service task in '%.80s'", eff_unit, raw_query)
+        return None
 
     for ontology in ONTOLOGY_REGISTRY:
         # 1. Verificar si la consulta activa esta familia constructiva
@@ -947,20 +1112,44 @@ def evaluate_parametric_ontology_contract(
 
         if not options_list:
             if len(missing_params) == 1:
-                options_list = missing_params[0].default_options
+                options_list = get_contextual_options(
+                    ontology.family_id,
+                    missing_params[0].param_id,
+                    raw_query,
+                    norm_query,
+                    missing_params[0].default_options
+                )
             else:
                 options_list = missing_params[0].default_options[:4]
 
-        # Mensaje técnico contextualizado
+        # Mensaje técnico contextualizado al elemento exacto solicitado
+        specific_name = ontology.name.lower()
+        if ontology.family_id in ("HERRERIA_ESTRUCTURAS_MET_DISCRETAS", "PUERTAS_VENTANAS_CARPINTERIA"):
+            if re.search(r"\bpuertas?\b", norm_query):
+                specific_name = "puertas metálicas"
+            elif re.search(r"\b(porton|portones)\b", norm_query):
+                specific_name = "portones"
+            elif re.search(r"\b(rejas?|protector(?:es)?)\b", norm_query):
+                specific_name = "rejas de protección"
+            elif re.search(r"\b(barandas?|pasamanos?)\b", norm_query):
+                specific_name = "barandas y pasamanos"
+        elif ontology.family_id == "ELEMENTOS_ESTRUCTURALES_DISCRETOS":
+            if re.search(r"\bdintel(?:es)?\b", norm_query):
+                specific_name = "dinteles"
+            elif re.search(r"\b(machon|machones)\b", norm_query):
+                specific_name = "machones"
+            elif re.search(r"\bvigas?\s+corona\b", norm_query):
+                specific_name = "vigas de corona"
+
         if len(missing_params) == 1:
             clarification_msg = (
-                f"Para calcular con exactitud un APU de {ontology.name.lower()}, es indispensable "
+                f"Para calcular con exactitud un APU de {specific_name}, es indispensable "
                 f"especificar el siguiente parámetro técnico: {missing_params[0].label.lower()}."
             )
         else:
             labels_str = " y ".join(p.label.lower() for p in missing_params)
             clarification_msg = (
-                f"Para calcular con exactitud un APU de {ontology.name.lower()}, se requieren "
+                f"Para calcular con exactitud un APU de {specific_name}, se requieren "
                 f"dos especificaciones técnicas indispensables en ingeniería de costos: {labels_str}."
             )
 
@@ -984,7 +1173,7 @@ def evaluate_parametric_ontology_contract(
         }
 
     # 5. Control Universal Fallback para Elementos Físicos en Unidades Discretas (und / pza / pto)
-    if eff_unit in ("und", "pza", "pto", "pieza", "piezas", "unidad"):
+    if eff_unit in ("und", "pza", "pto", "pieza", "piezas", "unidad") and not is_maintenance_or_service:
         is_discrete_fabrication = bool(re.search(
             r"\b(construcci[oó]n|construir|fabricaci[oó]n|fabricar|vaciado|vaciar|hechura|hacer|elaboraci[oó]n|elaborar)\b",
             norm_query
