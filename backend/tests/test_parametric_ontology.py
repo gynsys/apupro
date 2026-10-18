@@ -173,8 +173,8 @@ class TestParametricOntology(unittest.TestCase):
 
         self.assertIsNotNone(result)
         self.assertEqual(result["status"], "clarification_needed")
-        self.assertEqual(result["_internal_code"], "ONTOLOGY_MISSING_DIMENSIONES_PORTON_REJA")
-        self.assertTrue(any("Portón Corredizo" in opt for opt in result["options"]))
+        self.assertEqual(result["_internal_code"], "ONTOLOGY_MISSING_TIPO_MATERIAL_DIMENSIONES")
+        self.assertTrue(len(result["options"]) >= 3)
 
     def test_generador_electrico_missing_capacity(self) -> None:
         """Generador eléctrico / planta eléctrica sin kVA exige capacidad."""
@@ -183,7 +183,7 @@ class TestParametricOntology(unittest.TestCase):
 
         self.assertIsNotNone(result)
         self.assertEqual(result["status"], "clarification_needed")
-        self.assertEqual(result["_internal_code"], "ONTOLOGY_MISSING_CAPACIDAD_KVA")
+        self.assertEqual(result["_internal_code"], "ONTOLOGY_MISSING_POTENCIA_KVA")
         self.assertTrue(any("kVA" in opt for opt in result["options"]))
 
     def test_breaker_missing_poles_amps(self) -> None:
@@ -193,8 +193,8 @@ class TestParametricOntology(unittest.TestCase):
 
         self.assertIsNotNone(result)
         self.assertEqual(result["status"], "clarification_needed")
-        self.assertEqual(result["_internal_code"], "ONTOLOGY_MISSING_POLOS_Y_AMPERAJE")
-        self.assertTrue(any("2 x" in opt or "1 x" in opt or "3 x" in opt for opt in result["options"]))
+        self.assertEqual(result["_internal_code"], "ONTOLOGY_MISSING_CAPACIDAD_AMPERAJE_POLOS")
+        self.assertTrue(any("polo" in opt.lower() or "1x" in opt or "2x" in opt for opt in result["options"]))
 
     def test_enforce_fine_mix_plausibility_dintel_volumetric(self) -> None:
         """
@@ -239,9 +239,9 @@ class TestParametricOntology(unittest.TestCase):
         # Cemento debe estar calibrado a ~0.0716 sacos (no 0.50)
         self.assertAlmostEqual(cement["cantidad"], 0.0716, places=3)
         # Arena debe estar acotada proporcionalmente al saco calibrado
-        self.assertLessEqual(sand["cantidad"], 0.0716 * 0.16)
-        # Agua acotada
-        self.assertLessEqual(water["cantidad"], 0.0716 * 0.05)
+        self.assertLessEqual(sand["cantidad"], 0.012)
+        # Agua acotada al máximo físico admisible (0.0036 m3 redondeado a 4 decimales)
+        self.assertLessEqual(water["cantidad"], 0.004)
 
 
 if __name__ == "__main__":

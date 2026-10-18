@@ -411,7 +411,9 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
             re.compile(r"\b(tableros?\s+el[eé]ctricos?|tableros?\s+principal(?:es)?|tableros?\s+de\s+distribuci[oó]n|tableros?\s+secundarios?|tableros?\s+de\s+fuerza|tableros?\s+de\s+alumbrado|tablero\s+tipo\s+nlab|tablero\s+tipo\s+cpl|centro\s+de\s+carga)\b", re.IGNORECASE),
             re.compile(r"\b(suministro\s+y\s+colocaci[oó]n|instalaci[oó]n|montaje)\b.*\btablero[s]?\b", re.IGNORECASE)
         ],
-        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + [
+            re.compile(r"\b(interruptor(?:es)?\s+termomagn[eé]ticos?|breakers?|pastillas?\s+termomagn[eé]ticas?)\b", re.IGNORECASE)
+        ],
         required_parameters=[
             ParametricRequirement(
                 param_id="capacidad_circuitos",
@@ -697,7 +699,8 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
                 param_id="dimensiones_seccion",
                 label="Dimensiones o sección transversal (Largo x Ancho x Espesor/Alto)",
                 detection_patterns=[
-                    re.compile(r"\b\d+([\.,]\d+)?\s*(?:x|\*|por)\s*\d+([\.,]\d+)?\b", re.IGNORECASE),
+                    re.compile(r"\b\d+([\.,]\d+)?\s*(?:m|mts|mt|cm|cms|mm)?\s*(?:x|\*|por)\s*\d+([\.,]\d+)?\b", re.IGNORECASE),
+                    re.compile(r"\b(?:ancho|alto|altura|espesor|peralte|largo|longitud|secci[oó]n|dimensiones?|medidas?)\b", re.IGNORECASE),
                     re.compile(r"\be\s*=\s*\d+", re.IGNORECASE),
                     re.compile(r"\bh\s*=\s*\d+", re.IGNORECASE),
                     re.compile(r"\b\d+([\.,]\d+)?\s*(?:cm|cms|mm|m)\s*(?:de\s+espesor|de\s+alto|de\s+ancho|de\s+secci[oó]n)", re.IGNORECASE),
