@@ -324,10 +324,13 @@ def generate_apu_with_ai_from_base(
     if not effective_cov_prefix:
         effective_cov_prefix = infer_covenin_prefix(user_description, base_apu.get("covenin") or base_apu.get("codpar") or "")
 
-    unit_directive = ""
-    u_clean = str(requested_unit).strip().lower() if requested_unit else ""
+    base_unit = str(base_apu.get('unidad') or base_apu.get('unit') or '').strip().lower()
+    base_ren = base_apu.get('rendimiento') or base_apu.get('performance') or base_apu.get('RenPar') or 'N/A'
+    u_clean = str(requested_unit).strip().lower() if requested_unit else base_unit
+    req_u_clean = u_clean
     is_global_unit = u_clean in ("gl", "sg", "global", "suma global")
 
+    unit_directive = ""
     if is_global_unit:
         dias_val = float(execution_days) if execution_days and float(execution_days) > 0 else 1.0
         target_perf = round(1.0 / dias_val, 4)
@@ -345,23 +348,27 @@ La partida DEBE estructurarse OBLIGATORIAMENTE con la unidad: 'Gl'.
 - MANO DE OBRA Y EQUIPOS:
   * La cuadrilla y los equipos se asignan para la jornada diaria normal. La fórmula universal de costos dividirá su costo diario entre R, multiplicando exactamente por los {dias_val} días de duración.
 """
-    elif requested_unit:
+    elif u_clean:
         unit_directive = f"""
 # DIRECTIVA OBLIGATORIA DE UNIDAD DE MEDIDA (DEFINIDA POR EL ANALISTA)
 La partida DEBE estructurarse OBLIGATORIAMENTE con la unidad: '{u_clean}'.
 - El campo `unit` de `partida` DEBE ser exactamente '{u_clean}'.
 - Si la unidad es 'pza' o 'und':
-  * Todos los consumos de materiales (pintura, solvente, convertidor, lijas, electrodos, pernos) DEBEN calcularse para UNA SOLA PIEZA individual (ej. 1 peldaño de 1x0.32m consume ~0.02 gln de pintura/fondo y 0.01 gln de convertidor). NUNCA dejes consumos por m2 si la unidad es pieza o unidad.
-  * El rendimiento diario de la cuadrilla DEBE expresarse en piezas o unidades al día (ej. 15 a 25 pza/día con amoladora portátil de 4 1/2 pulg).
+  * CÁLCULO VOLUMÉTRICO Y UNITARIO RIGUROSO: Todos los consumos de materiales DEBEN calcularse para UNA SOLA PIEZA o unidad individual.
+  * Si el elemento es de concreto o mortero (ej. dinteles, machones, brocales, mesones, apoyos, peldaños):
+    - Calcula el volumen real: V = Largo (m) x Ancho/Base (m) x Espesor/Alto (m). Ejemplo para dintel de 0.90 m x 0.15 m x 0.05 m: V = 0.00675 m³.
+    - Dosificación de cemento: Para mortero 1:3 es de ~10.6 sacos/m³; para concreto f'c 180-210 kgf/cm² es de ~8.0 sacos/m³.
+    - Cantidad por unidad = V x Dosificación. Para dicho dintel: 0.00675 m³ x 10.6 = 0.072 sacos (¡NO 0.5 ni 1.0 saco!).
+    - PROHIBIDO redondear al alza a fracciones comerciales grandes (como 0.50 o 1.0 saco) cuando la unidad física consume solo una pequeña fracción decimal. Utiliza la cantidad decimal exacta calculada (ej. 0.072 sacos).
+    - Dosificación de agregados: Arena = V x 1.10 m³ (aprox. 0.10 m³ por saco de cemento); Agua = V x 0.24 m³.
+  * Si el elemento es metálico o carpintería (puertas, rejas, protectores, peldaños, marcos): calcula los perfiles por longitud real y consumibles (electrodos, discos, pintura ~0.02-0.05 gln) para UNA sola pieza.
+  * NUNCA dejes consumos por m² o por m³ si la unidad es pieza o unidad.
+  * El rendimiento diario de la cuadrilla DEBE expresarse en piezas o unidades al día (ej. para dinteles/vigas pequeñas en sitio: 8 a 15 und/día; para peldaños: 15 a 25 pza/día).
 - Si la unidad es 'm2':
   * Todos los consumos de materiales y el rendimiento diario se calculan por metro cuadrado de superficie desarrollada (25 a 35 m2/día).
 - Si la unidad es 'm' o 'ml':
   * Todos los consumos y rendimientos se calculan por metro lineal de desarrollo.
 """
-
-    base_unit = str(base_apu.get('unidad') or base_apu.get('unit') or '').strip().lower()
-    base_ren = base_apu.get('rendimiento') or base_apu.get('performance') or base_apu.get('RenPar') or 'N/A'
-    req_u_clean = str(requested_unit).strip().lower() if requested_unit else base_unit
 
     if is_global_unit:
         dias_val = float(execution_days) if execution_days and float(execution_days) > 0 else 1.0

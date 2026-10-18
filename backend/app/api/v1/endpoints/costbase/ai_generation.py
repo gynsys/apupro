@@ -196,9 +196,32 @@ def generate_ai_apu_route(
     if payload.description:
         payload.description = expand_technical_synonyms(payload.description)
 
+    raw_desc_lower = (raw_desc or "").lower()
+    effective_unit = (payload.unit or "").strip().lower()
+    if not effective_unit:
+        unit_match = re.search(r'\b(gl|sg|global|suma\s*global|pza|und|unidad|piezas?|m2|m²|m3|m³|ml|mts?|metros?\s*lineales?|pto|puntos?)\b', raw_desc_lower)
+        if unit_match:
+            matched_u = unit_match.group(1)
+            if matched_u in ("gl", "sg", "global", "suma global"):
+                effective_unit = "Gl"
+            elif matched_u in ("pieza", "piezas"):
+                effective_unit = "pza"
+            elif matched_u == "unidad":
+                effective_unit = "und"
+            elif matched_u in ("m2", "m²"):
+                effective_unit = "m2"
+            elif matched_u in ("m3", "m³"):
+                effective_unit = "m3"
+            elif matched_u in ("ml", "mt", "mts", "metro", "metros", "metros lineales"):
+                effective_unit = "m"
+            elif matched_u in ("pto", "puntos"):
+                effective_unit = "pto"
+            else:
+                effective_unit = matched_u
+
     # --- VALIDACIÓN ONTOLÓGICA PARAMÉTRICA GLOBAL (PRE-RAG) ---
     # Verifica si la descripción pertenece a una familia constructiva y carece de especificaciones críticas (espesor, mezcla, etc.)
-    ontology_eval = evaluate_parametric_ontology_contract(payload.description)
+    ontology_eval = evaluate_parametric_ontology_contract(payload.description, effective_unit)
     if ontology_eval and not payload.only_preprocess and not payload.accept_exact_match_code:
         logger.info("Ontology pre-RAG contract intercepted missing specifications [%s]: %.80s", ontology_eval["_internal_code"], payload.description)
         ontology_eval.setdefault("partida", None)
@@ -225,7 +248,6 @@ def generate_ai_apu_route(
         "escarificacion", "escarificación", "escarificar",
         "desmanchado", "desmanchar", "decapado", "decapar"
     ]
-    raw_desc_lower = (raw_desc or "").lower()
     is_maintenance_activity = (
         any(kw in raw_desc_lower for kw in MAINTENANCE_KEYWORDS)
         or bool(re.search(
@@ -233,26 +255,6 @@ def generate_ai_apu_route(
             raw_desc_lower
         ))
     )
-
-    effective_unit = (payload.unit or "").strip().lower()
-    if not effective_unit:
-        unit_match = re.search(r'\b(gl|sg|global|suma\s*global|pza|und|unidad|piezas?|m2|m²|ml|mts?|metros?\s*lineales?|pto|puntos?)\b', raw_desc_lower)
-        if unit_match:
-            matched_u = unit_match.group(1)
-            if matched_u in ("gl", "sg", "global", "suma global"):
-                effective_unit = "Gl"
-            elif matched_u in ("pieza", "piezas"):
-                effective_unit = "pza"
-            elif matched_u == "unidad":
-                effective_unit = "und"
-            elif matched_u in ("m2", "m²"):
-                effective_unit = "m2"
-            elif matched_u in ("ml", "mt", "mts", "metro", "metros", "metros lineales"):
-                effective_unit = "m"
-            elif matched_u in ("pto", "puntos"):
-                effective_unit = "pto"
-            else:
-                effective_unit = matched_u
 
     if is_maintenance_activity and not effective_unit and not payload.only_preprocess and not payload.accept_exact_match_code:
         logger.info("Maintenance activity detected without explicit unit: %.80s", raw_desc)

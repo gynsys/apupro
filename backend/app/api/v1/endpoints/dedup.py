@@ -129,6 +129,8 @@ def _normalize_key(description: str) -> str:
     text_up = description.upper()
     for src, dst in [("Á", "A"), ("É", "E"), ("Í", "I"), ("Ó", "O"), ("Ú", "U"), ("Ü", "U")]:
         text_up = text_up.replace(src, dst)
+    text_up = text_up.replace(">=", " MAYOR IGUAL ").replace("<=", " MENOR IGUAL ")
+    text_up = text_up.replace(">", " MAYOR ").replace("<", " MENOR ")
     text_up = re.sub(r"\b(\d+(?:[.,]\d+)?)\s*K[GO]F\b", r"\1 KG", text_up)
     text_up = re.sub(r"\bK[GO]F\b", "KG", text_up)
     cleaned = re.sub(r"[^A-Z0-9 ]", " ", text_up)

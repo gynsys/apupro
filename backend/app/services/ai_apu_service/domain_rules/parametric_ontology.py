@@ -682,6 +682,180 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
                 default_options=["500 Litros", "1000 Litros", "1500 Litros", "2000 Litros", "2500 Litros", "5000 Litros"]
             )
         ]
+    ),
+
+    # 22. ELEMENTOS ESTRUCTURALES DISCRETOS Y ALBAÑILERÍA (Dinteles, Machones, Vigas Corona, Brocales, Mesones, Peldaños)
+    ConstructionFamilyOntology(
+        family_id="ELEMENTOS_ESTRUCTURALES_DISCRETOS",
+        name="Dinteles, Machones y Elementos de Concreto/Mortero",
+        activation_patterns=[
+            re.compile(r"\b(dintel|dinteles|machon|machones|viga\s+de\s+corona|vigas?\s+corona|brocal|brocales|pedestal|pedestales|riostra|riostras|pollete|polletes|mes[oó]n|mesones|tope\s+de\s+mamposter[ií]a|topes?\s+en\s+mamposter[ií]a|peldano|peldaño|peldanos|peldaños)\b", re.IGNORECASE)
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        required_parameters=[
+            ParametricRequirement(
+                param_id="dimensiones_seccion",
+                label="Dimensiones o sección transversal (Largo x Ancho x Espesor/Alto)",
+                detection_patterns=[
+                    re.compile(r"\b\d+([\.,]\d+)?\s*(?:x|\*|por)\s*\d+([\.,]\d+)?\b", re.IGNORECASE),
+                    re.compile(r"\be\s*=\s*\d+", re.IGNORECASE),
+                    re.compile(r"\bh\s*=\s*\d+", re.IGNORECASE),
+                    re.compile(r"\b\d+([\.,]\d+)?\s*(?:cm|cms|mm|m)\s*(?:de\s+espesor|de\s+alto|de\s+ancho|de\s+secci[oó]n)", re.IGNORECASE),
+                    re.compile(r"\bsecci[oó]n\b", re.IGNORECASE),
+                ],
+                question="¿Cuáles son las dimensiones o sección transversal aproximada del elemento (Largo x Ancho x Espesor/Alto)?",
+                default_options=[
+                    "0.90 m x 15 cm x 5 cm (Dintel puerta estándar)",
+                    "1.00 m x 10 cm x 5 cm (Dintel tabique fino)",
+                    "1.20 m x 15 cm x 10 cm (Dintel / Machón mediano)",
+                    "1.50 m x 20 cm x 15 cm (Viga de corona / Brocal)"
+                ]
+            )
+        ]
+    ),
+
+    # 23. HERRERÍA Y CARPINTERÍA METÁLICA (Portones, Rejas, Puertas Metálicas, Protectores)
+    ConstructionFamilyOntology(
+        family_id="HERRERIA_ESTRUCTURAS_MET_DISCRETAS",
+        name="Portones, Rejas y Estructuras Metálicas",
+        activation_patterns=[
+            re.compile(r"\b(port[oó]n|portones|reja|rejas|puerta\s+met[aá]lica|puertas\s+met[aá]licas|protector(?:es)?\s+de\s+ventana|protectores?\s+para\s+ventanas?|baranda|barandas|pasamanos?)\b", re.IGNORECASE)
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + [
+            re.compile(r"\b(cerradura|cerrojo|candado|bisagra|manilla|cilindro|manillar|llave)\b", re.IGNORECASE)
+        ],
+        required_parameters=[
+            ParametricRequirement(
+                param_id="dimensiones_herreria",
+                label="Dimensiones del elemento metálico (Ancho x Alto)",
+                detection_patterns=[
+                    re.compile(r"\b\d+([\.,]\d+)?\s*(?:x|\*|por)\s*\d+([\.,]\d+)?\b", re.IGNORECASE),
+                    re.compile(r"\b\d+([\.,]\d+)?\s*(?:m2|m²|mts2|metros\s+cuadrados)\b", re.IGNORECASE),
+                    re.compile(r"\b(?:medidas?|dimensiones?|ancho|alto|largo)\b", re.IGNORECASE),
+                ],
+                question="¿Cuáles son las dimensiones aproximadas (Ancho x Alto) del elemento de herrería o estructura metálica?",
+                default_options=[
+                    "Portón 3.00 m x 2.00 m (Vehicular residencial)",
+                    "Portón 4.00 m x 2.50 m (Vehicular amplio)",
+                    "Reja para ventana 1.50 m x 1.20 m",
+                    "Reja para ventana 1.00 m x 1.00 m",
+                    "Puerta metálica 0.90 m x 2.10 m"
+                ]
+            )
+        ]
+    ),
+
+    # 24. PINTURAS Y RECUBRIMIENTOS DE ELEMENTOS ESPECÍFICOS (Rejas, Portones, Fachadas sin área en m2)
+    ConstructionFamilyOntology(
+        family_id="PINTURA_RECUBRIMIENTOS_DISCRETOS",
+        name="Pintura o Recubrimiento de Elementos Específicos",
+        activation_patterns=[
+            re.compile(r"\b(pintura|pintar|esmaltar?|barnizar?|impermeabilizar?)\b.*\b(reja|rejas|port[oó]n|portones|puerta|puertas|cerca|cercas|ventana|ventanas|jardinera|jardineras|fachada|fachadas)\b", re.IGNORECASE)
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        required_parameters=[
+            ParametricRequirement(
+                param_id="area_recubrimiento",
+                label="Área aproximada de superficie (m²)",
+                detection_patterns=[
+                    re.compile(r"\b\d+([\.,]\d+)?\s*(?:m2|m²|mts2|metros\s+cuadrados)\b", re.IGNORECASE),
+                    re.compile(r"\b\d+([\.,]\d+)?\s*(?:x|\*|por)\s*\d+([\.,]\d+)?\b", re.IGNORECASE),
+                    re.compile(r"\b(?:[aá]rea|superficie|desarrollo)\b", re.IGNORECASE),
+                ],
+                question="¿Cuál es el área o desarrollo aproximado de superficie a pintar o tratar?",
+                default_options=[
+                    "Superficie aprox. 5 m²",
+                    "Superficie aprox. 10 m² (Reja / Portón mediano)",
+                    "Superficie aprox. 20 m²",
+                    "Superficie aprox. 50 m²"
+                ]
+            )
+        ]
+    ),
+
+    # 25. GENERADORES Y PLANTAS ELÉCTRICAS
+    ConstructionFamilyOntology(
+        family_id="GENERADORES_PLANTAS_ELECTRICAS",
+        name="Plantas Eléctricas y Generadores",
+        activation_patterns=[
+            re.compile(r"\b(planta\s+el[eé]ctrica|plantas\s+el[eé]ctricas|generador\s+el[eé]ctrico|generadores\s+el[eé]ctricos|grupo\s+electr[oó]geno)\b", re.IGNORECASE)
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        required_parameters=[
+            ParametricRequirement(
+                param_id="potencia_kva",
+                label="Potencia nominal (kVA o kW)",
+                detection_patterns=[
+                    re.compile(r"\b\d+(?:[.,]\d+)?\s*(?:kva|kw|kwa)\b", re.IGNORECASE),
+                    re.compile(r"\b(?:capacidad|potencia)\b", re.IGNORECASE),
+                ],
+                question="¿Qué potencia nominal (kVA o kW) tiene la planta eléctrica o generador?",
+                default_options=[
+                    "15 kVA (Residencial)",
+                    "30 kVA (Comercial ligero)",
+                    "50 kVA (Edificio / Comercio)",
+                    "100 kVA (Industrial mediano)",
+                    "150 kVA (Industrial pesado)"
+                ]
+            )
+        ]
+    ),
+
+    # 26. INTERRUPTORES TERMOMAGNÉTICOS Y BREAKERS
+    ConstructionFamilyOntology(
+        family_id="INTERRUPTORES_BREAKERS",
+        name="Interruptores Termomagnéticos y Breakers",
+        activation_patterns=[
+            re.compile(r"\b(breakers?|interruptor(?:es)?\s+termomagn[eé]ticos?|pastillas?\s+termomagn[eé]ticas?)\b", re.IGNORECASE)
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        required_parameters=[
+            ParametricRequirement(
+                param_id="capacidad_amperaje_polos",
+                label="Número de polos y amperaje",
+                detection_patterns=[
+                    re.compile(r"\b\d{1,3}\s*(?:amp|amperios?|a)\b", re.IGNORECASE),
+                    re.compile(r"\b[1-3]\s*(?:x|polo|polos|p)\b", re.IGNORECASE),
+                    re.compile(r"\b(?:amperaje|capacidad)\b", re.IGNORECASE),
+                ],
+                question="¿De cuántos polos y qué amperaje es el interruptor termomagnético / breaker?",
+                default_options=[
+                    "1 polo x 20 A (1x20 A)",
+                    "2 polos x 30 A (2x30 A)",
+                    "2 polos x 50 A (2x50 A)",
+                    "3 polos x 70 A (3x70 A)",
+                    "3 polos x 100 A (3x100 A)"
+                ]
+            )
+        ]
+    ),
+
+    # 27. TABIQUERÍA Y TECHOS DRYWALL EN UNIDADES DISCRETAS
+    ConstructionFamilyOntology(
+        family_id="TABIQUERIA_DRYWALL_DISCRETA",
+        name="Tabiquería y Paredes de Drywall",
+        activation_patterns=[
+            re.compile(r"\b(drywall|durlock|cart[oó]n[- ]yeso|yeso[- ]cart[oó]n|tabiquer[ií]a\s+liviana)\b", re.IGNORECASE)
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        required_parameters=[
+            ParametricRequirement(
+                param_id="dimensiones_area_drywall",
+                label="Área o dimensiones del tabique",
+                detection_patterns=[
+                    re.compile(r"\b\d+([\.,]\d+)?\s*(?:m2|m²|mts2|metros\s+cuadrados)\b", re.IGNORECASE),
+                    re.compile(r"\b\d+([\.,]\d+)?\s*(?:x|\*|por)\s*\d+([\.,]\d+)?\b", re.IGNORECASE),
+                    re.compile(r"\b(?:[aá]rea|superficie|medidas?|dimensiones?)\b", re.IGNORECASE),
+                ],
+                question="¿Cuál es el área (m²) o las dimensiones aproximadas (Largo x Alto) del tabique de drywall?",
+                default_options=[
+                    "Tabique 3.00 m x 2.50 m (7.5 m²)",
+                    "Tabique 4.00 m x 2.50 m (10 m²)",
+                    "Superficie aprox. 15 m²",
+                    "Superficie aprox. 25 m²"
+                ]
+            )
+        ]
     )
 ]
 
@@ -691,7 +865,8 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
 # ---------------------------------------------------------------------------
 
 def evaluate_parametric_ontology_contract(
-    query: str
+    query: str,
+    unit: Optional[str] = None
 ) -> Optional[Dict[str, Any]]:
     """
     Evalúa la descripción de obra contra la Ontología Paramétrica Universal.
@@ -701,6 +876,7 @@ def evaluate_parametric_ontology_contract(
 
     Args:
         query: Descripción textual ingresada por el usuario.
+        unit: Unidad de cómputo solicitada (opcional, ej: 'und', 'pza', 'm2', 'm3', 'Gl').
 
     Returns:
         Dict con la aclaratoria estructurada (status: 'clarification_needed') o None si cumple.
@@ -710,6 +886,16 @@ def evaluate_parametric_ontology_contract(
 
     norm_query = _strip_accents(query.strip())
     raw_query = query.strip()
+
+    # Extraer unidad si no fue provista explícitamente
+    eff_unit = (unit or "").strip().lower()
+    if not eff_unit:
+        u_match = re.search(
+            r'\b(?:unidad|en\s+unidad|unidad\s+de\s+medida|unidad:?)\s*[:=]?\s*(und|pza|piezas?|m2|m²|m3|m³|m|ml|gl|pto|puntos?)\b|\b(und|pza|m2|m²|m3|m³|ml|pto|gl)\b',
+            norm_query
+        )
+        if u_match:
+            eff_unit = (u_match.group(1) or u_match.group(2) or "").strip().lower()
 
     for ontology in ONTOLOGY_REGISTRY:
         # 1. Verificar si la consulta activa esta familia constructiva
@@ -752,11 +938,9 @@ def evaluate_parametric_ontology_contract(
                 options_list = composite
 
         if not options_list:
-            # Si no hay generador compuesto, concatenar o usar las opciones del primer parámetro
             if len(missing_params) == 1:
                 options_list = missing_params[0].default_options
             else:
-                # Combinar opciones razonables
                 options_list = missing_params[0].default_options[:4]
 
         # Mensaje técnico contextualizado
@@ -790,5 +974,40 @@ def evaluate_parametric_ontology_contract(
                 "para continuar directamente con la generación del APU."
             )
         }
+
+    # 5. Control Universal Fallback para Elementos Físicos en Unidades Discretas (und / pza / pto)
+    if eff_unit in ("und", "pza", "pto", "pieza", "piezas", "unidad"):
+        is_discrete_fabrication = bool(re.search(
+            r"\b(construcci[oó]n|construir|fabricaci[oó]n|fabricar|vaciado|vaciar|hechura|hacer|elaboraci[oó]n|elaborar)\b",
+            norm_query
+        ))
+        is_demolition = any(p.search(raw_query) or p.search(norm_query) for p in DEMOLITION_OR_REMOVAL_PATTERNS)
+        has_dimensions_or_specs = bool(re.search(
+            r"\b\d+([\.,]\d+)?\s*(?:m|mts|cm|cms|mm|m2|m²|m3|m³|pulg|\"|kg|kgf|hp|kva|btu|x|\*|por)\b",
+            norm_query
+        ))
+        if is_discrete_fabrication and not is_demolition and not has_dimensions_or_specs:
+            logger.info("Universal discrete fabrication missing dimensions (unit=%s): '%.80s'", eff_unit, raw_query)
+            return {
+                "status": "clarification_needed",
+                "clarification_type": "parametric_specification_required",
+                "_internal_code": "ONTOLOGY_UNIVERSAL_DISCRETE_MISSING_DIMENSIONS",
+                "clarification_message": (
+                    f"Has solicitado la construcción o elaboración de un elemento por unidad ({eff_unit}). "
+                    "En ingeniería de costos, el consumo de insumos materiales y el rendimiento de la cuadrilla "
+                    "dependen de su escala física. Por favor indica sus dimensiones o sección aproximada (Largo x Ancho x Espesor/Alto):"
+                ),
+                "questions": [
+                    "¿Cuáles son las dimensiones o sección física aproximada del elemento (Largo x Ancho x Espesor/Alto)?"
+                ],
+                "options": [
+                    "Dimensiones menores (ej. 1.00 m x 0.15 m x 0.05 m)",
+                    "Dimensiones estándar (ej. 2.00 m x 0.20 m x 0.10 m)",
+                    "Dimensiones medianas (ej. 3.00 m x 0.25 m x 0.15 m)",
+                    "Dimensiones grandes (ej. 4.00 m x 0.30 m x 0.20 m)"
+                ],
+                "recommendation": "Indica o selecciona las medidas aproximadas para calcular las cantidades exactas de materiales sin sobreestimar costos.",
+                "guia_redaccion": "Escribe las dimensiones (ej: 0.90x0.15x0.05m o 1.00m de luz) para continuar con la generación exacta del APU."
+            }
 
     return None

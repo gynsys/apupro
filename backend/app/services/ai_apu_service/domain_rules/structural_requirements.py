@@ -7,7 +7,11 @@ from app.services.ai_apu_service.domain_rules.discordant_pruning import (
     is_explicit_mortar_without_coarse_concrete,
 )
 from app.services.ai_apu_service.reconciliation.specs_matcher import _normalize_unit
-from app.services.element_geometry import extract_linear_length_m
+from app.services.element_geometry import (
+    extract_discrete_volume_m3,
+    extract_linear_length_m,
+    is_linear_element,
+)
 
 # ---------------------------------------------------------------------------
 # Elementos que trabajan a flexión/compresión y SIEMPRE llevan refuerzo de acero y encofrado,
@@ -214,8 +218,11 @@ def align_description_with_requested_mix(result: Dict[str, Any], user_descriptio
 
 def enforce_fine_mix_plausibility(result: Dict[str, Any], user_description: str) -> None:
     """
-    Valida la dosificación física de mezclas arena-cemento: arena por saco de cemento dentro de un
-    rango plausible y agua acotada. Corrige solo desviaciones fuera de rango (errores aritméticos del LLM).
+    Valida la dosificación física de mezclas arena-cemento:
+    1. Si la unidad es discreta (und/pza), calibra los sacos de cemento según el volumen físico real
+       (V = L x b x h) o la longitud del elemento para evitar sobreestimaciones de órdenes de magnitud.
+    2. Arena por saco de cemento dentro de un rango físico plausible (0.06 - 0.16 m3/saco).
+    3. Agua acotada al máximo admisible (0.05 m3/saco).
     """
     if not isinstance(result, dict) or not is_explicit_mortar_without_coarse_concrete(user_description or ""):
         return
@@ -241,7 +248,35 @@ def enforce_fine_mix_plausibility(result: Dict[str, Any], user_description: str)
     if sacks <= 0.0:
         return
 
+    partida = result.get("partida") if isinstance(result.get("partida"), dict) else {}
+    unit = _normalize_unit(str(partida.get("unit") or partida.get("unidad") or ""))
     notes = result.setdefault("notas_adaptacion", [])
+
+    # Calibración volumétrica para elementos en und/pza
+    if unit in ("und", "pza", "pieza"):
+        vol = extract_discrete_volume_m3(user_description) or extract_discrete_volume_m3(
+            str(partida.get("description") or partida.get("descripcion") or "")
+        )
+        if vol is None and is_linear_element(user_description):
+            length = extract_linear_length_m(user_description) or extract_linear_length_m(
+                str(partida.get("description") or partida.get("descripcion") or "")
+            )
+            if length:
+                # Dintel o viga menor: sección típica ~0.12m x 0.07m = 0.0084 m3/ml
+                vol = round(length * 0.0084, 5)
+
+        if vol and vol > 0.0:
+            expected_sacks = round(vol * 10.6, 4)
+            # Si el LLM devolvió un valor discordante por orden de magnitud (ej. 0.50 sacos vs 0.07 sacos)
+            if sacks > expected_sacks * 1.8 or sacks < expected_sacks * 0.4:
+                cement["cantidad"] = expected_sacks
+                if isinstance(notes, list):
+                    notes.append(
+                        f"Dosificación volumétrica unitaria: cemento calibrado de {sacks:.4f} a {expected_sacks:.4f} sacos "
+                        f"para elemento de {vol:.5f} m3 en unidad '{unit}'."
+                    )
+                sacks = expected_sacks
+
     low, high = _SAND_PER_SACK_RANGE_M3
     if sand is not None:
         qty = float(sand.get("cantidad") or 0.0)

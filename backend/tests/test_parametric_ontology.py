@@ -9,6 +9,9 @@ from app.services.ai_apu_service.domain_rules.parametric_ontology import (
     evaluate_parametric_ontology_contract,
     ONTOLOGY_REGISTRY,
 )
+from app.services.ai_apu_service.domain_rules.structural_requirements import (
+    enforce_fine_mix_plausibility,
+)
 from app.services.apu_input_validator import validate_rag_signals
 
 
@@ -139,6 +142,106 @@ class TestParametricOntology(unittest.TestCase):
         query = "Pintura en losas con pintura impermeabilizante en exteriores todo incluido unidad m2"
         res = validate_rag_signals(query, candidates=None)
         self.assertIsNone(res)
+
+    def test_dintel_und_missing_dimensions(self) -> None:
+        """Caso del usuario: dintel en unidad und sin dimensiones debe pedir dimensiones físicas y mezcla."""
+        query = "Construcción de dintel para puertas con mezcla de arena-cemento elaborada manualmente En interiores unidad und"
+        result = evaluate_parametric_ontology_contract(query, "und")
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result["status"], "clarification_needed")
+        self.assertEqual(result["_internal_code"], "ONTOLOGY_MISSING_DIMENSIONES_SECCION")
+        self.assertTrue(len(result["options"]) >= 3)
+        self.assertTrue(any("0.90 m x 15 cm x 5 cm" in opt for opt in result["options"]))
+
+    def test_dintel_und_with_dimensions_passes(self) -> None:
+        """Dintel en unidad und con dimensiones y mezcla explicitadas pasa limpiamente."""
+        query = "Construcción de dintel para puertas con mezcla arena-cemento 0.90 m x 15 cm x 5 cm unidad und"
+        result = evaluate_parametric_ontology_contract(query, "und")
+        self.assertIsNone(result)
+
+    def test_dintel_und_with_range_dimensions_passes(self) -> None:
+        """Dintel en unidad und con especificación de rango dimensional pasa limpiamente."""
+        query = "Construcción de dintel para puertas de entre 0.8 a 1.00 m con ancho entre 0.10 y 0.15 de ancho y alto de 5 cm unidad und"
+        result = evaluate_parametric_ontology_contract(query, "und")
+        self.assertIsNone(result)
+
+    def test_porton_metalico_missing_dimensions(self) -> None:
+        """Portón metálico en unidad und sin dimensiones exige dimensiones."""
+        query = "Fabricación e instalación de portón metálico corredizo en lámina estriada unidad und"
+        result = evaluate_parametric_ontology_contract(query, "und")
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result["status"], "clarification_needed")
+        self.assertEqual(result["_internal_code"], "ONTOLOGY_MISSING_DIMENSIONES_PORTON_REJA")
+        self.assertTrue(any("Portón Corredizo" in opt for opt in result["options"]))
+
+    def test_generador_electrico_missing_capacity(self) -> None:
+        """Generador eléctrico / planta eléctrica sin kVA exige capacidad."""
+        query = "Suministro e instalación de planta eléctrica a gasoil con transferencia automática unidad und"
+        result = evaluate_parametric_ontology_contract(query, "und")
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result["status"], "clarification_needed")
+        self.assertEqual(result["_internal_code"], "ONTOLOGY_MISSING_CAPACIDAD_KVA")
+        self.assertTrue(any("kVA" in opt for opt in result["options"]))
+
+    def test_breaker_missing_poles_amps(self) -> None:
+        """Breaker termomagnético sin polos o amperaje exige especificación."""
+        query = "Suministro e instalación de interruptor termomagnético en tablero principal unidad pza"
+        result = evaluate_parametric_ontology_contract(query, "pza")
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result["status"], "clarification_needed")
+        self.assertEqual(result["_internal_code"], "ONTOLOGY_MISSING_POLOS_Y_AMPERAJE")
+        self.assertTrue(any("2 x" in opt or "1 x" in opt or "3 x" in opt for opt in result["options"]))
+
+    def test_enforce_fine_mix_plausibility_dintel_volumetric(self) -> None:
+        """
+        Verifica que enforce_fine_mix_plausibility calibre automáticamente el cemento
+        cuando el LLM produce un valor sobredimensionado (0.50 sacos) para un dintel discreto
+        de dimensiones reales (0.90 m x 15 cm x 5 cm -> V=0.00675 m3 -> 0.0716 sacos).
+        """
+        result = {
+            "partida": {
+                "unit": "und",
+                "description": "Construcción de dintel para puertas con mezcla arena-cemento 0.90 m x 15 cm x 5 cm"
+            },
+            "materials": [
+                {
+                    "descripcion": "CEMENTO PORTLAND GRIS TIPO I",
+                    "unidad": "saco",
+                    "cantidad": 0.50,
+                    "precio_unitario": 9.5
+                },
+                {
+                    "descripcion": "ARENA LAVADA",
+                    "unidad": "m3",
+                    "cantidad": 0.05,
+                    "precio_unitario": 28.0
+                },
+                {
+                    "descripcion": "AGUA",
+                    "unidad": "m3",
+                    "cantidad": 0.015,
+                    "precio_unitario": 5.0
+                }
+            ],
+            "notas_adaptacion": []
+        }
+        user_desc = "Construcción de dintel para puertas con mezcla arena-cemento 0.90 m x 15 cm x 5 cm unidad und"
+        enforce_fine_mix_plausibility(result, user_desc)
+
+        cement = next(m for m in result["materials"] if "CEMENTO" in m["descripcion"])
+        sand = next(m for m in result["materials"] if "ARENA" in m["descripcion"])
+        water = next(m for m in result["materials"] if "AGUA" in m["descripcion"])
+
+        # Cemento debe estar calibrado a ~0.0716 sacos (no 0.50)
+        self.assertAlmostEqual(cement["cantidad"], 0.0716, places=3)
+        # Arena debe estar acotada proporcionalmente al saco calibrado
+        self.assertLessEqual(sand["cantidad"], 0.0716 * 0.16)
+        # Agua acotada
+        self.assertLessEqual(water["cantidad"], 0.0716 * 0.05)
 
 
 if __name__ == "__main__":
