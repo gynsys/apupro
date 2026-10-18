@@ -3,8 +3,78 @@ import re
 import unicodedata
 from typing import Any, Dict, List, Optional, Tuple
 from app.core.logging import logger
-from app.services.ai_apu_service.domain_rules.discordant_pruning import deduplicate_labor_items
 from app.services.element_geometry import extract_linear_length_m, is_linear_element
+
+
+def _strip_accents_labor(s: str) -> str:
+    """Elimina tildes y diacríticos para normalización de cargos de mano de obra."""
+    if not s:
+        return ""
+    nfkd = unicodedata.normalize("NFKD", s)
+    return "".join(c for c in nfkd if not unicodedata.combining(c))
+
+
+def normalize_labor_role_key(desc: str) -> str:
+    """
+    Normaliza la descripción de un cargo de mano de obra eliminando sufijos de tabulador
+    ('-N1' a '-N9', '- TABULADOR CONSTRUCCION', puntos de abreviatura '1RA.') para detectar
+    duplicados exactos de oficio cuando una partida histórica mezcla dos tabuladores.
+    """
+    if not desc or not isinstance(desc, str):
+        return ""
+    up = _strip_accents_labor(desc).upper().strip()
+    up = re.sub(r"\s*-\s*TABULADOR\s+CONSTRUCCION\b", "", up)
+    up = re.sub(r"\bTABULADOR\s+CONSTRUCCION\b", "", up)
+    up = re.sub(r"\s*-\s*N\d+\b", "", up)
+    up = re.sub(r"\bN\d+\b", "", up)
+    up = re.sub(r"\b(1RA|2DA|3RA)\.", r"\1", up)
+    up = re.sub(r"[^A-Z0-9\s/()]", " ", up)
+    up = re.sub(r"\s{2,}", " ", up).strip()
+    return up
+
+
+def deduplicate_labor_items(
+    labors: List[Dict[str, Any]],
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """
+    Deduplica cargos de mano de obra equivalentes (ej. 'PLOMERO DE 1RA -N5' y 'PLOMERO DE 1ra.')
+    conservando una única línea por oficio y priorizando el registro con mayor salario integral (jornal + bono).
+    Retorna (lista_limpia, lista_purgados).
+    """
+    if not isinstance(labors, list) or not labors:
+        return [], []
+
+    by_role: Dict[str, Dict[str, Any]] = {}
+    role_order: List[str] = []
+    purged: List[Dict[str, Any]] = []
+
+    for item in labors:
+        if not isinstance(item, dict):
+            continue
+        desc = str(item.get("descripcion") or "").strip()
+        role_key = normalize_labor_role_key(desc)
+        if not role_key:
+            clean = re.sub(r"[^A-Za-z0-9]", "", str(desc).upper())
+            role_key = clean or f" IDX_{len(role_order)}"
+
+        jornal = float(item.get("jornal") or 0.0)
+        bono = float(item.get("bono") or 0.0)
+        total_comp = jornal + bono
+
+        if role_key not in by_role:
+            by_role[role_key] = item
+            role_order.append(role_key)
+        else:
+            existing = by_role[role_key]
+            ex_comp = float(existing.get("jornal") or 0.0) + float(existing.get("bono") or 0.0)
+            if total_comp > ex_comp:
+                purged.append(existing)
+                by_role[role_key] = item
+            else:
+                purged.append(item)
+
+    clean_list = [by_role[k] for k in role_order]
+    return clean_list, purged
 
 
 # ---------------------------------------------------------------------------

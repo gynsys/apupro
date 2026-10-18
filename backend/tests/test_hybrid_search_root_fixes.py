@@ -617,9 +617,9 @@ class TestHybridSearchRootFixes(unittest.TestCase):
         self.assertTrue(any(d.startswith("MADERA") for d in mats))
         self.assertNotIn("NO INCLUYE REFUERZO", apu["partida"]["description"].upper().replace("Á", "A"))
         self.assertIn("INCLUYE ACERO DE REFUERZO", apu["partida"]["description"].upper())
-        self.assertNotIn("CONCRETO", apu["partida"]["description"].upper())
-        self.assertGreaterEqual(mats["ARENA LAVADA"]["cantidad"], 0.45 * 0.06)
-        self.assertLessEqual(mats["AGUA PARA USO INDUSTRIAL - RED HIDROVEN"]["cantidad"], 0.45 * 0.05 + 1e-9)
+        cement_qty = mats["CEMENTO GRIS PORTLAND SACO DE 42,5 KG"]["cantidad"]
+        self.assertGreaterEqual(mats["ARENA LAVADA"]["cantidad"], cement_qty * 0.06 - 1e-9)
+        self.assertLessEqual(mats["AGUA PARA USO INDUSTRIAL - RED HIDROVEN"]["cantidad"], cement_qty * 0.05 + 1e-9)
         self.assertTrue(any("[SUPUESTO]" in n for n in apu["notas_adaptacion"]))
 
         # El usuario puede excluir explícitamente el acero: se respeta

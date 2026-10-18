@@ -2,6 +2,7 @@ import re
 import unicodedata
 from typing import Any, Dict, List, Set, Tuple
 from app.core.logging import logger
+from app.services.apu_labor_calibrator import deduplicate_labor_items, normalize_labor_role_key
 
 
 def _strip_accents(s: str) -> str:
@@ -69,68 +70,6 @@ def _normalize_text_key(text: str) -> str:
         return ""
     clean = re.sub(r'[^A-Za-z0-9]', '', str(text).upper())
     return clean
-
-
-def normalize_labor_role_key(desc: str) -> str:
-    """
-    Normaliza la descripción de un cargo de mano de obra eliminando sufijos de tabulador
-    ('-N1' a '-N9', '- TABULADOR CONSTRUCCION', puntos de abreviatura '1RA.') para detectar
-    duplicados exactos de oficio cuando una partida histórica mezcla dos tabuladores.
-    """
-    if not desc or not isinstance(desc, str):
-        return ""
-    up = _strip_accents(desc).upper().strip()
-    up = re.sub(r"\s*-\s*TABULADOR\s+CONSTRUCCION\b", "", up)
-    up = re.sub(r"\bTABULADOR\s+CONSTRUCCION\b", "", up)
-    up = re.sub(r"\s*-\s*N\d+\b", "", up)
-    up = re.sub(r"\bN\d+\b", "", up)
-    up = re.sub(r"\b(1RA|2DA|3RA)\.", r"\1", up)
-    up = re.sub(r"[^A-Z0-9\s/()]", " ", up)
-    up = re.sub(r"\s{2,}", " ", up).strip()
-    return up
-
-
-def deduplicate_labor_items(
-    labors: List[Dict[str, Any]],
-) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """
-    Deduplica cargos de mano de obra equivalentes (ej. 'PLOMERO DE 1RA -N5' y 'PLOMERO DE 1ra.')
-    conservando una única línea por oficio y priorizando el registro con mayor salario integral (jornal + bono).
-    Retorna (lista_limpia, lista_purgados).
-    """
-    if not isinstance(labors, list) or not labors:
-        return [], []
-
-    by_role: Dict[str, Dict[str, Any]] = {}
-    role_order: List[str] = []
-    purged: List[Dict[str, Any]] = []
-
-    for item in labors:
-        if not isinstance(item, dict):
-            continue
-        desc = str(item.get("descripcion") or "").strip()
-        role_key = normalize_labor_role_key(desc)
-        if not role_key:
-            role_key = _normalize_text_key(desc) or f" IDX_{len(role_order)}"
-
-        jornal = float(item.get("jornal") or 0.0)
-        bono = float(item.get("bono") or 0.0)
-        total_comp = jornal + bono
-
-        if role_key not in by_role:
-            by_role[role_key] = item
-            role_order.append(role_key)
-        else:
-            existing = by_role[role_key]
-            ex_comp = float(existing.get("jornal") or 0.0) + float(existing.get("bono") or 0.0)
-            if total_comp > ex_comp:
-                purged.append(existing)
-                by_role[role_key] = item
-            else:
-                purged.append(item)
-
-    clean_list = [by_role[k] for k in role_order]
-    return clean_list, purged
 
 
 _PIPE_ACTIVITY_PATTERNS: List[str] = [
@@ -352,12 +291,47 @@ def enforce_discordant_inputs_purging(
         r"\b(?:ANDAMIO|ALTURA|COLGANTE|SUSPENDID[OA]|EN\s+TECHO|BAJO\s+LOSA|AERE[OA])\b",
         desc_upper,
     ))
+    is_labor_only = bool(re.search(
+        r"\b(?:SOLO\s+MANO\s+DE\s+OBRA|UNICAMENTE\s+MANO\s+DE\s+OBRA|SIN\s+MATERIALES?|SOLO\s+MANO\s+OBRA)\b",
+        desc_upper,
+    ))
+    is_civil_or_flooring = bool(re.search(
+        r"\b(?:sobrepiso|contrapiso|concreto|vaciado|losa|pavimento|pared|bloque|mamposteria|friso|revoque|dintel|machon|zapata|mortero|radier|acera|brocal)\b",
+        desc_lower,
+    ))
+    explicit_painting = bool(re.search(
+        r"\b(?:pintura|pintar|esmalte|caucho|fondo\s+antialcalino|pasta\s+profesional|barniz|encamisado)\b",
+        desc_lower,
+    ))
+    explicit_plumbing = bool(re.search(
+        r"\b(?:tuberia|tubo|ppr|cpvc|aguas\s+blancas|aguas\s+negras|aguas\s+servidas|plomeria|griferia|sanitari[ao])\b",
+        desc_lower,
+    ))
+    explicit_electrical = bool(re.search(
+        r"\b(?:electric(?:o|a|idad)|conduit|emt|cable|tablero|breaker|tomacorriente|iluminacion)\b",
+        desc_lower,
+    ))
 
     # -------------------------------------------------------------------------
     # 1. PODA EN MATERIALES
     # -------------------------------------------------------------------------
     materials = result.get("materials", [])
     if isinstance(materials, list) and materials:
+        if is_labor_only:
+            for mat in materials:
+                if not isinstance(mat, dict):
+                    continue
+                mat_desc = str(mat.get("descripcion", "")).strip()
+                logger.info("[DiscordantPruning] Purgado material (%s) en partida de SOLO MANO DE OBRA", mat_desc)
+                pruning_trace["insumos_purgados"].append({
+                    "descripcion": mat_desc,
+                    "codigo": mat.get("codigo"),
+                    "motivo": "Partida solicitada expresamente como 'Solo mano de obra' (sin suministro de materiales)",
+                    "regla": "SOLO_MANO_DE_OBRA",
+                })
+            result["materials"] = []
+            materials = []
+
         clean_materials: List[Dict[str, Any]] = []
         seen_mat_keys: Set[str] = set()
 
@@ -481,6 +455,18 @@ def enforce_discordant_inputs_purging(
                         "codigo": mat.get("codigo"),
                         "motivo": "Material de canalización eléctrica incompatible con partida de agua potable/sanitaria",
                         "regla": "DISCIPLINA_AJENA_SANITARIAS"
+                    })
+                    continue
+
+            # Poda de materiales de pintura en partidas de obra civil sin pintura solicitada
+            if is_civil_or_flooring and not explicit_painting:
+                if re.search(r"\b(?:PINTURA|ESMALTE|FONDO\s+ANTIALCALINO|FONDO\s+ANTICORROSIVO|FONDO\s+DE\s+HERRERIA|PASTA\s+PROFESIONAL|BARNIZ|OLEO|THINNER|TINNER|SOLVENTE\s+PARA\s+PINTURA)\b", mat_desc_upper):
+                    logger.info("[DiscordantPruning] Purgado material de pintura discordante en obra civil: %s", mat_desc)
+                    pruning_trace["insumos_purgados"].append({
+                        "descripcion": mat_desc,
+                        "codigo": mat.get("codigo"),
+                        "motivo": "Material de acabado/pintura incompatible con partida de obra civil/albañilería sin pintura solicitada",
+                        "regla": "MATERIAL_DISCORDANTE_PINTURA",
                     })
                     continue
 
@@ -663,6 +649,18 @@ def enforce_discordant_inputs_purging(
                     })
                     continue
 
+            # Poda de herramientas de pintura en obras civiles / albañilería / sobrepiso sin pintura solicitada
+            if is_civil_or_flooring and not explicit_painting:
+                if re.search(r"\b(?:BROCHA|RODILLO|ESPATULA|PISTOLA\s+DE\s+PINTAR|BANDEJA\s+PARA\s+PINTURA|EXTENSI[OÓ]N\s+PARA\s+RODILLO|LIJADORA\s+DE\s+PARED)\b", eq_desc_upper):
+                    logger.info("[DiscordantPruning] Purgada herramienta de pintura discordante en obra civil: %s", eq_desc)
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Herramienta/equipo de pintura incompatible con partida de sobrepiso/concreto/albañilería",
+                        "regla": "EQUIPO_DISCORDANTE_PINTURA",
+                    })
+                    continue
+
             seen_eq_keys.add(eq_key)
             clean_equipments.append(eq)
 
@@ -682,10 +680,8 @@ def enforce_discordant_inputs_purging(
 
         result["equipments"] = clean_equipments
 
-    # -------------------------------------------------------------------------
-    # 2.5. DEDUPLICACIÓN DE MANO DE OBRA (DOBLE TABULADOR / ROLES EQUIVALENTES)
-    # -------------------------------------------------------------------------
-    labors = result.get("labors", [])
+    labors_key = "labors" if "labors" in result else ("labor" if "labor" in result else "labors")
+    labors = result.get(labors_key, [])
     if isinstance(labors, list) and labors:
         clean_labors, purged_labors = deduplicate_labor_items(labors)
         if purged_labors:
@@ -720,7 +716,92 @@ def enforce_discordant_inputs_purging(
                     retained_labors.append(l_item)
             clean_labors = retained_labors
 
-        result["labors"] = clean_labors
+        # Poda de oficios de pintura en obras civiles / albañilería / sobrepisos
+        if is_civil_or_flooring and not explicit_painting:
+            retained_labors = []
+            for l_item in clean_labors:
+                l_up = _strip_accents(str(l_item.get("descripcion") or "")).upper()
+                if re.search(r"\b(?:PINTOR|MAESTRO\s+PINTOR|AYUDANTE\s+PINTOR)\b", l_up):
+                    logger.info("[DiscordantPruning] Purgado oficio de pintura (%s) en partida de obra civil", l_up)
+                    pruning_trace["mano_obra_purgada"].append({
+                        "descripcion": str(l_item.get("descripcion") or ""),
+                        "codigo": l_item.get("codigo"),
+                        "motivo": "Oficio de pintura incompatible con partida de obra civil/albañilería/sobrepiso sin pintura solicitada",
+                        "regla": "MANO_OBRA_DISCORDANTE_PINTURA",
+                    })
+                else:
+                    retained_labors.append(l_item)
+            clean_labors = retained_labors
+
+            # Si tras podar oficios la cuadrilla se quedó sin oficial calificado de albañilería
+            has_civil_craftsman = any(
+                re.search(r"\b(?:ALBA[NÑ]IL|MAESTRO\s+DE\s+OBRA|CARPINTERO|CABILLERO)\b", _strip_accents(str(l.get("descripcion") or "")).upper())
+                for l in clean_labors
+            )
+            if not has_civil_craftsman and clean_labors:
+                clean_labors.insert(0, {
+                    "id": "mo-ia-albanil-1ra",
+                    "codigo": "MO-ALB01",
+                    "descripcion": "ALBAÑIL DE 1RA",
+                    "unidad": "día",
+                    "cantidad": 1.0,
+                    "jornal": 18.0,
+                    "bono": 0.0,
+                    "origen": "historico",
+                    "nota_calculo": "Oficial albañil requerido para ejecución técnica de sobrepiso/albañilería tras poda de oficio discordante.",
+                })
+
+        # Poda de oficios de plomería en obras civiles puras sin instalaciones sanitarias
+        if is_civil_or_flooring and not explicit_plumbing:
+            retained_labors = []
+            for l_item in clean_labors:
+                l_up = _strip_accents(str(l_item.get("descripcion") or "")).upper()
+                if re.search(r"\b(?:PLOMERO|MAESTRO\s+PLOMERO|TUBERO\s+SANITARIO)\b", l_up):
+                    pruning_trace["mano_obra_purgada"].append({
+                        "descripcion": str(l_item.get("descripcion") or ""),
+                        "codigo": l_item.get("codigo"),
+                        "motivo": "Oficio de plomería incompatible con obra civil sin instalaciones sanitarias",
+                        "regla": "MANO_OBRA_DISCORDANTE_PLOMERIA",
+                    })
+                else:
+                    retained_labors.append(l_item)
+            clean_labors = retained_labors
+
+        # Poda de oficios de electricidad en obras civiles puras sin instalaciones eléctricas
+        if is_civil_or_flooring and not explicit_electrical:
+            retained_labors = []
+            for l_item in clean_labors:
+                l_up = _strip_accents(str(l_item.get("descripcion") or "")).upper()
+                if re.search(r"\b(?:ELECTRICISTA|MAESTRO\s+ELECTRICISTA|LINIERO)\b", l_up):
+                    pruning_trace["mano_obra_purgada"].append({
+                        "descripcion": str(l_item.get("descripcion") or ""),
+                        "codigo": l_item.get("codigo"),
+                        "motivo": "Oficio de electricidad incompatible con obra civil sin instalaciones eléctricas",
+                        "regla": "MANO_OBRA_DISCORDANTE_ELECTRICIDAD",
+                    })
+                else:
+                    retained_labors.append(l_item)
+            clean_labors = retained_labors
+
+        # Poda de oficios de obra civil en partidas exclusivas de pintura
+        if explicit_painting and not is_civil_or_flooring:
+            retained_labors = []
+            for l_item in clean_labors:
+                l_up = _strip_accents(str(l_item.get("descripcion") or "")).upper()
+                if re.search(r"\b(?:ALBA[NÑ]IL|CABILLERO|CARPINTERO\s+DE\s+OBRA|PLOMERO|ELECTRICISTA)\b", l_up):
+                    pruning_trace["mano_obra_purgada"].append({
+                        "descripcion": str(l_item.get("descripcion") or ""),
+                        "codigo": l_item.get("codigo"),
+                        "motivo": "Oficio ajeno incompatible con partida exclusiva de pintura",
+                        "regla": "MANO_OBRA_DISCORDANTE_PINTURA_PURA",
+                    })
+                else:
+                    retained_labors.append(l_item)
+            clean_labors = retained_labors
+
+        result[labors_key] = clean_labors
+        if "labor" in result and labors_key != "labor":
+            result["labor"] = clean_labors
 
     # -------------------------------------------------------------------------
     # 3. DEDUPLICACIÓN Y FILTRADO DE ADVERTENCIAS

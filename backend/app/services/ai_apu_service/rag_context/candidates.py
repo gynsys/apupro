@@ -72,10 +72,55 @@ INCOMPATIBLE_POLARITY_RULES: List[Tuple[Set[str], Set[str], float]] = [
         {"ppr", "polipropileno", "cpvc", "agua potable", "aguas blancas", "aguas claras", "plomeria", "fontaneria", "sanitarias"},
         {"aire acondicionado", "split", "fancoil", "chiller", "condensadora", "evaporadora", "ducteria", "climatizacion"},
         0.50
+    ),
+    # 11. Pintura y Recubrimientos VS Obra Civil Pesada / Concreto / Mampostería / Pisos / Sobrepisos
+    (
+        {
+            "pintura", "pinturas", "pintar", "esmalte", "esmaltes", "caucho interior",
+            "caucho exterior", "fondo antialcalino", "pasta profesional", "encamisado",
+            "barniz", "oleo", "brocha", "rodillo", "laca"
+        },
+        {
+            "sobrepiso", "sobrepisos", "contrapiso", "contrapisos", "vaciado de concreto",
+            "vaciado", "losa de concreto", "pavimento", "pared de bloque", "mamposteria",
+            "dintel", "machon", "zapata", "pedestal", "viga de corona", "friso base",
+            "nivelacion de piso", "radier"
+        },
+        0.60
+    ),
+    # 12. Pintura y Recubrimientos VS Instalaciones Sanitarias / Plomería / Tuberías
+    (
+        {
+            "pintura", "pinturas", "pintar", "esmalte", "caucho", "fondo antialcalino",
+            "pasta profesional", "encamisado", "barniz"
+        },
+        {
+            "tuberia de agua", "ppr", "cpvc", "agua potable", "aguas blancas", "aguas negras",
+            "aguas servidas", "plomeria", "griferia", "valvula", "llave de paso", "sanitaria"
+        },
+        0.60
+    ),
+    # 13. Pintura y Recubrimientos VS Instalaciones Eléctricas / Fuerza / Cableado
+    (
+        {
+            "pintura", "pinturas", "pintar", "esmalte", "caucho", "fondo antialcalino",
+            "pasta profesional", "encamisado", "barniz"
+        },
+        {
+            "instalaciones electricas", "cable electrico", "conduit", "emt", "tablero electrico",
+            "breaker", "tomacorriente", "acometida", "banco de ductos", "subestacion"
+        },
+        0.60
     )
 ]
 
 TECHNICAL_DISCIPLINE_CLUSTERS: Dict[str, Set[str]] = {
+    "PINTURAS_Y_RECUBRIMIENTOS": {
+        "pintura", "pinturas", "pintar", "esmalte", "esmaltes", "caucho interior",
+        "caucho exterior", "fondo antialcalino", "fondo anticorrosivo", "fondo de herreria",
+        "pasta profesional", "encamisado", "barniz", "oleo", "brocha", "rodillo",
+        "hidrolavado", "pintado"
+    },
     "INSTALACIONES_SANITARIAS_AGUA": {
         "tuberia sanitaria", "tuberia de agua", "ppr", "polipropileno", "cpvc",
         "aguas blancas", "aguas claras", "agua potable", "aguas servidas", "aguas negras",
@@ -117,13 +162,56 @@ TECHNICAL_DISCIPLINE_CLUSTERS: Dict[str, Set[str]] = {
     "OBRA_CIVIL_ALBANILERIA": {
         "pared de bloque", "friso", "revoque", "losa", "concreto", "viga de concreto",
         "columna de concreto", "zapata", "mamposteria", "piso de granito", "ceramica", "porcelanato",
-        "dintel", "dinteles", "machon", "machones", "viga de corona", "media cana", "mortero", "gotero"
+        "dintel", "dinteles", "machon", "machones", "viga de corona", "media cana", "mortero", "gotero",
+        "sobrepiso", "sobrepisos", "contrapiso", "contrapisos", "vaciado de concreto",
+        "nivelacion de piso", "radier", "carpeta de nivelacion", "afinado de piso"
     },
     "PAVIMENTOS_VIALIDAD": {
         "pavimento", "pavimentos", "acera", "aceras", "brocal", "brocales",
         "asfalto", "carpeta asfaltica", "bacheo", "pavimento de concreto"
     }
 }
+
+
+def extract_technical_disciplines(text: str) -> Set[str]:
+    """
+    Identifica el conjunto de disciplinas técnicas presentes en una descripción técnica.
+    Aplica desambiguación de sustrato:
+    Si la partida es primordialmente de PINTURAS_Y_RECUBRIMIENTOS (acción o material rector de acabado
+    como pintura, barniz, fondo antialcalino, esmalte, pasta profesional), las menciones a
+    sustratos de concreto, paredes de bloque o estructuras metálicas son la superficie soporte
+    y NO deben clasificar la partida en OBRA_CIVIL_ALBANILERIA ni ESTRUCTURAS_METALICAS, evitando
+    falsos positivos cruzados en el scoring RAG y contratos de especialidad.
+    """
+    if not text or not isinstance(text, str):
+        return set()
+    t_lower = text.lower()
+    disciplines: Set[str] = set()
+    for disc_name, terms in TECHNICAL_DISCIPLINE_CLUSTERS.items():
+        if any(term in t_lower for term in terms):
+            disciplines.add(disc_name)
+
+    if "PINTURAS_Y_RECUBRIMIENTOS" in disciplines:
+        paint_action_patterns = [
+            r"\bpintura\b",
+            r"\bpinturas\b",
+            r"\bpintar\b",
+            r"\baplicaci[oó]n\s+de\s+pintura\b",
+            r"\bfondo\s+antialcalino\b",
+            r"\bfondo\s+anticorrosivo\b",
+            r"\bpasta\s+profesional\b",
+            r"\bencamisado\b",
+            r"\bbarniz\b",
+            r"\besmalte\b",
+            r"\bcaucho\b",
+        ]
+        is_primarily_paint = any(bool(re.search(pat, t_lower)) for pat in paint_action_patterns)
+        if is_primarily_paint:
+            disciplines.discard("OBRA_CIVIL_ALBANILERIA")
+            disciplines.discard("ESTRUCTURAS_METALICAS")
+            disciplines.discard("PAVIMENTOS_VIALIDAD")
+
+    return disciplines
 
 CORE_EQUIPMENT_KEYWORDS: List[str] = [
     "bomba",
@@ -220,15 +308,8 @@ def _apply_technical_scoring_adjustments_detailed(
             adjustment_details.append(f"Penalización por polaridad técnica opuesta: -{penalty:.2f}")
 
     # 2. Afinidad y Discordancia por Disciplina Tecnológica
-    q_disciplines: Set[str] = set()
-    for disc_name, terms in TECHNICAL_DISCIPLINE_CLUSTERS.items():
-        if any(term in q_lower for term in terms):
-            q_disciplines.add(disc_name)
-
-    i_disciplines: Set[str] = set()
-    for disc_name, terms in TECHNICAL_DISCIPLINE_CLUSTERS.items():
-        if any(term in i_lower for term in terms):
-            i_disciplines.add(disc_name)
+    q_disciplines: Set[str] = extract_technical_disciplines(query_text)
+    i_disciplines: Set[str] = extract_technical_disciplines(item_desc)
 
     if q_disciplines:
         if i_disciplines:

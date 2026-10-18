@@ -12,6 +12,14 @@ from app.services.apu_labor_calibrator import (
     balance_crew_and_equipments,
     balance_crew_specialties,
 )
+from app.services.ai_apu_service.rag_context.candidates import (
+    _apply_technical_scoring_adjustments_detailed,
+    extract_technical_disciplines,
+)
+from app.services.ai_apu_service.generator.anchored_generator import (
+    apply_specialty_coherence_contract_to_base,
+    evaluate_specialty_and_system_coherence,
+)
 
 
 class TestDiscordantPruningAndCalibration(unittest.TestCase):
@@ -218,6 +226,128 @@ class TestDiscordantPruningAndCalibration(unittest.TestCase):
         specialist_names = [l["descripcion"] for l in balanced_labors]
         self.assertIn("PLOMERO DE 1RA", specialist_names)
         self.assertNotIn("ELECTRICISTA DE 1RA -N5", specialist_names)
+
+    def test_sobrepiso_purges_painters_brushes_and_spatulas(self) -> None:
+        """
+        Caso Real del Usuario (debug_apu_2026-10-18T01-03-23-325Z.json):
+        Para un sobrepiso de nivelación con concreto (Solo mano de obra):
+        1. Purgar oficios de pintor y maestro pintor.
+        2. Inyectar albañil de 1ra si no hay artesano de obra civil.
+        3. Purgar brochas y espátulas de pintura.
+        4. Purgar materiales por ser 'Solo mano de obra'.
+        """
+        description = "Construcción de sobrepiso de nivelacion con Concreto f'c=150 kg/cm² e=5.0 cm En interiores Solo mano de obra unidad m2"
+        apu_result: Dict[str, Any] = {
+            "materials": [
+                {"codigo": "MAT-PIN-01", "descripcion": "PINTURA DE CAUCHO INTERIOR", "cantidad": 0.05, "unidad": "gal"},
+            ],
+            "equipments": [
+                {"codigo": "HER010", "descripcion": "BROCHA PROFESIONAL 4\"", "cantidad": 1.0, "unidad": "dia"},
+                {"codigo": "HER011", "descripcion": "ESPATULA ANCHO = 4\"", "cantidad": 1.0, "unidad": "dia"},
+                {"codigo": "HER001", "descripcion": "HERRAMIENTAS MENORES", "cantidad": 1.0, "unidad": "dia"},
+            ],
+            "labors": [
+                {"codigo": "19-210", "descripcion": "PINTOR DE 1RA", "cantidad": 1.0, "unidad": "dia", "jornal": 18.0, "bono": 0.0},
+                {"codigo": "19-211", "descripcion": "MAESTRO PINTOR", "cantidad": 1.0, "unidad": "dia", "jornal": 22.0, "bono": 0.0},
+                {"codigo": "1-1.1", "descripcion": "OBRERO DE 1RA", "cantidad": 1.0, "unidad": "dia", "jornal": 14.0, "bono": 0.0},
+            ]
+        }
+
+        enforce_discordant_inputs_purging(
+            result=apu_result,
+            user_description=description,
+            base_apu={"partida_code": "EAP262", "descripcion": "PINTURA DE CAUCHO EN COLUMNAS DE CONCRETO"},
+        )
+
+        # 1. Materiales deben ser vacíos (Solo mano de obra)
+        self.assertEqual(len(apu_result["materials"]), 0)
+
+        # 2. Equipos no deben contener brocha ni espátula
+        eq_descs = [e["descripcion"] for e in apu_result["equipments"]]
+        self.assertNotIn("BROCHA PROFESIONAL 4\"", eq_descs)
+        self.assertNotIn("ESPATULA ANCHO = 4\"", eq_descs)
+        self.assertIn("HERRAMIENTAS MENORES", eq_descs)
+
+        # 3. Mano de obra no debe contener pintores y debe tener ALBAÑIL DE 1RA
+        mo_descs = [m["descripcion"] for m in apu_result["labors"]]
+        self.assertNotIn("PINTOR DE 1RA", mo_descs)
+        self.assertNotIn("MAESTRO PINTOR", mo_descs)
+        self.assertIn("ALBAÑIL DE 1RA", mo_descs)
+        self.assertIn("OBRERO DE 1RA", mo_descs)
+
+        # 4. Traza de depuración
+        trace = apu_result["debug_pruning_trace"]
+        self.assertTrue(any(p.get("regla") == "MANO_OBRA_DISCORDANTE_PINTURA" for p in trace["mano_obra_purgada"]))
+        self.assertTrue(any(p.get("regla") == "EQUIPO_DISCORDANTE_PINTURA" for p in trace["equipos_purgados"]))
+        self.assertTrue(any(p.get("regla") == "SOLO_MANO_DE_OBRA" for p in trace["insumos_purgados"]))
+
+    def test_candidates_rescoring_paint_vs_sobrepiso(self) -> None:
+        """
+        Valida que el RAG penalice drásticamente a un candidato de pintura (EAP262)
+        cuando la solicitud es de sobrepiso/concreto, y que su disciplina no sea OBRA_CIVIL_ALBANILERIA.
+        """
+        query = "Construcción de sobrepiso de nivelacion con Concreto f'c=150 kg/cm² e=5.0 cm En interiores Solo mano de obra unidad m2"
+        cand_desc = "PINTURA DE CAUCHO INTERIOR EN COLUMNAS DE CONCRETO APLICADO CON BROCHA. NO INCLUYE FONDO ANTIALCALINO"
+
+        q_discs = extract_technical_disciplines(query)
+        i_discs = extract_technical_disciplines(cand_desc)
+
+        self.assertIn("OBRA_CIVIL_ALBANILERIA", q_discs)
+        self.assertNotIn("PINTURAS_Y_RECUBRIMIENTOS", q_discs)
+
+        self.assertIn("PINTURAS_Y_RECUBRIMIENTOS", i_discs)
+        # Por desambiguación de sustrato, concreto no debe clasificar EAP262 como obra civil
+        self.assertNotIn("OBRA_CIVIL_ALBANILERIA", i_discs)
+
+        final_score, breakdown = _apply_technical_scoring_adjustments_detailed(
+            query_text=query,
+            item_desc=cand_desc,
+            current_score=1.0,
+            item_unit="m2"
+        )
+
+        # Debe recibir penalización de polaridad opuesta (-0.60) y conflicto de disciplina cruzada (-0.40)
+        self.assertLessEqual(final_score, 0.20)
+        details = " ".join(breakdown.get("detalles_ajustes", []))
+        self.assertIn("polaridad técnica opuesta", details)
+        self.assertIn("conflicto de disciplina tecnológica cruzada", details)
+
+    def test_specialty_coherence_contract_painting_base_decoupled_from_sobrepiso(self) -> None:
+        """
+        Valida que si EAP262 (Pintura de caucho) fuera evaluado como base para un sobrepiso:
+        1. evaluate_specialty_and_system_coherence retorne False.
+        2. apply_specialty_coherence_contract_to_base desancla materiales y equipos,
+           y purgue oficios de pintor de la cuadrilla base.
+        """
+        query = "Construcción de sobrepiso de nivelacion con Concreto f'c=150 kg/cm² e=5.0 cm En interiores Solo mano de obra unidad m2"
+        base_apu = {
+            "descripcion": "PINTURA DE CAUCHO INTERIOR EN COLUMNAS DE CONCRETO APLICADO CON BROCHA",
+            "materiales": [{"descripcion": "PINTURA DE CAUCHO"}],
+            "equipos": [
+                {"descripcion": "BROCHA 4\""},
+                {"descripcion": "HERRAMIENTAS MENORES"},
+            ],
+            "mano_obra": [
+                {"descripcion": "PINTOR DE 1RA"},
+                {"descripcion": "MAESTRO PINTOR"},
+                {"descripcion": "OBRERO DE 1RA"},
+            ]
+        }
+
+        is_coherent, reason = evaluate_specialty_and_system_coherence(query, base_apu)
+        self.assertFalse(is_coherent)
+
+        decoupled, coherent, decoupling_reason = apply_specialty_coherence_contract_to_base(base_apu, query)
+        self.assertFalse(coherent)
+        self.assertEqual(len(decoupled["materiales"]), 0)
+        self.assertEqual(len(decoupled["equipos"]), 1)
+        self.assertEqual(decoupled["equipos"][0]["descripcion"], "HERRAMIENTAS MENORES")
+
+        # La mano de obra no debe contener pintores
+        decoupled_mo = [m["descripcion"] for m in decoupled["mano_obra"]]
+        self.assertNotIn("PINTOR DE 1RA", decoupled_mo)
+        self.assertNotIn("MAESTRO PINTOR", decoupled_mo)
+        self.assertIn("OBRERO DE 1RA", decoupled_mo)
 
 
 if __name__ == "__main__":

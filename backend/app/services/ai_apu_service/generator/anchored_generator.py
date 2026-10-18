@@ -45,6 +45,7 @@ from app.services.ai_apu_service.rag_context.pruning import _prune_apu_for_promp
 from app.services.ai_apu_service.rag_context.candidates import (
     INCOMPATIBLE_POLARITY_RULES,
     TECHNICAL_DISCIPLINE_CLUSTERS,
+    extract_technical_disciplines,
 )
 
 _PRIMARY_SYSTEM_CATEGORIES: Tuple[str, ...] = (
@@ -110,14 +111,8 @@ def evaluate_specialty_and_system_coherence(
     b_lower = _strip_accents_upper(b_exp).lower()
 
     # 1. Coherencia de Disciplina Tecnológica (D_user vs D_base)
-    u_disciplines: Set[str] = {
-        disc for disc, terms in TECHNICAL_DISCIPLINE_CLUSTERS.items()
-        if any(term in u_lower for term in terms)
-    }
-    b_disciplines: Set[str] = {
-        disc for disc, terms in TECHNICAL_DISCIPLINE_CLUSTERS.items()
-        if any(term in b_lower for term in terms)
-    }
+    u_disciplines: Set[str] = extract_technical_disciplines(u_exp)
+    b_disciplines: Set[str] = extract_technical_disciplines(b_exp)
     if u_disciplines and b_disciplines and not (u_disciplines & b_disciplines):
         return (
             False,
@@ -166,9 +161,9 @@ def apply_specialty_coherence_contract_to_base(
     conservando únicamente la escala de rendimiento, cuadrilla y herramientas menores porcentuales.
     Asimismo:
     - Si es una partida de tubería, filtra preventivamente los equipos de la base que no
-      correspondan a la condición de montaje (EMBUTIDA vs ENTERRADA vs SUPERFICIAL_COLGANTE).
+       correspondan a la condición de montaje (EMBUTIDA vs ENTERRADA vs SUPERFICIAL_COLGANTE).
     - Si la solicitud especifica mortero de arena-cemento (sin concreto grueso), filtra preventivamente
-      la piedra picada y el vibrador de inmersión, preservando el acero de refuerzo en elementos a flexión.
+       la piedra picada y el vibrador de inmersión, preservando el acero de refuerzo en elementos a flexión.
     """
     if not pruned_base or not isinstance(pruned_base, dict):
         return {}, True, ""
@@ -181,6 +176,30 @@ def apply_specialty_coherence_contract_to_base(
             eq for eq in pruned_base.get("equipos", [])
             if isinstance(eq, dict) and "HERRAMIENTAS" in str(eq.get("descripcion", "")).upper()
         ]
+        # Purgar mano de obra especializada discordante perteneciente a la especialidad ajena de la base
+        base_desc = str(pruned_base.get("descripcion") or pruned_base.get("description") or "")
+        u_disciplines = extract_technical_disciplines(expand_technical_synonyms(user_description))
+        b_disciplines = extract_technical_disciplines(expand_technical_synonyms(base_desc))
+        base_labors = pruned_base.get("mano_obra", [])
+        if isinstance(base_labors, list):
+            generic_labors: List[Dict[str, Any]] = []
+            for mo in base_labors:
+                if not isinstance(mo, dict):
+                    continue
+                mo_desc = _strip_accents_upper(str(mo.get("descripcion") or ""))
+                is_discordant_specialist = False
+                if "PINTURAS_Y_RECUBRIMIENTOS" in b_disciplines and "PINTURAS_Y_RECUBRIMIENTOS" not in u_disciplines:
+                    if re.search(r"\b(?:PINTOR|MAESTRO\s+PINTOR)\b", mo_desc):
+                        is_discordant_specialist = True
+                if "INSTALACIONES_SANITARIAS_AGUA" in b_disciplines and "INSTALACIONES_SANITARIAS_AGUA" not in u_disciplines:
+                    if re.search(r"\b(?:PLOMERO|MAESTRO\s+PLOMERO|TUBERO)\b", mo_desc):
+                        is_discordant_specialist = True
+                if "CANALIZACIONES_E_INSTALACIONES_ELECTRICAS" in b_disciplines and "CANALIZACIONES_E_INSTALACIONES_ELECTRICAS" not in u_disciplines:
+                    if re.search(r"\b(?:ELECTRICISTA|MAESTRO\s+ELECTRICISTA|LINIERO)\b", mo_desc):
+                        is_discordant_specialist = True
+                if not is_discordant_specialist:
+                    generic_labors.append(mo)
+            decoupled["mano_obra"] = generic_labors
         return decoupled, False, reason
 
     u_up = _strip_accents_upper(user_description or "")
