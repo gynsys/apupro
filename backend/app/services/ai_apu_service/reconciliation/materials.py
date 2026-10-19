@@ -204,29 +204,35 @@ def _execute_material_reconciliation(result: Dict[str, Any], db: Session) -> Non
                 if not mat.get("codigo") or mat.get("codigo").startswith("m-") or mat.get("codigo").startswith("MAT-IA-"):
                     mat["codigo"] = "S/C"
 
-                # Investigar precio promedio en internet para el insumo faltante
+                # Investigar precio referencial en internet para el insumo faltante (HYP-2 / P0 #6)
                 mat_desc = mat.get("descripcion", "")
                 mat_unit = mat.get("unidad", "")
+                web_info = None
                 try:
                     web_info = research_material_web_price(mat_desc, mat_unit)
-                    if web_info and web_info.get("precio_promedio"):
-                        mat["precio_unitario"] = float(web_info["precio_promedio"])
-                        mat["precio_web_info"] = web_info
-                    else:
-                        pu = float(mat.get("precio_unitario") or 0.0)
-                        if pu <= 0:
-                            mat["precio_unitario"] = 10.0  # fallback mínimo referencial
                 except Exception as w_err:
                     logger.warning("Error al buscar precio web para material '%s': %s", mat_desc, w_err)
-                    pu = float(mat.get("precio_unitario") or 0.0)
+
+                pu = float(mat.get("precio_unitario") or 0.0)
+                if web_info and web_info.get("precio_promedio"):
+                    mat["precio_web_info"] = web_info
+                    web_price = float(web_info["precio_promedio"])
                     if pu <= 0:
-                        mat["precio_unitario"] = 10.0
+                        mat["precio_unitario"] = web_price
+                    clean_mat_name = (mat_desc or desc)[:50]
+                    result.setdefault("advertencias", []).append(
+                        f"[PRECIO_REFERENCIAL WEB] Insumo '{clean_mat_name}': precio referencial web "
+                        f"detectado (${web_price:.2f} USD/{mat_unit}). Cotice con distribuidores locales antes de presupuestar."
+                    )
+                else:
+                    if pu <= 0:
+                        mat["precio_unitario"] = 10.0  # fallback mínimo referencial
 
                 mat_trace["mantenidos_referencial"].append({
                     "descripcion": mat_desc or desc,
                     "unidad": mat_unit or str(mat.get("unidad") or ""),
                     "precio_referencial": float(mat.get("precio_unitario") or 0.0),
-                    "fuente_precio": "investigacion_web" if mat.get("precio_web_info") else "estimacion_llm",
+                    "fuente_precio": "investigacion_web" if (mat.get("precio_web_info") and pu <= 0) else "estimacion_llm",
                     "motivo": "Sin coincidencia en catálogo certificado de Costbase"
                 })
 

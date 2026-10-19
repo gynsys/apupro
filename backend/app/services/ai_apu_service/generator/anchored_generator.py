@@ -27,6 +27,7 @@ from app.services.ai_apu_service.domain_rules.structural_requirements import (
     align_description_with_requested_mix,
     enforce_fine_mix_plausibility,
     enforce_reinforcement_for_structural_elements,
+    enforce_frp_structural_safeguards,
 )
 from app.services.ai_apu_service.domain_rules.sanitize_partida import (
     _sanitize_partida_description,
@@ -528,6 +529,7 @@ Prefijo COVENIN: {effective_cov_prefix}
     if result.get("status") == "clarification_needed":
         if "options" not in result or not isinstance(result["options"], list):
             result["options"] = []
+        return result
 
     # Salvaguarda determinista de exclusiones de alcance explícitas
     _enforce_scope_exclusions(result, user_description)
@@ -559,6 +561,7 @@ Prefijo COVENIN: {effective_cov_prefix}
     align_description_with_requested_mix(result, user_description)
     enforce_reinforcement_for_structural_elements(result, user_description)
     enforce_fine_mix_plausibility(result, user_description)
+    enforce_frp_structural_safeguards(result, user_description)
 
     effective_base_for_heritage = (
         base_apu

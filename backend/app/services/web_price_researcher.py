@@ -4,6 +4,7 @@ Busca cotizaciones y listas de precios en internet para insumos de construcción
 que no se encuentran en el catálogo local de CostBase.
 """
 import re
+import time
 import logging
 from typing import Optional, Dict, Any, List
 try:
@@ -18,8 +19,13 @@ from app.services.llm_router import call_llm_json
 
 logger = logging.getLogger(__name__)
 
-# Caché en memoria para evitar consultas web repetidas durante la misma sesión
+# Caché en memoria para evitar consultas web repetidas durante la misma sesión (TTL 7 días)
 _WEB_PRICE_CACHE: Dict[str, Dict[str, Any]] = {}
+WEB_PRICE_CACHE_TTL_SECS = 86400 * 7
+
+# Límites de plausibilidad física para evitar aberraciones numéricas de la web
+MIN_PLAUSIBLE_PRICE_USD = 0.05
+MAX_PLAUSIBLE_PRICE_USD = 50000.0
 
 
 def _clean_search_query(description: str) -> str:
@@ -52,8 +58,13 @@ def research_material_web_price(description: str, unit: str = "") -> Optional[Di
 
     cache_key = f"{desc_clean.lower()}_{unit.lower()}"
     if cache_key in _WEB_PRICE_CACHE:
-        logger.info("[WEB_PRICE] Retornando precio desde caché para: %s", desc_clean)
-        return _WEB_PRICE_CACHE[cache_key]
+        cache_entry = _WEB_PRICE_CACHE[cache_key]
+        if isinstance(cache_entry, dict) and "data" in cache_entry:
+            if (time.time() - cache_entry.get("timestamp", 0.0)) < WEB_PRICE_CACHE_TTL_SECS:
+                logger.info("[WEB_PRICE] Retornando precio desde caché para: %s", desc_clean)
+                return cache_entry["data"]
+        elif isinstance(cache_entry, dict):
+            return cache_entry
 
     unit_hint = f"por {unit}" if unit else ""
     query = f"precio {desc_clean} {unit_hint} venezuela dolares".strip()
@@ -99,16 +110,23 @@ Responde estrictamente en formato JSON válido con la siguiente estructura:
         data = call_llm_json(prompt, use_case="cost360")
         if isinstance(data, dict):
             precio_prom = float(data.get("precio_promedio") or 0.0)
-            if precio_prom > 0:
-                result = {
-                    "precio_promedio": round(precio_prom, 2),
-                    "rango_min": round(float(data.get("rango_min") or precio_prom), 2),
-                    "rango_max": round(float(data.get("rango_max") or precio_prom), 2),
-                    "resumen": str(data.get("resumen") or "Cotización promedio de mercado web").strip()
-                }
-                _WEB_PRICE_CACHE[cache_key] = result
-                logger.info("[WEB_PRICE] Precio promedio detectado para '%s': $%.2f USD", desc_clean, precio_prom)
-                return result
+            if precio_prom < MIN_PLAUSIBLE_PRICE_USD or precio_prom > MAX_PLAUSIBLE_PRICE_USD:
+                logger.warning(
+                    "[WEB_PRICE] Precio web fuera de rango físico plausible (%.2f USD) para '%s'. Descartando cotización atípica.",
+                    precio_prom,
+                    desc_clean
+                )
+                return None
+
+            result = {
+                "precio_promedio": round(precio_prom, 2),
+                "rango_min": round(float(data.get("rango_min") or precio_prom), 2),
+                "rango_max": round(float(data.get("rango_max") or precio_prom), 2),
+                "resumen": str(data.get("resumen") or "Cotización promedio de mercado web").strip()
+            }
+            _WEB_PRICE_CACHE[cache_key] = {"data": result, "timestamp": time.time()}
+            logger.info("[WEB_PRICE] Precio promedio detectado para '%s': $%.2f USD", desc_clean, precio_prom)
+            return result
     except Exception as exc:
         logger.error("[WEB_PRICE] Error al procesar respuesta del LLM para '%s': %s", desc_clean, exc, exc_info=True)
 

@@ -316,10 +316,15 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                   {preview.stats?.total || items.length} filas
                 </span>
                 <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center gap-1">
-                  <CheckCircle2 size={12} /> {preview.stats?.matched || 0} con APU
+                  <CheckCircle2 size={12} /> {preview.stats?.selected ?? preview.stats?.matched ?? 0} con APU
                 </span>
+                {(preview.stats?.pending || 0) > 0 && (
+                  <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 border border-amber-300 text-amber-800">
+                    {preview.stats.pending} por revisar
+                  </span>
+                )}
                 <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 border border-amber-300 text-amber-800">
-                  {preview.stats?.generic || 0} genéricas
+                  {preview.stats?.generic || 0} sin coincidencia
                 </span>
                 <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-white/70 border border-amber-600/15 text-amber-800">
                   {preview.stats?.chapters || 0} capítulos
@@ -374,6 +379,10 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                             ) : selectedCandidate ? (
                               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wide">
                                 APU sugerido
+                              </span>
+                            ) : (item.candidates || []).length > 0 ? (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 uppercase tracking-wide">
+                                Por revisar
                               </span>
                             ) : (
                               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 uppercase tracking-wide">

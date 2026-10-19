@@ -79,7 +79,7 @@ export default function GuidedAssistantModal({
             <h3 className="font-bold text-amber-900">Asistente CostBase</h3>
             <p className="text-xs text-amber-800 truncate">Te guiaré paso a paso para crear tu APU.</p>
           </div>
-          {isSuperAdmin && (
+          {setGenerationMode && (
             <div className="mr-6 sm:mr-8">
               <ArchitectureModeSelector
                 generationMode={generationMode}

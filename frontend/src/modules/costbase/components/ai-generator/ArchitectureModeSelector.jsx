@@ -1,11 +1,12 @@
 import React from 'react';
-import { Calculator, Sparkles, Zap } from 'lucide-react';
+import { Calculator, Sparkles, Zap, Layers } from 'lucide-react';
 
 /**
  * Selector de Arquitectura para Superadmin.
  * Permite alternar mutuamente entre:
  * - Modo Matemático (Síntesis Inversa Component-First)
- * - Modo Adaptativo (Adaptación RAG Clásica)
+ * - Modo Adaptativo (Adaptación RAG Clásica v1)
+ * - Motor v2.0 (WorkSpec + Compositor Determinista)
  * Y opcionalmente activar el Copiloto de decisión rápida TypeSafe Jev System One.
  */
 export default function ArchitectureModeSelector({
@@ -48,10 +49,26 @@ export default function ArchitectureModeSelector({
             ? 'bg-white text-indigo-700 shadow-xs ring-1 ring-indigo-500/20'
             : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
         }`}
-        title="Modo Adaptativo: Búsqueda de partida base similar en 17.408 partidas COVENIN y adaptación por Gemini."
+        title="Modo Adaptativo (v1): Búsqueda de partida base similar en 17.408 partidas COVENIN y adaptación por Gemini/DeepSeek."
       >
         <Sparkles size={compact ? 13 : 14} className={generationMode === 'rag' ? 'text-indigo-600' : 'text-slate-500'} />
-        <span>Modo Adaptativo</span>
+        <span>Modo Adaptativo (v1)</span>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => onChange && onChange('v2')}
+        className={`flex items-center gap-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+          compact ? 'px-2.5 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'
+        } ${
+          generationMode === 'v2'
+            ? 'bg-white text-emerald-700 shadow-xs ring-1 ring-emerald-500/20'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+        }`}
+        title="Motor v2.0 (WorkSpec): Fase 1 rápida (LLM extrae WorkSpec tipado en 2s) + Fase 2 determinista (Compositor sin alucinaciones)."
+      >
+        <Layers size={compact ? 13 : 14} className={generationMode === 'v2' ? 'text-emerald-600' : 'text-slate-500'} />
+        <span>Motor v2.0 (WorkSpec)</span>
       </button>
 
       {onToggleTypesafeJev && (

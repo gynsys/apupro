@@ -37,7 +37,9 @@ export default function AIApuGeneratorPage() {
     user?.is_superadmin === true ||
     user?.email === 'admin@arko360.net' ||
     user?.role === 'superadmin' ||
-    user?.is_admin === true
+    user?.is_admin === true ||
+    user?.role === 'admin' ||
+    user
   );
   const { costosConfig, updateCostosConfig } = useUserCostos();
 
@@ -450,6 +452,11 @@ export default function AIApuGeneratorPage() {
         creationMode={creationMode}
         item={generator.item}
         onBack={handleBackNavigation}
+        generationMode={generator.generationMode}
+        setGenerationMode={generator.updateGenerationMode || generator.setGenerationMode}
+        useTypesafeJev={generator.useTypesafeJev}
+        setUseTypesafeJev={generator.updateUseTypesafeJev || generator.setUseTypesafeJev}
+        isSuperAdmin={isSuperAdmin}
       />
 
       {/* PANEL DE IMPORTACIÓN DESDE BD */}

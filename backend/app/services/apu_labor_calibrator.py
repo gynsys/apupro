@@ -3,7 +3,50 @@ import re
 import unicodedata
 from typing import Any, Dict, List, Optional, Tuple
 from app.core.logging import logger
+from app.services.text_norm import norm_text
 from app.services.element_geometry import extract_linear_length_m, is_linear_element
+
+_normalize_str = norm_text
+
+
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    """Conversión robusta a float tolerando comas decimales, strings con espacios y None (VER-17)."""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return float(value)
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        s = value.strip().replace(" ", "").replace(",", ".")
+        try:
+            return float(s)
+        except ValueError:
+            return default
+    return default
+
+
+_UNIT_BENCHMARK_ALIAS: Dict[str, str] = {
+    "pza": "und",
+    "u": "und",
+    "unidad": "und",
+    "piezas": "und",
+    "pieza": "und",
+    "ml": "m",
+    "mt": "m",
+    "mts": "m",
+    "metro": "m",
+    "metros": "m",
+    "metro lineal": "m",
+    "m²": "m2",
+    "m³": "m3",
+}
+
+
+def _benchmark_unit(unit: str) -> str:
+    """Normaliza y unifica variantes de unidades para benchmarks empíricos (VER-1)."""
+    u = (unit or "").strip().lower()
+    return _UNIT_BENCHMARK_ALIAS.get(u, u)
 
 
 def _strip_accents_labor(s: str) -> str:
@@ -57,8 +100,8 @@ def deduplicate_labor_items(
             clean = re.sub(r"[^A-Za-z0-9]", "", str(desc).upper())
             role_key = clean or f" IDX_{len(role_order)}"
 
-        jornal = float(item.get("jornal") or 0.0)
-        bono = float(item.get("bono") or 0.0)
+        jornal = _safe_float(item.get("jornal"), 0.0)
+        bono = _safe_float(item.get("bono"), 0.0)
         total_comp = jornal + bono
 
         if role_key not in by_role:
@@ -66,7 +109,7 @@ def deduplicate_labor_items(
             role_order.append(role_key)
         else:
             existing = by_role[role_key]
-            ex_comp = float(existing.get("jornal") or 0.0) + float(existing.get("bono") or 0.0)
+            ex_comp = _safe_float(existing.get("jornal"), 0.0) + _safe_float(existing.get("bono"), 0.0)
             if total_comp > ex_comp:
                 purged.append(existing)
                 by_role[role_key] = item
@@ -423,13 +466,14 @@ EMPERICAL_HH_BENCHMARKS: Dict[str, Dict[str, float]] = {
         "p90": 24.0000,
         "rendimiento_med": 1.0,
     },
+    # VER-1: Unificado con _und para evitar disparidad 6.7x según etiqueta und vs pza
     "REPARACIONES_PUNTUALES_pza": {
-        "p10": 1.0000,
-        "p25": 1.5000,
-        "median": 2.4000,
-        "p75": 4.0000,
-        "p90": 6.0000,
-        "rendimiento_med": 8.0,
+        "p10": 8.0000,
+        "p25": 12.0000,
+        "median": 16.0000,
+        "p75": 20.0000,
+        "p90": 24.0000,
+        "rendimiento_med": 1.0,
     },
 
     # 16. Mantenimiento Electromecánico y Equipos (M6/M7)
@@ -441,19 +485,136 @@ EMPERICAL_HH_BENCHMARKS: Dict[str, Dict[str, float]] = {
         "p90": 24.0000,
         "rendimiento_med": 1.5,
     },
+    "MANTENIMIENTO_ELECTROMECANICO_pza": {
+        "p10": 6.0000,
+        "p25": 10.0000,
+        "median": 16.0000,
+        "p75": 20.0000,
+        "p90": 24.0000,
+        "rendimiento_med": 1.5,
+    },
+
+    # 17. Aliases de und para especialidades (VER-1)
+    "ELECTRICAS_und": {
+        "p10": 0.9000,
+        "p25": 1.4256,
+        "median": 2.6000,
+        "p75": 4.3667,
+        "p90": 6.7400,
+        "rendimiento_med": 10.0,
+    },
+    "SANITARIAS_und": {
+        "p10": 0.7400,
+        "p25": 1.0286,
+        "median": 1.8000,
+        "p75": 3.4000,
+        "p90": 8.6133,
+        "rendimiento_med": 12.0,
+    },
+
+    # 18. Tipologías huérfanas calibrables (VER-11)
+    "LIMPIEZA_m2": {
+        "p10": 0.0500,
+        "p25": 0.1000,
+        "median": 0.2000,
+        "p75": 0.4000,
+        "p90": 0.8000,
+        "rendimiento_med": 80.0,
+    },
+    "LIMPIEZA_m": {
+        "p10": 0.0400,
+        "p25": 0.0800,
+        "median": 0.1500,
+        "p75": 0.3000,
+        "p90": 0.5000,
+        "rendimiento_med": 100.0,
+    },
+    "LIMPIEZA_und": {
+        "p10": 0.5000,
+        "p25": 1.0000,
+        "median": 2.0000,
+        "p75": 4.0000,
+        "p90": 6.0000,
+        "rendimiento_med": 8.0,
+    },
+    "IMPERMEABILIZACION_m2": {
+        "p10": 0.3000,
+        "p25": 0.5000,
+        "median": 0.8000,
+        "p75": 1.4000,
+        "p90": 2.2000,
+        "rendimiento_med": 20.0,
+    },
+    "IMPERMEABILIZACION_m": {
+        "p10": 0.1500,
+        "p25": 0.2500,
+        "median": 0.4000,
+        "p75": 0.7000,
+        "p90": 1.1000,
+        "rendimiento_med": 40.0,
+    },
+    "IMPERMEABILIZACION_und": {
+        "p10": 1.0000,
+        "p25": 2.0000,
+        "median": 3.5000,
+        "p75": 5.0000,
+        "p90": 8.0000,
+        "rendimiento_med": 5.0,
+    },
+    "RELLENO_m3": {
+        "p10": 0.3000,
+        "p25": 0.6000,
+        "median": 1.2000,
+        "p75": 2.0000,
+        "p90": 3.0000,
+        "rendimiento_med": 15.0,
+    },
+    "RELLENO_m2": {
+        "p10": 0.1000,
+        "p25": 0.2000,
+        "median": 0.4000,
+        "p75": 0.7000,
+        "p90": 1.2000,
+        "rendimiento_med": 40.0,
+    },
+    "PERFORACION_m": {
+        "p10": 0.5000,
+        "p25": 1.0000,
+        "median": 2.0000,
+        "p75": 3.5000,
+        "p90": 5.0000,
+        "rendimiento_med": 8.0,
+    },
+    "PERFORACION_und": {
+        "p10": 8.0000,
+        "p25": 16.0000,
+        "median": 24.0000,
+        "p75": 36.0000,
+        "p90": 48.0000,
+        "rendimiento_med": 1.0,
+    },
 }
 
+# Constantes y escalador dinámico de mano de obra para pozo profundo (VER-6)
+DEEP_WELL_BASE_DEPTH_M: float = 30.0
+DEEP_WELL_DEPTH_EXPONENT: float = 0.35
 
-def _normalize_str(text: str) -> str:
-    """
-    Elimina acentos y signos diacríticos, convirtiendo a mayúsculas
-    para comparaciones semánticas deterministas y robustas en español.
-    """
-    if not text:
-        return ""
-    nfkd = unicodedata.normalize("NFKD", text)
-    stripped = "".join(c for c in nfkd if not unicodedata.combining(c))
-    return stripped.upper().strip()
+
+def _deep_well_benchmark(depth_m: float) -> Dict[str, float]:
+    """Escala el benchmark de mano de obra en función de la profundidad real del pozo (VER-6)."""
+    base = {
+        "p10": 16.0,
+        "p25": 24.0,
+        "median": 32.0,
+        "p75": 48.0,
+        "p90": 64.0,
+    }
+    effective_depth = max(DEEP_WELL_BASE_DEPTH_M, float(depth_m or DEEP_WELL_BASE_DEPTH_M))
+    factor = max(1.0, (effective_depth / DEEP_WELL_BASE_DEPTH_M) ** DEEP_WELL_DEPTH_EXPONENT)
+    out = {k: round(v * factor, 4) for k, v in base.items()}
+    out["rendimiento_med"] = round(1.0 / factor, 2)
+    out["_depth_factor"] = round(factor, 3)
+    return out
 
 
 def classify_activity_typology(description: str, unit: str, covenin_code: str = "") -> str:
@@ -636,22 +797,38 @@ def classify_activity_typology(description: str, unit: str, covenin_code: str = 
     if cov_upper.startswith("E6"):
         return "ELECTRICAS"
 
-    # 12. Excavación y Movimiento de Tierra
-    if any(k in desc_clean for k in ["EXCAVACION A MANO", "ZANJA A MANO", "COMPACTACION A MANO", "DESMALEZAMIENTO A MANO"]):
+    # 12. Limpieza, Desmalezamiento y Despeje (VER-11)
+    if any(k in desc_clean for k in ["LIMPIEZA", "DESMALEZAMIENTO", "DESRAICE", "DESFORESTACION", "BARRIDO", "LAVADO", "DESPEJE"]):
+        return "LIMPIEZA"
+
+    # 13. Impermeabilización (VER-11)
+    if cov_upper.startswith("E416") or any(k in desc_clean for k in ["IMPERMEABILIZACION", "MANTO ASFALTICO", "PRIMER ASFALTICO", "TECHO ASFALTICO", "IMPERMEABILIZANTE"]):
+        return "IMPERMEABILIZACION"
+
+    # 14. Relleno y Compactación (VER-11)
+    if cov_upper.startswith("E12") or any(k in desc_clean for k in ["RELLENO", "COMPACTACION CON MATERIAL", "BASE GRANULAR", "SUB-BASE", "PRESTAMO"]):
+        return "RELLENO"
+
+    # 15. Perforación y Pozos Profundos (VER-11)
+    if any(k in desc_clean for k in ["PERFORACION", "POZO PROFUNDO", "POZO TUBULAR", "HINCADO", "SONDEO", "PILOTE"]):
+        return "PERFORACION"
+
+    # 16. Excavación y Movimiento de Tierra General
+    if any(k in desc_clean for k in ["EXCAVACION A MANO", "ZANJA A MANO", "COMPACTACION A MANO"]):
         return "EXCAVACION_MANUAL"
     if any(k in desc_clean for k in ["EXCAVACION", "MOVIMIENTO DE TIERRA", "NIVELACION", "COMPACTACION"]):
         if any(m in desc_clean for m in ["RETROEXCAVADORA", "TRACTOR", "MAQUINARIA", "JUMBO", "PAYLOADER"]):
             return "EXCAVACION_MECANICA"
         return "EXCAVACION_MANUAL"
 
-    # 13. Mantenimiento Electromecánico y Equipos (M6, M7, M5)
+    # 17. Mantenimiento Electromecánico y Equipos (M6, M7, M5)
     if cov_upper.startswith("M6") or cov_upper.startswith("M7") or cov_upper.startswith("M5"):
         if any(k in desc_clean for k in ["MANTENIMIENTO", "REVISION", "SERVICIO", "BOMBA", "MOTOR", "COMPRESOR", "AIRE ACONDICIONADO", "HIDRONEUMATICO"]):
             return "MANTENIMIENTO_ELECTROMECANICO"
     if any(k in desc_clean for k in ["MANTENIMIENTO DE BOMBA", "MANTENIMIENTO ELECTROMECANICO", "SISTEMA HIDRONEUMATICO", "COMPRESOR DE AIRE", "PLANTA ELECTRICA"]):
         return "MANTENIMIENTO_ELECTROMECANICO"
 
-    # 14. Reparaciones y Reformas Puntuales en Sitio (R4, R6, R2 o en und/pza)
+    # 18. Reparaciones y Reformas Puntuales en Sitio (R4, R6, R2 o en und/pza)
     if cov_upper.startswith("R4") or cov_upper.startswith("R6") or cov_upper.startswith("R2"):
         if u_norm in ("und", "pza"):
             return "REPARACIONES_PUNTUALES"
@@ -667,7 +844,7 @@ def is_supervisory_role(role_desc: str, code: str = "") -> bool:
     """
     if not role_desc and not code:
         return False
-    desc_clean = (role_desc or "").upper()
+    desc_clean = norm_text(role_desc)
     code_clean = (code or "").upper().strip()
 
     supervision_terms = ["CAPORAL", "MAESTRO", "SOBRESTANTE", "SUPERVISOR", "JEFE DE CUADRILLA"]
@@ -719,10 +896,10 @@ def consolidate_labor_crew(labors: List[Dict[str, Any]]) -> Tuple[List[Dict[str,
         return active_workers, notes
 
     # Calcular el tamaño total de la cuadrilla operativa directa
-    total_active_count = sum(float(w.get("cantidad", 1.0) or 1.0) for w in active_workers)
+    total_active_count = sum(_safe_float(w.get("cantidad", 1.0), 1.0) for w in active_workers)
 
     # Calcular fracción acumulada de supervisión
-    total_sup_qty = sum(float(s.get("cantidad", 0.0) or 0.0) for s in supervision_items)
+    total_sup_qty = sum(_safe_float(s.get("cantidad", 0.0), 0.0) for s in supervision_items)
 
     # Determinar el tope técnico según la normativa de rendimientos
     if total_active_count <= 12.0:
@@ -733,9 +910,9 @@ def consolidate_labor_crew(labors: List[Dict[str, Any]]) -> Tuple[List[Dict[str,
     # Seleccionar la línea de supervisión principal (preferir la que tenga código estructurado o tarifas más representativas)
     primary_sup = supervision_items[0].copy()
     for s in supervision_items:
-        jornal = float(s.get("jornal", 0.0) or 0.0)
-        bono = float(s.get("bono", 0.0) or 0.0)
-        if (jornal + bono) > (float(primary_sup.get("jornal", 0.0) or 0.0) + float(primary_sup.get("bono", 0.0) or 0.0)):
+        jornal = _safe_float(s.get("jornal", 0.0), 0.0)
+        bono = _safe_float(s.get("bono", 0.0), 0.0)
+        if (jornal + bono) > (_safe_float(primary_sup.get("jornal", 0.0), 0.0) + _safe_float(primary_sup.get("bono", 0.0), 0.0)):
             primary_sup = s.copy()
 
     was_consolidated = (len(supervision_items) > 1) or abs(total_sup_qty - clamped_sup_qty) > 0.01
@@ -776,7 +953,7 @@ def balance_crew_specialties(labors: List[Dict[str, Any]], typology: str) -> Tup
 
     # Detectar oficiales y ayudantes
     specialist_terms = [
-        "ALBAÑIL", "PINTOR", "PLOMERO", "ELECTRICISTA", "CARPINTERO",
+        "ALBANIL", "ALBAÑIL", "PINTOR", "PLOMERO", "ELECTRICISTA", "CARPINTERO",
         "CABILLERO", "SOLDADOR", "HERRERO", "MONTADOR", "OXICORTADOR",
         "TECNICO", "MECANICO", "INSTALADOR", "OFICIAL DE 1RA", "OFICIAL"
     ]
@@ -787,7 +964,7 @@ def balance_crew_specialties(labors: List[Dict[str, Any]], typology: str) -> Tup
     others: List[Dict[str, Any]] = []
 
     for item in labors:
-        desc = str(item.get("descripcion", "")).upper()
+        desc = norm_text(item.get("descripcion", ""))
         if is_supervisory_role(desc, str(item.get("codigo", ""))):
             others.append(item)
             continue
@@ -805,35 +982,35 @@ def balance_crew_specialties(labors: List[Dict[str, Any]], typology: str) -> Tup
     # Sustitución de oficios incompatibles para disciplinas especializadas
     if typology == "ESTRUCTURAS_METALICAS":
         for s in specialists:
-            s_desc = str(s.get("descripcion", "")).upper()
-            if any(inc in s_desc for inc in ["CABILLERO", "CARPINTERO", "ALBAÑIL", "PLOMERO"]):
+            s_desc = norm_text(s.get("descripcion", ""))
+            if any(inc in s_desc for inc in ["CABILLERO", "CARPINTERO", "ALBANIL", "ALBAÑIL", "PLOMERO"]):
                 s["descripcion"] = "HERRERO DE 1RA"
                 notes.append(f"Oficio especializado calibrado: Se sustituyó cargo incompatible '{s_desc}' de la base por HERRERO DE 1RA.")
     elif typology == "SANITARIAS":
         for s in specialists:
-            s_desc = str(s.get("descripcion", "")).upper()
+            s_desc = norm_text(s.get("descripcion", ""))
             if any(inc in s_desc for inc in ["ELECTRICISTA", "CABILLERO", "CARPINTERO", "PINTOR"]):
                 s["descripcion"] = "PLOMERO DE 1RA"
                 notes.append(f"Oficio especializado calibrado: Se sustituyó cargo incompatible '{s_desc}' de la base por PLOMERO DE 1RA.")
         for o in others:
-            o_desc = str(o.get("descripcion", "")).upper()
+            o_desc = norm_text(o.get("descripcion", ""))
             if "ELECTRICISTA" in o_desc:
                 o["descripcion"] = "MAESTRO PLOMERO -N7"
                 notes.append(f"Supervisión calibrada: Se sustituyó supervisión incompatible '{o_desc}' de la base por MAESTRO PLOMERO.")
     elif typology == "ELECTRICAS":
         for s in specialists:
-            s_desc = str(s.get("descripcion", "")).upper()
+            s_desc = norm_text(s.get("descripcion", ""))
             if any(inc in s_desc for inc in ["PLOMERO", "CABILLERO", "CARPINTERO", "PINTOR"]):
                 s["descripcion"] = "ELECTRICISTA DE 1RA"
                 notes.append(f"Oficio especializado calibrado: Se sustituyó cargo incompatible '{s_desc}' de la base por ELECTRICISTA DE 1RA.")
         for o in others:
-            o_desc = str(o.get("descripcion", "")).upper()
+            o_desc = norm_text(o.get("descripcion", ""))
             if "PLOMERO" in o_desc:
                 o["descripcion"] = "MAESTRO ELECTRICISTA -N7"
                 notes.append(f"Supervisión calibrada: Se sustituyó supervisión incompatible '{o_desc}' de la base por MAESTRO ELECTRICISTA.")
 
-    spec_count = sum(float(s.get("cantidad", 1.0) or 1.0) for s in specialists)
-    help_count = sum(float(h.get("cantidad", 1.0) or 1.0) for h in helpers)
+    spec_count = sum(_safe_float(s.get("cantidad", 1.0), 1.0) for s in specialists)
+    help_count = sum(_safe_float(h.get("cantidad", 1.0), 1.0) for h in helpers)
 
     # Si hay ayudantes pero 0 especialistas en una disciplina especializada, convertir el primer ayudante en oficial
     if spec_count == 0 and help_count > 0:
@@ -855,22 +1032,35 @@ def balance_crew_specialties(labors: List[Dict[str, Any]], typology: str) -> Tup
         specialists.append(first_helper)
         helpers.pop(0)
         spec_count = 1.0
-        help_count = sum(float(h.get("cantidad", 1.0) or 1.0) for h in helpers)
+        help_count = sum(_safe_float(h.get("cantidad", 1.0), 1.0) for h in helpers)
         notes.append(f"Cuadrilla equilibrada: Se asignó 1.0 {spec_role} como oficial técnico de frente de trabajo.")
 
     # Regla: máximo 1.0 ayudante por especialista en trabajos puntuales/mantenimiento, 2.0 en masivos
     max_ratio = 1.0 if typology in ("ESTRUCTURAS_METALICAS", "REPARACIONES_PUNTUALES", "MANTENIMIENTO_ELECTROMECANICO") else 2.0
     max_allowed_helpers = max(1.0, round(spec_count * max_ratio, 1))
     if spec_count > 0 and help_count > max_allowed_helpers:
-        # Escalar ayudantes al tope técnico admisible
-        scale_ratio = max_allowed_helpers / help_count
-        for h in helpers:
-            old_qty = float(h.get("cantidad", 1.0) or 1.0)
-            h["cantidad"] = max(1.0, round(old_qty * scale_ratio, 1))
-        new_help_count = sum(float(h.get("cantidad", 1.0) or 1.0) for h in helpers)
+        # VER-4: Reducción iterativa del exceso tomando primero la línea de mayor cantidad
+        excess = help_count - max_allowed_helpers
+        while excess > 1e-6 and helpers:
+            target = max(helpers, key=lambda x: _safe_float(x.get("cantidad", 1.0), 1.0))
+            cur = _safe_float(target.get("cantidad", 1.0), 1.0)
+            take = min(cur, excess)
+            new_qty = round(cur - take, 2)
+            if new_qty <= 0.01:
+                helpers.remove(target)
+            else:
+                target["cantidad"] = new_qty
+            excess -= take
+
+        new_help_count = sum(_safe_float(h.get("cantidad", 1.0), 1.0) for h in helpers)
         notes.append(
-            f"Proporción de cuadrilla ajustada: Se calibró el ratio ayudante/oficial a {new_help_count/spec_count:.1f} "
-            f"({new_help_count:.1f} ayudantes para {spec_count:.1f} especialistas)."
+            f"Proporción de cuadrilla ajustada: ratio ayudante/oficial calibrado a "
+            f"{new_help_count / spec_count:.2f} "
+            f"({new_help_count:.1f} ayudantes para {spec_count:.1f} especialistas, "
+            f"tope {max_allowed_helpers:.1f})."
+        )
+        assert new_help_count <= max_allowed_helpers + 0.01, (
+            f"Calibración de ayudantes falló: {new_help_count:.2f} > {max_allowed_helpers:.2f}"
         )
 
     balanced_labors = specialists + helpers + others
@@ -903,7 +1093,7 @@ def balance_crew_and_equipments(
         desc = str(l.get("descripcion", ""))
         code = str(l.get("codigo", ""))
         if not is_supervisory_role(desc, code):
-            active_labor_count += float(l.get("cantidad", 1.0) or 1.0)
+            active_labor_count += _safe_float(l.get("cantidad", 1.0), 1.0)
 
     if active_labor_count <= 0.0:
         active_labor_count = 1.0
@@ -911,7 +1101,7 @@ def balance_crew_and_equipments(
     # -----------------------------------------------------------------------
     # CASO A: LOGÍSTICA, TRANSPORTE Y ACARREOS (Circuito Continuo)
     # -----------------------------------------------------------------------
-    desc_clean = _normalize_str(description)
+    desc_clean = norm_text(description)
     is_haulage = (
         typology == "ACARREO" or
         "ACARREO" in desc_clean or
@@ -928,8 +1118,8 @@ def balance_crew_and_equipments(
 
         if is_tobo_haulage:
             # 1. En acarreo por tobos/sacos se eliminan carretillas por incompatibilidad física
-            had_carretilla = any("CARRETILLA" in str(eq.get("descripcion", "")).upper() for eq in equipments)
-            equipments = [eq for eq in equipments if "CARRETILLA" not in str(eq.get("descripcion", "")).upper()]
+            had_carretilla = any("CARRETILLA" in norm_text(eq.get("descripcion", "")) for eq in equipments)
+            equipments = [eq for eq in equipments if "CARRETILLA" not in norm_text(eq.get("descripcion", ""))]
             if had_carretilla:
                 notes.append(
                     "Modalidad de acarreo calibrada: Se eliminaron carretillas por incompatibilidad física con acarreo en interiores/pisos superiores/tobos."
@@ -939,11 +1129,11 @@ def balance_crew_and_equipments(
             target_tobos = max(2.0, float(round(active_labor_count * 1.5)))
             target_palas = max(1.0, float(round(active_labor_count * 0.25)))
 
-            tobo_item = next((eq for eq in equipments if any(t in str(eq.get("descripcion", "")).upper() for t in ["TOBO", "CUNETE", "SACO", "BOLSA"])), None)
-            pala_item = next((eq for eq in equipments if "PALA" in str(eq.get("descripcion", "")).upper()), None)
+            tobo_item = next((eq for eq in equipments if any(t in norm_text(eq.get("descripcion", "")) for t in ["TOBO", "CUNETE", "SACO", "BOLSA"])), None)
+            pala_item = next((eq for eq in equipments if "PALA" in norm_text(eq.get("descripcion", ""))), None)
 
             if tobo_item is not None:
-                curr_tobos = float(tobo_item.get("cantidad", 1.0) or 1.0)
+                curr_tobos = _safe_float(tobo_item.get("cantidad", 1.0), 1.0)
                 if curr_tobos < target_tobos:
                     tobo_item["cantidad"] = target_tobos
                     notes.append(
@@ -969,7 +1159,7 @@ def balance_crew_and_equipments(
                 )
 
             if pala_item is not None:
-                curr_pala = float(pala_item.get("cantidad", 1.0) or 1.0)
+                curr_pala = _safe_float(pala_item.get("cantidad", 1.0), 1.0)
                 if curr_pala < target_palas:
                     pala_item["cantidad"] = target_palas
                     notes.append(
@@ -979,8 +1169,8 @@ def balance_crew_and_equipments(
         else:
             # Modalidad en carretilla (terrenos planos / exteriores)
             # 1. Purgar tobos si fueron heredados erróneamente de partidas base de tobo
-            had_tobo = any("TOBO" in str(eq.get("descripcion", "")).upper() or "CUNETE" in str(eq.get("descripcion", "")).upper() for eq in equipments)
-            equipments = [eq for eq in equipments if "TOBO" not in str(eq.get("descripcion", "")).upper() and "CUNETE" not in str(eq.get("descripcion", "")).upper()]
+            had_tobo = any("TOBO" in norm_text(eq.get("descripcion", "")) or "CUNETE" in norm_text(eq.get("descripcion", "")) for eq in equipments)
+            equipments = [eq for eq in equipments if "TOBO" not in norm_text(eq.get("descripcion", "")) and "CUNETE" not in norm_text(eq.get("descripcion", ""))]
             if had_tobo:
                 notes.append(
                     "Modalidad de acarreo calibrada: Se eliminaron tobos por incompatibilidad física con acarreo plano en carretilla."
@@ -990,11 +1180,11 @@ def balance_crew_and_equipments(
             target_carretillas = max(1.0, float(round(active_labor_count * 0.40)))
             target_palas = max(1.0, float(round(active_labor_count * 0.30)))
 
-            carretilla_item = next((eq for eq in equipments if "CARRETILLA" in str(eq.get("descripcion", "")).upper()), None)
-            pala_item = next((eq for eq in equipments if "PALA" in str(eq.get("descripcion", "")).upper()), None)
+            carretilla_item = next((eq for eq in equipments if "CARRETILLA" in norm_text(eq.get("descripcion", ""))), None)
+            pala_item = next((eq for eq in equipments if "PALA" in norm_text(eq.get("descripcion", ""))), None)
 
             if carretilla_item is not None:
-                curr_qty = float(carretilla_item.get("cantidad", 1.0) or 1.0)
+                curr_qty = _safe_float(carretilla_item.get("cantidad", 1.0), 1.0)
                 if curr_qty < target_carretillas:
                     carretilla_item["cantidad"] = target_carretillas
                     notes.append(
@@ -1024,7 +1214,7 @@ def balance_crew_and_equipments(
                 )
 
             if pala_item is not None:
-                curr_pala = float(pala_item.get("cantidad", 1.0) or 1.0)
+                curr_pala = _safe_float(pala_item.get("cantidad", 1.0), 1.0)
                 if curr_pala < target_palas:
                     pala_item["cantidad"] = target_palas
                     notes.append(
@@ -1064,16 +1254,16 @@ def balance_crew_and_equipments(
         # Contar especialistas
         specialist_count = 0.0
         for l in labors:
-            desc_l = str(l.get("descripcion", "")).upper()
+            desc_l = norm_text(l.get("descripcion", ""))
             is_helper = any(h in desc_l for h in ["AYUDANTE", "OBRERO", "PEON"])
-            if (not is_helper) and any(term in desc_l for term in ["ALBAÑIL", "PINTOR", "FRISADOR"]):
-                specialist_count += float(l.get("cantidad", 1.0) or 1.0)
+            if (not is_helper) and any(term in desc_l for term in ["ALBANIL", "ALBAÑIL", "PINTOR", "FRISADOR"]):
+                specialist_count += _safe_float(l.get("cantidad", 1.0), 1.0)
 
         if specialist_count > 0:
             for eq in equipments:
-                desc_e = str(eq.get("descripcion", "")).upper()
+                desc_e = norm_text(eq.get("descripcion", ""))
                 if any(tool in desc_e for tool in ["CUCHARA", "NIVEL", "BROCHA", "RODILLO", "LLANA"]):
-                    curr_qty = float(eq.get("cantidad", 1.0) or 1.0)
+                    curr_qty = _safe_float(eq.get("cantidad", 1.0), 1.0)
                     if curr_qty < specialist_count:
                         eq["cantidad"] = specialist_count
                         notes.append(
@@ -1082,15 +1272,13 @@ def balance_crew_and_equipments(
                         )
 
         # Sincronización de herramientas eléctricas menores de preparación de superficie:
-        # Si la pintura incluye decapado, cepillado de óxido o preparación en elementos metálicos:
-        # NOTA: Ignorar si 'óxido' se refiere a pigmento mineral colorante en pisos/morteros (óxido negro, rojo, etc.)
-        desc_c_paint = _normalize_str(description)
+        desc_c_paint = norm_text(description)
         is_pigment_color = any(p in desc_c_paint for p in ["OXIDO NEGRO", "OXIDO ROJO", "OXIDO AMARILLO", "OXIDO VERDE", "PIGMENTO", "COLOR", "PISO", "SOBREPISO", "REQUEMADO", "MORTERO"])
         is_metal_prep = (not is_pigment_color) and any(k in desc_c_paint for k in ["CEPILLADO", "OXIDO", "DECAPADO", "SANEAMIENTO", "PELDANO", "ESCALERA", "BARANDA", "REJA", "ANTICORROSIV", "METALIC"])
         if is_metal_prep:
             # 1. Sustituir esmeril industrial pesado de 7" por amoladora liviana de 4 1/2" para trabajo en sitio
             for eq in equipments:
-                d_up = str(eq.get("descripcion", "")).upper()
+                d_up = norm_text(eq.get("descripcion", ""))
                 if any(h in d_up for h in ["7 PULG", "7\"", "INDUSTRIAL", "BANCO", "TRONCHADORA"]) and any(e in d_up for e in ["ESMERIL", "AMOLADORA"]):
                     eq["codigo"] = "EQU-IA-AMOLADORA"
                     eq["descripcion"] = "AMOLADORA ANGULAR DE 4 1/2 PULG CON CEPILLO DE ALAMBRE"
@@ -1101,7 +1289,7 @@ def balance_crew_and_equipments(
                     notes.append("Herramienta calibrada: Se sustituyó esmeril industrial de 7\" por Amoladora de 4 1/2\" con cepillo de alambre por accesibilidad en sitio.")
 
             # 2. Si no tiene amoladora o cepillo, incorporar la de 4 1/2"
-            has_grinder = any(any(g in str(eq.get("descripcion", "")).upper() for g in ["ESMERIL", "AMOLADORA", "CEPILLO"]) for eq in equipments)
+            has_grinder = any(any(g in norm_text(eq.get("descripcion", "")) for g in ["ESMERIL", "AMOLADORA", "CEPILLO"]) for eq in equipments)
             if not has_grinder:
                 equipments.append({
                     "id": "e-ia-amoladora-4y12",
@@ -1121,11 +1309,11 @@ def balance_crew_and_equipments(
     # -----------------------------------------------------------------------
     elif typology == "ESTRUCTURAS_METALICAS":
         # Contar soldadores activos
-        welders_count = sum(float(l.get("cantidad", 1.0) or 1.0) for l in labors if "SOLDADOR" in str(l.get("descripcion", "")).upper())
+        welders_count = sum(_safe_float(l.get("cantidad", 1.0), 1.0) for l in labors if "SOLDADOR" in norm_text(l.get("descripcion", "")))
         if welders_count > 0:
-            welder_eq = next((eq for eq in equipments if any(w in str(eq.get("descripcion", "")).upper() for w in ["SOLDADORA", "MAQUINA DE SOLDAR", "MOTO SOLDADOR", "LINCOLN", "INVERSORA"])), None)
+            welder_eq = next((eq for eq in equipments if any(w in norm_text(eq.get("descripcion", "")) for w in ["SOLDADORA", "MAQUINA DE SOLDAR", "MOTO SOLDADOR", "LINCOLN", "INVERSORA"])), None)
             if welder_eq is not None:
-                curr_w = float(welder_eq.get("cantidad", 1.0) or 1.0)
+                curr_w = _safe_float(welder_eq.get("cantidad", 1.0), 1.0)
                 if curr_w < welders_count:
                     welder_eq["cantidad"] = welders_count
                     notes.append(f"Equipos metalmecánicos: Ajustada máquina de soldar a {welders_count:.0f} un. (1 por soldador activo).")
@@ -1143,17 +1331,11 @@ def balance_crew_and_equipments(
                 })
                 notes.append(f"Equipos metalmecánicos: Se incorporó máquina soldadora ({welders_count:.0f} un.) para soldadores activos.")
 
-        # Sincronizar amoladora angular según la escala operativa:
-        # A) Mantenimiento, reparación o decapado en elementos instalados en sitio (peldaños, barandas, rejas, marcos):
-        #    Amoladora portátil de 4 1/2" con cepillo de alambre de acero.
-        # B) Fabricación, montaje o corte pesado de perfiles estructurales en taller/obra:
-        #    Esmeril angular / amoladora industrial de 7".
-        desc_c = _normalize_str(description)
+        desc_c = norm_text(description)
         is_site_maintenance = any(m in desc_c for m in ["MANTENIMIENTO", "SANEAMIENTO", "REPARACION", "RESTAURACION", "PELDANO", "BARANDA", "REJA", "PINTURA", "ANTICORROSIV"])
         if is_site_maintenance:
-            # Sustituir esmeril de 7" por amoladora 4 1/2" con cepillo en sitio
             for eq in equipments:
-                d_up = str(eq.get("descripcion", "")).upper()
+                d_up = norm_text(eq.get("descripcion", ""))
                 if any(h in d_up for h in ["7 PULG", "7\"", "INDUSTRIAL", "BANCO", "TRONCHADORA"]) and any(e in d_up for e in ["ESMERIL", "AMOLADORA"]):
                     eq["codigo"] = "EQU-IA-AMOLADORA"
                     eq["descripcion"] = "AMOLADORA ANGULAR DE 4 1/2 PULG CON CEPILLO DE ALAMBRE"
@@ -1167,7 +1349,7 @@ def balance_crew_and_equipments(
             "CORTE", "DESBASTE", "ESMERIL", "AMOLADORA", "PELDANO", "ZANCA", "TUBO", "PERFIL",
             "PLETINA", "SANEAMIENTO", "CEPILLADO", "ANTICORROSIV", "DECAPADO", "OXIDO"
         ]):
-            has_grinder = any(any(g in str(eq.get("descripcion", "")).upper() for g in ["ESMERIL", "AMOLADORA", "TRONCHADORA"]) for eq in equipments)
+            has_grinder = any(any(g in norm_text(eq.get("descripcion", "")) for g in ["ESMERIL", "AMOLADORA", "TRONCHADORA"]) for eq in equipments)
             if not has_grinder:
                 if is_site_maintenance:
                     equipments.append({
@@ -1197,7 +1379,7 @@ def balance_crew_and_equipments(
                     notes.append("Herramientas metalmecánicas: Se incorporó Esmeril Angular Industrial de 7\" para corte y desbaste estructural.")
 
     # -----------------------------------------------------------------------
-    # CASO E: LOGÍSTICA INTELIGENTE DE VEHÍCULOS DE APOYO Y CHOFERES
+    # CASO E: LOGÍSTICA INTELIGENTE DE VEHÍCULOS DE APOYO Y CHOFERES (VER-12, VER-15)
     # -----------------------------------------------------------------------
     # Aplica para trabajos de campo, mantenimiento, herrería y reparaciones en sitio
     is_site_logistics = typology in (
@@ -1206,26 +1388,33 @@ def balance_crew_and_equipments(
     )
 
     if is_site_logistics:
-        light_terms = ["F-350", "F350", "ESTACAS", "F-150", "F150", "PICK-UP", "PICKUP", "CHEVROLET", "SILVERADO", "HILUX", "D-MAX", "FURGON"]
-        heavy_terms = [
-            "750", "CAMION 750", "MACK", "CHUTO", "GANDOLA", "VOLTEO", "PERFORADOR",
-            "CALDWELL", "MIXER", "CONCRETERA", "GRUA TELESCOPICA", "GRUA 40", "GRUA 50", "GRUA 100"
-        ]
+        # VER-12: Compilar regexes estrictos para transporte pesado y vehículos livianos
+        _HEAVY_RE = re.compile(
+            r"\b(CAMI[OÓ]N\s+750|750\s*(?:PESADO|C[AO]RGA)|MACK|CHUTO|GANDOLA"
+            r"|VOLTEO|PERFORADOR|CALDWELL|MIXER|CONCRETERA"
+            r"|GRUA\s+TELESC[OÓ]PICA|GRUA\s+(?:40|50|100))\b",
+            re.IGNORECASE,
+        )
+        _LIGHT_VEHICLE_RE = re.compile(
+            r"\b(F-?350|ESTACAS|F-?150|PICK-?UP|PICKUP|CHEVROLET|SILVERADO|HILUX|D-MAX|FURGON)\b",
+            re.IGNORECASE,
+        )
 
         # 1. Detectar y sustituir transporte pesado o maquinaria pesada fuera de escala
         heavy_truck_found = False
         purged_equipments = []
         for eq in equipments:
-            eq_desc = str(eq.get("descripcion", "")).upper()
-            if any(h in eq_desc for h in heavy_terms):
+            eq_desc = norm_text(eq.get("descripcion", ""))
+            if _HEAVY_RE.search(eq_desc):
                 heavy_truck_found = True
             else:
                 purged_equipments.append(eq)
         equipments = purged_equipments
 
         if heavy_truck_found:
-            has_light = any(any(lv in str(eq.get("descripcion", "")).upper() for lv in light_terms) for eq in equipments)
+            has_light = any(_LIGHT_VEHICLE_RE.search(norm_text(eq.get("descripcion", ""))) for eq in equipments)
             if not has_light:
+                # VER-15: Origen referencial honesto
                 equipments.append({
                     "id": "e-vehiculo-utilitario-cuadrilla",
                     "codigo": "EQU-PES-054",
@@ -1234,18 +1423,18 @@ def balance_crew_and_equipments(
                     "cantidad": 0.25,
                     "depreciacion": 0.004429,
                     "precio_unitario": 96278.52,
-                    "origen": "historico",
+                    "origen": "referencial",
                     "nota_calculo": "Logística de cuadrilla: Camión F-350 estacas (0.25 día) para transporte de cuadrilla, soldadora, cilindros y herramientas en sitio (degradado de maquinaria pesada de la base)."
                 })
                 notes.append(
-                    "Logística de cuadrilla calibrada: Se sustituyó maquinaria/transporte pesado de la base por Camión F-350 estacas a 0.25 día (adecuado a escala de obra)."
+                    "[PRECIO_REFERENCIAL] Equipo logístico con precio embebido en el motor: 'CAMION FORD F-350 ESTACAS' ($96,278.52 USD/día). Verifique tarifa de alquiler local."
                 )
 
         # 2. Preservar vehículos utilitarios livianos y acotar a escala razonable (0.25 a 0.50 día)
         for eq in equipments:
-            eq_desc = str(eq.get("descripcion", "")).upper()
-            if any(lv in eq_desc for lv in light_terms):
-                curr_qty = float(eq.get("cantidad", 0.0) or 0.0)
+            eq_desc = norm_text(eq.get("descripcion", ""))
+            if _LIGHT_VEHICLE_RE.search(eq_desc):
+                curr_qty = _safe_float(eq.get("cantidad", 0.0), 0.0)
                 if curr_qty > 0.50:
                     eq["cantidad"] = 0.25
                     notes.append(
@@ -1255,11 +1444,11 @@ def balance_crew_and_equipments(
                     eq["cantidad"] = 0.25
 
         # 3. Sincronizar al Chofer con el vehículo de apoyo
-        has_any_vehicle = any(any(lv in str(eq.get("descripcion", "")).upper() for lv in light_terms) for eq in equipments)
+        has_any_vehicle = any(_LIGHT_VEHICLE_RE.search(norm_text(eq.get("descripcion", ""))) for eq in equipments)
         if has_any_vehicle:
-            driver = next((l for l in labors if "CHOFER" in str(l.get("descripcion", "")).upper()), None)
+            driver = next((l for l in labors if "CHOFER" in norm_text(l.get("descripcion", ""))), None)
             if driver is not None:
-                curr_drv = float(driver.get("cantidad", 0.0) or 0.0)
+                curr_drv = _safe_float(driver.get("cantidad", 0.0), 0.0)
                 if curr_drv > 0.50 or curr_drv <= 0.0:
                     driver["cantidad"] = 0.25
                     notes.append("Mano de obra logística: Chofer ajustado a 0.25 día en correspondencia con el vehículo de apoyo.")
@@ -1303,21 +1492,30 @@ def validate_and_calibrate_hh(
 
     notes: List[str] = []
     unit = str(partida.get("unit") or partida.get("unidad") or "").strip().lower()
-    perf = float(partida.get("performance") or partida.get("rendimiento") or 0.0)
+    perf = _safe_float(partida.get("performance") or partida.get("rendimiento"), 0.0)
 
     unit_clean = str(unit or "").strip().lower()
     if unit_clean in ("gl", "sg", "global", "suma global"):
-        # INMUNIDAD UNIVERSAL PARA PARTIDAS GLOBALES:
+        # INMUNIDAD UNIVERSAL PARA PARTIDAS GLOBALES (VER-3):
         # El rendimiento es estrictamente determinista por plazo: R = 1.0 / Días de trabajo.
-        # NUNCA aplicar benchmarks empíricos de piezas, m2 o m3.
-        perf = float(partida.get("performance") or partida.get("rendimiento") or 1.0)
+        # NUNCA aplicar benchmarks empíricos ni acotar silenciosamente la duración indicada por el analista.
+        perf = _safe_float(partida.get("performance") or partida.get("rendimiento"), 1.0)
         if perf <= 0.0:
             perf = 1.0
-        perf = max(0.05, min(perf, 2.0))
         days_equiv = round(1.0 / perf, 2)
+
+        MAX_GLOBAL_DAYS = 365.0
+        if days_equiv > MAX_GLOBAL_DAYS:
+            notes.append(
+                f"Advertencia de alcance: la duración solicitada ({days_equiv:.0f} días) "
+                f"excede el límite de cordura de {MAX_GLOBAL_DAYS:.0f} días. "
+                f"Verifique el plazo antes de presupuestar."
+            )
+
         notes.append(
-            f"Rendimiento Global (Gl) certificado: {perf:.4f} Gl/día "
-            f"correspondiente a una duración estimada de {days_equiv} días de cuadrilla."
+            f"Rendimiento Global (Gl): {perf:.4f} Gl/día "
+            f"correspondiente a {days_equiv} días de cuadrilla. "
+            f"Duración preservada tal como la indicó el analista."
         )
         partida["performance"] = perf
         if "rendimiento" in partida:
@@ -1335,7 +1533,7 @@ def validate_and_calibrate_hh(
         return partida, notes
 
     # Sumar total de personas en cuadrilla (incluyendo supervisión ponderada)
-    total_crew_size = sum(float(l.get("cantidad", 1.0) or 1.0) for l in labors)
+    total_crew_size = sum(_safe_float(l.get("cantidad", 1.0), 1.0) for l in labors)
     if total_crew_size <= 0.0:
         empty_crew_trace = {"error": "cuadrilla_vacia", "calibracion_aplicada": False}
         if return_trace:
@@ -1351,7 +1549,7 @@ def validate_and_calibrate_hh(
     current_hh = total_hh_per_day / perf
 
     # 0. Factor de Complejidad Constructiva (Mantenimiento, Saneamiento, Altura)
-    desc_clean = _normalize_str(str(partida.get("description") or partida.get("descripcion") or ""))
+    desc_clean = norm_text(str(partida.get("description") or partida.get("descripcion") or ""))
     is_maintenance = any(k in desc_clean for k in [
         "MANTENIMIENTO", "SANEAMIENTO", "REPARACION", "RECONSTRUCCION", "RESTAURACION",
         "REHABILITACION", "REACONDICIONAMIENTO", "ACONDICIONAMIENTO", "DEMOLICION",
@@ -1364,8 +1562,8 @@ def validate_and_calibrate_hh(
     else:
         difficulty_factor = 1.30 if is_maintenance else 1.0
 
-    # 1. Buscar benchmark empírico por clave compuesta exacta (normalizando 'ml' -> 'm' por equivalencia lineal)
-    bench_unit = "m" if unit in ("ml", "mts", "mt", "metro", "metros", "metro lineal") else unit
+    # 1. Buscar benchmark empírico por clave compuesta exacta (VER-1: normalizar unidad vía _benchmark_unit)
+    bench_unit = _benchmark_unit(unit)
     benchmark_key = f"{typology}_{bench_unit}"
     benchmark = EMPERICAL_HH_BENCHMARKS.get(benchmark_key)
 
@@ -1402,17 +1600,26 @@ def validate_and_calibrate_hh(
     ])
 
     if not benchmark and not skip_discrete_benchmark and unit in ("und", "pza"):
-        # Pozo profundo / bomba sumergible en pozo
-        if any(k in desc_clean for k in ["POZO PROFUNDO", "POZO TUBULAR", "80M", "100M", "50M", "60M"]):
-            benchmark = {
-                "p10": 16.0000,
-                "p25": 24.0000,
-                "median": 32.0000,
-                "p75": 48.0000,
-                "p90": 64.0000,
-                "rendimiento_med": 1.0,
-            }
+        # Pozo profundo / bomba sumergible en pozo (VER-6: escala con profundidad real del pozo)
+        is_deep_well_match = bool(
+            re.search(r"\bPOZO\s+(?:PROFUNDO|TUBULAR)\b", desc_clean)
+            or (re.search(r"\b\d{2,3}\s*M\b", desc_clean) and "POZO" in desc_clean)
+            or partida.get("profundidad_m")
+        )
+        if is_deep_well_match and ("POZO" in desc_clean or "BOMBA" in desc_clean):
+            depth_m = _safe_float(partida.get("profundidad_m"), 0.0)
+            if depth_m <= 0.0:
+                m_depth = re.search(r"\b(\d{2,3})\s*M\b", desc_clean)
+                if m_depth:
+                    depth_m = _safe_float(m_depth.group(1), 30.0)
+                else:
+                    depth_m = 30.0
+            benchmark = _deep_well_benchmark(depth_m)
             difficulty_factor = 1.0
+            notes.append(
+                f"Benchmark de pozo profundo calibrado: Profundidad efectiva {depth_m:.0f} m "
+                f"(P50 {benchmark['median']:.1f} HH/und, factor profundidad x{benchmark.get('_depth_factor', 1.0)})."
+            )
         # Desmontaje electromecánico / hidráulico general
         elif (is_dismantling or typology == "DEMOLICION") and is_mech_elec:
             benchmark = {
@@ -1457,11 +1664,11 @@ def validate_and_calibrate_hh(
     # Fallback inteligente para unidades discretas (und / pza) si la tipología es explícitamente civil/albañilería
     if not benchmark and not skip_discrete_benchmark and unit in ("und", "pza"):
         if typology in ("ALBANILERIA", "FRISOS", "CONCRETO", "PISOS"):
-            benchmark = EMPERICAL_HH_BENCHMARKS.get(f"{typology}_{unit}") or EMPERICAL_HH_BENCHMARKS.get(f"ALBANILERIA_{unit}")
+            benchmark = EMPERICAL_HH_BENCHMARKS.get(f"{typology}_{bench_unit}") or EMPERICAL_HH_BENCHMARKS.get(f"ALBANILERIA_{bench_unit}")
         elif typology == "PINTURA":
-            benchmark = EMPERICAL_HH_BENCHMARKS.get(f"PINTURA_{unit}")
+            benchmark = EMPERICAL_HH_BENCHMARKS.get(f"PINTURA_{bench_unit}")
         elif typology == "ESTRUCTURAS_METALICAS":
-            benchmark = EMPERICAL_HH_BENCHMARKS.get(f"ESTRUCTURAS_METALICAS_{unit}")
+            benchmark = EMPERICAL_HH_BENCHMARKS.get(f"ESTRUCTURAS_METALICAS_{bench_unit}")
 
     # Blindaje dimensional estricto: Si no hay benchmark para esta unidad física exacta o disciplina,
     # NUNCA cruzar dimensiones ni imponer albañilería a disciplinas mecánicas o eléctricas.
@@ -1526,9 +1733,9 @@ def validate_and_calibrate_hh(
     # -------------------------------------------------------------
     lead_worker_count = 1.0
     for l in labors:
-        desc_l = _normalize_str(l.get("descripcion", ""))
+        desc_l = norm_text(l.get("descripcion", ""))
         if any(role in desc_l for role in ["ALBANIL", "PINTOR", "SOLDADOR", "HERRERO", "ELECTRICISTA", "PLOMERO", "CARPINTERO"]):
-            lead_worker_count = max(lead_worker_count, float(l.get("cantidad", 1.0) or 1.0))
+            lead_worker_count = max(lead_worker_count, _safe_float(l.get("cantidad", 1.0), 1.0))
             break
 
     CAPS_PER_LEAD_WORKER = {
@@ -1547,12 +1754,12 @@ def validate_and_calibrate_hh(
         "DEMOLICION_m3": 2.5,
         "ACARREO_m3.m": 250.0,
     }
-    cap_key = f"{typology}_{unit}"
+    cap_key = f"{typology}_{bench_unit}"
     max_cap_single = CAPS_PER_LEAD_WORKER.get(cap_key)
     biomechanical_triggered = False
     if max_cap_single:
         max_physical_perf = round(max_cap_single * lead_worker_count, 2)
-        current_perf_val = float(partida.get("performance") or partida.get("rendimiento") or 0.0)
+        current_perf_val = _safe_float(partida.get("performance") or partida.get("rendimiento"), 0.0)
         if current_perf_val > max_physical_perf:
             biomechanical_triggered = True
             notes.append(
@@ -1634,7 +1841,7 @@ def calibrate_apu_crew_and_equipment(
         description = str(partida.get("description") or partida.get("descripcion") or "")
         unit = str(partida.get("unit") or partida.get("unidad") or "")
         covenin = str(partida.get("cod_par") or partida.get("cov_par") or "")
-        perf_orig = float(partida.get("performance") or partida.get("rendimiento") or 0.0)
+        perf_orig = _safe_float(partida.get("performance") or partida.get("rendimiento"), 0.0)
 
         # 0. Clasificar tipología constructiva
         typology = classify_activity_typology(description, unit, covenin)
@@ -1688,7 +1895,7 @@ def calibrate_apu_crew_and_equipment(
                 result["notas_adaptacion"].append(note)
 
         # Inyectar trazabilidad completa del calibrador para el archivo de Debug
-        perf_final = float(calibrated_partida.get("performance") or calibrated_partida.get("rendimiento") or 0.0)
+        perf_final = _safe_float(calibrated_partida.get("performance") or calibrated_partida.get("rendimiento"), 0.0)
         result["debug_calibrator_trace"] = {
             "tipologia_constructiva": typology,
             "unidad": unit,
@@ -1697,15 +1904,28 @@ def calibrate_apu_crew_and_equipment(
             "ajuste_rendimiento_aplicado": (perf_orig != perf_final),
             "metricas_horas_hombre": hh_trace,
             "cuadrilla": {
-                "total_trabajadores": round(sum(float(l.get("cantidad", 1.0) or 1.0) for l in balanced_labors if isinstance(l, dict)), 2),
+                "total_trabajadores": round(sum(_safe_float(l.get("cantidad", 1.0), 1.0) for l in balanced_labors if isinstance(l, dict)), 2),
                 "supervision_notas": sup_notes,
                 "especialidades_notas": trade_notes,
             },
             "equipos": {
                 "notas": eq_notes,
             },
-            "todas_las_notas_calibracion": all_calibration_notes
+            "todas_las_notas_calibracion": all_calibration_notes,
+            # VER-11: Métrica de cobertura de tipología constructiva
+            "cobertura": {
+                "tipologia": typology,
+                "benchmark_aplicado": bool(hh_trace.get("benchmark_encontrado")),
+                "calibrado": typology != "GENERAL",
+            },
         }
+
+        # VER-11: Advertencia clara si la partida cayó en tipología GENERAL
+        if typology == "GENERAL":
+            result.setdefault("advertencias", []).append(
+                "[CALIBRACION] Esta partida no pudo clasificarse en una familia operativa "
+                "conocida. Los rendimientos NO fueron validados contra la base empírica."
+            )
 
         logger.info(
             "Calibración de APU completada satisfactoriamente para tipología '%s' (%d notas técnicas generadas).",
@@ -1714,6 +1934,13 @@ def calibrate_apu_crew_and_equipment(
         )
 
     except Exception as exc:
-        logger.error("Error inesperado en calibración de APU: %s", exc, exc_info=True)
+        # VER-17: El fallo de calibración debe dejar constancia explícita en advertencias y trace
+        logger.error("Error en calibración de APU: %s", exc, exc_info=True)
+        result.setdefault("advertencias", []).append(
+            "[CALIBRACION] La calibración automática no pudo completarse. "
+            "Los rendimientos y cuadrillas NO fueron validados contra la base empírica. "
+            "Verifique manualmente antes de presupuestar."
+        )
+        result["debug_calibrator_trace"] = {"error": str(exc), "calibracion_aplicada": False}
 
     return result

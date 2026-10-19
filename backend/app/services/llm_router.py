@@ -16,13 +16,19 @@ import logging
 from typing import List, Optional
 from datetime import datetime, timedelta
 
-import google.generativeai as genai  # kept for now, SDK updated via requirements
+try:
+    import google.generativeai as genai  # kept for now, SDK updated via requirements
+except ImportError:
+    genai = None
+
 try:
     from google import genai as genai_new
     from google.genai import types as genai_types
     GENAI_NEW = True
 except ImportError:
     GENAI_NEW = False
+    genai_new = None
+    genai_types = None
 import requests
 
 from app.db.base import SessionLocal
@@ -102,7 +108,9 @@ def _call_gemini(provider: LLMProvider, prompt: str, expect_json: bool, system_p
         client = genai_new.Client(api_key=api_key)
         config = genai_types.GenerateContentConfig(
             system_instruction=system_instruction,
-            response_mime_type="application/json" if expect_json else "text/plain"
+            response_mime_type="application/json" if expect_json else "text/plain",
+            temperature=0.0,
+            max_output_tokens=8192,
         )
         for attempt in range(1, 4):
             try:
@@ -123,21 +131,26 @@ def _call_gemini(provider: LLMProvider, prompt: str, expect_json: bool, system_p
                 else:
                     raise
         raise ValueError("Gemini falló tras 3 intentos por congestión del proveedor.")
-    else:
+    elif genai is not None:
         # Fallback to old SDK
         genai.configure(api_key=api_key)
-        gen_config_kwargs = {}
+        gen_config_kwargs = {
+            "temperature": 0.0,
+            "max_output_tokens": 8192,
+        }
         if expect_json:
             gen_config_kwargs["response_mime_type"] = "application/json"
         model = genai.GenerativeModel(
             model_name,
             system_instruction=system_instruction,
-            generation_config=genai.GenerationConfig(**gen_config_kwargs) if gen_config_kwargs else None,
+            generation_config=genai.GenerationConfig(**gen_config_kwargs),
         )
         response = model.generate_content(prompt)
         if not response or not hasattr(response, "text") or not response.text:
             raise ValueError("Gemini returned empty or blocked response.")
         return response.text.strip()
+    else:
+        raise ImportError("Ni google-genai ni google-generativeai están disponibles en el entorno.")
 
 
 def _call_openai_compatible(provider: LLMProvider, prompt: str, expect_json: bool, system_prompt: Optional[str] = None) -> str:
@@ -172,8 +185,8 @@ def _call_openai_compatible(provider: LLMProvider, prompt: str, expect_json: boo
 
     # APU JSON requiere ~3000-4000 tokens de salida; default 8192 para no truncar
     default_max_tokens = 8192 if key in ("deepseek", "qwen") else 4096
-    # Timeout optimizado para conmutar rápido a Gemini si DeepSeek se congestiona
-    timeout_secs = 20 if key == "deepseek" else 30
+    # Timeout calibrado según doc §11.7 (90s para deepseek/qwen con max_tokens=8192) (VER-7)
+    timeout_secs = 90 if key in ("deepseek", "qwen") else 60
 
     payload: dict = {
         "model": provider.model_name,

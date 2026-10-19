@@ -17,12 +17,23 @@ from app.services.ai_apu_service.reconciliation.equipment import (
 )
 from app.services.ai_apu_service.reconciliation.materials import reconcile_materials_with_database
 from app.services.ai_apu_service.reconciliation.labor import reconcile_labor_with_database
+from app.services.ai_apu_service.domain_rules.structural_requirements import (
+    align_description_with_requested_mix,
+    enforce_fine_mix_plausibility,
+    enforce_reinforcement_for_structural_elements,
+    enforce_frp_structural_safeguards,
+)
+from app.services.ai_apu_service.domain_rules.discordant_pruning import (
+    enforce_discordant_inputs_purging,
+)
 
 
 def generate_apu_with_ai(
     payload_llm: Dict[str, Any],
     history: Optional[List[Dict[str, Any]]] = None,
-    db: Optional[Session] = None
+    db: Optional[Session] = None,
+    deep_well_depth: Optional[float] = None,
+    requested_unit: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Generación de APU usando el flujo clásico de preprocesamiento estadístico.
@@ -99,13 +110,25 @@ def generate_apu_with_ai(
     _enforce_rapel_and_height_equipment(result, user_desc)
     _enforce_floor_ground_equipment(result, user_desc)
     _enforce_primary_materials_mutual_exclusion(result, user_desc)
-    _enforce_deep_well_dimensions(result, user_desc)
+    enforce_discordant_inputs_purging(result, user_desc, None)
+    _enforce_deep_well_dimensions(result, user_desc, deep_well_depth)
     _sanitize_partida_description(result, user_desc)
+
+    if result.get("partida") and requested_unit:
+        result["partida"]["unit"] = requested_unit.strip().lower()
+
+    align_description_with_requested_mix(result, user_desc)
+    enforce_reinforcement_for_structural_elements(result, user_desc)
+    enforce_fine_mix_plausibility(result, user_desc)
+    enforce_frp_structural_safeguards(result, user_desc)
 
     _normalize_equipment_prices(result)
     calibrate_apu_crew_and_equipment(result)
     reconcile_equipment_with_database(result, db)
     reconcile_materials_with_database(result, db)
     reconcile_labor_with_database(result, db)
+
+    enforce_discordant_inputs_purging(result, user_desc, None)
+    _enforce_deep_well_dimensions(result, user_desc, deep_well_depth)
 
     return result

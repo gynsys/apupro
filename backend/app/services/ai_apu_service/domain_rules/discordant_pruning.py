@@ -209,6 +209,9 @@ _FINE_MIX_PATTERN = re.compile(
     r"\bMORTERO\b|\bARENA\s*(?:-|/|Y|E|\+)\s*CEMENTO\b|\bCEMENTO\s*(?:-|/|Y|E|\+)\s*ARENA\b"
 )
 _COARSE_CONCRETE_PATTERN = re.compile(r"\b(?:CONCRETO|HORMIGON|PIEDRA\s+PICADA|GRAVA|GRANZA)\b")
+_NEGATED_COARSE_PATTERN = re.compile(
+    r"\b(?:SIN|NO|LIBRE\s+DE|EXCLUIR|EXCLUYENDO|PRESCINDIR\s+DE)\s+(?:(?:CONCRETO|HORMIGON|PIEDRA\s+PICADA|GRAVA|GRANZA)(?:\s*(?:,|Y|E|NI|O)\s*)?)+\b"
+)
 _MANUAL_MIXING_PATTERN = re.compile(
     r"\b(?:HECH[OA]|ELABORAD[OA]|PREPARAD[OA]|MEZCLAD[OA])\s+(?:A\s+MANO|MANUAL(?:MENTE)?)\b"
     r"|\bMEZCLA\s+MANUAL\b|\bMANUALMENTE\b|\bA\s+MANO\b"
@@ -224,7 +227,10 @@ def is_explicit_mortar_without_coarse_concrete(text_input: str) -> bool:
     if not text_input or not isinstance(text_input, str):
         return False
     up = _strip_accents(text_input).upper()
-    return bool(_FINE_MIX_PATTERN.search(up)) and not bool(_COARSE_CONCRETE_PATTERN.search(up))
+    if not bool(_FINE_MIX_PATTERN.search(up)):
+        return False
+    cleaned = _NEGATED_COARSE_PATTERN.sub("", up)
+    return not bool(_COARSE_CONCRETE_PATTERN.search(cleaned))
 
 
 def is_manual_mixing_requested(text_input: str) -> bool:

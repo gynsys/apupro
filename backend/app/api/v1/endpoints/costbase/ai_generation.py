@@ -40,6 +40,8 @@ from app.services.ai_apu_service.domain_rules.parametric_ontology import evaluat
 from app.services.user_semantic_cache import lookup_user_semantic_cache
 from app.services.inverse_apu_synthesizer import synthesize_apu_inverse
 from app.services.typesafe_service import evaluate_construction_prompt
+from app.services.ai_apu_service.domain_rules.well_classifier import is_sewage_or_drainage
+from app.services.ai_apu_service_v2 import generate_apu_v2
 from app.api.v1.endpoints.costbase.common import (
     is_covenin_coded_item,
     normalize_text_alphanumeric,
@@ -47,6 +49,94 @@ from app.api.v1.endpoints.costbase.common import (
 )
 
 router = APIRouter()
+
+
+def _safe_float_attr(obj: Any, attr: str, default: float = 0.0, disallow_zero: bool = False) -> float:
+    """Extrae de forma segura atributos numéricos de modelos ORM evitando que 0.0 legítimo se convierta en default."""
+    val = getattr(obj, attr, None)
+    if val is None:
+        return default
+    try:
+        num = float(val)
+        if disallow_zero and num <= 0.0:
+            return default
+        return num
+    except (ValueError, TypeError):
+        return default
+
+
+def _strip_debug_payload(result: Dict[str, Any], is_superadmin: bool) -> Dict[str, Any]:
+    """Elimina el payload de diagnóstico interno para usuarios no-superadmin (SEC-2)."""
+    if not isinstance(result, dict) or is_superadmin:
+        return result
+    for key in (
+        "debug_rag_trace",
+        "debug_base_selection",
+        "debug_calibrator_trace",
+        "debug_meta",
+        "debug_llm",
+        "jev_analysis",
+        "prompt_enviado_al_llm",
+        "debug_base_apu",
+        "debug_preprocesamiento",
+        "debug_specialty_coherence",
+        "debug_reconciliation_trace",
+    ):
+        result.pop(key, None)
+    if isinstance(result.get("debug_meta"), dict):
+        result["debug_meta"].pop("usuario_id", None)
+    return result
+
+
+_ACTION_TOKENS = (
+    "suministro", "instalacion", "construccion", "demolicion", "vaciado",
+    "colocacion", "montaje", "acarreo", "pintura", "pintar", "friso", "frisar",
+    "excavacion", "excavar", "relleno", "rellenar", "compactacion", "compactar",
+    "impermeabilizacion", "impermeabilizar", "perforacion", "perforar",
+    "soldadura", "soldar", "fabricacion", "fabricar", "reparacion", "reparar",
+    "limpieza", "limpiar", "saneamiento", "sanear", "nivelacion", "nivelar",
+    "encofrado", "encofrar", "armado", "armar", "remocion", "remover",
+    "transporte", "transportar", "reemplazo", "reemplazar", "deforestacion",
+    "desmalezamiento", "tala",
+)
+
+_CLARIFICATION_ANSWER_RE = re.compile(
+    r"^\s*(?:s[ií]\b|no\b|correcto\b|esa\b|la\s+(?:primera|segunda|tercera)\b"
+    r"|\d[\d.,]*\s*(?:m|m2|m²|m3|m³|ml|cm|mm|hp|kg|und|pza|d[ií]as?)\b"
+    r"|\d[\d.,]*\s*[x×]\s*\d[\d.,]*)",
+    re.IGNORECASE,
+)
+
+
+def _is_clarification_answer(text: str) -> bool:
+    """Determina si un mensaje es respuesta a aclaratoria previa evitando contaminar nuevas consultas."""
+    t = (text or "").strip()
+    if not t:
+        return False
+    if any(act in t.lower() for act in _ACTION_TOKENS):
+        return False
+    if _CLARIFICATION_ANSWER_RE.match(t):
+        return True
+    return len(t.split()) <= 6
+
+
+def _resolve_contextual_prompt(raw_desc: str, history: Optional[List[Any]]) -> str:
+    """Reconstruye y unifica contexto si es una respuesta a aclaratoria con historial (VER-2)."""
+    if not history or not raw_desc:
+        return (raw_desc or "").strip()
+    clean_desc = raw_desc.strip()
+    last_user_msg = None
+    for msg in reversed(history):
+        role = getattr(msg, "role", None) or (msg.get("role") if isinstance(msg, dict) else "")
+        content = getattr(msg, "content", None) or (msg.get("content") if isinstance(msg, dict) else "")
+        content_str = str(content or "").strip()
+        if role == "user" and content_str and content_str.lower() != clean_desc.lower():
+            last_user_msg = content_str
+            break
+    if last_user_msg and _is_clarification_answer(clean_desc):
+        logger.info("Unificando respuesta de aclaratoria con mensaje previo: '%.80s' + '%.80s'", last_user_msg, clean_desc)
+        return f"{last_user_msg}, {clean_desc}"
+    return clean_desc
 
 
 @router.post("/generate-ai-apu")
@@ -58,6 +148,13 @@ def generate_ai_apu_route(
     # Verificar acceso a IA
     check_ai_access(current_user)
     t_route_start = time.time()
+
+    is_superadmin: bool = bool(
+        getattr(current_user, 'is_superadmin', False) is True or
+        getattr(current_user, 'role', '') == 'superadmin' or
+        getattr(current_user, 'email', '') == 'admin@arko360.net' or
+        getattr(current_user, 'is_admin', False) is True
+    )
 
     # 0. Si el usuario aceptó la partida de Match Exacto ("Sí, es esa"), devolver APU de BD directamente
     if payload.accept_exact_match_code:
@@ -76,7 +173,7 @@ def generate_ai_apu_route(
                     "descripcion": mat.Descri,
                     "unidad": mat.UniMat,
                     "cantidad": rel.CanIns,
-                    "desperdicio": getattr(rel, 'Desper', 0.0) or 0.0,
+                    "desperdicio": _safe_float_attr(rel, 'Desper', 0.0),
                     "precio_unitario": mat.CosMat or 0.0,
                     "origen": "historico",
                     "nota_calculo": "Extraído directamente de la base de datos certificada."
@@ -92,7 +189,7 @@ def generate_ai_apu_route(
                     "descripcion": eq.Descri,
                     "unidad": "día",
                     "cantidad": rel.CanIns,
-                    "depreciacion": getattr(rel, 'Deprec', 1.0) or 1.0,
+                    "depreciacion": _safe_float_attr(rel, 'Deprec', 1.0),
                     "precio_unitario": eq.CosDia or 0.0,
                     "origen": "historico",
                     "nota_calculo": "Extraído directamente de la base de datos certificada."
@@ -124,7 +221,7 @@ def generate_ai_apu_route(
                     "description": item.Descri,
                     "unit": item.UniPar,
                     "quantity": 1.0,
-                    "performance": getattr(item, 'RenPar', 1.0) or 1.0
+                    "performance": _safe_float_attr(item, 'RenPar', 1.0, disallow_zero=True)
                 },
                 "materials": materials,
                 "equipments": equipments,
@@ -135,28 +232,10 @@ def generate_ai_apu_route(
     # 1. Early Validation & Detección de Código vs Descripción de Obra
     raw_desc = (payload.description or "").strip()
 
-    # Reconstrucción y unificación de contexto si es una respuesta a aclaratoria con historial
+    # Reconstrucción y unificación de contexto si es una respuesta a aclaratoria con historial (VER-2)
     if payload.history and raw_desc:
-        last_user_msg = next(
-            (
-                getattr(msg, "content", "").strip()
-                for msg in reversed(payload.history)
-                if getattr(msg, "role", "") == "user"
-                and getattr(msg, "content", "").strip()
-                and getattr(msg, "content", "").strip().lower() != raw_desc.lower()
-            ),
-            None
-        )
-        if last_user_msg:
-            raw_tokens = raw_desc.lower().split()
-            has_action = any(
-                act in raw_desc.lower()
-                for act in ("suministro", "instalacion", "construccion", "demolicion", "vaciado", "colocacion", "montaje", "acarreo")
-            )
-            if len(raw_tokens) <= 6 or not has_action:
-                logger.info("Unificando respuesta de aclaratoria con mensaje previo: '%.80s' + '%.80s'", last_user_msg, raw_desc)
-                raw_desc = f"{last_user_msg}, {raw_desc}"
-                payload.description = raw_desc
+        raw_desc = _resolve_contextual_prompt(raw_desc, payload.history)
+        payload.description = raw_desc
 
     # --- CAPA 1: Validación de entrada (costo cero — sin LLM, sin red) ---
     capa1_result = validate_apu_input(raw_desc)
@@ -178,7 +257,7 @@ def generate_ai_apu_route(
                         "description": exact_item.Descri,
                         "unit": exact_item.UniPar,
                         "pre_uni": exact_item.PreUni or 0.0,
-                        "performance": getattr(exact_item, 'RenPar', 1.0) or 1.0
+                        "performance": _safe_float_attr(exact_item, 'RenPar', 1.0, disallow_zero=True)
                     },
                     "message": f"Existe la partida {exact_item.CovPar or exact_item.CodPar} correspondiente al código ingresado. ¿Te refieres a esta partida?"
                 }
@@ -294,20 +373,17 @@ def generate_ai_apu_route(
         }
 
     # --- VALIDACIÓN DETERMINISTA DE PROFUNDIDAD PARA POZO PROFUNDO / BOMBA SUMERGIBLE ---
-    is_sewage_or_drainage = bool(re.search(
-        r"\b(aguas?\s+negras?|aguas?\s+servidas?|residuales?|achique|fosa|cloaca|triturador\w*|drenaje\s+pluvial)\b",
-        raw_desc_lower
-    ))
+    is_sewage_flag = is_sewage_or_drainage(raw_desc_lower)
     is_deep_well_pump = (
         bool(re.search(r"\b(pozo\s+profundo|pozo\s+de\s+agua|pozo\s+tubular|bomba\s+(?:tipo\s+)?lapicero)\b", raw_desc_lower))
-        or (bool(re.search(r"\bbomba\s+sumergible\b", raw_desc_lower)) and not is_sewage_or_drainage)
+        or (bool(re.search(r"\bbomba\s+sumergible\b", raw_desc_lower)) and not is_sewage_flag)
     )
     if not is_deep_well_pump and payload.history:
         for msg in reversed(payload.history):
             c_low = (getattr(msg, "content", "") or "").lower()
             if (
                 bool(re.search(r"\b(pozo\s+profundo|pozo\s+de\s+agua|pozo\s+tubular|bomba\s+(?:tipo\s+)?lapicero)\b", c_low))
-                or (bool(re.search(r"\bbomba\s+sumergible\b", c_low)) and not is_sewage_or_drainage)
+                or (bool(re.search(r"\bbomba\s+sumergible\b", c_low)) and not is_sewage_or_drainage(c_low))
             ):
                 is_deep_well_pump = True
                 break
@@ -422,6 +498,38 @@ def generate_ai_apu_route(
             logger.error("Error al sintetizar APU en Modo Matemático: %s", exc, exc_info=True)
             raise HTTPException(status_code=500, detail=f"Error en Modo Matemático: {str(exc)}")
 
+    # Selector de Motor v2.0 (WorkSpec + Compositor Determinista) para Superadmin / Evaluadores
+    if payload.generation_mode in ("v2", "workspec") and is_superadmin and not payload.only_preprocess:
+        logger.info(
+            "Despachando generación de APU en Motor v2.0 (WorkSpec) para superadmin %s: %.80s",
+            getattr(current_user, 'email', 'desconocido'),
+            payload.description
+        )
+        try:
+            base_apu = None
+            base_code = payload.base_partida_code
+            if not base_code:
+                v2_candidates, _ = get_dynamic_candidates(db, payload.description, payload.covenin_prefix or "", limit=5)
+                if v2_candidates and v2_candidates[0]["score"] >= 0.35:
+                    base_code = v2_candidates[0]["item"].CodPar
+            if base_code:
+                base_apu = fetch_base_apu_for_prompt(db, base_code)
+
+            v2_result = generate_apu_v2(
+                user_description=payload.description,
+                requested_unit=effective_unit or payload.unit,
+                covenin_prefix=payload.covenin_prefix,
+                context=payload.covenin_context,
+                base_apu=base_apu,
+                db=db
+            )
+            if jev_analysis:
+                v2_result["jev_analysis"] = jev_analysis
+            return _strip_debug_payload(v2_result, is_superadmin)
+        except Exception as exc:
+            logger.error("Error al generar APU con Motor v2.0: %s", exc, exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Error en Motor v2.0: {str(exc)}")
+
     # --- CAPA 0 (Semantic Cache Privado del Usuario) ---
     if current_user and payload.description and not payload.only_preprocess and not payload.base_partida_code and not payload.accept_exact_match_code:
         user_id = getattr(current_user, 'id', None)
@@ -429,11 +537,12 @@ def generate_ai_apu_route(
             db=db,
             user_id=user_id,
             description=payload.description,
+            unit=effective_unit or payload.unit,
             threshold=0.96
         )
         if cached_apu:
             logger.info("APU servido desde Semantic Cache para usuario %s: %.80s", user_id, payload.description)
-            return cached_apu
+            return _strip_debug_payload(cached_apu, is_superadmin)
 
     # 2.1. Si es solo preproceso DEBUG, devolver resultado rápido
     if payload.only_preprocess:
@@ -527,7 +636,7 @@ def generate_ai_apu_route(
                             "description": top_item.Descri,
                             "unit": top_item.UniPar,
                             "pre_uni": top_item.PreUni or 0.0,
-                            "performance": getattr(top_item, 'RenPar', 1.0) or 1.0
+                            "performance": _safe_float_attr(top_item, 'RenPar', 1.0, disallow_zero=True)
                         },
                         "message": f"Existe la partida {top_item.CovPar or top_item.CodPar} que coincide casi al 100% con tu descripción. ¿Te refieres a esta partida?"
                     }
@@ -711,7 +820,7 @@ def generate_ai_apu_route(
         result["generation_engine"] = "rag"
         if jev_analysis and isinstance(result, dict):
             result["jev_analysis"] = jev_analysis
-        return result
+        return _strip_debug_payload(result, is_superadmin)
 
     # 3. Preprocesamiento (BD + Estadísticas) + IA semántica (Fallback clásico sin base directa)
     payload_llm = preprocess_apu_data(db, payload.description, payload.covenin_prefix, payload.covenin_context)
@@ -729,14 +838,20 @@ def generate_ai_apu_route(
                     "description": item.Descri,
                     "unit": item.UniPar,
                     "pre_uni": item.PreUni or 0.0,
-                    "performance": getattr(item, 'RenPar', 1.0) or 1.0
+                    "performance": _safe_float_attr(item, 'RenPar', 1.0, disallow_zero=True)
                 },
                 "message": f"Existe la partida {item.CovPar or item.CodPar} que coincide casi al 100% con tu descripción. ¿Te refieres a esta partida?"
             }
 
     # 4. Generación con IA
     history_dicts = [msg.model_dump() for msg in payload.history] if payload.history else []
-    result = generate_apu_with_ai(payload_llm, history_dicts, db=db)
+    result = generate_apu_with_ai(
+        payload_llm,
+        history_dicts,
+        db=db,
+        deep_well_depth=effective_depth,
+        requested_unit=effective_unit or payload.unit,
+    )
 
     if (result.get("status") in ("success", "completed")) and result.get("partida"):
         if "advertencias" in result and isinstance(result["advertencias"], list):
@@ -753,7 +868,7 @@ def generate_ai_apu_route(
     if jev_analysis and isinstance(result, dict):
         result["jev_analysis"] = jev_analysis
 
-    return result
+    return _strip_debug_payload(result, is_superadmin)
 
 
 @router.post("/smart-select")
@@ -887,12 +1002,25 @@ def rag_diagnostic_route(
 
 
 @router.post("/rag/update-brain")
-def update_rag_brain(background_tasks: BackgroundTasks) -> Dict[str, str]:
+def update_rag_brain(
+    background_tasks: BackgroundTasks,
+    current_user: Any = Depends(get_current_arko_admin)
+) -> Dict[str, str]:
     """
     Ejecuta la actualización del Cerebro RAG (generación de embeddings y CSV) en segundo plano.
     Este proceso lee las partidas de PostgreSQL, calcula los embeddings con MiniLM y 
     los guarda en la carpeta /app para que el AISearchEngine los cargue en el proximo restart.
+    Ruta protegida exclusiva para superadministradores (SEC-1).
     """
+    is_superadmin = bool(
+        getattr(current_user, 'is_superadmin', False) is True or
+        getattr(current_user, 'role', '') == 'superadmin' or
+        getattr(current_user, 'email', '') == 'admin@arko360.net' or
+        getattr(current_user, 'is_admin', False) is True
+    )
+    if not is_superadmin:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Solo superadmin puede actualizar el cerebro RAG.")
+
     def run_generation() -> None:
         try:
             subprocess.run(

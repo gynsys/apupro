@@ -8,12 +8,13 @@ from app.services.llm_router import call_llm_json
 
 from .errors import StructuringError
 from .extractors import _looks_like_stop_row, _normalize_header, _normalize_unit, parse_quantity
+from .reconcile import reconcile_items
 
 logger = logging.getLogger(__name__)
 
 MAX_ITEMS = 300
-MAX_CHUNK_CHARS = 12_000
-MAX_CHUNKS = 5
+MAX_CHUNK_CHARS = 9_000
+MAX_CHUNKS = 8
 
 _ITEM_SCHEMA = """{
   "budget_name": "Nombre del presupuesto si aparece, si no déjalo vacío",
@@ -150,12 +151,18 @@ def _dedupe(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     seen = set()
     result: List[Dict[str, Any]] = []
     for item in items:
-        key = (
-            _normalize_header(item["description"]),
-            item["unit"],
-            round(float(item["quantity"]), 3),
-            bool(item["is_chapter"]),
-        )
+        code = str(item.get("code") or "").strip()
+        if code:
+            # Dos partidas de secciones distintas pueden tener la misma
+            # descripción; el código es el identificador correcto.
+            key = ("code", code)
+        else:
+            key = (
+                _normalize_header(item["description"]),
+                item["unit"],
+                round(float(item["quantity"]), 3),
+                bool(item["is_chapter"]),
+            )
         if key in seen:
             continue
         seen.add(key)
@@ -210,8 +217,8 @@ def structure_text(text: str, filename: str) -> Dict[str, Any]:
                 # Solo cambiamos la moneda si el documento la menciona explícitamente;
                 # de lo contrario el LLM tiende a asumir VES por el contexto venezolano.
                 chunk_upper = chunk.upper()
-                has_ves = any(token in chunk_upper for token in ("BS.", "BSF", "VES", "BOLIVAR", "BOLÍVAR"))
-                has_usd = any(token in chunk_upper for token in ("USD", "US$", "$"))
+                has_ves = bool(re.search(r"\bBSF\b|\bVES\b|\bBOL[IÍ]VAR(?:ES)?\b|BS\.", chunk_upper))
+                has_usd = bool(re.search(r"\bUSD\b|US\$|\$", chunk_upper))
                 if has_ves and not has_usd:
                     header["currency"] = "VES"
                 elif has_usd and not has_ves:
@@ -232,6 +239,12 @@ def structure_text(text: str, filename: str) -> Dict[str, Any]:
         )
 
     items = _dedupe(items)
+
+    # La IA puede omitir filas en documentos largos. Reconciliamos contra los
+    # códigos del texto original y recuperamos las partidas faltantes.
+    items, reconciliation_warnings = reconcile_items(text, items)
+    warnings.extend(reconciliation_warnings)
+
     if len(items) > MAX_ITEMS:
         warnings.append(f"Se detectaron {len(items)} filas; se importarán las primeras {MAX_ITEMS}.")
         items = items[:MAX_ITEMS]

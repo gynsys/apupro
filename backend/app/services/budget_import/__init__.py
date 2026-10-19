@@ -33,13 +33,14 @@ def _finalize_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             quantity = 0.0
         quantity = max(0.0, quantity)
 
-        key = (description.lower(), unit, round(quantity, 3), is_chapter)
+        code = str(raw.get("code") or "").strip()
+        key = ("code", code) if code else (description.lower(), unit, round(quantity, 3), is_chapter)
         if key in seen:
             continue
         seen.add(key)
 
         result.append({
-            "code": str(raw.get("code") or "")[:80],
+            "code": code[:80],
             "description": description[:600],
             "unit": unit,
             "quantity": quantity,
@@ -101,6 +102,7 @@ def build_preview(data: bytes, filename: str, db: Session) -> Dict[str, Any]:
         item["candidates"] = item["candidates"][:5]
 
     matched = sum(1 for item in items if not item["is_chapter"] and item["candidates"])
+    selected = sum(1 for item in items if not item["is_chapter"] and item.get("selected_cod_par"))
     generic = sum(1 for item in items if not item["is_chapter"] and not item["candidates"])
     chapters = sum(1 for item in items if item["is_chapter"])
 
@@ -118,6 +120,8 @@ def build_preview(data: bytes, filename: str, db: Session) -> Dict[str, Any]:
         "stats": {
             "total": len(items),
             "matched": matched,
+            "selected": selected,
+            "pending": max(0, matched - selected),
             "generic": generic,
             "chapters": chapters,
         },

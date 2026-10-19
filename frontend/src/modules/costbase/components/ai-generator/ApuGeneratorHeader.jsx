@@ -1,9 +1,19 @@
 import React from 'react';
 import { ArrowLeft, Plus, FileText, Sparkles } from 'lucide-react';
+import ArchitectureModeSelector from './ArchitectureModeSelector';
 
-export default function ApuGeneratorHeader({ creationMode, item, onBack }) {
+export default function ApuGeneratorHeader({
+  creationMode,
+  item,
+  onBack,
+  generationMode = 'rag',
+  setGenerationMode,
+  useTypesafeJev = false,
+  setUseTypesafeJev,
+  isSuperAdmin = true
+}) {
   return (
-    <div className="flex items-center justify-between mb-6">
+    <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
       <div className="flex items-center gap-4">
         {creationMode !== 'manual' && (creationMode !== 'import' || Boolean(item)) && (
           <button 
@@ -29,6 +39,18 @@ export default function ApuGeneratorHeader({ creationMode, item, onBack }) {
             : 'Generador de APU con IA'}
         </h2>
       </div>
+
+      {creationMode === 'ia' && setGenerationMode && isSuperAdmin && (
+        <div className="flex items-center gap-2">
+          <ArchitectureModeSelector
+            generationMode={generationMode}
+            onChange={setGenerationMode}
+            compact={false}
+            useTypesafeJev={useTypesafeJev}
+            onToggleTypesafeJev={setUseTypesafeJev}
+          />
+        </div>
+      )}
     </div>
   );
 }

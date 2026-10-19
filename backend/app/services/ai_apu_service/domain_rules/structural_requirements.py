@@ -42,6 +42,11 @@ _DESC_EXCLUDES_REBAR = re.compile(
 _SAND_PER_SACK_RANGE_M3: Tuple[float, float] = (0.06, 0.16)
 _WATER_PER_SACK_MAX_M3: float = 0.05
 
+_PRESERVE_SUBSTRATE_PATTERN = re.compile(
+    r"\b(?:SOBRE\s+(?:LA\s+)?(?:LOSA|BASE|PISO|PAVIMENTO|MURO|ESTRUCTURA)\s+DE|BASE\s+DE|LOSA\s+DE|EN\s+(?:MURO|LOSA|PISO|ESTRUCTURA)\s+DE|CAMION\s+(?:MEZCLADOR\s+)?DE|MEZCLADOR(?:A)?\s+DE|DEMOLICI[OÓ]N\s+DE|PICADO\s+DE|RETIRO\s+DE|DESMONTAJE\s+DE)\s*$",
+    re.IGNORECASE,
+)
+
 
 def _strip_accents_upper_local(text: str) -> str:
     decomposed = unicodedata.normalize("NFKD", text or "")
@@ -66,6 +71,14 @@ def _resolve_length_factor_m(result: Dict[str, Any], user_description: str) -> O
     if unit == "m":
         return 1.0
     if unit == "und":
+        declared_length = partida.get("longitud_m")
+        if declared_length and isinstance(declared_length, (int, float)) and declared_length > 0:
+            return float(declared_length)
+        ws = result.get("workspec")
+        if isinstance(ws, dict):
+            ws_len = (ws.get("dimensions") or {}).get("length_m")
+            if ws_len and isinstance(ws_len, (int, float)) and ws_len > 0:
+                return float(ws_len)
         length = extract_linear_length_m(user_description) or extract_linear_length_m(
             str(partida.get("description") or partida.get("descripcion") or "")
         )
@@ -152,6 +165,10 @@ def enforce_reinforcement_for_structural_elements(result: Dict[str, Any], user_d
     length_factor = _resolve_length_factor_m(result, user_description)
     if length_factor is None:
         logger.info("[StructuralRequirements] %s sin longitud/unidad lineal resoluble: no se auto-incluye refuerzo", element_name)
+        result.setdefault("advertencias", []).append(
+            f"[ESPECIFICACION] Elemento estructural ({element_name}) presupuestado por pieza/unidad sin longitud declarada. "
+            "No fue posible auto-calcular el acero de refuerzo ni encofrado. Verifique las dimensiones del elemento."
+        )
         return
 
     materials = result.get("materials")
@@ -205,6 +222,7 @@ def align_description_with_requested_mix(result: Dict[str, Any], user_descriptio
     """
     Si el usuario pidió mezcla fina de arena-cemento (sin concreto), la descripción generada no debe
     llamarla 'concreto' ni heredar exclusiones de la base que contradigan la solicitud.
+    Preserva menciones a elementos preexistentes de soporte o maquinaria (ej. 'sobre losa de concreto', 'camión de concreto').
     """
     if not isinstance(result, dict) or not isinstance(user_description, str):
         return
@@ -212,8 +230,14 @@ def align_description_with_requested_mix(result: Dict[str, Any], user_descriptio
     if not isinstance(partida, dict) or not is_explicit_mortar_without_coarse_concrete(user_description):
         return
     desc = str(partida.get("description") or "")
-    if re.search(r"\bCONCRETO\b", desc, flags=re.IGNORECASE):
-        partida["description"] = re.sub(r"\bCONCRETO\b", "MORTERO", desc, flags=re.IGNORECASE)
+
+    def _replace_concrete_mix(match: re.Match) -> str:
+        preceding = desc[:match.start()]
+        if _PRESERVE_SUBSTRATE_PATTERN.search(preceding):
+            return match.group(0)
+        return "MORTERO"
+
+    partida["description"] = re.sub(r"\bCONCRETO\b", _replace_concrete_mix, desc, flags=re.IGNORECASE)
 
 
 def enforce_fine_mix_plausibility(result: Dict[str, Any], user_description: str) -> None:
@@ -295,3 +319,32 @@ def enforce_fine_mix_plausibility(result: Dict[str, Any], user_description: str)
             water["cantidad"] = round(cap, 4)
             if isinstance(notes, list):
                 notes.append(f"Dosificación verificada: agua acotada de {qty:.4f} a {cap:.4f} m3.")
+
+
+def enforce_frp_structural_safeguards(result: Dict[str, Any], user_description: str = "") -> None:
+    """
+    Salvaguarda determinista para refuerzo no metálico FRP / GFRP (HYP-1 / P0 #8).
+    El reemplazo por densidad (20-25 kgf/m3) cubre ELU a tracción, pero el GFRP tiene
+    módulo de elasticidad 4-5x menor al acero y no posee meseta de fluencia dúctil.
+    Exige verificación de ELS (deflexiones) y diseño sismorresistente según ACI 440.1R / COVENIN 1756.
+    """
+    if not isinstance(result, dict):
+        return
+    desc_check = (user_description or "") + " " + str(result.get("partida", {}).get("description", ""))
+    materials = result.get("materials", [])
+    mat_check = " ".join(str(m.get("descripcion", "")) for m in materials if isinstance(m, dict))
+    full_text = (desc_check + " " + mat_check).upper()
+
+    is_frp = bool(re.search(r"\b(FRP|GFRP|FIBRA\s+DE\s+VIDRIO|VARILLA\s+DE\s+FIBRA|CABILLA\s+DE\s+FIBRA)\b", full_text))
+    if is_frp:
+        warning_msg = (
+            "[VERIFICACION ESTRUCTURAL REQUERIDA] La cuantía de refuerzo en fibra "
+            "(GFRP/FRP) calculada por equivalencia de masa NO considera la diferencia de "
+            "módulo elástico (≈4-5x inferior al acero) ni la ausencia de fluencia dúctil. "
+            "Válida únicamente como estimación de estado límite último a tracción. "
+            "Un ingeniero estructural debe verificar ELS (flechas) y comportamiento "
+            "sísmico (COVENIN 1756) antes de aprobar este APU."
+        )
+        advs = result.setdefault("advertencias", [])
+        if not any("[VERIFICACION ESTRUCTURAL REQUERIDA]" in str(a) for a in advs):
+            advs.append(warning_msg)
