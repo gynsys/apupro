@@ -62,11 +62,14 @@ class ChatRequest(BaseModel):
     temperature: float = Field(default=0.7, description="Temperatura de generación")
 
 
-def is_ollama_online() -> bool:
+_OLLAMA_STARTED_ONCE: bool = False
+
+
+def is_ollama_online(timeout: float = 4.0) -> bool:
     """Verifica si el servicio de Ollama está respondiendo en el puerto local."""
     try:
         req = urllib.request.Request(f"{OLLAMA_BASE_URL}/api/tags", headers={"User-Agent": "QwenGUI"})
-        with urllib.request.urlopen(req, timeout=1.5) as response:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
             return response.status == 200
     except (urllib.error.URLError, TimeoutError, OSError):
         return False
@@ -86,8 +89,10 @@ def get_ollama_executable() -> Optional[str]:
 
 
 def ensure_ollama_running() -> None:
-    """Inicia el servidor de Ollama en segundo plano si no está activo."""
-    if is_ollama_online():
+    """Inicia el servidor de Ollama en segundo plano sin mostrar ninguna ventana de consola."""
+    global _OLLAMA_STARTED_ONCE
+    if is_ollama_online(timeout=2.0):
+        _OLLAMA_STARTED_ONCE = True
         logger.info("Ollama ya se encuentra activo en %s", OLLAMA_BASE_URL)
         return
 
@@ -99,9 +104,13 @@ def ensure_ollama_running() -> None:
     logger.info("Iniciando Ollama en segundo plano desde: %s", exe)
     try:
         if sys.platform == "win32":
+            si = subprocess.STARTUPINFO()
+            si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            si.wShowWindow = 0  # SW_HIDE
             subprocess.Popen(
                 [exe, "serve"],
                 creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS,
+                startupinfo=si,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
@@ -209,13 +218,15 @@ async def stream_ollama(payload: ChatRequest) -> AsyncGenerator[str, None]:
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest) -> StreamingResponse:
     """Endpoint de streaming en tiempo real usando Server-Sent Events (SSE)."""
-    if not is_ollama_online():
+    global _OLLAMA_STARTED_ONCE
+    if not is_ollama_online(timeout=2.0) and not _OLLAMA_STARTED_ONCE:
         ensure_ollama_running()
-        if not is_ollama_online():
+        if not is_ollama_online(timeout=3.0):
             raise HTTPException(
                 status_code=503,
                 detail="El servicio local de Ollama no está disponible. Verifica que esté instalado.",
             )
+    _OLLAMA_STARTED_ONCE = True
 
     return StreamingResponse(
         stream_ollama(request),
@@ -658,23 +669,72 @@ HTML_CONTENT = """<!DOCTYPE html>
         /* ADJUNTOS Y DRAG & DROP */
         .attachments-tray {
             display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
+            flex-direction: column;
+            gap: 6px;
             padding-bottom: 8px;
             border-bottom: 1px solid var(--border-color);
+            max-height: 160px;
+            overflow-y: auto;
+        }
+
+        .tray-summary-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            width: 100%;
+            gap: 10px;
+        }
+
+        .token-gauge {
+            font-size: 0.74rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .token-gauge.ok {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+        }
+
+        .token-gauge.warn {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.35);
+        }
+
+        .token-gauge.danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.45);
+        }
+
+        .chips-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-height: 100px;
+            overflow-y: auto;
+            padding-top: 4px;
         }
 
         .attach-chip {
             background: #23293a;
             border: 1px solid #3b445c;
             color: var(--text-main);
-            font-size: 0.78rem;
-            padding: 4px 10px;
+            font-size: 0.76rem;
+            padding: 3px 8px;
             border-radius: 6px;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            max-width: 280px;
+            gap: 6px;
+            max-width: 260px;
         }
 
         .attach-chip span {
@@ -954,7 +1014,58 @@ HTML_CONTENT = """<!DOCTYPE html>
 
         // GESTIÓN DE ADJUNTOS
         attachFileBtn.addEventListener('click', () => fileInput.click());
-        attachFolderBtn.addEventListener('click', () => folderInput.click());
+
+        attachFolderBtn.addEventListener('click', async () => {
+            // Usar la API moderna showDirectoryPicker para evitar el alert "¿Cargar X archivos?" de Chrome
+            if (window.showDirectoryPicker) {
+                try {
+                    const dirHandle = await window.showDirectoryPicker({ id: 'qwen_folder_picker', mode: 'read' });
+                    const resultFiles = [];
+                    await scanDirectoryHandle(dirHandle, dirHandle.name, resultFiles);
+                    if (resultFiles.length > 0) {
+                        await handleSelectedFiles(resultFiles);
+                    }
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        console.warn("showDirectoryPicker falló, usando input tradicional:", err);
+                        folderInput.click();
+                    }
+                }
+            } else {
+                folderInput.click();
+            }
+        });
+
+        const IGNORED_DIRS = [
+            '__pycache__', 'node_modules', '.git', '.vscode', '.idea', 'venv', 
+            'dist', 'build', '.next', 'scratch', '.gemini', 'uploads', '.qwen_backups',
+            '.pytest_cache', 'env', 'coverage', '.system_generated'
+        ];
+
+        const IGNORED_EXTS = [
+            '.png', '.jpg', '.jpeg', '.gif', '.ico', '.pdf', '.exe', '.dll', 
+            '.zip', '.tar', '.gz', '.mp4', '.mp3', '.pyc', '.bin', '.wasm', 
+            '.woff', '.woff2', '.ttf', '.sql', '.dump', '.db', '.sqlite', '.bak'
+        ];
+
+        async function scanDirectoryHandle(handle, currentPath, resultFiles) {
+            for await (const entry of handle.values()) {
+                const entryPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+                if (entry.kind === 'file') {
+                    try {
+                        const file = await entry.getFile();
+                        file.fullPath = entryPath;
+                        resultFiles.push(file);
+                    } catch (e) {
+                        console.error("Error obteniendo archivo:", entry.name, e);
+                    }
+                } else if (entry.kind === 'directory') {
+                    if (!IGNORED_DIRS.includes(entry.name.toLowerCase())) {
+                        await scanDirectoryHandle(entry, entryPath, resultFiles);
+                    }
+                }
+            }
+        }
 
         fileInput.addEventListener('change', function() {
             handleSelectedFiles(this.files);
@@ -1033,8 +1144,7 @@ HTML_CONTENT = """<!DOCTYPE html>
                     console.error("Error obteniendo archivo de entry:", e);
                 }
             } else if (entry.isDirectory) {
-                const ignoredDirs = ['__pycache__', 'node_modules', '.git', '.vscode', '.idea', 'venv', 'dist', 'build', '.next'];
-                if (ignoredDirs.includes(entry.name.toLowerCase())) {
+                if (IGNORED_DIRS.includes(entry.name.toLowerCase())) {
                     return;
                 }
 
@@ -1057,8 +1167,6 @@ HTML_CONTENT = """<!DOCTYPE html>
             if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
             return (bytes / 1048576).toFixed(1) + ' MB';
         }
-
-        const IGNORED_EXTS = ['.png', '.jpg', '.jpeg', '.gif', '.ico', '.pdf', '.exe', '.dll', '.zip', '.tar', '.gz', '.mp4', '.mp3', '.pyc', '.bin', '.wasm', '.woff', '.woff2', '.ttf'];
 
         async function handleSelectedFiles(fileList) {
             for (const file of fileList) {
@@ -1100,6 +1208,8 @@ HTML_CONTENT = """<!DOCTYPE html>
             });
         }
 
+        let isDetailsOpen = false;
+
         function renderAttachments() {
             if (attachedFiles.length === 0) {
                 attachmentsTray.style.display = 'none';
@@ -1111,32 +1221,72 @@ HTML_CONTENT = """<!DOCTYPE html>
             attachmentsTray.innerHTML = '';
 
             const totalSize = attachedFiles.reduce((acc, f) => acc + f.size, 0);
+            const totalChars = attachedFiles.reduce((acc, f) => acc + (f.content ? f.content.length : 0), 0);
+            const estTokens = Math.round(totalChars / 3.6);
+            const maxCtx = parseInt(contextSelect.value, 10) || 8192;
 
-            // Cabecera resumen
-            const header = document.createElement('div');
-            header.style.width = '100%';
-            header.style.display = 'flex';
-            header.style.justifyContent = 'space-between';
-            header.style.alignItems = 'center';
-            header.style.fontSize = '0.75rem';
-            header.style.color = 'var(--text-muted)';
-            header.style.marginBottom = '4px';
-            header.innerHTML = `
-                <span>📁 <strong>${attachedFiles.length} archivos listos</strong> (${formatBytes(totalSize)} en total)</span>
-                <button type="button" style="background:transparent; border:none; color:#f87171; cursor:pointer; font-size:0.75rem;" onclick="clearAllAttachments()">Limpiar todos</button>
-            `;
-            attachmentsTray.appendChild(header);
+            // Semáforo de tokens
+            let gaugeClass = 'ok';
+            let gaugeText = `~${estTokens.toLocaleString()} tokens (Óptimo)`;
+            let warningHtml = '';
 
-            attachedFiles.forEach((file, idx) => {
-                const chip = document.createElement('div');
-                chip.className = 'attach-chip';
-                chip.innerHTML = `
-                    <span title="${file.path}">📄 ${file.path} (${formatBytes(file.size)})</span>
-                    <button type="button" onclick="removeAttachment(${idx})">✕</button>
+            if (estTokens > maxCtx) {
+                gaugeClass = 'danger';
+                gaugeText = `⚠️ ~${estTokens.toLocaleString()} / ${maxCtx.toLocaleString()} tokens (Excede límite)`;
+                warningHtml = `
+                    <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; font-size: 0.76rem; padding: 6px 10px; border-radius: 6px;">
+                        ⚠️ <strong>Atención:</strong> Has cargado más de ${maxCtx.toLocaleString()} tokens. Para que Qwen no se desborde, te recomendamos subir a 16K tokens en la barra lateral o cargar solo la subcarpeta específica que deseas analizar.
+                    </div>
                 `;
-                attachmentsTray.appendChild(chip);
-            });
+            } else if (estTokens > maxCtx * 0.75) {
+                gaugeClass = 'warn';
+                gaugeText = `~${estTokens.toLocaleString()} / ${maxCtx.toLocaleString()} tokens (Cerca del límite)`;
+            }
+
+            // Barra resumen
+            const summaryBar = document.createElement('div');
+            summaryBar.className = 'tray-summary-bar';
+            summaryBar.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span>📁 <strong>${attachedFiles.length} archivos</strong> (${formatBytes(totalSize)})</span>
+                    <span class="token-gauge ${gaugeClass}">${gaugeText}</span>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button type="button" class="action-icon-btn" style="padding: 2px 8px; font-size: 0.74rem;" onclick="toggleDetails()">
+                        ${isDetailsOpen ? '▲ Ocultar lista' : '▼ Ver archivos (' + attachedFiles.length + ')'}
+                    </button>
+                    <button type="button" style="background:transparent; border:none; color:#f87171; cursor:pointer; font-size:0.75rem; text-decoration: underline;" onclick="clearAllAttachments()">Limpiar todos</button>
+                </div>
+            `;
+            attachmentsTray.appendChild(summaryBar);
+
+            if (warningHtml) {
+                const warnContainer = document.createElement('div');
+                warnContainer.innerHTML = warningHtml;
+                attachmentsTray.appendChild(warnContainer);
+            }
+
+            // Lista detallada de chips (solo visible si está desplegada o si son pocos archivos <= 4)
+            if (isDetailsOpen || attachedFiles.length <= 4) {
+                const chipsContainer = document.createElement('div');
+                chipsContainer.className = 'chips-container';
+                attachedFiles.forEach((file, idx) => {
+                    const chip = document.createElement('div');
+                    chip.className = 'attach-chip';
+                    chip.innerHTML = `
+                        <span title="${file.path}">📄 ${file.path} (${formatBytes(file.size)})</span>
+                        <button type="button" onclick="removeAttachment(${idx})">✕</button>
+                    `;
+                    chipsContainer.appendChild(chip);
+                });
+                attachmentsTray.appendChild(chipsContainer);
+            }
         }
+
+        window.toggleDetails = function() {
+            isDetailsOpen = !isDetailsOpen;
+            renderAttachments();
+        };
 
         window.removeAttachment = function(idx) {
             attachedFiles.splice(idx, 1);
@@ -1145,8 +1295,11 @@ HTML_CONTENT = """<!DOCTYPE html>
 
         window.clearAllAttachments = function() {
             attachedFiles = [];
+            isDetailsOpen = false;
             renderAttachments();
         };
+
+        contextSelect.addEventListener('change', renderAttachments);
 
         // Configurar marked para resaltado
         if (typeof marked !== 'undefined') {

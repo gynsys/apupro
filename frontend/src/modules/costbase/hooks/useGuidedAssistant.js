@@ -117,6 +117,139 @@ export function decomposeComprehensivePrompt(prompt) {
 }
 
 /**
+ * Analiza la completitud técnica de una descripción libre de APU.
+ * Evalúa acción constructiva, elemento principal, especificaciones técnicas y unidad.
+ *
+ * @param {string} text - Texto libre ingresado por el usuario
+ * @returns {{
+ *   isValid: boolean,
+ *   isGibberish: boolean,
+ *   hasAction: boolean,
+ *   action: string | null,
+ *   hasElement: boolean,
+ *   element: string | null,
+ *   hasSpecs: boolean,
+ *   specs: string | null,
+ *   detectedUnit: string | null,
+ *   isComplete: boolean,
+ *   error?: string,
+ *   rawText: string
+ * }}
+ */
+export function analyzeDescriptionCompleteness(text) {
+  if (!text || typeof text !== 'string') {
+    return {
+      isValid: false,
+      isGibberish: true,
+      hasAction: false,
+      action: null,
+      hasElement: false,
+      element: null,
+      hasSpecs: false,
+      specs: null,
+      detectedUnit: null,
+      isComplete: false,
+      error: 'Por favor ingresa una descripción constructiva válida.',
+      rawText: ''
+    };
+  }
+
+  const clean = text.trim();
+  if (isGibberish(clean) || clean.length < 5) {
+    return {
+      isValid: false,
+      isGibberish: true,
+      hasAction: false,
+      action: null,
+      hasElement: false,
+      element: null,
+      hasSpecs: false,
+      specs: null,
+      detectedUnit: null,
+      isComplete: false,
+      error: `"${clean}" no parece una descripción técnica válida. Por favor describe los trabajos o partida con términos constructivos.`,
+      rawText: clean
+    };
+  }
+
+  const cleanLower = clean.toLowerCase();
+
+  // 1. Detección de Acción Constructiva
+  const detectedActionRoot = CONSTRUCTION_ACTION_ROOTS.find(root => cleanLower.includes(root));
+  let detectedActionName = null;
+  if (detectedActionRoot) {
+    const match = clean.match(new RegExp(`\\b[a-záéíóúñ]*(?:${detectedActionRoot})[a-záéíóúñ]*(?:\\s+(?:e\\s+|y\\s+)[a-záéíóúñ]+)?`, 'i'));
+    const rawAction = match ? match[0] : detectedActionRoot;
+    detectedActionName = rawAction.charAt(0).toUpperCase() + rawAction.slice(1);
+  }
+
+  // 2. Detección de Elemento o Material Principal
+  const detectedElementRoot = ELEMENT_ROOTS.find(root => cleanLower.includes(root));
+  let detectedElementName = null;
+  if (detectedElementRoot) {
+    const match = clean.match(new RegExp(`(?:\\bde\\s+|\\ben\\s+|\\bpara\\s+)?([a-záéíóúñ]*(?:${detectedElementRoot})[a-záéíóúñ]*(?:\\s+(?:de\\s+)?[a-záéíóúñ]+)?)`, 'i'));
+    const rawElem = match ? (match[1] || match[0]) : detectedElementRoot;
+    detectedElementName = rawElem.charAt(0).toUpperCase() + rawElem.slice(1);
+  }
+
+  // 3. Detección de Especificaciones Técnicas / Dimensiones / Materiales
+  const specsFound = [];
+  const dimMatch = clean.match(/(?:e\s*=\s*|espesor(?:\s+de)?\s+|d\s*=\s*|di[aá]metro(?:\s+de)?\s+|ancho(?:\s+de)?\s+|alto(?:\s+de)?\s+|longitud(?:\s+de)?\s+)?\b\d+(?:[.,]\d+)?\s*(?:cm|mm|m\b|pulg|pulgadas|"|''|x\s*\d+)/i);
+  if (dimMatch) specsFound.push(dimMatch[0].trim());
+
+  const techMatch = clean.match(/(?:f'?c\s*=\s*\d+|kg\/cm2|psi|calibre\s*#?\d+|mortero\s+\d+:\d+|clase\s+[a-c]|satinad[oa]|ep[oó]xic[oa]|galvanizad[oa]|pvc|hvac|\b\d+\s*(?:hp|kva|btu|w|kw|v|amp)\b)/i);
+  if (techMatch) specsFound.push(techMatch[0].trim());
+
+  const includesMatch = clean.match(/(?:incluye|incluyendo|con)\s+([^,.;]+)/i);
+  if (includesMatch) specsFound.push(includesMatch[0].trim());
+
+  // 4. Detección de Unidad de Medida en el texto
+  let detectedUnit = null;
+  const unitExplicitMatch = clean.match(/(?:unidad|unid\.?|und\.?)\s*[:=]?\s*([a-zA-Z0-9²³]+)/i);
+  if (unitExplicitMatch) {
+    const raw = unitExplicitMatch[1].toLowerCase();
+    if (raw === 'm2' || raw === 'm²') detectedUnit = 'm2';
+    else if (raw === 'm3' || raw === 'm³') detectedUnit = 'm3';
+    else if (['und', 'pza', 'pieza', 'unidad'].includes(raw)) detectedUnit = 'und';
+    else if (['m', 'ml', 'metro', 'metros'].includes(raw)) detectedUnit = 'm';
+    else if (['gl', 'global'].includes(raw)) detectedUnit = 'Gl';
+    else if (['pto', 'punto'].includes(raw)) detectedUnit = 'pto';
+    else if (['kg', 'kgf'].includes(raw)) detectedUnit = 'kg';
+    else if (['ton', 'tonf'].includes(raw)) detectedUnit = 'ton';
+  }
+
+  if (!detectedUnit) {
+    if (/\b(?:en|por|de)?\s*(?:m²|m2)\b/i.test(clean)) detectedUnit = 'm2';
+    else if (/\b(?:en|por|de)?\s*(?:m³|m3)\b/i.test(clean)) detectedUnit = 'm3';
+    else if (/\b(?:en|por|de)?\s*(?:und|unidades|pza|piezas)\b/i.test(clean)) detectedUnit = 'und';
+    else if (/\b(?:en|por|de)?\s*(?:ml|metros\s+lineales)\b/i.test(clean)) detectedUnit = 'm';
+    else if (/\b(?:en|por|de)?\s*(?:suma\s+global|gl|global)\b/i.test(clean)) detectedUnit = 'Gl';
+    else if (/\b(?:en|por|de)?\s*(?:pto|puntos)\b/i.test(clean)) detectedUnit = 'pto';
+    else if (/\b(?:en|por|de)?\s*(?:kg|kgf|kilogramos)\b/i.test(clean)) detectedUnit = 'kg';
+    else if (/\b(?:en|por|de)?\s*(?:ton|toneladas)\b/i.test(clean)) detectedUnit = 'ton';
+  }
+
+  const hasAction = Boolean(detectedActionRoot);
+  const hasElement = Boolean(detectedElementRoot);
+  const hasSpecs = specsFound.length > 0 || clean.length >= 35;
+  const isComplete = hasAction && (hasElement || clean.length >= 25);
+
+  return {
+    isValid: true,
+    isGibberish: false,
+    hasAction,
+    action: detectedActionName || (hasAction ? detectedActionRoot : null),
+    hasElement,
+    element: detectedElementName || (hasElement ? detectedElementRoot : null),
+    hasSpecs,
+    specs: specsFound.length > 0 ? specsFound.join(', ') : null,
+    detectedUnit,
+    isComplete,
+    rawText: clean
+  };
+}
+
+/**
  * Validador estricto para cada paso del asistente guiado
  */
 export function validateStepInput(text, step, isMaintenance = false, currentStepDef = null) {
@@ -180,6 +313,21 @@ export function validateStepInput(text, step, isMaintenance = false, currentStep
   return { isValid: true };
 }
 
+/**
+ * Crea el mensaje inicial de bienvenida para el asistente guiado (Paso 0)
+ */
+export function createGuidedInitialMessage(user = null) {
+  const userName = user?.full_name || user?.email?.split('@')[0] || '';
+  const greetingName = userName ? ` ${userName}` : '';
+  return {
+    id: 'msg-bot0',
+    sender: 'bot',
+    step: 0,
+    text: `¡Hola${greetingName}! Construir una descripción detallada de una partida es lo esencial para evitar ambigüedades al momento de la ejecución en campo.\n\nEn pocos pasos armaremos la mejor descripción.\n¿Comenzamos?`,
+    chips: ['Sí, comenzar', 'Escribir libremente']
+  };
+}
+
 export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
   const [isGuidedMode, setIsGuidedMode] = useState(true);
   const [entryModeSource, setEntryModeSource] = useState('chat');
@@ -208,6 +356,9 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
   const [pendingPromptForGlobal, setPendingPromptForGlobal] = useState(null);
   const [waitingForClarification, setWaitingForClarification] = useState(false);
   const [pendingClarification, setPendingClarification] = useState(null);
+  const [isFreeformMode, setIsFreeformMode] = useState(false);
+  const [pendingFreeformPrompt, setPendingFreeformPrompt] = useState(null);
+  const [waitingForFreeformUnit, setWaitingForFreeformUnit] = useState(false);
   const loadingTimeoutsRef = useRef([]);
 
   const clearLoadingTimeouts = useCallback(() => {
@@ -223,15 +374,7 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
 
   // Inicializar mensaje de bienvenida según el usuario
   const createInitialMessage = useCallback(() => {
-    const userName = user?.full_name || user?.email?.split('@')[0] || '';
-    const greetingName = userName ? ` ${userName}` : '';
-    return {
-      id: 'msg-bot0',
-      sender: 'bot',
-      step: 0,
-      text: `¡Hola${greetingName}! Construir una descripción detallada de una partida es lo esencial para evitar ambigüedades al momento de la ejecución en campo.\n\nEn pocos pasos armaremos la mejor descripción.\n¿Comenzamos?`,
-      chips: ['Sí, comenzar']
-    };
+    return createGuidedInitialMessage(user);
   }, [user]);
 
   useEffect(() => {
@@ -271,6 +414,22 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       setPendingPromptForGlobal(null);
       setChatInputValue('');
       setGuidedMessages(prev => prev.slice(0, -2));
+      return;
+    }
+    if (waitingForFreeformUnit) {
+      setWaitingForFreeformUnit(false);
+      setChatInputValue(pendingFreeformPrompt || '');
+      setPendingFreeformPrompt(null);
+      setGuidedMessages(prev => prev.filter(m => !m.id.startsWith('bot-completeness-')));
+      return;
+    }
+    if (isFreeformMode) {
+      setIsFreeformMode(false);
+      setPendingFreeformPrompt(null);
+      setWaitingForFreeformUnit(false);
+      setCurrentChatStep(0);
+      setChatInputValue('');
+      setGuidedMessages([createInitialMessage()]);
       return;
     }
     if (detectedFullPrompt) {
@@ -423,6 +582,9 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     setPendingPromptForGlobal(null);
     setWaitingForClarification(false);
     setPendingClarification(null);
+    setIsFreeformMode(false);
+    setPendingFreeformPrompt(null);
+    setWaitingForFreeformUnit(false);
 
     if (startAtStep === 1) {
       setCurrentChatStep(1);
@@ -529,6 +691,145 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
       return;
     }
 
+    // 0.5. Manejo cuando se está esperando la unidad en modo "Escribir libremente"
+    if (waitingForFreeformUnit && pendingFreeformPrompt) {
+      const unitVal = validateStepInput(cleanText, 6, false);
+      if (unitVal.isValid) {
+        const cleanLower = cleanText.toLowerCase().trim();
+        const isGlobalUnit = ['gl', 'sg', 'global', 'suma global'].includes(cleanLower) || cleanText.trim() === 'Gl' || cleanText.includes('Gl (');
+
+        if (isGlobalUnit) {
+          setWaitingForFreeformUnit(false);
+          setWaitingForGlobalDays(true);
+          setPendingPromptForGlobal(pendingFreeformPrompt);
+          const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 0 };
+          const botDaysMsg = {
+            id: `bot-global-days-${Date.now()}`,
+            sender: 'bot',
+            step: 0,
+            text: 'Has seleccionado unidad Global (Gl).\n\nIndica los días de trabajo estimados para la cuadrilla:',
+            chips: ['0.5 día', '1 día', '2 días', '3 días', '5 días']
+          };
+          setGuidedMessages(prev => [...prev, newUserMsg, botDaysMsg]);
+          setChatInputValue('');
+          return;
+        }
+
+        let chosenUnit = cleanLower.replace('m²', 'm2').replace('m³', 'm3');
+        const rawPrompt = pendingFreeformPrompt;
+        setWaitingForFreeformUnit(false);
+        setPendingFreeformPrompt(null);
+        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 0 };
+        const botSuccessMsg = {
+          id: `bot-completeness-finish-${Date.now()}`,
+          sender: 'bot',
+          step: 0,
+          text: `Unidad confirmada: «${cleanText}».\n\nGenerando APU detallado con análisis de costos y rendimientos...`
+        };
+        setGuidedMessages(prev => [...prev, newUserMsg, botSuccessMsg]);
+        setChatInputValue('');
+        triggerGeneration(rawPrompt, chosenUnit);
+        return;
+      } else {
+        toast.error(unitVal.error || 'Por favor indica una unidad válida (ej: und, pza, m², m, m³, Gl)', { id: 'chat-val-error', duration: 4500 });
+        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 0 };
+        const botValMsg = {
+          id: `bot-val-${Date.now()}`,
+          sender: 'bot',
+          step: 0,
+          text: `Aviso: "${cleanText}" no es una unidad de cómputo válida.\n\nPor favor selecciona una unidad o escribe una unidad estándar (und, pza, m², m, m³, Gl):`,
+          chips: ['und', 'pza', 'm²', 'm', 'm³', 'Gl']
+        };
+        setGuidedMessages(prev => [...prev, newUserMsg, botValMsg]);
+        setChatInputValue('');
+        return;
+      }
+    }
+
+    // 0.6. Manejo de texto ingresado en Modo "Escribir libremente"
+    if (isFreeformMode && cleanText !== 'Escribir libremente') {
+      const analysis = analyzeDescriptionCompleteness(cleanText);
+      if (!analysis.isValid) {
+        toast.error(analysis.error, { id: 'chat-val-error', duration: 4500 });
+        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 0 };
+        const botRetryMsg = {
+          id: `bot-freeform-retry-${Date.now()}`,
+          sender: 'bot',
+          step: 0,
+          text: `Aviso: ${analysis.error}\n\nPor favor escribe los detalles de la partida (ej: Construcción de pared de bloques de arcilla de 15cm con mortero 1:3):`
+        };
+        setGuidedMessages(prev => [...prev, newUserMsg, botRetryMsg]);
+        setChatInputValue('');
+        return;
+      }
+
+      const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 0 };
+
+      if (!analysis.isComplete) {
+        const botIncompleteMsg = {
+          id: `bot-freeform-incomplete-${Date.now()}`,
+          sender: 'bot',
+          step: 0,
+          text: `📋 Análisis de Revisión:\n${analysis.element ? `• Elemento detectado: ${analysis.element}\n` : ''}• Acción constructiva: No especificada\n\nDetecté el elemento pero se requiere la acción constructiva a realizar para estructurar los costos con exactitud (¿Construcción, Suministro, Demolición, Reparación?).\n\nIndica la acción o selecciona una sugerencia:`,
+          chips: ['Construcción', 'Suministro e instalación', 'Demolición', 'Reparación']
+        };
+        setGuidedMessages(prev => [...prev, newUserMsg, botIncompleteMsg]);
+        setChatInputValue('');
+        return;
+      }
+
+      const lines = [
+        '📋 Análisis de Revisión y Completitud:',
+        analysis.action ? `• Acción: ${analysis.action}` : null,
+        analysis.element ? `• Elemento/Material: ${analysis.element}` : null,
+        analysis.specs ? `• Especificaciones: ${analysis.specs}` : null,
+        analysis.detectedUnit ? `• Unidad detectada: ${analysis.detectedUnit}` : '• Unidad de cómputo: Pendiente',
+        '• Estado: ✅ Descripción técnica completa y estructurada.'
+      ].filter(Boolean).join('\n');
+
+      if (analysis.detectedUnit) {
+        const isGlobalUnit = ['gl', 'sg', 'global', 'suma global'].includes(analysis.detectedUnit.toLowerCase());
+        if (isGlobalUnit) {
+          setWaitingForGlobalDays(true);
+          setPendingPromptForGlobal(cleanText);
+          const botCompleteMsg = {
+            id: `bot-completeness-${Date.now()}`,
+            sender: 'bot',
+            step: 0,
+            text: `${lines}\n\nHas seleccionado unidad Global (Gl). Indica los días de trabajo estimados para la cuadrilla:`,
+            chips: ['0.5 día', '1 día', '2 días', '3 días', '5 días']
+          };
+          setGuidedMessages(prev => [...prev, newUserMsg, botCompleteMsg]);
+          setChatInputValue('');
+          return;
+        }
+
+        const botCompleteMsg = {
+          id: `bot-completeness-${Date.now()}`,
+          sender: 'bot',
+          step: 0,
+          text: `${lines}\n\n¡Todo listo! Procediendo a la construcción y adaptación del APU con IA...`
+        };
+        setGuidedMessages(prev => [...prev, newUserMsg, botCompleteMsg]);
+        setChatInputValue('');
+        triggerGeneration(cleanText, analysis.detectedUnit);
+        return;
+      }
+
+      setPendingFreeformPrompt(cleanText);
+      setWaitingForFreeformUnit(true);
+      const botNeedUnitMsg = {
+        id: `bot-completeness-${Date.now()}`,
+        sender: 'bot',
+        step: 0,
+        text: `${lines}\n\nTu descripción cuenta con excelente nivel de detalle. Para calcular rendimientos y costos unitarios con exactitud, por favor selecciona o indica la unidad de cómputo:`,
+        chips: ['m²', 'm³', 'und', 'pza', 'm', 'Gl']
+      };
+      setGuidedMessages(prev => [...prev, newUserMsg, botNeedUnitMsg]);
+      setChatInputValue('');
+      return;
+    }
+
     // 1. Manejo cuando se detectó previamente un prompt completo y estamos solicitando la unidad
     if (detectedFullPrompt) {
       const unitVal = validateStepInput(cleanText, 6, false);
@@ -600,6 +901,19 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
 
     // 3. Manejo de Paso 0 (Bienvenida)
     if (currentChatStep === 0) {
+      if (cleanText === 'Escribir libremente') {
+        setIsFreeformMode(true);
+        const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 0 };
+        const botPromptMsg = {
+          id: `bot-freeform-prompt-${Date.now()}`,
+          sender: 'bot',
+          step: 0,
+          text: '¡Excelente! Escribe o pega aquí la descripción completa de tu partida (incluyendo materiales, especificaciones, dimensiones, alcance o unidad).\n\nRealizaré un análisis de revisión y completitud técnica antes de continuar a las siguientes fases.'
+        };
+        setGuidedMessages(prev => [...prev, newUserMsg, botPromptMsg]);
+        setChatInputValue('');
+        return;
+      }
       if (cleanText === 'Sí, comenzar' || cleanText === 'Comenzar') {
         const newUserMsg = { id: Date.now().toString(), sender: 'user', text: cleanText, step: 0 };
         setCurrentChatStep(1);
@@ -791,8 +1105,14 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     if (waitingForClarification) {
       return 'Selecciona una opción o escribe tu respuesta...';
     }
+    if (waitingForFreeformUnit) {
+      return 'Selecciona una unidad o escribe (ej: m², m³, und, pza, m, Gl)...';
+    }
+    if (isFreeformMode) {
+      return 'Pega o escribe aquí la descripción completa de tu partida...';
+    }
     if (currentChatStep === 0) {
-      return 'Haz clic en "Sí, comenzar" o describe la acción constructiva...';
+      return 'Haz clic en "Sí, comenzar", "Escribir libremente" o describe la acción...';
     }
     if (currentChatStep === 1) {
       return 'Ej: Suministro e instalación, Construcción, Compactación, Transporte...';
@@ -843,6 +1163,10 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
     detectedFullPrompt,
     waitingForGlobalDays,
     waitingForClarification,
+    isFreeformMode,
+    setIsFreeformMode,
+    waitingForFreeformUnit,
+    analyzeDescriptionCompleteness,
     injectClarification,
     clearLoadingTimeouts,
     handleChatSubmit,

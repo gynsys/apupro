@@ -25,7 +25,8 @@ export default function GuidedAssistantModal({
   waitingForClarification = false,
   useTypesafeJev = false,
   setUseTypesafeJev = null,
-  chatPlaceholder = ''
+  chatPlaceholder = '',
+  isFreeformMode = false
 }) {
   const chatEndRef = useRef(null);
   const navigate = useNavigate();
@@ -56,9 +57,9 @@ export default function GuidedAssistantModal({
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4 overflow-hidden animate-in fade-in duration-200">
       <div 
         className={`bg-[#FEF3C7] border-2 border-[#FEF3C7] rounded-2xl p-3.5 sm:p-6 relative flex flex-col max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200 ${
-          currentChatStep === 0 ? '!pb-[23px]' : ''
+          currentChatStep === 0 && !isFreeformMode ? '!pb-[23px]' : ''
         }`} 
-        style={{ minHeight: currentChatStep === 0 ? 'auto' : '380px', maxHeight: '90dvh' }}
+        style={{ minHeight: currentChatStep === 0 && !isFreeformMode ? 'auto' : '380px', maxHeight: '90dvh' }}
       >
         <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
           <button 
@@ -92,7 +93,7 @@ export default function GuidedAssistantModal({
         </div>
 
         <div className={`flex-1 overflow-y-auto pr-2 flex flex-col scrollbar-thin scrollbar-thumb-amber-200 ${
-          currentChatStep === 0 ? 'pb-0' : 'space-y-6 pb-4'
+          currentChatStep === 0 && !isFreeformMode ? 'pb-0' : 'space-y-6 pb-4'
         }`}>
           {guidedMessages.map((msg, idx) => (
             <div key={msg.id || idx} className={`animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-3 ${msg.sender === 'user' ? 'items-end' : ''}`}>
@@ -117,13 +118,19 @@ export default function GuidedAssistantModal({
                 </div>
               </div>
               {msg.sender === 'bot' && msg.chips && (msg.step === currentChatStep || idx === guidedMessages.length - 1) && (
-                <div className={`flex flex-wrap gap-2 pt-1 animate-in fade-in slide-in-from-bottom-2 duration-300 ${currentChatStep === 0 ? 'justify-center pl-0 py-2' : 'pl-10'}`}>
+                <div className={`flex flex-wrap gap-2 pt-1 animate-in fade-in slide-in-from-bottom-2 duration-300 ${currentChatStep === 0 && !isFreeformMode ? 'justify-center pl-0 py-2' : 'pl-10'}`}>
                   {msg.chips.map(chip => (
                     <button 
                       key={chip}
                       type="button"
                       onClick={() => handleChatSubmit && handleChatSubmit(chip)}
-                      className={`${currentChatStep === 0 ? 'bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm px-4 py-2 shadow-md shadow-amber-500/20' : 'bg-white border border-amber-300 hover:border-amber-600 hover:bg-amber-100 text-amber-950 font-semibold text-xs px-3.5 py-1.5'} rounded-xl transition-all shadow-sm hover:shadow active:scale-95 cursor-pointer`}
+                      className={`${
+                        currentChatStep === 0 && !isFreeformMode
+                          ? chip === 'Escribir libremente'
+                            ? 'bg-amber-100 hover:bg-amber-200/90 text-amber-950 font-bold text-sm px-4 py-2 border-2 border-amber-400/80 rounded-xl transition-all shadow-sm hover:shadow active:scale-95 cursor-pointer'
+                            : 'bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm px-4 py-2 shadow-md shadow-amber-500/20 rounded-xl transition-all shadow-sm hover:shadow active:scale-95 cursor-pointer'
+                          : 'bg-white border border-amber-300 hover:border-amber-600 hover:bg-amber-100 text-amber-950 font-semibold text-xs px-3.5 py-1.5 rounded-xl transition-all shadow-sm hover:shadow active:scale-95 cursor-pointer'
+                      }`}
                     >
                       {chip}
                     </button>
@@ -159,11 +166,11 @@ export default function GuidedAssistantModal({
               </div>
             </div>
           )}
-          {currentChatStep > 0 && <div ref={chatEndRef} />}
+          {(currentChatStep > 0 || isFreeformMode) && <div ref={chatEndRef} />}
         </div>
 
-        {/* Chat Input: Renderizar si se inició el flujo o se espera aclaratoria */}
-        {(currentChatStep > 0 || waitingForClarification) && chatbotLoadingStage === 0 && (
+        {/* Chat Input: Renderizar si se inició el flujo, se espera aclaratoria o en modo libre */}
+        {(currentChatStep > 0 || waitingForClarification || isFreeformMode) && chatbotLoadingStage === 0 && (
           <div className="mt-4 pt-4 border-t border-amber-200 flex-shrink-0">
             <div className="flex gap-2 items-center">
               <input 
@@ -177,6 +184,7 @@ export default function GuidedAssistantModal({
                   chatPlaceholder || (
                     waitingForGlobalDays ? "Indica los días estimados (ej: 0.5, 1, 2, 3, 5)..." :
                     waitingForClarification ? "Selecciona una opción o escribe tu respuesta..." :
+                    isFreeformMode ? "Escribe o pega aquí la descripción completa de tu partida..." :
                     currentChatStep === 1 ? "Ej: Suministro e instalación, Pintura, Construcción, Vaciado..." :
                     currentChatStep === 2 ? "Ej: Paredes, Rejas y herrería, Losas, Tuberías, Fachadas..." :
                     currentChatStep === 3 ? "Ej: Pintura de caucho clase A, Fondo cromato de zinc, Concreto f'c=250..." :

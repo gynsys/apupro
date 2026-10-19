@@ -18,6 +18,8 @@ import {
   isComprehensiveDescription,
   decomposeComprehensivePrompt,
   validateStepInput,
+  analyzeDescriptionCompleteness,
+  createGuidedInitialMessage
 } from '../useGuidedAssistant.js';
 import { getDynamicStepDefinition } from '../../constants/guidedBuilderConstants.js';
 import {
@@ -94,6 +96,68 @@ describe('PRUEBA 7 — Integración del asistente guiado', () => {
         expect(typeof def.text, `paso ${step} text`).toBe('string');
         expect(def.chips !== undefined, `paso ${step} chips`).toBe(true);
       }
+    });
+  });
+
+  describe('analyzeDescriptionCompleteness (análisis de revisión y completitud)', () => {
+    it('rechaza entradas inválidas o tipo gibberish', () => {
+      expect(analyzeDescriptionCompleteness('asdf').isValid).toBe(false);
+      expect(analyzeDescriptionCompleteness('').isValid).toBe(false);
+      expect(analyzeDescriptionCompleteness(null).isValid).toBe(false);
+    });
+
+    it('identifica descripción incompleta sin acción constructiva', () => {
+      const r = analyzeDescriptionCompleteness('bloques de arcilla de 15cm');
+      expect(r.hasAction).toBe(false);
+      expect(r.hasElement).toBe(true);
+      expect(r.isComplete).toBe(false);
+    });
+
+    it('analiza descripción completa sin unidad y marca completitud', () => {
+      const r = analyzeDescriptionCompleteness(
+        'Construcción de pared de bloques de arcilla de 15cm con mortero 1:3 acabado corriente'
+      );
+      expect(r.isValid).toBe(true);
+      expect(r.hasAction).toBe(true);
+      expect(r.hasElement).toBe(true);
+      expect(r.hasSpecs).toBe(true);
+      expect(r.isComplete).toBe(true);
+      expect(r.detectedUnit).toBeNull();
+    });
+
+    it('detecta unidades explícitas en el texto', () => {
+      const r1 = analyzeDescriptionCompleteness('Vaciado de losa de concreto e=15cm en m2');
+      expect(r1.detectedUnit).toBe('m2');
+
+      const r2 = analyzeDescriptionCompleteness('Suministro e instalación de transformador 50kVA, unidad: und');
+      expect(r2.detectedUnit).toBe('und');
+
+      const r3 = analyzeDescriptionCompleteness('Limpieza de terreno general, Gl');
+      expect(r3.detectedUnit).toBe('Gl');
+    });
+
+    it('detecta especificaciones técnicas de dimensiones, mezclas y cláusulas', () => {
+      const r = analyzeDescriptionCompleteness(
+        'Vaciado de concreto f\'c=250 kg/cm2 para losa e=15cm incluyendo vibrado mecánico'
+      );
+      expect(r.hasSpecs).toBe(true);
+      expect(r.specs).toContain('15cm');
+      expect(r.specs).toContain("f'c=250");
+      expect(r.isComplete).toBe(true);
+    });
+  });
+
+  describe('createGuidedInitialMessage (Paso 0 - Chips de bienvenida)', () => {
+    it('incluye botón "Escribir libremente" al lado de "Sí, comenzar" en el mensaje inicial', () => {
+      const msg = createGuidedInitialMessage({ full_name: 'Pablo' });
+      expect(msg.chips).toEqual(['Sí, comenzar', 'Escribir libremente']);
+      expect(msg.text).toContain('¡Hola Pablo!');
+    });
+
+    it('genera saludo genérico si no hay usuario especificado', () => {
+      const msg = createGuidedInitialMessage(null);
+      expect(msg.chips).toEqual(['Sí, comenzar', 'Escribir libremente']);
+      expect(msg.text).toContain('¡Hola!');
     });
   });
 });

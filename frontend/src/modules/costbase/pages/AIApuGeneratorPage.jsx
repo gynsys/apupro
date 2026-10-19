@@ -552,6 +552,7 @@ export default function AIApuGeneratorPage() {
               waitingForGlobalDays={guided.waitingForGlobalDays}
               waitingForClarification={guided.waitingForClarification}
               chatPlaceholder={guided.chatPlaceholder}
+              isFreeformMode={guided.isFreeformMode}
             />
           )}
         </div>
