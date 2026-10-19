@@ -58,6 +58,7 @@ import_*.sql
 # Temporary files
 *.tmp
 *.temp
+*.bak
 scratch/
 ~$*.xlsx
 *.db
@@ -68,3 +69,6 @@ test_*.py
 # Graphify
 graphify-out/
 .graphify/
+
+# Qwen local agent backups
+.qwen_backups/

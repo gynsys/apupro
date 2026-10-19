@@ -3,7 +3,7 @@
 
 > **Módulo:** `costbase` / `cost360`  
 > **Funcionalidad:** Generador de Análisis de Precios Unitarios (APU) con Inteligencia Artificial (Función Premium)  
-> **Última Actualización:** Octubre 2026  
+> **Última Actualización:** 18 de Octubre 2026  
 > **Normativa de Referencia:** COVENIN 2000:1992 (Sector Construcción Venezuela)  
 > **Base de Datos Oficial:** PostgreSQL (`cost360_items`) con **17.408 partidas** históricas y codificadas  
 
@@ -22,6 +22,9 @@
 10. [Bitácora de Actualizaciones Críticas: 17 de Septiembre 2026](#10-bitácora-de-actualizaciones-críticas-17-de-septiembre-2026)
 11. [Bitácora de Actualizaciones Críticas: 21–22 de Septiembre 2026](#11-bitácora-de-actualizaciones-críticas-2122-de-septiembre-2026)
 12. [Bitácora de Actualizaciones Críticas: Octubre 2026 (Pozos Profundos, Aclaratorias y Blindaje Frontend)](#12-bitácora-de-actualizaciones-críticas-octubre-2026-pozos-profundos-aclaratorias-y-blindaje-frontend)
+13. [Modularización y Desacoplamiento del Motor (`ai_apu_service/`)](#13-modularización-y-desacoplamiento-del-motor-ai_apu_service)
+14. [Bitácora de Actualizaciones Críticas: Mediados de Octubre 2026 (Ontología Paramétrica, Cuantías FRP, Poda Discordante y Amortización de Herramientas Menores)](#14-bitácora-de-actualizaciones-críticas-mediados-de-octubre-2026-ontología-paramétrica-cuantías-frp-poda-discordante-y-amortización-de-herramientas-menores)
+15. [Bitácora de Actualizaciones Críticas: 17–18 de Octubre 2026 (Motor de Rutas Dinámicas de las 23 Acciones, Chatbot Atómico, Trazabilidad Local y Salvaguarda de Pozos Profundos)](#15-bitácora-de-actualizaciones-críticas-1718-de-octubre-2026-motor-de-rutas-dinámicas-de-las-23-acciones-chatbot-atómico-trazabilidad-local-y-salvaguarda-de-pozos-profundos)
 
 ---
 
@@ -47,23 +50,51 @@ apupro_platform/
 ├── backend/
 │   ├── app/
 │   │   ├── api/v1/endpoints/
-│   │   │   └── costbase.py                 # Endpoint principal /generate-ai-apu, Capa 0 y orquestación
+│   │   │   └── costbase/                    # Paquete modular de endpoints de Costbase
+│   │   │       ├── __init__.py              # Router unificado con prefijo /costbase
+│   │   │       ├── ai_generation.py         # Endpoint /generate-ai-apu, Capas 0, 1, 2, RAG y aclaratorias
+│   │   │       ├── resources.py             # CRUD de materiales, mano de obra, equipos y catálogos
+│   │   │       └── bulk_operations.py       # Operaciones en lote y actualización de listas de precios
 │   │   ├── services/
 │   │   │   ├── user_semantic_cache.py       # Capa 0: Caché semántico privado, embeddings y similitud
-│   │   │   ├── apu_input_validator.py       # Capas 1 y 2: Sanitización, Guardia Léxica y Fonética
+│   │   │   ├── apu_input_validator.py       # Capas 1 y 2: Sanitización, Guardia Léxica, Fonética y Contratos
 │   │   │   ├── synonyms_service.py          # Normalización de modismos y siglas técnicas
 │   │   │   ├── ai_search.py                 # Motor RAG: Embeddings, BM25 y Re-ranking
-│   │   │   ├── ai_apu_service/              # Capa 4: Paquete modular (Facade, prompts, domain_rules, reconciliation, rag, generator)
+│   │   │   ├── element_geometry.py          # Inferencia paramétrica de volúmenes, áreas y dimensiones
+│   │   │   ├── parametric_contract_engine/  # Motor paramétrico empírico aislado (taxonomy, db_miner, matrix)
+│   │   │   ├── ai_apu_service/              # Capa 4: Paquete modular
+│   │   │   │   ├── __init__.py              # Facade principal compatible hacia atrás
+│   │   │   │   ├── prompts.py               # Plantillas de prompts y contratos JSON
+│   │   │   │   ├── helpers.py               # Sanitización numérica y validación de tipos
+│   │   │   │   ├── reconciliation/          # Reconciliación con BD oficial (materiales, equipos, mano de obra)
+│   │   │   │   │   └── equipment.py         # Amortización de herramientas menores y equipos pesados
+│   │   │   │   ├── domain_rules/            # Reglas deterministas de ingeniería civil
+│   │   │   │   │   ├── deep_well.py         # Pozos profundos: metraje de tubería, purga carretillas y pick-up
+│   │   │   │   │   ├── parametric_ontology.py # Ontología paramétrica: dosificaciones volumétricas y dimensiones
+│   │   │   │   │   ├── structural_requirements.py # Cuantías FRP/acero, vibrado y encofrados
+│   │   │   │   │   ├── discordant_pruning.py# Poda universal de oficios/materiales incompatibles
+│   │   │   │   │   ├── material_conflicts.py# Conflicto de material preponderante
+│   │   │   │   │   ├── safety_height.py     # Trabajo en altura y rapel
+│   │   │   │   │   ├── floor_ground.py      # Purga de andamios a ras de suelo
+│   │   │   │   │   └── scope_exclusions.py  # Exclusiones deterministas de alcance
+│   │   │   │   ├── rag_context/             # Scoring de candidatos, penalización polar y poda
+│   │   │   │   └── generator/               # Orquestadores anchored_generator y free_generator
 │   │   │   ├── apu_labor_calibrator.py      # Capa 5: Calibrador determinista de cuadrillas, equipos y HH
-│   │   │   ├── llm_router.py                # Abstracción multi-proveedor (Gemini, OpenAI, etc.)
+│   │   │   ├── llm_router.py                # Abstracción multi-proveedor (DeepSeek, Gemini, OpenAI)
 │   │   │   └── data/
 │   │   │       └── construction_lexicon.json # Léxico oficial (226 acciones, 3.146 elementos)
 │   │   └── evaluations/
-│   │       ├── golden_dataset_input_validation.py # 56 casos de prueba etiquetados
+│   │       ├── golden_dataset_input_validation.py # Casos de prueba etiquetados
 │   │       └── run_input_validation_tests.py      # Runner de validación por capas
 │   ├── tests/
-│   │   ├── test_labor_calibrator.py         # Suite de 15 pruebas unitarias de calibración y logística
-│   │   └── test_user_semantic_cache.py      # Suite de 12 pruebas de similitud, HIT/MISS y privacidad
+│   │   ├── test_labor_calibrator.py         # Suite de pruebas unitarias de calibración y logística
+│   │   ├── test_user_semantic_cache.py      # Suite de pruebas de similitud, HIT/MISS y privacidad
+│   │   ├── test_deep_well.py                # Suite de pozos profundos: purga de carretilla y garantía pick-up
+│   │   ├── test_minor_tools_amortization.py # Suite de amortización diaria de herramientas menores
+│   │   ├── test_parametric_ontology.py      # Suite de validación ontológica y dosificaciones
+│   │   ├── test_all_23_actions_simulation.py# Simulador de las 23 acciones del chatbot guiado
+│   │   ├── test_discordant_pruning.py       # Suite de poda de oficios y materiales discordantes
+│   │   └── test_parametric_contract_engine.py # Suite del motor paramétrico empírico
 │   ├── scripts/
 │   │   └── compile_construction_lexicon.py  # Compilador de léxico desde PostgreSQL
 │   └── smoke_test_validator.py              # Suite de 34 tests unitarios de validación y typos
@@ -73,18 +104,21 @@ apupro_platform/
     │   ├── ApuEditorUI.jsx                  # Editor de APU completo con cálculo reactivo y modales
     │   ├── ComponentSelectorModal.jsx       # Modal de selección de materiales, equipos y mano de obra
     │   └── ComponentSearchModal.jsx         # Modal de búsqueda para presupuestos
+    ├── utils/
+    │   └── debugStorage.js                  # Guardado automático de logs de depuración (File System Access)
     └── modules/costbase/
         ├── pages/
         │   ├── AIApuGeneratorPage.jsx       # Vista orquestadora modular con IA y Asistente Guiado
         │   └── APUViewer.jsx                # Visor y editor de APUs de bases certificadas y personalizadas
         ├── hooks/
-        │   ├── useApuGenerator.js           # Hook: Llamadas API, estados, toast semántico y debug
-        │   └── useGuidedAssistant.js        # Hook: Estado del Asistente Guiado (5 pasos)
+        │   ├── useApuGenerator.js           # Hook: Llamadas API, estados, toast semántico y trazabilidad
+        │   └── useGuidedAssistant.js        # Hook: Motor de navegación y pipeline dinámico de 23 acciones
         ├── constants/
-        │   └── guidedBuilderConstants.js    # Opciones, chips y prompts de las 5 fases
+        │   ├── actionPipelines.js           # Definición de fases y etapas contextuales para las 23 acciones
+        │   └── guidedBuilderConstants.js    # Chips atómicos contextuales y opciones normalizadas
         └── components/ai-generator/
             ├── ApuGeneratorHeader.jsx       # Encabezado contextual y tabs de modo
-            ├── ClarificationAlertCard.jsx   # Tarjeta ámbar sin opciones adivinadas
+            ├── ClarificationAlertCard.jsx   # Tarjeta interactiva de aclaratorias (chips + texto libre)
             ├── ExactMatchCard.jsx           # Tarjeta interactiva de match exacto
             ├── GuidedAssistantModal.jsx     # Modal del Asistente Guiado paso a paso (Modo Único Exclusivo)
             ├── ImportFromDbPanel.jsx        # Panel de clonación de bases de datos
@@ -730,4 +764,116 @@ backend/app/services/ai_apu_service/
 
 ### 13.2 Patrón Fachada (Facade Backward-Compatible)
 El archivo [`__init__.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/ai_apu_service/__init__.py) actúa como fachada unificada. Cualquier servicio externo (`costbase.py`, `inverse_apu_synthesizer.py`, `preprocessing_service.py`) o prueba unitaria continúa importando directamente desde `app.services.ai_apu_service` sin requerir modificaciones en sus llamadas ni romper sus dependencias.
+
+---
+
+## 14. Bitácora de Actualizaciones Críticas: Mediados de Octubre 2026 (Ontología Paramétrica, Cuantías FRP, Poda Discordante y Amortización de Herramientas Menores)
+
+> **Contexto:** Modularización de los endpoints de Costbase, cálculo determinista de desgaste y amortización de herramientas manuales/menores, incorporación de la ontología paramétrica universal, estandarización de cuantías de refuerzo FRP vs acero estructural y purga sistemática de oficios/materiales discordantes.
+
+### 14.1 Modularización del Paquete de Endpoints de Costbase (`backend/app/api/v1/endpoints/costbase/`)
+Para solventar la deuda técnica del endpoint monolítico `costbase.py` (~2.600 líneas), la capa de presentación de la API fue refactorizada en un paquete modular:
+* [`ai_generation.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/api/v1/endpoints/costbase/ai_generation.py): Endpoint `/generate-ai-apu`, unificación temprana de contexto de historial, evaluación de Capas 0, 1 y 2, RAG híbrido y gestión interactiva de aclaratorias paramétricas.
+* [`resources.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/api/v1/endpoints/costbase/resources.py): Gestión de insumos y recursos unitarios (materiales, equipos, mano de obra) y catálogos certificados.
+* [`bulk_operations.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/api/v1/endpoints/costbase/bulk_operations.py): Operaciones de actualización masiva y reajustes de precios.
+* [`__init__.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/api/v1/endpoints/costbase/__init__.py): Router principal que preserva todas las rutas y contratos de la API sin romper consumidores ni clientes frontend.
+
+### 14.2 Cálculo Determinista de Amortización Diaria de Herramientas Menores (`reconciliation/equipment.py`)
+* **Problema:** Históricamente, las herramientas manuales y menores (palas, picos, carretillas, alicates, juegos de llaves, seguetas) se amortizaban con fórmulas de maquinaria pesada basadas en depreciación lineal a 10 años (depreciación diaria $\approx 0.0004$), lo que producía costos irrisorios de fracciones de centavo ($0.001 - $0.01 USD/día) que distorsionaban el presupuesto de obra.
+* **Solución Técnica:**
+  - Implementación en [`backend/app/services/ai_apu_service/reconciliation/equipment.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/ai_apu_service/reconciliation/equipment.py) del modelo de reposición/desgaste diario de herramientas manuales:
+    $$\text{Costo Diario} = \text{Precio de Adquisición} \times \text{Factor de Desgaste Diario (1\% a 3\%)}$$
+  - Para una herramienta de \$50 USD, su costo computable en el APU es de \$0.50 a \$1.50 USD/día de uso efectivo.
+  - Se formalizó la batería de pruebas en [`backend/tests/test_minor_tools_amortization.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/tests/test_minor_tools_amortization.py).
+
+### 14.3 Ontología Paramétrica Universal y Geometría de Elementos
+* **Módulos:** [`parametric_ontology.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/ai_apu_service/domain_rules/parametric_ontology.py) y [`element_geometry.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/element_geometry.py).
+* **Calibración de Dosificaciones Volumétricas:**
+  - Inferencia matemática de dosificaciones volumétricas estándar venezolanas para morteros de pega/friso (1:3, 1:4) y concretos estructurales ($150, 210, 250, 280\text{ kgf/cm}^2$).
+  - Proporciones exactas de sacos de cemento, arena lavada, piedra picada y agua por metro cúbico.
+  - Estimación geométrica automática de áreas de contacto, perímetros de encofrado y volúmenes de vaciado a partir de las dimensiones indicadas por el usuario.
+
+### 14.4 Calibración de Refuerzo FRP / GFRP vs Acero Tradicional
+* **Directiva Física:**
+  - Las varillas de refuerzo en fibra de vidrio estructural (GFRP / FRP) tienen una densidad de $\approx 2.0\text{ g/cm}^3$, lo que representa un cuarto del peso del acero de cabilla tradicional ($7.85\text{ g/cm}^3$).
+  - Se configuró la directiva en [`structural_requirements.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/ai_apu_service/domain_rules/structural_requirements.py) y en [`anchored_generator.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/ai_apu_service/generator/anchored_generator.py) para calibrar la cuantía equivalente estructural de FRP entre **20 y 25 kgf por $m^3$ de concreto**, prohibiendo que el LLM copie cuantías de acero pesado (80 a 100 kgf/m³).
+
+### 14.5 Poda Universal de Insumos y Oficios Discordantes (`discordant_pruning.py`)
+* **Reglas de Poda en Caliente:**
+  - Purgado sistemático de tuberías de concreto coladas por error en partidas de sobrepiso y pisos de concreto.
+  - Supresión de cortadoras mecánicas de cabilla en partidas sin refuerzo estructural.
+  - Purgado de oficios incompatibles: plomeros o electricistas en partidas de pintura o friso simple; operadores de máquina pesada en remates manuales.
+  - Distinción técnica entre pigmentos/colorantes de acabado vs convertidores/inhibidores de óxido por corrosión.
+  - **Penalización Polar Cruzada en RAG (`candidates.py`):** Detección de incompatibilidad entre partidas de pintura y sobrepisos para evitar que una base de sobrepiso se use para generar una partida de pintura o viceversa.
+
+### 14.6 Motor Paramétrico Empírico Aislado (`parametric_contract_engine/`)
+* Módulo desacoplado en `backend/app/services/parametric_contract_engine/` con `contract_evaluator.py`, `db_miner.py`, `parametric_matrix.json` y `taxonomy.py`.
+* Permite evaluar contratos paramétricos basados en minería empírica de las 17.408 partidas con un interruptor de aislamiento (`PARMETRIC_ENGINE_ENABLED`) para operar en pruebas o modo shadow sin comprometer el pipeline de producción.
+
+---
+
+## 15. Bitácora de Actualizaciones Críticas: 17–18 de Octubre 2026 (Motor de Rutas Dinámicas de las 23 Acciones, Chatbot Atómico, Trazabilidad Local y Salvaguarda de Pozos Profundos)
+
+> **Contexto:** Transformación del Asistente Guiado a un motor de rutas dinámicas contextuales para las 23 acciones canónicas de la construcción, saneamiento atómico del árbol de chips, resolución de bucles infinitos en aclaratorias dimensionales, trazabilidad local mediante File System Access API y salvaguarda determinista de equipos en pozos profundos.
+
+### 15.1 Motor de Rutas Dinámicas Inteligentes para las 23 Acciones Primarias
+* **Archivos Principales:** [`frontend/src/modules/costbase/constants/actionPipelines.js`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/constants/actionPipelines.js) y [`useGuidedAssistant.js`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/hooks/useGuidedAssistant.js).
+* **Cobertura Exhaustiva:** Soporte nativo y especializado para las **23 acciones canónicas de la construcción**:
+  1. *Construcción*
+  2. *Demolición*
+  3. *Reparación*
+  4. *Mantenimiento*
+  5. *Saneamiento*
+  6. *Limpieza*
+  7. *Instalación*
+  8. *Transporte*
+  9. *Deforestación*
+  10. *Remoción*
+  11. *Compactación*
+  12. *Relleno*
+  13. *Pintura*
+  14. *Impermeabilización*
+  15. *Nivelación*
+  16. *Perforación*
+  17. *Excavación*
+  18. *Vaciado*
+  19. *Armado*
+  20. *Encofrado*
+  21. *Fabricación*
+  22. *Soldadura*
+  23. *Reemplazo*
+* **Pipelines y Fases Contextuales Adaptativas:** Cada acción define un flujo lógico estructurado según su naturaleza física:
+  * **Transporte:** Tipo de Carga $\rightarrow$ Tipo de Vehículo $\rightarrow$ Distancia / Ruta $\rightarrow$ Unidad de Medida.
+  * **Demolición:** Elemento / Estructura $\rightarrow$ Método (Manual / Mecánico) $\rightarrow$ Acarreo y Destino de Escombros $\rightarrow$ Unidad de Medida.
+  * **Reparación:** Elemento Averiado $\rightarrow$ Método Técnico de Sustitución $\rightarrow$ Alcance de Repuestos y Pruebas $\rightarrow$ Unidad de Medida y Días de Cuadrilla.
+
+### 15.2 Saneamiento Contextual del Árbol de Decisión y Separación de Chips Compuestos
+* **Separación de Chips Compuestos:** Se eliminaron las etiquetas mixtas que confundían el flujo (ej. en Limpieza: `"Manual a mano de obra"` se normalizó a `"Manual"`, segregando claramente la opción de `"Equipo mecánico y minishovel"`).
+* **Coherencia Contextual en Saneamiento:** En `Saneamiento` de trampas de grasa colapsadas, el árbol bifurca de forma limpia entre vaciado/desinfección con camión váctor vs reconstrucción de albañilería / pedraplén / tubería corrugada de PEAD, eliminando opciones contradictorias entre sí.
+* **Batería de Pruebas de Combinatorias:** Se implementó el script de simulación exhaustiva [`frontend/scripts/test-chatbot-combinations.js`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/scripts/test-chatbot-combinations.js) y la suite de pruebas unitarias [`backend/tests/test_all_23_actions_simulation.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/tests/test_all_23_actions_simulation.py), validando la coherencia técnica de principio a fin a lo largo de las 23 acciones.
+
+### 15.3 Erradicación del Bucle Infinito en Aclaratorias Dimensionales y Soporte de Entrada Libre
+* **Diagnóstico del Loop:** En elementos metálicos (portones, rejas, puertas), tras solicitar dimensiones (ancho $\times$ alto), la selección de un chip o la respuesta de texto libre del usuario volvía a disparar la misma aclaratoria porque el reconocedor de la ontología no absorbía las dimensiones en el historial o exigía el formato estricto original.
+* **Solución Implementada:**
+  - Ajuste en [`parametric_ontology.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/ai_apu_service/domain_rules/parametric_ontology.py) y en [`ai_generation.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/api/v1/endpoints/costbase/ai_generation.py) para detectar dimensiones en el texto y en el historial unificado.
+  - **Contextualización de Chips según el Elemento:**
+    - Si el prompt contiene "puerta", se priorizan medidas típicas de puertas ($0.90\times 2.10\text{ m}$, $1.00\times 2.10\text{ m}$, $1.80\times 2.10\text{ m}$).
+    - Si contiene "portón", medidas vehiculares ($3.00\times 2.00\text{ m}$, $4.00\times 2.50\text{ m}$).
+    - Si contiene "reja", medidas de ventanas ($1.50\times 1.20\text{ m}$, $1.00\times 1.00\text{ m}$).
+  - Aceptación transparente de respuestas escritas libres del usuario sin reiniciar ni atrapar la conversación en bucles infinitos.
+
+### 15.4 Trazabilidad y Guardado Local de Logs de Auditoría (`debugStorage.js`)
+* Integración en el frontend de [`frontend/src/utils/debugStorage.js`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/utils/debugStorage.js) usando la **File System Access API** del navegador:
+  - Guarda automáticamente o permite descargar un snapshot JSON exhaustivo (`debug_apu_YYYY-MM-DDTHH-mm-ss-msZ.json`).
+  - Registra el payload completo: prompt de entrada, historial de conversación, candidatos RAG evaluados (con scores base y penalizaciones polares), APU base seleccionado, prompt enviado al LLM, respuesta cruda del LLM, APU tras reconciliación y resultado post-calibrador.
+
+### 15.5 Salvaguarda Logística de Pozos Profundos: Purga de Carretillas y Transporte Vehicular (APU `E511SC001`)
+* **Diagnóstico Forense de la Incidencia:**
+  - En la partida `E511SC001` (*"Suministro e instalación de bomba de pozo profundo de 5 HP"*), el LLM purgó la camioneta F-150 histórica por divergencia de especialidad con la base váctor, e introdujo erróneamente una `CARRETILLA PARA ACARREO DE MATERIALES` debido a una directiva de "acarreo liviano".
+  - Físicamente, un montaje en pozo profundo exige transportar tramos rígidos de tubería de 6 m, guayas, cables sumergibles, tableros de 5 HP, tecle de izaje y cuadrilla externa hacia la locación. Una carretilla resulta inoperativa.
+* **Salvaguarda Técnica Determinista:**
+  - En [`deep_well.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/ai_apu_service/domain_rules/deep_well.py): purga automática de carretillas, carruchas, buggies, palas y picos en equipos y advertencias; e inyección obligatoria del vehículo utilitario de apoyo `EQU-TRA-002` (`CAMIONETA PICK-UP TIPO FORD F-150 / 350`, rendimiento $0.5\text{ día}$).
+  - En [`anchored_generator.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/ai_apu_service/generator/anchored_generator.py): actualización de la regla 9 de escala para vetar expresamente carretillas en bombas de pozo profundo y exigir vehículo liviano de apoyo.
+  - Validación con suite unitaria [`backend/tests/test_deep_well.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/tests/test_deep_well.py) (37/37 tests passing).
+
 

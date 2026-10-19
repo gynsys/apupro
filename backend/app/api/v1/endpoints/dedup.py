@@ -82,6 +82,64 @@ CONFLICTING_PHRASE_PAIRS: List[Tuple[str, str]] = [
     ("ISO I", "ISO II"),
 ]
 
+ALLOWED_CATALOG_TABLES: Set[str] = {
+    "cost360_materials",
+    "cost360_equipment",
+    "cost360_labor",
+}
+
+ALLOWED_APU_TABLES: Set[str] = {
+    "cost360_apu_materials",
+    "cost360_apu_equipment",
+    "cost360_apu_labor",
+}
+
+ALLOWED_BUDGET_TABLES: Set[str] = {
+    "budget_apu_materials",
+    "budget_apu_equipments",
+    "budget_apu_labors",
+}
+
+ALLOWED_COLUMNS: Set[str] = {
+    "CodMat",
+    "CodEqu",
+    "CodMan",
+    "CodIns",
+    "CodPar",
+    "Descri",
+    "UniMat",
+    "CosMat",
+    "CosDia",
+    "Jornal",
+}
+
+
+def validate_sql_identifier(identifier: str, allowed_set: Set[str]) -> str:
+    """Valida y sanitiza un identificador SQL contra una lista blanca permitida.
+
+    Args:
+        identifier: Nombre de tabla o columna a verificar.
+        allowed_set: Conjunto de nombres autorizados.
+
+    Returns:
+        El identificador validado.
+
+    Raises:
+        ValueError: Si el identificador no es valido o no esta en la lista blanca.
+    """
+    if not identifier or not isinstance(identifier, str):
+        raise ValueError("El identificador SQL no puede estar vacio.")
+
+    if not re.match(r"^[a-zA-Z0-9_]+$", identifier):
+        raise ValueError(
+            f"Identificador SQL invalido: '{identifier}'. Solo se permiten alfanumericos y guiones bajos."
+        )
+
+    if identifier not in allowed_set:
+        raise ValueError(f"Identificador SQL no autorizado: '{identifier}'.")
+
+    return identifier
+
 
 def _get_catalog_meta(resource_type: str) -> Dict[str, str]:
     """Retorna metadatos de tabla y columnas según el tipo de insumo."""
@@ -214,14 +272,20 @@ def _similarity(a: str, b: str) -> float:
 
 def _fetch_catalog_rows_with_usage(db: Session, meta: Dict[str, str]) -> List[Dict[str, Any]]:
     """Carga los registros del catálogo junto con su conteo de usos en APUs."""
-    tbl = meta["table"]
-    c_col = meta["code_col"]
-    d_col = meta["desc_col"]
-    u_col = meta["unit_col"]
-    p_col = meta["price_col"]
-    apu_tbl = meta["apu_table"]
+    tbl = validate_sql_identifier(meta["table"], ALLOWED_CATALOG_TABLES)
+    c_col = validate_sql_identifier(meta["code_col"], ALLOWED_COLUMNS)
+    d_col = validate_sql_identifier(meta["desc_col"], ALLOWED_COLUMNS)
+    p_col = validate_sql_identifier(meta["price_col"], ALLOWED_COLUMNS)
+    apu_tbl = validate_sql_identifier(meta["apu_table"], ALLOWED_APU_TABLES)
 
-    unit_expr = f'COALESCE("{u_col}", \'\')' if u_col else "'dia'"
+    u_col_raw = meta.get("unit_col", "")
+    if u_col_raw:
+        u_col = validate_sql_identifier(u_col_raw, ALLOWED_COLUMNS)
+        unit_expr = f'COALESCE("{u_col}", \'\')'
+    else:
+        u_col = ""
+        unit_expr = "'dia'"
+
     rows = db.execute(text(f"""
         SELECT "{c_col}", "{d_col}", {unit_expr} AS unit_val, COALESCE("{p_col}", 0) AS price_val
         FROM {tbl}
@@ -264,7 +328,7 @@ def _attach_apu_samples(db: Session, meta: Dict[str, str], groups: List[Dict[str
     if not all_codes:
         return
 
-    apu_tbl = meta["apu_table"]
+    apu_tbl = validate_sql_identifier(meta["apu_table"], ALLOWED_APU_TABLES)
     rows = db.execute(
         text(f"""
             SELECT a."CodIns", a."CodPar", COALESCE(i."Descri", '')
@@ -479,11 +543,11 @@ def merge_duplicates(payload: MergeRequest, db: Session = Depends(get_db)) -> Di
     - Elimina los códigos perdedores de la BD
     """
     meta = _get_catalog_meta(payload.resource_type)
-    tbl = meta["table"]
-    c_col = meta["code_col"]
-    p_col = meta["price_col"]
-    apu_tbl = meta["apu_table"]
-    budget_tbl = meta["budget_table"]
+    tbl = validate_sql_identifier(meta["table"], ALLOWED_CATALOG_TABLES)
+    c_col = validate_sql_identifier(meta["code_col"], ALLOWED_COLUMNS)
+    p_col = validate_sql_identifier(meta["price_col"], ALLOWED_COLUMNS)
+    apu_tbl = validate_sql_identifier(meta["apu_table"], ALLOWED_APU_TABLES)
+    budget_tbl = validate_sql_identifier(meta["budget_table"], ALLOWED_BUDGET_TABLES)
 
     total_apus_redirigidas = 0
     total_eliminados = 0

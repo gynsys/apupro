@@ -1,0 +1,2842 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PRUEBA 1 — Fingerprint de ACTION_FLOW_PIPELINES > snapshot dorado: el catálogo completo no cambia 1`] = `
+{
+  "acarreo": [
+    {
+      "chips": "[FN:() => [
+        'Escombros de demolición',
+        'Tierra de excavación',
+        'Bloques de arcilla',
+        'Bloques de concreto',
+        'Cemento en sacos',
+        'Arena lavada',
+        'Piedra picada',
+        'Cabillas de acero',
+        'Cerámicas',
+        'Porcelanatos',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`de \${v.toLowerCase()}\`]",
+      "id": "material",
+      "text": "Defina el Material a Trasladar
+¿Qué insumo o escombro se va a acarrear?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const mat = (answers.material || '').toLowerCase();
+        if (mat.includes('cabilla')) {
+          return [
+            'A hombro por cuadrilla',
+            'Manual por cuadrilla de obreros',
+            'Omitir'
+          ];
+        }
+        if (mat.includes('escombro') || mat.includes('tierra') || mat.includes('arena') || mat.includes('piedra')) {
+          return [
+            'Manual en carretilla',
+            'Manual en tobos',
+            'Con minishovel mecánico',
+            'Con motocarretilla (buggy)',
+            'Omitir'
+          ];
+        }
+        return [
+          'Manual en carretilla',
+          'A hombro por cuadrilla',
+          'Con carretilla de dos ruedas',
+          'Omitir'
+        ];
+      }]",
+      "field": "material",
+      "format": "[FN:(v) => v.toLowerCase()]",
+      "id": "medio",
+      "text": "Defina el Medio de Acarreo
+¿Cómo se trasladará internamente el material?",
+    },
+    {
+      "chips": "[FN:() => [
+        'En planta baja hasta 50 m de distancia',
+        'En planta baja hasta 100 m de distancia',
+        'Hacia pisos superiores por escaleras',
+        'Hacia pisos superiores con malacate / güinche',
+        'Hacia sótanos',
+        'Omitir'
+      ]]",
+      "field": "ubicacion",
+      "format": "[FN:(v) => v]",
+      "id": "distancia_nivel",
+      "text": "Defina la Distancia o Cambio de Nivel
+¿A qué distancia o piso se realizará el acarreo?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const mat = (answers.material || '').toLowerCase();
+        if (mat.includes('bloque')) {
+          return ['und (Por bloque)', 'viaje (Por viaje de carretilla)', 'Gl (Suma global)'];
+        }
+        if (mat.includes('cemento') || mat.includes('saco')) {
+          return ['saco (Por saco)', 'viaje (Por viaje de carretilla)', 'Gl (Suma global)'];
+        }
+        if (mat.includes('cabilla')) {
+          return ['kgf (Kilogramo fuerza)', 'ton (Tonelada)', 'Gl (Suma global)'];
+        }
+        return ['m³ (Metro cúbico)', 'viaje (Por viaje de carretilla)', 'Gl (Suma global)'];
+      }]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará el acarreo?",
+    },
+  ],
+  "colocacion": [
+    {
+      "chips": "[FN:() => [
+        'Cerámica en pisos',
+        'Porcelanato en pisos',
+        'Azulejos en paredes de baños',
+        'Puertas de madera',
+        'Puertas metálicas',
+        'Ventanas de aluminio',
+        'Techos de láminas de acerolit',
+        'Techos de láminas de zinc',
+        'Brocales prefabricados',
+        'Bordillos prefabricados',
+        'Adoquines de concreto',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`de \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina el Elemento o Revestimiento a Colocar
+¿Qué elemento constructivo se va a colocar?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('cerámica') || elem.includes('porcelanato') || elem.includes('azulejo')) {
+          return [
+            'Con mortero adhesivo gris (pega común)',
+            'Con mortero adhesivo blanco de alta adherencia para porcelanato',
+            'Con mortero cemento-arena 1:3',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('puerta') || elem.includes('ventana')) {
+          return [
+            'Con tornillos autorroscantes y ramplug',
+            'Con espuma de poliuretano expansiva y anclajes',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('techo')) {
+          return [
+            'Con ganchos de fijación y arandelas de neopreno sobre correas metálicas',
+            'Con tornillos autorroscantes sobre correas de madera',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('adoquín')) {
+          return [
+            'Sobre cama de arena nivelada e intertrabado con arena fina',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('brocal') || elem.includes('bordillo')) {
+          return [
+            'Sobre base de mortero nivelada',
+            'Omitir'
+          ];
+        }
+        return [
+          'Con mortero adhesivo especial',
+          'Con anclajes mecánicos',
+          'Omitir'
+        ];
+      }]",
+      "field": "material",
+      "format": "[FN:(v) => v]",
+      "id": "material_fijacion",
+      "text": "Defina el Material de Fijación o Pega
+¿Con qué mortero o anclaje se instalará?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('cerámica') || elem.includes('porcelanato') || elem.includes('azulejo')) {
+          return [
+            'Incluye emboquillado con pastina antimoho',
+            'Incluye nivelación y corte de piezas',
+            'Todo incluido (material de fijación + mano de obra)',
+            'Solo colocación y mano de obra',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('puerta') || elem.includes('ventana')) {
+          return [
+            'Incluye cerraduras, bisagras y accesorios',
+            'Incluye sellado perimetral con silicón',
+            'Todo incluido (suministro de fijación + montaje)',
+            'Solo mano de obra',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('techo')) {
+          return [
+            'Incluye caballetes y remates de cumbrera',
+            'Incluye fijaciones y sellado de solapes',
+            'Todo incluido (fijaciones + montaje)',
+            'Solo mano de obra',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('adoquín') || elem.includes('brocal') || elem.includes('bordillo')) {
+          return [
+            'Incluye alineación, nivelación y emboquillado de juntas',
+            'Todo incluido (material de asiento + mano de obra)',
+            'Solo colocación y mano de obra',
+            'Omitir'
+          ];
+        }
+        return [
+          'Todo incluido (materiales + mano de obra)',
+          'Solo colocación y mano de obra',
+          'Omitir'
+        ];
+      }]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "alcance",
+      "text": "Defina el Alcance de Acabado y Juntas
+¿Qué operaciones de acabado contempla la partida?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('puerta') || elem.includes('ventana')) {
+          return ['pza (Pieza)', 'und (Unidad)', 'Gl (Suma global)'];
+        }
+        if (elem.includes('brocal') || elem.includes('bordillo')) {
+          return ['ml (Metro lineal)', 'pza (Pieza)', 'Gl (Suma global)'];
+        }
+        return ['m² (Metro cuadrado)', 'ml (Metro lineal)', 'Gl (Suma global)'];
+      }]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará la colocación?",
+    },
+  ],
+  "compactacion": [
+    {
+      "chips": "[FN:() => [
+        'Manual con pisón',
+        'Con vibrocompactador (rana / canguro)',
+        'Con rodillo vibratorio manual',
+        'Con rodillo autopropulsado pesado',
+        'Omitir'
+      ]]",
+      "field": "material",
+      "format": "[FN:(v) => (v.startsWith('Manual') || v.startsWith('Con ') ? v.toLowerCase() : \`compactado con \${v.toLowerCase()}\`)]",
+      "id": "metodo",
+      "text": "Defina el Método o Equipo de Compactación
+¿Con qué equipo o procedimiento se compactará?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const metodo = (answers.metodo || '').toLowerCase();
+        if (metodo.includes('pisón') || metodo.includes('vibrocompactador') || metodo.includes('rana') || metodo.includes('canguro')) {
+          return [
+            'Fondo de zanja para tuberías',
+            'Fondo de zanja para fundaciones',
+            'Relleno alrededor de zapatas',
+            'Relleno de zanjas',
+            'Subbase de piso',
+            'Omitir'
+          ];
+        }
+        if (metodo.includes('rodillo')) {
+          return [
+            'Subbase de pavimento',
+            'Base granular',
+            'Terraplenes',
+            'Patios de maniobras',
+            'Vialidad',
+            'Omitir'
+          ];
+        }
+        return [
+          'Fondo de zanja para tuberías',
+          'Relleno de fundaciones',
+          'Subbase de piso',
+          'Base granular',
+          'Terraplenes',
+          'Omitir'
+        ];
+      }]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`en \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina la Zona o Capa a Compactar
+¿Qué base, fondo o relleno se va a compactar?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const metodo = (answers.metodo || '').toLowerCase();
+        if (metodo.includes('pisón')) {
+          return [
+            'En capas de 15 cm compactadas',
+            'En capas de 20 cm compactadas',
+            'Al 95% del Proctor Modificado',
+            'Omitir'
+          ];
+        }
+        return [
+          'En capas de 15 cm al 95% Proctor Modificado',
+          'En capas de 20 cm al 95% Proctor Modificado',
+          'En capas de 30 cm al 95% Proctor Modificado',
+          'En capas compactadas de 20 cm',
+          'Al 95% del Proctor Modificado',
+          'Omitir'
+        ];
+      }]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "control",
+      "text": "Defina el Espesor de Capa y Control de Calidad
+¿Qué espesor de capa y grado de compactación contempla?",
+    },
+    {
+      "chips": "[FN:() => ['m² (Por superficie)', 'm³ (Por volumen compactado)', 'ml (Por metro lineal de zanja)', 'Gl (Suma global)']]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará la compactación?",
+    },
+  ],
+  "confeccion": [
+    {
+      "chips": "[FN:() => [
+        'Armaduras de cabilla para columnas',
+        'Armaduras de cabilla para vigas',
+        'Armaduras de cabilla para zapatas',
+        'Encofrados para vigas',
+        'Encofrados para columnas',
+        'Encofrados de madera para losas',
+        'Rejas de protección metálica',
+        'Puertas metálicas',
+        'Portones metálicos',
+        'Canaletas de lluvia en lámina galvanizada',
+        'Bajantes de lluvia en lámina galvanizada',
+        'Pasamanos de acero',
+        'Barandas de acero',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`de \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina el Elemento a Confeccionar
+¿Qué pieza o armadura se va a habilitar o fabricar?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('armadura') || elem.includes('cabilla')) {
+          return [
+            'Con cabillas corrugadas grado 60 (fy=4200 kg/cm²) y alambre #16',
+            'Con cabillas de diámetro 3/8", 1/2" y estribos de 3/8"',
+            'Con cabillas de diámetro 5/8" y 3/4"',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('encofrado')) {
+          return [
+            'Con madera de pino cepillada y barrotes 2x4',
+            'Con tablero fenólico marino de 15 mm y parales telescópicos',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('reja') || elem.includes('puerta') || elem.includes('portón') || elem.includes('pasamano') || elem.includes('baranda')) {
+          return [
+            'Con tubos estructurales 2x1 y barras cuadradas de 1/2"',
+            'Con lámina pulida calibre 18 y perfiles tubulares',
+            'Con perfiles de acero inoxidable pulido',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('canaleta') || elem.includes('bajante')) {
+          return [
+            'Con lámina galvanizada calibre 22 con uniones engrapadas y soldadas',
+            'Con lámina galvanizada calibre 24 con sellador elástico',
+            'Omitir'
+          ];
+        }
+        return [
+          'Con perfiles y láminas de acero de primera calidad',
+          'Con materiales según especificación de planos',
+          'Omitir'
+        ];
+      }]",
+      "field": "material",
+      "format": "[FN:(v) => (v.startsWith('con ') || v.startsWith('Con ') ? v : \`con \${v}\`)]",
+      "id": "material_calibre",
+      "text": "Defina el Material, Espesor o Calibre
+¿Con qué insumo y dimensiones se confeccionará?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Fabricado en banco de trabajo en obra',
+        'Fabricado en taller externo con transporte a obra',
+        'Confección directa en sitio de instalación',
+        'Omitir'
+      ]]",
+      "field": "ubicacion",
+      "format": "[FN:(v) => v]",
+      "id": "lugar_hechura",
+      "text": "Defina el Lugar de Confección
+¿Dónde se elaborará la pieza o armadura?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('armadura') || elem.includes('cabilla')) {
+          return ['kgf (Kilogramo fuerza)', 'ton (Tonelada)', 'Gl (Suma global)'];
+        }
+        if (elem.includes('encofrado')) {
+          return ['m² (Metro cuadrado de contacto)', 'Gl (Suma global)'];
+        }
+        if (elem.includes('canaleta') || elem.includes('bajante') || elem.includes('baranda') || elem.includes('pasamano')) {
+          return ['ml (Metro lineal)', 'pza (Pieza)', 'Gl (Suma global)'];
+        }
+        return ['pza (Pieza)', 'm² (Metro cuadrado)', 'Gl (Suma global)'];
+      }]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará la confección?",
+    },
+  ],
+  "construccion": [
+    {
+      "chips": "[FN:() => [
+        'Paredes de bloques de arcilla',
+        'Paredes de bloques de concreto',
+        'Paredes de ladrillo macizo',
+        'Columnas',
+        'Vigas',
+        'Zapatas aisladas',
+        'Vigas de riostra',
+        'Losas de entrepiso',
+        'Losas de techo',
+        'Pisos de concreto',
+        'Pavimentos de concreto',
+        'Brocales',
+        'Bordillos',
+        'Aceras de concreto',
+        'Estructuras metálicas de acero',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`de \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina el Elemento o Estructura a Construir
+¿Qué elemento o estructura se va a construir?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('arcilla')) {
+          return [
+            'Bloque de arcilla e=10 cm con mortero 1:4',
+            'Bloque de arcilla e=15 cm con mortero 1:4',
+            'Bloque de arcilla e=20 cm con mortero 1:4',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('bloques de concreto')) {
+          return [
+            'Bloque de concreto e=15 cm con mortero 1:4',
+            'Bloque de concreto e=20 cm con mortero 1:4',
+            'Bloque de concreto e=10 cm con mortero 1:4',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('columna') || elem.includes('viga') || elem.includes('zapata') || elem.includes('riostra') || elem.includes('losa')) {
+          return [
+            'Concreto f\\'c=250 kg/cm² con acero fy=4200 y encofrado',
+            'Concreto f\\'c=280 kg/cm² con acero fy=4200 y encofrado',
+            'Concreto f\\'c=210 kg/cm² con acero fy=4200 y encofrado',
+            'Solo concreto premezclado f\\'c=250 kg/cm² (sin acero)',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('piso') || elem.includes('pavimento')) {
+          return [
+            'Concreto f\\'c=210 kg/cm² e=10 cm con malla electrosoldada',
+            'Concreto f\\'c=250 kg/cm² e=15 cm con junta y pasadores',
+            'Concreto f\\'c=280 kg/cm² e=20 cm de alto tráfico',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('brocal') || elem.includes('bordillo') || elem.includes('acera')) {
+          return [
+            'Concreto f\\'c=210 kg/cm² con encofrado metálico',
+            'Concreto f\\'c=250 kg/cm² con junta de dilatación',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('metálica') || elem.includes('acero')) {
+          return [
+            'Perfiles tubulares estructurales con soldadura 7018',
+            'Vigas IPE y columnas HEB con pintura anticorrosiva',
+            'Perfiles de hierro en ángulo y pletinas',
+            'Omitir'
+          ];
+        }
+        return [
+          'Concreto f\\'c=250 kg/cm²',
+          'Mortero cemento-arena 1:3',
+          'Acero de refuerzo grado 60',
+          'Perfiles de acero estructural',
+          'Omitir'
+        ];
+      }]",
+      "field": "material",
+      "format": "[FN:(v) => (v.startsWith('con ') || v.startsWith('Con ') ? v : \`con \${v}\`)]",
+      "id": "material",
+      "text": "Defina el Material o Especificación Constructiva
+¿Con qué material o dosificación se construirá?",
+    },
+    {
+      "chips": "[FN:() => ['En planta baja', 'En pisos superiores', 'En exteriores', 'En sótanos', 'Omitir']]",
+      "field": "ubicacion",
+      "format": "[FN:(v) => v]",
+      "id": "ubicacion",
+      "text": "Defina la Ubicación o Nivel
+¿En qué nivel o área se construirá?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Todo incluido (Materiales + Mano de Obra + Equipos)',
+        'Incluye andamios y transporte interno',
+        'Solo mano de obra y equipos (materiales suministrados)',
+        'Omitir'
+      ]]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "alcance",
+      "text": "Defina el Alcance y Condiciones
+¿Qué insumos o servicios incluye?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('columna') || elem.includes('viga') || elem.includes('zapata') || elem.includes('riostra')) {
+          return ['m³ (Metro cúbico)', 'ml (Metro lineal)', 'pza (Pieza)', 'Gl (Suma global)'];
+        }
+        if (elem.includes('brocal') || elem.includes('bordillo')) {
+          return ['ml (Metro lineal)', 'm³ (Metro cúbico)', 'Gl (Suma global)'];
+        }
+        if (elem.includes('metálica') || elem.includes('acero')) {
+          return ['kgf (Kilogramo fuerza)', 'ton (Tonelada)', 'm² (Metro cuadrado)', 'Gl (Suma global)'];
+        }
+        return ['m² (Metro cuadrado)', 'm³ (Metro cúbico)', 'ml (Metro lineal)', 'Gl (Suma global)'];
+      }]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará la partida?",
+    },
+  ],
+  "deforestacion": [
+    {
+      "chips": "[FN:() => [
+        'Maleza liviana (hasta 1 m de altura)',
+        'Rastrojo',
+        'Matorral denso',
+        'Arbustos medianos',
+        'Árboles delgados con diámetro menor a 20 cm',
+        'Árboles medianos con diámetro de 20 a 40 cm',
+        'Árboles grandes con diámetro mayor a 40 cm',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`de \${v.toLowerCase()}\`]",
+      "id": "tipo_vegetacion",
+      "text": "Defina la Vegetación o Zona a Intervenir
+¿Qué tipo de vegetación se va a deforestar?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const veg = (answers.tipo_vegetacion || '').toLowerCase();
+        if (veg.includes('árbol')) {
+          return [
+            'Con motosierra',
+            'Tala y destoconado mecánico con retroexcavadora',
+            'Tala con motosierra y destoconado manual',
+            'Omitir'
+          ];
+        }
+        return [
+          'Manual con machete',
+          'Con desbrozadora a motor (guadaña)',
+          'Mecánica con tractor de orugas (Bulldozer D6)',
+          'Omitir'
+        ];
+      }]",
+      "field": "material",
+      "format": "[FN:(v) => (v.startsWith('Con ') || v.startsWith('Manual') || v.startsWith('Mecánica') || v.startsWith('Tala') ? v.toLowerCase() : \`mediante \${v.toLowerCase()}\`)]",
+      "id": "metodo",
+      "text": "Defina el Método de Deforestación
+¿Con qué equipo se realizará la tala o desmonte?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Incluye repicado, apilado y quema controlada',
+        'Incluye carga mecánica y bote fuera de la obra',
+        'Incluye destoconado y extracción de raíces',
+        'Solo corte y volteo en sitio',
+        'Omitir'
+      ]]",
+      "field": "ubicacion",
+      "format": "[FN:(v) => v]",
+      "id": "disposicion",
+      "text": "Defina la Disposición de Material Vegetal
+¿Qué se hará con los troncos, ramas y restos vegetales?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const veg = (answers.tipo_vegetacion || '').toLowerCase();
+        if (veg.includes('árbol')) {
+          return ['und (Por árbol talado)', 'ha (Hectárea)', 'm² (Metro cuadrado)', 'Gl (Suma global)'];
+        }
+        return ['m² (Metro cuadrado)', 'ha (Hectárea)', 'Gl (Suma global)'];
+      }]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará la deforestación?",
+    },
+  ],
+  "demolicion": [
+    {
+      "chips": "[FN:() => [
+        'Manual con mandarria y cincel',
+        'Con martillo demoledor eléctrico',
+        'Con compresor y martillo neumático',
+        'Con retroexcavadora y martillo hidráulico',
+        'Con cortadora de disco para concreto',
+        'Omitir'
+      ]]",
+      "field": "material",
+      "format": "[FN:(v) => (v.startsWith('Manual') || v.startsWith('Con ') ? v.toLowerCase() : \`demolido con \${v.toLowerCase()}\`)]",
+      "id": "metodo",
+      "text": "Defina el Método de Demolición
+¿Con qué equipo o procedimiento se demolerá?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const metodo = (answers.metodo || '').toLowerCase();
+        if (metodo.includes('manual') || metodo.includes('eléctrico')) {
+          return [
+            'Paredes de bloques de arcilla',
+            'Paredes de bloques de concreto',
+            'Paredes de ladrillo macizo',
+            'Frisos de pared',
+            'Sobrepisos de mortero',
+            'Cielos rasos de yeso',
+            'Omitir'
+          ];
+        }
+        return [
+          'Losas de concreto armado',
+          'Pisos de concreto',
+          'Pavimentos de concreto',
+          'Pavimentos de asfalto',
+          'Columnas',
+          'Vigas',
+          'Brocales',
+          'Bordillos',
+          'Fundaciones de concreto',
+          'Omitir'
+        ];
+      }]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`de \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina el Elemento a Demoler
+¿Qué elemento o estructura se va a demoler?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('pared')) {
+          return ['Espesor e=10 cm', 'Espesor e=15 cm', 'Espesor e=20 cm', 'Espesor e=25 cm', 'Omitir'];
+        }
+        if (elem.includes('piso') || elem.includes('pavimento') || elem.includes('losa')) {
+          return ['Espesor e=5 cm', 'Espesor e=10 cm', 'Espesor e=15 cm', 'Espesor e=20 cm', 'Omitir'];
+        }
+        return ['Espesor e=10 cm', 'Espesor e=15 cm', 'Espesor e=20 cm', 'Espesor mayor a 25 cm', 'Omitir'];
+      }]",
+      "field": "ubicacion",
+      "format": "[FN:(v) => v]",
+      "id": "espesor",
+      "text": "Defina el Espesor del Elemento
+¿Qué espesor o calibre tiene la estructura a demoler?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Incluye acarreo interno y apilado',
+        'Incluye carga y bote en camión a botadero',
+        'Solo demolición',
+        'Omitir'
+      ]]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "alcance",
+      "text": "Defina el Alcance de Desalojo de Escombros
+¿Qué retiro de escombros incluye la partida?",
+    },
+    {
+      "chips": "[FN:() => ['m² (Por superficie)', 'm³ (Por volumen demolido)', 'ml (Metro lineal)', 'pza (Por pieza)', 'Gl (Suma global)']]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará la demolición?",
+    },
+  ],
+  "desmontaje": [
+    {
+      "chips": "[FN:() => [
+        'Techo de láminas de acerolit',
+        'Techo de láminas de zinc',
+        'Puertas de madera',
+        'Puertas metálicas',
+        'Ventanas de aluminio',
+        'Rejas metálicas',
+        'Luminarias LED',
+        'Tuberías de agua',
+        'Tuberías sanitarias',
+        'Inodoros',
+        'Lavamanos',
+        'Equipos de aire acondicionado',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`de \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina el Elemento a Desmontar
+¿Qué elemento o equipo se va a desmontar?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Con recuperación de piezas para reutilización',
+        'Sin recuperación (desecho a botadero)',
+        'Con desconexión eléctrica segura',
+        'Omitir'
+      ]]",
+      "field": "material",
+      "format": "[FN:(v) => v]",
+      "id": "condicion",
+      "text": "Defina la Condición de Retiro
+¿Se requiere recuperar las piezas desmontadas?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Incluye bajada cuidadosa, retiro y apilado en sitio',
+        'Incluye carga y bote fuera de la obra en camión',
+        'Solo desmontaje en sitio',
+        'Omitir'
+      ]]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "alcance",
+      "text": "Defina el Alcance de Acopio y Desalojo
+¿Qué traslado de material desmontado incluye?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('techo')) {
+          return ['m² (Metro cuadrado)', 'pza (Pieza)', 'Gl (Suma global)'];
+        }
+        if (elem.includes('tubería')) {
+          return ['ml (Metro lineal)', 'Gl (Suma global)'];
+        }
+        return ['pza (Pieza)', 'und (Unidad)', 'Gl (Suma global)'];
+      }]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará el desmontaje?",
+    },
+  ],
+  "excavacion": [
+    {
+      "chips": "[FN:() => [
+        'Manual con pico y pala',
+        'A máquina con retroexcavadora',
+        'A máquina con minishovel',
+        'Con compresor y martillo neumático',
+        'Con tractor de orugas',
+        'Omitir'
+      ]]",
+      "field": "material",
+      "format": "[FN:(v) => (v.startsWith('Manual') || v.startsWith('A máquina') || v.startsWith('Con ') ? v.toLowerCase() : \`excavado con \${v.toLowerCase()}\`)]",
+      "id": "metodo",
+      "text": "Defina el Método de Excavación
+¿Cómo se ejecutará la excavación?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const metodo = (answers.metodo || '').toLowerCase();
+        if (metodo.includes('manual') || metodo.includes('pico')) {
+          return [
+            'Zanjas para tuberías',
+            'Zapatas aisladas',
+            'Vigas de riostra',
+            'Huecos para postes',
+            'Fosas sépticas',
+            'Omitir'
+          ];
+        }
+        if (metodo.includes('compresor') || metodo.includes('neumático')) {
+          return [
+            'Zanja en roca',
+            'Zapatas en roca',
+            'Perfilado de terreno rocoso',
+            'Omitir'
+          ];
+        }
+        return [
+          'Cortes masivos de terreno',
+          'Zanjas para colectores',
+          'Sótanos',
+          'Fosas de ascensor',
+          'Zapatas',
+          'Fundaciones masivas',
+          'Lagunas de retención',
+          'Omitir'
+        ];
+      }]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`para \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina el Elemento o Zanja a Excavarse
+¿Para qué elemento o estructura es la excavación?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const metodo = (answers.metodo || '').toLowerCase();
+        if (metodo.includes('manual')) {
+          return [
+            'Hasta 1.00 m de profundidad',
+            'De 1.00 m a 2.00 m de profundidad',
+            'De 2.00 m a 3.00 m de profundidad',
+            'Omitir'
+          ];
+        }
+        return [
+          'Hasta 2.00 m de profundidad',
+          'De 2.00 m a 4.00 m de profundidad',
+          'Mayor a 4.00 m de profundidad',
+          'Omitir'
+        ];
+      }]",
+      "field": "ubicacion",
+      "format": "[FN:(v) => v]",
+      "id": "profundidad",
+      "text": "Defina el Rango de Profundidad
+¿A qué profundidad se excavará?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Incluye carga mecánica en camión',
+        'Incluye acarreo interno hasta 50 m',
+        'Con bote a botadero en camión volteo',
+        'Solo excavación y apilado al borde',
+        'Omitir'
+      ]]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "alcance_bote",
+      "text": "Defina el Alcance de Retiro o Bote
+¿Qué operaciones de desalojo contempla la partida?",
+    },
+    {
+      "chips": "[FN:() => ['m³ (Metro cúbico)', 'ml (Metro lineal)', 'Gl (Suma global)']]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará la excavación?",
+    },
+  ],
+  "impermeabilizacion": [
+    {
+      "chips": "[FN:() => [
+        'Techos de concreto',
+        'Losas de entrepiso',
+        'Techos de machihembrado de madera',
+        'Jardineras',
+        'Muros de contención enterrados',
+        'Tanques de agua',
+        'Fosos de ascensor',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`en \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina el Elemento o Área a Impermeabilizar
+¿En qué elemento o cubierta se aplicará la impermeabilización?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('machihembrado')) {
+          return [
+            'Manto asfáltico autoadhesivo aluminizado (sin soplete)',
+            'Manto asfáltico de 3 mm con fijación mecánica',
+            'Membrana líquida elastomérica reflectiva',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('jardinera') || elem.includes('muro') || elem.includes('tanque') || elem.includes('foso')) {
+          return [
+            'Mortero cementoso impermeable bicomponente',
+            'Manto asfáltico de 4 mm antiraíz',
+            'Membrana de poliuretano impermeable líquida',
+            'Omitir'
+          ];
+        }
+        return [
+          'Manto asfáltico de 4 mm con polímeros SBS/APP',
+          'Manto asfáltico de 3 mm con polímeros SBS/APP',
+          'Membrana líquida de poliuretano elastomérica',
+          'Membrana líquida acrílica reflectiva',
+          'Omitir'
+        ];
+      }]",
+      "field": "material",
+      "format": "[FN:(v) => (v.startsWith('con ') || v.startsWith('Con ') ? v : \`con \${v}\`)]",
+      "id": "sistema",
+      "text": "Defina el Sistema Impermeabilizante
+¿Qué tipo de manto o membrana se instalará?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('tanque') || elem.includes('muro') || elem.includes('jardinera') || elem.includes('foso')) {
+          return [
+            'Con sobrepiso de mortero hidrófugo de protección',
+            'Con sellador epóxico grado alimenticio',
+            'Sin acabado adicional',
+            'Omitir'
+          ];
+        }
+        return [
+          'Con pintura de aluminio reflectiva',
+          'Con acabado de tejas asfálticas',
+          'Con sobrepiso de mortero de protección',
+          'Sin acabado adicional',
+          'Omitir'
+        ];
+      }]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "acabado",
+      "text": "Defina el Acabado y Protección Térmica
+¿Qué recubrimiento de acabado y protección incluye?",
+    },
+    {
+      "chips": "[FN:() => ['m² (Metro cuadrado)', 'ml (Metro lineal)', 'Gl (Suma global)']]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará la impermeabilización?",
+    },
+  ],
+  "instalacion": [
+    {
+      "chips": "[FN:() => [
+        'Tubería de agua potable termofusión (PPR)',
+        'Tubería de agua potable PVC',
+        'Tubería de aguas servidas PVC',
+        'Tubería de gas en cobre',
+        'Tableros eléctricos',
+        'Breakers termomagnéticos',
+        'Protecciones eléctricas',
+        'Transformadores eléctricos',
+        'Bombas de agua',
+        'Inodoros',
+        'Lavamanos',
+        'Griferías',
+        'Llaves de paso',
+        'Luminarias LED',
+        'Aires acondicionados split',
+        'Puertas de madera',
+        'Puertas metálicas',
+        'Ventanas de aluminio',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`de \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina el Elemento o Equipo a Instalar
+¿Qué insumo, equipo o pieza constructiva se va a instalar?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('tubería')) {
+          return [
+            'Diámetro 1/2"',
+            'Diámetro 3/4"',
+            'Diámetro 1"',
+            'Diámetro 2"',
+            'Diámetro 3"',
+            'Diámetro 4"',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('bomba')) {
+          return [
+            'Potencia 0.5 HP',
+            'Potencia 1 HP',
+            'Potencia 2 HP',
+            'Potencia 5 HP',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('transformador')) {
+          return [
+            'Capacidad 25 kVA',
+            'Capacidad 50 kVA',
+            'Capacidad 75 kVA',
+            'Capacidad 100 kVA',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('aire')) {
+          return [
+            'Capacidad 12.000 BTU',
+            'Capacidad 18.000 BTU',
+            'Capacidad 24.000 BTU',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('breaker') || elem.includes('protección')) {
+          return [
+            'Breaker termomagnético 1x20A',
+            'Breaker termomagnético 2x20A',
+            'Breaker termomagnético 3x50A',
+            'Protección contra sobretensiones (DPS)',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('tablero')) {
+          return [
+            'Tablero de 12 circuitos',
+            'Tablero de 24 circuitos',
+            'Tablero de 42 circuitos',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('grifería') || elem.includes('llave')) {
+          return [
+            'Diámetro 1/2"',
+            'Diámetro 3/4"',
+            'Diámetro 1"',
+            'Cromada de lavamanos monomando',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('inodoro') || elem.includes('lavamanos')) {
+          return [
+            'Con grifería y accesorios completos',
+            'Línea comercial estándar blanco',
+            'Línea institucional antivandálica',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('puerta') || elem.includes('ventana')) {
+          return [
+            'Medida estándar 0.70 x 2.10 m con cerradura',
+            'Medida estándar 0.80 x 2.10 m con cerradura',
+            'Medida estándar 0.90 x 2.10 m con cerradura',
+            'Medida 1.20 x 1.00 m con vidrio de 4 mm',
+            'Omitir'
+          ];
+        }
+        return [
+          'Capacidad estándar de catálogo',
+          'Especificación indicada en planos',
+          'Omitir'
+        ];
+      }]",
+      "field": "material",
+      "format": "[FN:(v) => v]",
+      "id": "capacidad",
+      "text": "Defina la Capacidad, Diámetro o Calibre
+¿Qué especificación técnica o dimensión tiene el elemento?",
+    },
+    {
+      "chips": "[FN:() => [
+        'En planta baja',
+        'En pisos superiores',
+        'En sala de bombas',
+        'En tabiquería interior',
+        'En exteriores',
+        'Omitir'
+      ]]",
+      "field": "ubicacion",
+      "format": "[FN:(v) => v]",
+      "id": "ubicacion",
+      "text": "Defina la Ubicación de Montaje
+¿En qué área o nivel se montará?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Todo incluido (Suministro + Montaje + Conexiones)',
+        'Solo instalación y mano de obra (equipo suministrado en obra)',
+        'Incluye pruebas de presión y certificación',
+        'Incluye puesta en marcha y calibración',
+        'Omitir'
+      ]]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "alcance",
+      "text": "Defina el Alcance de Instalación
+¿Qué operaciones de conexión y pruebas incluye?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('tubería')) {
+          return ['ml (Metro lineal)', 'und (Unidad)', 'Gl (Suma global)'];
+        }
+        return ['und (Unidad)', 'pza (Pieza)', 'jgo (Juego)', 'pto (Punto)', 'Gl (Suma global)'];
+      }]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará la partida?",
+    },
+  ],
+  "limpieza": [
+    {
+      "chips": "[FN:() => [
+        'Manual',
+        'Con hidrolavadora a presión',
+        'Con minishovel',
+        'Con barredora mecánica',
+        'Con compresor de aire industrial',
+        'Omitir'
+      ]]",
+      "field": "material",
+      "format": "[FN:(v) => (v.startsWith('Manual') || v.startsWith('Con ') ? v.toLowerCase() : \`limpiado con \${v.toLowerCase()}\`)]",
+      "id": "metodo",
+      "text": "Defina el Procedimiento o Equipo de Limpieza
+¿Cómo se ejecutará la limpieza?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const metodo = (answers.metodo || '').toLowerCase();
+        if (metodo.includes('minishovel') || metodo.includes('mecánica') || metodo.includes('barredora')) {
+          return [
+            'Terreno con maleza liviana',
+            'Terreno con escombros',
+            'Terreno con desechos sólidos',
+            'Patios de maniobras',
+            'Galpones industriales',
+            'Omitir'
+          ];
+        }
+        if (metodo.includes('hidrolavadora')) {
+          return [
+            'Fachadas exteriores',
+            'Pisos de concreto',
+            'Pisos de porcelanato',
+            'Tanques de agua',
+            'Techos',
+            'Omitir'
+          ];
+        }
+        if (metodo.includes('compresor')) {
+          return [
+            'Estructuras metálicas',
+            'Juntas de dilatación en pavimentos',
+            'Ductos de ventilación',
+            'Omitir'
+          ];
+        }
+        return [
+          'Pisos de concreto posconstrucción',
+          'Pisos de porcelanato posconstrucción',
+          'Terreno con maleza liviana',
+          'Terreno con escombros',
+          'Canaletas de lluvia',
+          'Ventanas',
+          'Omitir'
+        ];
+      }]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`de \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina el Área o Elemento a Limpiar
+¿Qué zona, terreno o superficie se limpiará?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('terreno') || elem.includes('patio') || elem.includes('galpón')) {
+          return [
+            'Incluye recolección en sacos y bote',
+            'Incluye desmalezado y apilado en sitio',
+            'Solo barrido y despeje superficial',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('piso')) {
+          return [
+            'Incluye desengrase químico profundo',
+            'Incluye decapado de manchas y lavado neutro',
+            'Solo barrido y mopeado superficial',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('tanque')) {
+          return [
+            'Incluye desinfección con hipoclorito de sodio',
+            'Incluye achique de fondo y lavado a presión',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('fachada') || elem.includes('techo')) {
+          return [
+            'Incluye retiro de moho con fungicida',
+            'Solo lavado con agua a presión',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('ventana')) {
+          return [
+            'Incluye desmanchado de marcos y limpieza de vidrios',
+            'Solo lavado de vidrios',
+            'Omitir'
+          ];
+        }
+        return [
+          'Incluye recolección en sacos y bote',
+          'Solo barrido y limpieza superficial',
+          'Omitir'
+        ];
+      }]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "alcance",
+      "text": "Defina el Alcance de la Limpieza
+¿Qué operaciones de tratamiento contempla?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('tanque')) {
+          return ['und (Por tanque)', 'm³ (Metro cúbico)', 'Gl (Suma global)'];
+        }
+        if (elem.includes('canaleta') || elem.includes('junta')) {
+          return ['ml (Metro lineal)', 'Gl (Suma global)'];
+        }
+        return ['m² (Metro cuadrado)', 'Gl (Suma global)', 'und (Por unidad)'];
+      }]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará la limpieza?",
+    },
+  ],
+  "mantenimiento": [
+    {
+      "chips": "[FN:() => [
+        'Paredes con fisuras y grietas',
+        'Frisos desprendidos o deteriorados',
+        'Tuberías de agua potable con filtraciones',
+        'Tuberías de aguas servidas obstruidas',
+        'Bombas de agua',
+        'Motores eléctricos',
+        'Rejas metálicas oxidadas',
+        'Puertas metálicas',
+        'Estructuras metálicas de acero',
+        'Tableros eléctricos',
+        'Pisos de concreto fisurados',
+        'Techos con filtraciones de agua',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`de \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina el Elemento o Falla a Reparar
+¿Qué elemento o instalación presenta la avería?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('pared') || elem.includes('friso')) {
+          return [
+            'Picado de friso dañado, resellado de grieta y refrisado con mortero 1:3',
+            'Inyección de resina epóxica en fisuras estructurales',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('tubería')) {
+          return [
+            'Sustitución de tramo de tubería dañada con accesorios de compresión',
+            'Destape y sondeo mecánico con guaya rotativa',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('bomba') || elem.includes('motor')) {
+          return [
+            'Reemplazo de rodamientos, sellos mecánicos y chequeo eléctrico',
+            'Rebobinado de motor y cambio de condensador',
+            'Mantenimiento preventivo, limpieza y lubricación',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('reja') || elem.includes('puerta') || elem.includes('estructura')) {
+          return [
+            'Cepillado de óxido, aplicación de fondo anticorrosivo y esmalte',
+            'Corte de tramo podrido, soldado de refuerzo y pintura',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('tablero')) {
+          return [
+            'Ajuste de bornes, balanceo de fases y sustitución de breakers defectuosos',
+            'Limpieza con solvente dieléctrico y pruebas de aislamiento',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('techo')) {
+          return [
+            'Parcheo focalizado con manto asfáltico y primer',
+            'Sellado de juntas con mastique asfáltico y cinta impermeabilizante',
+            'Omitir'
+          ];
+        }
+        return [
+          'Reparación y ajuste general',
+          'Mantenimiento preventivo completo',
+          'Omitir'
+        ];
+      }]",
+      "field": "material",
+      "format": "[FN:(v) => (v.startsWith('con ') || v.startsWith('mediante ') ? v : \`mediante \${v.toLowerCase()}\`)]",
+      "id": "diagnostico_metodo",
+      "text": "Defina el Método de Reparación
+¿Qué trabajo técnico o sustitución se ejecutará?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Incluye materiales, repuestos y mano de obra especializada',
+        'Incluye pruebas de funcionamiento y puesta en marcha',
+        'Solo mano de obra técnica (repuestos suministrados por el cliente)',
+        'Omitir'
+      ]]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "alcance",
+      "text": "Defina el Alcance de Repuestos y Pruebas
+¿Qué insumos y garantías contempla el servicio?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('tubería') || elem.includes('friso') || elem.includes('techo')) {
+          return ['pza (Por reparación puntual)', 'ml (Metro lineal)', 'm² (Metro cuadrado)', 'Gl (Suma global)'];
+        }
+        if (elem.includes('bomba') || elem.includes('motor') || elem.includes('tablero')) {
+          return ['und (Unidad)', 'pza (Pieza)', 'Gl (Suma global)'];
+        }
+        return ['pza (Pieza)', 'und (Unidad)', 'm² (Metro cuadrado)', 'ml (Metro lineal)', 'Gl (Suma global)'];
+      }]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará la reparación?",
+    },
+  ],
+  "pintura": [
+    {
+      "chips": "[FN:() => [
+        'Paredes interiores',
+        'Fachadas exteriores',
+        'Cielos rasos',
+        'Pisos de concreto interiores',
+        'Pavimentos exteriores',
+        'Canchas deportivas',
+        'Rejas',
+        'Puertas metálicas',
+        'Estructuras metálicas de acero',
+        'Brocales',
+        'Bordillos',
+        'Demarcación vial',
+        'Pasos peatonales',
+        'Madera',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`en \${v.toLowerCase()}\`]",
+      "id": "superficie",
+      "text": "Defina la Superficie a Pintar
+¿Qué elemento o superficie se va a recubrir?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const sup = (answers.superficie || '').toLowerCase();
+        if (sup.includes('pisos de concreto')) {
+          return [
+            'Pintura epóxica autonivelante de alto tráfico',
+            'Pintura epóxica bicomponente (primer + acabado)',
+            'Pintura poliuretano alifático resistente a químicos',
+            'Sellador acrílico antipolvo transparente para concreto',
+            'Omitir'
+          ];
+        }
+        if (sup.includes('pavimentos exteriores')) {
+          return [
+            'Pintura de tráfico base solvente (clorocaucho)',
+            'Pintura de tráfico base agua de secado rápido',
+            'Pintura termoplástica reflectiva',
+            'Omitir'
+          ];
+        }
+        if (sup.includes('canchas deportivas')) {
+          return [
+            'Pintura acrílica elastomérica para canchas deportivas con arena sílice',
+            'Esmalte poliuretano para pistas y canchas',
+            'Omitir'
+          ];
+        }
+        if (sup.includes('paredes interiores') || sup.includes('cielos rasos')) {
+          return [
+            'Pintura de caucho clase A (lavable)',
+            'Pintura de caucho clase B',
+            'Pintura de caucho satinada',
+            'Pintura antihongos y antimoho (para baños y cocinas)',
+            'Omitir'
+          ];
+        }
+        if (sup.includes('fachadas exteriores')) {
+          return [
+            'Pintura elastomérica impermeable antihongos para exteriores',
+            'Pintura de caucho clase A resistente a rayos UV',
+            'Revestimiento texturizado acrílico para fachadas',
+            'Omitir'
+          ];
+        }
+        if (sup.includes('rejas') || sup.includes('puertas metálicas') || sup.includes('estructuras metálicas')) {
+          return [
+            'Esmalte sintético brillante sobre fondo anticorrosivo',
+            'Esmalte sintético satinado',
+            'Fondo anticorrosivo alquídico (solo fondo)',
+            'Fondo cromato de zinc',
+            'Fondo epóxico anticorrosivo',
+            'Omitir'
+          ];
+        }
+        if (sup.includes('brocales') || sup.includes('bordillos')) {
+          return [
+            'Pintura de tráfico amarillo brocal',
+            'Pintura de tráfico negro y amarillo en franjas',
+            'Pintura de tráfico reflectiva con microesferas',
+            'Omitir'
+          ];
+        }
+        if (sup.includes('demarcación vial') || sup.includes('pasos peatonales')) {
+          return [
+            'Pintura de tráfico blanco con microesferas reflectivas',
+            'Pintura de tráfico amarillo vial reflectivo',
+            'Pintura termoplástica reflectiva en caliente',
+            'Omitir'
+          ];
+        }
+        if (sup.includes('madera')) {
+          return [
+            'Barniz marino transparente de alta resistencia',
+            'Sellador nitrocelulósico',
+            'Laca brillante',
+            'Lasur protector microporoso para exteriores',
+            'Esmalte sintético para madera',
+            'Omitir'
+          ];
+        }
+        return [
+          'Pintura de caucho clase A',
+          'Pintura esmalte sintético brillante',
+          'Pintura epóxica alto tráfico',
+          'Pintura de tráfico reflectiva',
+          'Omitir'
+        ];
+      }]",
+      "field": "material",
+      "format": "[FN:(v) => (v.startsWith('con ') || v.startsWith('Con ') ? v : \`con \${v}\`)]",
+      "id": "tipo_pintura",
+      "text": "Defina el Tipo de Pintura o Acabado
+¿Qué recubrimiento compatible se aplicará?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const sup = (answers.superficie || '').toLowerCase();
+        if (sup.includes('rejas') || sup.includes('puertas metálicas') || sup.includes('estructuras metálicas')) {
+          return [
+            '1 mano de fondo anticorrosivo + 2 manos de esmalte de acabado',
+            '2 manos de esmalte sintético directo',
+            '1 mano de cromato de zinc + 2 manos de acabado epóxico',
+            'Omitir'
+          ];
+        }
+        if (sup.includes('pisos de concreto')) {
+          return [
+            'Con escarificación mecánica + 1 mano de primer + 2 manos de epóxico',
+            '2 manos de recubrimiento epóxico',
+            'Omitir'
+          ];
+        }
+        if (sup.includes('brocales') || sup.includes('bordillos') || sup.includes('demarcación vial') || sup.includes('pasos peatonales')) {
+          return [
+            'A 2 manos con aplicación manual',
+            'A 1 mano con máquina pinta-rayas mecanizada',
+            'Omitir'
+          ];
+        }
+        return [
+          'A 2 manos con empastado y preparación de superficie',
+          'A 2 manos sobre friso existente',
+          'A 3 manos con lijado intermedio',
+          'Omitir'
+        ];
+      }]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "manos_fondo",
+      "text": "Defina el Número de Manos y Preparación
+¿Qué preparación de fondo y capas incluye?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const sup = (answers.superficie || '').toLowerCase();
+        if (sup.includes('fachadas exteriores')) {
+          return [
+            'Con andamios tubulares en altura (más de 3 m)',
+            'A nivel de planta baja hasta 3 m',
+            'A rapel con silleta de guíndola',
+            'Omitir'
+          ];
+        }
+        if (sup.includes('pisos') || sup.includes('pavimentos') || sup.includes('brocales') || sup.includes('bordillos') || sup.includes('demarcación') || sup.includes('pasos peatonales')) {
+          return [
+            'A nivel de piso',
+            'Omitir'
+          ];
+        }
+        return [
+          'A nivel de planta baja hasta 3 m',
+          'En doble altura con andamios',
+          'Omitir'
+        ];
+      }]",
+      "field": "ubicacion",
+      "format": "[FN:(v) => v]",
+      "id": "altura",
+      "text": "Defina la Altura y Medios de Trabajo
+¿A qué altura se ejecutará el trabajo?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const sup = (answers.superficie || '').toLowerCase();
+        if (sup.includes('brocales') || sup.includes('bordillos') || sup.includes('demarcación vial')) {
+          return ['ml (Metro lineal)', 'm² (Metro cuadrado)', 'Gl (Suma global)'];
+        }
+        if (sup.includes('puertas metálicas')) {
+          return ['pza (Pieza)', 'm² (Metro cuadrado)', 'Gl (Suma global)'];
+        }
+        if (sup.includes('pasos peatonales')) {
+          return ['m² (Metro cuadrado)', 'ml (Metro lineal)', 'pza (Por paso peatonal)', 'Gl (Suma global)'];
+        }
+        return ['m² (Metro cuadrado)', 'Gl (Suma global)'];
+      }]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará la pintura?",
+    },
+  ],
+  "relleno": [
+    {
+      "chips": "[FN:() => [
+        'Zanjas para tuberías',
+        'Zanjas para fundaciones',
+        'Alrededor de zapatas',
+        'Bajo piso de concreto',
+        'Terraplén vial',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`en \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina la Zona o Elemento a Rellenar
+¿Qué área se va a rellenar?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Con tierra seleccionada de la excavación (material propio)',
+        'Con material de préstamo granular (granzón)',
+        'Con arena lavada',
+        'Con piedra picada',
+        'Con ripio',
+        'Con piedra bola',
+        'Omitir'
+      ]]",
+      "field": "material",
+      "format": "[FN:(v) => (v.startsWith('con ') || v.startsWith('Con ') ? v : \`con \${v}\`)]",
+      "id": "material",
+      "text": "Defina el Material de Relleno
+¿Con qué tipo de material se rellenará?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Compactado manual con pisón',
+        'Compactado con vibrocompactador (rana / canguro)',
+        'Compactado con rodillo vibratorio manual',
+        'Compactado con rodillo autopropulsado pesado',
+        'Relleno simple sin compactar',
+        'Omitir'
+      ]]",
+      "field": "ubicacion",
+      "format": "[FN:(v) => v.toLowerCase()]",
+      "id": "metodo_compactacion",
+      "text": "Defina el Método de Compactación
+¿Cómo se compactará el relleno?",
+    },
+    {
+      "chips": "[FN:() => [
+        'En capas de 20 cm compactadas al 95% Proctor',
+        'En capas de 30 cm compactadas al 95% Proctor',
+        'Todo incluido (suministro de material + transporte + compactación)',
+        'Solo colocación y compactación (material en sitio)',
+        'Omitir'
+      ]]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "alcance",
+      "text": "Defina el Espesor de Capas y Alcance
+¿Qué condiciones de suministro y compactación incluye?",
+    },
+    {
+      "chips": "[FN:() => ['m³ (Metro cúbico)', 'ml (Metro lineal de zanja)', 'Gl (Suma global)']]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará el relleno?",
+    },
+  ],
+  "remocion": [
+    {
+      "chips": "[FN:() => [
+        'Manual con herramientas menores',
+        'Mecánica con retroexcavadora',
+        'Con escarificadora mecánica',
+        'Con soplete de oxicorte',
+        'Omitir'
+      ]]",
+      "field": "material",
+      "format": "[FN:(v) => (v.startsWith('Manual') || v.startsWith('Mecánica') || v.startsWith('Con ') ? v.toLowerCase() : \`removido con \${v.toLowerCase()}\`)]",
+      "id": "metodo",
+      "text": "Defina el Método de Remoción
+¿Cómo se removerá el material o elemento?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const metodo = (answers.metodo || '').toLowerCase();
+        if (metodo.includes('retroexcavadora') || metodo.includes('mecánica')) {
+          return [
+            'Capa vegetal de terreno (descapote)',
+            'Base granular contaminada',
+            'Pavimento asfáltico deteriorado',
+            'Tuberías enterradas existentes',
+            'Omitir'
+          ];
+        }
+        if (metodo.includes('oxicorte')) {
+          return [
+            'Estructuras metálicas de acero',
+            'Perfiles de hierro',
+            'Tuberías de acero',
+            'Omitir'
+          ];
+        }
+        return [
+          'Cerámica de piso',
+          'Porcelanato de piso',
+          'Azulejos de pared',
+          'Manto asfáltico en techos',
+          'Puertas de madera',
+          'Puertas metálicas',
+          'Ventanas de aluminio',
+          'Rejas metálicas',
+          'Tuberías de agua',
+          'Tuberías sanitarias',
+          'Inodoros',
+          'Lavamanos',
+          'Omitir'
+        ];
+      }]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`de \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina el Elemento o Capa a Remover
+¿Qué elemento existente se va a remover?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Con recuperación de piezas para reutilización',
+        'Sin recuperación de material (desecho)',
+        'Con cuidado para no dañar sustrato base',
+        'Omitir'
+      ]]",
+      "field": "ubicacion",
+      "format": "[FN:(v) => v]",
+      "id": "condicion",
+      "text": "Defina la Condición de Recuperación
+¿Se requiere recuperar y preservar el material o es para desecho?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Incluye limpieza de área y apilado',
+        'Incluye carga y bote en camión a botadero',
+        'Solo remoción',
+        'Omitir'
+      ]]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "alcance",
+      "text": "Defina el Alcance de Desalojo
+¿Qué desalojo incluye la partida?",
+    },
+    {
+      "chips": "[FN:() => ['m² (Metro cuadrado)', 'm³ (Metro cúbico)', 'ml (Metro lineal)', 'pza (Pieza)', 'Gl (Suma global)']]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará la remoción?",
+    },
+  ],
+  "reparacion": [
+    {
+      "chips": "[FN:() => [
+        'Paredes con fisuras y grietas',
+        'Frisos desprendidos o deteriorados',
+        'Tuberías de agua potable con filtraciones',
+        'Tuberías de aguas servidas obstruidas',
+        'Bombas de agua',
+        'Motores eléctricos',
+        'Rejas metálicas oxidadas',
+        'Puertas metálicas',
+        'Estructuras metálicas de acero',
+        'Tableros eléctricos',
+        'Pisos de concreto fisurados',
+        'Techos con filtraciones de agua',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`de \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina el Elemento o Falla a Reparar
+¿Qué elemento o instalación presenta la avería?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('pared') || elem.includes('friso')) {
+          return [
+            'Picado de friso dañado, resellado de grieta y refrisado con mortero 1:3',
+            'Inyección de resina epóxica en fisuras estructurales',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('tubería')) {
+          return [
+            'Sustitución de tramo de tubería dañada con accesorios de compresión',
+            'Destape y sondeo mecánico con guaya rotativa',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('bomba') || elem.includes('motor')) {
+          return [
+            'Reemplazo de rodamientos, sellos mecánicos y chequeo eléctrico',
+            'Rebobinado de motor y cambio de condensador',
+            'Mantenimiento preventivo, limpieza y lubricación',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('reja') || elem.includes('puerta') || elem.includes('estructura')) {
+          return [
+            'Cepillado de óxido, aplicación de fondo anticorrosivo y esmalte',
+            'Corte de tramo podrido, soldado de refuerzo y pintura',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('tablero')) {
+          return [
+            'Ajuste de bornes, balanceo de fases y sustitución de breakers defectuosos',
+            'Limpieza con solvente dieléctrico y pruebas de aislamiento',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('techo')) {
+          return [
+            'Parcheo focalizado con manto asfáltico y primer',
+            'Sellado de juntas con mastique asfáltico y cinta impermeabilizante',
+            'Omitir'
+          ];
+        }
+        return [
+          'Reparación y ajuste general',
+          'Mantenimiento preventivo completo',
+          'Omitir'
+        ];
+      }]",
+      "field": "material",
+      "format": "[FN:(v) => (v.startsWith('con ') || v.startsWith('mediante ') ? v : \`mediante \${v.toLowerCase()}\`)]",
+      "id": "diagnostico_metodo",
+      "text": "Defina el Método de Reparación
+¿Qué trabajo técnico o sustitución se ejecutará?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Incluye materiales, repuestos y mano de obra especializada',
+        'Incluye pruebas de funcionamiento y puesta en marcha',
+        'Solo mano de obra técnica (repuestos suministrados por el cliente)',
+        'Omitir'
+      ]]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "alcance",
+      "text": "Defina el Alcance de Repuestos y Pruebas
+¿Qué insumos y garantías contempla el servicio?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('tubería') || elem.includes('friso') || elem.includes('techo')) {
+          return ['pza (Por reparación puntual)', 'ml (Metro lineal)', 'm² (Metro cuadrado)', 'Gl (Suma global)'];
+        }
+        if (elem.includes('bomba') || elem.includes('motor') || elem.includes('tablero')) {
+          return ['und (Unidad)', 'pza (Pieza)', 'Gl (Suma global)'];
+        }
+        return ['pza (Pieza)', 'und (Unidad)', 'm² (Metro cuadrado)', 'ml (Metro lineal)', 'Gl (Suma global)'];
+      }]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará la reparación?",
+    },
+  ],
+  "restauracion": [
+    {
+      "chips": "[FN:() => [
+        'Fachadas históricas',
+        'Cornisas coloniales',
+        'Molduras coloniales',
+        'Portones de madera antigua',
+        'Ventanas de madera antigua',
+        'Rejas de herrería forjada colonial',
+        'Muros de mampostería tradicional',
+        'Muros de tapia',
+        'Muros de adobe',
+        'Techos de caña brava',
+        'Techos de teja criolla',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`de \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina el Elemento Patrimonial o Histórico
+¿Qué elemento o estructura se va a restaurar?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('madera') || elem.includes('portón') || elem.includes('ventana')) {
+          return [
+            'Decapado manual, tratamiento antipolilla e hidratación con aceites',
+            'Sustitución de piezas podridas con madera curada similar',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('herrería') || elem.includes('reja')) {
+          return [
+            'Limpieza química no abrasiva, inhibidor de corrosión y cera microcristalina',
+            'Forjado en caliente de piezas faltantes con unión tradicional',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('muro') || elem.includes('fachada') || elem.includes('cornisa') || elem.includes('moldura')) {
+          return [
+            'Consolidación estructural y cosido de grietas con grapas de acero',
+            'Limpieza suave con agua nebulizada y cepillo de cerdas naturales',
+            'Reintegración de molduras con mortero de cal hidráulica',
+            'Omitir'
+          ];
+        }
+        return [
+          'Restauración integral respetando técnica constructiva original',
+          'Consolidación y reintegración formal',
+          'Omitir'
+        ];
+      }]",
+      "field": "material",
+      "format": "[FN:(v) => (v.startsWith('mediante ') || v.startsWith('con ') ? v : \`mediante \${v.toLowerCase()}\`)]",
+      "id": "intervencion",
+      "text": "Defina el Tipo de Intervención de Restauración
+¿Qué técnica de conservación o recuperación se aplicará?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('madera') || elem.includes('portón') || elem.includes('ventana')) {
+          return [
+            'Con preservantes y aceites naturales para madera',
+            'Con goma laca y cera protectora de abeja',
+            'Con lasur protector para intemperie',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('herrería') || elem.includes('reja')) {
+          return [
+            'Con inhibidores de corrosión y pasivadores para metal',
+            'Con esmalte anticorrosivo acabado forja tradicional',
+            'Con cera microcristalina protectora',
+            'Omitir'
+          ];
+        }
+        return [
+          'Con morteros tradicionales de cal hidráulica y arena lavada',
+          'Con pintura a base de cal y pigmentos minerales',
+          'Con lechada de cal viva apagada',
+          'Omitir'
+        ];
+      }]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "material",
+      "text": "Defina los Materiales Tradicionales Compatibles
+¿Con qué materiales nobles o morteros se trabajará?",
+    },
+    {
+      "chips": "[FN:() => [
+        'A nivel de planta baja',
+        'En altura con andamios tubulares modulares',
+        'En interiores patrimoniales',
+        'Omitir'
+      ]]",
+      "field": "ubicacion",
+      "format": "[FN:(v) => v]",
+      "id": "altura_entorno",
+      "text": "Defina la Altura y Entorno de Trabajo
+¿Bajo qué condiciones de acceso se restaurará?",
+    },
+    {
+      "chips": "[FN:() => ['m² (Metro cuadrado)', 'ml (Metro lineal)', 'pza (Pieza)', 'Gl (Suma global)']]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará la restauración?",
+    },
+  ],
+  "saneamiento": [
+    {
+      "chips": "[FN:() => [
+        'Trampas de grasa colapsadas',
+        'Fosas sépticas saturadas',
+        'Colectores de drenaje obstruidos',
+        'Tuberías de aguas servidas colapsadas',
+        'Terreno saturado en fondo de excavación',
+        'Muros con salitre y humedad ascendente',
+        'Taludes inestables',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`en \${v.toLowerCase()}\`]",
+      "id": "zona_problema",
+      "text": "Defina la Zona o Problema a Sanear
+¿Qué área contaminada o saturada requiere saneamiento?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const prob = (answers.zona_problema || '').toLowerCase();
+        if (prob.includes('trampa')) {
+          return [
+            'Vaciado y limpieza profunda con camión váctor',
+            'Limpieza manual y extracción de grasas en cuñetes',
+            'Hidrolavado a alta presión y succión de lodos',
+            'Omitir'
+          ];
+        }
+        if (prob.includes('fosa')) {
+          return [
+            'Vaciado y succión con camión váctor',
+            'Limpieza manual y extracción de lodos digeridos',
+            'Omitir'
+          ];
+        }
+        if (prob.includes('colector') || prob.includes('tubería')) {
+          return [
+            'Desazolve con equipo hidroneumático de alta presión',
+            'Vaciado y limpieza profunda con camión váctor',
+            'Limpieza mecánica con guayas de acero rotativas',
+            'Omitir'
+          ];
+        }
+        if (prob.includes('terreno')) {
+          return [
+            'Achique continuo con bomba sumergible',
+            'Excavación y extracción de fango con retroexcavadora',
+            'Omitir'
+          ];
+        }
+        if (prob.includes('muro') || prob.includes('salitre')) {
+          return [
+            'Picado de friso contaminado, cepillado y lavado a presión',
+            'Inyección de barrera química impermeabilizante',
+            'Omitir'
+          ];
+        }
+        if (prob.includes('talud')) {
+          return [
+            'Perfilado de talud y retiro de material inestable',
+            'Omitir'
+          ];
+        }
+        return [
+          'Limpieza y desinfección profunda',
+          'Drenaje y corrección de sustrato',
+          'Omitir'
+        ];
+      }]",
+      "field": "material",
+      "format": "[FN:(v) => (v.startsWith('mediante ') || v.startsWith('con ') ? v : \`mediante \${v.toLowerCase()}\`)]",
+      "id": "metodo",
+      "text": "Defina el Método de Saneamiento
+¿Cómo se corregirá la patología o contaminación?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const prob = (answers.zona_problema || '').toLowerCase();
+        if (prob.includes('trampa')) {
+          return [
+            'Disposición final de grasas en planta autorizada',
+            'Desinfección profunda con bactericida y neutralizador de olores',
+            'Lavado hidroneumático con desengrasante biodegradable',
+            'Sellado interior con mortero hidrófugo',
+            'Sustitución de deflector interior en PVC',
+            'Suministro y reemplazo de tapa de inspección',
+            'Omitir'
+          ];
+        }
+        if (prob.includes('fosa')) {
+          return [
+            'Disposición y descarga de aguas en planta de tratamiento',
+            'Reactivación biológica con bacterias digestoras',
+            'Lavado y desinfección profunda de paredes interiores',
+            'Sellado e impermeabilización interior con mortero hidrófugo',
+            'Omitir'
+          ];
+        }
+        if (prob.includes('colector') || prob.includes('tubería')) {
+          return [
+            'Inspección con cámara CCTV robotizada poslimpieza',
+            'Sustitución de tramo colapsado con tubería de PVC cloacas',
+            'Sustitución de tramo colapsado con tubería corrugada de PEAD',
+            'Reconstrucción de media caña en boca de visita',
+            'Omitir'
+          ];
+        }
+        if (prob.includes('terreno')) {
+          return [
+            'Reemplazo con pedraplén de piedra picada y geotextil no tejido',
+            'Estabilización de fondo con piedra rajón',
+            'Colocación de tubería ranurada para drenaje francés',
+            'Omitir'
+          ];
+        }
+        if (prob.includes('muro') || prob.includes('salitre')) {
+          return [
+            'Refrisado con mortero hidrófugo impermeabilizante',
+            'Aplicación de fondo antialcalino y sellador antihumedad',
+            'Omitir'
+          ];
+        }
+        if (prob.includes('talud')) {
+          return [
+            'Colocación de geomalla para control de erosión',
+            'Construcción de cuneta de coronación en concreto',
+            'Siembra de cobertura vegetal estabilizadora',
+            'Omitir'
+          ];
+        }
+        return [
+          'Desinfección profunda con bactericida',
+          'Sellado con mortero hidrófugo',
+          'Omitir'
+        ];
+      }]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "sustitucion",
+      "text": "Defina el Tratamiento Complementario o Reposición
+¿Qué disposición, desinfección o reposición contempla?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const prob = (answers.zona_problema || '').toLowerCase();
+        if (prob.includes('trampa')) {
+          return ['und (Por trampa)', 'viaje (Por camión váctor)', 'm³ (Metro cúbico)', 'Gl (Suma global)'];
+        }
+        if (prob.includes('fosa')) {
+          return ['und (Por fosa)', 'viaje (Por camión váctor)', 'm³ (Metro cúbico)', 'Gl (Suma global)'];
+        }
+        if (prob.includes('colector') || prob.includes('tubería')) {
+          return ['ml (Metro lineal)', 'm³ (Metro cúbico)', 'Gl (Suma global)'];
+        }
+        if (prob.includes('muro')) {
+          return ['m² (Metro cuadrado)', 'ml (Metro lineal)', 'Gl (Suma global)'];
+        }
+        return ['m³ (Metro cúbico)', 'm² (Metro cuadrado)', 'ml (Metro lineal)', 'Gl (Suma global)'];
+      }]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará el saneamiento?",
+    },
+  ],
+  "suministro e instalacion": [
+    {
+      "chips": "[FN:() => [
+        'Tubería de agua potable termofusión (PPR)',
+        'Tubería de agua potable PVC',
+        'Tubería de aguas servidas PVC',
+        'Tubería de gas en cobre',
+        'Tableros eléctricos',
+        'Breakers termomagnéticos',
+        'Protecciones eléctricas',
+        'Transformadores eléctricos',
+        'Bombas de agua',
+        'Inodoros',
+        'Lavamanos',
+        'Griferías',
+        'Llaves de paso',
+        'Luminarias LED',
+        'Aires acondicionados split',
+        'Puertas de madera',
+        'Puertas metálicas',
+        'Ventanas de aluminio',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`de \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina el Elemento o Equipo a Instalar
+¿Qué insumo, equipo o pieza constructiva se va a instalar?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('tubería')) {
+          return [
+            'Diámetro 1/2"',
+            'Diámetro 3/4"',
+            'Diámetro 1"',
+            'Diámetro 2"',
+            'Diámetro 3"',
+            'Diámetro 4"',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('bomba')) {
+          return [
+            'Potencia 0.5 HP',
+            'Potencia 1 HP',
+            'Potencia 2 HP',
+            'Potencia 5 HP',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('transformador')) {
+          return [
+            'Capacidad 25 kVA',
+            'Capacidad 50 kVA',
+            'Capacidad 75 kVA',
+            'Capacidad 100 kVA',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('aire')) {
+          return [
+            'Capacidad 12.000 BTU',
+            'Capacidad 18.000 BTU',
+            'Capacidad 24.000 BTU',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('breaker') || elem.includes('protección')) {
+          return [
+            'Breaker termomagnético 1x20A',
+            'Breaker termomagnético 2x20A',
+            'Breaker termomagnético 3x50A',
+            'Protección contra sobretensiones (DPS)',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('tablero')) {
+          return [
+            'Tablero de 12 circuitos',
+            'Tablero de 24 circuitos',
+            'Tablero de 42 circuitos',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('grifería') || elem.includes('llave')) {
+          return [
+            'Diámetro 1/2"',
+            'Diámetro 3/4"',
+            'Diámetro 1"',
+            'Cromada de lavamanos monomando',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('inodoro') || elem.includes('lavamanos')) {
+          return [
+            'Con grifería y accesorios completos',
+            'Línea comercial estándar blanco',
+            'Línea institucional antivandálica',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('puerta') || elem.includes('ventana')) {
+          return [
+            'Medida estándar 0.70 x 2.10 m con cerradura',
+            'Medida estándar 0.80 x 2.10 m con cerradura',
+            'Medida estándar 0.90 x 2.10 m con cerradura',
+            'Medida 1.20 x 1.00 m con vidrio de 4 mm',
+            'Omitir'
+          ];
+        }
+        return [
+          'Capacidad estándar de catálogo',
+          'Especificación indicada en planos',
+          'Omitir'
+        ];
+      }]",
+      "field": "material",
+      "format": "[FN:(v) => v]",
+      "id": "capacidad",
+      "text": "Defina la Capacidad, Diámetro o Calibre
+¿Qué especificación técnica o dimensión tiene el elemento?",
+    },
+    {
+      "chips": "[FN:() => [
+        'En planta baja',
+        'En pisos superiores',
+        'En sala de bombas',
+        'En tabiquería interior',
+        'En exteriores',
+        'Omitir'
+      ]]",
+      "field": "ubicacion",
+      "format": "[FN:(v) => v]",
+      "id": "ubicacion",
+      "text": "Defina la Ubicación de Montaje
+¿En qué área o nivel se montará?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Todo incluido (Suministro + Montaje + Conexiones)',
+        'Solo instalación y mano de obra (equipo suministrado en obra)',
+        'Incluye pruebas de presión y certificación',
+        'Incluye puesta en marcha y calibración',
+        'Omitir'
+      ]]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "alcance",
+      "text": "Defina el Alcance de Instalación
+¿Qué operaciones de conexión y pruebas incluye?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('tubería')) {
+          return ['ml (Metro lineal)', 'und (Unidad)', 'Gl (Suma global)'];
+        }
+        return ['und (Unidad)', 'pza (Pieza)', 'jgo (Juego)', 'pto (Punto)', 'Gl (Suma global)'];
+      }]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará la partida?",
+    },
+  ],
+  "suministro e instalación": [
+    {
+      "chips": "[FN:() => [
+        'Tubería de agua potable termofusión (PPR)',
+        'Tubería de agua potable PVC',
+        'Tubería de aguas servidas PVC',
+        'Tubería de gas en cobre',
+        'Tableros eléctricos',
+        'Breakers termomagnéticos',
+        'Protecciones eléctricas',
+        'Transformadores eléctricos',
+        'Bombas de agua',
+        'Inodoros',
+        'Lavamanos',
+        'Griferías',
+        'Llaves de paso',
+        'Luminarias LED',
+        'Aires acondicionados split',
+        'Puertas de madera',
+        'Puertas metálicas',
+        'Ventanas de aluminio',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`de \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina el Elemento o Equipo a Instalar
+¿Qué insumo, equipo o pieza constructiva se va a instalar?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('tubería')) {
+          return [
+            'Diámetro 1/2"',
+            'Diámetro 3/4"',
+            'Diámetro 1"',
+            'Diámetro 2"',
+            'Diámetro 3"',
+            'Diámetro 4"',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('bomba')) {
+          return [
+            'Potencia 0.5 HP',
+            'Potencia 1 HP',
+            'Potencia 2 HP',
+            'Potencia 5 HP',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('transformador')) {
+          return [
+            'Capacidad 25 kVA',
+            'Capacidad 50 kVA',
+            'Capacidad 75 kVA',
+            'Capacidad 100 kVA',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('aire')) {
+          return [
+            'Capacidad 12.000 BTU',
+            'Capacidad 18.000 BTU',
+            'Capacidad 24.000 BTU',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('breaker') || elem.includes('protección')) {
+          return [
+            'Breaker termomagnético 1x20A',
+            'Breaker termomagnético 2x20A',
+            'Breaker termomagnético 3x50A',
+            'Protección contra sobretensiones (DPS)',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('tablero')) {
+          return [
+            'Tablero de 12 circuitos',
+            'Tablero de 24 circuitos',
+            'Tablero de 42 circuitos',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('grifería') || elem.includes('llave')) {
+          return [
+            'Diámetro 1/2"',
+            'Diámetro 3/4"',
+            'Diámetro 1"',
+            'Cromada de lavamanos monomando',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('inodoro') || elem.includes('lavamanos')) {
+          return [
+            'Con grifería y accesorios completos',
+            'Línea comercial estándar blanco',
+            'Línea institucional antivandálica',
+            'Omitir'
+          ];
+        }
+        if (elem.includes('puerta') || elem.includes('ventana')) {
+          return [
+            'Medida estándar 0.70 x 2.10 m con cerradura',
+            'Medida estándar 0.80 x 2.10 m con cerradura',
+            'Medida estándar 0.90 x 2.10 m con cerradura',
+            'Medida 1.20 x 1.00 m con vidrio de 4 mm',
+            'Omitir'
+          ];
+        }
+        return [
+          'Capacidad estándar de catálogo',
+          'Especificación indicada en planos',
+          'Omitir'
+        ];
+      }]",
+      "field": "material",
+      "format": "[FN:(v) => v]",
+      "id": "capacidad",
+      "text": "Defina la Capacidad, Diámetro o Calibre
+¿Qué especificación técnica o dimensión tiene el elemento?",
+    },
+    {
+      "chips": "[FN:() => [
+        'En planta baja',
+        'En pisos superiores',
+        'En sala de bombas',
+        'En tabiquería interior',
+        'En exteriores',
+        'Omitir'
+      ]]",
+      "field": "ubicacion",
+      "format": "[FN:(v) => v]",
+      "id": "ubicacion",
+      "text": "Defina la Ubicación de Montaje
+¿En qué área o nivel se montará?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Todo incluido (Suministro + Montaje + Conexiones)',
+        'Solo instalación y mano de obra (equipo suministrado en obra)',
+        'Incluye pruebas de presión y certificación',
+        'Incluye puesta en marcha y calibración',
+        'Omitir'
+      ]]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "alcance",
+      "text": "Defina el Alcance de Instalación
+¿Qué operaciones de conexión y pruebas incluye?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('tubería')) {
+          return ['ml (Metro lineal)', 'und (Unidad)', 'Gl (Suma global)'];
+        }
+        return ['und (Unidad)', 'pza (Pieza)', 'jgo (Juego)', 'pto (Punto)', 'Gl (Suma global)'];
+      }]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará la partida?",
+    },
+  ],
+  "transporte": [
+    {
+      "chips": "[FN:() => [
+        'Escombros de demolición',
+        'Tierra de excavación',
+        'Arena lavada',
+        'Piedra picada',
+        'Asfalto en caliente',
+        'Bloques de arcilla',
+        'Bloques de concreto',
+        'Cemento en sacos',
+        'Cabillas de acero',
+        'Maquinaria pesada',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`de \${v.toLowerCase()}\`]",
+      "id": "material_carga",
+      "text": "Defina el Material o Carga a Transportar
+¿Qué tipo de material o carga se va a transportar?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const mat = (answers.material_carga || '').toLowerCase();
+        if (mat.includes('maquinaria')) {
+          return [
+            'En chuto con lowboy',
+            'En camión plataforma con winche',
+            'Omitir'
+          ];
+        }
+        if (mat.includes('bloque') || mat.includes('cemento') || mat.includes('cabilla')) {
+          return [
+            'En camión plataforma 350',
+            'En camión plataforma 750 (toronja)',
+            'En gandola de 30 toneladas',
+            'Omitir'
+          ];
+        }
+        return [
+          'En camión volteo de 7 m³',
+          'En camión volteo de 14 m³',
+          'En camión volteo de 20 m³ (chuto)',
+          'Omitir'
+        ];
+      }]",
+      "field": "material",
+      "format": "[FN:(v) => v]",
+      "id": "vehiculo",
+      "text": "Defina el Tipo de Vehículo de Transporte
+¿En qué tipo de vehículo de carga se transportará?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Hasta 5 km de distancia',
+        'De 5 a 15 km de distancia',
+        'De 15 a 30 km de distancia',
+        'De 30 a 50 km de distancia',
+        'Mayor a 50 km de distancia',
+        'Omitir'
+      ]]",
+      "field": "ubicacion",
+      "format": "[FN:(v) => v]",
+      "id": "distancia",
+      "text": "Defina la Distancia de Transporte
+¿Cuál es la distancia aproximada de acarreo / transporte?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Incluye carga mecánica y descarga en botadero',
+        'Incluye carga manual y descarga',
+        'Solo flete y transporte (sin carga ni descarga)',
+        'Omitir'
+      ]]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "alcance",
+      "text": "Defina el Alcance de Carga y Descarga
+¿Qué operaciones complementarias incluye el transporte?",
+    },
+    {
+      "chips": "[FN:() => ['m³-km (Metro cúbico por kilómetro)', 'viaje (Por viaje)', 'm³ (Metro cúbico)', 'ton-km (Tonelada-kilómetro)', 'Gl (Suma global)']]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará el transporte?",
+    },
+  ],
+  "tratamiento": [
+    {
+      "chips": "[FN:() => [
+        'Pisos de concreto',
+        'Pavimentos de concreto',
+        'Estructuras metálicas de acero',
+        'Madera para encofrados',
+        'Madera de techos machihembrados',
+        'Muros de contención enterrados',
+        'Juntas de dilatación en pavimentos',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`en \${v.toLowerCase()}\`]",
+      "id": "sustrato",
+      "text": "Defina el Sustrato o Elemento a Tratar
+¿Qué superficie o material recibirá el tratamiento?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const sus = (answers.sustrato || '').toLowerCase();
+        if (sus.includes('concreto') || sus.includes('pavimento')) {
+          return [
+            'Endurecedor superficial y densificador antipolvo a base de silicato',
+            'Membrana de curado químico reflectiva para concreto fresco',
+            'Sellador hidrófugo hidrorrepelente a base de silicona',
+            'Omitir'
+          ];
+        }
+        if (sus.includes('metálica') || sus.includes('acero')) {
+          return [
+            'Limpieza abrasiva con chorro de arena (Sandblasting comercial) y fondo anticorrosivo',
+            'Convertidor de óxido y pasivador químico fosfatizante',
+            'Omitir'
+          ];
+        }
+        if (sus.includes('madera')) {
+          return [
+            'Preservante insecticida antipolilla y antitérmitas',
+            'Impregnante protector fungicida contra pudrición',
+            'Desmoldante químico para encofrados de madera',
+            'Omitir'
+          ];
+        }
+        if (sus.includes('junta')) {
+          return [
+            'Sellado elástico con masilla de poliuretano de alto desempeño',
+            'Sellado con masilla asfáltica aplicada en caliente',
+            'Omitir'
+          ];
+        }
+        return [
+          'Tratamiento hidrófugo repelente al agua',
+          'Tratamiento químico anticorrosivo',
+          'Omitir'
+        ];
+      }]",
+      "field": "material",
+      "format": "[FN:(v) => (v.startsWith('con ') || v.startsWith('Con ') ? v : \`con \${v}\`)]",
+      "id": "tipo_tratamiento",
+      "text": "Defina el Tipo de Tratamiento Químico o Físico
+¿Qué sustancia o protección se aplicará?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Con equipo aspersor',
+        'Con compresor de aire industrial',
+        'Con brocha',
+        'Con rodillo de pelo corto',
+        'Con pistola de calafateo manual',
+        'Por inyección a presión',
+        'Omitir'
+      ]]",
+      "field": "ubicacion",
+      "format": "[FN:(v) => v]",
+      "id": "metodo_aplicacion",
+      "text": "Defina el Método de Aplicación
+¿Cómo se aplicará el producto?",
+    },
+    {
+      "chips": "[FN:(answers = {}) => {
+        const sus = (answers.sustrato || '').toLowerCase();
+        if (sus.includes('junta')) {
+          return ['ml (Metro lineal)', 'Gl (Suma global)'];
+        }
+        return ['m² (Metro cuadrado)', 'ml (Metro lineal)', 'pza (Pieza)', 'Gl (Suma global)'];
+      }]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará el tratamiento?",
+    },
+  ],
+  "vaciado": [
+    {
+      "chips": "[FN:() => [
+        'Columnas',
+        'Vigas',
+        'Zapatas aisladas',
+        'Vigas de riostra',
+        'Losas de entrepiso',
+        'Losas de techo',
+        'Pisos de concreto',
+        'Pavimentos de concreto',
+        'Muros de contención',
+        'Brocales',
+        'Bordillos',
+        'Aceras de concreto',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`en \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina el Elemento Estructural
+¿En qué elemento se vaciará el concreto?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Concreto premezclado f\\'c=210 kg/cm²',
+        'Concreto premezclado f\\'c=250 kg/cm²',
+        'Concreto premezclado f\\'c=280 kg/cm²',
+        'Concreto premezclado f\\'c=300 kg/cm²',
+        'Concreto f\\'c=210 kg/cm² mezclado en obra',
+        'Concreto pobre f\\'c=150 kg/cm² (limpieza)',
+        'Omitir'
+      ]]",
+      "field": "material",
+      "format": "[FN:(v) => (v.startsWith('con ') || v.startsWith('Con ') ? v : \`con \${v}\`)]",
+      "id": "especificacion",
+      "text": "Defina la Resistencia del Concreto
+¿Qué resistencia y tipo de concreto se vaciará?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Con bomba de concreto pluma',
+        'Con bomba de concreto estacionaria',
+        'Directo desde camión mixer por canaleta',
+        'Con grúa y capacho',
+        'Manual con trompo, carretillas y tobos',
+        'Omitir'
+      ]]",
+      "field": "ubicacion",
+      "format": "[FN:(v) => v.toLowerCase()]",
+      "id": "metodo_vaciado",
+      "text": "Defina el Método de Colocación
+¿Cómo se transportará y vaciará el concreto en el elemento?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Incluye vibrado mecánico y curado con agua',
+        'Incluye aditivo fluidificante plastificante',
+        'Incluye aditivo acelerante de fraguado',
+        'Solo colocación y vibrado (sin curado)',
+        'Omitir'
+      ]]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "alcance",
+      "text": "Defina el Alcance de Acabado y Curado
+¿Qué cuidados posteriores incluye el vaciado?",
+    },
+    {
+      "chips": "[FN:() => ['m³ (Metro cúbico)', 'm² (Metro cuadrado)', 'ml (Metro lineal)', 'Gl (Suma global)']]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará el vaciado?",
+    },
+  ],
+  "vaciado de concreto": [
+    {
+      "chips": "[FN:() => [
+        'Columnas',
+        'Vigas',
+        'Zapatas aisladas',
+        'Vigas de riostra',
+        'Losas de entrepiso',
+        'Losas de techo',
+        'Pisos de concreto',
+        'Pavimentos de concreto',
+        'Muros de contención',
+        'Brocales',
+        'Bordillos',
+        'Aceras de concreto',
+        'Omitir'
+      ]]",
+      "field": "elemento",
+      "format": "[FN:(v) => \`en \${v.toLowerCase()}\`]",
+      "id": "elemento",
+      "text": "Defina el Elemento Estructural
+¿En qué elemento se vaciará el concreto?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Concreto premezclado f\\'c=210 kg/cm²',
+        'Concreto premezclado f\\'c=250 kg/cm²',
+        'Concreto premezclado f\\'c=280 kg/cm²',
+        'Concreto premezclado f\\'c=300 kg/cm²',
+        'Concreto f\\'c=210 kg/cm² mezclado en obra',
+        'Concreto pobre f\\'c=150 kg/cm² (limpieza)',
+        'Omitir'
+      ]]",
+      "field": "material",
+      "format": "[FN:(v) => (v.startsWith('con ') || v.startsWith('Con ') ? v : \`con \${v}\`)]",
+      "id": "especificacion",
+      "text": "Defina la Resistencia del Concreto
+¿Qué resistencia y tipo de concreto se vaciará?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Con bomba de concreto pluma',
+        'Con bomba de concreto estacionaria',
+        'Directo desde camión mixer por canaleta',
+        'Con grúa y capacho',
+        'Manual con trompo, carretillas y tobos',
+        'Omitir'
+      ]]",
+      "field": "ubicacion",
+      "format": "[FN:(v) => v.toLowerCase()]",
+      "id": "metodo_vaciado",
+      "text": "Defina el Método de Colocación
+¿Cómo se transportará y vaciará el concreto en el elemento?",
+    },
+    {
+      "chips": "[FN:() => [
+        'Incluye vibrado mecánico y curado con agua',
+        'Incluye aditivo fluidificante plastificante',
+        'Incluye aditivo acelerante de fraguado',
+        'Solo colocación y vibrado (sin curado)',
+        'Omitir'
+      ]]",
+      "field": "incluye",
+      "format": "[FN:(v) => v]",
+      "id": "alcance",
+      "text": "Defina el Alcance de Acabado y Curado
+¿Qué cuidados posteriores incluye el vaciado?",
+    },
+    {
+      "chips": "[FN:() => ['m³ (Metro cúbico)', 'm² (Metro cuadrado)', 'ml (Metro lineal)', 'Gl (Suma global)']]",
+      "field": "unidad",
+      "format": "[FN:(v) => \`unidad \${extractCleanUnit(v)}\`]",
+      "id": "unidad",
+      "isUnit": true,
+      "text": "Defina la Unidad de Medida
+¿En qué unidad se computará el vaciado?",
+    },
+  ],
+}
+`;

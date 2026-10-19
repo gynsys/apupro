@@ -8,51 +8,9 @@
  * 2. Árbol de decisión contextual: cada paso evalúa answers y ofrece solo opciones técnicamente compatibles.
  */
 
-export const ACCIONES_STEP1_CHIPS = [
-  'Suministro e instalación',
-  'Instalación',
-  'Construcción',
-  'Demolición',
-  'Remoción',
-  'Pintura',
-  'Vaciado de concreto',
-  'Excavación',
-  'Compactación',
-  'Relleno',
-  'Acarreo',
-  'Transporte',
-  'Deforestación',
-  'Colocación',
-  'Reparación',
-  'Mantenimiento',
-  'Restauración',
-  'Saneamiento',
-  'Confección',
-  'Tratamiento',
-  'Impermeabilización',
-  'Desmontaje',
-  'Limpieza'
-];
-
-/**
- * Filtro para verificar si un valor fue omitido
- */
-export function isOmitted(val) {
-  if (!val) return true;
-  const lower = val.trim().toLowerCase();
-  return lower === 'omitir' || lower === 'ninguno' || lower === 'ninguno / omitir' || lower === 'sugerir por ia' || lower === 'sugerir';
-}
-
-/**
- * Normaliza y limpia una unidad de medida seleccionada
- */
-export function extractCleanUnit(unitText) {
-  if (!unitText || isOmitted(unitText)) return null;
-  let raw = unitText.includes('(') ? unitText.split('(')[0].trim() : unitText.trim();
-  if (raw === 'm²') return 'm2';
-  if (raw === 'm³') return 'm3';
-  return raw.toLowerCase();
-}
+import { isOmitted, extractCleanUnit } from './helpers.js';
+export { isOmitted, extractCleanUnit } from './helpers.js';
+export { ACCIONES_STEP1_CHIPS } from './actionList.js';
 
 /**
  * Catálogo de pipelines adaptativos por acción con árbol de decisión completo
