@@ -1,0 +1,147 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PRUEBA 8 — Snapshot E2E del prompt guiado > golden: compactación 1`] = `
+{
+  "accion": "compactación",
+  "finalPrompt": "compactación manual con pisón en fondo de zanja para tuberías En capas de 15 cm compactadas unidad m2",
+  "steps": [
+    "metodo",
+    "elemento",
+    "control",
+    "unidad",
+  ],
+  "unit": "m2",
+}
+`;
+
+exports[`PRUEBA 8 — Snapshot E2E del prompt guiado > golden: confección 1`] = `
+{
+  "accion": "confección",
+  "finalPrompt": "confección de armaduras de cabilla para columnas Con cabillas corrugadas grado 60 (fy=4200 kg/cm²) y alambre #16 Fabricado en banco de trabajo en obra unidad m2",
+  "steps": [
+    "elemento",
+    "material_calibre",
+    "lugar_hechura",
+    "unidad",
+  ],
+  "unit": "m2",
+}
+`;
+
+exports[`PRUEBA 8 — Snapshot E2E del prompt guiado > golden: construcción 1`] = `
+{
+  "accion": "construcción",
+  "finalPrompt": "construcción de paredes de bloques de arcilla con Bloque de arcilla e=10 cm con mortero 1:4 En planta baja Todo incluido (Materiales + Mano de Obra + Equipos) unidad m2",
+  "steps": [
+    "elemento",
+    "material",
+    "ubicacion",
+    "alcance",
+    "unidad",
+  ],
+  "unit": "m2",
+}
+`;
+
+exports[`PRUEBA 8 — Snapshot E2E del prompt guiado > golden: demolición 1`] = `
+{
+  "accion": "demolición",
+  "finalPrompt": "demolición manual con mandarria y cincel de paredes de bloques de arcilla Espesor e=10 cm Incluye acarreo interno y apilado unidad m2",
+  "steps": [
+    "metodo",
+    "elemento",
+    "espesor",
+    "alcance",
+    "unidad",
+  ],
+  "unit": "m2",
+}
+`;
+
+exports[`PRUEBA 8 — Snapshot E2E del prompt guiado > golden: excavación 1`] = `
+{
+  "accion": "excavación",
+  "finalPrompt": "excavación manual con pico y pala para zanjas para tuberías Hasta 1.00 m de profundidad Incluye carga mecánica en camión unidad m2",
+  "steps": [
+    "metodo",
+    "elemento",
+    "profundidad",
+    "alcance_bote",
+    "unidad",
+  ],
+  "unit": "m2",
+}
+`;
+
+exports[`PRUEBA 8 — Snapshot E2E del prompt guiado > golden: instalación 1`] = `
+{
+  "accion": "instalación",
+  "finalPrompt": "instalación de tubería de agua potable termofusión (ppr) Diámetro 1/2" En planta baja Todo incluido (Suministro + Montaje + Conexiones) unidad m2",
+  "steps": [
+    "elemento",
+    "capacidad",
+    "ubicacion",
+    "alcance",
+    "unidad",
+  ],
+  "unit": "m2",
+}
+`;
+
+exports[`PRUEBA 8 — Snapshot E2E del prompt guiado > golden: pintura 1`] = `
+{
+  "accion": "pintura",
+  "finalPrompt": "pintura en paredes interiores con Pintura de caucho clase A (lavable) A 2 manos con empastado y preparación de superficie A nivel de planta baja hasta 3 m unidad m2",
+  "steps": [
+    "superficie",
+    "tipo_pintura",
+    "manos_fondo",
+    "altura",
+    "unidad",
+  ],
+  "unit": "m2",
+}
+`;
+
+exports[`PRUEBA 8 — Snapshot E2E del prompt guiado > golden: reparación 1`] = `
+{
+  "accion": "reparación",
+  "finalPrompt": "reparación de paredes con fisuras y grietas mediante picado de friso dañado, resellado de grieta y refrisado con mortero 1:3 Incluye materiales, repuestos y mano de obra especializada unidad m2",
+  "steps": [
+    "elemento",
+    "diagnostico_metodo",
+    "alcance",
+    "unidad",
+  ],
+  "unit": "m2",
+}
+`;
+
+exports[`PRUEBA 8 — Snapshot E2E del prompt guiado > golden: saneamiento 1`] = `
+{
+  "accion": "saneamiento",
+  "finalPrompt": "saneamiento en trampas de grasa colapsadas mediante vaciado y limpieza profunda con camión váctor Disposición final de grasas en planta autorizada unidad m2",
+  "steps": [
+    "zona_problema",
+    "metodo",
+    "sustitucion",
+    "unidad",
+  ],
+  "unit": "m2",
+}
+`;
+
+exports[`PRUEBA 8 — Snapshot E2E del prompt guiado > golden: vaciado de concreto 1`] = `
+{
+  "accion": "vaciado de concreto",
+  "finalPrompt": "vaciado de concreto en columnas con Concreto premezclado f'c=210 kg/cm² con bomba de concreto pluma Incluye vibrado mecánico y curado con agua unidad m2",
+  "steps": [
+    "elemento",
+    "especificacion",
+    "metodo_vaciado",
+    "alcance",
+    "unidad",
+  ],
+  "unit": "m2",
+}
+`;

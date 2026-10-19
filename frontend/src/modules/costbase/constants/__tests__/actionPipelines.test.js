@@ -58,6 +58,18 @@ describe('PRUEBA 2 — Invariancias estructurales', () => {
     }
   });
 
+  it('el catálogo tiene exactamente 25 claves (21 acciones + 4 alias)', () => {
+    expect(Object.keys(api.ACTION_FLOW_PIPELINES)).toHaveLength(25);
+  });
+
+  it('los 4 alias históricos están presentes y apuntan bien (guardia anti-pérdida)', () => {
+    const P = api.ACTION_FLOW_PIPELINES;
+    expect(P['mantenimiento']).toBe(P['reparacion']);
+    expect(P['suministro e instalacion']).toBe(P['instalacion']);
+    expect(P['suministro e instalación']).toBe(P['instalacion']);
+    expect(P['vaciado de concreto']).toBe(P['vaciado']);
+  });
+
   it('los pasos "isUnit" son consistentes (texto de unidad + formato)', () => {
     for (const [action, steps] of Object.entries(api.ACTION_FLOW_PIPELINES)) {
       for (const step of steps.filter((s) => s.isUnit)) {
