@@ -1,14 +1,14 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Layout, LogOut, Menu, X, Home, Settings,
   FileText, Database, Server, Cpu, ChevronRight, Copy, Calculator
 } from 'lucide-react';
-import { FaTools } from 'react-icons/fa';
+import { FaTools, FaFileUpload } from 'react-icons/fa';
 import { AuthContext } from '../../context/AuthContext';
-import toast from 'react-hot-toast';
 import SubscriptionRequestModal from '../SubscriptionRequestModal';
 import ReportPaymentModal from '../ReportPaymentModal';
+import BudgetFileImportModal from '../modals/BudgetFileImportModal';
 import AccountSettingsModal from '../modals/AccountSettingsModal';
 import { Crown, Receipt, HelpCircle } from 'lucide-react';
 import NotificationBell from './NotificationBell';
@@ -32,8 +32,20 @@ export default function AppLayout() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showHelpDrawer, setShowHelpDrawer] = useState(false);
+  const [showBudgetImportModal, setShowBudgetImportModal] = useState(false);
+  const [budgetImportFile, setBudgetImportFile] = useState(null);
 
   const handleLogout = () => { logout(); navigate('/'); };
+
+  const budgetFileInputRef = useRef(null);
+
+  const handleBudgetFileSelected = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setBudgetImportFile(file);
+    setShowBudgetImportModal(true);
+  };
 
   const isActive = (item) => {
     if (item.exact) {
@@ -115,6 +127,32 @@ export default function AppLayout() {
             </div>
           );
         })}
+
+        {/* Botón Crear Presupuesto desde Archivo */}
+        <div className="group relative w-full">
+          <button
+            type="button"
+            onClick={() => {
+              setSidebarOpen(false);
+              budgetFileInputRef.current?.click();
+            }}
+            aria-label="Crear Presupuesto desde Archivo"
+            className={`flex items-center ${
+              isMobile ? 'justify-start px-3.5 py-2.5 gap-3' : 'justify-center p-3'
+            } rounded-xl transition-all duration-200 text-slate-600 hover:bg-[#FEF3C7] hover:text-slate-900 w-full min-h-[44px] touch-target cursor-pointer`}
+          >
+            <FaFileUpload size={22} className="text-slate-400 shrink-0" />
+            {isMobile && (
+              <span className="text-sm font-medium tracking-tight truncate">Crear Presupuesto desde Archivo</span>
+            )}
+          </button>
+          {!isMobile && (
+            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
+              Crear Presupuesto desde Archivo
+              <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
+            </div>
+          )}
+        </div>
 
         {/* Botón Calculadora FCAS */}
         <div className="group relative w-full">
@@ -336,7 +374,31 @@ export default function AppLayout() {
 
       </div>
       
+      {/* Input oculto para Crear Presupuesto desde Archivo */}
+      <input
+        ref={budgetFileInputRef}
+        type="file"
+        accept=".xlsx,.xls,.csv,.pdf,.png,.jpg,.jpeg,.webp"
+        onChange={handleBudgetFileSelected}
+        className="hidden"
+      />
+
       {/* Modals Globales */}
+      <BudgetFileImportModal
+        isOpen={showBudgetImportModal}
+        file={budgetImportFile}
+        onClose={() => {
+          setShowBudgetImportModal(false);
+          setBudgetImportFile(null);
+        }}
+        onCreated={(budgetId) => {
+          setShowBudgetImportModal(false);
+          setBudgetImportFile(null);
+          navigate(`/budgets/${budgetId}`);
+        }}
+        onShowPlans={() => setShowSubscriptionModal(true)}
+      />
+
       <SubscriptionRequestModal 
         isOpen={showSubscriptionModal} 
         onClose={() => setShowSubscriptionModal(false)}

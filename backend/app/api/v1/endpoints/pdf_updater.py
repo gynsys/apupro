@@ -22,6 +22,7 @@ from app.core.config import settings
 from app.crud.llm import decrypt_api_key
 from app.db.base import get_db
 from app.db.models.cost360 import CostMaterial, MaterialSynonym
+from app.db.models.llm_provider import LLMProvider
 from app.services.currency_service import get_bcv_rate
 from app.services.llm_router import call_llm_json
 
