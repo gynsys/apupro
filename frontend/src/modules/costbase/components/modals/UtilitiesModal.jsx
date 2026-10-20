@@ -14,7 +14,14 @@ import {
   CheckCircle2, 
   AlertTriangle,
   Folder,
-  FolderPlus
+  FolderPlus,
+  Mail,
+  Send,
+  UserCheck,
+  Copy,
+  Check,
+  AlertCircle,
+  Users
 } from 'lucide-react';
 import { FiDatabase, FiCpu } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
@@ -76,7 +83,13 @@ export default function UtilitiesModal({
     }
   }, [isOpen]);
 
-  const [recovering, setRecovering] = useState(null); // 'cron' | 'ai-brain' | 'connections' | 'all'
+  const [recovering, setRecovering] = useState(null); // 'cron' | 'ai-brain' | 'connections' | 'verification-service' | 'all'
+  const [showTestEmailModal, setShowTestEmailModal] = useState(false);
+  const [testEmailInput, setTestEmailInput] = useState('');
+  const [testingDelivery, setTestingDelivery] = useState(false);
+  const [testDeliveryResult, setTestDeliveryResult] = useState(null);
+  const [actionInProgress, setActionInProgress] = useState(null); // 'verify:email' | 'resend:email'
+  const [copiedCodeEmail, setCopiedCodeEmail] = useState(null);
 
   const executeRecovery = async (action) => {
     setRecovering(action);
@@ -84,6 +97,7 @@ export default function UtilitiesModal({
       cron: 'Cron de Suscripciones',
       'ai-brain': 'Cerebro de IA',
       connections: 'Conexiones DB & Redis',
+      'verification-service': 'Servicio de Códigos de Verificación',
       all: 'Auto-Reparación Integral',
     };
     const toastId = toast.loading(`Recuperando ${labels[action]}...`);
@@ -102,6 +116,95 @@ export default function UtilitiesModal({
     } finally {
       setRecovering(null);
     }
+  };
+
+  const handleTestVerificationEmail = async (e) => {
+    if (e) e.preventDefault();
+    setTestingDelivery(true);
+    setTestDeliveryResult(null);
+    const targetEmail = testEmailInput.trim();
+    const toastId = toast.loading(`Enviando código de prueba a ${targetEmail || 'tu correo'}...`);
+    try {
+      const res = await apiPost('/system/verification/test-send', { 
+        email: targetEmail || undefined 
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        const errorMsg = data.message || data.detail || 'Fallo en la prueba de entrega';
+        setTestDeliveryResult({
+          success: false,
+          message: errorMsg,
+          error_detail: data.error_detail,
+          solution_hint: data.solution_hint,
+          latency_ms: data.latency_ms,
+          provider: data.provider
+        });
+        toast.error(`❌ Falla en entrega: ${errorMsg}`, { id: toastId, duration: 7000 });
+      } else {
+        setTestDeliveryResult({
+          success: true,
+          message: data.message,
+          latency_ms: data.latency_ms,
+          provider: data.provider
+        });
+        toast.success(`✅ ${data.message}`, { id: toastId, duration: 6000 });
+      }
+      await fetchHealth();
+    } catch (err) {
+      toast.error(`Error al ejecutar prueba de entrega: ${err.message}`, { id: toastId });
+      setTestDeliveryResult({
+        success: false,
+        message: err.message,
+      });
+    } finally {
+      setTestingDelivery(false);
+    }
+  };
+
+  const handleManualVerify = async (email) => {
+    if (!window.confirm(`¿Aprobar y activar inmediatamente la cuenta de "${email}" sin requerir código de verificación por correo?`)) {
+      return;
+    }
+    setActionInProgress(`verify:${email}`);
+    const toastId = toast.loading(`Activando cuenta para ${email}...`);
+    try {
+      const res = await apiPost('/system/verification/manual-verify', { email });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || 'No se pudo verificar al usuario');
+      }
+      toast.success(`✅ ${data.message}`, { id: toastId, duration: 5000 });
+      await fetchHealth();
+    } catch (err) {
+      toast.error(`❌ Error: ${err.message}`, { id: toastId, duration: 6000 });
+    } finally {
+      setActionInProgress(null);
+    }
+  };
+
+  const handleAdminResendCode = async (email) => {
+    setActionInProgress(`resend:${email}`);
+    const toastId = toast.loading(`Reenviando código a ${email}...`);
+    try {
+      const res = await apiPost('/system/verification/resend-code', { email });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || 'No se pudo reenviar el código');
+      }
+      toast.success(`✅ ${data.message}`, { id: toastId, duration: 5000 });
+      await fetchHealth();
+    } catch (err) {
+      toast.error(`❌ ${err.message}`, { id: toastId, duration: 7000 });
+    } finally {
+      setActionInProgress(null);
+    }
+  };
+
+  const copyToClipboard = (text, email) => {
+    navigator.clipboard.writeText(text);
+    setCopiedCodeEmail(email);
+    toast.success(`Código ${text} copiado al portapapeles`, { icon: '📋' });
+    setTimeout(() => setCopiedCodeEmail(null), 2500);
   };
 
   if (!isOpen) return null;
@@ -592,6 +695,214 @@ export default function UtilitiesModal({
                       {healthData.components?.system_resources?.disk?.free_gb} GB libres de {healthData.components?.system_resources?.disk?.total_gb} GB
                     </p>
                   </div>
+
+                  {/* Envío de Códigos de Verificación (Auth / Registro) */}
+                  <div className="sm:col-span-2 p-3.5 bg-white border border-slate-200 rounded-xl shadow-xs space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`p-2 rounded-xl shrink-0 ${
+                          healthData.components?.verification_email_service?.status === 'healthy'
+                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                            : healthData.components?.verification_email_service?.status === 'simulated'
+                            ? 'bg-amber-50 text-amber-600 border border-amber-100'
+                            : 'bg-red-50 text-red-600 border border-red-100'
+                        }`}>
+                          <Mail className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-bold text-slate-800">
+                              Envío de Códigos de Verificación (Auth / Registro)
+                            </span>
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                              healthData.components?.verification_email_service?.status === 'healthy'
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                : healthData.components?.verification_email_service?.status === 'simulated'
+                                ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                : 'bg-red-100 text-red-800 border border-red-200'
+                            }`}>
+                              {healthData.components?.verification_email_service?.status === 'healthy'
+                                ? `Operativo (${healthData.components?.verification_email_service?.active_provider?.toUpperCase()})`
+                                : healthData.components?.verification_email_service?.status === 'simulated'
+                                ? 'Modo Simulación (Sin API Key)'
+                                : 'Falla de Entrega'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Transporte: <span className="font-semibold text-slate-700">
+                              {healthData.components?.verification_email_service?.active_provider === 'resend' 
+                                ? 'Resend API (Cloud)'
+                                : healthData.components?.verification_email_service?.active_provider === 'smtp'
+                                ? `SMTP (${healthData.components?.verification_email_service?.smtp_host || 'Servidor'}:${healthData.components?.verification_email_service?.smtp_port || 587})`
+                                : 'Simulador Local (Los correos no salen a internet)'}
+                            </span> · Remitente: <span className="font-mono text-slate-600">{healthData.components?.verification_email_service?.resend_from_email || 'info@costbase.net'}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTestDeliveryResult(null);
+                            setShowTestEmailModal(true);
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-bold transition-all hover:scale-[1.02] cursor-pointer"
+                          title="Probar transporte de correos enviando un código de prueba"
+                        >
+                          <Send className="w-3 h-3" />
+                          <span>Probar Envío</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => executeRecovery('verification-service')}
+                          disabled={recovering !== null}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-[11px] font-bold transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-50"
+                          title="Restablecer servicio y telemetría de verificación"
+                        >
+                          <RefreshCw className={`w-3 h-3 ${recovering === 'verification-service' ? 'animate-spin' : ''}`} />
+                          <span>Restablecer</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Fila de métricas rápidas */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+                      <div className="p-2 bg-slate-50 rounded-lg border border-slate-200/80">
+                        <span className="text-slate-500 block text-[10px]">Historial de Entregas</span>
+                        <span className="font-bold text-slate-800">
+                          {healthData.components?.verification_email_service?.total_sent || 0} exitosos · {healthData.components?.verification_email_service?.total_errors || 0} errores
+                        </span>
+                      </div>
+
+                      <div className="p-2 bg-slate-50 rounded-lg border border-slate-200/80">
+                        <span className="text-slate-500 block text-[10px]">Última Entrega</span>
+                        <span className="font-medium text-slate-700 truncate block" title={healthData.components?.verification_email_service?.last_delivery?.recipient || 'Sin envíos registrados'}>
+                          {healthData.components?.verification_email_service?.last_delivery 
+                            ? `${healthData.components?.verification_email_service?.last_delivery?.recipient} (${healthData.components?.verification_email_service?.last_delivery?.status})`
+                            : 'Sin actividad reciente'}
+                        </span>
+                      </div>
+
+                      <div className="p-2 bg-slate-50 rounded-lg border border-slate-200/80">
+                        <span className="text-slate-500 block text-[10px]">Usuarios en Espera (Redis)</span>
+                        <span className={`font-bold ${
+                          (healthData.components?.verification_email_service?.pending_count || 0) > 0 
+                            ? 'text-amber-700' 
+                            : 'text-slate-700'
+                        }`}>
+                          {healthData.components?.verification_email_service?.pending_count || 0} pendientes (TTL 15 min)
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* ALERTA VISIBLE SI HAY ERROR */}
+                    {healthData.components?.verification_email_service?.status === 'error' && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-xl space-y-1.5 text-xs">
+                        <div className="flex items-center gap-1.5 text-red-800 font-bold">
+                          <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                          <span>Fallo de Entrega en el Sistema de Correos</span>
+                        </div>
+                        <p className="text-red-700 font-mono text-[11px] bg-red-100/70 p-2 rounded-lg border border-red-200/60 break-words">
+                          {healthData.components?.verification_email_service?.last_error?.error_detail || 'Error desconocido al intentar enviar el correo de verificación.'}
+                        </p>
+                        {healthData.components?.verification_email_service?.last_error?.solution_hint && (
+                          <p className="text-[11px] text-red-700 font-medium">
+                            💡 <strong>Diagnóstico / Solución:</strong> {healthData.components?.verification_email_service?.last_error?.solution_hint}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* AVISO VISIBLE SI ESTÁ EN MODO SIMULACIÓN */}
+                    {healthData.components?.verification_email_service?.status === 'simulated' && (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1 text-xs">
+                        <div className="flex items-center gap-1.5 text-amber-800 font-bold">
+                          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span>Atención Super Admin: El sistema está en Modo Simulación</span>
+                        </div>
+                        <p className="text-[11px] text-amber-700 leading-relaxed">
+                          La variable <code className="bg-amber-100 px-1 py-0.5 rounded text-amber-900 font-mono">RESEND_API_KEY</code> en <code className="font-mono">backend/.env</code> no está configurada o contiene un placeholder por defecto (<code className="font-mono">your_resend_api_key_here</code>), y no hay credenciales SMTP. Los usuarios que se registren <strong>no recibirán el código en su correo real</strong>. Puedes activarlos manualmente abajo o configurar una clave real de Resend (<code className="font-mono">re_...</code>).
+                        </p>
+                      </div>
+                    )}
+
+                    {/* LISTADO DE USUARIOS ATASCADOS / PENDIENTES */}
+                    {(healthData.components?.verification_email_service?.pending_verifications?.length > 0) && (
+                      <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-indigo-700" />
+                            <span className="text-xs font-bold text-indigo-900">
+                              {healthData.components?.verification_email_service?.pending_verifications?.length} usuario(s) esperando verificación
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-indigo-600 font-medium">
+                            Puedes activar su cuenta con 1 clic o copiar su código
+                          </span>
+                        </div>
+
+                        <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                          {healthData.components?.verification_email_service?.pending_verifications?.map((item) => (
+                            <div key={item.email} className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-2.5 rounded-lg border border-indigo-100 shadow-2xs gap-2 text-xs">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-slate-800">{item.email}</span>
+                                  {item.full_name && (
+                                    <span className="text-slate-400 text-[11px]">({item.full_name})</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500">
+                                  <span>Código generado: <strong className="font-mono bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100 font-bold tracking-wider">{item.code}</strong></span>
+                                  <span>·</span>
+                                  <span>Expira en: {Math.floor(item.ttl_seconds / 60)}m {item.ttl_seconds % 60}s</span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                                <button
+                                  type="button"
+                                  onClick={() => copyToClipboard(item.code, item.email)}
+                                  className="flex items-center gap-1 px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[11px] font-semibold transition-colors cursor-pointer"
+                                  title="Copiar código al portapapeles"
+                                >
+                                  {copiedCodeEmail === item.email ? (
+                                    <Check className="w-3 h-3 text-emerald-600" />
+                                  ) : (
+                                    <Copy className="w-3 h-3" />
+                                  )}
+                                  <span>{copiedCodeEmail === item.email ? 'Copiado' : 'Copiar'}</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleAdminResendCode(item.email)}
+                                  disabled={actionInProgress !== null}
+                                  className="flex items-center gap-1 px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-md text-[11px] font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                                  title="Reintentar envío de correo al usuario"
+                                >
+                                  <Send className={`w-3 h-3 ${actionInProgress === `resend:${item.email}` ? 'animate-spin' : ''}`} />
+                                  <span>{actionInProgress === `resend:${item.email}` ? 'Enviando...' : 'Reenviar'}</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleManualVerify(item.email)}
+                                  disabled={actionInProgress !== null}
+                                  className="flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[11px] font-bold shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+                                  title="Aprobar y activar inmediatamente esta cuenta"
+                                >
+                                  <UserCheck className={`w-3 h-3 ${actionInProgress === `verify:${item.email}` ? 'animate-spin' : ''}`} />
+                                  <span>{actionInProgress === `verify:${item.email}` ? 'Activando...' : 'Aprobar y Activar'}</span>
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Botón Maestro de Auto-Reparación */}
@@ -606,7 +917,7 @@ export default function UtilitiesModal({
                   ) : (
                     <Layers className="w-4 h-4" />
                   )}
-                  {recovering === 'all' ? 'Reparando Sistema...' : '🔧 Auto-Reparación Integral (DB + Redis + IA + Cron)'}
+                  {recovering === 'all' ? 'Reparando Sistema...' : '🔧 Auto-Reparación Integral (DB + Redis + IA + Cron + Auth Email)'}
                 </button>
 
                 {/* Footer del diagnóstico */}
@@ -639,6 +950,100 @@ export default function UtilitiesModal({
             Cerrar Utilitarios
           </button>
         </div>
+
+        {/* Modal Emergente de Prueba de Entrega */}
+        {showTestEmailModal && (
+          <div className="fixed inset-0 z-60 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-blue-600" />
+                  Prueba de Entrega de Códigos
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowTestEmailModal(false);
+                    setTestDeliveryResult(null);
+                  }}
+                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-600">
+                Envía un correo con código de 6 dígitos de prueba para validar en vivo el transporte (Resend / SMTP), medir la latencia y observar el error exacto si falla.
+              </p>
+
+              <form onSubmit={handleTestVerificationEmail} className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    Correo destino para la prueba:
+                  </label>
+                  <input
+                    type="email"
+                    value={testEmailInput}
+                    onChange={(e) => setTestEmailInput(e.target.value)}
+                    placeholder="Ingresa correo (deja vacío para usar tu email de admin)"
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                {testDeliveryResult && (
+                  <div className={`p-3 rounded-xl border text-xs space-y-1.5 ${
+                    testDeliveryResult.success 
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
+                      : 'bg-red-50 border-red-200 text-red-900'
+                  }`}>
+                    <div className="flex items-center justify-between font-bold">
+                      <div className="flex items-center gap-1.5">
+                        {testDeliveryResult.success ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        ) : (
+                          <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                        )}
+                        <span>{testDeliveryResult.success ? 'Envío Exitoso' : 'Error en la Entrega'}</span>
+                      </div>
+                      {testDeliveryResult.latency_ms > 0 && (
+                        <span className="text-[10px] font-mono text-slate-500">
+                          {testDeliveryResult.latency_ms} ms · {testDeliveryResult.provider?.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] font-mono break-words">{testDeliveryResult.message}</p>
+                    {testDeliveryResult.solution_hint && (
+                      <p className="text-[11px] font-sans text-slate-700 pt-1 border-t border-slate-200/60">
+                        💡 <strong>Solución:</strong> {testDeliveryResult.solution_hint}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowTestEmailModal(false);
+                      setTestDeliveryResult(null);
+                    }}
+                    className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                  >
+                    Cerrar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={testingDelivery}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
+                  >
+                    <Send className={`w-3.5 h-3.5 ${testingDelivery ? 'animate-spin' : ''}`} />
+                    <span>{testingDelivery ? 'Enviando prueba...' : 'Enviar Prueba Ahora'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,18 +1,18 @@
 import redis
 import json
 import os
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from app.core.config import settings
 from app.core.logging import logger
 
 class RedisCacheService:
     """Servicio para manejar caché de Redis para registros pendientes de verificación."""
     
-    def __init__(self):
-        self.redis_client = None
+    def __init__(self) -> None:
+        self.redis_client: Optional[redis.Redis] = None
         self._connect()
     
-    def _connect(self):
+    def _connect(self) -> None:
         """Establece conexión con Redis."""
         try:
             self.redis_client = redis.from_url(
@@ -139,7 +139,64 @@ class RedisCacheService:
         except Exception as e:
             logger.error(f"Error verificando código: {e}", exc_info=True)
             return False
-    
+
+    def get_verification_code(self, email: str) -> Optional[str]:
+        """
+        Recupera el código de verificación para un email dado.
+        """
+        if not self.redis_client:
+            return None
+        try:
+            key = f"verification_code:{email}"
+            return self.redis_client.get(key)
+        except Exception as e:
+            logger.error(f"Error recuperando código de verificación para {email}: {e}", exc_info=True)
+            return None
+
+    def delete_verification_code(self, email: str) -> bool:
+        """
+        Elimina el código de verificación de un email dado.
+        """
+        if not self.redis_client:
+            return False
+        try:
+            key = f"verification_code:{email}"
+            self.redis_client.delete(key)
+            return True
+        except Exception as e:
+            logger.error(f"Error eliminando código de verificación para {email}: {e}", exc_info=True)
+            return False
+
+    def get_pending_verifications_summary(self) -> List[Dict[str, Any]]:
+        """
+        Recupera el listado de todos los registros pendientes de verificación en Redis.
+        Útil para el Super Administrador para diagnosticar usuarios bloqueados.
+        """
+        if not self.redis_client:
+            return []
+
+        try:
+            keys = self.redis_client.keys("verification_code:*")
+            results: List[Dict[str, Any]] = []
+            for k in keys:
+                k_str = k.decode('utf-8') if isinstance(k, bytes) else str(k)
+                email = k_str.replace("verification_code:", "")
+                code = self.redis_client.get(k)
+                ttl = self.redis_client.ttl(k)
+                reg_data = self.get_pending_registration(email) or {}
+                results.append({
+                    "email": email,
+                    "code": code,
+                    "ttl_seconds": max(ttl, 0),
+                    "username": reg_data.get("username") or reg_data.get("full_name") or "",
+                    "full_name": reg_data.get("full_name") or "",
+                })
+            results.sort(key=lambda x: x["ttl_seconds"], reverse=True)
+            return results
+        except Exception as e:
+            logger.error(f"Error recuperando resumen de registros pendientes en Redis: {e}", exc_info=True)
+            return []
+
     def cleanup_expired_registrations(self) -> int:
         """
         Limpia registros expirados (Redis lo hace automáticamente con TTL,
@@ -148,8 +205,6 @@ class RedisCacheService:
         Returns:
             int: Número de claves eliminadas
         """
-        # Redis maneja la expiración automáticamente con setex
-        # Este método es principalmente para propósitos de monitoreo
         return 0
 
 # Instancia global del servicio

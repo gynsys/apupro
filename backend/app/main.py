@@ -14,15 +14,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from sqlalchemy import text
+from sqlalchemy import text, func
+from pydantic import BaseModel
 
 from app.api.v1.api import api_router
-from app.db.arko_base import ArkoBase, arko_engine
+from app.db.arko_base import ArkoBase, arko_engine, ArkoSessionLocal
 from app.db.base import Base, engine
 from app.core.config import settings
 from app.core.limiter import limiter
+from app.core.security import hash_password
 from app.services.ai_search import ai_engine
 from app.services.redis_cache_service import redis_cache
+from app.services.email import (
+    get_verification_service_health,
+    test_verification_delivery,
+    reset_email_telemetry_errors,
+    send_verification_email,
+)
 from app.api.v1.endpoints.users import process_plan_expirations
 from app.api.v1.endpoints.arko import get_current_arko_admin
 from app.db.models.arko import ArkoAdmin
@@ -407,6 +415,12 @@ def check_system_health() -> Tuple[Dict[str, Any], int]:
         disk_status = f"error: {str(ex)[:100]}"
         logger.error(f"Healthcheck: Error al consultar uso de disco: {ex}", exc_info=True)
 
+    # 7. Sistema de Entrega de Códigos de Verificación (Auth / Registro)
+    email_health = get_verification_service_health()
+    pending_verifications = redis_cache.get_pending_verifications_summary()
+    email_health["pending_count"] = len(pending_verifications)
+    email_health["pending_verifications"] = pending_verifications
+
     # Estado Global y Código HTTP
     critical_failures = not db_primary_ok or not db_arko_ok
     degraded_conditions = (
@@ -414,6 +428,7 @@ def check_system_health() -> Tuple[Dict[str, Any], int]:
         or redis_status != "connected"
         or disk_status in ("warning", "critical")
         or cron_status in ("stalled", "error")
+        or email_health.get("status") in ("error", "simulated")
     )
 
     if critical_failures:
@@ -459,6 +474,7 @@ def check_system_health() -> Tuple[Dict[str, Any], int]:
                 "last_result": CRON_HEALTH.get("last_result"),
                 "healthchecks_ping_enabled": bool(settings.HEALTHCHECKS_PING_URL),
             },
+            "verification_email_service": email_health,
             "system_resources": {
                 "disk": {
                     "status": disk_status,
@@ -661,6 +677,15 @@ async def recover_all(
         steps["cron"] = f"error: {str(exc)[:80]}"
         logger.error(f"Error al ejecutar cron durante auto-reparación: {exc}", exc_info=True)
 
+    # 5. Restablecer Servicio de Verificación de Correos
+    try:
+        reset_email_telemetry_errors()
+        v_health = get_verification_service_health()
+        steps["verification_service"] = f"restablecido ({v_health['active_provider']} - {v_health['status']})"
+    except Exception as exc:
+        steps["verification_service"] = f"error: {str(exc)[:80]}"
+        logger.error(f"Error al restablecer servicio de verificación en auto-reparación: {exc}", exc_info=True)
+
     total_ms = round((time.time() - start) * 1000, 2)
     all_ok = all("error" not in v for v in steps.values())
     logger.info(f"✅ Auto-Reparación Integral completada en {total_ms} ms — {steps}")
@@ -670,6 +695,200 @@ async def recover_all(
         "message": "Auto-Reparación Integral completada." if all_ok else "Reparación completada con errores parciales.",
         "duration_ms": total_ms,
         "steps": steps,
+    }
+
+
+# ============================================================================
+# DIAGNÓSTICO Y RECUPERACIÓN DEL SISTEMA DE VERIFICACIÓN (AUTH / REGISTRO)
+# ============================================================================
+
+class TestVerificationEmailRequest(BaseModel):
+    email: Optional[str] = None
+
+
+class ManualVerifyUserRequest(BaseModel):
+    email: str
+
+
+class ResendVerificationAdminRequest(BaseModel):
+    email: str
+
+
+@app.post("/api/v1/system/recover/verification-service", tags=["Monitoring"])
+def recover_verification_service(
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """
+    Diagnostica y restablece el servicio de entrega de códigos de verificación.
+    Verifica conexión con Redis, reinicia contadores de error de telemetría y valida configuración.
+    Requiere sesión de administrador activa.
+    """
+    logger.info(f"🔧 Admin {current_user.email} solicitó recuperación del servicio de verificación de emails")
+    results: Dict[str, Any] = {}
+
+    try:
+        if redis_cache.redis_client is None:
+            redis_cache._connect()
+        if redis_cache.redis_client:
+            redis_cache.redis_client.ping()
+            results["redis_store"] = "conectado_ok"
+        else:
+            results["redis_store"] = "desconectado"
+    except Exception as exc:
+        results["redis_store"] = f"error: {str(exc)[:100]}"
+        logger.error(f"Error al verificar Redis para códigos de verificación: {exc}", exc_info=True)
+
+    reset_email_telemetry_errors()
+    results["telemetry"] = "restablecida"
+
+    health = get_verification_service_health()
+    pending = redis_cache.get_pending_verifications_summary()
+    results["provider"] = health.get("active_provider")
+    results["status"] = health.get("status")
+    results["pending_count"] = len(pending)
+
+    return {
+        "status": "recovered",
+        "message": f"Servicio de verificación restablecido (Proveedor: {results['provider']}, Estado: {results['status']}).",
+        "details": results,
+    }
+
+
+@app.post("/api/v1/system/verification/test-send", tags=["Monitoring"])
+def test_send_verification_email(
+    data: TestVerificationEmailRequest,
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """
+    Envía un código de prueba para validar el transporte y entrega de correos de verificación.
+    Retorna métricas detalladas de latencia y diagnóstico de errores en tiempo real.
+    """
+    target = (data.email or current_user.email).strip().lower()
+    if not target or "@" not in target:
+        raise HTTPException(status_code=400, detail="Dirección de correo inválida para prueba")
+
+    logger.info(f"🔧 Admin {current_user.email} solicitó prueba de envío de verificación a {target}")
+    result = test_verification_delivery(target)
+    return result
+
+
+@app.get("/api/v1/system/verification/pending", tags=["Monitoring"])
+def get_pending_verifications(
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """
+    Retorna la lista de registros pendientes de verificación en Redis.
+    Permite al superadmin ver códigos generados y ayudar a usuarios atascados.
+    """
+    summary = redis_cache.get_pending_verifications_summary()
+    return {
+        "count": len(summary),
+        "pending": summary,
+    }
+
+
+@app.post("/api/v1/system/verification/manual-verify", tags=["Monitoring"])
+def manual_verify_user(
+    data: ManualVerifyUserRequest,
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """
+    Verifica y activa manualmente a un usuario atascado que no pudo recibir su código por correo.
+    Crea o activa el registro en PostgreSQL y purga la cola temporal de Redis.
+    """
+    if not data.email or "@" not in data.email:
+        raise HTTPException(status_code=400, detail="Dirección de correo inválida")
+
+    clean_email = data.email.strip().lower()
+    logger.info(f"🔧 Admin {current_user.email} activó manualmente al usuario {clean_email}")
+
+    db = ArkoSessionLocal()
+    try:
+        user = db.query(ArkoAdmin).filter(func.lower(ArkoAdmin.email) == clean_email).first()
+        registration_data = redis_cache.get_pending_registration(clean_email)
+
+        action_taken = ""
+        if user:
+            user.is_email_verified = True
+            user.is_active = True
+            user.verification_code = None
+            db.commit()
+            action_taken = "usuario_existente_activado"
+        elif registration_data:
+            username_val = registration_data.get("username") or registration_data.get("full_name") or clean_email.split('@')[0]
+            new_user = ArkoAdmin(
+                email=registration_data["email"],
+                username=username_val,
+                hashed_password=registration_data.get("hashed_password") or hash_password(registration_data.get("password", "")),
+                full_name=registration_data.get("full_name") or username_val,
+                is_active=True,
+                is_email_verified=True,
+                verification_code=None
+            )
+            db.add(new_user)
+            db.commit()
+            action_taken = "usuario_creado_y_activado"
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No se encontraron datos en Redis ni en BD para {clean_email}. El usuario debe registrarse nuevamente."
+            )
+
+        redis_cache.delete_pending_registration(clean_email)
+        redis_cache.delete_verification_code(clean_email)
+
+        return {
+            "status": "success",
+            "message": f"Usuario {clean_email} verificado y activado exitosamente ({action_taken}).",
+            "email": clean_email,
+            "action": action_taken,
+        }
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.error(f"Error al verificar manualmente al usuario {clean_email}: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error al activar usuario: {str(exc)[:150]}")
+    finally:
+        db.close()
+
+
+@app.post("/api/v1/system/verification/resend-code", tags=["Monitoring"])
+def resend_verification_code_admin(
+    data: ResendVerificationAdminRequest,
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """
+    Reenvía el código de verificación existente para un usuario en espera.
+    Retorna el estado de entrega y el diagnóstico si falla.
+    """
+    if not data.email or "@" not in data.email:
+        raise HTTPException(status_code=400, detail="Dirección de correo inválida")
+
+    clean_email = data.email.strip().lower()
+    code = redis_cache.get_verification_code(clean_email)
+    if not code:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No hay código activo en Redis para {clean_email}. El registro pudo haber expirado (TTL 15 min)."
+        )
+
+    logger.info(f"🔧 Admin {current_user.email} solicitó reenvío del código a {clean_email}")
+    sent = send_verification_email(clean_email, code)
+    if not sent:
+        health = get_verification_service_health()
+        last_err = health.get("last_error") or {}
+        err_detail = last_err.get("error_detail") or "Fallo de transporte en el proveedor de correos"
+        raise HTTPException(
+            status_code=500,
+            detail=f"No se pudo enviar el correo a {clean_email}. {err_detail}"
+        )
+
+    return {
+        "status": "success",
+        "message": f"Código de verificación reenviado exitosamente a {clean_email}.",
+        "email": clean_email,
     }
 
 

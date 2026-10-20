@@ -332,9 +332,11 @@ def resend_verification(data: ResendVerificationRequest):
         # Enviar nuevo correo
         email_sent = send_verification_email(target_email, code)
         if not email_sent:
-            raise HTTPException(status_code=500, detail="No se pudo reenviar el correo. Verifica la configuración de Resend.")
+            raise HTTPException(status_code=500, detail="No se pudo reenviar el correo de verificación. Por favor contacta al administrador.")
             
         return {"message": "Nuevo código enviado. Por favor revisa tu correo."}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error resending verification: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
