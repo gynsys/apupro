@@ -7,7 +7,7 @@ import React, {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { budgetService } from '../services/budgetService';
 import { getCatalogConfig } from '../utils/componentCatalogConfig';
 import { useDatabaseContext } from '../contexts/DatabaseContext';
@@ -341,13 +341,8 @@ export default function CatalogAutocomplete({
         aria-controls={listboxId}
         aria-autocomplete="list"
         aria-activedescendant={activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined}
-        className={`${inputClassName || 'w-full bg-transparent px-1 text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500'} pr-5`}
+        className={inputClassName || 'w-full bg-transparent px-1 text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500'}
       />
-      {isOpen && (
-        <span className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-slate-400">
-          <Search size={11} />
-        </span>
-      )}
       {panel}
     </div>
   );
