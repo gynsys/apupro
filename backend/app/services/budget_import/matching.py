@@ -182,6 +182,7 @@ def find_candidates(
         rows = db.query(CostItem).filter(CostItem.CodPar.in_(ordered_ids)).all()
         by_id = {row.CodPar: row for row in rows}
         query_tokens = _tokenize(description)
+        query_norm = _normalize_header(description)
         query_is_demolition = _has_any(description, _DEMOLITION_TERMS)
         query_is_transport = _has_any(description, _TRANSPORT_TERMS)
         max_raw = max(score_by_id.values()) if score_by_id else 1.0
@@ -195,6 +196,12 @@ def find_candidates(
 
             score = score_by_id.get(candidate_id, 0.0) / max_raw
             description_upper = (row.Descri or "").upper()
+            match_type = "description"
+
+            # Coincidencia exacta de descripción (normalizada): máxima prioridad.
+            if query_norm and _normalize_header(row.Descri or "") == query_norm:
+                score += 0.35
+                match_type = "exact_description"
 
             # Evita que una demolición/remoción gane cuando se pide construir o instalar.
             if not query_is_demolition and _has_any(description_upper, _DEMOLITION_TERMS):
@@ -219,7 +226,7 @@ def find_candidates(
                 "description": row.Descri or "",
                 "unit": row.UniPar or "",
                 "_raw_score": score,
-                "match_type": "description",
+                "match_type": match_type,
             }
 
     ordered = sorted(
@@ -272,7 +279,12 @@ def refine_with_llm(items: List[Dict[str, Any]]) -> None:
     Modifica `items` en sitio: deja la mejor candidata primero y marca
     `selected_cod_par`. Si el LLM falla, se conserva el orden heurístico.
     """
-    refinable = [item for item in items if not item.get("is_chapter") and item.get("candidates")]
+    refinable = [
+        item for item in items
+        if not item.get("is_chapter")
+        and item.get("candidates")
+        and item["candidates"][0].get("match_type") not in {"code", "exact_description"}
+    ]
     if not refinable:
         return
 

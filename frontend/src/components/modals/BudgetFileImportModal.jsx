@@ -128,7 +128,53 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
     }
   };
 
+  const handleGenerateApu = async (index) => {
+    const item = items[index];
+    if (!item || item.generating) return;
+
+    updateItem(index, { generating: true });
+    try {
+      const result = await budgetService.generateImportApu({
+        description: item.description,
+        unit: item.unit || 'und',
+        code: item.code || null,
+      });
+      const partida = result.partida || {};
+      const generatedCode = String(partida.cod_par || `GEN-${item.code || item.row}`).trim();
+      const generatedCandidate = {
+        cod_par: generatedCode,
+        cov_par: partida.cov_par || generatedCode,
+        description: partida.description || item.description,
+        unit: partida.unit || item.unit || 'und',
+        score: 1,
+        match_type: 'ai_generated',
+      };
+      updateItem(index, {
+        generating: false,
+        generated_data: result,
+        generated_code: generatedCode,
+        selected: generatedCode,
+        cov_par: generatedCandidate.cov_par,
+        candidates: [
+          generatedCandidate,
+          ...(item.candidates || []).filter((candidate) => candidate.cod_par !== generatedCode),
+        ],
+      });
+      toast.success('APU generado con IA. Revísalo antes de crear el presupuesto.');
+    } catch (err) {
+      updateItem(index, { generating: false });
+      toast.error(err.message || 'No se pudo generar el APU.');
+    }
+  };
+
   const includedItems = items.filter((item) => item.include && item.description.trim());
+  const selectedCount = items.filter((item) => !item.is_chapter && item.selected).length;
+  const pendingCount = items.filter(
+    (item) => !item.is_chapter && !item.selected && (item.candidates || []).length > 0,
+  ).length;
+  const noMatchCount = items.filter(
+    (item) => !item.is_chapter && !item.selected && (item.candidates || []).length === 0,
+  ).length;
 
   const handleCreate = async () => {
     if (!header.budget_name.trim()) {
@@ -151,14 +197,23 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
         client_name: header.client_name.trim() || null,
         currency: header.currency,
         source_filename: currentFile?.name || preview?.filename || null,
-        items: includedItems.map((item) => ({
-          description: item.description.trim(),
-          unit: (item.unit || 'und').trim() || 'und',
-          quantity: Number(item.quantity) || 0,
-          is_chapter: Boolean(item.is_chapter),
-          cod_par: item.is_chapter ? null : (item.selected || null),
-          code: item.code || null,
-        })),
+        items: includedItems.map((item) => {
+          const generated = item.generated_data;
+          const generatedCode = item.generated_code || generated?.partida?.cod_par || '';
+          const useGenerated = Boolean(generated && generatedCode && item.selected === generatedCode);
+          return {
+            description: item.description.trim(),
+            unit: (item.unit || 'und').trim() || 'und',
+            quantity: Number(item.quantity) || 0,
+            is_chapter: Boolean(item.is_chapter),
+            cod_par: item.is_chapter ? null : (item.selected || null),
+            cov_par: useGenerated ? (generated?.partida?.cov_par || generatedCode) : (item.cov_par || null),
+            code: item.code || null,
+            materials: useGenerated ? (generated.materials || []) : [],
+            equipments: useGenerated ? (generated.equipments || []) : [],
+            labors: useGenerated ? (generated.labors || []) : [],
+          };
+        }),
       });
       toast.success(result.message || 'Presupuesto creado correctamente.');
       if (onCreated) onCreated(result.budget_id);
@@ -316,15 +371,15 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                   {preview.stats?.total || items.length} filas
                 </span>
                 <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center gap-1">
-                  <CheckCircle2 size={12} /> {preview.stats?.selected ?? preview.stats?.matched ?? 0} con APU
+                  <CheckCircle2 size={12} /> {selectedCount} con APU
                 </span>
-                {(preview.stats?.pending || 0) > 0 && (
+                {pendingCount > 0 && (
                   <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 border border-amber-300 text-amber-800">
-                    {preview.stats.pending} por revisar
+                    {pendingCount} por revisar
                   </span>
                 )}
                 <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 border border-amber-300 text-amber-800">
-                  {preview.stats?.generic || 0} sin coincidencia
+                  {noMatchCount} sin coincidencia
                 </span>
                 <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-white/70 border border-amber-600/15 text-amber-800">
                   {preview.stats?.chapters || 0} capítulos
@@ -353,6 +408,8 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
               <div className="space-y-2">
                 {items.map((item, index) => {
                   const selectedCandidate = (item.candidates || []).find((candidate) => candidate.cod_par === item.selected);
+                  const isGenerated = selectedCandidate?.match_type === 'ai_generated';
+                  const isExact = selectedCandidate && ['code', 'exact_description'].includes(selectedCandidate.match_type);
                   return (
                     <div
                       key={`${item.row}-${index}`}
@@ -376,6 +433,14 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                             <span className="text-[10px] font-bold text-amber-900/60">{item.row}</span>
                             {item.is_chapter ? (
                               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 uppercase tracking-wide">Capítulo</span>
+                            ) : isGenerated ? (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 uppercase tracking-wide">
+                                APU generado
+                              </span>
+                            ) : isExact ? (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wide">
+                                Match exacto
+                              </span>
                             ) : selectedCandidate ? (
                               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wide">
                                 APU sugerido
@@ -439,6 +504,22 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                                 </select>
                               </label>
                             </div>
+                          )}
+
+                          {!item.is_chapter && !isExact && !isGenerated && (
+                            <button
+                              type="button"
+                              onClick={() => handleGenerateApu(index)}
+                              disabled={item.generating}
+                              className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-sky-700 bg-sky-50 border border-sky-200 hover:bg-sky-100 transition-colors disabled:opacity-60 disabled:cursor-wait"
+                            >
+                              {item.generating ? (
+                                <Loader2 size={13} className="animate-spin" />
+                              ) : (
+                                <Sparkles size={13} />
+                              )}
+                              {item.generating ? 'Generando APU con IA...' : 'Generar APU con IA'}
+                            </button>
                           )}
 
                           {selectedCandidate && (

@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints.arko import _get_costos_config, get_current_arko_admin
+from app.db.arko_base import ArkoSessionLocal
 from app.db.base import get_db
 from app.db.models.arko import ArkoAdmin
 from app.db.models.budget import (
@@ -17,9 +18,11 @@ from app.db.models.budget import (
     BudgetItem,
 )
 from app.db.models.cost360 import CostItem
-from app.middleware.plan_limits import check_budget_limit
+from app.middleware.plan_limits import check_ai_access, check_budget_limit
+from app.services.ai_apu_service import generate_apu_with_ai
 from app.services.budget_import import build_preview
 from app.services.budget_import.errors import BudgetImportError, OCRError
+from app.services.preprocessing_service import preprocess_apu_data
 
 logger = logging.getLogger(__name__)
 
@@ -69,13 +72,58 @@ class PreviewResponse(BaseModel):
     warnings: List[str] = []
 
 
+class GeneratedMaterial(BaseModel):
+    codigo: str = ""
+    descripcion: str = ""
+    unidad: str = "und"
+    precio_unitario: float = 0.0
+    cantidad: float = 0.0
+    desperdicio: float = 0.0
+
+
+class GeneratedEquipment(BaseModel):
+    codigo: str = ""
+    descripcion: str = ""
+    unidad: str = "día"
+    precio_unitario: float = 0.0
+    cantidad: float = 0.0
+    depreciacion: float = 1.0
+
+
+class GeneratedLabor(BaseModel):
+    codigo: str = ""
+    descripcion: str = ""
+    cantidad: float = 0.0
+    jornal: float = 0.0
+    bono: float = 0.0
+
+
+class GenerateApuRequest(BaseModel):
+    description: str = Field(min_length=3, max_length=1200)
+    unit: str = Field(default="und", max_length=20)
+    code: Optional[str] = None
+
+
+class GenerateApuResponse(BaseModel):
+    status: str = "completed"
+    partida: Optional[Dict[str, Any]] = None
+    materials: List[Dict[str, Any]] = []
+    equipments: List[Dict[str, Any]] = []
+    labors: List[Dict[str, Any]] = []
+    advertencias: List[str] = []
+
+
 class CommitItem(BaseModel):
     description: str = Field(min_length=1, max_length=600)
     unit: str = Field(default="und", max_length=20)
     quantity: float = 0.0
     is_chapter: bool = False
     cod_par: Optional[str] = None
+    cov_par: Optional[str] = None
     code: Optional[str] = None
+    materials: List[GeneratedMaterial] = []
+    equipments: List[GeneratedEquipment] = []
+    labors: List[GeneratedLabor] = []
 
     @field_validator("quantity")
     @classmethod
@@ -102,6 +150,7 @@ class CommitResponse(BaseModel):
     budget_id: str
     items_created: int
     matched_items: int
+    generated_items: int
     generic_items: int
     message: str
 
@@ -187,6 +236,63 @@ async def preview_budget_import(
         ) from exc
 
 
+@router.post("/import/generate-apu", response_model=GenerateApuResponse)
+def generate_import_apu(
+    payload: GenerateApuRequest,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """Genera un APU con el motor de IA de la plataforma para una partida importada."""
+    check_ai_access(current_user)
+
+    description = payload.description.strip()
+    if len(description) < 5:
+        raise HTTPException(status_code=400, detail="La descripción es demasiado corta para generar un APU.")
+    unit = (payload.unit or "und").strip().lower() or "und"
+
+    try:
+        preprocessed = preprocess_apu_data(db, description, None, None)
+        result = generate_apu_with_ai(preprocessed, None, db=db, requested_unit=unit)
+    except Exception as exc:
+        logger.error("Error generando APU para importación: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=502,
+            detail="El generador de APUs no pudo procesar la partida. Inténtalo de nuevo.",
+        ) from exc
+
+    if result.get("status") not in ("completed", "success") or not result.get("partida"):
+        detail = (
+            result.get("clarification_message")
+            or "No se pudo generar un APU para esta partida. Revisa o amplía la descripción."
+        )
+        raise HTTPException(status_code=422, detail=detail)
+
+    if not any(result.get(key) for key in ("materials", "equipments", "labors")):
+        raise HTTPException(
+            status_code=422,
+            detail="El APU generado no contiene insumos. Amplía la descripción técnica e inténtalo de nuevo.",
+        )
+
+    # Consumir cuota de APUs con IA (solo si el usuario tiene un límite finito).
+    try:
+        with ArkoSessionLocal() as adb:
+            db_user = adb.query(ArkoAdmin).filter(ArkoAdmin.id == current_user.id).first()
+            if db_user:
+                db_user.ai_apus_generated = (getattr(db_user, "ai_apus_generated", 0) or 0) + 1
+                adb.commit()
+    except Exception as exc:
+        logger.warning("No se pudo incrementar la cuota de APUs generados: %s", exc)
+
+    return {
+        "status": "completed",
+        "partida": result.get("partida"),
+        "materials": result.get("materials") or [],
+        "equipments": result.get("equipments") or [],
+        "labors": result.get("labors") or [],
+        "advertencias": result.get("advertencias") or [],
+    }
+
+
 @router.post("/import/commit", response_model=CommitResponse, status_code=status.HTTP_201_CREATED)
 def commit_budget_import(
     payload: CommitRequest,
@@ -231,6 +337,7 @@ def commit_budget_import(
 
     items_created = 0
     matched_items = 0
+    generated_items = 0
     generic_items = 0
 
     try:
@@ -243,14 +350,22 @@ def commit_budget_import(
                 continue
 
             is_chapter = bool(item.is_chapter)
+            has_generated = bool(
+                not is_chapter and (item.materials or item.equipments or item.labors)
+            )
             requested_code = (item.cod_par or "").strip()
             cost_item: Optional[CostItem] = None
-            if requested_code and not is_chapter:
+            if requested_code and not is_chapter and not has_generated:
                 cost_item = db.query(CostItem).filter(CostItem.CodPar == requested_code).first()
 
-            cod_par = cost_item.CodPar if cost_item else ((item.code or "").strip() or f"IMP-{index:03d}")
-            cov_par = cost_item.CovPar if cost_item else None
-            unit = (cost_item.UniPar if (cost_item and cost_item.UniPar) else item.unit) or "und"
+            if has_generated:
+                cod_par = requested_code or ((item.code or "").strip() or f"GEN-{index:03d}")
+                cov_par = item.cov_par or None
+                unit = item.unit or "und"
+            else:
+                cod_par = cost_item.CodPar if cost_item else ((item.code or "").strip() or f"IMP-{index:03d}")
+                cov_par = cost_item.CovPar if cost_item else None
+                unit = (cost_item.UniPar if (cost_item and cost_item.UniPar) else item.unit) or "und"
 
             db_item = BudgetItem(
                 budget_id=budget.id,
@@ -266,7 +381,38 @@ def commit_budget_import(
             db.add(db_item)
             db.flush()
 
-            if cost_item and not is_chapter:
+            if has_generated:
+                for mat in item.materials:
+                    db.add(DBMaterial(
+                        budget_item_id=db_item.id,
+                        codigo=(mat.codigo or "")[:80],
+                        descripcion=mat.descripcion or "",
+                        unidad=(mat.unidad or "und")[:20],
+                        precio_unitario=float(mat.precio_unitario or 0.0),
+                        cantidad=float(mat.cantidad or 0.0),
+                        desperdicio=float(mat.desperdicio or 0.0),
+                    ))
+                for eq in item.equipments:
+                    db.add(DBEquipment(
+                        budget_item_id=db_item.id,
+                        codigo=(eq.codigo or "")[:80],
+                        descripcion=eq.descripcion or "",
+                        unidad=(eq.unidad or "día")[:20],
+                        precio_unitario=float(eq.precio_unitario or 0.0),
+                        cantidad=float(eq.cantidad or 0.0),
+                        depreciacion=float(eq.depreciacion or 1.0),
+                    ))
+                for lab in item.labors:
+                    db.add(DBLabor(
+                        budget_item_id=db_item.id,
+                        codigo=(lab.codigo or "")[:80],
+                        descripcion=lab.descripcion or "",
+                        cantidad=float(lab.cantidad or 0.0),
+                        jornal=float(lab.jornal or 0.0),
+                        bono=float(lab.bono or 0.0),
+                    ))
+                generated_items += 1
+            elif cost_item and not is_chapter:
                 _copy_apu_components(db, db_item, cost_item)
                 matched_items += 1
             elif not is_chapter:
@@ -291,7 +437,9 @@ def commit_budget_import(
         "budget_id": budget.id,
         "items_created": items_created,
         "matched_items": matched_items,
+        "generated_items": generated_items,
         "generic_items": generic_items,
         "message": f"Presupuesto creado con {items_created} partidas "
-                   f"({matched_items} con APU de la base maestra, {generic_items} genéricas).",
+                   f"({matched_items} con APU de la base maestra, {generated_items} generadas con IA, "
+                   f"{generic_items} genéricas).",
     }
