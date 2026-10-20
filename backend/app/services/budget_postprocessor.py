@@ -33,56 +33,74 @@ from app.services.ai_apu_service_v2.schemas import WorkSpec, WorkSpecDimensions
 _BENCHMARK_RULES: List[Tuple[str, str, float, str]] = [
     # Demolición y Remoción
     (r"REMOCION.*MANTO|RETIRO.*MANTO", "m2", 70.0, "Remoción de manto asfáltico en losas"),
-    (r"REMOCION.*CERAMICA|RETIRO.*BALDOSA|PICADO.*FRISO", "m2", 20.0, "Picado/remoción de revestimientos cerámicos o frisos"),
+    (r"DEMOLICION.*CERAMICA|REMOCION.*CERAMICA|RETIRO.*BALDOSA|PICADO.*FRISO", "m2", 20.0, "Picado/remoción/demolición de revestimientos cerámicos o frisos"),
+    (r"DEMOLICION.*PARED|DEMOLICION.*BLOQUE|DEMOLICION.*MAMPOSTERIA", "m2", 18.0, "Demolición a mano de paredes de bloques"),
     (r"REMOCION|DEMOLICION|DESMONTE|PICADO", "m2", 25.0, "Demolición o remoción de revestimientos en m2"),
     (r"REMOCION|DEMOLICION|DESMONTE", "m3", 4.5, "Demolición de concreto o mampostería en m3"),
     (r"REMOCION|DEMOLICION|DESMONTE", "m", 30.0, "Desmonte de elementos lineales"),
 
     # Impermeabilización
-    (r"IMPERMEABILIZACION.*ASFALTO|MANTO.*ASFALTICO|PRIMER.*ASFALT", "m2", 35.0, "Impermeabilización con manto asfáltico caliente/primer"),
+    (r"IMPERMEABILIZACION.*TRANSITABLE|IMPERMEABILIZACION.*ASFALTO|MANTO.*ASFALTICO|PRIMER.*ASFALT", "m2", 35.0, "Impermeabilización con manto asfáltico caliente/primer"),
     (r"PINTURA.*ELASTOMERICA.*TECHO|IMPERMEABILIZANTE.*ACRILICO", "m2", 45.0, "Pintura elastomérica para techos/impermeabilización"),
 
     # Albañilería, Pisos y Frisos
     (r"SOBREPISO|NIVELAD.*CEMENTO|CARPETA.*NIVELACION", "m2", 22.0, "Sobrepiso nivelado de cemento hasta 6cm"),
-    (r"REVESTIMIENTO.*EXTERIOR|FRISO.*BASE|MORTERO.*CAL|FRISO.*LISO", "m2", 18.0, "Revestimiento exterior con mortero / friso base"),
+    (r"REVESTIMIENTO.*EXTERIOR|FRISO.*BASE|MORTERO.*CAL|FRISO.*LISO|CONSTRUCCION.*REVESTIMIENTO", "m2", 18.0, "Revestimiento exterior con mortero / friso base"),
     (r"FRISO.*RAYADO|ACABADO.*ESPONJA", "m2", 16.0, "Friso exterior rayado a esponja"),
-    (r"ENCAMISADO.*PASTA|PASTA.*PROFESIONAL|LIJADO", "m2", 40.0, "Encamisado de paredes/techos con pasta y lijado"),
+    (r"ENCAMISADO.*PASTA|PASTA.*PROFESIONAL|ENCAMISADO.*TECHOS|LIJADO", "m2", 40.0, "Encamisado de paredes/techos con pasta y lijado"),
     (r"DRY\s*WALL|YESO.*CARTON", "m2", 25.0, "Acabados de Drywall / juntas encamisadas"),
     (r"BALDOSA|CERAMICA|PORCELANATO|PISO", "m2", 12.0, "Instalación de pisos y revestimientos cerámicos"),
+    (r"TOPE.*MAMPOSTERIA", "m2", 5.0, "Construcción de tope en mampostería"),
 
     # Pintura
-    (r"PINTURA.*ESMALTE.*METAL|ESMALTE.*PUERTA|ESMALTE.*MARCO", "m2", 30.0, "Pintura de esmalte en paneles/elementos metálicos"),
-    (r"PINTURA.*ESMALTE.*MARCO", "m", 35.0, "Pintura de esmalte en marcos metálicos por metro"),
+    (r"PINTURA.*ESMALTE.*METAL|ESMALTE.*PUERTA|ESMALTE.*MARCO|ESMALTE.*PANEL", "m2", 30.0, "Pintura de esmalte en paneles/elementos metálicos"),
+    (r"PINTURA.*ESMALTE.*MARCO|ESMALTE.*MARCO", "m", 35.0, "Pintura de esmalte en marcos metálicos por metro"),
     (r"PINTURA.*TEXTURIZADA", "m2", 35.0, "Pintura texturizada aplicada con compresor/pistola"),
-    (r"PINTURA.*CAUCHO|PINTURA.*PARED|PINTURA.*INTERIOR|PINTURA.*EXTERIOR", "m2", 55.0, "Pintura de caucho en paredes"),
-    (r"PINTURA.*TRAFICO|DEMARCACION.*ESTACIONAMIENTO|DEMARCACION", "m", 200.0, "Demarcación vial/puestos con pintura de tráfico"),
+    (r"PINTURA.*CAUCHO.*PARED|PINTURA.*CAUCHO.*INTERIOR|PINTURA.*CAUCHO.*EXTERIOR|PINTURA.*CAUCHO", "m2", 55.0, "Pintura de caucho en paredes"),
+    (r"DEMARCACION.*BROCAL|DEMARCACION.*ESTACIONAMIENTO|PINTURA.*TRAFICO|DEMARCACION", "m", 120.0, "Demarcación con pintura de tráfico"),
     (r"PREPARACION.*SUPERFICIE.*PINTURA|LAVADO.*HONGO", "m2", 60.0, "Preparación de superficie/limpieza de moho para pintura"),
 
     # Electricidad
-    (r"PUNTO.*ILUMINACION|PUNTO.*ELECTRICIDAD|PUNTO.*TOMA.*CORRIENTE|PUNTO.*TOMACORRIENTE|PUNTO.*INTERRUPTOR", "pto", 5.0, "Instalación de punto eléctrico en PVC/EMT"),
+    (r"PUNTO.*ILUMINACION|PUNTO.*ELECTRICIDAD|PUNTO.*TOMA|PUNTO.*TOMACORRIENTE|PUNTO.*INTERRUPTOR|PUNTO.*CAMARA|PUNTO.*FUERZA|PUNTO.*SALIDA", "pto", 5.0, "Instalación de punto eléctrico"),
     (r"CABLE.*COBRE|CONDUCTOR.*THW", "m", 120.0, "Tendido de cable de cobre THW en tubería"),
-    (r"TUBERIA.*PVC.*ELECTRIC|TUBERIA.*PLASTICA.*PVC", "m", 35.0, "Instalación de tubería plástica PVC para electricidad"),
+    (r"TUBERIA.*PVC.*ELECTRIC|TUBERIA.*PLASTICA.*PVC|TUBERIA.*EMT", "m", 35.0, "Instalación de tubería plástica PVC para electricidad"),
     (r"CAJA.*CONTROL.*ALUMBRADO|TABLERO.*ELECTRICO", "pza", 2.0, "Instalación y conexionado de caja de control/tablero"),
+    (r"CAJA.*METALICA.*PASO|CAJA.*DERIVACION|CAJA.*PASO", "pza", 8.0, "Instalación de cajas de paso o derivación"),
     (r"BREAKER|INTERRUPTOR.*TERMOMAGNETICO", "pza", 6.0, "Instalación de breaker termomagnético en tablero"),
-    (r"LAMPARA.*LED|REFLECTOR.*LED|LUMINARIA", "und", 10.0, "Instalación de lámpara/reflector LED"),
+    (r"TOMACORRIENTE|INTERRUPTOR.*COMBINABLE|INTERRUPTOR.*SIMPLE|FACE.*PLATE", "pza", 8.0, "Colocación de interruptores, tomacorrientes o placas"),
+    (r"LAMPARA.*LED|REFLECTOR.*LED|LUMINARIA|VENTILADOR.*TECHO", "und", 10.0, "Instalación de lámpara/reflector LED/ventilador"),
+    (r"LAMPARA.*LED|REFLECTOR.*LED|LUMINARIA|VENTILADOR.*TECHO", "pza", 10.0, "Instalación de lámpara/reflector LED/ventilador"),
 
-    # Herrería, Vidriería y Carpintería
-    (r"VENTANA.*ALUMINIO|PERFIL.*ALUMINIO.*VIDRIO|VENTANA.*PANORAMICA", "m2", 7.0, "Suministro e instalación de ventanas de aluminio y vidrio"),
-    (r"PUERTA.*METALICA|PORTON", "m2", 5.0, "Instalación de puertas metálicas"),
-    (r"PUERTA.*VIDRIO", "und", 3.0, "Instalación de puerta de vidrio templado"),
+    # Ventanas, Puertas y Carpintería
+    (r"VENTANA.*ALUMINIO|PERFIL.*ALUMINIO.*VIDRIO|VENTANA.*PANORAMICA|VENTANAS.*RI", "m2", 7.0, "Suministro e instalación de ventanas de aluminio y vidrio"),
+    (r"PUERTA.*METALICA|PORTON|PUERTA.*MADERA|PUERTA.*BAÑO", "m2", 5.0, "Instalación de puertas metálicas/madera"),
+    (r"TABIQUERIA.*PVC", "m2", 15.0, "Instalación de tabiquería de PVC para baños"),
+    (r"PUERTA.*DOBLE.*VIDRIO|PUERTA.*VIDRIO", "und", 2.0, "Instalación de puerta de vidrio templado"),
+    (r"PUERTA.*BATIENTE|PUERTA", "pza", 3.0, "Instalación de puertas batientes"),
+    (r"CERRADURA", "pza", 6.0, "Instalación de cerraduras"),
+    (r"MUEBLE.*ARCHIVO|MUEBLE.*GAVETA", "m2", 4.0, "Fabricación/colocación de mueble de archivo"),
+
+    # Aire Acondicionado y Climatización
+    (r"A/C.*INSTALACION|INSTALACION.*AIRE.*ACONDICIONADO|SUSTITUCION.*AIRE", "und", 1.0, "Instalación de equipo de aire acondicionado"),
+    (r"A/C.*INSTALACION|INSTALACION.*AIRE.*ACONDICIONADO|SUSTITUCION.*AIRE", "ton", 1.0, "Instalación de aire acondicionado por tonelada"),
+    (r"SUMINISTRO.*CONDENSADORA|SUMINISTRO.*EVAPORADORA", "und", 2.0, "Suministro e izamiento de condensadora/evaporadora"),
+    (r"AJUSTES.*BALANCEO|PUESTA.*EN.*MARCHA", "trf", 1.0, "Ajustes, balanceo y puesta en marcha de aire"),
+    (r"PUNTO.*DRENAJE.*AIRE", "pto", 4.0, "Punto de drenaje de aire acondicionado"),
 
     # Plomería e Instalaciones Sanitarias
     (r"DRENAJE.*AGUA.*LLUVIA|BAJANTE|CANAL", "sg", 1.0, "Reparación puntual de drenajes de lluvia"),
-    (r"PUNTO.*AGUAS.*NEGRAS|PUNTO.*AGUAS.*BLANCAS|PUNTO.*VENTILACION", "pto", 4.0, "Punto hidrosanitario aguas blancas o negras"),
-    (r"TUBERIA.*AGUAS.*RESIDUALES|TUBERIA.*AGUAS.*CLARAS|TUBERIA.*POLIPROPILENO", "m", 30.0, "Tendido de tubería hidrosanitaria"),
-    (r"LLAVE.*PASO|LLAVE.*ARRESTO|CANILLA", "pza", 8.0, "Instalación de llaves y accesorios de fontanería"),
+    (r"PUNTO.*AGUAS.*NEGRAS|PUNTO.*AGUAS.*BLANCAS|PUNTO.*AGUAS.*CLARAS|PUNTO.*AGUAS.*RESIDUALES|PUNTO.*VENTILACION", "pto", 4.0, "Punto hidrosanitario"),
+    (r"TUBERIA.*AGUAS.*RESIDUALES|TUBERIA.*AGUAS.*CLARAS|TUBERIA.*POLIPROPILENO|TUBERIA.*PVC", "m", 30.0, "Tendido de tubería hidrosanitaria"),
+    (r"LLAVE.*PASO|LLAVE.*ARRESTO|CANILLA", "pza", 8.0, "Instalación de llaves de paso, arresto o canillas"),
     (r"LAVAMANOS|WC|POCETA|DUCHA|GRIFERIA", "pza", 4.0, "Instalación de piezas y griferías sanitarias"),
-    (r"CALENTADOR.*ELECTRICO|SISTEMA.*HIDRONEUMATICO", "und", 2.0, "Instalación de equipo hidroneumático o calentador"),
+    (r"CALENTADOR.*ELECTRICO|SISTEMA.*HIDRONEUMATICO|TERMOSTATO|RESISTENCIA", "und", 2.0, "Instalación de calentador o sistema hidroneumático"),
+    (r"CALENTADOR.*ELECTRICO|SISTEMA.*HIDRONEUMATICO|TERMOSTATO|RESISTENCIA", "pza", 2.0, "Instalación de calentador o sistema hidroneumático"),
+    (r"ELECTRODOMESTICO", "und", 4.0, "Instalación de electrodomésticos"),
 
     # Movimiento de Materiales, Acarreos y Botes
-    (r"ACARREO.*MANO.*CARRETILLA|ACARREO.*HORIZONTAL", "m3", 8.0, "Acarreo horizontal a mano con carretilla"),
+    (r"ACARREO.*MANO.*CARRETILLA|ACARREO.*HORIZONTAL|ACARREO.*A.*MANO", "m3", 8.0, "Acarreo horizontal a mano con carretilla"),
     (r"ACARREO.*VERTICAL", "m3", 6.0, "Acarreo vertical de material a mano"),
-    (r"TRANSPORTE.*BOTE.*ESCOMBRO|BOTE.*BASURA.*CAMIONETA", "vje", 4.0, "Transporte y bote de escombros en camioneta (viajes/día)"),
+    (r"TRANSPORTE.*BOTE.*ESCOMBRO|BOTE.*BASURA|TRANSPORTE.*Y.*BOTE", "vje", 4.0, "Transporte y bote de escombros en camioneta (viajes/día)"),
     (r"LIMPIEZA.*GENERAL.*OBRA", "und", 1.0, "Limpieza general de obra"),
 ]
 
@@ -114,6 +132,12 @@ def calibrate_item_performance(item: BudgetItem, db: Session) -> Tuple[float, st
     """
     Determina el rendimiento diario calibrado y realista para un BudgetItem.
     Retorna (calibrated_performance, motivo_calibracion).
+    Prioridad:
+    1. Unidades globales canónicas (gl, glb, sg).
+    2. Catálogo maestro COVENIN (si tiene código formal COVENIN).
+    3. Normas Técnicas y Benchmarks Empíricos del tabulador especializado venezolano.
+    4. Cálculo determinista según cuadrilla de obreros.
+    5. Tabulador de respaldo COVENIN por unidad de medida.
     """
     if item is None:
         raise ValueError("item no puede ser None")
@@ -129,11 +153,11 @@ def calibrate_item_performance(item: BudgetItem, db: Session) -> Tuple[float, st
     if unit in ("gl", "glb", "sg"):
         return 1.0, f"Unidad global/suma global '{unit}' (rendimiento canónico 1.0)"
 
-    # 2. Búsqueda en catálogo maestro COVENIN (CostItem) por código de partida
+    # 2. Búsqueda en catálogo maestro COVENIN (CostItem) por código de partida formal (no índice numérico simple)
     candidate_codes: List[str] = []
-    if item.cod_par and item.cod_par.strip():
+    if item.cod_par and item.cod_par.strip() and not item.cod_par.strip().isdigit():
         candidate_codes.append(item.cod_par.strip())
-    if item.cov_par and item.cov_par.strip() and item.cov_par.strip() != item.cod_par.strip():
+    if item.cov_par and item.cov_par.strip() and not item.cov_par.strip().isdigit() and item.cov_par.strip() != item.cod_par.strip():
         candidate_codes.append(item.cov_par.strip())
 
     for c_code in candidate_codes:
@@ -145,7 +169,15 @@ def calibrate_item_performance(item: BudgetItem, db: Session) -> Tuple[float, st
             if ci_unit == unit or not unit:
                 return float(ci.RenPar), f"Catálogo maestro COVENIN ({ci.CodPar}): {float(ci.RenPar):.2f} {ci.UniPar}/día"
 
-    # 3. Cálculo determinista si el ítem cuenta con cuadrilla de mano de obra (BudgetAPULabor)
+    # 3. Reglas empíricas basadas en tipología de obra y descripción técnica
+    desc_upper = (item.description or "").upper()
+    for pattern, rule_unit, perf, label in _BENCHMARK_RULES:
+        if re.search(pattern, desc_upper, re.IGNORECASE):
+            norm_rule_unit = normalize_unit_str(rule_unit)
+            if norm_rule_unit == unit or (norm_rule_unit in ("und", "pza") and unit in ("und", "pza")):
+                return float(perf), f"Norma Técnica: {label}"
+
+    # 4. Cálculo determinista si el ítem cuenta con cuadrilla de mano de obra (BudgetAPULabor)
     if hasattr(item, "labors") and item.labors:
         labors_list = [
             {
@@ -157,8 +189,9 @@ def calibrate_item_performance(item: BudgetItem, db: Session) -> Tuple[float, st
         ]
         if labors_list:
             try:
+                act_type = "DEMOLICION" if is_labor_only_activity(item.description)[0] else "CONSTRUCCION"
                 temp_workspec = WorkSpec(
-                    activity_type="CONSTRUCCION",
+                    activity_type=act_type,
                     element=item.description[:60],
                     target_unit=unit,
                     dimensions=WorkSpecDimensions()
@@ -174,14 +207,6 @@ def calibrate_item_performance(item: BudgetItem, db: Session) -> Tuple[float, st
                     return float(calc_perf), f"Cuadrilla APU: {note_msg}"
             except Exception as exc:
                 logger.warning("Fallo al calcular rendimiento determinista con cuadrilla: %s", exc)
-
-    # 4. Reglas empíricas basadas en tipología de obra y descripción técnica
-    desc_upper = (item.description or "").upper()
-    for pattern, rule_unit, perf, label in _BENCHMARK_RULES:
-        if re.search(pattern, desc_upper, re.IGNORECASE):
-            norm_rule_unit = normalize_unit_str(rule_unit)
-            if norm_rule_unit == unit or (norm_rule_unit in ("und", "pza") and unit in ("und", "pza")):
-                return float(perf), f"Norma Técnica: {label}"
 
     # 5. Tabulador de respaldo estándar COVENIN según unidad de medida
     fallback_perf = _UNIT_FALLBACK_PERFORMANCES.get(unit, 10.0)
