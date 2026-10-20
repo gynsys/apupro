@@ -751,57 +751,7 @@ export default function CalculadoraFCAS({
               </div>
             </div>
 
-            {/* DNT: A + B + permisos + lluvia = DET */}
-            <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-3 space-y-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-600">
-                  Días No Trabajados (DNT)
-                </span>
-                <span className="text-[11px] font-black text-amber-700">
-                  DET = {dtLaborados} días
-                </span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <label className="flex flex-col gap-0.5">
-                  <span className="text-[9px] font-bold text-slate-500 uppercase">A. Descansos, feriados y júbilo</span>
-                  <DecimalInput
-                    value={diasNoTrabajados}
-                    onChange={(val) => {
-                      setCalculoAutomatico(false);
-                      setDiasNoTrabajados(Math.min(diasContratados, Math.max(0, val)));
-                    }}
-                    className="w-full bg-white rounded-lg border border-slate-300 px-2 py-1 text-[11px] text-slate-900 font-bold focus:outline-none focus:border-amber-600"
-                  />
-                </label>
-                <label className="flex flex-col gap-0.5">
-                  <span className="text-[9px] font-bold text-slate-500 uppercase">B. Vacaciones y otros</span>
-                  <DecimalInput
-                    value={diasVacaciones}
-                    onChange={(val) => setDiasVacaciones(Math.max(0, val))}
-                    className="w-full bg-white rounded-lg border border-slate-300 px-2 py-1 text-[11px] text-slate-900 font-bold focus:outline-none focus:border-amber-600"
-                  />
-                </label>
-                <label className="flex flex-col gap-0.5">
-                  <span className="text-[9px] font-bold text-slate-500 uppercase">Permisos</span>
-                  <DecimalInput
-                    value={diasPermisos}
-                    onChange={(val) => setDiasPermisos(Math.max(0, val))}
-                    className="w-full bg-white rounded-lg border border-slate-300 px-2 py-1 text-[11px] text-slate-900 font-bold focus:outline-none focus:border-amber-600"
-                  />
-                </label>
-                <label className="flex flex-col gap-0.5">
-                  <span className="text-[9px] font-bold text-slate-500 uppercase">Lluvia / rendimiento</span>
-                  <DecimalInput
-                    value={diasRendimiento}
-                    onChange={(val) => setDiasRendimiento(Math.max(0, val))}
-                    className="w-full bg-white rounded-lg border border-slate-300 px-2 py-1 text-[11px] text-slate-900 font-bold focus:outline-none focus:border-amber-600"
-                  />
-                </label>
-              </div>
-              <p className="text-[10px] text-slate-500 m-0">
-                DET = 365 − A − B − permisos − lluvia. También editable en el bloque 2.
-              </p>
-            </div>
+            {/* El DNT (A, B, permisos y lluvia) se calcula en el bloque 2; aquí solo se muestra el DEP legal. */}
 
             <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700">
