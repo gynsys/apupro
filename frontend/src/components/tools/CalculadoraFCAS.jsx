@@ -90,12 +90,6 @@ export default function CalculadoraFCAS({
   // ── 4. Matriz de Conceptos de Ley ────────────────────────────────────────
   const [conceptos, setConceptos] = useState(CONCEPTOS_DEFAULT);
 
-  // ── 4.1 Conceptos C–H de la matriz antigua (réplica) ─────────────────────
-  const [diasContribucionesComplementarias, setDiasContribucionesComplementarias] = useState(0);
-  const [diasHigieneSeguridad, setDiasHigieneSeguridad] = useState(0);
-  const [diasContribucionesSindicales, setDiasContribucionesSindicales] = useState(0);
-  const [diasSalarioOrdinario, setDiasSalarioOrdinario] = useState(365);
-
   // ── 5. Modales de Perfiles ───────────────────────────────────────────────
   const [showOpenModal, setShowOpenModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -185,18 +179,13 @@ export default function CalculadoraFCAS({
     [subtotalPrestaciones, subtotalBeneficios],
   );
 
-  // E + F + G: conceptos contractuales/sindicales/higiene (días anuales editables)
-  const subtotalConceptosEspeciales = useMemo(() => (
-    diasContribucionesComplementarias + diasHigieneSeguridad + diasContribucionesSindicales
-  ), [diasContribucionesComplementarias, diasHigieneSeguridad, diasContribucionesSindicales]);
+  // H. Días pagados por salarios ordinarios: se usa N (365 por defecto) como base
+  const subtotalSalarioOrdinario = diasContratados;
 
-  // H. Días pagados por salarios ordinarios (días calendario)
-  const subtotalSalarioOrdinario = diasSalarioOrdinario;
-
-  // DEP legal = C + D + E + F + G + H (la vieja incluía los 365 días de H)
+  // DEP legal = C + D + H (la vieja incluía los 365 días de H)
   const depLegal = useMemo(() => (
-    subtotalPrestaciones + subtotalBeneficios + subtotalConceptosEspeciales + subtotalSalarioOrdinario
-  ), [subtotalPrestaciones, subtotalBeneficios, subtotalConceptosEspeciales, subtotalSalarioOrdinario]);
+    subtotalPrestaciones + subtotalBeneficios + subtotalSalarioOrdinario
+  ), [subtotalPrestaciones, subtotalBeneficios, subtotalSalarioOrdinario]);
 
   // C. Días Equivalentes Comerciales y de Operación de Campo en USD
   const { diasHcm, diasTransporte, diasEpp, dpCampoTotal } = useMemo(() => {
@@ -313,10 +302,6 @@ export default function CalculadoraFCAS({
     setActivoTransporte(true);
     setActivoEpp(true);
     setConceptos(CONCEPTOS_DEFAULT.map(c => ({ ...c })));
-    setDiasContribucionesComplementarias(0);
-    setDiasHigieneSeguridad(0);
-    setDiasContribucionesSindicales(0);
-    setDiasSalarioOrdinario(365);
     toast.success('Valores de la matriz restaurados a configuración base');
   };
 
@@ -347,10 +332,6 @@ export default function CalculadoraFCAS({
       activoTransporte,
       activoEpp,
       conceptos,
-      diasContribucionesComplementarias,
-      diasHigieneSeguridad,
-      diasContribucionesSindicales,
-      diasSalarioOrdinario,
       fcasPorcentaje: parseFloat(fcasPorcentaje.toFixed(2)),
       bonoDiario: parseFloat(bonoDiarioApu.toFixed(4)),
       costoJornalObra: parseFloat(costoJornalObra.toFixed(2)),
@@ -400,10 +381,6 @@ export default function CalculadoraFCAS({
     if (Array.isArray(p.conceptos) && p.conceptos.length > 0) {
       setConceptos(p.conceptos);
     }
-    setDiasContribucionesComplementarias(p.diasContribucionesComplementarias ?? 0);
-    setDiasHigieneSeguridad(p.diasHigieneSeguridad ?? 0);
-    setDiasContribucionesSindicales(p.diasContribucionesSindicales ?? 0);
-    setDiasSalarioOrdinario(p.diasSalarioOrdinario ?? 365);
     setShowOpenModal(false);
     toast.success(`Cálculo "${name}" cargado exitosamente`);
   };
@@ -780,70 +757,9 @@ export default function CalculadoraFCAS({
               ))}
             </div>
 
-            {/* E + F + G + H */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <label className="flex flex-col gap-1 bg-white border border-slate-200 rounded-xl p-3">
-                <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider">
-                  E. Contribuciones complementarias
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <DecimalInput
-                    value={diasContribucionesComplementarias}
-                    onChange={(val) => setDiasContribucionesComplementarias(Math.max(0, val))}
-                    className="w-full bg-slate-50 rounded-lg border border-slate-300 px-2 py-1 text-xs text-right font-black text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white"
-                  />
-                  <span className="text-[10px] font-bold text-slate-500">días</span>
-                </div>
-              </label>
-
-              <label className="flex flex-col gap-1 bg-white border border-slate-200 rounded-xl p-3">
-                <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider">
-                  F. Higiene y seguridad
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <DecimalInput
-                    value={diasHigieneSeguridad}
-                    onChange={(val) => setDiasHigieneSeguridad(Math.max(0, val))}
-                    className="w-full bg-slate-50 rounded-lg border border-slate-300 px-2 py-1 text-xs text-right font-black text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white"
-                  />
-                  <span className="text-[10px] font-bold text-slate-500">días</span>
-                </div>
-                <span className="text-[9px] text-slate-400 leading-tight">EPP se mantiene en el bloque 4</span>
-              </label>
-
-              <label className="flex flex-col gap-1 bg-white border border-slate-200 rounded-xl p-3">
-                <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider">
-                  G. Contribuciones sindicales
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <DecimalInput
-                    value={diasContribucionesSindicales}
-                    onChange={(val) => setDiasContribucionesSindicales(Math.max(0, val))}
-                    className="w-full bg-slate-50 rounded-lg border border-slate-300 px-2 py-1 text-xs text-right font-black text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white"
-                  />
-                  <span className="text-[10px] font-bold text-slate-500">días</span>
-                </div>
-              </label>
-
-              <label className="flex flex-col gap-1 bg-white border border-slate-200 rounded-xl p-3">
-                <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider">
-                  H. Salarios ordinarios
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <DecimalInput
-                    value={diasSalarioOrdinario}
-                    onChange={(val) => setDiasSalarioOrdinario(Math.max(0, val))}
-                    className="w-full bg-slate-50 rounded-lg border border-slate-300 px-2 py-1 text-xs text-right font-black text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white"
-                  />
-                  <span className="text-[10px] font-bold text-slate-500">días</span>
-                </div>
-                <span className="text-[9px] text-slate-400 leading-tight">Días calendario pagados (base 365)</span>
-              </label>
-            </div>
-
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-slate-100 pt-2.5 text-[10px] font-bold">
-              <span className="text-slate-500">E–G = {subtotalConceptosEspeciales.toFixed(2)} días</span>
-              <span className="text-slate-500">H = {subtotalSalarioOrdinario.toFixed(2)} días</span>
+              <span className="text-slate-500">C–D = {diasBeneficiosLegales.toFixed(2)} días</span>
+              <span className="text-slate-500">H = {subtotalSalarioOrdinario.toFixed(2)} días (incluido)</span>
               <span className="text-indigo-700">DEP legal = {depLegal.toFixed(2)} días</span>
               <span className="text-emerald-700">FCAS legal = {fcasLegal.toFixed(2)}%</span>
             </div>
