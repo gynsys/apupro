@@ -7,8 +7,6 @@ import {
   Check, 
   Printer, 
   RotateCcw, 
-  Pencil, 
-  Lock, 
   Info, 
   HelpCircle,
   TrendingUp,
@@ -73,11 +71,13 @@ export default function CalculadoraFCAS({
 
   // ── 2. Denominador: Días de Obra y Pérdidas de Jornada ───────────────────
   const [diasContratados, setDiasContratados] = useState(365); // N (días calendario base)
-  const [diasNoTrabajados, setDiasNoTrabajados] = useState(115); // Ti (descansos y feriados)
-  const [calculoAutomatico, setCalculoAutomatico] = useState(true);
-  const [diasVacaciones, setDiasVacaciones] = useState(15); // Disfrute efectivo de descanso
-  const [diasPermisos, setDiasPermisos] = useState(15); // Permisos y contingencias de contrato
-  const [diasRendimiento, setDiasRendimiento] = useState(initialDiasRendimiento ?? 56); // Pérdida por lluvias/rendimiento
+  // A. Días no trabajados según leyes y decretos (feriados y júbilo)
+  const [diasDntLeyes, setDiasDntLeyes] = useState(11);
+  // B. Días no trabajados / permisos remunerados u otros (incluye fines de semana y vacaciones)
+  const [diasDntPermisos, setDiasDntPermisos] = useState(134);
+  // Adicional opcional: pérdida de rendimiento por lluvia
+  const [diasLluvia, setDiasLluvia] = useState(initialDiasRendimiento ?? 56);
+  const [incluirLluvia, setIncluirLluvia] = useState(true);
 
   // ── 3. Compensaciones Comerciales y Operación de Campo en USD ───────────
   const [costoHcm, setCostoHcm] = useState(initialCostoHcm ?? 450); // $ anual póliza gremial
@@ -136,20 +136,6 @@ export default function CalculadoraFCAS({
     setSalarioBase(Number((sDiario * 30).toFixed(2)));
   };
 
-  // Cálculo automático de días de descanso (Ti)
-  const diasDescansoAutomaticos = useMemo(() => {
-    if (diasContratados <= 0) return 0;
-    const finesSemana = diasContratados * (2 / 7);
-    const feriados = 11 * (diasContratados / 365);
-    return Math.ceil(finesSemana + feriados);
-  }, [diasContratados]);
-
-  useEffect(() => {
-    if (calculoAutomatico) {
-      setDiasNoTrabajados(diasDescansoAutomaticos);
-    }
-  }, [calculoAutomatico, diasDescansoAutomaticos]);
-
   // Factor de proporción temporal frente al año estándar
   const factorTemporal = useMemo(() => {
     return diasContratados > 0 ? diasContratados / 365 : 1;
@@ -157,13 +143,9 @@ export default function CalculadoraFCAS({
 
   // ── CÁLCULO DEL DENOMINADOR: Días Efectivamente Laborados (DT) ───────────
   const dtLaborados = useMemo(() => {
-    const tiDeduccion = (diasNoTrabajados || 0) * factorTemporal;
-    const vacDeduccion = (diasVacaciones || 0) * factorTemporal;
-    const permDeduccion = (diasPermisos || 0) * factorTemporal;
-    const rendDeduccion = (diasRendimiento || 0) * factorTemporal;
-    const totalDeducciones = tiDeduccion + vacDeduccion + permDeduccion + rendDeduccion;
-    return Math.max(1, Math.round(diasContratados - totalDeducciones));
-  }, [diasContratados, diasNoTrabajados, diasVacaciones, diasPermisos, diasRendimiento, factorTemporal]);
+    const lluvia = incluirLluvia ? (diasLluvia || 0) : 0;
+    return Math.max(1, Math.round(diasContratados - diasDntLeyes - diasDntPermisos - lluvia));
+  }, [diasContratados, diasDntLeyes, diasDntPermisos, diasLluvia, incluirLluvia]);
 
   // ── ALÍCUOTA DE SALARIO INTEGRAL (Art. 122 LOTTT) ─────────────────────────
   const diasUtilidades = useMemo(() => {
@@ -320,11 +302,10 @@ export default function CalculadoraFCAS({
     setBonoCestaticket(175);
     setBonoInFcas(false);
     setDiasContratados(365);
-    setDiasNoTrabajados(115);
-    setCalculoAutomatico(true);
-    setDiasVacaciones(15);
-    setDiasPermisos(15);
-    setDiasRendimiento(initialDiasRendimiento ?? 56);
+    setDiasDntLeyes(11);
+    setDiasDntPermisos(134);
+    setDiasLluvia(initialDiasRendimiento ?? 56);
+    setIncluirLluvia(true);
     setCostoHcm(initialCostoHcm ?? 450);
     setCostoTransporte(initialCostoTransporte ?? 547.5);
     setCostoEpp(initialCostoEpp ?? 290);
@@ -354,11 +335,11 @@ export default function CalculadoraFCAS({
       bonoCestaticket,
       bonoInFcas,
       diasContratados,
-      diasNoTrabajados,
-      calculoAutomatico,
-      diasVacaciones,
-      diasPermisos,
-      diasRendimiento,
+      diasDntLeyes,
+      diasDntPermisos,
+      diasLluvia,
+      incluirLluvia,
+      diasRendimiento: incluirLluvia ? diasLluvia : 0,
       costoHcm,
       costoTransporte,
       costoEpp,
@@ -398,14 +379,18 @@ export default function CalculadoraFCAS({
       setBonoInFcas(p.metodo === 'indexado');
     }
     if (p.diasContratados != null) setDiasContratados(p.diasContratados);
-    if (p.diasNoTrabajados != null) {
-      setDiasNoTrabajados(p.diasNoTrabajados);
-      setCalculoAutomatico(false);
+    if (p.diasDntLeyes != null || p.diasNoTrabajados != null) {
+      setDiasDntLeyes(p.diasDntLeyes ?? p.diasNoTrabajados ?? 11);
     }
-    if (p.calculoAutomatico != null) setCalculoAutomatico(p.calculoAutomatico);
-    if (p.diasVacaciones != null) setDiasVacaciones(p.diasVacaciones);
-    if (p.diasPermisos != null) setDiasPermisos(p.diasPermisos);
-    if (p.diasRendimiento != null) setDiasRendimiento(p.diasRendimiento);
+    if (p.diasDntPermisos != null || p.diasVacaciones != null || p.diasPermisos != null) {
+      setDiasDntPermisos(
+        p.diasDntPermisos ?? ((p.diasVacaciones ?? 15) + (p.diasPermisos ?? 15)),
+      );
+    }
+    if (p.diasLluvia != null || p.diasRendimiento != null) {
+      setDiasLluvia(p.diasLluvia ?? p.diasRendimiento ?? 56);
+    }
+    setIncluirLluvia(p.incluirLluvia ?? true);
     if (p.costoHcm != null) setCostoHcm(p.costoHcm);
     if (p.costoTransporte != null) setCostoTransporte(p.costoTransporte);
     if (p.costoEpp != null) setCostoEpp(p.costoEpp);
@@ -443,10 +428,11 @@ export default function CalculadoraFCAS({
         bonoInFcas: isEnFcas,
         bonoDiario: isEnFcas ? 0.0 : parseFloat(bonoDiarioApu.toFixed(4)),
         diasContratados,
-        diasNoTrabajados,
-        diasVacaciones,
-        diasPermisos,
-        diasRendimiento,
+        diasDntLeyes,
+        diasDntPermisos,
+        diasLluvia,
+        incluirLluvia,
+        diasRendimiento: incluirLluvia ? diasLluvia : 0,
         costoHcm: activoHcm ? costoHcm : 0,
         costoTransporte: activoTransporte ? costoTransporte : 0,
         costoEpp: activoEpp ? costoEpp : 0,
@@ -641,7 +627,7 @@ export default function CalculadoraFCAS({
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-5 gap-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5">
               {/* Días Calendario de Obra */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -655,79 +641,65 @@ export default function CalculadoraFCAS({
                 <p className="text-[10px] text-slate-500">Base estándar: 365 días</p>
               </div>
 
-              {/* Días Descanso y Feriados (Ti) */}
+              {/* A. Días no trabajados según leyes y decretos */}
               <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    Descansos (Ti)
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setCalculoAutomatico(!calculoAutomatico)}
-                    className={`text-[10px] px-1.5 py-0.5 rounded font-bold inline-flex items-center gap-1 ${
-                      calculoAutomatico ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'
-                    }`}
-                    title="Alternar entre cálculo automático y manual"
-                  >
-                    {calculoAutomatico ? <Lock size={10} /> : <Pencil size={10} />}
-                    {calculoAutomatico ? 'Auto' : 'Manual'}
-                  </button>
-                </div>
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  A. Días no trabajados según leyes y decretos (feriados y júbilo)
+                </label>
                 <DecimalInput
-                  value={diasNoTrabajados}
-                  onChange={(val) => {
-                    setCalculoAutomatico(false);
-                    setDiasNoTrabajados(Math.min(diasContratados, val));
-                  }}
-                  className={`w-full rounded-xl border px-3 py-2 text-sm font-bold focus:outline-none ${
-                    calculoAutomatico 
-                      ? 'border-emerald-300 bg-emerald-50/50 text-emerald-900' 
-                      : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-amber-600 focus:bg-white'
+                  value={diasDntLeyes}
+                  onChange={(val) => setDiasDntLeyes(Math.max(0, val))}
+                  className="w-full bg-slate-50 rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 font-bold focus:outline-none focus:border-amber-600 focus:bg-white"
+                />
+                <p className="text-[10px] text-slate-500">Feriados y júbilo</p>
+              </div>
+
+              {/* B. Días no trabajados / permisos remunerados u otros */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  B. Días no trabajados / permisos remunerados u otros
+                </label>
+                <DecimalInput
+                  value={diasDntPermisos}
+                  onChange={(val) => setDiasDntPermisos(Math.max(0, val))}
+                  className="w-full bg-slate-50 rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 font-bold focus:outline-none focus:border-amber-600 focus:bg-white"
+                />
+                <p className="text-[10px] text-slate-500">Fines de semana, vacaciones y permisos</p>
+              </div>
+
+              {/* Días por lluvia / rendimiento (opcional) */}
+              <div className={`space-y-1.5 p-2.5 rounded-xl border transition-all ${
+                incluirLluvia ? 'bg-amber-50/60 border-amber-200' : 'bg-slate-50 border-slate-200 opacity-70'
+              }`}>
+                <label className="flex items-start gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={incluirLluvia}
+                    onChange={(e) => setIncluirLluvia(e.target.checked)}
+                    className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-amber-600 focus:ring-amber-500 cursor-pointer shrink-0"
+                  />
+                  <span className="text-xs font-black text-amber-900 uppercase tracking-wider leading-tight">
+                    Días por lluvia / rendimiento
+                    <span className="block text-[9px] font-bold text-amber-700 normal-case tracking-normal">Adicional opcional</span>
+                  </span>
+                </label>
+                <DecimalInput
+                  value={diasLluvia}
+                  onChange={(val) => setDiasLluvia(Math.max(0, val))}
+                  disabled={!incluirLluvia}
+                  className={`w-full rounded-lg border px-3 py-1.5 text-sm font-bold focus:outline-none ${
+                    incluirLluvia
+                      ? 'bg-white border-amber-300 text-amber-900 focus:ring-2 focus:ring-amber-500/20'
+                      : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
                   }`}
-                />
-                <p className="text-[10px] text-slate-500">Fines de semana + Feriados</p>
-              </div>
-
-              {/* Vacaciones Disfrute */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Vacaciones (Disfrute)
-                </label>
-                <DecimalInput
-                  value={diasVacaciones}
-                  onChange={(val) => setDiasVacaciones(Math.max(0, val))}
-                  className="w-full bg-slate-50 rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 font-bold focus:outline-none focus:border-amber-600 focus:bg-white"
-                />
-                <p className="text-[10px] text-slate-500">Descanso efectivo (Art. 192)</p>
-              </div>
-
-              {/* Permisos Contractuales */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Permisos / Cláusulas
-                </label>
-                <DecimalInput
-                  value={diasPermisos}
-                  onChange={(val) => setDiasPermisos(Math.max(0, val))}
-                  className="w-full bg-slate-50 rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 font-bold focus:outline-none focus:border-amber-600 focus:bg-white"
-                />
-                <p className="text-[10px] text-slate-500">Ausencias contractuales justificadas</p>
-              </div>
-
-              {/* Factor de Rendimiento / Lluvias */}
-              <div className="space-y-1.5 bg-amber-50/60 p-2.5 rounded-xl border border-amber-200">
-                <label className="text-xs font-black text-amber-900 uppercase tracking-wider flex items-center justify-between">
-                  <span>Pérdida Rendimiento</span>
-                  <span className="text-[10px] text-amber-700 font-bold">Lluvias</span>
-                </label>
-                <DecimalInput
-                  value={diasRendimiento}
-                  onChange={(val) => setDiasRendimiento(Math.max(0, val))}
-                  className="w-full bg-white rounded-lg border border-amber-300 px-3 py-1.5 text-sm text-amber-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                 />
                 <p className="text-[10px] text-amber-800 font-medium">Días deducidos de DT por clima/contingencias</p>
               </div>
             </div>
+
+            <p className="text-[10px] text-slate-500 m-0">
+              DT = N − A − B − lluvia (si está activa). A y B son días anuales; ajusta N si el lapso es menor a 365 días.
+            </p>
           </div>
 
           {/* =========================================================================
