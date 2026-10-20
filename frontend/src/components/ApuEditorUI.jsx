@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Package, Wrench, Users, Plus, Search, Trash2, Loader, Sparkles } from 'lucide-react';
 import { numeroALetras } from '../utils/numberToLetters';
+import { calculateItemBreakdown } from '../utils/apuCalculations';
 import EquipmentSelectorModal from './EquipmentSelectorModal';
 import MaterialSelectorModal from './MaterialSelectorModal';
 import LaborSelectorModal from './LaborSelectorModal';
+import CatalogAutocomplete from './CatalogAutocomplete';
 import DecimalInput from './DecimalInput';
 
 export default function ApuEditorUI({
@@ -39,71 +41,22 @@ export default function ApuEditorUI({
   const isBonoInFcas = bono_in_fcas === true || (bono_in_fcas !== false && fcas_percent >= 1000);
   const exRate = currency === 'BS' ? (exchange_rate || 1.0) : 1.0;
 
-  // ── Calculations ─────────────────────────────────────────────────────────
-  const calculateMaterialTotal = () => {
-    return item.materials?.reduce((sum, mat) => {
-      const baseCost = mat.cantidad * (mat.precio_unitario * exRate) * (1 + (mat.desperdicio || 0) / 100);
-      return sum + (baseCost * (1 + (material_inflation / 100)));
-    }, 0) || 0;
-  };
+  // ── Calculations (Delegated to Single Source of Truth) ─────────────────────
+  const costos = calculateItemBreakdown(item, settings);
+  const calculateMaterialTotal = () => costos.matCost;
+  const calculateEquipmentTotalDay = () => costos.eqTotalDay;
+  const calculateLaborTotalJornalDay = () => costos.totJornal;
+  const calculateLaborTotalBonoDay = () => costos.totBono;
+  const calculateLaborTotalDay = () => costos.labTotalDay;
 
-  const calculateEquipmentTotalDay = () => {
-    return item.equipments?.reduce((sum, eq) => {
-      const baseCost = eq.cantidad * (eq.depreciacion ?? 1.0) * (eq.precio_unitario * exRate);
-      return sum + (baseCost * (1 + (equipment_inflation / 100)));
-    }, 0) || 0;
-  };
-
-  const calculateLaborTotalJornalDay = () => {
-    return item.labors?.reduce((sum, lab) => {
-      const baseCost = lab.cantidad * (lab.jornal * exRate);
-      return sum + (baseCost * (1 + (labor_inflation / 100)));
-    }, 0) || 0;
-  };
-
-  const calculateLaborTotalBonoDay = () => {
-    if (isBonoInFcas) return 0;
-    return item.labors?.reduce((sum, lab) => {
-      const bBonus = lab.bono || labor_bonus || 0;
-      const baseCost = lab.cantidad * (bBonus * exRate);
-      return sum + (baseCost * (1 + (labor_inflation / 100)));
-    }, 0) || 0;
-  };
-
-  const calculateLaborTotalDay = () => {
-    const totJornal = calculateLaborTotalJornalDay();
-    const totBono = calculateLaborTotalBonoDay();
-    const fcasMonto = totJornal * (fcas_percent / 100);
-    return totJornal + totBono + fcasMonto;
-  };
-
-  const calculateCostosDirectos = () => {
-    const matTotal = calculateMaterialTotal();
-    const perf = item.performance || item.rendimiento || 1;
-    const eqTotal = calculateEquipmentTotalDay() / perf;
-    const labTotal = calculateLaborTotalDay() / perf;
-    
-    const subtotalA = matTotal + eqTotal + labTotal;
-    const adminCost = subtotalA * (admin_percent / 100);
-    const subtotalB = subtotalA + adminCost;
-    const profitCost = subtotalB * (profit_percent / 100);
-    
-    const subtotalC = subtotalB + profitCost;
-    const ivaCost = subtotalC * (iva_percent / 100);
-    
-    return {
-      materiales: matTotal,
-      equipos: eqTotal,
-      manoObra: labTotal,
-      subtotalA,
-      adminCost,
-      subtotalB,
-      profitCost,
-      subtotalC,
-      ivaCost,
-      unitPrice: subtotalC,
-      unitPriceWithIva: subtotalC + ivaCost
-    };
+  const handleCatalogSelect = (type, targetRow, selectedData) => {
+    if (type === 'materials') {
+      handleSelectMaterial(selectedData, targetRow);
+    } else if (type === 'equipments') {
+      handleSelectEquipment(selectedData, targetRow);
+    } else {
+      handleSelectLabor(selectedData, targetRow);
+    }
   };
 
   const renderOrigenTag = (origen) => {
@@ -114,8 +67,6 @@ export default function ApuEditorUI({
     if (origen === 'custom') return <span className="bg-purple-100 text-purple-800 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase border border-purple-200">Personalizada</span>;
     return null;
   };
-
-  const costos = calculateCostosDirectos();
   const safeFn = (fn) => typeof fn === 'function' ? fn : () => {};
 
   const formatSmartDecimal = (val, minSigDec = 5, maxDec = 6) => {
@@ -141,9 +92,15 @@ export default function ApuEditorUI({
     isOpen: false,
     targetRow: null
   });
+  const [focusRowId, setFocusRowId] = useState(null);
 
-  const handleSelectEquipment = (selectedData) => {
-    const target = equipmentModal.targetRow;
+  const handleAddRow = (type) => {
+    const newId = safeFn(onAddBlankRow)(type);
+    if (newId) setFocusRowId(newId);
+  };
+
+  const handleSelectEquipment = (selectedData, targetOverride = null) => {
+    const target = targetOverride || equipmentModal.targetRow;
     setEquipmentModal({ isOpen: false, targetRow: null });
 
     const deprecVal = selectedData.depreciacion != null 
@@ -177,8 +134,8 @@ export default function ApuEditorUI({
     }
   };
 
-  const handleSelectMaterial = (selectedData) => {
-    const target = materialModal.targetRow;
+  const handleSelectMaterial = (selectedData, targetOverride = null) => {
+    const target = targetOverride || materialModal.targetRow;
     setMaterialModal({ isOpen: false, targetRow: null });
 
     if (target && target.id) {
@@ -203,8 +160,8 @@ export default function ApuEditorUI({
     }
   };
 
-  const handleSelectLabor = (selectedData) => {
-    const target = laborModal.targetRow;
+  const handleSelectLabor = (selectedData, targetOverride = null) => {
+    const target = targetOverride || laborModal.targetRow;
     setLaborModal({ isOpen: false, targetRow: null });
 
     if (target && target.id) {
@@ -320,7 +277,7 @@ export default function ApuEditorUI({
                 <Search size={14} /> Buscar
               </button>
               <button
-                onClick={() => safeFn(onAddBlankRow)('materials')}
+                onClick={() => handleAddRow('materials')}
                 className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-50 hover:text-orange-600 transition-colors shadow-sm"
               >
                 <Plus size={14} /> Fila
@@ -355,13 +312,16 @@ export default function ApuEditorUI({
                       />
                     </td>
                     <td className="p-2 border-r border-slate-200 text-xs">
-                      <input 
-                        type="text" 
-                        className="w-full bg-transparent focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 rounded px-1 font-medium text-slate-700"
+                      <CatalogAutocomplete
+                        type="materials"
                         value={mat.descripcion || ''}
-                        onChange={e => safeFn(onComponentChange)('materials', mat.id, 'descripcion', e.target.value)}
-                        onBlur={e => safeFn(onComponentBlur)('materials', mat.id, 'descripcion', e.target.value)}
+                        onChange={(val) => safeFn(onComponentChange)('materials', mat.id, 'descripcion', val)}
+                        onBlur={(val) => safeFn(onComponentBlur)('materials', mat.id, 'descripcion', val)}
+                        onSelect={(data) => handleCatalogSelect('materials', mat, data)}
                         placeholder="Descripción del material"
+                        inputClassName="w-full bg-transparent focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 rounded px-1 font-medium text-slate-700"
+                        autoFocus={focusRowId === mat.id}
+                        openOnFocus={String(mat.id).startsWith('NEW-')}
                       />
                       {mat.origen && (
                         <div className="flex items-center gap-2 mt-1 px-1">
@@ -457,7 +417,7 @@ export default function ApuEditorUI({
               </button>
               <button
                 type="button"
-                onClick={() => safeFn(onAddBlankRow)('equipments')}
+                onClick={() => handleAddRow('equipments')}
                 className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-50 hover:text-indigo-600 transition-colors shadow-sm"
               >
                 <Plus size={14} /> Fila
@@ -491,13 +451,16 @@ export default function ApuEditorUI({
                       />
                     </td>
                     <td className="p-2 border-r border-slate-200 text-xs">
-                      <input 
-                        type="text" 
-                        className="w-full bg-transparent focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 rounded px-1 font-medium text-slate-700"
+                      <CatalogAutocomplete
+                        type="equipments"
                         value={eq.descripcion || ''}
-                        onChange={e => safeFn(onComponentChange)('equipments', eq.id, 'descripcion', e.target.value)}
-                        onBlur={e => safeFn(onComponentBlur)('equipments', eq.id, 'descripcion', e.target.value)}
+                        onChange={(val) => safeFn(onComponentChange)('equipments', eq.id, 'descripcion', val)}
+                        onBlur={(val) => safeFn(onComponentBlur)('equipments', eq.id, 'descripcion', val)}
+                        onSelect={(data) => handleCatalogSelect('equipments', eq, data)}
                         placeholder="Descripción del equipo"
+                        inputClassName="w-full bg-transparent focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 rounded px-1 font-medium text-slate-700"
+                        autoFocus={focusRowId === eq.id}
+                        openOnFocus={String(eq.id).startsWith('NEW-')}
                       />
                       {eq.origen && (
                         <div className="flex items-center gap-2 mt-1 px-1">
@@ -590,7 +553,7 @@ export default function ApuEditorUI({
                 <Search size={14} /> Buscar
               </button>
               <button
-                onClick={() => safeFn(onAddBlankRow)('labors')}
+                onClick={() => handleAddRow('labors')}
                 className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-50 hover:text-teal-600 transition-colors shadow-sm"
               >
                 <Plus size={14} /> Fila
@@ -625,13 +588,16 @@ export default function ApuEditorUI({
                       />
                     </td>
                     <td className="p-2 border-r border-slate-200 text-xs">
-                      <input 
-                        type="text" 
-                        className="w-full bg-transparent focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 rounded px-1 font-medium text-slate-700"
+                      <CatalogAutocomplete
+                        type="labors"
                         value={lab.descripcion || ''}
-                        onChange={e => safeFn(onComponentChange)('labors', lab.id, 'descripcion', e.target.value)}
-                        onBlur={e => safeFn(onComponentBlur)('labors', lab.id, 'descripcion', e.target.value)}
+                        onChange={(val) => safeFn(onComponentChange)('labors', lab.id, 'descripcion', val)}
+                        onBlur={(val) => safeFn(onComponentBlur)('labors', lab.id, 'descripcion', val)}
+                        onSelect={(data) => handleCatalogSelect('labors', lab, data)}
                         placeholder="Descripción (ej. Maestro de Obra)"
+                        inputClassName="w-full bg-transparent focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 rounded px-1 font-medium text-slate-700"
+                        autoFocus={focusRowId === lab.id}
+                        openOnFocus={String(lab.id).startsWith('NEW-')}
                       />
                       {lab.origen && (
                         <div className="flex items-center gap-2 mt-1 px-1">

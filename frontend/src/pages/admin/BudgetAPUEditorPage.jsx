@@ -231,10 +231,11 @@ export default function BudgetAPUEditorPage() {
 
   // ── Handlers for Manual Blank Rows (to match AI logic) ─────────────
   const handleAddBlankRow = (type) => {
+    const newId = "NEW-" + Math.floor(Math.random() * 100000);
     setItem(prev => {
       const updated = { ...prev };
       const newRow = {
-        id: "NEW-" + Math.floor(Math.random() * 100000),
+        id: newId,
         codigo: "",
         descripcion: "",
         cantidad: 1,
@@ -253,6 +254,7 @@ export default function BudgetAPUEditorPage() {
       updated[type] = [...(updated[type] || []), newRow];
       return updated;
     });
+    return newId;
   };
 
   const handleRemoveRow = async (type, compId) => {
@@ -356,11 +358,31 @@ export default function BudgetAPUEditorPage() {
     <div className="p-4 md:p-6 max-w-7xl mx-auto pb-24 print:p-0 print:m-0 print:max-w-none print:bg-white print:w-full">
       {printOptions && (
         <PrintAPULayout
-          partida={{ ...item, fcas_percent: budget.fcas_percent, admin_percent: budget.admin_percent, util_percent: budget.profit_percent ?? budget.util_percent ?? 10, rendimiento: item.performance, cantidad: item.quantity }}
+          partida={{
+            ...item,
+            ...budget,
+            fcas_percent: budget.fcas_percent,
+            bono_in_fcas: budget.bono_in_fcas,
+            labor_bonus: budget.labor_bonus,
+            material_inflation: budget.material_inflation,
+            equipment_inflation: budget.equipment_inflation,
+            labor_inflation: budget.labor_inflation,
+            admin_percent: budget.admin_percent,
+            util_percent: budget.profit_percent ?? budget.util_percent ?? 10,
+            profit_percent: budget.profit_percent ?? budget.util_percent ?? 10,
+            rendimiento: item.performance ?? item.rendimiento ?? 1,
+            cantidad: item.quantity
+          }}
           materiales={item.materials || []}
           equipos={item.equipments || []}
           mano_obra={item.labors || []}
-          options={{ ...printOptions, companyName: budget.name }}
+          options={{
+            ...printOptions,
+            ...budget,
+            currency: budget.currency,
+            exchange_rate: budget.exchange_rate,
+            companyName: budget.company_name || budget.name
+          }}
         />
       )}
       
@@ -474,9 +496,15 @@ export default function BudgetAPUEditorPage() {
               equipments={item.equipments || []}
               labors={item.labors || []}
               settings={{
+                ...budget,
                 currency: budget.currency,
                 exchange_rate: budget.exchange_rate,
                 fcas_percent: budget.fcas_percent,
+                bono_in_fcas: budget.bono_in_fcas,
+                labor_bonus: budget.labor_bonus,
+                material_inflation: budget.material_inflation,
+                equipment_inflation: budget.equipment_inflation,
+                labor_inflation: budget.labor_inflation,
                 admin_percent: budget.admin_percent,
                 profit_percent: budget.profit_percent ?? budget.util_percent ?? 10,
                 iva_percent: 0,
@@ -491,15 +519,17 @@ export default function BudgetAPUEditorPage() {
           <ApuEditorUI
             item={item}
             settings={{
+              ...budget,
               currency: budget.currency,
-              exchange_rate: budget.exchange_rate || 1.0,
-              material_inflation: budget.material_inflation || 0,
-              equipment_inflation: budget.equipment_inflation || 0,
-              labor_inflation: budget.labor_inflation || 0,
-              labor_bonus: budget.labor_bonus || 0,
-              fcas_percent: budget.fcas_percent || 417,
-              admin_percent: budget.admin_percent || 15,
-              profit_percent: budget.profit_percent || 10,
+              exchange_rate: budget.exchange_rate ?? 1.0,
+              material_inflation: budget.material_inflation ?? 0,
+              equipment_inflation: budget.equipment_inflation ?? 0,
+              labor_inflation: budget.labor_inflation ?? 0,
+              labor_bonus: budget.labor_bonus ?? 0,
+              fcas_percent: budget.fcas_percent ?? 417,
+              bono_in_fcas: budget.bono_in_fcas,
+              admin_percent: budget.admin_percent ?? 15,
+              profit_percent: budget.profit_percent ?? budget.util_percent ?? 10,
               iva_percent: 0
             }}
             onHeaderChange={handleHeaderFieldChange}
