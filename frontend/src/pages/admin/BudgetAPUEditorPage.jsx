@@ -411,6 +411,24 @@ export default function BudgetAPUEditorPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Cantidad de la partida en el presupuesto */}
+            <div 
+              className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-sm"
+              title={`Cantidad presupuestada para esta partida: ${(parseFloat(item?.quantity) || 0).toLocaleString('es-VE')} ${item?.unit || ''}`}
+            >
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Cant:
+              </span>
+              <span className="text-base md:text-lg font-bold text-slate-800 leading-none">
+                {(parseFloat(item?.quantity) || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              {item?.unit && (
+                <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                  {item.unit}
+                </span>
+              )}
+            </div>
+
             {/* Total Partida en vivo (P.U. x Cantidad) */}
             <div 
               className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-blue-200 shadow-sm"
