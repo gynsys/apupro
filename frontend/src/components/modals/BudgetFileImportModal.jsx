@@ -40,6 +40,14 @@ function fileSize(bytes = 0) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function isLaborOnlyActivity(desc = '') {
+  if (!desc) return false;
+  const d = desc.trim().toLowerCase();
+  const starts = /^(demolici[oó]n|demoler|desmantelamiento|desmantelar|desmonte|desmontar|retiro|retirar|remoci[oó]n|remover|picado|picoteo|picar|raspado|raspar|ranurado|ranurar|desinstalaci[oó]n|desinstalar|excavaci[oó]n|excavar|acarreo|acarrear|carga|descarga|transporte y bote|bote de|compactaci[oó]n|compactar|perfilado|perfilar|trazado|replanteo|supervisi[oó]n|prueba de|limpieza general|limpieza de la obra|limpieza final|lijado|pulido|resanado)/i;
+  const supply = /(suministro|s\/i|s\/c|construcci[oó]n|colocaci[oó]n de|aplicaci[oó]n de pintura|encamisado|impermeabilizaci[oó]n)/i;
+  return starts.test(d) && !supply.test(d);
+}
+
 export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated, onShowPlans }) {
   const [currentFile, setCurrentFile] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -298,11 +306,12 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
             description: item.description.trim(),
             unit: (item.unit || 'und').trim() || 'und',
             quantity: Number(item.quantity) || 0,
+            performance: Number(item.performance) || (useGenerated ? Number(generated?.partida?.performance || generated?.partida?.rendimiento) : null) || null,
             is_chapter: Boolean(item.is_chapter),
             cod_par: item.is_chapter ? null : (item.selected || suppliedCode || null),
             cov_par: suppliedCode || (useGenerated ? (generated?.partida?.cov_par || generatedCode) : (item.cov_par || null)),
             code: suppliedCode || null,
-            materials: useGenerated ? (generated.materials || []) : [],
+            materials: (useGenerated && !isLaborOnlyActivity(item.description)) ? (generated.materials || []) : [],
             equipments: useGenerated ? (generated.equipments || []) : [],
             labors: useGenerated ? (generated.labors || []) : [],
           };

@@ -20,8 +20,10 @@ from app.db.models.budget import (
 from app.db.models.cost360 import CostItem
 from app.middleware.plan_limits import check_ai_access, check_budget_limit
 from app.services.ai_apu_service import generate_apu_with_ai
+from app.services.ai_apu_service_v2 import generate_apu_v2
 from app.services.budget_import import build_preview
 from app.services.budget_import.errors import BudgetImportError, OCRError
+from app.services.budget_postprocessor import is_labor_only_activity, recalibrate_budget_performances
 from app.services.preprocessing_service import preprocess_apu_data
 
 logger = logging.getLogger(__name__)
@@ -118,6 +120,7 @@ class CommitItem(BaseModel):
     description: str = Field(min_length=1, max_length=600)
     unit: str = Field(default="und", max_length=20)
     quantity: float = 0.0
+    performance: Optional[float] = None
     is_chapter: bool = False
     cod_par: Optional[str] = None
     cov_par: Optional[str] = None
@@ -161,17 +164,21 @@ class CommitResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 def _copy_apu_components(db: Session, db_item: BudgetItem, cost_item: CostItem) -> None:
-    """Copia los insumos del APU maestro al item del presupuesto."""
-    for mat in cost_item.apu_materials:
-        db.add(DBMaterial(
-            budget_item_id=db_item.id,
-            codigo=mat.CodIns,
-            descripcion=mat.material.Descri if mat.material else "",
-            unidad=mat.material.UniMat if mat.material else "",
-            precio_unitario=(mat.material.CosMat if (mat.material and mat.material.CosMat is not None) else 0.0),
-            cantidad=mat.CanIns or 0.0,
-            desperdicio=mat.Desper or 0.0,
-        ))
+    """Copia los insumos del APU maestro al item del presupuesto y asigna el rendimiento COVENIN."""
+    is_labor_only, _ = is_labor_only_activity(db_item.description)
+
+    # Solo copiar materiales si la partida legítimamente admite insumos de materiales
+    if not is_labor_only:
+        for mat in cost_item.apu_materials:
+            db.add(DBMaterial(
+                budget_item_id=db_item.id,
+                codigo=mat.CodIns,
+                descripcion=mat.material.Descri if mat.material else "",
+                unidad=mat.material.UniMat if mat.material else "",
+                precio_unitario=(mat.material.CosMat if (mat.material and mat.material.CosMat is not None) else 0.0),
+                cantidad=mat.CanIns or 0.0,
+                desperdicio=mat.Desper or 0.0,
+            ))
 
     for eq in cost_item.apu_equipments:
         precio_diario = eq.equipment.CosDia if (eq.equipment and eq.equipment.CosDia is not None) else 0.0
@@ -196,6 +203,9 @@ def _copy_apu_components(db: Session, db_item: BudgetItem, cost_item: CostItem) 
             bono=(lab.labor.Bono if (lab.labor and lab.labor.Bono is not None) else 0.0),
             cantidad=lab.CanIns or 0.0,
         ))
+
+    if cost_item.RenPar and cost_item.RenPar > 0:
+        db_item.performance = float(cost_item.RenPar)
 
 
 # ---------------------------------------------------------------------------
@@ -252,14 +262,22 @@ def generate_import_apu(
     unit = (payload.unit or "und").strip().lower() or "und"
 
     try:
-        preprocessed = preprocess_apu_data(db, description, None, None)
-        result = generate_apu_with_ai(preprocessed, None, db=db, requested_unit=unit)
+        result = generate_apu_v2(
+            user_description=description,
+            requested_unit=unit,
+            db=db,
+        )
     except Exception as exc:
-        logger.error("Error generando APU para importación: %s", exc, exc_info=True)
-        raise HTTPException(
-            status_code=502,
-            detail="El generador de APUs no pudo procesar la partida. Inténtalo de nuevo.",
-        ) from exc
+        logger.warning("Generador v2.0 falló para importación, recurriendo a v1: %s", exc)
+        try:
+            preprocessed = preprocess_apu_data(db, description, None, None)
+            result = generate_apu_with_ai(preprocessed, None, db=db, requested_unit=unit)
+        except Exception as exc_v1:
+            logger.error("Error generando APU para importación (v1 y v2 fallaron): %s", exc_v1, exc_info=True)
+            raise HTTPException(
+                status_code=502,
+                detail="El generador de APUs no pudo procesar la partida. Inténtalo de nuevo.",
+            ) from exc_v1
 
     if result.get("status") not in ("completed", "success") or not result.get("partida"):
         detail = (
@@ -390,6 +408,12 @@ def commit_budget_import(
                 cov_par = supplied_code or None
                 unit = item.unit or "und"
 
+            initial_perf = 1.0
+            if item.performance and float(item.performance) > 0:
+                initial_perf = float(item.performance)
+            elif cost_item and cost_item.RenPar and float(cost_item.RenPar) > 0:
+                initial_perf = float(cost_item.RenPar)
+
             db_item = BudgetItem(
                 budget_id=budget.id,
                 cod_par=cod_par[:80],
@@ -397,7 +421,7 @@ def commit_budget_import(
                 description=description,
                 unit="" if is_chapter else unit[:20],
                 quantity=0.0 if is_chapter else float(item.quantity or 0.0),
-                performance=1.0,
+                performance=initial_perf,
                 order=index,
                 is_chapter=is_chapter,
             )
@@ -405,16 +429,18 @@ def commit_budget_import(
             db.flush()
 
             if has_generated:
-                for mat in item.materials:
-                    db.add(DBMaterial(
-                        budget_item_id=db_item.id,
-                        codigo=(mat.codigo or "")[:80],
-                        descripcion=mat.descripcion or "",
-                        unidad=(mat.unidad or "und")[:20],
-                        precio_unitario=float(mat.precio_unitario or 0.0),
-                        cantidad=float(mat.cantidad or 0.0),
-                        desperdicio=float(mat.desperdicio or 0.0),
-                    ))
+                is_labor_only, _ = is_labor_only_activity(description)
+                if not is_labor_only:
+                    for mat in item.materials:
+                        db.add(DBMaterial(
+                            budget_item_id=db_item.id,
+                            codigo=(mat.codigo or "")[:80],
+                            descripcion=mat.descripcion or "",
+                            unidad=(mat.unidad or "und")[:20],
+                            precio_unitario=float(mat.precio_unitario or 0.0),
+                            cantidad=float(mat.cantidad or 0.0),
+                            desperdicio=float(mat.desperdicio or 0.0),
+                        ))
                 for eq in item.equipments:
                     db.add(DBEquipment(
                         budget_item_id=db_item.id,
@@ -442,6 +468,12 @@ def commit_budget_import(
                 generic_items += 1
 
             items_created += 1
+
+        # Post-procesamiento y calibración determinista obligatoria de salida
+        try:
+            recalibrate_budget_performances(budget.id, db, dry_run=False)
+        except Exception as exc_post:
+            logger.error("Error en post-procesamiento de rendimientos al importar: %s", exc_post, exc_info=True)
 
         db.commit()
         db.refresh(budget)

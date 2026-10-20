@@ -1,13 +1,14 @@
 """
 Budget item endpoints: Add, update, delete, and reorder items/chapters.
 """
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints.arko import get_current_arko_admin
+from app.core.logging import logger
 from app.db.base import get_db
 from app.db.models.arko import ArkoAdmin
 from app.db.models.budget import (
@@ -24,6 +25,7 @@ from app.schemas.budget import (
     BudgetItemCreate,
     BudgetItemUpdate,
 )
+from app.services.budget_postprocessor import recalibrate_budget_performances
 
 router = APIRouter()
 
@@ -147,6 +149,9 @@ def add_item_to_budget(
                 )
                 db.add(db_lab)
 
+            if cost_item.RenPar and cost_item.RenPar > 0 and db_item.performance == 1.0:
+                db_item.performance = float(cost_item.RenPar)
+
     db.commit()
     db.refresh(db_item)
     return db_item
@@ -217,3 +222,25 @@ def update_item_in_budget(
     db.commit()
     db.refresh(db_item)
     return db_item
+
+
+@router.post("/{budget_id}/recalibrate-performances")
+def recalibrate_budget(
+    budget_id: str,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """Recalibra rendimientos de todas las partidas del presupuesto según COVENIN y cuadrillas reales."""
+    if not budget_id or not isinstance(budget_id, str):
+        raise HTTPException(status_code=400, detail="Identificador de presupuesto inválido.")
+
+    db_budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
+    if not db_budget:
+        raise HTTPException(status_code=404, detail="Presupuesto no encontrado.")
+
+    try:
+        return recalibrate_budget_performances(budget_id, db, dry_run=False)
+    except Exception as exc:
+        logger.error("Error recalibrando rendimientos del presupuesto %s: %s", budget_id, exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="Error al recalibrar rendimientos.") from exc
+
