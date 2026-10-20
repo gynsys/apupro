@@ -3,6 +3,8 @@ Phase 1: Interpretation Engine (LLM -> WorkSpec)
 Converts natural language user requests into a typed, validated WorkSpec Intermediate Representation (IR).
 """
 
+from __future__ import annotations
+
 import json
 import re
 import time

@@ -60,6 +60,7 @@ import_*.sql
 *.temp
 *.bak
 scratch/
+frontend/.tmp-esbuild/
 ~$*.xlsx
 *.db
 check_*.py
