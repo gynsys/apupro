@@ -32,12 +32,12 @@ import DecimalInput from '../DecimalInput';
 
 // Conceptos de Ley de la Matriz Expandida (LOTTT + CCU)
 const CONCEPTOS_DEFAULT = [
-  { id: 'utilidades', nombre: 'Utilidades Contractuales (Bono Fin de Año)', dias: 90, activo: true, info: 'Art. 131 LOTTT / Convención Colectiva' },
-  { id: 'bono_vac', nombre: 'Bono Vacacional Contractual', dias: 21, activo: true, info: 'Art. 192 LOTTT / Cláusula 45 CCU' },
-  { id: 'prestaciones', nombre: 'Garantía de Prestaciones (LOTTT Art. 142)', dias: 60, activo: true, info: 'Recalculado con Alícuota Salario Integral (Art. 122 LOTTT)' },
-  { id: 'sso', nombre: 'Seguro Social Obligatorio (IVSS Patronal 11%)', dias: 40, activo: true, info: '11% sobre nómina anual regular' },
-  { id: 'inces', nombre: 'Aporte INCES Patronal (2%)', dias: 7, activo: true, info: '2% sobre remuneraciones brutas anuales' },
-  { id: 'faov', nombre: 'Fondo de Ahorro Vivienda (FAOV 2%)', dias: 7, activo: true, info: '2% aporte patronal obligatorio de ley' },
+  { id: 'utilidades', nombre: 'Utilidades Contractuales (Bono Fin de Año)', dias: 90, activo: true, info: 'Mínimo 30 días / contractual 90 (Art. 131 LOTTT)' },
+  { id: 'bono_vac', nombre: 'Bono Vacacional Contractual', dias: 21, activo: true, info: '15 días + 1 por año, hasta 30 (Art. 192 LOTTT)' },
+  { id: 'prestaciones', nombre: 'Garantía de Prestaciones (LOTTT Art. 142)', dias: 60, activo: true, info: '60 días/año (5 días/mes); se calcula sobre salario integral' },
+  { id: 'sso', nombre: 'Seguro Social Obligatorio (IVSS + RPE)', dias: 47.45, activo: true, info: 'IVSS 11% + RPE 2% ≈ 47.45 días/año (9–11% según riesgo)' },
+  { id: 'inces', nombre: 'Aporte INCES Patronal (2%)', dias: 7.3, activo: true, info: '2% patronal ≈ 7.3 días/año (entidades con 5+ trabajadores)' },
+  { id: 'faov', nombre: 'Fondo de Ahorro Vivienda (FAOV 2%)', dias: 7.3, activo: true, info: '2% patronal ≈ 7.3 días/año' },
 ];
 
 export default function CalculadoraFCAS({ 
@@ -89,6 +89,12 @@ export default function CalculadoraFCAS({
 
   // ── 4. Matriz de Conceptos de Ley ────────────────────────────────────────
   const [conceptos, setConceptos] = useState(CONCEPTOS_DEFAULT);
+
+  // ── 4.1 Conceptos C–H de la matriz antigua (réplica) ─────────────────────
+  const [diasContribucionesComplementarias, setDiasContribucionesComplementarias] = useState(0);
+  const [diasHigieneSeguridad, setDiasHigieneSeguridad] = useState(0);
+  const [diasContribucionesSindicales, setDiasContribucionesSindicales] = useState(0);
+  const [diasSalarioOrdinario, setDiasSalarioOrdinario] = useState(365);
 
   // ── 5. Modales de Perfiles ───────────────────────────────────────────────
   const [showOpenModal, setShowOpenModal] = useState(false);
@@ -177,22 +183,38 @@ export default function CalculadoraFCAS({
   }, [diasUtilidades, diasBonoVac]);
 
   // ── CÁLCULO DEL NUMERADOR: Matriz Expandida de Días Pagados (DP) ─────────
-  // A. Días Base del Año Calendario Evaluado
-  const diasBaseNomina = diasContratados;
-
-  // B. Días de Beneficios y Pasivos Legales
-  const diasBeneficiosLegales = useMemo(() => {
-    let sum = 0;
-    conceptos.forEach(c => {
-      if (!c.activo) return;
-      if (c.id === 'prestaciones') {
-        sum += (c.dias * alicuotaSalarioIntegral) * factorTemporal;
-      } else {
-        sum += c.dias * factorTemporal;
-      }
-    });
-    return sum;
+  // C. Prestaciones (se calculan sobre salario integral)
+  const subtotalPrestaciones = useMemo(() => {
+    const prestaciones = conceptos.find(c => c.id === 'prestaciones');
+    if (!prestaciones || !prestaciones.activo) return 0;
+    return (prestaciones.dias * alicuotaSalarioIntegral) * factorTemporal;
   }, [conceptos, alicuotaSalarioIntegral, factorTemporal]);
+
+  // D. Beneficios legales y contractuales (utilidades, bono vacacional, IVSS, INCES, FAOV)
+  const subtotalBeneficios = useMemo(() => {
+    return conceptos.reduce((sum, c) => {
+      if (!c.activo || c.id === 'prestaciones') return sum;
+      return sum + (c.dias * factorTemporal);
+    }, 0);
+  }, [conceptos, factorTemporal]);
+
+  const diasBeneficiosLegales = useMemo(
+    () => subtotalPrestaciones + subtotalBeneficios,
+    [subtotalPrestaciones, subtotalBeneficios],
+  );
+
+  // E + F + G: conceptos contractuales/sindicales/higiene (días anuales editables)
+  const subtotalConceptosEspeciales = useMemo(() => (
+    diasContribucionesComplementarias + diasHigieneSeguridad + diasContribucionesSindicales
+  ), [diasContribucionesComplementarias, diasHigieneSeguridad, diasContribucionesSindicales]);
+
+  // H. Días pagados por salarios ordinarios (días calendario)
+  const subtotalSalarioOrdinario = diasSalarioOrdinario;
+
+  // DEP legal = C + D + E + F + G + H (la vieja incluía los 365 días de H)
+  const depLegal = useMemo(() => (
+    subtotalPrestaciones + subtotalBeneficios + subtotalConceptosEspeciales + subtotalSalarioOrdinario
+  ), [subtotalPrestaciones, subtotalBeneficios, subtotalConceptosEspeciales, subtotalSalarioOrdinario]);
 
   // C. Días Equivalentes Comerciales y de Operación de Campo en USD
   const { diasHcm, diasTransporte, diasEpp, dpCampoTotal } = useMemo(() => {
@@ -215,10 +237,10 @@ export default function CalculadoraFCAS({
     return sDia > 0 ? (bonoCestaticket * 12 * factorTemporal) / sDia : 0;
   }, [salarioDiario, salarioBase, bonoCestaticket, factorTemporal]);
 
-  // DP sin bono (Base + Ley + Campo ordinario)
+  // DP sin bono (Legal C–H + Campo ordinario)
   const dpSinBono = useMemo(() => {
-    return diasBaseNomina + diasBeneficiosLegales + dpCampoTotal;
-  }, [diasBaseNomina, diasBeneficiosLegales, dpCampoTotal]);
+    return depLegal + dpCampoTotal;
+  }, [depLegal, dpCampoTotal]);
 
   // DP con bono integrado
   const dpConBono = useMemo(() => {
@@ -235,6 +257,12 @@ export default function CalculadoraFCAS({
     if (dtLaborados <= 0) return 0;
     return Math.max(0, ((dpSinBono / dtLaborados) - 1) * 100);
   }, [dtLaborados, dpSinBono]);
+
+  // FCAS solo del bloque legal (C–H), sin las compensaciones de campo del bloque 4
+  const fcasLegal = useMemo(() => {
+    if (dtLaborados <= 0) return 0;
+    return Math.max(0, ((depLegal / dtLaborados) - 1) * 100);
+  }, [dtLaborados, depLegal]);
 
   // FCAS con bono integrado
   const fcasConBono = useMemo(() => {
@@ -304,6 +332,10 @@ export default function CalculadoraFCAS({
     setActivoTransporte(true);
     setActivoEpp(true);
     setConceptos(CONCEPTOS_DEFAULT.map(c => ({ ...c })));
+    setDiasContribucionesComplementarias(0);
+    setDiasHigieneSeguridad(0);
+    setDiasContribucionesSindicales(0);
+    setDiasSalarioOrdinario(365);
     toast.success('Valores de la matriz restaurados a configuración base');
   };
 
@@ -334,6 +366,10 @@ export default function CalculadoraFCAS({
       activoTransporte,
       activoEpp,
       conceptos,
+      diasContribucionesComplementarias,
+      diasHigieneSeguridad,
+      diasContribucionesSindicales,
+      diasSalarioOrdinario,
       fcasPorcentaje: parseFloat(fcasPorcentaje.toFixed(2)),
       bonoDiario: parseFloat(bonoDiarioApu.toFixed(4)),
       costoJornalObra: parseFloat(costoJornalObra.toFixed(2)),
@@ -379,6 +415,10 @@ export default function CalculadoraFCAS({
     if (Array.isArray(p.conceptos) && p.conceptos.length > 0) {
       setConceptos(p.conceptos);
     }
+    setDiasContribucionesComplementarias(p.diasContribucionesComplementarias ?? 0);
+    setDiasHigieneSeguridad(p.diasHigieneSeguridad ?? 0);
+    setDiasContribucionesSindicales(p.diasContribucionesSindicales ?? 0);
+    setDiasSalarioOrdinario(p.diasSalarioOrdinario ?? 365);
     setShowOpenModal(false);
     toast.success(`Cálculo "${name}" cargado exitosamente`);
   };
@@ -701,8 +741,74 @@ export default function CalculadoraFCAS({
                   3. Matriz de Beneficios y Pasivos Legales (LOTTT y CCU)
                 </h4>
               </div>
-              <span className="text-xs font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-200">
-                Subtotal Legal = {diasBeneficiosLegales.toFixed(2)} días
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                <span className="text-xs font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
+                  DET = {dtLaborados} días
+                </span>
+                <span className="text-xs font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-200">
+                  DEP legal = {depLegal.toFixed(2)} días
+                </span>
+              </div>
+            </div>
+
+            {/* DNT: A + B + permisos + lluvia = DET */}
+            <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-3 space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-600">
+                  Días No Trabajados (DNT)
+                </span>
+                <span className="text-[11px] font-black text-amber-700">
+                  DET = {dtLaborados} días
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <label className="flex flex-col gap-0.5">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase">A. Descansos, feriados y júbilo</span>
+                  <DecimalInput
+                    value={diasNoTrabajados}
+                    onChange={(val) => {
+                      setCalculoAutomatico(false);
+                      setDiasNoTrabajados(Math.min(diasContratados, Math.max(0, val)));
+                    }}
+                    className="w-full bg-white rounded-lg border border-slate-300 px-2 py-1 text-[11px] text-slate-900 font-bold focus:outline-none focus:border-amber-600"
+                  />
+                </label>
+                <label className="flex flex-col gap-0.5">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase">B. Vacaciones y otros</span>
+                  <DecimalInput
+                    value={diasVacaciones}
+                    onChange={(val) => setDiasVacaciones(Math.max(0, val))}
+                    className="w-full bg-white rounded-lg border border-slate-300 px-2 py-1 text-[11px] text-slate-900 font-bold focus:outline-none focus:border-amber-600"
+                  />
+                </label>
+                <label className="flex flex-col gap-0.5">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase">Permisos</span>
+                  <DecimalInput
+                    value={diasPermisos}
+                    onChange={(val) => setDiasPermisos(Math.max(0, val))}
+                    className="w-full bg-white rounded-lg border border-slate-300 px-2 py-1 text-[11px] text-slate-900 font-bold focus:outline-none focus:border-amber-600"
+                  />
+                </label>
+                <label className="flex flex-col gap-0.5">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase">Lluvia / rendimiento</span>
+                  <DecimalInput
+                    value={diasRendimiento}
+                    onChange={(val) => setDiasRendimiento(Math.max(0, val))}
+                    className="w-full bg-white rounded-lg border border-slate-300 px-2 py-1 text-[11px] text-slate-900 font-bold focus:outline-none focus:border-amber-600"
+                  />
+                </label>
+              </div>
+              <p className="text-[10px] text-slate-500 m-0">
+                DET = 365 − A − B − permisos − lluvia. También editable en el bloque 2.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700">
+                C + D. Prestaciones y beneficios legales
+              </span>
+              <span className="text-[11px] font-black text-indigo-700">
+                Subtotal C–D = {diasBeneficiosLegales.toFixed(2)} días
               </span>
             </div>
 
@@ -750,6 +856,74 @@ export default function CalculadoraFCAS({
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* E + F + G + H */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <label className="flex flex-col gap-1 bg-white border border-slate-200 rounded-xl p-3">
+                <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider">
+                  E. Contribuciones complementarias
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <DecimalInput
+                    value={diasContribucionesComplementarias}
+                    onChange={(val) => setDiasContribucionesComplementarias(Math.max(0, val))}
+                    className="w-full bg-slate-50 rounded-lg border border-slate-300 px-2 py-1 text-xs text-right font-black text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white"
+                  />
+                  <span className="text-[10px] font-bold text-slate-500">días</span>
+                </div>
+              </label>
+
+              <label className="flex flex-col gap-1 bg-white border border-slate-200 rounded-xl p-3">
+                <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider">
+                  F. Higiene y seguridad
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <DecimalInput
+                    value={diasHigieneSeguridad}
+                    onChange={(val) => setDiasHigieneSeguridad(Math.max(0, val))}
+                    className="w-full bg-slate-50 rounded-lg border border-slate-300 px-2 py-1 text-xs text-right font-black text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white"
+                  />
+                  <span className="text-[10px] font-bold text-slate-500">días</span>
+                </div>
+                <span className="text-[9px] text-slate-400 leading-tight">EPP se mantiene en el bloque 4</span>
+              </label>
+
+              <label className="flex flex-col gap-1 bg-white border border-slate-200 rounded-xl p-3">
+                <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider">
+                  G. Contribuciones sindicales
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <DecimalInput
+                    value={diasContribucionesSindicales}
+                    onChange={(val) => setDiasContribucionesSindicales(Math.max(0, val))}
+                    className="w-full bg-slate-50 rounded-lg border border-slate-300 px-2 py-1 text-xs text-right font-black text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white"
+                  />
+                  <span className="text-[10px] font-bold text-slate-500">días</span>
+                </div>
+              </label>
+
+              <label className="flex flex-col gap-1 bg-white border border-slate-200 rounded-xl p-3">
+                <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider">
+                  H. Salarios ordinarios
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <DecimalInput
+                    value={diasSalarioOrdinario}
+                    onChange={(val) => setDiasSalarioOrdinario(Math.max(0, val))}
+                    className="w-full bg-slate-50 rounded-lg border border-slate-300 px-2 py-1 text-xs text-right font-black text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white"
+                  />
+                  <span className="text-[10px] font-bold text-slate-500">días</span>
+                </div>
+                <span className="text-[9px] text-slate-400 leading-tight">Días calendario pagados (base 365)</span>
+              </label>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-slate-100 pt-2.5 text-[10px] font-bold">
+              <span className="text-slate-500">E–G = {subtotalConceptosEspeciales.toFixed(2)} días</span>
+              <span className="text-slate-500">H = {subtotalSalarioOrdinario.toFixed(2)} días</span>
+              <span className="text-indigo-700">DEP legal = {depLegal.toFixed(2)} días</span>
+              <span className="text-emerald-700">FCAS legal = {fcasLegal.toFixed(2)}%</span>
             </div>
           </div>
 
