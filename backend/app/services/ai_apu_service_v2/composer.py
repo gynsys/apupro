@@ -32,7 +32,16 @@ from app.services.ai_apu_service.reconciliation.labor import reconcile_labor_wit
 from app.services.ai_apu_service.reconciliation.materials import reconcile_materials_with_database
 from app.services.ai_apu_service.reconciliation.specs_matcher import _normalize_unit
 from app.services.ai_apu_service_v2.schemas import WorkSpec
-from app.services.apu_labor_calibrator import calibrate_apu_crew_and_equipment
+from app.services.apu_labor_calibrator import (
+    EMPERICAL_HH_BENCHMARKS,
+    _benchmark_unit,
+    calibrate_apu_crew_and_equipment,
+    classify_activity_typology,
+)
+from app.services.element_geometry import (
+    extract_linear_length_m,
+    is_linear_element,
+)
 
 
 def _ensure_normalized_apu_structure(apu: Dict[str, Any]) -> Dict[str, Any]:
@@ -40,14 +49,32 @@ def _ensure_normalized_apu_structure(apu: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(apu, dict):
         apu = {}
 
+    cod_par = str(
+        apu.get("cod_par") or apu.get("codpar") or
+        (apu.get("partida", {}).get("cod_par") if isinstance(apu.get("partida"), dict) else "") or ""
+    ).strip()
+    cov_par = str(
+        apu.get("cov_par") or apu.get("covenin") or apu.get("covpar") or
+        (apu.get("partida", {}).get("cov_par") if isinstance(apu.get("partida"), dict) else "") or ""
+    ).strip()
+    codigo = cov_par or cod_par or (apu.get("codigo") if isinstance(apu.get("codigo"), str) else "") or (apu.get("partida", {}).get("codigo") if isinstance(apu.get("partida"), dict) else "") or "U-GEN-001"
+
     partida = apu.get("partida")
     if not isinstance(partida, dict):
         partida = {
-            "codigo": apu.get("codigo") or apu.get("covpar") or "U-GEN-001",
+            "codigo": codigo,
+            "cod_par": cod_par or codigo,
+            "cov_par": cov_par or codigo,
             "description": apu.get("description") or apu.get("descripcion") or "Partida de Construcción",
             "unit": apu.get("unit") or apu.get("unidad") or "und",
-            "performance": float(apu.get("performance") or apu.get("rendimiento") or 1.0)
+            "performance": float(apu.get("performance") or apu.get("rendimiento") or 0.0)
         }
+    else:
+        partida.setdefault("codigo", codigo)
+        partida.setdefault("cod_par", cod_par or codigo)
+        partida.setdefault("cov_par", cov_par or codigo)
+        if "performance" not in partida and "rendimiento" in partida:
+            partida["performance"] = float(partida["rendimiento"] or 0.0)
     apu["partida"] = partida
 
     # Normalizar materiales
@@ -117,6 +144,144 @@ def _calculate_apu_subtotals(apu: Dict[str, Any]) -> None:
     apu["subtotal_mano_de_obra"] = round(tot_mo, 4)
     apu["costo_directo"] = round(tot_mat + tot_eq + tot_mo, 4)
     apu["precio_unitario"] = apu["costo_directo"]
+
+
+def calculate_v2_deterministic_performance(
+    workspec: WorkSpec,
+    labors: List[Dict[str, Any]],
+    user_description: str,
+    base_apu: Optional[Dict[str, Any]] = None
+) -> Tuple[float, List[str]]:
+    """
+    Calcula matemáticamente el rendimiento diario de la cuadrilla para el Motor v2.0
+    aplicando la formulación canónica COVENIN (Horas-Hombre y benchmarks empíricos):
+    R = round(Total_HH_activa / median_hh_benchmark, 2).
+    """
+    if not isinstance(workspec, WorkSpec):
+        raise ValueError("workspec debe ser una instancia válida de WorkSpec")
+    if not isinstance(labors, list):
+        raise ValueError("labors debe ser una lista de trabajadores")
+
+    notes: List[str] = []
+    target_unit = _normalize_unit(workspec.target_unit)
+
+    # 1. Si la partida base histórica tiene la MISMA unidad y un rendimiento válido (> 1.0),
+    # evaluar si puede conservarse como punto de partida
+    if base_apu and isinstance(base_apu, dict):
+        base_unit = _normalize_unit(
+            base_apu.get("unidad") or
+            (base_apu.get("partida", {}).get("unit") if isinstance(base_apu.get("partida"), dict) else "")
+        )
+        base_perf = float(
+            base_apu.get("rendimiento") or
+            (base_apu.get("partida", {}).get("performance") if isinstance(base_apu.get("partida"), dict) else 0.0) or
+            0.0
+        )
+        if base_perf > 1.0 and base_unit == target_unit:
+            notes.append(f"Rendimiento heredado de partida base histórica: {base_perf:.2f} {target_unit}/día.")
+            return round(base_perf, 2), notes
+
+    # 2. Casos especiales: Unidades globales (Gl / SG)
+    if target_unit in ("gl", "sg"):
+        days = float(workspec.execution_days) if workspec.execution_days and float(workspec.execution_days) > 0 else 1.0
+        ren_global = round(1.0 / days, 4)
+        notes.append(f"Rendimiento global determinista: {ren_global:.4f} Gl/día ({days:g} días de ejecución).")
+        return ren_global, notes
+
+    # 3. Sumar total de Horas-Hombre del personal activo en la cuadrilla
+    active_workers = 0.0
+    for l in labors:
+        if not isinstance(l, dict):
+            continue
+        desc = str(l.get("descripcion", "")).upper()
+        if any(sup in desc for sup in ("CAPORAL", "MAESTRO", "SUPERVIS")):
+            continue
+        active_workers += float(l.get("cantidad", 1.0) or 1.0)
+
+    if active_workers <= 0.0:
+        # Si toda la cuadrilla es supervisión o vino vacía, sumar todos los trabajadores (mínimo 1)
+        active_workers = max(1.0, sum(float(l.get("cantidad", 1.0) or 1.0) for l in labors if isinstance(l, dict)))
+
+    total_hh_daily = active_workers * 8.0  # 8 horas legales por jornada diaria
+
+    # 4. Clasificar tipología constructiva
+    covenin_code = ""
+    if base_apu and isinstance(base_apu, dict):
+        covenin_code = str(
+            base_apu.get("covenin") or base_apu.get("codpar") or
+            (base_apu.get("partida", {}).get("cov_par") if isinstance(base_apu.get("partida"), dict) else "") or ""
+        )
+
+    desc_for_typology = user_description or (f"{workspec.activity_type} {workspec.element}" if workspec.element else "")
+    typology = classify_activity_typology(desc_for_typology, target_unit, covenin_code)
+
+    is_maintenance = (
+        workspec.activity_type in ("REPARACION", "MANTENIMIENTO", "DESMONTAJE") or
+        any(k in desc_for_typology.upper() for k in [
+            "MANTENIMIENTO", "SANEAMIENTO", "REPARACION", "RECONSTRUCCION", "RESTAURACION",
+            "REHABILITACION", "REACONDICIONAMIENTO", "ACONDICIONAMIENTO", "DEMOLICION",
+            "REMOCION", "SUSTITUCION", "REEMPLAZO"
+        ])
+    )
+    difficulty_factor = 1.30 if (is_maintenance and typology not in ("REPARACIONES_PUNTUALES", "MANTENIMIENTO_ELECTROMECANICO")) else 1.0
+
+    # 5. Elementos lineales discretos pedidos en und/pza (ej. dintel de 1.5m en und)
+    if target_unit in ("und", "pza", "u") and is_linear_element(desc_for_typology):
+        length_m = workspec.dimensions.length_m or extract_linear_length_m(desc_for_typology)
+        linear_bench = EMPERICAL_HH_BENCHMARKS.get(f"{typology}_m")
+        if length_m and linear_bench and "median" in linear_bench:
+            p50_hh = linear_bench["median"] * length_m * difficulty_factor
+            calc_perf = round(total_hh_daily / p50_hh, 2)
+            notes.append(
+                f"Rendimiento determinista derivado linealmente: {calc_perf:.2f} {target_unit}/día "
+                f"({total_hh_daily:.1f} HH/día / {p50_hh:.3f} HH/und para L={length_m:.2f}m)."
+            )
+            return max(0.5, calc_perf), notes
+
+    # 6. Benchmark empírico directo por tipología y unidad
+    bench_unit = _benchmark_unit(target_unit)
+    benchmark_key = f"{typology}_{bench_unit}"
+    benchmark = EMPERICAL_HH_BENCHMARKS.get(benchmark_key)
+
+    # Si no coincide exactamente, buscar benchmark compatible con la misma unidad
+    if not benchmark:
+        for k, v in EMPERICAL_HH_BENCHMARKS.items():
+            if k.endswith(f"_{bench_unit}") and k.startswith(typology):
+                benchmark = v
+                benchmark_key = k
+                break
+
+    if benchmark and "median" in benchmark:
+        median_hh = benchmark["median"] * difficulty_factor
+        calc_perf = round(total_hh_daily / median_hh, 2)
+        notes.append(
+            f"Rendimiento determinista COVENIN P50: {calc_perf:.2f} {target_unit}/día "
+            f"({total_hh_daily:.1f} HH/día cuadrilla / {median_hh:.4f} HH/{target_unit} de {benchmark_key})."
+        )
+        return max(0.2, calc_perf), notes
+
+    # 7. Tabulador estándar empírico por unidad de medida si no hay benchmark directo
+    default_performances: Dict[str, float] = {
+        "m2": 25.0,
+        "m": 30.0,
+        "pza": 16.0,
+        "und": 12.0,
+        "m3": 8.0,
+        "kgf": 500.0,
+        "kg": 500.0,
+        "ton": 5.0,
+        "pto": 4.0,
+        "viaje": 6.0,
+    }
+    fallback_perf = default_performances.get(bench_unit, 10.0)
+    if is_maintenance:
+        fallback_perf = round(fallback_perf * 0.70, 2)
+
+    notes.append(
+        f"Rendimiento determinista asignado por tabulador normativo: {fallback_perf:.2f} {target_unit}/día "
+        f"para tipología '{typology}' en '{target_unit}'."
+    )
+    return fallback_perf, notes
 
 
 def compose_apu_from_workspec(
@@ -195,9 +360,23 @@ def compose_apu_from_workspec(
         result["partida"]["longitud_m"] = workspec.dimensions.length_m
 
     # 2. Asignación de unidad y descripción
-    result["partida"]["unit"] = _normalize_unit(workspec.target_unit)
+    target_unit = _normalize_unit(workspec.target_unit)
+    result["partida"]["unit"] = target_unit
     if workspec.element and not base_apu:
         result["partida"]["description"] = f"{workspec.activity_type.capitalize()} de {workspec.element}"
+
+    # Cálculo determinista del rendimiento diario canónico COVENIN (Horas-Hombre y benchmarks)
+    calc_perf, perf_notes = calculate_v2_deterministic_performance(
+        workspec=workspec,
+        labors=result.get("labors", []),
+        user_description=user_description,
+        base_apu=base_apu
+    )
+    result["partida"]["performance"] = calc_perf
+    result["partida"]["rendimiento"] = calc_perf
+    for p_note in perf_notes:
+        if p_note not in result["notas_adaptacion"]:
+            result["notas_adaptacion"].append(p_note)
 
     # 3. Aplicación de salvaguardas de dominio de ingeniería
     _enforce_scope_exclusions(result, user_description)

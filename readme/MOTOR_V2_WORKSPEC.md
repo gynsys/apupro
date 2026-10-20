@@ -137,10 +137,16 @@ El archivo [`backend/app/services/ai_apu_service_v2/composer.py`](file:///c:/Use
    * Purga agregados gruesos y vibradores si la mezcla es mortero.
    * Purga carretillas y cintas topográficas si la instalación de tubería es embutida en pared.
    * Purga andamios y pistolas de fijación si la tubería es enterrada en zanja.
-5. **Reconciliación y Calibración Oficial:**
+5. **Cálculo Determinista del Rendimiento Diario Canónico COVENIN (`calculate_v2_deterministic_performance`):**
+   * Supera el problema de rendimientos en $1.0$ derivando el rendimiento de forma proactiva y matemática a partir de las Horas-Hombre (HH) activas de la cuadrilla y las medianas empíricas de la norma COVENIN:
+     $$R = \text{round}\left(\frac{\text{Total\_HH\_activa}}{\text{Mediana\_HH\_benchmark}}, 2\right)$$
+   * Soporta escalado lineal para elementos discretos (`dintel`, `machón` en `und` según su longitud típica).
+   * Asigna tabulador empírico normativo para unidades sin benchmark directo (`m2`: 25.0, `m`: 30.0, `und`: 12.0, `m3`: 8.0, `kg`: 500.0).
+   * Modela suma global (`Gl`) en función de los días de ejecución requeridos ($R = 1.0 / \text{días}$).
+6. **Reconciliación y Calibración Oficial:**
    * Materiales y equipos conciliados con el catálogo de PostgreSQL (`cost360_materials`).
-   * Cuadrilla y rendimiento ajustados por el calibrador canónico de horas-hombre COVENIN ([`calibrate_apu_crew_and_equipment`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/apu_labor_calibrator.py)).
-6. **Cálculo Matemático de Subtotales:**
+   * Cuadrilla y rendimiento ajustados por el calibrador canónico de horas-hombre COVENIN ([`calibrate_apu_crew_and_equipment`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/apu_labor_calibrator.py)), con salvaguarda defensiva contra valores residuales no inicializados $\le 1.0$.
+7. **Cálculo Matemático de Subtotales:**
    * Sumatoria exacta: $\text{Materiales} + \text{Equipos} + \text{Mano de Obra} = \text{Costo Directo}$.
 
 ---

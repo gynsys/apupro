@@ -1672,8 +1672,51 @@ def validate_and_calibrate_hh(
 
     # Blindaje dimensional estricto: Si no hay benchmark para esta unidad física exacta o disciplina,
     # NUNCA cruzar dimensiones ni imponer albañilería a disciplinas mecánicas o eléctricas.
-    # Conservar el rendimiento propuesto por el analista / LLM y registrar nota explicativa.
+    # Conservar el rendimiento propuesto por el analista / LLM y registrar nota explicativa,
+    # SALVO si el rendimiento propuesto es <= 1.0 (fallback no inicializado de IA/plantilla) en unidades no globales.
     if not benchmark:
+        u_clean = unit.lower().strip()
+        default_unit_performances: Dict[str, float] = {
+            "m2": 25.0,
+            "m": 30.0,
+            "ml": 30.0,
+            "pza": 16.0,
+            "und": 12.0,
+            "u": 12.0,
+            "m3": 8.0,
+            "kgf": 500.0,
+            "kg": 500.0,
+            "ton": 5.0,
+            "tonf": 5.0,
+            "pto": 4.0,
+            "viaje": 6.0,
+        }
+        if perf <= 1.0 and u_clean not in ("gl", "sg", "global") and u_clean in default_unit_performances:
+            calibrated_perf = default_unit_performances[u_clean]
+            if is_maintenance:
+                calibrated_perf = round(calibrated_perf * 0.70, 2)
+            new_hh = total_hh_per_day / calibrated_perf
+            partida["performance"] = calibrated_perf
+            if "rendimiento" in partida:
+                partida["rendimiento"] = calibrated_perf
+            notes.append(
+                f"Calibración de rendimiento estándar: Rendimiento ajustado de {perf:.2f} a {calibrated_perf:.2f} {unit}/día "
+                f"según tabulador empírico normativo para unidad '{unit}' (evitando valor residual por defecto 1.0 sin benchmark específico)."
+            )
+            fallback_trace = {
+                "hh_iniciales": round(current_hh, 4),
+                "hh_finales": round(new_hh, 4),
+                "total_hh_jornada_cuadrilla": round(total_hh_per_day, 2),
+                "tamano_cuadrilla": round(total_crew_size, 2),
+                "factor_dificultad": round(difficulty_factor, 2),
+                "benchmark_encontrado": False,
+                "motivo_sin_benchmark": f"Sin benchmark empírico para {typology}_{unit}; ajustado por tabulador estándar normativo de unidad.",
+                "calibracion_aplicada": True,
+            }
+            if return_trace:
+                return partida, notes, fallback_trace
+            return partida, notes
+
         notes.append(
             f"Rendimiento conservado: Se preserva el rendimiento propuesto ({perf:.2f} {unit}/día) "
             f"para {typology} en '{unit}' para evitar distorsiones con benchmarks ajenos a la disciplina."
@@ -1726,6 +1769,19 @@ def validate_and_calibrate_hh(
             f"Calibración de rendimiento (HH): Rendimiento diario ajustado de {perf:.2f} a {calibrated_perf:.2f} {unit}/día "
             f"para evitar sobrecosto por subrendimiento. (HH anterior: {current_hh:.4f}, calibrado a {new_hh:.4f} HH/{unit}, "
             f"benchmark P50: {adjusted_p50:.4f})."
+        )
+    elif perf <= 1.0 and unit.lower().strip() not in ("gl", "sg", "global") and (total_hh_per_day / adjusted_p50) > 1.8:
+        # El rendimiento propuesto era <= 1.0 (típicamente fallback no inicializado de IA o plantilla)
+        # mientras que la mediana del benchmark para la cuadrilla activa dicta un rendimiento significativamente mayor.
+        calibrated_perf = round(total_hh_per_day / adjusted_p50, 2)
+        new_hh = total_hh_per_day / calibrated_perf
+        partida["performance"] = calibrated_perf
+        if "rendimiento" in partida:
+            partida["rendimiento"] = calibrated_perf
+        notes.append(
+            f"Calibración de rendimiento por defecto (HH): Rendimiento nominal ({perf:.2f} {unit}/día) "
+            f"calibrado a {calibrated_perf:.2f} {unit}/día según mediana normativa P50 ({adjusted_p50:.4f} HH/{unit}) "
+            f"para evitar subrendimiento artificial por valor no inicializado."
         )
 
     # -------------------------------------------------------------
@@ -1840,7 +1896,7 @@ def calibrate_apu_crew_and_equipment(
 
         description = str(partida.get("description") or partida.get("descripcion") or "")
         unit = str(partida.get("unit") or partida.get("unidad") or "")
-        covenin = str(partida.get("cod_par") or partida.get("cov_par") or "")
+        covenin = str(partida.get("cod_par") or partida.get("cov_par") or partida.get("codigo") or "")
         perf_orig = _safe_float(partida.get("performance") or partida.get("rendimiento"), 0.0)
 
         # 0. Clasificar tipología constructiva
