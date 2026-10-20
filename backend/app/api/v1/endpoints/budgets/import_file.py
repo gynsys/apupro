@@ -54,6 +54,7 @@ class PreviewItem(BaseModel):
     is_chapter: bool = False
     candidates: List[Candidate] = []
     selected_cod_par: Optional[str] = None
+    has_covenin_code_match: bool = False
 
 
 class PreviewHeader(BaseModel):
@@ -273,6 +274,13 @@ def generate_import_apu(
             detail="El APU generado no contiene insumos. Amplía la descripción técnica e inténtalo de nuevo.",
         )
 
+    # Si se suministró un código en la solicitud (el código del archivo), asignárselo a la partida generada
+    partida = result.get("partida") or {}
+    supplied_code = (payload.code or "").strip()
+    if supplied_code:
+        partida["cod_par"] = supplied_code[:80]
+        partida["cov_par"] = supplied_code[:80]
+
     # Consumir cuota de APUs con IA (solo si el usuario tiene un límite finito).
     try:
         with ArkoSessionLocal() as adb:
@@ -285,7 +293,7 @@ def generate_import_apu(
 
     return {
         "status": "completed",
-        "partida": result.get("partida"),
+        "partida": partida,
         "materials": result.get("materials") or [],
         "equipments": result.get("equipments") or [],
         "labors": result.get("labors") or [],
@@ -358,19 +366,34 @@ def commit_budget_import(
             if requested_code and not is_chapter and not has_generated:
                 cost_item = db.query(CostItem).filter(CostItem.CodPar == requested_code).first()
 
-            if has_generated:
-                cod_par = requested_code or ((item.code or "").strip() or f"GEN-{index:03d}")
-                cov_par = item.cov_par or None
+            supplied_code = (item.code or "").strip()
+
+            if is_chapter:
+                cod_par = supplied_code or f"CAP-{index:03d}"
+                cov_par = supplied_code or None
+                unit = ""
+            elif has_generated:
+                # Partida con APU generado con IA: conservar el código suministrado del archivo si existe
+                item_code = supplied_code or requested_code or f"GEN-{index:03d}"
+                cod_par = item_code
+                cov_par = item_code
                 unit = item.unit or "und"
+            elif cost_item:
+                # Partida de base COVENIN: conservar el código suministrado del archivo si existe
+                cod_par = supplied_code or cost_item.CodPar
+                cov_par = supplied_code or cost_item.CovPar or cost_item.CodPar
+                unit = cost_item.UniPar or item.unit or "und"
             else:
-                cod_par = cost_item.CodPar if cost_item else ((item.code or "").strip() or f"IMP-{index:03d}")
-                cov_par = cost_item.CovPar if cost_item else None
-                unit = (cost_item.UniPar if (cost_item and cost_item.UniPar) else item.unit) or "und"
+                # Partida genérica (sin APU): conservar el código suministrado del archivo si existe
+                item_code = supplied_code or requested_code or f"IMP-{index:03d}"
+                cod_par = item_code
+                cov_par = supplied_code or None
+                unit = item.unit or "und"
 
             db_item = BudgetItem(
                 budget_id=budget.id,
                 cod_par=cod_par[:80],
-                cov_par=cov_par,
+                cov_par=cov_par[:80] if cov_par else None,
                 description=description,
                 unit="" if is_chapter else unit[:20],
                 quantity=0.0 if is_chapter else float(item.quantity or 0.0),

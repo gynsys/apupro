@@ -12,14 +12,14 @@
 El botón **“Crear Presupuesto desde Archivo”** de la barra lateral abre un flujo que:
 
 1. Lee un archivo de presupuesto (Excel, CSV, PDF o imagen).
-2. Extrae las partidas: código, descripción, unidad y cantidad.
+2. Extrae las partidas: código original suministrado, descripción, unidad y cantidad.
 3. Detecta capítulos/secciones y las separa de las partidas.
-4. Cruza cada partida contra la base maestra COVENIN (`cost360_items`).
-5. Propone un APU existente cuando hay coincidencia por código o descripción.
-6. Permite **generar un APU con IA** para las partidas que no tengan match.
-7. Crea el presupuesto y guarda las partidas con sus insumos APU.
+4. Cruza cada partida contra la base maestra COVENIN (`cost360_items`) por código estricto.
+5. Si el código coincide con una partida COVENIN de la BD, utiliza ese APU de la base maestra y **conserva el código suministrado del archivo**.
+6. Si la partida **no tiene código COVENIN que coincida con la BD**, no preselecciona partidas por descripción y **genera automáticamente el APU con IA en la vista previa**, asignándole como código el código leído del archivo.
+7. Crea el presupuesto y guarda todas las partidas conservando su código original suministrado y sus insumos de APU.
 
-El objetivo es que el usuario no tenga que volver a digitar un presupuesto que ya existe en un documento, y que cada partida quede con un código y un APU utilizable.
+El objetivo es que el usuario no tenga que volver a digitar un presupuesto que ya existe en un documento, conservando su codificación original (ej: `18.A.01`, `01.01`) y garantizando que cada partida tenga su APU utilizable y completo.
 
 ---
 
@@ -55,23 +55,20 @@ Antes de crear el presupuesto se muestra una vista previa con:
 
 | Estado | Significado |
 |---|---|
-| **Match exacto** | El código o la descripción normalizada coincide exactamente con una partida de la base maestra. |
-| **APU sugerido** | Hay una partida candidata seleccionada por el motor de matching/LLM. |
-| **Por revisar** | Hay candidatas, pero ninguna quedó seleccionada automáticamente. |
-| **Sin coincidencia** | No se encontró ninguna candidata. |
-| **APU generado** | El usuario generó un APU nuevo con IA para esa fila. |
-| **Capítulo** | Fila de título/sección, sin unidad ni cantidad. |
+| **Match COVENIN** | El código suministrado coincide exactamente con una partida de la base maestra COVENIN (`cost360_items`). Conserva el código suministrado. |
+| **APU generado con IA** | APU generado automáticamente (o bajo demanda) con IA, al cual se le asignó el código leído del archivo. |
+| **APU asignado** | El usuario seleccionó manualmente una partida candidata de la base maestra. |
+| **Pendiente APU con IA** | La partida no tiene código COVENIN coincidente y está pendiente de generación. |
+| **Capítulo** | Fila de título/sección, sin unidad ni cantidad. Conserva su código (ej: `CAP. I`). |
 
-### 2.4 Generación bajo demanda
+### 2.4 Generación de APUs para partidas no COVENIN
 
-- El botón **Generar APU con IA** aparece en las filas que no tienen match exacto.
-- Usa el motor de APUs de la plataforma (RAG + LLM + reglas deterministas).
-- Devuelve un APU con:
-  - Código de Partida Especial (convención `E###SC###`, por ejemplo `E451SC001`).
-  - Materiales, equipos y mano de obra con cantidades y precios.
-- La fila pasa a **APU generado** y queda seleccionada.
+- Si el código de la fila **no coincide con la base COVENIN**, la plataforma no preselecciona candidatas por descripción.
+- Apenas se procesa el archivo en la vista previa, se ejecuta la generación automática de APU con IA para cada partida pendiente.
+- Cada APU generado recibe **el código original suministrado del archivo leído** (por ejemplo, `18.A.01`), en lugar de códigos genéricos `E###SC###`.
+- La vista previa incluye barra de progreso y botón para pausar o disparar la generación en lote.
 - Cada generación consume **1 APU de la cuota de IA** del usuario.
-- Si el usuario luego elige otra partida en el selector, el APU generado deja de usarse.
+- El usuario puede editar el código o los insumos directamente en la vista previa antes de crear el presupuesto.
 
 ### 2.5 Creación
 

@@ -88,22 +88,31 @@ def build_preview(data: bytes, filename: str, db: Session) -> Dict[str, Any]:
             limit=8,
         )
         item["candidates"] = candidates
-        item["selected_cod_par"] = candidates[0]["cod_par"] if candidates else None
+        item["selected_cod_par"] = None
+        item["has_covenin_code_match"] = False
 
     refine_with_llm(items)
 
     for item in items:
-        if item.get("llm_rejected"):
+        item["candidates"] = item.get("candidates", [])[:5]
+        if item.get("is_chapter"):
+            item["has_covenin_code_match"] = False
             item["selected_cod_par"] = None
-        elif item["candidates"]:
-            item["selected_cod_par"] = item["candidates"][0]["cod_par"]
-        else:
-            item["selected_cod_par"] = None
-        item["candidates"] = item["candidates"][:5]
+            continue
 
-    matched = sum(1 for item in items if not item["is_chapter"] and item["candidates"])
-    selected = sum(1 for item in items if not item["is_chapter"] and item.get("selected_cod_par"))
-    generic = sum(1 for item in items if not item["is_chapter"] and not item["candidates"])
+        # Coincidencia estricta por código COVENIN en la base de datos
+        code_candidates = [c for c in item["candidates"] if c.get("match_type") == "code"]
+        if code_candidates:
+            item["has_covenin_code_match"] = True
+            item["selected_cod_par"] = code_candidates[0]["cod_par"]
+        else:
+            # Si no coincide con un código COVENIN de la BD, NO preseleccionar candidata
+            # para que se genere el APU con IA conservando el código del archivo.
+            item["has_covenin_code_match"] = False
+            item["selected_cod_par"] = None
+
+    covenin_matched = sum(1 for item in items if not item["is_chapter"] and item.get("has_covenin_code_match"))
+    pending_ai = sum(1 for item in items if not item["is_chapter"] and not item.get("has_covenin_code_match"))
     chapters = sum(1 for item in items if item["is_chapter"])
 
     header["budget_name"] = (header.get("budget_name") or _fallback_name(filename)).strip()[:250]
@@ -119,10 +128,10 @@ def build_preview(data: bytes, filename: str, db: Session) -> Dict[str, Any]:
         "items": items,
         "stats": {
             "total": len(items),
-            "matched": matched,
-            "selected": selected,
-            "pending": max(0, matched - selected),
-            "generic": generic,
+            "matched": covenin_matched,
+            "selected": covenin_matched,
+            "pending": pending_ai,
+            "generic": 0,
             "chapters": chapters,
         },
         "warnings": warnings,

@@ -25,6 +25,7 @@
 13. [Modularización y Desacoplamiento del Motor (`ai_apu_service/`)](#13-modularización-y-desacoplamiento-del-motor-ai_apu_service)
 14. [Bitácora de Actualizaciones Críticas: Mediados de Octubre 2026 (Ontología Paramétrica, Cuantías FRP, Poda Discordante y Amortización de Herramientas Menores)](#14-bitácora-de-actualizaciones-críticas-mediados-de-octubre-2026-ontología-paramétrica-cuantías-frp-poda-discordante-y-amortización-de-herramientas-menores)
 15. [Bitácora de Actualizaciones Críticas: 17–18 de Octubre 2026 (Motor de Rutas Dinámicas de las 23 Acciones, Chatbot Atómico, Trazabilidad Local y Salvaguarda de Pozos Profundos)](#15-bitácora-de-actualizaciones-críticas-1718-de-octubre-2026-motor-de-rutas-dinámicas-de-las-23-acciones-chatbot-atómico-trazabilidad-local-y-salvaguarda-de-pozos-profundos)
+16. [Motor v2.0: Arquitectura en Dos Fases (WorkSpec Intermediate Representation + Compositor Determinista)](#16-motor-v20-arquitectura-en-dos-fases-workspec-intermediate-representation--compositor-determinista)
 
 ---
 
@@ -875,5 +876,34 @@ Para solventar la deuda técnica del endpoint monolítico `costbase.py` (~2.600 
   - En [`deep_well.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/ai_apu_service/domain_rules/deep_well.py): purga automática de carretillas, carruchas, buggies, palas y picos en equipos y advertencias; e inyección obligatoria del vehículo utilitario de apoyo `EQU-TRA-002` (`CAMIONETA PICK-UP TIPO FORD F-150 / 350`, rendimiento $0.5\text{ día}$).
   - En [`anchored_generator.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/app/services/ai_apu_service/generator/anchored_generator.py): actualización de la regla 9 de escala para vetar expresamente carretillas en bombas de pozo profundo y exigir vehículo liviano de apoyo.
   - Validación con suite unitaria [`backend/tests/test_deep_well.py`](file:///c:/Users/pablo/Documents/apupro_platform/backend/tests/test_deep_well.py) (37/37 tests passing).
+
+---
+
+## 16. Motor v2.0: Arquitectura en Dos Fases (WorkSpec Intermediate Representation + Compositor Determinista)
+
+> **Documentación Completa y Especificaciones Técnicas:** Ver [`readme/MOTOR_V2_WORKSPEC.md`](file:///c:/Users/pablo/Documents/apupro_platform/readme/MOTOR_V2_WORKSPEC.md).
+
+Durante la auditoría técnica profunda de Octubre 2026, se formuló e implementó la evolución arquitectónica del generador hacia el patrón clásico de **Compilador con Representación Intermedia (IR)**:
+
+### 16.1 Principio de Funcionamiento
+
+* **Fase 1 — Interpretación Semántica (LLM Ultraligero, ~2s / ~350 tokens):**
+  Un prompt estricto y condensado (`interpreter.py`) extrae exclusivamente las intenciones, dimensiones físicas y restricciones técnicas del usuario en un esquema Pydantic cerrado denominado `WorkSpec` (15 campos tipados: `activity_type`, `discipline`, `element`, `target_unit`, `mix_type`, `mounting_condition`, `dimensions`, `explicit_materials`, `excluded_materials`, etc.).
+  * **Regla de oro:** El LLM **nunca genera precios, cuadrillas ni rendimientos**.
+
+* **Fase 2 — Composición Determinista (0s LLM / ~50ms):**
+  Un motor en Python (`composer.py`) toma el `WorkSpec`, clona la receta de la partida base COVENIN seleccionada en PostgreSQL, escala las cantidades según la física del elemento (ej. $2.80\text{ kg/m}$ de cabilla en dinteles), purga discordancias ontológicas (piedra picada en mortero, carretillas en tuberías embutidas) y conecta los precios vivos del catálogo de 8.491 materiales y las horas-hombre oficiales de COVENIN.
+
+### 16.2 Control en Producción y Selector Superadmin
+
+* **Cero Riesgo de Regresión:** El motor v1.0 se mantiene 100% activo como motor por defecto para todos los usuarios.
+* **Feature Toggle en Frontend:** En [`ArchitectureModeSelector.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/components/ai-generator/ArchitectureModeSelector.jsx) y en [`ApuGeneratorHeader.jsx`](file:///c:/Users/pablo/Documents/apupro_platform/frontend/src/modules/costbase/components/ai-generator/ApuGeneratorHeader.jsx), los administradores disponen del selector en tiempo real:
+  ```text
+  [ 🧮 Modo Matemático ]   [ ✨ Modo Adaptativo (v1) ]   [ ⚡ Motor v2.0 (WorkSpec) ]
+  ```
+* **Batería de Pruebas:**
+  * Suite v2.0: [`scratch/test_v2_engine.py`](file:///c:/Users/pablo/Documents/apupro_platform/scratch/test_v2_engine.py) (5/5 tests passing).
+  * Suite de regresión v1.0: [`scratch/test_audit_remediation.py`](file:///c:/Users/pablo/Documents/apupro_platform/scratch/test_audit_remediation.py) (16/16 tests passing).
+
 
 

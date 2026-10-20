@@ -47,12 +47,17 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
   const [header, setHeader] = useState({ budget_name: '', project_name: '', client_name: '', currency: 'USD' });
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [autoGenerating, setAutoGenerating] = useState(false);
+  const [autoGenProgress, setAutoGenProgress] = useState({ current: 0, total: 0 });
   const [error, setError] = useState(null);
   const [limitReached, setLimitReached] = useState(false);
   const fileInputRef = useRef(null);
+  const autoGenCancelledRef = useRef(false);
 
   useEffect(() => {
     if (!isOpen) {
+      autoGenCancelledRef.current = true;
+      setAutoGenerating(false);
       setCurrentFile(null);
       setPreview(null);
       setItems([]);
@@ -65,10 +70,87 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
     }
   }, [isOpen, file]);
 
+  const triggerAutoGeneration = async (list) => {
+    const toGenerate = (list || []).filter(
+      (item) => !item.is_chapter && !item.has_covenin_code_match && item.include && !item.generated_data
+    );
+    if (!toGenerate.length) return;
+
+    setAutoGenerating(true);
+    autoGenCancelledRef.current = false;
+    setAutoGenProgress({ current: 0, total: toGenerate.length });
+
+    let completed = 0;
+    for (let i = 0; i < toGenerate.length; i++) {
+      if (autoGenCancelledRef.current) break;
+      const target = toGenerate[i];
+      setAutoGenProgress({ current: i + 1, total: toGenerate.length });
+
+      setItems((prev) =>
+        prev.map((it) => (it.row === target.row ? { ...it, generating: true } : it))
+      );
+
+      try {
+        const result = await budgetService.generateImportApu({
+          description: target.description,
+          unit: target.unit || 'und',
+          code: target.code || null,
+        });
+
+        if (autoGenCancelledRef.current) break;
+
+        const partida = result.partida || {};
+        const suppliedCode = String(target.code || '').trim();
+        const finalCode = suppliedCode || String(partida.cod_par || `GEN-${target.row}`).trim();
+
+        const generatedCandidate = {
+          cod_par: finalCode,
+          cov_par: suppliedCode || partida.cov_par || finalCode,
+          description: partida.description || target.description,
+          unit: partida.unit || target.unit || 'und',
+          score: 1,
+          match_type: 'ai_generated',
+        };
+
+        setItems((prev) =>
+          prev.map((it) => {
+            if (it.row !== target.row) return it;
+            return {
+              ...it,
+              generating: false,
+              generated_data: result,
+              generated_code: finalCode,
+              selected: finalCode,
+              cov_par: generatedCandidate.cov_par,
+              candidates: [
+                generatedCandidate,
+                ...(it.candidates || []).filter((c) => c.cod_par !== finalCode),
+              ],
+            };
+          })
+        );
+        completed++;
+      } catch (err) {
+        if (autoGenCancelledRef.current) break;
+        setItems((prev) =>
+          prev.map((it) => (it.row === target.row ? { ...it, generating: false } : it))
+        );
+        console.warn(`Error en generación de APU para fila ${target.row}:`, err);
+      }
+    }
+
+    setAutoGenerating(false);
+    if (!autoGenCancelledRef.current && completed > 0) {
+      toast.success(`${completed} APU(s) generados automáticamente con IA usando su código original.`);
+    }
+  };
+
   useEffect(() => {
     if (!isOpen || !currentFile) return undefined;
 
     let cancelled = false;
+    autoGenCancelledRef.current = true;
+    setAutoGenerating(false);
     setLoading(true);
     setError(null);
     setLimitReached(false);
@@ -86,13 +168,19 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
           client_name: data.header?.client_name || '',
           currency: data.header?.currency || 'USD',
         });
-        setItems((data.items || []).map((item) => ({
+        const parsedItems = (data.items || []).map((item) => ({
           ...item,
           include: true,
           quantity: item.quantity ?? 0,
           unit: item.unit || 'und',
+          code: item.code || '',
           selected: item.is_chapter ? '' : (item.selected_cod_par || ''),
-        })));
+          has_covenin_code_match: Boolean(item.has_covenin_code_match),
+        }));
+        setItems(parsedItems);
+
+        // Generar automáticamente con IA para las partidas que no tengan código COVENIN en la BD
+        triggerAutoGeneration(parsedItems);
       } catch (err) {
         if (cancelled) return;
         setError(err.message || 'No se pudo analizar el archivo.');
@@ -102,7 +190,10 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      autoGenCancelledRef.current = true;
+    };
   }, [isOpen, currentFile]);
 
   useEffect(() => {
@@ -140,10 +231,11 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
         code: item.code || null,
       });
       const partida = result.partida || {};
-      const generatedCode = String(partida.cod_par || `GEN-${item.code || item.row}`).trim();
+      const suppliedCode = String(item.code || '').trim();
+      const finalCode = suppliedCode || String(partida.cod_par || `GEN-${item.row}`).trim();
       const generatedCandidate = {
-        cod_par: generatedCode,
-        cov_par: partida.cov_par || generatedCode,
+        cod_par: finalCode,
+        cov_par: suppliedCode || partida.cov_par || finalCode,
         description: partida.description || item.description,
         unit: partida.unit || item.unit || 'und',
         score: 1,
@@ -152,15 +244,15 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
       updateItem(index, {
         generating: false,
         generated_data: result,
-        generated_code: generatedCode,
-        selected: generatedCode,
+        generated_code: finalCode,
+        selected: finalCode,
         cov_par: generatedCandidate.cov_par,
         candidates: [
           generatedCandidate,
-          ...(item.candidates || []).filter((candidate) => candidate.cod_par !== generatedCode),
+          ...(item.candidates || []).filter((candidate) => candidate.cod_par !== finalCode),
         ],
       });
-      toast.success('APU generado con IA. Revísalo antes de crear el presupuesto.');
+      toast.success(`APU generado con IA (código: ${finalCode}).`);
     } catch (err) {
       updateItem(index, { generating: false });
       toast.error(err.message || 'No se pudo generar el APU.');
@@ -170,7 +262,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
   const includedItems = items.filter((item) => item.include && item.description.trim());
   const selectedCount = items.filter((item) => !item.is_chapter && item.selected).length;
   const pendingCount = items.filter(
-    (item) => !item.is_chapter && !item.selected && (item.candidates || []).length > 0,
+    (item) => !item.is_chapter && !item.selected && !item.has_covenin_code_match,
   ).length;
   const noMatchCount = items.filter(
     (item) => !item.is_chapter && !item.selected && (item.candidates || []).length === 0,
@@ -199,16 +291,17 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
         source_filename: currentFile?.name || preview?.filename || null,
         items: includedItems.map((item) => {
           const generated = item.generated_data;
-          const generatedCode = item.generated_code || generated?.partida?.cod_par || '';
-          const useGenerated = Boolean(generated && generatedCode && item.selected === generatedCode);
+          const suppliedCode = (item.code || '').trim();
+          const generatedCode = item.generated_code || generated?.partida?.cod_par || suppliedCode || '';
+          const useGenerated = Boolean(generated && (item.selected === generatedCode || !item.has_covenin_code_match));
           return {
             description: item.description.trim(),
             unit: (item.unit || 'und').trim() || 'und',
             quantity: Number(item.quantity) || 0,
             is_chapter: Boolean(item.is_chapter),
-            cod_par: item.is_chapter ? null : (item.selected || null),
-            cov_par: useGenerated ? (generated?.partida?.cov_par || generatedCode) : (item.cov_par || null),
-            code: item.code || null,
+            cod_par: item.is_chapter ? null : (item.selected || suppliedCode || null),
+            cov_par: suppliedCode || (useGenerated ? (generated?.partida?.cov_par || generatedCode) : (item.cov_par || null)),
+            code: suppliedCode || null,
             materials: useGenerated ? (generated.materials || []) : [],
             equipments: useGenerated ? (generated.equipments || []) : [],
             labors: useGenerated ? (generated.labors || []) : [],
@@ -365,7 +458,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                 </div>
               </div>
 
-              {/* Métricas */}
+              {/* Métricas y Acciones Rápidas */}
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-white/80 border border-amber-600/15 text-amber-950">
                   {preview.stats?.total || items.length} filas
@@ -374,23 +467,68 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                   <CheckCircle2 size={12} /> {selectedCount} con APU
                 </span>
                 {pendingCount > 0 && (
-                  <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 border border-amber-300 text-amber-800">
-                    {pendingCount} por revisar
+                  <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-sky-50 border border-sky-300 text-sky-800 flex items-center gap-1">
+                    <Sparkles size={12} className="text-sky-600" /> {pendingCount} pendientes IA
                   </span>
                 )}
-                <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 border border-amber-300 text-amber-800">
-                  {noMatchCount} sin coincidencia
-                </span>
                 <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-white/70 border border-amber-600/15 text-amber-800">
                   {preview.stats?.chapters || 0} capítulos
                 </span>
-                <span className="text-[10px] text-amber-800/60 ml-auto">
+                {pendingCount > 0 && !autoGenerating && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const pending = items.filter(
+                        (it) => !it.is_chapter && !it.has_covenin_code_match && it.include && !it.generated_data
+                      );
+                      triggerAutoGeneration(pending);
+                    }}
+                    className="ml-auto text-[11px] font-bold px-3 py-1 rounded-full bg-sky-600 hover:bg-sky-700 text-white transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  >
+                    <Sparkles size={12} />
+                    Generar {pendingCount} pendientes con IA
+                  </button>
+                )}
+                <span className={`text-[10px] text-amber-800/60 ${pendingCount > 0 && !autoGenerating ? '' : 'ml-auto'}`}>
                   {preview.source_type === 'pdf_ocr' ? 'PDF escaneado (OCR)' :
                     preview.source_type === 'image' ? 'Imagen (OCR)' :
                       preview.source_type === 'excel' ? 'Excel' :
                         preview.source_type === 'csv' ? 'CSV' : preview.source_type}
                 </span>
               </div>
+
+              {/* Banner de Generación Automática con IA */}
+              {autoGenerating && (
+                <div className="bg-gradient-to-r from-sky-50 via-sky-50 to-blue-50 border border-sky-200 rounded-xl p-3 shadow-sm flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Loader2 size={16} className="animate-spin text-sky-600 shrink-0" />
+                      <span className="text-xs font-bold text-sky-950 truncate">
+                        Generando APUs con IA ({autoGenProgress.current} de {autoGenProgress.total})...
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        autoGenCancelledRef.current = true;
+                        setAutoGenerating(false);
+                      }}
+                      className="text-[11px] font-semibold text-rose-700 hover:text-rose-900 px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200 hover:bg-rose-100 transition-colors shrink-0 cursor-pointer"
+                    >
+                      Detener
+                    </button>
+                  </div>
+                  <div className="w-full bg-sky-200/60 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-sky-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${autoGenProgress.total > 0 ? (autoGenProgress.current / autoGenProgress.total) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-sky-800/80 m-0">
+                    Conservando y asignando el código original de cada partida leída del archivo.
+                  </p>
+                </div>
+              )}
 
               {/* Advertencias */}
               {preview.warnings?.length > 0 && (
@@ -408,8 +546,8 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
               <div className="space-y-2">
                 {items.map((item, index) => {
                   const selectedCandidate = (item.candidates || []).find((candidate) => candidate.cod_par === item.selected);
-                  const isGenerated = selectedCandidate?.match_type === 'ai_generated';
-                  const isExact = selectedCandidate && ['code', 'exact_description'].includes(selectedCandidate.match_type);
+                  const isGenerated = Boolean(item.generated_data || selectedCandidate?.match_type === 'ai_generated');
+                  const isCoveninExact = item.has_covenin_code_match;
                   return (
                     <div
                       key={`${item.row}-${index}`}
@@ -429,33 +567,33 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                         />
 
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <span className="text-[10px] font-bold text-amber-900/60">{item.row}</span>
+                          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                            <span className="text-[10px] font-bold text-amber-900/60">#{item.row}</span>
                             {item.is_chapter ? (
-                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 uppercase tracking-wide">Capítulo</span>
-                            ) : isGenerated ? (
-                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 uppercase tracking-wide">
-                                APU generado
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 uppercase tracking-wide">
+                                Capítulo
                               </span>
-                            ) : isExact ? (
-                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wide">
-                                Match exacto
+                            ) : isGenerated ? (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 uppercase tracking-wide flex items-center gap-1">
+                                <Sparkles size={10} /> APU generado {item.code ? `(${item.code})` : ''}
+                              </span>
+                            ) : isCoveninExact ? (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wide flex items-center gap-1">
+                                <CheckCircle2 size={10} /> Match COVENIN {item.code ? `(${item.code})` : ''}
                               </span>
                             ) : selectedCandidate ? (
                               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wide">
-                                APU sugerido
-                              </span>
-                            ) : (item.candidates || []).length > 0 ? (
-                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 uppercase tracking-wide">
-                                Por revisar
+                                APU asignado
                               </span>
                             ) : (
                               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 uppercase tracking-wide">
-                                Sin coincidencia
+                                Pendiente APU con IA
                               </span>
                             )}
                             {item.code && (
-                              <span className="text-[9px] text-slate-400 font-mono truncate">{item.code}</span>
+                              <span className="text-[10px] font-mono font-bold text-sky-900 bg-sky-50 border border-sky-200 px-1.5 py-0.2 rounded">
+                                Código: {item.code}
+                              </span>
                             )}
                           </div>
 
@@ -466,8 +604,18 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                             className="w-full px-2 py-1.5 border border-transparent hover:border-slate-200 focus:border-sky-400 focus:bg-white rounded-lg text-xs font-medium text-slate-800 bg-transparent outline-none transition-colors"
                           />
 
-                          {!item.is_chapter && (
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                          {!item.is_chapter ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-2">
+                              <label className="flex flex-col gap-0.5">
+                                <span className="text-[9px] font-bold text-slate-400 uppercase">Código</span>
+                                <input
+                                  type="text"
+                                  value={item.code || ''}
+                                  placeholder="Ej. 18.A.01"
+                                  onChange={(event) => updateItem(index, { code: event.target.value })}
+                                  className="px-2 py-1 border border-slate-200 rounded-lg text-[11px] font-mono font-bold text-slate-800 bg-white outline-none focus:border-sky-400"
+                                />
+                              </label>
                               <label className="flex flex-col gap-0.5">
                                 <span className="text-[9px] font-bold text-slate-400 uppercase">Unidad</span>
                                 <input
@@ -495,7 +643,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                                   onChange={(event) => updateItem(index, { selected: event.target.value })}
                                   className="px-2 py-1 border border-slate-200 rounded-lg text-[11px] text-slate-700 bg-white outline-none focus:border-sky-400 truncate"
                                 >
-                                  <option value="">— Genérica (sin APU) —</option>
+                                  <option value="">— {item.has_covenin_code_match ? 'Sin APU' : 'Generar APU con IA'} —</option>
                                   {(item.candidates || []).map((candidate) => (
                                     <option key={candidate.cod_par} value={candidate.cod_par}>
                                       {candidate.cod_par} · {candidate.description.slice(0, 70)} ({candidate.unit || 'und'})
@@ -504,13 +652,26 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                                 </select>
                               </label>
                             </div>
+                          ) : (
+                            <div className="flex items-center gap-2 mt-2">
+                              <label className="flex items-center gap-1.5">
+                                <span className="text-[9px] font-bold text-slate-400 uppercase">Código:</span>
+                                <input
+                                  type="text"
+                                  value={item.code || ''}
+                                  placeholder="Ej. CAP. I"
+                                  onChange={(event) => updateItem(index, { code: event.target.value })}
+                                  className="px-2 py-1 border border-slate-200 rounded-lg text-[11px] font-mono font-bold text-slate-800 bg-white outline-none focus:border-sky-400 w-36"
+                                />
+                              </label>
+                            </div>
                           )}
 
-                          {!item.is_chapter && !isExact && !isGenerated && (
+                          {!item.is_chapter && !isCoveninExact && !isGenerated && (
                             <button
                               type="button"
                               onClick={() => handleGenerateApu(index)}
-                              disabled={item.generating}
+                              disabled={item.generating || autoGenerating}
                               className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-sky-700 bg-sky-50 border border-sky-200 hover:bg-sky-100 transition-colors disabled:opacity-60 disabled:cursor-wait"
                             >
                               {item.generating ? (
@@ -518,7 +679,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                               ) : (
                                 <Sparkles size={13} />
                               )}
-                              {item.generating ? 'Generando APU con IA...' : 'Generar APU con IA'}
+                              {item.generating ? 'Generando APU con IA...' : (item.code ? `Generar APU con IA (${item.code})` : 'Generar APU con IA')}
                             </button>
                           )}
 
