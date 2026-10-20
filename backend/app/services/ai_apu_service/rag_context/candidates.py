@@ -347,13 +347,21 @@ def _apply_technical_scoring_adjustments_detailed(
                 f"Penalización por elemento constructivo discordante (solicitado={sorted(q_civil_elem)} vs candidato={sorted(i_civil_elem)}): -0.20"
             )
 
-    # 3. Afinidad de Verbo Rector (Desmontaje / Demolición)
-    q_is_removal = any(r in q_lower for r in ["desmontaje", "demolicion", "retiro", "desinstalacion", "extraccion", "desmantelamiento"])
-    i_is_removal = any(r in i_lower for r in ["desmontaje", "demolicion", "retiro", "desinstalacion", "extraccion", "desmantelamiento", "desconexion"])
+    # 3. Afinidad de Verbo Rector (Desmontaje / Demolición / Remoción)
+    removal_terms = [
+        "desmontaje", "demolicion", "retiro", "desinstalacion", "extraccion",
+        "desmantelamiento", "remocion", "remover", "picar", "picado", "raspar", "raspado"
+    ]
+    q_is_removal = any(r in q_lower for r in removal_terms)
+    i_is_removal = any(r in i_lower for r in (removal_terms + ["desconexion"]))
     if q_is_removal and i_is_removal:
-        current_score = min(1.0, current_score + 0.08)
-        action_bonus += 0.08
-        adjustment_details.append("Bonificación por coincidencia de acción rectora (desmontaje/retiro): +0.08")
+        current_score = min(1.0, current_score + 0.15)
+        action_bonus += 0.15
+        adjustment_details.append("Bonificación por coincidencia de acción rectora (demolición/remoción/desmontaje): +0.15")
+    elif q_is_removal and not i_is_removal:
+        current_score = max(0.0, current_score - 0.45)
+        action_bonus -= 0.45
+        adjustment_details.append("Penalización por discordancia de acción: remoción/demolición solicitada frente a candidato de suministro/instalación: -0.45")
 
     # 4. Afinidad Global por Condición de Montaje de Tuberías (EMBUTIDA vs ENTERRADA vs SUPERFICIAL_COLGANTE)
     mounting_adjustment = 0.0

@@ -76,6 +76,13 @@ def infer_covenin_prefix(description: str, base_code: str = "") -> str:
 
     d = description.upper()
 
+    # 0. Demoliciones, Desmontes y Remociones (E211) - Máxima prioridad sobre materiales soporte
+    if any(k in d for k in [
+        "DEMOLICION", "DEMOLER", "REMOCION", "REMOVER", "DESMONTE", "DESMONTAR",
+        "RETIRO", "RETIRAR", "DESMANTELAMIENTO", "DESMANTELAR", "PICADO", "DESINSTALACION"
+    ]):
+        return "E211"
+
     # 1. Pinturas y Acabados Especiales (E46)
     if any(k in d for k in ["EPOXI", "POLIURETANO", "TRAFICO", "MICROESFERA"]):
         return "E465"  # Pinturas especiales / epóxicas

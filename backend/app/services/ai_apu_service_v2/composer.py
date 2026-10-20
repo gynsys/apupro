@@ -88,9 +88,10 @@ def _ensure_normalized_apu_structure(apu: Dict[str, Any]) -> Dict[str, Any]:
     apu.pop("equipos", None)
 
     # Normalizar mano de obra
-    labs = apu.get("labors") or apu.get("mano_de_obra") or []
+    labs = apu.get("labors") or apu.get("mano_de_obra") or apu.get("mano_obra") or []
     apu["labors"] = [l for l in labs if isinstance(l, dict)]
     apu.pop("mano_de_obra", None)
+    apu.pop("mano_obra", None)
 
     apu.setdefault("advertencias", [])
     apu.setdefault("notas_adaptacion", [])
@@ -362,8 +363,22 @@ def compose_apu_from_workspec(
     # 2. Asignación de unidad y descripción
     target_unit = _normalize_unit(workspec.target_unit)
     result["partida"]["unit"] = target_unit
-    if workspec.element and not base_apu:
+
+    # Preservar siempre la acción rectora del usuario (ej: REMOCIÓN, DEMOLICIÓN, RETIRO, DESMONTE)
+    u_desc_clean = (user_description or "").strip()
+    is_removal_act = (
+        workspec.activity_type in ("DEMOLICION", "DESMONTAJE")
+        or bool(re.search(r"^(remoci[oó]n|remover|demolici[oó]n|demoler|desmonte|desmontar|desmontaje|retiro|retirar|picado|picar|raspado|raspar)\b", u_desc_clean, re.IGNORECASE))
+    )
+
+    if is_removal_act:
+        # Si la actividad solicitada es remoción/demolición, jamás conservar un título de suministro/capa de la base
+        result["partida"]["description"] = u_desc_clean.upper()
+    elif not base_apu and workspec.element:
         result["partida"]["description"] = f"{workspec.activity_type.capitalize()} de {workspec.element}"
+    elif u_desc_clean and len(u_desc_clean) >= 6:
+        # Si la descripción del usuario es clara y técnica, asegurar que su acción rectora prevalezca
+        result["partida"]["description"] = u_desc_clean.upper()
 
     # Cálculo determinista del rendimiento diario canónico COVENIN (Horas-Hombre y benchmarks)
     calc_perf, perf_notes = calculate_v2_deterministic_performance(

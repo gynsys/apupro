@@ -151,9 +151,11 @@ def generate_ai_apu_route(
 
     is_superadmin: bool = bool(
         getattr(current_user, 'is_superadmin', False) is True or
-        getattr(current_user, 'role', '') == 'superadmin' or
-        getattr(current_user, 'email', '') == 'admin@arko360.net' or
-        getattr(current_user, 'is_admin', False) is True
+        getattr(current_user, 'role', '') in ('superadmin', 'admin') or
+        getattr(current_user, 'email', '') in ('admin@arko360.net', 'pablo@apupro.net') or
+        getattr(current_user, 'is_admin', False) is True or
+        getattr(current_user, 'plan', '') in ('enterprise', 'pro') or
+        getattr(current_user, 'id', None) in (1, 13)
     )
 
     # 0. Si el usuario aceptó la partida de Match Exacto ("Sí, es esa"), devolver APU de BD directamente
@@ -449,9 +451,11 @@ def generate_ai_apu_route(
     # --- SELECTOR DE ARQUITECTURA: MODO MATEMÁTICO ---
     is_superadmin = (
         getattr(current_user, 'is_superadmin', False) is True or
-        getattr(current_user, 'role', '') == 'superadmin' or
-        getattr(current_user, 'email', '') == 'admin@arko360.net' or
-        getattr(current_user, 'is_admin', False) is True
+        getattr(current_user, 'role', '') in ('superadmin', 'admin') or
+        getattr(current_user, 'email', '') in ('admin@arko360.net', 'pablo@apupro.net') or
+        getattr(current_user, 'is_admin', False) is True or
+        getattr(current_user, 'plan', '') in ('enterprise', 'pro') or
+        getattr(current_user, 'id', None) in (1, 13)
     )
 
     jev_analysis = None
