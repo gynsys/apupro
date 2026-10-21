@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { exportApuExcelCustom } from '../services/costbaseService';
-import { numeroALetras } from '../../../utils/numberToLetters';
+import { numeroALetras } from '../../../utils/numberToLetters';
 import { calculateItemBreakdown } from '../../../utils/apuCalculations';
+import { useUserCostos } from '../../../context/UserCostosContext';
 
 const ExcelIcon = ({ size = 20, className = "" }) => (
   <svg 
@@ -33,33 +34,91 @@ export default function ExportApuExcelButton({
 }) {
   const [isExporting, setIsExporting] = useState(false);
 
+  let costosConfig = null;
+  try {
+    const ctx = useUserCostos();
+    costosConfig = ctx?.costosConfig;
+  } catch (_) {
+    costosConfig = null;
+  }
+
   const handleExport = async () => {
     try {
       setIsExporting(true);
-      
-      const calcPrice = () => {
+
+      const effectiveLaborBonus = parseFloat(
+        settings?.labor_bonus ??
+        settings?.fcasLaborBonus ??
+        item?.labor_bonus ??
+        costosConfig?.fcasLaborBonus ??
+        0
+      ) || 0;
+
+      const rawBonoInFcas = settings?.bono_in_fcas ?? item?.bono_in_fcas ?? costosConfig?.fcasBonoInFcas;
+      const effectiveFcasPercent = parseFloat(
+        settings?.fcas_percent ??
+        item?.fcas_percent ??
+        costosConfig?.fcas ??
+        417.0
+      );
+      const effectiveBonoInFcas = rawBonoInFcas === true || (rawBonoInFcas !== false && effectiveFcasPercent >= 1000);
+
+      const rawLabors = labors.length ? labors : (item?.labors || []);
+      const mappedLabors = rawLabors.map(lab => {
+        const rawBono = (lab.bono != null && lab.bono !== '')
+          ? parseFloat(lab.bono)
+          : (lab.Bono != null && lab.Bono !== '' ? parseFloat(lab.Bono) : null);
+
+        let finalBono = 0;
+        if (!effectiveBonoInFcas) {
+          if (rawBono !== null && !isNaN(rawBono) && rawBono > 0) {
+            finalBono = rawBono;
+          } else {
+            finalBono = effectiveLaborBonus;
+          }
+        }
+
+        return {
+          ...lab,
+          bono: finalBono,
+          Bono: finalBono
+        };
+      });
+
+      const calcPrice = (currSettings) => {
         const itemToCalc = {
           ...item,
           materials: materials.length ? materials : (item?.materials || []),
           equipments: equipments.length ? equipments : (item?.equipments || []),
-          labors: labors.length ? labors : (item?.labors || [])
+          labors: mappedLabors
         };
-        const breakdown = calculateItemBreakdown(itemToCalc, settings);
+        const breakdown = calculateItemBreakdown(itemToCalc, currSettings);
         return breakdown.unitPrice;
       };
 
-      const finalPrice = calcPrice();
-      const currency = settings?.currency || "Bs.";
+      const intermediateSettings = {
+        ...settings,
+        labor_bonus: effectiveLaborBonus,
+        bono_in_fcas: effectiveBonoInFcas,
+        fcas_percent: effectiveFcasPercent
+      };
+
+      const finalPrice = calcPrice(intermediateSettings);
+      const currency = settings?.currency || item?.currency || "USD";
       const currencyWord = String(currency).toUpperCase().includes("USD") ? "DÓLARES" : "Bs.";
       const sonLetras = `SON: ( ${numeroALetras(finalPrice)} ${currencyWord} ctms )`;
 
-      const finalSettings = { ...settings, son_letras: sonLetras };
+      const finalSettings = {
+        ...intermediateSettings,
+        currency,
+        son_letras: sonLetras
+      };
 
       const payload = {
         item: item || {},
         materials: materials.length ? materials : (item?.materials || []),
         equipments: equipments.length ? equipments : (item?.equipments || []),
-        labors: labors.length ? labors : (item?.labors || []),
+        labors: mappedLabors,
         settings: finalSettings
       };
       

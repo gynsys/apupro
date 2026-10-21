@@ -260,7 +260,8 @@ export function APUPrintSheet({ partida, materiales = [], equipos = [], mano_obr
             {mano_obra.map((lab, i) => {
               const q = parseFloat(lab.cantidad ?? lab.quantity ?? 0);
               const j = parseFloat(lab.jornal ?? 0);
-              const b = bonoInFcas ? 0 : parseFloat(lab.bono ?? 0);
+              const rawB = parseFloat(lab.bono ?? lab.Bono);
+              const b = bonoInFcas ? 0 : (!isNaN(rawB) && rawB > 0 ? rawB : defaultLaborBonus);
               const tj = lab.tot_jornal ?? (q * j);
               const tb = bonoInFcas ? 0 : (lab.tot_bono ?? (q * b));
               return (

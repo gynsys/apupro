@@ -33,7 +33,8 @@ export default function APUViewer() {
     profit_percent: costosConfig?.porcentajeUtilidad ?? 10,
     fcas_percent: costosConfig?.fcas ?? 417,
     iva_percent: costosConfig?.iva ?? 0,
-    labor_bonus: 0,
+    labor_bonus: costosConfig?.fcasBonoInFcas ? 0 : (costosConfig?.fcasLaborBonus ?? 0),
+    bono_in_fcas: costosConfig?.fcasBonoInFcas ?? false,
     currency: 'USD'
   }));
 
@@ -46,6 +47,8 @@ export default function APUViewer() {
         profit_percent: costosConfig.porcentajeUtilidad ?? prev.profit_percent,
         fcas_percent: costosConfig.fcas ?? prev.fcas_percent,
         iva_percent: costosConfig.iva ?? prev.iva_percent,
+        labor_bonus: costosConfig.fcasBonoInFcas ? 0 : (costosConfig.fcasLaborBonus ?? prev.labor_bonus),
+        bono_in_fcas: costosConfig.fcasBonoInFcas ?? prev.bono_in_fcas,
       }));
     }
   }, [costosConfig]);

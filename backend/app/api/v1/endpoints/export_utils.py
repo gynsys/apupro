@@ -51,7 +51,20 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     financiamiento = float(settings.get("financiamiento", 0.0))
     iva = float(settings.get("iva_percent", 16.0))
     otros_imp = float(settings.get("otros_imp", 0.0))
-    prestaciones = float(settings.get("fcas_percent", 435.0))
+    prestaciones = float(settings.get("fcas_percent", 417.0))
+    raw_bono_in_fcas = settings.get("bono_in_fcas")
+    if raw_bono_in_fcas is None:
+        raw_bono_in_fcas = item.get("bono_in_fcas")
+    bono_in_fcas = raw_bono_in_fcas is True or (raw_bono_in_fcas is not False and prestaciones >= 1000)
+
+    default_labor_bonus = 0.0 if bono_in_fcas else float(
+        settings.get("labor_bonus")
+        or settings.get("fcasLaborBonus")
+        or settings.get("laborBonus")
+        or item.get("labor_bonus")
+        or item.get("laborBonus")
+        or 0.0
+    )
 
     wb = Workbook()
     wb.calculation.calcMode = 'auto'
@@ -178,9 +191,39 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
         ws[f"C{row}"] = l.get("Descri") or l.get("descripcion", "")
         ws[f"D{row}"] = float(l.get("CanIns") or l.get("cantidad") or 0)
         ws[f"E{row}"] = float(l.get("Jornal") or l.get("jornal") or 0)
-        ws[f"F{row}"] = float(l.get("Bono") or l.get("bono") or 0)
+
+        # Resolver bono: prioridad a bono explícito de fila (>0), fallback a bono general
+        raw_b = (
+            l.get("bono")
+            if l.get("bono") is not None
+            else (
+                l.get("Bono")
+                if l.get("Bono") is not None
+                else (
+                    l.get("labor_bonus")
+                    if l.get("labor_bonus") is not None
+                    else l.get("bonus")
+                )
+            )
+        )
+        try:
+            val_b = float(raw_b) if raw_b is not None and str(raw_b).strip() != "" else 0.0
+        except (ValueError, TypeError):
+            val_b = 0.0
+
+        if bono_in_fcas:
+            final_bono = 0.0
+        elif val_b > 0:
+            final_bono = val_b
+        else:
+            final_bono = default_labor_bonus
+
+        ws[f"F{row}"] = final_bono
         ws[f"G{row}"] = f"=ROUND((D{row}*E{row}),2)"
         ws[f"H{row}"] = f"=ROUND((D{row}*F{row}),2)"
+        style_cell(ws[f"D{row}"], number_format='#,##0.00')
+        style_cell(ws[f"E{row}"], number_format='#,##0.00')
+        style_cell(ws[f"F{row}"], number_format='#,##0.00')
         style_cell(ws[f"G{row}"], number_format='#,##0.00')
         style_cell(ws[f"H{row}"], number_format='#,##0.00')
         row += 1
@@ -274,7 +317,9 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     style_cell(ws[f"H{oi_row}"], number_format='#,##0.00')
     
     pf_row = oi_row + 2
-    ws[f"D{pf_row}"] = "PRECIO UNITARIO (Bs.F.):"
+    curr_code = str(settings.get("currency") or "USD").strip().upper()
+    unit_curr = "USD" if ("USD" in curr_code or "$" in curr_code) else "Bs."
+    ws[f"D{pf_row}"] = f"PRECIO UNITARIO ({unit_curr}):"
     ws[f"H{pf_row}"] = f"=H{ps_row2}+H{iva_row}+H{oi_row}"
     style_cell(ws[f"H{pf_row}"], bold=True, number_format='#,##0.00')
     
@@ -287,11 +332,33 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     ws.column_dimensions['G'].width = 16
     ws.column_dimensions['H'].width = 18
 
+    def _resolve_lab_bono(l_dict):
+        if bono_in_fcas:
+            return 0.0
+        raw = (
+            l_dict.get("bono")
+            if l_dict.get("bono") is not None
+            else (
+                l_dict.get("Bono")
+                if l_dict.get("Bono") is not None
+                else (
+                    l_dict.get("labor_bonus")
+                    if l_dict.get("labor_bonus") is not None
+                    else l_dict.get("bonus")
+                )
+            )
+        )
+        try:
+            v = float(raw) if raw is not None and str(raw).strip() != "" else 0.0
+        except (ValueError, TypeError):
+            v = 0.0
+        return v if v > 0 else default_labor_bonus
+
     # Convertir el precio total a letras en B{cd_row}:C{pf_row-1}
     total_mat = round(sum( round((float(m.get("CosMat") or m.get("precio_unitario") or m.get("precio") or 0) * float(m.get("CanIns") or m.get("cantidad") or 0)) * (float(m.get("Desper") or m.get("desperdicio") or 0)/100.0 + 1), 2) for m in mat_rows ), 2)
     total_eq = round(sum( round((float(e.get("CosDia") or e.get("precio_unitario") or e.get("precio") or 0) * float(e.get("CanIns") or e.get("cantidad") or 0)) * float(e.get("Deprec") or e.get("depreciacion") or 1), 2) for e in eq_rows ), 2)
     total_mo_jornal = sum( round(float(l.get("CanIns") or l.get("cantidad") or 0) * float(l.get("Jornal") or l.get("jornal") or 0), 2) for l in mo_rows )
-    total_mo_bono = sum( round(float(l.get("CanIns") or l.get("cantidad") or 0) * float(l.get("Bono") or l.get("bono") or 0), 2) for l in mo_rows )
+    total_mo_bono = sum( round(float(l.get("CanIns") or l.get("cantidad") or 0) * _resolve_lab_bono(l), 2) for l in mo_rows )
     mo_ps = round((prestaciones/100.0) * total_mo_jornal, 2)
     total_mo = total_mo_jornal + total_mo_bono + mo_ps
     

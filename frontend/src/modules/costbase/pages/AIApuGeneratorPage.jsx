@@ -62,7 +62,8 @@ export default function AIApuGeneratorPage() {
     admin_percent: costosConfig?.porcentajeAdministracion ?? 15.0,
     profit_percent: costosConfig?.porcentajeUtilidad ?? 10.0,
     iva_percent: 0,
-    labor_bonus: 0,
+    labor_bonus: costosConfig?.fcasBonoInFcas ? 0 : (costosConfig?.fcasLaborBonus ?? 0),
+    bono_in_fcas: costosConfig?.fcasBonoInFcas ?? false,
     currency: 'USD'
   }));
 
@@ -73,6 +74,8 @@ export default function AIApuGeneratorPage() {
         fcas_percent: costosConfig.fcas ?? prev.fcas_percent,
         admin_percent: costosConfig.porcentajeAdministracion ?? prev.admin_percent,
         profit_percent: costosConfig.porcentajeUtilidad ?? prev.profit_percent,
+        labor_bonus: costosConfig.fcasBonoInFcas ? 0 : (costosConfig.fcasLaborBonus ?? prev.labor_bonus),
+        bono_in_fcas: costosConfig.fcasBonoInFcas ?? prev.bono_in_fcas,
       }));
     }
   }, [costosConfig]);
