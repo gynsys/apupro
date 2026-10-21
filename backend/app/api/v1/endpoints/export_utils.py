@@ -404,12 +404,14 @@ def build_apu_sheet(
     style_cell(ws["C6"], align="left", valign="top")
     ws["G8"] = "Rendimiento:"
     ws["H8"] = rendimiento
+    ws["H8"].number_format = "#,##0.000000"
     ws["B9"] = "Código:"
     ws["C9"] = codigo
     ws["E9"] = "Unidad:"
     ws["F9"] = unidad
     ws["G9"] = "Cantidad:"
     ws["H9"] = cantidad if cantidad > 0 else 1.0
+    ws["H9"].number_format = "#,##0.00"
 
     # MATERIALES
     mat_start = 11
@@ -438,6 +440,9 @@ def build_apu_sheet(
         ws[f"F{row}"] = float(m.get("Desper") or m.get("desperdicio") or 0)
         ws[f"G{row}"] = float(m.get("CosMat") or m.get("precio_unitario") or m.get("precio") or 0)
         ws[f"H{row}"] = f"=ROUND((G{row}*E{row})*((F{row}/100)+1),2)"
+        ws[f"E{row}"].number_format = '#,##0.0000'
+        ws[f"F{row}"].number_format = '#,##0.00'
+        ws[f"G{row}"].number_format = '#,##0.00'
         style_cell(ws[f"H{row}"], number_format='#,##0.00')
         row += 1
 
@@ -480,6 +485,9 @@ def build_apu_sheet(
         ws[f"F{row}"] = float(e.get("Deprec") or e.get("depreciacion") or 1)
         ws[f"G{row}"] = float(e.get("CosDia") or e.get("precio_unitario") or e.get("precio") or 0)
         ws[f"H{row}"] = f"=ROUND((G{row}*E{row})*(F{row}),2)"
+        ws[f"E{row}"].number_format = '#,##0.00'
+        ws[f"F{row}"].number_format = '#,##0.000000'
+        ws[f"G{row}"].number_format = '#,##0.00'
         style_cell(ws[f"H{row}"], number_format='#,##0.00')
         row += 1
 
@@ -578,6 +586,7 @@ def build_apu_sheet(
     ws[f"D{ps_row}"] = "Prestaciones Sociales:"
     ws[f"G{ps_row}"] = f"=ROUND((C{ps_row}/100)*G{sub_row},2)"
     ws[f"H{ps_row}"] = 0
+    style_cell(ws[f"H{ps_row}"], bold=True, number_format='#,##0.00')
     style_cell(ws[f"G{ps_row}"], number_format='#,##0.00')
 
     tg_row = ps_row + 1
