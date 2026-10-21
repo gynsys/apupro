@@ -311,6 +311,31 @@ def _save_workbook_with_cache(wb: Workbook, file_path: Path) -> None:
         logger.warning("No se pudieron inyectar los valores cacheados: %s", exc)
 
 
+def _clean_description(value: Any) -> str:
+    """Normaliza descripciones para que Maprex no reciba \\, comas ni espacios finales."""
+    text = str(value or "").replace("\\", "/")
+    text = re.sub(r"\s+", " ", text).strip()
+    return text.rstrip(" /,;").strip()
+
+
+def _clean_code(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _safe_code(value: Any) -> str:
+    text = _clean_code(value)
+    return re.sub(r"[^A-Za-z0-9._-]+", "_", text).strip("_")
+
+
+def _is_placeholder_code(code: str) -> bool:
+    normalized = re.sub(r"\s+", " ", _clean_code(code)).strip().upper()
+    return normalized in {"", "S/C", "SC", "SIN CODIGO", "SIN CÓDIGO", "N/A", "NA"} or normalized.startswith("S/C")
+
+
+def _generated_insumo_code(part_num: int, row: int) -> str:
+    return f"SC{int(part_num):03d}{int(row):03d}"
+
+
 def build_apu_sheet(
     ws: Any,
     item: Dict[str, Any],
@@ -326,8 +351,12 @@ def build_apu_sheet(
 
     rendimiento = float(item.get("RenPar") or item.get("rendimiento") or item.get("performance") or 1.0)
     cantidad = float(item.get("CanPar") or item.get("cantidad") or item.get("quantity") or 1.0)
-    descripcion = item.get("DesPar") or item.get("descripcion") or item.get("description") or item.get("Descri") or ""
-    codigo = item.get("cov_par") or item.get("CovPar") or item.get("codigo_covenin") or item.get("CodPar") or item.get("codigo") or item.get("code") or ""
+    descripcion = _clean_description(item.get("DesPar") or item.get("descripcion") or item.get("description") or item.get("Descri") or "")
+    codigo = _clean_code(item.get("cov_par") or item.get("CovPar") or item.get("codigo_covenin") or item.get("CodPar") or item.get("codigo") or item.get("code") or "")
+    if _is_placeholder_code(codigo):
+        codigo = f"APU{int(part_num):03d}"
+    else:
+        codigo = _safe_code(codigo)
     unidad = item.get("UniPar") or item.get("unidad") or item.get("unit") or "UND"
     admin_gg = float(settings.get("admin_percent", 15.0))
     imprevisto_ut = float(settings.get("profit_percent", 10.0))
@@ -395,10 +424,15 @@ def build_apu_sheet(
 
     row = mat_start + 2
     for i, m in enumerate(mat_rows):
-        ws[f"A{row}"] = str(m.get("codigo") or m.get("CodIns") or "")
+        insumo_code = _clean_code(m.get("codigo") or m.get("CodIns") or "")
+        if _is_placeholder_code(insumo_code):
+            insumo_code = _generated_insumo_code(part_num, row)
+        else:
+            insumo_code = _safe_code(insumo_code)
+        ws[f"A{row}"] = insumo_code
         style_cell(ws[f"A{row}"], align="center")
         ws[f"B{row}"] = i + 1
-        ws[f"C{row}"] = m.get("Descri") or m.get("descripcion", "")
+        ws[f"C{row}"] = _clean_description(m.get("Descri") or m.get("descripcion", ""))
         ws[f"D{row}"] = m.get("UniMat") or m.get("unidad", "")
         ws[f"E{row}"] = float(m.get("CanIns") or m.get("cantidad") or 0)
         ws[f"F{row}"] = float(m.get("Desper") or m.get("desperdicio") or 0)
@@ -432,10 +466,15 @@ def build_apu_sheet(
 
     row = eq_start + 2
     for i, e in enumerate(eq_rows):
-        ws[f"A{row}"] = str(e.get("codigo") or e.get("CodIns") or "")
+        insumo_code = _clean_code(e.get("codigo") or e.get("CodIns") or "")
+        if _is_placeholder_code(insumo_code):
+            insumo_code = _generated_insumo_code(part_num, row)
+        else:
+            insumo_code = _safe_code(insumo_code)
+        ws[f"A{row}"] = insumo_code
         style_cell(ws[f"A{row}"], align="center")
         ws[f"B{row}"] = i + 1
-        ws[f"C{row}"] = e.get("Descri") or e.get("descripcion", "")
+        ws[f"C{row}"] = _clean_description(e.get("Descri") or e.get("descripcion", ""))
         ws.merge_cells(f"C{row}:D{row}")
         ws[f"E{row}"] = float(e.get("CanIns") or e.get("cantidad") or 0)
         ws[f"F{row}"] = float(e.get("Deprec") or e.get("depreciacion") or 1)
@@ -473,10 +512,15 @@ def build_apu_sheet(
 
     row = mo_start + 2
     for i, l in enumerate(mo_rows):
-        ws[f"A{row}"] = str(l.get("codigo") or l.get("CodIns") or "")
+        insumo_code = _clean_code(l.get("codigo") or l.get("CodIns") or "")
+        if _is_placeholder_code(insumo_code):
+            insumo_code = _generated_insumo_code(part_num, row)
+        else:
+            insumo_code = _safe_code(insumo_code)
+        ws[f"A{row}"] = insumo_code
         style_cell(ws[f"A{row}"], align="center")
         ws[f"B{row}"] = i + 1
-        ws[f"C{row}"] = l.get("Descri") or l.get("descripcion", "")
+        ws[f"C{row}"] = _clean_description(l.get("Descri") or l.get("descripcion", ""))
         ws[f"D{row}"] = float(l.get("CanIns") or l.get("cantidad") or 0)
         ws[f"E{row}"] = float(l.get("Jornal") or l.get("jornal") or 0)
 
@@ -733,7 +777,9 @@ def generate_excel_workbook(
 
     temp_dir = Path("temp")
     temp_dir.mkdir(exist_ok=True)
-    filename = f"APU_{item.get('CovPar') or item.get('CodPar', 'Custom')}_{uuid.uuid4().hex[:6]}.xlsx"
+    raw_name = str(item.get('CovPar') or item.get('CodPar') or 'Custom')
+    safe_name = re.sub(r'[^A-Za-z0-9_-]+', '_', raw_name).strip('_') or 'APU'
+    filename = f"APU_{safe_name}_{uuid.uuid4().hex[:6]}.xlsx"
     file_path = temp_dir / filename
     _save_workbook_with_cache(wb, file_path)
 
@@ -927,7 +973,7 @@ def generate_budget_excel_workbook(
 
     for it in items:
         is_chapter = bool(it.get("is_chapter"))
-        desc = str(it.get("description") or "").strip()
+        desc = _clean_description(it.get("description") or "")
 
         if is_chapter:
             ws.merge_cells(f"B{curr_r}:H{curr_r}")
