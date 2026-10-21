@@ -255,8 +255,8 @@ export default function ApuEditorUI({
             />
           </label>
 
-          <div className="flex items-center gap-1.5 sm:ml-auto">
-            <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Precio Unitario ({currency}):</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">P.U:</span>
             <span className="text-sm sm:text-base font-black text-blue-700 whitespace-nowrap">
               {costos.unitPrice.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
             </span>
