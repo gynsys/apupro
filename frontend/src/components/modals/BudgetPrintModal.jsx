@@ -24,14 +24,45 @@ export default function BudgetPrintModal({ onClose, onPrint, initialCurrency = '
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const hasBudget = config.type === 'general' || config.type === 'capitulos';
+    const hasApus = Boolean(config.includeAllApus);
+
+    if (!hasBudget && !hasApus) {
+      toast.error('Selecciona al menos una opción para imprimir (Presupuesto o APUs)');
+      return;
+    }
+
     if (config.ubicacion !== undefined) {
       localStorage.setItem(`budget_ubicacion_${budgetId}`, config.ubicacion.trim());
     }
-    onPrint(config);
+
+    const finalConfig = {
+      ...config,
+      type: hasBudget ? config.type : 'apus_only',
+      includeAllApus: hasApus
+    };
+    onPrint(finalConfig);
   };
 
-  const handleTypeChange = (type) => {
-    setConfig(prev => ({ ...prev, type }));
+  const toggleGeneral = () => {
+    setConfig(prev => ({
+      ...prev,
+      type: prev.type === 'general' ? 'none' : 'general'
+    }));
+  };
+
+  const toggleCapitulos = () => {
+    setConfig(prev => ({
+      ...prev,
+      type: prev.type === 'capitulos' ? 'none' : 'capitulos'
+    }));
+  };
+
+  const toggleApus = () => {
+    setConfig(prev => ({
+      ...prev,
+      includeAllApus: !prev.includeAllApus
+    }));
   };
 
   const toggleCheckbox = (field) => {
@@ -103,28 +134,47 @@ export default function BudgetPrintModal({ onClose, onPrint, initialCurrency = '
           <div className="flex flex-col gap-3">
             <label className="text-[13px] font-bold text-amber-900 uppercase tracking-wide">Formato</label>
             <div className="flex flex-col gap-2">
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <div onClick={() => handleTypeChange('general')} className="text-sky-600 transition-transform group-active:scale-95">
+              <div 
+                onClick={toggleGeneral} 
+                className="flex items-center gap-3 cursor-pointer group py-0.5"
+                role="button"
+                tabIndex={0}
+              >
+                <div className="text-sky-600 transition-transform group-active:scale-95 shrink-0">
                   {config.type === 'general' ? <CheckSquare className="text-sky-600" size={20} /> : <Square className="text-sky-300" size={20} />}
                 </div>
-                <span className="text-sm font-medium text-slate-700 select-none group-hover:text-amber-900 transition-colors" onClick={() => handleTypeChange('general')}>Presupuesto General</span>
-              </label>
+                <span className={`text-sm select-none transition-colors ${config.type === 'general' ? 'font-semibold text-amber-950' : 'font-medium text-slate-700 group-hover:text-amber-900'}`}>
+                  Presupuesto General
+                </span>
+              </div>
               
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <div onClick={() => handleTypeChange('capitulos')} className="text-sky-600 transition-transform group-active:scale-95">
+              <div 
+                onClick={toggleCapitulos} 
+                className="flex items-center gap-3 cursor-pointer group py-0.5"
+                role="button"
+                tabIndex={0}
+              >
+                <div className="text-sky-600 transition-transform group-active:scale-95 shrink-0">
                   {config.type === 'capitulos' ? <CheckSquare className="text-sky-600" size={20} /> : <Square className="text-sky-300" size={20} />}
                 </div>
-                <span className="text-sm font-medium text-slate-700 select-none group-hover:text-amber-900 transition-colors" onClick={() => handleTypeChange('capitulos')}>Presupuesto por Capítulos</span>
-              </label>
+                <span className={`text-sm select-none transition-colors ${config.type === 'capitulos' ? 'font-semibold text-amber-950' : 'font-medium text-slate-700 group-hover:text-amber-900'}`}>
+                  Presupuesto por Capítulos
+                </span>
+              </div>
 
-              <label className="flex items-center gap-3 cursor-pointer group mt-1 border-t border-amber-600/15">
-                <div onClick={() => toggleCheckbox('includeAllApus')} className="text-sky-600 transition-transform group-active:scale-95">
+              <div 
+                onClick={toggleApus} 
+                className="flex items-center gap-3 cursor-pointer group py-0.5 mt-1 border-t border-amber-600/15 pt-2"
+                role="button"
+                tabIndex={0}
+              >
+                <div className="text-sky-600 transition-transform group-active:scale-95 shrink-0">
                   {config.includeAllApus ? <CheckSquare className="text-sky-600" size={20} /> : <Square className="text-sky-300" size={20} />}
                 </div>
-                <span className="text-sm font-semibold text-slate-800 select-none group-hover:text-amber-900 transition-colors" onClick={() => toggleCheckbox('includeAllApus')}>
+                <span className={`text-sm select-none transition-colors ${config.includeAllApus ? 'font-semibold text-amber-950' : 'font-medium text-slate-700 group-hover:text-amber-900'}`}>
                   Imprimir todos los APU
                 </span>
-              </label>
+              </div>
             </div>
           </div>
 

@@ -104,7 +104,9 @@ export default function BudgetPrintLayout({ budget, config }) {
         padding: '12mm 15mm'
       }}
     >
-      <div style={{ width: '100%', boxSizing: 'border-box' }}>
+      {/* ── RESUMEN DEL PRESUPUESTO (Omitido si se imprime Solamente los APU) ── */}
+      {config?.type !== 'apus_only' && (
+        <div style={{ width: '100%', boxSizing: 'border-box' }}>
 
         {/* ── ENCABEZADO (estilo PDF: empresa top-left, sin membrete derecho) ── */}
         <div style={{ marginBottom: '14px' }}>
@@ -335,17 +337,18 @@ export default function BudgetPrintLayout({ budget, config }) {
         </div>
 
       </div>
+      )}
 
-      {/* ── APUs individuales si se seleccionó "Imprimir todos los APU" ── */}
-      {config?.includeAllApus && (
+      {/* ── APUs individuales si se seleccionó "Imprimir todos los APU" o Solamente los APU ── */}
+      {(config?.includeAllApus || config?.type === 'apus_only') && (
         <div style={{ width: '100%', boxSizing: 'border-box' }}>
           {items.filter(i => !i.is_chapter).map((item, idx) => (
             <div
               key={`print-all-apu-${item.id || idx}`}
               style={{
-                pageBreakBefore: 'always',
-                breakBefore: 'page',
-                paddingTop: '10mm',
+                pageBreakBefore: (config?.type === 'apus_only' && idx === 0) ? 'auto' : 'always',
+                breakBefore: (config?.type === 'apus_only' && idx === 0) ? 'auto' : 'page',
+                paddingTop: (config?.type === 'apus_only' && idx === 0) ? '0' : '10mm',
                 boxSizing: 'border-box'
               }}
             >
@@ -385,6 +388,11 @@ export default function BudgetPrintLayout({ budget, config }) {
               />
             </div>
           ))}
+          {items.filter(i => !i.is_chapter).length === 0 && config?.type === 'apus_only' && (
+            <div style={{ textAlign: 'center', padding: '40px', fontSize: '13px', color: '#666' }}>
+              El presupuesto no contiene partidas con Análisis de Precios Unitarios (APU) para imprimir.
+            </div>
+          )}
         </div>
       )}
     </div>,
