@@ -136,6 +136,14 @@ def build_apu_sheet(
     cantidad = float(item.get("CanPar") or item.get("cantidad") or item.get("quantity") or 1.0)
     descripcion = item.get("DesPar") or item.get("descripcion") or item.get("description") or item.get("Descri") or ""
     codigo = item.get("cov_par") or item.get("CovPar") or item.get("codigo_covenin") or item.get("CodPar") or item.get("codigo") or item.get("code") or ""
+    cod_par = str(
+        item.get("CodPar")
+        or item.get("cod_par")
+        or item.get("CovPar")
+        or item.get("cov_par")
+        or codigo
+        or ""
+    ).strip()
     unidad = item.get("UniPar") or item.get("unidad") or item.get("unit") or "UND"
     admin_gg = float(settings.get("admin_percent", 15.0))
     imprevisto_ut = float(settings.get("profit_percent", 10.0))
@@ -193,6 +201,8 @@ def build_apu_sheet(
     mat_start = 11
     ws.merge_cells(f"B{mat_start}:H{mat_start}")
     ws[f"B{mat_start}"] = "MATERIALES"
+    ws[f"A{mat_start}"] = cod_par
+    style_cell(ws[f"A{mat_start}"], bold=True, align="center")
     style_cell(ws[f"B{mat_start}"], bold=True, size=12)
 
     headers = ["No.", "Descripción", "Und.", "Cant.", "Desp.", "Precio", "Total"]
@@ -200,9 +210,13 @@ def build_apu_sheet(
         col = get_column_letter(i + 2)
         ws[f"{col}{mat_start+1}"] = h
         style_cell(ws[f"{col}{mat_start+1}"], bold=True, border=True)
+    ws[f"A{mat_start+1}"] = "CodPar"
+    style_cell(ws[f"A{mat_start+1}"], bold=True, border=True)
 
     row = mat_start + 2
     for i, m in enumerate(mat_rows):
+        ws[f"A{row}"] = cod_par
+        style_cell(ws[f"A{row}"], align="center")
         ws[f"B{row}"] = i + 1
         ws[f"C{row}"] = m.get("Descri") or m.get("descripcion", "")
         ws[f"D{row}"] = m.get("UniMat") or m.get("unidad", "")
@@ -227,6 +241,8 @@ def build_apu_sheet(
     eq_start = total_mat_row + 2
     ws.merge_cells(f"B{eq_start}:H{eq_start}")
     ws[f"B{eq_start}"] = "EQUIPOS"
+    ws[f"A{eq_start}"] = cod_par
+    style_cell(ws[f"A{eq_start}"], bold=True, align="center")
     style_cell(ws[f"B{eq_start}"], bold=True, size=12)
 
     headers = ["No.", "Descripción", "", "Cant.", "Cop/Dep", "Precio", "Total"]
@@ -234,9 +250,13 @@ def build_apu_sheet(
         col = get_column_letter(i + 2)
         ws[f"{col}{eq_start+1}"] = h
         style_cell(ws[f"{col}{eq_start+1}"], bold=True, border=True)
+    ws[f"A{eq_start+1}"] = "CodPar"
+    style_cell(ws[f"A{eq_start+1}"], bold=True, border=True)
 
     row = eq_start + 2
     for i, e in enumerate(eq_rows):
+        ws[f"A{row}"] = cod_par
+        style_cell(ws[f"A{row}"], align="center")
         ws[f"B{row}"] = i + 1
         ws[f"C{row}"] = e.get("Descri") or e.get("descripcion", "")
         ws[f"E{row}"] = float(e.get("CanIns") or e.get("cantidad") or 0)
@@ -265,6 +285,8 @@ def build_apu_sheet(
     mo_start = cuo_row + 2
     ws.merge_cells(f"B{mo_start}:H{mo_start}")
     ws[f"B{mo_start}"] = "MANO DE OBRA"
+    ws[f"A{mo_start}"] = cod_par
+    style_cell(ws[f"A{mo_start}"], bold=True, align="center")
     style_cell(ws[f"B{mo_start}"], bold=True, size=12)
 
     headers = ["No.", "Descripción", "Cant.", "Jornal", "Bono", "Total Jornal", "Total Bono"]
@@ -272,9 +294,13 @@ def build_apu_sheet(
         col = get_column_letter(i + 2)
         ws[f"{col}{mo_start+1}"] = h
         style_cell(ws[f"{col}{mo_start+1}"], bold=True, border=True)
+    ws[f"A{mo_start+1}"] = "CodPar"
+    style_cell(ws[f"A{mo_start+1}"], bold=True, border=True)
 
     row = mo_start + 2
     for i, l in enumerate(mo_rows):
+        ws[f"A{row}"] = cod_par
+        style_cell(ws[f"A{row}"], align="center")
         ws[f"B{row}"] = i + 1
         ws[f"C{row}"] = l.get("Descri") or l.get("descripcion", "")
         ws[f"D{row}"] = float(l.get("CanIns") or l.get("cantidad") or 0)
@@ -410,7 +436,7 @@ def build_apu_sheet(
     ws[f"H{pf_row}"] = f"=H{ps_row2}+H{iva_row}+H{oi_row}"
     style_cell(ws[f"H{pf_row}"], bold=True, number_format='#,##0.00')
 
-    ws.column_dimensions['A'].width = 3
+    ws.column_dimensions['A'].width = 14
     ws.column_dimensions['B'].width = 12
     ws.column_dimensions['C'].width = 45
     ws.column_dimensions['D'].width = 12
