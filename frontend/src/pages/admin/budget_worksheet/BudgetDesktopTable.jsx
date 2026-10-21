@@ -155,8 +155,8 @@ export default function BudgetDesktopTable({
                           let rowBgClass = 'hover:bg-[#FEF3C7]';
                           if (isPending) {
                             rowBgClass = isSelected
-                              ? 'bg-red-100/90 ring-inset ring-2 ring-red-400 hover:bg-red-100'
-                              : 'bg-red-500/[0.08] hover:bg-red-500/[0.16]';
+                              ? 'bg-red-500/[0.38] ring-inset ring-2 ring-red-500 hover:bg-red-500/[0.42]'
+                              : 'bg-red-500/[0.30] hover:bg-red-500/[0.38]';
                           } else if (isSelected) {
                             rowBgClass = 'bg-blue-50 ring-inset ring-2 ring-blue-400';
                           }
@@ -204,12 +204,12 @@ export default function BudgetDesktopTable({
                                         onClick={(e) => { e.stopPropagation(); onTogglePending?.(item.id); }} 
                                         className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
                                           isPending 
-                                            ? 'text-red-600 bg-red-100/90 border-red-300 hover:bg-red-200 shadow-xs' 
+                                            ? 'text-red-700 bg-red-200/90 border-red-400 hover:bg-red-300 shadow-xs' 
                                             : 'text-slate-400 hover:text-red-600 hover:bg-red-50 border-transparent hover:border-red-200'
                                         }`}
                                         title={isPending ? "Partida marcada como pendiente (clic para desmarcar)" : "Marcar partida como pendiente"}
                                       >
-                                        {isPending ? <CheckSquare size={16} className="text-red-600" /> : <Square size={16} />}
+                                        {isPending ? <CheckSquare size={16} className="text-red-700 stroke-[2.2]" /> : <Square size={16} />}
                                       </button>
                                       <button 
                                         onClick={(e) => { e.stopPropagation(); navigate(`/budgets/${budget.id}/item/${item.id}`); }} 

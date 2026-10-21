@@ -109,8 +109,8 @@ export default function BudgetMobileItemCard({
   let cardClass = 'border-slate-200 hover:border-slate-300 bg-white';
   if (isPending) {
     cardClass = isSelected
-      ? 'ring-2 ring-red-400 border-red-300 bg-red-100/90'
-      : 'border-red-200/90 bg-red-500/[0.07] hover:bg-red-500/[0.12]';
+      ? 'ring-2 ring-red-500 border-red-400 bg-red-500/[0.35]'
+      : 'border-red-300 bg-red-500/[0.25] hover:bg-red-500/[0.32]';
   } else if (isSelected) {
     cardClass = 'ring-2 ring-blue-500 border-blue-300 bg-blue-50/20';
   }
@@ -205,12 +205,12 @@ export default function BudgetMobileItemCard({
           onClick={() => onTogglePending?.(item.id)} 
           className={`p-2.5 rounded-xl border transition-colors flex items-center justify-center cursor-pointer ${
             isPending 
-              ? 'text-red-600 bg-red-100 border-red-300 hover:bg-red-200' 
+              ? 'text-red-700 bg-red-200 border-red-400 hover:bg-red-300' 
               : 'text-slate-400 hover:text-red-600 hover:bg-red-50 border-slate-200'
           }`}
           title={isPending ? "Partida marcada como pendiente (clic para desmarcar)" : "Marcar partida como pendiente"}
         >
-          {isPending ? <CheckSquare size={18} className="text-red-600" /> : <Square size={18} />}
+          {isPending ? <CheckSquare size={18} className="text-red-700 stroke-[2.2]" /> : <Square size={18} />}
         </button>
 
         <button 
