@@ -1,5 +1,4 @@
 import React from 'react';
-import { ExternalLink, Handshake } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 /**
@@ -64,14 +63,15 @@ export function searchInMercadoLibre(description) {
 }
 
 /**
- * Badge interactivo de Mercado Libre con colores de marca (#FFE600 / #2D3277).
+ * Botón interactivo con el logo oficial de Mercado Libre.
+ * Ubicado sutilmente al lado de la descripción de los materiales.
+ * Totalmente excluido de impresión física y exportaciones (print:hidden, no-print).
  * 
  * @param {Object} props
- * @param {string} props.description - Texto del material
- * @param {boolean} [props.compact=false] - Modo compacto cuadrado para barras de acciones
+ * @param {string} props.description - Texto del material a buscar
  * @param {string} [props.className=''] - Clases Tailwind adicionales
  */
-export default function MercadoLibreBadge({ description, compact = false, className = '' }) {
+export default function MercadoLibreBadge({ description, className = '' }) {
   if (!description || !description.trim()) return null;
 
   const handleClick = (e) => {
@@ -79,29 +79,20 @@ export default function MercadoLibreBadge({ description, compact = false, classN
     searchInMercadoLibre(description);
   };
 
-  if (compact) {
-    return (
-      <button
-        type="button"
-        onClick={handleClick}
-        className={`inline-flex items-center justify-center p-1 rounded-md bg-[#FFE600] hover:bg-[#FDD835] text-[#2D3277] border border-[#E6CF00] transition-all shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer group shrink-0 ${className}`}
-        title="Copiar descripción y buscar en Mercado Libre"
-      >
-        <Handshake size={14} className="stroke-[2.2] group-hover:scale-110 transition-transform" />
-      </button>
-    );
-  }
-
   return (
     <button
       type="button"
       onClick={handleClick}
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#FFE600] hover:bg-[#FDD835] text-[#2D3277] border border-[#E6CF00] text-[10px] font-bold tracking-tight transition-all shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer group shrink-0 ${className}`}
-      title="Copiar descripción y buscar en Mercado Libre"
+      className={`inline-flex items-center justify-center p-0.5 rounded hover:bg-amber-100/60 transition-all duration-150 hover:scale-110 active:scale-95 cursor-pointer shrink-0 print:hidden no-print select-none focus:outline-none ${className}`}
+      title="Buscar en Mercado Libre (copia al portapapeles y abre búsqueda)"
+      aria-label="Buscar en Mercado Libre"
     >
-      <Handshake size={12} className="stroke-[2.4] text-[#2D3277] group-hover:scale-110 transition-transform shrink-0" />
-      <span className="leading-none">Mercado Libre</span>
-      <ExternalLink size={10} className="stroke-[2.2] opacity-70 group-hover:opacity-100 shrink-0" />
+      <img
+        src="/mercadolibre.png"
+        alt="Mercado Libre"
+        className="w-5 h-5 object-contain pointer-events-none drop-shadow-2xs"
+        loading="lazy"
+      />
     </button>
   );
 }

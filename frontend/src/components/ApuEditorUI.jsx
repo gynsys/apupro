@@ -313,23 +313,29 @@ export default function ApuEditorUI({
                       />
                     </td>
                     <td className="p-2 border-r border-slate-200 text-xs">
-                      <CatalogAutocomplete
-                        type="materials"
-                        value={mat.descripcion || ''}
-                        onChange={(val) => safeFn(onComponentChange)('materials', mat.id, 'descripcion', val)}
-                        onBlur={(val) => safeFn(onComponentBlur)('materials', mat.id, 'descripcion', val)}
-                        onSelect={(data) => handleCatalogSelect('materials', mat, data)}
-                        placeholder="Descripción del material"
-                        inputClassName="w-full bg-transparent focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 rounded px-1 font-medium text-slate-700"
-                        autoFocus={focusRowId === mat.id}
-                        openOnFocus={String(mat.id).startsWith('NEW-')}
-                      />
-                      <div className="flex items-center gap-2 mt-1 px-1 flex-wrap">
-                        {mat.origen && renderOrigenTag(mat.origen)}
+                      <div className="flex items-center gap-1.5 w-full">
+                        <div className="flex-1 min-w-0">
+                          <CatalogAutocomplete
+                            type="materials"
+                            value={mat.descripcion || ''}
+                            onChange={(val) => safeFn(onComponentChange)('materials', mat.id, 'descripcion', val)}
+                            onBlur={(val) => safeFn(onComponentBlur)('materials', mat.id, 'descripcion', val)}
+                            onSelect={(data) => handleCatalogSelect('materials', mat, data)}
+                            placeholder="Descripción del material"
+                            inputClassName="w-full bg-transparent focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 rounded px-1 font-medium text-slate-700"
+                            autoFocus={focusRowId === mat.id}
+                            openOnFocus={String(mat.id).startsWith('NEW-')}
+                          />
+                        </div>
                         {mat.descripcion && (
                           <MercadoLibreBadge description={mat.descripcion} />
                         )}
                       </div>
+                      {mat.origen && (
+                        <div className="flex items-center gap-2 mt-1 px-1 flex-wrap">
+                          {renderOrigenTag(mat.origen)}
+                        </div>
+                      )}
                     </td>
                     <td className="p-2 text-center border-r border-slate-200 text-xs">
                       <input 
@@ -370,9 +376,6 @@ export default function ApuEditorUI({
                     </td>
                     <td className="p-2 text-center">
                       <div className="flex items-center justify-center gap-1">
-                        {mat.descripcion && (
-                          <MercadoLibreBadge description={mat.descripcion} compact={true} />
-                        )}
                         <button
                           type="button"
                           onClick={() => setMaterialModal({ isOpen: true, targetRow: mat })}
