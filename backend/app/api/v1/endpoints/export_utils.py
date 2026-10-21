@@ -617,13 +617,26 @@ def build_apu_sheet(
     ws[f"H{pf_row}"] = f"=H{ps_row2}+H{iva_row}+H{oi_row}"
     style_cell(ws[f"H{pf_row}"], bold=True, number_format='#,##0.00')
 
-    # Fusiones del template Maprex
+    # Fusiones del template Maprex (filas dinámicas según las secciones)
     for cell_range in [
-        "F20:G20", "F28:G28", "E29:G29",
-        "D39:F39", "D40:F40", "D41:G41", "D42:G42",
-        "F43:G43", "E44:G44", "D45:G45", "D46:G46",
-        "F47:G47", "D48:G48", "F49:G49",
-        "D50:G50", "F51:G51", "F52:G52", "D54:G54",
+        f"F{total_mat_row}:G{total_mat_row}",
+        f"F{total_eq_row}:G{total_eq_row}",
+        f"E{cuo_row}:G{cuo_row}",
+        f"D{sub_row}:F{sub_row}",
+        f"D{ps_row}:F{ps_row}",
+        f"D{tg_row}:G{tg_row}",
+        f"D{cuo_mo_row}:G{cuo_mo_row}",
+        f"F{otros_mo_row}:G{otros_mo_row}",
+        f"E{cd_row}:G{cd_row}",
+        f"D{ad_row}:G{ad_row}",
+        f"D{sb_row}:G{sb_row}",
+        f"F{iu_row}:G{iu_row}",
+        f"D{sc_row}:G{sc_row}",
+        f"F{fin_row}:G{fin_row}",
+        f"D{ps_row2}:G{ps_row2}",
+        f"F{iva_row}:G{iva_row}",
+        f"F{oi_row}:G{oi_row}",
+        f"D{pf_row}:G{pf_row}",
     ]:
         ws.merge_cells(cell_range)
 
