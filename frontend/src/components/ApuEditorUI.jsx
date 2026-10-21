@@ -228,33 +228,36 @@ export default function ApuEditorUI({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 border-b border-slate-200 bg-white">
-          <div className="p-3 border-r border-b md:border-b-0 border-slate-100">
-            <span className="block text-[11px] sm:text-xs font-bold text-slate-400 uppercase mb-1">Unidad</span>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 bg-white px-3 py-2 sm:px-4">
+          <label className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Unidad:</span>
             <input 
               type="text" 
-              className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-sm font-bold text-slate-700 focus:outline-none focus:border-blue-500"
+              className="w-24 bg-transparent border-b border-slate-300 px-1 py-0.5 text-sm font-bold text-slate-700 focus:outline-none focus:border-blue-500"
               value={item.unit || item.unidad || ''}
               onChange={e => safeFn(onHeaderChange)('unit', e.target.value)}
               onBlur={e => safeFn(onHeaderBlur)('unit', e.target.value)}
             />
-          </div>
-          <div className="p-3 border-b md:border-b-0 md:border-r border-slate-100">
-            <span className="block text-[11px] sm:text-xs font-bold text-slate-400 uppercase mb-1">Cantidad Base</span>
+          </label>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cantidad Base:</span>
             <span className="text-sm font-bold text-slate-700">1</span>
           </div>
-          <div className="p-3 border-r border-slate-100 bg-amber-50/30">
-            <span className="block text-[11px] sm:text-xs font-bold text-amber-700/70 uppercase mb-1">Rendimiento</span>
+
+          <label className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-amber-700/70 uppercase tracking-wider">Rendimiento:</span>
             <DecimalInput 
-              className="w-full bg-amber-100/50 border-b-2 border-amber-300 focus:border-amber-500 focus:outline-none focus:bg-amber-100 px-1 font-bold text-amber-900 transition-colors text-sm"
+              className="w-20 bg-amber-50/60 border-b border-amber-300 px-1 py-0.5 text-sm font-bold text-amber-900 focus:outline-none focus:border-amber-500 focus:bg-amber-100"
               value={item.performance || item.rendimiento || 1}
               onChange={(val) => safeFn(onHeaderChange)('performance', val)}
               onBlur={(val) => safeFn(onHeaderBlur)('performance', val)}
             />
-          </div>
-          <div className="p-3 bg-blue-50/50">
-            <span className="block text-[11px] sm:text-xs font-bold text-blue-500 uppercase mb-1">Precio Unitario ({currency})</span>
-            <span className="text-base sm:text-lg font-black text-blue-700">
+          </label>
+
+          <div className="flex items-center gap-1.5 sm:ml-auto">
+            <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Precio Unitario ({currency}):</span>
+            <span className="text-sm sm:text-base font-black text-blue-700 whitespace-nowrap">
               {costos.unitPrice.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
             </span>
           </div>
