@@ -202,58 +202,60 @@ export default function ApuEditorUI({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white border-2 border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-3 sm:p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-3 sm:gap-4">
-          <div className="md:col-span-1">
+      <div className="bg-white border-2 border-slate-200 rounded-xl shadow-sm p-3 sm:p-4">
+        <div className="flex flex-col md:flex-row items-stretch md:items-end gap-3 sm:gap-4">
+          <div className="w-full md:w-32 shrink-0">
             <span className="block text-[11px] sm:text-xs font-bold text-slate-400 uppercase mb-1">Código</span>
             <input 
               type="text" 
-              className="w-full md:max-w-[105px] bg-white border border-slate-300 rounded px-2.5 py-1.5 text-sm font-bold font-mono text-slate-800 focus:outline-none focus:border-blue-500"
+              className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 text-sm font-bold font-mono text-slate-800 focus:outline-none focus:border-blue-500 focus:bg-white"
               value={item.CovPar || item.CodPar || item.cov_par || item.cod_par || item.codigo || ''}
               onChange={e => safeFn(onHeaderChange)(item.CovPar !== undefined ? 'CovPar' : (item.cov_par !== undefined ? 'cov_par' : 'cod_par'), e.target.value)}
               onBlur={e => safeFn(onHeaderBlur)(item.CovPar !== undefined ? 'CovPar' : (item.cov_par !== undefined ? 'cov_par' : 'cod_par'), e.target.value)}
               placeholder="Ej. CUST-001"
             />
           </div>
-          <div className="md:col-span-3">
+
+          <div className="flex-1 min-w-[200px]">
             <span className="block text-[11px] sm:text-xs font-bold text-slate-400 uppercase mb-1">Descripción</span>
             <input 
               type="text" 
-              className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-sm font-medium focus:outline-none focus:border-blue-500"
+              className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 text-sm font-medium focus:outline-none focus:border-blue-500 focus:bg-white"
               value={item.description || item.descripcion || ''}
               onChange={e => safeFn(onHeaderChange)('description', e.target.value)}
               onBlur={e => safeFn(onHeaderBlur)('description', e.target.value)}
               placeholder="Descripción de la partida"
             />
           </div>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 bg-white px-3 py-2 sm:px-4">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cantidad Base:</span>
-            <span className="text-sm font-bold text-slate-700">1</span>
+          <div className="w-full md:w-24 shrink-0">
+            <span className="block text-[11px] sm:text-xs font-bold text-slate-400 uppercase mb-1 whitespace-nowrap">Cant. Base</span>
+            <div className="w-full bg-slate-100 border border-slate-200 rounded px-2 py-1.5 text-sm font-bold text-slate-700 text-center">
+              1
+            </div>
           </div>
 
-          <label className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold text-amber-700/70 uppercase tracking-wider">Rendimiento:</span>
+          <div className="w-full md:w-28 shrink-0">
+            <span className="block text-[11px] sm:text-xs font-bold text-amber-700/80 uppercase mb-1 whitespace-nowrap">Rendimiento</span>
             <DecimalInput 
-              className="w-20 bg-amber-50/60 border-b border-amber-300 px-1 py-0.5 text-sm font-bold text-amber-900 focus:outline-none focus:border-amber-500 focus:bg-amber-100"
+              className="w-full bg-amber-50/60 border border-amber-300 rounded px-2.5 py-1.5 text-sm font-bold text-amber-900 text-right focus:outline-none focus:border-amber-500 focus:bg-amber-100"
               value={item.performance || item.rendimiento || 1}
               onChange={(val) => safeFn(onHeaderChange)('performance', val)}
               onBlur={(val) => safeFn(onHeaderBlur)('performance', val)}
             />
-          </label>
+          </div>
 
-          <label className="flex items-center gap-1.5 sm:ml-auto">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Unidad:</span>
+          <div className="w-full md:w-24 shrink-0">
+            <span className="block text-[11px] sm:text-xs font-bold text-slate-400 uppercase mb-1 whitespace-nowrap">Unidad</span>
             <input 
               type="text" 
-              className="w-[92px] max-w-[92px] bg-transparent border-b border-slate-300 px-1 py-0.5 text-sm font-bold text-slate-700 focus:outline-none focus:border-blue-500"
+              className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 text-sm font-bold text-slate-700 text-center uppercase focus:outline-none focus:border-blue-500 focus:bg-white"
               value={item.unit || item.unidad || ''}
               onChange={e => safeFn(onHeaderChange)('unit', e.target.value)}
               onBlur={e => safeFn(onHeaderBlur)('unit', e.target.value)}
+              placeholder="UND"
             />
-          </label>
+          </div>
         </div>
       </div>
 
