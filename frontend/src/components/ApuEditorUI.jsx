@@ -8,6 +8,7 @@ import LaborSelectorModal from './LaborSelectorModal';
 import CatalogAutocomplete from './CatalogAutocomplete';
 import DecimalInput from './DecimalInput';
 import MercadoLibreBadge from './MercadoLibreBadge';
+import EpaBadge from './EpaBadge';
 
 export default function ApuEditorUI({
   item,
@@ -228,28 +229,28 @@ export default function ApuEditorUI({
             />
           </div>
 
-          <div className="w-full md:w-24 shrink-0">
-            <span className="block text-[11px] sm:text-xs font-bold text-slate-400 uppercase mb-1 whitespace-nowrap">Cant. Base</span>
-            <div className="w-full bg-slate-100 border border-slate-200 rounded px-2 py-1.5 text-sm font-bold text-slate-700 text-center">
+          <div className="w-full md:w-[75px] shrink-0">
+            <span className="block text-[11px] sm:text-xs font-bold text-slate-400 uppercase mb-1 whitespace-nowrap text-center">Cant. Base</span>
+            <div className="w-full bg-slate-100 border border-slate-200 rounded px-1.5 py-1.5 text-sm font-bold text-slate-700 text-center">
               1
             </div>
           </div>
 
-          <div className="w-full md:w-28 shrink-0">
-            <span className="block text-[11px] sm:text-xs font-bold text-amber-700/80 uppercase mb-1 whitespace-nowrap">Rendimiento</span>
+          <div className="w-full md:w-[88px] shrink-0">
+            <span className="block text-[11px] sm:text-xs font-bold text-amber-700/80 uppercase mb-1 whitespace-nowrap text-center">Rendimiento</span>
             <DecimalInput 
-              className="w-full bg-amber-50/60 border border-amber-300 rounded px-2.5 py-1.5 text-sm font-bold text-amber-900 text-right focus:outline-none focus:border-amber-500 focus:bg-amber-100"
+              className="w-full bg-amber-50/60 border border-amber-300 rounded px-1.5 py-1.5 text-sm font-bold text-amber-900 text-center focus:outline-none focus:border-amber-500 focus:bg-amber-100"
               value={item.performance || item.rendimiento || 1}
               onChange={(val) => safeFn(onHeaderChange)('performance', val)}
               onBlur={(val) => safeFn(onHeaderBlur)('performance', val)}
             />
           </div>
 
-          <div className="w-full md:w-24 shrink-0">
-            <span className="block text-[11px] sm:text-xs font-bold text-slate-400 uppercase mb-1 whitespace-nowrap">Unidad</span>
+          <div className="w-full md:w-[52px] shrink-0">
+            <span className="block text-[11px] sm:text-xs font-bold text-slate-400 uppercase mb-1 whitespace-nowrap text-center">Unidad</span>
             <input 
               type="text" 
-              className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 text-sm font-bold text-slate-700 text-center uppercase focus:outline-none focus:border-blue-500 focus:bg-white"
+              className="w-full bg-slate-50 border border-slate-300 rounded px-1 py-1.5 text-sm font-bold text-slate-700 text-center uppercase focus:outline-none focus:border-blue-500 focus:bg-white"
               value={item.unit || item.unidad || ''}
               onChange={e => safeFn(onHeaderChange)('unit', e.target.value)}
               onBlur={e => safeFn(onHeaderBlur)('unit', e.target.value)}
@@ -326,7 +327,10 @@ export default function ApuEditorUI({
                           />
                         </div>
                         {mat.descripcion && (
-                          <MercadoLibreBadge description={mat.descripcion} />
+                          <div className="flex items-center gap-1 shrink-0 print:hidden no-print select-none">
+                            <MercadoLibreBadge description={mat.descripcion} />
+                            <EpaBadge description={mat.descripcion} />
+                          </div>
                         )}
                       </div>
                       {mat.origen && (

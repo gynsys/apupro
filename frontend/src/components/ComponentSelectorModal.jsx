@@ -4,6 +4,7 @@ import { API_URL } from '../services/api';
 import { TYPE_CONFIG } from '../utils/componentCatalogConfig';
 import { useDatabaseContext } from '../contexts/DatabaseContext';
 import MercadoLibreBadge from './MercadoLibreBadge';
+import EpaBadge from './EpaBadge';
 
 export default function ComponentSelectorModal({
   isOpen,
@@ -297,7 +298,10 @@ export default function ComponentSelectorModal({
                         <div className="flex items-center justify-between gap-2">
                           <span>{desc}</span>
                           {type === 'materials' && desc && (
-                            <MercadoLibreBadge description={desc} />
+                            <div className="flex items-center gap-1 shrink-0 print:hidden no-print select-none">
+                              <MercadoLibreBadge description={desc} />
+                              <EpaBadge description={desc} />
+                            </div>
                           )}
                         </div>
                       </td>
