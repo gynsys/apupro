@@ -1,62 +1,95 @@
 /**
  * APU and Budget Calculation Utilities
- * Ensures consistent calculations between BudgetWorksheetPage, BudgetHomePage,
- * BudgetPrintLayout, and ApuEditorUI.
+ * Single Source of Truth for APU and Budget Calculations across:
+ * - BudgetWorksheetPage (Desktop & Mobile)
+ * - BudgetAPUEditorPage & ApuEditorUI
+ * - BudgetPrintLayout & PrintAPULayout
+ * - ExportApuExcelButton
  */
 
 /**
- * Calculates the unit price (Subtotal C: Costo Directo + Admin + Utilidad) for an APU item.
- * Note: The unit price of an APU never includes IVA. IVA is applied to the global budget total.
+ * Calculates the complete breakdown and unit price for an APU item.
  * 
  * @param {Object} item - The budget item or APU item
  * @param {Object} budget - The budget settings/configuration
- * @returns {number} The calculated unit price (Subtotal C)
+ * @returns {Object} Complete breakdown of materials, equipment, labor, overheads and unit price.
  */
-export function calculateItemPU(item, budget = {}) {
-  if (!item || item.is_chapter) return 0;
+export function calculateItemBreakdown(item, budget = {}) {
+  const zeroBreakdown = {
+    matCost: 0,
+    eqTotalDay: 0,
+    eqCost: 0,
+    totJornal: 0,
+    totBono: 0,
+    fcasPercent: 417.0,
+    fcasMonto: 0,
+    labTotalDay: 0,
+    labCost: 0,
+    subtotalA: 0,
+    adminPercent: 15.0,
+    adminCost: 0,
+    subtotalB: 0,
+    profitPercent: 10.0,
+    profitCost: 0,
+    subtotalC: 0,
+    ivaPercent: 0,
+    ivaCost: 0,
+    unitPrice: 0,
+    unitPriceWithIva: 0,
+    materiales: 0,
+    equipos: 0,
+    manoObra: 0
+  };
 
-  const exRate = budget?.currency === 'BS' ? (parseFloat(budget?.exchange_rate) || 1.0) : 1.0;
-  const matInflation = parseFloat(budget?.material_inflation) || 0;
-  const eqInflation = parseFloat(budget?.equipment_inflation) || 0;
-  const labInflation = parseFloat(budget?.labor_inflation) || 0;
-  const defaultLaborBonus = parseFloat(budget?.labor_bonus) || 0;
-  const perf = parseFloat(item.performance ?? item.rendimiento ?? 1.0) || 1.0;
+  if (!item || item.is_chapter) return zeroBreakdown;
+
+  const curr = budget?.currency || item?.currency || 'USD';
+  const exRate = (curr === 'BS' || curr === 'Bs' || curr === 'Bs.')
+    ? (parseFloat(budget?.exchange_rate ?? item?.exchange_rate) || 1.0)
+    : 1.0;
+
+  const matInflation = parseFloat(budget?.material_inflation ?? item?.material_inflation ?? 0) || 0;
+  const eqInflation = parseFloat(budget?.equipment_inflation ?? item?.equipment_inflation ?? 0) || 0;
+  const labInflation = parseFloat(budget?.labor_inflation ?? item?.labor_inflation ?? 0) || 0;
+  const defaultLaborBonus = parseFloat(budget?.labor_bonus ?? item?.labor_bonus ?? 0) || 0;
+  const perf = parseFloat(item.performance ?? item.rendimiento ?? item.RenPar ?? 1.0) || 1.0;
 
   // 1. Materiales
-  const matCost = (item.materials || []).reduce((acc, curr) => {
-    const q = parseFloat(curr.cantidad ?? curr.quantity ?? 0);
-    const w = parseFloat(curr.desperdicio ?? curr.waste ?? 0);
-    const p = parseFloat(curr.precio_unitario ?? curr.price ?? 0) * exRate;
+  const matCost = (item.materials || []).reduce((acc, currMat) => {
+    const q = parseFloat(currMat.cantidad ?? currMat.quantity ?? currMat.CanIns ?? 0);
+    const w = parseFloat(currMat.desperdicio ?? currMat.waste ?? currMat.Desper ?? 0);
+    const p = parseFloat(currMat.precio_unitario ?? currMat.price ?? currMat.precio ?? currMat.CosMat ?? 0) * exRate;
     const baseCost = (q * (1 + w / 100)) * p;
     return acc + (baseCost * (1 + (matInflation / 100)));
   }, 0);
 
   // 2. Equipos
-  const eqTotalDay = (item.equipments || []).reduce((acc, curr) => {
-    const q = parseFloat(curr.cantidad ?? curr.quantity ?? 0);
-    const d = parseFloat(curr.depreciacion ?? curr.depreciation ?? 1.0);
-    const p = parseFloat(curr.precio_unitario ?? curr.price ?? 0) * exRate;
+  const eqTotalDay = (item.equipments || []).reduce((acc, currEq) => {
+    const q = parseFloat(currEq.cantidad ?? currEq.quantity ?? currEq.CanIns ?? 0);
+    const d = parseFloat(currEq.depreciacion ?? currEq.depreciation ?? currEq.Deprec ?? 1.0);
+    const p = parseFloat(currEq.precio_unitario ?? currEq.price ?? currEq.precio ?? currEq.CosDia ?? 0) * exRate;
     const baseCost = q * d * p;
     return acc + (baseCost * (1 + (eqInflation / 100)));
   }, 0);
   const eqCost = eqTotalDay / perf;
 
   // 3. Mano de Obra
-  const totJornal = (item.labors || []).reduce((acc, curr) => {
-    const q = parseFloat(curr.cantidad ?? curr.quantity ?? 0);
-    const j = parseFloat(curr.jornal ?? 0) * exRate;
+  const totJornal = (item.labors || []).reduce((acc, currLab) => {
+    const q = parseFloat(currLab.cantidad ?? currLab.quantity ?? currLab.CanIns ?? 0);
+    const j = parseFloat(currLab.jornal ?? currLab.Jornal ?? 0) * exRate;
     const baseCost = q * j;
     return acc + (baseCost * (1 + (labInflation / 100)));
   }, 0);
 
-  const fcasPercent = parseFloat(budget?.fcas_percent ?? 417.0);
-  const bonoInFcas = budget?.bono_in_fcas === true || (budget?.bono_in_fcas !== false && fcasPercent >= 1000);
+  const fcasPercent = parseFloat(budget?.fcas_percent ?? item?.fcas_percent ?? budget?.settings?.fcas_percent ?? 417.0);
+  const rawBonoInFcas = budget?.bono_in_fcas ?? item?.bono_in_fcas ?? budget?.settings?.bono_in_fcas;
+  const bonoInFcas = rawBonoInFcas === true || (rawBonoInFcas !== false && fcasPercent >= 1000);
 
   let totBono = 0;
   if (!bonoInFcas) {
-    totBono = (item.labors || []).reduce((acc, curr) => {
-      const q = parseFloat(curr.cantidad ?? curr.quantity ?? 0);
-      const bBonus = parseFloat(curr.bono) || defaultLaborBonus;
+    totBono = (item.labors || []).reduce((acc, currLab) => {
+      const q = parseFloat(currLab.cantidad ?? currLab.quantity ?? currLab.CanIns ?? 0);
+      const bBonus = parseFloat(currLab.bono ?? currLab.Bono) || defaultLaborBonus;
       const b = bBonus * exRate;
       const baseCost = q * b;
       return acc + (baseCost * (1 + (labInflation / 100)));
@@ -69,8 +102,9 @@ export function calculateItemPU(item, budget = {}) {
 
   // Overheads: Subtotal A -> Subtotal B -> Subtotal C (Precio Unitario)
   const subtotalA = matCost + eqCost + labCost;
-  const adminPercent = parseFloat(budget?.admin_percent ?? 15.0);
-  const profitPercent = parseFloat(budget?.profit_percent ?? budget?.util_percent ?? 10.0);
+  const adminPercent = parseFloat(budget?.admin_percent ?? item?.admin_percent ?? budget?.settings?.admin_percent ?? 15.0);
+  const profitPercent = parseFloat(budget?.profit_percent ?? budget?.util_percent ?? item?.profit_percent ?? item?.util_percent ?? budget?.settings?.profit_percent ?? 10.0);
+  const ivaPercent = parseFloat(budget?.iva_percent ?? item?.iva_percent ?? budget?.settings?.iva_percent ?? 0.0);
 
   const adminCost = subtotalA * (adminPercent / 100);
   const subtotalB = subtotalA + adminCost;
@@ -78,7 +112,48 @@ export function calculateItemPU(item, budget = {}) {
   const subtotalC = subtotalB + profitCost;
 
   // Redondear el Precio Unitario siempre a 2 decimales exactos
-  return Math.round((subtotalC + Number.EPSILON) * 100) / 100;
+  const unitPrice = Math.round((subtotalC + Number.EPSILON) * 100) / 100;
+  const ivaCost = Math.round((unitPrice * (ivaPercent / 100) + Number.EPSILON) * 100) / 100;
+  const unitPriceWithIva = Math.round((unitPrice + ivaCost + Number.EPSILON) * 100) / 100;
+
+  return {
+    matCost,
+    eqTotalDay,
+    eqCost,
+    totJornal,
+    totBono,
+    fcasPercent,
+    fcasMonto,
+    labTotalDay,
+    labCost,
+    subtotalA,
+    adminPercent,
+    adminCost,
+    subtotalB,
+    profitPercent,
+    profitCost,
+    subtotalC,
+    ivaPercent,
+    ivaCost,
+    unitPrice,
+    unitPriceWithIva,
+    materiales: matCost,
+    equipos: eqCost,
+    manoObra: labCost
+  };
+}
+
+/**
+ * Calculates the unit price (Subtotal C: Costo Directo + Admin + Utilidad) for an APU item.
+ * Note: The unit price of an APU never includes IVA. IVA is applied to the global budget total.
+ * 
+ * @param {Object} item - The budget item or APU item
+ * @param {Object} budget - The budget settings/configuration
+ * @returns {number} The calculated unit price (Subtotal C)
+ */
+export function calculateItemPU(item, budget = {}) {
+  const breakdown = calculateItemBreakdown(item, budget);
+  return breakdown.unitPrice;
 }
 
 /**
