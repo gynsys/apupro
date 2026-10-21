@@ -136,14 +136,6 @@ def build_apu_sheet(
     cantidad = float(item.get("CanPar") or item.get("cantidad") or item.get("quantity") or 1.0)
     descripcion = item.get("DesPar") or item.get("descripcion") or item.get("description") or item.get("Descri") or ""
     codigo = item.get("cov_par") or item.get("CovPar") or item.get("codigo_covenin") or item.get("CodPar") or item.get("codigo") or item.get("code") or ""
-    cod_par = str(
-        item.get("CodPar")
-        or item.get("cod_par")
-        or item.get("CovPar")
-        or item.get("cov_par")
-        or codigo
-        or ""
-    ).strip()
     unidad = item.get("UniPar") or item.get("unidad") or item.get("unit") or "UND"
     admin_gg = float(settings.get("admin_percent", 15.0))
     imprevisto_ut = float(settings.get("profit_percent", 10.0))
@@ -203,18 +195,17 @@ def build_apu_sheet(
     ws[f"B{mat_start}"] = "MATERIALES"
     style_cell(ws[f"B{mat_start}"], bold=True, size=12)
 
-    headers = ["", "Descripción", "Und.", "Cant.", "Desp.", "Precio", "Total"]
+    headers = ["No.", "Descripción", "Und.", "Cant.", "Desp.", "Precio", "Total"]
     for i, h in enumerate(headers):
         col = get_column_letter(i + 2)
         ws[f"{col}{mat_start+1}"] = h
         style_cell(ws[f"{col}{mat_start+1}"], bold=True, border=True)
 
     row = mat_start + 2
-    for m in mat_rows:
+    for i, m in enumerate(mat_rows):
         ws[f"A{row}"] = str(m.get("codigo") or m.get("CodIns") or "")
         style_cell(ws[f"A{row}"], align="center")
-        ws[f"B{row}"] = cod_par
-        style_cell(ws[f"B{row}"], align="center")
+        ws[f"B{row}"] = i + 1
         ws[f"C{row}"] = m.get("Descri") or m.get("descripcion", "")
         ws[f"D{row}"] = m.get("UniMat") or m.get("unidad", "")
         ws[f"E{row}"] = float(m.get("CanIns") or m.get("cantidad") or 0)
@@ -240,18 +231,17 @@ def build_apu_sheet(
     ws[f"B{eq_start}"] = "EQUIPOS"
     style_cell(ws[f"B{eq_start}"], bold=True, size=12)
 
-    headers = ["", "Descripción", "", "Cant.", "Cop/Dep", "Precio", "Total"]
+    headers = ["No.", "Descripción", "", "Cant.", "Cop/Dep", "Precio", "Total"]
     for i, h in enumerate(headers):
         col = get_column_letter(i + 2)
         ws[f"{col}{eq_start+1}"] = h
         style_cell(ws[f"{col}{eq_start+1}"], bold=True, border=True)
 
     row = eq_start + 2
-    for e in eq_rows:
+    for i, e in enumerate(eq_rows):
         ws[f"A{row}"] = str(e.get("codigo") or e.get("CodIns") or "")
         style_cell(ws[f"A{row}"], align="center")
-        ws[f"B{row}"] = cod_par
-        style_cell(ws[f"B{row}"], align="center")
+        ws[f"B{row}"] = i + 1
         ws[f"C{row}"] = e.get("Descri") or e.get("descripcion", "")
         ws[f"E{row}"] = float(e.get("CanIns") or e.get("cantidad") or 0)
         ws[f"F{row}"] = float(e.get("Deprec") or e.get("depreciacion") or 1)
@@ -281,18 +271,17 @@ def build_apu_sheet(
     ws[f"B{mo_start}"] = "MANO DE OBRA"
     style_cell(ws[f"B{mo_start}"], bold=True, size=12)
 
-    headers = ["", "Descripción", "Cant.", "Jornal", "Bono", "Total Jornal", "Total Bono"]
+    headers = ["No.", "Descripción", "Cant.", "Jornal", "Bono", "Total Jornal", "Total Bono"]
     for i, h in enumerate(headers):
         col = get_column_letter(i + 2)
         ws[f"{col}{mo_start+1}"] = h
         style_cell(ws[f"{col}{mo_start+1}"], bold=True, border=True)
 
     row = mo_start + 2
-    for l in mo_rows:
+    for i, l in enumerate(mo_rows):
         ws[f"A{row}"] = str(l.get("codigo") or l.get("CodIns") or "")
         style_cell(ws[f"A{row}"], align="center")
-        ws[f"B{row}"] = cod_par
-        style_cell(ws[f"B{row}"], align="center")
+        ws[f"B{row}"] = i + 1
         ws[f"C{row}"] = l.get("Descri") or l.get("descripcion", "")
         ws[f"D{row}"] = float(l.get("CanIns") or l.get("cantidad") or 0)
         ws[f"E{row}"] = float(l.get("Jornal") or l.get("jornal") or 0)
