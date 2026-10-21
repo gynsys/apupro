@@ -523,6 +523,22 @@ export default function BudgetAPUEditorPage() {
               )}
             </div>
 
+            {/* Precio unitario del APU */}
+            <div 
+              className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-emerald-200 shadow-sm"
+              title={`Precio unitario del APU: ${pu.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${budget?.currency || 'USD'}`}
+            >
+              <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider">
+                P.U:
+              </span>
+              <span className="text-base md:text-lg font-bold text-emerald-700 leading-none">
+                {pu.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                {budget?.currency || 'USD'}
+              </span>
+            </div>
+
             {/* Total Partida en vivo (P.U. x Cantidad) */}
             <div 
               className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-blue-200 shadow-sm"
