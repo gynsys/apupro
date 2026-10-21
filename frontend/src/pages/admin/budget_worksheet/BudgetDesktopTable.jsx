@@ -449,7 +449,14 @@ export default function BudgetDesktopTable({
                               </td>
                               <td className="p-4 text-sm font-mono text-slate-600">{item.cov_par || item.cod_par}</td>
                               <td className="p-4 text-sm text-slate-800">
-                                <div className="line-clamp-2 leading-relaxed" title={item.description}>
+                                <div
+                                  className="line-clamp-2 leading-relaxed cursor-pointer"
+                                  title={`${item.description} — Doble clic para abrir el APU`}
+                                  onDoubleClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/budgets/${budget.id}/item/${item.id}`);
+                                  }}
+                                >
                                   {item.description}
                                 </div>
                               </td>
