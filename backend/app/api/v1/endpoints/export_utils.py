@@ -1,6 +1,6 @@
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
-from openpyxl.utils import get_column_letter
+from openpyxl.utils import get_column_letter, range_boundaries
 from openpyxl.drawing.image import Image as OpenpyxlImage
 from PIL import Image as PILImage
 from pathlib import Path
@@ -11,6 +11,9 @@ import base64
 import io
 import re
 import math
+import ast
+import operator
+import zipfile
 from app.core.logging import logger
 
 # Eliminamos numero_a_letras ya que vendrá del frontend
@@ -119,6 +122,195 @@ def sanitize_sheet_title(raw_title: str, existing_titles: set, fallback_index: i
     return candidate
 
 
+def _excel_round(value: float, digits: int = 0) -> float:
+    """Redondeo tipo Excel (medio hacia arriba, no bancario)."""
+    factor = 10 ** int(digits or 0)
+    scaled = abs(float(value)) * factor
+    rounded = math.floor(scaled + 0.5) / factor
+    return rounded if value >= 0 else -rounded
+
+
+def _expand_formula_ranges(formula: str) -> str:
+    """Convierte SUM(A1:A3) en sum([A1,A2,A3]) para poder evaluarlo."""
+    def replace_sum(match: re.Match) -> str:
+        start, end = match.group(1), match.group(2)
+        min_col, min_row, max_col, max_row = range_boundaries(f"{start}:{end}")
+        refs = [
+            f"{get_column_letter(col)}{row}"
+            for row in range(min_row, max_row + 1)
+            for col in range(min_col, max_col + 1)
+        ]
+        return "sum([" + ",".join(refs) + "])"
+
+    formula = re.sub(
+        r"SUM\(([A-Z]+\d+):([A-Z]+\d+)\)",
+        replace_sum,
+        formula,
+        flags=re.IGNORECASE,
+    )
+    formula = re.sub(r"\bROUND\(", "round(", formula, flags=re.IGNORECASE)
+    formula = re.sub(r"\bSUM\(", "sum(", formula, flags=re.IGNORECASE)
+    return formula
+
+
+def _eval_formula_ast(node: ast.AST, resolve) -> Any:
+    if isinstance(node, ast.Expression):
+        return _eval_formula_ast(node.body, resolve)
+    if isinstance(node, ast.Constant):
+        return node.value
+    if isinstance(node, ast.Name):
+        return resolve(node.id)
+    if isinstance(node, ast.List):
+        return [_eval_formula_ast(element, resolve) for element in node.elts]
+    if isinstance(node, ast.UnaryOp):
+        operand = _eval_formula_ast(node.operand, resolve)
+        if isinstance(node.op, ast.USub):
+            return -operand
+        if isinstance(node.op, ast.UAdd):
+            return operand
+        raise ValueError("Operador unario no soportado")
+    if isinstance(node, ast.BinOp):
+        left = _eval_formula_ast(node.left, resolve)
+        right = _eval_formula_ast(node.right, resolve)
+        operations = {
+            ast.Add: operator.add,
+            ast.Sub: operator.sub,
+            ast.Mult: operator.mul,
+            ast.Div: operator.truediv,
+            ast.Pow: operator.pow,
+        }
+        operation = operations.get(type(node.op))
+        if operation is None:
+            raise ValueError("Operador binario no soportado")
+        return operation(left, right)
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+        name = node.func.id
+        args = [_eval_formula_ast(arg, resolve) for arg in node.args]
+        if name == "round":
+            return _excel_round(args[0], int(args[1]) if len(args) > 1 else 0)
+        if name == "sum":
+            if len(args) == 1 and isinstance(args[0], list):
+                return sum(args[0])
+            return sum(args)
+        raise ValueError(f"Función no soportada: {name}")
+    raise ValueError(f"Expresión no soportada: {ast.dump(node)}")
+
+
+def _resolve_formula_ref(ws: Any, ref: str, memo: Dict[str, float], visiting: set) -> float:
+    ref = str(ref).upper()
+    if ref in memo:
+        return memo[ref]
+    if ref in visiting:
+        return 0.0
+
+    value = ws[ref].value
+    if value is None:
+        return 0.0
+    if isinstance(value, str) and value.startswith("="):
+        visiting.add(ref)
+        try:
+            result = _evaluate_excel_formula(ws, value, memo, visiting)
+        finally:
+            visiting.discard(ref)
+        memo[ref] = result
+        return result
+    if isinstance(value, bool):
+        return float(value)
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        text = value.strip().replace(" ", "")
+        if re.fullmatch(r"-?\d+(?:[.,]\d+)?", text):
+            if "," in text and "." not in text:
+                return float(text.replace(",", "."))
+            return float(text.replace(",", ""))
+    return 0.0
+
+
+def _evaluate_excel_formula(ws: Any, formula: str, memo: Dict[str, float], visiting: set) -> float:
+    expression = formula[1:] if formula.startswith("=") else formula
+    expression = re.sub(r"\s+", "", expression)
+    expression = _expand_formula_ranges(expression)
+    tree = ast.parse(expression, mode="eval")
+    return float(_eval_formula_ast(tree, lambda ref: _resolve_formula_ref(ws, ref, memo, visiting)))
+
+
+def _collect_formula_values(wb: Workbook) -> Dict[Tuple[str, str], float]:
+    """Calcula el valor de todas las fórmulas del libro para usarlo como caché."""
+    values: Dict[Tuple[str, str], float] = {}
+    for ws in wb.worksheets:
+        memo: Dict[str, float] = {}
+        visiting: set = set()
+        for row in ws.iter_rows():
+            for cell in row:
+                if isinstance(cell.value, str) and cell.value.startswith("="):
+                    try:
+                        values[(ws.title, cell.coordinate)] = _evaluate_excel_formula(ws, cell.value, memo, visiting)
+                    except Exception as exc:
+                        logger.warning("No se pudo calcular la fórmula %s!%s: %s", ws.title, cell.coordinate, exc)
+    return values
+
+
+def _inject_cached_values(file_path: Path, wb: Workbook, formula_values: Dict[Tuple[str, str], float]) -> None:
+    """Inserta los valores calculados dentro del XML de las celdas con fórmula."""
+    if not formula_values:
+        return
+
+    sheet_index = {name: index + 1 for index, name in enumerate(wb.sheetnames)}
+    temp_path = file_path.with_name(file_path.name + ".tmp")
+
+    def inject_cell(xml: str, coordinate: str, value: float) -> str:
+        pattern = re.compile(
+            r'(<c r="%s"(?:\s[^>]*)?>)(.*?)(</c>)' % re.escape(coordinate),
+            re.DOTALL,
+        )
+        match = pattern.search(xml)
+        if not match:
+            return xml
+        opening, inner, closing = match.groups()
+        if "<f" not in inner:
+            return xml
+        inner = re.sub(r"<v>.*?</v>", "", inner, flags=re.DOTALL)
+        opening = re.sub(r'\st="[^"]*"', "", opening)
+        if not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+            return xml
+        number = f"{float(value):.15g}"
+        replacement = f"{opening}{inner}<v>{number}</v>{closing}"
+        return xml[:match.start()] + replacement + xml[match.end():]
+
+    with zipfile.ZipFile(file_path, "r") as source, zipfile.ZipFile(temp_path, "w", zipfile.ZIP_DEFLATED) as target:
+        for item in source.infolist():
+            data = source.read(item.filename)
+            match = re.search(r"xl/worksheets/sheet(\d+)\.xml$", item.filename)
+            if match:
+                index = int(match.group(1))
+                title = next((name for name, idx in sheet_index.items() if idx == index), None)
+                if title:
+                    xml = data.decode("utf-8")
+                    for (sheet_title, coordinate), value in formula_values.items():
+                        if sheet_title == title:
+                            xml = inject_cell(xml, coordinate, value)
+                    data = xml.encode("utf-8")
+            target.writestr(item, data)
+
+    temp_path.replace(file_path)
+
+
+def _save_workbook_with_cache(wb: Workbook, file_path: Path) -> None:
+    """Guarda el libro y le inyecta los resultados de las fórmulas como caché."""
+    formula_values = _collect_formula_values(wb)
+    try:
+        if getattr(wb, "calculation", None) is not None:
+            wb.calculation.fullCalcOnLoad = True
+    except Exception:
+        pass
+    wb.save(file_path)
+    try:
+        _inject_cached_values(file_path, wb, formula_values)
+    except Exception as exc:
+        logger.warning("No se pudieron inyectar los valores cacheados: %s", exc)
+
+
 def build_apu_sheet(
     ws: Any,
     item: Dict[str, Any],
@@ -165,17 +357,18 @@ def build_apu_sheet(
     ws["B1"] = "ANÁLISIS DE PRECIO UNITARIO"
     style_cell(ws["B1"], bold=True, size=14, align="center")
 
-    ws.merge_cells("B2:H2")
-    ws["B2"] = ""
-
     ws.column_dimensions['B'].width = 10
 
     ws["B3"] = f"Obra: {settings.get('project_name') or settings.get('obra') or ''}"
+    ws.merge_cells("B3:H3")
     ws["B4"] = f"Contratante: {settings.get('client_name') or settings.get('contratante') or ''}"
+    ws.merge_cells("B4:H4")
     ws["E5"] = "Part. No.:"
-    ws["F5"] = str(part_num)
+    ws["F5"] = int(part_num)
     ws["G5"] = "Fecha:"
-    ws["H5"] = datetime.now().strftime("%d/%m/%Y")
+    ws["H5"] = datetime.now()
+    ws["H5"].number_format = "mm-dd-yy"
+    style_cell(ws["H5"], align="center")
     ws["B6"] = "Descripción:"
     ws.merge_cells("C6:H7")
     ws["C6"] = descripcion or item.get("Descri", 'N/A')
@@ -191,7 +384,6 @@ def build_apu_sheet(
 
     # MATERIALES
     mat_start = 11
-    ws.merge_cells(f"B{mat_start}:H{mat_start}")
     ws[f"B{mat_start}"] = "MATERIALES"
     style_cell(ws[f"B{mat_start}"], bold=True, size=12)
 
@@ -216,6 +408,7 @@ def build_apu_sheet(
         row += 1
 
     total_mat_row = row
+    ws.row_dimensions[total_mat_row + 1].hidden = True
     ws[f"F{total_mat_row}"] = "Total Materiales:"
     if mat_rows:
         first_data = mat_start + 2
@@ -227,7 +420,6 @@ def build_apu_sheet(
 
     # EQUIPOS
     eq_start = total_mat_row + 2
-    ws.merge_cells(f"B{eq_start}:H{eq_start}")
     ws[f"B{eq_start}"] = "EQUIPOS"
     style_cell(ws[f"B{eq_start}"], bold=True, size=12)
 
@@ -236,6 +428,7 @@ def build_apu_sheet(
         col = get_column_letter(i + 2)
         ws[f"{col}{eq_start+1}"] = h
         style_cell(ws[f"{col}{eq_start+1}"], bold=True, border=True)
+    ws.merge_cells(f"C{eq_start+1}:D{eq_start+1}")
 
     row = eq_start + 2
     for i, e in enumerate(eq_rows):
@@ -243,6 +436,7 @@ def build_apu_sheet(
         style_cell(ws[f"A{row}"], align="center")
         ws[f"B{row}"] = i + 1
         ws[f"C{row}"] = e.get("Descri") or e.get("descripcion", "")
+        ws.merge_cells(f"C{row}:D{row}")
         ws[f"E{row}"] = float(e.get("CanIns") or e.get("cantidad") or 0)
         ws[f"F{row}"] = float(e.get("Deprec") or e.get("depreciacion") or 1)
         ws[f"G{row}"] = float(e.get("CosDia") or e.get("precio_unitario") or e.get("precio") or 0)
@@ -261,13 +455,13 @@ def build_apu_sheet(
     style_cell(ws[f"H{total_eq_row}"], bold=True, number_format='#,##0.00')
 
     cuo_row = total_eq_row + 1
+    ws.row_dimensions[cuo_row + 1].hidden = True
     ws[f"E{cuo_row}"] = "Costo Unitarios Equipos:"
     ws[f"H{cuo_row}"] = f"=ROUND(H{total_eq_row}/H8,2)"
     style_cell(ws[f"H{cuo_row}"], bold=True, number_format='#,##0.00')
 
     # MANO DE OBRA
     mo_start = cuo_row + 2
-    ws.merge_cells(f"B{mo_start}:H{mo_start}")
     ws[f"B{mo_start}"] = "MANO DE OBRA"
     style_cell(ws[f"B{mo_start}"], bold=True, size=12)
 
@@ -352,9 +546,16 @@ def build_apu_sheet(
     ws[f"H{cuo_mo_row}"] = f"=ROUND(H{tg_row}/H8,2)"
     style_cell(ws[f"H{cuo_mo_row}"], bold=True, number_format='#,##0.00')
 
+    # Otros impuestos de mano de obra (fila del template Maprex)
+    otros_mo_row = cuo_mo_row + 1
+    ws[f"E{otros_mo_row}"] = otros_imp
+    style_cell(ws[f"E{otros_mo_row}"], number_format='#,##0.00', align="right")
+    ws[f"F{otros_mo_row}"] = "Otros Impuestos:"
+    ws[f"H{otros_mo_row}"] = f"=ROUND((H{tg_row}*E{otros_mo_row})/100,2)"
+    style_cell(ws[f"H{otros_mo_row}"], number_format='#,##0.00')
+
     # RESUMEN
-    resumen_start = cuo_mo_row + 2
-    cd_row = resumen_start + 1
+    cd_row = otros_mo_row + 1
     ws[f"E{cd_row}"] = "COSTO DIRECTO SUBTOTAL A:"
     ws[f"H{cd_row}"] = f"=ROUND(H{total_mat_row}+H{cuo_row}+H{cuo_mo_row},2)"
     style_cell(ws[f"H{cd_row}"], bold=True, number_format='#,##0.00')
@@ -411,19 +612,30 @@ def build_apu_sheet(
 
     pf_row = oi_row + 2
     curr_code = str(settings.get("currency") or "USD").strip().upper()
-    unit_curr = "USD" if ("USD" in curr_code or "$" in curr_code) else "Bs."
+    unit_curr = "USD" if ("USD" in curr_code or "$" in curr_code) else "Bs.F."
     ws[f"D{pf_row}"] = f"PRECIO UNITARIO ({unit_curr}):"
     ws[f"H{pf_row}"] = f"=H{ps_row2}+H{iva_row}+H{oi_row}"
     style_cell(ws[f"H{pf_row}"], bold=True, number_format='#,##0.00')
 
-    ws.column_dimensions['A'].width = 14
-    ws.column_dimensions['B'].width = 12
-    ws.column_dimensions['C'].width = 45
-    ws.column_dimensions['D'].width = 12
-    ws.column_dimensions['E'].width = 12
-    ws.column_dimensions['F'].width = 12
-    ws.column_dimensions['G'].width = 16
-    ws.column_dimensions['H'].width = 18
+    # Fusiones del template Maprex
+    for cell_range in [
+        "F20:G20", "F28:G28", "E29:G29",
+        "D39:F39", "D40:F40", "D41:G41", "D42:G42",
+        "F43:G43", "E44:G44", "D45:G45", "D46:G46",
+        "F47:G47", "D48:G48", "F49:G49",
+        "D50:G50", "F51:G51", "F52:G52", "D54:G54",
+    ]:
+        ws.merge_cells(cell_range)
+
+    ws.column_dimensions['A'].hidden = True
+    ws.column_dimensions['A'].width = 0
+    ws.column_dimensions['B'].width = 8.21875
+    ws.column_dimensions['C'].width = 30.77734375
+    ws.column_dimensions['D'].width = 5.77734375
+    ws.column_dimensions['E'].width = 7.21875
+    ws.column_dimensions['F'].width = 6.33203125
+    ws.column_dimensions['G'].width = 10.109375
+    ws.column_dimensions['H'].width = 12.109375
 
     def _resolve_lab_bono(l_dict):
         if bono_in_fcas:
@@ -471,11 +683,16 @@ def build_apu_sheet(
     son_letras = settings.get("son_letras")
     if not son_letras or son_letras == "SON: ( NO DISPONIBLE )":
         currency_word = "DÓLARES" if ("USD" in curr_code or "$" in curr_code) else "Bs."
-        son_letras = f"SON: ( {numero_a_letras(precio_final)} {currency_word} ctms )"
+        son_base = numero_a_letras(precio_final)
+        if " CON " in son_base:
+            entero, centavos = son_base.split(" CON ", 1)
+            son_letras = f"SON: ( {entero} {currency_word} con {centavos} ctms )"
+        else:
+            son_letras = f"SON: ( {son_base} {currency_word} ctms )"
 
-    ws.merge_cells(f"B{iva_row}:C{pf_row-1}")
-    ws[f"B{iva_row}"] = son_letras
-    style_cell(ws[f"B{iva_row}"], align="center", valign="bottom", bold=True)
+    ws.merge_cells(f"B{iu_row}:C{pf_row}")
+    ws[f"B{iu_row}"] = son_letras
+    style_cell(ws[f"B{iu_row}"], align="center", valign="bottom", bold=True)
 
     for r in range(1, pf_row + 1):
         cell = ws[f"H{r}"]
@@ -497,7 +714,7 @@ def generate_excel_workbook(
     wb = Workbook()
     wb.calculation.calcMode = 'auto'
     ws = wb.active
-    ws.title = sanitize_sheet_title(item.get('CodPar') or 'Custom', set())
+    ws.title = "1"
 
     build_apu_sheet(ws, item, mat_rows, eq_rows, mo_rows, settings, part_num=1)
 
@@ -505,7 +722,7 @@ def generate_excel_workbook(
     temp_dir.mkdir(exist_ok=True)
     filename = f"APU_{item.get('CovPar') or item.get('CodPar', 'Custom')}_{uuid.uuid4().hex[:6]}.xlsx"
     file_path = temp_dir / filename
-    wb.save(file_path)
+    _save_workbook_with_cache(wb, file_path)
 
     return file_path, filename
 
@@ -542,13 +759,7 @@ def generate_budget_all_apus_excel_workbook(
             eqs = entry.get("equipments") or []
             mos = entry.get("labors") or []
 
-            code = str(item_info.get("CovPar") or item_info.get("cov_par") or item_info.get("CodPar") or item_info.get("cod_par") or "").strip()
-            if code:
-                raw_sheet_title = f"P{idx} - {code}"
-            else:
-                raw_sheet_title = f"Partida {idx}"
-
-            sheet_title = sanitize_sheet_title(raw_sheet_title, existing_titles, fallback_index=idx)
+            sheet_title = sanitize_sheet_title(str(idx), existing_titles, fallback_index=idx)
 
             if idx == 1:
                 ws = wb.active
@@ -563,7 +774,7 @@ def generate_budget_all_apus_excel_workbook(
     clean_name = re.sub(r'[^A-Za-z0-9_]+', '_', str(budget_dict.get("project_name") or budget_dict.get("name") or "Presupuesto")).strip('_')[:30]
     filename = f"APUS_{clean_name}_{uuid.uuid4().hex[:6]}.xlsx"
     file_path = temp_dir / filename
-    wb.save(file_path)
+    _save_workbook_with_cache(wb, file_path)
 
     return file_path, filename
 def generate_budget_excel_workbook(
@@ -849,6 +1060,6 @@ def generate_budget_excel_workbook(
     safe_slug = re.sub(r'[^a-zA-Z0-9_\-]', '_', raw_name).strip('_')[:40] or "Presupuesto"
     filename = f"Presupuesto_{safe_slug}_{uuid.uuid4().hex[:6]}.xlsx"
     file_path = temp_dir / filename
-    wb.save(file_path)
+    _save_workbook_with_cache(wb, file_path)
 
     return file_path, filename
