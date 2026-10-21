@@ -82,14 +82,14 @@ export default function EpaBadge({ description, className = '' }) {
     <button
       type="button"
       onClick={handleClick}
-      className={`inline-flex items-center justify-center p-0.5 rounded hover:bg-yellow-100/70 transition-all duration-150 hover:scale-110 active:scale-95 cursor-pointer shrink-0 print:hidden no-print select-none focus:outline-none ${className}`}
+      className={`inline-flex items-center justify-center h-6 px-1 rounded hover:bg-yellow-100/70 transition-all duration-150 hover:scale-110 active:scale-95 cursor-pointer shrink-0 print:hidden no-print select-none focus:outline-none ${className}`}
       title="Buscar en Ferretería EPA (copia al portapapeles y abre búsqueda)"
       aria-label="Buscar en Ferretería EPA"
     >
       <img
         src="/epa.png"
         alt="Ferretería EPA"
-        className="h-5 w-auto object-contain pointer-events-none drop-shadow-2xs rounded-xs"
+        className="h-2.5 w-auto object-contain pointer-events-none drop-shadow-2xs rounded-xs"
         loading="lazy"
       />
     </button>
