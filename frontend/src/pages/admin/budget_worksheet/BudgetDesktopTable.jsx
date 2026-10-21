@@ -207,7 +207,7 @@ export default function BudgetDesktopTable({
                                         materials={item.materials || []}
                                         equipments={item.equipments || []}
                                         labors={item.labors || []}
-                                        settings={budget.settings}
+                                        settings={budget}
                                         className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded-lg border border-transparent hover:border-slate-200 transition-colors cursor-pointer"
                                         iconSize={16}
                                       />

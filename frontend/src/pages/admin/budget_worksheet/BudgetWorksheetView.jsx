@@ -43,12 +43,14 @@ export default function BudgetWorksheetView() {
             budget={ws.budget}
             onClose={() => ws.setShowSettings(false)}
             onSave={(newSettings) => {
-              ws.setBudget(prev => ({ 
-                ...prev, 
+              const updated = {
+                ...ws.budget,
                 ...newSettings,
-                name: newSettings.name || newSettings.project_name || prev.name,
-                project_name: newSettings.project_name || newSettings.name || prev.project_name
-              }));
+                name: newSettings.name || newSettings.project_name || ws.budget.name,
+                project_name: newSettings.project_name || newSettings.name || ws.budget.project_name
+              };
+              ws.setBudget(updated);
+              ws.setSettings(prev => ({ ...prev, ...updated }));
               ws.setShowSettings(false);
             }}
           />
@@ -93,17 +95,30 @@ export default function BudgetWorksheetView() {
         {ws.apuPrintOptions && ws.apuPrintOptions.scope !== 'all' && ws.apuToPrint && (
           <PrintAPULayout
             partida={{ 
-              ...ws.apuToPrint, 
-              fcas_percent: ws.budget.fcas_percent, 
+              ...ws.apuToPrint,
+              ...ws.budget,
+              fcas_percent: ws.budget.fcas_percent,
+              bono_in_fcas: ws.budget.bono_in_fcas,
+              labor_bonus: ws.budget.labor_bonus,
+              material_inflation: ws.budget.material_inflation,
+              equipment_inflation: ws.budget.equipment_inflation,
+              labor_inflation: ws.budget.labor_inflation,
               admin_percent: ws.budget.admin_percent, 
               util_percent: ws.budget.profit_percent, 
-              rendimiento: ws.apuToPrint.performance, 
+              profit_percent: ws.budget.profit_percent,
+              rendimiento: ws.apuToPrint.performance ?? ws.apuToPrint.rendimiento ?? 1, 
               cantidad: ws.apuToPrint.quantity 
             }}
             materiales={ws.apuToPrint.materials || []}
             equipos={ws.apuToPrint.equipments || []}
             mano_obra={ws.apuToPrint.labors || []}
-            options={{ ...ws.apuPrintOptions, companyName: ws.budget.company_name || ws.budget.project_name || ws.budget.name }}
+            options={{
+              ...ws.apuPrintOptions,
+              ...ws.budget,
+              currency: ws.budget.currency,
+              exchange_rate: ws.budget.exchange_rate,
+              companyName: ws.budget.company_name || ws.budget.project_name || ws.budget.name
+            }}
           />
         )}
 
@@ -134,9 +149,16 @@ export default function BudgetWorksheetView() {
                 <APUPrintSheet
                   partida={{
                     ...item,
+                    ...ws.budget,
                     fcas_percent: ws.budget.fcas_percent,
+                    bono_in_fcas: ws.budget.bono_in_fcas,
+                    labor_bonus: ws.budget.labor_bonus,
+                    material_inflation: ws.budget.material_inflation,
+                    equipment_inflation: ws.budget.equipment_inflation,
+                    labor_inflation: ws.budget.labor_inflation,
                     admin_percent: ws.budget.admin_percent,
                     util_percent: ws.budget.profit_percent,
+                    profit_percent: ws.budget.profit_percent,
                     rendimiento: item.performance ?? item.rendimiento ?? 1,
                     cantidad: item.quantity,
                     obra: ws.budget.project_name || ws.budget.name || '',
@@ -147,10 +169,18 @@ export default function BudgetWorksheetView() {
                   mano_obra={item.labors || []}
                   options={{
                     ...ws.apuPrintOptions,
+                    ...ws.budget,
+                    currency: ws.budget.currency,
+                    exchange_rate: ws.budget.exchange_rate,
                     companyName: ws.budget.company_name || ws.budget.project_name || ws.budget.name,
                     admin_percent: ws.budget.admin_percent,
                     profit_percent: ws.budget.profit_percent,
                     fcas_percent: ws.budget.fcas_percent,
+                    bono_in_fcas: ws.budget.bono_in_fcas,
+                    labor_bonus: ws.budget.labor_bonus,
+                    material_inflation: ws.budget.material_inflation,
+                    equipment_inflation: ws.budget.equipment_inflation,
+                    labor_inflation: ws.budget.labor_inflation,
                     obra: ws.budget.project_name || ws.budget.name || '',
                     contratante: ws.budget.client_name || '',
                   }}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { calculateItemBreakdown } from '../utils/apuCalculations';
 
 export function APUPrintSheet({ partida, materiales = [], equipos = [], mano_obra = [], options = {} }) {
   if (!partida) return null;
@@ -17,49 +18,46 @@ export function APUPrintSheet({ partida, materiales = [], equipos = [], mano_obr
   const utilPercent = options?.profit_percent ?? options?.util_percent ?? partida.profit_percent ?? partida.util_percent ?? partida.settings?.profit_percent ?? 10;
   const fcasPercent = options?.fcas_percent ?? partida.fcas_percent ?? partida.settings?.fcas_percent ?? 417;
   const fcasFactor = fcasPercent / 100;
-  const bonoInFcas = options?.bono_in_fcas ?? partida?.bono_in_fcas ?? partida?.settings?.bono_in_fcas ?? (fcasPercent >= 1000);
+  const rawBonoInFcas = options?.bono_in_fcas ?? partida?.bono_in_fcas ?? partida?.settings?.bono_in_fcas;
+  const bonoInFcas = rawBonoInFcas === true || (rawBonoInFcas !== false && fcasPercent >= 1000);
 
-  const calcMatTotal = () => materiales.reduce((acc, m) => {
-    const q = parseFloat(m.cantidad ?? m.quantity ?? 0);
-    const p = (parseFloat(m.precio_unitario ?? m.price ?? 0) * exRate) * (1 + (matInflation / 100));
-    const w = parseFloat(m.desperdicio ?? m.waste ?? 0);
-    return acc + (m.subtotal ?? (q * p * (1 + w / 100)));
-  }, 0);
+  // Single Source of Truth APU Breakdown
+  const breakdown = calculateItemBreakdown({
+    ...partida,
+    materials: materiales,
+    equipments: equipos,
+    labors: mano_obra,
+    performance: rendimiento
+  }, {
+    ...partida,
+    ...options,
+    currency: options?.currency || partida?.currency,
+    exchange_rate: exRate,
+    admin_percent: adminPercent,
+    profit_percent: utilPercent,
+    fcas_percent: fcasPercent,
+    bono_in_fcas: bonoInFcas,
+    labor_bonus: defaultLaborBonus,
+    material_inflation: matInflation,
+    equipment_inflation: eqInflation,
+    labor_inflation: labInflation
+  });
 
-  const calcEqTotal = () => equipos.reduce((acc, eq) => {
-    const q = parseFloat(eq.cantidad ?? eq.quantity ?? 0);
-    const d = parseFloat(eq.depreciacion ?? eq.depreciation ?? 1);
-    const p = (parseFloat(eq.precio_unitario ?? eq.price ?? 0) * exRate) * (1 + (eqInflation / 100));
-    return acc + (eq.subtotal ?? (q * d * p));
-  }, 0);
+  const totalMat = breakdown.matCost;
+  const totalEq = breakdown.eqCost;
+  const totalLab = breakdown.labCost;
+  const subtotalA = breakdown.subtotalA;
+  const adminCost = breakdown.adminCost;
+  const subtotalB = breakdown.subtotalB;
+  const utilCost = breakdown.profitCost;
+  const subtotalC = breakdown.subtotalC;
+  const unitPrice = breakdown.unitPrice;
 
-  const calcLabTotalJornalDay = () => mano_obra.reduce((acc, lab) => {
-    const q = parseFloat(lab.cantidad ?? lab.quantity ?? 0);
-    const j = (parseFloat(lab.jornal ?? 0) * exRate) * (1 + (labInflation / 100));
-    return acc + (lab.tot_jornal ?? (q * j));
-  }, 0);
-
-  const calcLabTotalBonoDay = () => {
-    if (bonoInFcas) return 0;
-    return mano_obra.reduce((acc, lab) => {
-      const q = parseFloat(lab.cantidad ?? lab.quantity ?? 0);
-      const bBonus = parseFloat(lab.bono) || defaultLaborBonus;
-      const b = (bBonus * exRate) * (1 + (labInflation / 100));
-      return acc + (q * b);
-    }, 0);
-  };
-
-  const calcLabTotalDay = () => calcLabTotalJornalDay() * (1 + fcasFactor) + calcLabTotalBonoDay();
-
-  const totalMat = calcMatTotal();
-  const totalEq = calcEqTotal() / rendimiento;
-  const totalLab = calcLabTotalDay() / rendimiento;
-  const subtotalA = totalMat + totalEq + totalLab;
-  const adminCost = subtotalA * (adminPercent / 100);
-  const subtotalB = subtotalA + adminCost;
-  const utilCost = subtotalB * (utilPercent / 100);
-  const subtotalC = subtotalB + utilCost;
-  const unitPrice = subtotalC;
+  const calcMatTotal = () => breakdown.matCost;
+  const calcEqTotal = () => breakdown.eqTotalDay;
+  const calcLabTotalJornalDay = () => breakdown.totJornal;
+  const calcLabTotalBonoDay = () => breakdown.totBono;
+  const calcLabTotalDay = () => breakdown.labTotalDay;
 
   const numFormat = (val) => Number(val).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 

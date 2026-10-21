@@ -214,7 +214,7 @@ export default function BudgetMobileItemCard({
           materials={item.materials || []}
           equipments={item.equipments || []}
           labors={item.labors || []}
-          settings={budget.settings}
+          settings={budget}
           className="p-2.5 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 active:bg-emerald-100 border border-slate-200 rounded-xl transition-colors flex items-center justify-center w-full cursor-pointer"
           iconSize={18}
         />

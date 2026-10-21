@@ -48,6 +48,22 @@ export default function BudgetAPUEditorPage() {
 
 
 
+  // ── Helper to update item and sync budget.items without full reload ───────
+  const updateItemInState = (updater) => {
+    setItem(prev => {
+      if (!prev) return prev;
+      const updated = typeof updater === 'function' ? updater(prev) : updater;
+      setBudget(prevBudget => {
+        if (!prevBudget || !prevBudget.items) return prevBudget;
+        return {
+          ...prevBudget,
+          items: prevBudget.items.map(it => it.id === itemId ? updated : it)
+        };
+      });
+      return updated;
+    });
+  };
+
   // ── Numeric field change (local state only) ──────────────────────────────
   const handleComponentChange = (type, compId, field, value) => {
     const val = parseFloat(value) || 0;
@@ -64,9 +80,18 @@ export default function BudgetAPUEditorPage() {
     const val = parseFloat(value) || 0;
     try {
       await budgetService.updateComponent(id, itemId, type, compId, { [field]: val });
+      setBudget(prev => {
+        if (!prev || !prev.items) return prev;
+        return {
+          ...prev,
+          items: prev.items.map(it => it.id === itemId ? {
+            ...it,
+            [type]: (it[type] || []).map(c => c.id === compId ? { ...c, [field]: val } : c)
+          } : it)
+        };
+      });
     } catch (error) {
       toast.error('Error al actualizar el componente');
-      loadData();
     }
   };
 
@@ -81,11 +106,18 @@ export default function BudgetAPUEditorPage() {
   const handleTextBlur = async (type, compId, field, value) => {
     try {
       await budgetService.updateComponent(id, itemId, type, compId, { [field]: value });
-      toast.success('Actualizado');
-      loadData(); // Recargar datos para reflejar cambios
+      setBudget(prev => {
+        if (!prev || !prev.items) return prev;
+        return {
+          ...prev,
+          items: prev.items.map(it => it.id === itemId ? {
+            ...it,
+            [type]: (it[type] || []).map(c => c.id === compId ? { ...c, [field]: value } : c)
+          } : it)
+        };
+      });
     } catch (error) {
       toast.error('Error al actualizar');
-      loadData();
     }
   };
 
@@ -94,11 +126,11 @@ export default function BudgetAPUEditorPage() {
     setDeletingId(compId);
     try {
       await budgetService.deleteComponent(id, itemId, type, compId);
-      setItem(prev => ({
+      updateItemInState(prev => ({
         ...prev,
-        [type]: prev[type].filter(c => c.id !== compId)
+        [type]: (prev[type] || []).filter(c => c.id !== compId)
       }));
-      toast.success('Eliminado');
+      toast.success('Insumo eliminado');
     } catch (error) {
       toast.error('Error al eliminar');
     } finally {
@@ -107,18 +139,29 @@ export default function BudgetAPUEditorPage() {
   };
 
   useEffect(() => {
+    // Si el presupuesto ya está cargado en memoria, cambiar al APU de forma instantánea sin parpadeo
+    if (budget && budget.id === id) {
+      const foundItem = budget.items?.find(i => i.id === itemId);
+      if (foundItem) {
+        setItem(foundItem);
+        return;
+      }
+    }
     loadData();
   }, [id, itemId]);
 
   const loadData = async () => {
     try {
-      setLoading(true);
+      if (!budget || !item) {
+        setLoading(true);
+      }
       const budgetData = await budgetService.getById(id);
       setBudget(budgetData);
-      const foundItem = budgetData.items.find(i => i.id === itemId);
+      const foundItem = budgetData.items?.find(i => i.id === itemId);
       if (!foundItem) {
         toast.error('Partida no encontrada en este presupuesto');
         navigate(`/budgets/${id}`);
+        return;
       }
       setItem(foundItem);
     } catch (error) {
@@ -131,7 +174,7 @@ export default function BudgetAPUEditorPage() {
 
   const handlePerformanceChange = async (newPerf) => {
     const val = parseFloat(newPerf) || 1;
-    setItem(prev => ({ ...prev, performance: val }));
+    updateItemInState(prev => ({ ...prev, performance: val, rendimiento: val }));
     try {
       await budgetService.updateItem(id, itemId, { performance: val });
     } catch (error) {
@@ -157,38 +200,45 @@ export default function BudgetAPUEditorPage() {
         finalField = 'performance';
         finalValue = parseFloat(value) || 1.0;
         if (finalValue <= 0) finalValue = 1.0;
-        setItem(prev => ({ ...prev, performance: finalValue, rendimiento: finalValue }));
       }
+      updateItemInState(prev => ({
+        ...prev,
+        [finalField]: finalValue,
+        ...(finalField === 'performance' ? { rendimiento: finalValue } : {})
+      }));
       await budgetService.updateItem(id, itemId, { [finalField]: finalValue });
-      toast.success('Rendimiento actualizado');
+      toast.success(finalField === 'performance' ? 'Rendimiento actualizado' : 'Partida actualizada');
       setEditingHeader(prev => ({ ...prev, [field === 'cov_par' ? 'code' : 'description']: false }));
     } catch (error) {
       toast.error('Error al actualizar');
-      loadData();
     }
   };
 
   const handleAddComponent = async (componentData) => {
     try {
-      setLoading(true);
-      await budgetService.addComponent(id, itemId, searchModal.type, componentData);
-      toast.success('Agregado con éxito');
+      const addedComp = await budgetService.addComponent(id, itemId, searchModal.type, componentData);
+      toast.success('Insumo agregado con éxito');
       setSearchModal({ isOpen: false, type: '', title: '' });
-      await loadData();
+      updateItemInState(prev => ({
+        ...prev,
+        [searchModal.type]: [...(prev[searchModal.type] || []), addedComp]
+      }));
     } catch (error) {
       console.error(error);
       toast.error('Error al agregar el insumo');
-      setLoading(false);
     }
   };
 
   const handleSelectComponent = async (type, compId, selectedData) => {
     try {
-      setLoading(true);
       if (!compId) {
         // Adding new component from modal
-        await budgetService.addComponent(id, itemId, type, selectedData);
+        const addedComp = await budgetService.addComponent(id, itemId, type, selectedData);
         toast.success('Insumo agregado con éxito');
+        updateItemInState(prev => ({
+          ...prev,
+          [type]: [...(prev[type] || []), addedComp]
+        }));
       } else if (String(compId).startsWith('NEW-')) {
         // It was a newly added blank row
         const existingRow = item[type]?.find(c => c.id === compId) || {};
@@ -198,8 +248,12 @@ export default function BudgetAPUEditorPage() {
           ...(type === 'materials' ? { desperdicio: existingRow.desperdicio ?? 5.0, unidad: selectedData.unidad || existingRow.unidad || 'UND' } : {}),
           ...(type === 'equipments' ? { depreciacion: selectedData.depreciacion != null ? selectedData.depreciacion : (existingRow.depreciacion ?? 1.0) } : {}),
         };
-        await budgetService.addComponent(id, itemId, type, payload);
+        const addedComp = await budgetService.addComponent(id, itemId, type, payload);
         toast.success('Insumo agregado con éxito');
+        updateItemInState(prev => ({
+          ...prev,
+          [type]: (prev[type] || []).map(c => c.id === compId ? addedComp : c)
+        }));
       } else {
         // Replacing/updating an existing component
         const payload = {
@@ -218,14 +272,16 @@ export default function BudgetAPUEditorPage() {
             bono: selectedData.bono
           } : {})
         };
-        await budgetService.updateComponent(id, itemId, type, compId, payload);
+        const updatedComp = await budgetService.updateComponent(id, itemId, type, compId, payload);
         toast.success('Insumo actualizado');
+        updateItemInState(prev => ({
+          ...prev,
+          [type]: (prev[type] || []).map(c => c.id === compId ? { ...c, ...updatedComp } : c)
+        }));
       }
-      await loadData();
     } catch (error) {
       console.error(error);
       toast.error('Error al actualizar insumo');
-      setLoading(false);
     }
   };
 
@@ -288,23 +344,21 @@ export default function BudgetAPUEditorPage() {
     }
     // We only send to API if it's NOT a new row
     if (String(compId).startsWith('NEW-')) {
-      // If the user finishes editing a new row, and it has valid desc/price, we could auto-save it
-      // For now, we wait for a manual save button? Actually, in budgets, changes save automatically.
-      // We will create the component if it has enough data.
       if (field === 'descripcion' && value.trim() !== '') {
         try {
-          const compToSave = item[type].find(c => c.id === compId);
+          const compToSave = item[type]?.find(c => c.id === compId);
           if (compToSave) {
-            setLoading(true);
             const dataToSave = { ...compToSave };
             delete dataToSave.id; // remove fake ID
-            await budgetService.addComponent(id, itemId, type, dataToSave);
+            const savedComp = await budgetService.addComponent(id, itemId, type, dataToSave);
             toast.success('Insumo guardado');
-            await loadData();
+            updateItemInState(prev => ({
+              ...prev,
+              [type]: (prev[type] || []).map(c => c.id === compId ? savedComp : c)
+            }));
           }
         } catch (error) {
           toast.error('Error al guardar nuevo insumo');
-          setLoading(false);
         }
       }
       return;
@@ -342,11 +396,19 @@ export default function BudgetAPUEditorPage() {
     return pu * qty;
   }, [item, pu]);
 
-  const currentIndex = budget ? budget.items.findIndex(i => i.id === itemId) : -1;
-  const prevItem = currentIndex > 0 ? budget.items[currentIndex - 1] : null;
-  const nextItem = currentIndex !== -1 && currentIndex < budget.items.length - 1 ? budget.items[currentIndex + 1] : null;
+  // Lista de partidas APU reales (excluyendo capítulos)
+  const apuItems = useMemo(() => {
+    return (budget?.items || []).filter(i => !i.is_chapter);
+  }, [budget]);
 
-  if (loading || !item || !budget) {
+  const currentApuIndex = apuItems.findIndex(i => i.id === itemId);
+  const currentPosition = currentApuIndex !== -1 ? currentApuIndex + 1 : 0;
+  const totalApus = apuItems.length;
+
+  const prevItem = currentApuIndex > 0 ? apuItems[currentApuIndex - 1] : null;
+  const nextItem = currentApuIndex !== -1 && currentApuIndex < apuItems.length - 1 ? apuItems[currentApuIndex + 1] : null;
+
+  if (loading && (!item || !budget)) {
     return (
       <div className="flex items-center justify-center min-h-screen text-slate-400">
         <Loader className="animate-spin" size={32} />
@@ -405,27 +467,37 @@ export default function BudgetAPUEditorPage() {
             >
               <ArrowLeft size={20} />
             </button>
-            <div className="flex items-center gap-6">
-              <h2 className="text-sm font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
-                <Calculator size={16} className="text-blue-500" /> APU PRESUPUESTADO
-              </h2>
+            <div className="flex items-center gap-3">
+              {/* Indicador de Partida (ej. 1/88, 50/88) */}
+              <div 
+                className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-sm"
+                title={`Partida ${currentPosition} de ${totalApus} del presupuesto`}
+              >
+                <Calculator size={16} className="text-blue-600 shrink-0" />
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Partida:
+                </span>
+                <span className="text-base md:text-lg font-black text-slate-800 leading-none font-mono">
+                  {currentPosition}/{totalApus}
+                </span>
+              </div>
               
               {/* Navegación APUs */}
-              <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
+              <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
                 <button
-                  onClick={() => navigate(`/budgets/${id}/item/${prevItem.id}`)}
+                  onClick={() => prevItem && navigate(`/budgets/${id}/item/${prevItem.id}`)}
                   disabled={!prevItem}
-                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                  title={prevItem ? "APU Anterior" : "Este es el primer APU"}
+                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  title={prevItem ? `Ir a APU anterior (${currentPosition - 1}/${totalApus})` : "Este es el primer APU"}
                 >
                   <ChevronLeft size={20} className="text-slate-700" />
                 </button>
                 <div className="w-px h-4 bg-slate-200 mx-1"></div>
                 <button
-                  onClick={() => navigate(`/budgets/${id}/item/${nextItem.id}`)}
+                  onClick={() => nextItem && navigate(`/budgets/${id}/item/${nextItem.id}`)}
                   disabled={!nextItem}
-                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                  title={nextItem ? "Siguiente APU" : "Este es el último APU"}
+                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  title={nextItem ? `Ir a siguiente APU (${currentPosition + 1}/${totalApus})` : "Este es el último APU"}
                 >
                   <ChevronRight size={20} className="text-slate-700" />
                 </button>
@@ -515,7 +587,7 @@ export default function BudgetAPUEditorPage() {
           </div>
         </div>
 
-        <div key={item.id} className="animate-in fade-in zoom-in-95 duration-300">
+        <div key={item.id} className="animate-in fade-in duration-150">
           <ApuEditorUI
             item={item}
             settings={{

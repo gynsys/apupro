@@ -90,8 +90,9 @@ export function useBudgetWorksheet() {
       setNotesText(data.notes || '');
       setSettings({
         currency: data.currency || 'USD',
-        exchange_rate: data.exchange_rate || 1.0,
-        fcas_percent: data.fcas_percent || 417.0,
+        exchange_rate: data.exchange_rate ?? 1.0,
+        fcas_percent: data.fcas_percent ?? 417.0,
+        bono_in_fcas: data.bono_in_fcas,
         admin_percent: data.admin_percent ?? 15.0,
         profit_percent: data.profit_percent ?? 10.0,
         iva_percent: data.iva_percent ?? 16.0,
