@@ -257,6 +257,7 @@ export default function BudgetWorksheetView() {
                         onQuantityChange={ws.handleQuantityChange}
                         onSaveQuantity={ws.saveQuantity}
                         onPrintApu={(it) => { ws.setApuToPrint(it); ws.setShowApuPrintModal(true); }}
+                        onTogglePending={ws.handleTogglePending}
                         itemNumber={mobileItemNumber}
                       />
                     );
@@ -282,6 +283,7 @@ export default function BudgetWorksheetView() {
               onSaveQuantity={ws.saveQuantity}
               onPrintApu={(it) => { ws.setApuToPrint(it); ws.setShowApuPrintModal(true); }}
               onOpenSearchModal={ws.handleOpenSearchModal}
+              onTogglePending={ws.handleTogglePending}
             />
           </div>
         </div>

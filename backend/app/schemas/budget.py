@@ -77,6 +77,7 @@ class BudgetItemBase(BaseModel):
     performance: float = 1.0
     order: int = 0
     is_chapter: bool = False
+    is_pending: Optional[bool] = False
 
 class BudgetItemCreate(BudgetItemBase):
     materials: Optional[List[BudgetAPUMaterialBase]] = None
@@ -90,6 +91,7 @@ class BudgetItemUpdate(BaseModel):
     performance: Optional[float] = None
     order: Optional[int] = None
     is_chapter: Optional[bool] = None
+    is_pending: Optional[bool] = None
 
 class BudgetItem(BudgetItemBase):
     id: str

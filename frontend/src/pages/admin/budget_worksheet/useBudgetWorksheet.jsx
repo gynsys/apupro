@@ -86,6 +86,31 @@ export function useBudgetWorksheet() {
     try {
       setLoading(true);
       const data = await budgetService.getById(id);
+
+      // Sincronizar estado pendiente (DB + LocalStorage para máxima persistencia)
+      try {
+        const storageKey = `budget_pending_${id}`;
+        if (data && data.items) {
+          const savedRaw = localStorage.getItem(storageKey);
+          let localPendingSet = new Set(savedRaw ? JSON.parse(savedRaw) : []);
+
+          data.items.forEach(it => {
+            if (it.is_pending) {
+              localPendingSet.add(it.id);
+            }
+          });
+
+          data.items = data.items.map(it => ({
+            ...it,
+            is_pending: localPendingSet.has(it.id) || !!it.is_pending
+          }));
+
+          localStorage.setItem(storageKey, JSON.stringify([...localPendingSet]));
+        }
+      } catch (e) {
+        console.warn('Error sincronizando partidas pendientes con localStorage', e);
+      }
+
       setBudget(data);
       setNotesText(data.notes || '');
       setSettings({
@@ -506,6 +531,48 @@ export function useBudgetWorksheet() {
     }
   };
 
+  const handleTogglePending = async (itemId) => {
+    if (!budget) return;
+    const targetItem = (budget.items || []).find(it => it.id === itemId);
+    if (!targetItem) return;
+
+    const nextPending = !targetItem.is_pending;
+
+    // 1. Optimistic UI update en React
+    setBudget(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        items: (prev.items || []).map(it =>
+          it.id === itemId ? { ...it, is_pending: nextPending } : it
+        )
+      };
+    });
+
+    // 2. Persistir en localStorage inmediatamente
+    try {
+      const storageKey = `budget_pending_${id}`;
+      const savedRaw = localStorage.getItem(storageKey);
+      let pendingSet = new Set(savedRaw ? JSON.parse(savedRaw) : []);
+      if (nextPending) {
+        pendingSet.add(itemId);
+      } else {
+        pendingSet.delete(itemId);
+      }
+      localStorage.setItem(storageKey, JSON.stringify([...pendingSet]));
+    } catch (e) {
+      console.warn('Error guardando partida pendiente en localStorage', e);
+    }
+
+    // 3. Persistir en base de datos via backend
+    try {
+      await budgetService.updateItem(id, itemId, { is_pending: nextPending });
+    } catch (error) {
+      console.error('Error actualizando estado pendiente en servidor:', error);
+      toast.error('No se pudo guardar el estado pendiente en el servidor');
+    }
+  };
+
   const handleSaveNotes = async () => {
     if (!budget) return;
     if ((budget.notes || '') === (notesText || '')) return;
@@ -636,6 +703,7 @@ export function useBudgetWorksheet() {
     calculateBudgetTotal,
     handleQuantityChange,
     saveQuantity,
+    handleTogglePending,
     handleSaveNotes,
     handleExportBudgetToExcel,
   };

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUp, ArrowDown, Trash2, Settings, Printer, Calculator } from 'lucide-react';
+import { ArrowUp, ArrowDown, Trash2, Settings, Printer, Calculator, CheckSquare, Square } from 'lucide-react';
 import MathQuantityInput from './MathQuantityInput';
 import ExportApuExcelButton from '../../../modules/costbase/components/ExportApuExcelButton';
 
@@ -22,6 +22,7 @@ export default function BudgetMobileItemCard({
   onQuantityChange,
   onSaveQuantity,
   onPrintApu,
+  onTogglePending,
   itemNumber,
 }) {
   const navigate = useNavigate();
@@ -102,14 +103,22 @@ export default function BudgetMobileItemCard({
   }
 
   const qty = parseFloat(item.quantity) || 0;
+  const isPending = !!item.is_pending;
   const total = Math.round((pu * qty + Number.EPSILON) * 100) / 100;
+
+  let cardClass = 'border-slate-200 hover:border-slate-300 bg-white';
+  if (isPending) {
+    cardClass = isSelected
+      ? 'ring-2 ring-red-400 border-red-300 bg-red-100/90'
+      : 'border-red-200/90 bg-red-500/[0.07] hover:bg-red-500/[0.12]';
+  } else if (isSelected) {
+    cardClass = 'ring-2 ring-blue-500 border-blue-300 bg-blue-50/20';
+  }
 
   return (
     <div 
       onClick={onSelect}
-      className={`bg-white rounded-2xl border transition-all p-3.5 space-y-2.5 shadow-sm ${
-        isSelected ? 'ring-2 ring-blue-500 border-blue-300 bg-blue-50/20' : 'border-slate-200 hover:border-slate-300'
-      }`}
+      className={`rounded-2xl border transition-all p-3.5 space-y-2.5 shadow-sm ${cardClass}`}
     >
       {/* FILA 1: Identificación y Reordenamiento */}
       <div className="flex items-center justify-between gap-2">
@@ -190,7 +199,20 @@ export default function BudgetMobileItemCard({
       </div>
 
       {/* FILA 4: STRICTLY ONLY ICONS (NO TEXT) */}
-      <div className="grid grid-cols-4 gap-2 pt-1.5 border-t border-slate-100" onClick={e => e.stopPropagation()}>
+      <div className="grid grid-cols-5 gap-2 pt-1.5 border-t border-slate-100" onClick={e => e.stopPropagation()}>
+        <button 
+          type="button"
+          onClick={() => onTogglePending?.(item.id)} 
+          className={`p-2.5 rounded-xl border transition-colors flex items-center justify-center cursor-pointer ${
+            isPending 
+              ? 'text-red-600 bg-red-100 border-red-300 hover:bg-red-200' 
+              : 'text-slate-400 hover:text-red-600 hover:bg-red-50 border-slate-200'
+          }`}
+          title={isPending ? "Partida marcada como pendiente (clic para desmarcar)" : "Marcar partida como pendiente"}
+        >
+          {isPending ? <CheckSquare size={18} className="text-red-600" /> : <Square size={18} />}
+        </button>
+
         <button 
           type="button"
           onClick={() => navigate(`/budgets/${budget.id}/item/${item.id}`)} 

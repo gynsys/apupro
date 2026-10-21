@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { GripVertical, Trash2, Settings, Printer, Layers, Plus } from 'lucide-react';
+import { GripVertical, Trash2, Settings, Printer, Layers, Plus, CheckSquare, Square } from 'lucide-react';
 import MathQuantityInput from './MathQuantityInput';
 import ExportApuExcelButton from '../../../modules/costbase/components/ExportApuExcelButton';
 
@@ -21,6 +21,7 @@ export default function BudgetDesktopTable({
   onSaveQuantity,
   onPrintApu,
   onOpenSearchModal,
+  onTogglePending,
 }) {
   const navigate = useNavigate();
 
@@ -146,9 +147,19 @@ export default function BudgetDesktopTable({
 
                           itemNumber++;
                           const currentNumber = itemNumber;
+                          const isPending = !!item.is_pending;
                           const pu = calculatePU(item);
                           const qty = parseFloat(item.quantity) || 0;
                           const total = Math.round((pu * qty + Number.EPSILON) * 100) / 100;
+
+                          let rowBgClass = 'hover:bg-[#FEF3C7]';
+                          if (isPending) {
+                            rowBgClass = isSelected
+                              ? 'bg-red-100/90 ring-inset ring-2 ring-red-400 hover:bg-red-100'
+                              : 'bg-red-500/[0.08] hover:bg-red-500/[0.16]';
+                          } else if (isSelected) {
+                            rowBgClass = 'bg-blue-50 ring-inset ring-2 ring-blue-400';
+                          }
 
                           return (
                             <Draggable key={item.id} draggableId={item.id} index={idx}>
@@ -157,7 +168,7 @@ export default function BudgetDesktopTable({
                                   ref={dragProvided.innerRef}
                                   {...dragProvided.draggableProps}
                                   onClick={() => setSelectedItemId(isSelected ? null : item.id)}
-                                  className={`hover:bg-[#FEF3C7] transition-colors duration-200 cursor-pointer group ${isSelected ? 'bg-blue-50 ring-inset ring-2 ring-blue-400' : ''} ${snapshot.isDragging ? 'shadow-xl ring-1 ring-blue-500 bg-white z-50 relative' : ''}`}
+                                  className={`transition-colors duration-200 cursor-pointer group ${rowBgClass} ${snapshot.isDragging ? 'shadow-xl ring-1 ring-blue-500 bg-white z-50 relative' : ''}`}
                                 >
                                   <td className="p-4 text-center">
                                     <div {...dragProvided.dragHandleProps} className="inline-flex items-center justify-center p-1.5 rounded-lg cursor-grab active:cursor-grabbing hover:bg-slate-200/50 transition-colors w-8 h-8">
@@ -188,6 +199,18 @@ export default function BudgetDesktopTable({
                                   </td>
                                   <td className="p-4 text-center">
                                     <div className="flex items-center justify-center gap-1">
+                                      <button 
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); onTogglePending?.(item.id); }} 
+                                        className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                                          isPending 
+                                            ? 'text-red-600 bg-red-100/90 border-red-300 hover:bg-red-200 shadow-xs' 
+                                            : 'text-slate-400 hover:text-red-600 hover:bg-red-50 border-transparent hover:border-red-200'
+                                        }`}
+                                        title={isPending ? "Partida marcada como pendiente (clic para desmarcar)" : "Marcar partida como pendiente"}
+                                      >
+                                        {isPending ? <CheckSquare size={16} className="text-red-600" /> : <Square size={16} />}
+                                      </button>
                                       <button 
                                         onClick={(e) => { e.stopPropagation(); navigate(`/budgets/${budget.id}/item/${item.id}`); }} 
                                         className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg border border-transparent hover:border-slate-200 transition-colors cursor-pointer" 

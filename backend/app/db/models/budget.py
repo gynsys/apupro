@@ -68,6 +68,7 @@ class BudgetItem(Base):
     # Orden y Estructura
     order = Column(Integer, default=0, nullable=False)
     is_chapter = Column(Boolean, default=False, nullable=False)
+    is_pending = Column(Boolean, default=False, nullable=True)
     
     budget = relationship("Budget", back_populates="items")
     
