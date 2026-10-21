@@ -474,9 +474,6 @@ export default function BudgetAPUEditorPage() {
                 title={`Partida ${currentPosition} de ${totalApus} del presupuesto`}
               >
                 <Calculator size={16} className="text-blue-600 shrink-0" />
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Partida:
-                </span>
                 <span className="text-base md:text-lg font-black text-slate-800 leading-none font-mono">
                   {currentPosition}/{totalApus}
                 </span>
