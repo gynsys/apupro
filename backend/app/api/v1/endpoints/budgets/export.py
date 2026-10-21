@@ -17,6 +17,7 @@ from app.db.base import get_db
 from app.db.models.arko import ArkoAdmin
 from app.db.models.budget import Budget, BudgetItem
 from app.schemas.budget import BudgetExportExcelRequest
+from app.services.code_mapping import apply_code_maps, build_code_maps
 
 router = APIRouter()
 
@@ -259,6 +260,9 @@ async def export_budget_all_apus_excel(
                     "equipments": eqs,
                     "labors": mos,
                 })
+
+        # Traducir códigos de referencia visibles al código interno de Maprex
+        apply_code_maps(items_data, build_code_maps(db))
 
         budget_dict: Dict[str, Any] = {
             "name": budget.name,

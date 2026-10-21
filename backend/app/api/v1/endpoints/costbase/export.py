@@ -12,6 +12,7 @@ from app.crud.crud_costbase import (
     get_apu_labors
 )
 from app.api.v1.endpoints.export_utils import generate_excel_workbook
+from app.services.code_mapping import apply_code_maps, build_code_maps
 
 router = APIRouter()
 
@@ -40,9 +41,9 @@ async def export_apu_excel(item_id: str, db: Session = Depends(get_db)) -> FileR
             "RenPar": item.RenPar
         }
 
-        mats = [{"Descri": mat.Descri if mat else '', "UniMat": mat.UniMat if mat else '', "CanIns": apu.CanIns, "Desper": apu.Desper, "CosMat": mat.CosMat if mat else 0} for apu, mat in mat_rows]
-        eqs = [{"Descri": eq.Descri if eq else '', "CanIns": apu.CanIns, "Deprec": apu.Deprec, "CosDia": eq.CosDia if eq else 0} for apu, eq in eq_rows]
-        mos = [{"Descri": mo.Descri if mo else '', "CanIns": apu.CanIns, "Jornal": mo.Jornal if mo else 0, "Bono": mo.Bono if mo else 0} for apu, mo in mo_rows]
+        mats = [{"codigo": apu.CodIns or (mat.CodMat if mat else ''), "Descri": mat.Descri if mat else '', "UniMat": mat.UniMat if mat else '', "CanIns": apu.CanIns, "Desper": apu.Desper, "CosMat": mat.CosMat if mat else 0} for apu, mat in mat_rows]
+        eqs = [{"codigo": apu.CodIns or (eq.CodEqu if eq else ''), "Descri": eq.Descri if eq else '', "CanIns": apu.CanIns, "Deprec": apu.Deprec, "CosDia": eq.CosDia if eq else 0} for apu, eq in eq_rows]
+        mos = [{"codigo": apu.CodIns or (mo.CodMan if mo else ''), "Descri": mo.Descri if mo else '', "CanIns": apu.CanIns, "Jornal": mo.Jornal if mo else 0, "Bono": mo.Bono if mo else 0} for apu, mo in mo_rows]
 
         file_path, filename = generate_excel_workbook(item_dict, mats, eqs, mos)
         return FileResponse(path=str(file_path), filename=filename)
@@ -55,13 +56,18 @@ async def export_apu_excel(item_id: str, db: Session = Depends(get_db)) -> FileR
 
 
 @router.post("/apu/export-excel-custom")
-async def export_apu_excel_custom(payload: CustomApuExportRequest) -> FileResponse:
+async def export_apu_excel_custom(payload: CustomApuExportRequest, db: Session = Depends(get_db)) -> FileResponse:
     """Genera un archivo Excel desde la memoria enviada por el frontend (APU dinámico o en edición)"""
     try:
         item_data = payload.item
         mats = payload.materials
         eqs = payload.equipments
         mos = payload.labors
+
+        apply_code_maps(
+            [{"materials": mats, "equipments": eqs, "labors": mos}],
+            build_code_maps(db),
+        )
 
         item_dict = {
             "CodPar": item_data.get("CodPar") or item_data.get("cod_par", "Custom"),
