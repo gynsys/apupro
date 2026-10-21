@@ -208,7 +208,7 @@ export default function ApuEditorUI({
             <span className="block text-[11px] sm:text-xs font-bold text-slate-400 uppercase mb-1">Código</span>
             <input 
               type="text" 
-              className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-sm font-bold font-mono text-slate-800 focus:outline-none focus:border-blue-500"
+              className="w-full md:max-w-[105px] bg-white border border-slate-300 rounded px-2.5 py-1.5 text-sm font-bold font-mono text-slate-800 focus:outline-none focus:border-blue-500"
               value={item.CovPar || item.CodPar || item.cov_par || item.cod_par || item.codigo || ''}
               onChange={e => safeFn(onHeaderChange)(item.CovPar !== undefined ? 'CovPar' : (item.cov_par !== undefined ? 'cov_par' : 'cod_par'), e.target.value)}
               onBlur={e => safeFn(onHeaderBlur)(item.CovPar !== undefined ? 'CovPar' : (item.cov_par !== undefined ? 'cov_par' : 'cod_par'), e.target.value)}
@@ -229,17 +229,6 @@ export default function ApuEditorUI({
         </div>
 
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 bg-white px-3 py-2 sm:px-4">
-          <label className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Unidad:</span>
-            <input 
-              type="text" 
-              className="w-24 bg-transparent border-b border-slate-300 px-1 py-0.5 text-sm font-bold text-slate-700 focus:outline-none focus:border-blue-500"
-              value={item.unit || item.unidad || ''}
-              onChange={e => safeFn(onHeaderChange)('unit', e.target.value)}
-              onBlur={e => safeFn(onHeaderBlur)('unit', e.target.value)}
-            />
-          </label>
-
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cantidad Base:</span>
             <span className="text-sm font-bold text-slate-700">1</span>
@@ -252,6 +241,17 @@ export default function ApuEditorUI({
               value={item.performance || item.rendimiento || 1}
               onChange={(val) => safeFn(onHeaderChange)('performance', val)}
               onBlur={(val) => safeFn(onHeaderBlur)('performance', val)}
+            />
+          </label>
+
+          <label className="flex items-center gap-1.5 sm:ml-auto">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Unidad:</span>
+            <input 
+              type="text" 
+              className="w-[92px] max-w-[92px] bg-transparent border-b border-slate-300 px-1 py-0.5 text-sm font-bold text-slate-700 focus:outline-none focus:border-blue-500"
+              value={item.unit || item.unidad || ''}
+              onChange={e => safeFn(onHeaderChange)('unit', e.target.value)}
+              onBlur={e => safeFn(onHeaderBlur)('unit', e.target.value)}
             />
           </label>
         </div>
