@@ -3,6 +3,7 @@ import { Search, X, Check, Loader2, Database, ChevronDown, RefreshCw } from 'luc
 import { API_URL } from '../services/api';
 import { TYPE_CONFIG } from '../utils/componentCatalogConfig';
 import { useDatabaseContext } from '../contexts/DatabaseContext';
+import MercadoLibreBadge from './MercadoLibreBadge';
 
 export default function ComponentSelectorModal({
   isOpen,
@@ -293,7 +294,12 @@ export default function ComponentSelectorModal({
                         </span>
                       </td>
                       <td className="py-2.5 px-4 font-medium text-slate-700 leading-relaxed">
-                        {desc}
+                        <div className="flex items-center justify-between gap-2">
+                          <span>{desc}</span>
+                          {type === 'materials' && desc && (
+                            <MercadoLibreBadge description={desc} />
+                          )}
+                        </div>
                       </td>
                       {type === 'materials' && (
                         <td className="py-2.5 px-4 text-center font-semibold text-slate-600 whitespace-nowrap">

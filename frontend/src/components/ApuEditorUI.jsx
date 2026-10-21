@@ -7,6 +7,7 @@ import MaterialSelectorModal from './MaterialSelectorModal';
 import LaborSelectorModal from './LaborSelectorModal';
 import CatalogAutocomplete from './CatalogAutocomplete';
 import DecimalInput from './DecimalInput';
+import MercadoLibreBadge from './MercadoLibreBadge';
 
 export default function ApuEditorUI({
   item,
@@ -323,11 +324,12 @@ export default function ApuEditorUI({
                         autoFocus={focusRowId === mat.id}
                         openOnFocus={String(mat.id).startsWith('NEW-')}
                       />
-                      {mat.origen && (
-                        <div className="flex items-center gap-2 mt-1 px-1">
-                          {renderOrigenTag(mat.origen)}
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2 mt-1 px-1 flex-wrap">
+                        {mat.origen && renderOrigenTag(mat.origen)}
+                        {mat.descripcion && (
+                          <MercadoLibreBadge description={mat.descripcion} />
+                        )}
+                      </div>
                     </td>
                     <td className="p-2 text-center border-r border-slate-200 text-xs">
                       <input 
@@ -368,6 +370,9 @@ export default function ApuEditorUI({
                     </td>
                     <td className="p-2 text-center">
                       <div className="flex items-center justify-center gap-1">
+                        {mat.descripcion && (
+                          <MercadoLibreBadge description={mat.descripcion} compact={true} />
+                        )}
                         <button
                           type="button"
                           onClick={() => setMaterialModal({ isOpen: true, targetRow: mat })}
