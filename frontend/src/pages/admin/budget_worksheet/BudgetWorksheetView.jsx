@@ -4,6 +4,7 @@ import { Loader, Layers, Plus } from 'lucide-react';
 
 import BudgetSettingsModal from '../../../components/modals/BudgetSettingsModal';
 import BudgetPrintModal from '../../../components/modals/BudgetPrintModal';
+import BudgetExportExcelModal from '../../../components/modals/BudgetExportExcelModal';
 import BudgetPrintLayout from '../../../components/print/BudgetPrintLayout';
 import PrintAPUModal from '../../../components/PrintAPUModal';
 import PrintAPULayout, { APUPrintSheet } from '../../../components/PrintAPULayout';
@@ -207,7 +208,7 @@ export default function BudgetWorksheetView() {
               <BudgetWorksheetToolbar
                 onOpenSearchModal={ws.handleOpenSearchModal}
                 onOpenChapterModal={() => { ws.setChapterName(""); ws.setShowChapterModal(true); }}
-                onExportExcel={ws.handleExportBudgetToExcel}
+                onExportExcel={ws.handleOpenExportExcelModal}
                 exportingExcel={ws.exportingBudgetExcel}
                 showSettings={ws.showSettings}
                 setShowSettings={ws.setShowSettings}
@@ -355,6 +356,14 @@ export default function BudgetWorksheetView() {
           budgetSettings={ws.settings}
         />
       )}
+
+      <BudgetExportExcelModal
+        isOpen={ws.showExportExcelModal}
+        onClose={() => ws.setShowExportExcelModal(false)}
+        onExport={ws.handleExportExcelWithOptions}
+        isExporting={ws.exportingBudgetExcel}
+        totalItemsCount={(ws.budget.items || []).filter(i => !i.is_chapter).length}
+      />
     </div>
   );
 }

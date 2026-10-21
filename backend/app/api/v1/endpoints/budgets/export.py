@@ -3,12 +3,15 @@ Budget export endpoints: Generate and stream formatted Excel workbooks.
 """
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.api.v1.endpoints.arko import get_current_arko_admin
-from app.api.v1.endpoints.export_utils import generate_budget_excel_workbook
+from app.api.v1.endpoints.export_utils import (
+    generate_budget_excel_workbook,
+    generate_budget_all_apus_excel_workbook,
+)
 from app.core.logging import logger
 from app.db.base import get_db
 from app.db.models.arko import ArkoAdmin
@@ -96,3 +99,184 @@ async def export_budget_excel(
     except Exception as e:
         logger.error(f"Error exportando presupuesto a Excel: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error al exportar presupuesto a Excel: {str(e)}")
+
+
+@router.post("/{budget_id}/export-apus-excel")
+async def export_budget_all_apus_excel(
+    budget_id: str,
+    payload: Optional[Dict[str, Any]] = Body(None),
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> FileResponse:
+    """Genera un archivo Excel (.xlsx) con un libro de trabajo donde cada hoja corresponde a un APU del presupuesto."""
+    if not budget_id:
+        raise HTTPException(status_code=400, detail="ID de presupuesto inválido")
+
+    try:
+        budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
+        if not budget:
+            raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
+
+        settings: Dict[str, Any] = {
+            "name": budget.name,
+            "project_name": budget.project_name or budget.name,
+            "obra": budget.project_name or budget.name,
+            "ubicacion": getattr(budget, "ubicacion", "") or "",
+            "client_name": budget.client_name or "",
+            "company_rif": budget.company_rif or "",
+            "currency": budget.currency or "USD",
+            "exchange_rate": float(budget.exchange_rate or 1.0),
+            "admin_percent": float(budget.admin_percent if budget.admin_percent is not None else 15.0),
+            "profit_percent": float(budget.profit_percent if budget.profit_percent is not None else 10.0),
+            "iva_percent": float(budget.iva_percent if budget.iva_percent is not None else 16.0),
+            "fcas_percent": float(budget.fcas_percent if budget.fcas_percent is not None else 417.0),
+            "labor_bonus": float(budget.labor_bonus if budget.labor_bonus is not None else 0.0),
+            "bono_in_fcas": bool(budget.bono_in_fcas),
+        }
+
+        if payload and isinstance(payload, dict):
+            if "settings" in payload and isinstance(payload["settings"], dict):
+                settings.update(payload["settings"])
+            for key in [
+                "project_name",
+                "obra",
+                "client_name",
+                "contratante",
+                "currency",
+                "admin_percent",
+                "profit_percent",
+                "iva_percent",
+                "fcas_percent",
+                "labor_bonus",
+                "bono_in_fcas",
+            ]:
+                if key in payload and payload[key] is not None:
+                    settings[key] = payload[key]
+
+        items_data: List[Dict[str, Any]] = []
+
+        if payload and isinstance(payload.get("items"), list) and len(payload["items"]) > 0:
+            for it in payload["items"]:
+                if isinstance(it, dict):
+                    if "materials" in it or "equipments" in it or "labors" in it:
+                        items_data.append({
+                            "item": it.get("item") if isinstance(it.get("item"), dict) else it,
+                            "materials": it.get("materials") or [],
+                            "equipments": it.get("equipments") or [],
+                            "labors": it.get("labors") or [],
+                        })
+                    else:
+                        items_data.append({"item": it, "materials": [], "equipments": [], "labors": []})
+
+        if not items_data:
+            db_items = (
+                db.query(BudgetItem)
+                .options(
+                    joinedload(BudgetItem.materials),
+                    joinedload(BudgetItem.equipments),
+                    joinedload(BudgetItem.labors),
+                )
+                .filter(BudgetItem.budget_id == budget_id)
+                .order_by(BudgetItem.order)
+                .all()
+            )
+
+            for db_item in db_items:
+                if db_item.is_chapter:
+                    continue
+
+                item_info: Dict[str, Any] = {
+                    "id": db_item.id,
+                    "is_chapter": False,
+                    "cod_par": db_item.cod_par,
+                    "cov_par": db_item.cov_par,
+                    "CodPar": db_item.cod_par,
+                    "CovPar": db_item.cov_par,
+                    "description": db_item.description,
+                    "Descri": db_item.description,
+                    "unit": db_item.unit,
+                    "UniPar": db_item.unit,
+                    "quantity": float(db_item.quantity or 1.0),
+                    "CanPar": float(db_item.quantity or 1.0),
+                    "performance": float(db_item.performance or 1.0),
+                    "RenPar": float(db_item.performance or 1.0),
+                    "bono_in_fcas": budget.bono_in_fcas,
+                    "labor_bonus": float(budget.labor_bonus or 0.0),
+                }
+
+                mats: List[Dict[str, Any]] = [
+                    {
+                        "codigo": m.codigo,
+                        "Descri": m.descripcion,
+                        "descripcion": m.descripcion,
+                        "UniMat": m.unidad,
+                        "unidad": m.unidad,
+                        "CanIns": float(m.cantidad or 0.0),
+                        "cantidad": float(m.cantidad or 0.0),
+                        "Desper": float(m.desperdicio or 0.0),
+                        "desperdicio": float(m.desperdicio or 0.0),
+                        "CosMat": float(m.precio_unitario or 0.0),
+                        "precio_unitario": float(m.precio_unitario or 0.0),
+                    }
+                    for m in db_item.materials
+                ]
+
+                eqs: List[Dict[str, Any]] = [
+                    {
+                        "codigo": e.codigo,
+                        "Descri": e.descripcion,
+                        "descripcion": e.descripcion,
+                        "UniEq": e.unidad,
+                        "unidad": e.unidad,
+                        "CanIns": float(e.cantidad or 0.0),
+                        "cantidad": float(e.cantidad or 0.0),
+                        "Deprec": float(e.depreciacion if e.depreciacion is not None else 1.0),
+                        "depreciacion": float(e.depreciacion if e.depreciacion is not None else 1.0),
+                        "CosDia": float(e.precio_unitario or 0.0),
+                        "precio_unitario": float(e.precio_unitario or 0.0),
+                    }
+                    for e in db_item.equipments
+                ]
+
+                mos: List[Dict[str, Any]] = [
+                    {
+                        "codigo": l.codigo,
+                        "Descri": l.descripcion,
+                        "descripcion": l.descripcion,
+                        "CanIns": float(l.cantidad or 0.0),
+                        "cantidad": float(l.cantidad or 0.0),
+                        "Jornal": float(l.jornal or 0.0),
+                        "jornal": float(l.jornal or 0.0),
+                        "Bono": float(l.bono if l.bono is not None else 0.0),
+                        "bono": float(l.bono if l.bono is not None else 0.0),
+                    }
+                    for l in db_item.labors
+                ]
+
+                items_data.append({
+                    "item": item_info,
+                    "materials": mats,
+                    "equipments": eqs,
+                    "labors": mos,
+                })
+
+        budget_dict: Dict[str, Any] = {
+            "name": budget.name,
+            "project_name": budget.project_name or budget.name,
+            "client_name": budget.client_name or "",
+            "currency": budget.currency or "USD",
+        }
+
+        file_path, filename = generate_budget_all_apus_excel_workbook(budget_dict, items_data, settings=settings)
+
+        return FileResponse(
+            path=str(file_path),
+            filename=filename,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exportando APUs del presupuesto a Excel: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error al exportar APUs a Excel: {str(e)}")

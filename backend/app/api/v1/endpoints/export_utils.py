@@ -36,16 +36,107 @@ def style_cell(
     if fill:
         cell.fill = fill
 
-def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
-    """Genera Excel con el formato original (apu_formulas.py) usando diccionarios"""
+def numero_a_letras(numero: float) -> str:
+    """Convierte un monto numérico a su representación en letras en español."""
+    unidades = ["", "UN", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE"]
+    decenas = ["", "DIEZ", "VEINTE", "TREINTA", "CUARENTA", "CINCUENTA", "SESENTA", "SETENTA", "OCHENTA", "NOVENTA"]
+    diez_diecinueve = ["DIEZ", "ONCE", "DOCE", "TRECE", "CATORCE", "QUINCE", "DIECISÉIS", "DIECISIETE", "DIECIOCHO", "DIECINUEVE"]
+    veintes = ["VEINTE", "VEINTIÚN", "VEINTIDÓS", "VEINTITRÉS", "VEINTICUATRO", "VEINTICINCO", "VEINTISÉIS", "VEINTISIETE", "VEINTIOCHO", "VEINTINUEVE"]
+    centenas = ["", "CIENTO", "DOSCIENTOS", "TRESCIENTOS", "CUATROCIENTOS", "QUINIENTOS", "SEISCIENTOS", "SETECIENTOS", "OCHOCIENTOS", "NOVECIENTOS"]
+
+    def leer_decenas(n: int) -> str:
+        if n < 10:
+            return unidades[n]
+        if n < 20:
+            return diez_diecinueve[n - 10]
+        if n < 30:
+            return veintes[n - 20]
+        u = n % 10
+        if u == 0:
+            return decenas[n // 10]
+        return f"{decenas[n // 10]} Y {unidades[u]}"
+
+    def leer_centenas(n: int) -> str:
+        if n == 100:
+            return "CIEN"
+        return f"{centenas[n // 100]} {leer_decenas(n % 100)}".strip()
+
+    def leer_miles(n: int) -> str:
+        if n == 0:
+            return ""
+        if n == 1:
+            return "MIL"
+        return f"{leer_centenas(n)} MIL".strip()
+
+    def leer_millones(n: int) -> str:
+        if n == 0:
+            return ""
+        if n == 1:
+            return "UN MILLÓN"
+        if n > 1:
+            return f"{leer_centenas(n)} MILLONES".strip()
+        return ""
+
+    entero = int(numero)
+    decimales = int(round((numero - entero) * 100))
+
+    if entero == 0:
+        return f"CERO CON {decimales:02d}/100"
+
+    millones = entero // 1000000
+    miles = (entero // 1000) % 1000
+    cientos = entero % 1000
+
+    partes = []
+    if millones > 0:
+        partes.append(leer_millones(millones))
+    if miles > 0:
+        partes.append(leer_miles(miles))
+    if cientos > 0:
+        partes.append(leer_centenas(cientos))
+
+    letras = " ".join(partes).strip()
+    return f"{letras} CON {decimales:02d}/100"
+
+
+def sanitize_sheet_title(raw_title: str, existing_titles: set, fallback_index: int = 1) -> str:
+    """Sanitiza y acorta un título para cumplir las reglas de nombres de hoja de Excel (máx 31 caracteres, sin caracteres ilegales)."""
+    cleaned = re.sub(r'[\\/*?:[\]]', '', str(raw_title or "")).strip()
+    cleaned = cleaned.strip("'")
+    if not cleaned:
+        cleaned = f"APU {fallback_index}"
+    if len(cleaned) > 28:
+        cleaned = cleaned[:28].strip()
+
+    candidate = cleaned
+    counter = 1
+    while candidate.upper() in [t.upper() for t in existing_titles]:
+        suffix = f"_{counter}"
+        candidate = f"{cleaned[:31-len(suffix)]}{suffix}"
+        counter += 1
+
+    existing_titles.add(candidate)
+    return candidate
+
+
+def build_apu_sheet(
+    ws: Any,
+    item: Dict[str, Any],
+    mat_rows: List[Dict[str, Any]],
+    eq_rows: List[Dict[str, Any]],
+    mo_rows: List[Dict[str, Any]],
+    settings: Optional[Dict[str, Any]] = None,
+    part_num: int = 1,
+) -> None:
+    """Rellena y formatea una hoja de Excel individual con la estructura completa de un APU."""
     if settings is None:
         settings = {}
-        
+
     rendimiento = float(item.get("RenPar") or item.get("rendimiento") or item.get("performance") or 1.0)
     cantidad = float(item.get("CanPar") or item.get("cantidad") or item.get("quantity") or 1.0)
-    descripcion = item.get("DesPar") or item.get("descripcion") or item.get("description") or ""
+    descripcion = item.get("DesPar") or item.get("descripcion") or item.get("description") or item.get("Descri") or ""
     codigo = item.get("cov_par") or item.get("CovPar") or item.get("codigo_covenin") or item.get("CodPar") or item.get("codigo") or item.get("code") or ""
-    unidad = item.get("UniPar") or item.get("unidad") or item.get("unit") or ""
+    unidad = item.get("UniPar") or item.get("unidad") or item.get("unit") or "UND"
     admin_gg = float(settings.get("admin_percent", 15.0))
     imprevisto_ut = float(settings.get("profit_percent", 10.0))
     financiamiento = float(settings.get("financiamiento", 0.0))
@@ -66,53 +157,50 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
         or 0.0
     )
 
-    wb = Workbook()
-    wb.calculation.calcMode = 'auto'
-    ws = wb.active
-    ws.title = f"APU_{item.get('CodPar', 'Custom')}"
+    if hasattr(ws, 'views') and ws.views and hasattr(ws.views, 'sheetView') and ws.views.sheetView:
+        ws.views.sheetView[0].showGridLines = True
 
     # HEADER
     ws.merge_cells("B1:H1")
     ws["B1"] = "ANÁLISIS DE PRECIO UNITARIO"
     style_cell(ws["B1"], bold=True, size=14, align="center")
-    
+
     ws.merge_cells("B2:H2")
     ws["B2"] = ""
-    
-    # Ajustar ancho de la columna B para que quepa "Descripción"
+
     ws.column_dimensions['B'].width = 10
-    
-    ws["B3"] = f"Obra: {settings.get('project_name') or ''}"
-    ws["B4"] = f"Contratante: {settings.get('client_name') or ''}"
+
+    ws["B3"] = f"Obra: {settings.get('project_name') or settings.get('obra') or ''}"
+    ws["B4"] = f"Contratante: {settings.get('client_name') or settings.get('contratante') or ''}"
     ws["E5"] = "Part. No.:"
-    ws["F5"] = "1"
+    ws["F5"] = str(part_num)
     ws["G5"] = "Fecha:"
     ws["H5"] = datetime.now().strftime("%d/%m/%Y")
     ws["B6"] = "Descripción:"
     ws.merge_cells("C6:H7")
-    ws["C6"] = item.get("Descri", 'N/A')
+    ws["C6"] = descripcion or item.get("Descri", 'N/A')
     style_cell(ws["C6"], align="left", valign="top")
     ws["G8"] = "Rendimiento:"
     ws["H8"] = rendimiento
     ws["B9"] = "Código:"
     ws["C9"] = codigo
     ws["E9"] = "Unidad:"
-    ws["F9"] = item.get("UniPar", "UND")
+    ws["F9"] = unidad
     ws["G9"] = "Cantidad:"
-    ws["H9"] = "1"
+    ws["H9"] = cantidad if cantidad > 0 else 1.0
 
     # MATERIALES
     mat_start = 11
     ws.merge_cells(f"B{mat_start}:H{mat_start}")
     ws[f"B{mat_start}"] = "MATERIALES"
     style_cell(ws[f"B{mat_start}"], bold=True, size=12)
-    
+
     headers = ["No.", "Descripción", "Und.", "Cant.", "Desp.", "Precio", "Total"]
     for i, h in enumerate(headers):
         col = get_column_letter(i + 2)
         ws[f"{col}{mat_start+1}"] = h
         style_cell(ws[f"{col}{mat_start+1}"], bold=True, border=True)
-    
+
     row = mat_start + 2
     for i, m in enumerate(mat_rows):
         ws[f"B{row}"] = i + 1
@@ -124,7 +212,7 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
         ws[f"H{row}"] = f"=ROUND((G{row}*E{row})*((F{row}/100)+1),2)"
         style_cell(ws[f"H{row}"], number_format='#,##0.00')
         row += 1
-    
+
     total_mat_row = row
     ws[f"F{total_mat_row}"] = "Total Materiales:"
     if mat_rows:
@@ -140,13 +228,13 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     ws.merge_cells(f"B{eq_start}:H{eq_start}")
     ws[f"B{eq_start}"] = "EQUIPOS"
     style_cell(ws[f"B{eq_start}"], bold=True, size=12)
-    
+
     headers = ["No.", "Descripción", "", "Cant.", "Cop/Dep", "Precio", "Total"]
     for i, h in enumerate(headers):
         col = get_column_letter(i + 2)
         ws[f"{col}{eq_start+1}"] = h
         style_cell(ws[f"{col}{eq_start+1}"], bold=True, border=True)
-    
+
     row = eq_start + 2
     for i, e in enumerate(eq_rows):
         ws[f"B{row}"] = i + 1
@@ -157,7 +245,7 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
         ws[f"H{row}"] = f"=ROUND((G{row}*E{row})*(F{row}),2)"
         style_cell(ws[f"H{row}"], number_format='#,##0.00')
         row += 1
-    
+
     total_eq_row = row
     ws[f"F{total_eq_row}"] = "Total Equipos:"
     if eq_rows:
@@ -167,7 +255,7 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     else:
         ws[f"H{total_eq_row}"] = 0.0
     style_cell(ws[f"H{total_eq_row}"], bold=True, number_format='#,##0.00')
-    
+
     cuo_row = total_eq_row + 1
     ws[f"E{cuo_row}"] = "Costo Unitarios Equipos:"
     ws[f"H{cuo_row}"] = f"=ROUND(H{total_eq_row}/H8,2)"
@@ -178,13 +266,13 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     ws.merge_cells(f"B{mo_start}:H{mo_start}")
     ws[f"B{mo_start}"] = "MANO DE OBRA"
     style_cell(ws[f"B{mo_start}"], bold=True, size=12)
-    
+
     headers = ["No.", "Descripción", "Cant.", "Jornal", "Bono", "Total Jornal", "Total Bono"]
     for i, h in enumerate(headers):
         col = get_column_letter(i + 2)
         ws[f"{col}{mo_start+1}"] = h
         style_cell(ws[f"{col}{mo_start+1}"], bold=True, border=True)
-    
+
     row = mo_start + 2
     for i, l in enumerate(mo_rows):
         ws[f"B{row}"] = i + 1
@@ -192,7 +280,6 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
         ws[f"D{row}"] = float(l.get("CanIns") or l.get("cantidad") or 0)
         ws[f"E{row}"] = float(l.get("Jornal") or l.get("jornal") or 0)
 
-        # Resolver bono: prioridad a bono explícito de fila (>0), fallback a bono general
         raw_b = (
             l.get("bono")
             if l.get("bono") is not None
@@ -227,7 +314,7 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
         style_cell(ws[f"G{row}"], number_format='#,##0.00')
         style_cell(ws[f"H{row}"], number_format='#,##0.00')
         row += 1
-    
+
     sub_row = row
     ws[f"D{sub_row}"] = "SubTotal Mano de Obra:"
     if mo_rows:
@@ -240,7 +327,7 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
         ws[f"H{sub_row}"] = 0.0
     style_cell(ws[f"G{sub_row}"], bold=True, number_format='#,##0.00')
     style_cell(ws[f"H{sub_row}"], bold=True, number_format='#,##0.00')
-    
+
     ps_row = sub_row + 1
     ws[f"C{ps_row}"] = prestaciones
     style_cell(ws[f"C{ps_row}"], number_format='#,##0.00', align="right")
@@ -248,12 +335,12 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     ws[f"G{ps_row}"] = f"=ROUND((C{ps_row}/100)*G{sub_row},2)"
     ws[f"H{ps_row}"] = 0
     style_cell(ws[f"G{ps_row}"], number_format='#,##0.00')
-    
+
     tg_row = ps_row + 1
     ws[f"D{tg_row}"] = "Total General Mano de Obra:"
     ws[f"H{tg_row}"] = f"=G{ps_row}+H{ps_row}+G{sub_row}+H{sub_row}"
     style_cell(ws[f"H{tg_row}"], bold=True, number_format='#,##0.00')
-    
+
     cuo_mo_row = tg_row + 1
     ws[f"D{cuo_mo_row}"] = "Costo Unitario de Mano de Obra:"
     ws[f"H{cuo_mo_row}"] = f"=ROUND(H{tg_row}/H8,2)"
@@ -265,64 +352,64 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     ws[f"E{cd_row}"] = "COSTO DIRECTO SUBTOTAL A:"
     ws[f"H{cd_row}"] = f"=ROUND(H{total_mat_row}+H{cuo_row}+H{cuo_mo_row},2)"
     style_cell(ws[f"H{cd_row}"], bold=True, number_format='#,##0.00')
-    
+
     ad_row = cd_row + 1
     ws[f"C{ad_row}"] = admin_gg
     style_cell(ws[f"C{ad_row}"], number_format='#,##0.00', align="right")
     ws[f"D{ad_row}"] = "Administración y Gastos Generales:"
     ws[f"H{ad_row}"] = f"=ROUND((H{cd_row}*C{ad_row})/100,2)"
     style_cell(ws[f"H{ad_row}"], number_format='#,##0.00')
-    
+
     sb_row = ad_row + 1
     ws[f"D{sb_row}"] = "SUBTOTAL B:"
     ws[f"H{sb_row}"] = f"=H{cd_row}+H{ad_row}"
     style_cell(ws[f"H{sb_row}"], bold=True, number_format='#,##0.00')
-    
+
     iu_row = sb_row + 1
     ws[f"E{iu_row}"] = imprevisto_ut
     style_cell(ws[f"E{iu_row}"], number_format='#,##0.00', align="right")
     ws[f"F{iu_row}"] = "Imprevisto Utilidad:"
     ws[f"H{iu_row}"] = f"=ROUND((H{sb_row}*E{iu_row})/100,2)"
     style_cell(ws[f"H{iu_row}"], number_format='#,##0.00')
-    
+
     sc_row = iu_row + 1
     ws[f"D{sc_row}"] = "SUBTOTAL C:"
     ws[f"H{sc_row}"] = f"=H{sb_row}+H{iu_row}"
     style_cell(ws[f"H{sc_row}"], bold=True, number_format='#,##0.00')
-    
+
     fin_row = sc_row + 1
     ws[f"E{fin_row}"] = financiamiento
     style_cell(ws[f"E{fin_row}"], number_format='#,##0.00', align="right")
     ws[f"F{fin_row}"] = "Financiamiento:"
     ws[f"H{fin_row}"] = f"=ROUND((H{sc_row}*E{fin_row})/100,2)"
     style_cell(ws[f"H{fin_row}"], number_format='#,##0.00')
-    
+
     ps_row2 = fin_row + 1
     ws[f"D{ps_row2}"] = "PRECIO UNITARIO SIN IMPUESTO:"
     ws[f"H{ps_row2}"] = f"=H{sc_row}+H{fin_row}"
     style_cell(ws[f"H{ps_row2}"], bold=True, number_format='#,##0.00')
-    
+
     iva_row = ps_row2 + 1
     ws[f"E{iva_row}"] = iva
     style_cell(ws[f"E{iva_row}"], number_format='#,##0.00', align="right")
     ws[f"F{iva_row}"] = "Impuesto (I.V.A.):"
     ws[f"H{iva_row}"] = f"=ROUND((H{ps_row2}*E{iva_row})/100,2)"
     style_cell(ws[f"H{iva_row}"], number_format='#,##0.00')
-    
+
     oi_row = iva_row + 1
     ws[f"E{oi_row}"] = otros_imp
     style_cell(ws[f"E{oi_row}"], number_format='#,##0.00', align="right")
     ws[f"F{oi_row}"] = "Otros Impuestos:"
     ws[f"H{oi_row}"] = f"=ROUND((H{ps_row2}*E{oi_row})/100,2)"
     style_cell(ws[f"H{oi_row}"], number_format='#,##0.00')
-    
+
     pf_row = oi_row + 2
     curr_code = str(settings.get("currency") or "USD").strip().upper()
     unit_curr = "USD" if ("USD" in curr_code or "$" in curr_code) else "Bs."
     ws[f"D{pf_row}"] = f"PRECIO UNITARIO ({unit_curr}):"
     ws[f"H{pf_row}"] = f"=H{ps_row2}+H{iva_row}+H{oi_row}"
     style_cell(ws[f"H{pf_row}"], bold=True, number_format='#,##0.00')
-    
+
     ws.column_dimensions['A'].width = 3
     ws.column_dimensions['B'].width = 12
     ws.column_dimensions['C'].width = 45
@@ -354,17 +441,16 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
             v = 0.0
         return v if v > 0 else default_labor_bonus
 
-    # Convertir el precio total a letras en B{cd_row}:C{pf_row-1}
     total_mat = round(sum( round((float(m.get("CosMat") or m.get("precio_unitario") or m.get("precio") or 0) * float(m.get("CanIns") or m.get("cantidad") or 0)) * (float(m.get("Desper") or m.get("desperdicio") or 0)/100.0 + 1), 2) for m in mat_rows ), 2)
     total_eq = round(sum( round((float(e.get("CosDia") or e.get("precio_unitario") or e.get("precio") or 0) * float(e.get("CanIns") or e.get("cantidad") or 0)) * float(e.get("Deprec") or e.get("depreciacion") or 1), 2) for e in eq_rows ), 2)
     total_mo_jornal = sum( round(float(l.get("CanIns") or l.get("cantidad") or 0) * float(l.get("Jornal") or l.get("jornal") or 0), 2) for l in mo_rows )
     total_mo_bono = sum( round(float(l.get("CanIns") or l.get("cantidad") or 0) * _resolve_lab_bono(l), 2) for l in mo_rows )
     mo_ps = round((prestaciones/100.0) * total_mo_jornal, 2)
     total_mo = total_mo_jornal + total_mo_bono + mo_ps
-    
+
     cuo_eq = round(total_eq / rendimiento, 2)
     cuo_mo = round(total_mo / rendimiento, 2)
-    
+
     cd_val = round(total_mat + cuo_eq + cuo_mo, 2)
     ad_val = round((cd_val * admin_gg)/100, 2)
     sb_val = cd_val + ad_val
@@ -376,20 +462,39 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     oi_val = round((ps_val * otros_imp)/100, 2)
     precio_final = ps_val + iva_val + oi_val
 
-    # El texto ya viene calculado desde el frontend en settings
-    son_letras = settings.get("son_letras", "SON: ( NO DISPONIBLE )")
+    son_letras = settings.get("son_letras")
+    if not son_letras or son_letras == "SON: ( NO DISPONIBLE )":
+        currency_word = "DÓLARES" if ("USD" in curr_code or "$" in curr_code) else "Bs."
+        son_letras = f"SON: ( {numero_a_letras(precio_final)} {currency_word} ctms )"
 
     ws.merge_cells(f"B{iva_row}:C{pf_row-1}")
     ws[f"B{iva_row}"] = son_letras
     style_cell(ws[f"B{iva_row}"], align="center", valign="bottom", bold=True)
 
-    # Alinear al centro toda la columna H (valores y totales)
     for r in range(1, pf_row + 1):
         cell = ws[f"H{r}"]
         if cell.value is not None:
             cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
-    # Guardar
+
+def generate_excel_workbook(
+    item: Dict[str, Any],
+    mat_rows: List[Dict[str, Any]],
+    eq_rows: List[Dict[str, Any]],
+    mo_rows: List[Dict[str, Any]],
+    settings: Optional[Dict[str, Any]] = None,
+) -> Tuple[Path, str]:
+    """Genera un archivo Excel (.xlsx) con un APU individual usando diccionarios."""
+    if settings is None:
+        settings = {}
+
+    wb = Workbook()
+    wb.calculation.calcMode = 'auto'
+    ws = wb.active
+    ws.title = sanitize_sheet_title(item.get('CodPar') or 'Custom', set())
+
+    build_apu_sheet(ws, item, mat_rows, eq_rows, mo_rows, settings, part_num=1)
+
     temp_dir = Path("temp")
     temp_dir.mkdir(exist_ok=True)
     filename = f"APU_{item.get('CovPar') or item.get('CodPar', 'Custom')}_{uuid.uuid4().hex[:6]}.xlsx"
@@ -399,6 +504,62 @@ def generate_excel_workbook(item, mat_rows, eq_rows, mo_rows, settings=None):
     return file_path, filename
 
 
+def generate_budget_all_apus_excel_workbook(
+    budget_dict: Dict[str, Any],
+    items_data: List[Dict[str, Any]],
+    settings: Optional[Dict[str, Any]] = None,
+) -> Tuple[Path, str]:
+    """Genera un libro de Excel (.xlsx) donde cada hoja corresponde al APU de una partida del presupuesto."""
+    if settings is None:
+        settings = {}
+
+    wb = Workbook()
+    wb.calculation.calcMode = 'auto'
+    existing_titles: set = set()
+
+    # Filtrar solo partidas con APU (excluir capítulos)
+    apus_items: List[Dict[str, Any]] = []
+    for entry in items_data:
+        item_info = entry.get("item") if isinstance(entry.get("item"), dict) else entry
+        if not item_info.get("is_chapter", False):
+            apus_items.append(entry)
+
+    if not apus_items:
+        ws = wb.active
+        ws.title = "APUs"
+        ws["B2"] = "No hay partidas con APU en este presupuesto."
+        style_cell(ws["B2"], bold=True, size=12)
+    else:
+        for idx, entry in enumerate(apus_items, start=1):
+            item_info = entry.get("item") if isinstance(entry.get("item"), dict) else entry
+            mats = entry.get("materials") or []
+            eqs = entry.get("equipments") or []
+            mos = entry.get("labors") or []
+
+            code = str(item_info.get("CovPar") or item_info.get("cov_par") or item_info.get("CodPar") or item_info.get("cod_par") or "").strip()
+            if code:
+                raw_sheet_title = f"P{idx} - {code}"
+            else:
+                raw_sheet_title = f"Partida {idx}"
+
+            sheet_title = sanitize_sheet_title(raw_sheet_title, existing_titles, fallback_index=idx)
+
+            if idx == 1:
+                ws = wb.active
+                ws.title = sheet_title
+            else:
+                ws = wb.create_sheet(title=sheet_title)
+
+            build_apu_sheet(ws, item_info, mats, eqs, mos, settings, part_num=idx)
+
+    temp_dir = Path("temp")
+    temp_dir.mkdir(exist_ok=True)
+    clean_name = re.sub(r'[^A-Za-z0-9_]+', '_', str(budget_dict.get("project_name") or budget_dict.get("name") or "Presupuesto")).strip('_')[:30]
+    filename = f"APUS_{clean_name}_{uuid.uuid4().hex[:6]}.xlsx"
+    file_path = temp_dir / filename
+    wb.save(file_path)
+
+    return file_path, filename
 def generate_budget_excel_workbook(
     budget: Dict[str, Any],
     items: List[Dict[str, Any]],

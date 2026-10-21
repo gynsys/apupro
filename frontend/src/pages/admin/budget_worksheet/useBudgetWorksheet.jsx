@@ -77,6 +77,7 @@ export function useBudgetWorksheet() {
   const [availableBudgets, setAvailableBudgets] = useState([]);
   const [chapterName, setChapterName] = useState("");
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [showExportExcelModal, setShowExportExcelModal] = useState(false);
   const [exportingBudgetExcel, setExportingBudgetExcel] = useState(false);
 
   const [editingChapterId, setEditingChapterId] = useState(null);
@@ -585,47 +586,98 @@ export function useBudgetWorksheet() {
     }
   };
 
-  const handleExportBudgetToExcel = async () => {
+  const handleOpenExportExcelModal = () => {
+    setShowExportExcelModal(true);
+  };
+
+  const handleExportExcelWithOptions = async ({ exportBudget, exportApus }) => {
     if (!budget) return;
     try {
       setExportingBudgetExcel(true);
-      toast.loading('Generando presupuesto en Excel...', { id: 'export-budget-excel' });
 
       const savedLogo = localStorage.getItem(`budget_logo_${budget.id}`);
       const savedUbicacion = localStorage.getItem(`budget_ubicacion_${budget.id}`) || budget.ubicacion || '';
 
-      const itemsPayload = (budget.items || []).map(item => ({
-        id: item.id,
-        is_chapter: !!item.is_chapter,
-        cod_par: item.cov_par || item.cod_par || '',
-        description: item.description || '',
-        unit: item.unit || '',
-        quantity: parseFloat(item.quantity) || 0,
-        pu: item.is_chapter ? 0 : calculatePU(item)
-      }));
+      if (exportBudget) {
+        toast.loading('Generando presupuesto en Excel...', { id: 'export-budget-excel' });
 
-      const payload = {
-        title: 'PRESUPUESTO',
-        obra: (budget.project_name || budget.name || '').trim(),
-        ubicacion: savedUbicacion.trim(),
-        contratante: (budget.client_name || '').trim(),
-        company_rif: (budget.company_rif || '').trim(),
-        currency: budget.currency || 'USD',
-        iva_percent: budget.iva_percent !== undefined && budget.iva_percent !== null ? Number(budget.iva_percent) : 16.0,
-        logo_base64: savedLogo || null,
-        notes: (notesText !== undefined && notesText !== null ? notesText : budget.notes || '').trim(),
-        items: itemsPayload
-      };
+        const itemsPayload = (budget.items || []).map(item => ({
+          id: item.id,
+          is_chapter: !!item.is_chapter,
+          cod_par: item.cov_par || item.cod_par || '',
+          description: item.description || '',
+          unit: item.unit || '',
+          quantity: parseFloat(item.quantity) || 0,
+          pu: item.is_chapter ? 0 : calculatePU(item)
+        }));
 
-      await budgetService.exportExcel(budget.id, payload);
-      toast.success('Presupuesto exportado a Excel exitosamente', { id: 'export-budget-excel' });
+        const payload = {
+          title: 'PRESUPUESTO',
+          obra: (budget.project_name || budget.name || '').trim(),
+          ubicacion: savedUbicacion.trim(),
+          contratante: (budget.client_name || '').trim(),
+          company_rif: (budget.company_rif || '').trim(),
+          currency: budget.currency || 'USD',
+          iva_percent: budget.iva_percent !== undefined && budget.iva_percent !== null ? Number(budget.iva_percent) : 16.0,
+          logo_base64: savedLogo || null,
+          notes: (notesText !== undefined && notesText !== null ? notesText : budget.notes || '').trim(),
+          items: itemsPayload
+        };
+
+        await budgetService.exportExcel(budget.id, payload);
+        toast.success('Presupuesto exportado a Excel exitosamente', { id: 'export-budget-excel' });
+      }
+
+      if (exportApus) {
+        toast.loading('Generando libro de APUs en Excel...', { id: 'export-apus-excel' });
+
+        const apusPayload = {
+          project_name: (budget.project_name || budget.name || '').trim(),
+          obra: (budget.project_name || budget.name || '').trim(),
+          client_name: (budget.client_name || '').trim(),
+          contratante: (budget.client_name || '').trim(),
+          currency: budget.currency || 'USD',
+          admin_percent: budget.admin_percent !== undefined && budget.admin_percent !== null ? Number(budget.admin_percent) : 15.0,
+          profit_percent: budget.profit_percent !== undefined && budget.profit_percent !== null ? Number(budget.profit_percent) : 10.0,
+          iva_percent: budget.iva_percent !== undefined && budget.iva_percent !== null ? Number(budget.iva_percent) : 16.0,
+          fcas_percent: budget.fcas_percent !== undefined && budget.fcas_percent !== null ? Number(budget.fcas_percent) : 417.0,
+          labor_bonus: budget.labor_bonus !== undefined && budget.labor_bonus !== null ? Number(budget.labor_bonus) : 0.0,
+          bono_in_fcas: !!budget.bono_in_fcas,
+          items: (budget.items || [])
+            .filter(item => !item.is_chapter)
+            .map(item => ({
+              item: {
+                id: item.id,
+                is_chapter: false,
+                cod_par: item.cod_par,
+                cov_par: item.cov_par,
+                description: item.description,
+                unit: item.unit,
+                quantity: parseFloat(item.quantity) || 1.0,
+                performance: parseFloat(item.performance ?? item.rendimiento ?? 1.0),
+                bono_in_fcas: budget.bono_in_fcas,
+                labor_bonus: budget.labor_bonus
+              },
+              materials: item.materials || [],
+              equipments: item.equipments || [],
+              labors: item.labors || []
+            }))
+        };
+
+        await budgetService.exportAllApusExcel(budget.id, apusPayload);
+        toast.success('Libro de APUs exportado a Excel exitosamente', { id: 'export-apus-excel' });
+      }
+
+      setShowExportExcelModal(false);
     } catch (err) {
-      console.error('Error al exportar presupuesto a Excel:', err);
-      toast.error(err.message || 'Error al exportar presupuesto a Excel', { id: 'export-budget-excel' });
+      console.error('Error al exportar a Excel:', err);
+      toast.error(err.message || 'Error al exportar a Excel');
     } finally {
       setExportingBudgetExcel(false);
     }
   };
+
+  const handleExportBudgetToExcel = handleOpenExportExcelModal;
 
   return {
     id,
@@ -705,6 +757,10 @@ export function useBudgetWorksheet() {
     saveQuantity,
     handleTogglePending,
     handleSaveNotes,
+    showExportExcelModal,
+    setShowExportExcelModal,
+    handleOpenExportExcelModal,
+    handleExportExcelWithOptions,
     handleExportBudgetToExcel,
   };
 }
