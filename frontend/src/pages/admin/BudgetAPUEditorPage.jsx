@@ -525,7 +525,7 @@ export default function BudgetAPUEditorPage() {
               className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-emerald-200 shadow-sm"
               title={`Precio unitario del APU: ${pu.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${budget?.currency || 'USD'}`}
             >
-              <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">
                 P.U:
               </span>
               <span className="text-base md:text-lg font-bold text-emerald-700 leading-none">
