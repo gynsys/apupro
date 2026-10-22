@@ -383,7 +383,7 @@ def build_apu_sheet(
 
     # HEADER
     ws.merge_cells("B1:H1")
-    ws["B1"] = "ANÁLISIS DE PRECIO UNITARIO"
+    ws["B1"] = "ANALISIS DE PRECIO UNITARIO"
     style_cell(ws["B1"], bold=True, size=14, align="center")
 
     ws.column_dimensions['B'].width = 10
@@ -764,6 +764,167 @@ def build_apu_sheet(
         cell = ws[f"H{r}"]
         if cell.value is not None:
             cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    # ------------------------------------------------------------------
+    # Estilo exacto del modelo APU_modelo.xlsx
+    # ------------------------------------------------------------------
+    def _apuc(coord: str, size: float = 7, bold: bool = False, h: Optional[str] = None,
+              v: Optional[str] = None, wrap: Optional[bool] = None,
+              nf: Optional[str] = None) -> None:
+        cell = ws[coord]
+        cell.font = Font(name="Calibri", size=size, bold=bold)
+        cell.alignment = Alignment(horizontal=h, vertical=v, wrap_text=wrap)
+        if nf:
+            cell.number_format = nf
+
+    # El modelo no usa bordes ni rellenos.
+    for row in ws.iter_rows(min_row=1, max_row=pf_row, min_col=2, max_col=8):
+        for cell in row:
+            cell.border = Border()
+            cell.fill = PatternFill(fill_type=None)
+
+    # Título y encabezado
+    _apuc("B1", 18, True, "center", None, None)
+    _apuc("B2", 18, True, "center", None, None)
+    for col in "CDEFGH":
+        _apuc(f"{col}2", 11, True, "center", None, None)
+    _apuc("B3", 9, True, None, "top", None)
+    _apuc("B4", 9, True, None, "top", None)
+    for coord in ("B5", "C5", "D5"):
+        _apuc(coord, 7, False, None, "center", None)
+    _apuc("E5", 7, False, "right", "center", None)
+    _apuc("F5", 7, False, "center", "center", None)
+    _apuc("G5", 7, False, "right", "center", None)
+    _apuc("H5", 7, False, "center", "center", None, "mm-dd-yy")
+    _apuc("B6", 7, False, None, "top", None)
+    _apuc("C6", 7, False, "justify", "top", True)
+    _apuc("B7", 7, False, None, None, None)
+    for coord in ("B8", "C8", "D8", "E8", "F8"):
+        _apuc(coord, 7, False, None, "center", None)
+    _apuc("G8", 7, False, "right", "center", None)
+    _apuc("H8", 7, False, "center", "center", None, "#,##0.000000")
+    _apuc("B9", 7, False, None, "center", None)
+    _apuc("C9", 7, False, None, "center", None)
+    _apuc("D9", 7, False, None, "center", None)
+    _apuc("E9", 7, False, "right", "center", None)
+    _apuc("F9", 7, False, "center", "center", None)
+    _apuc("G9", 7, False, "right", "center", None)
+    _apuc("H9", 7, False, "center", "center", None, "#,##0.00")
+
+    # Títulos de sección
+    for coord in (f"B{mat_start}", f"B{eq_start}", f"B{mo_start}"):
+        _apuc(coord, 11, False, None, None, None)
+
+    # Cabeceras de tablas
+    for col in "BCDEFGH":
+        _apuc(f"{col}{mat_start + 1}", 7, True, "center", "center", None)
+        _apuc(f"{col}{mo_start + 1}", 7, True, "center", "center", None)
+        _apuc(f"{col}{eq_start + 1}", 7, True, "center", "center", None)
+    _apuc(f"F{eq_start + 1}", 6, True, "center", "center", None)
+
+    # Materiales
+    for r in range(mat_start + 2, total_mat_row):
+        _apuc(f"A{r}", 7, False, "center", "center", None)
+        _apuc(f"B{r}", 7, False, "center", "center", None)
+        _apuc(f"C{r}", 7, False, "justify", "center", True)
+        _apuc(f"D{r}", 7, False, None, "center", None)
+        _apuc(f"E{r}", 7, False, None, "center", None, "#,##0.0000")
+        _apuc(f"F{r}", 7, False, None, "center", None, "#,##0.00")
+        _apuc(f"G{r}", 7, False, None, "center", None, "#,##0.00")
+        _apuc(f"H{r}", 7, False, None, "center", None, "#,##0.00")
+
+    # Equipos
+    for r in range(eq_start + 2, total_eq_row):
+        _apuc(f"A{r}", 7, False, "center", "center", None)
+        _apuc(f"B{r}", 7, False, "center", "center", None)
+        _apuc(f"C{r}", 7, False, "justify", "center", True)
+        _apuc(f"E{r}", 7, False, None, "center", None, "#,##0.00")
+        _apuc(f"F{r}", 7, False, None, "center", None, "#,##0.000000")
+        _apuc(f"G{r}", 7, False, None, "center", None, "#,##0.00")
+        _apuc(f"H{r}", 7, False, None, "center", None, "#,##0.00")
+
+    # Mano de obra
+    for r in range(mo_start + 2, sub_row):
+        _apuc(f"A{r}", 7, False, "center", "center", None)
+        _apuc(f"B{r}", 7, False, "center", "center", None)
+        _apuc(f"C{r}", 7, False, "justify", "center", True)
+        _apuc(f"D{r}", 7, False, "right", "center", True, "#,##0.00")
+        _apuc(f"E{r}", 7, False, None, "center", None, "#,##0.00")
+        _apuc(f"F{r}", 7, False, None, "center", None, "#,##0.00")
+        _apuc(f"G{r}", 7, False, None, None, None, "#,##0.00")
+        _apuc(f"H{r}", 7, False, None, "center", None, "#,##0.00")
+
+    # Totales y resumen
+    _apuc(f"F{total_mat_row}", 8, True, "right", None, None)
+    _apuc(f"H{total_mat_row}", 8, True, None, None, None, "#,##0.00")
+    _apuc(f"F{total_eq_row}", 8, True, "right", None, None)
+    _apuc(f"H{total_eq_row}", 8, True, None, None, None, "#,##0.00")
+    _apuc(f"E{cuo_row}", 8, True, "right", None, None)
+    _apuc(f"H{cuo_row}", 8, True, None, None, None, "#,##0.00")
+
+    _apuc(f"D{sub_row}", 8, True, "right", None, None)
+    _apuc(f"C{sub_row}", 8, True, "right", None, None)
+    _apuc(f"G{sub_row}", 8, True, None, None, None, "#,##0.00")
+    _apuc(f"H{sub_row}", 8, True, None, None, None, "#,##0.00")
+
+    _apuc(f"C{ps_row}", 8, True, "right", None, None, "#,##0.00")
+    _apuc(f"D{ps_row}", 8, True, "right", None, None)
+    _apuc(f"G{ps_row}", 8, True, None, None, None, "#,##0.00")
+    _apuc(f"H{ps_row}", 8, True, None, None, None, "#,##0.00")
+
+    _apuc(f"D{tg_row}", 8, True, "right", None, None)
+    _apuc(f"H{tg_row}", 8, True, None, None, None, "#,##0.00")
+    _apuc(f"D{cuo_mo_row}", 8, True, "right", None, None)
+    _apuc(f"H{cuo_mo_row}", 8, True, None, None, None, "#,##0.00")
+
+    _apuc(f"E{otros_mo_row}", 8, True, "right", None, None, "#,##0.00")
+    _apuc(f"F{otros_mo_row}", 11, False, None, None, None)
+    _apuc(f"H{otros_mo_row}", 8, True, None, None, None, "#,##0.00")
+
+    _apuc(f"E{cd_row}", 8, True, "right", None, None)
+    _apuc(f"H{cd_row}", 8, True, None, None, None, "#,##0.00")
+
+    _apuc(f"C{ad_row}", 8, True, "right", None, None, "#,##0.00")
+    _apuc(f"D{ad_row}", 11, False, None, None, None)
+    _apuc(f"H{ad_row}", 8, True, None, None, None, "#,##0.00")
+
+    _apuc(f"D{sb_row}", 8, True, "right", None, None)
+    _apuc(f"H{sb_row}", 8, True, None, None, None, "#,##0.00")
+
+    _apuc(f"E{iu_row}", 8, True, "right", None, None, "#,##0.00")
+    _apuc(f"F{iu_row}", 11, False, None, None, None)
+    _apuc(f"H{iu_row}", 8, True, None, None, None, "#,##0.00")
+
+    _apuc(f"D{sc_row}", 8, True, "right", None, None)
+    _apuc(f"H{sc_row}", 8, True, None, None, None, "#,##0.00")
+
+    _apuc(f"E{fin_row}", 8, True, "right", None, None, "#,##0.00")
+    _apuc(f"F{fin_row}", 11, False, None, None, None)
+    _apuc(f"H{fin_row}", 8, True, None, None, None, "#,##0.00")
+
+    _apuc(f"D{ps_row2}", 11, False, None, None, None)
+    _apuc(f"H{ps_row2}", 8, True, None, None, None, "#,##0.00")
+
+    _apuc(f"E{iva_row}", 8, True, "right", None, None, "#,##0.00")
+    _apuc(f"F{iva_row}", 11, False, None, None, None)
+    _apuc(f"H{iva_row}", 8, True, None, None, None, "#,##0.00")
+
+    _apuc(f"E{oi_row}", 8, True, "right", None, None, "#,##0.00")
+    _apuc(f"F{oi_row}", 11, False, None, None, None)
+    _apuc(f"H{oi_row}", 8, True, None, None, None, "#,##0.00")
+
+    _apuc(f"B{iu_row}", 8, True, None, None, True, "#,##0.00")
+    _apuc(f"D{pf_row}", 11, False, None, None, None)
+    _apuc(f"H{pf_row}", 8, True, None, None, None, "#,##0.00")
+
+    # Alturas del modelo
+    ws.row_dimensions[1].height = 23.4
+    ws.row_dimensions[2].height = 23.4
+    ws.row_dimensions[mat_start - 1].height = 4.05
+    for r in range(eq_start + 2, total_eq_row):
+        ws.row_dimensions[r].height = 18.75
+    ws.row_dimensions[otros_mo_row].height = 4.05
+    ws.row_dimensions[pf_row - 1].height = 4.05
 
 
 def generate_excel_workbook(
