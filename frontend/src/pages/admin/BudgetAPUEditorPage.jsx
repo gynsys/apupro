@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Plus, Printer, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Loader, Package, Wrench, Users, Calculator, Plus, Printer, Trash2, ChevronLeft, ChevronRight, Undo2, Redo2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { budgetService } from '../../services/budgetService';
 import { API_URL } from '../../services/api';
@@ -10,6 +10,8 @@ import PrintAPULayout from '../../components/PrintAPULayout';
 import ApuEditorUI from '../../components/ApuEditorUI';
 import ExportApuExcelButton from '../../modules/costbase/components/ExportApuExcelButton';
 import { calculateBudgetTotals, calculateItemPU } from '../../utils/apuCalculations';
+import { isBlankComponentRow } from '../../utils/apuRows';
+import useApuHistory from '../../hooks/useApuHistory';
 
 
 export default function BudgetAPUEditorPage() {
@@ -27,6 +29,10 @@ export default function BudgetAPUEditorPage() {
   
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [printOptions, setPrintOptions] = useState(null);
+
+  const history = useApuHistory(itemId);
+  const pendingOldRef = useRef(new Map());
+  const rowRefsRef = useRef(new Map());
 
   useEffect(() => {
     if (printOptions) {
@@ -64,6 +70,129 @@ export default function BudgetAPUEditorPage() {
     });
   };
 
+  const rowRef = (type, id) => {
+    const key = `${type}:${id}`;
+    if (!rowRefsRef.current.has(key)) {
+      rowRefsRef.current.set(key, { id });
+    }
+    return rowRefsRef.current.get(key);
+  };
+
+  const patchRow = (type, id, fields) => {
+    updateItemInState(prev => ({
+      ...prev,
+      [type]: (prev[type] || []).map(c => c.id === id ? { ...c, ...fields } : c),
+    }));
+  };
+
+  const insertRow = (type, row) => {
+    updateItemInState(prev => {
+      const rows = [...(prev[type] || [])];
+      const blankIndex = rows.findIndex(isBlankComponentRow);
+      if (blankIndex === -1) rows.push(row);
+      else rows.splice(blankIndex, 0, row);
+      return { ...prev, [type]: rows };
+    });
+  };
+
+  const removeRowLocal = (type, id) => {
+    updateItemInState(prev => ({
+      ...prev,
+      [type]: (prev[type] || []).filter(c => c.id !== id),
+    }));
+  };
+
+  const recordFieldCommand = (type, compId, field, before, after) => {
+    if (history.applyingRef.current || before === after || before === undefined) return;
+    const ref = rowRef(type, compId);
+    history.push({
+      label: `Cambiar ${field}`,
+      undo: async () => {
+        await budgetService.updateComponent(id, itemId, type, ref.id, { [field]: before });
+        patchRow(type, ref.id, { [field]: before });
+      },
+      redo: async () => {
+        await budgetService.updateComponent(id, itemId, type, ref.id, { [field]: after });
+        patchRow(type, ref.id, { [field]: after });
+      },
+    });
+  };
+
+  const recordRowUpdateCommand = (type, oldRow, newRow) => {
+    if (history.applyingRef.current || !oldRow || !newRow) return;
+    const fieldsByType = {
+      materials: ['codigo', 'descripcion', 'unidad', 'cantidad', 'precio_unitario', 'desperdicio'],
+      equipments: ['codigo', 'descripcion', 'cantidad', 'precio_unitario', 'depreciacion'],
+      labors: ['codigo', 'descripcion', 'cantidad', 'jornal', 'bono'],
+    };
+    const before = {};
+    const after = {};
+    (fieldsByType[type] || []).forEach((field) => {
+      if (oldRow[field] !== newRow[field]) {
+        before[field] = oldRow[field];
+        after[field] = newRow[field];
+      }
+    });
+    if (!Object.keys(before).length) return;
+    const ref = rowRef(type, newRow.id);
+    history.push({
+      label: 'Editar insumo',
+      undo: async () => {
+        await budgetService.updateComponent(id, itemId, type, ref.id, before);
+        patchRow(type, ref.id, before);
+      },
+      redo: async () => {
+        await budgetService.updateComponent(id, itemId, type, ref.id, after);
+        patchRow(type, ref.id, after);
+      },
+    });
+  };
+
+  const registerAddCommand = (type, added, payload) => {
+    if (history.applyingRef.current || !added?.id) return;
+    const ref = rowRef(type, added.id);
+    const cleanPayload = { ...payload };
+    delete cleanPayload.id;
+    history.push({
+      label: 'Agregar insumo',
+      undo: async () => {
+        await budgetService.deleteComponent(id, itemId, type, ref.id);
+        removeRowLocal(type, ref.id);
+      },
+      redo: async () => {
+        const again = await budgetService.addComponent(id, itemId, type, cleanPayload);
+        ref.id = again.id;
+        rowRefsRef.current.set(`${type}:${again.id}`, ref);
+        insertRow(type, again);
+      },
+    });
+  };
+
+  const registerDeleteCommand = (type, row) => {
+    if (history.applyingRef.current || !row?.id) return;
+    const ref = rowRef(type, row.id);
+    const cleanRow = { ...row };
+    delete cleanRow.id;
+    history.push({
+      label: 'Eliminar insumo',
+      undo: async () => {
+        const again = await budgetService.addComponent(id, itemId, type, cleanRow);
+        ref.id = again.id;
+        rowRefsRef.current.set(`${type}:${again.id}`, ref);
+        insertRow(type, again);
+      },
+      redo: async () => {
+        await budgetService.deleteComponent(id, itemId, type, ref.id);
+        removeRowLocal(type, ref.id);
+      },
+    });
+  };
+
+  useEffect(() => {
+    pendingOldRef.current.clear();
+    rowRefsRef.current.clear();
+  }, [itemId]);
+
   // ── Numeric field change (local state only) ──────────────────────────────
   const handleComponentChange = (type, compId, field, value) => {
     const val = parseFloat(value) || 0;
@@ -78,6 +207,9 @@ export default function BudgetAPUEditorPage() {
 
   const handleComponentBlur = async (type, compId, field, value) => {
     const val = parseFloat(value) || 0;
+    const key = `${type}:${compId}:${field}`;
+    const before = pendingOldRef.current.get(key);
+    pendingOldRef.current.delete(key);
     try {
       await budgetService.updateComponent(id, itemId, type, compId, { [field]: val });
       setBudget(prev => {
@@ -90,6 +222,7 @@ export default function BudgetAPUEditorPage() {
           } : it)
         };
       });
+      recordFieldCommand(type, compId, field, before, val);
     } catch (error) {
       toast.error('Error al actualizar el componente');
     }
@@ -104,6 +237,9 @@ export default function BudgetAPUEditorPage() {
   };
 
   const handleTextBlur = async (type, compId, field, value) => {
+    const key = `${type}:${compId}:${field}`;
+    const before = pendingOldRef.current.get(key);
+    pendingOldRef.current.delete(key);
     try {
       await budgetService.updateComponent(id, itemId, type, compId, { [field]: value });
       setBudget(prev => {
@@ -116,6 +252,7 @@ export default function BudgetAPUEditorPage() {
           } : it)
         };
       });
+      recordFieldCommand(type, compId, field, before, value);
     } catch (error) {
       toast.error('Error al actualizar');
     }
@@ -123,6 +260,7 @@ export default function BudgetAPUEditorPage() {
 
   // ── Delete component ─────────────────────────────────────────────────────
   const handleDeleteComponent = async (type, compId) => {
+    const rowToDelete = (item[type] || []).find(c => c.id === compId);
     setDeletingId(compId);
     try {
       await budgetService.deleteComponent(id, itemId, type, compId);
@@ -130,6 +268,7 @@ export default function BudgetAPUEditorPage() {
         ...prev,
         [type]: (prev[type] || []).filter(c => c.id !== compId)
       }));
+      registerDeleteCommand(type, rowToDelete);
       toast.success('Insumo eliminado');
     } catch (error) {
       toast.error('Error al eliminar');
@@ -184,6 +323,12 @@ export default function BudgetAPUEditorPage() {
 
   const handleHeaderFieldChange = (field, value) => {
     let finalValue = value;
+    if (!history.applyingRef.current) {
+      const key = `header:${field}`;
+      if (!pendingOldRef.current.has(key)) {
+        pendingOldRef.current.set(key, item?.[field]);
+      }
+    }
     if (field === 'performance' || field === 'rendimiento') {
       finalValue = parseFloat(value) || 0;
       setItem(prev => ({ ...prev, performance: finalValue, rendimiento: finalValue }));
@@ -201,12 +346,33 @@ export default function BudgetAPUEditorPage() {
         finalValue = parseFloat(value) || 1.0;
         if (finalValue <= 0) finalValue = 1.0;
       }
+      const key = `header:${field}`;
+      const before = pendingOldRef.current.get(key);
+      pendingOldRef.current.delete(key);
       updateItemInState(prev => ({
         ...prev,
         [finalField]: finalValue,
         ...(finalField === 'performance' ? { rendimiento: finalValue } : {})
       }));
       await budgetService.updateItem(id, itemId, { [finalField]: finalValue });
+      if (!history.applyingRef.current && before !== undefined && before !== finalValue) {
+        const applyValue = (nextValue) => updateItemInState(prev => ({
+          ...prev,
+          [finalField]: nextValue,
+          ...(finalField === 'performance' ? { rendimiento: nextValue } : {})
+        }));
+        history.push({
+          label: finalField === 'performance' ? 'Cambiar rendimiento' : 'Editar partida',
+          undo: async () => {
+            await budgetService.updateItem(id, itemId, { [finalField]: before });
+            applyValue(before);
+          },
+          redo: async () => {
+            await budgetService.updateItem(id, itemId, { [finalField]: finalValue });
+            applyValue(finalValue);
+          },
+        });
+      }
       toast.success(finalField === 'performance' ? 'Rendimiento actualizado' : 'Partida actualizada');
       setEditingHeader(prev => ({ ...prev, [field === 'cov_par' ? 'code' : 'description']: false }));
     } catch (error) {
@@ -219,10 +385,8 @@ export default function BudgetAPUEditorPage() {
       const addedComp = await budgetService.addComponent(id, itemId, searchModal.type, componentData);
       toast.success('Insumo agregado con éxito');
       setSearchModal({ isOpen: false, type: '', title: '' });
-      updateItemInState(prev => ({
-        ...prev,
-        [searchModal.type]: [...(prev[searchModal.type] || []), addedComp]
-      }));
+      insertRow(searchModal.type, addedComp);
+      registerAddCommand(searchModal.type, addedComp, componentData);
     } catch (error) {
       console.error(error);
       toast.error('Error al agregar el insumo');
@@ -235,10 +399,8 @@ export default function BudgetAPUEditorPage() {
         // Adding new component from modal
         const addedComp = await budgetService.addComponent(id, itemId, type, selectedData);
         toast.success('Insumo agregado con éxito');
-        updateItemInState(prev => ({
-          ...prev,
-          [type]: [...(prev[type] || []), addedComp]
-        }));
+        insertRow(type, addedComp);
+        registerAddCommand(type, addedComp, selectedData);
       } else if (String(compId).startsWith('NEW-')) {
         // It was a newly added blank row
         const existingRow = item[type]?.find(c => c.id === compId) || {};
@@ -254,8 +416,10 @@ export default function BudgetAPUEditorPage() {
           ...prev,
           [type]: (prev[type] || []).map(c => c.id === compId ? addedComp : c)
         }));
+        registerAddCommand(type, addedComp, payload);
       } else {
         // Replacing/updating an existing component
+        const oldRow = item[type]?.find(c => c.id === compId) || {};
         const payload = {
           codigo: selectedData.codigo,
           descripcion: selectedData.descripcion,
@@ -278,6 +442,7 @@ export default function BudgetAPUEditorPage() {
           ...prev,
           [type]: (prev[type] || []).map(c => c.id === compId ? { ...c, ...updatedComp } : c)
         }));
+        recordRowUpdateCommand(type, oldRow, { ...oldRow, ...updatedComp });
       }
     } catch (error) {
       console.error(error);
@@ -327,6 +492,13 @@ export default function BudgetAPUEditorPage() {
   };
 
   const handleApuEditorComponentChange = (type, compId, field, value) => {
+    if (!history.applyingRef.current && compId && !String(compId).startsWith('NEW-')) {
+      const key = `${type}:${compId}:${field}`;
+      if (!pendingOldRef.current.has(key)) {
+        const currentRow = (item[type] || []).find(c => c.id === compId);
+        pendingOldRef.current.set(key, currentRow?.[field]);
+      }
+    }
     // For text fields like codigo, descripcion, unidad
     if (['codigo', 'descripcion', 'unidad'].includes(field)) {
       handleTextChange(type, compId, field, value);
@@ -356,6 +528,7 @@ export default function BudgetAPUEditorPage() {
               ...prev,
               [type]: (prev[type] || []).map(c => c.id === compId ? savedComp : c)
             }));
+            registerAddCommand(type, savedComp, dataToSave);
           }
         } catch (error) {
           toast.error('Error al guardar nuevo insumo');
@@ -404,6 +577,24 @@ export default function BudgetAPUEditorPage() {
   const currentApuIndex = apuItems.findIndex(i => i.id === itemId);
   const currentPosition = currentApuIndex !== -1 ? currentApuIndex + 1 : 0;
   const totalApus = apuItems.length;
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      const key = event.key.toLowerCase();
+      const isUndo = key === 'z' && !event.shiftKey;
+      const isRedo = key === 'y' || (key === 'z' && event.shiftKey);
+      if (!isUndo && !isRedo) return;
+      if (isUndo && !history.canUndo) return;
+      if (isRedo && !history.canRedo) return;
+      event.preventDefault();
+      if (history.busy) return;
+      const action = isUndo ? history.undo : history.redo;
+      action().catch(() => toast.error(isUndo ? 'No se pudo deshacer' : 'No se pudo rehacer'));
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [history.busy, history.undo, history.redo]);
 
   const prevItem = currentApuIndex > 0 ? apuItems[currentApuIndex - 1] : null;
   const nextItem = currentApuIndex !== -1 && currentApuIndex < apuItems.length - 1 ? apuItems[currentApuIndex + 1] : null;
@@ -497,6 +688,26 @@ export default function BudgetAPUEditorPage() {
                   title={nextItem ? `Ir a siguiente APU (${currentPosition + 1}/${totalApus})` : "Este es el último APU"}
                 >
                   <ChevronRight size={20} className="text-slate-700" />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+                <button
+                  onClick={() => history.undo().catch(() => toast.error('No se pudo deshacer'))}
+                  disabled={!history.canUndo || history.busy}
+                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                  title="Deshacer (Ctrl+Z)"
+                >
+                  <Undo2 size={19} className="text-slate-700" />
+                </button>
+                <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                <button
+                  onClick={() => history.redo().catch(() => toast.error('No se pudo rehacer'))}
+                  disabled={!history.canRedo || history.busy}
+                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                  title="Rehacer (Ctrl+Y)"
+                >
+                  <Redo2 size={19} className="text-slate-700" />
                 </button>
               </div>
             </div>
