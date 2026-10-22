@@ -997,7 +997,6 @@ def build_apu_sheet(
     ws.row_dimensions[mat_start - 1].height = 4.05
     for r in range(eq_start + 2, total_eq_row):
         ws.row_dimensions[r].height = 18.75
-    ws.row_dimensions[otros_mo_row].height = 4.05
     ws.row_dimensions[pf_row - 1].height = 4.05
 
 
