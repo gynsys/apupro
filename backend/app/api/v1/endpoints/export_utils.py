@@ -777,11 +777,85 @@ def build_apu_sheet(
         if nf:
             cell.number_format = nf
 
-    # El modelo no usa bordes ni rellenos.
+    # El modelo no usa rellenos, pero sí bordes finos en las tablas.
+    thin = Side(style="thin")
     for row in ws.iter_rows(min_row=1, max_row=pf_row, min_col=2, max_col=8):
         for cell in row:
             cell.border = Border()
             cell.fill = PatternFill(fill_type=None)
+
+    def _bd(coord: str, left: bool = False, right: bool = False,
+            top: bool = False, bottom: bool = False) -> None:
+        ws[coord].border = Border(
+            left=thin if left else None,
+            right=thin if right else None,
+            top=thin if top else None,
+            bottom=thin if bottom else None,
+        )
+
+    # Materiales: cabecera y filas completas
+    for r in range(mat_start + 1, total_mat_row):
+        for col in "BCDEFGH":
+            _bd(f"{col}{r}", True, True, True, True)
+    # Totales de materiales
+    _bd(f"F{total_mat_row}", right=True, top=True)
+    _bd(f"G{total_mat_row}", right=True, top=True)
+    _bd(f"H{total_mat_row}", True, True, True, True)
+
+    # Equipos: C:D van fusionadas en la descripción.
+    for r in range(eq_start + 1, total_eq_row):
+        _bd(f"B{r}", True, True, True, True)
+        _bd(f"C{r}", True, True, True, True)
+        _bd(f"D{r}", right=True, top=True, bottom=True)
+        for col in "EFGH":
+            _bd(f"{col}{r}", True, True, True, True)
+    _bd(f"F{total_eq_row}", right=True, top=True)
+    _bd(f"G{total_eq_row}", right=True, top=True)
+    _bd(f"H{total_eq_row}", True, True, True, True)
+    _bd(f"E{cuo_row}", right=True)
+    _bd(f"G{cuo_row}", right=True)
+    _bd(f"H{cuo_row}", True, True, True, True)
+
+    # Mano de obra
+    for r in range(mo_start + 1, sub_row):
+        _bd(f"B{r}", True, True, True, True)
+        _bd(f"C{r}", left=True, top=True, bottom=True)
+        for col in "DEFGH":
+            _bd(f"{col}{r}", True, True, True, True)
+    _bd(f"D{sub_row}", right=True, top=True)
+    _bd(f"E{sub_row}", top=True)
+    _bd(f"F{sub_row}", right=True, top=True)
+    _bd(f"G{sub_row}", True, True, True, True)
+    _bd(f"H{sub_row}", True, True, True, True)
+    _bd(f"G{ps_row}", True, True, True, True)
+    _bd(f"H{ps_row}", True, True, True, True)
+
+    for r, left_cell in ((tg_row, "D"), (cuo_mo_row, "D"), (ad_row, "D"), (sb_row, "D"),
+                         (sc_row, "D"), (ps_row2, "D"), (pf_row, "D")):
+        _bd(f"{left_cell}{r}", right=True)
+        _bd(f"G{r}", right=True)
+        _bd(f"H{r}", True, True, True, True)
+
+    for r, label_cell in ((otros_mo_row, "F"), (iu_row, "F"), (fin_row, "F"),
+                          (iva_row, "F"), (oi_row, "F")):
+        _bd(f"{label_cell}{r}", right=True)
+        _bd(f"G{r}", right=True)
+        _bd(f"H{r}", True, True, True, True)
+
+    for r in (cd_row,):
+        _bd(f"E{r}", right=True)
+        _bd(f"G{r}", right=True)
+        _bd(f"H{r}", True, True, True, True)
+
+    # Formato de hoja/página del modelo
+    ws.sheet_format.defaultRowHeight = 14.4
+    ws.sheet_format.baseColWidth = 10
+    ws.page_margins.left = 0.75
+    ws.page_margins.right = 0.75
+    ws.page_margins.top = 0.75
+    ws.page_margins.bottom = 0.75
+    ws.page_margins.header = 0.3
+    ws.page_margins.footer = 0.3
 
     # Título y encabezado
     _apuc("B1", 18, True, "center", None, None)
