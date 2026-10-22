@@ -569,6 +569,9 @@ export default function BudgetAPUEditorPage() {
     return pu * qty;
   }, [item, pu]);
 
+  const rawCurrency = String(budget?.currency || 'USD').trim();
+  const currencyLabel = rawCurrency.toUpperCase() === 'USD' ? '$' : rawCurrency;
+
   // Lista de partidas APU reales (excluyendo capítulos)
   const apuItems = useMemo(() => {
     return (budget?.items || []).filter(i => !i.is_chapter);
@@ -734,7 +737,7 @@ export default function BudgetAPUEditorPage() {
             {/* Precio unitario del APU */}
             <div 
               className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-emerald-200 shadow-sm"
-              title={`Precio unitario del APU: ${pu.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${budget?.currency || 'USD'}`}
+              title={`Precio unitario del APU: ${pu.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currencyLabel}`}
             >
               <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">
                 P.U:
@@ -743,7 +746,7 @@ export default function BudgetAPUEditorPage() {
                 {pu.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
               <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
-                {budget?.currency || 'USD'}
+                {currencyLabel}
               </span>
             </div>
 
@@ -759,7 +762,7 @@ export default function BudgetAPUEditorPage() {
                 {totalPartida.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
               <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
-                {budget?.currency || 'USD'}
+                {currencyLabel}
               </span>
             </div>
 
@@ -775,7 +778,7 @@ export default function BudgetAPUEditorPage() {
                 {subtotalPresupuesto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
               <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                {budget?.currency || 'USD'}
+                {currencyLabel}
               </span>
             </div>
 
