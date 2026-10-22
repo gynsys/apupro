@@ -96,7 +96,6 @@ export default function ApuEditorUI({
     targetRow: null
   });
   const sectionRows = (type) => filterBlankComponentRows(item[type]);
-  const blankRowOf = (type) => (item[type] || []).find(isBlankComponentRow) || null;
 
   useEffect(() => {
     if (typeof onAddBlankRow !== 'function') return;
@@ -275,15 +274,6 @@ export default function ApuEditorUI({
               <Package className="text-orange-600" size={18} />
               <h3 className="font-bold text-orange-800 text-sm tracking-wide">1. MATERIALES ( {sectionRows('materials').length} )</h3>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setMaterialModal({ isOpen: true, targetRow: blankRowOf('materials') })}
-                className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-50 hover:text-blue-600 transition-colors shadow-sm"
-              >
-                <Search size={14} /> Buscar
-              </button>
-            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse min-w-[620px]">
@@ -417,15 +407,6 @@ export default function ApuEditorUI({
               <Wrench className="text-indigo-600" size={18} />
               <h3 className="font-bold text-indigo-800 text-sm tracking-wide">2. EQUIPOS ( {sectionRows('equipments').length} )</h3>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setEquipmentModal({ isOpen: true, targetRow: blankRowOf('equipments') })}
-                className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-50 hover:text-indigo-600 transition-colors shadow-sm"
-              >
-                <Search size={14} /> Buscar
-              </button>
-            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse min-w-[620px]">
@@ -545,15 +526,6 @@ export default function ApuEditorUI({
             <div className="flex items-center gap-2">
               <Users className="text-teal-600" size={18} />
               <h3 className="font-bold text-teal-800 text-sm tracking-wide">3. MANO DE OBRA ( {sectionRows('labors').length} )</h3>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setLaborModal({ isOpen: true, targetRow: blankRowOf('labors') })}
-                className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-50 hover:text-emerald-600 transition-colors shadow-sm"
-              >
-                <Search size={14} /> Buscar
-              </button>
             </div>
           </div>
           <div className="overflow-x-auto">
