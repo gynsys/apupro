@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { Package, Wrench, Users, Plus, Search, Trash2, Loader, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Package, Wrench, Users, Search, Trash2, Loader, Sparkles } from 'lucide-react';
 import { numeroALetras } from '../utils/numberToLetters';
 import { calculateItemBreakdown } from '../utils/apuCalculations';
+import { filterBlankComponentRows, isBlankComponentRow } from '../utils/apuRows';
 import EquipmentSelectorModal from './EquipmentSelectorModal';
 import MaterialSelectorModal from './MaterialSelectorModal';
 import LaborSelectorModal from './LaborSelectorModal';
@@ -94,12 +95,18 @@ export default function ApuEditorUI({
     isOpen: false,
     targetRow: null
   });
-  const [focusRowId, setFocusRowId] = useState(null);
+  const sectionRows = (type) => filterBlankComponentRows(item[type]);
+  const blankRowOf = (type) => (item[type] || []).find(isBlankComponentRow) || null;
 
-  const handleAddRow = (type) => {
-    const newId = safeFn(onAddBlankRow)(type);
-    if (newId) setFocusRowId(newId);
-  };
+  useEffect(() => {
+    if (typeof onAddBlankRow !== 'function') return;
+    ['materials', 'equipments', 'labors'].forEach((type) => {
+      const rows = item[type] || [];
+      if (!rows.some(isBlankComponentRow)) {
+        onAddBlankRow(type);
+      }
+    });
+  }, [item.materials, item.equipments, item.labors, onAddBlankRow]);
 
   const handleSelectEquipment = (selectedData, targetOverride = null) => {
     const target = targetOverride || equipmentModal.targetRow;
@@ -197,7 +204,7 @@ export default function ApuEditorUI({
   const incidenciaManoObra = costos.unitPrice ? (costoUnitarioManoObra / costos.unitPrice) * 100 : 0;
 
   const horasLaborables = 8;
-  const horasHombres = (item.labors || []).reduce((acc, lab) => acc + (parseFloat(lab.cantidad) || 0), 0) * horasLaborables;
+  const horasHombres = filterBlankComponentRows(item.labors).reduce((acc, lab) => acc + (parseFloat(lab.cantidad) || 0), 0) * horasLaborables;
   const horasHombresRend = horasHombres / rendimiento;
   const puHoras = horasHombresRend ? costos.unitPrice / horasHombresRend : 0;
 
@@ -266,21 +273,15 @@ export default function ApuEditorUI({
           <div className="bg-slate-100 px-4 py-2 border-b border-slate-400 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Package className="text-orange-600" size={18} />
-              <h3 className="font-bold text-orange-800 text-sm tracking-wide">1. MATERIALES ( {item.materials?.length || 0} )</h3>
+              <h3 className="font-bold text-orange-800 text-sm tracking-wide">1. MATERIALES ( {sectionRows('materials').length} )</h3>
             </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setMaterialModal({ isOpen: true, targetRow: null })}
+                onClick={() => setMaterialModal({ isOpen: true, targetRow: blankRowOf('materials') })}
                 className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-50 hover:text-blue-600 transition-colors shadow-sm"
               >
                 <Search size={14} /> Buscar
-              </button>
-              <button
-                onClick={() => handleAddRow('materials')}
-                className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-50 hover:text-orange-600 transition-colors shadow-sm"
-              >
-                <Plus size={14} /> Fila
               </button>
             </div>
           </div>
@@ -322,7 +323,6 @@ export default function ApuEditorUI({
                             onSelect={(data) => handleCatalogSelect('materials', mat, data)}
                             placeholder="Descripción del material"
                             inputClassName="w-full bg-transparent focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 rounded px-1 font-medium text-slate-700"
-                            autoFocus={focusRowId === mat.id}
                             openOnFocus={String(mat.id).startsWith('NEW-')}
                           />
                         </div>
@@ -390,7 +390,7 @@ export default function ApuEditorUI({
                           type="button"
                           onClick={() => safeFn(onRemoveRow)('materials', mat.id)}
                           disabled={deletingId === mat.id}
-                          className="text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors p-1 rounded disabled:opacity-50 cursor-pointer"
+                          className={`text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors p-1 rounded disabled:opacity-50 cursor-pointer ${isBlankComponentRow(mat) ? 'invisible' : ''}`}
                           title="Eliminar insumo"
                         >
                           {deletingId === mat.id ? <Loader size={16} className="animate-spin" /> : <Trash2 size={16} />}
@@ -415,22 +415,15 @@ export default function ApuEditorUI({
           <div className="bg-slate-100 px-4 py-2 border-b border-slate-400 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Wrench className="text-indigo-600" size={18} />
-              <h3 className="font-bold text-indigo-800 text-sm tracking-wide">2. EQUIPOS ( {item.equipments?.length || 0} )</h3>
+              <h3 className="font-bold text-indigo-800 text-sm tracking-wide">2. EQUIPOS ( {sectionRows('equipments').length} )</h3>
             </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setEquipmentModal({ isOpen: true, targetRow: null })}
+                onClick={() => setEquipmentModal({ isOpen: true, targetRow: blankRowOf('equipments') })}
                 className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-50 hover:text-indigo-600 transition-colors shadow-sm"
               >
                 <Search size={14} /> Buscar
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddRow('equipments')}
-                className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-50 hover:text-indigo-600 transition-colors shadow-sm"
-              >
-                <Plus size={14} /> Fila
               </button>
             </div>
           </div>
@@ -469,7 +462,6 @@ export default function ApuEditorUI({
                         onSelect={(data) => handleCatalogSelect('equipments', eq, data)}
                         placeholder="Descripción del equipo"
                         inputClassName="w-full bg-transparent focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 rounded px-1 font-medium text-slate-700"
-                        autoFocus={focusRowId === eq.id}
                         openOnFocus={String(eq.id).startsWith('NEW-')}
                       />
                       {eq.origen && (
@@ -519,7 +511,7 @@ export default function ApuEditorUI({
                           type="button"
                           onClick={() => safeFn(onRemoveRow)('equipments', eq.id)}
                           disabled={deletingId === eq.id}
-                          className="text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors p-1 rounded disabled:opacity-50 cursor-pointer"
+                          className={`text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors p-1 rounded disabled:opacity-50 cursor-pointer ${isBlankComponentRow(eq) ? 'invisible' : ''}`}
                           title="Eliminar equipo"
                         >
                           {deletingId === eq.id ? <Loader size={16} className="animate-spin" /> : <Trash2 size={16} />}
@@ -552,21 +544,15 @@ export default function ApuEditorUI({
           <div className="bg-slate-100 px-4 py-2 border-b border-slate-400 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Users className="text-teal-600" size={18} />
-              <h3 className="font-bold text-teal-800 text-sm tracking-wide">3. MANO DE OBRA ( {item.labors?.length || 0} )</h3>
+              <h3 className="font-bold text-teal-800 text-sm tracking-wide">3. MANO DE OBRA ( {sectionRows('labors').length} )</h3>
             </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setLaborModal({ isOpen: true, targetRow: null })}
+                onClick={() => setLaborModal({ isOpen: true, targetRow: blankRowOf('labors') })}
                 className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-50 hover:text-emerald-600 transition-colors shadow-sm"
               >
                 <Search size={14} /> Buscar
-              </button>
-              <button
-                onClick={() => handleAddRow('labors')}
-                className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-50 hover:text-teal-600 transition-colors shadow-sm"
-              >
-                <Plus size={14} /> Fila
               </button>
             </div>
           </div>
@@ -606,7 +592,6 @@ export default function ApuEditorUI({
                         onSelect={(data) => handleCatalogSelect('labors', lab, data)}
                         placeholder="Descripción (ej. Maestro de Obra)"
                         inputClassName="w-full bg-transparent focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 rounded px-1 font-medium text-slate-700"
-                        autoFocus={focusRowId === lab.id}
                         openOnFocus={String(lab.id).startsWith('NEW-')}
                       />
                       {lab.origen && (
@@ -658,7 +643,7 @@ export default function ApuEditorUI({
                           type="button"
                           onClick={() => safeFn(onRemoveRow)('labors', lab.id)}
                           disabled={deletingId === lab.id}
-                          className="text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors p-1 rounded disabled:opacity-50 cursor-pointer"
+                          className={`text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors p-1 rounded disabled:opacity-50 cursor-pointer ${isBlankComponentRow(lab) ? 'invisible' : ''}`}
                           title="Eliminar mano de obra"
                         >
                           {deletingId === lab.id ? <Loader size={16} className="animate-spin" /> : <Trash2 size={16} />}

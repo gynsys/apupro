@@ -4,6 +4,7 @@ import { toast } from 'react-hot-toast';
 import { exportApuExcelCustom } from '../services/costbaseService';
 import { numeroALetras } from '../../../utils/numberToLetters';
 import { calculateItemBreakdown } from '../../../utils/apuCalculations';
+import { filterBlankComponentRows } from '../../../utils/apuRows';
 import { useUserCostos } from '../../../context/UserCostosContext';
 
 const ExcelIcon = ({ size = 20, className = "" }) => (
@@ -63,7 +64,9 @@ export default function ExportApuExcelButton({
       );
       const effectiveBonoInFcas = rawBonoInFcas === true || (rawBonoInFcas !== false && effectiveFcasPercent >= 1000);
 
-      const rawLabors = labors.length ? labors : (item?.labors || []);
+      const cleanMaterials = filterBlankComponentRows(materials.length ? materials : (item?.materials || []));
+      const cleanEquipments = filterBlankComponentRows(equipments.length ? equipments : (item?.equipments || []));
+      const rawLabors = filterBlankComponentRows(labors.length ? labors : (item?.labors || []));
       const mappedLabors = rawLabors.map(lab => {
         const rawBono = (lab.bono != null && lab.bono !== '')
           ? parseFloat(lab.bono)
@@ -88,8 +91,8 @@ export default function ExportApuExcelButton({
       const calcPrice = (currSettings) => {
         const itemToCalc = {
           ...item,
-          materials: materials.length ? materials : (item?.materials || []),
-          equipments: equipments.length ? equipments : (item?.equipments || []),
+          materials: cleanMaterials,
+          equipments: cleanEquipments,
           labors: mappedLabors
         };
         const breakdown = calculateItemBreakdown(itemToCalc, currSettings);
@@ -116,8 +119,8 @@ export default function ExportApuExcelButton({
 
       const payload = {
         item: item || {},
-        materials: materials.length ? materials : (item?.materials || []),
-        equipments: equipments.length ? equipments : (item?.equipments || []),
+        materials: cleanMaterials,
+        equipments: cleanEquipments,
         labors: mappedLabors,
         settings: finalSettings
       };
