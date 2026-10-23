@@ -87,7 +87,7 @@ export default function PartidasScreen({ activePartida, scrolled, gearActive }) 
         </div>
 
         <div className="mt-3 flex items-center justify-between text-[10px] text-slate-400">
-          <span>Doble clic o engranaje para abrir el APU</span>
+          <span>Clic en el engranaje para abrir el APU</span>
           <span className="flex items-center gap-1 text-slate-500">
             Ver APU <ChevronDown size={11} className="-rotate-90" />
           </span>
