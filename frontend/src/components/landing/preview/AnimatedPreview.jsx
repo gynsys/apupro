@@ -8,17 +8,17 @@ import PartidasScreen from './screens/PartidasScreen';
 import ApuScreen from './screens/ApuScreen';
 
 const PHASES = [
-  { id: 'budgets', duration: 1800 },
+  { id: 'budgets', duration: 2400 },
   { id: 'budget-click', duration: 600 },
-  { id: 'partidas', duration: 1500 },
-  { id: 'partidas-scroll', duration: 1200 },
+  { id: 'partidas', duration: 2600 },
+  { id: 'partidas-scroll', duration: 1400 },
   { id: 'partida-click', duration: 600 },
-  { id: 'apu', duration: 1800 },
-  { id: 'apu-scroll', duration: 1200 },
-  { id: 'export-click', duration: 600 },
-  { id: 'modal', duration: 2000 },
-  { id: 'close-click', duration: 600 },
-  { id: 'rewind', duration: 800 },
+  { id: 'apu', duration: 2600 },
+  { id: 'apu-scroll', duration: 1400 },
+  { id: 'export-click', duration: 700 },
+  { id: 'modal', duration: 2200 },
+  { id: 'close-click', duration: 650 },
+  { id: 'rewind', duration: 900 },
 ];
 
 const CURSOR_POSITIONS = {
@@ -47,17 +47,23 @@ export default function AnimatedPreview() {
   const prefersReducedMotion = useReducedMotion();
   const [phaseIndex, setPhaseIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [manualModal, setManualModal] = useState(false);
+  const [modalDismissed, setModalDismissed] = useState(false);
   const containerRef = useRef(null);
   const isInView = useInView(containerRef, { amount: 0.35 });
 
   const phase = PHASES[phaseIndex].id;
   const screen = screenForPhase(phase);
-  const showModal = phase === 'modal' || phase === 'close-click';
+  const showModal = !modalDismissed && (manualModal || phase === 'modal' || phase === 'close-click');
   const cursorPosition = CURSOR_POSITIONS[phase];
 
   useEffect(() => {
     if (!isInView) setPhaseIndex(0);
   }, [isInView]);
+
+  useEffect(() => {
+    if (phase !== 'modal' && phase !== 'close-click') setModalDismissed(false);
+  }, [phase]);
 
   useEffect(() => {
     if (prefersReducedMotion || paused || !isInView) return undefined;
@@ -83,9 +89,13 @@ export default function AnimatedPreview() {
       <ApuScreen
         scrolled={phase === 'apu-scroll' || phase === 'export-click' || showModal}
         exportActive={phase === 'export-click'}
+        onExportClick={() => {
+          setManualModal(true);
+          setModalDismissed(false);
+        }}
       />
     );
-  }, [screen, phase]);
+  }, [screen, phase, showModal]);
 
   if (prefersReducedMotion) {
     return (
@@ -116,7 +126,17 @@ export default function AnimatedPreview() {
           </motion.div>
         </AnimatePresence>
 
-        <AnimatePresence>{showModal && <ExportModal closeActive={phase === 'close-click'} />}</AnimatePresence>
+        <AnimatePresence>
+          {showModal && (
+            <ExportModal
+              closeActive={phase === 'close-click'}
+              onClose={() => {
+                setManualModal(false);
+                setModalDismissed(true);
+              }}
+            />
+          )}
+        </AnimatePresence>
 
         <AnimatedCursor
           position={cursorPosition}

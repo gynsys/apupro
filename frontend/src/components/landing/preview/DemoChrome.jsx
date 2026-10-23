@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function DemoChrome({ children, height = 'h-[460px] sm:h-[500px]' }) {
+export default function DemoChrome({ children, height = 'h-[520px] sm:h-[600px]' }) {
   return (
     <div className={`relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl shadow-blue-900/25 transition-all duration-500 hover:shadow-blue-500/10 ${height}`}>
       <div className="flex h-11 items-center gap-2 border-b border-slate-800 bg-slate-950 px-4">

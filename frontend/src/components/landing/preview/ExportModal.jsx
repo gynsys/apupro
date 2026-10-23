@@ -2,7 +2,7 @@ import React from 'react';
 import { FileSpreadsheet, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export default function ExportModal({ closeActive }) {
+export default function ExportModal({ closeActive, onClose }) {
   return (
     <motion.div
       className="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-[2px]"
@@ -12,7 +12,7 @@ export default function ExportModal({ closeActive }) {
       transition={{ duration: 0.25 }}
     >
       <motion.div
-        className="w-full max-w-[330px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl"
+        className="w-full max-w-[380px] rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl"
         initial={{ opacity: 0, scale: 0.94, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 8 }}
@@ -28,13 +28,16 @@ export default function ExportModal({ closeActive }) {
               <p className="text-[9px] text-slate-400">Selecciona el contenido del archivo</p>
             </div>
           </div>
-          <span
+          <button
+            type="button"
+            onClick={onClose}
+            data-demo-target="close"
             className={`rounded-md p-1 text-slate-400 transition-all duration-300 ${
               closeActive ? 'bg-rose-50 text-rose-500 ring-2 ring-rose-200' : ''
             }`}
           >
             <X size={15} />
-          </span>
+          </button>
         </div>
 
         <div className="space-y-2">
@@ -55,12 +58,12 @@ export default function ExportModal({ closeActive }) {
         </div>
 
         <div className="mt-4 flex justify-end gap-2">
-          <span className="rounded-lg border border-slate-200 px-3 py-1.5 text-[9px] font-semibold text-slate-500">
+          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-3 py-1.5 text-[9px] font-semibold text-slate-500">
             Cancelar
-          </span>
-          <span className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[9px] font-bold text-white shadow-sm">
+          </button>
+          <button type="button" className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[9px] font-bold text-white shadow-sm">
             Exportar
-          </span>
+          </button>
         </div>
       </motion.div>
     </motion.div>
