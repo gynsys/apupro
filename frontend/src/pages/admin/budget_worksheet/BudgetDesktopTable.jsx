@@ -11,7 +11,8 @@ import {
   CheckSquare, 
   Square,
   Filter,
-  RotateCcw
+  RotateCcw,
+  Share2
 } from 'lucide-react';
 import MathQuantityInput from './MathQuantityInput';
 import ExportApuExcelButton from '../../../modules/costbase/components/ExportApuExcelButton';
@@ -33,6 +34,7 @@ export default function BudgetDesktopTable({
   onQuantityChange,
   onSaveQuantity,
   onPrintApu,
+  onShareItem,
   onOpenSearchModal,
   onTogglePending,
 }) {
@@ -512,6 +514,14 @@ export default function BudgetDesktopTable({
                                     className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded-lg border border-transparent hover:border-slate-200 transition-colors cursor-pointer"
                                     iconSize={16}
                                   />
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); onShareItem?.(item); }}
+                                    className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg border border-transparent hover:border-amber-200 transition-colors cursor-pointer"
+                                    title="Compartir partida"
+                                  >
+                                    <Share2 size={16} />
+                                  </button>
                                   <button 
                                     onClick={(e) => { e.stopPropagation(); onDeleteItem(item.id); }} 
                                     className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 transition-colors cursor-pointer" 

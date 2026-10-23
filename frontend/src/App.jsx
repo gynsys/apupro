@@ -7,6 +7,7 @@ import BudgetHomePage from './pages/admin/BudgetHomePage.jsx';
 import BudgetWorksheetPage from './pages/admin/BudgetWorksheetPage.jsx';
 import BudgetAPUEditorPage from './pages/admin/BudgetAPUEditorPage.jsx';
 import SharedBudgetPage from './pages/admin/SharedBudgetPage.jsx';
+import SharedPartidaPage from './pages/admin/SharedPartidaPage.jsx';
 import CalculadoraFCASPage from './pages/tools/CalculadoraFCASPage.jsx';
 import CostbaseDashboard from './modules/costbase/pages/CostbaseDashboard.jsx';
 import APUViewer from './modules/costbase/pages/APUViewer.jsx';
@@ -126,7 +127,8 @@ function App() {
             </Route>
 
             {/* RUTA DE VISTA PREVIA COMPARTIDA (Accesible con y sin sesión) */}
-            <Route path="/budgets/shared/:token" element={<SharedBudgetPage />} />
+            <Route path="/budgets/shared/partida/:token" element={<SharedPartidaPage />} />
+          <Route path="/budgets/shared/:token" element={<SharedBudgetPage />} />
 
             {/* RUTAS DE PRESUPUESTOS (APP - Protegidas) */}
             <Route 

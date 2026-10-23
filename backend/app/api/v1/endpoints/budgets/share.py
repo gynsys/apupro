@@ -2,9 +2,11 @@
 Budget sharing endpoints: Public share links, read-only preview, and shared cloning.
 """
 import secrets
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints.arko import get_current_arko_admin, get_optional_arko_admin
@@ -63,6 +65,148 @@ def generate_share_link(
         "share_token": budget.share_token,
         "share_url": share_url,
         "is_public_share": budget.is_public_share,
+    }
+
+
+@router.post("/{budget_id}/items/{item_id}/share")
+def generate_item_share_link(
+    budget_id: str,
+    item_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """Genera un enlace firmado para compartir una partida/APU individual."""
+    budget = db.query(Budget).filter(
+        Budget.id == budget_id,
+        Budget.user_id == str(current_user.id),
+    ).first()
+    if not budget:
+        raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
+
+    item = db.query(BudgetItem).filter(
+        BudgetItem.id == item_id,
+        BudgetItem.budget_id == budget_id,
+        BudgetItem.is_chapter.is_(False),
+    ).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Partida no encontrada")
+
+    token = jwt.encode(
+        {
+            "scope": "partida_share",
+            "budget_id": budget_id,
+            "item_id": item_id,
+            "exp": int((datetime.now(timezone.utc) + timedelta(days=30)).timestamp()),
+        },
+        settings.SECRET_KEY,
+        algorithm="HS256",
+    )
+
+    origin = request.headers.get("origin")
+    if origin and ("costbase.net" in origin or "localhost" in origin):
+        frontend_base_url = origin.rstrip("/")
+    else:
+        frontend_base_url = getattr(settings, "FRONTEND_URL", "https://www.costbase.net")
+        if "gynsys.net" in frontend_base_url:
+            frontend_base_url = "https://www.costbase.net"
+
+    return {
+        "share_token": token,
+        "share_url": f"{frontend_base_url}/budgets/shared/partida/{token}",
+        "budget_id": budget_id,
+        "item_id": item_id,
+        "description": item.description,
+        "expires_in_days": 30,
+    }
+
+
+@router.get("/shared/partida/{share_token}")
+def get_shared_item_preview(
+    share_token: str,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Vista pública de una partida compartida mediante token firmado."""
+    try:
+        payload = jwt.decode(share_token, settings.SECRET_KEY, algorithms=["HS256"])
+    except JWTError:
+        raise HTTPException(status_code=404, detail="Enlace de partida inválido o expirado")
+
+    if payload.get("scope") != "partida_share":
+        raise HTTPException(status_code=404, detail="Enlace de partida inválido")
+
+    budget_id = payload.get("budget_id")
+    item_id = payload.get("item_id")
+    budget = db.query(Budget).filter(Budget.id == budget_id).first()
+    item = db.query(BudgetItem).filter(
+        BudgetItem.id == item_id,
+        BudgetItem.budget_id == budget_id,
+    ).first()
+    if not budget or not item:
+        raise HTTPException(status_code=404, detail="Partida no encontrada")
+
+    return {
+        "budget": {
+            "id": budget.id,
+            "name": budget.name,
+            "client_name": budget.client_name,
+            "currency": budget.currency or "USD",
+            "exchange_rate": budget.exchange_rate or 1.0,
+            "fcas_percent": budget.fcas_percent if budget.fcas_percent is not None else 417.0,
+            "bono_in_fcas": budget.bono_in_fcas,
+            "labor_bonus": budget.labor_bonus or 0,
+            "material_inflation": budget.material_inflation or 0,
+            "equipment_inflation": budget.equipment_inflation or 0,
+            "labor_inflation": budget.labor_inflation or 0,
+            "admin_percent": budget.admin_percent if budget.admin_percent is not None else 15.0,
+            "profit_percent": budget.profit_percent if budget.profit_percent is not None else 10.0,
+            "iva_percent": budget.iva_percent if budget.iva_percent is not None else 16.0,
+        },
+        "item": {
+            "id": item.id,
+            "cod_par": item.cod_par,
+            "cov_par": item.cov_par,
+            "description": item.description,
+            "unit": item.unit,
+            "quantity": item.quantity,
+            "performance": item.performance,
+            "materials": [
+                {
+                    "id": m.id,
+                    "codigo": m.codigo,
+                    "descripcion": m.descripcion,
+                    "unidad": m.unidad,
+                    "cantidad": m.cantidad,
+                    "precio_unitario": m.precio_unitario,
+                    "desperdicio": m.desperdicio,
+                }
+                for m in item.materials
+            ],
+            "equipments": [
+                {
+                    "id": e.id,
+                    "codigo": e.codigo,
+                    "descripcion": e.descripcion,
+                    "unidad": e.unidad,
+                    "cantidad": e.cantidad,
+                    "precio_unitario": e.precio_unitario,
+                    "depreciacion": e.depreciacion,
+                }
+                for e in item.equipments
+            ],
+            "labors": [
+                {
+                    "id": l.id,
+                    "codigo": l.codigo,
+                    "descripcion": l.descripcion,
+                    "unidad": l.unidad,
+                    "cantidad": l.cantidad,
+                    "jornal": l.jornal,
+                    "bono": l.bono,
+                }
+                for l in item.labors
+            ],
+        },
     }
 
 

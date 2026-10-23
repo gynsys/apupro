@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Loader, Layers, Plus } from 'lucide-react';
 
 import BudgetSettingsModal from '../../../components/modals/BudgetSettingsModal';
 import BudgetPrintModal from '../../../components/modals/BudgetPrintModal';
 import BudgetExportExcelModal from '../../../components/modals/BudgetExportExcelModal';
+import SharePartidaModal from '../../../components/modals/SharePartidaModal';
 import BudgetPrintLayout from '../../../components/print/BudgetPrintLayout';
 import PrintAPUModal from '../../../components/PrintAPUModal';
 import PrintAPULayout, { APUPrintSheet } from '../../../components/PrintAPULayout';
@@ -23,6 +24,7 @@ import BudgetSearchModal from './BudgetSearchModal';
 
 export default function BudgetWorksheetView() {
   const ws = useBudgetWorksheet();
+  const [sharingItem, setSharingItem] = useState(null);
 
   if (ws.loading || !ws.budget) {
     return (
@@ -283,6 +285,7 @@ export default function BudgetWorksheetView() {
               onQuantityChange={ws.handleQuantityChange}
               onSaveQuantity={ws.saveQuantity}
               onPrintApu={(it) => { ws.setApuToPrint(it); ws.setShowApuPrintModal(true); }}
+              onShareItem={setSharingItem}
               onOpenSearchModal={ws.handleOpenSearchModal}
               onTogglePending={ws.handleTogglePending}
             />
@@ -363,6 +366,13 @@ export default function BudgetWorksheetView() {
         onExport={ws.handleExportExcelWithOptions}
         isExporting={ws.exportingBudgetExcel}
         totalItemsCount={(ws.budget.items || []).filter(i => !i.is_chapter).length}
+      />
+
+      <SharePartidaModal
+        isOpen={!!sharingItem}
+        onClose={() => setSharingItem(null)}
+        budget={ws.budget}
+        item={sharingItem}
       />
     </div>
   );
