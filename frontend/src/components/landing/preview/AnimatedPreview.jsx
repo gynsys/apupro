@@ -139,10 +139,6 @@ export default function AnimatedPreview() {
           clicking={CLICK_PHASES.has(phase)}
         />
       </DemoChrome>
-
-      <p className="mt-3 text-center text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500">
-        Recorrido interactivo · presupuesto → partidas → APU → Excel
-      </p>
     </div>
   );
 }

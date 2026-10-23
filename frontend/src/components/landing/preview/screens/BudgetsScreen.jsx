@@ -117,15 +117,15 @@ export default function BudgetsScreen({ activeBudget }) {
                     </div>
                   </div>
 
-                  <div className="relative flex shrink-0 items-center gap-1">
-                    <button type="button" className="p-1.5 text-slate-400" title="Duplicar"><Copy size={17} /></button>
-                    <button type="button" className="p-1.5 text-slate-400" title="Configuración Global"><Settings size={17} /></button>
-                    <button type="button" className="p-1.5 text-slate-400" title="Imprimir"><Printer size={17} /></button>
-                    <button type="button" className="rounded-md p-1.5 text-slate-400" title="Exportar a Excel"><FileSpreadsheet size={17} /></button>
-                    <button type="button" className="p-1.5 text-slate-400" title="Exportar Backup"><CloudDownload size={17} /></button>
-                    <button type="button" className="p-1.5 text-slate-400" title="Compartir enlace"><Share2 size={17} /></button>
-                    <button type="button" className="p-1.5 text-slate-400" title="Renombrar"><Edit3 size={17} /></button>
-                    <button type="button" className="p-1.5 text-slate-400" title="Eliminar"><Trash2 size={17} /></button>
+                  <div className="acciones-rapidas flex w-full shrink-0 items-center justify-between gap-1 overflow-x-auto border-t border-amber-200/60 pt-2.5 md:w-auto md:justify-end md:border-t-0 md:pt-0 no-scrollbar">
+                    <button type="button" className="btn-accion" title="Duplicar"><Copy size={18} /></button>
+                    <button type="button" className="btn-accion" title="Configuración Global"><Settings size={18} /></button>
+                    <button type="button" className="btn-accion" title="Imprimir"><Printer size={18} /></button>
+                    <button type="button" className="btn-accion" title="Exportar a Excel"><FileSpreadsheet size={18} /></button>
+                    <button type="button" className="btn-accion" title="Exportar Backup"><CloudDownload size={18} /></button>
+                    <button type="button" className="btn-accion hover:text-amber-600 transition-colors" title="Compartir enlace en la nube"><Share2 size={18} /></button>
+                    <button type="button" className="btn-accion" title="Editar Nombre"><Edit3 size={18} /></button>
+                    <button type="button" className="btn-accion hover:text-red-600" title="Eliminar"><Trash2 size={18} /></button>
                   </div>
                 </div>
               );
