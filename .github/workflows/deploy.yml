@@ -78,12 +78,25 @@ jobs:
           password: ${{ secrets.DO_PASSWORD }}
           script: |
             cd /root/apupro_platform
+            set -e
+            ENV_BACKUP=$(mktemp /tmp/apupro-backend-env.XXXXXX)
+            if [ -f backend/.env ]; then
+              cp backend/.env "$ENV_BACKUP"
+              rm -f backend/.env
+            fi
+            restore_env() {
+              if [ -f "$ENV_BACKUP" ]; then
+                cp "$ENV_BACKUP" backend/.env
+              fi
+            }
+            trap restore_env EXIT
             
             # Login to GitHub Container Registry using the GitHub token
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
             # Pull new code
             git pull origin main
+            restore_env
             
             # Free up disk space by removing old docker images and stopped containers
             docker system prune -af

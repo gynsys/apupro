@@ -42,6 +42,7 @@ services:
       - apupro-redis
     volumes:
       - apupro_ai_brain:/app/ai_brain
+      - apupro_uploads:/app/uploads
 
   apupro-frontend:
     image: ghcr.io/gynsys/apupro/apupro-frontend:latest
@@ -58,3 +59,4 @@ volumes:
   apupro_db_data:
   apupro_ai_brain:
   apupro_redis_data:
+  apupro_uploads:
