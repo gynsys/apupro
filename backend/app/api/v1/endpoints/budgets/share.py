@@ -22,7 +22,7 @@ from app.db.models.budget import (
     BudgetAPUMaterial as DBMaterial,
     BudgetItem,
 )
-from app.middleware.plan_limits import check_budget_limit
+from app.middleware.plan_limits import check_budget_limit, check_items_limit
 from .helpers import ensure_budget_share_columns
 
 router = APIRouter()
@@ -208,6 +208,113 @@ def get_shared_item_preview(
             ],
         },
     }
+
+
+@router.post("/{budget_id}/import-shared-partida")
+def import_shared_item(
+    budget_id: str,
+    payload: Dict[str, Any],
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """Copia una partida compartida al final de un presupuesto del usuario."""
+    token = (payload or {}).get("token", "").strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="El enlace de la partida es obligatorio")
+
+    target_budget = db.query(Budget).filter(
+        Budget.id == budget_id,
+        Budget.user_id == str(current_user.id),
+    ).first()
+    if not target_budget:
+        raise HTTPException(status_code=404, detail="Presupuesto destino no encontrado")
+
+    try:
+        token_payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+    except JWTError:
+        raise HTTPException(status_code=404, detail="Enlace de partida inválido o expirado")
+
+    if token_payload.get("scope") != "partida_share":
+        raise HTTPException(status_code=404, detail="Enlace de partida inválido")
+
+    source_item = db.query(BudgetItem).filter(
+        BudgetItem.id == token_payload.get("item_id"),
+        BudgetItem.budget_id == token_payload.get("budget_id"),
+        BudgetItem.is_chapter.is_(False),
+    ).first()
+    if not source_item:
+        raise HTTPException(status_code=404, detail="Partida compartida no encontrada")
+
+    check_items_limit(current_user, budget_id)
+
+    try:
+        last_order = db.query(BudgetItem).filter(
+            BudgetItem.budget_id == budget_id,
+        ).order_by(BudgetItem.order.desc()).first()
+
+        new_item = BudgetItem(
+            budget_id=budget_id,
+            cod_par=source_item.cod_par,
+            cov_par=source_item.cov_par,
+            description=source_item.description,
+            unit=source_item.unit,
+            quantity=source_item.quantity,
+            performance=source_item.performance,
+            order=(last_order.order + 1) if last_order else 0,
+            is_chapter=False,
+        )
+        db.add(new_item)
+        db.flush()
+
+        for mat in source_item.materials:
+            db.add(DBMaterial(
+                budget_item_id=new_item.id,
+                codigo=mat.codigo,
+                descripcion=mat.descripcion,
+                unidad=mat.unidad,
+                precio_unitario=mat.precio_unitario,
+                cantidad=mat.cantidad,
+                desperdicio=mat.desperdicio or 0.0,
+            ))
+
+        for eq in source_item.equipments:
+            db.add(DBEquipment(
+                budget_item_id=new_item.id,
+                codigo=eq.codigo,
+                descripcion=eq.descripcion,
+                unidad=eq.unidad,
+                precio_unitario=eq.precio_unitario,
+                cantidad=eq.cantidad,
+                depreciacion=eq.depreciacion if eq.depreciacion is not None else 1.0,
+            ))
+
+        for lab in source_item.labors:
+            db.add(DBLabor(
+                budget_item_id=new_item.id,
+                codigo=lab.codigo,
+                descripcion=lab.descripcion,
+                unidad=lab.unidad,
+                jornal=lab.jornal,
+                bono=lab.bono,
+                cantidad=lab.cantidad,
+            ))
+
+        db.commit()
+        db.refresh(new_item)
+
+        return {
+            "success": True,
+            "item_id": new_item.id,
+            "description": new_item.description,
+            "message": "Partida importada exitosamente",
+        }
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as err:
+        db.rollback()
+        logger.error(f"Error al importar partida compartida budget={budget_id}: {err}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error interno al importar la partida")
 
 
 @router.delete("/{budget_id}/share")

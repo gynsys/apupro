@@ -169,6 +169,23 @@ export const budgetService = {
     return response.json();
   },
 
+  importSharedPartida: async (budgetId, token) => {
+    const response = await fetch(`${API_URL}/budgets/${budgetId}/import-shared-partida`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ token })
+    });
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      if (response.status === 403) {
+        throw { detail: errData.detail || 'Límite alcanzado', isLimitError: true };
+      }
+      throw new Error(errData.detail || 'Error al importar la partida compartida');
+    }
+    return response.json();
+  },
+
   // DELETE a single APU component (material, equipment or labor)
   deleteComponent: async (budgetId, itemId, type, componentId) => {
     const response = await fetch(`${API_URL}/budgets/${budgetId}/items/${itemId}/${type}/${componentId}`, {

@@ -6,6 +6,7 @@ import BudgetSettingsModal from '../../../components/modals/BudgetSettingsModal'
 import BudgetPrintModal from '../../../components/modals/BudgetPrintModal';
 import BudgetExportExcelModal from '../../../components/modals/BudgetExportExcelModal';
 import SharePartidaModal from '../../../components/modals/SharePartidaModal';
+import ImportSharedPartidaModal from '../../../components/modals/ImportSharedPartidaModal';
 import BudgetPrintLayout from '../../../components/print/BudgetPrintLayout';
 import PrintAPUModal from '../../../components/PrintAPUModal';
 import PrintAPULayout, { APUPrintSheet } from '../../../components/PrintAPULayout';
@@ -25,6 +26,7 @@ import BudgetSearchModal from './BudgetSearchModal';
 export default function BudgetWorksheetView() {
   const ws = useBudgetWorksheet();
   const [sharingItem, setSharingItem] = useState(null);
+  const [showImportSharedPartida, setShowImportSharedPartida] = useState(false);
 
   if (ws.loading || !ws.budget) {
     return (
@@ -314,6 +316,7 @@ export default function BudgetWorksheetView() {
         availableBudgets={ws.availableBudgets}
         currentBudgetId={ws.id}
         onOpenAIApuModal={() => ws.setShowAIApuModal(true)}
+        onOpenImportSharedPartida={() => setShowImportSharedPartida(true)}
         searchQuery={ws.searchQuery}
         setSearchQuery={ws.setSearchQuery}
         searchCovenin={ws.searchCovenin}
@@ -373,6 +376,16 @@ export default function BudgetWorksheetView() {
         onClose={() => setSharingItem(null)}
         budget={ws.budget}
         item={sharingItem}
+      />
+
+      <ImportSharedPartidaModal
+        isOpen={showImportSharedPartida}
+        onClose={() => setShowImportSharedPartida(false)}
+        budget={ws.budget}
+        onImported={() => {
+          setShowImportSharedPartida(false);
+          ws.loadBudget();
+        }}
       />
     </div>
   );

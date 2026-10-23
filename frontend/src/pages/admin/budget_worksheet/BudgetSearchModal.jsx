@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Database, FileText, Sparkles, X, Plus, ChevronDown } from 'lucide-react';
+import { Search, Database, FileText, Sparkles, X, Plus, ChevronDown, Share2 } from 'lucide-react';
 import { CostbaseSearchBar as Cost360SearchBar } from '../../../modules/costbase/components/CostbaseSearchBar';
 
 export default function BudgetSearchModal({
@@ -12,6 +12,7 @@ export default function BudgetSearchModal({
   availableBudgets,
   currentBudgetId,
   onOpenAIApuModal,
+  onOpenImportSharedPartida,
   searchQuery,
   setSearchQuery,
   searchCovenin,
@@ -133,6 +134,17 @@ export default function BudgetSearchModal({
               >
                 <Sparkles size={14} className="text-purple-600" />
                 <span>Desde IA</span>
+              </button>
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenImportSharedPartida?.();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-700 rounded-xl transition-colors font-semibold shadow-sm text-xs sm:text-sm cursor-pointer"
+                title="Importar una partida compartida por otro usuario"
+              >
+                <Share2 size={14} className="text-sky-600" />
+                <span>De Otro Usuario</span>
               </button>
             </div>
           </div>
