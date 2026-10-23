@@ -26,10 +26,10 @@ const CURSOR_POSITIONS = {
   'budget-click': { x: 56, y: 44 },
   partidas: { x: 61, y: 52 },
   'partidas-scroll': { x: 58, y: 50 },
-  'partida-click': { x: 46, y: 57 },
+  'partida-click': { x: 82, y: 57 },
   apu: { x: 77, y: 64 },
   'apu-scroll': { x: 78, y: 67 },
-  'export-click': { x: 83, y: 82 },
+  'export-click': { x: 84, y: 10 },
   modal: { x: 69, y: 45 },
   'close-click': { x: 75, y: 27 },
   rewind: { x: 78, y: 35 },
@@ -46,7 +46,6 @@ function screenForPhase(phase) {
 export default function AnimatedPreview() {
   const prefersReducedMotion = useReducedMotion();
   const [phaseIndex, setPhaseIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
   const [manualModal, setManualModal] = useState(false);
   const [modalDismissed, setModalDismissed] = useState(false);
   const containerRef = useRef(null);
@@ -66,12 +65,12 @@ export default function AnimatedPreview() {
   }, [phase]);
 
   useEffect(() => {
-    if (prefersReducedMotion || paused || !isInView) return undefined;
+    if (prefersReducedMotion || !isInView) return undefined;
     const timer = window.setTimeout(() => {
       setPhaseIndex((current) => (current + 1) % PHASES.length);
     }, PHASES[phaseIndex].duration);
     return () => window.clearTimeout(timer);
-  }, [phaseIndex, paused, prefersReducedMotion, isInView]);
+  }, [phaseIndex, prefersReducedMotion, isInView]);
 
   const screenContent = useMemo(() => {
     if (screen === 'budgets') {
@@ -82,6 +81,7 @@ export default function AnimatedPreview() {
         <PartidasScreen
           activePartida={phase === 'partida-click'}
           scrolled={phase === 'partidas-scroll' || phase === 'partida-click'}
+          gearActive={phase === 'partida-click'}
         />
       );
     }
@@ -106,12 +106,7 @@ export default function AnimatedPreview() {
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="relative"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-    >
+    <div ref={containerRef} className="relative">
       <DemoChrome>
         <AnimatePresence mode="wait">
           <motion.div
