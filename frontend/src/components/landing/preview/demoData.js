@@ -1,10 +1,10 @@
 export const demoBudgets = [
   {
     id: 1,
-    name: 'Rehabilitación de áreas internas',
-    client: 'BAER',
-    items: 88,
-    total: '$ 210.952,94',
+    name: 'Presupuesto de Ejemplo costbase.net',
+    client: 'CostBase Demo',
+    items: 6,
+    total: '$ 1.361,58',
   },
   {
     id: 2,

@@ -1,5 +1,17 @@
 import React from 'react';
-import { ArrowLeft, ChevronDown, FileSpreadsheet, Settings2, SlidersHorizontal } from 'lucide-react';
+import {
+  ArrowLeft,
+  ChevronDown,
+  Database,
+  FileSpreadsheet,
+  FolderPlus,
+  Plus,
+  Printer,
+  RefreshCw,
+  Settings,
+  Settings2,
+  SlidersHorizontal,
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import { demoPartidas } from '../demoData';
 
@@ -11,26 +23,40 @@ export default function PartidasScreen({ activePartida, scrolled, gearActive }) 
           <ArrowLeft size={17} />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-extrabold text-slate-800">Rehabilitación de áreas internas</p>
-          <p className="text-[10px] text-slate-400">Presupuesto · 88 partidas · USD</p>
+          <p className="truncate text-sm font-extrabold text-slate-800">Presupuesto de Ejemplo costbase.net</p>
+          <p className="text-[10px] text-slate-400">Presupuesto · 6 partidas · USD</p>
         </div>
-        <div className="ml-auto flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
-          <span className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5">Presupuesto</span>
-          <span className="rounded-md bg-blue-600 px-2.5 py-1.5 text-white">Partidas</span>
+        <div className="ml-auto flex items-center gap-1 text-[9px] font-medium text-slate-600">
+          <span className="flex items-center gap-1 rounded-lg border border-slate-400 bg-white px-2 py-1.5 shadow-xs">
+            <Database size={12} /> Base de Datos
+          </span>
+          <span className="hidden items-center gap-1 rounded-lg border border-slate-400 bg-white px-2 py-1.5 shadow-xs lg:flex">
+            <RefreshCw size={12} /> Actualizar Precios
+          </span>
+          <span className="flex items-center gap-1 rounded-lg border border-slate-400 bg-white px-2 py-1.5 shadow-xs">
+            <Settings size={12} /> Configuración Global
+          </span>
+          <span className="flex items-center gap-1 rounded-lg border border-slate-400 bg-white px-2 py-1.5 shadow-xs">
+            <Printer size={12} /> Imprimir
+          </span>
         </div>
       </header>
 
       <main className="flex min-h-0 flex-1 flex-col p-4 sm:p-5">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
             <SlidersHorizontal size={14} />
             Partidas del presupuesto
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] text-slate-500">Buscar</span>
-            <button type="button" className="flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1.5 text-[10px] font-bold text-white">
-              <FileSpreadsheet size={12} />
-              Exportar
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button type="button" className="flex items-center gap-1 rounded-xl bg-blue-600 px-2.5 py-1.5 text-[10px] font-medium text-white shadow-xs">
+              <Plus size={13} /> Agregar Partida
+            </button>
+            <button type="button" className="flex items-center gap-1 rounded-xl border border-slate-400 bg-white px-2.5 py-1.5 text-[10px] font-medium text-slate-700 shadow-xs">
+              <FolderPlus size={13} /> Agregar Capítulo
+            </button>
+            <button type="button" className="flex items-center gap-1 rounded-xl border border-slate-400 bg-white px-2.5 py-1.5 text-[10px] font-medium text-slate-700 shadow-xs">
+              <FileSpreadsheet size={13} className="text-emerald-600" /> Exportar Excel
             </button>
           </div>
         </div>
