@@ -79,7 +79,7 @@ export default function APUViewer() {
       }
     };
     fetchAPU();
-  }, [id]);
+  }, [id, dbId]);
 
   useEffect(() => {
     if (printOptions) {

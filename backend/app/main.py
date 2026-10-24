@@ -114,6 +114,12 @@ try:
             "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS ubicacion VARCHAR(255);",
             "UPDATE budgets SET user_id = '1' WHERE user_id IS NULL;",
             "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS embedding TEXT;",
+            "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS shared_with_user_id INTEGER;",
+            "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS shared_by_user_id INTEGER;",
+            "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS shared_note TEXT;",
+            "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS shared_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();",
+            "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS source_budget_item_id VARCHAR(255);",
+            "CREATE INDEX IF NOT EXISTS ix_cost360_custom_items_shared_with ON cost360_custom_items(shared_with_user_id);",
             """
             CREATE TABLE IF NOT EXISTS llm_providers (
                 id SERIAL PRIMARY KEY,

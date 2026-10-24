@@ -15,7 +15,7 @@ def set_schema_for_db(db: Session, database_id: str) -> None:
     Valida el formato del identificador y verifica su existencia en PostgreSQL mediante consulta parametrizada
     para prevenir inyección SQL.
     """
-    if not database_id or database_id in ["master", "personalizada"]:
+    if not database_id or database_id in ["master", "personalizada", "compartidos"]:
         return
     if not re.match(r'^[a-zA-Z0-9_]+$', database_id):
         logger.warning(f"Identificador de esquema rechazado por formato inválido: {database_id}")

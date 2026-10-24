@@ -113,6 +113,13 @@ class CustomCostItem(Base):
     embedding = Column(Text, nullable=True)  # JSON-serialized embedding vector for user semantic cache
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    # Compartidos conmigo: el ítem pertenece a la base del receptor.
+    shared_with_user_id = Column(Integer, nullable=True, index=True)
+    shared_by_user_id = Column(Integer, nullable=True)
+    shared_note = Column(Text, nullable=True)
+    shared_at = Column(DateTime(timezone=True), server_default=func.now())
+    source_budget_item_id = Column(String, nullable=True)
+
 CustomCostbaseItem = CustomCostItem
 
 class MaterialSynonym(Base):

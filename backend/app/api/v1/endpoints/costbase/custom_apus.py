@@ -1,11 +1,18 @@
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
+import json
+import uuid
 
 from app.core.logging import logger
 from app.db.base import get_db
+from app.db.arko_base import ArkoSessionLocal
 from app.api.v1.endpoints.arko import get_current_arko_admin, get_optional_arko_admin
 from app.db.models.arko import ArkoAdmin
+from app.db.models.budget import Budget, BudgetItem
+from app.db.models.costbase import CustomCostItem
 from app.schemas.costbase import (
     CustomCostItemCreate,
     CustomCostItemResponse
@@ -47,6 +54,128 @@ def save_custom_apu_route(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error interno al guardar la partida personalizada: {str(exc)}"
         )
+
+
+class ShareApuRequest(BaseModel):
+    recipient_id: int
+    budget_id: str
+    item_id: str
+    note: Optional[str] = None
+
+
+@router.post("/custom-apus/share")
+def share_apu_with_user(
+    payload: ShareApuRequest,
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Copia el APU de una partida a la base Compartidos conmigo del receptor."""
+    if payload.recipient_id == current_user.id:
+        raise HTTPException(status_code=400, detail="No puedes compartir una partida contigo mismo")
+
+    budget = db.query(Budget).filter(
+        Budget.id == payload.budget_id,
+        Budget.user_id == str(current_user.id),
+    ).first()
+    if not budget:
+        raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
+
+    item = db.query(BudgetItem).filter(
+        BudgetItem.id == payload.item_id,
+        BudgetItem.budget_id == payload.budget_id,
+        BudgetItem.is_chapter.is_(False),
+    ).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Partida no encontrada")
+
+    with ArkoSessionLocal() as arko_db:
+        recipient = arko_db.query(ArkoAdmin).filter(
+            ArkoAdmin.id == payload.recipient_id,
+            ArkoAdmin.is_active.is_(True),
+        ).first()
+        if not recipient:
+            raise HTTPException(status_code=404, detail="Usuario destinatario no encontrado")
+        recipient_name = recipient.full_name or recipient.username or recipient.email
+
+    apu_data = {
+        "cod_par": item.cov_par or item.cod_par,
+        "cov_par": item.cov_par,
+        "description": item.description,
+        "unit": item.unit,
+        "performance": item.performance or 1.0,
+        "materials": [
+            {
+                "codigo": m.codigo,
+                "descripcion": m.descripcion,
+                "unidad": m.unidad,
+                "cantidad": m.cantidad,
+                "precio_unitario": m.precio_unitario,
+                "desperdicio": m.desperdicio or 0.0,
+            }
+            for m in item.materials
+        ],
+        "equipments": [
+            {
+                "codigo": e.codigo,
+                "descripcion": e.descripcion,
+                "unidad": e.unidad,
+                "cantidad": e.cantidad,
+                "precio_unitario": e.precio_unitario,
+                "depreciacion": e.depreciacion if e.depreciacion is not None else 1.0,
+            }
+            for e in item.equipments
+        ],
+        "labors": [
+            {
+                "codigo": l.codigo,
+                "descripcion": l.descripcion,
+                "cantidad": l.cantidad,
+                "jornal": l.jornal,
+                "bono": l.bono,
+            }
+            for l in item.labors
+        ],
+    }
+
+    shared = db.query(CustomCostItem).filter(
+        CustomCostItem.shared_with_user_id == payload.recipient_id,
+        CustomCostItem.shared_by_user_id == current_user.id,
+        CustomCostItem.source_budget_item_id == item.id,
+    ).first()
+
+    if shared:
+        shared.description = item.description
+        shared.unit = item.unit or "und"
+        shared.performance = item.performance or 1.0
+        shared.apu_data = json.dumps(apu_data)
+        shared.shared_note = payload.note
+        shared.shared_at = datetime.now(timezone.utc)
+    else:
+        shared = CustomCostItem(
+            id=str(uuid.uuid4()),
+            user_id=current_user.id,
+            description=item.description,
+            unit=item.unit or "und",
+            performance=item.performance or 1.0,
+            apu_data=json.dumps(apu_data),
+            shared_with_user_id=payload.recipient_id,
+            shared_by_user_id=current_user.id,
+            shared_note=payload.note,
+            shared_at=datetime.now(timezone.utc),
+            source_budget_item_id=item.id,
+        )
+        db.add(shared)
+
+    db.commit()
+    db.refresh(shared)
+
+    return {
+        "success": True,
+        "item_id": shared.id,
+        "recipient_id": payload.recipient_id,
+        "recipient_name": recipient_name,
+        "message": "APU compartido en la base Compartidos conmigo",
+    }
 
 
 @router.delete("/custom-apus/{item_id}")

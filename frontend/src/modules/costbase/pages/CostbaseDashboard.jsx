@@ -150,6 +150,9 @@ const Cost360Dashboard = () => {
         if (!loadedDbs.find(db => db.id === 'personalizada')) {
           loadedDbs.push({ id: 'personalizada', name: 'Base Personalizada', is_master: false });
         }
+        if (!loadedDbs.find(db => db.id === 'compartidos')) {
+          loadedDbs.push({ id: 'compartidos', name: 'Compartidos conmigo', is_master: false });
+        }
         setDatabases(loadedDbs);
       } catch (error) {
         // Silencioso

@@ -45,14 +45,25 @@ def _find_custom_cost_item(
     target = item_code.strip().upper()
 
     # 1. Búsqueda directa por UUID
-    ci = db.query(CustomCostItem).filter(CustomCostItem.id == item_code.strip()).first()
+    direct_query = db.query(CustomCostItem).filter(CustomCostItem.id == item_code.strip())
+    if user_id is not None and not is_superadmin:
+        direct_query = direct_query.filter(or_(
+            CustomCostItem.user_id == user_id,
+            CustomCostItem.user_id.is_(None),
+            CustomCostItem.shared_with_user_id == user_id,
+        ))
+    ci = direct_query.first()
     if ci:
         return ci
 
     # 2. Búsqueda en partidas del usuario (o todas si es superadmin)
     query = db.query(CustomCostItem)
     if user_id is not None and not is_superadmin:
-        query = query.filter(or_(CustomCostItem.user_id == user_id, CustomCostItem.user_id.is_(None)))
+        query = query.filter(or_(
+            CustomCostItem.user_id == user_id,
+            CustomCostItem.user_id.is_(None),
+            CustomCostItem.shared_with_user_id == user_id,
+        ))
     candidates = query.all()
 
     fallback_match: Optional[CustomCostItem] = None
@@ -354,13 +365,13 @@ def get_apu(
             getattr(current_user, 'role', '') in ['admin', 'superadmin']
         )
 
-    # 1. Si se solicita explícitamente base personalizada o código CUST-
-    if database_id == "personalizada" or item_code.startswith("CUST-"):
+    # 1. Si se solicita explícitamente base personalizada/compartidos o código CUST-
+    if database_id in ("personalizada", "compartidos") or item_code.startswith("CUST-"):
         ci = _find_custom_cost_item(db, item_code, user_id=user_id, is_superadmin=is_superadmin)
         if ci:
             return _build_custom_apu_response(ci, item_code)
-        if database_id == "personalizada":
-            raise HTTPException(status_code=404, detail="Partida personalizada no encontrada")
+        if database_id in ("personalizada", "compartidos"):
+            raise HTTPException(status_code=404, detail="Partida no encontrada en la base seleccionada")
 
     # 2. Buscar en catálogo maestro
     item = get_item_by_code(db, item_code)

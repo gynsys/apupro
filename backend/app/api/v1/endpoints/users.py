@@ -48,6 +48,50 @@ class UserUpdateRequest(BaseModel):
     has_ai_access: Optional[bool] = None
     test_mode: Optional[bool] = False
 
+
+class UserSearchResult(BaseModel):
+    id: int
+    email: str
+    username: Optional[str] = None
+    full_name: Optional[str] = None
+
+
+@router.get("/search", response_model=List[UserSearchResult])
+def search_users(
+    q: str = "",
+    current_user=Depends(get_current_arko_admin),
+):
+    """Buscar usuarios activos por correo, usuario o nombre para compartir."""
+    term = (q or "").strip()
+    if len(term) < 2:
+        return []
+    pattern = f"%{term}%"
+    with ArkoSessionLocal() as db:
+        users = (
+            db.query(ArkoAdmin)
+            .filter(
+                ArkoAdmin.is_active.is_(True),
+                ArkoAdmin.id != current_user.id,
+                or_(
+                    ArkoAdmin.email.ilike(pattern),
+                    ArkoAdmin.username.ilike(pattern),
+                    ArkoAdmin.full_name.ilike(pattern),
+                ),
+            )
+            .order_by(ArkoAdmin.full_name.asc(), ArkoAdmin.email.asc())
+            .limit(10)
+            .all()
+        )
+        return [
+            {
+                "id": user.id,
+                "email": user.email,
+                "username": user.username or (user.email.split('@')[0] if user.email else None),
+                "full_name": user.full_name,
+            }
+            for user in users
+        ]
+
 @router.get("/", response_model=List[UserListResponse])
 def get_users(current_user = Depends(get_current_arko_admin)):
     """Obtener lista de usuarios (solo admin)"""

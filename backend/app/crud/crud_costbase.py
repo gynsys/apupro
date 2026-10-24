@@ -71,13 +71,18 @@ def get_items_paginated(
         search_desc = True
     
     # Determinar quÃ© base de datos estÃ¡ seleccionada y configurar la query apropiada
-    if database_id == "personalizada":
-        # Base de datos personalizada: buscar en CustomCostItem
+    if database_id in ("personalizada", "compartidos"):
         query = db.query(CustomCostItem)
-        if user_id is not None:
-            query = query.filter(or_(CustomCostItem.user_id == user_id, CustomCostItem.user_id.is_(None)))
+        if database_id == "compartidos":
+            if user_id is None:
+                return 0, []
+            query = query.filter(CustomCostItem.shared_with_user_id == user_id)
         else:
-            query = query.filter(CustomCostItem.user_id.is_(None))
+            query = query.filter(CustomCostItem.shared_with_user_id.is_(None))
+            if user_id is not None:
+                query = query.filter(or_(CustomCostItem.user_id == user_id, CustomCostItem.user_id.is_(None)))
+            else:
+                query = query.filter(CustomCostItem.user_id.is_(None))
 
         if search:
             words = search.split()
