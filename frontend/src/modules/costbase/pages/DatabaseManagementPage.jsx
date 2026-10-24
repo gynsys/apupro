@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Database, Plus, Trash2, Edit2, Copy, 
   TrendingUp, DollarSign, Users, Settings,
-  AlertTriangle, CheckCircle, X, Layers, ArrowRight, Calendar
+  AlertTriangle, CheckCircle, X, Layers, ArrowRight, Calendar, Share2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
@@ -25,6 +25,7 @@ export default function DatabaseManagementPage() {
   const { refreshDatabases: reloadDatabases } = useDatabaseContext();
   const [databases, setDatabases] = useState([]);
   const [customItemsCount, setCustomItemsCount] = useState(0);
+  const [sharedItemsCount, setSharedItemsCount] = useState(0);
   const [dbItemsCounts, setDbItemsCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -68,6 +69,13 @@ export default function DatabaseManagementPage() {
       try {
         const customRes = await cost360Service.fetchItems(0, 1, '', '', 'personalizada');
         setCustomItemsCount(customRes?.total || 0);
+      } catch (err) {
+        // Ignorar silenciosamente
+      }
+
+      try {
+        const sharedRes = await cost360Service.fetchItems(0, 1, '', '', 'compartidos');
+        setSharedItemsCount(sharedRes?.total || 0);
       } catch (err) {
         // Ignorar silenciosamente
       }
@@ -291,6 +299,59 @@ export default function DatabaseManagementPage() {
                 className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:gap-2 cursor-pointer shrink-0"
               >
                 <span>Ver Partidas</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+
+          {/* Tarjeta Compartidos conmigo */}
+          <div className="tarjeta-presupuesto-ambar group cursor-default relative !flex !flex-col !items-stretch justify-between !h-[250px] !gap-0">
+            <div className="flex flex-col flex-1">
+              <div className="tarjeta-header !flex-none flex flex-col justify-start items-start pb-[3px] mb-2">
+                <div className="flex items-center gap-3">
+                  <div className="icono-archivo-ambar">
+                    <Share2 size={20} strokeWidth={2.2} />
+                  </div>
+                  <div>
+                    <h3 className="tarjeta-titulo-ambar font-extrabold text-slate-800">Compartidos conmigo</h3>
+                    <span className="inline-block mt-0.5 px-2.5 py-0.5 text-[11px] font-bold bg-sky-100/70 text-sky-800 rounded-md border border-sky-200/50">
+                      APUs recibidos
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="tarjeta-body flex-1 flex flex-col">
+                <p className="text-sm text-center text-slate-600 mb-[5px]">
+                  APUs que otros usuarios han compartido contigo. Puedes revisarlos e insertarlos en tus presupuestos.
+                </p>
+                <div className="rounded-xl p-2.5 caja-inflacion mb-2 w-full">
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-slate-600 font-medium whitespace-nowrap">APUs recibidos:</span>
+                    <span className="font-extrabold text-sky-700 bg-sky-50/60 px-3.5 py-1 rounded-lg border border-sky-200/80 whitespace-nowrap shrink-0 min-w-[95px] text-center">
+                      {sharedItemsCount} {sharedItemsCount === 1 ? 'partida' : 'partidas'}
+                    </span>
+                  </div>
+                </div>
+                <div className="tarjeta-detalles flex-col items-start gap-1 mt-auto">
+                  <div className="detalle-fecha">
+                    <Share2 size={13} className="mini-icono" />
+                    Origen: otros usuarios
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 mt-[1px] border-t border-slate-200/70 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 shrink-0">
+                <CheckCircle size={15} />
+                <span>Activa</span>
+              </div>
+              <button
+                onClick={() => navigate('/cost360?db=compartidos')}
+                className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:gap-2 cursor-pointer shrink-0"
+              >
+                <span>Ver APUs</span>
                 <ArrowRight size={14} />
               </button>
             </div>
