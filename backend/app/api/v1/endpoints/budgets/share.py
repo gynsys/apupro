@@ -29,6 +29,85 @@ from .helpers import ensure_budget_share_columns
 router = APIRouter()
 
 
+def _clone_budget_for_user(db: Session, source_budget: Budget, target_user_id: Any) -> Budget:
+    """Crea una copia independiente del presupuesto para otro usuario."""
+    new_budget = Budget(
+        user_id=str(target_user_id),
+        name=f"{source_budget.name} (Compartido)",
+        description=source_budget.description,
+        notes=source_budget.notes,
+        client_name=source_budget.client_name,
+        currency=source_budget.currency,
+        exchange_rate=source_budget.exchange_rate,
+        fcas_percent=source_budget.fcas_percent,
+        admin_percent=source_budget.admin_percent,
+        profit_percent=source_budget.profit_percent,
+        iva_percent=source_budget.iva_percent,
+        labor_bonus=source_budget.labor_bonus,
+        bono_in_fcas=source_budget.bono_in_fcas,
+        material_inflation=source_budget.material_inflation,
+        labor_inflation=source_budget.labor_inflation,
+        equipment_inflation=source_budget.equipment_inflation,
+        company_name=source_budget.company_name,
+        company_rif=source_budget.company_rif,
+        project_name=source_budget.project_name,
+        ubicacion=source_budget.ubicacion,
+    )
+    db.add(new_budget)
+    db.flush()
+
+    source_items = db.query(BudgetItem).filter(BudgetItem.budget_id == source_budget.id).all()
+    for s_item in source_items:
+        new_item = BudgetItem(
+            budget_id=new_budget.id,
+            cod_par=s_item.cod_par,
+            cov_par=s_item.cov_par,
+            description=s_item.description,
+            unit=s_item.unit,
+            quantity=s_item.quantity,
+            performance=s_item.performance,
+            order=s_item.order,
+            is_chapter=s_item.is_chapter,
+            is_pending=s_item.is_pending,
+        )
+        db.add(new_item)
+        db.flush()
+
+        for mat in s_item.materials:
+            db.add(DBMaterial(
+                budget_item_id=new_item.id,
+                codigo=mat.codigo,
+                descripcion=mat.descripcion,
+                unidad=mat.unidad,
+                precio_unitario=mat.precio_unitario,
+                cantidad=mat.cantidad,
+                desperdicio=mat.desperdicio or 0.0,
+            ))
+
+        for eq in s_item.equipments:
+            db.add(DBEquipment(
+                budget_item_id=new_item.id,
+                codigo=eq.codigo,
+                descripcion=eq.descripcion,
+                unidad=eq.unidad,
+                precio_unitario=eq.precio_unitario,
+                cantidad=eq.cantidad,
+                depreciacion=eq.depreciacion if eq.depreciacion is not None else 1.0,
+            ))
+
+        for lab in s_item.labors:
+            db.add(DBLabor(
+                budget_item_id=new_item.id,
+                codigo=lab.codigo,
+                descripcion=lab.descripcion,
+                jornal=lab.jornal,
+                bono=lab.bono,
+                cantidad=lab.cantidad,
+            ))
+
+    return new_budget
+
+
 @router.post("/{budget_id}/share")
 def generate_share_link(
     budget_id: str,
@@ -347,39 +426,36 @@ def share_budget_with_user(
         ).first()
         if not recipient:
             raise HTTPException(status_code=404, detail="Usuario destinatario no encontrado")
+        check_budget_limit(recipient)
 
-    if not budget.share_token:
-        budget.share_token = f"cb_{secrets.token_urlsafe(12)}"
-    budget.is_public_share = True
-    db.commit()
-    db.refresh(budget)
+    try:
+        new_budget = _clone_budget_for_user(db, budget, recipient_id)
+        db.commit()
+        db.refresh(new_budget)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as err:
+        db.rollback()
+        logger.error(f"Error al compartir presupuesto con usuario {recipient_id}: {err}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error interno al compartir el presupuesto")
 
-    origin = request.headers.get("origin")
-    if origin and ("costbase.net" in origin or "localhost" in origin):
-        frontend_base_url = origin.rstrip("/")
-    else:
-        frontend_base_url = getattr(settings, "FRONTEND_URL", "https://www.costbase.net")
-        if "gynsys.net" in frontend_base_url:
-            frontend_base_url = "https://www.costbase.net"
-
-    share_url = f"{frontend_base_url}/budgets/shared/{budget.share_token}"
     sender_name = current_user.full_name or current_user.username or current_user.email
     with ArkoSessionLocal() as arko_db:
         arko_db.add(Notification(
             user_id=int(recipient_id),
             message=f"{sender_name} te compartió el presupuesto: {budget.name}" + (f" — {note}" if note else ""),
             type="budget_shared",
-            link=f"/budgets/shared/{budget.share_token}",
+            link=f"/budgets/{new_budget.id}",
             is_read=False,
         ))
         arko_db.commit()
 
     return {
         "success": True,
-        "share_token": budget.share_token,
-        "share_url": share_url,
+        "budget_id": new_budget.id,
         "recipient_id": int(recipient_id),
-        "message": "Presupuesto compartido correctamente",
+        "message": "Presupuesto agregado a los presupuestos del destinatario",
     }
 
 
@@ -521,80 +597,7 @@ def import_shared_budget(
     check_budget_limit(current_user)
 
     try:
-        new_budget = Budget(
-            user_id=str(current_user.id),
-            name=f"{source_budget.name} (Compartido)",
-            description=source_budget.description,
-            notes=source_budget.notes,
-            client_name=source_budget.client_name,
-            currency=source_budget.currency,
-            exchange_rate=source_budget.exchange_rate,
-            fcas_percent=source_budget.fcas_percent,
-            admin_percent=source_budget.admin_percent,
-            profit_percent=source_budget.profit_percent,
-            iva_percent=source_budget.iva_percent,
-            labor_bonus=source_budget.labor_bonus,
-            material_inflation=source_budget.material_inflation,
-            labor_inflation=source_budget.labor_inflation,
-            equipment_inflation=source_budget.equipment_inflation,
-            company_name=source_budget.company_name,
-            company_rif=source_budget.company_rif,
-            project_name=source_budget.project_name,
-        )
-        db.add(new_budget)
-        db.flush()
-
-        source_items = db.query(BudgetItem).filter(BudgetItem.budget_id == source_budget.id).all()
-        for s_item in source_items:
-            new_item = BudgetItem(
-                budget_id=new_budget.id,
-                cod_par=s_item.cod_par,
-                cov_par=s_item.cov_par,
-                description=s_item.description,
-                unit=s_item.unit,
-                quantity=s_item.quantity,
-                performance=s_item.performance,
-                order=s_item.order,
-                is_chapter=s_item.is_chapter,
-            )
-            db.add(new_item)
-            db.flush()
-
-            for mat in s_item.materials:
-                new_mat = DBMaterial(
-                    budget_item_id=new_item.id,
-                    codigo=mat.codigo,
-                    descripcion=mat.descripcion,
-                    unidad=mat.unidad,
-                    precio_unitario=mat.precio_unitario,
-                    cantidad=mat.cantidad,
-                    desperdicio=mat.desperdicio or 0.0,
-                )
-                db.add(new_mat)
-
-            for eq in s_item.equipments:
-                new_eq = DBEquipment(
-                    budget_item_id=new_item.id,
-                    codigo=eq.codigo,
-                    descripcion=eq.descripcion,
-                    unidad=eq.unidad,
-                    precio_unitario=eq.precio_unitario,
-                    cantidad=eq.cantidad,
-                    depreciacion=eq.depreciacion if eq.depreciacion is not None else 1.0,
-                )
-                db.add(new_eq)
-
-            for lab in s_item.labors:
-                new_lab = DBLabor(
-                    budget_item_id=new_item.id,
-                    codigo=lab.codigo,
-                    descripcion=lab.descripcion,
-                    jornal=lab.jornal,
-                    bono=lab.bono,
-                    cantidad=lab.cantidad,
-                )
-                db.add(new_lab)
-
+        new_budget = _clone_budget_for_user(db, source_budget, current_user.id)
         db.commit()
         db.refresh(new_budget)
 
