@@ -13,6 +13,7 @@ from app.api.v1.endpoints.arko import get_current_arko_admin, get_optional_arko_
 from app.db.models.arko import ArkoAdmin
 from app.db.models.budget import Budget, BudgetItem
 from app.db.models.costbase import CustomCostItem
+from app.db.models.notification import Notification
 from app.schemas.costbase import (
     CustomCostItemCreate,
     CustomCostItemResponse
@@ -168,6 +169,17 @@ def share_apu_with_user(
 
     db.commit()
     db.refresh(shared)
+
+    sender_name = current_user.full_name or current_user.username or current_user.email
+    with ArkoSessionLocal() as arko_db:
+        arko_db.add(Notification(
+            user_id=payload.recipient_id,
+            message=f"{sender_name} te compartió el APU: {item.description}",
+            type="apu_shared",
+            link=f"/cost360/apu/{shared.id}?db=compartidos",
+            is_read=False,
+        ))
+        arko_db.commit()
 
     return {
         "success": True,

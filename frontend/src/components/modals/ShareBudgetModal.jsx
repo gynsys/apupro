@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Share2, Copy, Check, X, Globe, ShieldCheck } from 'lucide-react';
+import { Share2, Copy, Check, X, Globe, ShieldCheck, Search, Send, UserPlus, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { API_URL } from '../../services/api';
 
@@ -7,15 +7,51 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
   const [shareData, setShareData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [userQuery, setUserQuery] = useState('');
+  const [userResults, setUserResults] = useState([]);
+  const [searchingUsers, setSearchingUsers] = useState(false);
+  const [recipient, setRecipient] = useState(null);
+  const [note, setNote] = useState('');
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     if (isOpen && budget?.id) {
       handleGenerateShareLink();
+      setUserQuery('');
+      setUserResults([]);
+      setRecipient(null);
+      setNote('');
     } else {
       setShareData(null);
       setCopied(false);
     }
   }, [isOpen, budget?.id]);
+
+  useEffect(() => {
+    const term = userQuery.trim();
+    if (term.length < 2) {
+      setUserResults([]);
+      return undefined;
+    }
+    const timer = window.setTimeout(async () => {
+      setSearchingUsers(true);
+      try {
+        const storedToken = localStorage.getItem('token') || localStorage.getItem('access_token');
+        const headers = {};
+        if (storedToken) headers.Authorization = `Bearer ${storedToken}`;
+        const res = await fetch(`${API_URL}/users/search?q=${encodeURIComponent(term)}`, {
+          headers,
+          credentials: 'include',
+        });
+        setUserResults(res.ok ? await res.json() : []);
+      } catch {
+        setUserResults([]);
+      } finally {
+        setSearchingUsers(false);
+      }
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [userQuery]);
 
   const handleGenerateShareLink = async () => {
     setLoading(true);
@@ -61,6 +97,36 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
       setTimeout(() => setCopied(false), 2500);
     } catch {
       toast.error('No se pudo copiar automáticamente');
+    }
+  };
+
+  const handleSendToUser = async () => {
+    if (!recipient) {
+      toast.error('Selecciona un usuario');
+      return;
+    }
+    setSending(true);
+    try {
+      const storedToken = localStorage.getItem('token') || localStorage.getItem('access_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (storedToken) headers.Authorization = `Bearer ${storedToken}`;
+      const res = await fetch(`${API_URL}/budgets/${budget.id}/share-to-user`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          recipient_id: recipient.id,
+          note: note.trim() || null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || 'No se pudo compartir el presupuesto');
+      toast.success(`Presupuesto enviado a ${recipient.full_name || recipient.username || recipient.email}`);
+      onClose();
+    } catch (error) {
+      toast.error(error.message || 'No se pudo compartir el presupuesto');
+    } finally {
+      setSending(false);
     }
   };
 
@@ -149,6 +215,80 @@ export default function ShareBudgetModal({ isOpen, onClose, budget }) {
               </div>
             </div>
           )}
+
+          {/* Enviar a un usuario */}
+          <div className="border-t border-amber-600/15 pt-4">
+            <div className="mb-2 flex items-center gap-1.5 text-[13px] font-bold uppercase tracking-wide text-amber-900">
+              <UserPlus size={15} className="text-sky-600" /> Enviar a un usuario
+            </div>
+            <p className="mb-2 text-xs text-amber-800/80">
+              Recibirá una notificación con el enlace para importarlo a sus presupuestos.
+            </p>
+
+            {recipient ? (
+              <div className="mb-2 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-bold text-emerald-900">{recipient.full_name || recipient.username}</p>
+                  <p className="truncate text-[10px] text-emerald-700">{recipient.email}</p>
+                </div>
+                <button type="button" onClick={() => setRecipient(null)} className="text-xs font-semibold text-emerald-700">
+                  Cambiar
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <div className="flex items-center gap-2 rounded-xl border border-sky-200 bg-white px-3 py-2.5">
+                  <Search size={15} className="text-slate-400" />
+                  <input
+                    value={userQuery}
+                    onChange={(e) => setUserQuery(e.target.value)}
+                    placeholder="Buscar por correo, usuario o nombre..."
+                    className="min-w-0 flex-1 bg-transparent text-xs text-slate-800 outline-none"
+                  />
+                  {searchingUsers && <Loader2 size={14} className="animate-spin text-sky-600" />}
+                </div>
+                {userResults.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-44 overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
+                    {userResults.map((user) => (
+                      <button
+                        key={user.id}
+                        type="button"
+                        onClick={() => { setRecipient(user); setUserResults([]); setUserQuery(''); }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-sky-50"
+                      >
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-[10px] font-bold text-sky-700">
+                          {(user.full_name || user.username || user.email || '?').charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-semibold text-slate-800">{user.full_name || user.username}</p>
+                          <p className="truncate text-[10px] text-slate-400">{user.email}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={2}
+              maxLength={500}
+              placeholder="Nota opcional para el destinatario..."
+              className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 outline-none focus:border-sky-500"
+            />
+
+            <button
+              type="button"
+              onClick={handleSendToUser}
+              disabled={!recipient || sending}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+              Enviar presupuesto
+            </button>
+          </div>
 
           {/* Footer del modal: solo botón Cerrar */}
           <div className="flex items-center justify-end pt-3 pb-safe border-t border-amber-600/15 mt-auto shrink-0">

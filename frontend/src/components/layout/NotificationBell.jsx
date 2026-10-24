@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
 import { Bell, Check, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { API_URL } from '../../services/api';
 
 export default function NotificationBell() {
   const { token, isAuthenticated } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -206,8 +208,15 @@ export default function NotificationBell() {
               notifications.map(notif => (
                 <div
                   key={notif.id}
-                  className={`p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors ${!notif.is_read ? 'bg-blue-50/30' : ''}`}
+                  className={`p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors ${!notif.is_read ? 'bg-blue-50/30' : ''} ${notif.link ? 'cursor-pointer' : ''}`}
                   role="menuitem"
+                  onClick={async () => {
+                    if (!notif.is_read) await handleMarkAsRead(notif.id);
+                    if (notif.link) {
+                      setIsOpen(false);
+                      navigate(notif.link);
+                    }
+                  }}
                 >
                   <div className="flex gap-3">
                     <div className="flex-1">

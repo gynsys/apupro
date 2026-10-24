@@ -15,6 +15,7 @@ from app.core.logging import logger
 from app.db.arko_base import ArkoSessionLocal
 from app.db.base import get_db
 from app.db.models.arko import ArkoAdmin
+from app.db.models.notification import Notification
 from app.db.models.budget import (
     Budget,
     BudgetAPUEquipment as DBEquipment,
@@ -313,6 +314,73 @@ def import_shared_item(
         db.rollback()
         logger.error(f"Error al importar partida compartida budget={budget_id}: {err}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error interno al importar la partida")
+
+
+@router.post("/{budget_id}/share-to-user")
+def share_budget_with_user(
+    budget_id: str,
+    request: Request,
+    payload: Dict[str, Any],
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """Comparte un presupuesto con un usuario y le envía una notificación."""
+    recipient_id = (payload or {}).get("recipient_id")
+    note = (payload or {}).get("note") or ""
+    if not recipient_id:
+        raise HTTPException(status_code=400, detail="Selecciona un usuario destinatario")
+    if str(recipient_id) == str(current_user.id):
+        raise HTTPException(status_code=400, detail="No puedes compartir un presupuesto contigo mismo")
+
+    ensure_budget_share_columns(db)
+    budget = db.query(Budget).filter(
+        Budget.id == budget_id,
+        Budget.user_id == str(current_user.id),
+    ).first()
+    if not budget:
+        raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
+
+    with ArkoSessionLocal() as arko_db:
+        recipient = arko_db.query(ArkoAdmin).filter(
+            ArkoAdmin.id == int(recipient_id),
+            ArkoAdmin.is_active.is_(True),
+        ).first()
+        if not recipient:
+            raise HTTPException(status_code=404, detail="Usuario destinatario no encontrado")
+
+    if not budget.share_token:
+        budget.share_token = f"cb_{secrets.token_urlsafe(12)}"
+    budget.is_public_share = True
+    db.commit()
+    db.refresh(budget)
+
+    origin = request.headers.get("origin")
+    if origin and ("costbase.net" in origin or "localhost" in origin):
+        frontend_base_url = origin.rstrip("/")
+    else:
+        frontend_base_url = getattr(settings, "FRONTEND_URL", "https://www.costbase.net")
+        if "gynsys.net" in frontend_base_url:
+            frontend_base_url = "https://www.costbase.net"
+
+    share_url = f"{frontend_base_url}/budgets/shared/{budget.share_token}"
+    sender_name = current_user.full_name or current_user.username or current_user.email
+    with ArkoSessionLocal() as arko_db:
+        arko_db.add(Notification(
+            user_id=int(recipient_id),
+            message=f"{sender_name} te compartió el presupuesto: {budget.name}" + (f" — {note}" if note else ""),
+            type="budget_shared",
+            link=f"/budgets/shared/{budget.share_token}",
+            is_read=False,
+        ))
+        arko_db.commit()
+
+    return {
+        "success": True,
+        "share_token": budget.share_token,
+        "share_url": share_url,
+        "recipient_id": int(recipient_id),
+        "message": "Presupuesto compartido correctamente",
+    }
 
 
 @router.delete("/{budget_id}/share")

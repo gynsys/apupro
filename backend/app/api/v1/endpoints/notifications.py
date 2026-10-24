@@ -14,6 +14,7 @@ class NotificationResponse(BaseModel):
     id: int
     message: str
     type: str
+    link: Optional[str] = None
     is_read: bool
     created_at: str
 
@@ -31,6 +32,7 @@ def get_notifications(current_user = Depends(get_current_arko_admin)):
                 "id": n.id,
                 "message": n.message,
                 "type": n.type,
+                "link": getattr(n, "link", None),
                 "is_read": n.is_read,
                 "created_at": n.created_at.isoformat() if n.created_at else None
             } for n in notifs

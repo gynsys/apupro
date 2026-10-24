@@ -120,6 +120,7 @@ try:
             "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS shared_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();",
             "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS source_budget_item_id VARCHAR(255);",
             "CREATE INDEX IF NOT EXISTS ix_cost360_custom_items_shared_with ON cost360_custom_items(shared_with_user_id);",
+            "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link VARCHAR(500);",
             """
             CREATE TABLE IF NOT EXISTS llm_providers (
                 id SERIAL PRIMARY KEY,

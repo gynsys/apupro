@@ -9,5 +9,6 @@ class Notification(Base):
     user_id = Column(Integer, nullable=False)
     message = Column(Text, nullable=False)
     type = Column(String(50), default="system")
+    link = Column(String(500), nullable=True)
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
