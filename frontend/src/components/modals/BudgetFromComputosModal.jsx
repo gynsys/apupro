@@ -62,9 +62,48 @@ const UNIT_ALIASES = {
 const CHAPTER_PREFIX_RE = /^(?:cap[ií]tulo|cap\.?)\s*[:\-]?\s*(.+)$/i;
 const PURE_UNIT_LINE_RE = /^(?:und\.?|unidad\s*[:\-]?)?\s*(m2|m²|mt2|mts2|m3|m³|mt3|mts3|ml|m|mts|und|unid|unidad|pza|pto|punto|kg|kgf|ton|tn|gl|global|sg|ha|km|lt|l)\.?$/i;
 
+const MEASURE_TRAILING_RE =
+  /[:\s,=-]+((?:\(?\d+(?:[.,]\d+)?\)?\s*[*xX×/+-]\s*)+\(?\d+(?:[.,]\d+)?\)?|\d+(?:[.,]\d+)?)\s*(m2|m²|mt2|mts2|m3|m³|mt3|mts3|ml|mts|mt|m|metro|metros|und|unid|unidad|unidades|pza|pieza|piezas|pto|ptos|punto|puntos|kgf|kg|kilos|ton|tn|gl|global)?\.?\s*$/i;
+
+/**
+ * Infiere la unidad de medida según palabras clave de la descripción de la partida.
+ */
+function inferUnitFromDescription(desc = '') {
+  const d = (desc || '').toLowerCase();
+  if (
+    /losa|piso|techo|manto|impermeab|pared|friso|pintura|ceramica|porcelanato|muro|tabique|cielorraso|drywall|bloque|sobrepiso|acera|esmalte|epoxi/i.test(
+      d
+    )
+  ) {
+    return 'M2';
+  }
+  if (
+    /concreto|vaciado|bote|escombro|excavaci[oó]n|relleno|viga|columna|zapata|pedestal|mortero/i.test(
+      d
+    )
+  ) {
+    return 'M3';
+  }
+  if (
+    /tuber[ií]a|tubo|cable|canal|rodapi[eé]|acero|cabilla|costanera|viga corona|conducto/i.test(
+      d
+    )
+  ) {
+    return 'ML';
+  }
+  if (
+    /punto|pto|toma|l[aá]mpara|interruptor|grifer[ií]a|lavamanos|poceta|inodoro|tomacorriente/i.test(
+      d
+    )
+  ) {
+    return 'PTO';
+  }
+  return 'UND';
+}
+
 /**
  * Evalúa de forma segura una expresión de mediciones como:
- * "10.50*7.50 m", "10,50 x 7,50", "10.50*7.50 + 3.20*2.00", "(4.5+3.2)*2.80"
+ * "10.50*7.50 m", "10,50 x 7,50", "10.50*7.50 + 3.20*2.00", "(4.5+3.2)*2.80", "25 m2", "12.50"
  */
 function evaluateMeasurementFormula(rawLine) {
   if (!rawLine || typeof rawLine !== 'string') return null;
@@ -80,7 +119,7 @@ function evaluateMeasurementFormula(rawLine) {
   if (nonMeasureWords.length > 1) return null;
 
   let explicitUnit = null;
-  const trailingUnitMatch = trimmed.match(/\b(m2|m²|m3|m³|ml|und|pza|pto|kgf|kg|ton|gl)\s*$/i);
+  const trailingUnitMatch = trimmed.match(/\b(m2|m²|mt2|mts2|m3|m³|mt3|mts3|ml|mts|mt|m|metro|metros|und|pza|pto|kgf|kg|ton|gl)\s*$/i);
   if (trailingUnitMatch) {
     const rawU = trailingUnitMatch[1].toLowerCase();
     explicitUnit = UNIT_ALIASES[rawU] || rawU.toUpperCase();
@@ -88,7 +127,7 @@ function evaluateMeasurementFormula(rawLine) {
 
   let expr = trimmed
     .replace(/(\d),(\d)/g, '$1.$2')
-    .replace(/(\d+(?:\.\d+)?)\s*(?:m2|m²|m3|m³|ml|mts|mt|m|cm|mm|und|pza|pto|kgf|kg|ton|gl)\b/gi, '$1')
+    .replace(/(\d+(?:\.\d+)?)\s*(?:m2|m²|mt2|mts2|m3|m³|mt3|mts3|ml|mts|mt|m|metro|metros|cm|mm|und|pza|pto|kgf|kg|ton|gl)\b/gi, '$1')
     .replace(/\b(?:por|x|×)\b/gi, '*')
     .replace(/[x×]/gi, '*')
     .replace(/[^0-9+\-*/().\s]/g, ' ')
@@ -123,52 +162,114 @@ function evaluateMeasurementFormula(rawLine) {
 }
 
 /**
- * Analiza un mensaje enviado por el usuario (multilínea o de una sola línea).
+ * Analiza un mensaje del usuario (multilínea, partida única, o lista de partidas).
+ * Extrae capítulos, partidas, fórmulas de medición y unidades.
  */
-function parseUserComputoMessage(text) {
-  const lines = (text || '')
+function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
+  if (!text || typeof text !== 'string') {
+    return { items: [], activeChapter: defaultChapter };
+  }
+
+  const rawLines = text
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter(Boolean);
 
-  let chapter = null;
-  let unit = null;
-  let measurement = null;
-  const descriptionLines = [];
-
-  for (const line of lines) {
-    const chapMatch = line.match(CHAPTER_PREFIX_RE);
-    if (chapMatch && chapMatch[1]) {
-      chapter = chapMatch[1].trim().toUpperCase();
-      continue;
-    }
-
-    const unitMatch = line.match(PURE_UNIT_LINE_RE);
-    if (unitMatch && unitMatch[1]) {
-      const key = unitMatch[1].toLowerCase();
-      unit = UNIT_ALIASES[key] || key.toUpperCase();
-      continue;
-    }
-
-    const meas = evaluateMeasurementFormula(line);
-    if (meas && !measurement) {
-      measurement = meas;
-      if (!unit && meas.explicitUnit) {
-        unit = meas.explicitUnit;
-      }
-      continue;
-    }
-
-    descriptionLines.push(line);
+  if (rawLines.length === 0) {
+    return { items: [], activeChapter: defaultChapter };
   }
 
-  const description = descriptionLines.join(' ').trim();
-  return {
-    chapter,
-    description: description || null,
-    measurement,
-    unit,
-  };
+  const items = [];
+  let currentChap = defaultChapter;
+  let i = 0;
+
+  while (i < rawLines.length) {
+    const line = rawLines[i];
+
+    // ¿Es cabecera de capítulo?
+    const chapMatch = line.match(CHAPTER_PREFIX_RE);
+    if (chapMatch && chapMatch[1]) {
+      currentChap = chapMatch[1].trim().toUpperCase();
+      i += 1;
+      continue;
+    }
+
+    // ¿Línea de una sola partida con medición al final? Ej: "Friso en paredes 25 m2" o "Losa 10.5*7.5 m2"
+    const inlineMatch = line.match(MEASURE_TRAILING_RE);
+    const prefixText = inlineMatch ? line.slice(0, inlineMatch.index).trim() : '';
+    if (inlineMatch && prefixText.replace(/^[\d+.)\-#\s]+/, '').length >= 3) {
+      const desc = prefixText.replace(/^[\d+.)\-#\s]+/, '').trim();
+      const rawFormula = inlineMatch[1];
+      const rawUnit = inlineMatch[2];
+      const formulaEval = evaluateMeasurementFormula(rawFormula);
+      const qty = formulaEval?.quantity || parseFloat(rawFormula.replace(',', '.')) || 1;
+      const cleanFormula = formulaEval?.formula || rawFormula.replace(/\*/g, ' × ');
+      const unit =
+        (rawUnit && UNIT_ALIASES[rawUnit.toLowerCase()]) ||
+        formulaEval?.inferredUnit ||
+        inferUnitFromDescription(desc);
+
+      items.push({
+        chapter: currentChap,
+        description: desc.toUpperCase(),
+        quantity: qty,
+        formula: cleanFormula,
+        unit,
+        isDefaultQty: false,
+      });
+      i += 1;
+      continue;
+    }
+
+    // Bloque multilínea o partida descriptiva
+    const desc = line.replace(/^[\d+.)\-#\s]+/, '').trim();
+    let formula = null;
+    let unit = null;
+    let qty = 1;
+    let isDefaultQty = true;
+
+    // Mirar si la siguiente línea es la fórmula de medición
+    if (i + 1 < rawLines.length) {
+      const nextLine = rawLines[i + 1];
+      const measEval = evaluateMeasurementFormula(nextLine);
+      if (measEval) {
+        qty = measEval.quantity;
+        formula = measEval.formula;
+        unit = measEval.explicitUnit || measEval.inferredUnit;
+        isDefaultQty = false;
+        i += 1; // consumir línea de medición
+
+        // Mirar si la subsiguiente línea es la unidad pura (ej: M2)
+        if (!unit && i + 1 < rawLines.length) {
+          const unitLineMatch = rawLines[i + 1].match(PURE_UNIT_LINE_RE);
+          if (unitLineMatch && unitLineMatch[1]) {
+            const k = unitLineMatch[1].toLowerCase();
+            unit = UNIT_ALIASES[k] || k.toUpperCase();
+            i += 1; // consumir línea de unidad
+          }
+        }
+      }
+    }
+
+    if (!unit) {
+      unit = inferUnitFromDescription(desc);
+    }
+    if (!formula) {
+      formula = String(qty);
+    }
+
+    items.push({
+      chapter: currentChap,
+      description: desc.toUpperCase(),
+      quantity: qty,
+      formula,
+      unit,
+      isDefaultQty,
+    });
+    i += 1;
+  }
+
+  return { items, activeChapter: currentChap };
 }
 
 const STORAGE_KEY = 'costbase_computos_draft_v1';
@@ -202,6 +303,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
 
   // Estado conversacional cuando el usuario escribe paso a paso
   const [pendingDraft, setPendingDraft] = useState(null);
+  const [lastCapturedItemId, setLastCapturedItemId] = useState(null);
 
   // Lista de partidas levantadas en el chat (en memoria, se reinicia al refrescar o al pulsar Limpiar)
   const [capturedItems, setCapturedItems] = useState([]);
@@ -258,25 +360,48 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
    * Registra de inmediato el cómputo en la lista local sin bloquear al usuario en campo.
    * La búsqueda en la BD y la generación del APU se ejecutan al presionar "Confirmar y Generar Presupuesto".
    */
-  const registerCapturedComputo = ({ chapter, description, quantity, formula, unit }) => {
+  const registerCapturedComputo = ({
+    chapter,
+    description,
+    quantity,
+    formula,
+    unit,
+    isDefaultQty = false,
+  }) => {
     const normalizedUnit = (unit || 'M2').toUpperCase();
     const itemId = `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const finalQty = Number(quantity) || 1;
+    const finalFormula = formula || String(finalQty);
     const newItem = {
       id: itemId,
       chapter: (chapter || activeChapter || 'GENERAL').trim().toUpperCase(),
       description: (description || '').trim().toUpperCase(),
       unit: normalizedUnit,
-      quantity: Number(quantity) || 1,
-      formula: formula || String(quantity),
+      quantity: finalQty,
+      formula: finalFormula,
+      isDefaultQty,
     };
 
     setCapturedItems((prev) => [...prev, newItem]);
-    appendMessage({
-      role: 'bot',
-      type: 'item_captured',
-      itemId,
-      content: `Cómputo registrado: **${newItem.description}** (${newItem.formula} = ${newItem.quantity} ${newItem.unit}). Puedes anotar otra partida o presionar "Confirmar y Generar Presupuesto".`,
-    });
+    setLastCapturedItemId(itemId);
+
+    if (isDefaultQty) {
+      appendMessage({
+        role: 'bot',
+        type: 'item_captured',
+        itemId,
+        content: `Cómputo registrado: **${newItem.description}** (${newItem.quantity} ${newItem.unit}). Puedes anotar otra partida, ajustar la medida respondiendo (ej: \`10.50*7.50 m2\` o \`25\`) o ver la lista en "Cómputos".`,
+      });
+    } else {
+      appendMessage({
+        role: 'bot',
+        type: 'item_captured',
+        itemId,
+        content: `Cómputo registrado: **${newItem.description}** (${newItem.formula} = ${newItem.quantity} ${newItem.unit}). Puedes anotar otra partida o presionar "Confirmar y Generar Presupuesto".`,
+      });
+    }
+
+    return newItem;
   };
 
   const handleSendMessage = (overrideText = null) => {
@@ -288,128 +413,91 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     }
     appendMessage({ role: 'user', content: raw });
 
-    const parsed = parseUserComputoMessage(raw);
-    let currentChap = activeChapter;
-
-    if (parsed.chapter) {
-      currentChap = parsed.chapter;
-      setActiveChapter(parsed.chapter);
-    }
-
-    // Si solo escribió "Capítulo X" sin descripción ni medidas
-    if (parsed.chapter && !parsed.description && !parsed.measurement && !parsed.unit) {
-      appendMessage({
-        role: 'bot',
-        content: `📂 Capítulo activo cambiado a **${parsed.chapter}**. Ahora escribe la descripción de la partida, sus mediciones y unidad.`,
-      });
-      return;
-    }
-
-    // Si estamos en medio de una captura paso a paso (pendingDraft)
-    if (pendingDraft) {
-      if (pendingDraft.step === 'awaiting_measurement') {
-        const meas = parsed.measurement || evaluateMeasurementFormula(raw);
-        if (!meas) {
-          if (parsed.description && parsed.measurement) {
-            setPendingDraft(null);
-            registerCapturedComputo({
-              chapter: currentChap,
-              description: parsed.description,
-              quantity: parsed.measurement.quantity,
-              formula: parsed.measurement.formula,
-              unit: parsed.unit || parsed.measurement.inferredUnit || 'M2',
-            });
-            return;
-          }
-          appendMessage({
-            role: 'bot',
-            content:
-              '⚠️ No pude interpretar esa medida. Ingresa un número o multiplicación, por ejemplo: `10.50*7.50` o `15.20 + 4.80`.',
-          });
-          return;
-        }
-
-        const resolvedUnit = parsed.unit || meas.explicitUnit;
-        if (resolvedUnit) {
-          const draftDesc = pendingDraft.description;
-          const draftChap = pendingDraft.chapter || currentChap;
-          setPendingDraft(null);
-          registerCapturedComputo({
-            chapter: draftChap,
-            description: draftDesc,
-            quantity: meas.quantity,
-            formula: meas.formula,
-            unit: resolvedUnit,
-          });
-          return;
-        }
-
-        const nextDraft = {
-          ...pendingDraft,
-          quantity: meas.quantity,
-          formula: meas.formula,
-          suggestedUnit: meas.inferredUnit || 'M2',
-          step: 'awaiting_unit',
-        };
-        setPendingDraft(nextDraft);
+    // 1. ¿Es una actualización de medidas para el último cómputo registrado?
+    const pureMeas = evaluateMeasurementFormula(raw);
+    if (pureMeas && lastCapturedItemId) {
+      const targetItem = capturedItems.find((it) => it.id === lastCapturedItemId);
+      if (targetItem) {
+        const finalUnit = pureMeas.explicitUnit || pureMeas.inferredUnit || targetItem.unit;
+        setCapturedItems((prev) =>
+          prev.map((it) =>
+            it.id === lastCapturedItemId
+              ? {
+                  ...it,
+                  quantity: pureMeas.quantity,
+                  formula: pureMeas.formula,
+                  unit: finalUnit,
+                  isDefaultQty: false,
+                }
+              : it
+          )
+        );
         appendMessage({
           role: 'bot',
-          type: 'unit_prompt',
-          suggestedUnit: nextDraft.suggestedUnit,
-          content: `📐 Medición calculada: **${meas.formula} = ${meas.quantity.toLocaleString('es-VE', { maximumFractionDigits: 2 })}**. Selecciona o escribe la unidad de medida:`,
-        });
-        return;
-      }
-
-      if (pendingDraft.step === 'awaiting_unit') {
-        const cleanU = raw.replace(/[^a-zA-Z0-9²³]/g, '').toLowerCase();
-        const chosenUnit = parsed.unit || UNIT_ALIASES[cleanU] || raw.toUpperCase().slice(0, 10);
-        const { description: draftDesc, chapter: draftChap, quantity, formula } = pendingDraft;
-        setPendingDraft(null);
-        registerCapturedComputo({
-          chapter: draftChap || currentChap,
-          description: draftDesc,
-          quantity,
-          formula,
-          unit: chosenUnit,
+          type: 'item_captured',
+          itemId: lastCapturedItemId,
+          content: `📐 Medición actualizada para **${targetItem.description}**: ${pureMeas.formula} = **${pureMeas.quantity} ${finalUnit}**.`,
         });
         return;
       }
     }
 
-    // Flujo directo (descripción + medición + unidad en el mismo mensaje)
-    if (parsed.description && parsed.measurement) {
-      const finalUnit = parsed.unit || parsed.measurement.inferredUnit || 'M2';
-      registerCapturedComputo({
-        chapter: currentChap,
-        description: parsed.description,
-        quantity: parsed.measurement.quantity,
-        formula: parsed.measurement.formula,
-        unit: finalUnit,
-      });
-      return;
+    // 2. ¿Es sólo una selección de unidad directa (ej: si se pulsa un chip 'M2')?
+    const rawUnitKey = raw.replace(/[^a-zA-Z0-9²³]/g, '').toLowerCase();
+    if (UNIT_ALIASES[rawUnitKey] && lastCapturedItemId) {
+      const chosenUnit = UNIT_ALIASES[rawUnitKey];
+      const targetItem = capturedItems.find((it) => it.id === lastCapturedItemId);
+      if (targetItem) {
+        setCapturedItems((prev) =>
+          prev.map((it) =>
+            it.id === lastCapturedItemId ? { ...it, unit: chosenUnit } : it
+          )
+        );
+        appendMessage({
+          role: 'bot',
+          type: 'item_captured',
+          itemId: lastCapturedItemId,
+          content: `Unidad actualizada a **${chosenUnit}** para **${targetItem.description}**.`,
+        });
+        return;
+      }
     }
 
-    // Si envió sólo descripción, iniciamos captura guiada paso a paso
-    if (parsed.description && !parsed.measurement) {
-      const upperDesc = parsed.description.trim().toUpperCase();
-      setPendingDraft({
-        chapter: currentChap,
-        description: upperDesc,
-        step: 'awaiting_measurement',
-      });
+    // 3. Analizar input con el analizador inteligente de cómputos
+    const parsed = parseComputosInput(raw, activeChapter);
+
+    if (parsed.activeChapter && parsed.activeChapter !== activeChapter) {
+      setActiveChapter(parsed.activeChapter);
+    }
+
+    // Si solo escribió el capítulo
+    if (parsed.items.length === 0) {
+      if (parsed.activeChapter) {
+        appendMessage({
+          role: 'bot',
+          content: `📂 Capítulo activo cambiado a **${parsed.activeChapter}**. Ahora escribe la descripción de la partida, sus mediciones y unidad.`,
+        });
+        return;
+      }
       appendMessage({
         role: 'bot',
-        content: `📝 Partida: **${upperDesc}**\n¿Cuáles son las mediciones o fórmula? (Ej: \`10.50*7.50 m\` o \`24.50\`)`,
+        content:
+          'Escribe la descripción de la partida junto con sus medidas y unidad, por ejemplo:\n`Capitulo Impermeabilizacion`\n`Remoción de manto asfáltico en losa de techo`\n`10.50*7.50 m`\n`M2`\nO en una sola línea:\n`Remoción de manto asfáltico 10.50*7.50 m2`',
       });
       return;
     }
 
-    appendMessage({
-      role: 'bot',
-      content:
-        'Escribe la descripción de la partida junto con sus medidas y unidad, por ejemplo:\n`Capitulo Impermeabilizacion`\n`Remoción de manto asfáltico en losa de techo`\n`10.50*7.50 m`\n`M2`',
-    });
+    // Registrar todas las partidas interpretadas
+    for (const it of parsed.items) {
+      registerCapturedComputo({
+        chapter: it.chapter || parsed.activeChapter || activeChapter,
+        description: it.description,
+        quantity: it.quantity,
+        formula: it.formula,
+        unit: it.unit,
+        isDefaultQty: it.isDefaultQty,
+      });
+    }
   };
 
   const handleClearAll = (force = false) => {
@@ -425,6 +513,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       // noop
     }
     setCapturedItems([]);
+    setLastCapturedItemId(null);
     setPendingDraft(null);
     setInputText('');
     setBudgetName(`Presupuesto de Inspección - ${new Date().toLocaleDateString('es-VE')}`);
