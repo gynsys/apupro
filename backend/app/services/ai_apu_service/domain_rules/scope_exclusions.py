@@ -63,7 +63,9 @@ _NO_MATERIAL_ANYWHERE: List[str] = [
 _SUPPLY_VERBS: List[str] = [
     r"\bsuministro\b", r"\bs/i\b", r"\bs/c\b", r"\bs/t/c\b", r"\bs/t/i\b",
     r"\bconstrucci[oó]n\b", r"\bconfecci[oó]n\b", r"\bfabricaci[oó]n\b",
-    r"\bcolocaci[oó]n\s+de\b", r"\baplicaci[oó]n\s+de\s+pintura\b",
+    r"\bcolocaci[oó]n\b", r"\baplicaci[oó]n\b", r"\baplicar\b",
+    r"\breparaci[oó]n\b", r"\breparar\b", r"\brehabilitaci[oó]n\b", r"\brehabilitar\b",
+    r"\bfriso\b", r"\bmortero\b", r"\bconcreto\b", r"\bpintura\b",
     r"\bencamisado\b", r"\bimpermeabilizaci[oó]n\b", r"\brevestimiento\b"
 ]
 

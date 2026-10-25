@@ -25,6 +25,12 @@ _DEMOLITION_TERMS = ("DEMOLICION", "REMOCION", "ROTURA", "DESINCORPORACION", "DE
 _TRANSPORT_TERMS = ("CARGA A MANO", "CARGA CON", "TRANSPORTE", "ACARREO", "BOTE DE MATERIAL", "RETIRO DE ESCOMBRO")
 
 
+_STRUCTURAL_ELEMENTS = (
+    "LOSA", "VIGA", "COLUMNA", "MURO", "PARED", "TECHO", "PISO", "ESCALERA",
+    "FUNDACION", "ZAPATA", "CABEZAL", "PEDESTAL", "ESTRUCTURA METALICA", "TABLERO"
+)
+
+
 def _tokenize(text: str) -> set:
     normalized = _normalize_header(text)
     return {token for token in normalized.split() if len(token) > 2 and token not in _STOPWORDS}
@@ -214,6 +220,12 @@ def find_candidates(
             if not query_is_transport and _has_any(description_upper, _TRANSPORT_TERMS):
                 score -= 0.15
 
+            # Afinidad y penalización por elemento constructivo principal (ej. losa vs elemento metálico vs rodamiento)
+            query_has_losa = "LOSA" in query_norm or "TECHO" in query_norm
+            cand_is_metal_only = "ELEMENTO METALICO" in description_upper or "ELEMENTOS METALICOS" in description_upper or "RODAMIENTO" in description_upper
+            if query_has_losa and cand_is_metal_only:
+                score -= 0.40
+
             candidate_tokens = _tokenize(row.Descri or "")
             if query_tokens:
                 overlap = len(query_tokens & candidate_tokens) / len(query_tokens)
@@ -260,15 +272,17 @@ def _build_refine_prompt(batch: List[Dict[str, Any]]) -> str:
 
     return f"""
 Eres un ingeniero de costos experto en presupuestos de obra venezolanos (normativa COVENIN).
-Para cada partida importada de un archivo, elige entre sus candidatas la que MEJOR corresponda
-técnicamente al trabajo descrito. Compara la acción (construir, demoler, instalar, pintar,
-excavar, suministrar), el elemento constructivo, el material, las dimensiones y la unidad.
+Para cada partida importada de un archivo o levantada en cómputos, elige entre sus candidatas la que MEJOR corresponda
+técnicamente al trabajo descrito. Compara:
+1. El ELEMENTO CONSTRUCTIVO PRINCIPAL (ej: si describe 'losa de techo', 'muro', 'tubería', la candidata DEBE ser de ese mismo elemento; NUNCA elijas 'elementos metálicos' o 'rodamientos' para una 'losa de concreto').
+2. La ACCIÓN O ALCANCE COMPLETO (reparación, construcción, demolición, instalación).
+3. Si la partida describe un trabajo integral (ej: reparación que incluye varios pasos como remoción, cepillado, anticorrosivo y mortero), NO elijas una candidata que solo cubra un paso secundario aislado (como solo limpiar óxido).
 
 REGLAS:
 1. Devuelve SOLO un objeto JSON con esta estructura:
    {{"selections": [{{"row": 1, "cod_par": "CODIGO_EXACTO_DE_LAS_CANDIDATAS O null", "confianza": "alta|media|baja", "motivo": "breve"}}]}}
 2. Usa únicamente códigos que aparezcan en las candidatas de esa fila. NUNCA inventes códigos.
-3. Si NINGUNA candidata corresponde al trabajo descrito, devuelve "cod_par": null.
+3. Si NINGUNA candidata corresponde plenamente al elemento constructivo y alcance principal descrito, devuelve "cod_par": null OBLIGATORIAMENTE para que el sistema genere el APU a la medida.
 4. Prioriza la coincidencia de acción y elemento sobre palabras sueltas.
 5. Si la unidad de la partida importada difiere de la candidata, no la descartes: elige por afinidad técnica.
 
