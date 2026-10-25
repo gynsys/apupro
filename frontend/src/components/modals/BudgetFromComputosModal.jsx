@@ -170,37 +170,60 @@ function parseUserComputoMessage(text) {
   };
 }
 
+const STORAGE_KEY = 'costbase_computos_draft_v1';
+
+function loadSavedComputosDraft() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) {
-  const [activeChapter, setActiveChapter] = useState('OBRAS PRELIMINARES');
+  const savedDraft = loadSavedComputosDraft();
+  const [activeChapter, setActiveChapter] = useState(
+    () => savedDraft?.activeChapter || 'OBRAS PRELIMINARES'
+  );
   const [isEditingChapter, setIsEditingChapter] = useState(false);
   const [chapterInput, setChapterInput] = useState('');
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
 
-  const [messages, setMessages] = useState([
-    {
-      id: 'welcome',
-      role: 'bot',
-      type: 'welcome',
-      content:
-        '¡Hola! Soy tu asistente de cómputos en campo. Anota tus partidas aquí (capítulo, descripción, mediciones y unidad) y al finalizar presiona "Confirmar y Generar Presupuesto" para buscar las coincidencias en la BD o generar sus APUs.',
-    },
-  ]);
+  const [messages, setMessages] = useState(() =>
+    savedDraft?.messages?.length
+      ? savedDraft.messages
+      : [
+          {
+            id: 'welcome',
+            role: 'bot',
+            type: 'welcome',
+            content:
+              '¡Hola! Soy tu asistente de cómputos en campo. Anota tus partidas aquí (capítulo, descripción, mediciones y unidad) y al finalizar presiona "Confirmar y Generar Presupuesto" para buscar las coincidencias en la BD o generar sus APUs.',
+          },
+        ]
+  );
   const [inputText, setInputText] = useState('');
 
   // Estado conversacional cuando el usuario escribe paso a paso
   const [pendingDraft, setPendingDraft] = useState(null);
 
   // Lista de partidas levantadas en el chat
-  const [capturedItems, setCapturedItems] = useState([]);
+  const [capturedItems, setCapturedItems] = useState(() => savedDraft?.capturedItems || []);
   const [showSummaryDrawer, setShowSummaryDrawer] = useState(false);
 
   // Datos de encabezado del presupuesto para guardar
   const [budgetName, setBudgetName] = useState(() => {
+    if (savedDraft?.budgetName) return savedDraft.budgetName;
     const today = new Date().toLocaleDateString('es-VE');
     return `Presupuesto de Inspección - ${today}`;
   });
-  const [projectName, setProjectName] = useState('');
-  const [clientName, setClientName] = useState('');
-  const [currency, setCurrency] = useState('USD');
+  const [projectName, setProjectName] = useState(() => savedDraft?.projectName || '');
+  const [clientName, setClientName] = useState(() => savedDraft?.clientName || '');
+  const [currency, setCurrency] = useState(() => savedDraft?.currency || 'USD');
 
   // Estado del proceso final "Confirmar y Generar Presupuesto"
   const [isCommitting, setIsCommitting] = useState(false);
@@ -210,6 +233,36 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+
+  useEffect(() => {
+    const onUp = () => setIsOnline(true);
+    const onDown = () => setIsOnline(false);
+    window.addEventListener('online', onUp);
+    window.addEventListener('offline', onDown);
+    return () => {
+      window.removeEventListener('online', onUp);
+      window.removeEventListener('offline', onDown);
+    };
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          activeChapter,
+          messages,
+          capturedItems,
+          budgetName,
+          projectName,
+          clientName,
+          currency,
+        })
+      );
+    } catch {
+      // Ignorar si el almacenamiento local está lleno
+    }
+  }, [activeChapter, messages, capturedItems, budgetName, projectName, clientName, currency]);
 
   useEffect(() => {
     if (isOpen) {
@@ -494,6 +547,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       });
 
       // Limpiar estado del modal, cerrar la herramienta del chatbot y abrir el presupuesto
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        // noop
+      }
       setCapturedItems([]);
       setShowSummaryDrawer(false);
       if (onCreated) {
@@ -553,9 +611,20 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
             <Calculator className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-amber-900 font-bold text-base sm:text-lg leading-tight truncate">
-              Presupuesto desde Cómputos
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-amber-900 font-bold text-base sm:text-lg leading-tight truncate">
+                Presupuesto desde Cómputos
+              </h2>
+              <span
+                className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
+                  isOnline
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                    : 'bg-amber-200 text-amber-900 border-amber-400 animate-pulse'
+                }`}
+              >
+                {isOnline ? '● En línea' : '⚡ Modo Offline'}
+              </span>
+            </div>
             <p className="text-xs text-amber-800 truncate">
               Inspección móvil • Busca en BD o genera APU al confirmar
             </p>

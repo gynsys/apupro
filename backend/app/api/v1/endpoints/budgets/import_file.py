@@ -578,6 +578,56 @@ def commit_budget_import(
 
             supplied_code = (item.code or "").strip()
 
+            # Respaldo automático en el servidor si una partida de cómputos llega sin insumos ni cost_item
+            if (
+                not is_chapter
+                and not has_generated
+                and cost_item is None
+                and payload.source_filename == "Cómputos de Inspección Móvil"
+            ):
+                try:
+                    resolved_fallback = resolve_computo_item(
+                        payload=ResolveComputoRequest(
+                            description=description,
+                            unit=item.unit or "M2",
+                            sc_index=index,
+                            auto_generate_sc=True,
+                        ),
+                        db=db,
+                        current_user=current_user,
+                    )
+                    if resolved_fallback.get("resolution_type") == "covenin" and resolved_fallback.get("cod_par"):
+                        cost_item = (
+                            db.query(CostItem)
+                            .filter(CostItem.CodPar == resolved_fallback["cod_par"])
+                            .first()
+                        )
+                        if cost_item and cost_item.Descri:
+                            description = cost_item.Descri
+                        supplied_code = ""
+                    elif any(
+                        resolved_fallback.get(k) for k in ("materials", "equipments", "labors")
+                    ):
+                        item.materials = [
+                            GeneratedMaterial(**m) for m in (resolved_fallback.get("materials") or [])
+                        ]
+                        item.equipments = [
+                            GeneratedEquipment(**e) for e in (resolved_fallback.get("equipments") or [])
+                        ]
+                        item.labors = [
+                            GeneratedLabor(**l) for l in (resolved_fallback.get("labors") or [])
+                        ]
+                        if resolved_fallback.get("performance"):
+                            item.performance = float(resolved_fallback["performance"])
+                        has_generated = True
+                except Exception as exc_fb:
+                    logger.error(
+                        "Error en respaldo automático de APU para cómputos (%s): %s",
+                        description[:60],
+                        exc_fb,
+                        exc_info=True,
+                    )
+
             if is_chapter:
                 cod_par = supplied_code or f"CAP-{index:03d}"
                 cov_par = supplied_code or None
