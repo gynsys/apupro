@@ -1,25 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import LandingPage from './pages/LandingPage.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import BudgetHomePage from './pages/admin/BudgetHomePage.jsx';
 import BudgetWorksheetPage from './pages/admin/BudgetWorksheetPage.jsx';
-import BudgetAPUEditorPage from './pages/admin/BudgetAPUEditorPage.jsx';
-import SharedBudgetPage from './pages/admin/SharedBudgetPage.jsx';
-import SharedPartidaPage from './pages/admin/SharedPartidaPage.jsx';
-import CalculadoraFCASPage from './pages/tools/CalculadoraFCASPage.jsx';
-import CostbaseDashboard from './modules/costbase/pages/CostbaseDashboard.jsx';
-import APUViewer from './modules/costbase/pages/APUViewer.jsx';
-import AIApuGeneratorPage from './modules/costbase/pages/AIApuGeneratorPage.jsx';
-import DatabaseManagementPage from './modules/costbase/pages/DatabaseManagementPage.jsx';
-import AdminDatabasePage from './modules/costbase/pages/AdminDatabasePage.jsx';
-import MarketAdminPage from './modules/market/pages/MarketAdminPage.jsx';
 import AppLayout from './components/layout/AppLayout.jsx';
 import { API_URL } from './services/api';
 import { Toaster } from 'react-hot-toast';
 import { DatabaseProvider } from './contexts/DatabaseContext.jsx';
 import { UserCostosProvider } from './context/UserCostosContext.jsx';
+
+const LandingPage = lazy(() => import('./pages/LandingPage.jsx'));
+const BudgetAPUEditorPage = lazy(() => import('./pages/admin/BudgetAPUEditorPage.jsx'));
+const SharedBudgetPage = lazy(() => import('./pages/admin/SharedBudgetPage.jsx'));
+const SharedPartidaPage = lazy(() => import('./pages/admin/SharedPartidaPage.jsx'));
+const CalculadoraFCASPage = lazy(() => import('./pages/tools/CalculadoraFCASPage.jsx'));
+const CostbaseDashboard = lazy(() => import('./modules/costbase/pages/CostbaseDashboard.jsx'));
+const APUViewer = lazy(() => import('./modules/costbase/pages/APUViewer.jsx'));
+const AIApuGeneratorPage = lazy(() => import('./modules/costbase/pages/AIApuGeneratorPage.jsx'));
+const DatabaseManagementPage = lazy(() => import('./modules/costbase/pages/DatabaseManagementPage.jsx'));
+const AdminDatabasePage = lazy(() => import('./modules/costbase/pages/AdminDatabasePage.jsx'));
+const MarketAdminPage = lazy(() => import('./modules/market/pages/MarketAdminPage.jsx'));
 
 export const SiteConfigContext = React.createContext(null);
 
@@ -74,136 +75,143 @@ function App() {
       <DatabaseProvider>
         <UserCostosProvider>
           <SiteConfigContext.Provider value={{ config, setConfig, fetchSiteConfig }}>
-          <BrowserRouter basename={window.location.pathname.startsWith('/app') ? '/app' : ''}>
-          <Routes>
-                                                <Route path="/" element={<LandingPage />} />
-            {/* Redirección retrocompatible de rutas admin obsoletas */}
-            <Route path="/admin/*" element={<Navigate to="/budgets" replace />} />
+            <BrowserRouter basename={window.location.pathname.startsWith('/app') ? '/app' : ''}>
+              <Suspense
+                fallback={
+                  <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+                  </div>
+                }
+              >
+                <Routes>
+                  <Route path="/" element={<LandingPage />} />
+                  {/* Redirección retrocompatible de rutas admin obsoletas */}
+                  <Route path="/admin/*" element={<Navigate to="/budgets" replace />} />
 
-            {/* FCAS Calculator Route */}
-            <Route
-              path="/fcas"
-              element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<CalculadoraFCASPage />} />
-            </Route>
-            
-            {/* RUTAS DE BASE MAESTRA - COSTBASE (Protegidas) */}
-            <Route 
-              path="/costbase" 
-              element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<CostbaseDashboard />} />
-              <Route path="apu/:id" element={<APUViewer />} />
-              <Route path="ai-generator" element={<AIApuGeneratorPage />} />
-              <Route path="databases" element={<DatabaseManagementPage />} />
-              <Route path="admin-db" element={<AdminDatabasePage />} />
-              <Route path="market-admin" element={<MarketAdminPage />} />
-            </Route>
+                  {/* FCAS Calculator Route */}
+                  <Route
+                    path="/fcas"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout />
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route index element={<CalculadoraFCASPage />} />
+                  </Route>
 
-            {/* ALIAS RETROCOMPATIBLES /cost360 */}
-            <Route 
-              path="/cost360" 
-              element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<CostbaseDashboard />} />
-              <Route path="apu/:id" element={<APUViewer />} />
-              <Route path="ai-generator" element={<AIApuGeneratorPage />} />
-              <Route path="databases" element={<DatabaseManagementPage />} />
-              <Route path="admin-db" element={<AdminDatabasePage />} />
-              <Route path="market-admin" element={<MarketAdminPage />} />
-            </Route>
+                  {/* RUTAS DE BASE MAESTRA - COSTBASE (Protegidas) */}
+                  <Route
+                    path="/costbase"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout />
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route index element={<CostbaseDashboard />} />
+                    <Route path="apu/:id" element={<APUViewer />} />
+                    <Route path="ai-generator" element={<AIApuGeneratorPage />} />
+                    <Route path="databases" element={<DatabaseManagementPage />} />
+                    <Route path="admin-db" element={<AdminDatabasePage />} />
+                    <Route path="market-admin" element={<MarketAdminPage />} />
+                  </Route>
 
-            {/* RUTA DE VISTA PREVIA COMPARTIDA (Accesible con y sin sesión) */}
-            <Route path="/budgets/shared/partida/:token" element={<SharedPartidaPage />} />
-          <Route path="/budgets/shared/:token" element={<SharedBudgetPage />} />
+                  {/* ALIAS RETROCOMPATIBLES /cost360 */}
+                  <Route
+                    path="/cost360"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout />
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route index element={<CostbaseDashboard />} />
+                    <Route path="apu/:id" element={<APUViewer />} />
+                    <Route path="ai-generator" element={<AIApuGeneratorPage />} />
+                    <Route path="databases" element={<DatabaseManagementPage />} />
+                    <Route path="admin-db" element={<AdminDatabasePage />} />
+                    <Route path="market-admin" element={<MarketAdminPage />} />
+                  </Route>
 
-            {/* RUTAS DE PRESUPUESTOS (APP - Protegidas) */}
-            <Route 
-              path="/budgets" 
-              element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<BudgetHomePage />} />
-              <Route path=":id" element={<BudgetWorksheetPage />} />
-              <Route path=":id/item/:itemId" element={<BudgetAPUEditorPage />} />
-            </Route>
+                  {/* RUTA DE VISTA PREVIA COMPARTIDA (Accesible con y sin sesión) */}
+                  <Route path="/budgets/shared/partida/:token" element={<SharedPartidaPage />} />
+                  <Route path="/budgets/shared/:token" element={<SharedBudgetPage />} />
 
-            {/* Rutas retrocompatibles usando el slug */}
-            <Route path="/:slug" element={<Navigate to="/budgets" replace />} />
-            <Route path="/:slug/admin/*" element={<Navigate to="/budgets" replace />} />
+                  {/* RUTAS DE PRESUPUESTOS (APP - Protegidas) */}
+                  <Route
+                    path="/budgets"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout />
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route index element={<BudgetHomePage />} />
+                    <Route path=":id" element={<BudgetWorksheetPage />} />
+                    <Route path=":id/item/:itemId" element={<BudgetAPUEditorPage />} />
+                  </Route>
 
-            <Route
-              path="/:slug/costbase"
-              element={
-                <ProtectedRoute>
-                  <CostbaseDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/:slug/costbase/apu/:id"
-              element={
-                <ProtectedRoute>
-                  <APUViewer />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/:slug/costbase/ai-generator"
-              element={
-                <ProtectedRoute>
-                  <AIApuGeneratorPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/:slug/cost360"
-              element={
-                <ProtectedRoute>
-                  <CostbaseDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/:slug/cost360/apu/:id"
-              element={
-                <ProtectedRoute>
-                  <APUViewer />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/:slug/cost360/ai-generator"
-              element={
-                <ProtectedRoute>
-                  <AIApuGeneratorPage />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </BrowserRouter>
-      </SiteConfigContext.Provider>
-    </UserCostosProvider>
-  </DatabaseProvider>
+                  {/* Rutas retrocompatibles usando el slug */}
+                  <Route path="/:slug" element={<Navigate to="/budgets" replace />} />
+                  <Route path="/:slug/admin/*" element={<Navigate to="/budgets" replace />} />
+
+                  <Route
+                    path="/:slug/costbase"
+                    element={
+                      <ProtectedRoute>
+                        <CostbaseDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/:slug/costbase/apu/:id"
+                    element={
+                      <ProtectedRoute>
+                        <APUViewer />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/:slug/costbase/ai-generator"
+                    element={
+                      <ProtectedRoute>
+                        <AIApuGeneratorPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/:slug/cost360"
+                    element={
+                      <ProtectedRoute>
+                        <CostbaseDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/:slug/cost360/apu/:id"
+                    element={
+                      <ProtectedRoute>
+                        <APUViewer />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/:slug/cost360/ai-generator"
+                    element={
+                      <ProtectedRoute>
+                        <AIApuGeneratorPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
+          </SiteConfigContext.Provider>
+        </UserCostosProvider>
+      </DatabaseProvider>
     </AuthProvider>
   );
 }
 
 export default App;
-

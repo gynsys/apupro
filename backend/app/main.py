@@ -7,6 +7,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Callable, Any, Dict, Optional, Tuple
 
+import anyio
 import httpx
 from fastapi import FastAPI, Request, Response, Depends, HTTPException, Cookie, status
 from fastapi.responses import PlainTextResponse, JSONResponse
@@ -67,137 +68,165 @@ def clean_fcas_description(desc: str) -> str:
     cleaned = re.sub(r'^[.\s,;:\-]+', '', cleaned).strip()
     return cleaned
 
-# Configurar Base de Datos para Arko
+# Configurar Base de Datos para Arko (protegido por advisory lock para arranque multi-worker seguro)
 logger.info("Initializing Arko360 database tables...")
 try:
-    ArkoBase.metadata.create_all(bind=arko_engine)
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables verified/created successfully.")
-
-    # Auto-migración segura de columnas de planes en arko_admins si no existen
-    with arko_engine.connect() as conn:
-        schema_statements = [
-            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS plan VARCHAR(50) DEFAULT 'free';",
-            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS max_budgets INTEGER DEFAULT 1;",
-            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS max_items_per_budget INTEGER DEFAULT 2;",
-            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS has_ai_access BOOLEAN DEFAULT FALSE;",
-            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS plan_started_at TIMESTAMP;",
-            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS plan_expires_at TIMESTAMP;",
-            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS max_ai_apus INTEGER DEFAULT 0;",
-            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS ai_apus_generated INTEGER DEFAULT 0;",
-            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS costos_config JSONB;",
-            "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS username VARCHAR(100);",
-            "CREATE INDEX IF NOT EXISTS idx_arko_admins_plan ON arko_admins(plan);",
-            "CREATE INDEX IF NOT EXISTS idx_arko_admins_plan_expires ON arko_admins(plan_expires_at);",
-            "UPDATE arko_admins SET username = LOWER(TRIM(full_name)) WHERE (username IS NULL OR username = '') AND full_name IS NOT NULL AND TRIM(full_name) != '';",
-            "UPDATE arko_admins SET username = LOWER(SPLIT_PART(email, '@', 1)) WHERE (username IS NULL OR username = '') AND email IS NOT NULL;",
-            "CREATE INDEX IF NOT EXISTS idx_arko_admins_username ON arko_admins(LOWER(username));",
-            "UPDATE arko_admins SET max_ai_apus = 20 WHERE plan IN ('Básico', 'basico', 'basic') AND (max_ai_apus = 10 OR max_ai_apus IS NULL);",
-            "UPDATE arko_admins SET max_ai_apus = 50 WHERE plan IN ('Profesional', 'profesional', 'pro') AND (max_ai_apus = 25 OR max_ai_apus IS NULL);",
-            "UPDATE arko_admins SET max_ai_apus = 100 WHERE plan IN ('Experto', 'experto', 'expert') AND (max_ai_apus = 50 OR max_ai_apus IS NULL);",
-            "UPDATE arko_admins SET max_ai_apus = 0 WHERE plan IN ('enterprise', 'corporativo', 'admin');"
-        ]
-        for stmt in schema_statements:
-            try:
-                conn.execute(text(stmt))
-            except Exception as ex:
-                logger.warning(f"Aviso en auto-migración de esquema: {ex}")
-        conn.commit()
-    logger.info("Schema migrations for arko_admins verified successfully.")
-
-    with engine.connect() as conn:
-        budget_schema_statements = [
-            "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS user_id VARCHAR(255);",
-            "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS notes TEXT;",
-            "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS share_token VARCHAR(255);",
-            "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS is_public_share BOOLEAN DEFAULT FALSE;",
-            "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS ubicacion VARCHAR(255);",
-            "UPDATE budgets SET user_id = '1' WHERE user_id IS NULL;",
-            "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS embedding TEXT;",
-            "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS shared_with_user_id INTEGER;",
-            "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS shared_by_user_id INTEGER;",
-            "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS shared_note TEXT;",
-            "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS shared_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();",
-            "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS source_budget_item_id VARCHAR(255);",
-            "CREATE INDEX IF NOT EXISTS ix_cost360_custom_items_shared_with ON cost360_custom_items(shared_with_user_id);",
-            "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link VARCHAR(500);",
-            """
-            CREATE TABLE IF NOT EXISTS llm_providers (
-                id SERIAL PRIMARY KEY,
-                provider_key VARCHAR NOT NULL,
-                display_name VARCHAR NOT NULL,
-                api_key_enc TEXT NOT NULL,
-                model_name VARCHAR NOT NULL,
-                base_url VARCHAR,
-                is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                priority INTEGER NOT NULL DEFAULT 1,
-                use_case VARCHAR NOT NULL DEFAULT 'all',
-                extra_params JSONB,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                updated_at TIMESTAMP WITH TIME ZONE
-            );
-            """
-        ]
-        for stmt in budget_schema_statements:
-            try:
-                conn.execute(text(stmt))
-            except Exception as ex:
-                logger.warning(f"Aviso en auto-migración de esquema: {ex}")
-        conn.commit()
-
-        # Limpieza automatica en produccion de descripciones parasitarias (F.C.A.S., etc.)
+    _is_pg_engine = "sqlite" not in settings.DATABASE_URL
+    _migration_lock_conn = None
+    _has_migration_lock = True
+    if _is_pg_engine:
         try:
-            dirty_items = conn.execute(text("""
-                SELECT "CodPar", "Descri", "desc_limpia"
-                FROM cost360_items
-                WHERE "Descri" ILIKE '%F.C.A.S%' 
-                   OR "Descri" ILIKE '%FCAS%' 
-                   OR "Descri" ILIKE '%Calculos por Rendimiento%'
-                   OR "Descri" ~ '^[.\\s,;:\\-]+'
-                   OR "desc_limpia" ILIKE '%F.C.A.S%'
-                   OR "desc_limpia" ILIKE '%FCAS%'
-                   OR "desc_limpia" ~ '^[.\\s,;:\\-]+'
-            """)).fetchall()
-            
-            if dirty_items:
-                for row in dirty_items:
-                    cod = row[0]
-                    new_desc = clean_fcas_description(row[1] or "")
-                    new_limpia = clean_fcas_description(row[2] or "") if row[2] else new_desc
-                    conn.execute(
-                        text('UPDATE cost360_items SET "Descri" = :d, "desc_limpia" = :l WHERE "CodPar" = :c'),
-                        {"d": new_desc, "l": new_limpia, "c": cod}
-                    )
-                conn.commit()
-                logger.info(f"Limpieza automatica de {len(dirty_items)} partidas con F.C.A.S. completada con exito.")
-        except Exception as ex_fcas:
-            logger.error(f"Error en auto-limpieza de descripciones F.C.A.S.: {ex_fcas}", exc_info=True)
+            _migration_lock_conn = engine.connect()
+            _has_migration_lock = bool(
+                _migration_lock_conn.execute(text("SELECT pg_try_advisory_lock(849201)")).scalar()
+            )
+        except Exception as _lock_exc:
+            logger.warning(f"Advisory lock check fallback: {_lock_exc}")
+            _has_migration_lock = True
 
-        # Auto-migracion de codigos de Redes Aereas (RA1000 -> 1000RA)
-        try:
-            res_ra = conn.execute(text("""
-                UPDATE cost360_items
-                SET "CovPar" = SUBSTRING("CovPar" FROM 3) || 'RA'
-                WHERE "CovPar" ~ '^RA[0-9]+'
-            """))
+    if _has_migration_lock:
+        ArkoBase.metadata.create_all(bind=arko_engine)
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables verified/created successfully.")
+
+        # Auto-migración segura de columnas de planes en arko_admins si no existen
+        with arko_engine.connect() as conn:
+            schema_statements = [
+                "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS plan VARCHAR(50) DEFAULT 'free';",
+                "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS max_budgets INTEGER DEFAULT 1;",
+                "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS max_items_per_budget INTEGER DEFAULT 2;",
+                "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS has_ai_access BOOLEAN DEFAULT FALSE;",
+                "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS plan_started_at TIMESTAMP;",
+                "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS plan_expires_at TIMESTAMP;",
+                "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS max_ai_apus INTEGER DEFAULT 0;",
+                "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS ai_apus_generated INTEGER DEFAULT 0;",
+                "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS costos_config JSONB;",
+                "ALTER TABLE arko_admins ADD COLUMN IF NOT EXISTS username VARCHAR(100);",
+                "CREATE INDEX IF NOT EXISTS idx_arko_admins_plan ON arko_admins(plan);",
+                "CREATE INDEX IF NOT EXISTS idx_arko_admins_plan_expires ON arko_admins(plan_expires_at);",
+                "UPDATE arko_admins SET username = LOWER(TRIM(full_name)) WHERE (username IS NULL OR username = '') AND full_name IS NOT NULL AND TRIM(full_name) != '';",
+                "UPDATE arko_admins SET username = LOWER(SPLIT_PART(email, '@', 1)) WHERE (username IS NULL OR username = '') AND email IS NOT NULL;",
+                "CREATE INDEX IF NOT EXISTS idx_arko_admins_username ON arko_admins(LOWER(username));",
+                "UPDATE arko_admins SET max_ai_apus = 20 WHERE plan IN ('Básico', 'basico', 'basic') AND (max_ai_apus = 10 OR max_ai_apus IS NULL);",
+                "UPDATE arko_admins SET max_ai_apus = 50 WHERE plan IN ('Profesional', 'profesional', 'pro') AND (max_ai_apus = 25 OR max_ai_apus IS NULL);",
+                "UPDATE arko_admins SET max_ai_apus = 100 WHERE plan IN ('Experto', 'experto', 'expert') AND (max_ai_apus = 50 OR max_ai_apus IS NULL);",
+                "UPDATE arko_admins SET max_ai_apus = 0 WHERE plan IN ('enterprise', 'corporativo', 'admin');"
+            ]
+            for stmt in schema_statements:
+                try:
+                    conn.execute(text(stmt))
+                except Exception as ex:
+                    logger.warning(f"Aviso en auto-migración de esquema: {ex}")
             conn.commit()
-            if res_ra.rowcount > 0:
-                logger.info(f"Auto-migracion de {res_ra.rowcount} partidas de Redes Aereas a formato [numero]RA completada.")
-        except Exception as ex_ra:
-            logger.error(f"Error en auto-migracion de codigos RA: {ex_ra}", exc_info=True)
+        logger.info("Schema migrations for arko_admins verified successfully.")
 
-        # Auto-migracion segura de familias Yeso/Anime y cobertura 100% de insumos lideres
+        with engine.connect() as conn:
+            budget_schema_statements = [
+                "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS user_id VARCHAR(255);",
+                "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS notes TEXT;",
+                "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS share_token VARCHAR(255);",
+                "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS is_public_share BOOLEAN DEFAULT FALSE;",
+                "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS ubicacion VARCHAR(255);",
+                "UPDATE budgets SET user_id = '1' WHERE user_id IS NULL;",
+                "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS embedding TEXT;",
+                "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS shared_with_user_id INTEGER;",
+                "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS shared_by_user_id INTEGER;",
+                "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS shared_note TEXT;",
+                "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS shared_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();",
+                "ALTER TABLE cost360_custom_items ADD COLUMN IF NOT EXISTS source_budget_item_id VARCHAR(255);",
+                "CREATE INDEX IF NOT EXISTS ix_cost360_custom_items_shared_with ON cost360_custom_items(shared_with_user_id);",
+                "CREATE INDEX IF NOT EXISTS idx_budget_items_budget_id ON budget_items(budget_id);",
+                "CREATE INDEX IF NOT EXISTS idx_budget_apu_materials_item_id ON budget_apu_materials(budget_item_id);",
+                "CREATE INDEX IF NOT EXISTS idx_budget_apu_equipments_item_id ON budget_apu_equipments(budget_item_id);",
+                "CREATE INDEX IF NOT EXISTS idx_budget_apu_labors_item_id ON budget_apu_labors(budget_item_id);",
+                "CREATE INDEX IF NOT EXISTS idx_notifications_user_id_id ON notifications(user_id, id DESC);",
+                "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link VARCHAR(500);",
+                """
+                CREATE TABLE IF NOT EXISTS llm_providers (
+                    id SERIAL PRIMARY KEY,
+                    provider_key VARCHAR NOT NULL,
+                    display_name VARCHAR NOT NULL,
+                    api_key_enc TEXT NOT NULL,
+                    model_name VARCHAR NOT NULL,
+                    base_url VARCHAR,
+                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                    priority INTEGER NOT NULL DEFAULT 1,
+                    use_case VARCHAR NOT NULL DEFAULT 'all',
+                    extra_params JSONB,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    updated_at TIMESTAMP WITH TIME ZONE
+                );
+                """
+            ]
+            for stmt in budget_schema_statements:
+                try:
+                    conn.execute(text(stmt))
+                except Exception as ex:
+                    logger.warning(f"Aviso en auto-migración de esquema: {ex}")
+            conn.commit()
+
+            # Limpieza automatica en produccion de descripciones parasitarias (F.C.A.S., etc.)
+            try:
+                dirty_items = conn.execute(text("""
+                    SELECT "CodPar", "Descri", "desc_limpia"
+                    FROM cost360_items
+                    WHERE "Descri" ILIKE '%F.C.A.S%' 
+                       OR "Descri" ILIKE '%FCAS%' 
+                       OR "Descri" ILIKE '%Calculos por Rendimiento%'
+                       OR "Descri" ~ '^[.\\s,;:\\-]+'
+                       OR "desc_limpia" ILIKE '%F.C.A.S%'
+                       OR "desc_limpia" ILIKE '%FCAS%'
+                       OR "desc_limpia" ~ '^[.\\s,;:\\-]+'
+                """)).fetchall()
+                
+                if dirty_items:
+                    for row in dirty_items:
+                        cod = row[0]
+                        new_desc = clean_fcas_description(row[1] or "")
+                        new_limpia = clean_fcas_description(row[2] or "") if row[2] else new_desc
+                        conn.execute(
+                            text('UPDATE cost360_items SET "Descri" = :d, "desc_limpia" = :l WHERE "CodPar" = :c'),
+                            {"d": new_desc, "l": new_limpia, "c": cod}
+                        )
+                    conn.commit()
+                    logger.info(f"Limpieza automatica de {len(dirty_items)} partidas con F.C.A.S. completada con exito.")
+            except Exception as ex_fcas:
+                logger.error(f"Error en auto-limpieza de descripciones F.C.A.S.: {ex_fcas}", exc_info=True)
+
+            # Auto-migracion de codigos de Redes Aereas (RA1000 -> 1000RA)
+            try:
+                res_ra = conn.execute(text("""
+                    UPDATE cost360_items
+                    SET "CovPar" = SUBSTRING("CovPar" FROM 3) || 'RA'
+                    WHERE "CovPar" ~ '^RA[0-9]+'
+                """))
+                conn.commit()
+                if res_ra.rowcount > 0:
+                    logger.info(f"Auto-migracion de {res_ra.rowcount} partidas de Redes Aereas a formato [numero]RA completada.")
+            except Exception as ex_ra:
+                logger.error(f"Error en auto-migracion de codigos RA: {ex_ra}", exc_info=True)
+
+            # Auto-migracion segura de familias Yeso/Anime y cobertura 100% de insumos lideres
+            try:
+                dw_exists = conn.execute(text("SELECT count(*) FROM cost360_material_families WHERE id = 'FAM-DRYWALL'")).scalar()
+                orphan_count = conn.execute(text("SELECT count(*) FROM cost360_materials WHERE family_id IS NULL OR family_id = ''")).scalar()
+                if not dw_exists or (orphan_count and orphan_count > 0):
+                    logger.info(f"Detectada base de datos sin migración completa de mercado (huérfanos: {orphan_count}, Drywall: {dw_exists}). Ejecutando auto-migración...")
+                    run_migration()
+                    logger.info("Auto-migración de familias de mercado e insumos líderes completada.")
+            except Exception as ex_fam:
+                logger.error(f"Aviso en auto-migración de familias de mercado: {ex_fam}", exc_info=True)
+
+        logger.info("Schema and data migrations for cost360 verified successfully.")
+    else:
+        logger.info("Worker secundario detectó migración en curso por worker principal; omitiendo DDL duplicado.")
+    if _migration_lock_conn is not None:
         try:
-            dw_exists = conn.execute(text("SELECT count(*) FROM cost360_material_families WHERE id = 'FAM-DRYWALL'")).scalar()
-            orphan_count = conn.execute(text("SELECT count(*) FROM cost360_materials WHERE family_id IS NULL OR family_id = ''")).scalar()
-            if not dw_exists or (orphan_count and orphan_count > 0):
-                logger.info(f"Detectada base de datos sin migración completa de mercado (huérfanos: {orphan_count}, Drywall: {dw_exists}). Ejecutando auto-migración...")
-                run_migration()
-                logger.info("Auto-migración de familias de mercado e insumos líderes completada.")
-        except Exception as ex_fam:
-            logger.error(f"Aviso en auto-migración de familias de mercado: {ex_fam}", exc_info=True)
-
-    logger.info("Schema and data migrations for cost360 verified successfully.")
+            if _has_migration_lock:
+                _migration_lock_conn.execute(text("SELECT pg_advisory_unlock(849201)"))
+            _migration_lock_conn.close()
+        except Exception as _unlock_exc:
+            logger.warning(f"Aviso liberando advisory lock de migración: {_unlock_exc}")
 except Exception as e:
     logger.error(f"Error creating Arko360 database tables: {e}", exc_info=True)
 
@@ -284,6 +313,12 @@ async def run_expiration_cron() -> None:
 
 @app.on_event("startup")
 async def startup_event() -> None:
+    try:
+        limiter_tokens = anyio.to_thread.current_default_thread_limiter()
+        limiter_tokens.total_tokens = settings.ANYIO_THREADPOOL_TOKENS
+        logger.info(f"AnyIO threadpool configurado a {settings.ANYIO_THREADPOOL_TOKENS} tokens por worker.")
+    except Exception as ex_tp:
+        logger.warning(f"No se pudo ajustar AnyIO threadpool tokens: {ex_tp}")
     logger.info("Application starting up... Loading AI brain")
     ai_engine.load_brain()
     # Iniciar Cron Job ligero en segundo plano
@@ -321,9 +356,14 @@ app.mount("/uploads", SecureStaticFiles(directory=upload_dir), name="uploads")
 app.mount("/api/v1/uploads", SecureStaticFiles(directory=upload_dir), name="api_uploads")
 
 
+_HEALTH_CACHE: Dict[str, Any] = {"ts": 0.0, "data": None, "code": 200}
+_HEALTH_CACHE_TTL_SEC: float = 3.0
+
+
 def check_system_health() -> Tuple[Dict[str, Any], int]:
     """
-    Evalúa la salud de los componentes críticos del sistema:
+    Evalúa la salud de los componentes críticos del sistema (con caché en memoria de 3s
+    para absorber picos de concurrencia sin saturar DB/Redis):
     - Base de datos primaria (PostgreSQL)
     - Base de datos Arko (PostgreSQL)
     - Conectividad con Redis
@@ -331,6 +371,11 @@ def check_system_health() -> Tuple[Dict[str, Any], int]:
     - Estado de ejecución del Cron Job de suscripciones
     - Capacidad de almacenamiento en disco
     """
+    now_mono = time.monotonic()
+    cached_data = _HEALTH_CACHE.get("data")
+    if cached_data is not None and (now_mono - float(_HEALTH_CACHE.get("ts", 0.0))) < _HEALTH_CACHE_TTL_SEC:
+        return cached_data, int(_HEALTH_CACHE.get("code", 200))
+
     now = datetime.now(timezone.utc)
     uptime_sec = round(time.time() - APP_START_TIME, 1)
 
@@ -493,6 +538,9 @@ def check_system_health() -> Tuple[Dict[str, Any], int]:
             }
         }
     }
+    _HEALTH_CACHE["ts"] = time.monotonic()
+    _HEALTH_CACHE["data"] = health_data
+    _HEALTH_CACHE["code"] = http_code
     return health_data, http_code
 
 

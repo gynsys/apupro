@@ -102,11 +102,15 @@ export function useApuGenerator({ setSettings }) {
       setDebugInfo(currentDebug);
     } else if (response.debug_rag_trace || response.debug_base_apu) {
       currentDebug = {
-        message: 'Generación asistida por RAG Híbrido y Adaptación de Partida Base',
+        message: response.generation_engine === 'v3_delta'
+          ? 'Motor v3.0: Selección IA de Mejor Partida Base + Ajustes Puntuales (Delta)'
+          : 'Generación asistida por RAG Híbrido y Adaptación de Partida Base',
         solicitud_usuario: textToSubmit,
-        generation_engine: 'rag',
-        telemetria: response.debug_meta || null,
+        generation_engine: response.generation_engine || 'rag',
+        telemetria: response.telemetria_v3 || response.debug_meta || null,
         seleccion_base: response.debug_base_selection || null,
+        v3_delta_plan: response.v3_delta_plan || null,
+        v3_applied_deltas: response.v3_applied_deltas || null,
         calibrador_labor_equipos: response.debug_calibrator_trace || null,
         poda_discordancias: response.debug_pruning_trace || null,
         reconciliacion_costbase: response.debug_reconciliation_trace || null,

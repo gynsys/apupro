@@ -355,9 +355,11 @@ export default function BudgetPrintLayout({ budget, config }) {
               <APUPrintSheet
                 partida={{
                   ...item,
+                  partNumber: idx + 1,
                   fcas_percent: budget.fcas_percent,
                   admin_percent: budget.admin_percent,
                   util_percent: budget.profit_percent,
+                  iva_percent: budget.iva_percent,
                   rendimiento: item.performance ?? item.rendimiento ?? 1,
                   cantidad: item.quantity,
                   obra: obra,
@@ -380,7 +382,9 @@ export default function BudgetPrintLayout({ budget, config }) {
                   labor_inflation: budget.labor_inflation,
                   admin_percent: budget.admin_percent,
                   profit_percent: budget.profit_percent,
+                  iva_percent: budget.iva_percent,
                   fcas_percent: budget.fcas_percent,
+                  partNumber: idx + 1,
                   obra: obra,
                   contratante: contratante,
                   dateType: 'current'

@@ -447,20 +447,24 @@ def get_dynamic_candidates(
     description: str,
     covenin_prefix: str = "",
     limit: int = 15,
+    use_embeddings: bool = True,
 ) -> Tuple[List[Dict[str, Any]], float]:
     """
     Recupera las partidas más similares desde el Cerebro RAG Híbrido,
     considerando el material técnico y filtrando opcionalmente por prefijo.
     Aplica penalizaciones cruzadas a candidatos con incompatibilidad funcional polar.
+    Si use_embeddings=False, opera 100% con búsqueda léxica IDF + ponderación técnica sin invocar API de embeddings.
     """
     if not description or not isinstance(description, str):
         return [], 0.0
 
     try:
-        if not getattr(ai_engine, "is_loaded", False):
+        if use_embeddings and not getattr(ai_engine, "is_loaded", False):
             ai_engine.load_brain()
 
-        hybrid_results = ai_engine.hybrid_search(db, description, limit=limit * 3)
+        hybrid_results = ai_engine.hybrid_search(
+            db, description, limit=limit * 3, use_embeddings=use_embeddings
+        )
         if not hybrid_results:
             return [], 0.0
 

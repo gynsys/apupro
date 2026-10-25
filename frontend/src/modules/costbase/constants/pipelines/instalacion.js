@@ -342,11 +342,12 @@ export const PIPELINES = {
     {
       id: 'alcance',
       field: 'incluye',
-      text: 'Defina el Alcance de Acopio y Desalojo\n¿Qué traslado de material desmontado incluye?',
+      text: 'Defina Equipos de Corte/Izaje y Desalojo\n¿Cómo se realizará el desmontaje y traslado?',
       chips: () => [
-        'Incluye bajada cuidadosa, retiro y apilado en sitio',
+        'Con herramientas manuales / esmeril, sin oxicorte ni camión (apilado en sitio)',
+        'Con equipo de oxicorte (oxígeno-acetileno), sin grúa ni camión',
+        'Con señorita de cadena / polipasto para izaje (sin oxicorte)',
         'Incluye carga y bote fuera de la obra en camión',
-        'Solo desmontaje en sitio',
         'Omitir'
       ],
       format: (v) => v

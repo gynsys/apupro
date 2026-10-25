@@ -14,6 +14,9 @@ export default function NotificationBell() {
   const dropdownRef = useRef(null);
   const fetchIdRef = useRef(0);
   const intervalRef = useRef(null);
+  const streamAbortRef = useRef(null);
+  const knownNotificationIdsRef = useRef(new Set());
+  const notificationsInitializedRef = useRef(false);
 
   // Función para obtener notificaciones con manejo de concurrencia
   const fetchNotifications = useCallback(async () => {
@@ -37,6 +40,21 @@ export default function NotificationBell() {
         const sortedData = data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         setNotifications(sortedData);
         setUnreadCount(sortedData.filter(n => !n.is_read).length);
+
+        const newBudgetShares = sortedData.filter(
+          (n) => n.type === 'budget_shared' && !knownNotificationIdsRef.current.has(n.id)
+        );
+        sortedData.forEach((n) => knownNotificationIdsRef.current.add(n.id));
+
+        // En la primera carga la página ya está cargando la lista.
+        // En cargas posteriores (polling de respaldo o pestaña reactivada)
+        // avisamos para que la lista se actualice aunque el SSE no esté activo.
+        if (notificationsInitializedRef.current && newBudgetShares.length > 0) {
+          window.dispatchEvent(new CustomEvent('budget:shared', {
+            detail: { notification: newBudgetShares[0] },
+          }));
+        }
+        notificationsInitializedRef.current = true;
       } else if (!res.ok) {
         console.error('Error fetching notifications:', res.status);
       }
@@ -86,6 +104,94 @@ export default function NotificationBell() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [fetchNotifications]);
+
+  // Stream SSE: recibe notificaciones nuevas sin esperar al polling.
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+
+    let cancelled = false;
+    let reconnectTimer = null;
+    const controller = new AbortController();
+    streamAbortRef.current = controller;
+
+    const connect = async () => {
+      if (cancelled) return;
+      try {
+        const storedToken = token || localStorage.getItem('token') || localStorage.getItem('access_token');
+        const headers = { Accept: 'text/event-stream' };
+        if (storedToken) headers.Authorization = `Bearer ${storedToken}`;
+
+        const res = await fetch(`${API_URL}/notifications/stream`, {
+          headers,
+          credentials: 'include',
+          signal: controller.signal,
+        });
+        if (!res.ok || !res.body) throw new Error(`SSE ${res.status}`);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (!cancelled) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          let boundary = buffer.indexOf('\n\n');
+          while (boundary !== -1) {
+            const rawEvent = buffer.slice(0, boundary);
+            buffer = buffer.slice(boundary + 2);
+            boundary = buffer.indexOf('\n\n');
+
+            const dataLine = rawEvent
+              .split('\n')
+              .find((line) => line.startsWith('data:'));
+            if (!dataLine) continue;
+
+            try {
+              const payload = JSON.parse(dataLine.slice(5).trim());
+              const incoming = payload?.notification;
+              if (!incoming?.id) continue;
+
+              setNotifications((prev) => {
+                if (prev.some((item) => item.id === incoming.id)) return prev;
+                const next = [incoming, ...prev].sort(
+                  (a, b) => new Date(b.created_at) - new Date(a.created_at)
+                );
+                setUnreadCount(next.filter((item) => !item.is_read).length);
+                return next;
+              });
+              knownNotificationIdsRef.current.add(incoming.id);
+
+              if (incoming.type === 'budget_shared') {
+                window.dispatchEvent(new CustomEvent('budget:shared', {
+                  detail: { notification: incoming },
+                }));
+              }
+            } catch (err) {
+              console.warn('Evento SSE inválido:', err);
+            }
+          }
+        }
+      } catch (err) {
+        if (cancelled || err.name === 'AbortError') return;
+        console.warn('Stream de notificaciones desconectado; reintentando.', err);
+      }
+
+      if (!cancelled) {
+        reconnectTimer = setTimeout(connect, 5000);
+      }
+    };
+
+    connect();
+
+    return () => {
+      cancelled = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      controller.abort();
+      if (streamAbortRef.current === controller) streamAbortRef.current = null;
+    };
+  }, [isAuthenticated, token]);
 
   // Cerrar dropdown al hacer clic fuera
   useEffect(() => {

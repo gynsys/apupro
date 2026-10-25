@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { API_URL } from '../services/api';
+import { fetchCurrentUserShared } from './AuthContext.jsx';
 
 const COSTOS_DEFAULTS = {
   porcentajeUtilidad: 10,
@@ -75,15 +76,10 @@ export function UserCostosProvider({ children }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_URL}/arko/me`, {
-        headers: getAuthHeaders(),
-        credentials: 'include',
-      });
-      if (!response.ok) {
-        // Si no está autenticado, queda con defaults/caché — no es error crítico
+      const data = await fetchCurrentUserShared();
+      if (!data) {
         return;
       }
-      const data = await response.json();
       if (data.costos_config) {
         const cleanCostos = { ...data.costos_config };
         if (cleanCostos.fcasSalarioBase === 240 || cleanCostos.fcasSalarioBase === 80) {

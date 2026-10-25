@@ -58,7 +58,10 @@ _STOP_DESCRIPTIONS = (
 )
 
 _CHAPTER_RE = re.compile(
-    r"^(cap[ií]tulo|secci[oó]n|rubro|partida|etapa|fase)\b", re.IGNORECASE
+    r"^(cap[ií]tulo|secci[oó]n|rubro|etapa|fase)\b", re.IGNORECASE
+)
+_NUMBERED_CHAPTER_RE = re.compile(
+    r"^(?:\d{1,3}|[IVXLCDM]{1,6})[\.\)\-:]\s+\S", re.IGNORECASE
 )
 
 _UNIT_NORMALIZATION = {
@@ -152,12 +155,19 @@ def parse_quantity(value: Any) -> Optional[float]:
 
 
 def _is_chapter(description: str, quantity: Optional[float], unit: str) -> bool:
+    text = description.strip()
+    if not text:
+        return False
+
+    # Un título explícito o numerado manda sobre una unidad heredada de una
+    # celda combinada. Si tiene cantidad real, se considera partida.
+    explicit_title = bool(_CHAPTER_RE.match(text) or _NUMBERED_CHAPTER_RE.match(text))
+    if explicit_title and (quantity is None or quantity <= 0):
+        return True
+
     if quantity is not None and quantity > 0:
         return False
     if unit:
-        return False
-    text = description.strip()
-    if not text:
         return False
     if _CHAPTER_RE.match(text):
         return True

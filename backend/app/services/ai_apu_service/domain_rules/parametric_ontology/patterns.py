@@ -13,10 +13,10 @@ def strip_accents(text: str) -> str:
     return "".join(c for c in nfkd if not unicodedata.combining(c))
 
 
-# Patrones genéricos de demolición y desmontaje (donde no aplica exigir dosificación de mezcla o fabricación nueva)
+# Patrones genéricos de demolición, remoción y desmontaje (donde no aplica exigir dosificación de mezcla o fabricación nueva)
 DEMOLITION_OR_REMOVAL_PATTERNS: List[re.Pattern] = [
     re.compile(
-        r"\b(demolici[oó]n|demoler|picar|picado|tumbar|derribar|desmontaje|desmontar|desmonte|desmontes|desinstalaci[oó]n|desinstalar|retiro|retirar|desmantelamiento|desmantelar|desarme|desarmar|extracci[oó]n|extraer)\b",
+        r"\b(demolici[oó]n|demoler|remoci[oó]n|remover|levantamiento|picar|picado|tumbar|derribar|desmontaje|desmontar|desmonte|desmontes|desinstalaci[oó]n|desinstalar|retiro|retirar|desmantelamiento|desmantelar|desarme|desarmar|extracci[oó]n|extraer)\b",
         re.IGNORECASE,
     )
 ]

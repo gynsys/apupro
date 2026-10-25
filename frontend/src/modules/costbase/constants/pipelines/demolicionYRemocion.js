@@ -67,11 +67,11 @@ export const PIPELINES = {
     {
       id: 'alcance',
       field: 'incluye',
-      text: 'Defina el Alcance de Desalojo de Escombros\n¿Qué retiro de escombros incluye la partida?',
+      text: 'Defina el Alcance de Desalojo de Escombros\n¿Se incluye camión de bote o solo apilado interno?',
       chips: () => [
-        'Incluye acarreo interno y apilado',
-        'Incluye carga y bote en camión a botadero',
-        'Solo demolición',
+        'Sin camión (solo acarreo interno y apilado)',
+        'Con camión para carga y bote a botadero',
+        'Solo demolición (sin camión ni bote)',
         'Omitir'
       ],
       format: (v) => v
@@ -157,13 +157,25 @@ export const PIPELINES = {
     {
       id: 'alcance',
       field: 'incluye',
-      text: 'Defina el Alcance de Desalojo\n¿Qué desalojo incluye la partida?',
-      chips: () => [
-        'Incluye limpieza de área y apilado',
-        'Incluye carga y bote en camión a botadero',
-        'Solo remoción',
-        'Omitir'
-      ],
+      text: 'Defina Logística de Equipos (Winche / Camión) y Desalojo\n¿Se incluye winche eléctrico o camión de bote en el APU?',
+      chips: (answers = {}) => {
+        const elem = (answers.elemento || '').toLowerCase();
+        if (elem.includes('manto') || elem.includes('techo') || elem.includes('impermeabiliz')) {
+          return [
+            'Sin winche ni camión (bajada manual y apilado en obra)',
+            'Con winche eléctrico para bajada de escombros (sin camión)',
+            'Sin winche, incluye carga y bote en camión a botadero',
+            'Con winche eléctrico y bote en camión a botadero',
+            'Omitir'
+          ];
+        }
+        return [
+          'Sin winche ni camión (limpieza de área y apilado interno)',
+          'Incluye carga y bote en camión a botadero',
+          'Solo remoción (sin camión)',
+          'Omitir'
+        ];
+      },
       format: (v) => v
     },
     {

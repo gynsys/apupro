@@ -1,0 +1,336 @@
+CodMat,Descri,UniMat,CosMat
+MOD-PLO-001,Tubo PPR PN20 20 mm,m,31
+MOD-PLO-002,Tubo PPR PN20 25 mm,m,31
+MOD-PLO-003,Tubo PPR PN20 32 mm,m,31
+MOD-PLO-004,Tubo PPR PN20 40 mm,m,31
+MOD-PLO-005,Tubo PPR PN20 50 mm,m,31
+MOD-PLO-006,Tubo PPR PN20 63 mm,m,31
+MOD-PLO-007,Codo PPR 90° 20 mm,und,31
+MOD-PLO-008,Codo PPR 90° 25 mm,und,31
+MOD-PLO-009,Codo PPR 90° 32 mm,und,31
+MOD-PLO-010,Tee PPR 20 mm,und,31
+MOD-PLO-011,Tee PPR 25 mm,und,31
+MOD-PLO-012,Tee PPR 32 mm,und,31
+MOD-PLO-013,Unión simple PPR 20 mm,und,31
+MOD-PLO-014,Unión simple PPR 25 mm,und,31
+MOD-PLO-015,"Adaptador PPR rosca macho 20 mm x 1/2""",und,31
+MOD-PLO-016,"Adaptador PPR rosca hembra 20 mm x 1/2""",und,31
+MOD-PLO-017,Válvula de bola PPR 20 mm,und,31
+MOD-PLO-018,Válvula de bola PPR 25 mm,und,31
+MOD-PLO-019,Llave terminal PPR 20 mm,und,31
+MOD-PLO-020,Reducción PPR 32 x 25 mm,und,31
+MOD-PLO-021,Abrazadera PPR 25 mm,und,31
+MOD-PLO-022,Tubo PEX-a 16 mm,m,31
+MOD-PLO-023,Tubo PEX-a 20 mm,m,31
+MOD-PLO-024,Manifold PEX 2 vías,und,31
+MOD-PLO-025,Conexión push PEX 16 mm,und,31
+MOD-PLO-026,"Tubo CPVC 1/2""",m,31
+MOD-PLO-027,"Codo CPVC 90° 1/2""",und,31
+MOD-PLO-028,Cemento CPVC,frasco,31
+MOD-PLO-029,Limpiador CPVC,frasco,31
+MOD-PLO-030,Tubo PEAD 20 mm,m,31
+MOD-PLO-031,Válvula esférica PEAD 20 mm,und,31
+MOD-PLO-032,"Tubo PEAL 1/2""",m,31
+MOD-PLO-033,Geotextil no tejido 200 g/m²,m2,31
+MOD-PLO-034,Geodren drenaje lineal,m2,31
+MOD-PLO-035,"Sifón PVC doble 2""",und,31
+MOD-PLO-036,Desagüe lineal acero inoxidable,und,31
+MOD-PLO-037,"Tubo PVC sanitario 4""",m,31
+MOD-PLO-038,"Rejilla PVC 4""",und,31
+MOD-PLO-039,"Abrazadera isofónica 2""",und,31
+MOD-PLO-040,"Válvula reductora de presión 1/2""",und,31
+MOD-PLO-041,"Filtro de agua 10""",und,31
+MOD-PLO-042,"Contador de agua 1/2""",und,31
+MOD-PIN-001,Pintura elastomérica base agua 5 años,gln,51
+MOD-PIN-002,Pintura elastomérica fibrada 10 años,gln,51
+MOD-PIN-003,Pintura elastomérica blanca para techo,gln,51
+MOD-PIN-004,Pintura elastomérica gris para techo,gln,51
+MOD-PIN-005,Membrana líquida de poliuretano,gln,51
+MOD-PIN-006,Cemento cristalizante,kg,51
+MOD-PIN-007,Manta asfáltica autoadhesiva 3 mm,rollo,51
+MOD-PIN-008,Manta asfáltica APP 4 mm,rollo,51
+MOD-PIN-009,Imprimante asfáltico,gln,51
+MOD-PIN-010,Sellador de poliuretano,gln,51
+MOD-PIN-011,Espuma de poliuretano expansiva,und,51
+MOD-PIN-012,Cinta butílica de aluminio,rollo,51
+MOD-PIN-013,Membrana acrílica para losa,gln,51
+MOD-PIN-014,Pintura epóxica para piso,gln,51
+MOD-PIN-015,Pintura epóxica para pared,gln,51
+MOD-PIN-016,Poliuretano alifático,gln,51
+MOD-PIN-017,Anticorrosivo con zinc,gln,51
+MOD-PIN-018,Pintura intumescente,gln,51
+MOD-PIN-019,Pintura antihongos,gln,51
+MOD-PIN-020,Pintura fotocatalítica,gln,51
+MOD-PIN-021,Pintura termoreflectiva,gln,51
+MOD-PIN-022,Pintura para tráfico,gln,51
+MOD-PIN-023,Esmalte industrial,gln,51
+MOD-PIN-024,Primer epóxico,gln,51
+MOD-PIN-025,Masilla epóxica,kg,51
+MOD-PIN-026,Diluyente epóxico,gln,51
+MOD-PIS-001,Porcelanato 60 x 120 cm rectificado mate,m2,36.5
+MOD-PIS-002,Porcelanato 60 x 120 cm pulido,m2,36.5
+MOD-PIS-003,Porcelanato 120 x 120 cm rectificado,m2,36.5
+MOD-PIS-004,Porcelanato 120 x 240 cm,m2,36.5
+MOD-PIS-005,Porcelanato 90 x 180 cm,m2,36.5
+MOD-PIS-006,Porcelanato 60 x 60 cm antideslizante,m2,36.5
+MOD-PIS-007,Porcelanato 30 x 60 cm,m2,36.5
+MOD-PIS-008,Porcelanato delgado 6 mm,m2,36.5
+MOD-PIS-009,Porcelanato símil mármol,m2,36.5
+MOD-PIS-010,Porcelanato símil madera,m2,36.5
+MOD-PIS-011,Peldaño de porcelanato,und,36.5
+MOD-PIS-012,Zócalo de porcelanato,m,36.5
+MOD-PIS-013,Adhesivo para porcelanato gran formato,saco,36.5
+MOD-PIS-014,Adhesivo para porcelanato exterior,saco,36.5
+MOD-PIS-015,Boquilla epóxica,kg,36.5
+MOD-PIS-016,Nivelador de pisos,kit,36.5
+MOD-PIS-017,Piso SPC 4 mm,m2,36.5
+MOD-PIS-018,Piso SPC 5 mm,m2,36.5
+MOD-PIS-019,Underlayment acústico,m2,36.5
+MOD-PIS-020,Laminado AC4,m2,36.5
+MOD-PIS-021,Vinílico en rollo,m2,36.5
+MOD-PIS-022,Deck WPC,m2,36.5
+MOD-PIS-023,Césped artificial,m2,36.5
+MOD-PIS-024,Microcemento,m2,36.5
+MOD-PIS-025,Piedra flexible,m2,36.5
+MOD-PIS-026,Panel 3D,m2,36.5
+MOD-MUR-001,Wall panel PVC,m2,38
+MOD-MUR-002,Wall panel WPC,m2,38
+MOD-MUR-003,Wall panel mármol PVC,m2,38
+MOD-MUR-004,Listón WPC,m2,38
+MOD-MUR-005,Panel acústico,m2,38
+MOD-MUR-006,"Plancha drywall 1/2""",m2,38
+MOD-MUR-007,Plancha drywall RH,m2,38
+MOD-MUR-008,Plancha fibrocemento,m2,38
+MOD-MUR-009,"Perfil galvanizado 2""",m,38
+MOD-MUR-010,"Perfil galvanizado 3""",m,38
+MOD-MUR-011,Montante galvanizado,m,38
+MOD-MUR-012,Tornillo drywall,caja,38
+MOD-MUR-013,Cinta malla drywall,rollo,38
+MOD-MUR-014,Masilla drywall,saco,38
+MOD-MUR-015,Panel sándwich 30 mm,m2,38
+MOD-MUR-016,Teja termoacústica,m2,38
+MOD-MUR-017,Policarbonato alveolar,m2,38
+MOD-MUR-018,Teja translúcida,m2,38
+MOD-MUR-019,Canaleta de cubierta,m,38
+MOD-MUR-020,Cumbrera de cubierta,m,38
+MOD-MUR-021,Panel SIP,m2,38
+MOD-MUR-022,Steel framing,m2,38
+MOD-MUR-023,Losacero,m2,38
+MOD-MUR-024,Malla electrosoldada,m2,38
+MOD-MUR-025,Fibra de carbono,m2,38
+MOD-MUR-026,Anclaje químico,und,38
+MOD-MUR-027,Adhesivo epóxico estructural,kg,38
+MOD-MUR-028,Lana mineral,m2,38
+MOD-MUR-029,Poliestireno XPS,m2,38
+MOD-MUR-030,Poliestireno EPS,m2,38
+MOD-MUR-031,Barrera de vapor,m2,38
+MOD-MUR-032,Aislante reflectivo,m2,38
+MOD-ELE-001,Tira LED 12 V 60 LED/m,m,126.5
+MOD-ELE-002,Tira LED 24 V 120 LED/m,m,126.5
+MOD-ELE-003,Tira LED RGB,m,126.5
+MOD-ELE-004,Neón flex LED,m,126.5
+MOD-ELE-005,Perfil de aluminio para LED,m,126.5
+MOD-ELE-006,Difusor para perfil LED,m,126.5
+MOD-ELE-007,Driver LED 12 V 60 W,und,126.5
+MOD-ELE-008,Driver LED 24 V 100 W,und,126.5
+MOD-ELE-009,Dimmer LED,und,126.5
+MOD-ELE-010,Sensor de movimiento,und,126.5
+MOD-ELE-011,Panel LED 60 x 60 cm,und,126.5
+MOD-ELE-012,"Downlight LED 6""",und,126.5
+MOD-ELE-013,Spot LED,und,126.5
+MOD-ELE-014,Riel electrificado,m,126.5
+MOD-ELE-015,Proyector LED 100 W,und,126.5
+MOD-ELE-016,Luminaria solar,und,126.5
+MOD-ELE-017,Cable THHN 12 AWG,m,126.5
+MOD-ELE-018,Cable THHN 10 AWG,m,126.5
+MOD-ELE-019,Cable THHN 8 AWG,m,126.5
+MOD-ELE-020,Cable encauchetado 3 x 12,m,126.5
+MOD-ELE-021,Breaker 1P 20 A,und,126.5
+MOD-ELE-022,Breaker 2P 40 A,und,126.5
+MOD-ELE-023,Diferencial 2P 30 mA,und,126.5
+MOD-ELE-024,Protector contra sobretensiones SPD,und,126.5
+MOD-ELE-025,Tablero 12 circuitos,und,126.5
+MOD-ELE-026,"Tubería EMT 1/2""",m,126.5
+MOD-ELE-027,"Tubería IMC 3/4""",m,126.5
+MOD-ELE-028,Caja octogonal,und,126.5
+MOD-ELE-029,Tomacorriente GFCI,und,126.5
+MOD-ELE-030,Tomacorriente USB,und,126.5
+MOD-ELE-031,Interruptor smart,und,126.5
+MOD-ELE-032,Contactor 2P 40 A,und,126.5
+MOD-ELE-033,Temporizador digital,und,126.5
+MOD-ELE-034,UPS 1 kVA,und,126.5
+MOD-CLI-001,Minisplit inverter 12.000 BTU,und,232.5
+MOD-CLI-002,Minisplit inverter 18.000 BTU,und,232.5
+MOD-CLI-003,Minisplit inverter 24.000 BTU,und,232.5
+MOD-CLI-004,Unidad VRF exterior,und,232.5
+MOD-CLI-005,Fancoil VRF,und,232.5
+MOD-CLI-006,Ducto de fibra,m2,232.5
+MOD-CLI-007,Rejilla de ventilación,und,232.5
+MOD-CLI-008,Difusor de aire,und,232.5
+MOD-CLI-009,"Tubería de cobre 1/4""",m,232.5
+MOD-CLI-010,"Tubería de cobre 3/8""",m,232.5
+MOD-CLI-011,Aislamiento para tubería,m,232.5
+MOD-CLI-012,Bomba de condensado,und,232.5
+MOD-CLI-013,Extractor inline,und,232.5
+MOD-CLI-014,Filtro HEPA,und,232.5
+MOD-CLI-015,"Tubería PEAL 1/2""",m,232.5
+MOD-CLI-016,Regulador de gas,und,232.5
+MOD-CLI-017,Detector de gas,und,232.5
+MOD-CLI-018,Válvula de corte de gas,und,232.5
+MOD-ENS-001,Panel solar 600 W,und,350
+MOD-ENS-002,Inversor híbrido 5 kW,und,460
+MOD-ENS-003,Batería LiFePO4 5 kWh,und,460
+MOD-ENS-004,Controlador MPPT,und,460
+MOD-ENS-005,Estructura para panel solar,und,460
+MOD-ENS-006,Cable solar,m,460
+MOD-ENS-007,Calentador solar,und,460
+MOD-ENS-008,Hub de domótica,und,460
+MOD-ENS-009,Cerradura smart,und,460
+MOD-ENS-010,Cortina motorizada,und,460
+MOD-ENS-011,Videoportero,und,460
+MOD-ENS-012,Cámara IP,und,460
+MOD-ENS-013,NVR,und,460
+MOD-ENS-014,Sensor de alarma,und,460
+MOD-ENS-015,Detector de humo,und,460
+MOD-ENS-016,Detector de CO,und,460
+MOD-ENS-017,Cargador para vehículo eléctrico,und,460
+MOD-BCO-001,Mesón de cuarzo,m2,307.5
+MOD-BCO-002,Mesón de granito,m2,307.5
+MOD-BCO-003,Mesón solid surface,m2,307.5
+MOD-BCO-004,Lavamanos de sobreponer,und,307.5
+MOD-BCO-005,Grifería monomando,und,307.5
+MOD-BCO-006,Sanitario dual,und,307.5
+MOD-BCO-007,Mueble de baño,und,307.5
+MOD-BCO-008,Desagüe lineal,und,307.5
+MOD-BCO-009,Regadera termostática,und,307.5
+MOD-BCO-010,Espejo LED,und,307.5
+MOD-BCO-011,Mampara de vidrio templado,m2,307.5
+MOD-BCO-012,Campana extractora,und,307.5
+MOD-BCO-013,Calentador instantáneo,und,307.5
+MOD-BCO-014,Termo eléctrico,und,307.5
+MOD-BCO-016,Ventana de PVC,m2,307.5
+MOD-BCO-017,Mosquitero,m2,307.5
+MOD-BCO-018,Persiana,m2,307.5
+MOD-QUI-001,Silicona neutra,und,41.5
+MOD-QUI-002,Silicona sanitaria,und,41.5
+MOD-QUI-003,Adhesivo de poliuretano,und,41.5
+MOD-QUI-004,Adhesivo de contacto,gln,41.5
+MOD-QUI-005,Cinta doble faz,rollo,41.5
+MOD-QUI-006,Primer universal,gln,41.5
+MOD-QUI-007,Thinner,gln,41.5
+MOD-QUI-008,Removedor de pintura,gln,41.5
+MOD-QUI-009,Catalizador,und,41.5
+MOD-QUI-010,Resina epóxica,kg,41.5
+MOD-QUI-011,Lechada epóxica,kg,41.5
+MOD-QUI-012,Mortero autonivelante,saco,41.5
+MOD-QUI-013,Concreto impreso,m2,41.5
+MOD-QUI-014,Aditivo impermeabilizante,gln,41.5
+MOD-QUI-015,Fibra de polipropileno,kg,41.5
+MOD-QUI-016,Curador de concreto,gln,41.5
+MOD-BOM-001,Bomba centrífuga 1 HP,und,265
+MOD-BOM-002,"Bomba centrífuga 1,5 HP",und,365
+MOD-BOM-003,Bomba centrífuga 3 HP,und,650
+MOD-BOM-004,"Bomba centrífuga 7,5 HP",und,1250
+MOD-BOM-005,Bomba centrífuga 15 HP,und,2500
+MOD-BOM-006,"Bomba sumergible 4"" 1 HP",und,575
+MOD-BOM-007,"Bomba sumergible 4"" 1,5 HP",und,750
+MOD-BOM-008,"Bomba sumergible 4"" 2 HP",und,950
+MOD-BOM-009,"Bomba sumergible 4"" 3 HP",und,1400
+MOD-BOM-010,"Bomba sumergible 4"" 5 HP",und,2200
+MOD-BOM-011,"Bomba sumergible 4"" 7,5 HP",und,3000
+MOD-BOM-012,"Bomba sumergible 4"" 10 HP",und,4000
+MOD-BOM-013,Bomba jet 1/2 HP,und,250
+MOD-BOM-014,Bomba jet 3/4 HP,und,300
+MOD-BOM-015,Bomba jet 1 HP,und,380
+MOD-BOM-016,Bomba de presión constante 1 HP,und,700
+MOD-BOM-017,"Bomba de presión constante 1,5 HP",und,950
+MOD-BOM-018,Bomba de presión constante 2 HP,und,1200
+MOD-BOM-019,Bomba solar sumergible 1 HP,und,1250
+MOD-BOM-020,Bomba solar sumergible 2 HP,und,1900
+MOD-BOM-021,Hidroneumático 250 gal,und,6250
+MOD-BOM-022,Hidroneumático 300 gal,und,7500
+MOD-BOM-023,Hidroneumático 500 gal,und,11000
+MOD-BOM-024,Tanque hidroneumático 20 gal,und,350
+MOD-BOM-025,Tanque hidroneumático 50 gal,und,625
+MOD-BOM-026,Tanque hidroneumático 100 gal,und,1100
+MOD-BOM-027,Tanque hidroneumático 200 gal,und,2050
+MOD-BOM-028,Tanque de agua 1.000 L,und,225
+MOD-BOM-029,Tanque de agua 5.000 L,und,850
+MOD-BOM-030,Tanque de agua 10.000 L,und,1700
+MOD-BOM-031,Presostato 20-40 psi,und,42.5
+MOD-BOM-032,Presostato 30-50 psi,und,42.5
+MOD-BOM-033,Presostato 40-60 psi,und,50
+MOD-BOM-034,Presostato digital,und,130
+MOD-BOM-035,Manómetro glicerina 0-100 psi,und,42.5
+MOD-BOM-036,Manómetro glicerina 0-200 psi,und,50
+MOD-BOM-037,"Válvula check 1""",und,27.5
+MOD-BOM-038,"Válvula check 2""",und,55
+MOD-BOM-039,"Válvula check 3""",und,105
+MOD-BOM-040,"Válvula check 4""",und,175
+MOD-BOM-041,"Válvula de pie 1""",und,35
+MOD-BOM-042,"Válvula de pie 2""",und,65
+MOD-BOM-043,Control de nivel electrónico,und,140
+MOD-BOM-044,Sensor de presión 4-20 mA,und,105
+MOD-BOM-045,Flotador eléctrico,und,47.5
+MOD-BOM-046,Tablero de control bomba 1F,und,250
+MOD-BOM-047,Tablero de control bomba 3F,und,500
+MOD-BOM-048,Arrancador directo 3F,und,425
+MOD-BOM-049,Guardamotor 5-40 A,und,165
+MOD-BOM-050,Contactor 3P 40 A,und,105
+MOD-BOM-051,Relé térmico 40 A,und,80
+MOD-BOM-052,Protector de fase,und,120
+MOD-BOM-053,Variador de frecuencia 2 HP,und,525
+MOD-BOM-054,Variador de frecuencia 5 HP,und,900
+MOD-BOM-055,Variador de frecuencia 10 HP,und,1500
+MOD-BOM-056,Soft starter 10 HP,und,650
+MOD-BOM-057,Cable sumergible 3 x 14 AWG,m,3.5
+MOD-BOM-058,Cable sumergible 3 x 12 AWG,m,4.5
+MOD-BOM-059,Cable sumergible 3 x 10 AWG,m,6
+MOD-BOM-060,Cable sumergible 3 x 8 AWG,m,9
+MOD-BOM-061,Kit de empalme para cable sumergible,und,55
+MOD-BOM-062,Prensaestopas para cable sumergible,und,12.5
+MOD-POZ-001,"Tubería PVC 4"" para pozo",m,11.5
+MOD-POZ-002,"Tubería PVC 6"" para pozo",m,20
+MOD-POZ-003,"Tubería PVC 8"" para pozo",m,32.5
+MOD-POZ-004,"Filtro/cedazo 4"" para pozo",m,35
+MOD-POZ-005,"Filtro/cedazo 6"" para pozo",m,57.5
+MOD-POZ-006,"Filtro/cedazo 8"" para pozo",m,90
+MOD-POZ-007,Grava para pozo,m3,90
+MOD-POZ-008,Bentonita para sello sanitario,kg,2
+MOD-POZ-009,"Cabezal de pozo 4""",und,140
+MOD-POZ-010,"Cabezal de pozo 6""",und,210
+MOD-POZ-011,Tapa sanitaria de pozo,und,100
+MOD-POZ-012,"Pitless adapter 4""",und,175
+MOD-POZ-013,"Torque arrestor 4""",und,140
+MOD-POZ-014,"Centralizador 4""",und,55
+MOD-POZ-015,Cable guía de acero inoxidable,m,3.5
+MOD-POZ-016,Sonda de nivel para pozo,und,175
+MOD-POZ-017,Medidor de nivel de agua,und,275
+MOD-POZ-018,"Válvula de retención 4""",und,175
+MOD-POZ-019,Desarenador para pozo,und,140
+MOD-CEB-001,ATS 100 A,und,1300
+MOD-CEB-002,ATS 200 A,und,2250
+MOD-CEB-003,Medidor de energía kWh trifásico,und,175
+MOD-CEB-004,Transformador de corriente 200/5,und,85
+MOD-CEB-005,Amperímetro 96 x 96,und,40
+MOD-CEB-006,Voltímetro 96 x 96,und,40
+MOD-CEB-007,Selector 3 posiciones,und,35
+MOD-CEB-008,Piloto LED 24 V,und,10
+MOD-CEB-009,Pulsador 22 mm,und,10
+MOD-CEB-010,Paro de emergencia 22 mm,und,25
+MOD-CEB-011,SPD tipo 2 monofásico,und,130
+MOD-CEB-012,SPD tipo 2 trifásico,und,325
+MOD-CEB-013,Riel DIN,m,5.5
+MOD-CEB-014,Canaleta ranurada,m,5.5
+MOD-CEB-015,Bornera DIN,und,4
+MOD-CEB-016,Terminal tubular,und,2
+MOD-CEB-017,Cable de control 2 x 18 AWG apantallado,m,2
+MOD-CEB-018,"Varilla copperweld 5/8"" x 8'",und,25
+MOD-CEB-019,"Electrodo copperweld 5/8""",und,25
+MOD-CEB-020,Soldadura exotérmica,und,20
+MOD-CEB-021,Caja de inspección de tierra,und,35
+MOD-CEB-022,Motor eléctrico 2 HP,und,375
+MOD-CEB-023,Motor eléctrico 5 HP,und,700
+MOD-CEB-024,Motor eléctrico 10 HP,und,1250
+MOD-CEB-025,Kit de protección de motor,und,175
+MOD-CEB-026,Sensor de nivel por electrodos,und,100

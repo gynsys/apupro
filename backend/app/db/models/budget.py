@@ -53,7 +53,7 @@ class BudgetItem(Base):
     __tablename__ = "budget_items"
     
     id = Column(String, primary_key=True, default=generate_uuid)
-    budget_id = Column(String, ForeignKey("budgets.id", ondelete="CASCADE"), nullable=False)
+    budget_id = Column(String, ForeignKey("budgets.id", ondelete="CASCADE"), nullable=False, index=True)
     
     # Referencia a la base maestra Cost360
     cod_par = Column(String, nullable=False) # Codigo original (e.g. E0101)
@@ -81,7 +81,7 @@ class BudgetAPUMaterial(Base):
     __tablename__ = "budget_apu_materials"
     
     id = Column(String, primary_key=True, default=generate_uuid)
-    budget_item_id = Column(String, ForeignKey("budget_items.id", ondelete="CASCADE"), nullable=False)
+    budget_item_id = Column(String, ForeignKey("budget_items.id", ondelete="CASCADE"), nullable=False, index=True)
     
     codigo = Column(String, nullable=False)
     descripcion = Column(Text, nullable=False)
@@ -97,7 +97,7 @@ class BudgetAPUEquipment(Base):
     __tablename__ = "budget_apu_equipments"
     
     id = Column(String, primary_key=True, default=generate_uuid)
-    budget_item_id = Column(String, ForeignKey("budget_items.id", ondelete="CASCADE"), nullable=False)
+    budget_item_id = Column(String, ForeignKey("budget_items.id", ondelete="CASCADE"), nullable=False, index=True)
     
     codigo = Column(String, nullable=False)
     descripcion = Column(Text, nullable=False)
@@ -113,7 +113,7 @@ class BudgetAPULabor(Base):
     __tablename__ = "budget_apu_labors"
     
     id = Column(String, primary_key=True, default=generate_uuid)
-    budget_item_id = Column(String, ForeignKey("budget_items.id", ondelete="CASCADE"), nullable=False)
+    budget_item_id = Column(String, ForeignKey("budget_items.id", ondelete="CASCADE"), nullable=False, index=True)
     
     codigo = Column(String, nullable=False)
     descripcion = Column(Text, nullable=False)

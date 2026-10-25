@@ -163,9 +163,9 @@ export const PIPELINES = {
         const sup = (answers.superficie || '').toLowerCase();
         if (sup.includes('fachadas exteriores')) {
           return [
+            'Sin andamio tubular (a nivel de planta baja hasta 3 m)',
             'Con andamios tubulares en altura (más de 3 m)',
-            'A nivel de planta baja hasta 3 m',
-            'A rapel con silleta de guíndola',
+            'Con andamio colgante / guíndola a rapel',
             'Omitir'
           ];
         }
@@ -176,8 +176,8 @@ export const PIPELINES = {
           ];
         }
         return [
-          'A nivel de planta baja hasta 3 m',
-          'En doble altura con andamios',
+          'Sin andamio tubular (planta baja hasta 3 m con escalera/caballetes)',
+          'En doble altura con andamios tubulares',
           'Omitir'
         ];
       },
@@ -277,6 +277,18 @@ export const PIPELINES = {
           'Omitir'
         ];
       },
+      format: (v) => v
+    },
+    {
+      id: 'logistica',
+      field: 'ubicacion',
+      text: 'Defina Logística de Izaje (Winche) y Transporte\n¿Se incluye alquiler de winche eléctrico y camión en el APU?',
+      chips: () => [
+        'Sin winche ni camión (subida manual de rollos/insumos)',
+        'Con winche eléctrico para izaje de materiales (sin camión)',
+        'Con winche eléctrico y camión de transporte',
+        'Omitir'
+      ],
       format: (v) => v
     },
     {

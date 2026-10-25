@@ -223,9 +223,10 @@ export const budgetService = {
   },
 
   // Importar presupuesto desde archivo (Excel, CSV, PDF o imagen)
-  previewImport: async (file) => {
+  previewImport: async (file, mode = 'budget') => {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('mode', mode);
 
     const response = await fetch(`${API_URL}/budgets/import/preview`, {
       method: 'POST',

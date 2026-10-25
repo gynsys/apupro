@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Folder, FolderOpen, Plus, FileText, Trash2, Edit3, Copy, Search,
@@ -16,9 +16,41 @@ import ShareBudgetModal from '../../components/modals/ShareBudgetModal';
 import ImportSharedBudgetModal from '../../components/modals/ImportSharedBudgetModal';
 import { calculateItemPU, calculateBudgetTotals } from '../../utils/apuCalculations';
 
+const CURRENCY_FORMATTER = new Intl.NumberFormat('es-VE', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const BUDGETS_CACHE_KEY = 'budgets_summary_cache_v1';
+
+function getCachedBudgets() {
+  try {
+    const raw = sessionStorage.getItem(BUDGETS_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildTotalsMap(list) {
+  const map = {};
+  if (!Array.isArray(list)) return map;
+  for (const b of list) {
+    if (b && b.id && b.items_count !== undefined && b.total_amount !== undefined) {
+      map[b.id] = {
+        items: Number(b.items_count) || 0,
+        amount: Number(b.total_amount) || 0,
+      };
+    }
+  }
+  return map;
+}
+
 export default function BudgetHomePage() {
-  const [budgets, setBudgets] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const initialCached = useMemo(() => getCachedBudgets(), []);
+  const [budgets, setBudgets] = useState(() => initialCached || []);
+  const [loading, setLoading] = useState(() => !initialCached);
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingId, setDeletingId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,6 +58,7 @@ export default function BudgetHomePage() {
   const [sharingBudget, setSharingBudget] = useState(null);
   const [isImportSharedOpen, setIsImportSharedOpen] = useState(false);
   const fileInputRef = useRef(null);
+  const lastFetchRef = useRef(0);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [limitReachedReason, setLimitReachedReason] = useState('');
   const [newBudgetName, setNewBudgetName] = useState('');
@@ -45,11 +78,72 @@ export default function BudgetHomePage() {
   
   const navigate = useNavigate();
 
-  const [budgetTotals, setBudgetTotals] = useState({});
+  const [budgetTotals, setBudgetTotals] = useState(() => buildTotalsMap(initialCached));
+
+  const loadBudgets = useCallback(async (silent = false) => {
+    try {
+      if (!silent && budgets.length === 0) {
+        setLoading(true);
+      }
+      lastFetchRef.current = Date.now();
+      const data = await budgetService.getAll();
+      setBudgets(data);
+      try {
+        sessionStorage.setItem(BUDGETS_CACHE_KEY, JSON.stringify(data));
+      } catch {
+        // Ignorar errores de cuota en sessionStorage
+      }
+
+      const immediateTotals = buildTotalsMap(data);
+      setBudgetTotals(prev => ({ ...prev, ...immediateTotals }));
+
+      // Fallback solo si algún registro viniera sin items_count precalculado
+      const missingDetails = (data || []).filter(
+        b => b.items_count === undefined || b.total_amount === undefined
+      );
+      if (missingDetails.length > 0) {
+        missingDetails.forEach(async (b) => {
+          try {
+            const fullBudget = await budgetService.getById(b.id);
+            const totalItems = fullBudget.items?.filter(i => !i.is_chapter).length || 0;
+            const { totalGeneral } = calculateBudgetTotals(fullBudget);
+            setBudgetTotals(prev => ({
+              ...prev,
+              [b.id]: { items: totalItems, amount: totalGeneral }
+            }));
+          } catch (e) {
+            console.error("Error loading details for budget", b.id, e);
+          }
+        });
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }, [budgets.length]);
 
   useEffect(() => {
-    loadBudgets();
+    loadBudgets(Boolean(initialCached));
   }, []);
+
+  // Un presupuesto compartido por otro usuario aparece sin refrescar la página, sin parpadeo de spinner.
+  useEffect(() => {
+    const handleSharedBudget = () => loadBudgets(true);
+    const handleVisible = () => {
+      if (!document.hidden && Date.now() - lastFetchRef.current > 15000) {
+        loadBudgets(true);
+      }
+    };
+    window.addEventListener('budget:shared', handleSharedBudget);
+    window.addEventListener('focus', handleVisible);
+    document.addEventListener('visibilitychange', handleVisible);
+    return () => {
+      window.removeEventListener('budget:shared', handleSharedBudget);
+      window.removeEventListener('focus', handleVisible);
+      document.removeEventListener('visibilitychange', handleVisible);
+    };
+  }, [loadBudgets]);
 
   // Handle Budget printing cleanup
   useEffect(() => {
@@ -67,37 +161,14 @@ export default function BudgetHomePage() {
 
   const calculatePU = (item, budget) => calculateItemPU(item, budget);
 
-  const loadBudgets = async () => {
-    try {
-      setLoading(true);
-      const data = await budgetService.getAll();
-      setBudgets(data);
-      
-      data.forEach(async (b) => {
-        try {
-          const fullBudget = await budgetService.getById(b.id);
-          const totalItems = fullBudget.items?.filter(i => !i.is_chapter).length || 0;
-          const { totalGeneral } = calculateBudgetTotals(fullBudget);
-          
-          setBudgetTotals(prev => ({
-            ...prev,
-            [b.id]: { items: totalItems, amount: totalGeneral }
-          }));
-        } catch (e) {
-          console.error("Error loading details for budget", b.id, e);
-        }
-      });
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredBudgets = budgets.filter(b => {
-    const query = searchTerm.toLowerCase();
-    return (b.name || '').toLowerCase().includes(query) || (b.project_name || '').toLowerCase().includes(query);
-  });
+  const filteredBudgets = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return budgets;
+    return budgets.filter(b =>
+      (b.name || '').toLowerCase().includes(query) ||
+      (b.project_name || '').toLowerCase().includes(query)
+    );
+  }, [budgets, searchTerm]);
 
   const confirmDelete = (id) => {
     toast((t) => (
@@ -394,7 +465,7 @@ export default function BudgetHomePage() {
                     {/* Badge de Monto Móvil */}
                     {budgetTotals[budget.id] ? (
                       <span className="md:hidden shrink-0 text-xs font-bold text-amber-950 bg-amber-200/70 border border-amber-300 px-2.5 py-1 rounded-lg whitespace-nowrap shadow-xs">
-                        {budget.currency === 'USD' ? '$' : 'Bs.'} {new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(budgetTotals[budget.id].amount)}
+                        {budget.currency === 'USD' ? '$' : 'Bs.'} {CURRENCY_FORMATTER.format(budgetTotals[budget.id].amount)}
                       </span>
                     ) : (
                       <span className="md:hidden shrink-0 text-[11px] text-amber-700/60 whitespace-nowrap">...</span>
@@ -416,7 +487,7 @@ export default function BudgetHomePage() {
                     <div className="hidden md:flex items-center ml-auto">
                       {budgetTotals[budget.id] ? (
                         <span className="text-sm font-bold text-amber-900">
-                          {budget.currency === 'USD' ? '$' : 'Bs.'} {new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(budgetTotals[budget.id].amount)}
+                          {budget.currency === 'USD' ? '$' : 'Bs.'} {CURRENCY_FORMATTER.format(budgetTotals[budget.id].amount)}
                         </span>
                       ) : (
                         <span className="text-xs text-amber-700/50">Calculando...</span>

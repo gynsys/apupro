@@ -100,8 +100,10 @@ export default function BudgetWorksheetView() {
         {ws.apuPrintOptions && ws.apuPrintOptions.scope !== 'all' && ws.apuToPrint && (
           <PrintAPULayout
             partida={{ 
-              ...ws.apuToPrint,
               ...ws.budget,
+              ...ws.apuToPrint,
+              description: ws.apuToPrint.description ?? ws.apuToPrint.descripcion ?? ws.apuToPrint.DesPar ?? ws.apuToPrint.Descri ?? '',
+              descripcion: ws.apuToPrint.descripcion ?? ws.apuToPrint.description ?? ws.apuToPrint.DesPar ?? ws.apuToPrint.Descri ?? '',
               fcas_percent: ws.budget.fcas_percent,
               bono_in_fcas: ws.budget.bono_in_fcas,
               labor_bonus: ws.budget.labor_bonus,
@@ -112,7 +114,9 @@ export default function BudgetWorksheetView() {
               util_percent: ws.budget.profit_percent, 
               profit_percent: ws.budget.profit_percent,
               rendimiento: ws.apuToPrint.performance ?? ws.apuToPrint.rendimiento ?? 1, 
-              cantidad: ws.apuToPrint.quantity 
+              cantidad: ws.apuToPrint.quantity,
+              obra: ws.budget.project_name || ws.budget.name || '',
+              contratante: ws.budget.client_name || '',
             }}
             materiales={ws.apuToPrint.materials || []}
             equipos={ws.apuToPrint.equipments || []}
@@ -122,6 +126,8 @@ export default function BudgetWorksheetView() {
               ...ws.budget,
               currency: ws.budget.currency,
               exchange_rate: ws.budget.exchange_rate,
+              obra: ws.budget.project_name || ws.budget.name || '',
+              contratante: ws.budget.client_name || '',
               companyName: ws.budget.company_name || ws.budget.project_name || ws.budget.name
             }}
           />
@@ -153,8 +159,11 @@ export default function BudgetWorksheetView() {
               >
                 <APUPrintSheet
                   partida={{
-                    ...item,
                     ...ws.budget,
+                    ...item,
+                    description: item.description ?? item.descripcion ?? item.DesPar ?? item.Descri ?? '',
+                    descripcion: item.descripcion ?? item.description ?? item.DesPar ?? item.Descri ?? '',
+                    partNumber: idx + 1,
                     fcas_percent: ws.budget.fcas_percent,
                     bono_in_fcas: ws.budget.bono_in_fcas,
                     labor_bonus: ws.budget.labor_bonus,
@@ -164,6 +173,7 @@ export default function BudgetWorksheetView() {
                     admin_percent: ws.budget.admin_percent,
                     util_percent: ws.budget.profit_percent,
                     profit_percent: ws.budget.profit_percent,
+                    iva_percent: ws.budget.iva_percent,
                     rendimiento: item.performance ?? item.rendimiento ?? 1,
                     cantidad: item.quantity,
                     obra: ws.budget.project_name || ws.budget.name || '',
@@ -175,11 +185,13 @@ export default function BudgetWorksheetView() {
                   options={{
                     ...ws.apuPrintOptions,
                     ...ws.budget,
+                    partNumber: idx + 1,
                     currency: ws.budget.currency,
                     exchange_rate: ws.budget.exchange_rate,
                     companyName: ws.budget.company_name || ws.budget.project_name || ws.budget.name,
                     admin_percent: ws.budget.admin_percent,
                     profit_percent: ws.budget.profit_percent,
+                    iva_percent: ws.budget.iva_percent,
                     fcas_percent: ws.budget.fcas_percent,
                     bono_in_fcas: ws.budget.bono_in_fcas,
                     labor_bonus: ws.budget.labor_bonus,

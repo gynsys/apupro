@@ -170,7 +170,7 @@ def _dedupe(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return result
 
 
-def structure_text(text: str, filename: str) -> Dict[str, Any]:
+def _structure_text_llm(text: str, filename: str) -> Dict[str, Any]:
     """Convierte texto libre (PDF/OCR/Excel volcado) en partidas normalizadas."""
     if not text or len(text.strip()) < 20:
         raise StructuringError("El documento no contiene texto suficiente para identificar partidas.")
@@ -255,3 +255,64 @@ def structure_text(text: str, filename: str) -> Dict[str, Any]:
         warnings.append("Algunos fragmentos no pudieron procesarse con IA; revisa las partidas detectadas.")
 
     return {"header": header, "items": items, "warnings": warnings}
+
+
+def structure_text(text: str, filename: str) -> Dict[str, Any]:
+    """Ruta híbrida: primero códigos, LLM solo para el texto residual.
+
+    Si el documento contiene partidas codificadas, se extraen de forma
+    determinista y se evita enviar todo el presupuesto al LLM. El texto que
+    no pudo resolverse por código se procesa con el flujo asistido.
+    """
+    from .deterministic import parse_coded_document
+
+    parsed = parse_coded_document(text, filename)
+    if parsed and parsed.get("items"):
+        items = list(parsed["items"])
+        warnings = [
+            "Se detectaron partidas codificadas; se recuperaron sin enviar todo el documento al LLM."
+        ]
+        header = dict(parsed.get("header") or {})
+
+        residual = (parsed.get("residual_text") or "").strip()
+        if residual and len(residual) >= 20:
+            try:
+                assisted = _structure_text_llm(residual, filename)
+                assisted_items = assisted.get("items") or []
+                existing_codes = {
+                    (item.get("code") or "").strip().upper()
+                    for item in items
+                    if (item.get("code") or "").strip()
+                }
+                merged = list(items)
+                for item in assisted_items:
+                    code = (item.get("code") or "").strip().upper()
+                    desc = (item.get("description") or "").strip().lower()
+                    if code and code in existing_codes:
+                        continue
+                    if not code and any(
+                        (candidate.get("description") or "").strip().lower() == desc
+                        for candidate in merged
+                    ):
+                        continue
+                    merged.append(item)
+                    if code:
+                        existing_codes.add(code)
+                items = merged
+                warnings.extend(assisted.get("warnings") or [])
+                warnings.append(
+                    "Las partidas sin código se procesaron con IA como respaldo."
+                )
+            except Exception as exc:
+                logger.warning("No se pudo procesar el texto residual con IA: %s", exc)
+                warnings.append(
+                    "El texto residual no pudo procesarse con IA; revisa las partidas."
+                )
+
+        if len(items) > MAX_ITEMS:
+            warnings.append(f"Se detectaron {len(items)} filas; se importarán las primeras {MAX_ITEMS}.")
+            items = items[:MAX_ITEMS]
+
+        return {"header": header, "items": items, "warnings": warnings}
+
+    return _structure_text_llm(text, filename)

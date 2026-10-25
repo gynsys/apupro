@@ -615,8 +615,11 @@ export default function BudgetAPUEditorPage() {
       {printOptions && (
         <PrintAPULayout
           partida={{
-            ...item,
             ...budget,
+            ...item,
+            description: item.description ?? item.descripcion ?? item.DesPar ?? item.Descri ?? '',
+            descripcion: item.descripcion ?? item.description ?? item.DesPar ?? item.Descri ?? '',
+            partNumber: currentApuIndex >= 0 ? currentApuIndex + 1 : 1,
             fcas_percent: budget.fcas_percent,
             bono_in_fcas: budget.bono_in_fcas,
             labor_bonus: budget.labor_bonus,
@@ -627,7 +630,9 @@ export default function BudgetAPUEditorPage() {
             util_percent: budget.profit_percent ?? budget.util_percent ?? 10,
             profit_percent: budget.profit_percent ?? budget.util_percent ?? 10,
             rendimiento: item.performance ?? item.rendimiento ?? 1,
-            cantidad: item.quantity
+            cantidad: item.quantity,
+            obra: budget.project_name || budget.name || '',
+            contratante: budget.client_name || '',
           }}
           materiales={item.materials || []}
           equipos={item.equipments || []}
@@ -635,8 +640,11 @@ export default function BudgetAPUEditorPage() {
           options={{
             ...printOptions,
             ...budget,
+            partNumber: currentApuIndex >= 0 ? currentApuIndex + 1 : 1,
             currency: budget.currency,
             exchange_rate: budget.exchange_rate,
+            obra: budget.project_name || budget.name || '',
+            contratante: budget.client_name || '',
             companyName: budget.company_name || budget.name
           }}
         />

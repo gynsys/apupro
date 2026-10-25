@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calculator, Sparkles, Zap, Layers } from 'lucide-react';
+import { Calculator, Sparkles, Zap, Layers, GitCompare } from 'lucide-react';
 
 /**
  * Selector de Arquitectura para Superadmin.
@@ -7,6 +7,7 @@ import { Calculator, Sparkles, Zap, Layers } from 'lucide-react';
  * - Modo Matemático (Síntesis Inversa Component-First)
  * - Modo Adaptativo (Adaptación RAG Clásica v1)
  * - Motor v2.0 (WorkSpec + Compositor Determinista)
+ * - Motor v3.0 (Selección IA de Mejor Partida Base + Ajustes Delta)
  * Y opcionalmente activar el Copiloto de decisión rápida TypeSafe Jev System One.
  */
 export default function ArchitectureModeSelector({
@@ -69,6 +70,22 @@ export default function ArchitectureModeSelector({
       >
         <Layers size={compact ? 13 : 14} className={generationMode === 'v2' ? 'text-emerald-600' : 'text-slate-500'} />
         <span>Motor v2.0 (WorkSpec)</span>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => onChange && onChange('v3')}
+        className={`flex items-center gap-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+          compact ? 'px-2.5 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'
+        } ${
+          generationMode === 'v3'
+            ? 'bg-white text-purple-700 shadow-xs ring-1 ring-purple-500/20'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+        }`}
+        title="Motor v3.0 (Base + Ajustes): La IA inspecciona las mejores partidas reales con sus insumos, elige la que más se parece y aplica únicamente ajustes puntuales (Delta)."
+      >
+        <GitCompare size={compact ? 13 : 14} className={generationMode === 'v3' ? 'text-purple-600' : 'text-slate-500'} />
+        <span>Motor v3.0 (Base + Ajustes)</span>
       </button>
 
       {onToggleTypesafeJev && (

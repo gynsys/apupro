@@ -391,8 +391,8 @@ class AISearchEngine:
 
         if npy_path:
             try:
-                self.embeddings = np.load(npy_path)
-                logger.info("Matriz de embeddings cargada desde %s con forma %s (Proveedor activo: %s)", npy_path, self.embeddings.shape, self.provider)
+                self.embeddings = np.load(npy_path, mmap_mode="r")
+                logger.info("Matriz de embeddings cargada (mmap) desde %s con forma %s (Proveedor activo: %s)", npy_path, self.embeddings.shape, self.provider)
             except Exception as exc:
                 logger.error("Error al cargar matriz de embeddings desde %s: %s", npy_path, exc, exc_info=True)
         else:
@@ -675,11 +675,18 @@ class AISearchEngine:
             logger.error("Error en lexical_search con tsquery '%s': %s", tsquery_str, exc, exc_info=True)
             return []
 
-    def hybrid_search(self, db: Session, query: str, valid_ids: Optional[List[str]] = None, limit: int = 40) -> List[Dict[str, Any]]:
+    def hybrid_search(
+        self,
+        db: Session,
+        query: str,
+        valid_ids: Optional[List[str]] = None,
+        limit: int = 40,
+        use_embeddings: bool = True,
+    ) -> List[Dict[str, Any]]:
         """
         Búsqueda Híbrida que combina el score Semántico (SentenceTransformers o Gemini)
         con el score Léxico ponderado por IDF sobre el catálogo completo.
-        Si valid_ids se proporciona, solo busca en esos IDs.
+        Si use_embeddings=False, opera 100% con el motor Léxico IDF + ponderación técnica sin llamar API de embeddings.
         """
         if not query or not isinstance(query, str):
             raise ValueError("La consulta debe ser una cadena no vacia.")
@@ -699,9 +706,9 @@ class AISearchEngine:
         if max_lex_score == 0:
             max_lex_score = 1.0
 
-        # 3. Puntaje Semántico (RAG)
+        # 3. Puntaje Semántico (RAG) - se omite en modo léxico puro (ej. Motor V3 sin embeddings)
         semantic_scores: Dict[str, float] = {}
-        if self.is_loaded and self.embeddings is not None:
+        if use_embeddings and self.is_loaded and self.embeddings is not None:
             try:
                 query_embedding = self.encode_query(main_query)
                 norm_query = np.linalg.norm(query_embedding)

@@ -50,6 +50,7 @@ function isLaborOnlyActivity(desc = '') {
 
 export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated, onShowPlans }) {
   const [currentFile, setCurrentFile] = useState(null);
+  const [importMode, setImportMode] = useState('budget');
   const [preview, setPreview] = useState(null);
   const [items, setItems] = useState([]);
   const [header, setHeader] = useState({ budget_name: '', project_name: '', client_name: '', currency: 'USD' });
@@ -67,6 +68,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
       autoGenCancelledRef.current = true;
       setAutoGenerating(false);
       setCurrentFile(null);
+      setImportMode('budget');
       setPreview(null);
       setItems([]);
       setError(null);
@@ -167,7 +169,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
 
     (async () => {
       try {
-        const data = await budgetService.previewImport(currentFile);
+        const data = await budgetService.previewImport(currentFile, importMode);
         if (cancelled) return;
         setPreview(data);
         setHeader({
@@ -202,7 +204,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
       cancelled = true;
       autoGenCancelledRef.current = true;
     };
-  }, [isOpen, currentFile]);
+  }, [isOpen, currentFile, importMode]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -358,6 +360,34 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
 
         {/* Cuerpo */}
         <div className="px-4 sm:px-6 py-4 flex-1 overflow-y-auto flex flex-col gap-4">
+
+          {/* Modo de importación */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setImportMode('budget')}
+              className={`text-left rounded-xl border px-3 py-2.5 transition-colors ${
+                importMode === 'budget'
+                  ? 'border-sky-500 bg-sky-50 text-sky-900'
+                  : 'border-amber-600/15 bg-white/70 text-amber-900 hover:bg-white'
+              }`}
+            >
+              <span className="block text-xs font-bold">Presupuesto existente</span>
+              <span className="block text-[10px] opacity-75 mt-0.5">Excel, CSV, PDF o imagen con partidas</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setImportMode('compute_notes')}
+              className={`text-left rounded-xl border px-3 py-2.5 transition-colors ${
+                importMode === 'compute_notes'
+                  ? 'border-sky-500 bg-sky-50 text-sky-900'
+                  : 'border-amber-600/15 bg-white/70 text-amber-900 hover:bg-white'
+              }`}
+            >
+              <span className="block text-xs font-bold">Apuntes de cómputos</span>
+              <span className="block text-[10px] opacity-75 mt-0.5">Foto o PDF con descripción y medidas</span>
+            </button>
+          </div>
 
           {/* Archivo actual */}
           {currentFile && (
@@ -612,6 +642,25 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                             onChange={(event) => updateItem(index, { description: event.target.value })}
                             className="w-full px-2 py-1.5 border border-transparent hover:border-slate-200 focus:border-sky-400 focus:bg-white rounded-lg text-xs font-medium text-slate-800 bg-transparent outline-none transition-colors"
                           />
+
+                          {(item.calculation || item.confidence) && (
+                            <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] text-slate-500">
+                              {item.calculation && (
+                                <span className="bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5">
+                                  Cómputo: <strong className="text-slate-700">{item.calculation}</strong>
+                                </span>
+                              )}
+                              {item.confidence && (
+                                <span className={`rounded px-1.5 py-0.5 border ${
+                                  item.confidence === 'alta'
+                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                                    : 'bg-amber-50 border-amber-200 text-amber-700'
+                                }`}>
+                                  Confianza: {item.confidence}
+                                </span>
+                              )}
+                            </div>
+                          )}
 
                           {!item.is_chapter ? (
                             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-2">

@@ -164,6 +164,8 @@ class BudgetSummary(BudgetBase):
     id: str
     created_at: datetime
     updated_at: datetime
+    items_count: int = 0
+    total_amount: float = 0.0
     class Config:
         from_attributes = True
 

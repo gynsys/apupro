@@ -291,7 +291,7 @@ export default function APUViewer() {
     <div className="p-4 md:p-6 max-w-7xl mx-auto min-h-screen pb-20 print:p-0 print:m-0 print:max-w-none print:bg-white print:w-full">
       {printOptions && (
         <PrintAPULayout 
-          partida={{ ...partida, ...settings }} 
+          partida={{ ...settings, ...partida }} 
           materiales={materiales} 
           equipos={equipos} 
           mano_obra={mano_obra} 

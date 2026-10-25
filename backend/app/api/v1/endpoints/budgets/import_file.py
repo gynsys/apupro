@@ -2,7 +2,7 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
@@ -53,6 +53,9 @@ class PreviewItem(BaseModel):
     description: str
     unit: str = "und"
     quantity: float = 0.0
+    calculation: str = ""
+    confidence: str = ""
+    warnings: List[str] = []
     is_chapter: bool = False
     candidates: List[Candidate] = []
     selected_cod_par: Optional[str] = None
@@ -215,6 +218,7 @@ def _copy_apu_components(db: Session, db_item: BudgetItem, cost_item: CostItem) 
 @router.post("/import/preview", response_model=PreviewResponse)
 async def preview_budget_import(
     file: UploadFile = File(...),
+    mode: str = Form("budget"),
     db: Session = Depends(get_db),
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> Dict[str, Any]:
@@ -232,7 +236,7 @@ async def preview_budget_import(
         )
 
     try:
-        return build_preview(data, file.filename, db)
+        return build_preview(data, file.filename, db, mode=mode)
     except OCRError as exc:
         logger.warning("OCR no disponible para %s: %s", file.filename, exc)
         raise HTTPException(status_code=503, detail=str(exc)) from exc

@@ -247,8 +247,31 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
                     "Manto asfáltico 3 mm con gravilla",
                     "Pintura elastomérica impermeable"
                 ]
+            ),
+            ParametricRequirement(
+                param_id="logistica_winche_acarreo",
+                label="Logística de izaje (winche eléctrico) y transporte (camión)",
+                detection_patterns=[
+                    re.compile(
+                        r"\b(winche|gu[ií]nche|cabrestante|sin\s+winche|con\s+winche|izaje\s+manual|acarreo\s+manual|subida\s+manual|por\s+escalera|sin\s+cam[ií][oó]n|con\s+cam[ií][oó]n|elevador\s+de\s+carga)\b",
+                        re.IGNORECASE
+                    )
+                ],
+                question="¿Se incluye el alquiler de winche eléctrico (+ güinchero) y camión en el APU, o el traslado vertical de insumos será manual (sin winche)?",
+                default_options=[
+                    "Sin winche ni camión (subida manual de rollos/insumos)",
+                    "Con winche eléctrico para izaje de materiales (sin camión)",
+                    "Con winche eléctrico y camión de transporte"
+                ]
             )
-        ]
+        ],
+        composite_options_generator=lambda missing_ids: [
+            "Manto asfáltico 3 mm autoprotegido, Sin winche ni camión (acarreo manual)",
+            "Manto asfáltico 4 mm poliéster, Sin winche ni camión (acarreo manual)",
+            "Manto asfáltico 3 mm autoprotegido, Con winche eléctrico (sin camión)",
+            "Manto asfáltico 4 mm poliéster, Con winche eléctrico (sin camión)",
+            "Pintura elastomérica impermeable, Sin winche ni camión"
+        ] if set(missing_ids) == {"tipo_manto_espesor", "logistica_winche_acarreo"} else None
     ),
 
     # 10. SOPORTES Y MONTAJE DE TELEVISORES / PANTALLAS
@@ -807,5 +830,298 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
                 ]
             )
         ]
-    )
+    ),
+
+    # 28. REMOCIÓN / RETIRO DE MANTO ASFÁLTICO E IMPERMEABILIZACIÓN EN TECHOS (Logística de Winche y Camión)
+    ConstructionFamilyOntology(
+        family_id="REMOCION_MANTO_IMPERMEABILIZACION_LOGISTICA",
+        name="Remoción de Manto Asfáltico o Capa Impermeabilizante",
+        activation_patterns=[
+            re.compile(
+                r"\b(remoci[oó]n|remover|retiro|retirar|demolici[oó]n|demoler|desmontaje|levantamiento)\b.*\b(manto\s+asf[aá]ltico|manto|impermeabilizaci[oó]n|capa\s+impermeabilizante|membrana\s+asf[aá]ltica)\b"
+                r"|\b(manto\s+asf[aá]ltico|capa\s+impermeabilizante)\b.*\b(remoci[oó]n|remover|retiro|retirar|demolici[oó]n)\b",
+                re.IGNORECASE,
+            )
+        ],
+        exclusion_patterns=[],
+        required_parameters=[
+            ParametricRequirement(
+                param_id="logistica_winche_bote",
+                label="Uso de winche eléctrico (+ güinchero) y alcance de bote en camión",
+                detection_patterns=[
+                    re.compile(
+                        r"\b(winche|gu[ií]nche|cabrestante|sin\s+winche|con\s+winche|bajada\s+manual|acarreo\s+manual|por\s+escalera|sin\s+cam[ií][oó]n|con\s+cam[ií][oó]n|bote\s+en\s+cam[ií][oó]n|solo\s+remoci[oó]n|apilado\s+interno)\b",
+                        re.IGNORECASE,
+                    )
+                ],
+                question="En la remoción de manto asfáltico en techos/azoteas, ¿se debe incluir el alquiler de winche eléctrico (+ güinchero) y camión de bote, o se ejecutará con bajada/acarreo manual sin winche?",
+                default_options=[
+                    "Sin winche ni camión (remoción manual y apilado en obra)",
+                    "Con winche eléctrico para bajada de escombros (sin camión)",
+                    "Sin winche, pero incluye camión para bote de escombros",
+                    "Con winche eléctrico y camión para bote de escombros",
+                ],
+            )
+        ],
+    ),
+
+    # 29. DEMOLICIÓN DE ELEMENTOS DE OBRA CIVIL (Equipo: Manual vs Martillo Eléctrico vs Compresor Neumático)
+    ConstructionFamilyOntology(
+        family_id="DEMOLICION_OBRA_CIVIL_EQUIPO_LOGISTICA",
+        name="Demolición de Elementos de Obra Civil y Acabados",
+        activation_patterns=[
+            re.compile(
+                r"\b(demolici[oó]n|demoler)\b.*\b(losa|losas|piso|pisos|sobrepiso|sobrepisos|pavimento|pavimentos|concreto|pared|paredes|muro|muros|tabique|tabiques|friso|frisos|revoque|cer[aá]mica|porcelanato|acera|aceras|brocal|brocales)\b",
+                re.IGNORECASE,
+            )
+        ],
+        exclusion_patterns=[
+            re.compile(r"\b(manto\s+asf[aá]ltico|impermeabilizaci[oó]n)\b", re.IGNORECASE)
+        ],
+        required_parameters=[
+            ParametricRequirement(
+                param_id="equipo_demolicion_y_bote",
+                label="Equipo de demolición (manual, martillo eléctrico o compresor neumático) y bote",
+                detection_patterns=[
+                    re.compile(
+                        r"\b(a\s+mano|manual|manualmente|mandarria|cincel|martillo\s+demoledor|martillo\s+el[eé]ctrico|demoledor\s+el[eé]ctrico|compresor|martillo\s+neum[aá]tico|retroexcavadora|martillo\s+hidr[aá]ulico|cortadora|sin\s+compresor|con\s+compresor)\b",
+                        re.IGNORECASE,
+                    )
+                ],
+                question="¿Con qué equipo se ejecutará la demolición (manual con mandarria, martillo demoledor eléctrico portátil o compresor neumático remolcable) y qué alcance de bote incluye?",
+                default_options=[
+                    "Manual con mandarria y cincel, sin camión (solo apilado interno)",
+                    "Con martillo demoledor eléctrico portátil (110V), sin compresor ni camión",
+                    "Con compresor neumático remolcable y martillo neumático (sin camión)",
+                    "Con martillo demoledor eléctrico e incluye camión para bote de escombros",
+                ],
+            )
+        ],
+    ),
+
+    # 30. CONSTRUCCIÓN DE PENDIENTES / RASEO EN LOSAS DE TECHO (Logística de Winche y Mezcladora)
+    ConstructionFamilyOntology(
+        family_id="PENDIENTES_RASEO_LOSAS_TECHO_LOGISTICA",
+        name="Pendientes y Raseo de Mortero en Losas de Techo",
+        activation_patterns=[
+            re.compile(
+                r"\b(pendientes?\s+en\s+losas?|raseo\s+en\s+losas?|pendientes?\s+de\s+mortero\s+en\s+(?:techo|azotea|losa))\b",
+                re.IGNORECASE,
+            )
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        required_parameters=[
+            ParametricRequirement(
+                param_id="logistica_winche_mezcla",
+                label="Equipo de mezclado (trompo vs manual) e izaje (winche eléctrico)",
+                detection_patterns=[
+                    re.compile(
+                        r"\b(winche|gu[ií]nche|sin\s+winche|con\s+winche|mezcla\s+manual|a\s+mano|sin\s+mezcladora|sin\s+trompo|con\s+mezcladora|con\s+trompo|en\s+interiores)\b",
+                        re.IGNORECASE,
+                    )
+                ],
+                question="Para la construcción de pendientes/raseo en losa, ¿se incluye winche eléctrico y mezcladora (trompo), o se ejecutará sin winche?",
+                default_options=[
+                    "Con mezcladora (trompo) en planta, sin winche ni camión",
+                    "Mezcla preparada manualmente en sitio, sin mezcladora, sin winche ni camión",
+                    "Con mezcladora (trompo) y winche eléctrico para subida a techo",
+                ],
+            )
+        ],
+    ),
+
+    # 31. DESMONTAJE DE ESTRUCTURAS METÁLICAS, HERRERÍA O EQUIPOS (Oxicorte / Señorita / Grúa vs Manual)
+    ConstructionFamilyOntology(
+        family_id="DESMONTAJE_ELEMENTOS_EQUIPO_CORTE_IZAJE",
+        name="Desmontaje de Estructuras, Herrería o Equipos",
+        activation_patterns=[
+            re.compile(
+                r"\b(desmontaje|desmontar|desinstalaci[oó]n|desmantelamiento)\b.*\b(estructura\s+met[aá]lica|estructuras\s+met[aá]licas|perfil(?:es)?|reja|rejas|port[oó]n|portones|puerta|puertas|ventana|ventanas|baranda|barandas|bomba|bombas|motor|motores|aire\s+acondicionado|split|tablero)\b",
+                re.IGNORECASE,
+            )
+        ],
+        exclusion_patterns=[
+            re.compile(r"\b(pozo\s+profundo|pozo\s+tubular|bomba\s+sumergible)\b", re.IGNORECASE)
+        ],
+        required_parameters=[
+            ParametricRequirement(
+                param_id="metodo_desmontaje_equipo",
+                label="Equipo de corte e izaje (herramientas manuales/esmeril vs oxicorte/señorita/grúa)",
+                detection_patterns=[
+                    re.compile(
+                        r"\b(manual|a\s+mano|herramientas\s+menores|esmeril|oxicorte|soplete|sin\s+oxicorte|con\s+oxicorte|se[nñ]orita|polipasto|gr[uú]a|cam[ií][oó]n\s+gr[uú]a|sin\s+equipo\s+pesado|con\s+recuperaci[oó]n|sin\s+recuperaci[oó]n)\b",
+                        re.IGNORECASE,
+                    )
+                ],
+                question="¿El desmontaje se realizará con herramientas manuales/esmeril angular, o requiere equipo de oxicorte o izaje mecánico (señorita/grúa)?",
+                default_options=[
+                    "Con herramientas manuales / esmeril angular (sin oxicorte, sin señorita ni camión)",
+                    "Con equipo de oxicorte (oxígeno-acetileno), sin grúa ni camión",
+                    "Con señorita de cadena / polipasto para izaje (sin oxicorte)",
+                    "Con equipo de oxicorte y camión grúa / transporte",
+                ],
+            )
+        ],
+    ),
+
+    # 32. COMPACTACIÓN DE RELLENOS Y ZANJAS (Pisón Manual vs Vibrocompactador / Rana)
+    ConstructionFamilyOntology(
+        family_id="COMPACTACION_RELLENO_METODO_EQUIPO",
+        name="Compactación de Rellenos y Zanjas",
+        activation_patterns=[
+            re.compile(
+                r"\b(compactaci[oó]n|compactar|relleno\s+compactado)\b",
+                re.IGNORECASE,
+            )
+        ],
+        exclusion_patterns=[
+            re.compile(r"\b(concreto|asfalto|mezcla\s+asf[aá]ltica)\b", re.IGNORECASE)
+        ],
+        required_parameters=[
+            ParametricRequirement(
+                param_id="equipo_compactacion",
+                label="Equipo de compactación (pisón manual vs vibrocompactador mecánico)",
+                detection_patterns=[
+                    re.compile(
+                        r"\b(pis[oó]n\s+manual|pis[oó]n\s+de\s+mano|a\s+mano|manual|manualmente|vibrocompactador|rana|sapo|plancha\s+vibratoria|rodillo|a\s+m[aá]quina|mec[aá]nic[ao]|sin\s+vibrocompactador)\b",
+                        re.IGNORECASE,
+                    )
+                ],
+                question="¿La compactación se ejecutará de forma manual con pisón o con equipo mecánico (vibrocompactador tipo rana/sapo)?",
+                default_options=[
+                    "Compactación mecánica con vibrocompactador (rana/sapo)",
+                    "Compactación manual con pisón de mano (sin vibrocompactador)",
+                    "Compactación pesada con rodillo vibratorio",
+                ],
+            )
+        ],
+    ),
+
+    # 33. FRISOS Y TRABAJOS EN FACHADAS / ALTURA (Andamio Tubular/Colgante/Manlift vs Escaleras/Caballetes)
+    ConstructionFamilyOntology(
+        family_id="FRISOS_Y_TRABAJOS_ALTURA_ANDAMIAJE",
+        name="Trabajos de Friso, Revoque o Pintura en Fachadas y Altura",
+        activation_patterns=[
+            re.compile(
+                r"\b(friso|frisos|frisar|revoque|encamisado|pintura|pintar)\b.*\b(fachada|fachadas|exterior|exteriores|altura|doble\s+altura)\b",
+                re.IGNORECASE,
+            )
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS,
+        required_parameters=[
+            ParametricRequirement(
+                param_id="medio_elevacion_andamio",
+                label="Medio de trabajo en altura (escalera/caballetes vs andamio tubular, colgante o manlift)",
+                detection_patterns=[
+                    re.compile(
+                        r"\b(andamio|andamios|sin\s+andamio|con\s+andamio|escalera|caballete|burro|gu[ií]ndola|colgante|rapel|manlift|plataforma\s+elevadora|planta\s+baja|hasta\s+3\s*m)\b",
+                        re.IGNORECASE,
+                    )
+                ],
+                question="¿El APU debe incluir el alquiler de andamios tubulares, colgantes o plataforma elevadora (manlift), o se trabajará con escaleras/caballetes (sin andamio tubular)?",
+                default_options=[
+                    "Sin andamio tubular (con escaleras o caballetes hasta 3 m)",
+                    "Incluye alquiler de andamio tubular en el APU",
+                    "Incluye andamio colgante / guíndola para fachada",
+                    "Con plataforma elevadora (manlift)",
+                ],
+            )
+        ],
+    ),
+
+    # 34. LIMPIEZA Y LAVADO DE FACHADAS, LOSAS O PISOS (Manual vs Hidrolavadora)
+    ConstructionFamilyOntology(
+        family_id="LIMPIEZA_LAVADO_SUPERFICIES_EQUIPO",
+        name="Limpieza o Lavado de Fachadas, Losas y Pisos",
+        activation_patterns=[
+            re.compile(
+                r"\b(limpieza|limpiar|lavado|lavar)\b.*\b(fachada|fachadas|losa|losas|piso|pisos|techo|techos|pared|paredes|muro|muros|pavimento|concreto|piedra|ladrillo)\b",
+                re.IGNORECASE,
+            )
+        ],
+        exclusion_patterns=DEMOLITION_OR_REMOVAL_PATTERNS + [
+            re.compile(r"\b(tanque|tanques|terreno|descapote|vegetal|tuber[ií]a|drenaje)\b", re.IGNORECASE)
+        ],
+        required_parameters=[
+            ParametricRequirement(
+                param_id="metodo_limpieza_hidrolavadora",
+                label="Método de lavado (manual con cepillo/agua vs hidrolavadora)",
+                detection_patterns=[
+                    re.compile(
+                        r"\b(limpieza\s+manual|a\s+mano|manual|cepillo|manguera|sin\s+hidrolavadora|con\s+hidrolavadora|hidrolavadora|hidrojet|alta\s+presi[oó]n)\b",
+                        re.IGNORECASE,
+                    )
+                ],
+                question="¿La limpieza/lavado de la superficie se realizará de forma manual (cepillo y agua) o con hidrolavadora a presión?",
+                default_options=[
+                    "Limpieza manual con cepillo y agua (sin hidrolavadora)",
+                    "Con hidrolavadora eléctrica portátil",
+                    "Con hidrolavadora industrial de alta presión a gasolina",
+                ],
+            )
+        ],
+    ),
+
+    # 35. ESCARIFICACIÓN, DESBASTE O PREPARACIÓN DE PISOS (Amoladora/Manual vs Fresadora Industrial)
+    ConstructionFamilyOntology(
+        family_id="PREPARACION_DESBASTE_PISOS_EQUIPO",
+        name="Escarificación o Desbaste de Superficies de Piso",
+        activation_patterns=[
+            re.compile(
+                r"\b(escarificaci[oó]n|escarificar|desbaste|desbastar|fresado|preparaci[oó]n\s+mec[aá]nica)\b.*\b(piso|pisos|losa|losas|concreto|pavimento|superficie)\b",
+                re.IGNORECASE,
+            )
+        ],
+        exclusion_patterns=[],
+        required_parameters=[
+            ParametricRequirement(
+                param_id="equipo_desbaste_piso",
+                label="Equipo de desbaste (amoladora/manual vs fresadora/escarificadora industrial)",
+                detection_patterns=[
+                    re.compile(
+                        r"\b(manual|a\s+mano|amoladora|esmeril|sin\s+fresadora|con\s+fresadora|fresadora|escarificadora|pulidora\s+industrial)\b",
+                        re.IGNORECASE,
+                    )
+                ],
+                question="¿El desbaste o preparación de la superficie se ejecutará de forma manual / con amoladora angular, o con fresadora/escarificadora industrial de piso?",
+                default_options=[
+                    "Con amoladora angular / desbaste manual (sin fresadora industrial)",
+                    "Con escarificadora / fresadora mecánica de piso",
+                    "Con pulidora industrial de piso",
+                ],
+            )
+        ],
+    ),
+
+    # 36. CORTE O RANURADO DE CONCRETO / LOSA / PAVIMENTO (Esmeril Angular vs Cortadora de Carro)
+    ConstructionFamilyOntology(
+        family_id="CORTE_RANURADO_CONCRETO_EQUIPO",
+        name="Corte o Ranurado en Concreto, Losas o Paredes",
+        activation_patterns=[
+            re.compile(
+                r"\b(corte|cortar|ranurado|apertura\s+de\s+regatas?)\b.*\b(concreto|losa|losas|piso|pisos|pavimento|pared|paredes|muro|asfalto)\b",
+                re.IGNORECASE,
+            )
+        ],
+        exclusion_patterns=[
+            re.compile(r"\b(tuber[ií]a|tubo|conduit|cable)\b", re.IGNORECASE)
+        ],
+        required_parameters=[
+            ParametricRequirement(
+                param_id="equipo_corte_concreto",
+                label="Equipo de corte (esmeril angular manual vs cortadora de pavimento de carro)",
+                detection_patterns=[
+                    re.compile(
+                        r"\b(esmeril|amoladora|manual|a\s+mano|sin\s+cortadora|cortadora\s+de\s+concreto|cortadora\s+de\s+pavimento|cortadora\s+de\s+disco)\b",
+                        re.IGNORECASE,
+                    )
+                ],
+                question="¿El corte se ejecutará con esmeril angular manual (disco diamantado) o con cortadora de concreto de carro a gasolina?",
+                default_options=[
+                    "Con esmeril angular manual y disco diamantado (sin cortadora de carro)",
+                    "Con cortadora de concreto/pavimento de carro a gasolina",
+                ],
+            )
+        ],
+    ),
 ]

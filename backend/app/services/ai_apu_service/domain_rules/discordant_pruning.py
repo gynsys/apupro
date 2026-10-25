@@ -667,6 +667,280 @@ def enforce_discordant_inputs_purging(
                     })
                     continue
 
+            # Poda de Winche Cabrestante salvo solicitud explícita ("con winche" / "incluye winche")
+            explicit_winch = bool(
+                re.search(r"\b(?:CON\s+WINCHE|CON\s+GUINCHE|INCLUYE\s+WINCHE|CON\s+MALACATE|CON\s+ELEVADOR)\b", desc_upper)
+            ) and not bool(re.search(r"\bSIN\s+WINCHE\b", desc_upper))
+            if not explicit_winch and re.search(r"\b(?:WINCHE|GUINCHE|CABRESTANTE|MALACATE)\b", eq_desc_upper):
+                logger.info("[DiscordantPruning] Purgado winche no solicitado expresamente: %s", eq_desc)
+                pruning_trace["equipos_purgados"].append({
+                    "descripcion": eq_desc,
+                    "codigo": eq.get("codigo"),
+                    "motivo": "Winche cabrestante excluido (solo se incluye bajo solicitud explícita del usuario)",
+                    "regla": "WINCHE_NO_SOLICITADO",
+                })
+                continue
+
+            # Poda de Camión Ford F-350 / Volteo salvo que sea partida de transporte/bote o solicitud explícita ("con camión")
+            explicit_truck = bool(
+                re.search(
+                    r"\b(?:CON\s+CAMION|BOTE\s+EN\s+CAMION|EN\s+CAMION|TRANSPORTE\s+DE|CARGA\s+Y\s+BOTE|BOTE\s+DE\s+ESCOMBROS|CAMION\s+VOLTEO|CAMION\s+F-?\s*350|CAMION\s+GRUA)\b",
+                    desc_upper,
+                )
+            ) and not bool(re.search(r"\bSIN\s+(?:WINCHE\s+NI\s+)?CAMION\b", desc_upper))
+            if not explicit_truck and re.search(
+                r"\b(?:CAMION\s+FORD|CAMION\s+F-?\s*350|CAMION\s+ESTACAS|CAMION\s+DE\s+ESTACAS|CAMION\s+VOLTEO|CAMION\s+PLATAFORMA)\b",
+                eq_desc_upper,
+            ):
+                logger.info("[DiscordantPruning] Purgado camión no solicitado en partida de ejecución: %s", eq_desc)
+                pruning_trace["equipos_purgados"].append({
+                    "descripcion": eq_desc,
+                    "codigo": eq.get("codigo"),
+                    "motivo": "Camión de carga/bote excluido de partida de obra (sin camión solicitado)",
+                    "regla": "CAMION_NO_SOLICITADO",
+                })
+                continue
+
+            # Poda de Compresor Neumático cuando el usuario indica demolición manual o con martillo eléctrico (sin compresor)
+            explicit_no_compressor = bool(
+                re.search(
+                    r"\b(?:SIN\s+COMPRESOR|MARTILLO\s+DEMOLEDOR\s+ELECTRICO|MARTILLO\s+ELECTRICO|DEMOLEDOR\s+ELECTRICO|MANUAL\s+CON\s+MANDARRIA)\b",
+                    desc_upper,
+                )
+            ) and not bool(re.search(r"\bCON\s+COMPRESOR\b", desc_upper))
+            if explicit_no_compressor and re.search(
+                r"\b(?:COMPRESOR\s+DE\s+AIRE|COMPRESOR\s+NEUMATICO|MARTILLO\s+NEUMATICO|ROMPEDOR\s+NEUMATICO)\b",
+                eq_desc_upper,
+            ):
+                logger.info("[DiscordantPruning] Purgado compresor/martillo neumático (%s) por selección manual/eléctrica", eq_desc)
+                pruning_trace["equipos_purgados"].append({
+                    "descripcion": eq_desc,
+                    "codigo": eq.get("codigo"),
+                    "motivo": "Compresor/martillo neumático excluido por selección de método manual o martillo eléctrico",
+                    "regla": "DEMOLICION_SIN_COMPRESOR_NEUMATICO",
+                })
+                continue
+
+            # Poda de Andamio Tubular/Colgante cuando el usuario especifica sin andamio
+            explicit_no_scaffold = bool(
+                re.search(r"\b(?:SIN\s+ANDAMIO|PLANTA\s+BAJA\s+HASTA\s+3\s*M|CON\s+ESCALERA|CON\s+CABALLETES)\b", desc_upper)
+            ) and not bool(re.search(r"\b(?:CON\s+ANDAMIO|INCLUYE\s+(?:ALQUILER\s+DE\s+)?ANDAMIO)\b", desc_upper))
+            if explicit_no_scaffold and re.search(r"\b(?:ANDAMIO\s+TUBULAR|ANDAMIO\s+COLGANTE|GUINDOLA)\b", eq_desc_upper):
+                logger.info("[DiscordantPruning] Purgado andamio tubular/colgante (%s) por selección sin andamio", eq_desc)
+                pruning_trace["equipos_purgados"].append({
+                    "descripcion": eq_desc,
+                    "codigo": eq.get("codigo"),
+                    "motivo": "Andamio tubular/colgante excluido por especificación de trabajo sin andamio",
+                    "regla": "SIN_ANDAMIO_SOLICITADO",
+                })
+                continue
+
+            # Poda de Vibrocompactador / Rana cuando el usuario especifica compactación manual con pisón
+            explicit_manual_compaction = bool(
+                re.search(r"\b(?:PISON\s+MANUAL|PISON\s+DE\s+MANO|SIN\s+VIBROCOMPACTADOR|COMPACTACION\s+MANUAL)\b", desc_upper)
+            ) and not bool(re.search(r"\bCON\s+VIBROCOMPACTADOR\b", desc_upper))
+            if explicit_manual_compaction and re.search(
+                r"\b(?:VIBROCOMPACTADOR|COMPACTADOR\s+DE\s+PERCUSION|RANA\s+COMPACTADORA|RODILLO\s+VIBRATORIO)\b",
+                eq_desc_upper,
+            ):
+                logger.info("[DiscordantPruning] Purgado vibrocompactador (%s) por selección de compactación manual con pisón", eq_desc)
+                pruning_trace["equipos_purgados"].append({
+                    "descripcion": eq_desc,
+                    "codigo": eq.get("codigo"),
+                    "motivo": "Vibrocompactador mecánico excluido por especificación de compactación manual con pisón",
+                    "regla": "COMPACTACION_MANUAL_SIN_RANA",
+                })
+                continue
+
+            # -----------------------------------------------------------------
+            # REGLAS DE LOS 15 EQUIPOS AMBIGUOS / SOBREDIMENSIONADOS (NIVEL 1 Y 2)
+            # -----------------------------------------------------------------
+            # 1. Equipo de ensayo de laboratorio (compactación/concreto) -> Nunca en APU de obra salvo partida de ensayo
+            if not re.search(r"\b(?:ENSAYO|LABORATORIO|PROCTOR|CONO\s+DE\s+ABRAMS|DENSIMETRO)\b", desc_upper):
+                if re.search(
+                    r"\b(?:CONO\s+DE\s+ABRAMS|CILINDRO(?:S)?\s+PARA\s+ENSAYO|DENSIMETRO\s+NUCLEAR|EQUIPO\s+DE\s+ENSAYO|PRENSA\s+DE\s+ENSAYO|LABORATORIO\s+DE\s+CAMPO)\b",
+                    eq_desc_upper,
+                ):
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Equipo de ensayo de control de calidad excluido (corresponde a laboratorio/costo indirecto)",
+                        "regla": "EQUIPO_ENSAYO_EXCLUIDO",
+                    })
+                    continue
+
+            # 2. Equipo de topografía (estación total, teodolito, nivel óptico) -> Solo en partidas de replanteo/topografía
+            if not re.search(r"\b(?:TOPOGRAFI[CA]|REPLANTEO|LEVANTAMIENTO\s+TOPOGRAFICO|NIVELACION\s+TOPOGRAFICA)\b", desc_upper):
+                if re.search(
+                    r"\b(?:ESTACION\s+TOTAL|TEODOLITO|NIVEL\s+OPTICO|NIVEL\s+DE\s+ANTEOJO|NIVEL\s+TOPOGRAFICO|MIRA\s+ESTADIMETRICA|EQUIPO\s+DE\s+TOPOGRAFIA)\b",
+                    eq_desc_upper,
+                ):
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Equipo de topografía excluido (solo aplica en partidas explícitas de replanteo/topografía)",
+                        "regla": "EQUIPO_TOPOGRAFIA_EXCLUIDO",
+                    })
+                    continue
+
+            # 3. Planta eléctrica / generador como equipo auxiliar -> Solo si se solicita expresamente
+            if not re.search(r"\b(?:PLANTA\s+ELECTRICA|GENERADOR|GRUPO\s+ELECTROGENO|SIN\s+ELECTRICIDAD|ZONA\s+RURAL)\b", desc_upper):
+                if re.search(r"\b(?:PLANTA\s+ELECTRICA|GRUPO\s+ELECTROGENO|GENERADOR\s+ELECTRICO|MOTOGENERADOR)\b", eq_desc_upper):
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Planta eléctrica auxiliar excluida (se asume acometida eléctrica en obra salvo solicitud expresa)",
+                        "regla": "PLANTA_ELECTRICA_AUXILIAR_EXCLUIDA",
+                    })
+                    continue
+
+            # 4. Montacargas (Forklift) -> Solo si se solicita expresamente
+            if not re.search(r"\b(?:MONTACARGAS|FORKLIFT|ELEVADOR\s+DE\s+HORQUILLA)\b", desc_upper):
+                if re.search(r"\b(?:MONTACARGAS|ELEVADOR\s+DE\s+HORQUILLA|FORKLIFT)\b", eq_desc_upper):
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Montacargas excluido del APU (el movimiento de paletas pertenece a suministro/almacén)",
+                        "regla": "MONTACARGAS_EXCLUIDO",
+                    })
+                    continue
+
+            # 5. Contenedor de escombros / Volqueta / Batea -> Solo si se solicita expresamente
+            if not explicit_truck and not re.search(r"\b(?:CONTENEDOR|VOLQUETA|BATEA)\b", desc_upper):
+                if re.search(r"\b(?:CONTENEDOR\s+DE\s+ESCOMBROS|VOLQUETA|BATEA\s+VOLTEO|GONDOLA)\b", eq_desc_upper):
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Contenedor/volqueta de retiro de escombros excluido (corresponde a partida de transporte/bote)",
+                        "regla": "CONTENEDOR_VOLQUETA_EXCLUIDO",
+                    })
+                    continue
+
+            # 6. Bomba de achique en excavaciones o sótanos -> Solo si se menciona achique o nivel freático
+            if not re.search(r"\b(?:ACHIQUE|ACHICAR|NIVEL\s+FREATICO|AGOTAMIENTO\s+DE\s+AGUA|MOTOBOMBA|BAJO\s+AGUA)\b", desc_upper):
+                if re.search(r"\b(?:BOMBA\s+DE\s+ACHIQUE|MOTOBOMBA\s+DE\s+ACHIQUE|MOTOBOMBA\s+AUTOCEBANTE|BOMBA\s+PARA\s+ACHIQUE)\b", eq_desc_upper):
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Bomba de achique excluida (solo aplica cuando se especifica nivel freático o achique)",
+                        "regla": "BOMBA_ACHIQUE_EXCLUIDA",
+                    })
+                    continue
+
+            # 7. Bomba de concreto (camión bomba / estacionaria) -> Solo si se pide concreto bombeado
+            if not re.search(r"\b(?:BOMBA\s+DE\s+CONCRETO|CONCRETO\s+BOMBEADO|VACIADO\s+CON\s+BOMBA|AUTOBOMBA)\b", desc_upper):
+                if re.search(r"\b(?:BOMBA\s+DE\s+CONCRETO|CAMION\s+BOMBA|AUTOBOMBA\s+DE\s+CONCRETO|BOMBA\s+ESTACIONARIA\s+DE\s+CONCRETO)\b", eq_desc_upper):
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Bomba de concreto excluida (solo se incluye si se solicita expresamente concreto bombeado)",
+                        "regla": "BOMBA_CONCRETO_EXCLUIDA",
+                    })
+                    continue
+
+            # 8. Minicargador / Bobcat / Minishovel -> Solo si se solicita expresamente
+            if not re.search(r"\b(?:MINICARGADOR|MINI\s*CARGADOR|BOBCAT|MINISHOVEL|MINI\s*SHOVEL|CARGADOR\s+FRONTAL)\b", desc_upper):
+                if re.search(r"\b(?:MINICARGADOR|MINI\s*CARGADOR|BOBCAT|MINISHOVEL|MINI\s*SHOVEL|CARGADOR\s+FRONTAL)\b", eq_desc_upper):
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Minicargador/Bobcat excluido (solo se incluye bajo solicitud explícita)",
+                        "regla": "MINICARGADOR_BOBCAT_EXCLUIDO",
+                    })
+                    continue
+
+            # 9. Plataforma elevadora / Manlift / Tijera -> Solo si se solicita expresamente
+            if not re.search(r"\b(?:PLATAFORMA\s+ELEVADORA|MANLIFT|ELEVADOR\s+DE\s+TIJERA|BRAZO\s+ARTICULADO)\b", desc_upper):
+                if re.search(r"\b(?:PLATAFORMA\s+ELEVADORA|MANLIFT|ELEVADOR\s+DE\s+TIJERA|BRAZO\s+ARTICULADO)\b", eq_desc_upper):
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Plataforma elevadora/Manlift excluida (solo se incluye si el usuario la solicita expresamente)",
+                        "regla": "MANLIFT_NO_SOLICITADO",
+                    })
+                    continue
+
+            # 10. Cortadora de concreto/pavimento de carro -> Excluir cuando el usuario elige esmeril angular o regata manual
+            if re.search(r"\b(?:CON\s+ESMERIL|ESMERIL\s+ANGULAR|SIN\s+CORTADORA|REGATA|PARED)\b", desc_upper) and not re.search(
+                r"\b(?:CORTADORA\s+DE\s+(?:CONCRETO|PAVIMENTO|DISCO|ASFALTO))\b", desc_upper
+            ):
+                if re.search(r"\b(?:CORTADORA\s+DE\s+CONCRETO|CORTADORA\s+DE\s+PAVIMENTO|CORTADORA\s+DE\s+ASFALTO)\b", eq_desc_upper):
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Cortadora de pavimento a gasolina excluida (se ejecuta con esmeril angular / corte menor)",
+                        "regla": "CORTADORA_PAVIMENTO_EXCLUIDA",
+                    })
+                    continue
+
+            # 11. Pulidora / Fresadora / Escarificadora industrial de piso -> Solo si se solicita expresamente
+            if not re.search(r"\b(?:FRESADORA|ESCARIFICADORA|PULIDORA\s+INDUSTRIAL|DESBASTADORA)\b", desc_upper):
+                if re.search(
+                    r"\b(?:FRESADORA\s+DE\s+PISO|ESCARIFICADORA\s+MECANICA|ESCARIFICADORA\s+DE\s+PISO|PULIDORA\s+INDUSTRIAL\s+DE\s+PISO|DESBASTADORA\s+DE\s+PISO)\b",
+                    eq_desc_upper,
+                ):
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Fresadora/escarificadora industrial de piso excluida (solo aplica bajo solicitud explícita)",
+                        "regla": "FRESADORA_PISO_EXCLUIDA",
+                    })
+                    continue
+
+            # 12. Hidrolavadora industrial -> Excluir si el usuario especifica limpieza manual o no solicita hidrolavadora
+            if re.search(r"\b(?:LIMPIEZA\s+MANUAL|SIN\s+HIDROLAVADORA|CEPILLO\s+Y\s+AGUA)\b", desc_upper) and not re.search(
+                r"\b(?:CON\s+HIDROLAVADORA|HIDROJET|ALTA\s+PRESION)\b", desc_upper
+            ):
+                if re.search(r"\b(?:HIDROLAVADORA|HIDROJET|LAVADORA\s+DE\s+ALTA\s+PRESION)\b", eq_desc_upper):
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Hidrolavadora excluida por selección de limpieza manual",
+                        "regla": "HIDROLAVADORA_EXCLUIDA",
+                    })
+                    continue
+
+            # 13. Equipo Airless / Pistola pulverizadora en pintura -> Solo si se solicita airless/pistola
+            if explicit_painting and not re.search(r"\b(?:AIRLESS|PISTOLA|ASPERSION|PULVERIZAD[OA]|COMPRESOR)\b", desc_upper):
+                if re.search(r"\b(?:EQUIPO\s+AIRLESS|AIRLESS|PISTOLA\s+DE\s+PINTAR|PISTOLA\s+PULVERIZADORA|COMPRESOR\s+PARA\s+PINTURA)\b", eq_desc_upper):
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Equipo Airless/pistola de pintar excluido (aplicación estándar con rodillo y brocha)",
+                        "regla": "AIRLESS_NO_SOLICITADO",
+                    })
+                    continue
+
+            # 14. Vibrador de concreto en elementos menores (dinteles, machones, sobrepisos, peldaños) salvo solicitud expresa
+            if re.search(r"\b(?:DINTEL|DINTELES|MACHON|MACHONES|SOBREPISO|CONTRAPISO|PELDANO|MESON)\b", desc_upper) and not re.search(
+                r"\b(?:VIBRADOR|VIBRADO\s+MECANICO)\b", desc_upper
+            ):
+                if re.search(r"\bVIBRADOR\b", eq_desc_upper):
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Vibrador de inmersión excluido en elemento de poca sección (compactación manual)",
+                        "regla": "VIBRADOR_ELEMENTO_MENOR_EXCLUIDO",
+                    })
+                    continue
+
+            # 15. Camión grúa / Brazo Pitman / Señorita / Tecle -> Solo si se solicita expresamente (o pozo profundo)
+            if not is_deep_well and not re.search(
+                r"\b(?:CON\s+GRUA|CAMION\s+GRUA|BRAZO\s+PITMAN|CON\s+SENORITA|CON\s+POLIPASTO|CON\s+TECLE|IZAJE\s+MECANICO)\b",
+                desc_upper,
+            ):
+                if re.search(
+                    r"\b(?:CAMION\s+GRUA|BRAZO\s+PITMAN|GRUA\s+HIDRAULICA|GRUA\s+TELESCOPICA|SENORITA\s+DE\s+CADENA|POLIPASTO|TECLE)\b",
+                    eq_desc_upper,
+                ):
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Equipo de izaje pesado (grúa/señorita/tecle) excluido salvo solicitud explícita",
+                        "regla": "IZAJE_PESADO_NO_SOLICITADO",
+                    })
+                    continue
+
             seen_eq_keys.add(eq_key)
             clean_equipments.append(eq)
 
@@ -804,6 +1078,73 @@ def enforce_discordant_inputs_purging(
                 else:
                     retained_labors.append(l_item)
             clean_labors = retained_labors
+
+        # Purgar Güinchero, Chofer, Topógrafo u Operador de Compresor/Montacargas/Grúa huérfanos si su equipo fue excluido
+        active_eq_uppers = [
+            _strip_accents(str(e.get("descripcion") or "")).upper()
+            for e in result.get("equipments", [])
+            if isinstance(e, dict)
+        ]
+        has_active_winch = any(re.search(r"\b(?:WINCHE|GUINCHE|CABRESTANTE|MALACATE)\b", eu) for eu in active_eq_uppers)
+        has_active_truck = any(re.search(r"\bCAMION\b", eu) for eu in active_eq_uppers)
+        has_active_compressor = any(re.search(r"\bCOMPRESOR\b", eu) for eu in active_eq_uppers)
+        has_active_forklift = any(re.search(r"\b(?:MONTACARGAS|FORKLIFT)\b", eu) for eu in active_eq_uppers)
+        has_active_crane = any(re.search(r"\b(?:GRUA|BRAZO\s+PITMAN)\b", eu) for eu in active_eq_uppers)
+        is_topography_task = bool(re.search(r"\b(?:TOPOGRAFI[CA]|REPLANTEO|LEVANTAMIENTO\s+TOPOGRAFICO)\b", desc_upper))
+
+        retained_labors = []
+        for l_item in clean_labors:
+            l_up = _strip_accents(str(l_item.get("descripcion") or "")).upper()
+            if not has_active_winch and re.search(r"\b(?:GUINCHERO|OPERADOR\s+DE\s+WINCHE|OPERADOR\s+DE\s+GUINCHE)\b", l_up):
+                pruning_trace["mano_obra_purgada"].append({
+                    "descripcion": str(l_item.get("descripcion") or ""),
+                    "codigo": l_item.get("codigo"),
+                    "motivo": "Güinchero eliminado al no incluirse winche cabrestante en la partida",
+                    "regla": "OPERADOR_SIN_EQUIPO_WINCHE",
+                })
+                continue
+            if not has_active_truck and re.search(r"\bCHOFER\b", l_up):
+                pruning_trace["mano_obra_purgada"].append({
+                    "descripcion": str(l_item.get("descripcion") or ""),
+                    "codigo": l_item.get("codigo"),
+                    "motivo": "Chofer eliminado al no incluirse camión en la partida",
+                    "regla": "OPERADOR_SIN_EQUIPO_CAMION",
+                })
+                continue
+            if not has_active_compressor and re.search(r"\bOPERADOR\s+DE\s+COMPRESOR\b", l_up):
+                pruning_trace["mano_obra_purgada"].append({
+                    "descripcion": str(l_item.get("descripcion") or ""),
+                    "codigo": l_item.get("codigo"),
+                    "motivo": "Operador de compresor eliminado al no incluirse compresor neumático en la partida",
+                    "regla": "OPERADOR_SIN_EQUIPO_COMPRESOR",
+                })
+                continue
+            if not has_active_forklift and re.search(r"\bOPERADOR\s+DE\s+MONTACARGAS\b", l_up):
+                pruning_trace["mano_obra_purgada"].append({
+                    "descripcion": str(l_item.get("descripcion") or ""),
+                    "codigo": l_item.get("codigo"),
+                    "motivo": "Operador de montacargas eliminado al no incluirse montacargas en la partida",
+                    "regla": "OPERADOR_SIN_EQUIPO_MONTACARGAS",
+                })
+                continue
+            if not has_active_crane and re.search(r"\bOPERADOR\s+DE\s+GRUA\b", l_up):
+                pruning_trace["mano_obra_purgada"].append({
+                    "descripcion": str(l_item.get("descripcion") or ""),
+                    "codigo": l_item.get("codigo"),
+                    "motivo": "Operador de grúa eliminado al no incluirse grúa en la partida",
+                    "regla": "OPERADOR_SIN_EQUIPO_GRUA",
+                })
+                continue
+            if not is_topography_task and re.search(r"\b(?:TOPOGRAFO|AYUDANTE\s+DE\s+TOPOGRAFIA)\b", l_up):
+                pruning_trace["mano_obra_purgada"].append({
+                    "descripcion": str(l_item.get("descripcion") or ""),
+                    "codigo": l_item.get("codigo"),
+                    "motivo": "Personal de topografía eliminado en partida que no es de replanteo/topografía",
+                    "regla": "PERSONAL_TOPOGRAFIA_EXCLUIDO",
+                })
+                continue
+            retained_labors.append(l_item)
+        clean_labors = retained_labors
 
         result[labors_key] = clean_labors
         if "labor" in result and labors_key != "labor":

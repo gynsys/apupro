@@ -1,6 +1,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, and_, text, case
-from typing import Optional, List, Tuple
+from types import SimpleNamespace
+from typing import Any, Dict, List, Optional, Set, Tuple
+import time
 from app.db.models.costbase import (
     CostItem, CostMaterial, CostEquipment, CostLabor,
     CostAPUMaterial, CostAPUEquipment, CostAPULabor, CustomCostItem
@@ -416,44 +418,149 @@ def get_apu_labors(db: Session, item_code: str):
         .join(CostLabor, CostAPULabor.CodIns == CostLabor.CodMan)\
         .filter(CostAPULabor.CodPar == item_code).all()
 
+_RESOURCE_CATALOG_CACHE: Dict[Tuple[str, str, bool], Tuple[float, List[Dict[str, Any]]]] = {}
+_RESOURCE_CACHE_TTL_SEC: float = 120.0
+_COVENIN_VALID_REGEX: str = r'^\s*([A-Za-z]{1,2}[\.\-\s]?[0-9\.\-\s]+|[0-9\.\-\s]+RA|RA[\.\-\s]?[0-9]+)\s*$'
+_MINOR_TOOL_CODES: Set[str] = {"ALB084", "ALB013", "COM024", "COM026", "ALB004", "ALB052", "ALB067", "SUB023"}
+_MINOR_TOOL_KEYWORDS: Tuple[str, ...] = (
+    "pala",
+    "pico",
+    "piqueta",
+    "carretill",
+    "andamio",
+    "mandarria",
+    "barra",
+    "herramienta",
+)
+
+
+def invalidate_resource_catalog_cache() -> None:
+    """Invalida la caché en memoria de catálogos de materiales, equipos y mano de obra."""
+    _RESOURCE_CATALOG_CACHE.clear()
+
+
+def _get_active_schema_key(db: Session) -> str:
+    """Obtiene el esquema activo registrado en la sesión (por defecto 'public')."""
+    return str(db.info.get("active_schema", "public"))
+
+
+def _get_cached_materials(db: Session, all_items: bool) -> List[Dict[str, Any]]:
+    """Retorna la lista ordenada de materiales desde caché en memoria (TTL 120s) o la construye desde PostgreSQL."""
+    schema_key = _get_active_schema_key(db)
+    cache_key = ("materials", schema_key, bool(all_items))
+    now_mono = time.monotonic()
+    cached_entry = _RESOURCE_CATALOG_CACHE.get(cache_key)
+    if cached_entry is not None and (now_mono - cached_entry[0]) < _RESOURCE_CACHE_TTL_SEC:
+        return cached_entry[1]
+
+    used_codes: Optional[Set[str]] = None
+    if not all_items:
+        valid_items_condition = or_(
+            CostItem.CovPar.op('~*')(_COVENIN_VALID_REGEX),
+            CostItem.CodPar.op('~*')(_COVENIN_VALID_REGEX),
+            CostItem.Categoria == 'RA',
+        )
+        raw_codes = (
+            db.query(CostAPUMaterial.CodIns)
+            .join(CostItem, CostAPUMaterial.CodPar == CostItem.CodPar)
+            .filter(valid_items_condition)
+            .distinct()
+            .all()
+        )
+        used_codes = {str(r[0]) for r in raw_codes if r[0]}
+
+    all_rows = db.query(CostMaterial).order_by(CostMaterial.ref_code, CostMaterial.CodMat).all()
+    serialized: List[Dict[str, Any]] = []
+    for item in all_rows:
+        if used_codes is not None and item.CodMat not in used_codes and (not item.ref_code or item.ref_code not in used_codes):
+            continue
+        ref_str = item.ref_code or ""
+        cod_str = item.CodMat or ""
+        desc_str = item.Descri or ""
+        serialized.append(
+            {
+                "CodMat": item.CodMat,
+                "ref_code": item.ref_code,
+                "Descri": item.Descri,
+                "UniMat": item.UniMat,
+                "CosMat": item.CosMat,
+                "family_id": getattr(item, "family_id", None),
+                "market_indicator_id": getattr(item, "market_indicator_id", None),
+                "market_factor": getattr(item, "market_factor", None),
+                "_search_blob": f"{ref_str} {cod_str} {desc_str}".lower(),
+            }
+        )
+
+    _RESOURCE_CATALOG_CACHE[cache_key] = (now_mono, serialized)
+    return serialized
+
+
 def search_materials_paginated(
     db: Session,
     skip: int,
     limit: int,
     search: str,
     all_items: bool = True
-) -> Tuple[int, List[CostMaterial]]:
-    if all_items:
-        query = db.query(CostMaterial)
-    else:
-        covenin_regex = r'^\s*([A-Za-z]{1,2}[\.\-\s]?[0-9\.\-\s]+|[0-9\.\-\s]+RA|RA[\.\-\s]?[0-9]+)\s*$'
-        valid_items_condition = or_(
-            CostItem.CovPar.op('~*')(covenin_regex),
-            CostItem.CodPar.op('~*')(covenin_regex),
-            CostItem.Categoria == 'RA'
-        )
-        used_materials = db.query(CostAPUMaterial.CodIns).join(
-            CostItem,
-            CostAPUMaterial.CodPar == CostItem.CodPar
-        ).filter(valid_items_condition).distinct()
-
-        query = db.query(CostMaterial).filter(
-            or_(
-                CostMaterial.CodMat.in_(used_materials),
-                CostMaterial.ref_code.in_(used_materials)
-            )
-        )
-
+) -> Tuple[int, List[Any]]:
+    rows = _get_cached_materials(db, all_items=all_items)
     if search:
-        search_term = f"%{search}%"
-        query = query.filter(
-            CostMaterial.ref_code.ilike(search_term) |
-            CostMaterial.CodMat.ilike(search_term) |
-            CostMaterial.Descri.ilike(search_term)
+        q_lower = search.strip().lower()
+        if q_lower:
+            rows = [r for r in rows if q_lower in r["_search_blob"]]
+    total = len(rows)
+    sliced = rows[skip : skip + limit]
+    return total, [SimpleNamespace(**r) for r in sliced]
+
+
+def _get_cached_equipments(db: Session, all_items: bool) -> List[Dict[str, Any]]:
+    """Retorna la lista ordenada de equipos desde caché en memoria (TTL 120s) o la construye desde PostgreSQL."""
+    schema_key = _get_active_schema_key(db)
+    cache_key = ("equipments", schema_key, bool(all_items))
+    now_mono = time.monotonic()
+    cached_entry = _RESOURCE_CATALOG_CACHE.get(cache_key)
+    if cached_entry is not None and (now_mono - cached_entry[0]) < _RESOURCE_CACHE_TTL_SEC:
+        return cached_entry[1]
+
+    used_codes: Optional[Set[str]] = None
+    if not all_items:
+        valid_items_condition = or_(
+            CostItem.CovPar.op('~*')(_COVENIN_VALID_REGEX),
+            CostItem.CodPar.op('~*')(_COVENIN_VALID_REGEX),
+            CostItem.Categoria == 'RA',
         )
-    total = query.count()
-    items = query.order_by(CostMaterial.ref_code, CostMaterial.CodMat).offset(skip).limit(limit).all()
-    return total, items
+        raw_codes = (
+            db.query(CostAPUEquipment.CodIns)
+            .join(CostItem, CostAPUEquipment.CodPar == CostItem.CodPar)
+            .filter(valid_items_condition)
+            .distinct()
+            .all()
+        )
+        used_codes = {str(r[0]) for r in raw_codes if r[0]}
+
+    all_rows = db.query(CostEquipment).order_by(CostEquipment.ref_code, CostEquipment.CodEqu).all()
+    serialized: List[Dict[str, Any]] = []
+    for item in all_rows:
+        if used_codes is not None and item.CodEqu not in used_codes and (not item.ref_code or item.ref_code not in used_codes):
+            continue
+        ref_str = item.ref_code or ""
+        cod_str = item.CodEqu or ""
+        desc_str = item.Descri or ""
+        serialized.append(
+            {
+                "CodEqu": item.CodEqu,
+                "ref_code": item.ref_code,
+                "Descri": item.Descri,
+                "CosDia": item.CosDia,
+                "precio": item.precio,
+                "deprec_factor": item.deprec_factor,
+                "_search_blob": f"{ref_str} {cod_str} {desc_str}".lower(),
+                "_desc_lower": desc_str.lower(),
+            }
+        )
+
+    _RESOURCE_CATALOG_CACHE[cache_key] = (now_mono, serialized)
+    return serialized
+
 
 def search_equipments_paginated(
     db: Session,
@@ -462,78 +569,89 @@ def search_equipments_paginated(
     search: str,
     all_items: bool = True,
     deprec_filter: Optional[str] = None
-) -> Tuple[int, List[CostEquipment]]:
-    if all_items:
-        query = db.query(CostEquipment)
-    else:
-        covenin_regex = r'^\s*([A-Za-z]{1,2}[\.\-\s]?[0-9\.\-\s]+|[0-9\.\-\s]+RA|RA[\.\-\s]?[0-9]+)\s*$'
-        valid_items_condition = or_(
-            CostItem.CovPar.op('~*')(covenin_regex),
-            CostItem.CodPar.op('~*')(covenin_regex),
-            CostItem.Categoria == 'RA'
-        )
-        used_equipments = db.query(CostAPUEquipment.CodIns).join(
-            CostItem,
-            CostAPUEquipment.CodPar == CostItem.CodPar
-        ).filter(valid_items_condition).distinct()
-
-        query = db.query(CostEquipment).filter(
-            or_(
-                CostEquipment.CodEqu.in_(used_equipments),
-                CostEquipment.ref_code.in_(used_equipments)
-            )
-        )
-
+) -> Tuple[int, List[Any]]:
+    rows = _get_cached_equipments(db, all_items=all_items)
     if search:
-        search_term = f"%{search}%"
-        query = query.filter(
-            CostEquipment.ref_code.ilike(search_term) |
-            CostEquipment.CodEqu.ilike(search_term) |
-            CostEquipment.Descri.ilike(search_term)
-        )
+        q_lower = search.strip().lower()
+        if q_lower:
+            rows = [r for r in rows if q_lower in r["_search_blob"]]
 
     if deprec_filter:
         clean_filter = deprec_filter.strip().lower()
         if clean_filter in ("equal_1", "1", "1.0"):
-            query = query.filter(
-                or_(
-                    CostEquipment.deprec_factor == 1.0,
-                    CostEquipment.deprec_factor >= 0.99,
-                    CostEquipment.deprec_factor.is_(None)
-                )
-            )
+            rows = [
+                r for r in rows
+                if r["deprec_factor"] is None or float(r["deprec_factor"]) >= 0.99
+            ]
         elif clean_filter in ("less_1", "<1", "own"):
-            query = query.filter(
-                CostEquipment.deprec_factor < 0.99,
-                CostEquipment.deprec_factor > 0
-            )
+            rows = [
+                r for r in rows
+                if r["deprec_factor"] is not None and 0 < float(r["deprec_factor"]) < 0.99
+            ]
         elif clean_filter == "minor_tools":
-            query = query.filter(
-                or_(
-                    CostEquipment.Descri.ilike("%PALA%"),
-                    CostEquipment.Descri.ilike("%PICO%"),
-                    CostEquipment.Descri.ilike("%PIQUETA%"),
-                    CostEquipment.Descri.ilike("%CARRETILL%"),
-                    CostEquipment.Descri.ilike("%ANDAMIO%"),
-                    CostEquipment.Descri.ilike("%MANDARRIA%"),
-                    CostEquipment.Descri.ilike("%BARRA%"),
-                    CostEquipment.Descri.ilike("%HERRAMIENTA%"),
-                    CostEquipment.CodEqu.in_(("ALB084", "ALB013", "COM024", "COM026", "ALB004", "ALB052", "ALB067", "SUB023"))
-                )
-            )
+            rows = [
+                r for r in rows
+                if r["CodEqu"] in _MINOR_TOOL_CODES
+                or any(kw in r["_desc_lower"] for kw in _MINOR_TOOL_KEYWORDS)
+            ]
         elif clean_filter == "zero_price":
-            query = query.filter(
-                or_(
-                    CostEquipment.precio.is_(None),
-                    CostEquipment.precio == 0,
-                    CostEquipment.CosDia.is_(None),
-                    CostEquipment.CosDia == 0
-                )
-            )
+            rows = [
+                r for r in rows
+                if not r["precio"] or not r["CosDia"]
+            ]
 
-    total = query.count()
-    items = query.order_by(CostEquipment.ref_code, CostEquipment.CodEqu).offset(skip).limit(limit).all()
-    return total, items
+    total = len(rows)
+    sliced = rows[skip : skip + limit]
+    return total, [SimpleNamespace(**r) for r in sliced]
+
+
+def _get_cached_labors(db: Session, all_items: bool) -> List[Dict[str, Any]]:
+    """Retorna la lista ordenada de mano de obra desde caché en memoria (TTL 120s) o la construye desde PostgreSQL."""
+    schema_key = _get_active_schema_key(db)
+    cache_key = ("labors", schema_key, bool(all_items))
+    now_mono = time.monotonic()
+    cached_entry = _RESOURCE_CATALOG_CACHE.get(cache_key)
+    if cached_entry is not None and (now_mono - cached_entry[0]) < _RESOURCE_CACHE_TTL_SEC:
+        return cached_entry[1]
+
+    used_codes: Optional[Set[str]] = None
+    if not all_items:
+        valid_items_condition = or_(
+            CostItem.CovPar.op('~*')(_COVENIN_VALID_REGEX),
+            CostItem.CodPar.op('~*')(_COVENIN_VALID_REGEX),
+            CostItem.Categoria == 'RA',
+        )
+        raw_codes = (
+            db.query(CostAPULabor.CodIns)
+            .join(CostItem, CostAPULabor.CodPar == CostItem.CodPar)
+            .filter(valid_items_condition)
+            .distinct()
+            .all()
+        )
+        used_codes = {str(r[0]) for r in raw_codes if r[0]}
+
+    all_rows = db.query(CostLabor).order_by(CostLabor.ref_code, CostLabor.CodMan).all()
+    serialized: List[Dict[str, Any]] = []
+    for item in all_rows:
+        if used_codes is not None and item.CodMan not in used_codes and (not item.ref_code or item.ref_code not in used_codes):
+            continue
+        ref_str = item.ref_code or ""
+        cod_str = item.CodMan or ""
+        desc_str = item.Descri or ""
+        serialized.append(
+            {
+                "CodMan": item.CodMan,
+                "ref_code": item.ref_code,
+                "Descri": item.Descri,
+                "Jornal": item.Jornal,
+                "Bono": item.Bono,
+                "_search_blob": f"{ref_str} {cod_str} {desc_str}".lower(),
+            }
+        )
+
+    _RESOURCE_CATALOG_CACHE[cache_key] = (now_mono, serialized)
+    return serialized
+
 
 def search_labors_paginated(
     db: Session,
@@ -541,38 +659,15 @@ def search_labors_paginated(
     limit: int,
     search: str,
     all_items: bool = True
-) -> Tuple[int, List[CostLabor]]:
-    if all_items:
-        query = db.query(CostLabor)
-    else:
-        covenin_regex = r'^\s*([A-Za-z]{1,2}[\.\-\s]?[0-9\.\-\s]+|[0-9\.\-\s]+RA|RA[\.\-\s]?[0-9]+)\s*$'
-        valid_items_condition = or_(
-            CostItem.CovPar.op('~*')(covenin_regex),
-            CostItem.CodPar.op('~*')(covenin_regex),
-            CostItem.Categoria == 'RA'
-        )
-        used_labors = db.query(CostAPULabor.CodIns).join(
-            CostItem,
-            CostAPULabor.CodPar == CostItem.CodPar
-        ).filter(valid_items_condition).distinct()
-
-        query = db.query(CostLabor).filter(
-            or_(
-                CostLabor.CodMan.in_(used_labors),
-                CostLabor.ref_code.in_(used_labors)
-            )
-        )
-
+) -> Tuple[int, List[Any]]:
+    rows = _get_cached_labors(db, all_items=all_items)
     if search:
-        search_term = f"%{search}%"
-        query = query.filter(
-            CostLabor.ref_code.ilike(search_term) |
-            CostLabor.CodMan.ilike(search_term) |
-            CostLabor.Descri.ilike(search_term)
-        )
-    total = query.count()
-    items = query.order_by(CostLabor.ref_code, CostLabor.CodMan).offset(skip).limit(limit).all()
-    return total, items
+        q_lower = search.strip().lower()
+        if q_lower:
+            rows = [r for r in rows if q_lower in r["_search_blob"]]
+    total = len(rows)
+    sliced = rows[skip : skip + limit]
+    return total, [SimpleNamespace(**r) for r in sliced]
 
 def get_categories_tree_data(db: Session):
     items = db.query(CostItem.Categoria, CostItem.TipoActividad).distinct().all()
@@ -601,6 +696,7 @@ def update_material(db: Session, codigo: str, payload: CostMaterialUpdate):
             mat.Descri = payload.Descri
         db.commit()
         db.refresh(mat)
+        invalidate_resource_catalog_cache()
     return mat
 
 def delete_material(db: Session, codigo: str):
@@ -608,6 +704,7 @@ def delete_material(db: Session, codigo: str):
     if mat:
         db.delete(mat)
         db.commit()
+        invalidate_resource_catalog_cache()
         return True
     return False
 
@@ -629,6 +726,7 @@ def update_equipment(db: Session, codigo: str, payload: CostEquipmentUpdate) -> 
             eq.Descri = payload.Descri
         db.commit()
         db.refresh(eq)
+        invalidate_resource_catalog_cache()
     return eq
 
 def delete_equipment(db: Session, codigo: str) -> bool:
@@ -636,6 +734,7 @@ def delete_equipment(db: Session, codigo: str) -> bool:
     if eq:
         db.delete(eq)
         db.commit()
+        invalidate_resource_catalog_cache()
         return True
     return False
 
@@ -650,6 +749,7 @@ def update_labor(db: Session, codigo: str, payload: CostLaborUpdate) -> Optional
             labor.Descri = payload.Descri
         db.commit()
         db.refresh(labor)
+        invalidate_resource_catalog_cache()
     return labor
 
 def delete_labor(db: Session, codigo: str) -> bool:
@@ -657,6 +757,7 @@ def delete_labor(db: Session, codigo: str) -> bool:
     if labor:
         db.delete(labor)
         db.commit()
+        invalidate_resource_catalog_cache()
         return True
     return False
 

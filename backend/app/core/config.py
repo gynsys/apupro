@@ -35,8 +35,14 @@ class Settings(BaseSettings):
             return False
         return v_bool
 
-    # Database
+    # Database & Concurrency Pool
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/apupro_db"
+    DB_POOL_SIZE: int = int(os.getenv("DB_POOL_SIZE", "25"))
+    DB_MAX_OVERFLOW: int = int(os.getenv("DB_MAX_OVERFLOW", "35"))
+    DB_POOL_TIMEOUT: int = int(os.getenv("DB_POOL_TIMEOUT", "30"))
+    DB_POOL_RECYCLE: int = int(os.getenv("DB_POOL_RECYCLE", "1800"))
+    UVICORN_WORKERS: int = int(os.getenv("UVICORN_WORKERS", "2"))
+    ANYIO_THREADPOOL_TOKENS: int = int(os.getenv("ANYIO_THREADPOOL_TOKENS", "100"))
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
@@ -175,9 +181,6 @@ class Settings(BaseSettings):
             
         return v
 
-    # Debug flag (read from .env; useful for local development)
-    DEBUG: bool = False
-
     # Cookie Security Settings
     COOKIE_SECURE: bool = True  # HTTPS only in production
     COOKIE_HTTPONLY: bool = True  # Prevent JavaScript access
@@ -283,4 +286,3 @@ class Settings(BaseSettings):
 
 # Global settings instance
 settings = Settings()
-

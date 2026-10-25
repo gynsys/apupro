@@ -42,6 +42,7 @@ from app.services.inverse_apu_synthesizer import synthesize_apu_inverse
 from app.services.typesafe_service import evaluate_construction_prompt
 from app.services.ai_apu_service.domain_rules.well_classifier import is_sewage_or_drainage
 from app.services.ai_apu_service_v2 import generate_apu_v2
+from app.services.ai_apu_service_v3 import generate_apu_v3
 from app.api.v1.endpoints.costbase.common import (
     is_covenin_coded_item,
     normalize_text_alphanumeric,
@@ -102,6 +103,9 @@ _ACTION_TOKENS = (
 
 _CLARIFICATION_ANSWER_RE = re.compile(
     r"^\s*(?:s[ií]\b|no\b|correcto\b|esa\b|la\s+(?:primera|segunda|tercera)\b"
+    r"|sin\s+(?:winche|cam[ií][oó]n|compresor|andamio|mezcladora|trompo|oxicorte|vibrocompactador)\b"
+    r"|con\s+(?:winche|cam[ií][oó]n|compresor|andamio|mezcladora|trompo|oxicorte|vibrocompactador|martillo|herramientas|se[nñ]orita)\b"
+    r"|incluye\s+(?:alquiler\s+de\s+andamio|andamio|carga\s+y\s+bote|cam[ií][oó]n)\b"
     r"|\d[\d.,]*\s*(?:m|m2|m²|m3|m³|ml|cm|mm|hp|kg|und|pza|d[ií]as?)\b"
     r"|\d[\d.,]*\s*[x×]\s*\d[\d.,]*)",
     re.IGNORECASE,
@@ -113,10 +117,10 @@ def _is_clarification_answer(text: str) -> bool:
     t = (text or "").strip()
     if not t:
         return False
-    if any(act in t.lower() for act in _ACTION_TOKENS):
-        return False
     if _CLARIFICATION_ANSWER_RE.match(t):
         return True
+    if any(act in t.lower() for act in _ACTION_TOKENS):
+        return False
     return len(t.split()) <= 6
 
 
@@ -533,6 +537,31 @@ def generate_ai_apu_route(
         except Exception as exc:
             logger.error("Error al generar APU con Motor v2.0: %s", exc, exc_info=True)
             raise HTTPException(status_code=500, detail=f"Error en Motor v2.0: {str(exc)}")
+
+    # Selector de Motor v3.0 (Selección IA de Mejor Partida Base + Ajustes Puntuales Delta)
+    if payload.generation_mode in ("v3", "delta") and is_superadmin and not payload.only_preprocess:
+        logger.info(
+            "Despachando generación de APU en Motor v3.0 (Base + Ajustes Delta) para superadmin %s: %.80s",
+            getattr(current_user, 'email', 'desconocido'),
+            payload.description
+        )
+        try:
+            v3_result = generate_apu_v3(
+                user_description=payload.description,
+                db=db,
+                requested_unit=effective_unit or payload.unit,
+                covenin_prefix=payload.covenin_prefix,
+                context=payload.covenin_context,
+                manual_base_code=payload.base_partida_code,
+                execution_days=payload.execution_days,
+                deep_well_depth=effective_depth,
+            )
+            if jev_analysis:
+                v3_result["jev_analysis"] = jev_analysis
+            return _strip_debug_payload(v3_result, is_superadmin)
+        except Exception as exc:
+            logger.error("Error al generar APU con Motor v3.0: %s", exc, exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Error en Motor v3.0: {str(exc)}")
 
     # --- CAPA 0 (Semantic Cache Privado del Usuario) ---
     if current_user and payload.description and not payload.only_preprocess and not payload.base_partida_code and not payload.accept_exact_match_code:

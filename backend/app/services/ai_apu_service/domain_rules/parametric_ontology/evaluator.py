@@ -14,13 +14,14 @@ from .patterns import (
 )
 from .registry import ONTOLOGY_REGISTRY
 
+
 def evaluate_parametric_ontology_contract(
     query: str,
     unit: Optional[str] = None
 ) -> Optional[Dict[str, Any]]:
     """
     Evalúa la descripción de obra contra la Ontología Paramétrica Universal.
-    Si faltan parámetros físicos indispensables para la familia constructiva detectada,
+    Si faltan parámetros físicos o logísticos indispensables para la familia constructiva detectada,
     devuelve un payload estructurado de aclaratoria interactiva para detener el pipeline
     ANTES de entrar a la búsqueda RAG y antes de consumir cualquier LLM.
 
@@ -47,7 +48,7 @@ def evaluate_parametric_ontology_contract(
         if u_match:
             eff_unit = (u_match.group(1) or u_match.group(2) or "").strip().lower()
 
-    # 0. Inmunidad ontológica para Unidades Globales (Gl / Sg) o Labores de Cuadrilla / Mantenimiento / Servicio
+    # 0. Inmunidad ontológica para Unidades Globales (Gl / Sg) o Labores por Jornada/Día/Hora
     eff_unit_lower = eff_unit.lower()
     is_global_unit = eff_unit_lower in ("gl", "sg", "global", "suma global") or bool(
         re.search(r"\b(?:unidad\s+)?(?:gl|sg|suma\s+global|global)\b", norm_query)
@@ -60,7 +61,7 @@ def evaluate_parametric_ontology_contract(
         re.search(r"\b(servicio|inspecci[oó]n|revisi[oó]n|d[ií]as?|jornad[ao]|cuadrilla|mano\s+de\s+obra|hora|horas)\b", norm_query)
     )
 
-    if is_global_unit or (is_maintenance_or_service and eff_unit_lower in ("gl", "sg", "dia", "dias", "jornada", "hh", "mes", "")):
+    if is_global_unit or (is_maintenance_or_service and eff_unit_lower in ("gl", "sg", "dia", "dias", "jornada", "hh", "mes")):
         logger.info("Ontology contract bypassed: unit '%s' or maintenance/service task in '%.80s'", eff_unit, raw_query)
         return None
 
@@ -138,7 +139,7 @@ def evaluate_parametric_ontology_contract(
         if len(missing_params) == 1:
             clarification_msg = (
                 f"Para calcular con exactitud un APU de {specific_name}, es indispensable "
-                f"especificar el siguiente parámetro técnico: {missing_params[0].label.lower()}."
+                f"especificar el siguiente parámetro técnico o logístico: {missing_params[0].label.lower()}."
             )
         else:
             labels_str = " y ".join(p.label.lower() for p in missing_params)
@@ -157,8 +158,8 @@ def evaluate_parametric_ontology_contract(
             "questions": questions_list,
             "options": options_list,
             "recommendation": (
-                "Indica o selecciona los parámetros solicitados para dimensionar los insumos y "
-                "el rendimiento exacto de la cuadrilla sin asumir especificaciones arbitrarias."
+                "Indica o selecciona los parámetros solicitados para dimensionar los insumos, equipos "
+                "y el rendimiento exacto de la cuadrilla sin asumir equipos costosos arbitrariamente."
             ),
             "guia_redaccion": (
                 f"Especifica los parámetros requeridos ({', '.join(missing_ids)}) en tu respuesta "

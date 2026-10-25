@@ -16,9 +16,11 @@ def set_schema_for_db(db: Session, database_id: str) -> None:
     para prevenir inyección SQL.
     """
     if not database_id or database_id in ["master", "personalizada", "compartidos"]:
+        db.info["active_schema"] = "public"
         return
     if not re.match(r'^[a-zA-Z0-9_]+$', database_id):
         logger.warning(f"Identificador de esquema rechazado por formato inválido: {database_id}")
+        db.info["active_schema"] = "public"
         return
     try:
         exists = db.execute(
@@ -27,10 +29,13 @@ def set_schema_for_db(db: Session, database_id: str) -> None:
         ).scalar()
         if exists:
             db.execute(text(f'SET LOCAL search_path TO "{database_id}", public'))
+            db.info["active_schema"] = database_id
         else:
             logger.warning(f"El esquema '{database_id}' no existe en PostgreSQL. search_path no modificado.")
+            db.info["active_schema"] = "public"
     except Exception as e:
         logger.error(f"Error setting schema for database {database_id}: {e}", exc_info=True)
+        db.info["active_schema"] = "public"
 
 
 def clean_cell_str(val: Any) -> str:

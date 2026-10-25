@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.v1.endpoints.arko import _get_costos_config, get_current_arko_admin
 from app.db.base import get_db
@@ -26,7 +26,11 @@ from app.schemas.budget import (
     BudgetSummary,
     BudgetUpdate,
 )
-from .helpers import ensure_budget_share_columns
+from .helpers import (
+    compute_budget_summary_metrics,
+    ensure_budget_performance_indexes,
+    ensure_budget_share_columns,
+)
 
 router = APIRouter()
 
@@ -72,13 +76,38 @@ def get_budgets(
     db: Session = Depends(get_db),
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> List[Budget]:
-    """Lista los presupuestos pertenecientes al usuario autenticado."""
+    """Lista los presupuestos pertenecientes al usuario autenticado con su conteo de partidas y monto total."""
+    ensure_budget_performance_indexes(db)
+    eager_options = (
+        selectinload(Budget.items).selectinload(BudgetItem.materials),
+        selectinload(Budget.items).selectinload(BudgetItem.equipments),
+        selectinload(Budget.items).selectinload(BudgetItem.labors),
+    )
     try:
-        budgets = db.query(Budget).filter(Budget.user_id == str(current_user.id)).offset(skip).limit(limit).all()
+        budgets = (
+            db.query(Budget)
+            .options(*eager_options)
+            .filter(Budget.user_id == str(current_user.id))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
     except Exception:
         db.rollback()
         ensure_budget_share_columns(db)
-        budgets = db.query(Budget).filter(Budget.user_id == str(current_user.id)).offset(skip).limit(limit).all()
+        budgets = (
+            db.query(Budget)
+            .options(*eager_options)
+            .filter(Budget.user_id == str(current_user.id))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+    for b in budgets:
+        items_count, total_amount = compute_budget_summary_metrics(b)
+        setattr(b, "items_count", items_count)
+        setattr(b, "total_amount", total_amount)
     return budgets
 
 
@@ -88,8 +117,18 @@ def get_budget(
     db: Session = Depends(get_db),
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> Budget:
-    """Obtiene un presupuesto por ID si pertenece al usuario autenticado."""
-    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
+    """Obtiene un presupuesto por ID con carga eager indexada si pertenece al usuario autenticado."""
+    ensure_budget_performance_indexes(db)
+    budget = (
+        db.query(Budget)
+        .options(
+            selectinload(Budget.items).selectinload(BudgetItem.materials),
+            selectinload(Budget.items).selectinload(BudgetItem.equipments),
+            selectinload(Budget.items).selectinload(BudgetItem.labors),
+        )
+        .filter(Budget.id == budget_id, Budget.user_id == str(current_user.id))
+        .first()
+    )
     if not budget:
         raise HTTPException(status_code=404, detail="Budget not found")
     return budget

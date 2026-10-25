@@ -721,8 +721,16 @@ def deep_merge(dict1: dict, dict2: dict) -> dict:
 
 # --- Site Configuration Endpoints ---
 
+_SITE_CONFIG_CACHE: Dict[str, Any] = {"ts": 0.0, "data": None}
+_SITE_CONFIG_TTL_SEC: float = 60.0
+
+
 @router.get("/config", response_model=dict)
 def get_site_config() -> dict:
+    now_mono = datetime.now().timestamp()
+    cached = _SITE_CONFIG_CACHE.get("data")
+    if cached is not None and (now_mono - float(_SITE_CONFIG_CACHE.get("ts", 0.0))) < _SITE_CONFIG_TTL_SEC:
+        return cached
     try:
         with get_db_session() as db:
             admin = db.query(ArkoAdmin).filter(ArkoAdmin.email == "admin@arko360.net").first()
@@ -731,7 +739,10 @@ def get_site_config() -> dict:
             
             saved_config = admin.site_config if admin and admin.site_config else {}
             # Mezclar recursivamente con los valores predeterminados
-            return deep_merge(DEFAULT_SITE_CONFIG, saved_config)
+            merged_cfg = deep_merge(DEFAULT_SITE_CONFIG, saved_config)
+            _SITE_CONFIG_CACHE["ts"] = now_mono
+            _SITE_CONFIG_CACHE["data"] = merged_cfg
+            return merged_cfg
     except Exception as e:
         logger.error(f"Error fetching Arko config: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -750,6 +761,8 @@ def update_site_config(
             # Guardamos la nueva configuración en la base de datos
             admin.site_config = config_data
             db.commit()
+            _SITE_CONFIG_CACHE["ts"] = 0.0
+            _SITE_CONFIG_CACHE["data"] = None
             return {"status": "success", "config": admin.site_config}
     except Exception as e:
         logger.error(f"Error updating Arko config: {str(e)}", exc_info=True)

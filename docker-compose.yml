@@ -4,6 +4,7 @@ services:
   apupro-db:
     image: postgres:14
     restart: always
+    command: postgres -c max_connections=300 -c shared_buffers=256MB
     environment:
       POSTGRES_USER: apupro_user
       POSTGRES_PASSWORD: apupro_password
@@ -26,6 +27,7 @@ services:
     image: ghcr.io/gynsys/apupro/apupro-backend:latest
     build: 
       context: ./backend
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "2", "--backlog", "2048", "--timeout-keep-alive", "15"]
     restart: always
     ports:
       - "8010:8001"

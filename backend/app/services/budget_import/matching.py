@@ -206,6 +206,10 @@ def find_candidates(
             # Evita que una demolición/remoción gane cuando se pide construir o instalar.
             if not query_is_demolition and _has_any(description_upper, _DEMOLITION_TERMS):
                 score -= 0.28
+            # Si la consulta es demolición/remoción, prioriza esa acción sobre
+            # suministro, instalación o impermeabilización.
+            if query_is_demolition and _has_any(description_upper, _DEMOLITION_TERMS):
+                score += 0.22
             # Evita que una fila de carga/acarreo gane cuando no se pidió transporte.
             if not query_is_transport and _has_any(description_upper, _TRANSPORT_TERMS):
                 score -= 0.15
