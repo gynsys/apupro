@@ -94,18 +94,19 @@ jobs:
             # Login to GitHub Container Registry using the GitHub token
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
-            # Pull new code
-            git pull origin main
+            # Pull new code cleanly without git merge conflicts
+            git fetch origin main
+            git reset --hard origin/main
             restore_env
-            
-            # Free up disk space by removing old docker images and stopped containers
-            docker system prune -af
             
             # Pull the new images
             docker compose pull
             
-            # Restart containers with the new images or build them if missing
-            docker compose up -d
+            # Prevent container name collision conflicts (remove previous app containers cleanly)
+            docker rm -f apupro_platform-apupro-backend-1 apupro_platform-apupro-frontend-1 || true
             
-            # Clean up again just in case
-            docker image prune -af
+            # Restart containers with the new images
+            docker compose up -d --remove-orphans
+            
+            # Free up disk space by removing unused dangling images
+            docker image prune -f

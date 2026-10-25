@@ -95,6 +95,7 @@ def generate_apu_v3(
     total_deltas = len(plan.material_ops) + len(plan.equipment_ops) + len(plan.labor_ops)
 
     # Telemetría y trazabilidad compatible con el visor de auditoría y debugStorage.js
+    result["generation_engine"] = "v3_delta"
     result["telemetria_v3"] = {
         "engine": "v3_delta",
         "candidate_retrieval_ms": round(retrieval_ms, 1),

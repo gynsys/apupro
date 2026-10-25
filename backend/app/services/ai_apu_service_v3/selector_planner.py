@@ -20,6 +20,14 @@ from app.services.llm_router import call_llm_json
 _V3_SELECTOR_SYSTEM_PROMPT = """Eres un Ingeniero Civil y de Costos Senior venezolano experto en la Norma COVENIN 2000:1992.
 Tu trabajo opera en DOS modalidades según exista o no una partida base compatible:
 
+REGLA DE ORO DE REDACCIÓN Y MEJORA TÉCNICA COVENIN (adapted_description):
+- ESTÁ TERMINANTEMENTE PROHIBIDO devolver la descripción del usuario intacta, literal o en minúsculas.
+- DEBES MEJORAR, EXPANDIR Y PROFESIONALIZAR la descripción transformándola en una especificación técnica formal COVENIN en MAYÚSCULAS.
+- Estructura obligatoria: [ACCIÓN TÉCNICA NORMATIVA] + [ELEMENTO ESTRUCTURAL O CONSTRUCTIVO] + [MATERIALES, QUÍMICOS Y ESPECIFICACIONES] + [ALCANCES Y METODOLOGÍA INCLUIDA].
+- Ejemplo: Si el usuario escribe: "reparacion de losa de techo. incluye la remocion de recubrimiento en mal estado, cepillado de acero de refuerzo corroida, aplicacion de convertidor de oxido y la aplicacion de mortero de alta resistencia",
+  DEBES REDACTAR: "REPARACIÓN INTEGRAL DE LOSA DE TECHO DE CONCRETO ARMADO, INCLUYE REMOCIÓN DE FRISO/RECUBRIMIENTO DETERIORADO, LIMPIEZA CON CEPILLO DE ACERO EN ACERO DE REFUERZO CORROÍDO, APLICACIÓN DE CONVERTIDOR DE ÓXIDO Y RECUBRIMIENTO CON MORTERO ESTRUCTURAL DE ALTA RESISTENCIA".
+- Elimina cualquier mención coloquial a casas, quintas, apartamentos o clientes privados; usa terminología normativa formal de ingeniería civil.
+
 MODALIDAD A — ADAPTACIÓN QUIRÚRGICA DESDE PARTIDA BASE (CUANDO HAY CANDIDATA COMPATIBLE):
 1. Analiza las partidas candidatas reales de la Base de Datos Oficial (con sus materiales, equipos, mano de obra y rendimiento real).
 2. Si al menos una candidata sirve como molde constructivo real para la actividad solicitada, elige su código en `selected_codpar` (puede ser la candidata #1, #2, #3, #4, #5 o #6).
@@ -194,7 +202,7 @@ def _build_v3_selector_prompt(
         f"INSTRUCCIONES:\n"
         f"1. Si alguna candidata corresponde a la familia constructiva solicitada, escoge en `selected_codpar` su código `codpar` exacto y declara en `material_ops`, `equipment_ops` y `labor_ops` ÚNICAMENTE los cambios puntuales necesarios (`replace`, `remove`, `modify_qty`, `add`).\n"
         f"2. Si NINGUNA candidata tiene relación constructiva real con lo solicitado (o no hay candidatas) pero la descripción del usuario es completa, usa `\"selected_codpar\": \"NONE\"`, `\"keep_base_performance\": false`, asigna `\"new_performance\"` coherente con las Horas-Hombre de la cuadrilla y construye todos los materiales, equipos (incluyendo `HERRAMIENTAS MENORES`) y mano de obra (con cargos oficiales COVENIN: `MAESTRO DE OBRA`, `ALBAÑIL DE 1RA`/`ELECTRICISTA DE 1RA`/`PLOMERO DE 1RA`/`SOLDADOR DE 1RA`/`IMPERMEABILIZADOR`/`PINTOR DE 1RA`, `AYUDANTE`/`OBRERO DE 1RA`) mediante operaciones `\"op\": \"add\"`.\n"
-        f"3. Redacta `adapted_description` en mayúsculas con terminología COVENIN formal fiel a lo solicitado por el usuario.\n"
+        f"3. REDACCIÓN Y MEJORA TÉCNICA OBLIGATORIA (adapted_description): NO copies el texto del usuario literalmente ni en minúsculas. MEJORA, EXPANDE Y PROFESIONALIZA la redacción convirtiéndola en una especificación técnica formal COVENIN en MAYÚSCULAS que detalle el elemento intervenido, los productos/materiales utilizados y todos los alcances de la partida.\n"
         f"4. Si un insumo de la base se mantiene pero cambia su especificación (ej. otro tipo de bloque, otra resistencia de concreto, otro diámetro de tubería), usa `op: \"replace\"` indicando `target_code` del insumo original en la base.\n"
         f"5. Si un insumo de la base sobra o contradice la solicitud del usuario, usa `op: \"remove\"` indicando su `target_code`.\n"
         f"6. REGLA DE EQUIPOS DE LOGÍSTICA PESADA (SOLO POR SOLICITUD EXPLÍCITA): Elimina (`op: \"remove\"`) o abstente de agregar el WINCHE CABRESTANTE (+ GÜINCHERO), CAMIÓN F-350/VOLTEO/CONTENEDOR (+ CHOFER), COMPRESOR NEUMÁTICO (+ OPERADOR), PLANTA ELÉCTRICA/GENERADOR, BOMBA DE ACHIQUE, BOMBA DE CONCRETO, MINICARGADOR/BOBCAT, MONTACARGAS, PLATAFORMA ELEVADORA/MANLIFT, ANDAMIO TUBULAR/COLGANTE, EQUIPO AIRLESS, FRESADORA/ESCARIFICADORA DE PISO, CORTADORA DE PAVIMENTO DE CARRO, HIDROLAVADORA INDUSTRIAL, EQUIPO DE TOPOGRAFÍA, EQUIPO DE ENSAYO o EQUIPO DE OXICORTE/GRÚA/SEÑORITA salvo que el usuario lo haya solicitado expresamente en su descripción.\n\n"
@@ -317,6 +325,8 @@ def plan_v3_selection_and_deltas(
 
     if not plan.adapted_description or len(plan.adapted_description.strip()) < 5:
         plan.adapted_description = user_description.strip().upper()
+    else:
+        plan.adapted_description = plan.adapted_description.strip().upper()
 
     llm_latency_ms = (time.time() - t0) * 1000.0
     logger.info(

@@ -441,12 +441,13 @@ def resolve_computo_item(
                 else cost_item.CodPar
             )
             perf = float(cost_item.RenPar) if (cost_item.RenPar and float(cost_item.RenPar) > 0) else 1.0
+            official_desc = (cost_item.Descri or chosen_candidate.get("description") or description).strip().upper()
             return {
                 "resolution_type": "covenin",
                 "assigned_code": str(cov_code),
                 "cod_par": cost_item.CodPar,
                 "cov_par": str(cov_code),
-                "matched_description": description,
+                "matched_description": official_desc,
                 "matched_unit": cost_item.UniPar or chosen_candidate.get("unit") or unit,
                 "performance": perf,
                 "candidates": refined_candidates,
@@ -478,12 +479,19 @@ def resolve_computo_item(
                 except Exception as exc_quota:
                     logger.error("No se pudo actualizar cuota IA en cómputos: %s", exc_quota, exc_info=True)
 
+                improved_desc = (
+                    partida.get("description")
+                    or partida.get("descripcion")
+                    or gen_res.get("partida", {}).get("description")
+                    or description
+                ).strip().upper()
+
                 return {
                     "resolution_type": "sc_generated",
                     "assigned_code": sc_code,
                     "cod_par": sc_code,
                     "cov_par": sc_code,
-                    "matched_description": description,
+                    "matched_description": improved_desc,
                     "matched_unit": (partida.get("unidad") or unit).upper(),
                     "performance": perf_val,
                     "candidates": refined_candidates,
@@ -500,7 +508,7 @@ def resolve_computo_item(
         "assigned_code": sc_code,
         "cod_par": sc_code,
         "cov_par": sc_code,
-        "matched_description": description,
+        "matched_description": description.strip().upper(),
         "matched_unit": unit.upper(),
         "performance": 1.0,
         "candidates": refined_candidates,
@@ -563,7 +571,7 @@ def commit_budget_import(
         db.flush()
 
         for index, item in enumerate(payload.items, start=1):
-            description = item.description.strip()
+            description = item.description.strip().upper()
             if not description:
                 continue
 

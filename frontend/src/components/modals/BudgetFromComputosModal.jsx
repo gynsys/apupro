@@ -17,6 +17,7 @@ import {
   HelpCircle,
   ChevronDown,
   ChevronUp,
+  RotateCcw,
 } from 'lucide-react';
 import { budgetService } from '../../services/budgetService';
 
@@ -292,7 +293,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     const newItem = {
       id: itemId,
       chapter: (chapter || activeChapter || 'GENERAL').trim().toUpperCase(),
-      description: description.trim(),
+      description: (description || '').trim().toUpperCase(),
       unit: normalizedUnit,
       quantity: Number(quantity) || 1,
       formula: formula || String(quantity),
@@ -303,7 +304,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       role: 'bot',
       type: 'item_captured',
       itemId,
-      content: 'Cómputo registrado. Puedes anotar otra partida o presionar "Confirmar y Generar Presupuesto".',
+      content: `Cómputo registrado: **${newItem.description}** (${newItem.formula} = ${newItem.quantity} ${newItem.unit}). Puedes anotar otra partida o presionar "Confirmar y Generar Presupuesto".`,
     });
   };
 
@@ -420,14 +421,15 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
 
     // Si envió sólo descripción, iniciamos captura guiada paso a paso
     if (parsed.description && !parsed.measurement) {
+      const upperDesc = parsed.description.trim().toUpperCase();
       setPendingDraft({
         chapter: currentChap,
-        description: parsed.description,
+        description: upperDesc,
         step: 'awaiting_measurement',
       });
       appendMessage({
         role: 'bot',
-        content: `📝 Partida: **${parsed.description}**\n¿Cuáles son las mediciones o fórmula? (Ej: \`10.50*7.50 m\` o \`24.50\`)`,
+        content: `📝 Partida: **${upperDesc}**\n¿Cuáles son las mediciones o fórmula? (Ej: \`10.50*7.50 m\` o \`24.50\`)`,
       });
       return;
     }
@@ -437,6 +439,36 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       content:
         'Escribe la descripción de la partida junto con sus medidas y unidad, por ejemplo:\n`Capitulo Impermeabilizacion`\n`Remoción de manto asfáltico en losa de techo`\n`10.50*7.50 m`\n`M2`',
     });
+  };
+
+  const handleClearAll = () => {
+    if (capturedItems.length > 0) {
+      const confirmClear = window.confirm(
+        '¿Deseas limpiar todos los cómputos y mensajes de esta inspección para comenzar de nuevo?'
+      );
+      if (!confirmClear) return;
+    }
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // noop
+    }
+    setCapturedItems([]);
+    setPendingDraft(null);
+    setInputText('');
+    setBudgetName(`Presupuesto de Inspección - ${new Date().toLocaleDateString('es-VE')}`);
+    setProjectName('');
+    setClientName('');
+    setActiveChapter('OBRAS PRELIMINARES');
+    setMessages([
+      {
+        id: 'welcome',
+        role: 'bot',
+        type: 'welcome',
+        content:
+          '¡Hola! Soy tu asistente de cómputos en campo. Anota tus partidas aquí (capítulo, descripción, mediciones y unidad) y al finalizar presiona "Confirmar y Generar Presupuesto" para buscar las coincidencias en la BD o generar sus APUs.',
+      },
+    ]);
   };
 
   const handleRemoveItem = (itemId) => {
@@ -502,7 +534,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         if (resolved && resolved.resolution_type === 'covenin' && resolved.cod_par) {
           // Coincidencia encontrada en la BD -> Recupera la partida de la BD
           payloadItems.push({
-            description: resolved.matched_description || it.description,
+            description: (resolved.matched_description || it.description).trim().toUpperCase(),
             unit: (resolved.matched_unit || it.unit || 'M2').toUpperCase(),
             quantity: Number(it.quantity) || 0,
             performance: Number(resolved.performance) || 1.0,
@@ -520,7 +552,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           scCounter += 1;
 
           payloadItems.push({
-            description: resolved?.matched_description || it.description.toUpperCase(),
+            description: (resolved?.matched_description || it.description).trim().toUpperCase(),
             unit: (resolved?.matched_unit || it.unit || 'M2').toUpperCase(),
             quantity: Number(it.quantity) || 0,
             performance: Number(resolved?.performance) || 1.0,
@@ -632,6 +664,17 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleClearAll}
+            disabled={isCommitting}
+            className="px-2.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 hover:border-amber-400 cursor-pointer shadow-xs"
+            title="Limpiar conversación y reiniciar cómputos"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
+            <span className="hidden sm:inline">Limpiar</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setShowSummaryDrawer((v) => !v)}
@@ -789,9 +832,21 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
             </div>
 
             <div className="bg-white border border-amber-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
-              <h4 className="text-amber-950 font-bold text-sm sm:text-base">
-                Cómputos Levantados ({capturedItems.length})
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="text-amber-950 font-bold text-sm sm:text-base">
+                  Cómputos Levantados ({capturedItems.length})
+                </h4>
+                {capturedItems.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearAll}
+                    className="text-xs text-red-600 hover:text-red-700 font-semibold flex items-center gap-1 hover:underline cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Vaciar todo</span>
+                  </button>
+                )}
+              </div>
 
               {capturedItems.length === 0 ? (
                 <div className="text-center py-8 text-amber-800 text-sm">

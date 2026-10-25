@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader, Save, Calculator, Sparkles, X, Plus, RotateCcw } from 'lucide-react';
+import { Loader, Save, Calculator, Sparkles, X, Plus, RotateCcw, FileCode } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import { AuthContext } from '../../../../context/AuthContext';
 import { useUserCostos } from '../../../../context/UserCostosContext';
 import { saveCustomApu } from '../../services/cost360Service';
+import { saveDebugJsonFile } from '../../../../utils/debugStorage';
 
 import ApuEditorUI from '../../../../components/ApuEditorUI';
 import SubscriptionRequestModal from '../../../../components/SubscriptionRequestModal';
@@ -384,13 +385,38 @@ export default function AIApuGeneratorModal({
                     APU Generado listo para el presupuesto
                   </h4>
                 </div>
-                <button
-                  onClick={handleResetToNewGeneration}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  <RotateCcw size={13} />
-                  Generar otro
-                </button>
+                <div className="flex items-center gap-2">
+                  {generator.debugInfo && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const res = await saveDebugJsonFile(generator.debugInfo);
+                          if (res && res.method === 'filesystem') {
+                            toast.success(`Debug guardado en ${res.dirName}/${res.filename}`, { icon: '📁' });
+                          } else {
+                            toast.success('Debug JSON descargado exitosamente', { icon: '📥' });
+                          }
+                        } catch (err) {
+                          console.error('Error descargando Debug JSON:', err);
+                          toast.error('Error al descargar Debug JSON');
+                        }
+                      }}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                      title="Descargar auditoría técnica en JSON (Motor v3)"
+                    >
+                      <FileCode size={13} className="text-purple-400" />
+                      <span>Debug JSON</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={handleResetToNewGeneration}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    <RotateCcw size={13} />
+                    Generar otro
+                  </button>
+                </div>
               </div>
 
               {generator.item.advertencias && generator.item.advertencias.length > 0 && (

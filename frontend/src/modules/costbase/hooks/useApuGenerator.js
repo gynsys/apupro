@@ -100,13 +100,20 @@ export function useApuGenerator({ setSettings }) {
         }
       };
       setDebugInfo(currentDebug);
-    } else if (response.debug_rag_trace || response.debug_base_apu) {
+    } else if (
+      response.generation_engine === 'v3_delta' ||
+      response.telemetria_v3 ||
+      response.v3_delta_plan ||
+      response.debug_base_selection ||
+      response.debug_rag_trace ||
+      response.debug_base_apu
+    ) {
       currentDebug = {
-        message: response.generation_engine === 'v3_delta'
+        message: (response.generation_engine === 'v3_delta' || response.telemetria_v3)
           ? 'Motor v3.0: Selección IA de Mejor Partida Base + Ajustes Puntuales (Delta)'
           : 'Generación asistida por RAG Híbrido y Adaptación de Partida Base',
         solicitud_usuario: textToSubmit,
-        generation_engine: response.generation_engine || 'rag',
+        generation_engine: response.generation_engine || (response.telemetria_v3 ? 'v3_delta' : 'rag'),
         telemetria: response.telemetria_v3 || response.debug_meta || null,
         seleccion_base: response.debug_base_selection || null,
         v3_delta_plan: response.v3_delta_plan || null,
@@ -117,6 +124,7 @@ export function useApuGenerator({ setSettings }) {
         rag_trace: response.debug_rag_trace || null,
         base_apu: response.debug_base_apu || null,
         prompt_enviado_al_llm: response.prompt_enviado_al_llm || null,
+        raw_response: response,
         respuesta_cruda_llm: {
           partida: response.partida,
           notas_adaptacion: response.notas_adaptacion || [],
@@ -209,6 +217,7 @@ export function useApuGenerator({ setSettings }) {
       }
       setItem({
         ...response.partida,
+        description: (response.partida?.description || response.partida?.descripcion || '').trim().toUpperCase(),
         materials: response.materials || [],
         equipments: response.equipments || [],
         labors: response.labors || [],

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { Loader, Save, Printer, Zap, CheckCircle2, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Loader, Save, Printer, Zap, CheckCircle2, AlertCircle, AlertTriangle, FileCode } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import { AuthContext } from '../../../context/AuthContext';
@@ -8,6 +8,7 @@ import { useUserCostos } from '../../../context/UserCostosContext';
 import { saveCustomApu, fetchApuDetails } from '../services/cost360Service';
 import { cost360DatabaseService } from '../../../services/cost360DatabaseService';
 import { useCost360Search } from '../hooks/useCost360Search';
+import { saveDebugJsonFile } from '../../../utils/debugStorage';
 
 import ApuEditorUI from '../../../components/ApuEditorUI';
 import ExportApuExcelButton from '../components/ExportApuExcelButton';
@@ -592,6 +593,29 @@ export default function AIApuGeneratorPage() {
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center justify-end mb-4 pb-3 border-b border-slate-200">
             <div className="flex items-center gap-3">
+              {generator.debugInfo && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await saveDebugJsonFile(generator.debugInfo);
+                      if (res && res.method === 'filesystem') {
+                        toast.success(`Debug guardado en ${res.dirName}/${res.filename}`, { icon: '📁' });
+                      } else {
+                        toast.success('Debug JSON descargado exitosamente', { icon: '📥' });
+                      }
+                    } catch (err) {
+                      console.error('Error descargando Debug JSON:', err);
+                      toast.error('Error al descargar Debug JSON');
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all duration-200 border border-slate-700 cursor-pointer"
+                  title="Descargar auditoría técnica completa en JSON (Motor v3)"
+                >
+                  <FileCode size={16} className="text-purple-400" />
+                  <span>Debug JSON</span>
+                </button>
+              )}
               <button
                 onClick={() => setPrintModalOpen(true)}
                 className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 hover:border-blue-400 hover:shadow-md transition-all duration-200 shadow-sm cursor-pointer"

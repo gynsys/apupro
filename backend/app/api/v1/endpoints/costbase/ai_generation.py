@@ -539,9 +539,9 @@ def generate_ai_apu_route(
             raise HTTPException(status_code=500, detail=f"Error en Motor v2.0: {str(exc)}")
 
     # Selector de Motor v3.0 (Selección IA de Mejor Partida Base + Ajustes Puntuales Delta)
-    if payload.generation_mode in ("v3", "delta") and is_superadmin and not payload.only_preprocess:
+    if payload.generation_mode in ("v3", "delta") and not payload.only_preprocess:
         logger.info(
-            "Despachando generación de APU en Motor v3.0 (Base + Ajustes Delta) para superadmin %s: %.80s",
+            "Despachando generación de APU en Motor v3.0 (Base + Ajustes Delta) para usuario %s: %.80s",
             getattr(current_user, 'email', 'desconocido'),
             payload.description
         )
@@ -558,7 +558,9 @@ def generate_ai_apu_route(
             )
             if jev_analysis:
                 v3_result["jev_analysis"] = jev_analysis
-            return _strip_debug_payload(v3_result, is_superadmin)
+            # En Motor v3.0 conservamos la auditoría completa (selección base, deltas y telemetría)
+            # para alimentar el visor técnico y el exportador de Debug JSON
+            return v3_result
         except Exception as exc:
             logger.error("Error al generar APU con Motor v3.0: %s", exc, exc_info=True)
             raise HTTPException(status_code=500, detail=f"Error en Motor v3.0: {str(exc)}")
