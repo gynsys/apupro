@@ -21,8 +21,10 @@ from app.db.models.cost360 import CostItem
 from app.middleware.plan_limits import check_ai_access, check_budget_limit
 from app.services.ai_apu_service import generate_apu_with_ai
 from app.services.ai_apu_service_v2 import generate_apu_v2
+from app.services.ai_apu_service_v3 import generate_apu_v3
 from app.services.budget_import import build_preview
 from app.services.budget_import.errors import BudgetImportError, OCRError
+from app.services.budget_import.matching import find_candidates, refine_with_llm
 from app.services.budget_postprocessor import is_labor_only_activity, recalibrate_budget_performances
 from app.services.preprocessing_service import preprocess_apu_data
 
@@ -113,6 +115,28 @@ class GenerateApuRequest(BaseModel):
 class GenerateApuResponse(BaseModel):
     status: str = "completed"
     partida: Optional[Dict[str, Any]] = None
+    materials: List[Dict[str, Any]] = []
+    equipments: List[Dict[str, Any]] = []
+    labors: List[Dict[str, Any]] = []
+    advertencias: List[str] = []
+
+
+class ResolveComputoRequest(BaseModel):
+    description: str = Field(min_length=3, max_length=1200)
+    unit: str = Field(default="M2", max_length=20)
+    sc_index: int = Field(default=1, ge=1, le=9999)
+    auto_generate_sc: bool = True
+
+
+class ResolveComputoResponse(BaseModel):
+    resolution_type: str = "covenin"
+    assigned_code: str
+    cod_par: Optional[str] = None
+    cov_par: Optional[str] = None
+    matched_description: Optional[str] = None
+    matched_unit: Optional[str] = None
+    performance: float = 1.0
+    candidates: List[Candidate] = []
     materials: List[Dict[str, Any]] = []
     equipments: List[Dict[str, Any]] = []
     labors: List[Dict[str, Any]] = []
@@ -251,6 +275,54 @@ async def preview_budget_import(
         ) from exc
 
 
+def _generate_apu_with_fallback(
+    db: Session,
+    description: str,
+    unit: str,
+) -> Dict[str, Any]:
+    """Ejecuta el motor de generación de APU v3.0 con respaldo en v2.0 y v1.0."""
+    if not description or len(description.strip()) < 3:
+        raise ValueError("La descripción es obligatoria para generar un APU.")
+
+    result: Optional[Dict[str, Any]] = None
+    try:
+        v3_res = generate_apu_v3(
+            user_description=description,
+            db=db,
+            requested_unit=unit,
+            use_embeddings=False,
+        )
+        if (
+            v3_res.get("status") in ("completed", "success")
+            and v3_res.get("partida")
+            and any(v3_res.get(k) for k in ("materials", "equipments", "labors"))
+        ):
+            result = v3_res
+    except Exception as exc_v3:
+        logger.warning("Generador v3.0 falló para importación/cómputos, recurriendo a v2.0: %s", exc_v3)
+
+    if result is None:
+        try:
+            result = generate_apu_v2(
+                user_description=description,
+                requested_unit=unit,
+                db=db,
+            )
+        except Exception as exc_v2:
+            logger.warning("Generador v2.0 falló para importación, recurriendo a v1: %s", exc_v2)
+            try:
+                preprocessed = preprocess_apu_data(db, description, None, None)
+                result = generate_apu_with_ai(preprocessed, None, db=db, requested_unit=unit)
+            except Exception as exc_v1:
+                logger.error("Error generando APU para importación (v3, v2 y v1 fallaron): %s", exc_v1, exc_info=True)
+                raise HTTPException(
+                    status_code=502,
+                    detail="El generador de APUs no pudo procesar la partida. Inténtalo de nuevo.",
+                ) from exc_v1
+
+    return result
+
+
 @router.post("/import/generate-apu", response_model=GenerateApuResponse)
 def generate_import_apu(
     payload: GenerateApuRequest,
@@ -265,23 +337,7 @@ def generate_import_apu(
         raise HTTPException(status_code=400, detail="La descripción es demasiado corta para generar un APU.")
     unit = (payload.unit or "und").strip().lower() or "und"
 
-    try:
-        result = generate_apu_v2(
-            user_description=description,
-            requested_unit=unit,
-            db=db,
-        )
-    except Exception as exc:
-        logger.warning("Generador v2.0 falló para importación, recurriendo a v1: %s", exc)
-        try:
-            preprocessed = preprocess_apu_data(db, description, None, None)
-            result = generate_apu_with_ai(preprocessed, None, db=db, requested_unit=unit)
-        except Exception as exc_v1:
-            logger.error("Error generando APU para importación (v1 y v2 fallaron): %s", exc_v1, exc_info=True)
-            raise HTTPException(
-                status_code=502,
-                detail="El generador de APUs no pudo procesar la partida. Inténtalo de nuevo.",
-            ) from exc_v1
+    result = _generate_apu_with_fallback(db=db, description=description, unit=unit)
 
     if result.get("status") not in ("completed", "success") or not result.get("partida"):
         detail = (
@@ -320,6 +376,138 @@ def generate_import_apu(
         "equipments": result.get("equipments") or [],
         "labors": result.get("labors") or [],
         "advertencias": result.get("advertencias") or [],
+    }
+
+
+@router.post("/import/resolve-computo", response_model=ResolveComputoResponse)
+def resolve_computo_item(
+    payload: ResolveComputoRequest,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """Busca coincidencia COVENIN para un apunte de cómputos o genera partida S/C 01 con APU IA."""
+    description = (payload.description or "").strip()
+    if len(description) < 3:
+        raise HTTPException(status_code=400, detail="La descripción de la partida es demasiado corta.")
+
+    unit = (payload.unit or "M2").strip() or "M2"
+    sc_code = f"S/C {max(1, int(payload.sc_index or 1)):02d}"
+
+    candidates = find_candidates(db, description=description, unit=unit, limit=5)
+    probe_item: Dict[str, Any] = {
+        "row": 1,
+        "description": description,
+        "unit": unit,
+        "quantity": 1.0,
+        "is_chapter": False,
+        "candidates": [dict(c) for c in candidates],
+        "selected_cod_par": candidates[0]["cod_par"] if candidates else None,
+    }
+
+    if candidates:
+        try:
+            refine_with_llm([probe_item])
+        except Exception as exc_ref:
+            logger.error("Error en arbitraje LLM para cómputos: %s", exc_ref, exc_info=True)
+
+    refined_candidates = probe_item.get("candidates") or candidates
+    selected_cod_par = probe_item.get("selected_cod_par")
+    llm_rejected = bool(probe_item.get("llm_rejected", False))
+
+    chosen_candidate: Optional[Dict[str, Any]] = None
+    if selected_cod_par and not llm_rejected:
+        chosen_candidate = next(
+            (c for c in refined_candidates if c.get("cod_par") == selected_cod_par),
+            None,
+        )
+        if chosen_candidate and float(chosen_candidate.get("score") or 0.0) < 0.48:
+            chosen_candidate = None
+
+    if chosen_candidate:
+        cost_item = db.query(CostItem).filter(CostItem.CodPar == chosen_candidate["cod_par"]).first()
+        has_db_apu = bool(
+            cost_item
+            and (cost_item.apu_materials or cost_item.apu_equipments or cost_item.apu_labors)
+        )
+        if cost_item and has_db_apu:
+            raw_cov = str(
+                (cost_item.CovPar if cost_item.CovPar else None)
+                or chosen_candidate.get("cov_par")
+                or ""
+            ).strip()
+            cov_code = (
+                raw_cov
+                if (raw_cov and raw_cov.upper() != "S/C")
+                else cost_item.CodPar
+            )
+            perf = float(cost_item.RenPar) if (cost_item.RenPar and float(cost_item.RenPar) > 0) else 1.0
+            return {
+                "resolution_type": "covenin",
+                "assigned_code": str(cov_code),
+                "cod_par": cost_item.CodPar,
+                "cov_par": str(cov_code),
+                "matched_description": cost_item.Descri or chosen_candidate.get("description") or description.upper(),
+                "matched_unit": cost_item.UniPar or chosen_candidate.get("unit") or unit,
+                "performance": perf,
+                "candidates": refined_candidates,
+                "materials": [],
+                "equipments": [],
+                "labors": [],
+                "advertencias": [],
+            }
+
+    # No hay coincidencia COVENIN válida -> Crear partida S/C 01, S/C 02, ...
+    if payload.auto_generate_sc:
+        try:
+            check_ai_access(current_user)
+            gen_res = _generate_apu_with_fallback(db=db, description=description, unit=unit.lower())
+            partida = gen_res.get("partida") or {}
+            materials = gen_res.get("materials") or []
+            equipments = gen_res.get("equipments") or []
+            labors = gen_res.get("labors") or []
+            if any((materials, equipments, labors)):
+                perf_val = float(partida.get("rendimiento") or 1.0)
+                if perf_val <= 0:
+                    perf_val = 1.0
+                try:
+                    with ArkoSessionLocal() as adb:
+                        db_user = adb.query(ArkoAdmin).filter(ArkoAdmin.id == current_user.id).first()
+                        if db_user:
+                            db_user.ai_apus_generated = (getattr(db_user, "ai_apus_generated", 0) or 0) + 1
+                            adb.commit()
+                except Exception as exc_quota:
+                    logger.error("No se pudo actualizar cuota IA en cómputos: %s", exc_quota, exc_info=True)
+
+                return {
+                    "resolution_type": "sc_generated",
+                    "assigned_code": sc_code,
+                    "cod_par": sc_code,
+                    "cov_par": sc_code,
+                    "matched_description": partida.get("descripcion") or description.upper(),
+                    "matched_unit": (partida.get("unidad") or unit).upper(),
+                    "performance": perf_val,
+                    "candidates": refined_candidates,
+                    "materials": materials,
+                    "equipments": equipments,
+                    "labors": labors,
+                    "advertencias": gen_res.get("advertencias") or [],
+                }
+        except Exception as exc_gen:
+            logger.error("Error generando APU automático para %s (%s): %s", sc_code, description[:60], exc_gen, exc_info=True)
+
+    return {
+        "resolution_type": "sc_generic",
+        "assigned_code": sc_code,
+        "cod_par": sc_code,
+        "cov_par": sc_code,
+        "matched_description": description.upper(),
+        "matched_unit": unit.upper(),
+        "performance": 1.0,
+        "candidates": refined_candidates,
+        "materials": [],
+        "equipments": [],
+        "labors": [],
+        "advertencias": ["Partida registrada como S/C sin insumos automáticos; puedes editar o generar su APU."],
     }
 
 

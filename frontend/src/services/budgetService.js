@@ -274,6 +274,22 @@ export const budgetService = {
     return response.json();
   },
 
+  resolveComputo: async (payload) => {
+    const response = await fetch(`${API_URL}/budgets/import/resolve-computo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const error = new Error(errorData.detail || 'No se pudo procesar la partida de cómputo');
+      error.status = response.status;
+      throw error;
+    }
+    return response.json();
+  },
+
   exportExcel: async (budgetId, payload = null) => {
     const response = await fetch(`${API_URL}/budgets/${budgetId}/export-excel`, {
       method: 'POST',
