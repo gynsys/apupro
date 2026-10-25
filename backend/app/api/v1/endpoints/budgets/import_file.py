@@ -420,7 +420,7 @@ def resolve_computo_item(
             (c for c in refined_candidates if c.get("cod_par") == selected_cod_par),
             None,
         )
-        if chosen_candidate and float(chosen_candidate.get("score") or 0.0) < 0.48:
+        if chosen_candidate and float(chosen_candidate.get("score") or 0.0) < 0.65:
             chosen_candidate = None
 
     if chosen_candidate:

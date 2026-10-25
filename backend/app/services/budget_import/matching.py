@@ -221,10 +221,11 @@ def find_candidates(
                 score -= 0.15
 
             # Afinidad y penalización por elemento constructivo principal (ej. losa vs elemento metálico vs rodamiento)
-            query_has_losa = "LOSA" in query_norm or "TECHO" in query_norm
-            cand_is_metal_only = "ELEMENTO METALICO" in description_upper or "ELEMENTOS METALICOS" in description_upper or "RODAMIENTO" in description_upper
+            query_upper = query_norm.upper()
+            query_has_losa = "LOSA" in query_upper or "TECHO" in query_upper
+            cand_is_metal_only = "ELEMENTO METALICO" in description_upper or "ELEMENTOS METALICOS" in description_upper or "RODAMIENTO" in description_upper or "BOMBA" in description_upper
             if query_has_losa and cand_is_metal_only:
-                score -= 0.40
+                score -= 0.50
 
             candidate_tokens = _tokenize(row.Descri or "")
             if query_tokens:
