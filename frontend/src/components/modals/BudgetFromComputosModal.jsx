@@ -194,6 +194,18 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
       continue;
     }
 
+    // ¿Es una línea de unidad pura suelta (ej: "M2", "UND")? Nunca crear una partida de ella
+    const uStandalone = line.match(PURE_UNIT_LINE_RE);
+    if (uStandalone && uStandalone[1]) {
+      const k = uStandalone[1].toLowerCase();
+      const matchedU = UNIT_ALIASES[k] || k.toUpperCase();
+      if (items.length > 0) {
+        items[items.length - 1].unit = matchedU;
+      }
+      i += 1;
+      continue;
+    }
+
     // ¿Línea de una sola partida con medición al final? Ej: "Friso en paredes 25 m2" o "Losa 10.5*7.5 m2"
     const inlineMatch = line.match(MEASURE_TRAILING_RE);
     const prefixText = inlineMatch ? line.slice(0, inlineMatch.index).trim() : '';
@@ -240,7 +252,7 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
         i += 1; // consumir línea de medición
 
         // Mirar si la subsiguiente línea es la unidad pura (ej: M2)
-        if (!unit && i + 1 < rawLines.length) {
+        if (i + 1 < rawLines.length) {
           const unitLineMatch = rawLines[i + 1].match(PURE_UNIT_LINE_RE);
           if (unitLineMatch && unitLineMatch[1]) {
             const k = unitLineMatch[1].toLowerCase();
@@ -528,10 +540,18 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     setCapturedItems((prev) => prev.filter((it) => it.id !== itemId));
   };
 
-  const handleInsertTemplate = () => {
-    const sample = `Capitulo Impermeabilizacion\nRemoción de manto asfáltico en losa de techo\n10.50*7.50 m\nM2`;
-    setInputText(sample);
-    textareaRef.current?.focus();
+  const handleInsertTemplate = (presetIndex = 1, autoAdd = true) => {
+    const sample =
+      presetIndex === 2
+        ? `Capitulo Albañilería\nReparación de losa de techo con mortero y convertidor de óxido\n15.00 m2`
+        : `Capitulo Impermeabilizacion\nRemoción de manto asfáltico en losa de techo\n10.50*7.50 m\nM2`;
+
+    if (autoAdd) {
+      handleSendMessage(sample);
+    } else {
+      setInputText(sample);
+      textareaRef.current?.focus();
+    }
   };
 
   /**
@@ -802,12 +822,12 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           )}
           <button
             type="button"
-            onClick={handleInsertTemplate}
-            className="text-xs font-semibold text-amber-800 hover:text-amber-950 bg-white/80 hover:bg-white border border-amber-300 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors"
-            title="Insertar ejemplo de cómputo"
+            onClick={() => handleInsertTemplate(1, true)}
+            className="text-xs font-semibold text-amber-800 hover:text-amber-950 bg-white/80 hover:bg-white border border-amber-300 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+            title="Cargar ejemplo de cómputo inmediatamente"
           >
-            <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
-            Ejemplo
+            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+            + Cargar Ejemplo
           </button>
         </div>
       </div>
@@ -960,6 +980,23 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         /* Vista de Chat */
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-[#FEF3C7]">
           <div className="max-w-3xl mx-auto space-y-4">
+            {capturedItems.length > 0 && (
+              <div className="sticky top-0 z-10 p-2.5 rounded-xl bg-amber-100/95 backdrop-blur-xs border border-amber-300 flex items-center justify-between gap-2 shadow-xs">
+                <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                  <ClipboardList className="w-4 h-4 text-amber-600" />
+                  <strong>{capturedItems.length}</strong> partida(s) levantada(s) en esta inspección
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowSummaryDrawer(true)}
+                  className="text-xs font-bold text-amber-900 bg-white hover:bg-amber-50 px-3 py-1 rounded-lg border border-amber-300 shadow-xs cursor-pointer flex items-center gap-1"
+                >
+                  <span>Ver listado de cómputos</span>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             {messages.map((msg) => {
               const isBot = msg.role === 'bot';
               const relatedItem = msg.itemId
@@ -987,24 +1024,27 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                     {msg.type === 'welcome' ? (
                       <div className="space-y-3">
                         <p className="font-medium text-amber-950">{msg.content}</p>
-                        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1.5">
+                        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-2">
                           <p className="font-bold text-amber-950 flex items-center gap-1.5">
                             <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                            Ejemplo de escritura rápida en inspección:
+                            Ejemplos rápidos para probar el levantamiento (haz clic para cargarlos):
                           </p>
-                          <pre className="font-mono text-xs bg-white p-2.5 rounded-lg border border-amber-200 text-amber-950 whitespace-pre-wrap">
-{`Capitulo Impermeabilizacion
-Remoción de manto asfáltico en losa de techo
-10.50*7.50 m
-M2`}
-                          </pre>
-                          <button
-                            type="button"
-                            onClick={handleInsertTemplate}
-                            className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-amber-700 hover:text-amber-950 underline"
-                          >
-                            Probar con este ejemplo en el cuadro de texto
-                          </button>
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => handleInsertTemplate(1, true)}
+                              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-xs cursor-pointer flex items-center gap-1"
+                            >
+                              <span>+ Cargar Ejemplo 1: Manto asfáltico (78.75 M2)</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleInsertTemplate(2, true)}
+                              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-amber-100 text-amber-950 border border-amber-300 shadow-xs cursor-pointer flex items-center gap-1"
+                            >
+                              <span>+ Cargar Ejemplo 2: Reparación de losa c/mortero (15 M2)</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ) : (
@@ -1116,7 +1156,7 @@ M2`}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={(e) => {
-                  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                  if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     handleSendMessage();
                   }
