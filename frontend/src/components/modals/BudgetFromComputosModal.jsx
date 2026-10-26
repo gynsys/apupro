@@ -21,6 +21,7 @@ import {
   Plus,
   Save,
   Copy,
+  Info,
 } from 'lucide-react';
 import { budgetService } from '../../services/budgetService';
 
@@ -167,6 +168,9 @@ function inferUnitFromDescription(desc = '') {
     if (/50m|primeros 50|m3xm|m3-m/i.test(d)) return 'M3-M';
     return 'M3-KM';
   }
+  if (/acero|cabilla|malla|refuerzo|hierro/i.test(d)) {
+    return 'KGF';
+  }
   if (
     /losa|piso|techo|manto|impermeab|pared|friso|pintura|ceramica|porcelanato|muro|tabique|cielorraso|drywall|bloque|sobrepiso|acera|esmalte|epoxi/i.test(
       d
@@ -182,7 +186,7 @@ function inferUnitFromDescription(desc = '') {
     return 'M3';
   }
   if (
-    /tuber[ií]a|tubo|cable|canal|rodapi[eé]|acero|cabilla|costanera|viga corona|conducto/i.test(
+    /tuber[ií]a|tubo|cable|canal|rodapi[eé]|costanera|viga corona|conducto/i.test(
       d
     )
   ) {
@@ -293,7 +297,8 @@ function evaluateMeasurementFormula(rawLine) {
 }
 
 /**
- * Recalcula dinámicamente las dimensiones y cantidades de una partida según el estándar de Planilla de Cómputos.
+ * Recalcula dinámicamente las dimensiones, factor de acero y distancia de acarreo
+ * según el estándar completo de la Planilla de Cómputos Métricos.
  */
 function recomputeRow(row, field, value) {
   const updated = { ...row, [field]: value };
@@ -306,11 +311,17 @@ function recomputeRow(row, field, value) {
   const w = updated.width !== '' && updated.width != null ? parseFloat(updated.width) : null;
   const h = updated.height !== '' && updated.height != null ? parseFloat(updated.height) : null;
   const t = updated.times !== '' && updated.times != null ? Math.max(1, parseFloat(updated.times) || 1) : 1;
+  const f = updated.factor !== '' && updated.factor != null && !isNaN(parseFloat(updated.factor)) ? parseFloat(updated.factor) : null;
+  const dist = updated.distance !== '' && updated.distance != null && !isNaN(parseFloat(updated.distance)) ? parseFloat(updated.distance) : null;
+
+  const multFactor = f !== null && f > 0 ? f : 1;
+  const multDist = dist !== null && dist > 0 ? dist : 1;
 
   if (field === 'quantity') {
     const qVal = Math.max(0, parseFloat(value) || 0);
     updated.quantity = qVal;
-    updated.partial = t > 0 ? Math.round((qVal / t) * 10000) / 10000 : qVal;
+    const divisor = t * multDist;
+    updated.partial = divisor > 0 ? Math.round((qVal / divisor) * 10000) / 10000 : qVal;
     return updated;
   }
 
@@ -320,17 +331,36 @@ function recomputeRow(row, field, value) {
   if (h !== null && !isNaN(h) && h > 0) dims.push(h);
 
   if (dims.length > 0) {
-    const parcial = dims.reduce((acc, curr) => acc * curr, 1);
-    const total = parcial * t;
-    updated.partial = Math.round(parcial * 10000) / 10000;
-    updated.quantity = Math.round(total * 10000) / 10000;
+    const baseGeom = dims.reduce((acc, curr) => acc * curr, 1);
+    
+    // Parcial = base geométrica * Factor (ej: metros lineales de cabilla * kg/m)
+    const parcial = Math.round(baseGeom * multFactor * 10000) / 10000;
+    
+    // Total = Parcial * N° Veces * Distancia (si aplica acarreo M3-KM)
+    const total = Math.round(parcial * t * multDist * 10000) / 10000;
 
+    updated.partial = parcial;
+    updated.quantity = total;
+
+    // Actualizar fórmula visible
+    let formulaParts = [];
+    if (t > 1) formulaParts.push(`${t} ×`);
     const dimsStr = dims.map((d) => String(d)).join(' × ');
-    updated.formula = t > 1 ? `${t} × (${dimsStr})` : dimsStr;
+    formulaParts.push(dimsStr);
+    if (f !== null) formulaParts.push(`× ${f}`);
+    if (dist !== null) formulaParts.push(`× ${dist}km`);
+    updated.formula = formulaParts.join(' ');
   } else if (field === 'partial') {
     const pVal = Math.max(0, parseFloat(value) || 0);
     updated.partial = pVal;
-    updated.quantity = Math.round(pVal * t * 10000) / 10000;
+    updated.quantity = Math.round(pVal * t * multDist * 10000) / 10000;
+  } else {
+    // Si no hay dimensiones pero se modifica Factor, Distancia o Veces sobre una cantidad base
+    const currentBase = updated.partial > 0 ? updated.partial : (parseFloat(updated.quantity) || 0);
+    if (currentBase > 0) {
+      const total = Math.round(currentBase * t * multFactor * multDist * 10000) / 10000;
+      updated.quantity = total;
+    }
   }
 
   return updated;
@@ -379,6 +409,13 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
       continue;
     }
 
+    // Detectar si el texto incluye factor de acero o distancia de acarreo
+    const factorMatch = line.match(/(?:factor|peso|kg\/m|kgf\/m)\s*[:=]?\s*(\d+(?:[.,]\d+)?)/i);
+    const parsedFactor = factorMatch ? parseFloat(factorMatch[1].replace(',', '.')) : '';
+
+    const distMatch = line.match(/(?:distancia|dist|dist\.|km)\s*[:=]?\s*(\d+(?:[.,]\d+)?)/i);
+    const parsedDistance = distMatch ? parseFloat(distMatch[1].replace(',', '.')) : '';
+
     // ¿Línea de una sola partida con medición al final?
     const inlineMatch = line.match(MEASURE_TRAILING_RE);
     const prefixText = inlineMatch ? line.slice(0, inlineMatch.index).trim() : '';
@@ -394,17 +431,23 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
         formulaEval?.inferredUnit ||
         inferUnitFromDescription(desc);
 
+      const multFactor = parsedFactor ? Number(parsedFactor) : 1;
+      const multDist = parsedDistance ? Number(parsedDistance) : 1;
+      const finalQuantity = Math.round(qty * multFactor * multDist * 10000) / 10000;
+
       items.push({
         chapter: currentChap,
         description: desc.toUpperCase(),
-        quantity: qty,
+        quantity: finalQuantity,
         formula: cleanFormula,
         unit,
         length: formulaEval?.length ?? '',
         width: formulaEval?.width ?? '',
         height: formulaEval?.height ?? '',
         times: formulaEval?.times ?? 1,
-        partial: formulaEval?.partial ?? qty,
+        factor: parsedFactor,
+        distance: parsedDistance,
+        partial: formulaEval?.partial ? Math.round(formulaEval.partial * multFactor * 10000) / 10000 : finalQuantity,
         observations: '',
         isDefaultQty: false,
       });
@@ -456,17 +499,23 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
       formula = String(qty);
     }
 
+    const multFactor = parsedFactor ? Number(parsedFactor) : 1;
+    const multDist = parsedDistance ? Number(parsedDistance) : 1;
+    const finalQuantity = Math.round(qty * multFactor * multDist * 10000) / 10000;
+
     items.push({
       chapter: currentChap,
       description: desc.toUpperCase(),
-      quantity: qty,
+      quantity: finalQuantity,
       formula,
       unit,
       length,
       width,
       height,
       times,
-      partial,
+      factor: parsedFactor,
+      distance: parsedDistance,
+      partial: Math.round(partial * multFactor * 10000) / 10000,
       observations: '',
       isDefaultQty,
     });
@@ -490,7 +539,7 @@ const INITIAL_WELCOME_MESSAGE = {
   role: 'bot',
   type: 'welcome',
   content:
-    '¡Hola! Soy tu asistente de cómputos en campo. Anota tus partidas aquí o edítalas directamente en la Planilla de Cómputos Métricos. Al finalizar presiona "Confirmar y Generar Presupuesto" para buscar coincidencias en la BD o generar sus APUs.',
+    '¡Hola! Soy tu asistente de cómputos en campo. Anota tus partidas aquí o edítalas directamente en la Planilla de Cómputos Métricos (con soporte de factores para acero y distancias para acarreos). Al finalizar presiona "Confirmar y Generar Presupuesto".',
 };
 
 export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) {
@@ -576,6 +625,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     width = '',
     height = '',
     times = 1,
+    factor = '',
+    distance = '',
     partial = null,
     observations = '',
     isDefaultQty = false,
@@ -593,6 +644,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       width: width !== '' && width != null ? width : '',
       height: height !== '' && height != null ? height : '',
       times: times || 1,
+      factor: factor !== '' && factor != null ? factor : '',
+      distance: distance !== '' && distance != null ? distance : '',
       partial: partial != null ? partial : finalQty,
       quantity: finalQty,
       formula: finalFormula,
@@ -720,6 +773,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         width: it.width,
         height: it.height,
         times: it.times,
+        factor: it.factor,
+        distance: it.distance,
         partial: it.partial,
         observations: it.observations,
         isDefaultQty: it.isDefaultQty,
@@ -753,6 +808,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       width: '',
       height: '',
       times: 1,
+      factor: '',
+      distance: '',
       partial: 0,
       quantity: 0,
       formula: '',
@@ -1018,7 +1075,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
               </span>
             </div>
             <p className="text-xs text-amber-800 truncate hidden sm:block">
-              Planilla interactiva de mediciones y cálculo de cantidades
+              Planilla de mediciones con soporte de acero (Factor kg/m) y acarreos (Distancia km)
             </p>
           </div>
         </div>
@@ -1133,9 +1190,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
 
       {/* CUERPO PRINCIPAL */}
       {activeTab === 'sheet' ? (
-        /* VISTA: PLANILLA DE CÓMPUTOS MÉTRICOS (TABLA EDITABLE SEGÚN ESTÁNDAR) */
+        /* VISTA: PLANILLA DE CÓMPUTOS MÉTRICOS (TABLA COMPLETA CON FACTOR Y DISTANCIA) */
         <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 bg-[#FEF3C7]">
-          <div className="max-w-7xl mx-auto space-y-4">
+          <div className="max-w-[1400px] mx-auto space-y-4">
             {/* Metadatos del Presupuesto */}
             <div className="bg-white border-2 border-amber-300 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
               <div className="text-center border-b border-amber-200 pb-2">
@@ -1143,7 +1200,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                   PLANILLA DE CÓMPUTOS MÉTRICOS
                 </h2>
                 <p className="text-xs text-amber-800 font-medium">
-                  Cálculo de dimensiones, cantidades parciales y totales de partidas para el presupuesto
+                  Cálculo de dimensiones, factor de peso para acero (kg/m), distancia para acarreos (km) y totales
                 </p>
               </div>
 
@@ -1182,7 +1239,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                     <select
                       value={currency}
                       onChange={(e) => setCurrency(e.target.value)}
-                      className="px-2.5 py-1.5 rounded-xl border border-amber-300 text-amber-950 text-xs sm:text-sm font-bold bg-amber-100"
+                      className="px-2.5 py-1.5 rounded-xl border border-amber-300 text-amber-950 text-xs sm:text-sm font-bold bg-amber-100 cursor-pointer"
                     >
                       <option value="USD">USD</option>
                       <option value="VES">VES</option>
@@ -1192,7 +1249,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
               </div>
             </div>
 
-            {/* Barra de Herramientas de la Planilla */}
+            {/* Barra de Herramientas y Referencia de Factores de Acero */}
             <div className="flex flex-wrap items-center justify-between gap-2 bg-white/90 border border-amber-300 px-4 py-2 rounded-2xl shadow-xs">
               <div className="flex items-center gap-2">
                 <button
@@ -1208,6 +1265,21 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                 </span>
               </div>
 
+              {/* Guía Rápida de Factores de Cabillas para Cómputos de Acero */}
+              <div className="hidden lg:flex items-center gap-2 text-[11px] text-amber-900 bg-amber-100/70 px-3 py-1 rounded-xl border border-amber-200">
+                <Info className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                <span className="font-bold">Factores de Acero (kg/m):</span>
+                <span>3/8&quot;=<strong>0.559</strong></span>
+                <span>•</span>
+                <span>1/2&quot;=<strong>0.994</strong></span>
+                <span>•</span>
+                <span>5/8&quot;=<strong>1.552</strong></span>
+                <span>•</span>
+                <span>3/4&quot;=<strong>2.237</strong></span>
+                <span>•</span>
+                <span>1&quot;=<strong>3.973</strong></span>
+              </div>
+
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -1220,28 +1292,40 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
               </div>
             </div>
 
-            {/* TABLA PRINCIPAL: PLANILLA DE CÓMPUTOS MÉTRICOS (IGUAL A LA IMAGEN) */}
+            {/* TABLA PRINCIPAL: PLANILLA DE CÓMPUTOS MÉTRICOS CON FACTOR Y DISTANCIA */}
             <div className="bg-white border-2 border-gray-400 rounded-2xl shadow-md overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left border-collapse border border-gray-400 min-w-[950px]">
+                <table className="w-full text-xs text-left border-collapse border border-gray-400 min-w-[1100px]">
                   <thead>
                     <tr className="bg-amber-200/90 text-amber-950 font-black uppercase border-b border-gray-400 text-center text-[11px] tracking-wide">
-                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-14 bg-amber-300/80">
+                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-12 bg-amber-300/80">
                         N° DE ITEM
                       </th>
-                      <th rowSpan={2} className="border border-gray-400 px-3 py-2 text-left min-w-[280px] bg-amber-200/90">
+                      <th rowSpan={2} className="border border-gray-400 px-3 py-2 text-left min-w-[240px] bg-amber-200/90">
                         DESCRIPCIÓN
                       </th>
                       <th colSpan={4} className="border border-gray-400 px-2 py-1 bg-amber-300/70">
                         DIMENSIONES
                       </th>
-                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-16 bg-amber-200/90">
+                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-14 bg-amber-200/90" title="Número de repeticiones o piezas iguales">
                         N° DE VECES
+                      </th>
+                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-20 bg-amber-300/80 text-amber-950" title="Factor de peso unitario para acero (kg/m) o factor multiplicador">
+                        <div className="leading-tight">
+                          <span>FACTOR</span>
+                          <span className="block text-[9px] font-semibold text-amber-800 normal-case">(Acero kg/m)</span>
+                        </div>
+                      </th>
+                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-20 bg-amber-300/80 text-amber-950" title="Distancia en kilómetros para acarreos y transportes (M3-KM, TON-KM)">
+                        <div className="leading-tight">
+                          <span>DISTANCIA</span>
+                          <span className="block text-[9px] font-semibold text-amber-800 normal-case">(Km acarreo)</span>
+                        </div>
                       </th>
                       <th colSpan={2} className="border border-gray-400 px-2 py-1 bg-amber-300/70">
                         CANTIDAD
                       </th>
-                      <th rowSpan={2} className="border border-gray-400 px-3 py-2 min-w-[170px] bg-amber-200/90">
+                      <th rowSpan={2} className="border border-gray-400 px-3 py-2 min-w-[150px] bg-amber-200/90">
                         OBSERVACIONES
                       </th>
                       <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-20 text-center bg-amber-300/80">
@@ -1260,7 +1344,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                   <tbody>
                     {capturedItems.length === 0 ? (
                       <tr>
-                        <td colSpan={11} className="py-12 text-center text-amber-800">
+                        <td colSpan={13} className="py-12 text-center text-amber-800">
                           <p className="font-bold text-sm mb-2">Aún no hay partidas en la planilla de cómputos.</p>
                           <div className="flex items-center justify-center gap-3">
                             <button
@@ -1291,7 +1375,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                           <React.Fragment key={it.id}>
                             {showChapHeader && (
                               <tr className="bg-amber-200/70 border-b border-gray-400">
-                                <td colSpan={11} className="px-3 py-1.5 font-black text-amber-950 text-[11px] tracking-wide border border-gray-400">
+                                <td colSpan={13} className="px-3 py-1.5 font-black text-amber-950 text-[11px] tracking-wide border border-gray-400">
                                   <div className="flex items-center justify-between">
                                     <span className="flex items-center gap-1.5">
                                       <Layers className="w-3.5 h-3.5 text-amber-700" />
@@ -1380,6 +1464,32 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                   value={it.times ?? 1}
                                   onChange={(e) => handleUpdateItemField(it.id, 'times', e.target.value)}
                                   className="w-full px-1 py-1 text-xs text-center font-bold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                />
+                              </td>
+
+                              {/* FACTOR (Acero kg/m o Multiplicador) */}
+                              <td className="border border-gray-300 px-1 py-1 bg-amber-50/30">
+                                <input
+                                  type="number"
+                                  step="0.001"
+                                  value={it.factor ?? ''}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'factor', e.target.value)}
+                                  placeholder="1.000"
+                                  className="w-full px-1 py-1 text-xs text-right font-semibold text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                  title="Factor de peso para acero (ej: 0.994 kg/m para 1/2&quot;, 1.552 para 5/8&quot;) o factor de conversión"
+                                />
+                              </td>
+
+                              {/* DISTANCIA (Km Acarreo) */}
+                              <td className="border border-gray-300 px-1 py-1 bg-amber-50/30">
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  value={it.distance ?? ''}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'distance', e.target.value)}
+                                  placeholder="—"
+                                  className="w-full px-1 py-1 text-xs text-right font-semibold text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                  title="Distancia en kilómetros para partidas de transporte y acarreo (M3-KM, TON-KM)"
                                 />
                               </td>
 
@@ -1546,7 +1656,7 @@ M2`}
                               />
                             </div>
 
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
                               <div>
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
                                   Largo
@@ -1597,6 +1707,32 @@ M2`}
                                   value={editForm.times ?? 1}
                                   onChange={(e) => handleEditFormFieldChange('times', e.target.value)}
                                   className="w-full px-2 py-1 text-xs text-center font-bold rounded-lg border border-amber-300 bg-white"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-amber-900 mb-0.5" title="Factor de peso para acero (ej: 0.994 kg/m para cabilla 1/2&quot;)">
+                                  Factor (kg/m)
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.001"
+                                  value={editForm.factor ?? ''}
+                                  onChange={(e) => handleEditFormFieldChange('factor', e.target.value)}
+                                  className="w-full px-2 py-1 text-xs text-right rounded-lg border border-amber-300 bg-white font-medium"
+                                  placeholder="1.000"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-amber-900 mb-0.5" title="Distancia en kilómetros para acarreos y transportes">
+                                  Distancia (km)
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  value={editForm.distance ?? ''}
+                                  onChange={(e) => handleEditFormFieldChange('distance', e.target.value)}
+                                  className="w-full px-2 py-1 text-xs text-right rounded-lg border border-amber-300 bg-white font-medium"
+                                  placeholder="—"
                                 />
                               </div>
                             </div>
@@ -1706,13 +1842,20 @@ M2`}
                               <p className="text-sm font-bold text-amber-950">{relatedItem.description}</p>
                             </div>
 
-                            {/* Desglose de dimensiones si están presentes */}
-                            {(relatedItem.length || relatedItem.width || relatedItem.height || (relatedItem.times && relatedItem.times > 1)) && (
+                            {/* Desglose de dimensiones, factor y distancia si están presentes */}
+                            {(relatedItem.length ||
+                              relatedItem.width ||
+                              relatedItem.height ||
+                              (relatedItem.times && relatedItem.times > 1) ||
+                              relatedItem.factor ||
+                              relatedItem.distance) && (
                               <div className="flex flex-wrap gap-2 text-[11px] text-amber-900 bg-white/80 p-2 rounded-lg border border-amber-200 font-medium">
                                 {relatedItem.length && <span>Largo: <strong>{relatedItem.length}</strong></span>}
                                 {relatedItem.width && <span>Ancho: <strong>{relatedItem.width}</strong></span>}
                                 {relatedItem.height && <span>Alto: <strong>{relatedItem.height}</strong></span>}
                                 {relatedItem.times && <span>Veces: <strong>{relatedItem.times}</strong></span>}
+                                {relatedItem.factor && <span>Factor: <strong>{relatedItem.factor} kg/m</strong></span>}
+                                {relatedItem.distance && <span>Distancia: <strong>{relatedItem.distance} km</strong></span>}
                                 {relatedItem.partial > 0 && (
                                   <span>• Parcial: <strong>{Number(relatedItem.partial).toLocaleString('es-VE', { maximumFractionDigits: 3 })}</strong></span>
                                 )}
