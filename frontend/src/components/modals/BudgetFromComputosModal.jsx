@@ -15,13 +15,31 @@ import {
   FileCheck2,
   RefreshCw,
   HelpCircle,
-  ChevronDown,
-  ChevronUp,
   RotateCcw,
+  Table,
+  Edit3,
+  Plus,
+  Save,
+  Copy,
 } from 'lucide-react';
 import { budgetService } from '../../services/budgetService';
 
-const COMMON_UNITS = ['M2', 'M3', 'ML', 'UND', 'PTO', 'KGF', 'TON', 'M3-KM', 'VIAJE', 'GL'];
+const COMMON_UNITS = [
+  'M2',
+  'M3',
+  'ML',
+  'UND',
+  'PTO',
+  'KGF',
+  'TON',
+  'M3-KM',
+  'M3-M',
+  'TON-KM',
+  'VIAJE',
+  'FLETE',
+  'GL',
+  'HA',
+];
 
 const UNIT_PATTERN =
   '(?:m3[\\s*xX×.\\-/]km|m³[\\s*xX×.\\-/]km|m3km|m³km|m3[\\s*xX×.\\-/]m|m³[\\s*xX×.\\-/]m|m3m|m³m|m3x50|ton[\\s*xX×.\\-/]km|tonkm|tf[\\s*xX×.\\-/]km|tfkm|kgf?[\\s*xX×.\\-/]km|kgf?[\\s*xX×.\\-/]m|viajes?|vje|fletes?|flt|gand(?:olas?)?|m2|m²|mt2|mts2|m3|m³|mt3|mts3|ml|mts|mt|m|metro|metros|und|unid|unidad|unidades|pza|pieza|piezas|pto|ptos|punto|puntos|kgf|kg|kilos|ton|tn|gl|global|sg|ha|km|lt|l)';
@@ -181,8 +199,7 @@ function inferUnitFromDescription(desc = '') {
 }
 
 /**
- * Evalúa de forma segura una expresión de mediciones con soporte para unidades compuestas de acarreo:
- * "120.50 m3*km", "45.00 m3-km", "10.50*7.50 m", "10,50 x 7,50", "25 m2", "3 viajes"
+ * Evalúa de forma segura una expresión de mediciones y extrae sus factores (Largo, Ancho, Alto, Veces).
  */
 function evaluateMeasurementFormula(rawLine) {
   if (!rawLine || typeof rawLine !== 'string') return null;
@@ -224,16 +241,51 @@ function evaluateMeasurementFormula(rawLine) {
     if (typeof val !== 'number' || !Number.isFinite(val) || val <= 0) return null;
 
     const quantity = Math.round(val * 10000) / 10000;
+
+    let length = '';
+    let width = '';
+    let height = '';
+    let times = 1;
+    let partial = quantity;
+
+    if (!/[+/\-]/.test(expr) && expr.includes('*')) {
+      const parts = expr
+        .split('*')
+        .map((s) => parseFloat(s.trim()))
+        .filter((n) => !isNaN(n) && n > 0);
+      if (parts.length === 2) {
+        length = parts[0];
+        width = parts[1];
+        partial = Math.round(length * width * 10000) / 10000;
+      } else if (parts.length === 3) {
+        length = parts[0];
+        width = parts[1];
+        height = parts[2];
+        partial = Math.round(length * width * height * 10000) / 10000;
+      } else if (parts.length >= 4) {
+        times = parts[0];
+        length = parts[1];
+        width = parts[2];
+        height = parts[3];
+        partial = Math.round(length * width * height * 10000) / 10000;
+      }
+    }
+
     const multParts = expr.split('*').length;
     const inferredUnit = explicitUnit || (multParts === 3 ? 'M3' : multParts === 2 ? 'M2' : null);
     const cleanFormula = expr.replace(/\*/g, ' × ');
 
     return {
       quantity,
+      partial,
       formula: cleanFormula,
       hasOperator: /[+\-*/]/.test(expr),
       inferredUnit,
       explicitUnit,
+      length,
+      width,
+      height,
+      times,
     };
   } catch {
     return null;
@@ -241,8 +293,51 @@ function evaluateMeasurementFormula(rawLine) {
 }
 
 /**
+ * Recalcula dinámicamente las dimensiones y cantidades de una partida según el estándar de Planilla de Cómputos.
+ */
+function recomputeRow(row, field, value) {
+  const updated = { ...row, [field]: value };
+
+  if (field === 'description' || field === 'chapter' || field === 'observations' || field === 'unit') {
+    return updated;
+  }
+
+  const l = updated.length !== '' && updated.length != null ? parseFloat(updated.length) : null;
+  const w = updated.width !== '' && updated.width != null ? parseFloat(updated.width) : null;
+  const h = updated.height !== '' && updated.height != null ? parseFloat(updated.height) : null;
+  const t = updated.times !== '' && updated.times != null ? Math.max(1, parseFloat(updated.times) || 1) : 1;
+
+  if (field === 'quantity') {
+    const qVal = Math.max(0, parseFloat(value) || 0);
+    updated.quantity = qVal;
+    updated.partial = t > 0 ? Math.round((qVal / t) * 10000) / 10000 : qVal;
+    return updated;
+  }
+
+  const dims = [];
+  if (l !== null && !isNaN(l) && l > 0) dims.push(l);
+  if (w !== null && !isNaN(w) && w > 0) dims.push(w);
+  if (h !== null && !isNaN(h) && h > 0) dims.push(h);
+
+  if (dims.length > 0) {
+    const parcial = dims.reduce((acc, curr) => acc * curr, 1);
+    const total = parcial * t;
+    updated.partial = Math.round(parcial * 10000) / 10000;
+    updated.quantity = Math.round(total * 10000) / 10000;
+
+    const dimsStr = dims.map((d) => String(d)).join(' × ');
+    updated.formula = t > 1 ? `${t} × (${dimsStr})` : dimsStr;
+  } else if (field === 'partial') {
+    const pVal = Math.max(0, parseFloat(value) || 0);
+    updated.partial = pVal;
+    updated.quantity = Math.round(pVal * t * 10000) / 10000;
+  }
+
+  return updated;
+}
+
+/**
  * Analiza un mensaje del usuario (multilínea, partida única, o lista de partidas).
- * Extrae capítulos, partidas, fórmulas de medición y unidades.
  */
 function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
   if (!text || typeof text !== 'string') {
@@ -273,7 +368,7 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
       continue;
     }
 
-    // ¿Es una línea de unidad pura suelta (ej: "M2", "UND", "M3-KM", "M3*KM")? Nunca crear una partida de ella
+    // ¿Es una línea de unidad pura suelta?
     const uStandalone = line.match(PURE_UNIT_LINE_RE);
     if (uStandalone && uStandalone[1]) {
       const matchedU = normalizeUnitStr(uStandalone[1]);
@@ -284,7 +379,7 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
       continue;
     }
 
-    // ¿Línea de una sola partida con medición al final? Ej: "Friso en paredes 25 m2" o "Acarreo 120.50 m3*km"
+    // ¿Línea de una sola partida con medición al final?
     const inlineMatch = line.match(MEASURE_TRAILING_RE);
     const prefixText = inlineMatch ? line.slice(0, inlineMatch.index).trim() : '';
     if (inlineMatch && prefixText.replace(/^[\d+.)\-#\s]+/, '').length >= 3) {
@@ -305,6 +400,12 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
         quantity: qty,
         formula: cleanFormula,
         unit,
+        length: formulaEval?.length ?? '',
+        width: formulaEval?.width ?? '',
+        height: formulaEval?.height ?? '',
+        times: formulaEval?.times ?? 1,
+        partial: formulaEval?.partial ?? qty,
+        observations: '',
         isDefaultQty: false,
       });
       i += 1;
@@ -317,8 +418,12 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
     let unit = null;
     let qty = 1;
     let isDefaultQty = true;
+    let length = '';
+    let width = '';
+    let height = '';
+    let times = 1;
+    let partial = 1;
 
-    // Mirar si la siguiente línea es la fórmula de medición
     if (i + 1 < rawLines.length) {
       const nextLine = rawLines[i + 1];
       const measEval = evaluateMeasurementFormula(nextLine);
@@ -326,15 +431,19 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
         qty = measEval.quantity;
         formula = measEval.formula;
         unit = measEval.explicitUnit || measEval.inferredUnit;
+        length = measEval.length ?? '';
+        width = measEval.width ?? '';
+        height = measEval.height ?? '';
+        times = measEval.times ?? 1;
+        partial = measEval.partial ?? qty;
         isDefaultQty = false;
-        i += 1; // consumir línea de medición
+        i += 1;
 
-        // Mirar si la subsiguiente línea es la unidad pura (ej: M2, M3-KM)
         if (i + 1 < rawLines.length) {
           const unitLineMatch = rawLines[i + 1].match(PURE_UNIT_LINE_RE);
           if (unitLineMatch && unitLineMatch[1]) {
             unit = normalizeUnitStr(unitLineMatch[1]);
-            i += 1; // consumir línea de unidad
+            i += 1;
           }
         }
       }
@@ -353,6 +462,12 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
       quantity: qty,
       formula,
       unit,
+      length,
+      width,
+      height,
+      times,
+      partial,
+      observations: '',
       isDefaultQty,
     });
     i += 1;
@@ -362,7 +477,6 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
 }
 
 const STORAGE_KEY = 'costbase_computos_draft_v1';
-// Purgar cualquier borrador huérfano que haya quedado en localStorage
 try {
   if (typeof window !== 'undefined' && window.localStorage) {
     window.localStorage.removeItem(STORAGE_KEY);
@@ -376,10 +490,13 @@ const INITIAL_WELCOME_MESSAGE = {
   role: 'bot',
   type: 'welcome',
   content:
-    '¡Hola! Soy tu asistente de cómputos en campo. Anota tus partidas aquí (capítulo, descripción, mediciones y unidad) y al finalizar presiona "Confirmar y Generar Presupuesto" para buscar las coincidencias en la BD o generar sus APUs.',
+    '¡Hola! Soy tu asistente de cómputos en campo. Anota tus partidas aquí o edítalas directamente en la Planilla de Cómputos Métricos. Al finalizar presiona "Confirmar y Generar Presupuesto" para buscar coincidencias en la BD o generar sus APUs.',
 };
 
 export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) {
+  // Pestaña activa: 'sheet' (Planilla de Cómputos) | 'chat' (Asistente de Campo)
+  const [activeTab, setActiveTab] = useState('sheet');
+
   const [activeChapter, setActiveChapter] = useState('OBRAS PRELIMINARES');
   const [isEditingChapter, setIsEditingChapter] = useState(false);
   const [chapterInput, setChapterInput] = useState('');
@@ -390,24 +507,25 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   const [messages, setMessages] = useState([INITIAL_WELCOME_MESSAGE]);
   const [inputText, setInputText] = useState('');
 
-  // Estado conversacional cuando el usuario escribe paso a paso
-  const [pendingDraft, setPendingDraft] = useState(null);
+  // Estado para editar un cómputo en vivo (en el chat)
+  const [editingItemId, setEditingItemId] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+
   const [lastCapturedItemId, setLastCapturedItemId] = useState(null);
 
-  // Lista de partidas levantadas en el chat (en memoria, se reinicia al refrescar o al pulsar Limpiar)
+  // Lista de partidas en la Planilla de Cómputos
   const [capturedItems, setCapturedItems] = useState([]);
-  const [showSummaryDrawer, setShowSummaryDrawer] = useState(false);
 
-  // Datos de encabezado del presupuesto para guardar
+  // Datos del presupuesto para guardar
   const [budgetName, setBudgetName] = useState(() => {
     const today = new Date().toLocaleDateString('es-VE');
-    return `Presupuesto de Inspección - ${today}`;
+    return `Presupuesto de Cómputos - ${today}`;
   });
   const [projectName, setProjectName] = useState('');
   const [clientName, setClientName] = useState('');
   const [currency, setCurrency] = useState('USD');
 
-  // Estado del proceso final "Confirmar y Generar Presupuesto"
+  // Estado del proceso de confirmación y generación
   const [isCommitting, setIsCommitting] = useState(false);
   const [commitProgressText, setCommitProgressText] = useState('');
   const [commitStepInfo, setCommitStepInfo] = useState({ current: 0, total: 0 });
@@ -428,10 +546,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   }, []);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && activeTab === 'chat') {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, activeTab]);
 
   if (!isOpen) return null;
 
@@ -446,8 +564,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   };
 
   /**
-   * Registra de inmediato el cómputo en la lista local sin bloquear al usuario en campo.
-   * La búsqueda en la BD y la generación del APU se ejecutan al presionar "Confirmar y Generar Presupuesto".
+   * Registra un cómputo tanto en la Planilla como en el Chat
    */
   const registerCapturedComputo = ({
     chapter,
@@ -455,6 +572,12 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     quantity,
     formula,
     unit,
+    length = '',
+    width = '',
+    height = '',
+    times = 1,
+    partial = null,
+    observations = '',
     isDefaultQty = false,
   }) => {
     const normalizedUnit = (unit || 'M2').toUpperCase();
@@ -466,8 +589,14 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       chapter: (chapter || activeChapter || 'GENERAL').trim().toUpperCase(),
       description: (description || '').trim().toUpperCase(),
       unit: normalizedUnit,
+      length: length !== '' && length != null ? length : '',
+      width: width !== '' && width != null ? width : '',
+      height: height !== '' && height != null ? height : '',
+      times: times || 1,
+      partial: partial != null ? partial : finalQty,
       quantity: finalQty,
       formula: finalFormula,
+      observations: observations || '',
       isDefaultQty,
     };
 
@@ -479,14 +608,14 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         role: 'bot',
         type: 'item_captured',
         itemId,
-        content: `Cómputo registrado: **${newItem.description}** (${newItem.quantity} ${newItem.unit}). Puedes anotar otra partida, ajustar la medida respondiendo (ej: \`10.50*7.50 m2\` o \`25\`) o ver la lista en "Cómputos".`,
+        content: `Cómputo registrado: **${newItem.description}** (${newItem.quantity} ${newItem.unit}). Puedes editarlo con el botón "✏️ Editar" o continuar anotando.`,
       });
     } else {
       appendMessage({
         role: 'bot',
         type: 'item_captured',
         itemId,
-        content: `Cómputo registrado: **${newItem.description}** (${newItem.formula} = ${newItem.quantity} ${newItem.unit}). Puedes anotar otra partida o presionar "Confirmar y Generar Presupuesto".`,
+        content: `Cómputo registrado: **${newItem.description}** (${newItem.formula} = ${newItem.quantity} ${newItem.unit}).`,
       });
     }
 
@@ -502,7 +631,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     }
     appendMessage({ role: 'user', content: raw });
 
-    // 1. ¿Es una actualización de medidas para el último cómputo registrado?
+    // 1. ¿Actualización de medidas para el último cómputo registrado?
     const pureMeas = evaluateMeasurementFormula(raw);
     if (pureMeas && lastCapturedItemId) {
       const targetItem = capturedItems.find((it) => it.id === lastCapturedItemId);
@@ -514,8 +643,13 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
               ? {
                   ...it,
                   quantity: pureMeas.quantity,
+                  partial: pureMeas.partial,
                   formula: pureMeas.formula,
                   unit: finalUnit,
+                  length: pureMeas.length ?? '',
+                  width: pureMeas.width ?? '',
+                  height: pureMeas.height ?? '',
+                  times: pureMeas.times ?? 1,
                   isDefaultQty: false,
                 }
               : it
@@ -531,7 +665,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       }
     }
 
-    // 2. ¿Es sólo una selección de unidad directa (ej: si se pulsa un chip 'M2')?
+    // 2. ¿Selección de unidad directa?
     const rawUnitKey = raw.replace(/[^a-zA-Z0-9²³]/g, '').toLowerCase();
     if (UNIT_ALIASES[rawUnitKey] && lastCapturedItemId) {
       const chosenUnit = UNIT_ALIASES[rawUnitKey];
@@ -559,24 +693,22 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       setActiveChapter(parsed.activeChapter);
     }
 
-    // Si solo escribió el capítulo
     if (parsed.items.length === 0) {
       if (parsed.activeChapter) {
         appendMessage({
           role: 'bot',
-          content: `📂 Capítulo activo cambiado a **${parsed.activeChapter}**. Ahora escribe la descripción de la partida, sus mediciones y unidad.`,
+          content: `📂 Capítulo activo cambiado a **${parsed.activeChapter}**. Ahora escribe la descripción de la partida, sus dimensiones y unidad.`,
         });
         return;
       }
       appendMessage({
         role: 'bot',
         content:
-          'Escribe la descripción de la partida junto con sus medidas y unidad, por ejemplo:\n`Capitulo Impermeabilizacion`\n`Remoción de manto asfáltico en losa de techo`\n`10.50*7.50 m`\n`M2`\nO en una sola línea:\n`Remoción de manto asfáltico 10.50*7.50 m2`',
+          'Escribe la partida con sus medidas y unidad, por ejemplo:\n`Capitulo Impermeabilizacion`\n`Remoción de manto asfáltico 10.50*7.50 m2`\nO cambia a la pestaña "Planilla" para editar directamente en la tabla.',
       });
       return;
     }
 
-    // Registrar todas las partidas interpretadas
     for (const it of parsed.items) {
       registerCapturedComputo({
         chapter: it.chapter || parsed.activeChapter || activeChapter,
@@ -584,15 +716,113 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         quantity: it.quantity,
         formula: it.formula,
         unit: it.unit,
+        length: it.length,
+        width: it.width,
+        height: it.height,
+        times: it.times,
+        partial: it.partial,
+        observations: it.observations,
         isDefaultQty: it.isDefaultQty,
       });
+    }
+  };
+
+  /**
+   * Actualiza directamente cualquier celda de la Planilla de Cómputos
+   */
+  const handleUpdateItemField = (itemId, field, value) => {
+    setCapturedItems((prev) =>
+      prev.map((it) => {
+        if (it.id !== itemId) return it;
+        return recomputeRow(it, field, value);
+      })
+    );
+  };
+
+  /**
+   * Agrega una fila en blanco directamente a la Planilla
+   */
+  const handleAddBlankRow = () => {
+    const newId = `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const newItem = {
+      id: newId,
+      chapter: activeChapter || 'OBRAS PRELIMINARES',
+      description: '',
+      unit: 'M2',
+      length: '',
+      width: '',
+      height: '',
+      times: 1,
+      partial: 0,
+      quantity: 0,
+      formula: '',
+      observations: '',
+      isDefaultQty: false,
+    };
+    setCapturedItems((prev) => [...prev, newItem]);
+    setLastCapturedItemId(newId);
+  };
+
+  /**
+   * Duplica una partida existente
+   */
+  const handleDuplicateRow = (item) => {
+    const newId = `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    setCapturedItems((prev) => [
+      ...prev,
+      {
+        ...item,
+        id: newId,
+      },
+    ]);
+  };
+
+  /**
+   * Manejadores para edición en vivo de cómputos en el Chat
+   */
+  const handleStartEdit = (item) => {
+    setEditingItemId(item.id);
+    setEditForm({ ...item });
+  };
+
+  const handleEditFormFieldChange = (field, value) => {
+    if (!editForm) return;
+    setEditForm((prev) => recomputeRow(prev, field, value));
+  };
+
+  const handleSaveEdit = () => {
+    if (!editForm) return;
+    const finalDesc = (editForm.description || '').trim().toUpperCase();
+    setCapturedItems((prev) =>
+      prev.map((it) =>
+        it.id === editForm.id ? { ...editForm, description: finalDesc } : it
+      )
+    );
+    setEditingItemId(null);
+    setEditForm(null);
+    appendMessage({
+      role: 'bot',
+      content: `✏️ Cómputo actualizado: **${finalDesc}** (${editForm.quantity} ${editForm.unit}).`,
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingItemId(null);
+    setEditForm(null);
+  };
+
+  const handleRemoveItem = (itemId) => {
+    setCapturedItems((prev) => prev.filter((it) => it.id !== itemId));
+    if (editingItemId === itemId) {
+      setEditingItemId(null);
+      setEditForm(null);
     }
   };
 
   const handleClearAll = (force = false) => {
     if (!force && capturedItems.length > 0) {
       const confirmClear = window.confirm(
-        '¿Deseas limpiar todos los cómputos y mensajes de esta inspección para comenzar de nuevo?'
+        '¿Deseas limpiar todos los cómputos y reiniciar la planilla?'
       );
       if (!confirmClear) return;
     }
@@ -603,42 +833,45 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     }
     setCapturedItems([]);
     setLastCapturedItemId(null);
-    setPendingDraft(null);
+    setEditingItemId(null);
+    setEditForm(null);
     setInputText('');
-    setBudgetName(`Presupuesto de Inspección - ${new Date().toLocaleDateString('es-VE')}`);
+    setBudgetName(`Presupuesto de Cómputos - ${new Date().toLocaleDateString('es-VE')}`);
     setProjectName('');
     setClientName('');
     setActiveChapter('OBRAS PRELIMINARES');
     setMessages([INITIAL_WELCOME_MESSAGE]);
-    setShowSummaryDrawer(false);
-  };
-
-  const handleRemoveItem = (itemId) => {
-    setCapturedItems((prev) => prev.filter((it) => it.id !== itemId));
   };
 
   /**
-   * Al presionar "Confirmar y Generar Presupuesto":
-   * 1. Busca coincidencia de cada descripción en la BD maestra (COVENIN / cost360_items).
-   * 2. Si hay coincidencia, recupera la partida de la BD (código, descripción oficial, unidad, rendimiento e insumos APU).
-   * 3. Si NO hay coincidencia, genera el APU con el generador de IA (Motor V3/V2) y asigna S/C 01, S/C 02...
-   * 4. Crea el presupuesto, cierra el chatbot y abre el presupuesto creado.
+   * Proceso de Confirmar y Generar Presupuesto
    */
   const handleConfirmAndGenerateBudget = async () => {
-    if (capturedItems.length === 0 || isCommitting) return;
-    const cleanBudgetName = (budgetName || '').trim() || `Presupuesto de Inspección - ${new Date().toLocaleDateString('es-VE')}`;
+    const validItems = capturedItems.filter((it) => it.description && it.description.trim());
+    if (validItems.length === 0 || isCommitting) {
+      if (capturedItems.length === 0) {
+        alert('Debes agregar al menos una partida a la planilla antes de generar el presupuesto.');
+      } else {
+        alert('Las partidas en la planilla deben tener una descripción válida.');
+      }
+      return;
+    }
+
+    const cleanBudgetName =
+      (budgetName || '').trim() ||
+      `Presupuesto de Cómputos - ${new Date().toLocaleDateString('es-VE')}`;
 
     setIsCommitting(true);
     setCommitError(null);
-    setCommitStepInfo({ current: 0, total: capturedItems.length });
+    setCommitStepInfo({ current: 0, total: validItems.length });
 
     try {
       const payloadItems = [];
       let lastChapter = null;
       let scCounter = 1;
 
-      for (let i = 0; i < capturedItems.length; i += 1) {
-        const it = capturedItems[i];
+      for (let i = 0; i < validItems.length; i += 1) {
+        const it = validItems[i];
         const chapName = (it.chapter || 'GENERAL').trim().toUpperCase();
         if (chapName && chapName !== lastChapter) {
           payloadItems.push({
@@ -650,9 +883,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           lastChapter = chapName;
         }
 
-        setCommitStepInfo({ current: i + 1, total: capturedItems.length });
+        setCommitStepInfo({ current: i + 1, total: validItems.length });
         setCommitProgressText(
-          `Buscando en BD o generando APU (${i + 1}/${capturedItems.length}): ${it.description}`
+          `Buscando en BD o generando APU (${i + 1}/${validItems.length}): ${it.description}`
         );
 
         let resolved = null;
@@ -668,7 +901,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         }
 
         if (resolved && resolved.resolution_type === 'covenin' && resolved.cod_par) {
-          // Coincidencia encontrada en la BD -> Recupera la partida de la BD
           payloadItems.push({
             description: (resolved.matched_description || it.description).trim().toUpperCase(),
             unit: (resolved.matched_unit || it.unit || 'M2').toUpperCase(),
@@ -683,7 +915,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
             labors: [],
           });
         } else {
-          // Sin coincidencia en la BD -> Usa el APU generado con nuestro generador IA y código S/C XX
           const scCode = `S/C ${String(scCounter).padStart(2, '0')}`;
           scCounter += 1;
 
@@ -711,10 +942,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         client_name: clientName.trim() || null,
         currency,
         items: payloadItems,
-        source_filename: 'Cómputos de Inspección Móvil',
+        source_filename: 'Planilla de Cómputos Métricos',
       });
 
-      // Limpiar completamente el estado del chatbot al confirmar y generar con éxito
       handleClearAll(true);
       if (onCreated) {
         onCreated(result);
@@ -731,7 +961,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
 
   return (
     <div className="fixed inset-0 z-[100] w-full h-[100dvh] bg-[#FEF3C7] flex flex-col overflow-hidden select-none sm:select-auto">
-      {/* Overlay de progreso al presionar "Confirmar y Generar Presupuesto" */}
+      {/* Overlay de Progreso al Generar Presupuesto */}
       {isCommitting && (
         <div className="absolute inset-0 z-[120] bg-[#FEF3C7]/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
           <div className="max-w-md w-full bg-white border-2 border-amber-300 rounded-3xl p-6 sm:p-8 shadow-xl space-y-4">
@@ -766,8 +996,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         </div>
       )}
 
-      {/* Header Tipo App Full-Screen con colores del Chatbot APU */}
-      <header className="px-4 sm:px-6 py-3 border-b border-amber-200 flex items-center justify-between bg-[#FEF3C7] shrink-0 shadow-sm">
+      {/* Header Principal con Selector de Modo (Planilla vs Asistente/Chat) */}
+      <header className="px-4 sm:px-6 py-2.5 border-b border-amber-200 flex items-center justify-between bg-[#FEF3C7] shrink-0 shadow-sm">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/30 shrink-0">
             <Calculator className="w-5 h-5" />
@@ -775,10 +1005,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="text-amber-900 font-bold text-base sm:text-lg leading-tight truncate">
-                Presupuesto desde Cómputos
+                Cómputos Métricos
               </h2>
               <span
-                className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
+                className={`hidden sm:inline-block text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
                   isOnline
                     ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                     : 'bg-amber-200 text-amber-900 border-amber-400 animate-pulse'
@@ -787,43 +1017,58 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                 {isOnline ? '● En línea' : '⚡ Modo Offline'}
               </span>
             </div>
-            <p className="text-xs text-amber-800 truncate">
-              Inspección móvil • Busca en BD o genera APU al confirmar
+            <p className="text-xs text-amber-800 truncate hidden sm:block">
+              Planilla interactiva de mediciones y cálculo de cantidades
             </p>
           </div>
         </div>
 
+        {/* Selector de Pestaña Central: Planilla de Cómputos vs Chat Asistente */}
+        <div className="flex items-center gap-1 bg-amber-200/80 p-1 rounded-xl border border-amber-300 shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab('sheet')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
+              activeTab === 'sheet'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'text-amber-900 hover:bg-amber-300/60'
+            }`}
+          >
+            <Table className="w-4 h-4" />
+            <span>Planilla ({capturedItems.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('chat')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
+              activeTab === 'chat'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'text-amber-900 hover:bg-amber-300/60'
+            }`}
+          >
+            <Bot className="w-4 h-4" />
+            <span>Asistente / Chat</span>
+          </button>
+        </div>
+
+        {/* Acciones de Cabecera: Limpiar y Cerrar */}
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
-            onClick={handleClearAll}
+            onClick={() => handleClearAll()}
             disabled={isCommitting}
-            className="px-2.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 hover:border-amber-400 cursor-pointer shadow-xs"
-            title="Limpiar conversación y reiniciar cómputos"
+            className="px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shadow-xs"
+            title="Limpiar planilla y reiniciar"
           >
             <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
-            <span className="hidden sm:inline">Limpiar</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowSummaryDrawer((v) => !v)}
-            className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-all shadow-sm ${
-              capturedItems.length > 0
-                ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
-                : 'bg-white border border-amber-300 text-amber-900 hover:bg-amber-100'
-            }`}
-          >
-            <ClipboardList className="w-4 h-4" />
-            <span>Cómputos ({capturedItems.length})</span>
-            {showSummaryDrawer ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            <span className="hidden md:inline">Reiniciar</span>
           </button>
 
           <button
             type="button"
             onClick={onClose}
             disabled={isCommitting}
-            className="text-amber-700 hover:text-amber-900 hover:bg-amber-200/50 rounded-full p-2 transition-colors"
+            className="text-amber-700 hover:text-amber-900 hover:bg-amber-200/50 rounded-full p-2 transition-colors cursor-pointer"
             title="Cerrar"
           >
             <X className="w-5 h-5" />
@@ -832,12 +1077,12 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       </header>
 
       {/* Barra de Capítulo Activo */}
-      <div className="px-4 sm:px-6 py-2 bg-amber-100/80 border-b border-amber-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
-        <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-950 font-semibold min-w-0">
-          <Layers className="w-4 h-4 text-amber-600 shrink-0" />
-          <span className="text-amber-800 font-medium">Capítulo activo:</span>
+      <div className="px-4 sm:px-6 py-1.5 bg-amber-100/90 border-b border-amber-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div className="flex items-center gap-2 text-xs text-amber-950 font-semibold min-w-0">
+          <Layers className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+          <span className="text-amber-800 font-medium">Capítulo actual:</span>
           {!isEditingChapter ? (
-            <span className="px-2.5 py-0.5 rounded-lg bg-white border border-amber-300 text-amber-950 font-bold truncate max-w-[180px] sm:max-w-xs">
+            <span className="px-2 py-0.5 rounded-lg bg-white border border-amber-300 text-amber-950 font-bold truncate max-w-[200px] sm:max-w-xs">
               {activeChapter}
             </span>
           ) : (
@@ -855,13 +1100,13 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                 type="text"
                 value={chapterInput}
                 onChange={(e) => setChapterInput(e.target.value)}
-                placeholder="Ej. IMPERMEABILIZACIÓN"
+                placeholder="Ej. ESTRUCTURAS"
                 autoFocus
-                className="px-2.5 py-1 text-xs rounded-lg bg-white border border-amber-400 text-amber-950 focus:outline-none"
+                className="px-2 py-0.5 text-xs rounded-lg bg-white border border-amber-400 text-amber-950 focus:outline-none"
               />
               <button
                 type="submit"
-                className="px-2.5 py-1 rounded-lg bg-amber-500 text-white text-xs font-bold hover:bg-amber-600"
+                className="px-2 py-0.5 rounded-lg bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 cursor-pointer"
               >
                 OK
               </button>
@@ -877,72 +1122,67 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                 setChapterInput(activeChapter);
                 setIsEditingChapter(true);
               }}
-              className="text-xs font-semibold text-amber-800 hover:text-amber-950 bg-white/80 hover:bg-white border border-amber-300 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+              className="text-xs font-semibold text-amber-800 hover:text-amber-950 bg-white/90 hover:bg-white border border-amber-300 px-2 py-0.5 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
             >
               <FolderPlus className="w-3.5 h-3.5 text-amber-600" />
-              Cambiar capítulo
+              <span>Cambiar capítulo</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Cuerpo Principal: Vista de Resumen o Vista de Chat */}
-      {showSummaryDrawer ? (
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-[#FEF3C7]">
-          <div className="max-w-4xl mx-auto space-y-5">
-            <div className="bg-white border border-amber-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-amber-100 pb-3">
-                <div>
-                  <h3 className="text-amber-950 font-bold text-base">Datos del Presupuesto</h3>
-                  <p className="text-xs text-amber-700">
-                    Al confirmar, se buscará cada partida en la BD maestra o se generará su APU con IA.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowSummaryDrawer(false)}
-                  className="text-xs font-bold text-amber-700 hover:text-amber-950 px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 transition-colors"
-                >
-                  Volver al Chat
-                </button>
+      {/* CUERPO PRINCIPAL */}
+      {activeTab === 'sheet' ? (
+        /* VISTA: PLANILLA DE CÓMPUTOS MÉTRICOS (TABLA EDITABLE SEGÚN ESTÁNDAR) */
+        <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 bg-[#FEF3C7]">
+          <div className="max-w-7xl mx-auto space-y-4">
+            {/* Metadatos del Presupuesto */}
+            <div className="bg-white border-2 border-amber-300 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
+              <div className="text-center border-b border-amber-200 pb-2">
+                <h2 className="text-base sm:text-lg font-black text-amber-950 tracking-wider uppercase">
+                  PLANILLA DE CÓMPUTOS MÉTRICOS
+                </h2>
+                <p className="text-xs text-amber-800 font-medium">
+                  Cálculo de dimensiones, cantidades parciales y totales de partidas para el presupuesto
+                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-amber-900 mb-1">
+                  <label className="block text-[11px] font-bold text-amber-900 mb-1">
                     Nombre del Presupuesto *
                   </label>
                   <input
                     type="text"
                     value={budgetName}
                     onChange={(e) => setBudgetName(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-amber-300 text-amber-950 text-sm focus:outline-none focus:border-amber-500"
+                    className="w-full px-3 py-1.5 rounded-xl border border-amber-300 text-amber-950 text-xs sm:text-sm font-bold focus:outline-none focus:border-amber-500 bg-amber-50/30"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-amber-900 mb-1">Proyecto / Obra</label>
+                  <label className="block text-[11px] font-bold text-amber-900 mb-1">Proyecto / Obra</label>
                   <input
                     type="text"
                     value={projectName}
                     onChange={(e) => setProjectName(e.target.value)}
-                    placeholder="Opcional"
-                    className="w-full px-3 py-2 rounded-xl border border-amber-300 text-amber-950 text-sm focus:outline-none focus:border-amber-500"
+                    placeholder="Ej. Residencia Las Palmas"
+                    className="w-full px-3 py-1.5 rounded-xl border border-amber-300 text-amber-950 text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-amber-50/30"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-amber-900 mb-1">Cliente / Moneda</label>
+                  <label className="block text-[11px] font-bold text-amber-900 mb-1">Cliente / Moneda</label>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
                       placeholder="Cliente"
-                      className="w-full px-3 py-2 rounded-xl border border-amber-300 text-amber-950 text-sm focus:outline-none focus:border-amber-500"
+                      className="w-full px-3 py-1.5 rounded-xl border border-amber-300 text-amber-950 text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-amber-50/30"
                     />
                     <select
                       value={currency}
                       onChange={(e) => setCurrency(e.target.value)}
-                      className="px-2.5 py-2 rounded-xl border border-amber-300 text-amber-950 text-sm font-bold bg-amber-50"
+                      className="px-2.5 py-1.5 rounded-xl border border-amber-300 text-amber-950 text-xs sm:text-sm font-bold bg-amber-100"
                     >
                       <option value="USD">USD</option>
                       <option value="VES">VES</option>
@@ -952,101 +1192,275 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
               </div>
             </div>
 
-            <div className="bg-white border border-amber-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-amber-950 font-bold text-sm sm:text-base">
-                  Cómputos Levantados ({capturedItems.length})
-                </h4>
-                {capturedItems.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleClearAll}
-                    className="text-xs text-red-600 hover:text-red-700 font-semibold flex items-center gap-1 hover:underline cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Vaciar todo</span>
-                  </button>
-                )}
+            {/* Barra de Herramientas de la Planilla */}
+            <div className="flex flex-wrap items-center justify-between gap-2 bg-white/90 border border-amber-300 px-4 py-2 rounded-2xl shadow-xs">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleAddBlankRow}
+                  className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Agregar Fila a la Planilla</span>
+                </button>
+                <span className="text-xs font-semibold text-amber-900">
+                  {capturedItems.length} partida(s) registradas
+                </span>
               </div>
 
-              {capturedItems.length === 0 ? (
-                <div className="text-center py-8 text-amber-800 text-sm">
-                  Aún no has cargado partidas. Vuelve al chat y escribe tu primera nota de inspección.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {capturedItems.map((it, idx) => (
-                    <div
-                      key={it.id}
-                      className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                    >
-                      <div className="space-y-1 min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-500 text-white">
-                            #{idx + 1}
-                          </span>
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-200/80 text-amber-950">
-                            {it.chapter}
-                          </span>
-                          <span className="text-xs text-amber-800 font-semibold">
-                            Medición: {it.formula} ={' '}
-                            <strong className="text-amber-950">
-                              {Number(it.quantity).toLocaleString('es-VE', { maximumFractionDigits: 2 })}{' '}
-                              {it.unit}
-                            </strong>
-                          </span>
-                        </div>
-                        <p className="text-sm font-bold text-amber-950">{it.description}</p>
-                      </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('chat')}
+                  className="px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs flex items-center gap-1.5 border border-amber-300 transition-all cursor-pointer"
+                >
+                  <Bot className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Abrir Asistente / Chat para Dictar</span>
+                </button>
+              </div>
+            </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={it.quantity}
-                          onChange={(e) => {
-                            const val = parseFloat(e.target.value) || 0;
-                            setCapturedItems((prev) =>
-                              prev.map((row) => (row.id === it.id ? { ...row, quantity: val } : row))
-                            );
-                          }}
-                          className="w-24 px-2.5 py-1.5 rounded-lg border border-amber-300 text-amber-950 text-xs font-bold text-right bg-white"
-                          title="Cantidad"
-                        />
-                        <span className="text-xs font-bold text-amber-900 w-10">{it.unit}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveItem(it.id)}
-                          className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
-                          title="Eliminar partida"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+            {/* TABLA PRINCIPAL: PLANILLA DE CÓMPUTOS MÉTRICOS (IGUAL A LA IMAGEN) */}
+            <div className="bg-white border-2 border-gray-400 rounded-2xl shadow-md overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse border border-gray-400 min-w-[950px]">
+                  <thead>
+                    <tr className="bg-amber-200/90 text-amber-950 font-black uppercase border-b border-gray-400 text-center text-[11px] tracking-wide">
+                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-14 bg-amber-300/80">
+                        N° DE ITEM
+                      </th>
+                      <th rowSpan={2} className="border border-gray-400 px-3 py-2 text-left min-w-[280px] bg-amber-200/90">
+                        DESCRIPCIÓN
+                      </th>
+                      <th colSpan={4} className="border border-gray-400 px-2 py-1 bg-amber-300/70">
+                        DIMENSIONES
+                      </th>
+                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-16 bg-amber-200/90">
+                        N° DE VECES
+                      </th>
+                      <th colSpan={2} className="border border-gray-400 px-2 py-1 bg-amber-300/70">
+                        CANTIDAD
+                      </th>
+                      <th rowSpan={2} className="border border-gray-400 px-3 py-2 min-w-[170px] bg-amber-200/90">
+                        OBSERVACIONES
+                      </th>
+                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-20 text-center bg-amber-300/80">
+                        ACCIONES
+                      </th>
+                    </tr>
+                    <tr className="bg-amber-100 text-amber-950 font-bold text-[10px] uppercase border-b border-gray-400 text-center">
+                      <th className="border border-gray-400 px-1 py-1 w-20">Unidad</th>
+                      <th className="border border-gray-400 px-1 py-1 w-16">Largo</th>
+                      <th className="border border-gray-400 px-1 py-1 w-16">Ancho</th>
+                      <th className="border border-gray-400 px-1 py-1 w-16">Alto</th>
+                      <th className="border border-gray-400 px-1 py-1 w-20">PARCIAL</th>
+                      <th className="border border-gray-400 px-1 py-1 w-24 bg-amber-200/80">TOTAL</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {capturedItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={11} className="py-12 text-center text-amber-800">
+                          <p className="font-bold text-sm mb-2">Aún no hay partidas en la planilla de cómputos.</p>
+                          <div className="flex items-center justify-center gap-3">
+                            <button
+                              type="button"
+                              onClick={handleAddBlankRow}
+                              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+                            >
+                              <Plus className="w-4 h-4" />
+                              <span>Agregar Primera Fila</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('chat')}
+                              className="px-4 py-2 rounded-xl bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
+                            >
+                              <Bot className="w-4 h-4 text-amber-600" />
+                              <span>Ingresar con Asistente / Chat</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      capturedItems.map((it, idx) => {
+                        const prevItem = idx > 0 ? capturedItems[idx - 1] : null;
+                        const showChapHeader = !prevItem || prevItem.chapter !== it.chapter;
+
+                        return (
+                          <React.Fragment key={it.id}>
+                            {showChapHeader && (
+                              <tr className="bg-amber-200/70 border-b border-gray-400">
+                                <td colSpan={11} className="px-3 py-1.5 font-black text-amber-950 text-[11px] tracking-wide border border-gray-400">
+                                  <div className="flex items-center justify-between">
+                                    <span className="flex items-center gap-1.5">
+                                      <Layers className="w-3.5 h-3.5 text-amber-700" />
+                                      CAPÍTULO: {it.chapter}
+                                    </span>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                            <tr className="hover:bg-amber-50/80 transition-colors border-b border-gray-300 text-amber-950">
+                              {/* N° DE ITEM */}
+                              <td className="border border-gray-300 px-2 py-1 text-center font-bold text-xs bg-amber-50/40">
+                                {idx + 1}
+                              </td>
+
+                              {/* DESCRIPCIÓN */}
+                              <td className="border border-gray-300 px-1 py-1">
+                                <input
+                                  type="text"
+                                  value={it.description}
+                                  onChange={(e) =>
+                                    handleUpdateItemField(it.id, 'description', e.target.value.toUpperCase())
+                                  }
+                                  placeholder="Descripción de la partida..."
+                                  className="w-full px-2 py-1 text-xs font-semibold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded uppercase"
+                                />
+                              </td>
+
+                              {/* UNIDAD */}
+                              <td className="border border-gray-300 px-1 py-1">
+                                <select
+                                  value={it.unit}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'unit', e.target.value)}
+                                  className="w-full px-1 py-1 text-xs font-bold text-center bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded cursor-pointer"
+                                >
+                                  {COMMON_UNITS.map((u) => (
+                                    <option key={u} value={u}>
+                                      {u}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+
+                              {/* LARGO */}
+                              <td className="border border-gray-300 px-1 py-1">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={it.length ?? ''}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'length', e.target.value)}
+                                  placeholder="—"
+                                  className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                />
+                              </td>
+
+                              {/* ANCHO */}
+                              <td className="border border-gray-300 px-1 py-1">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={it.width ?? ''}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'width', e.target.value)}
+                                  placeholder="—"
+                                  className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                />
+                              </td>
+
+                              {/* ALTO */}
+                              <td className="border border-gray-300 px-1 py-1">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={it.height ?? ''}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'height', e.target.value)}
+                                  placeholder="—"
+                                  className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                />
+                              </td>
+
+                              {/* N° DE VECES */}
+                              <td className="border border-gray-300 px-1 py-1">
+                                <input
+                                  type="number"
+                                  step="1"
+                                  min="1"
+                                  value={it.times ?? 1}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'times', e.target.value)}
+                                  className="w-full px-1 py-1 text-xs text-center font-bold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                />
+                              </td>
+
+                              {/* CANTIDAD PARCIAL */}
+                              <td className="border border-gray-300 px-2 py-1 text-right font-semibold text-xs text-gray-700 bg-amber-50/30">
+                                {it.partial > 0
+                                  ? Number(it.partial).toLocaleString('es-VE', { maximumFractionDigits: 3 })
+                                  : '—'}
+                              </td>
+
+                              {/* CANTIDAD TOTAL */}
+                              <td className="border border-gray-300 px-1 py-1 bg-amber-100/60">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={it.quantity}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'quantity', e.target.value)}
+                                  className="w-full px-1.5 py-1 text-xs text-right font-extrabold text-amber-950 bg-white border border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                />
+                              </td>
+
+                              {/* OBSERVACIONES */}
+                              <td className="border border-gray-300 px-1 py-1">
+                                <input
+                                  type="text"
+                                  value={it.observations ?? ''}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'observations', e.target.value)}
+                                  placeholder="Notas, eje, ubicación..."
+                                  className="w-full px-2 py-1 text-xs bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                />
+                              </td>
+
+                              {/* ACCIONES */}
+                              <td className="border border-gray-300 px-1 py-1 text-center bg-amber-50/40">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDuplicateRow(it)}
+                                    className="p-1 text-amber-700 hover:text-amber-950 hover:bg-amber-200 rounded transition-colors cursor-pointer"
+                                    title="Duplicar partida"
+                                  >
+                                    <Copy className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveItem(it.id)}
+                                    className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors cursor-pointer"
+                                    title="Eliminar partida"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          </React.Fragment>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
       ) : (
-        /* Vista de Chat */
+        /* VISTA: CHAT ASISTENTE DE CAMPO */
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-[#FEF3C7]">
           <div className="max-w-3xl mx-auto space-y-4">
             {capturedItems.length > 0 && (
               <div className="sticky top-0 z-10 p-2.5 rounded-xl bg-amber-100/95 backdrop-blur-xs border border-amber-300 flex items-center justify-between gap-2 shadow-xs">
                 <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
-                  <ClipboardList className="w-4 h-4 text-amber-600" />
-                  <strong>{capturedItems.length}</strong> partida(s) levantada(s) en esta inspección
+                  <Table className="w-4 h-4 text-amber-600" />
+                  <strong>{capturedItems.length}</strong> partida(s) en la planilla de cómputos
                 </span>
                 <button
                   type="button"
-                  onClick={() => setShowSummaryDrawer(true)}
+                  onClick={() => setActiveTab('sheet')}
                   className="text-xs font-bold text-amber-900 bg-white hover:bg-amber-50 px-3 py-1 rounded-lg border border-amber-300 shadow-xs cursor-pointer flex items-center gap-1"
                 >
-                  <span>Ver listado de cómputos</span>
-                  <ChevronDown className="w-3.5 h-3.5" />
+                  <span>Ver Planilla de Cómputos</span>
+                  <Table className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}
@@ -1069,7 +1483,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                   )}
 
                   <div
-                    className={`max-w-[90%] sm:max-w-[82%] ${
+                    className={`max-w-[90%] sm:max-w-[85%] ${
                       isBot
                         ? 'bg-white border border-amber-200 rounded-2xl rounded-bl-none p-4 text-amber-950 text-sm leading-relaxed shadow-sm space-y-3'
                         : 'bg-amber-600 text-white rounded-2xl rounded-br-none px-4 py-3 text-sm shadow-sm whitespace-pre-wrap'
@@ -1095,76 +1509,244 @@ M2`}
                       <p className="whitespace-pre-wrap">{msg.content}</p>
                     )}
 
-                    {/* Chips rápidos cuando pide unidad */}
-                    {msg.type === 'unit_prompt' && pendingDraft?.step === 'awaiting_unit' && (
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        {COMMON_UNITS.map((u) => (
-                          <button
-                            key={u}
-                            type="button"
-                            onClick={() => handleSendMessage(u)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
-                              msg.suggestedUnit === u
-                                ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
-                                : 'bg-white border-amber-300 text-amber-950 hover:bg-amber-100'
-                            }`}
-                          >
-                            {u}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Tarjeta de cómputo anotado en el chat */}
+                    {/* Tarjeta de Cómputo Anotado en el Chat con Edición en Vivo */}
                     {msg.type === 'item_captured' && relatedItem && (
-                      <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 space-y-2">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-amber-200/80 text-amber-950">
-                            {relatedItem.chapter}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveItem(relatedItem.id)}
-                            className="text-xs text-red-600 hover:text-red-800 inline-flex items-center gap-1 font-semibold"
-                            title="Quitar cómputo"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Quitar
-                          </button>
-                        </div>
+                      <div className="pt-1">
+                        {editingItemId === relatedItem.id && editForm ? (
+                          /* FORMULARIO DE EDICIÓN EN VIVO DENTRO DEL CHAT */
+                          <div className="p-3.5 rounded-xl bg-amber-100/90 border-2 border-amber-400 space-y-3 shadow-sm">
+                            <div className="flex items-center justify-between border-b border-amber-300 pb-1.5">
+                              <span className="text-xs font-extrabold text-amber-950 flex items-center gap-1.5">
+                                <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+                                Editando Cómputo
+                              </span>
+                              <button
+                                type="button"
+                                onClick={handleCancelEdit}
+                                className="text-amber-800 hover:text-amber-950 text-xs font-bold cursor-pointer"
+                              >
+                                ✕ Cancelar
+                              </button>
+                            </div>
 
-                        <div>
-                          <p className="text-sm font-bold text-amber-950">{relatedItem.description}</p>
-                        </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
+                                Descripción
+                              </label>
+                              <input
+                                type="text"
+                                value={editForm.description}
+                                onChange={(e) =>
+                                  setEditForm((prev) => ({
+                                    ...prev,
+                                    description: e.target.value.toUpperCase(),
+                                  }))
+                                }
+                                className="w-full px-2.5 py-1 text-xs font-semibold rounded-lg border border-amber-300 bg-white text-amber-950 focus:outline-none focus:border-amber-500 uppercase"
+                              />
+                            </div>
 
-                        <div className="grid grid-cols-3 gap-2 pt-1">
-                          <div className="bg-white p-2 rounded-lg border border-amber-200">
-                            <span className="block text-[10px] uppercase font-bold text-amber-700">
-                              Medición
-                            </span>
-                            <span className="text-xs font-mono font-bold text-amber-950">
-                              {relatedItem.formula}
-                            </span>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                              <div>
+                                <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
+                                  Largo
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={editForm.length ?? ''}
+                                  onChange={(e) => handleEditFormFieldChange('length', e.target.value)}
+                                  className="w-full px-2 py-1 text-xs text-right rounded-lg border border-amber-300 bg-white font-medium"
+                                  placeholder="0.00"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
+                                  Ancho
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={editForm.width ?? ''}
+                                  onChange={(e) => handleEditFormFieldChange('width', e.target.value)}
+                                  className="w-full px-2 py-1 text-xs text-right rounded-lg border border-amber-300 bg-white font-medium"
+                                  placeholder="0.00"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
+                                  Alto
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={editForm.height ?? ''}
+                                  onChange={(e) => handleEditFormFieldChange('height', e.target.value)}
+                                  className="w-full px-2 py-1 text-xs text-right rounded-lg border border-amber-300 bg-white font-medium"
+                                  placeholder="0.00"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
+                                  N° Veces
+                                </label>
+                                <input
+                                  type="number"
+                                  step="1"
+                                  min="1"
+                                  value={editForm.times ?? 1}
+                                  onChange={(e) => handleEditFormFieldChange('times', e.target.value)}
+                                  className="w-full px-2 py-1 text-xs text-center font-bold rounded-lg border border-amber-300 bg-white"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2">
+                              <div>
+                                <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
+                                  Parcial
+                                </label>
+                                <div className="px-2 py-1 text-xs text-right font-medium rounded-lg border border-amber-200 bg-amber-50 text-amber-900">
+                                  {editForm.partial > 0
+                                    ? Number(editForm.partial).toLocaleString('es-VE', { maximumFractionDigits: 3 })
+                                    : '—'}
+                                </div>
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
+                                  Total *
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={editForm.quantity}
+                                  onChange={(e) => handleEditFormFieldChange('quantity', e.target.value)}
+                                  className="w-full px-2 py-1 text-xs text-right font-extrabold rounded-lg border border-amber-400 bg-white text-amber-950"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
+                                  Unidad
+                                </label>
+                                <select
+                                  value={editForm.unit}
+                                  onChange={(e) => setEditForm((prev) => ({ ...prev, unit: e.target.value }))}
+                                  className="w-full px-2 py-1 text-xs font-bold rounded-lg border border-amber-300 bg-white text-amber-950 cursor-pointer"
+                                >
+                                  {COMMON_UNITS.map((u) => (
+                                    <option key={u} value={u}>
+                                      {u}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
+                                Observaciones
+                              </label>
+                              <input
+                                type="text"
+                                value={editForm.observations ?? ''}
+                                onChange={(e) => setEditForm((prev) => ({ ...prev, observations: e.target.value }))}
+                                placeholder="Eje, ubicación, detalles..."
+                                className="w-full px-2.5 py-1 text-xs rounded-lg border border-amber-300 bg-white text-amber-950"
+                              />
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={handleCancelEdit}
+                                className="px-3 py-1 rounded-lg border border-amber-300 text-amber-900 bg-white text-xs font-bold hover:bg-amber-50 cursor-pointer"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleSaveEdit}
+                                className="px-3.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold flex items-center gap-1 shadow-sm cursor-pointer"
+                              >
+                                <Save className="w-3.5 h-3.5" />
+                                Guardar
+                              </button>
+                            </div>
                           </div>
-                          <div className="bg-white p-2 rounded-lg border border-amber-200">
-                            <span className="block text-[10px] uppercase font-bold text-amber-700">
-                              Cantidad
-                            </span>
-                            <span className="text-xs font-extrabold text-amber-950">
-                              {Number(relatedItem.quantity).toLocaleString('es-VE', {
-                                maximumFractionDigits: 2,
-                              })}
-                            </span>
+                        ) : (
+                          /* TARJETA VISIBLE CON BOTÓN EDITAR */
+                          <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 space-y-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-amber-200/80 text-amber-950">
+                                {relatedItem.chapter}
+                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartEdit(relatedItem)}
+                                  className="text-xs text-amber-800 hover:text-amber-950 inline-flex items-center gap-1 font-bold px-2 py-0.5 rounded bg-white border border-amber-300 hover:bg-amber-100 cursor-pointer"
+                                  title="Editar medidas o datos de esta partida"
+                                >
+                                  <Edit3 className="w-3 h-3" />
+                                  Editar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveItem(relatedItem.id)}
+                                  className="text-xs text-red-600 hover:text-red-800 inline-flex items-center gap-1 font-semibold px-2 py-0.5 cursor-pointer"
+                                  title="Quitar cómputo"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  Quitar
+                                </button>
+                              </div>
+                            </div>
+
+                            <div>
+                              <p className="text-sm font-bold text-amber-950">{relatedItem.description}</p>
+                            </div>
+
+                            {/* Desglose de dimensiones si están presentes */}
+                            {(relatedItem.length || relatedItem.width || relatedItem.height || (relatedItem.times && relatedItem.times > 1)) && (
+                              <div className="flex flex-wrap gap-2 text-[11px] text-amber-900 bg-white/80 p-2 rounded-lg border border-amber-200 font-medium">
+                                {relatedItem.length && <span>Largo: <strong>{relatedItem.length}</strong></span>}
+                                {relatedItem.width && <span>Ancho: <strong>{relatedItem.width}</strong></span>}
+                                {relatedItem.height && <span>Alto: <strong>{relatedItem.height}</strong></span>}
+                                {relatedItem.times && <span>Veces: <strong>{relatedItem.times}</strong></span>}
+                                {relatedItem.partial > 0 && (
+                                  <span>• Parcial: <strong>{Number(relatedItem.partial).toLocaleString('es-VE', { maximumFractionDigits: 3 })}</strong></span>
+                                )}
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-2 gap-2 pt-1">
+                              <div className="bg-white p-2 rounded-lg border border-amber-200">
+                                <span className="block text-[10px] uppercase font-bold text-amber-700">
+                                  Cantidad Total
+                                </span>
+                                <span className="text-xs font-extrabold text-amber-950">
+                                  {Number(relatedItem.quantity).toLocaleString('es-VE', {
+                                    maximumFractionDigits: 3,
+                                  })}
+                                </span>
+                              </div>
+                              <div className="bg-white p-2 rounded-lg border border-amber-200">
+                                <span className="block text-[10px] uppercase font-bold text-amber-700">
+                                  Unidad
+                                </span>
+                                <span className="text-xs font-extrabold text-amber-950">
+                                  {relatedItem.unit}
+                                </span>
+                              </div>
+                            </div>
+
+                            {relatedItem.observations && (
+                              <p className="text-[11px] text-amber-800 italic bg-white/60 p-1.5 rounded border border-amber-200">
+                                Obs: {relatedItem.observations}
+                              </p>
+                            )}
                           </div>
-                          <div className="bg-white p-2 rounded-lg border border-amber-200">
-                            <span className="block text-[10px] uppercase font-bold text-amber-700">
-                              Unidad
-                            </span>
-                            <span className="text-xs font-extrabold text-amber-950">
-                              {relatedItem.unit}
-                            </span>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1183,20 +1765,21 @@ M2`}
         </div>
       )}
 
-      {/* Barra Inferior: Input de Chat + Botón directo "Confirmar y Generar Presupuesto" */}
+      {/* BARRA INFERIOR DE ACCIÓN (Siempre accesible en ambas vistas) */}
       <div className="p-3 sm:p-4 bg-[#FEF3C7] border-t border-amber-200 shrink-0">
-        <div className="max-w-3xl mx-auto space-y-2.5">
+        <div className="max-w-4xl mx-auto space-y-2.5">
           {commitError && (
             <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
               {commitError}
             </div>
           )}
 
-          {!showSummaryDrawer && (
+          {/* Input de Chat (solo visible cuando estamos en la pestaña Chat) */}
+          {activeTab === 'chat' && (
             <div className="flex items-end gap-2">
               <textarea
                 ref={textareaRef}
-                rows={3}
+                rows={2}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={(e) => {
@@ -1206,21 +1789,15 @@ M2`}
                   }
                 }}
                 disabled={isCommitting}
-                placeholder={
-                  pendingDraft?.step === 'awaiting_measurement'
-                    ? 'Escribe las medidas (ej: 10.50*7.50 m)...'
-                    : pendingDraft?.step === 'awaiting_unit'
-                    ? 'Escribe la unidad (ej: M2, M3, ML, UND)...'
-                    : 'Escribe Capítulo, Descripción, Medidas (ej: 10.50*7.50 m) y Unidad (M2)...'
-                }
+                placeholder="Escribe Descripción, Medidas (ej: 10.50*7.50 m) y Unidad (M2)... Presiona Enter"
                 className="flex-1 bg-white border-2 border-amber-300 rounded-2xl px-4 py-2.5 text-sm text-amber-950 focus:outline-none focus:border-amber-500 placeholder:text-amber-700/60 shadow-inner resize-none"
               />
               <button
                 type="button"
                 onClick={() => handleSendMessage()}
                 disabled={!inputText.trim() || isCommitting}
-                className="h-12 px-4 sm:px-5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold flex items-center justify-center gap-1.5 disabled:opacity-50 transition-all shadow-md shadow-amber-500/20 shrink-0"
-                title="Agregar partida a los cómputos"
+                className="h-11 px-4 sm:px-5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold flex items-center justify-center gap-1.5 disabled:opacity-50 transition-all shadow-md shadow-amber-500/20 shrink-0 cursor-pointer"
+                title="Agregar partida"
               >
                 <Send className="w-4 h-4" />
                 <span className="hidden sm:inline text-sm">Agregar</span>
@@ -1229,24 +1806,36 @@ M2`}
           )}
 
           {/* Barra de Confirmación y Generación del Presupuesto */}
-          {capturedItems.length > 0 && (
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1 bg-amber-100/80 border border-amber-300 rounded-2xl p-2.5">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <FileCheck2 className="w-4 h-4 text-amber-600 shrink-0 ml-1" />
-                <input
-                  type="text"
-                  value={budgetName}
-                  onChange={(e) => setBudgetName(e.target.value)}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-amber-100/90 border border-amber-300 rounded-2xl p-2.5 shadow-xs">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <FileCheck2 className="w-4 h-4 text-amber-600 shrink-0 ml-1" />
+              <input
+                type="text"
+                value={budgetName}
+                onChange={(e) => setBudgetName(e.target.value)}
+                disabled={isCommitting}
+                placeholder="Nombre del presupuesto..."
+                className="flex-1 min-w-0 bg-white border border-amber-300 rounded-xl px-3 py-1.5 text-xs sm:text-sm font-bold text-amber-950 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              {activeTab === 'sheet' && (
+                <button
+                  type="button"
+                  onClick={handleAddBlankRow}
                   disabled={isCommitting}
-                  placeholder="Nombre del presupuesto..."
-                  className="flex-1 min-w-0 bg-white border border-amber-300 rounded-xl px-3 py-1.5 text-xs sm:text-sm font-bold text-amber-950 focus:outline-none focus:border-amber-500"
-                />
-              </div>
+                  className="px-3 py-2 rounded-xl bg-white hover:bg-amber-50 border border-amber-300 text-amber-950 text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5 text-amber-600" />
+                  <span className="hidden sm:inline">Nueva Fila</span>
+                </button>
+              )}
 
               <button
                 type="button"
                 onClick={handleConfirmAndGenerateBudget}
-                disabled={isCommitting}
+                disabled={isCommitting || capturedItems.length === 0}
                 className="px-4 sm:px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2 shadow-md shadow-amber-600/25 disabled:opacity-50 transition-all shrink-0 cursor-pointer"
               >
                 {isCommitting ? (
@@ -1262,7 +1851,7 @@ M2`}
                 )}
               </button>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
