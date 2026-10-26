@@ -415,6 +415,30 @@ function isItemEmpty(item) {
 }
 
 /**
+ * Extrae las palabras clave esenciales para buscar en el catálogo COVENIN.
+ * Remueve palabras vacías (de, en, la, los, para, con, etc.) y limita a 2 o 3 términos clave
+ * para evitar que búsquedas con frases largas devuelvan 0 coincidencias por exceso de filtros AND.
+ */
+function extractCoveninSearchKeywords(text) {
+  if (!text || typeof text !== 'string') return '';
+  const stopWords = new Set([
+    'DE', 'LA', 'EL', 'LOS', 'LAS', 'EN', 'CON', 'PARA', 'POR', 'Y', 'O', 'A',
+    'DEL', 'AL', 'UN', 'UNA', 'UNOS', 'UNAS', 'SEGUN', 'SEGÚN', 'EJE', 'TIPO',
+    'INCLUYE', 'SIN', 'SOBRE', 'BAJO', 'DESDE', 'HASTA', 'ENTRE'
+  ]);
+
+  const clean = text
+    .toUpperCase()
+    .replace(/[^A-Z0-9ÁÉÍÓÚÜÑ\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !stopWords.has(w));
+
+  if (clean.length === 0) return '';
+  // Tomar hasta 2 o 3 palabras clave más relevantes
+  return clean.slice(0, 2).join(' ');
+}
+
+/**
  * Asegura que la planilla SIEMPRE tenga exactamente una fila libre al final para continuar escribiendo
  */
 function normalizeRowsWithSingleTrailingBlank(items, defaultChapter = 'OBRAS PRELIMINARES') {
@@ -1356,11 +1380,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
    */
   const handleOpenCoveninModal = (targetItem) => {
     setCoveninTargetItemId(targetItem.id);
-    if (targetItem.description && targetItem.description.trim()) {
-      setSearchQuery(targetItem.description.trim());
-    } else {
-      setSearchQuery('');
-    }
+    const keywords = extractCoveninSearchKeywords(targetItem.description);
+    setSearchQuery(keywords);
     setSearchCovenin('');
     setShowCatalogModal(true);
   };
