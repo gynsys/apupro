@@ -1972,6 +1972,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           setShowCatalogModal(false);
           setCoveninTargetItemId(null);
         }}
+        zIndexClass="z-[140]"
         activeDatabase={activeDatabase}
         setActiveDatabase={setActiveDatabase}
         databases={databases}

@@ -15,6 +15,7 @@ export default function BudgetSearchModal({
   onOpenImportSharedPartida,
   showAiOption = true,
   showSharedOption = true,
+  zIndexClass = 'z-50',
   searchQuery,
   setSearchQuery,
   searchCovenin,
@@ -37,7 +38,7 @@ export default function BudgetSearchModal({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-start justify-center p-0 sm:p-4 sm:pt-20">
+    <div className={`fixed inset-0 bg-slate-900/50 backdrop-blur-sm ${zIndexClass} flex items-start justify-center p-0 sm:p-4 sm:pt-20`}>
       <div className="w-full h-full sm:h-[80vh] sm:max-w-4xl bg-amber-100 rounded-none sm:rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
         <div className="flex flex-wrap sm:flex-nowrap justify-between items-center px-4 sm:px-6 py-3 sm:py-4 bg-white/40 border-b border-amber-600/15 gap-2">
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">
