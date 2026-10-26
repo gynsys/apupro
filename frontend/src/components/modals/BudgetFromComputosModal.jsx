@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 import {
   Bot,
   User,
@@ -838,27 +839,20 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
 
       const timeStr = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
       setSaveStatus(`Guardado ${timeStr}`);
+      toast.success(`Cómputo guardado correctamente (${timeStr})`);
       setTimeout(() => {
         setSaveStatus(null);
       }, 3500);
     } catch (err) {
       console.error('Error al guardar borrador de cómputos:', err);
-      alert('No se pudo guardar el borrador en el almacenamiento local.');
+      toast.error('No se pudo guardar el borrador en el almacenamiento local.');
     }
   };
 
   /**
    * Carga un cómputo guardado previamente
    */
-  const handleLoadSavedComputo = (savedItem) => {
-    if (!savedItem) return;
-    if (validCount > 0) {
-      const confirmLoad = window.confirm(
-        `¿Deseas abrir el cómputo "${savedItem.budgetName}"? Se reemplazarán las partidas actuales en pantalla.`
-      );
-      if (!confirmLoad) return;
-    }
-
+  const executeLoadSavedComputo = (savedItem) => {
     setCurrentDraftId(savedItem.id || `draft-${Date.now()}`);
     setBudgetName(savedItem.budgetName || `Presupuesto de Cómputos`);
     setProjectName(savedItem.projectName || '');
@@ -882,6 +876,48 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     } catch {}
 
     setShowOpenModal(false);
+    toast.success(`Cómputo "${savedItem.budgetName}" cargado en pantalla`);
+  };
+
+  const handleLoadSavedComputo = (savedItem) => {
+    if (!savedItem) return;
+    if (validCount > 0) {
+      toast(
+        (t) => (
+          <div className="flex flex-col gap-2.5 py-1">
+            <p className="font-semibold text-slate-800 text-sm leading-snug">
+              ¿Deseas abrir el cómputo &ldquo;{savedItem.budgetName}&rdquo;?
+            </p>
+            <p className="text-xs text-slate-500">
+              Se reemplazarán las partidas actuales en pantalla.
+            </p>
+            <div className="flex gap-2 justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => toast.dismiss(t.id)}
+                className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  toast.dismiss(t.id);
+                  executeLoadSavedComputo(savedItem);
+                }}
+                className="px-3 py-1.5 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors shadow-sm cursor-pointer"
+              >
+                Abrir cómputo
+              </button>
+            </div>
+          </div>
+        ),
+        { duration: Infinity, id: 'toast-load-saved-computo' }
+      );
+      return;
+    }
+
+    executeLoadSavedComputo(savedItem);
   };
 
   /**
@@ -889,27 +925,47 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
    */
   const handleDeleteSavedComputo = (savedId, e) => {
     e.stopPropagation();
-    const confirmDelete = window.confirm('¿Deseas eliminar este cómputo guardado de la lista?');
-    if (!confirmDelete) return;
-
-    const existingList = getSavedComputosList();
-    const updated = existingList.filter((it) => it.id !== savedId);
-    try {
-      localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
-    setSavedList(updated);
+    toast(
+      (t) => (
+        <div className="flex flex-col gap-2.5 py-1">
+          <p className="font-semibold text-slate-800 text-sm leading-snug">
+            ¿Deseas eliminar este cómputo guardado de la lista?
+          </p>
+          <div className="flex gap-2 justify-end pt-1">
+            <button
+              type="button"
+              onClick={() => toast.dismiss(t.id)}
+              className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                toast.dismiss(t.id);
+                const existingList = getSavedComputosList();
+                const updated = existingList.filter((it) => it.id !== savedId);
+                try {
+                  localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(updated));
+                } catch {}
+                setSavedList(updated);
+                toast.success('Cómputo eliminado de la lista');
+              }}
+              className="px-3 py-1.5 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors shadow-sm cursor-pointer"
+            >
+              Eliminar
+            </button>
+          </div>
+        </div>
+      ),
+      { duration: Infinity, id: `toast-del-${savedId}` }
+    );
   };
 
   /**
    * Crea un nuevo cómputo en blanco
    */
-  const handleCreateNewComputo = () => {
-    if (validCount > 0) {
-      const confirmNew = window.confirm(
-        '¿Deseas comenzar un nuevo cómputo en blanco? Asegúrate de haber guardado el actual si deseas conservarlo.'
-      );
-      if (!confirmNew) return;
-    }
+  const executeCreateNewComputo = () => {
     const newId = `draft-${Date.now()}`;
     setCurrentDraftId(newId);
     setCapturedItems([createBlankRow('OBRAS PRELIMINARES')]);
@@ -920,6 +976,46 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     setMessages([INITIAL_WELCOME_MESSAGE]);
     setSaveStatus(null);
     setShowOpenModal(false);
+    toast.success('Nueva planilla en blanco iniciada');
+  };
+
+  const handleCreateNewComputo = () => {
+    if (validCount > 0) {
+      toast(
+        (t) => (
+          <div className="flex flex-col gap-2.5 py-1">
+            <p className="font-semibold text-slate-800 text-sm leading-snug">
+              ¿Deseas comenzar un nuevo cómputo en blanco?
+            </p>
+            <p className="text-xs text-slate-500">
+              Asegúrate de haber guardado el actual si deseas conservarlo.
+            </p>
+            <div className="flex gap-2 justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => toast.dismiss(t.id)}
+                className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  toast.dismiss(t.id);
+                  executeCreateNewComputo();
+                }}
+                className="px-3 py-1.5 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors shadow-sm cursor-pointer"
+              >
+                Nuevo cómputo
+              </button>
+            </div>
+          </div>
+        ),
+        { duration: Infinity, id: 'toast-create-new-computo' }
+      );
+      return;
+    }
+    executeCreateNewComputo();
   };
 
   /**
@@ -1214,13 +1310,63 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     }
   };
 
+  const executeClearAll = () => {
+    try {
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
+    } catch {
+      // noop
+    }
+    setCapturedItems([createBlankRow('OBRAS PRELIMINARES')]);
+    setLastCapturedItemId(null);
+    setEditingItemId(null);
+    setEditForm(null);
+    setInputText('');
+    setBudgetName(`Presupuesto de Cómputos - ${new Date().toLocaleDateString('es-VE')}`);
+    setProjectName('');
+    setClientName('');
+    setActiveChapter('OBRAS PRELIMINARES');
+    setMessages([INITIAL_WELCOME_MESSAGE]);
+    setSaveStatus(null);
+    toast.success('Planilla reiniciada');
+  };
+
   const handleClearAll = (force = false) => {
     if (!force && validCount > 0) {
-      const confirmClear = window.confirm(
-        '¿Deseas limpiar todos los cómputos y reiniciar la planilla?'
+      toast(
+        (t) => (
+          <div className="flex flex-col gap-2.5 py-1">
+            <p className="font-semibold text-slate-800 text-sm leading-snug">
+              ¿Deseas limpiar todos los cómputos y reiniciar la planilla?
+            </p>
+            <p className="text-xs text-slate-500">
+              Esta acción vaciará la tabla y no se puede deshacer si no has guardado.
+            </p>
+            <div className="flex gap-2 justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => toast.dismiss(t.id)}
+                className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  toast.dismiss(t.id);
+                  executeClearAll();
+                }}
+                className="px-3 py-1.5 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors shadow-sm cursor-pointer"
+              >
+                Limpiar todo
+              </button>
+            </div>
+          </div>
+        ),
+        { duration: Infinity, id: 'toast-clear-all-computos' }
       );
-      if (!confirmClear) return;
+      return;
     }
+
     try {
       localStorage.removeItem(DRAFT_STORAGE_KEY);
     } catch {
@@ -1246,9 +1392,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     const finalItems = capturedItems.filter((it) => !isItemEmpty(it) && it.description.trim());
     if (finalItems.length === 0 || isCommitting) {
       if (validCount === 0) {
-        alert('Debes ingresar al menos una partida antes de generar el presupuesto.');
+        toast.error('Debes ingresar al menos una partida antes de generar el presupuesto.');
       } else {
-        alert('Las partidas en la planilla deben tener una descripción válida.');
+        toast.error('Las partidas en la planilla deben tener una descripción válida.');
       }
       return;
     }
