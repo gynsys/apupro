@@ -22,6 +22,7 @@ import {
   Save,
   Copy,
   Info,
+  FolderOpen,
 } from 'lucide-react';
 import { budgetService } from '../../services/budgetService';
 
@@ -589,8 +590,22 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
   return { items, activeChapter: currentChap };
 }
 
-// Clave persistente para guardar borradores de trabajo
+// Claves persistentes para guardar borradores de trabajo
 const DRAFT_STORAGE_KEY = 'costbase_computos_saved_draft_v2';
+const SAVED_LIST_STORAGE_KEY = 'costbase_computos_saved_list_v2';
+
+function getSavedComputosList() {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const data = window.localStorage.getItem(SAVED_LIST_STORAGE_KEY);
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    }
+  } catch {}
+  return [];
+}
 
 const INITIAL_WELCOME_MESSAGE = {
   id: 'welcome',
@@ -632,6 +647,20 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
 
   const [lastCapturedItemId, setLastCapturedItemId] = useState(null);
   const [saveStatus, setSaveStatus] = useState(null);
+  const [showOpenModal, setShowOpenModal] = useState(false);
+  const [savedList, setSavedList] = useState(getSavedComputosList);
+  const [currentDraftId, setCurrentDraftId] = useState(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed?.id) return parsed.id;
+        }
+      }
+    } catch {}
+    return `draft-${Date.now()}`;
+  });
 
   // Lista de partidas en la Planilla de Cómputos (inicializada con borrador previo o con 1 fila libre)
   const [capturedItems, setCapturedItems] = useState(() => {
@@ -773,21 +802,39 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   };
 
   /**
-   * Guarda explícitamente el borrador actual en localStorage
+   * Guarda explícitamente el borrador actual en localStorage y en la lista de guardados
    */
   const handleSaveDraft = () => {
     try {
       const nonBlank = capturedItems.filter((it) => !isItemEmpty(it));
+      const cleanName =
+        (budgetName || '').trim() ||
+        `Presupuesto de Cómputos - ${new Date().toLocaleDateString('es-VE')}`;
+      const nowIso = new Date().toISOString();
+
       const draftPayload = {
-        savedAt: new Date().toISOString(),
-        budgetName: (budgetName || '').trim(),
+        id: currentDraftId,
+        savedAt: nowIso,
+        budgetName: cleanName,
         projectName: (projectName || '').trim(),
         clientName: (clientName || '').trim(),
         currency,
         activeChapter,
         items: nonBlank,
+        itemCount: nonBlank.length,
       };
+
+      // 1. Guardar en el borrador activo
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftPayload));
+
+      // 2. Guardar o actualizar en la lista histórica de cómputos
+      const existingList = getSavedComputosList();
+      const updatedList = [
+        draftPayload,
+        ...existingList.filter((item) => item.id !== currentDraftId && item.budgetName !== cleanName),
+      ];
+      localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(updatedList));
+      setSavedList(updatedList);
 
       const timeStr = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
       setSaveStatus(`Guardado ${timeStr}`);
@@ -798,6 +845,81 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       console.error('Error al guardar borrador de cómputos:', err);
       alert('No se pudo guardar el borrador en el almacenamiento local.');
     }
+  };
+
+  /**
+   * Carga un cómputo guardado previamente
+   */
+  const handleLoadSavedComputo = (savedItem) => {
+    if (!savedItem) return;
+    if (validCount > 0) {
+      const confirmLoad = window.confirm(
+        `¿Deseas abrir el cómputo "${savedItem.budgetName}"? Se reemplazarán las partidas actuales en pantalla.`
+      );
+      if (!confirmLoad) return;
+    }
+
+    setCurrentDraftId(savedItem.id || `draft-${Date.now()}`);
+    setBudgetName(savedItem.budgetName || `Presupuesto de Cómputos`);
+    setProjectName(savedItem.projectName || '');
+    setClientName(savedItem.clientName || '');
+    setCurrency(savedItem.currency || 'USD');
+    setActiveChapter(savedItem.activeChapter || 'OBRAS PRELIMINARES');
+
+    if (Array.isArray(savedItem.items) && savedItem.items.length > 0) {
+      setCapturedItems(
+        normalizeRowsWithSingleTrailingBlank(
+          savedItem.items,
+          savedItem.activeChapter || 'OBRAS PRELIMINARES'
+        )
+      );
+    } else {
+      setCapturedItems([createBlankRow(savedItem.activeChapter || 'OBRAS PRELIMINARES')]);
+    }
+
+    try {
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(savedItem));
+    } catch {}
+
+    setShowOpenModal(false);
+  };
+
+  /**
+   * Elimina un cómputo de la lista de guardados
+   */
+  const handleDeleteSavedComputo = (savedId, e) => {
+    e.stopPropagation();
+    const confirmDelete = window.confirm('¿Deseas eliminar este cómputo guardado de la lista?');
+    if (!confirmDelete) return;
+
+    const existingList = getSavedComputosList();
+    const updated = existingList.filter((it) => it.id !== savedId);
+    try {
+      localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(updated));
+    } catch {}
+    setSavedList(updated);
+  };
+
+  /**
+   * Crea un nuevo cómputo en blanco
+   */
+  const handleCreateNewComputo = () => {
+    if (validCount > 0) {
+      const confirmNew = window.confirm(
+        '¿Deseas comenzar un nuevo cómputo en blanco? Asegúrate de haber guardado el actual si deseas conservarlo.'
+      );
+      if (!confirmNew) return;
+    }
+    const newId = `draft-${Date.now()}`;
+    setCurrentDraftId(newId);
+    setCapturedItems([createBlankRow('OBRAS PRELIMINARES')]);
+    setBudgetName(`Presupuesto de Cómputos - ${new Date().toLocaleDateString('es-VE')}`);
+    setProjectName('');
+    setClientName('');
+    setActiveChapter('OBRAS PRELIMINARES');
+    setMessages([INITIAL_WELCOME_MESSAGE]);
+    setSaveStatus(null);
+    setShowOpenModal(false);
   };
 
   /**
@@ -1231,6 +1353,111 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         </div>
       )}
 
+      {/* Modal / Diálogo para Abrir Cómputos Guardados */}
+      {showOpenModal && (
+        <div className="absolute inset-0 z-[130] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 border-2 border-amber-300 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-amber-200 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-sm">
+                  <FolderOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-amber-950 font-bold text-base leading-tight">Cómputos Guardados</h3>
+                  <p className="text-xs text-amber-800">Selecciona un archivo guardado para continuar</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowOpenModal(false)}
+                className="text-amber-700 hover:text-amber-950 p-1 rounded-full hover:bg-amber-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-amber-900">
+                {savedList.length} archivo(s) disponible(s)
+              </span>
+              <button
+                type="button"
+                onClick={handleCreateNewComputo}
+                className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Nuevo Cómputo</span>
+              </button>
+            </div>
+
+            <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+              {savedList.length === 0 ? (
+                <div className="py-8 text-center text-amber-800 text-xs">
+                  <FolderOpen className="w-8 h-8 text-amber-400 mx-auto mb-2" />
+                  <p className="font-bold">No hay cómputos guardados en este navegador.</p>
+                  <p className="text-amber-700 mt-1">
+                    Presiona el botón <strong>Guardar</strong> en la parte inferior para almacenar tus planillas.
+                  </p>
+                </div>
+              ) : (
+                savedList.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleLoadSavedComputo(item)}
+                    className="p-3 rounded-2xl border border-amber-200 hover:border-amber-400 bg-amber-50/50 hover:bg-amber-100/60 transition-all flex items-center justify-between gap-3 cursor-pointer group"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-extrabold text-amber-950 truncate group-hover:text-amber-900">
+                        {item.budgetName}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[11px] text-amber-800">
+                        {item.projectName && <span>Obra: <strong>{item.projectName}</strong></span>}
+                        <span>• {item.itemCount || (item.items?.length || 0)} partida(s)</span>
+                        <span>
+                          • {new Date(item.savedAt).toLocaleDateString('es-VE')}{' '}
+                          {new Date(item.savedAt).toLocaleTimeString('es-VE', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleLoadSavedComputo(item)}
+                        className="px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-600 text-white hover:bg-amber-700 shadow-xs cursor-pointer"
+                      >
+                        Abrir
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteSavedComputo(item.id, e)}
+                        className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        title="Eliminar de la lista"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="border-t border-amber-200 pt-3 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowOpenModal(false)}
+                className="px-4 py-1.5 rounded-xl border border-amber-300 text-amber-950 text-xs font-bold hover:bg-amber-100 cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header Principal con Selector de Modo (Planilla vs Asistente/Chat) */}
       <header className="px-4 sm:px-6 py-2.5 border-b border-amber-200 flex items-center justify-between bg-[#FEF3C7] shrink-0 shadow-sm">
         <div className="flex items-center gap-3 min-w-0">
@@ -1286,8 +1513,22 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           </button>
         </div>
 
-        {/* Acciones de Cabecera: Limpiar y Cerrar */}
+        {/* Acciones de Cabecera: Abrir, Reiniciar y Cerrar */}
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setSavedList(getSavedComputosList());
+              setShowOpenModal(true);
+            }}
+            disabled={isCommitting}
+            className="px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shadow-xs"
+            title="Abrir cómputos guardados"
+          >
+            <FolderOpen className="w-3.5 h-3.5 text-amber-700" />
+            <span className="hidden md:inline">Abrir ({savedList.length})</span>
+          </button>
+
           <button
             type="button"
             onClick={() => handleClearAll()}
