@@ -1333,7 +1333,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                       </th>
                     </tr>
                     <tr className="bg-amber-100 text-amber-950 font-bold text-[10px] uppercase border-b border-gray-400 text-center">
-                      <th className="border border-gray-400 px-1 py-1 w-20">Unidad</th>
+                      <th className="border border-gray-400 px-1 py-1 w-16" title="Unidad de medida">UND</th>
                       <th className="border border-gray-400 px-1 py-1 w-16">Largo</th>
                       <th className="border border-gray-400 px-1 py-1 w-16">Ancho</th>
                       <th className="border border-gray-400 px-1 py-1 w-16">Alto</th>
