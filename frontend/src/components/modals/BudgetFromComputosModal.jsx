@@ -617,24 +617,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     setCapturedItems((prev) => prev.filter((it) => it.id !== itemId));
   };
 
-  const handleInsertTemplate = (presetIndex = 1, autoAdd = true) => {
-    let sample = '';
-    if (presetIndex === 3) {
-      sample = `Capitulo Movimiento de Tierra\nAcarreo de material proveniente de excavación a botadero\n120.50 m3*km`;
-    } else if (presetIndex === 2) {
-      sample = `Capitulo Albañilería\nReparación de losa de techo con mortero y convertidor de óxido\n15.00 m2`;
-    } else {
-      sample = `Capitulo Impermeabilizacion\nRemoción de manto asfáltico en losa de techo\n10.50*7.50 m\nM2`;
-    }
-
-    if (autoAdd) {
-      handleSendMessage(sample);
-    } else {
-      setInputText(sample);
-      textareaRef.current?.focus();
-    }
-  };
-
   /**
    * Al presionar "Confirmar y Generar Presupuesto":
    * 1. Busca coincidencia de cada descripción en la BD maestra (COVENIN / cost360_items).
@@ -895,21 +877,12 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                 setChapterInput(activeChapter);
                 setIsEditingChapter(true);
               }}
-              className="text-xs font-semibold text-amber-800 hover:text-amber-950 bg-white/80 hover:bg-white border border-amber-300 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors"
+              className="text-xs font-semibold text-amber-800 hover:text-amber-950 bg-white/80 hover:bg-white border border-amber-300 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
             >
               <FolderPlus className="w-3.5 h-3.5 text-amber-600" />
               Cambiar capítulo
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => handleInsertTemplate(1, true)}
-            className="text-xs font-semibold text-amber-800 hover:text-amber-950 bg-white/80 hover:bg-white border border-amber-300 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
-            title="Cargar ejemplo de cómputo inmediatamente"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-            + Cargar Ejemplo
-          </button>
         </div>
       </div>
 
@@ -1105,34 +1078,17 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                     {msg.type === 'welcome' ? (
                       <div className="space-y-3">
                         <p className="font-medium text-amber-950">{msg.content}</p>
-                        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-2">
+                        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1.5">
                           <p className="font-bold text-amber-950 flex items-center gap-1.5">
                             <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                            Ejemplos rápidos para probar el levantamiento (haz clic para cargarlos):
+                            Ejemplo de escritura rápida en inspección:
                           </p>
-                          <div className="flex flex-wrap gap-2 pt-1">
-                            <button
-                              type="button"
-                              onClick={() => handleInsertTemplate(1, true)}
-                              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-xs cursor-pointer flex items-center gap-1"
-                            >
-                              <span>+ Cargar Ejemplo 1: Manto en losa (78.75 M2)</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleInsertTemplate(2, true)}
-                              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-amber-100 text-amber-950 border border-amber-300 shadow-xs cursor-pointer flex items-center gap-1"
-                            >
-                              <span>+ Cargar Ejemplo 2: Reparación losa c/mortero (15 M2)</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleInsertTemplate(3, true)}
-                              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 shadow-xs cursor-pointer flex items-center gap-1"
-                            >
-                              <span>+ Cargar Ejemplo 3: Acarreo botadero (120.50 M3-KM)</span>
-                            </button>
-                          </div>
+                          <pre className="font-mono text-xs bg-white p-2.5 rounded-lg border border-amber-200 text-amber-950 whitespace-pre-wrap">
+{`Capitulo Impermeabilizacion
+Remoción de manto asfáltico en losa de techo
+10.50*7.50 m
+M2`}
+                          </pre>
                         </div>
                       </div>
                     ) : (
