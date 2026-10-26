@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import { toast } from 'react-hot-toast';
 import {
   Bot,
@@ -24,8 +24,13 @@ import {
   Copy,
   Info,
   FolderOpen,
+  Search,
 } from 'lucide-react';
 import { budgetService } from '../../services/budgetService';
+import BudgetSearchModal from '../../pages/admin/budget_worksheet/BudgetSearchModal';
+import { useDatabaseContext } from '../../contexts/DatabaseContext';
+import { useCostbaseSearch as useCost360Search } from '../../modules/costbase/hooks/useCostbaseSearch';
+import { SiteConfigContext } from '../../App';
 
 const COMMON_UNITS = [
   'M2',
@@ -651,6 +656,37 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   const [chapterModalInput, setChapterModalInput] = useState('');
   const [renameChapterTarget, setRenameChapterTarget] = useState(null);
   const [renameChapterInput, setRenameChapterInput] = useState('');
+  const [showCatalogModal, setShowCatalogModal] = useState(false);
+  const [coveninTargetItemId, setCoveninTargetItemId] = useState(null);
+  const [availableBudgets, setAvailableBudgets] = useState([]);
+
+  // Base de datos y configuración del catálogo COVENIN
+  const dbContext = useDatabaseContext?.() || {};
+  const { activeDatabase = { id: 'master', name: 'Base Maestra' }, setActiveDatabase, databases = [] } = dbContext;
+  const siteConfig = useContext(SiteConfigContext) || {};
+  const config = siteConfig.config;
+
+  const {
+    searchQuery,
+    setSearchQuery,
+    searchCovenin,
+    setSearchCovenin,
+    searchDesc,
+    setSearchDesc,
+    searchInsumos,
+    setSearchInsumos,
+    results: searchResults,
+    totalResults: totalSearchResults,
+    isSearching: searching,
+    forceSearch: searchDatabase,
+    hasMore: hasMoreSearchResults,
+    loadMore: loadMoreSearchResults,
+  } = useCost360Search({
+    databaseId: activeDatabase?.id || 'master',
+    onlyCoded: config?.forceOnlyCodedMaster === true,
+    limit: 30,
+    autoSearch: showCatalogModal,
+  });
   const [savedList, setSavedList] = useState(getSavedComputosList);
   const [currentDraftId, setCurrentDraftId] = useState(() => {
     try {
@@ -770,6 +806,17 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
 
     return () => clearTimeout(timer);
   }, [capturedItems, budgetName, projectName, clientName, currency, activeChapter]);
+
+  useEffect(() => {
+    if (isOpen) {
+      budgetService.getAll()
+        .then((res) => {
+          if (Array.isArray(res)) setAvailableBudgets(res);
+          else if (Array.isArray(res?.data)) setAvailableBudgets(res.data);
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     const onUp = () => setIsOnline(true);
@@ -1286,6 +1333,62 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       const nonBlank = prev.filter((it) => !isItemEmpty(it));
       return normalizeRowsWithSingleTrailingBlank([...nonBlank, duplicated], activeChapter);
     });
+  };
+
+  /**
+   * Inserta una nueva fila vacía justo debajo de la fila actual
+   */
+  const handleInsertRowBelow = (targetItem) => {
+    const newRow = createBlankRow(targetItem?.chapter || activeChapter);
+    setCapturedItems((prev) => {
+      const targetIdx = prev.findIndex((it) => it.id === targetItem.id);
+      if (targetIdx === -1) {
+        return normalizeRowsWithSingleTrailingBlank([...prev, newRow], activeChapter);
+      }
+      const updated = [...prev];
+      updated.splice(targetIdx + 1, 0, newRow);
+      return normalizeRowsWithSingleTrailingBlank(updated, activeChapter);
+    });
+  };
+
+  /**
+   * Abre el modal de búsqueda de partidas COVENIN para reemplazar o ajustar la descripción
+   */
+  const handleOpenCoveninModal = (targetItem) => {
+    setCoveninTargetItemId(targetItem.id);
+    if (targetItem.description && targetItem.description.trim()) {
+      setSearchQuery(targetItem.description.trim());
+    } else {
+      setSearchQuery('');
+    }
+    setSearchCovenin('');
+    setShowCatalogModal(true);
+  };
+
+  /**
+   * Aplica la partida COVENIN seleccionada en la fila objetivo
+   */
+  const handleSelectCoveninPartida = (coveninItem) => {
+    if (!coveninTargetItemId || !coveninItem) return;
+    const cleanDesc = (coveninItem.Descri || '').trim().toUpperCase();
+    const cleanUnit = normalizeUnitStr(coveninItem.UniPar) || 'UND';
+
+    setCapturedItems((prev) => {
+      const updated = prev.map((it) => {
+        if (it.id !== coveninTargetItemId) return it;
+        return {
+          ...it,
+          description: cleanDesc,
+          unit: cleanUnit,
+          coveninCode: coveninItem.CovPar || coveninItem.CodPar || '',
+        };
+      });
+      return normalizeRowsWithSingleTrailingBlank(updated, activeChapter);
+    });
+
+    toast.success(`Partida actualizada según COVENIN: "${cleanDesc.slice(0, 35)}..."`);
+    setShowCatalogModal(false);
+    setCoveninTargetItemId(null);
   };
 
   /**
@@ -1862,6 +1965,36 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         </div>
       )}
 
+      {/* Modal de Búsqueda e Inclusión COVENIN (sin opciones IA ni Compartir) */}
+      <BudgetSearchModal
+        isOpen={showCatalogModal}
+        onClose={() => {
+          setShowCatalogModal(false);
+          setCoveninTargetItemId(null);
+        }}
+        activeDatabase={activeDatabase}
+        setActiveDatabase={setActiveDatabase}
+        databases={databases}
+        availableBudgets={availableBudgets}
+        showAiOption={false}
+        showSharedOption={false}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        searchCovenin={searchCovenin}
+        setSearchCovenin={setSearchCovenin}
+        searchDesc={searchDesc}
+        setSearchDesc={setSearchDesc}
+        searchInsumos={searchInsumos}
+        setSearchInsumos={setSearchInsumos}
+        searching={searching}
+        searchDatabase={searchDatabase}
+        totalSearchResults={totalSearchResults}
+        searchResults={searchResults}
+        hasMoreSearchResults={hasMoreSearchResults}
+        loadMoreSearchResults={loadMoreSearchResults}
+        onAddItem={handleSelectCoveninPartida}
+      />
+
       {/* Header Principal con Selector de Modo (Planilla vs Asistente/Chat) */}
       <header className="px-4 sm:px-6 py-2.5 border-b border-amber-200 flex items-center justify-between bg-[#FEF3C7] shrink-0 shadow-sm">
         <div className="flex items-center gap-3 min-w-0">
@@ -2262,6 +2395,22 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                             {/* ACCIONES */}
                             <td className="border border-gray-300 px-1 py-1 text-center bg-amber-50/40">
                               <div className="flex items-center justify-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleInsertRowBelow(it)}
+                                  className="p-1 text-emerald-700 hover:text-emerald-950 hover:bg-emerald-100 rounded transition-colors cursor-pointer"
+                                  title="Agregar fila debajo"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenCoveninModal(it)}
+                                  className="p-1 text-sky-700 hover:text-sky-950 hover:bg-sky-100 rounded transition-colors cursor-pointer"
+                                  title="Buscar y seleccionar partida según Norma COVENIN"
+                                >
+                                  <Search className="w-3.5 h-3.5" />
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() => handleDuplicateRow(it)}

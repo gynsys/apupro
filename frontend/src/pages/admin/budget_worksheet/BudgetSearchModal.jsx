@@ -8,11 +8,13 @@ export default function BudgetSearchModal({
   onClose,
   activeDatabase,
   setActiveDatabase,
-  databases,
-  availableBudgets,
+  databases = [],
+  availableBudgets = [],
   currentBudgetId,
   onOpenAIApuModal,
   onOpenImportSharedPartida,
+  showAiOption = true,
+  showSharedOption = true,
   searchQuery,
   setSearchQuery,
   searchCovenin,
@@ -124,28 +126,34 @@ export default function BudgetSearchModal({
               </div>
 
               {/* Botón Desde IA */}
-              <button
-                onClick={() => {
-                  onClose();
-                  onOpenAIApuModal();
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 rounded-xl transition-colors font-semibold shadow-sm text-xs sm:text-sm cursor-pointer"
-                title="Crear APU con Inteligencia Artificial e insertar directamente al presupuesto"
-              >
-                <Sparkles size={14} className="text-purple-600" />
-                <span>Desde IA</span>
-              </button>
-              <button
-                onClick={() => {
-                  onClose();
-                  onOpenImportSharedPartida?.();
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-700 rounded-xl transition-colors font-semibold shadow-sm text-xs sm:text-sm cursor-pointer"
-                title="Importar una partida compartida por otro usuario"
-              >
-                <Share2 size={14} className="text-sky-600" />
-                <span>De Otro Usuario</span>
-              </button>
+              {showAiOption && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    onOpenAIApuModal?.();
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 rounded-xl transition-colors font-semibold shadow-sm text-xs sm:text-sm cursor-pointer"
+                  title="Crear APU con Inteligencia Artificial e insertar directamente al presupuesto"
+                >
+                  <Sparkles size={14} className="text-purple-600" />
+                  <span>Desde IA</span>
+                </button>
+              )}
+
+              {/* Botón De Otro Usuario */}
+              {showSharedOption && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    onOpenImportSharedPartida?.();
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-700 rounded-xl transition-colors font-semibold shadow-sm text-xs sm:text-sm cursor-pointer"
+                  title="Importar una partida compartida por otro usuario"
+                >
+                  <Share2 size={14} className="text-sky-600" />
+                  <span>De Otro Usuario</span>
+                </button>
+              )}
             </div>
           </div>
           <button 
