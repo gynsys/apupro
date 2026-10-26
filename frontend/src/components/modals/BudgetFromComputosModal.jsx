@@ -1776,56 +1776,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
               </div>
             </div>
 
-            {/* Barra de Herramientas y Referencia de Factores de Acero */}
-            <div className="flex flex-wrap items-center justify-between gap-2 bg-white/90 border border-amber-300 px-4 py-2 rounded-2xl shadow-xs">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setChapterModalInput('');
-                    setShowChapterModal(true);
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                  title="Agregar un nuevo capítulo a la planilla de cómputos"
-                >
-                  <FolderPlus className="w-4 h-4" />
-                  <span>+ Agregar Capítulo</span>
-                </button>
-                <span className="text-xs font-extrabold text-amber-950 bg-amber-200/80 px-2.5 py-1 rounded-lg border border-amber-300">
-                  {validCount} partida(s) con datos
-                </span>
-                <span className="text-[11px] text-amber-800 hidden sm:inline">
-                  • La última fila vacía se agrega automáticamente para escribir
-                </span>
-              </div>
-
-              {/* Guía Rápida de Factores de Cabillas para Cómputos de Acero */}
-              <div className="hidden lg:flex items-center gap-2 text-[11px] text-amber-900 bg-amber-100/70 px-3 py-1 rounded-xl border border-amber-200">
-                <Info className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                <span className="font-bold">Factores de Acero (kg/m):</span>
-                <span>3/8&quot;=<strong>0.559</strong></span>
-                <span>•</span>
-                <span>1/2&quot;=<strong>0.994</strong></span>
-                <span>•</span>
-                <span>5/8&quot;=<strong>1.552</strong></span>
-                <span>•</span>
-                <span>3/4&quot;=<strong>2.237</strong></span>
-                <span>•</span>
-                <span>1&quot;=<strong>3.973</strong></span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('chat')}
-                  className="px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs flex items-center gap-1.5 border border-amber-300 transition-all cursor-pointer"
-                >
-                  <Bot className="w-3.5 h-3.5 text-amber-700" />
-                  <span>Abrir Asistente / Chat para Dictar</span>
-                </button>
-              </div>
-            </div>
-
             {/* TABLA PRINCIPAL: PLANILLA DE CÓMPUTOS MÉTRICOS CON FILA LIBRE SIEMPRE PRESENTE */}
             <div className="bg-white border-2 border-gray-400 rounded-2xl shadow-md overflow-hidden">
               <div className="overflow-x-auto">
