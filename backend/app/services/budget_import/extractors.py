@@ -85,6 +85,13 @@ _UNIT_NORMALIZATION = {
     "rll": "rll", "rollo": "rll", "rollos": "rll",
     "cuñ": "cuñ", "cun": "cuñ",
     "doc": "doc", "docena": "doc",
+    "m3 km": "m3-km", "m3km": "m3-km", "m3 x km": "m3-km", "m3xkm": "m3-km", "m3/km": "m3-km", "m3*km": "m3-km", "m3-km": "m3-km", "m3.km": "m3-km",
+    "m3 m": "m3-m", "m3m": "m3-m", "m3 x m": "m3-m", "m3xm": "m3-m", "m3/m": "m3-m", "m3*m": "m3-m", "m3-m": "m3-m", "m3.m": "m3-m", "m3x50": "m3x50",
+    "ton km": "ton-km", "tonkm": "ton-km", "ton x km": "ton-km", "tonxkm": "ton-km", "ton/km": "ton-km", "ton*km": "ton-km", "ton-km": "ton-km", "ton.km": "ton-km",
+    "tf km": "ton-km", "tfkm": "ton-km", "tfxkm": "ton-km", "tf.km": "ton-km",
+    "viaje": "viaje", "viajes": "viaje", "vje": "viaje",
+    "flete": "flete", "fletes": "flete", "flt": "flete",
+    "gand": "gand", "gandola": "gand", "gandolas": "gand",
 }
 
 

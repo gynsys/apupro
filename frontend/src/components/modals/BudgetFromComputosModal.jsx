@@ -21,9 +21,63 @@ import {
 } from 'lucide-react';
 import { budgetService } from '../../services/budgetService';
 
-const COMMON_UNITS = ['M2', 'M3', 'ML', 'UND', 'PTO', 'KGF', 'TON', 'GL'];
+const COMMON_UNITS = ['M2', 'M3', 'ML', 'UND', 'PTO', 'KGF', 'TON', 'M3-KM', 'VIAJE', 'GL'];
+
+const UNIT_PATTERN =
+  '(?:m3[\\s*xX×.\\-/]km|m³[\\s*xX×.\\-/]km|m3km|m³km|m3[\\s*xX×.\\-/]m|m³[\\s*xX×.\\-/]m|m3m|m³m|m3x50|ton[\\s*xX×.\\-/]km|tonkm|tf[\\s*xX×.\\-/]km|tfkm|kgf?[\\s*xX×.\\-/]km|kgf?[\\s*xX×.\\-/]m|viajes?|vje|fletes?|flt|gand(?:olas?)?|m2|m²|mt2|mts2|m3|m³|mt3|mts3|ml|mts|mt|m|metro|metros|und|unid|unidad|unidades|pza|pieza|piezas|pto|ptos|punto|puntos|kgf|kg|kilos|ton|tn|gl|global|sg|ha|km|lt|l)';
 
 const UNIT_ALIASES = {
+  // Acarreo y transporte
+  'm3*km': 'M3-KM',
+  'm3-km': 'M3-KM',
+  'm3xkm': 'M3-KM',
+  'm3.km': 'M3-KM',
+  'm3/km': 'M3-KM',
+  'm3 km': 'M3-KM',
+  m3km: 'M3-KM',
+  'm³*km': 'M3-KM',
+  'm³-km': 'M3-KM',
+  'm³xkm': 'M3-KM',
+  'm³km': 'M3-KM',
+  'm3*m': 'M3-M',
+  'm3-m': 'M3-M',
+  'm3xm': 'M3-M',
+  'm3.m': 'M3-M',
+  'm3/m': 'M3-M',
+  'm3 m': 'M3-M',
+  m3m: 'M3-M',
+  m3x50: 'M3X50',
+  'ton*km': 'TON-KM',
+  'ton-km': 'TON-KM',
+  'tonxkm': 'TON-KM',
+  'ton/km': 'TON-KM',
+  'ton.km': 'TON-KM',
+  tonkm: 'TON-KM',
+  'tf*km': 'TON-KM',
+  'tf-km': 'TON-KM',
+  'tfxkm': 'TON-KM',
+  'tf.km': 'TON-KM',
+  tfkm: 'TON-KM',
+  'kgf*km': 'KGF-KM',
+  'kgf-km': 'KGF-KM',
+  'kg*km': 'KGF-KM',
+  'kg-km': 'KGF-KM',
+  'kgxkm': 'KGF-KM',
+  'kgf*m': 'KGF-M',
+  'kgf-m': 'KGF-M',
+  'kg*m': 'KGF-M',
+  'kg-m': 'KGF-M',
+  viaje: 'VIAJE',
+  viajes: 'VIAJE',
+  vje: 'VIAJE',
+  flete: 'FLETE',
+  fletes: 'FLETE',
+  flt: 'FLETE',
+  gand: 'GAND',
+  gandola: 'GAND',
+  gandolas: 'GAND',
+
+  // Unidades estándar
   m2: 'M2',
   'm²': 'M2',
   mt2: 'M2',
@@ -59,17 +113,42 @@ const UNIT_ALIASES = {
   l: 'LT',
 };
 
-const CHAPTER_PREFIX_RE = /^(?:cap[ií]tulo|cap\.?)\s*[:\-]?\s*(.+)$/i;
-const PURE_UNIT_LINE_RE = /^(?:und\.?|unidad\s*[:\-]?)?\s*(m2|m²|mt2|mts2|m3|m³|mt3|mts3|ml|m|mts|und|unid|unidad|pza|pto|punto|kg|kgf|ton|tn|gl|global|sg|ha|km|lt|l)\.?$/i;
+function normalizeUnitStr(u) {
+  if (!u || typeof u !== 'string') return null;
+  const key = u.trim().toLowerCase();
+  const cleanDash = key.replace(/[\s.\-xX×/]+/g, '-');
+  const cleanStar = key.replace(/[\s.\-xX×/]+/g, '*');
+  return (
+    UNIT_ALIASES[key] ||
+    UNIT_ALIASES[cleanDash] ||
+    UNIT_ALIASES[cleanStar] ||
+    u.trim().toUpperCase()
+  );
+}
 
-const MEASURE_TRAILING_RE =
-  /[:\s,=-]+((?:\(?\d+(?:[.,]\d+)?\)?\s*[*xX×/+-]\s*)+\(?\d+(?:[.,]\d+)?\)?|\d+(?:[.,]\d+)?)\s*(m2|m²|mt2|mts2|m3|m³|mt3|mts3|ml|mts|mt|m|metro|metros|und|unid|unidad|unidades|pza|pieza|piezas|pto|ptos|punto|puntos|kgf|kg|kilos|ton|tn|gl|global)?\.?\s*$/i;
+const CHAPTER_PREFIX_RE = /^(?:cap[ií]tulo|cap\.?)\s*[:\-]?\s*(.+)$/i;
+const PURE_UNIT_LINE_RE = new RegExp(
+  `^(?:und\\.?|unidad\\s*[:\\-]?)?\\s*(${UNIT_PATTERN})\\.?$`,
+  'i'
+);
+
+const MEASURE_TRAILING_RE = new RegExp(
+  `[:\\s,=-]+((?:\\(?\\d+(?:[.,]\\d+)?\\)?\\s*[*xX×/+-]\\s*)+\\(?\\d+(?:[.,]\\d+)?\\)?|\\d+(?:[.,]\\d+)?)\\s*(${UNIT_PATTERN})?\\.?$`,
+  'i'
+);
 
 /**
  * Infiere la unidad de medida según palabras clave de la descripción de la partida.
  */
 function inferUnitFromDescription(desc = '') {
   const d = (desc || '').toLowerCase();
+  if (/acarreo|transporte|flete|viaje|botadero|bote.*escombro/i.test(d)) {
+    if (/km|kil[oó]metro|distancia/i.test(d)) return 'M3-KM';
+    if (/ton|acero|metal|estructura/i.test(d)) return 'TON-KM';
+    if (/viaje|camion|volteo|gandola/i.test(d)) return 'VIAJE';
+    if (/50m|primeros 50|m3xm|m3-m/i.test(d)) return 'M3-M';
+    return 'M3-KM';
+  }
   if (
     /losa|piso|techo|manto|impermeab|pared|friso|pintura|ceramica|porcelanato|muro|tabique|cielorraso|drywall|bloque|sobrepiso|acera|esmalte|epoxi/i.test(
       d
@@ -102,32 +181,32 @@ function inferUnitFromDescription(desc = '') {
 }
 
 /**
- * Evalúa de forma segura una expresión de mediciones como:
- * "10.50*7.50 m", "10,50 x 7,50", "10.50*7.50 + 3.20*2.00", "(4.5+3.2)*2.80", "25 m2", "12.50"
+ * Evalúa de forma segura una expresión de mediciones con soporte para unidades compuestas de acarreo:
+ * "120.50 m3*km", "45.00 m3-km", "10.50*7.50 m", "10,50 x 7,50", "25 m2", "3 viajes"
  */
 function evaluateMeasurementFormula(rawLine) {
   if (!rawLine || typeof rawLine !== 'string') return null;
   const trimmed = rawLine.trim();
   if (!trimmed) return null;
 
-  const words = trimmed.match(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/g) || [];
+  let explicitUnit = null;
+  let exprPart = trimmed;
+  const trailingUnitMatch = trimmed.match(new RegExp(`(${UNIT_PATTERN})\\s*$`, 'i'));
+  if (trailingUnitMatch) {
+    explicitUnit = normalizeUnitStr(trailingUnitMatch[1]);
+    exprPart = trimmed.slice(0, trailingUnitMatch.index).trim();
+  }
+
+  const words = exprPart.match(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/g) || [];
   const allowedMeasureWords = new Set([
-    'x', 'm', 'mt', 'mts', 'metro', 'metros', 'ml', 'm2', 'm3',
-    'cm', 'mm', 'und', 'pza', 'pto', 'kg', 'kgf', 'ton', 'gl', 'de', 'por',
+    'x', 'm', 'mt', 'mts', 'metro', 'metros', 'ml', 'cm', 'mm', 'de', 'por',
   ]);
   const nonMeasureWords = words.filter((w) => !allowedMeasureWords.has(w.toLowerCase()));
   if (nonMeasureWords.length > 1) return null;
 
-  let explicitUnit = null;
-  const trailingUnitMatch = trimmed.match(/\b(m2|m²|mt2|mts2|m3|m³|mt3|mts3|ml|mts|mt|m|metro|metros|und|pza|pto|kgf|kg|ton|gl)\s*$/i);
-  if (trailingUnitMatch) {
-    const rawU = trailingUnitMatch[1].toLowerCase();
-    explicitUnit = UNIT_ALIASES[rawU] || rawU.toUpperCase();
-  }
-
-  let expr = trimmed
+  let expr = exprPart
     .replace(/(\d),(\d)/g, '$1.$2')
-    .replace(/(\d+(?:\.\d+)?)\s*(?:m2|m²|mt2|mts2|m3|m³|mt3|mts3|ml|mts|mt|m|metro|metros|cm|mm|und|pza|pto|kgf|kg|ton|gl)\b/gi, '$1')
+    .replace(new RegExp(`\\b${UNIT_PATTERN}\\b`, 'gi'), '')
     .replace(/\b(?:por|x|×)\b/gi, '*')
     .replace(/[x×]/gi, '*')
     .replace(/[^0-9+\-*/().\s]/g, ' ')
@@ -194,11 +273,10 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
       continue;
     }
 
-    // ¿Es una línea de unidad pura suelta (ej: "M2", "UND")? Nunca crear una partida de ella
+    // ¿Es una línea de unidad pura suelta (ej: "M2", "UND", "M3-KM", "M3*KM")? Nunca crear una partida de ella
     const uStandalone = line.match(PURE_UNIT_LINE_RE);
     if (uStandalone && uStandalone[1]) {
-      const k = uStandalone[1].toLowerCase();
-      const matchedU = UNIT_ALIASES[k] || k.toUpperCase();
+      const matchedU = normalizeUnitStr(uStandalone[1]);
       if (items.length > 0) {
         items[items.length - 1].unit = matchedU;
       }
@@ -206,7 +284,7 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
       continue;
     }
 
-    // ¿Línea de una sola partida con medición al final? Ej: "Friso en paredes 25 m2" o "Losa 10.5*7.5 m2"
+    // ¿Línea de una sola partida con medición al final? Ej: "Friso en paredes 25 m2" o "Acarreo 120.50 m3*km"
     const inlineMatch = line.match(MEASURE_TRAILING_RE);
     const prefixText = inlineMatch ? line.slice(0, inlineMatch.index).trim() : '';
     if (inlineMatch && prefixText.replace(/^[\d+.)\-#\s]+/, '').length >= 3) {
@@ -217,7 +295,7 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
       const qty = formulaEval?.quantity || parseFloat(rawFormula.replace(',', '.')) || 1;
       const cleanFormula = formulaEval?.formula || rawFormula.replace(/\*/g, ' × ');
       const unit =
-        (rawUnit && UNIT_ALIASES[rawUnit.toLowerCase()]) ||
+        normalizeUnitStr(rawUnit) ||
         formulaEval?.inferredUnit ||
         inferUnitFromDescription(desc);
 
@@ -251,12 +329,11 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
         isDefaultQty = false;
         i += 1; // consumir línea de medición
 
-        // Mirar si la subsiguiente línea es la unidad pura (ej: M2)
+        // Mirar si la subsiguiente línea es la unidad pura (ej: M2, M3-KM)
         if (i + 1 < rawLines.length) {
           const unitLineMatch = rawLines[i + 1].match(PURE_UNIT_LINE_RE);
           if (unitLineMatch && unitLineMatch[1]) {
-            const k = unitLineMatch[1].toLowerCase();
-            unit = UNIT_ALIASES[k] || k.toUpperCase();
+            unit = normalizeUnitStr(unitLineMatch[1]);
             i += 1; // consumir línea de unidad
           }
         }
@@ -541,10 +618,14 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   };
 
   const handleInsertTemplate = (presetIndex = 1, autoAdd = true) => {
-    const sample =
-      presetIndex === 2
-        ? `Capitulo Albañilería\nReparación de losa de techo con mortero y convertidor de óxido\n15.00 m2`
-        : `Capitulo Impermeabilizacion\nRemoción de manto asfáltico en losa de techo\n10.50*7.50 m\nM2`;
+    let sample = '';
+    if (presetIndex === 3) {
+      sample = `Capitulo Movimiento de Tierra\nAcarreo de material proveniente de excavación a botadero\n120.50 m3*km`;
+    } else if (presetIndex === 2) {
+      sample = `Capitulo Albañilería\nReparación de losa de techo con mortero y convertidor de óxido\n15.00 m2`;
+    } else {
+      sample = `Capitulo Impermeabilizacion\nRemoción de manto asfáltico en losa de techo\n10.50*7.50 m\nM2`;
+    }
 
     if (autoAdd) {
       handleSendMessage(sample);
@@ -1035,14 +1116,21 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                               onClick={() => handleInsertTemplate(1, true)}
                               className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-xs cursor-pointer flex items-center gap-1"
                             >
-                              <span>+ Cargar Ejemplo 1: Manto asfáltico (78.75 M2)</span>
+                              <span>+ Cargar Ejemplo 1: Manto en losa (78.75 M2)</span>
                             </button>
                             <button
                               type="button"
                               onClick={() => handleInsertTemplate(2, true)}
                               className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-amber-100 text-amber-950 border border-amber-300 shadow-xs cursor-pointer flex items-center gap-1"
                             >
-                              <span>+ Cargar Ejemplo 2: Reparación de losa c/mortero (15 M2)</span>
+                              <span>+ Cargar Ejemplo 2: Reparación losa c/mortero (15 M2)</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleInsertTemplate(3, true)}
+                              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 shadow-xs cursor-pointer flex items-center gap-1"
+                            >
+                              <span>+ Cargar Ejemplo 3: Acarreo botadero (120.50 M3-KM)</span>
                             </button>
                           </div>
                         </div>
