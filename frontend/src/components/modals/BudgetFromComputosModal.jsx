@@ -649,6 +649,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   const [showOpenModal, setShowOpenModal] = useState(false);
   const [showChapterModal, setShowChapterModal] = useState(false);
   const [chapterModalInput, setChapterModalInput] = useState('');
+  const [renameChapterTarget, setRenameChapterTarget] = useState(null);
+  const [renameChapterInput, setRenameChapterInput] = useState('');
   const [savedList, setSavedList] = useState(getSavedComputosList);
   const [currentDraftId, setCurrentDraftId] = useState(() => {
     try {
@@ -1046,20 +1048,42 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   };
 
   /**
-   * Permite renombrar un capítulo directamente desde su encabezado en la tabla
+   * Abre modal para renombrar un capítulo directamente desde su encabezado en la tabla
    */
   const handleRenameChapter = (oldName) => {
-    const newName = window.prompt('Nuevo nombre para este capítulo:', oldName);
-    if (!newName || !newName.trim()) return;
-    const clean = newName.trim().toUpperCase();
-    if (clean === oldName) return;
+    if (!oldName) return;
+    setRenameChapterTarget(oldName);
+    setRenameChapterInput(oldName);
+  };
+
+  /**
+   * Confirma y aplica el renombre del capítulo
+   */
+  const handleConfirmRenameChapter = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!renameChapterTarget) return;
+
+    const clean = (renameChapterInput || '').trim().toUpperCase();
+    if (!clean) {
+      toast.error('El nombre del capítulo no puede estar vacío');
+      return;
+    }
+
+    if (clean === renameChapterTarget) {
+      setRenameChapterTarget(null);
+      setRenameChapterInput('');
+      return;
+    }
 
     setCapturedItems((prev) =>
-      prev.map((it) => (it.chapter === oldName ? { ...it, chapter: clean } : it))
+      prev.map((it) => (it.chapter === renameChapterTarget ? { ...it, chapter: clean } : it))
     );
-    if (activeChapter === oldName) {
+    if (activeChapter === renameChapterTarget) {
       setActiveChapter(clean);
     }
+    toast.success(`Capítulo renombrado a "${clean}"`);
+    setRenameChapterTarget(null);
+    setRenameChapterInput('');
   };
 
   /**
@@ -1737,6 +1761,100 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                   className="px-4 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
                 >
                   + Agregar a la Planilla
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal / Diálogo para Renombrar Capítulo */}
+      {renameChapterTarget && (
+        <div className="absolute inset-0 z-[130] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 border-2 border-amber-300 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-amber-200 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-sm">
+                  <Edit3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-amber-950 font-bold text-base leading-tight">Renombrar Capítulo</h3>
+                  <p className="text-xs text-amber-800">Actualiza el título del capítulo en la planilla</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setRenameChapterTarget(null);
+                  setRenameChapterInput('');
+                }}
+                className="text-amber-700 hover:text-amber-950 p-1 rounded-full hover:bg-amber-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmRenameChapter} className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-amber-950 mb-1">
+                  Nuevo nombre para este capítulo:
+                </label>
+                <input
+                  type="text"
+                  value={renameChapterInput}
+                  onChange={(e) => setRenameChapterInput(e.target.value)}
+                  placeholder="Ej. ESTRUCTURAS DE CONCRETO..."
+                  autoFocus
+                  className="w-full px-3 py-2 text-sm font-bold border-2 border-amber-300 rounded-xl bg-amber-50/30 text-amber-950 focus:outline-none focus:border-amber-500 uppercase"
+                />
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold text-amber-800 mb-1.5">Sugerencias rápidas:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    'OBRAS PRELIMINARES',
+                    'MOVIMIENTO DE TIERRAS',
+                    'ESTRUCTURAS',
+                    'ALBAÑILERÍA',
+                    'INSTALACIONES ELÉCTRICAS',
+                    'INSTALACIONES SANITARIAS',
+                    'ACABADOS',
+                    'IMPERMEABILIZACIÓN',
+                  ].map((sug) => (
+                    <button
+                      key={sug}
+                      type="button"
+                      onClick={() => setRenameChapterInput(sug)}
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                        renameChapterInput === sug
+                          ? 'bg-amber-500 text-white border-amber-600'
+                          : 'bg-amber-50 hover:bg-amber-100 text-amber-950 border-amber-200'
+                      }`}
+                    >
+                      {sug}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-amber-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRenameChapterTarget(null);
+                    setRenameChapterInput('');
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl border border-amber-300 text-amber-950 text-xs font-bold hover:bg-amber-50 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!renameChapterInput.trim()}
+                  className="px-4 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  Guardar Nombre
                 </button>
               </div>
             </form>
