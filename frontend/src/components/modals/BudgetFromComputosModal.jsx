@@ -367,6 +367,70 @@ function recomputeRow(row, field, value) {
 }
 
 /**
+ * Genera una nueva fila vacía estándar
+ */
+function createBlankRow(chapter = 'OBRAS PRELIMINARES') {
+  return {
+    id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    chapter: (chapter || 'OBRAS PRELIMINARES').trim().toUpperCase(),
+    description: '',
+    unit: 'M2',
+    length: '',
+    width: '',
+    height: '',
+    times: 1,
+    factor: '',
+    distance: '',
+    partial: 0,
+    quantity: 0,
+    formula: '',
+    observations: '',
+    isDefaultQty: false,
+  };
+}
+
+/**
+ * Evalúa si una fila está completamente vacía (sin descripción, medidas ni cantidad)
+ */
+function isItemEmpty(item) {
+  if (!item) return true;
+  const desc = (item.description || '').trim();
+  const hasDims =
+    (item.length !== '' && item.length != null) ||
+    (item.width !== '' && item.width != null) ||
+    (item.height !== '' && item.height != null) ||
+    (item.factor !== '' && item.factor != null) ||
+    (item.distance !== '' && item.distance != null);
+  const hasQty = item.quantity && Number(item.quantity) > 0;
+  const hasObs = (item.observations || '').trim() !== '';
+
+  return !desc && !hasDims && !hasQty && !hasObs;
+}
+
+/**
+ * Asegura que la planilla SIEMPRE tenga exactamente una fila libre al final para continuar escribiendo
+ */
+function normalizeRowsWithSingleTrailingBlank(items, defaultChapter = 'OBRAS PRELIMINARES') {
+  if (!items || items.length === 0) {
+    return [createBlankRow(defaultChapter)];
+  }
+
+  const cleaned = [...items];
+  // Quitar filas vacías consecutivas del final excepto una
+  while (cleaned.length > 1 && isItemEmpty(cleaned[cleaned.length - 1]) && isItemEmpty(cleaned[cleaned.length - 2])) {
+    cleaned.pop();
+  }
+
+  // Si la última fila tiene contenido, agregar una nueva fila vacía al final
+  if (!isItemEmpty(cleaned[cleaned.length - 1])) {
+    const lastChapter = cleaned[cleaned.length - 1].chapter || defaultChapter;
+    cleaned.push(createBlankRow(lastChapter));
+  }
+
+  return cleaned;
+}
+
+/**
  * Analiza un mensaje del usuario (multilínea, partida única, o lista de partidas).
  */
 function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
@@ -525,28 +589,34 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
   return { items, activeChapter: currentChap };
 }
 
-const STORAGE_KEY = 'costbase_computos_draft_v1';
-try {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    window.localStorage.removeItem(STORAGE_KEY);
-  }
-} catch {
-  // noop
-}
+// Clave persistente para guardar borradores de trabajo
+const DRAFT_STORAGE_KEY = 'costbase_computos_saved_draft_v2';
 
 const INITIAL_WELCOME_MESSAGE = {
   id: 'welcome',
   role: 'bot',
   type: 'welcome',
   content:
-    '¡Hola! Soy tu asistente de cómputos en campo. Anota tus partidas aquí o edítalas directamente en la Planilla de Cómputos Métricos (con soporte de factores para acero y distancias para acarreos). Al finalizar presiona "Confirmar y Generar Presupuesto".',
+    '¡Hola! Soy tu asistente de cómputos en campo. Anota tus partidas aquí o edítalas directamente en la Planilla de Cómputos Métricos. Puedes pulsar "Guardar" en cualquier momento para pausar y retomar tu trabajo después.',
 };
 
 export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) {
   // Pestaña activa: 'sheet' (Planilla de Cómputos) | 'chat' (Asistente de Campo)
   const [activeTab, setActiveTab] = useState('sheet');
 
-  const [activeChapter, setActiveChapter] = useState('OBRAS PRELIMINARES');
+  const [activeChapter, setActiveChapter] = useState(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed?.activeChapter) return parsed.activeChapter;
+        }
+      }
+    } catch {}
+    return 'OBRAS PRELIMINARES';
+  });
+
   const [isEditingChapter, setIsEditingChapter] = useState(false);
   const [chapterInput, setChapterInput] = useState('');
   const [isOnline, setIsOnline] = useState(() =>
@@ -561,18 +631,79 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   const [editForm, setEditForm] = useState(null);
 
   const [lastCapturedItemId, setLastCapturedItemId] = useState(null);
+  const [saveStatus, setSaveStatus] = useState(null);
 
-  // Lista de partidas en la Planilla de Cómputos
-  const [capturedItems, setCapturedItems] = useState([]);
+  // Lista de partidas en la Planilla de Cómputos (inicializada con borrador previo o con 1 fila libre)
+  const [capturedItems, setCapturedItems] = useState(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) {
+            return normalizeRowsWithSingleTrailingBlank(parsed.items, parsed.activeChapter || 'OBRAS PRELIMINARES');
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error cargando borrador previo de cómputos:', e);
+    }
+    return [createBlankRow('OBRAS PRELIMINARES')];
+  });
 
   // Datos del presupuesto para guardar
   const [budgetName, setBudgetName] = useState(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed?.budgetName) return parsed.budgetName;
+        }
+      }
+    } catch {}
     const today = new Date().toLocaleDateString('es-VE');
     return `Presupuesto de Cómputos - ${today}`;
   });
-  const [projectName, setProjectName] = useState('');
-  const [clientName, setClientName] = useState('');
-  const [currency, setCurrency] = useState('USD');
+
+  const [projectName, setProjectName] = useState(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed?.projectName) return parsed.projectName;
+        }
+      }
+    } catch {}
+    return '';
+  });
+
+  const [clientName, setClientName] = useState(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed?.clientName) return parsed.clientName;
+        }
+      }
+    } catch {}
+    return '';
+  });
+
+  const [currency, setCurrency] = useState(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed?.currency) return parsed.currency;
+        }
+      }
+    } catch {}
+    return 'USD';
+  });
 
   // Estado del proceso de confirmación y generación
   const [isCommitting, setIsCommitting] = useState(false);
@@ -582,6 +713,31 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+
+  // Auto-guardado en segundo plano de borradores para no perder nada si se cierra inesperadamente
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        const nonBlank = capturedItems.filter((it) => !isItemEmpty(it));
+        if (nonBlank.length > 0 || projectName || clientName) {
+          const draftPayload = {
+            savedAt: new Date().toISOString(),
+            budgetName: (budgetName || '').trim(),
+            projectName: (projectName || '').trim(),
+            clientName: (clientName || '').trim(),
+            currency,
+            activeChapter,
+            items: nonBlank,
+          };
+          localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftPayload));
+        }
+      } catch (e) {
+        // noop
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [capturedItems, budgetName, projectName, clientName, currency, activeChapter]);
 
   useEffect(() => {
     const onUp = () => setIsOnline(true);
@@ -602,6 +758,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
 
   if (!isOpen) return null;
 
+  // Cantidad real de partidas cargadas (sin contar la fila vacía de edición)
+  const validItems = capturedItems.filter((it) => !isItemEmpty(it));
+  const validCount = validItems.length;
+
   const appendMessage = (msg) => {
     setMessages((prev) => [
       ...prev,
@@ -610,6 +770,34 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         ...msg,
       },
     ]);
+  };
+
+  /**
+   * Guarda explícitamente el borrador actual en localStorage
+   */
+  const handleSaveDraft = () => {
+    try {
+      const nonBlank = capturedItems.filter((it) => !isItemEmpty(it));
+      const draftPayload = {
+        savedAt: new Date().toISOString(),
+        budgetName: (budgetName || '').trim(),
+        projectName: (projectName || '').trim(),
+        clientName: (clientName || '').trim(),
+        currency,
+        activeChapter,
+        items: nonBlank,
+      };
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftPayload));
+
+      const timeStr = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+      setSaveStatus(`Guardado ${timeStr}`);
+      setTimeout(() => {
+        setSaveStatus(null);
+      }, 3500);
+    } catch (err) {
+      console.error('Error al guardar borrador de cómputos:', err);
+      alert('No se pudo guardar el borrador en el almacenamiento local.');
+    }
   };
 
   /**
@@ -653,7 +841,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       isDefaultQty,
     };
 
-    setCapturedItems((prev) => [...prev, newItem]);
+    setCapturedItems((prev) => {
+      const nonBlank = prev.filter((it) => !isItemEmpty(it));
+      return normalizeRowsWithSingleTrailingBlank([...nonBlank, newItem], activeChapter);
+    });
     setLastCapturedItemId(itemId);
 
     if (isDefaultQty) {
@@ -784,40 +975,16 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
 
   /**
    * Actualiza directamente cualquier celda de la Planilla de Cómputos
+   * y garantiza que SIEMPRE exista una fila libre al final
    */
   const handleUpdateItemField = (itemId, field, value) => {
-    setCapturedItems((prev) =>
-      prev.map((it) => {
+    setCapturedItems((prev) => {
+      const updated = prev.map((it) => {
         if (it.id !== itemId) return it;
         return recomputeRow(it, field, value);
-      })
-    );
-  };
-
-  /**
-   * Agrega una fila en blanco directamente a la Planilla
-   */
-  const handleAddBlankRow = () => {
-    const newId = `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const newItem = {
-      id: newId,
-      chapter: activeChapter || 'OBRAS PRELIMINARES',
-      description: '',
-      unit: 'M2',
-      length: '',
-      width: '',
-      height: '',
-      times: 1,
-      factor: '',
-      distance: '',
-      partial: 0,
-      quantity: 0,
-      formula: '',
-      observations: '',
-      isDefaultQty: false,
-    };
-    setCapturedItems((prev) => [...prev, newItem]);
-    setLastCapturedItemId(newId);
+      });
+      return normalizeRowsWithSingleTrailingBlank(updated, activeChapter);
+    });
   };
 
   /**
@@ -825,13 +992,14 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
    */
   const handleDuplicateRow = (item) => {
     const newId = `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    setCapturedItems((prev) => [
-      ...prev,
-      {
-        ...item,
-        id: newId,
-      },
-    ]);
+    const duplicated = {
+      ...item,
+      id: newId,
+    };
+    setCapturedItems((prev) => {
+      const nonBlank = prev.filter((it) => !isItemEmpty(it));
+      return normalizeRowsWithSingleTrailingBlank([...nonBlank, duplicated], activeChapter);
+    });
   };
 
   /**
@@ -850,11 +1018,12 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   const handleSaveEdit = () => {
     if (!editForm) return;
     const finalDesc = (editForm.description || '').trim().toUpperCase();
-    setCapturedItems((prev) =>
-      prev.map((it) =>
+    setCapturedItems((prev) => {
+      const updated = prev.map((it) =>
         it.id === editForm.id ? { ...editForm, description: finalDesc } : it
-      )
-    );
+      );
+      return normalizeRowsWithSingleTrailingBlank(updated, activeChapter);
+    });
     setEditingItemId(null);
     setEditForm(null);
     appendMessage({
@@ -869,7 +1038,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   };
 
   const handleRemoveItem = (itemId) => {
-    setCapturedItems((prev) => prev.filter((it) => it.id !== itemId));
+    setCapturedItems((prev) => {
+      const filtered = prev.filter((it) => it.id !== itemId);
+      return normalizeRowsWithSingleTrailingBlank(filtered, activeChapter);
+    });
     if (editingItemId === itemId) {
       setEditingItemId(null);
       setEditForm(null);
@@ -877,18 +1049,18 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   };
 
   const handleClearAll = (force = false) => {
-    if (!force && capturedItems.length > 0) {
+    if (!force && validCount > 0) {
       const confirmClear = window.confirm(
         '¿Deseas limpiar todos los cómputos y reiniciar la planilla?'
       );
       if (!confirmClear) return;
     }
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
     } catch {
       // noop
     }
-    setCapturedItems([]);
+    setCapturedItems([createBlankRow('OBRAS PRELIMINARES')]);
     setLastCapturedItemId(null);
     setEditingItemId(null);
     setEditForm(null);
@@ -898,16 +1070,17 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     setClientName('');
     setActiveChapter('OBRAS PRELIMINARES');
     setMessages([INITIAL_WELCOME_MESSAGE]);
+    setSaveStatus(null);
   };
 
   /**
    * Proceso de Confirmar y Generar Presupuesto
    */
   const handleConfirmAndGenerateBudget = async () => {
-    const validItems = capturedItems.filter((it) => it.description && it.description.trim());
-    if (validItems.length === 0 || isCommitting) {
-      if (capturedItems.length === 0) {
-        alert('Debes agregar al menos una partida a la planilla antes de generar el presupuesto.');
+    const finalItems = capturedItems.filter((it) => !isItemEmpty(it) && it.description.trim());
+    if (finalItems.length === 0 || isCommitting) {
+      if (validCount === 0) {
+        alert('Debes ingresar al menos una partida antes de generar el presupuesto.');
       } else {
         alert('Las partidas en la planilla deben tener una descripción válida.');
       }
@@ -920,15 +1093,15 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
 
     setIsCommitting(true);
     setCommitError(null);
-    setCommitStepInfo({ current: 0, total: validItems.length });
+    setCommitStepInfo({ current: 0, total: finalItems.length });
 
     try {
       const payloadItems = [];
       let lastChapter = null;
       let scCounter = 1;
 
-      for (let i = 0; i < validItems.length; i += 1) {
-        const it = validItems[i];
+      for (let i = 0; i < finalItems.length; i += 1) {
+        const it = finalItems[i];
         const chapName = (it.chapter || 'GENERAL').trim().toUpperCase();
         if (chapName && chapName !== lastChapter) {
           payloadItems.push({
@@ -940,9 +1113,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           lastChapter = chapName;
         }
 
-        setCommitStepInfo({ current: i + 1, total: validItems.length });
+        setCommitStepInfo({ current: i + 1, total: finalItems.length });
         setCommitProgressText(
-          `Buscando en BD o generando APU (${i + 1}/${validItems.length}): ${it.description}`
+          `Buscando en BD o generando APU (${i + 1}/${finalItems.length}): ${it.description}`
         );
 
         let resolved = null;
@@ -1001,6 +1174,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         items: payloadItems,
         source_filename: 'Planilla de Cómputos Métricos',
       });
+
+      // Limpiar borrador local tras crear el presupuesto con éxito
+      try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+      } catch {}
 
       handleClearAll(true);
       if (onCreated) {
@@ -1092,7 +1270,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
             }`}
           >
             <Table className="w-4 h-4" />
-            <span>Planilla ({capturedItems.length})</span>
+            <span>Planilla ({validCount})</span>
           </button>
           <button
             type="button"
@@ -1190,7 +1368,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
 
       {/* CUERPO PRINCIPAL */}
       {activeTab === 'sheet' ? (
-        /* VISTA: PLANILLA DE CÓMPUTOS MÉTRICOS (TABLA COMPLETA CON FACTOR Y DISTANCIA) */
+        /* VISTA: PLANILLA DE CÓMPUTOS MÉTRICOS (TABLA CON FACTOR, DISTANCIA Y FILA LIBRE) */
         <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 bg-[#FEF3C7]">
           <div className="max-w-[1400px] mx-auto space-y-4">
             {/* Metadatos del Presupuesto */}
@@ -1252,16 +1430,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
             {/* Barra de Herramientas y Referencia de Factores de Acero */}
             <div className="flex flex-wrap items-center justify-between gap-2 bg-white/90 border border-amber-300 px-4 py-2 rounded-2xl shadow-xs">
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleAddBlankRow}
-                  className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Agregar Fila a la Planilla</span>
-                </button>
-                <span className="text-xs font-semibold text-amber-900">
-                  {capturedItems.length} partida(s) registradas
+                <span className="text-xs font-extrabold text-amber-950 bg-amber-200/80 px-2.5 py-1 rounded-lg border border-amber-300">
+                  {validCount} partida(s) con datos
+                </span>
+                <span className="text-[11px] text-amber-800 hidden sm:inline">
+                  • La última fila vacía se agrega automáticamente para escribir
                 </span>
               </div>
 
@@ -1292,7 +1465,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
               </div>
             </div>
 
-            {/* TABLA PRINCIPAL: PLANILLA DE CÓMPUTOS MÉTRICOS CON FACTOR Y DISTANCIA */}
+            {/* TABLA PRINCIPAL: PLANILLA DE CÓMPUTOS MÉTRICOS CON FILA LIBRE SIEMPRE PRESENTE */}
             <div className="bg-white border-2 border-gray-400 rounded-2xl shadow-md overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left border-collapse border border-gray-400 min-w-[1100px]">
@@ -1342,212 +1515,192 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                     </tr>
                   </thead>
                   <tbody>
-                    {capturedItems.length === 0 ? (
-                      <tr>
-                        <td colSpan={13} className="py-12 text-center text-amber-800">
-                          <p className="font-bold text-sm mb-2">Aún no hay partidas en la planilla de cómputos.</p>
-                          <div className="flex items-center justify-center gap-3">
-                            <button
-                              type="button"
-                              onClick={handleAddBlankRow}
-                              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
-                            >
-                              <Plus className="w-4 h-4" />
-                              <span>Agregar Primera Fila</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setActiveTab('chat')}
-                              className="px-4 py-2 rounded-xl bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
-                            >
-                              <Bot className="w-4 h-4 text-amber-600" />
-                              <span>Ingresar con Asistente / Chat</span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      capturedItems.map((it, idx) => {
-                        const prevItem = idx > 0 ? capturedItems[idx - 1] : null;
-                        const showChapHeader = !prevItem || prevItem.chapter !== it.chapter;
+                    {capturedItems.map((it, idx) => {
+                      const prevItem = idx > 0 ? capturedItems[idx - 1] : null;
+                      const showChapHeader = !prevItem || prevItem.chapter !== it.chapter;
+                      const isBlankTrailing = isItemEmpty(it);
 
-                        return (
-                          <React.Fragment key={it.id}>
-                            {showChapHeader && (
-                              <tr className="bg-amber-200/70 border-b border-gray-400">
-                                <td colSpan={13} className="px-3 py-1.5 font-black text-amber-950 text-[11px] tracking-wide border border-gray-400">
-                                  <div className="flex items-center justify-between">
-                                    <span className="flex items-center gap-1.5">
-                                      <Layers className="w-3.5 h-3.5 text-amber-700" />
-                                      CAPÍTULO: {it.chapter}
-                                    </span>
-                                  </div>
-                                </td>
-                              </tr>
-                            )}
-                            <tr className="hover:bg-amber-50/80 transition-colors border-b border-gray-300 text-amber-950">
-                              {/* N° DE ITEM */}
-                              <td className="border border-gray-300 px-2 py-1 text-center font-bold text-xs bg-amber-50/40">
-                                {idx + 1}
-                              </td>
-
-                              {/* DESCRIPCIÓN */}
-                              <td className="border border-gray-300 px-1 py-1">
-                                <input
-                                  type="text"
-                                  value={it.description}
-                                  onChange={(e) =>
-                                    handleUpdateItemField(it.id, 'description', e.target.value.toUpperCase())
-                                  }
-                                  placeholder="Descripción de la partida..."
-                                  className="w-full px-2 py-1 text-xs font-semibold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded uppercase"
-                                />
-                              </td>
-
-                              {/* UNIDAD */}
-                              <td className="border border-gray-300 px-1 py-1">
-                                <select
-                                  value={it.unit}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'unit', e.target.value)}
-                                  className="w-full px-1 py-1 text-xs font-bold text-center bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded cursor-pointer"
-                                >
-                                  {COMMON_UNITS.map((u) => (
-                                    <option key={u} value={u}>
-                                      {u}
-                                    </option>
-                                  ))}
-                                </select>
-                              </td>
-
-                              {/* LARGO */}
-                              <td className="border border-gray-300 px-1 py-1">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={it.length ?? ''}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'length', e.target.value)}
-                                  placeholder="—"
-                                  className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                                />
-                              </td>
-
-                              {/* ANCHO */}
-                              <td className="border border-gray-300 px-1 py-1">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={it.width ?? ''}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'width', e.target.value)}
-                                  placeholder="—"
-                                  className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                                />
-                              </td>
-
-                              {/* ALTO */}
-                              <td className="border border-gray-300 px-1 py-1">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={it.height ?? ''}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'height', e.target.value)}
-                                  placeholder="—"
-                                  className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                                />
-                              </td>
-
-                              {/* N° DE VECES */}
-                              <td className="border border-gray-300 px-1 py-1">
-                                <input
-                                  type="number"
-                                  step="1"
-                                  min="1"
-                                  value={it.times ?? 1}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'times', e.target.value)}
-                                  className="w-full px-1 py-1 text-xs text-center font-bold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                                />
-                              </td>
-
-                              {/* FACTOR (Acero kg/m o Multiplicador) */}
-                              <td className="border border-gray-300 px-1 py-1 bg-amber-50/30">
-                                <input
-                                  type="number"
-                                  step="0.001"
-                                  value={it.factor ?? ''}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'factor', e.target.value)}
-                                  placeholder="1.000"
-                                  className="w-full px-1 py-1 text-xs text-right font-semibold text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                                  title="Factor de peso para acero (ej: 0.994 kg/m para 1/2&quot;, 1.552 para 5/8&quot;) o factor de conversión"
-                                />
-                              </td>
-
-                              {/* DISTANCIA (Km Acarreo) */}
-                              <td className="border border-gray-300 px-1 py-1 bg-amber-50/30">
-                                <input
-                                  type="number"
-                                  step="0.1"
-                                  value={it.distance ?? ''}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'distance', e.target.value)}
-                                  placeholder="—"
-                                  className="w-full px-1 py-1 text-xs text-right font-semibold text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                                  title="Distancia en kilómetros para partidas de transporte y acarreo (M3-KM, TON-KM)"
-                                />
-                              </td>
-
-                              {/* CANTIDAD PARCIAL */}
-                              <td className="border border-gray-300 px-2 py-1 text-right font-semibold text-xs text-gray-700 bg-amber-50/30">
-                                {it.partial > 0
-                                  ? Number(it.partial).toLocaleString('es-VE', { maximumFractionDigits: 3 })
-                                  : '—'}
-                              </td>
-
-                              {/* CANTIDAD TOTAL */}
-                              <td className="border border-gray-300 px-1 py-1 bg-amber-100/60">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={it.quantity}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'quantity', e.target.value)}
-                                  className="w-full px-1.5 py-1 text-xs text-right font-extrabold text-amber-950 bg-white border border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                                />
-                              </td>
-
-                              {/* OBSERVACIONES */}
-                              <td className="border border-gray-300 px-1 py-1">
-                                <input
-                                  type="text"
-                                  value={it.observations ?? ''}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'observations', e.target.value)}
-                                  placeholder="Notas, eje, ubicación..."
-                                  className="w-full px-2 py-1 text-xs bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                                />
-                              </td>
-
-                              {/* ACCIONES */}
-                              <td className="border border-gray-300 px-1 py-1 text-center bg-amber-50/40">
-                                <div className="flex items-center justify-center gap-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDuplicateRow(it)}
-                                    className="p-1 text-amber-700 hover:text-amber-950 hover:bg-amber-200 rounded transition-colors cursor-pointer"
-                                    title="Duplicar partida"
-                                  >
-                                    <Copy className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveItem(it.id)}
-                                    className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors cursor-pointer"
-                                    title="Eliminar partida"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
+                      return (
+                        <React.Fragment key={it.id}>
+                          {showChapHeader && (
+                            <tr className="bg-amber-200/70 border-b border-gray-400">
+                              <td colSpan={13} className="px-3 py-1.5 font-black text-amber-950 text-[11px] tracking-wide border border-gray-400">
+                                <div className="flex items-center justify-between">
+                                  <span className="flex items-center gap-1.5">
+                                    <Layers className="w-3.5 h-3.5 text-amber-700" />
+                                    CAPÍTULO: {it.chapter}
+                                  </span>
                                 </div>
                               </td>
                             </tr>
-                          </React.Fragment>
-                        );
-                      })
-                    )}
+                          )}
+                          <tr
+                            className={`transition-colors border-b border-gray-300 text-amber-950 ${
+                              isBlankTrailing ? 'bg-amber-50/20 hover:bg-amber-50/50' : 'hover:bg-amber-50/80'
+                            }`}
+                          >
+                            {/* N° DE ITEM */}
+                            <td className="border border-gray-300 px-2 py-1 text-center font-bold text-xs bg-amber-50/40">
+                              {idx + 1}
+                            </td>
+
+                            {/* DESCRIPCIÓN */}
+                            <td className="border border-gray-300 px-1 py-1">
+                              <input
+                                type="text"
+                                value={it.description}
+                                onChange={(e) =>
+                                  handleUpdateItemField(it.id, 'description', e.target.value.toUpperCase())
+                                }
+                                placeholder={isBlankTrailing ? 'Escribe aquí la partida...' : 'Descripción de la partida...'}
+                                className="w-full px-2 py-1 text-xs font-semibold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded uppercase placeholder:text-gray-400"
+                              />
+                            </td>
+
+                            {/* UNIDAD */}
+                            <td className="border border-gray-300 px-1 py-1">
+                              <select
+                                value={it.unit}
+                                onChange={(e) => handleUpdateItemField(it.id, 'unit', e.target.value)}
+                                className="w-full px-1 py-1 text-xs font-bold text-center bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded cursor-pointer"
+                              >
+                                {COMMON_UNITS.map((u) => (
+                                  <option key={u} value={u}>
+                                    {u}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+
+                            {/* LARGO */}
+                            <td className="border border-gray-300 px-1 py-1">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={it.length ?? ''}
+                                onChange={(e) => handleUpdateItemField(it.id, 'length', e.target.value)}
+                                placeholder="—"
+                                className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                              />
+                            </td>
+
+                            {/* ANCHO */}
+                            <td className="border border-gray-300 px-1 py-1">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={it.width ?? ''}
+                                onChange={(e) => handleUpdateItemField(it.id, 'width', e.target.value)}
+                                placeholder="—"
+                                className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                              />
+                            </td>
+
+                            {/* ALTO */}
+                            <td className="border border-gray-300 px-1 py-1">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={it.height ?? ''}
+                                onChange={(e) => handleUpdateItemField(it.id, 'height', e.target.value)}
+                                placeholder="—"
+                                className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                              />
+                            </td>
+
+                            {/* N° DE VECES */}
+                            <td className="border border-gray-300 px-1 py-1">
+                              <input
+                                type="number"
+                                step="1"
+                                min="1"
+                                value={it.times ?? 1}
+                                onChange={(e) => handleUpdateItemField(it.id, 'times', e.target.value)}
+                                className="w-full px-1 py-1 text-xs text-center font-bold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                              />
+                            </td>
+
+                            {/* FACTOR (Acero kg/m o Multiplicador) */}
+                            <td className="border border-gray-300 px-1 py-1 bg-amber-50/30">
+                              <input
+                                type="number"
+                                step="0.001"
+                                value={it.factor ?? ''}
+                                onChange={(e) => handleUpdateItemField(it.id, 'factor', e.target.value)}
+                                placeholder="1.000"
+                                className="w-full px-1 py-1 text-xs text-right font-semibold text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                title="Factor de peso para acero (ej: 0.994 kg/m para 1/2&quot;, 1.552 para 5/8&quot;) o factor de conversión"
+                              />
+                            </td>
+
+                            {/* DISTANCIA (Km Acarreo) */}
+                            <td className="border border-gray-300 px-1 py-1 bg-amber-50/30">
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={it.distance ?? ''}
+                                onChange={(e) => handleUpdateItemField(it.id, 'distance', e.target.value)}
+                                placeholder="—"
+                                className="w-full px-1 py-1 text-xs text-right font-semibold text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                title="Distancia en kilómetros para partidas de transporte y acarreo (M3-KM, TON-KM)"
+                              />
+                            </td>
+
+                            {/* CANTIDAD PARCIAL */}
+                            <td className="border border-gray-300 px-2 py-1 text-right font-semibold text-xs text-gray-700 bg-amber-50/30">
+                              {it.partial > 0
+                                ? Number(it.partial).toLocaleString('es-VE', { maximumFractionDigits: 3 })
+                                : '—'}
+                            </td>
+
+                            {/* CANTIDAD TOTAL */}
+                            <td className="border border-gray-300 px-1 py-1 bg-amber-100/60">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={it.quantity}
+                                onChange={(e) => handleUpdateItemField(it.id, 'quantity', e.target.value)}
+                                className="w-full px-1.5 py-1 text-xs text-right font-extrabold text-amber-950 bg-white border border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                              />
+                            </td>
+
+                            {/* OBSERVACIONES */}
+                            <td className="border border-gray-300 px-1 py-1">
+                              <input
+                                type="text"
+                                value={it.observations ?? ''}
+                                onChange={(e) => handleUpdateItemField(it.id, 'observations', e.target.value)}
+                                placeholder="Notas, eje, ubicación..."
+                                className="w-full px-2 py-1 text-xs bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                              />
+                            </td>
+
+                            {/* ACCIONES */}
+                            <td className="border border-gray-300 px-1 py-1 text-center bg-amber-50/40">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDuplicateRow(it)}
+                                  disabled={isBlankTrailing}
+                                  className="p-1 text-amber-700 hover:text-amber-950 hover:bg-amber-200 rounded transition-colors cursor-pointer disabled:opacity-30"
+                                  title="Duplicar partida"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveItem(it.id)}
+                                  className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors cursor-pointer"
+                                  title="Eliminar partida"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1558,11 +1711,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         /* VISTA: CHAT ASISTENTE DE CAMPO */
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-[#FEF3C7]">
           <div className="max-w-3xl mx-auto space-y-4">
-            {capturedItems.length > 0 && (
+            {validCount > 0 && (
               <div className="sticky top-0 z-10 p-2.5 rounded-xl bg-amber-100/95 backdrop-blur-xs border border-amber-300 flex items-center justify-between gap-2 shadow-xs">
                 <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
                   <Table className="w-4 h-4 text-amber-600" />
-                  <strong>{capturedItems.length}</strong> partida(s) en la planilla de cómputos
+                  <strong>{validCount}</strong> partida(s) en la planilla de cómputos
                 </span>
                 <button
                   type="button"
@@ -1908,7 +2061,7 @@ M2`}
         </div>
       )}
 
-      {/* BARRA INFERIOR DE ACCIÓN (Siempre accesible en ambas vistas) */}
+      {/* BARRA INFERIOR DE ACCIÓN (Siempre accesible en ambas vistas con botón Guardar y Generar) */}
       <div className="p-3 sm:p-4 bg-[#FEF3C7] border-t border-amber-200 shrink-0">
         <div className="max-w-4xl mx-auto space-y-2.5">
           {commitError && (
@@ -1948,7 +2101,7 @@ M2`}
             </div>
           )}
 
-          {/* Barra de Confirmación y Generación del Presupuesto */}
+          {/* Barra de Guardar Borrador y Confirmación del Presupuesto */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-amber-100/90 border border-amber-300 rounded-2xl p-2.5 shadow-xs">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <FileCheck2 className="w-4 h-4 text-amber-600 shrink-0 ml-1" />
@@ -1963,22 +2116,31 @@ M2`}
             </div>
 
             <div className="flex items-center gap-2">
-              {activeTab === 'sheet' && (
-                <button
-                  type="button"
-                  onClick={handleAddBlankRow}
-                  disabled={isCommitting}
-                  className="px-3 py-2 rounded-xl bg-white hover:bg-amber-50 border border-amber-300 text-amber-950 text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5 text-amber-600" />
-                  <span className="hidden sm:inline">Nueva Fila</span>
-                </button>
-              )}
+              {/* BOTÓN GUARDAR BORRADOR (Reemplaza al anterior botón de Nueva Fila) */}
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                disabled={isCommitting}
+                className="px-3.5 py-2 rounded-xl bg-white hover:bg-amber-50 border border-amber-300 text-amber-950 text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                title="Guardar borrador de la planilla para pausar y continuar después"
+              >
+                {saveStatus ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+                    <span className="text-emerald-700 font-extrabold">{saveStatus}</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Guardar</span>
+                  </>
+                )}
+              </button>
 
               <button
                 type="button"
                 onClick={handleConfirmAndGenerateBudget}
-                disabled={isCommitting || capturedItems.length === 0}
+                disabled={isCommitting || validCount === 0}
                 className="px-4 sm:px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2 shadow-md shadow-amber-600/25 disabled:opacity-50 transition-all shrink-0 cursor-pointer"
               >
                 {isCommitting ? (
@@ -1989,7 +2151,7 @@ M2`}
                 ) : (
                   <>
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Confirmar y Generar Presupuesto ({capturedItems.length})</span>
+                    <span>Confirmar y Generar Presupuesto ({validCount})</span>
                   </>
                 )}
               </button>
