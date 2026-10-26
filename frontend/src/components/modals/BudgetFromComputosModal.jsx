@@ -1401,6 +1401,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           ...it,
           description: cleanDesc,
           unit: cleanUnit,
+          cod_par: coveninItem.CodPar || '',
+          cov_par: coveninItem.CovPar || coveninItem.CodPar || '',
           coveninCode: coveninItem.CovPar || coveninItem.CodPar || '',
         };
       });
@@ -1571,6 +1573,25 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
             is_chapter: true,
           });
           lastChapter = chapName;
+        }
+
+        // Si la partida ya fue seleccionada de la norma COVENIN (tiene cod_par),
+        // se toma directamente de la base de datos sin necesidad de llamar a IA ni resolver.
+        if (it.cod_par) {
+          payloadItems.push({
+            description: (it.description || '').trim().toUpperCase(),
+            unit: (it.unit || 'M2').toUpperCase(),
+            quantity: Number(it.quantity) || 0,
+            performance: 1.0,
+            is_chapter: false,
+            cod_par: it.cod_par,
+            cov_par: it.cov_par || it.cod_par,
+            code: '',
+            materials: [],
+            equipments: [],
+            labors: [],
+          });
+          continue;
         }
 
         setCommitStepInfo({ current: i + 1, total: finalItems.length });
@@ -2108,30 +2129,20 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         </div>
       </header>
 
-      {/* Barra de Capítulo Activo */}
-      <div className="px-4 sm:px-6 py-1.5 bg-amber-100/90 border-b border-amber-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
-        <div className="flex items-center gap-2 text-xs text-amber-950 font-semibold min-w-0">
-          <Layers className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-          <span className="text-amber-800 font-medium">Capítulo activo:</span>
-          <span className="px-2.5 py-0.5 rounded-lg bg-white border border-amber-300 text-amber-950 font-extrabold truncate max-w-[240px] sm:max-w-xs shadow-xs">
-            {activeChapter}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setChapterModalInput('');
-              setShowChapterModal(true);
-            }}
-            className="text-xs font-bold text-amber-900 hover:text-amber-950 bg-white hover:bg-amber-50 border border-amber-300 px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
-            title="Agregar un nuevo capítulo a la planilla"
-          >
-            <FolderPlus className="w-3.5 h-3.5 text-amber-700" />
-            <span>+ Agregar Capítulo</span>
-          </button>
-        </div>
+      {/* Barra de Acciones de Capítulo */}
+      <div className="px-4 sm:px-6 py-1.5 bg-amber-100/90 border-b border-amber-200 flex items-center justify-end gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={() => {
+            setChapterModalInput('');
+            setShowChapterModal(true);
+          }}
+          className="text-xs font-bold text-amber-900 hover:text-amber-950 bg-white hover:bg-amber-50 border border-amber-300 px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+          title="Agregar un nuevo capítulo a la planilla"
+        >
+          <FolderPlus className="w-3.5 h-3.5 text-amber-700" />
+          <span>+ Agregar Capítulo</span>
+        </button>
       </div>
 
       {/* CUERPO PRINCIPAL */}
