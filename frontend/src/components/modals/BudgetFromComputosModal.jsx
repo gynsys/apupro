@@ -632,8 +632,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     return 'OBRAS PRELIMINARES';
   });
 
-  const [isEditingChapter, setIsEditingChapter] = useState(false);
-  const [chapterInput, setChapterInput] = useState('');
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
@@ -648,6 +646,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   const [lastCapturedItemId, setLastCapturedItemId] = useState(null);
   const [saveStatus, setSaveStatus] = useState(null);
   const [showOpenModal, setShowOpenModal] = useState(false);
+  const [showChapterModal, setShowChapterModal] = useState(false);
+  const [chapterModalInput, setChapterModalInput] = useState('');
   const [savedList, setSavedList] = useState(getSavedComputosList);
   const [currentDraftId, setCurrentDraftId] = useState(() => {
     try {
@@ -920,6 +920,50 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     setMessages([INITIAL_WELCOME_MESSAGE]);
     setSaveStatus(null);
     setShowOpenModal(false);
+  };
+
+  /**
+   * Agrega un nuevo capítulo a la planilla de cómputos y lo deja listo con una fila libre
+   */
+  const handleAddChapterToSheet = (newChapName) => {
+    const name = (newChapName || '').trim().toUpperCase();
+    if (!name) return;
+
+    setActiveChapter(name);
+
+    setCapturedItems((prev) => {
+      const items = [...prev];
+      // Si la última fila era una fila vacía no utilizada, le asignamos el nuevo capítulo
+      if (items.length > 0 && isItemEmpty(items[items.length - 1])) {
+        items[items.length - 1] = {
+          ...items[items.length - 1],
+          chapter: name,
+        };
+        return items;
+      }
+      // Si la última fila ya tenía datos, agregamos una fila libre con el nuevo capítulo
+      return [...items, createBlankRow(name)];
+    });
+
+    setShowChapterModal(false);
+    setChapterModalInput('');
+  };
+
+  /**
+   * Permite renombrar un capítulo directamente desde su encabezado en la tabla
+   */
+  const handleRenameChapter = (oldName) => {
+    const newName = window.prompt('Nuevo nombre para este capítulo:', oldName);
+    if (!newName || !newName.trim()) return;
+    const clean = newName.trim().toUpperCase();
+    if (clean === oldName) return;
+
+    setCapturedItems((prev) =>
+      prev.map((it) => (it.chapter === oldName ? { ...it, chapter: clean } : it))
+    );
+    if (activeChapter === oldName) {
+      setActiveChapter(clean);
+    }
   };
 
   /**
@@ -1458,6 +1502,102 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         </div>
       )}
 
+      {/* Modal / Diálogo para Agregar Nuevo Capítulo a la Planilla */}
+      {showChapterModal && (
+        <div className="absolute inset-0 z-[130] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 border-2 border-amber-300 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-amber-200 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-sm">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-amber-950 font-bold text-base leading-tight">Agregar Capítulo a la Planilla</h3>
+                  <p className="text-xs text-amber-800">Crea una nueva sección para agrupar partidas</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowChapterModal(false)}
+                className="text-amber-700 hover:text-amber-950 p-1 rounded-full hover:bg-amber-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (chapterModalInput.trim()) {
+                  handleAddChapterToSheet(chapterModalInput.trim());
+                }
+              }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="block text-xs font-bold text-amber-950 mb-1">
+                  Nombre del Capítulo:
+                </label>
+                <input
+                  type="text"
+                  value={chapterModalInput}
+                  onChange={(e) => setChapterModalInput(e.target.value)}
+                  placeholder="Ej. ESTRUCTURAS, ALBAÑILERÍA..."
+                  autoFocus
+                  className="w-full px-3 py-2 text-sm font-bold border-2 border-amber-300 rounded-xl bg-amber-50/30 text-amber-950 focus:outline-none focus:border-amber-500 uppercase"
+                />
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold text-amber-800 mb-1.5">Capítulos frecuentes:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    'OBRAS PRELIMINARES',
+                    'MOVIMIENTO DE TIERRAS',
+                    'ESTRUCTURAS',
+                    'ALBAÑILERÍA',
+                    'INSTALACIONES ELÉCTRICAS',
+                    'INSTALACIONES SANITARIAS',
+                    'ACABADOS',
+                    'IMPERMEABILIZACIÓN',
+                  ].map((sug) => (
+                    <button
+                      key={sug}
+                      type="button"
+                      onClick={() => setChapterModalInput(sug)}
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                        chapterModalInput === sug
+                          ? 'bg-amber-500 text-white border-amber-600'
+                          : 'bg-amber-50 hover:bg-amber-100 text-amber-950 border-amber-200'
+                      }`}
+                    >
+                      {sug}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-amber-200">
+                <button
+                  type="button"
+                  onClick={() => setShowChapterModal(false)}
+                  className="px-3.5 py-1.5 rounded-xl border border-amber-300 text-amber-950 text-xs font-bold hover:bg-amber-50 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!chapterModalInput.trim()}
+                  className="px-4 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  + Agregar a la Planilla
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Header Principal con Selector de Modo (Planilla vs Asistente/Chat) */}
       <header className="px-4 sm:px-6 py-2.5 border-b border-amber-200 flex items-center justify-between bg-[#FEF3C7] shrink-0 shadow-sm">
         <div className="flex items-center gap-3 min-w-0">
@@ -1479,9 +1619,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                 {isOnline ? '● En línea' : '⚡ Modo Offline'}
               </span>
             </div>
-            <p className="text-xs text-amber-800 truncate hidden sm:block">
-              Planilla de mediciones con soporte de acero (Factor kg/m) y acarreos (Distancia km)
-            </p>
           </div>
         </div>
 
@@ -1556,54 +1693,25 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       <div className="px-4 sm:px-6 py-1.5 bg-amber-100/90 border-b border-amber-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 text-xs text-amber-950 font-semibold min-w-0">
           <Layers className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-          <span className="text-amber-800 font-medium">Capítulo actual:</span>
-          {!isEditingChapter ? (
-            <span className="px-2 py-0.5 rounded-lg bg-white border border-amber-300 text-amber-950 font-bold truncate max-w-[200px] sm:max-w-xs">
-              {activeChapter}
-            </span>
-          ) : (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (chapterInput.trim()) {
-                  setActiveChapter(chapterInput.trim().toUpperCase());
-                }
-                setIsEditingChapter(false);
-              }}
-              className="flex items-center gap-1.5"
-            >
-              <input
-                type="text"
-                value={chapterInput}
-                onChange={(e) => setChapterInput(e.target.value)}
-                placeholder="Ej. ESTRUCTURAS"
-                autoFocus
-                className="px-2 py-0.5 text-xs rounded-lg bg-white border border-amber-400 text-amber-950 focus:outline-none"
-              />
-              <button
-                type="submit"
-                className="px-2 py-0.5 rounded-lg bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 cursor-pointer"
-              >
-                OK
-              </button>
-            </form>
-          )}
+          <span className="text-amber-800 font-medium">Capítulo activo:</span>
+          <span className="px-2.5 py-0.5 rounded-lg bg-white border border-amber-300 text-amber-950 font-extrabold truncate max-w-[240px] sm:max-w-xs shadow-xs">
+            {activeChapter}
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
-          {!isEditingChapter && (
-            <button
-              type="button"
-              onClick={() => {
-                setChapterInput(activeChapter);
-                setIsEditingChapter(true);
-              }}
-              className="text-xs font-semibold text-amber-800 hover:text-amber-950 bg-white/90 hover:bg-white border border-amber-300 px-2 py-0.5 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
-            >
-              <FolderPlus className="w-3.5 h-3.5 text-amber-600" />
-              <span>Cambiar capítulo</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => {
+              setChapterModalInput('');
+              setShowChapterModal(true);
+            }}
+            className="text-xs font-bold text-amber-900 hover:text-amber-950 bg-white hover:bg-amber-50 border border-amber-300 px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+            title="Agregar un nuevo capítulo a la planilla"
+          >
+            <FolderPlus className="w-3.5 h-3.5 text-amber-700" />
+            <span>+ Agregar Capítulo</span>
+          </button>
         </div>
       </div>
 
@@ -1671,6 +1779,18 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
             {/* Barra de Herramientas y Referencia de Factores de Acero */}
             <div className="flex flex-wrap items-center justify-between gap-2 bg-white/90 border border-amber-300 px-4 py-2 rounded-2xl shadow-xs">
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChapterModalInput('');
+                    setShowChapterModal(true);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                  title="Agregar un nuevo capítulo a la planilla de cómputos"
+                >
+                  <FolderPlus className="w-4 h-4" />
+                  <span>+ Agregar Capítulo</span>
+                </button>
                 <span className="text-xs font-extrabold text-amber-950 bg-amber-200/80 px-2.5 py-1 rounded-lg border border-amber-300">
                   {validCount} partida(s) con datos
                 </span>
@@ -1771,6 +1891,15 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                     <Layers className="w-3.5 h-3.5 text-amber-700" />
                                     CAPÍTULO: {it.chapter}
                                   </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRenameChapter(it.chapter)}
+                                    className="text-[10px] font-bold text-amber-900 bg-white/90 hover:bg-white border border-amber-300 px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer shadow-xs"
+                                    title="Renombrar este capítulo"
+                                  >
+                                    <Edit3 className="w-3 h-3 text-amber-700" />
+                                    <span>Renombrar</span>
+                                  </button>
                                 </div>
                               </td>
                             </tr>
