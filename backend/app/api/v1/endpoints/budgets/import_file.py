@@ -50,37 +50,6 @@ class Candidate(BaseModel):
     match_type: str = "description"
 
 
-class PreviewItem(BaseModel):
-    row: int
-    code: str = ""
-    description: str
-    unit: str = "und"
-    quantity: float = 0.0
-    calculation: str = ""
-    confidence: str = ""
-    warnings: List[str] = []
-    is_chapter: bool = False
-    candidates: List[Candidate] = []
-    selected_cod_par: Optional[str] = None
-    has_covenin_code_match: bool = False
-
-
-class PreviewHeader(BaseModel):
-    budget_name: str
-    project_name: Optional[str] = None
-    client_name: Optional[str] = None
-    currency: str = "USD"
-
-
-class PreviewResponse(BaseModel):
-    filename: str
-    source_type: str
-    header: PreviewHeader
-    items: List[PreviewItem]
-    stats: Dict[str, int]
-    warnings: List[str] = []
-
-
 class GeneratedMaterial(BaseModel):
     codigo: str = ""
     descripcion: str = ""
@@ -105,6 +74,46 @@ class GeneratedLabor(BaseModel):
     cantidad: float = 0.0
     jornal: float = 0.0
     bono: float = 0.0
+
+
+class PreviewItem(BaseModel):
+    row: int
+    code: str = ""
+    description: str
+    unit: str = "und"
+    quantity: float = 0.0
+    calculation: str = ""
+    confidence: str = ""
+    warnings: List[str] = []
+    is_chapter: bool = False
+    candidates: List[Candidate] = []
+    selected_cod_par: Optional[str] = None
+    has_covenin_code_match: bool = False
+    performance: Optional[float] = None
+    materials: List[GeneratedMaterial] = []
+    equipments: List[GeneratedEquipment] = []
+    labors: List[GeneratedLabor] = []
+    apu_source: Optional[str] = None
+
+
+class PreviewHeader(BaseModel):
+    budget_name: str
+    project_name: Optional[str] = None
+    client_name: Optional[str] = None
+    currency: str = "USD"
+    fcas_percent: Optional[float] = None
+    admin_percent: Optional[float] = None
+    profit_percent: Optional[float] = None
+    iva_percent: Optional[float] = None
+
+
+class PreviewResponse(BaseModel):
+    filename: str
+    source_type: str
+    header: PreviewHeader
+    items: List[PreviewItem]
+    stats: Dict[str, int]
+    warnings: List[str] = []
 
 
 class GenerateApuRequest(BaseModel):
@@ -170,6 +179,10 @@ class CommitRequest(BaseModel):
     currency: str = "USD"
     items: List[CommitItem]
     source_filename: Optional[str] = None
+    fcas_percent: Optional[float] = None
+    admin_percent: Optional[float] = None
+    profit_percent: Optional[float] = None
+    iva_percent: Optional[float] = None
 
     @field_validator("currency")
     @classmethod
@@ -616,6 +629,11 @@ def commit_budget_import(
         )
 
     costos = _get_costos_config(current_user)
+    fcas_val = payload.fcas_percent if (payload.fcas_percent is not None and payload.fcas_percent > 0) else getattr(costos, "fcas", 0.0)
+    admin_val = payload.admin_percent if (payload.admin_percent is not None and payload.admin_percent > 0) else getattr(costos, "porcentajeAdministracion", 15.0)
+    profit_val = payload.profit_percent if (payload.profit_percent is not None and payload.profit_percent > 0) else getattr(costos, "porcentajeUtilidad", 10.0)
+    iva_val = payload.iva_percent if (payload.iva_percent is not None and payload.iva_percent >= 0) else getattr(costos, "iva", 16.0)
+
     budget = Budget(
         user_id=str(current_user.id),
         name=payload.name.strip(),
@@ -624,10 +642,10 @@ def commit_budget_import(
         client_name=(payload.client_name or None),
         currency=payload.currency,
         exchange_rate=1.0,
-        fcas_percent=getattr(costos, "fcas", 0.0),
-        admin_percent=getattr(costos, "porcentajeAdministracion", 15.0),
-        profit_percent=getattr(costos, "porcentajeUtilidad", 10.0),
-        iva_percent=getattr(costos, "iva", 16.0),
+        fcas_percent=fcas_val,
+        admin_percent=admin_val,
+        profit_percent=profit_val,
+        iva_percent=iva_val,
         labor_bonus=0.0 if getattr(costos, "fcasBonoInFcas", False) else (getattr(costos, "fcasLaborBonus", 0.0) or 0.0),
         bono_in_fcas=getattr(costos, "fcasBonoInFcas", False),
     )
@@ -751,7 +769,9 @@ def commit_budget_import(
 
             if has_generated:
                 is_labor_only, _ = is_labor_only_activity(description)
-                if not is_labor_only:
+                # Si el usuario suministró materiales explícitos en su APU (ej. Excel APU), guardarlos todos
+                save_materials = (not is_labor_only) or bool(item.materials)
+                if save_materials:
                     for mat in item.materials:
                         db.add(DBMaterial(
                             budget_item_id=db_item.id,

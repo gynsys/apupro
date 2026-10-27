@@ -60,6 +60,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
   const [autoGenProgress, setAutoGenProgress] = useState({ current: 0, total: 0 });
   const [error, setError] = useState(null);
   const [limitReached, setLimitReached] = useState(false);
+  const [expandedApuIndex, setExpandedApuIndex] = useState(null);
   const fileInputRef = useRef(null);
   const autoGenCancelledRef = useRef(false);
 
@@ -75,6 +76,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
       setLimitReached(false);
       setLoading(false);
       setCreating(false);
+      setExpandedApuIndex(null);
     } else {
       setCurrentFile(file || null);
     }
@@ -82,7 +84,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
 
   const triggerAutoGeneration = async (list) => {
     const toGenerate = (list || []).filter(
-      (item) => !item.is_chapter && !item.has_covenin_code_match && item.include && !item.generated_data
+      (item) => !item.is_chapter && !item.has_covenin_code_match && item.include && !item.generated_data && item.apu_source !== 'excel_apu' && !(item.materials?.length || item.equipments?.length || item.labors?.length)
     );
     if (!toGenerate.length) return;
 
@@ -172,11 +174,18 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
         const data = await budgetService.previewImport(currentFile, importMode);
         if (cancelled) return;
         setPreview(data);
+        if (data.source_type === 'excel_apu' && importMode !== 'apu_workbook') {
+          setImportMode('apu_workbook');
+        }
         setHeader({
           budget_name: data.header?.budget_name || '',
           project_name: data.header?.project_name || '',
           client_name: data.header?.client_name || '',
           currency: data.header?.currency || 'USD',
+          fcas_percent: data.header?.fcas_percent,
+          admin_percent: data.header?.admin_percent,
+          profit_percent: data.header?.profit_percent,
+          iva_percent: data.header?.iva_percent,
         });
         const parsedItems = (data.items || []).map((item) => ({
           ...item,
@@ -184,13 +193,20 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
           quantity: item.quantity ?? 0,
           unit: item.unit || 'und',
           code: item.code || '',
+          performance: item.performance || 1.0,
           selected: item.is_chapter ? '' : (item.selected_cod_par || ''),
           has_covenin_code_match: Boolean(item.has_covenin_code_match),
+          apu_source: item.apu_source || null,
+          materials: item.materials || [],
+          equipments: item.equipments || [],
+          labors: item.labors || [],
         }));
         setItems(parsedItems);
 
-        // Generar automáticamente con IA para las partidas que no tengan código COVENIN en la BD
-        triggerAutoGeneration(parsedItems);
+        // Si es libro de APUs de Excel, no necesita generación con IA porque ya tiene APUs completos
+        if (data.source_type !== 'excel_apu') {
+          triggerAutoGeneration(parsedItems);
+        }
       } catch (err) {
         if (cancelled) return;
         setError(err.message || 'No se pudo analizar el archivo.');
@@ -270,9 +286,9 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
   };
 
   const includedItems = items.filter((item) => item.include && item.description.trim());
-  const selectedCount = items.filter((item) => !item.is_chapter && item.selected).length;
+  const selectedCount = items.filter((item) => !item.is_chapter && (item.selected || item.apu_source === 'excel_apu' || item.materials?.length || item.equipments?.length || item.labors?.length)).length;
   const pendingCount = items.filter(
-    (item) => !item.is_chapter && !item.selected && !item.has_covenin_code_match,
+    (item) => !item.is_chapter && !item.selected && !item.has_covenin_code_match && item.apu_source !== 'excel_apu' && !(item.materials?.length || item.equipments?.length || item.labors?.length),
   ).length;
   const noMatchCount = items.filter(
     (item) => !item.is_chapter && !item.selected && (item.candidates || []).length === 0,
@@ -295,27 +311,33 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
     try {
       const result = await budgetService.commitImport({
         name: header.budget_name.trim(),
-        project_name: header.project_name.trim() || null,
-        client_name: header.client_name.trim() || null,
+        project_name: header.project_name?.trim() || null,
+        client_name: header.client_name?.trim() || null,
         currency: header.currency,
+        fcas_percent: header.fcas_percent || null,
+        admin_percent: header.admin_percent || null,
+        profit_percent: header.profit_percent || null,
+        iva_percent: header.iva_percent || null,
         source_filename: currentFile?.name || preview?.filename || null,
         items: includedItems.map((item) => {
           const generated = item.generated_data;
           const suppliedCode = (item.code || '').trim();
           const generatedCode = item.generated_code || generated?.partida?.cod_par || suppliedCode || '';
           const useGenerated = Boolean(generated && (item.selected === generatedCode || !item.has_covenin_code_match));
+          const hasExcelApu = item.apu_source === 'excel_apu' || Boolean(item.materials?.length || item.equipments?.length || item.labors?.length);
+
           return {
             description: item.description.trim(),
             unit: (item.unit || 'und').trim() || 'und',
             quantity: Number(item.quantity) || 0,
-            performance: Number(item.performance) || (useGenerated ? Number(generated?.partida?.performance || generated?.partida?.rendimiento) : null) || null,
+            performance: Number(item.performance) || (useGenerated ? Number(generated?.partida?.performance || generated?.partida?.rendimiento) : null) || 1.0,
             is_chapter: Boolean(item.is_chapter),
             cod_par: item.is_chapter ? null : (item.selected || suppliedCode || null),
             cov_par: suppliedCode || (useGenerated ? (generated?.partida?.cov_par || generatedCode) : (item.cov_par || null)),
             code: suppliedCode || null,
-            materials: (useGenerated && !isLaborOnlyActivity(item.description)) ? (generated.materials || []) : [],
-            equipments: useGenerated ? (generated.equipments || []) : [],
-            labors: useGenerated ? (generated.labors || []) : [],
+            materials: hasExcelApu ? (item.materials || []) : ((useGenerated && !isLaborOnlyActivity(item.description)) ? (generated.materials || []) : []),
+            equipments: hasExcelApu ? (item.equipments || []) : (useGenerated ? (generated.equipments || []) : []),
+            labors: hasExcelApu ? (item.labors || []) : (useGenerated ? (generated.labors || []) : []),
           };
         }),
       });
@@ -362,13 +384,13 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
         <div className="px-4 sm:px-6 py-4 flex-1 overflow-y-auto flex flex-col gap-4">
 
           {/* Modo de importación */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button
               type="button"
               onClick={() => setImportMode('budget')}
-              className={`text-left rounded-xl border px-3 py-2.5 transition-colors ${
+              className={`text-left rounded-xl border px-3 py-2.5 transition-colors cursor-pointer ${
                 importMode === 'budget'
-                  ? 'border-sky-500 bg-sky-50 text-sky-900'
+                  ? 'border-sky-500 bg-sky-50 text-sky-900 shadow-sm'
                   : 'border-amber-600/15 bg-white/70 text-amber-900 hover:bg-white'
               }`}
             >
@@ -377,10 +399,25 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
             </button>
             <button
               type="button"
+              onClick={() => setImportMode('apu_workbook')}
+              className={`text-left rounded-xl border px-3 py-2.5 transition-colors cursor-pointer ${
+                importMode === 'apu_workbook'
+                  ? 'border-emerald-500 bg-emerald-50 text-emerald-900 shadow-sm'
+                  : 'border-amber-600/15 bg-white/70 text-amber-900 hover:bg-white'
+              }`}
+            >
+              <span className="block text-xs font-bold flex items-center gap-1.5">
+                <FileSpreadsheet size={13} className="text-emerald-600 shrink-0" />
+                Libro de APUs (Excel)
+              </span>
+              <span className="block text-[10px] opacity-75 mt-0.5">Hojas con APUs (Materiales, Equipos, M.O.)</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setImportMode('compute_notes')}
-              className={`text-left rounded-xl border px-3 py-2.5 transition-colors ${
+              className={`text-left rounded-xl border px-3 py-2.5 transition-colors cursor-pointer ${
                 importMode === 'compute_notes'
-                  ? 'border-sky-500 bg-sky-50 text-sky-900'
+                  ? 'border-sky-500 bg-sky-50 text-sky-900 shadow-sm'
                   : 'border-amber-600/15 bg-white/70 text-amber-900 hover:bg-white'
               }`}
             >
@@ -587,6 +624,9 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                   const selectedCandidate = (item.candidates || []).find((candidate) => candidate.cod_par === item.selected);
                   const isGenerated = Boolean(item.generated_data || selectedCandidate?.match_type === 'ai_generated');
                   const isCoveninExact = item.has_covenin_code_match;
+                  const hasExcelApu = item.apu_source === 'excel_apu' || Boolean(item.materials?.length || item.equipments?.length || item.labors?.length);
+                  const isExpanded = expandedApuIndex === index;
+
                   return (
                     <div
                       key={`${item.row}-${index}`}
@@ -611,6 +651,10 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                             {item.is_chapter ? (
                               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 uppercase tracking-wide">
                                 Capítulo
+                              </span>
+                            ) : hasExcelApu ? (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-300 uppercase tracking-wide flex items-center gap-1">
+                                <CheckCircle2 size={11} className="text-emerald-600" /> APU importado de Excel ({item.materials?.length || 0} mat, {item.equipments?.length || 0} eq, {item.labors?.length || 0} mo)
                               </span>
                             ) : isGenerated ? (
                               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 uppercase tracking-wide flex items-center gap-1">
@@ -663,7 +707,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                           )}
 
                           {!item.is_chapter ? (
-                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 mt-2">
                               <label className="flex flex-col gap-0.5">
                                 <span className="text-[9px] font-bold text-slate-400 uppercase">Código</span>
                                 <input
@@ -694,13 +738,29 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                                   className="px-2 py-1 border border-slate-200 rounded-lg text-[11px] text-slate-700 bg-white outline-none focus:border-sky-400"
                                 />
                               </label>
+                              <label className="flex flex-col gap-0.5">
+                                <span className="text-[9px] font-bold text-slate-400 uppercase">Rendimiento</span>
+                                <input
+                                  type="number"
+                                  min="0.01"
+                                  step="0.01"
+                                  value={item.performance || 1}
+                                  onChange={(event) => updateItem(index, { performance: event.target.value })}
+                                  className="px-2 py-1 border border-slate-200 rounded-lg text-[11px] text-slate-700 bg-white outline-none focus:border-sky-400"
+                                />
+                              </label>
                               <label className="flex flex-col gap-0.5 col-span-2">
-                                <span className="text-[9px] font-bold text-slate-400 uppercase">Partida de la base maestra</span>
+                                <span className="text-[9px] font-bold text-slate-400 uppercase">Partida / Base Maestra</span>
                                 <select
                                   value={item.selected || ''}
                                   onChange={(event) => updateItem(index, { selected: event.target.value })}
                                   className="px-2 py-1 border border-slate-200 rounded-lg text-[11px] text-slate-700 bg-white outline-none focus:border-sky-400 truncate"
                                 >
+                                  {hasExcelApu && (
+                                    <option value={item.code || item.selected}>
+                                      ✓ Usar APU del Excel ({item.code || 'Propio'})
+                                    </option>
+                                  )}
                                   <option value="">— {item.has_covenin_code_match ? 'Sin APU' : 'Generar APU con IA'} —</option>
                                   {(item.candidates || []).map((candidate) => (
                                     <option key={candidate.cod_par} value={candidate.cod_par}>
@@ -725,7 +785,116 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                             </div>
                           )}
 
-                          {!item.is_chapter && !isCoveninExact && !isGenerated && (
+                          {hasExcelApu && (
+                            <div className="mt-2.5">
+                              <button
+                                type="button"
+                                onClick={() => setExpandedApuIndex(isExpanded ? null : index)}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 transition-colors cursor-pointer"
+                              >
+                                <FileSpreadsheet size={13} className="text-emerald-600" />
+                                {isExpanded ? 'Ocultar análisis de insumos' : `Ver insumos del APU (${item.materials?.length || 0} mat, ${item.equipments?.length || 0} eq, ${item.labors?.length || 0} mo)`}
+                              </button>
+
+                              {isExpanded && (
+                                <div className="mt-2 bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-3 text-[11px]">
+                                  {item.materials?.length > 0 && (
+                                    <div>
+                                      <p className="font-bold text-amber-950 text-xs mb-1">📦 Materiales ({item.materials.length}):</p>
+                                      <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                          <thead>
+                                            <tr className="border-b border-slate-200 text-[10px] text-slate-500 font-semibold">
+                                              <th className="py-1 px-1.5">Código</th>
+                                              <th className="py-1 px-1.5">Descripción</th>
+                                              <th className="py-1 px-1.5">Und.</th>
+                                              <th className="py-1 px-1.5 text-right">Cant.</th>
+                                              <th className="py-1 px-1.5 text-right">Desp %</th>
+                                              <th className="py-1 px-1.5 text-right">Precio</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {item.materials.map((m, mIdx) => (
+                                              <tr key={mIdx} className="border-b border-slate-100 text-slate-700">
+                                                <td className="py-1 px-1.5 font-mono text-[10px]">{m.codigo || '-'}</td>
+                                                <td className="py-1 px-1.5 font-medium">{m.descripcion}</td>
+                                                <td className="py-1 px-1.5">{m.unidad}</td>
+                                                <td className="py-1 px-1.5 text-right font-mono">{m.cantidad}</td>
+                                                <td className="py-1 px-1.5 text-right font-mono">{m.desperdicio}%</td>
+                                                <td className="py-1 px-1.5 text-right font-mono">{m.precio_unitario}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {item.equipments?.length > 0 && (
+                                    <div>
+                                      <p className="font-bold text-amber-950 text-xs mb-1">🚜 Equipos ({item.equipments.length}):</p>
+                                      <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                          <thead>
+                                            <tr className="border-b border-slate-200 text-[10px] text-slate-500 font-semibold">
+                                              <th className="py-1 px-1.5">Código</th>
+                                              <th className="py-1 px-1.5">Descripción</th>
+                                              <th className="py-1 px-1.5 text-right">Cant.</th>
+                                              <th className="py-1 px-1.5 text-right">Cop/Dep</th>
+                                              <th className="py-1 px-1.5 text-right">Precio</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {item.equipments.map((e, eIdx) => (
+                                              <tr key={eIdx} className="border-b border-slate-100 text-slate-700">
+                                                <td className="py-1 px-1.5 font-mono text-[10px]">{e.codigo || '-'}</td>
+                                                <td className="py-1 px-1.5 font-medium">{e.descripcion}</td>
+                                                <td className="py-1 px-1.5 text-right font-mono">{e.cantidad}</td>
+                                                <td className="py-1 px-1.5 text-right font-mono">{e.depreciacion}</td>
+                                                <td className="py-1 px-1.5 text-right font-mono">{e.precio_unitario}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {item.labors?.length > 0 && (
+                                    <div>
+                                      <p className="font-bold text-amber-950 text-xs mb-1">👷 Mano de Obra ({item.labors.length}):</p>
+                                      <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                          <thead>
+                                            <tr className="border-b border-slate-200 text-[10px] text-slate-500 font-semibold">
+                                              <th className="py-1 px-1.5">Código</th>
+                                              <th className="py-1 px-1.5">Cargo / Descripción</th>
+                                              <th className="py-1 px-1.5 text-right">Cant.</th>
+                                              <th className="py-1 px-1.5 text-right">Jornal</th>
+                                              <th className="py-1 px-1.5 text-right">Bono</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {item.labors.map((l, lIdx) => (
+                                              <tr key={lIdx} className="border-b border-slate-100 text-slate-700">
+                                                <td className="py-1 px-1.5 font-mono text-[10px]">{l.codigo || '-'}</td>
+                                                <td className="py-1 px-1.5 font-medium">{l.descripcion}</td>
+                                                <td className="py-1 px-1.5 text-right font-mono">{l.cantidad}</td>
+                                                <td className="py-1 px-1.5 text-right font-mono">{l.jornal}</td>
+                                                <td className="py-1 px-1.5 text-right font-mono">{l.bono}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {!item.is_chapter && !isCoveninExact && !isGenerated && !hasExcelApu && (
                             <button
                               type="button"
                               onClick={() => handleGenerateApu(index)}

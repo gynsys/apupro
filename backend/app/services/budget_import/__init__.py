@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 
 from sqlalchemy.orm import Session
 
+from .apu_workbook import extract_from_apu_workbook, is_apu_workbook
 from .errors import BudgetImportError, FileExtractionError
 from .extractors import _looks_like_stop_row, _normalize_unit, extract_from_file
 from .matching import find_candidates, refine_with_llm
@@ -56,6 +57,11 @@ def _finalize_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def build_preview(data: bytes, filename: str, db: Session, mode: str = "budget") -> Dict[str, Any]:
     """Extrae, estructura y cruza contra la base maestra todas las partidas del archivo."""
+    # 0. Detección prioritaria de Libros de APUs (Excel con hojas modelo APU)
+    ext = Path(filename or "").suffix.lower()
+    if mode == "apu_workbook" or (mode == "budget" and ext in {".xlsx", ".xlsm"} and is_apu_workbook(data)):
+        return extract_from_apu_workbook(data, filename)
+
     extracted = extract_from_file(data, filename, db)
     items: List[Dict[str, Any]] = list(extracted.get("items") or [])
     header: Dict[str, Any] = dict(extracted.get("header") or {})
