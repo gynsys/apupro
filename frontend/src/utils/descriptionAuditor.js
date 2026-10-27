@@ -3,8 +3,8 @@
  *
  * Evalúa si una partida posee la información constructiva necesaria
  * (Acción, Elemento, Especificaciones Técnicas y Alcance) antes de
- * pasar al generador de APUs con IA, evitando alucinaciones de materiales
- * y rendimientos.
+ * pasar al generador de APUs con IA, detectando y resolviendo la
+ * ambigüedad en los materiales constructivos para evitar alucinaciones.
  */
 
 export const ACTION_PATTERNS = [
@@ -57,95 +57,231 @@ export const ELEMENT_PATTERNS = [
 export const SPEC_REGEX = /(?:e\s*=|espesor|d\s*=|diametro|f'?c|kg\/cm2|psi|calibre|cal\b|\b\d+(?:[.,]\d+)?\s*(?:cm|mm|m\b|"|''|pulg|hp|kva|w\b|btu|kg|ton)|1:\d|caucho|esmalte|epoxic|antioxid|antialcalino|premezclad|arcilla|cemento)/i;
 
 /**
- * Plantillas inteligentes para enriquecer partidas ambiguas típicas.
+ * Dominios de ambigüedad de materiales con sus variantes constructivas.
+ * Permite al usuario desambiguar rápidamente con 1 clic en vez de asumir arbitrariamente.
  */
-const CANONICAL_TEMPLATES = [
+export const MATERIAL_AMBIGUITY_DOMAINS = [
   {
+    id: 'pintura',
+    label: 'Tipo de pintura / Acabado',
+    match: /pintura|pintar|esmalte|fondear/i,
+    variants: [
+      {
+        name: 'Caucho Interior (Mate)',
+        text: 'APLICACIÓN DE PINTURA DE CAUCHO MATE EN PAREDES INTERIORES, INCLUYE PREPARACIÓN DE SUPERFICIE, FONDO SELLADOR Y 2 MANOS DE ACABADO HASTA H=3.00M'
+      },
+      {
+        name: 'Caucho Exterior (Fachadas)',
+        text: 'APLICACIÓN DE PINTURA DE CAUCHO ELASTOMÉRICA PARA EXTERIORES EN FACHADAS, INCLUYE FONDO ANTIALCALINO Y 2 MANOS DE ACABADO'
+      },
+      {
+        name: 'Esmalte Sintético (Herrería/Rejas)',
+        text: 'APLICACIÓN DE PINTURA DE ESMALTE SINTÉTICO EN SUPERFICIES METÁLICAS, INCLUYE LIJADO, FONDO ANTICORROSIVO Y 2 MANOS DE ESMALTE'
+      },
+      {
+        name: 'Epóxica de Alto Tráfico',
+        text: 'APLICACIÓN DE PINTURA EPÓXICA DE DOS COMPONENTES EN PISOS O MUROS, INCLUYE PREPARACIÓN QUÍMICA DE SUPERFICIE Y 2 MANOS DE ACABADO'
+      }
+    ]
+  },
+  {
+    id: 'pared_bloque',
+    label: 'Tipo de bloque y espesor',
+    match: /pared.*bloque|bloque.*pared|pared de bloque|levantamiento de pared|bloque/i,
+    variants: [
+      {
+        name: 'Bloque Arcilla e=15cm',
+        text: 'CONSTRUCCIÓN DE PARED DE BLOQUES DE ARCILLA E=15CM, INCLUYE MORTERO DE PEGA 1:4 Y ANDAMIOS HASTA H=3.00M'
+      },
+      {
+        name: 'Bloque Arcilla e=10cm',
+        text: 'CONSTRUCCIÓN DE PARED DE BLOQUES DE ARCILLA E=10CM, INCLUYE MORTERO DE PEGA 1:4 Y ANDAMIOS HASTA H=3.00M'
+      },
+      {
+        name: 'Bloque Concreto e=15cm',
+        text: 'CONSTRUCCIÓN DE PARED DE BLOQUES DE CONCRETO E=15CM, INCLUYE MORTERO DE PEGA 1:4 Y ANDAMIOS HASTA H=3.00M'
+      },
+      {
+        name: 'Bloque Concreto e=20cm (Carga)',
+        text: 'CONSTRUCCIÓN DE PARED DE BLOQUES DE CONCRETO E=20CM, INCLUYE MORTERO DE PEGA 1:4 Y ANDAMIOS HASTA H=3.00M'
+      }
+    ]
+  },
+  {
+    id: 'tuberia_agua',
+    label: 'Servicio y diámetro de tubería',
+    match: /tuberi[a|as]|tubo.*agua|plomeri[a|as]/i,
+    variants: [
+      {
+        name: 'Aguas Blancas PVC 1/2"',
+        text: 'SUMINISTRO E INSTALACIÓN DE TUBERÍA PVC PARA AGUAS BLANCAS D=1/2", INCLUYE CONEXIONES, SOLDADURA LÍQUIDA Y PRUEBA HIDROSTÁTICA'
+      },
+      {
+        name: 'Aguas Blancas PVC 3/4"',
+        text: 'SUMINISTRO E INSTALACIÓN DE TUBERÍA PVC PARA AGUAS BLANCAS D=3/4", INCLUYE CONEXIONES, SOLDADURA LÍQUIDA Y PRUEBA HIDROSTÁTICA'
+      },
+      {
+        name: 'Aguas Servidas PVC 4"',
+        text: 'SUMINISTRO E INSTALACIÓN DE TUBERÍA PVC PARA AGUAS SERVIDAS D=4", INCLUYE ACCESORIOS, PEGA PVC Y PRUEBA DE ESTANQUEIDAD'
+      },
+      {
+        name: 'Aguas Servidas PVC 2"',
+        text: 'SUMINISTRO E INSTALACIÓN DE TUBERÍA PVC PARA AGUAS SERVIDAS D=2", INCLUYE ACCESORIOS, PEGA PVC Y PRUEBA DE ESTANQUEIDAD'
+      },
+      {
+        name: 'Termofusión PPR 20mm (1/2")',
+        text: 'SUMINISTRO E INSTALACIÓN DE TUBERÍA DE POLIPROPILENO (TERMOFUSIÓN) D=20MM PARA AGUA FRÍA/CALIENTE, INCLUYE ACCESORIOS Y PRUEBA'
+      }
+    ]
+  },
+  {
+    id: 'friso',
+    label: 'Acabado y ubicación del friso',
     match: /friso|revoque|tarrajeo/i,
-    enrich: (orig) => {
-      const isExt = /exterior|fachada/i.test(orig);
-      return `CONSTRUCCIÓN DE FRISO ACABADO LISO EN ${isExt ? 'PAREDES EXTERIORES' : 'PAREDES INTERIORES'}, INCLUYE MORTERO 1:4, REMATE DE ARISTAS Y ANDAMIOS HASTA H=3.00M`;
-    }
+    variants: [
+      {
+        name: 'Liso Interior Mortero 1:4',
+        text: 'CONSTRUCCIÓN DE FRISO ACABADO LISO EN PAREDES INTERIORES, INCLUYE MORTERO 1:4, REMATE DE ARISTAS Y ANDAMIOS HASTA H=3.00M'
+      },
+      {
+        name: 'Rústico / Salpicado Base',
+        text: 'CONSTRUCCIÓN DE FRISO ACABADO RÚSTICO O SALPICADO BASE PARA RECIBIR REVESTIMIENTOS, INCLUYE MORTERO 1:3'
+      },
+      {
+        name: 'Exterior con Hidrófugo',
+        text: 'CONSTRUCCIÓN DE FRISO ACABADO LISO EN PAREDES EXTERIORES, INCLUYE ADITIVO HIDRÓFUGO, MORTERO 1:4 Y ANDAMIOS'
+      }
+    ]
   },
   {
-    match: /pintura|pintar|esmalte/i,
-    enrich: (orig) => {
-      const isExt = /exterior|fachada/i.test(orig);
-      return isExt
-        ? 'APLICACIÓN DE PINTURA DE CAUCHO ELASTOMÉRICA PARA EXTERIORES EN FACHADAS, INCLUYE FONDO ANTIALCALINO Y 2 MANOS DE ACABADO'
-        : 'APLICACIÓN DE PINTURA DE CAUCHO MATE EN PAREDES INTERIORES, INCLUYE PREPARACIÓN DE SUPERFICIE, FONDO SELLADOR Y 2 MANOS DE ACABADO HASTA H=3.00M';
-    }
+    id: 'pisos',
+    label: 'Tipo de piso / Revestimiento',
+    match: /piso|porcelanato|ceramica|caico|granito/i,
+    variants: [
+      {
+        name: 'Cerámica Esmaltada Tráfico Medio',
+        text: 'SUMINISTRO E INSTALACIÓN DE PISO DE CERÁMICA ESMALTADA DE TRÁFICO MEDIO, INCLUYE PEGO GRIS, CORTES Y EMBOQUILLADO'
+      },
+      {
+        name: 'Porcelanato 60x60 Rectificado',
+        text: 'SUMINISTRO E INSTALACIÓN DE PISO DE PORCELANATO 60X60CM RECTIFICADO, INCLUYE PEGO BLANCO ESPECIAL, NIVELADORES Y EMBOQUILLADO'
+      },
+      {
+        name: 'Cemento Pulido e=5cm',
+        text: 'CONSTRUCCIÓN DE PISO DE CONCRETO CON ACABADO EN CEMENTO PULIDO DE 5CM DE ESPESOR, INCLUYE JUNTAS DE DILATACIÓN'
+      },
+      {
+        name: 'Caico Criollo 20x20',
+        text: 'SUMINISTRO E INSTALACIÓN DE PISO DE CAICO CRIOLLO DE ARCILLA 20X20CM, INCLUYE MORTERO DE ASIENTO 1:4 Y EMBOQUILLADO'
+      }
+    ]
   },
   {
-    match: /pared.*bloque|bloque.*pared|pared de bloque/i,
-    enrich: (orig) => {
-      const e = /e\s*=\s*(\d+)/i.exec(orig);
-      const esp = e ? e[1] : '15';
-      return `CONSTRUCCIÓN DE PARED DE BLOQUES DE ARCILLA E=${esp}CM, INCLUYE MORTERO DE PEGA 1:4 Y ANDAMIOS HASTA H=3.00M`;
-    }
+    id: 'impermeabilizacion',
+    label: 'Sistema de impermeabilización',
+    match: /impermeabili|manto/i,
+    variants: [
+      {
+        name: 'Manto Asfáltico 4mm + Aluminio',
+        text: 'IMPERMEABILIZACIÓN DE LOSA DE TECHO CON MANTO ASFÁLTICO DE 4MM, INCLUYE IMPRIMACIÓN ASFÁLTICA Y 2 MANOS DE PINTURA DE ALUMINIO'
+      },
+      {
+        name: 'Manto Asfáltico 3mm',
+        text: 'IMPERMEABILIZACIÓN DE TECHO CON MANTO ASFÁLTICO DE 3MM, INCLUYE IMPRIMER ASFÁLTICO Y SELLADO DE TRASLAPES'
+      },
+      {
+        name: 'Membrana Líquida Elastomérica',
+        text: 'IMPERMEABILIZACIÓN CON MEMBRANA LÍQUIDA ELASTOMÉRICA EN 3 MANOS CON MALLA DE REFUERZO DE POLIÉSTER'
+      }
+    ]
   },
   {
-    match: /demoli[c|z]|tumbar|derrib/i,
-    enrich: (orig) => {
-      const isPared = /pared|muro|tabique/i.test(orig);
-      const isPiso = /piso|pavimento/i.test(orig);
-      const elem = isPared ? 'PARED DE BLOQUES' : isPiso ? 'PISO DE CONCRETO' : 'ELEMENTO EXISTENTE';
-      return `DEMOLICIÓN A MANO DE ${elem}, INCLUYE ACARREO INTERNO Y APILAMIENTO DE ESCOMBROS HASTA SITIO DE DISPOSICIÓN`;
-    }
+    id: 'demolicion',
+    label: 'Elemento a demoler',
+    match: /demoli|tumbar|derrib|picar/i,
+    variants: [
+      {
+        name: 'Pared de Bloques',
+        text: 'DEMOLICIÓN A MANO DE PARED DE BLOQUES DE ARCILLA O CONCRETO HASTA H=3.00M, INCLUYE ACARREO INTERNO Y APILAMIENTO DE ESCOMBROS'
+      },
+      {
+        name: 'Piso de Concreto hasta e=10cm',
+        text: 'DEMOLICIÓN CON MARTILLO NEUMÁTICO DE PISO DE CONCRETO HASTA E=10CM, INCLUYE BOTE INTERNO DE ESCOMBROS'
+      },
+      {
+        name: 'Concreto Armado',
+        text: 'DEMOLICIÓN DE ELEMENTO DE CONCRETO ARMADO CON MARTILLO DE IMPACTO, INCLUYE CORTE DE CABILLAS Y APILAMIENTO'
+      },
+      {
+        name: 'Tabique Drywall',
+        text: 'DESMONTE Y DEMOLICIÓN DE TABIQUERÍA DE DRYWALL/YESO, INCLUYE ESTRUCTURA METÁLICA Y DESALOJO DE ESCOMBROS'
+      }
+    ]
   },
   {
-    match: /tuberi[a|as].*agua|tubo.*agua/i,
-    enrich: (orig) => {
-      const isServ = /servida|negra|residual/i.test(orig);
-      return isServ
-        ? 'SUMINISTRO E INSTALACIÓN DE TUBERÍA PVC PARA AGUAS SERVIDAS D=4", INCLUYE ACCESORIOS, PEGA PVC Y PRUEBA DE ESTANQUEIDAD'
-        : 'SUMINISTRO E INSTALACIÓN DE TUBERÍA PVC PARA AGUAS BLANCAS D=1/2", INCLUYE ACCESORIOS, PEGA PVC Y PRUEBA HIDROSTÁTICA';
-    }
+    id: 'electricidad',
+    label: 'Tipo de punto eléctrico',
+    match: /electric|punto.*luz|tomacorriente|iluminacion|cable/i,
+    variants: [
+      {
+        name: 'Tomacorriente 110V',
+        text: 'SUMINISTRO E INSTALACIÓN DE PUNTO DE TOMACORRIENTE DOBLE 110V POLARIZADO, INCLUYE TUBERÍA EMT 1/2", CONDUCTORES THW #12 Y TAPA'
+      },
+      {
+        name: 'Iluminación / Salida Techo',
+        text: 'SUMINISTRO E INSTALACIÓN DE PUNTO DE ILUMINACIÓN DE TECHO, INCLUYE TUBERÍA CONDUIT 1/2", CABLE THW #12, INTERRUPTOR Y CAJA OCTOGONAL'
+      },
+      {
+        name: 'Punto 220V (A/A - Cocina)',
+        text: 'SUMINISTRO E INSTALACIÓN DE PUNTO PARA AIRE ACONDICIONADO 220V, INCLUYE CABLE THW #10, TOMA NEMA Y BREAKER DE PROTECCIÓN'
+      }
+    ]
   },
   {
-    match: /impermeabili[z|s]|manto/i,
-    enrich: () =>
-      'IMPERMEABILIZACIÓN DE LOSA DE TECHO CON MANTO ASFÁLTICO DE 4MM, INCLUYE IMPRIMACIÓN ASFÁLTICA Y 2 MANOS DE PINTURA DE ALUMINIO'
-  },
-  {
-    match: /piso.*ceramica|ceramica/i,
-    enrich: () =>
-      'SUMINISTRO E INSTALACIÓN DE PISO DE CERÁMICA ESMALTADA DE TRÁFICO MEDIO, INCLUYE PEGO GRIS, CORTES Y EMBOQUILLADO'
-  },
-  {
-    match: /porcelanato/i,
-    enrich: () =>
-      'SUMINISTRO E INSTALACIÓN DE PISO DE PORCELANATO 60X60CM, INCLUYE PEGO BLANCO ESPECIAL, NIVELADORES Y EMBOQUILLADO'
-  },
-  {
-    match: /bote.*escombro|escombro.*bote|acarreo.*escombro/i,
-    enrich: () =>
-      'TRANSPORTE Y BOTE DE ESCOMBROS EN CAMIÓN VOLTEO, INCLUYE CARGA MANUAL, TRASLADO Y DISPOSICIÓN FINAL EN BOTADERO AUTORIZADO'
-  },
-  {
-    match: /concreto.*losa|losa.*concreto/i,
-    enrich: () =>
-      'CONSTRUCCIÓN DE LOSA DE CONCRETO PREMEZCLADO F\'C=250 KG/CM2, INCLUYE VACIADO, VIBRADO Y CURADO'
-  },
-  {
-    match: /cable|cableado|conductor/i,
-    enrich: () =>
-      'SUMINISTRO E INSTALACIÓN DE CONDUCTOR DE COBRE THW CALIBRE 12 AWG, INCLUYE ENHEBRADO EN TUBERÍA Y CONEXIONES'
-  },
-  {
-    match: /drywall|yeso|tabique durlock/i,
-    enrich: () =>
-      'CONSTRUCCIÓN DE TABIQUE DE DRYWALL CON LÁMINAS DE YESO DE 1/2" A DOS CARAS, INCLUYE ESTRUCTURA METÁLICA, CINTA Y PASTA DE REMATE'
+    id: 'drywall',
+    label: 'Tipo de tabique liviano',
+    match: /drywall|yeso|durlock/i,
+    variants: [
+      {
+        name: 'Yeso 1/2" Dos Caras',
+        text: 'CONSTRUCCIÓN DE TABIQUE DE DRYWALL CON LÁMINAS DE YESO DE 1/2" A DOS CARAS, INCLUYE ESTRUCTURA METÁLICA, CINTA Y PASTA'
+      },
+      {
+        name: 'Yeso Una Cara (Forrado)',
+        text: 'FORRADO DE MURO CON LÁMINAS DE YESO DE 1/2" A UNA CARA, INCLUYE ESTRUCTURA METÁLICA Y PASTA DE REMATE'
+      },
+      {
+        name: 'Lámina RH Resistente a Humedad (Baños)',
+        text: 'CONSTRUCCIÓN DE TABIQUE DE DRYWALL CON LÁMINAS RH VERDES DE 1/2" A DOS CARAS PARA ZONAS HÚMEDAS Y BAÑOS'
+      }
+    ]
   }
 ];
 
 /**
- * Audita una partida individual.
+ * Busca si la descripción encaja en un dominio de material ambiguo.
+ *
+ * @param {string} text - Descripción de la partida.
+ * @returns {Object|null} Dominio de ambigüedad si aplica.
+ */
+export function getMaterialAmbiguityDomain(text = '') {
+  if (!text) return null;
+  const clean = text.trim();
+  for (const dom of MATERIAL_AMBIGUITY_DOMAINS) {
+    if (dom.match.test(clean)) {
+      return dom;
+    }
+  }
+  return null;
+}
+
+/**
+ * Audita una partida individual detectando la ambigüedad en materiales.
  *
  * @param {string} description - Texto de la partida.
  * @param {string} [cod_par] - Código de la partida si ya proviene de COVENIN.
  * @param {string} [unit] - Unidad de medida.
- * @returns {Object} Diagnóstico con estado, campos faltantes y sugerencia.
+ * @returns {Object} Diagnóstico con estado, campos faltantes, variantes de material y sugerencia.
  */
 export function auditDescription(description = '', cod_par = null, unit = '') {
   const clean = (description || '').trim();
@@ -158,7 +294,9 @@ export function auditDescription(description = '', cod_par = null, unit = '') {
       score: 0,
       missing: ['descripción'],
       suggestion: '',
-      isCovenin: false
+      isCovenin: false,
+      materialDomain: null,
+      materialVariants: []
     };
   }
 
@@ -170,7 +308,9 @@ export function auditDescription(description = '', cod_par = null, unit = '') {
       score: 100,
       missing: [],
       suggestion: clean,
-      isCovenin: true
+      isCovenin: true,
+      materialDomain: null,
+      materialVariants: []
     };
   }
 
@@ -182,13 +322,22 @@ export function auditDescription(description = '', cod_par = null, unit = '') {
   const hasSpec = SPEC_REGEX.test(cleanLower);
   const hasScope = /incluye|incluyendo|con mortero|con acabado|hasta h=|suministro e instalaci|a dos caras/i.test(cleanLower);
 
-  const missing = [];
-  if (!hasAction) missing.push('acción constructiva');
-  if (!hasElement) missing.push('elemento constructivo');
-  if (!hasSpec) missing.push('especificación o espesor');
+  const ambDomain = getMaterialAmbiguityDomain(clean);
 
-  // Si tiene al menos 5 palabras técnicas y especificación clara, es completa
-  const isDetailed = (hasAction && hasElement && (hasSpec || hasScope)) || (words.length >= 7 && (hasSpec || hasScope));
+  // Si tiene un dominio de ambigüedad y no contiene ya especificaciones muy detalladas (>8 palabras y spec explícita)
+  const isMaterialAmbiguous = Boolean(ambDomain && (!hasSpec || words.length < 8));
+
+  const missing = [];
+  if (isMaterialAmbiguous) {
+    missing.push(`especificar material (${ambDomain.label})`);
+  } else {
+    if (!hasAction) missing.push('acción constructiva');
+    if (!hasElement) missing.push('elemento constructivo');
+    if (!hasSpec) missing.push('especificación o espesor');
+  }
+
+  // Si es detallada y no es ambigua
+  const isDetailed = !isMaterialAmbiguous && ((hasAction && hasElement && (hasSpec || hasScope)) || (words.length >= 8 && (hasSpec || hasScope)));
 
   if (isDetailed) {
     return {
@@ -197,19 +346,25 @@ export function auditDescription(description = '', cod_par = null, unit = '') {
       score: 90,
       missing: [],
       suggestion: clean,
-      isCovenin: false
+      isCovenin: false,
+      materialDomain: null,
+      materialVariants: []
     };
   }
 
   // Partida ambigua o incompleta
-  const suggestion = generateEnrichedSuggestion(clean, unit);
+  const variants = ambDomain ? ambDomain.variants : [];
+  const defaultSuggestion = variants.length > 0 ? variants[0].text : generateEnrichedSuggestion(clean, unit);
+
   return {
     status: 'warning',
-    label: 'Incompleta',
+    label: isMaterialAmbiguous ? 'Material Ambiguo' : 'Incompleta',
     score: hasElement && hasAction ? 55 : 30,
     missing: missing.length > 0 ? missing : ['especificación técnica detallada'],
-    suggestion: suggestion,
-    isCovenin: false
+    suggestion: defaultSuggestion,
+    isCovenin: false,
+    materialDomain: ambDomain ? ambDomain.label : null,
+    materialVariants: variants
   };
 }
 
@@ -224,17 +379,15 @@ export function generateEnrichedSuggestion(raw = '', unit = '') {
   const clean = (raw || '').trim();
   if (!clean) return '';
 
-  for (const t of CANONICAL_TEMPLATES) {
-    if (t.match.test(clean)) {
-      return t.enrich(clean);
-    }
+  const dom = getMaterialAmbiguityDomain(clean);
+  if (dom && dom.variants && dom.variants.length > 0) {
+    return dom.variants[0].text;
   }
 
   // Regla general para otras actividades constructivas
   const cleanUpper = clean.toUpperCase();
   const includesText = 'INCLUYE MATERIALES, HERRAMIENTAS MENORES Y MANO DE OBRA ESPECIALIZADA';
 
-  // Si ya empieza con una acción conocida
   const startsWithAction = /^(SUMINISTRO|CONSTRUCCI|DEMOLICI|INSTALACI|APLICACI|VACIADO|DESMONTE|ACARREO|LIMPIEZA|REPARACI)/i.test(cleanUpper);
   if (startsWithAction) {
     if (!/INCLUYE/i.test(cleanUpper)) {
@@ -243,6 +396,5 @@ export function generateEnrichedSuggestion(raw = '', unit = '') {
     return cleanUpper;
   }
 
-  // Agregar acción estándar por defecto según el contexto
   return `SUMINISTRO E INSTALACIÓN DE ${cleanUpper}, ${includesText}`;
 }

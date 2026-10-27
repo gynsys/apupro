@@ -2390,21 +2390,42 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                     );
                                   }
                                   if (audit.status === 'warning') {
+                                    const hasVariants = audit.materialVariants && audit.materialVariants.length > 0;
                                     return (
-                                      <div className="flex items-center justify-between gap-1 px-1.5 py-0.5 text-[9px] font-semibold text-amber-900 bg-amber-100/90 rounded border border-amber-300">
-                                        <div className="flex items-center gap-1 truncate">
-                                          <AlertTriangle className="w-2.5 h-2.5 text-amber-600 shrink-0" />
-                                          <span className="truncate">Falta detalle ({audit.missing.join(', ')})</span>
+                                      <div className="flex flex-col gap-1 px-1.5 py-1 text-[9px] font-semibold text-amber-900 bg-amber-100/90 rounded border border-amber-300">
+                                        <div className="flex items-center justify-between gap-1">
+                                          <div className="flex items-center gap-1 truncate">
+                                            <AlertTriangle className="w-2.5 h-2.5 text-amber-600 shrink-0" />
+                                            <span className="truncate">
+                                              {hasVariants ? `Material ambiguo (${audit.materialDomain})` : `Falta detalle (${audit.missing.join(', ')})`}
+                                            </span>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleEnrichItem(it.id, audit.suggestion)}
+                                            className="text-[9px] font-bold bg-amber-600 hover:bg-amber-700 text-white px-1.5 py-0.5 rounded shadow-xs flex items-center gap-0.5 transition-colors cursor-pointer shrink-0"
+                                            title="Completar con especificación técnica estándar"
+                                          >
+                                            <Sparkles className="w-2.5 h-2.5" />
+                                            <span>Enriquecer</span>
+                                          </button>
                                         </div>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleEnrichItem(it.id, audit.suggestion)}
-                                          className="text-[9px] font-bold bg-amber-600 hover:bg-amber-700 text-white px-1.5 py-0.5 rounded shadow-xs flex items-center gap-0.5 transition-colors cursor-pointer shrink-0"
-                                          title="Completar con especificación técnica estándar"
-                                        >
-                                          <Sparkles className="w-2.5 h-2.5" />
-                                          <span>Enriquecer</span>
-                                        </button>
+                                        {hasVariants && (
+                                          <div className="flex flex-wrap items-center gap-1 pt-0.5 border-t border-amber-200/80">
+                                            <span className="text-[8px] text-amber-800 font-bold shrink-0">Opciones:</span>
+                                            {audit.materialVariants.slice(0, 4).map((v, vIdx) => (
+                                              <button
+                                                key={vIdx}
+                                                type="button"
+                                                onClick={() => handleEnrichItem(it.id, v.text)}
+                                                className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-white hover:bg-amber-200 text-amber-950 border border-amber-300 cursor-pointer transition-colors shadow-2xs"
+                                                title={v.text}
+                                              >
+                                                {v.name}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        )}
                                       </div>
                                     );
                                   }

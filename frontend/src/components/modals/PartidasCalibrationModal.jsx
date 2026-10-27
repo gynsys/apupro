@@ -10,13 +10,15 @@ import {
   Check,
   RotateCcw,
   Info,
+  Layers,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { auditDescription } from '../../utils/descriptionAuditor';
 
 /**
  * Modal de Calibración y Afinación de Descripciones Técnicas
- * Paso previo a la generación de presupuestos con IA para evitar alucinaciones.
+ * Paso previo a la generación de presupuestos con IA para resolver la ambigüedad
+ * de materiales y evitar alucinaciones.
  */
 export default function PartidasCalibrationModal({
   isOpen,
@@ -30,7 +32,7 @@ export default function PartidasCalibrationModal({
 
   React.useEffect(() => {
     if (isOpen && items && items.length > 0) {
-      // Inicializar con la auditoría de cada partida
+      // Inicializar con la auditoría de cada partida y detección de variantes de materiales
       const audited = items.map((it, idx) => {
         const audit = auditDescription(it.description, it.cod_par, it.unit);
         return {
@@ -41,6 +43,8 @@ export default function PartidasCalibrationModal({
           auditStatus: audit.status,
           missing: audit.missing || [],
           isCovenin: audit.isCovenin,
+          materialDomain: audit.materialDomain,
+          materialVariants: audit.materialVariants || [],
           isModified: false,
         };
       });
@@ -64,6 +68,8 @@ export default function PartidasCalibrationModal({
             currentDescription: it.suggestedDescription,
             auditStatus: audit.status,
             missing: audit.missing,
+            materialDomain: audit.materialDomain,
+            materialVariants: audit.materialVariants || [],
             isModified: true,
           };
         }
@@ -71,6 +77,26 @@ export default function PartidasCalibrationModal({
       })
     );
     toast.success('Sugerencia técnica aplicada');
+  };
+
+  const handleSelectMaterialVariant = (id, variant) => {
+    setCalibratedItems((prev) =>
+      prev.map((it) => {
+        if (it.id === id) {
+          const audit = auditDescription(variant.text, it.cod_par, it.unit);
+          return {
+            ...it,
+            currentDescription: variant.text,
+            suggestedDescription: variant.text,
+            auditStatus: audit.status,
+            missing: audit.missing,
+            isModified: true,
+          };
+        }
+        return it;
+      })
+    );
+    toast.success(`Material seleccionado: ${variant.name}`);
   };
 
   const handleApplyAllSuggestions = () => {
@@ -83,6 +109,8 @@ export default function PartidasCalibrationModal({
             currentDescription: it.suggestedDescription,
             auditStatus: audit.status,
             missing: audit.missing,
+            materialDomain: audit.materialDomain,
+            materialVariants: audit.materialVariants || [],
             isModified: true,
           };
         }
@@ -102,6 +130,8 @@ export default function PartidasCalibrationModal({
             currentDescription: newText,
             auditStatus: audit.status,
             missing: audit.missing,
+            materialDomain: audit.materialDomain,
+            materialVariants: audit.materialVariants || [],
             isModified: true,
           };
         }
@@ -111,7 +141,6 @@ export default function PartidasCalibrationModal({
   };
 
   const handleConfirmAndProceed = () => {
-    // Retornar la lista con las descripciones calibradas
     const updated = calibratedItems.map((it) => ({
       ...it,
       description: it.currentDescription.trim(),
@@ -133,13 +162,13 @@ export default function PartidasCalibrationModal({
             </div>
             <div>
               <h2 className="text-lg font-black tracking-tight flex items-center gap-2">
-                Calibración Técnica de Partidas
+                Calibración de Partidas y Materiales
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/25 text-amber-50">
                   Anti-alucinación IA
                 </span>
               </h2>
               <p className="text-xs text-amber-100 font-medium">
-                Verifica y enriquece las especificaciones para asegurar un análisis de precios unitarios exacto.
+                Resuelve la ambigüedad de materiales y dimensiones para garantizar rendimientos e insumos reales.
               </p>
             </div>
           </div>
@@ -183,7 +212,7 @@ export default function PartidasCalibrationModal({
           )}
         </div>
 
-        {/* TABS SELECTOR (SI HAY MÁS DE 0 INCOMPLETAS) */}
+        {/* TABS SELECTOR */}
         <div className="px-6 pt-3 pb-1 border-b border-gray-200 bg-white flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
             <button
@@ -225,13 +254,14 @@ export default function PartidasCalibrationModal({
                 ¡Todas las partidas cuentan con especificaciones técnicas completas!
               </h3>
               <p className="text-xs text-gray-500 max-w-md mx-auto">
-                No se detectaron ambigüedades en las descripciones. Puedes proceder directamente con la generación del presupuesto.
+                No se detectaron ambigüedades en los materiales ni descripciones. Puedes proceder directamente con la generación del presupuesto.
               </p>
             </div>
           ) : (
             displayedList.map((it) => {
               const isWarning = it.auditStatus === 'warning';
               const isCov = it.isCovenin;
+              const hasVariants = it.materialVariants && it.materialVariants.length > 0;
 
               return (
                 <div
@@ -270,7 +300,7 @@ export default function PartidasCalibrationModal({
                       {isWarning && (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
                           <AlertTriangle className="w-3 h-3 text-amber-600" />
-                          Requiere detalles ({it.missing.join(', ')})
+                          {hasVariants ? `Material ambiguo (${it.materialDomain})` : `Requiere detalles (${it.missing.join(', ')})`}
                         </span>
                       )}
                     </div>
@@ -305,8 +335,41 @@ export default function PartidasCalibrationModal({
                       }`}
                     />
 
-                    {/* CAJA DE SUGERENCIA RECOMENDADA */}
-                    {isWarning && it.suggestedDescription && it.suggestedDescription !== it.currentDescription && (
+                    {/* VARIANTES DE MATERIALES PARA RESOLVER AMBIGÜEDAD */}
+                    {hasVariants && (
+                      <div className="p-2.5 rounded-lg bg-amber-50/70 border border-amber-200 space-y-1.5">
+                        <div className="flex items-center gap-1 text-[11px] font-bold text-amber-900">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Opciones de material para desambiguar:</span>
+                          <span className="text-[10px] text-gray-500 font-normal">
+                            (Haz clic en la opción correcta para actualizar el APU)
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {it.materialVariants.map((v, vIdx) => {
+                            const isSelected = it.currentDescription.trim() === v.text.trim();
+                            return (
+                              <button
+                                key={vIdx}
+                                type="button"
+                                onClick={() => handleSelectMaterialVariant(it.id, v)}
+                                className={`text-xs px-2.5 py-1 rounded-lg font-bold border transition-all cursor-pointer flex items-center gap-1 shadow-2xs ${
+                                  isSelected
+                                    ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
+                                    : 'bg-white hover:bg-amber-100 text-slate-700 hover:text-amber-950 border-amber-300'
+                                }`}
+                              >
+                                {isSelected && <Check className="w-3 h-3 text-white" />}
+                                <span>{v.name}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* CAJA DE SUGERENCIA RECOMENDADA (SI NO ES NINGUNA VARIANTE O ES OTRA ACTIVIDAD) */}
+                    {isWarning && !hasVariants && it.suggestedDescription && it.suggestedDescription !== it.currentDescription && (
                       <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="flex items-start gap-2">
                           <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
