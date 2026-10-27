@@ -810,9 +810,14 @@ def commit_budget_import(
 
             items_created += 1
 
-        # Post-procesamiento y calibración determinista obligatoria de salida
+        # Post-procesamiento y calibración determinista obligatoria de salida (solo si hay partidas genéricas o sin rendimiento calibrado)
         try:
-            recalibrate_budget_performances(budget.id, db, dry_run=False)
+            has_uncalibrated = any(
+                (not it.is_chapter and float(it.performance or 1.0) <= 1.0 and it.unit not in ("gl", "glb", "sg"))
+                for it in db.query(BudgetItem).filter(BudgetItem.budget_id == budget.id).all()
+            )
+            if has_uncalibrated:
+                recalibrate_budget_performances(budget.id, db, dry_run=False)
         except Exception as exc_post:
             logger.error("Error en post-procesamiento de rendimientos al importar: %s", exc_post, exc_info=True)
 

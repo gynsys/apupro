@@ -147,6 +147,11 @@ def calibrate_item_performance(item: BudgetItem, db: Session) -> Tuple[float, st
     if bool(item.is_chapter):
         return 1.0, "Capítulo de presupuesto (sin rendimiento)"
 
+    # 0. Si el ítem ya posee un rendimiento explícito válido (> 1.0) asignado o importado (ej. 900 kgf/día en APU de Excel), respetarlo estrictamente
+    current_perf = float(getattr(item, "performance", 0.0) or 0.0)
+    if current_perf > 1.0:
+        return current_perf, f"Rendimiento específico conservado ({current_perf:.2f} {item.unit}/día)"
+
     unit = normalize_unit_str(item.unit)
 
     # 1. Unidades intrínsecamente globales o por evento
@@ -267,6 +272,22 @@ def recalibrate_budget_performances(
 
         # --- 2. Calibración de rendimiento diario ---
         old_perf = float(item.performance or 1.0)
+        if old_perf > 1.0:
+            unchanged_items += 1
+            items_detail.append({
+                "order": item.order,
+                "cod_par": item.cod_par,
+                "description": item.description,
+                "unit": item.unit,
+                "old_performance": old_perf,
+                "new_performance": old_perf,
+                "reason": f"Rendimiento específico original conservado ({old_perf:.2f})",
+                "updated": False,
+                "is_labor_only": is_labor_only,
+                "materials_purged": purged_in_item,
+            })
+            continue
+
         new_perf, reason = calibrate_item_performance(item, db)
 
         # Limitar a 2 decimales limpios
