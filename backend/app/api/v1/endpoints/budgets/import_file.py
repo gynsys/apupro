@@ -1,5 +1,6 @@
 """Importación de presupuestos desde archivos Excel, CSV, PDF e imágenes."""
 import logging
+import re
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
@@ -275,6 +276,67 @@ async def preview_budget_import(
         ) from exc
 
 
+def _enrich_sparse_description(description: str, unit: str = "und") -> str:
+    """Enriquece descripciones telegráficas o ambiguas con parámetros constructivos
+    canónicos para evitar alucinaciones del modelo LLM generador de APUs."""
+    clean = (description or "").strip()
+    if not clean:
+        return clean
+
+    # Si la descripción ya es extensa o detallada, respetarla
+    words = clean.split()
+    if len(words) >= 10 and any(kw in clean.lower() for kw in ("incluye", "espesor", "e=", "d=", "f'c", "calibre", "mortero", "andamios")):
+        return clean
+
+    lower = clean.lower()
+
+    # Patrones constructivos canónicos de enriquecimiento
+    if re.search(r"\b(friso|revoque|tarrajeo)\b", lower):
+        is_ext = bool(re.search(r"\b(exterior|fachada)\b", lower))
+        loc = "PAREDES EXTERIORES" if is_ext else "PAREDES INTERIORES"
+        return f"CONSTRUCCIÓN DE FRISO ACABADO LISO EN {loc}, INCLUYE MORTERO 1:4, REMATE DE ARISTAS Y ANDAMIOS HASTA H=3.00M"
+
+    if re.search(r"\b(pintura|pintar|esmalte)\b", lower):
+        is_ext = bool(re.search(r"\b(exterior|fachada)\b", lower))
+        if is_ext:
+            return "APLICACIÓN DE PINTURA DE CAUCHO ELASTOMÉRICA PARA EXTERIORES EN FACHADAS, INCLUYE FONDO ANTIALCALINO Y 2 MANOS DE ACABADO"
+        return "APLICACIÓN DE PINTURA DE CAUCHO MATE EN PAREDES INTERIORES, INCLUYE PREPARACIÓN DE SUPERFICIE, FONDO SELLADOR Y 2 MANOS DE ACABADO HASTA H=3.00M"
+
+    if re.search(r"\b(pared.*bloque|bloque.*pared|pared de bloque)\b", lower):
+        match_esp = re.search(r"e\s*=\s*(\d+)", lower)
+        esp = match_esp.group(1) if match_esp else "15"
+        return f"CONSTRUCCIÓN DE PARED DE BLOQUES DE ARCILLA E={esp}CM, INCLUYE MORTERO DE PEGA 1:4 Y ANDAMIOS HASTA H=3.00M"
+
+    if re.search(r"\b(demoli|tumbar|derrib)\b", lower):
+        is_pared = bool(re.search(r"\b(pared|muro|tabique)\b", lower))
+        elem = "PARED DE BLOQUES" if is_pared else "ELEMENTO EXISTENTE"
+        return f"DEMOLICIÓN A MANO DE {elem}, INCLUYE ACARREO INTERNO Y APILAMIENTO DE ESCOMBROS HASTA SITIO DE DISPOSICIÓN"
+
+    if re.search(r"\b(tuberi|tubo).*agua\b", lower):
+        is_serv = bool(re.search(r"\b(servida|negra|residual|pluvial)\b", lower))
+        if is_serv:
+            return 'SUMINISTRO E INSTALACIÓN DE TUBERÍA PVC PARA AGUAS SERVIDAS D=4", INCLUYE ACCESORIOS, PEGA PVC Y PRUEBA DE ESTANQUEIDAD'
+        return 'SUMINISTRO E INSTALACIÓN DE TUBERÍA PVC PARA AGUAS BLANCAS D=1/2", INCLUYE ACCESORIOS, PEGA PVC Y PRUEBA HIDROSTÁTICA'
+
+    if re.search(r"\b(impermeabili|manto)\b", lower):
+        return "IMPERMEABILIZACIÓN DE LOSA DE TECHO CON MANTO ASFÁLTICO DE 4MM, INCLUYE IMPRIMACIÓN ASFÁLTICA Y 2 MANOS DE PINTURA DE ALUMINIO"
+
+    if re.search(r"\b(ceramica|porcelanato)\b", lower):
+        if "porcelanato" in lower:
+            return "SUMINISTRO E INSTALACIÓN DE PISO DE PORCELANATO 60X60CM, INCLUYE PEGO BLANCO ESPECIAL, NIVELADORES Y EMBOQUILLADO"
+        return "SUMINISTRO E INSTALACIÓN DE PISO DE CERÁMICA ESMALTADA DE TRÁFICO MEDIO, INCLUYE PEGO GRIS, CORTES Y EMBOQUILLADO"
+
+    if re.search(r"\b(bote.*escombro|escombro.*bote|acarreo.*escombro)\b", lower):
+        return "TRANSPORTE Y BOTE DE ESCOMBROS EN CAMIÓN VOLTEO, INCLUYE CARGA MANUAL, TRASLADO Y DISPOSICIÓN FINAL EN BOTADERO AUTORIZADO"
+
+    if len(words) < 5:
+        upper_text = clean.upper()
+        if not re.search(r"\bINCLUYE\b", upper_text):
+            return f"{upper_text}, INCLUYE MATERIALES, HERRAMIENTAS MENORES Y MANO DE OBRA ESPECIALIZADA"
+
+    return clean
+
+
 def _generate_apu_with_fallback(
     db: Session,
     description: str,
@@ -284,10 +346,19 @@ def _generate_apu_with_fallback(
     if not description or len(description.strip()) < 3:
         raise ValueError("La descripción es obligatoria para generar un APU.")
 
+    # Enriquecer descripciones telegráficas para evitar que el LLM alucine especificaciones
+    enriched_desc = _enrich_sparse_description(description, unit=unit)
+    if enriched_desc != description:
+        logger.info(
+            "Descripción técnica enriquecida para evitar alucinación IA: '%s' -> '%s'",
+            description[:60],
+            enriched_desc[:80],
+        )
+
     result: Optional[Dict[str, Any]] = None
     try:
         v3_res = generate_apu_v3(
-            user_description=description,
+            user_description=enriched_desc,
             db=db,
             requested_unit=unit,
             use_embeddings=False,
@@ -304,14 +375,14 @@ def _generate_apu_with_fallback(
     if result is None:
         try:
             result = generate_apu_v2(
-                user_description=description,
+                user_description=enriched_desc,
                 requested_unit=unit,
                 db=db,
             )
         except Exception as exc_v2:
             logger.warning("Generador v2.0 falló para importación, recurriendo a v1: %s", exc_v2)
             try:
-                preprocessed = preprocess_apu_data(db, description, None, None)
+                preprocessed = preprocess_apu_data(db, enriched_desc, None, None)
                 result = generate_apu_with_ai(preprocessed, None, db=db, requested_unit=unit)
             except Exception as exc_v1:
                 logger.error("Error generando APU para importación (v3, v2 y v1 fallaron): %s", exc_v1, exc_info=True)

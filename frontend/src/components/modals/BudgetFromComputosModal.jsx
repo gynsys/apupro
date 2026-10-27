@@ -25,9 +25,14 @@ import {
   Info,
   FolderOpen,
   Search,
+  Database,
+  AlertTriangle,
+  Check,
 } from 'lucide-react';
 import { budgetService } from '../../services/budgetService';
 import BudgetSearchModal from '../../pages/admin/budget_worksheet/BudgetSearchModal';
+import PartidasCalibrationModal from './PartidasCalibrationModal';
+import { auditDescription, generateEnrichedSuggestion } from '../../utils/descriptionAuditor';
 import { useDatabaseContext } from '../../contexts/DatabaseContext';
 import { useCostbaseSearch as useCost360Search } from '../../modules/costbase/hooks/useCostbaseSearch';
 import { SiteConfigContext } from '../../App';
@@ -682,6 +687,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   const [renameChapterInput, setRenameChapterInput] = useState('');
   const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [coveninTargetItemId, setCoveninTargetItemId] = useState(null);
+  const [isCalibrationOpen, setIsCalibrationOpen] = useState(false);
+  const [pendingBudgetItems, setPendingBudgetItems] = useState([]);
   const [availableBudgets, setAvailableBudgets] = useState([]);
 
   // Base de datos y configuración del catálogo COVENIN
@@ -1409,6 +1416,20 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       return normalizeRowsWithSingleTrailingBlank(updated, activeChapter);
     });
 
+    setPendingBudgetItems((prev) =>
+      prev.map((it) => {
+        if (it.id !== coveninTargetItemId) return it;
+        return {
+          ...it,
+          description: cleanDesc,
+          unit: cleanUnit,
+          cod_par: coveninItem.CodPar || '',
+          cov_par: coveninItem.CovPar || coveninItem.CodPar || '',
+          coveninCode: coveninItem.CovPar || coveninItem.CodPar || '',
+        };
+      })
+    );
+
     toast.success(`Partida actualizada según COVENIN: "${cleanDesc.slice(0, 35)}..."`);
     setShowCatalogModal(false);
     setCoveninTargetItemId(null);
@@ -1536,7 +1557,15 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   };
 
   /**
-   * Proceso de Confirmar y Generar Presupuesto
+   * Enriquecer la descripción de una partida con especificaciones técnicas estándar
+   */
+  const handleEnrichItem = (id, enrichedText) => {
+    handleUpdateItemField(id, 'description', (enrichedText || '').toUpperCase());
+    toast.success('Descripción enriquecida con especificaciones técnicas');
+  };
+
+  /**
+   * Proceso de Confirmar y Generar Presupuesto con Validación Previa Anti-alucinación
    */
   const handleConfirmAndGenerateBudget = async () => {
     const finalItems = capturedItems.filter((it) => !isItemEmpty(it) && it.description.trim());
@@ -1549,21 +1578,57 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       return;
     }
 
+    // Verificar si hay partidas S/C con descripciones incompletas o ambiguas
+    const itemsNeedingCalibration = finalItems.filter((it) => {
+      const audit = auditDescription(it.description, it.cod_par, it.unit);
+      return audit.status === 'warning';
+    });
+
+    if (itemsNeedingCalibration.length > 0) {
+      setPendingBudgetItems(finalItems);
+      setIsCalibrationOpen(true);
+      return;
+    }
+
+    await executeBudgetGeneration(finalItems);
+  };
+
+  /**
+   * Confirmación desde el modal de calibración de partidas
+   */
+  const handleCalibrationConfirmed = async (calibratedList) => {
+    setIsCalibrationOpen(false);
+
+    // Actualizar capturedItems con las descripciones calibradas para persistir cambios en el borrador
+    setCapturedItems((prev) =>
+      prev.map((it) => {
+        const match = calibratedList.find((c) => c.id === it.id);
+        return match ? { ...it, description: match.description } : it;
+      })
+    );
+
+    await executeBudgetGeneration(calibratedList);
+  };
+
+  /**
+   * Ejecuta la resolución y commit del presupuesto en el backend
+   */
+  const executeBudgetGeneration = async (itemsToProcess) => {
     const cleanBudgetName =
       (budgetName || '').trim() ||
       `Presupuesto de Cómputos - ${new Date().toLocaleDateString('es-VE')}`;
 
     setIsCommitting(true);
     setCommitError(null);
-    setCommitStepInfo({ current: 0, total: finalItems.length });
+    setCommitStepInfo({ current: 0, total: itemsToProcess.length });
 
     try {
       const payloadItems = [];
       let lastChapter = null;
       let scCounter = 1;
 
-      for (let i = 0; i < finalItems.length; i += 1) {
-        const it = finalItems[i];
+      for (let i = 0; i < itemsToProcess.length; i += 1) {
+        const it = itemsToProcess[i];
         const chapName = (it.chapter || 'GENERAL').trim().toUpperCase();
         if (chapName && chapName !== lastChapter) {
           payloadItems.push({
@@ -1594,9 +1659,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           continue;
         }
 
-        setCommitStepInfo({ current: i + 1, total: finalItems.length });
+        setCommitStepInfo({ current: i + 1, total: itemsToProcess.length });
         setCommitProgressText(
-          `Buscando en BD o generando APU (${i + 1}/${finalItems.length}): ${it.description}`
+          `Buscando en BD o generando APU (${i + 1}/${itemsToProcess.length}): ${it.description}`
         );
 
         let resolved = null;
@@ -2014,7 +2079,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           setShowCatalogModal(false);
           setCoveninTargetItemId(null);
         }}
-        zIndexClass="z-[140]"
+        zIndexClass="z-[160]"
         activeDatabase={activeDatabase}
         setActiveDatabase={setActiveDatabase}
         databases={databases}
@@ -2036,6 +2101,17 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         hasMoreSearchResults={hasMoreSearchResults}
         loadMoreSearchResults={loadMoreSearchResults}
         onAddItem={handleSelectCoveninPartida}
+      />
+
+      {/* Modal de Calibración Técnica de Partidas antes de Generar con IA */}
+      <PartidasCalibrationModal
+        isOpen={isCalibrationOpen}
+        items={pendingBudgetItems}
+        onClose={() => setIsCalibrationOpen(false)}
+        onConfirm={handleCalibrationConfirmed}
+        onOpenCoveninSearch={(item) => {
+          handleOpenCoveninModal(item);
+        }}
       />
 
       {/* Header Principal con Selector de Modo (Planilla vs Asistente/Chat) */}
@@ -2293,15 +2369,53 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
 
                             {/* DESCRIPCIÓN */}
                             <td className="border border-gray-300 px-1 py-1">
-                              <input
-                                type="text"
-                                value={it.description}
-                                onChange={(e) =>
-                                  handleUpdateItemField(it.id, 'description', e.target.value.toUpperCase())
-                                }
-                                placeholder={isBlankTrailing ? 'Escribe aquí la partida...' : 'Descripción de la partida...'}
-                                className="w-full px-2 py-1 text-xs font-semibold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded uppercase placeholder:text-gray-400"
-                              />
+                              <div className="flex flex-col gap-0.5">
+                                <input
+                                  type="text"
+                                  value={it.description}
+                                  onChange={(e) =>
+                                    handleUpdateItemField(it.id, 'description', e.target.value.toUpperCase())
+                                  }
+                                  placeholder={isBlankTrailing ? 'Escribe aquí la partida...' : 'Descripción de la partida...'}
+                                  className="w-full px-2 py-1 text-xs font-semibold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded uppercase placeholder:text-gray-400"
+                                />
+                                {!isBlankTrailing && it.description && it.description.trim() && (() => {
+                                  const audit = auditDescription(it.description, it.cod_par, it.unit);
+                                  if (audit.status === 'covenin') {
+                                    return (
+                                      <div className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800 bg-emerald-100/90 rounded w-fit border border-emerald-300">
+                                        <Database className="w-2.5 h-2.5 text-emerald-600" />
+                                        <span>COVENIN: {it.cod_par}</span>
+                                      </div>
+                                    );
+                                  }
+                                  if (audit.status === 'warning') {
+                                    return (
+                                      <div className="flex items-center justify-between gap-1 px-1.5 py-0.5 text-[9px] font-semibold text-amber-900 bg-amber-100/90 rounded border border-amber-300">
+                                        <div className="flex items-center gap-1 truncate">
+                                          <AlertTriangle className="w-2.5 h-2.5 text-amber-600 shrink-0" />
+                                          <span className="truncate">Falta detalle ({audit.missing.join(', ')})</span>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleEnrichItem(it.id, audit.suggestion)}
+                                          className="text-[9px] font-bold bg-amber-600 hover:bg-amber-700 text-white px-1.5 py-0.5 rounded shadow-xs flex items-center gap-0.5 transition-colors cursor-pointer shrink-0"
+                                          title="Completar con especificación técnica estándar"
+                                        >
+                                          <Sparkles className="w-2.5 h-2.5" />
+                                          <span>Enriquecer</span>
+                                        </button>
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <div className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold text-sky-800 bg-sky-100/80 rounded w-fit border border-sky-300">
+                                      <CheckCircle2 className="w-2.5 h-2.5 text-sky-600" />
+                                      <span>S/C Detallada</span>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
                             </td>
 
                             {/* UNIDAD */}
@@ -2441,6 +2555,19 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                 >
                                   <Search className="w-3.5 h-3.5" />
                                 </button>
+                                {!it.cod_par && !isBlankTrailing && it.description && it.description.trim() && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const audit = auditDescription(it.description, it.cod_par, it.unit);
+                                      handleEnrichItem(it.id, audit.suggestion);
+                                    }}
+                                    className="p-1 text-amber-700 hover:text-amber-950 hover:bg-amber-100 rounded transition-colors cursor-pointer"
+                                    title="Enriquecer descripción técnica"
+                                  >
+                                    <Sparkles className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                                 <button
                                   type="button"
                                   onClick={() => handleDuplicateRow(it)}
