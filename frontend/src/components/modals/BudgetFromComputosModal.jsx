@@ -2156,9 +2156,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                 <h2 className="text-base sm:text-lg font-black text-amber-950 tracking-wider uppercase">
                   PLANILLA DE CÓMPUTOS MÉTRICOS
                 </h2>
-                <p className="text-xs text-amber-800 font-medium">
-                  Cálculo de dimensiones, factor de peso para acero (kg/m), distancia para acarreos (km) y totales
-                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
