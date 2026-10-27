@@ -1,6 +1,6 @@
 """
 Bot de Telegram para Inspección de Obras.
-Fase 1: Recibe el reporte diario por texto, fotos adjuntas y compila la Ficha Técnica con Memoria Fotográfica en PDF.
+Fase 1: Recibe reporte diario por texto, fotos adjuntas y compila la Ficha Técnica con Memoria Fotográfica en PDF y/o Excel (.xlsx).
 """
 import logging
 import os
@@ -25,6 +25,7 @@ from telegram.ext import (
 )
 
 from inspector_bot.config import BOT_TOKEN, PDFS_DIR, PHOTOS_DIR
+from inspector_bot.excel_generator import generate_inspection_excel
 from inspector_bot.parser import parse_inspection_message
 from inspector_bot.pdf_generator import generate_inspection_pdf
 
@@ -42,16 +43,35 @@ def _sanitize_filename(name: str) -> str:
     return clean[:45] if clean else "Obra"
 
 
+def _get_format_keyboard(photo_count: int = 0) -> InlineKeyboardMarkup:
+    """Crea los botones de selección interactiva de formato."""
+    p_text = f" ({photo_count} fotos)" if photo_count > 0 else ""
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(f"📄 Generar PDF{p_text}", callback_data="btn_gen_pdf"),
+                InlineKeyboardButton(f"📊 Generar Excel{p_text}", callback_data="btn_gen_excel"),
+            ],
+            [
+                InlineKeyboardButton("📦 Generar Ambos (PDF + Excel)", callback_data="btn_gen_both"),
+            ],
+            [
+                InlineKeyboardButton("🔄 Reiniciar Reporte", callback_data="btn_reset"),
+            ],
+        ]
+    )
+
+
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Mensaje de bienvenida con instrucciones claras del flujo de trabajo."""
     welcome_text = (
         "🏗 *¡Bienvenido al Bot de Inspección de Obras!*\n\n"
         "Te ayudo a convertir tus reportes diarios de mensajería en un "
-        "*Informe Técnico formal en PDF* con su *Ficha de Obra y Memoria Fotográfica*.\n\n"
+        "*Informe Técnico formal en PDF o Excel (.xlsx)* con su *Ficha de Obra y Memoria Fotográfica*.\n\n"
         "📌 *¿Cómo funciona? (3 pasos sencillos):*\n"
         "1️⃣ *Pega tu reporte:* Envía el mensaje con los datos (Obra, Empresa, Inspectores, Actividades, etc.).\n"
         "2️⃣ *Envía las fotos:* Adjunta las imágenes de la inspección (puedes enviar varias juntas o con pie de foto).\n"
-        "3️⃣ *Genera el PDF:* Escribe `/generar` o presiona el botón y recibirás tu documento listo para firmar y reenviar.\n\n"
+        "3️⃣ *Elige el formato:* Pulsa *PDF*, *Excel* o *Ambos* y recibirás tus documentos listos para firmar y remitir.\n\n"
         "👉 *Pega ahora mismo el reporte de hoy para comenzar.*"
     )
     await update.message.reply_text(welcome_text, parse_mode=ParseMode.MARKDOWN)
@@ -62,9 +82,11 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     help_text = (
         "🛠 *Comandos disponibles:*\n"
         "• `/start` - Iniciar o ver bienvenida\n"
-        "• `/generar` - Crear y descargar el PDF de la inspección\n"
-        "• `/ver` - Ver los datos y cantidad de fotos acumuladas\n"
-        "• `/nuevo` - Reiniciar y comenzar un reporte nuevo\n\n"
+        "• `/generar` - Elegir formato y descargar informe (PDF o Excel)\n"
+        "• `/pdf` - Generar directamente en PDF\n"
+        "• `/excel` - Generar directamente en Excel (.xlsx)\n"
+        "• `/ver` - Ver datos y fotos acumuladas en la sesión\n"
+        "• `/nuevo` - Reiniciar sesión para un reporte nuevo\n\n"
         "📝 *Ejemplo de mensaje admitido:*\n"
         "```text\n"
         "Fecha: 27/10/2026\n"
@@ -127,25 +149,23 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                 f"👥 *Personal:* {obreros}\n"
                 "───────────────────────────\n"
                 "📸 *Paso 2:* Envía ahora las fotos de la inspección.\n"
-                "_(Puedes enviar varias fotos de una vez o con su pie de foto explicativo)_"
+                "_(El layout adaptativo acomodará las imágenes automáticamente sin dejar espacios vacíos)_\n\n"
+                "O si no tienes fotos, elige tu formato de salida abajo:"
             )
 
-            keyboard = [
-                [
-                    InlineKeyboardButton("📄 Generar PDF (Sin fotos)", callback_data="btn_generate"),
-                    InlineKeyboardButton("🔄 Reiniciar", callback_data="btn_reset"),
-                ]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-
-            await update.message.reply_text(summary, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
+            await update.message.reply_text(
+                summary,
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=_get_format_keyboard(photo_count=0),
+            )
             return
 
     # Si ya tiene un reporte activo y envía un texto corto (posible nota adicional)
     if "current_report" in context.user_data:
         await update.message.reply_text(
-            "ℹ️ Tienes un reporte activo. Envía las *fotos* de la obra o presiona `/generar` para compilar el informe.",
+            "ℹ️ Tienes un reporte activo. Envía las *fotos* de la obra o selecciona el formato abajo para compilar el informe:",
             parse_mode=ParseMode.MARKDOWN,
+            reply_markup=_get_format_keyboard(photo_count=len(context.user_data.get("photos", []))),
         )
     else:
         await update.message.reply_text(
@@ -189,47 +209,37 @@ async def handle_photo_message(update: Update, context: ContextTypes.DEFAULT_TYP
         })
 
         total = len(photos_list)
-        msg_text = f"📸 *Foto #{total} registrada*"
+        msg_text = f"📸 *Foto #{total} registrada con éxito.*"
         if caption:
             msg_text += f"\n_Pie de foto:_ \"{caption}\""
 
-        msg_text += f"\n\nLlevas *{total} foto(s)* agregadas. Envía más o pulsa el botón abajo para crear el informe."
+        msg_text += f"\n\nLlevas *{total} foto(s)* agregadas. Envía más o selecciona el formato de salida deseado:"
 
-        keyboard = [
-            [
-                InlineKeyboardButton(f"📄 Generar PDF ({total} Fotos)", callback_data="btn_generate"),
-                InlineKeyboardButton("🔄 Reiniciar", callback_data="btn_reset"),
-            ]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
-        await update.message.reply_text(msg_text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
+        await update.message.reply_text(
+            msg_text,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=_get_format_keyboard(photo_count=total),
+        )
     except Exception as exc:
         logger.error("Error descargando foto de Telegram: %s", exc, exc_info=True)
         await update.message.reply_text("❌ Ocurrió un error al procesar la foto. Inténtalo de nuevo.")
 
 
 async def execute_generate_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Genera y envía el documento PDF completo."""
+    """Compila y envía el informe en formato PDF."""
     report = context.user_data.get("current_report")
+    target_msg = update.message or (update.callback_query and update.callback_query.message)
+
     if not report:
-        target = update.message or (update.callback_query and update.callback_query.message)
-        if target:
-            await target.reply_text(
-                "⚠️ No tienes ningún reporte activo. Pega primero el mensaje diario de la obra.",
-                parse_mode=ParseMode.MARKDOWN,
-            )
+        if target_msg:
+            await target_msg.reply_text("⚠️ No tienes ningún reporte activo. Pega primero el mensaje diario de la obra.")
         return
 
-    target_msg = update.message or (update.callback_query and update.callback_query.message)
     status_msg = await target_msg.reply_text("⏳ *Compilando Ficha Técnica y Memoria Fotográfica en PDF...*", parse_mode=ParseMode.MARKDOWN)
 
     photos = context.user_data.get("photos", [])
-
-    # Nombre de archivo limpio
     obra_short = _sanitize_filename(report.get("obra", "Obra"))
     fecha_clean = report.get("fecha", datetime.now().strftime("%d-%m-%Y")).replace("/", "-")
-    user_id = update.effective_user.id
     timestamp = int(datetime.now().timestamp())
 
     pdf_filename = f"Informe_Inspeccion_{obra_short}_{fecha_clean}_{timestamp}.pdf"
@@ -243,7 +253,7 @@ async def execute_generate_pdf(update: Update, context: ContextTypes.DEFAULT_TYP
         )
 
         caption = (
-            f"📄 *INFORME DIARIO DE INSPECCIÓN FINALIZADO*\n\n"
+            f"📄 *INFORME DIARIO DE INSPECCIÓN (PDF)*\n\n"
             f"🏗 *Obra:* {report.get('obra', 'Sin especificar')[:70]}...\n"
             f"📅 *Fecha:* {report.get('fecha', '')}\n"
             f"📸 *Fotos incluidas:* {len(photos)}\n\n"
@@ -265,14 +275,103 @@ async def execute_generate_pdf(update: Update, context: ContextTypes.DEFAULT_TYP
         await status_msg.edit_text(f"❌ Ocurrió un error al compilar el PDF: {exc}")
 
 
+async def execute_generate_excel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Compila y envía el informe en formato Excel (.xlsx)."""
+    report = context.user_data.get("current_report")
+    target_msg = update.message or (update.callback_query and update.callback_query.message)
+
+    if not report:
+        if target_msg:
+            await target_msg.reply_text("⚠️ No tienes ningún reporte activo. Pega primero el mensaje diario de la obra.")
+        return
+
+    status_msg = await target_msg.reply_text("⏳ *Generando Ficha Técnica y Memoria Fotográfica en Excel (.xlsx)...*", parse_mode=ParseMode.MARKDOWN)
+
+    photos = context.user_data.get("photos", [])
+    obra_short = _sanitize_filename(report.get("obra", "Obra"))
+    fecha_clean = report.get("fecha", datetime.now().strftime("%d-%m-%Y")).replace("/", "-")
+    timestamp = int(datetime.now().timestamp())
+
+    excel_filename = f"Informe_Inspeccion_{obra_short}_{fecha_clean}_{timestamp}.xlsx"
+    excel_path = PDFS_DIR / excel_filename
+
+    try:
+        generate_inspection_excel(
+            report_data=report,
+            photos=photos,
+            output_excel_path=str(excel_path),
+        )
+
+        caption = (
+            f"📊 *INFORME DIARIO DE INSPECCIÓN (EXCEL)*\n\n"
+            f"🏗 *Obra:* {report.get('obra', 'Sin especificar')[:70]}...\n"
+            f"📅 *Fecha:* {report.get('fecha', '')}\n"
+            f"📸 *Fotos insertadas:* {len(photos)}\n\n"
+            "Documento editable con formato de celdas y fotografías en alta definición."
+        )
+
+        with open(excel_path, "rb") as excel_file:
+            await target_msg.reply_document(
+                document=excel_file,
+                filename=f"Informe_Inspeccion_{obra_short}_{fecha_clean}.xlsx",
+                caption=caption,
+                parse_mode=ParseMode.MARKDOWN,
+            )
+
+        await status_msg.delete()
+
+    except Exception as exc:
+        logger.error("Error generando Excel de inspección: %s", exc, exc_info=True)
+        await status_msg.edit_text(f"❌ Ocurrió un error al compilar el Excel: {exc}")
+
+
+async def execute_generate_both(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Compila y envía ambos formatos (PDF y Excel)."""
+    await execute_generate_pdf(update, context)
+    await execute_generate_excel(update, context)
+
+
+async def generate_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Maneja el comando /generar (con o sin parámetro)."""
+    args = context.args or []
+    if args:
+        sub = args[0].lower()
+        if "excel" in sub or "xlsx" in sub:
+            await execute_generate_excel(update, context)
+            return
+        if "pdf" in sub:
+            await execute_generate_pdf(update, context)
+            return
+        if "ambos" in sub or "all" in sub:
+            await execute_generate_both(update, context)
+            return
+
+    # Si no especificó parámetro, mostrar el selector
+    report = context.user_data.get("current_report")
+    if not report:
+        await update.message.reply_text("⚠️ No hay ningún reporte activo. Pega primero el mensaje de inspección.")
+        return
+
+    photos = context.user_data.get("photos", [])
+    await update.message.reply_text(
+        "📋 *Selecciona el formato de salida para tu informe:*",
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=_get_format_keyboard(photo_count=len(photos)),
+    )
+
+
 async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Maneja los botones interactivos Inline."""
     query = update.callback_query
     await query.answer()
 
     data = query.data
-    if data == "btn_generate":
+    if data == "btn_gen_pdf":
         await execute_generate_pdf(update, context)
+    elif data == "btn_gen_excel":
+        await execute_generate_excel(update, context)
+    elif data == "btn_gen_both":
+        await execute_generate_both(update, context)
     elif data == "btn_reset":
         context.user_data.pop("current_report", None)
         context.user_data.pop("photos", None)
@@ -295,8 +394,9 @@ async def view_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         f"• Obra: {obra}\n"
         f"• Fecha: {fecha}\n"
         f"• Fotos cargadas: {len(photos)}\n\n"
-        f"Escribe `/generar` para compilar el PDF.",
+        f"Usa `/generar`, `/pdf` o `/excel` para compilar el informe.",
         parse_mode=ParseMode.MARKDOWN,
+        reply_markup=_get_format_keyboard(photo_count=len(photos)),
     )
 
 
@@ -318,7 +418,10 @@ def create_bot_app():
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("ayuda", help_command))
     app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("generar", execute_generate_pdf))
+    app.add_handler(CommandHandler("generar", generate_command))
+    app.add_handler(CommandHandler("pdf", execute_generate_pdf))
+    app.add_handler(CommandHandler("excel", execute_generate_excel))
+    app.add_handler(CommandHandler("xlsx", execute_generate_excel))
     app.add_handler(CommandHandler("ver", view_command))
     app.add_handler(CommandHandler("nuevo", reset_command))
     app.add_handler(CommandHandler("cancelar", reset_command))
