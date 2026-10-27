@@ -47,6 +47,7 @@ Thumbs.db
 *.log
 bot.log
 test_chatbot_report.json
+inspector_bot/data/
 
 # Database dumps
 *.dump
