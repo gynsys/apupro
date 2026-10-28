@@ -364,7 +364,7 @@ export default function ApuEditorUI({
                       />
                     </td>
                     <td className="p-2 text-right font-semibold text-slate-700 bg-slate-50 text-xs border-r border-slate-200">
-                      {((mat.cantidad * (mat.precio_unitario * exRate) * (1 + (mat.desperdicio || 0) / 100)) * (1 + (material_inflation/100))).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
+                      {isBlankComponentRow(mat) ? '0,00' : ((mat.cantidad * (mat.precio_unitario * exRate) * (1 + (mat.desperdicio || 0) / 100)) * (1 + (material_inflation/100))).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
                     <td className="p-2 text-center">
                       <div className="flex items-center justify-center gap-1">
@@ -476,7 +476,7 @@ export default function ApuEditorUI({
                       />
                     </td>
                     <td className="p-2 text-right font-semibold text-slate-700 bg-slate-50 text-xs border-r border-slate-200">
-                      {((eq.cantidad * (eq.depreciacion ?? 1.0) * (eq.precio_unitario * exRate)) * (1 + (equipment_inflation/100))).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
+                      {isBlankComponentRow(eq) ? '0,00' : ((eq.cantidad * (eq.depreciacion ?? 1.0) * (eq.precio_unitario * exRate)) * (1 + (equipment_inflation/100))).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
                     <td className="p-2 text-center">
                       <div className="flex items-center justify-center gap-1">
@@ -591,15 +591,15 @@ export default function ApuEditorUI({
                     <td className="p-2 border-r border-slate-200 bg-amber-50/40">
                       <DecimalInput 
                         className="w-full text-right bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none focus:bg-amber-100 text-xs font-medium opacity-75"
-                        value={Number(((lab.bono || labor_bonus || 0) * exRate).toFixed(2))}
+                        value={isBlankComponentRow(lab) ? 0 : Number(((lab.bono || labor_bonus || 0) * exRate).toFixed(2))}
                         disabled
                       />
                     </td>
                     <td className="p-2 text-right font-semibold text-slate-700 bg-slate-50 text-xs border-r border-slate-200">
-                      {((lab.cantidad * (lab.jornal * exRate)) * (1 + (labor_inflation/100))).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
+                      {isBlankComponentRow(lab) ? '0,00' : ((lab.cantidad * (lab.jornal * exRate)) * (1 + (labor_inflation/100))).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
                     <td className="p-2 text-right font-semibold text-slate-700 bg-slate-50 text-xs border-r border-slate-200">
-                      {((lab.cantidad * ((lab.bono || labor_bonus || 0) * exRate)) * (1 + (labor_inflation/100))).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
+                      {isBlankComponentRow(lab) ? '0,00' : ((lab.cantidad * ((lab.bono || labor_bonus || 0) * exRate)) * (1 + (labor_inflation/100))).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
                     </td>
                     <td className="p-2 text-center">
                       <div className="flex items-center justify-center gap-1">

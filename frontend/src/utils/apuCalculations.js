@@ -6,6 +6,7 @@
  * - BudgetPrintLayout & PrintAPULayout
  * - ExportApuExcelButton
  */
+import { filterBlankComponentRows } from './apuRows.js';
 
 /**
  * Calculates the complete breakdown and unit price for an APU item.
@@ -56,8 +57,13 @@ export function calculateItemBreakdown(item, budget = {}) {
 
   const round2 = (val) => Math.round((Number(val || 0) + Number.EPSILON) * 100) / 100;
 
+  // Filtrar filas en blanco / plantillas de entrada para no sumar valores residuales ni bonos ficticios
+  const materials = filterBlankComponentRows(item?.materials || []);
+  const equipments = filterBlankComponentRows(item?.equipments || []);
+  const labors = filterBlankComponentRows(item?.labors || []);
+
   // 1. Materiales
-  const matCost = round2((item.materials || []).reduce((acc, currMat) => {
+  const matCost = round2(materials.reduce((acc, currMat) => {
     const q = parseFloat(currMat.cantidad ?? currMat.quantity ?? currMat.CanIns ?? 0);
     const w = parseFloat(currMat.desperdicio ?? currMat.waste ?? currMat.Desper ?? 0);
     const p = parseFloat(currMat.precio_unitario ?? currMat.price ?? currMat.precio ?? currMat.CosMat ?? 0) * exRate;
@@ -66,7 +72,7 @@ export function calculateItemBreakdown(item, budget = {}) {
   }, 0));
 
   // 2. Equipos
-  const eqTotalDay = round2((item.equipments || []).reduce((acc, currEq) => {
+  const eqTotalDay = round2(equipments.reduce((acc, currEq) => {
     const q = parseFloat(currEq.cantidad ?? currEq.quantity ?? currEq.CanIns ?? 0);
     const d = parseFloat(currEq.depreciacion ?? currEq.depreciation ?? currEq.Deprec ?? 1.0);
     const p = parseFloat(currEq.precio_unitario ?? currEq.price ?? currEq.precio ?? currEq.CosDia ?? 0) * exRate;
@@ -76,7 +82,7 @@ export function calculateItemBreakdown(item, budget = {}) {
   const eqCost = round2(eqTotalDay / perf);
 
   // 3. Mano de Obra
-  const totJornal = round2((item.labors || []).reduce((acc, currLab) => {
+  const totJornal = round2(labors.reduce((acc, currLab) => {
     const q = parseFloat(currLab.cantidad ?? currLab.quantity ?? currLab.CanIns ?? 0);
     const j = parseFloat(currLab.jornal ?? currLab.Jornal ?? 0) * exRate;
     const baseCost = round2(q * j);
@@ -89,7 +95,7 @@ export function calculateItemBreakdown(item, budget = {}) {
 
   let totBono = 0;
   if (!bonoInFcas) {
-    totBono = round2((item.labors || []).reduce((acc, currLab) => {
+    totBono = round2(labors.reduce((acc, currLab) => {
       const q = parseFloat(currLab.cantidad ?? currLab.quantity ?? currLab.CanIns ?? 0);
       const bBonus = (currLab.bono !== undefined && currLab.bono !== null && !isNaN(Number(currLab.bono)))
         ? Number(currLab.bono)
