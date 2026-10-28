@@ -319,6 +319,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
         profit_percent: header.profit_percent || null,
         iva_percent: header.iva_percent || null,
         source_filename: currentFile?.name || preview?.filename || null,
+        source_type: preview?.source_type || importMode || 'budget',
         items: includedItems.map((item) => {
           const generated = item.generated_data;
           const suppliedCode = (item.code || '').trim();
@@ -335,6 +336,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
             cod_par: item.is_chapter ? null : (item.selected || suppliedCode || null),
             cov_par: suppliedCode || (useGenerated ? (generated?.partida?.cov_par || generatedCode) : (item.cov_par || null)),
             code: suppliedCode || null,
+            apu_source: item.apu_source || (hasExcelApu ? 'excel_apu' : null),
             materials: hasExcelApu ? (item.materials || []) : ((useGenerated && !isLaborOnlyActivity(item.description)) ? (generated.materials || []) : []),
             equipments: hasExcelApu ? (item.equipments || []) : (useGenerated ? (generated.equipments || []) : []),
             labors: hasExcelApu ? (item.labors || []) : (useGenerated ? (generated.labors || []) : []),

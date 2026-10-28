@@ -162,6 +162,7 @@ class CommitItem(BaseModel):
     cod_par: Optional[str] = None
     cov_par: Optional[str] = None
     code: Optional[str] = None
+    apu_source: Optional[str] = None
     materials: List[GeneratedMaterial] = []
     equipments: List[GeneratedEquipment] = []
     labors: List[GeneratedLabor] = []
@@ -179,6 +180,7 @@ class CommitRequest(BaseModel):
     currency: str = "USD"
     items: List[CommitItem]
     source_filename: Optional[str] = None
+    source_type: Optional[str] = "budget"
     fcas_percent: Optional[float] = None
     admin_percent: Optional[float] = None
     profit_percent: Optional[float] = None
@@ -768,9 +770,15 @@ def commit_budget_import(
             db.flush()
 
             if has_generated:
-                is_labor_only, _ = is_labor_only_activity(description)
-                # Si el usuario suministró materiales explícitos en su APU (ej. Excel APU), guardarlos todos
-                save_materials = (not is_labor_only) or bool(item.materials)
+                # Si proviene del nuevo flujo de Libro de APU (Excel), clonar 1:1 sin reglas ni filtros.
+                # Si proviene del flujo antiguo de generación con IA, proteger contra alucinaciones de materiales en demolición.
+                is_from_excel_apu = (payload.source_type == "excel_apu") or (item.apu_source == "excel_apu")
+                if not is_from_excel_apu:
+                    is_labor_only, _ = is_labor_only_activity(description)
+                    save_materials = not is_labor_only
+                else:
+                    save_materials = True
+
                 if save_materials:
                     for mat in item.materials:
                         db.add(DBMaterial(
@@ -810,16 +818,22 @@ def commit_budget_import(
 
             items_created += 1
 
-        # Post-procesamiento y calibración determinista obligatoria de salida (solo si hay partidas genéricas o sin rendimiento calibrado)
-        try:
-            has_uncalibrated = any(
-                (not it.is_chapter and float(it.performance or 1.0) <= 1.0 and it.unit not in ("gl", "glb", "sg"))
-                for it in db.query(BudgetItem).filter(BudgetItem.budget_id == budget.id).all()
-            )
-            if has_uncalibrated:
-                recalibrate_budget_performances(budget.id, db, dry_run=False)
-        except Exception as exc_post:
-            logger.error("Error en post-procesamiento de rendimientos al importar: %s", exc_post, exc_info=True)
+        # Post-procesamiento y calibración determinista obligatoria para el FLUJO ANTIGUO
+        # En la NUEVA importación de Libros de APUs (excel_apu), se omite al 100% para respetar la copia fiel.
+        is_apu_workbook_flow = (payload.source_type == "excel_apu") or all(
+            it.is_chapter or bool(it.materials or it.equipments or it.labors)
+            for it in payload.items
+        )
+        if not is_apu_workbook_flow:
+            try:
+                has_uncalibrated = any(
+                    (not it.is_chapter and float(it.performance or 1.0) <= 1.0 and it.unit not in ("gl", "glb", "sg"))
+                    for it in db.query(BudgetItem).filter(BudgetItem.budget_id == budget.id).all()
+                )
+                if has_uncalibrated:
+                    recalibrate_budget_performances(budget.id, db, dry_run=False)
+            except Exception as exc_post:
+                logger.error("Error en post-procesamiento de rendimientos al importar (flujo estándar): %s", exc_post, exc_info=True)
 
         db.commit()
         db.refresh(budget)
