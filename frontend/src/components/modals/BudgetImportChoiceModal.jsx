@@ -125,6 +125,9 @@ export default function BudgetImportChoiceModal({ isOpen, onClose, onSelectMode 
                 <p className="text-xs text-slate-600 mt-1 mb-0 leading-relaxed">
                   Listas de partidas para cruzar con la Base Maestra o generar con Inteligencia Artificial.
                 </p>
+                <p className="text-[11px] text-slate-500 mt-1.5 mb-0">
+                  <span className="font-semibold text-slate-700">Formatos admitidos:</span> Excel (.xlsx, .xls), CSV, PDF o imagen (JPG, PNG).
+                </p>
               </div>
             </div>
             <button
