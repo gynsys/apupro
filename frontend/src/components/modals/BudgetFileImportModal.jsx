@@ -48,9 +48,9 @@ function isLaborOnlyActivity(desc = '') {
   return starts.test(d) && !supply.test(d);
 }
 
-export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated, onShowPlans }) {
+export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated, onShowPlans, initialMode = 'budget' }) {
   const [currentFile, setCurrentFile] = useState(null);
-  const [importMode, setImportMode] = useState('budget');
+  const [importMode, setImportMode] = useState(initialMode || 'budget');
   const [preview, setPreview] = useState(null);
   const [items, setItems] = useState([]);
   const [header, setHeader] = useState({ budget_name: '', project_name: '', client_name: '', currency: 'USD' });
@@ -135,7 +135,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
       autoGenCancelledRef.current = true;
       setAutoGenerating(false);
       setCurrentFile(null);
-      setImportMode('budget');
+      setImportMode(initialMode || 'budget');
       setPreview(null);
       setItems([]);
       setError(null);
@@ -148,9 +148,11 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
 
     if (file) {
       setCurrentFile(file);
-      loadFilePreview(file, 'budget');
+      const targetMode = initialMode || 'budget';
+      setImportMode(targetMode);
+      loadFilePreview(file, targetMode);
     }
-  }, [isOpen, file]);
+  }, [isOpen, file, initialMode]);
 
   const triggerAutoGeneration = async (list) => {
     const toGenerate = (list || []).filter(

@@ -11,6 +11,7 @@ import ReportPaymentModal from '../ReportPaymentModal';
 import BudgetFileImportModal from '../modals/BudgetFileImportModal';
 import BudgetFromComputosModal from '../modals/BudgetFromComputosModal';
 import AccountSettingsModal from '../modals/AccountSettingsModal';
+import BudgetImportChoiceModal from '../modals/BudgetImportChoiceModal';
 import { Crown, Receipt, HelpCircle, ClipboardList } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import HelpDrawer from '../help/HelpDrawer';
@@ -33,11 +34,20 @@ export default function AppLayout() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showHelpDrawer, setShowHelpDrawer] = useState(false);
+  const [showImportChoiceModal, setShowImportChoiceModal] = useState(false);
   const [showBudgetImportModal, setShowBudgetImportModal] = useState(false);
   const [showBudgetComputosModal, setShowBudgetComputosModal] = useState(false);
   const [budgetImportFile, setBudgetImportFile] = useState(null);
+  const [budgetImportMode, setBudgetImportMode] = useState('budget');
 
   const handleLogout = () => { logout(); navigate('/'); };
+
+  const handleImportChoice = (selectedFile, mode) => {
+    setShowImportChoiceModal(false);
+    setBudgetImportMode(mode || 'budget');
+    setBudgetImportFile(selectedFile);
+    setShowBudgetImportModal(true);
+  };
 
   const budgetFileInputRef = useRef(null);
 
@@ -45,6 +55,7 @@ export default function AppLayout() {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
+    setBudgetImportMode('budget');
     setBudgetImportFile(file);
     setShowBudgetImportModal(true);
   };
@@ -130,27 +141,27 @@ export default function AppLayout() {
           );
         })}
 
-        {/* Botón Crear Presupuesto desde Archivo */}
+        {/* Botón Importar Presupuesto desde Archivo */}
         <div className="group relative w-full">
           <button
             type="button"
             onClick={() => {
               setSidebarOpen(false);
-              budgetFileInputRef.current?.click();
+              setShowImportChoiceModal(true);
             }}
-            aria-label="Crear Presupuesto desde Archivo"
+            aria-label="Importar Presupuesto desde Archivo"
             className={`flex items-center ${
               isMobile ? 'justify-start px-3.5 py-2.5 gap-3' : 'justify-center p-3'
             } rounded-xl transition-all duration-200 text-slate-600 hover:bg-[#FEF3C7] hover:text-slate-900 w-full min-h-[44px] touch-target cursor-pointer`}
           >
             <FaFileUpload size={22} className="text-slate-400 shrink-0" />
             {isMobile && (
-              <span className="text-sm font-medium tracking-tight truncate">Crear Presupuesto desde Archivo</span>
+              <span className="text-sm font-medium tracking-tight truncate">Importar Presupuesto</span>
             )}
           </button>
           {!isMobile && (
             <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
-              Crear Presupuesto desde Archivo
+              Importar Presupuesto
               <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
             </div>
           )}
@@ -412,9 +423,16 @@ export default function AppLayout() {
       />
 
       {/* Modals Globales */}
+      <BudgetImportChoiceModal
+        isOpen={showImportChoiceModal}
+        onClose={() => setShowImportChoiceModal(false)}
+        onSelectMode={handleImportChoice}
+      />
+
       <BudgetFileImportModal
         isOpen={showBudgetImportModal}
         file={budgetImportFile}
+        initialMode={budgetImportMode}
         onClose={() => {
           setShowBudgetImportModal(false);
           setBudgetImportFile(null);
