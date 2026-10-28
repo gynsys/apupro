@@ -63,9 +63,75 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
   const [expandedApuIndex, setExpandedApuIndex] = useState(null);
   const fileInputRef = useRef(null);
   const autoGenCancelledRef = useRef(false);
+  const activeRequestIdRef = useRef(0);
+
+  const loadFilePreview = async (fileToLoad, mode) => {
+    if (!fileToLoad) return;
+    const requestId = ++activeRequestIdRef.current;
+
+    autoGenCancelledRef.current = true;
+    setAutoGenerating(false);
+    setLoading(true);
+    setError(null);
+    setLimitReached(false);
+    setPreview(null);
+    setItems([]);
+
+    try {
+      const data = await budgetService.previewImport(fileToLoad, mode);
+      if (activeRequestIdRef.current !== requestId) return;
+
+      setPreview(data);
+      if (data.source_type === 'excel_apu') {
+        setImportMode('apu_workbook');
+      }
+
+      setHeader({
+        budget_name: data.header?.budget_name || '',
+        project_name: data.header?.project_name || '',
+        client_name: data.header?.client_name || '',
+        currency: data.header?.currency || 'USD',
+        fcas_percent: data.header?.fcas_percent,
+        admin_percent: data.header?.admin_percent,
+        profit_percent: data.header?.profit_percent,
+        iva_percent: data.header?.iva_percent,
+      });
+
+      const parsedItems = (data.items || []).map((item) => ({
+        ...item,
+        description: item.description || '',
+        include: true,
+        quantity: item.quantity ?? 0,
+        unit: item.unit || 'und',
+        code: item.code || '',
+        performance: item.performance || 1.0,
+        selected: item.is_chapter ? '' : (item.selected_cod_par || ''),
+        has_covenin_code_match: Boolean(item.has_covenin_code_match),
+        apu_source: item.apu_source || null,
+        materials: item.materials || [],
+        equipments: item.equipments || [],
+        labors: item.labors || [],
+      }));
+      setItems(parsedItems);
+
+      // Si es libro de APUs de Excel, no necesita generación con IA porque ya tiene APUs completos
+      if (data.source_type !== 'excel_apu') {
+        triggerAutoGeneration(parsedItems);
+      }
+    } catch (err) {
+      if (activeRequestIdRef.current !== requestId) return;
+      setError(err.message || 'No se pudo analizar el archivo.');
+      setLimitReached(err.status === 403);
+    } finally {
+      if (activeRequestIdRef.current === requestId) {
+        setLoading(false);
+      }
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) {
+      activeRequestIdRef.current += 1;
       autoGenCancelledRef.current = true;
       setAutoGenerating(false);
       setCurrentFile(null);
@@ -77,8 +143,12 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
       setLoading(false);
       setCreating(false);
       setExpandedApuIndex(null);
-    } else {
-      setCurrentFile(file || null);
+      return;
+    }
+
+    if (file) {
+      setCurrentFile(file);
+      loadFilePreview(file, 'budget');
     }
   }, [isOpen, file]);
 
@@ -158,71 +228,6 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
   };
 
   useEffect(() => {
-    if (!isOpen || !currentFile) return undefined;
-
-    let cancelled = false;
-    autoGenCancelledRef.current = true;
-    setAutoGenerating(false);
-    setLoading(true);
-    setError(null);
-    setLimitReached(false);
-    setPreview(null);
-    setItems([]);
-
-    (async () => {
-      try {
-        const data = await budgetService.previewImport(currentFile, importMode);
-        if (cancelled) return;
-        setPreview(data);
-        if (data.source_type === 'excel_apu' && importMode !== 'apu_workbook') {
-          setImportMode('apu_workbook');
-        }
-        setHeader({
-          budget_name: data.header?.budget_name || '',
-          project_name: data.header?.project_name || '',
-          client_name: data.header?.client_name || '',
-          currency: data.header?.currency || 'USD',
-          fcas_percent: data.header?.fcas_percent,
-          admin_percent: data.header?.admin_percent,
-          profit_percent: data.header?.profit_percent,
-          iva_percent: data.header?.iva_percent,
-        });
-        const parsedItems = (data.items || []).map((item) => ({
-          ...item,
-          include: true,
-          quantity: item.quantity ?? 0,
-          unit: item.unit || 'und',
-          code: item.code || '',
-          performance: item.performance || 1.0,
-          selected: item.is_chapter ? '' : (item.selected_cod_par || ''),
-          has_covenin_code_match: Boolean(item.has_covenin_code_match),
-          apu_source: item.apu_source || null,
-          materials: item.materials || [],
-          equipments: item.equipments || [],
-          labors: item.labors || [],
-        }));
-        setItems(parsedItems);
-
-        // Si es libro de APUs de Excel, no necesita generación con IA porque ya tiene APUs completos
-        if (data.source_type !== 'excel_apu') {
-          triggerAutoGeneration(parsedItems);
-        }
-      } catch (err) {
-        if (cancelled) return;
-        setError(err.message || 'No se pudo analizar el archivo.');
-        setLimitReached(err.status === 403);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      autoGenCancelledRef.current = true;
-    };
-  }, [isOpen, currentFile, importMode]);
-
-  useEffect(() => {
     if (!isOpen) return undefined;
     const onKeyDown = (event) => {
       if (event.key === 'Escape' && !creating) onClose();
@@ -237,11 +242,20 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
     )));
   };
 
+  const handleModeChange = (newMode) => {
+    if (newMode === importMode) return;
+    setImportMode(newMode);
+    if (currentFile) {
+      loadFilePreview(currentFile, newMode);
+    }
+  };
+
   const handleFileChange = (event) => {
     const selectedFile = event.target.files?.[0];
     event.target.value = '';
     if (selectedFile) {
       setCurrentFile(selectedFile);
+      loadFilePreview(selectedFile, importMode);
     }
   };
 
@@ -285,7 +299,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
     }
   };
 
-  const includedItems = items.filter((item) => item.include && item.description.trim());
+  const includedItems = items.filter((item) => item.include && (item.description || '').trim());
   const selectedCount = items.filter((item) => !item.is_chapter && (item.selected || item.apu_source === 'excel_apu' || item.materials?.length || item.equipments?.length || item.labors?.length)).length;
   const pendingCount = items.filter(
     (item) => !item.is_chapter && !item.selected && !item.has_covenin_code_match && item.apu_source !== 'excel_apu' && !(item.materials?.length || item.equipments?.length || item.labors?.length),
@@ -389,7 +403,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button
               type="button"
-              onClick={() => setImportMode('budget')}
+              onClick={() => handleModeChange('budget')}
               className={`text-left rounded-xl border px-3 py-2.5 transition-colors cursor-pointer ${
                 importMode === 'budget'
                   ? 'border-sky-500 bg-sky-50 text-sky-900 shadow-sm'
@@ -401,7 +415,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
             </button>
             <button
               type="button"
-              onClick={() => setImportMode('apu_workbook')}
+              onClick={() => handleModeChange('apu_workbook')}
               className={`text-left rounded-xl border px-3 py-2.5 transition-colors cursor-pointer ${
                 importMode === 'apu_workbook'
                   ? 'border-emerald-500 bg-emerald-50 text-emerald-900 shadow-sm'
@@ -416,7 +430,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
             </button>
             <button
               type="button"
-              onClick={() => setImportMode('compute_notes')}
+              onClick={() => handleModeChange('compute_notes')}
               className={`text-left rounded-xl border px-3 py-2.5 transition-colors cursor-pointer ${
                 importMode === 'compute_notes'
                   ? 'border-sky-500 bg-sky-50 text-sky-900 shadow-sm'
@@ -571,7 +585,8 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                   {preview.source_type === 'pdf_ocr' ? 'PDF escaneado (OCR)' :
                     preview.source_type === 'image' ? 'Imagen (OCR)' :
                       preview.source_type === 'excel' ? 'Excel' :
-                        preview.source_type === 'csv' ? 'CSV' : preview.source_type}
+                        preview.source_type === 'excel_apu' ? 'Libro de APUs (Excel)' :
+                          preview.source_type === 'csv' ? 'CSV' : preview.source_type}
                 </span>
               </div>
 
@@ -766,7 +781,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                                   <option value="">— {item.has_covenin_code_match ? 'Sin APU' : 'Generar APU con IA'} —</option>
                                   {(item.candidates || []).map((candidate) => (
                                     <option key={candidate.cod_par} value={candidate.cod_par}>
-                                      {candidate.cod_par} · {candidate.description.slice(0, 70)} ({candidate.unit || 'und'})
+                                      {candidate.cod_par} · {(candidate.description || '').slice(0, 70)} ({candidate.unit || 'und'})
                                     </option>
                                   ))}
                                 </select>
