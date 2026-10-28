@@ -61,7 +61,7 @@ export function calculateItemBreakdown(item, budget = {}) {
     const q = parseFloat(currMat.cantidad ?? currMat.quantity ?? currMat.CanIns ?? 0);
     const w = parseFloat(currMat.desperdicio ?? currMat.waste ?? currMat.Desper ?? 0);
     const p = parseFloat(currMat.precio_unitario ?? currMat.price ?? currMat.precio ?? currMat.CosMat ?? 0) * exRate;
-    const baseCost = (q * (1 + w / 100)) * p;
+    const baseCost = round2((q * (1 + w / 100)) * p);
     return acc + (baseCost * (1 + (matInflation / 100)));
   }, 0));
 
@@ -70,7 +70,7 @@ export function calculateItemBreakdown(item, budget = {}) {
     const q = parseFloat(currEq.cantidad ?? currEq.quantity ?? currEq.CanIns ?? 0);
     const d = parseFloat(currEq.depreciacion ?? currEq.depreciation ?? currEq.Deprec ?? 1.0);
     const p = parseFloat(currEq.precio_unitario ?? currEq.price ?? currEq.precio ?? currEq.CosDia ?? 0) * exRate;
-    const baseCost = q * d * p;
+    const baseCost = round2(q * d * p);
     return acc + (baseCost * (1 + (eqInflation / 100)));
   }, 0));
   const eqCost = round2(eqTotalDay / perf);
@@ -79,7 +79,7 @@ export function calculateItemBreakdown(item, budget = {}) {
   const totJornal = round2((item.labors || []).reduce((acc, currLab) => {
     const q = parseFloat(currLab.cantidad ?? currLab.quantity ?? currLab.CanIns ?? 0);
     const j = parseFloat(currLab.jornal ?? currLab.Jornal ?? 0) * exRate;
-    const baseCost = q * j;
+    const baseCost = round2(q * j);
     return acc + (baseCost * (1 + (labInflation / 100)));
   }, 0));
 
@@ -97,7 +97,7 @@ export function calculateItemBreakdown(item, budget = {}) {
           ? Number(currLab.Bono)
           : defaultLaborBonus);
       const b = bBonus * exRate;
-      const baseCost = q * b;
+      const baseCost = round2(q * b);
       return acc + (baseCost * (1 + (labInflation / 100)));
     }, 0));
   }
