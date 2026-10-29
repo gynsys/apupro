@@ -1,4 +1,5 @@
 """Importación de presupuestos desde archivos Excel, CSV, PDF e imágenes."""
+import io
 import logging
 import re
 import time
@@ -6,6 +7,9 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import StreamingResponse
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
@@ -959,4 +963,296 @@ def delete_computos_draft(
     arko_db.commit()
 
     return {"status": "deleted", "id": clean_draft_id, "drafts": drafts}
+
+
+# ---------------------------------------------------------------------------
+# Cómputos Métricos: Exportación a Excel .xlsx nativo genuino (OpenXML)
+# ---------------------------------------------------------------------------
+
+class ComputosExportRequest(BaseModel):
+    budgetName: Optional[str] = "Planilla de Cómputos Métricos"
+    projectName: Optional[str] = ""
+    items: List[Dict[str, Any]] = []
+
+
+@router.post("/computos/export-excel")
+def export_computos_excel(
+    payload: ComputosExportRequest,
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> StreamingResponse:
+    """Genera y descarga un archivo Excel .xlsx nativo genuino (OpenXML) para la Planilla de Cómputos Métricos."""
+    valid_items = [it for it in payload.items if isinstance(it, dict) and (it.get("description") or "").strip()]
+    if not valid_items:
+        raise HTTPException(status_code=400, detail="No hay partidas con datos para exportar.")
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Cómputos Métricos"
+    ws.views.sheetView[0].showGridLines = True
+
+    # Paleta de fuentes y bordes
+    title_font = Font(name="Calibri", size=18, bold=True, color="1E293B")
+    meta_label_font = Font(name="Calibri", size=10, bold=True, color="1E293B")
+    meta_val_font = Font(name="Calibri", size=10, bold=False, color="334155")
+
+    # ENCABEZADO DE COLUMNAS: Todas en negrita y centradas tanto vertical como horizontalmente
+    header_font = Font(name="Calibri", size=10, bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="D97706", end_color="D97706", fill_type="solid")
+    header_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    header_border = Border(
+        left=Side(style="thin", color="B45309"),
+        right=Side(style="thin", color="B45309"),
+        top=Side(style="thin", color="B45309"),
+        bottom=Side(style="thin", color="B45309"),
+    )
+
+    cell_border = Border(
+        left=Side(style="thin", color="CBD5E1"),
+        right=Side(style="thin", color="CBD5E1"),
+        top=Side(style="thin", color="CBD5E1"),
+        bottom=Side(style="thin", color="CBD5E1"),
+    )
+
+    chap_font = Font(name="Calibri", size=11, bold=True, color="78350F")
+    chap_fill = PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid")
+    chap_border = Border(
+        left=Side(style="thin", color="D97706"),
+        right=Side(style="thin", color="D97706"),
+        top=Side(style="thin", color="D97706"),
+        bottom=Side(style="thin", color="D97706"),
+    )
+
+    total_fill = PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid")
+    partial_row_fill = PatternFill(start_color="FFFBEB", end_color="FFFBEB", fill_type="solid")
+
+    # 1. Título General
+    ws.merge_cells("A1:L1")
+    t_cell = ws["A1"]
+    t_cell.value = "Planilla de Cómputos Métricos"
+    t_cell.font = title_font
+    t_cell.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 36
+
+    # 2. Metadatos (Obra y Fecha)
+    ws["A2"] = "Obra:"
+    ws["A2"].font = meta_label_font
+    ws["B2"] = (payload.projectName or payload.budgetName or "—").strip()
+    ws["B2"].font = meta_val_font
+
+    ws["A3"] = "Fecha:"
+    ws["A3"].font = meta_label_font
+    ws["B3"] = datetime.now().strftime("%d/%m/%Y")
+    ws["B3"].font = meta_val_font
+
+    ws.row_dimensions[2].height = 18
+    ws.row_dimensions[3].height = 18
+    ws.row_dimensions[4].height = 8
+
+    # 3. Fila de Encabezados de Columnas (Fila 5)
+    headers = [
+        "N°",
+        "DESCRIPCIÓN DE LA PARTIDA",
+        "UND",
+        "LARGO",
+        "ANCHO",
+        "ALTO",
+        "VECES",
+        "FACTOR",
+        "DIST. (km)",
+        "PARCIAL",
+        "TOTAL",
+        "OBSERVACIONES",
+    ]
+    ws.row_dimensions[5].height = 28
+
+    for col_idx, header_text in enumerate(headers, start=1):
+        c = ws.cell(row=5, column=col_idx, value=header_text)
+        c.font = header_font
+        c.fill = header_fill
+        c.alignment = header_align
+        c.border = header_border
+
+    # Anchos de columnas optimizados
+    col_widths = {
+        "A": 7,   # N°
+        "B": 58,  # DESCRIPCIÓN
+        "C": 10,  # UND
+        "D": 11,  # LARGO
+        "E": 11,  # ANCHO
+        "F": 11,  # ALTO
+        "G": 10,  # VECES
+        "H": 11,  # FACTOR
+        "I": 12,  # DIST. (km)
+        "J": 13,  # PARCIAL
+        "K": 14,  # TOTAL
+        "L": 26,  # OBSERVACIONES
+    }
+    for col_letter, width in col_widths.items():
+        ws.column_dimensions[col_letter].width = width
+
+    # 4. Filas de Partidas y Capítulos
+    current_row = 6
+    current_chapter: Optional[str] = None
+    item_num = 1
+
+    def _parse_num(val: Any) -> Any:
+        if val is None or val == "" or val == "—":
+            return "—"
+        try:
+            f = float(val)
+            return int(f) if f.is_integer() else round(f, 4)
+        except (ValueError, TypeError):
+            return str(val)
+
+    for item in valid_items:
+        chap = (item.get("chapter") or "GENERAL").strip().upper()
+        if chap != current_chapter:
+            current_chapter = chap
+            ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=12)
+            c_chap = ws.cell(row=current_row, column=1, value=f"CAPÍTULO: {chap}")
+            c_chap.font = chap_font
+            c_chap.fill = chap_fill
+            c_chap.alignment = Alignment(horizontal="left", vertical="center", indent=1)
+            for c_idx in range(1, 13):
+                ws.cell(row=current_row, column=c_idx).border = chap_border
+            ws.row_dimensions[current_row].height = 24
+            current_row += 1
+
+        partials = item.get("partials") or []
+        has_partials = len(partials) > 0
+
+        ws.row_dimensions[current_row].height = 22
+
+        # A: N°
+        c_a = ws.cell(row=current_row, column=1, value=item_num)
+        c_a.alignment = Alignment(horizontal="center", vertical="top")
+        c_a.font = Font(name="Calibri", size=10, bold=True)
+        c_a.fill = PatternFill(start_color="F8FAFC", end_color="F8FAFC", fill_type="solid")
+
+        # B: Descripción
+        c_b = ws.cell(row=current_row, column=2, value=str(item.get("description") or "").strip())
+        c_b.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+        c_b.font = Font(name="Calibri", size=10, bold=True)
+
+        # C: UND
+        c_c = ws.cell(row=current_row, column=3, value=str(item.get("unit") or "").strip())
+        c_c.alignment = Alignment(horizontal="center", vertical="top")
+        c_c.font = Font(name="Calibri", size=10.5, bold=True, color="1E293B")
+
+        # D-I: Dimensiones
+        c_d = ws.cell(row=current_row, column=4, value="—" if has_partials else _parse_num(item.get("length")))
+        c_d.alignment = Alignment(horizontal="right" if not has_partials else "center", vertical="top")
+
+        c_e = ws.cell(row=current_row, column=5, value="—" if has_partials else _parse_num(item.get("width")))
+        c_e.alignment = Alignment(horizontal="right" if not has_partials else "center", vertical="top")
+
+        c_f = ws.cell(row=current_row, column=6, value="—" if has_partials else _parse_num(item.get("height")))
+        c_f.alignment = Alignment(horizontal="right" if not has_partials else "center", vertical="top")
+
+        c_g = ws.cell(row=current_row, column=7, value="—" if has_partials else _parse_num(item.get("times") or 1))
+        c_g.alignment = Alignment(horizontal="center", vertical="top")
+
+        c_h = ws.cell(row=current_row, column=8, value="—" if has_partials else _parse_num(item.get("factor")))
+        c_h.alignment = Alignment(horizontal="right" if not has_partials else "center", vertical="top")
+
+        c_i = ws.cell(row=current_row, column=9, value="—" if has_partials else _parse_num(item.get("distance")))
+        c_i.alignment = Alignment(horizontal="right" if not has_partials else "center", vertical="top")
+
+        # J: Parcial
+        c_j = ws.cell(row=current_row, column=10, value="—" if has_partials else _parse_num(item.get("partial")))
+        c_j.alignment = Alignment(horizontal="right" if not has_partials else "center", vertical="top")
+        c_j.font = Font(name="Calibri", size=10, bold=True)
+
+        # K: Total
+        c_k = ws.cell(row=current_row, column=11, value=_parse_num(item.get("quantity") or 0))
+        c_k.alignment = Alignment(horizontal="right", vertical="top")
+        c_k.font = Font(name="Calibri", size=10.5, bold=True, color="1E293B")
+        c_k.fill = total_fill
+
+        # L: Observaciones
+        c_l = ws.cell(row=current_row, column=12, value=str(item.get("observations") or "").strip())
+        c_l.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+        c_l.font = Font(name="Calibri", size=9.5)
+
+        for c_idx in range(1, 13):
+            ws.cell(row=current_row, column=c_idx).border = cell_border
+
+        current_row += 1
+
+        # Partidas con parciales/paredes
+        if has_partials:
+            for p_idx, part in enumerate(partials, start=1):
+                ws.row_dimensions[current_row].height = 20
+
+                p_desc = str(part.get("description") or f"Pared {p_idx}").strip()
+                p_unit = str(item.get("unit") or "").strip()
+
+                p_a = ws.cell(row=current_row, column=1, value=f"↳ {p_idx}")
+                p_a.alignment = Alignment(horizontal="center", vertical="top")
+                p_a.font = Font(name="Calibri", size=9, bold=True, color="D97706")
+
+                p_b = ws.cell(row=current_row, column=2, value=f"    {p_desc}")
+                p_b.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+                p_b.font = Font(name="Calibri", size=9.5, italic=True, color="78350F")
+
+                p_c = ws.cell(row=current_row, column=3, value=p_unit)
+                p_c.alignment = Alignment(horizontal="center", vertical="top")
+                p_c.font = Font(name="Calibri", size=9, color="64748B")
+
+                p_d = ws.cell(row=current_row, column=4, value=_parse_num(part.get("length")))
+                p_d.alignment = Alignment(horizontal="right", vertical="top")
+
+                p_e = ws.cell(row=current_row, column=5, value=_parse_num(part.get("width")))
+                p_e.alignment = Alignment(horizontal="right", vertical="top")
+
+                p_f = ws.cell(row=current_row, column=6, value=_parse_num(part.get("height")))
+                p_f.alignment = Alignment(horizontal="right", vertical="top")
+
+                p_g = ws.cell(row=current_row, column=7, value=_parse_num(part.get("times") or 1))
+                p_g.alignment = Alignment(horizontal="center", vertical="top")
+
+                p_h = ws.cell(row=current_row, column=8, value=_parse_num(part.get("factor")))
+                p_h.alignment = Alignment(horizontal="right", vertical="top")
+
+                p_i = ws.cell(row=current_row, column=9, value=_parse_num(part.get("distance")))
+                p_i.alignment = Alignment(horizontal="right", vertical="top")
+
+                p_j = ws.cell(row=current_row, column=10, value=_parse_num(part.get("partial") or 0))
+                p_j.alignment = Alignment(horizontal="right", vertical="top")
+                p_j.font = Font(name="Calibri", size=9.5, bold=True, color="B45309")
+
+                p_k = ws.cell(row=current_row, column=11, value="—")
+                p_k.alignment = Alignment(horizontal="center", vertical="top")
+                p_k.font = Font(name="Calibri", size=9, color="94A3B8")
+
+                p_l = ws.cell(row=current_row, column=12, value=str(part.get("observations") or "").strip())
+                p_l.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+                p_l.font = Font(name="Calibri", size=9, italic=True, color="64748B")
+
+                for c_idx in range(1, 13):
+                    cell = ws.cell(row=current_row, column=c_idx)
+                    cell.fill = partial_row_fill
+                    cell.border = cell_border
+
+                current_row += 1
+
+        item_num += 1
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    clean_filename = re.sub(r'[/\\?%*:|"<>]+', '_', (payload.budgetName or "Planilla_de_Computos").strip())
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    full_filename = f"{clean_filename}_{today_str}.xlsx"
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="{full_filename}"',
+            "Access-Control-Expose-Headers": "Content-Disposition",
+        },
+    )
+
 

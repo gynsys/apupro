@@ -1772,16 +1772,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   };
 
   /**
-   * Exporta la Planilla de Cómputos Métricos a un archivo Excel (.xls) profesional
-   * incluyendo capítulos, desglose de parciales/paredes y totales
+   * Exportación de contingencia en el navegador en caso de estar sin conexión
    */
-  const handleExportExcelComputos = () => {
-    const validItems = capturedItems.filter((it) => !isItemEmpty(it));
-    if (validItems.length === 0) {
-      toast.error('No hay datos en la planilla para exportar.');
-      return;
-    }
-
+  const exportExcelComputosFallback = (validItems) => {
     const cleanName = (budgetName || 'Planilla_de_Computos').trim().replace(/[/\\?%*:|"<>]/g, '_');
     const today = new Date().toLocaleDateString('es-VE');
 
@@ -1918,7 +1911,35 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast.success('Planilla exportada a Excel con éxito');
+    toast.success('Planilla exportada a Excel');
+  };
+
+  /**
+   * Exporta la Planilla de Cómputos Métricos a un archivo Excel (.xlsx) nativo genuino
+   * con encabezados en negrita y centrados tanto vertical como horizontalmente sin advertencias de Excel.
+   */
+  const handleExportExcelComputos = async () => {
+    const validItems = capturedItems.filter((it) => !isItemEmpty(it));
+    if (validItems.length === 0) {
+      toast.error('No hay datos en la planilla para exportar.');
+      return;
+    }
+
+    const payload = {
+      budgetName: budgetName || 'Planilla de Cómputos Métricos',
+      projectName: projectName || '',
+      items: validItems,
+    };
+
+    const toastId = toast.loading('Generando archivo Excel (.xlsx)...');
+    try {
+      await budgetService.exportComputosExcel(payload);
+      toast.success('Planilla exportada a Excel (.xlsx) con éxito', { id: toastId });
+    } catch (err) {
+      console.warn('Fallo exportación nativa por backend, usando exportación de contingencia:', err);
+      toast.dismiss(toastId);
+      exportExcelComputosFallback(validItems);
+    }
   };
 
   /**

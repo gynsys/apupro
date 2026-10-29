@@ -395,5 +395,34 @@ export const budgetService = {
       throw new Error(errorData.detail || 'Error al eliminar borrador de cómputos en la nube');
     }
     return response.json();
+  },
+
+  exportComputosExcel: async (payload) => {
+    const response = await fetch(`${API_URL}/budgets/computos/export-excel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Error al exportar cómputos a Excel');
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+
+    let filename = `Planilla_de_Computos.xlsx`;
+    const contentDisposition = response.headers.get('content-disposition');
+    if (contentDisposition && contentDisposition.includes('filename=')) {
+      filename = contentDisposition.split('filename=')[1].replace(/["']/g, '').trim();
+    }
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return true;
   }
 };
