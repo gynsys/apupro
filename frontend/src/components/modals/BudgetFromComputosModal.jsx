@@ -1807,7 +1807,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         <tr style="border-bottom: 1px solid #cbd5e1; font-size: 11px;">
           <td style="text-align: center; border: 1px solid #cbd5e1; font-weight: bold; background-color: #f8fafc; vertical-align: top;">${itemNumber}</td>
           <td style="border: 1px solid #cbd5e1; font-weight: 600; width: 550px; white-space: normal; word-wrap: break-word; vertical-align: top; mso-line-break-rule: exactly;">${escapeHtml(it.description || '')}</td>
-          <td style="text-align: center; border: 1px solid #cbd5e1; font-size: 9px; font-weight: bold; color: #475569; vertical-align: top;">${escapeHtml(it.unit || '')}</td>
+          <td style="text-align: center; border: 1px solid #cbd5e1; font-size: 11px; font-weight: bold; color: #1e293b; vertical-align: top;">${escapeHtml(it.unit || '')}</td>
           <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.length || '')}</td>
           <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.width || '')}</td>
           <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.height || '')}</td>
@@ -1828,7 +1828,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
               <td style="border: 1px solid #cbd5e1; padding-left: 20px; font-style: italic; color: #78350f; width: 550px; white-space: normal; word-wrap: break-word; vertical-align: top;">
                 ${escapeHtml(p.description || `Pared ${pIdx + 1}`)}
               </td>
-              <td style="text-align: center; border: 1px solid #cbd5e1; font-size: 8px; color: #94a3b8; vertical-align: top;">${escapeHtml(it.unit || '')}</td>
+              <td style="text-align: center; border: 1px solid #cbd5e1; font-size: 10px; color: #64748b; vertical-align: top;">${escapeHtml(it.unit || '')}</td>
               <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${p.length || ''}</td>
               <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${p.width || ''}</td>
               <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${p.height || ''}</td>
@@ -1863,14 +1863,14 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           </xml>
           <![endif]-->
           <style>
-            th { background-color: #d97706; color: #ffffff; border: 1px solid #b45309; padding: 6px; font-size: 11px; vertical-align: middle; }
+            th { background-color: #d97706; color: #ffffff; border: 1px solid #b45309; padding: 6px 3px; font-size: 9px; vertical-align: middle; white-space: nowrap; text-align: center; }
             td { padding: 5px; vertical-align: top; }
           </style>
         </head>
         <body>
           <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif;">
             <tr>
-              <td colspan="12" style="font-size: 16px; font-weight: bold; text-align: center; padding: 10px; color: #1e293b; border: none;">
+              <td colspan="12" style="font-size: 22px; font-weight: bold; text-align: center; padding: 14px 6px; color: #1e293b; border: none;">
                 Planilla de Cómputos Métricos
               </td>
             </tr>
@@ -1887,18 +1887,18 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
             <tr><td colspan="12" style="height: 8px; border: none;"></td></tr>
             <thead>
               <tr>
-                <th style="width: 40px;">N°</th>
-                <th style="width: 550px; text-align: left;">DESCRIPCIÓN DE LA PARTIDA</th>
-                <th style="width: 50px; font-size: 9px;">UND</th>
-                <th style="width: 70px;">LARGO</th>
-                <th style="width: 70px;">ANCHO</th>
-                <th style="width: 70px;">ALTO</th>
-                <th style="width: 60px;">VECES</th>
-                <th style="width: 70px;">FACTOR</th>
-                <th style="width: 75px;">DIST. (km)</th>
-                <th style="width: 80px;">PARCIAL</th>
-                <th style="width: 90px;">TOTAL</th>
-                <th style="width: 200px;">OBSERVACIONES</th>
+                <th style="width: 35px; font-size: 10px; text-align: center;">N°</th>
+                <th style="width: 550px; text-align: left; font-size: 11px; white-space: normal;">DESCRIPCIÓN DE LA PARTIDA</th>
+                <th style="width: 55px; font-size: 11px; font-weight: bold; text-align: center;">UND</th>
+                <th style="width: 75px; font-size: 9px; white-space: nowrap; text-align: center;">LARGO</th>
+                <th style="width: 75px; font-size: 9px; white-space: nowrap; text-align: center;">ANCHO</th>
+                <th style="width: 75px; font-size: 9px; white-space: nowrap; text-align: center;">ALTO</th>
+                <th style="width: 65px; font-size: 9px; white-space: nowrap; text-align: center;">VECES</th>
+                <th style="width: 75px; font-size: 9px; white-space: nowrap; text-align: center;">FACTOR</th>
+                <th style="width: 80px; font-size: 9px; white-space: nowrap; text-align: center;">DIST. (km)</th>
+                <th style="width: 85px; font-size: 9px; white-space: nowrap; text-align: center;">PARCIAL</th>
+                <th style="width: 85px; font-size: 9px; white-space: nowrap; text-align: center;">TOTAL</th>
+                <th style="width: 220px; font-size: 9px; text-align: left; white-space: nowrap;">OBSERVACIONES</th>
               </tr>
             </thead>
             <tbody>
@@ -1952,7 +1952,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         <tr class="item-row">
           <td class="text-center font-bold" style="vertical-align: top;">${itemNumber}</td>
           <td class="font-bold text-left" style="width: 500px; white-space: normal; word-wrap: break-word; vertical-align: top;">${escapeHtml(it.description || '')}</td>
-          <td class="text-center font-bold" style="font-size: 8px; vertical-align: top;">${escapeHtml(it.unit || '')}</td>
+          <td class="text-center font-bold" style="font-size: 11px; vertical-align: top;">${escapeHtml(it.unit || '')}</td>
           <td class="text-right" style="vertical-align: top;">${hasPartials ? '—' : (it.length || '')}</td>
           <td class="text-right" style="vertical-align: top;">${hasPartials ? '—' : (it.width || '')}</td>
           <td class="text-right" style="vertical-align: top;">${hasPartials ? '—' : (it.height || '')}</td>
@@ -1971,7 +1971,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
             <tr class="partial-row">
               <td class="text-center text-amber-700" style="vertical-align: top;">↳ ${pIdx + 1}</td>
               <td class="partial-name" style="width: 500px; white-space: normal; word-wrap: break-word; vertical-align: top;">${escapeHtml(p.description || `Pared ${pIdx + 1}`)}</td>
-              <td class="text-center text-muted" style="font-size: 8px; vertical-align: top;">${escapeHtml(it.unit || '')}</td>
+              <td class="text-center text-muted" style="font-size: 10px; vertical-align: top;">${escapeHtml(it.unit || '')}</td>
               <td class="text-right" style="vertical-align: top;">${p.length || ''}</td>
               <td class="text-right" style="vertical-align: top;">${p.width || ''}</td>
               <td class="text-right" style="vertical-align: top;">${p.height || ''}</td>
@@ -2019,7 +2019,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
               text-align: center;
             }
             .header h1 {
-              font-size: 16px;
+              font-size: 22px;
               color: #1e293b;
               margin: 0 0 6px 0;
               text-transform: uppercase;
@@ -2043,9 +2043,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
             th {
               background-color: #d97706;
               color: white;
-              font-size: 9px;
+              font-size: 8.5px;
               text-transform: uppercase;
               text-align: center;
+              white-space: nowrap;
             }
             .chapter-row td {
               background-color: #fef3c7;
