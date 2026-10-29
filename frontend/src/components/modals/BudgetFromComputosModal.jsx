@@ -957,8 +957,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     }
   }, [messages, isOpen, activeTab]);
 
-  if (!isOpen) return null;
-
   // Cantidad real de partidas cargadas (sin contar la fila vacía de edición)
   const validItems = capturedItems.filter((it) => !isItemEmpty(it));
   const validCount = validItems.length;
@@ -2532,6 +2530,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       setCommitProgressText('');
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] w-full h-[100dvh] bg-[#FEF3C7] flex flex-col overflow-hidden select-none sm:select-auto">
