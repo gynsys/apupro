@@ -365,7 +365,12 @@ function recomputeItemWithPartials(item) {
   return {
     ...item,
     quantity: roundedTotal,
-    partial: roundedTotal,
+    partial: 0,
+    length: '',
+    width: '',
+    height: '',
+    factor: '',
+    distance: '',
   };
 }
 
@@ -3416,11 +3421,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                             </div>
                           </div>
                         ) : (
-                          /* SECCIÓN CUANDO TIENE PARCIALES / PAREDES */
+                          /* SECCIÓN CUANDO TIENE PARCIALES / FILAS */
                           <div className="bg-amber-100/60 border border-amber-300 rounded-xl p-3 flex items-center justify-between">
                             <div>
                               <span className="block text-[11px] font-extrabold text-amber-950">
-                                📐 Calculado mediante {it.partials.length} paredes/parciales
+                                📐 Calculado mediante {it.partials.length} parciales
                               </span>
                               <span className="text-[10px] text-amber-800">
                                 La cantidad total se suma automáticamente desde el desglose inferior
@@ -3435,7 +3440,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                           </div>
                         )}
 
-                        {/* SECCIÓN DESGLOSE DE PAREDES / PARCIALES */}
+                        {/* SECCIÓN DESGLOSE DE PARCIALES */}
                         <div className="space-y-2">
                           {!hasPartials ? (
                             <button
@@ -3444,7 +3449,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                               className="w-full py-2 px-3 rounded-xl bg-amber-100/80 hover:bg-amber-200/80 border border-amber-300 text-amber-950 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                             >
                               <Split className="w-3.5 h-3.5 text-amber-700" />
-                              <span>+ Desglosar en varias paredes / tramos</span>
+                              <span>+ Desglosar en parciales / filas</span>
                             </button>
                           ) : (
                             <div className="space-y-2 border border-amber-300 rounded-xl p-3 bg-amber-50/60">
@@ -3459,7 +3464,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                   ) : (
                                     <ChevronDown className="w-4 h-4 text-amber-700" />
                                   )}
-                                  <span>🧱 Paredes / Parciales ({it.partials.length})</span>
+                                  <span>🧱 Parciales ({it.partials.length})</span>
                                 </button>
 
                                 <div className="flex items-center gap-2">
@@ -3681,6 +3686,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                       const prevItem = idx > 0 ? capturedItems[idx - 1] : null;
                       const showChapHeader = !prevItem || prevItem.chapter !== it.chapter;
                       const isBlankTrailing = isItemEmpty(it);
+                      const hasPartials = Boolean(it.partials && it.partials.length > 0);
 
                       return (
                         <React.Fragment key={it.id}>
@@ -3820,83 +3826,111 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
 
                             {/* LARGO */}
                             <td className="border border-gray-300 px-1 py-1">
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={it.length ?? ''}
-                                onChange={(e) => handleUpdateItemField(it.id, 'length', e.target.value)}
-                                placeholder="—"
-                                className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                              />
+                              {hasPartials ? (
+                                <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
+                              ) : (
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={it.length ?? ''}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'length', e.target.value)}
+                                  placeholder="—"
+                                  className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                />
+                              )}
                             </td>
 
                             {/* ANCHO */}
                             <td className="border border-gray-300 px-1 py-1">
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={it.width ?? ''}
-                                onChange={(e) => handleUpdateItemField(it.id, 'width', e.target.value)}
-                                placeholder="—"
-                                className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                              />
+                              {hasPartials ? (
+                                <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
+                              ) : (
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={it.width ?? ''}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'width', e.target.value)}
+                                  placeholder="—"
+                                  className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                />
+                              )}
                             </td>
 
                             {/* ALTO */}
                             <td className="border border-gray-300 px-1 py-1">
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={it.height ?? ''}
-                                onChange={(e) => handleUpdateItemField(it.id, 'height', e.target.value)}
-                                placeholder="—"
-                                className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                              />
+                              {hasPartials ? (
+                                <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
+                              ) : (
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={it.height ?? ''}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'height', e.target.value)}
+                                  placeholder="—"
+                                  className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                />
+                              )}
                             </td>
 
                             {/* N° DE VECES */}
                             <td className="border border-gray-300 px-1 py-1">
-                              <input
-                                type="number"
-                                step="1"
-                                min="1"
-                                value={it.times ?? 1}
-                                onChange={(e) => handleUpdateItemField(it.id, 'times', e.target.value)}
-                                className="w-full px-1 py-1 text-xs text-center font-bold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                              />
+                              {hasPartials ? (
+                                <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
+                              ) : (
+                                <input
+                                  type="number"
+                                  step="1"
+                                  min="1"
+                                  value={it.times ?? 1}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'times', e.target.value)}
+                                  className="w-full px-1 py-1 text-xs text-center font-bold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                />
+                              )}
                             </td>
 
                             {/* FACTOR (Acero kg/m o Multiplicador) */}
                             <td className="border border-gray-300 px-1 py-1 bg-amber-50/30">
-                              <input
-                                type="number"
-                                step="0.001"
-                                value={it.factor ?? ''}
-                                onChange={(e) => handleUpdateItemField(it.id, 'factor', e.target.value)}
-                                placeholder="1.000"
-                                className="w-full px-1 py-1 text-xs text-right font-semibold text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                                title="Factor de peso para acero (ej: 0.994 kg/m para 1/2&quot;, 1.552 para 5/8&quot;) o factor de conversión"
-                              />
+                              {hasPartials ? (
+                                <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
+                              ) : (
+                                <input
+                                  type="number"
+                                  step="0.001"
+                                  value={it.factor ?? ''}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'factor', e.target.value)}
+                                  placeholder="1.000"
+                                  className="w-full px-1 py-1 text-xs text-right font-semibold text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                  title="Factor de peso para acero (ej: 0.994 kg/m para 1/2&quot;, 1.552 para 5/8&quot;) o factor de conversión"
+                                />
+                              )}
                             </td>
 
                             {/* DISTANCIA (Km Acarreo) */}
                             <td className="border border-gray-300 px-1 py-1 bg-amber-50/30">
-                              <input
-                                type="number"
-                                step="0.1"
-                                value={it.distance ?? ''}
-                                onChange={(e) => handleUpdateItemField(it.id, 'distance', e.target.value)}
-                                placeholder="—"
-                                className="w-full px-1 py-1 text-xs text-right font-semibold text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                                title="Distancia en kilómetros para partidas de transporte y acarreo (M3-KM, TON-KM)"
-                              />
+                              {hasPartials ? (
+                                <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
+                              ) : (
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  value={it.distance ?? ''}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'distance', e.target.value)}
+                                  placeholder="—"
+                                  className="w-full px-1 py-1 text-xs text-right font-semibold text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                  title="Distancia en kilómetros para partidas de transporte y acarreo (M3-KM, TON-KM)"
+                                />
+                              )}
                             </td>
 
                             {/* CANTIDAD PARCIAL */}
                             <td className="border border-gray-300 px-2 py-1 text-right font-semibold text-xs text-gray-700 bg-amber-50/30">
-                              {it.partial > 0
-                                ? Number(it.partial).toLocaleString('es-VE', { maximumFractionDigits: 3 })
-                                : '—'}
+                              {hasPartials ? (
+                                <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
+                              ) : it.partial > 0 ? (
+                                Number(it.partial).toLocaleString('es-VE', { maximumFractionDigits: 3 })
+                              ) : (
+                                '—'
+                              )}
                             </td>
 
                             {/* CANTIDAD TOTAL */}
@@ -3905,8 +3939,12 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                 type="number"
                                 step="0.01"
                                 value={it.quantity}
+                                readOnly={hasPartials}
                                 onChange={(e) => handleUpdateItemField(it.id, 'quantity', e.target.value)}
-                                className="w-full px-1.5 py-1 text-xs text-right font-extrabold text-amber-950 bg-white border border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                title={hasPartials ? "Total calculado automáticamente por la suma de parciales" : ""}
+                                className={`w-full px-1.5 py-1 text-xs text-right font-extrabold text-amber-950 bg-white border border-amber-300 rounded ${
+                                  hasPartials ? 'bg-amber-100/50 cursor-default select-none' : 'focus:outline-none focus:ring-1 focus:ring-amber-500'
+                                }`}
                               />
                             </td>
 
