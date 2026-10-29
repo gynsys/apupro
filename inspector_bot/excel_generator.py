@@ -4,8 +4,11 @@ Formato: Carta Orientación Horizontal (Letter Landscape).
 Diseño Side-by-Side:
   - LADO IZQUIERDO (Columnas B a E): Ficha Técnica y Actividades en Ejecución.
   - LADO DERECHO (Columnas G a J): Memoria Fotográfica (Fotos 2x2 en alta definición).
+Soporta acumulación multi-hoja en el mismo libro de la obra.
 """
+import logging
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -13,13 +16,22 @@ from typing import Any, Dict, List, Optional
 import openpyxl
 from openpyxl.drawing.image import Image as OpenpyxlImage
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.worksheet import Worksheet
 from PIL import Image as PILImage
+
+logger = logging.getLogger(__name__)
+
+
+def _apply_border_range(ws: Worksheet, cell_range: str, border: Border) -> None:
+    """Aplica bordes completos a todas las celdas de un rango combinado."""
+    for row in ws[cell_range]:
+        for cell in row:
+            cell.border = border
 
 
 def _create_temp_resized_image(src_path: str, max_w_px: int = 280, max_h_px: int = 175) -> Optional[str]:
     """Redimensiona proporcionalmente la imagen para que encaje limpia en la celda de Excel."""
-    if not os.path.exists(src_path):
+    if not src_path or not os.path.exists(src_path):
         return None
 
     try:
@@ -40,7 +52,7 @@ def _create_temp_resized_image(src_path: str, max_w_px: int = 280, max_h_px: int
             resized.save(temp_path, quality=85)
             return str(temp_path)
     except Exception as exc:
-        print(f"Error optimizando imagen para Excel: {exc}")
+        logger.error("Error optimizando imagen para Excel: %s", exc, exc_info=True)
         return None
 
 
@@ -50,13 +62,38 @@ def generate_inspection_excel(
     output_excel_path: str,
 ) -> str:
     """
-    Genera un libro de Excel (.xlsx) en Carta Horizontal con diseño Side-by-Side.
+    Genera o actualiza un libro de Excel (.xlsx) en Carta Horizontal con diseño Side-by-Side.
+    Acumula las inspecciones diarias como hojas individuales dentro del mismo archivo de obra.
     """
+    if not output_excel_path:
+        raise ValueError("Ruta de salida no puede ser vacía.")
+
     os.makedirs(os.path.dirname(os.path.abspath(output_excel_path)), exist_ok=True)
 
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Ficha de Inspección"
+    # 1. Determinar el título de la hoja (Fecha limpia max 30 caracteres)
+    fecha_raw = (report_data.get("fecha") or datetime.now().strftime("%d-%m-%Y")).strip()
+    clean_date = re.sub(r'[\\/*?:\[\]]', "-", fecha_raw).strip("-")
+    sheet_title = clean_date if clean_date else "Inspección"
+    if len(sheet_title) > 30:
+        sheet_title = sheet_title[:30]
+
+    # 2. Cargar libro existente o crear uno nuevo
+    excel_file = Path(output_excel_path)
+    if excel_file.exists():
+        wb = openpyxl.load_workbook(str(excel_file))
+        if sheet_title in wb.sheetnames:
+            idx = wb.sheetnames.index(sheet_title)
+            del wb[sheet_title]
+            ws = wb.create_sheet(title=sheet_title, index=idx)
+        else:
+            ws = wb.create_sheet(title=sheet_title)
+    else:
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = sheet_title
+
+    # Dejar activa la hoja recién creada
+    wb.active = ws
     ws.views.sheetView[0].showGridLines = True
 
     # Configuración de página: Carta Horizontal (Letter Landscape)
@@ -66,7 +103,7 @@ def generate_inspection_excel(
     ws.page_setup.fitToWidth = 1
     ws.page_setup.fitToHeight = 0
 
-    # Paleta de colores
+    # Paleta de colores institucionales
     COLOR_PRIMARY_NAVY = "1E3A8A"     # Azul Marino Encabezado
     COLOR_SECONDARY_AMBER = "B45309"  # Ámbar Actividades
     COLOR_TEAL = "0F766E"             # Verde Fotos
@@ -157,11 +194,11 @@ def generate_inspection_excel(
     cell_obra.value = report_data.get("obra", "SIN ESPECIFICAR").upper()
     cell_obra.font = font_field_value
     cell_obra.alignment = align_left
-    cell_obra.border = full_border
+    _apply_border_range(ws, "C6:E6", full_border)
     ws.row_dimensions[6].height = 36
 
-    # Fecha y Empresa
-    ws["B7"] = "FECHA:"
+    # Fecha del reporte y Empresa
+    ws["B7"] = "FECHA REPORTE:"
     ws["B7"].font = font_field_label
     ws["B7"].fill = fill_row_label
     ws["B7"].border = full_border
@@ -180,28 +217,51 @@ def generate_inspection_excel(
     ws["E7"].border = full_border
     ws.row_dimensions[7].height = 18
 
-    # Residente e Inspectores
-    inspectores_list = report_data.get("ing_inspectores", [])
-    inspectores_str = ", ".join(inspectores_list) if inspectores_list else "No indicados"
+    # Fecha de inicio y Lapso de ejecución
+    fecha_inicio_val = report_data.get("fecha_inicio") or "No indicada"
+    lapso_val = report_data.get("lapso_ejecucion") or "No indicado"
 
-    ws["B8"] = "RESIDENTE:"
+    ws["B8"] = "INICIO DE OBRA:"
     ws["B8"].font = font_field_label
     ws["B8"].fill = fill_row_label
     ws["B8"].border = full_border
-    ws["C8"] = report_data.get("ing_residente", "No indicado")
+    ws["C8"] = fecha_inicio_val
     ws["C8"].font = font_field_value
     ws["C8"].alignment = align_left
     ws["C8"].border = full_border
 
-    ws["D8"] = "INSPECTORES:"
+    ws["D8"] = "LAPSO EJECUCIÓN:"
     ws["D8"].font = font_field_label
     ws["D8"].fill = fill_row_label
     ws["D8"].border = full_border
-    ws["E8"] = inspectores_str
+    ws["E8"] = lapso_val
     ws["E8"].font = font_field_value
     ws["E8"].alignment = align_left
     ws["E8"].border = full_border
     ws.row_dimensions[8].height = 18
+
+    # Residente e Inspectores
+    inspectores_list = report_data.get("ing_inspectores", [])
+    inspectores_str = ", ".join(inspectores_list) if inspectores_list else "No indicados"
+
+    ws["B9"] = "RESIDENTE:"
+    ws["B9"].font = font_field_label
+    ws["B9"].fill = fill_row_label
+    ws["B9"].border = full_border
+    ws["C9"] = report_data.get("ing_residente", "No indicado")
+    ws["C9"].font = font_field_value
+    ws["C9"].alignment = align_left
+    ws["C9"].border = full_border
+
+    ws["D9"] = "INSPECTORES:"
+    ws["D9"].font = font_field_label
+    ws["D9"].fill = fill_row_label
+    ws["D9"].border = full_border
+    ws["E9"] = inspectores_str
+    ws["E9"].font = font_field_value
+    ws["E9"].alignment = align_left
+    ws["E9"].border = full_border
+    ws.row_dimensions[9].height = 18
 
     # Caporal y Personal
     obreros_text = report_data.get("obreros", "No especificado")
@@ -210,36 +270,36 @@ def generate_inspection_excel(
     if caporal_obra_num:
         personal_str += f" • Caporal: {caporal_obra_num}"
 
-    ws["B9"] = "CAPORAL:"
-    ws["B9"].font = font_field_label
-    ws["B9"].fill = fill_row_label
-    ws["B9"].border = full_border
-    ws["C9"] = report_data.get("caporal", "No indicado")
-    ws["C9"].font = font_field_value
-    ws["C9"].alignment = align_left
-    ws["C9"].border = full_border
+    ws["B10"] = "CAPORAL:"
+    ws["B10"].font = font_field_label
+    ws["B10"].fill = fill_row_label
+    ws["B10"].border = full_border
+    ws["C10"] = report_data.get("caporal", "No indicado")
+    ws["C10"].font = font_field_value
+    ws["C10"].alignment = align_left
+    ws["C10"].border = full_border
 
-    ws["D9"] = "PERSONAL:"
-    ws["D9"].font = font_field_label
-    ws["D9"].fill = fill_row_label
-    ws["D9"].border = full_border
-    ws["E9"] = personal_str
-    ws["E9"].font = font_field_value
-    ws["E9"].alignment = align_left
-    ws["E9"].border = full_border
-    ws.row_dimensions[9].height = 18
+    ws["D10"] = "PERSONAL:"
+    ws["D10"].font = font_field_label
+    ws["D10"].fill = fill_row_label
+    ws["D10"].border = full_border
+    ws["E10"] = personal_str
+    ws["E10"].font = font_field_value
+    ws["E10"].alignment = align_left
+    ws["E10"].border = full_border
+    ws.row_dimensions[10].height = 18
 
     # Actividades en Ejecución
-    ws.merge_cells("B11:E11")
-    cell_sec2 = ws["B11"]
+    ws.merge_cells("B12:E12")
+    cell_sec2 = ws["B12"]
     cell_sec2.value = "ACTIVIDADES EJECUTADAS Y EN DESARROLLO"
     cell_sec2.font = font_sec_header
     cell_sec2.fill = fill_sec_act
     cell_sec2.alignment = align_center
-    ws.row_dimensions[11].height = 20
+    ws.row_dimensions[12].height = 20
 
     actividades = report_data.get("actividades", [])
-    act_row = 12
+    act_row = 13
     if actividades:
         for idx, act in enumerate(actividades, 1):
             ws.merge_cells(f"B{act_row}:E{act_row}")
@@ -247,7 +307,7 @@ def generate_inspection_excel(
             cell_act.value = f"  {idx}.  {act}"
             cell_act.font = font_field_value
             cell_act.alignment = align_left
-            cell_act.border = full_border
+            _apply_border_range(ws, f"B{act_row}:E{act_row}", full_border)
             ws.row_dimensions[act_row].height = 20
             act_row += 1
     else:
@@ -256,7 +316,7 @@ def generate_inspection_excel(
         cell_none.value = "  Sin actividades reportadas para la fecha."
         cell_none.font = Font(name="Calibri", size=9, italic=True)
         cell_none.alignment = align_left
-        cell_none.border = full_border
+        _apply_border_range(ws, f"B{act_row}:E{act_row}", full_border)
         ws.row_dimensions[act_row].height = 18
         act_row += 1
 
@@ -283,7 +343,7 @@ def generate_inspection_excel(
             ws[f"G{h_row}"].font = font_photo_header
             ws[f"G{h_row}"].fill = fill_card_header
             ws[f"G{h_row}"].alignment = align_center
-            ws[f"G{h_row}"].border = full_border
+            _apply_border_range(ws, f"G{h_row}:H{h_row}", full_border)
 
             if len(batch) > 1:
                 ws.merge_cells(f"I{h_row}:J{h_row}")
@@ -291,7 +351,7 @@ def generate_inspection_excel(
                 ws[f"I{h_row}"].font = font_photo_header
                 ws[f"I{h_row}"].fill = fill_card_header
                 ws[f"I{h_row}"].alignment = align_center
-                ws[f"I{h_row}"].border = full_border
+                _apply_border_range(ws, f"I{h_row}:J{h_row}", full_border)
 
             ws.row_dimensions[h_row].height = 16
 
@@ -314,24 +374,26 @@ def generate_inspection_excel(
                     img2 = OpenpyxlImage(opt_p2)
                     ws.add_image(img2, f"I{img_row}")
 
-            # Fila pie de foto
+            # Fila pie de foto / descripción corta
             cap_row = img_row + 1
             cap1 = p1.get("caption", "").strip() or f"Avance en fecha {report_data.get('fecha', '')}"
             ws.merge_cells(f"G{cap_row}:H{cap_row}")
             ws[f"G{cap_row}"] = cap1
             ws[f"G{cap_row}"].font = font_photo_caption
             ws[f"G{cap_row}"].alignment = align_center
-            ws[f"G{cap_row}"].border = full_border
+            _apply_border_range(ws, f"G{cap_row}:H{cap_row}", full_border)
 
+            max_cap_len = len(cap1)
             if len(batch) > 1:
                 cap2 = batch[1].get("caption", "").strip() or f"Avance en fecha {report_data.get('fecha', '')}"
                 ws.merge_cells(f"I{cap_row}:J{cap_row}")
                 ws[f"I{cap_row}"] = cap2
                 ws[f"I{cap_row}"].font = font_photo_caption
                 ws[f"I{cap_row}"].alignment = align_center
-                ws[f"I{cap_row}"].border = full_border
+                _apply_border_range(ws, f"I{cap_row}:J{cap_row}", full_border)
+                max_cap_len = max(max_cap_len, len(cap2))
 
-            ws.row_dimensions[cap_row].height = 20
+            ws.row_dimensions[cap_row].height = 28 if max_cap_len > 35 else 20
             r_row = cap_row + 1
     else:
         ws.merge_cells("G6:J7")

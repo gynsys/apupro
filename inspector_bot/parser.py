@@ -18,6 +18,8 @@ def parse_inspection_message(text: str) -> Dict[str, Any]:
 
     data: Dict[str, Any] = {
         "fecha": "",
+        "fecha_inicio": "",
+        "lapso_ejecucion": "",
         "obra": "",
         "empresa": "",
         "ing_residente": "",
@@ -32,7 +34,33 @@ def parse_inspection_message(text: str) -> Dict[str, Any]:
     current_section: str = ""
 
     for line in lines:
-        # 1. FECHA
+        # 1. FECHA DE INICIO
+        match_inicio = re.match(
+            r"^\*?(?:Fecha\s+de\s+inicio|Fecha\s+inicio|Inicio(?:\s+de\s+obra)?)\*?\s*[:=]\s*(.*)$",
+            line,
+            re.IGNORECASE,
+        )
+        if match_inicio:
+            current_section = "fecha_inicio"
+            val = match_inicio.group(1).strip().strip("*.")
+            if val:
+                data["fecha_inicio"] = val
+            continue
+
+        # 2. LAPSO / PLAZO DE EJECUCIÓN
+        match_lapso = re.match(
+            r"^\*?(?:Lapso(?:\s+de\s+ejecuci[oó]n)?|Plazo(?:\s+de\s+ejecuci[oó]n)?|Tiempo(?:\s+de\s+ejecuci[oó]n)?|Duraci[oó]n(?:\s+de\s+la\s+obra)?)\*?\s*[:=]\s*(.*)$",
+            line,
+            re.IGNORECASE,
+        )
+        if match_lapso:
+            current_section = "lapso_ejecucion"
+            val = match_lapso.group(1).strip().strip("*.")
+            if val:
+                data["lapso_ejecucion"] = val
+            continue
+
+        # 3. FECHA DEL REPORTE
         match_fecha = re.match(r"^\*?Fecha\*?\s*[:=]\s*(.*)$", line, re.IGNORECASE)
         if match_fecha:
             data["fecha"] = match_fecha.group(1).strip().strip("*.")
@@ -114,6 +142,10 @@ def parse_inspection_message(text: str) -> Dict[str, Any]:
         # Continuación de la sección actual en líneas subsiguientes
         if current_section == "obra":
             data["obra"] = (data["obra"] + " " + line.strip("*")).strip()
+        elif current_section == "fecha_inicio":
+            data["fecha_inicio"] = (data["fecha_inicio"] + " " + line.strip("*.")).strip()
+        elif current_section == "lapso_ejecucion":
+            data["lapso_ejecucion"] = (data["lapso_ejecucion"] + " " + line.strip("*.")).strip()
         elif current_section == "empresa":
             data["empresa"] = (data["empresa"] + " " + line.strip("*")).strip()
         elif current_section == "ing_residente":
@@ -131,6 +163,8 @@ def parse_inspection_message(text: str) -> Dict[str, Any]:
 
     # Limpieza final de espacios y signos
     data["obra"] = data["obra"].strip()
+    data["fecha_inicio"] = data["fecha_inicio"].strip().strip("*.")
+    data["lapso_ejecucion"] = data["lapso_ejecucion"].strip().strip("*.")
     data["empresa"] = data["empresa"].strip()
     data["ing_residente"] = data["ing_residente"].strip()
     data["caporal"] = data["caporal"].strip()

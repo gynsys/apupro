@@ -6,6 +6,7 @@ Diseño: Dashboard Side-by-Side:
   - LADO DERECHO: Memoria Fotográfica (Cuadrícula 2x2 de fotos en alta definición).
 Todo integrado armónicamente en formato horizontal sin espacios vacíos.
 """
+import logging
 import os
 from datetime import datetime
 from pathlib import Path
@@ -31,6 +32,7 @@ from reportlab.platypus import (
 )
 
 PAGE_W, PAGE_H = landscape(letter)  # 792 pt x 612 pt
+logger = logging.getLogger(__name__)
 
 
 class NumberedCanvas(canvas.Canvas):
@@ -88,7 +90,7 @@ def _optimize_and_resize_image(img_path: str, max_w: float = 175, max_h: float =
 
         return Image(img_path, width=target_w, height=target_h)
     except Exception as exc:
-        print(f"Error procesando imagen {img_path}: {exc}")
+        logger.error("Error procesando imagen %s: %s", img_path, exc, exc_info=True)
         return None
 
 
@@ -237,16 +239,26 @@ def generate_inspection_pdf(
     lbl_w = 100
     val_w = col_left_w - lbl_w
 
+    fecha_inicio_text = report_data.get("fecha_inicio", "").strip()
+    lapso_text = report_data.get("lapso_ejecucion", "").strip()
+
     ficha_data = [
         [sec_title_p, ""],
         [Paragraph("<b>OBRA / PROYECTO:</b>", cell_label_style), Paragraph(obra_text, cell_value_style)],
         [Paragraph("<b>FECHA DEL REPORTE:</b>", cell_label_style), Paragraph(fecha_text, cell_value_style)],
+    ]
+    if fecha_inicio_text:
+        ficha_data.append([Paragraph("<b>FECHA DE INICIO:</b>", cell_label_style), Paragraph(fecha_inicio_text, cell_value_style)])
+    if lapso_text:
+        ficha_data.append([Paragraph("<b>LAPSO DE EJECUCIÓN:</b>", cell_label_style), Paragraph(lapso_text, cell_value_style)])
+
+    ficha_data.extend([
         [Paragraph("<b>EMPRESA CONTRATISTA:</b>", cell_label_style), Paragraph(empresa_text, cell_value_style)],
         [Paragraph("<b>ING. RESIDENTE:</b>", cell_label_style), Paragraph(residente_text, cell_value_style)],
         [Paragraph("<b>ING. INSPECTOR(ES):</b>", cell_label_style), Paragraph(inspectores_text, cell_value_style)],
         [Paragraph("<b>CAPORAL:</b>", cell_label_style), Paragraph(caporal_text, cell_value_style)],
         [Paragraph("<b>FUERZA LABORAL:</b>", cell_label_style), Paragraph(personal_resumen, cell_value_style)],
-    ]
+    ])
 
     t_ficha = Table(ficha_data, colWidths=[lbl_w, val_w])
     t_ficha.setStyle(
@@ -336,8 +348,8 @@ def generate_inspection_pdf(
             continue
 
         caption_display = caption_raw if caption_raw else f"Registro de avance en fecha {fecha_text}"
-        if len(caption_display) > 55:
-            caption_display = caption_display[:52] + "..."
+        if len(caption_display) > 160:
+            caption_display = caption_display[:157] + "..."
 
         cell_content = [
             [rl_img],
