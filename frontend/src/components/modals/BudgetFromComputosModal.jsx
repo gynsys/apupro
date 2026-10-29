@@ -1648,7 +1648,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         const initialPartials = [
           {
             id: `part-${Date.now()}-1`,
-            description: 'Pared 1',
+            description: 'Parcial 1',
             times: it.times || 1,
             length: it.length || '',
             width: it.width || '',
@@ -1660,7 +1660,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           },
           {
             id: `part-${Date.now()}-2`,
-            description: 'Pared 2',
+            description: 'Parcial 2',
             times: 1,
             length: '',
             width: '',
@@ -1677,7 +1677,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       return updated;
     });
     setExpandedPartials((prev) => ({ ...prev, [itemId]: true }));
-    toast.success('Desglose de paredes/parciales activado');
+    toast.success('Desglose de parciales activado');
   };
 
   /**
@@ -1691,11 +1691,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       });
       return updated;
     });
-    toast.success('Desglose de paredes removido');
+    toast.success('Desglose de parciales removido');
   };
 
   /**
-   * Agrega un nuevo tramo / pared adicional a una partida
+   * Agrega un nuevo parcial / fila adicional a una partida
    */
   const handleAddPartial = (itemId) => {
     setCapturedItems((prev) => {
@@ -1705,7 +1705,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         const nextNum = currentList.length + 1;
         const newPartial = {
           id: `part-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          description: `Pared ${nextNum}`,
+          description: `Parcial ${nextNum}`,
           times: 1,
           length: '',
           width: '',
@@ -3469,7 +3469,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                     className="text-[11px] font-bold text-amber-900 bg-white hover:bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-lg flex items-center gap-1 cursor-pointer shadow-xs"
                                   >
                                     <Plus className="w-3.5 h-3.5 text-amber-700" />
-                                    <span>Agregar Pared</span>
+                                    <span>Agregar fila</span>
                                   </button>
                                   <button
                                     type="button"
@@ -3499,7 +3499,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                             onChange={(e) =>
                                               handleUpdatePartialField(it.id, p.id, 'description', e.target.value)
                                             }
-                                            placeholder={`Pared ${pIdx + 1} (ej: Pared Fachada, Pared Baño...)`}
+                                            placeholder={`Parcial ${pIdx + 1} (ej: Fachada, Eje 1-2, Tramo A...)`}
                                             className="w-full px-2 py-1 text-xs font-semibold bg-amber-50/30 border border-amber-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
                                           />
                                         </div>
@@ -3507,7 +3507,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                           type="button"
                                           onClick={() => handleRemovePartial(it.id, p.id)}
                                           className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer shrink-0"
-                                          title="Eliminar esta pared"
+                                          title="Eliminar esta fila"
                                         >
                                           <Trash2 className="w-3.5 h-3.5" />
                                         </button>
@@ -3575,7 +3575,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                           onChange={(e) =>
                                             handleUpdatePartialField(it.id, p.id, 'observations', e.target.value)
                                           }
-                                          placeholder="Notas / Eje de la pared..."
+                                          placeholder="Notas / Eje / Detalle..."
                                           className="flex-1 mr-2 px-1.5 py-0.5 text-[11px] bg-white border border-amber-200 rounded"
                                         />
                                         <div className="shrink-0 text-right">
@@ -3734,7 +3734,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                       onClick={() => handleToggleExpandPartials(it.id)}
                                       className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-200/80 hover:bg-amber-300 px-1.5 py-0.5 rounded cursor-pointer"
                                     >
-                                      <span>🧱 {it.partials.length} paredes/parciales</span>
+                                      <span>🧱 {it.partials.length} parciales</span>
                                       {expandedPartials[it.id] !== false ? (
                                         <ChevronUp className="w-3 h-3" />
                                       ) : (
@@ -3951,8 +3951,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                   }`}
                                   title={
                                     it.partials && it.partials.length > 0
-                                      ? 'Ver/Gestionar desglose de paredes'
-                                      : 'Desglosar en varias paredes o tramos'
+                                      ? 'Ver/Gestionar desglose de parciales'
+                                      : 'Desglosar en varios parciales / filas'
                                   }
                                 >
                                   <Split className="w-3.5 h-3.5" />
@@ -4004,7 +4004,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                   <td className="border border-amber-200 px-2 py-1 pl-6">
                                     <div className="flex items-center gap-1.5">
                                       <span className="text-[10px] font-bold text-amber-800 shrink-0">
-                                        Pared/Tramo:
+                                        Parcial:
                                       </span>
                                       <input
                                         type="text"
@@ -4017,7 +4017,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                             e.target.value
                                           )
                                         }
-                                        placeholder={`Pared ${pIdx + 1} (ej: Fachada, Baño...)`}
+                                        placeholder={`Parcial ${pIdx + 1} (ej: Fachada, Eje 1-2, Tramo A...)`}
                                         className="flex-1 px-1.5 py-0.5 text-xs font-semibold bg-white border border-amber-300 rounded focus:outline-none focus:ring-1 focus:ring-amber-500"
                                       />
                                     </div>
@@ -4126,7 +4126,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                       type="button"
                                       onClick={() => handleRemovePartial(it.id, p.id)}
                                       className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors cursor-pointer"
-                                      title="Eliminar esta pared"
+                                      title="Eliminar esta fila"
                                     >
                                       <Trash2 className="w-3 h-3" />
                                     </button>
@@ -4142,11 +4142,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                       className="text-[11px] font-bold text-amber-900 hover:text-amber-950 bg-white hover:bg-amber-50 border border-amber-300 px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-xs cursor-pointer"
                                     >
                                       <Plus className="w-3 h-3 text-amber-700" />
-                                      <span>+ Agregar otra pared / tramo</span>
+                                      <span>Agregar fila</span>
                                     </button>
                                     <div className="flex items-center gap-3">
                                       <span className="text-xs font-bold text-amber-950">
-                                        Total suma paredes:{' '}
+                                        Total parciales:{' '}
                                         <strong>
                                           {Number(it.quantity).toLocaleString('es-VE', {
                                             maximumFractionDigits: 3,
