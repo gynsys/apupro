@@ -358,5 +358,42 @@ export const budgetService = {
       throw new Error(errorData.detail || 'Error al recalibrar rendimientos');
     }
     return response.json();
+  },
+
+  getComputosDrafts: async () => {
+    const response = await fetch(`${API_URL}/budgets/computos/drafts`, {
+      credentials: 'include'
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Error al obtener borradores de cómputos');
+    }
+    return response.json();
+  },
+
+  saveComputosDraft: async (payload) => {
+    const response = await fetch(`${API_URL}/budgets/computos/drafts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Error al guardar borrador de cómputos en la nube');
+    }
+    return response.json();
+  },
+
+  deleteComputosDraft: async (draftId) => {
+    const response = await fetch(`${API_URL}/budgets/computos/drafts/${encodeURIComponent(draftId)}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Error al eliminar borrador de cómputos en la nube');
+    }
+    return response.json();
   }
 };

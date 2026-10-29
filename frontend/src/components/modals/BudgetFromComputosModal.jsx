@@ -974,9 +974,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   };
 
   /**
-   * Guarda explícitamente el borrador actual en localStorage y en la lista de guardados
+   * Guarda explícitamente el borrador actual en localStorage y en la lista de guardados (con sincronización en la nube)
    */
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     try {
       const nonBlank = capturedItems.filter((it) => !isItemEmpty(it));
       const cleanName =
@@ -996,10 +996,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         itemCount: nonBlank.length,
       };
 
-      // 1. Guardar en el borrador activo
+      // 1. Guardar de inmediato en el borrador activo local
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftPayload));
 
-      // 2. Guardar o actualizar en la lista histórica de cómputos
+      // 2. Guardar o actualizar en la lista histórica local
       const existingList = getSavedComputosList();
       const updatedList = [
         draftPayload,
@@ -1014,6 +1014,21 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       setTimeout(() => {
         setSaveStatus(null);
       }, 3500);
+
+      // 3. Sincronizar en la cuenta (nube) para que esté disponible en PC y móvil
+      try {
+        const res = await budgetService.saveComputosDraft(draftPayload);
+        if (res && Array.isArray(res.drafts)) {
+          setSavedList(res.drafts);
+          try {
+            localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(res.drafts));
+          } catch (_e) {
+            // ignore
+          }
+        }
+      } catch (cloudErr) {
+        console.warn('Aviso: Guardado local exitoso, pero falló sincronización en la nube:', cloudErr);
+      }
     } catch (err) {
       console.error('Error al guardar borrador de cómputos:', err);
       toast.error('No se pudo guardar el borrador en el almacenamiento local.');
@@ -1094,7 +1109,138 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   };
 
   /**
-   * Elimina un cómputo de la lista de guardados
+   * Abre la ventana modal de cómputos guardados refrescando la lista desde la nube
+   */
+  const handleOpenLoadModal = async () => {
+    setShowOpenModal(true);
+    try {
+      const serverDrafts = await budgetService.getComputosDrafts();
+      if (Array.isArray(serverDrafts)) {
+        const localList = getSavedComputosList();
+        const draftMap = new Map();
+        serverDrafts.forEach((d) => {
+          if (d && d.id) draftMap.set(d.id, d);
+        });
+        localList.forEach((d) => {
+          if (d && d.id && !draftMap.has(d.id)) {
+            draftMap.set(d.id, d);
+          }
+        });
+        const merged = Array.from(draftMap.values()).sort(
+          (a, b) => new Date(b.savedAt || 0) - new Date(a.savedAt || 0)
+        );
+        setSavedList(merged);
+        try {
+          localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(merged));
+        } catch (_e) {
+          // ignore
+        }
+      }
+    } catch (_err) {
+      // ignore
+    }
+  };
+
+  /**
+   * Sincronización multidispositivo (Nube <-> Local) al abrir el modal principal
+   */
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let isMounted = true;
+    const syncCloudAndLocalDrafts = async () => {
+      try {
+        const localList = getSavedComputosList();
+        // Recoger también si hay un borrador activo en local que aún no esté en la lista
+        try {
+          const rawActive = localStorage.getItem(DRAFT_STORAGE_KEY);
+          if (rawActive) {
+            const parsedActive = JSON.parse(rawActive);
+            if (parsedActive?.id && Array.isArray(parsedActive.items) && parsedActive.items.length > 0) {
+              if (!localList.some((d) => d.id === parsedActive.id)) {
+                localList.unshift(parsedActive);
+              }
+            }
+          }
+        } catch (_e) {
+          // ignore
+        }
+
+        const serverDrafts = await budgetService.getComputosDrafts().catch(() => null);
+        if (!isMounted) return;
+
+        if (Array.isArray(serverDrafts)) {
+          const draftMap = new Map();
+          serverDrafts.forEach((d) => {
+            if (d && d.id) draftMap.set(d.id, d);
+          });
+
+          // Detectar borradores locales que no estén en la nube para subirlos (ej. guardados desde el móvil)
+          const unsyncedLocals = [];
+          localList.forEach((d) => {
+            if (d && d.id) {
+              if (!draftMap.has(d.id)) {
+                draftMap.set(d.id, d);
+                unsyncedLocals.push(d);
+              }
+            }
+          });
+
+          const merged = Array.from(draftMap.values()).sort(
+            (a, b) => new Date(b.savedAt || 0) - new Date(a.savedAt || 0)
+          );
+
+          try {
+            localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(merged));
+          } catch (_e) {
+            // ignore
+          }
+          setSavedList(merged);
+
+          // Si la pantalla actual está vacía (sin partidas válidas) y no había borrador local activo con partidas,
+          // cargar automáticamente el último cómputo guardado para que el usuario en PC vea de inmediato lo que hizo en el móvil.
+          const currentNonBlank = capturedItems.filter((it) => !isItemEmpty(it));
+          if (currentNonBlank.length === 0 && merged.length > 0) {
+            let localHasItems = false;
+            try {
+              const rawLocal = localStorage.getItem(DRAFT_STORAGE_KEY);
+              if (rawLocal) {
+                const p = JSON.parse(rawLocal);
+                if (Array.isArray(p.items) && p.items.some((it) => !isItemEmpty(it))) {
+                  localHasItems = true;
+                }
+              }
+            } catch (_e) {
+              // ignore
+            }
+
+            if (!localHasItems) {
+              executeLoadSavedComputo(merged[0]);
+            }
+          }
+
+          // Subir borradores locales pendientes a la nube en segundo plano
+          if (unsyncedLocals.length > 0) {
+            for (const localDraft of unsyncedLocals) {
+              budgetService.saveComputosDraft(localDraft).catch((err) => {
+                console.warn('Aviso: Sincronización de borrador local a la nube:', err);
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Error sincronizando cómputos en la nube:', err);
+      }
+    };
+
+    syncCloudAndLocalDrafts();
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
+
+  /**
+   * Elimina un cómputo de la lista de guardados y de la nube
    */
   const handleDeleteSavedComputo = (savedId, e) => {
     e.stopPropagation();
@@ -1114,7 +1260,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
             </button>
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 toast.dismiss(t.id);
                 const existingList = getSavedComputosList();
                 const updated = existingList.filter((it) => it.id !== savedId);
@@ -1125,6 +1271,20 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                 }
                 setSavedList(updated);
                 toast.success('Cómputo eliminado de la lista');
+
+                try {
+                  const res = await budgetService.deleteComputosDraft(savedId);
+                  if (res && Array.isArray(res.drafts)) {
+                    setSavedList(res.drafts);
+                    try {
+                      localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(res.drafts));
+                    } catch (_e) {
+                      // ignore
+                    }
+                  }
+                } catch (cloudErr) {
+                  console.warn('Aviso: Eliminado localmente, pero falló en la nube:', cloudErr);
+                }
               }}
               className="px-3 py-1.5 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors shadow-sm cursor-pointer"
             >
@@ -2451,9 +2611,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
               {savedList.length === 0 ? (
                 <div className="py-8 text-center text-amber-800 text-xs">
                   <FolderOpen className="w-8 h-8 text-amber-400 mx-auto mb-2" />
-                  <p className="font-bold">No hay cómputos guardados en este navegador.</p>
+                  <p className="font-bold">No hay cómputos guardados en tu cuenta.</p>
                   <p className="text-amber-700 mt-1">
-                    Presiona el botón <strong>Guardar</strong> en la parte inferior para almacenar tus planillas.
+                    Presiona el botón <strong>Guardar</strong> en la parte inferior para almacenar tus planillas y sincronizarlas entre tu teléfono y tu PC.
                   </p>
                 </div>
               ) : (
@@ -2803,16 +2963,13 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
-            onClick={() => {
-              setSavedList(getSavedComputosList());
-              setShowOpenModal(true);
-            }}
+            onClick={handleOpenLoadModal}
             disabled={isCommitting}
             className="px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shadow-xs"
             title="Abrir cómputos guardados"
           >
             <FolderOpen className="w-3.5 h-3.5 text-amber-700" />
-            <span className="hidden md:inline">Abrir ({savedList.length})</span>
+            <span>Abrir{savedList.length > 0 ? ` (${savedList.length})` : ''}</span>
           </button>
 
           <button

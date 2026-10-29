@@ -1,14 +1,17 @@
 """Importación de presupuestos desde archivos Excel, CSV, PDF e imágenes."""
 import logging
 import re
+import time
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.api.v1.endpoints.arko import _get_costos_config, get_current_arko_admin
-from app.db.arko_base import ArkoSessionLocal
+from app.db.arko_base import ArkoSessionLocal, get_arko_db
 from app.db.base import get_db
 from app.db.models.arko import ArkoAdmin
 from app.db.models.budget import (
@@ -857,3 +860,103 @@ def commit_budget_import(
                    f"({matched_items} con APU de la base maestra, {generated_items} generadas con IA, "
                    f"{generic_items} genéricas).",
     }
+
+
+# ---------------------------------------------------------------------------
+# Cómputos Métricos: Sincronización multidispositivo de borradores
+# ---------------------------------------------------------------------------
+
+@router.get("/computos/drafts", response_model=List[Dict[str, Any]])
+def get_computos_drafts(
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> List[Dict[str, Any]]:
+    """Devuelve la lista de borradores de cómputos guardados por el usuario autenticado."""
+    config = current_user.site_config or {}
+    drafts = config.get("computos_drafts", [])
+    if not isinstance(drafts, list):
+        return []
+    return drafts
+
+
+@router.post("/computos/drafts")
+def save_computos_draft(
+    payload: Dict[str, Any],
+    arko_db: Session = Depends(get_arko_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """Guarda o actualiza un borrador de cómputos en la cuenta del usuario para sincronización multidispositivo."""
+    if not payload:
+        raise HTTPException(status_code=400, detail="El cuerpo de la solicitud no puede estar vacío.")
+
+    user = arko_db.query(ArkoAdmin).filter(ArkoAdmin.id == current_user.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+
+    config = dict(user.site_config or {})
+    raw_drafts = config.get("computos_drafts", [])
+    drafts = list(raw_drafts) if isinstance(raw_drafts, list) else []
+
+    incoming_items: List[Dict[str, Any]] = []
+    if "drafts" in payload and isinstance(payload["drafts"], list):
+        incoming_items = [it for it in payload["drafts"] if isinstance(it, dict)]
+    else:
+        incoming_items = [payload]
+
+    for item in incoming_items:
+        draft_id = str(item.get("id") or f"draft-{int(time.time() * 1000)}")
+        item["id"] = draft_id
+        if not item.get("savedAt"):
+            item["savedAt"] = datetime.utcnow().isoformat()
+
+        clean_name = (item.get("budgetName") or "").strip()
+        drafts = [
+            d for d in drafts
+            if str(d.get("id")) != draft_id and (not clean_name or (d.get("budgetName") or "").strip() != clean_name)
+        ]
+        drafts.insert(0, item)
+
+    try:
+        drafts.sort(key=lambda x: str(x.get("savedAt") or ""), reverse=True)
+    except Exception as sort_err:
+        logger.error("Error ordenando borradores de cómputos: %s", sort_err, exc_info=True)
+
+    config["computos_drafts"] = drafts[:40]
+    user.site_config = config
+    flag_modified(user, "site_config")
+    arko_db.commit()
+
+    return {
+        "status": "saved",
+        "id": incoming_items[0].get("id") if incoming_items else None,
+        "drafts": config["computos_drafts"],
+    }
+
+
+@router.delete("/computos/drafts/{draft_id}")
+def delete_computos_draft(
+    draft_id: str,
+    arko_db: Session = Depends(get_arko_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """Elimina un borrador de cómputos guardado de la cuenta del usuario."""
+    clean_draft_id = (draft_id or "").strip()
+    if not clean_draft_id:
+        raise HTTPException(status_code=400, detail="Identificador de borrador inválido.")
+
+    user = arko_db.query(ArkoAdmin).filter(ArkoAdmin.id == current_user.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+
+    config = dict(user.site_config or {})
+    raw_drafts = config.get("computos_drafts", [])
+    drafts = list(raw_drafts) if isinstance(raw_drafts, list) else []
+
+    drafts = [d for d in drafts if str(d.get("id")) != clean_draft_id]
+
+    config["computos_drafts"] = drafts
+    user.site_config = config
+    flag_modified(user, "site_config")
+    arko_db.commit()
+
+    return {"status": "deleted", "id": clean_draft_id, "drafts": drafts}
+
