@@ -513,6 +513,14 @@ EMPERICAL_HH_BENCHMARKS: Dict[str, Dict[str, float]] = {
     },
 
     # 18. Tipologías huérfanas calibrables (VER-11)
+    "LIMPIEZA_ha": {
+        "p10": 60.0000,
+        "p25": 90.0000,
+        "median": 130.0000,
+        "p75": 200.0000,
+        "p90": 300.0000,
+        "rendimiento_med": 0.35,
+    },
     "LIMPIEZA_m2": {
         "p10": 0.0500,
         "p25": 0.1000,
@@ -1377,6 +1385,30 @@ def balance_crew_and_equipments(
                         "nota_calculo": "Herramienta industrial para corte y desbaste de perfiles pesados y planchas estructurales."
                     })
                     notes.append("Herramientas metalmecánicas: Se incorporó Esmeril Angular Industrial de 7\" para corte y desbaste estructural.")
+
+    # -----------------------------------------------------------------------
+    # CASO D.5: ÁREAS VERDES Y DESMALEZAMIENTO EN MACRO-ESCALA (ha / km)
+    # -----------------------------------------------------------------------
+    is_clearing_macro = (
+        typology == "LIMPIEZA" or
+        any(k in desc_clean for k in ["DESMALEZAMIENTO", "DESMALEZAR", "DEFORESTACION", "TALA", "PODA", "AREAS VERDES"])
+    )
+    if is_clearing_macro and unit.lower() in ("ha", "hectarea", "hectareas"):
+        field_operators = sum(
+            _safe_float(l.get("cantidad", 1.0), 1.0)
+            for l in labors
+            if any(term in norm_text(l.get("descripcion", "")) for term in ["OBRERO", "OPERADOR", "JARDINERO"])
+        )
+        target_desmalezadoras = max(2.0, float(round(field_operators * 0.5)))
+        for eq in equipments:
+            if "DESMALEZADORA" in norm_text(eq.get("descripcion", "")):
+                curr_q = _safe_float(eq.get("cantidad", 1.0), 1.0)
+                if curr_q < target_desmalezadoras:
+                    eq["cantidad"] = target_desmalezadoras
+                    notes.append(
+                        f"Sincronización equipo-brigada: Desmalezadoras a motor ajustadas a {target_desmalezadoras:.0f} unidades "
+                        f"para brigada de campo de {field_operators:.0f} obreros en 1 hectárea."
+                    )
 
     # -----------------------------------------------------------------------
     # CASO E: LOGÍSTICA INTELIGENTE DE VEHÍCULOS DE APOYO Y CHOFERES (VER-12, VER-15)

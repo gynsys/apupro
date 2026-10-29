@@ -1079,6 +1079,44 @@ def enforce_discordant_inputs_purging(
                     retained_labors.append(l_item)
             clean_labors = retained_labors
 
+        # Poda de oficios de obra civil en partidas de desmalezamiento, deforestación y limpieza de áreas verdes
+        is_clearing_or_landscaping = bool(re.search(
+            r"\b(?:DESMALEZAMIENTO|DESMALEZAR|ROZA\b|DEFORESTACION|DESPEJE|PODA\b|TALA\b|LIMPIEZA\s+DE\s+TERRENO)\b",
+            desc_upper
+        )) and not bool(re.search(r"\b(?:MURO|PARED|LOSA|BROCAL|CONCRETO|TUBERIA|PINTURA|CABILLA|ACERO)\b", desc_upper))
+        if is_clearing_or_landscaping:
+            retained_labors = []
+            for l_item in clean_labors:
+                l_up = _strip_accents(str(l_item.get("descripcion") or "")).upper()
+                if re.search(r"\b(?:ALBA[NÑ]IL|PLOMERO|ELECTRICISTA|CARPINTERO|CABILLERO|SOLDADOR|HERRERO)\b", l_up):
+                    logger.info("[DiscordantPruning] Purgado oficio de obra civil (%s) en partida de desmalezamiento", l_up)
+                    pruning_trace["mano_obra_purgada"].append({
+                        "descripcion": str(l_item.get("descripcion") or ""),
+                        "codigo": l_item.get("codigo"),
+                        "motivo": "Oficio de obra civil ajeno e incompatible con desmalezamiento/limpieza de terreno",
+                        "regla": "MANO_OBRA_DISCORDANTE_DESMALEZAMIENTO",
+                    })
+                else:
+                    retained_labors.append(l_item)
+            clean_labors = retained_labors
+            # Garantizar que haya al menos Obrero de 1ra y Ayudante si quedó vacía de oficiales
+            has_field_worker = any(
+                re.search(r"\b(?:OBRERO|AYUDANTE|CAPORAL)\b", _strip_accents(str(l.get("descripcion") or "")).upper())
+                for l in clean_labors
+            )
+            if not has_field_worker and clean_labors:
+                clean_labors.insert(0, {
+                    "id": "mo-ia-obrero-1ra",
+                    "codigo": "MO-OBR01",
+                    "descripcion": "OBRERO DE 1RA",
+                    "unidad": "día",
+                    "cantidad": 2.0,
+                    "jornal": 14.0,
+                    "bono": 0.0,
+                    "origen": "ia",
+                    "nota_calculo": "Personal calificado para corte y roza de vegetación tras poda de oficio discordante.",
+                })
+
         # Purgar Güinchero, Chofer, Topógrafo u Operador de Compresor/Montacargas/Grúa huérfanos si su equipo fue excluido
         active_eq_uppers = [
             _strip_accents(str(e.get("descripcion") or "")).upper()
@@ -1145,6 +1183,32 @@ def enforce_discordant_inputs_purging(
                 continue
             retained_labors.append(l_item)
         clean_labors = retained_labors
+
+        # Sincronización Máquina-Operador: Soldadura sin Soldador/Herrero
+        has_welding_machine = any(
+            re.search(r"\b(?:SOLDADURA|SOLDAR|MAQUINA\s+DE\s+SOLDAR|TRANSFORMADOR\s+DE\s+SOLDAR)\b", eu)
+            for eu in active_eq_uppers
+        )
+        has_welder = any(
+            re.search(r"\b(?:SOLDADOR|HERRERO)\b", _strip_accents(str(l.get("descripcion") or "")).upper())
+            for l in clean_labors
+        )
+        if has_welding_machine and not has_welder:
+            for l_item in clean_labors:
+                l_up = _strip_accents(str(l_item.get("descripcion") or "")).upper()
+                if re.search(r"\b(?:ALBA[NÑ]IL)\b", l_up):
+                    old_role = str(l_item.get("descripcion") or "")
+                    l_item["descripcion"] = "HERRERO DE 1RA"
+                    l_item["codigo"] = "MO-HER01"
+                    l_item["jornal"] = 18.0
+                    pruning_trace["mano_obra_calibrada"] = pruning_trace.get("mano_obra_calibrada", [])
+                    pruning_trace["mano_obra_calibrada"].append({
+                        "descripcion_anterior": old_role,
+                        "nueva_descripcion": "HERRERO DE 1RA",
+                        "motivo": "Reconversión de albañil a herrero por presencia de equipo de soldadura y estructura/cerca metálica",
+                        "regla": "SINCRONIA_MAQUINA_OPERADOR_SOLDADURA"
+                    })
+                    break
 
         result[labors_key] = clean_labors
         if "labor" in result and labors_key != "labor":

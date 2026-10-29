@@ -28,6 +28,12 @@ import {
   Database,
   AlertTriangle,
   Check,
+  Printer,
+  FileSpreadsheet,
+  Smartphone,
+  ChevronDown,
+  ChevronUp,
+  Split,
 } from 'lucide-react';
 import { budgetService } from '../../services/budgetService';
 import BudgetSearchModal from '../../pages/admin/budget_worksheet/BudgetSearchModal';
@@ -157,9 +163,9 @@ function normalizeUnitStr(u) {
   );
 }
 
-const CHAPTER_PREFIX_RE = /^(?:cap[ií]tulo|cap\.?)\s*[:\-]?\s*(.+)$/i;
+const CHAPTER_PREFIX_RE = /^(?:cap[ií]tulo|cap\.?)\s*[:-]?\s*(.+)$/i;
 const PURE_UNIT_LINE_RE = new RegExp(
-  `^(?:und\\.?|unidad\\s*[:\\-]?)?\\s*(${UNIT_PATTERN})\\.?$`,
+  `^(?:und\\.?|unidad\\s*[:-]?)?\\s*(${UNIT_PATTERN})\\.?$`,
   'i'
 );
 
@@ -252,7 +258,6 @@ function evaluateMeasurementFormula(rawLine) {
   if (!expr || !/\d/.test(expr)) return null;
 
   try {
-    // eslint-disable-next-line no-new-func
     const val = Function(`"use strict"; return (${expr});`)();
     if (typeof val !== 'number' || !Number.isFinite(val) || val <= 0) return null;
 
@@ -264,7 +269,7 @@ function evaluateMeasurementFormula(rawLine) {
     let times = 1;
     let partial = quantity;
 
-    if (!/[+/\-]/.test(expr) && expr.includes('*')) {
+    if (!/[+/-]/.test(expr) && expr.includes('*')) {
       const parts = expr
         .split('*')
         .map((s) => parseFloat(s.trim()))
@@ -308,6 +313,62 @@ function evaluateMeasurementFormula(rawLine) {
   }
 }
 
+function escapeHtml(text) {
+  if (text == null) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Calcula el subtotal parcial de un renglón o tramo individual (ej: una pared específica)
+ */
+function computePartial(p) {
+  if (!p) return 0;
+  const l = p.length !== '' && p.length != null ? parseFloat(p.length) : null;
+  const w = p.width !== '' && p.width != null ? parseFloat(p.width) : null;
+  const h = p.height !== '' && p.height != null ? parseFloat(p.height) : null;
+  const t = p.times !== '' && p.times != null && !isNaN(parseFloat(p.times)) ? parseFloat(p.times) : 1;
+  const f = p.factor !== '' && p.factor != null && !isNaN(parseFloat(p.factor)) ? parseFloat(p.factor) : null;
+  const dist = p.distance !== '' && p.distance != null && !isNaN(parseFloat(p.distance)) ? parseFloat(p.distance) : null;
+
+  const multFactor = f !== null && f > 0 ? f : 1;
+  const multDist = dist !== null && dist > 0 ? dist : 1;
+
+  const dims = [];
+  if (l !== null && !isNaN(l) && l > 0) dims.push(l);
+  if (w !== null && !isNaN(w) && w > 0) dims.push(w);
+  if (h !== null && !isNaN(h) && h > 0) dims.push(h);
+
+  if (dims.length > 0) {
+    const baseGeom = dims.reduce((acc, curr) => acc * curr, 1);
+    return Math.round(baseGeom * multFactor * multDist * t * 10000) / 10000;
+  }
+  if (p.partial !== '' && p.partial != null && !isNaN(parseFloat(p.partial))) {
+    return Math.round(parseFloat(p.partial) * multFactor * multDist * t * 10000) / 10000;
+  }
+  return 0;
+}
+
+/**
+ * Recalcula la cantidad total de una partida a partir de la suma de sus parciales (paredes/tramos)
+ */
+function recomputeItemWithPartials(item) {
+  if (!item.partials || item.partials.length === 0) {
+    return item;
+  }
+  const total = item.partials.reduce((sum, p) => sum + computePartial(p), 0);
+  const roundedTotal = Math.round(total * 10000) / 10000;
+  return {
+    ...item,
+    quantity: roundedTotal,
+    partial: roundedTotal,
+  };
+}
+
 /**
  * Recalcula dinámicamente las dimensiones, factor de acero y distancia de acarreo
  * según el estándar completo de la Planilla de Cómputos Métricos.
@@ -317,6 +378,11 @@ function recomputeRow(row, field, value) {
 
   if (field === 'description' || field === 'chapter' || field === 'observations' || field === 'unit') {
     return updated;
+  }
+
+  // Si la partida tiene parciales (paredes), su cantidad total está gobernada por la suma de parciales
+  if (updated.partials && updated.partials.length > 0) {
+    return recomputeItemWithPartials(updated);
   }
 
   const l = updated.length !== '' && updated.length != null ? parseFloat(updated.length) : null;
@@ -398,6 +464,7 @@ function createBlankRow(chapter = 'OBRAS PRELIMINARES') {
     formula: '',
     observations: '',
     isDefaultQty: false,
+    partials: null,
   };
 }
 
@@ -407,6 +474,7 @@ function createBlankRow(chapter = 'OBRAS PRELIMINARES') {
 function isItemEmpty(item) {
   if (!item) return true;
   const desc = (item.description || '').trim();
+  const hasPartials = Array.isArray(item.partials) && item.partials.length > 0;
   const hasDims =
     (item.length !== '' && item.length != null) ||
     (item.width !== '' && item.width != null) ||
@@ -416,7 +484,7 @@ function isItemEmpty(item) {
   const hasQty = item.quantity && Number(item.quantity) > 0;
   const hasObs = (item.observations || '').trim() !== '';
 
-  return !desc && !hasDims && !hasQty && !hasObs;
+  return !desc && !hasDims && !hasQty && !hasObs && !hasPartials;
 }
 
 /**
@@ -638,7 +706,9 @@ function getSavedComputosList() {
         if (Array.isArray(parsed)) return parsed;
       }
     }
-  } catch {}
+  } catch (_e) {
+    // ignore
+  }
   return [];
 }
 
@@ -663,7 +733,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           if (parsed?.activeChapter) return parsed.activeChapter;
         }
       }
-    } catch {}
+    } catch (_e) {
+      // ignore
+    }
     return 'OBRAS PRELIMINARES';
   });
 
@@ -728,7 +800,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           if (parsed?.id) return parsed.id;
         }
       }
-    } catch {}
+    } catch (_e) {
+      // ignore
+    }
     return `draft-${Date.now()}`;
   });
 
@@ -760,7 +834,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           if (parsed?.budgetName) return parsed.budgetName;
         }
       }
-    } catch {}
+    } catch (_e) {
+      // ignore
+    }
     const today = new Date().toLocaleDateString('es-VE');
     return `Presupuesto de Cómputos - ${today}`;
   });
@@ -774,7 +850,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           if (parsed?.projectName) return parsed.projectName;
         }
       }
-    } catch {}
+    } catch (_e) {
+      // ignore
+    }
     return '';
   });
 
@@ -787,7 +865,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           if (parsed?.clientName) return parsed.clientName;
         }
       }
-    } catch {}
+    } catch (_e) {
+      // ignore
+    }
     return '';
   });
 
@@ -800,7 +880,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           if (parsed?.currency) return parsed.currency;
         }
       }
-    } catch {}
+    } catch (_e) {
+      // ignore
+    }
     return 'USD';
   });
 
@@ -809,6 +891,15 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   const [commitProgressText, setCommitProgressText] = useState('');
   const [commitStepInfo, setCommitStepInfo] = useState({ current: 0, total: 0 });
   const [commitError, setCommitError] = useState(null);
+
+  // Modo de visualización: 'cards' (móvil apilado hacia abajo) o 'table' (tabla clásica)
+  const [viewMode, setViewMode] = useState(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      return 'cards';
+    }
+    return 'table';
+  });
+  const [expandedPartials, setExpandedPartials] = useState({});
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -953,7 +1044,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
 
     try {
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(savedItem));
-    } catch {}
+    } catch (_e) {
+      // ignore
+    }
 
     setShowOpenModal(false);
     toast.success(`Cómputo "${savedItem.budgetName}" cargado en pantalla`);
@@ -1027,7 +1120,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                 const updated = existingList.filter((it) => it.id !== savedId);
                 try {
                   localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(updated));
-                } catch {}
+                } catch (_e) {
+                  // ignore
+                }
                 setSavedList(updated);
                 toast.success('Cómputo eliminado de la lista');
               }}
@@ -1383,6 +1478,508 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   };
 
   /**
+   * Habilita el desglose de sub-cómputos/parciales (múltiples paredes/tramos) para una partida
+   */
+  const handleTogglePartials = (itemId) => {
+    setCapturedItems((prev) => {
+      const updated = prev.map((it) => {
+        if (it.id !== itemId) return it;
+        if (it.partials && it.partials.length > 0) {
+          return it;
+        }
+        const initialPartials = [
+          {
+            id: `part-${Date.now()}-1`,
+            description: 'Pared 1',
+            times: it.times || 1,
+            length: it.length || '',
+            width: it.width || '',
+            height: it.height || '',
+            factor: it.factor || '',
+            distance: it.distance || '',
+            partial: it.partial || 0,
+            observations: '',
+          },
+          {
+            id: `part-${Date.now()}-2`,
+            description: 'Pared 2',
+            times: 1,
+            length: '',
+            width: '',
+            height: '',
+            factor: '',
+            distance: '',
+            partial: 0,
+            observations: '',
+          },
+        ];
+        initialPartials[0].partial = computePartial(initialPartials[0]);
+        return recomputeItemWithPartials({ ...it, partials: initialPartials });
+      });
+      return updated;
+    });
+    setExpandedPartials((prev) => ({ ...prev, [itemId]: true }));
+    toast.success('Desglose de paredes/parciales activado');
+  };
+
+  /**
+   * Remueve completamente el desglose de parciales de una partida
+   */
+  const handleClearPartials = (itemId) => {
+    setCapturedItems((prev) => {
+      const updated = prev.map((it) => {
+        if (it.id !== itemId) return it;
+        return { ...it, partials: null };
+      });
+      return updated;
+    });
+    toast.success('Desglose de paredes removido');
+  };
+
+  /**
+   * Agrega un nuevo tramo / pared adicional a una partida
+   */
+  const handleAddPartial = (itemId) => {
+    setCapturedItems((prev) => {
+      const updated = prev.map((it) => {
+        if (it.id !== itemId) return it;
+        const currentList = it.partials || [];
+        const nextNum = currentList.length + 1;
+        const newPartial = {
+          id: `part-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          description: `Pared ${nextNum}`,
+          times: 1,
+          length: '',
+          width: '',
+          height: '',
+          factor: '',
+          distance: '',
+          partial: 0,
+          observations: '',
+        };
+        const newList = [...currentList, newPartial];
+        return recomputeItemWithPartials({ ...it, partials: newList });
+      });
+      return updated;
+    });
+    setExpandedPartials((prev) => ({ ...prev, [itemId]: true }));
+  };
+
+  /**
+   * Actualiza un campo de un parcial individual y recalcula automáticamente la cantidad total de la partida
+   */
+  const handleUpdatePartialField = (itemId, partialId, field, value) => {
+    setCapturedItems((prev) => {
+      const updated = prev.map((it) => {
+        if (it.id !== itemId) return it;
+        if (!it.partials) return it;
+        const updatedPartials = it.partials.map((p) => {
+          if (p.id !== partialId) return p;
+          const updatedP = { ...p, [field]: value };
+          updatedP.partial = computePartial(updatedP);
+          return updatedP;
+        });
+        return recomputeItemWithPartials({ ...it, partials: updatedPartials });
+      });
+      return updated;
+    });
+  };
+
+  /**
+   * Elimina un tramo / pared individual del desglose
+   */
+  const handleRemovePartial = (itemId, partialId) => {
+    setCapturedItems((prev) => {
+      const updated = prev.map((it) => {
+        if (it.id !== itemId) return it;
+        if (!it.partials) return it;
+        const filtered = it.partials.filter((p) => p.id !== partialId);
+        if (filtered.length === 0) {
+          return { ...it, partials: null };
+        }
+        return recomputeItemWithPartials({ ...it, partials: filtered });
+      });
+      return updated;
+    });
+  };
+
+  /**
+   * Expande o colapsa el panel de paredes/parciales de una partida
+   */
+  const handleToggleExpandPartials = (itemId) => {
+    setExpandedPartials((prev) => ({
+      ...prev,
+      [itemId]: !prev[itemId],
+    }));
+  };
+
+  /**
+   * Exporta la Planilla de Cómputos Métricos a un archivo Excel (.xls) profesional
+   * incluyendo capítulos, desglose de parciales/paredes y totales
+   */
+  const handleExportExcelComputos = () => {
+    const validItems = capturedItems.filter((it) => !isItemEmpty(it));
+    if (validItems.length === 0) {
+      toast.error('No hay datos en la planilla para exportar.');
+      return;
+    }
+
+    const cleanName = (budgetName || 'Planilla_de_Computos').trim().replace(/[/\\?%*:|"<>]/g, '_');
+    const today = new Date().toLocaleDateString('es-VE');
+
+    let rowsHtml = '';
+    let currentChapter = null;
+    let itemNumber = 1;
+
+    validItems.forEach((it) => {
+      const chap = (it.chapter || 'GENERAL').trim().toUpperCase();
+      if (chap !== currentChapter) {
+        currentChapter = chap;
+        rowsHtml += `
+          <tr style="background-color: #fef3c7; font-weight: bold; font-size: 12px;">
+            <td colspan="12" style="padding: 8px; border: 1px solid #d97706; color: #78350f;">
+              CAPÍTULO: ${escapeHtml(chap)}
+            </td>
+          </tr>
+        `;
+      }
+
+      const hasPartials = it.partials && it.partials.length > 0;
+      rowsHtml += `
+        <tr style="border-bottom: 1px solid #cbd5e1; font-size: 11px;">
+          <td style="text-align: center; border: 1px solid #cbd5e1; font-weight: bold; background-color: #f8fafc;">${itemNumber}</td>
+          <td style="border: 1px solid #cbd5e1; font-weight: 600;">${escapeHtml(it.description || '')}</td>
+          <td style="text-align: center; border: 1px solid #cbd5e1;">${escapeHtml(it.unit || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1;">${hasPartials ? '—' : (it.length || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1;">${hasPartials ? '—' : (it.width || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1;">${hasPartials ? '—' : (it.height || '')}</td>
+          <td style="text-align: center; border: 1px solid #cbd5e1;">${hasPartials ? '—' : (it.times || 1)}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1;">${hasPartials ? '—' : (it.factor || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1;">${hasPartials ? '—' : (it.distance || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: 600;">${hasPartials ? '—' : (it.partial || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; background-color: #fef3c7;">${it.quantity || 0}</td>
+          <td style="border: 1px solid #cbd5e1;">${escapeHtml(it.observations || '')}</td>
+        </tr>
+      `;
+
+      if (hasPartials) {
+        it.partials.forEach((p, pIdx) => {
+          rowsHtml += `
+            <tr style="border-bottom: 1px dashed #cbd5e1; font-size: 10px; background-color: #fffbeb;">
+              <td style="text-align: center; border: 1px solid #cbd5e1; color: #d97706;">↳ ${pIdx + 1}</td>
+              <td style="border: 1px solid #cbd5e1; padding-left: 20px; font-style: italic; color: #78350f;">
+                ${escapeHtml(p.description || `Pared ${pIdx + 1}`)}
+              </td>
+              <td style="text-align: center; border: 1px solid #cbd5e1; color: #94a3b8;">${escapeHtml(it.unit || '')}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1;">${p.length || ''}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1;">${p.width || ''}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1;">${p.height || ''}</td>
+              <td style="text-align: center; border: 1px solid #cbd5e1;">${p.times || 1}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1;">${p.factor || ''}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1;">${p.distance || ''}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; color: #b45309;">${p.partial || 0}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; color: #94a3b8;">—</td>
+              <td style="border: 1px solid #cbd5e1; font-style: italic; color: #64748b;">${escapeHtml(p.observations || '')}</td>
+            </tr>
+          `;
+        });
+      }
+
+      itemNumber += 1;
+    });
+
+    const excelTemplate = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+          <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+          <!--[if gte mso 9]>
+          <xml>
+            <x:ExcelWorkbook>
+              <x:ExcelWorksheets>
+                <x:ExcelWorksheet>
+                  <x:Name>Cómputos Métricos</x:Name>
+                  <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+                </x:ExcelWorksheet>
+              </x:ExcelWorksheets>
+            </x:ExcelWorkbook>
+          </xml>
+          <![endif]-->
+          <style>
+            th { background-color: #d97706; color: #ffffff; border: 1px solid #b45309; padding: 6px; font-size: 11px; }
+            td { padding: 5px; }
+          </style>
+        </head>
+        <body>
+          <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif;">
+            <tr>
+              <td colspan="12" style="font-size: 16px; font-weight: bold; text-align: center; padding: 10px; background-color: #fef3c7; color: #78350f; border: 1px solid #d97706;">
+                PLANILLA DE CÓMPUTOS MÉTRICOS - APUPRO
+              </td>
+            </tr>
+            <tr>
+              <td colspan="6" style="padding: 4px; font-size: 11px;"><strong>Presupuesto:</strong> ${escapeHtml(budgetName || '—')}</td>
+              <td colspan="6" style="padding: 4px; font-size: 11px;"><strong>Proyecto:</strong> ${escapeHtml(projectName || '—')}</td>
+            </tr>
+            <tr>
+              <td colspan="6" style="padding: 4px; font-size: 11px;"><strong>Cliente:</strong> ${escapeHtml(clientName || '—')}</td>
+              <td colspan="6" style="padding: 4px; font-size: 11px;"><strong>Fecha:</strong> ${today} | <strong>Moneda:</strong> ${currency}</td>
+            </tr>
+            <tr><td colspan="12" style="height: 10px;"></td></tr>
+            <thead>
+              <tr>
+                <th style="width: 40px;">N°</th>
+                <th style="width: 320px;">DESCRIPCIÓN DE LA PARTIDA</th>
+                <th style="width: 60px;">UND</th>
+                <th style="width: 70px;">LARGO</th>
+                <th style="width: 70px;">ANCHO</th>
+                <th style="width: 70px;">ALTO</th>
+                <th style="width: 60px;">VECES</th>
+                <th style="width: 70px;">FACTOR</th>
+                <th style="width: 75px;">DIST. (km)</th>
+                <th style="width: 80px;">PARCIAL</th>
+                <th style="width: 90px;">TOTAL</th>
+                <th style="width: 200px;">OBSERVACIONES</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([excelTemplate], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${cleanName}_${new Date().toISOString().slice(0, 10)}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('Planilla exportada a Excel con éxito');
+  };
+
+  /**
+   * Imprime la Planilla de Cómputos Métricos en formato técnico de ingeniería
+   */
+  const handlePrintComputos = () => {
+    const validItems = capturedItems.filter((it) => !isItemEmpty(it));
+    if (validItems.length === 0) {
+      toast.error('No hay datos en la planilla para imprimir.');
+      return;
+    }
+
+    const today = new Date().toLocaleDateString('es-VE');
+    let rowsHtml = '';
+    let currentChapter = null;
+    let itemNumber = 1;
+
+    validItems.forEach((it) => {
+      const chap = (it.chapter || 'GENERAL').trim().toUpperCase();
+      if (chap !== currentChapter) {
+        currentChapter = chap;
+        rowsHtml += `
+          <tr class="chapter-row">
+            <td colspan="12">CAPÍTULO: ${escapeHtml(chap)}</td>
+          </tr>
+        `;
+      }
+
+      const hasPartials = it.partials && it.partials.length > 0;
+      rowsHtml += `
+        <tr class="item-row">
+          <td class="text-center font-bold">${itemNumber}</td>
+          <td class="font-bold">${escapeHtml(it.description || '')}</td>
+          <td class="text-center">${escapeHtml(it.unit || '')}</td>
+          <td class="text-right">${hasPartials ? '—' : (it.length || '')}</td>
+          <td class="text-right">${hasPartials ? '—' : (it.width || '')}</td>
+          <td class="text-right">${hasPartials ? '—' : (it.height || '')}</td>
+          <td class="text-center">${hasPartials ? '—' : (it.times || 1)}</td>
+          <td class="text-right">${hasPartials ? '—' : (it.factor || '')}</td>
+          <td class="text-right">${hasPartials ? '—' : (it.distance || '')}</td>
+          <td class="text-right font-semibold">${hasPartials ? '—' : (it.partial || '')}</td>
+          <td class="text-right font-black bg-amber-50">${it.quantity || 0}</td>
+          <td>${escapeHtml(it.observations || '')}</td>
+        </tr>
+      `;
+
+      if (hasPartials) {
+        it.partials.forEach((p, pIdx) => {
+          rowsHtml += `
+            <tr class="partial-row">
+              <td class="text-center text-amber-700">↳ ${pIdx + 1}</td>
+              <td class="partial-name">${escapeHtml(p.description || `Pared ${pIdx + 1}`)}</td>
+              <td class="text-center text-muted">${escapeHtml(it.unit || '')}</td>
+              <td class="text-right">${p.length || ''}</td>
+              <td class="text-right">${p.width || ''}</td>
+              <td class="text-right">${p.height || ''}</td>
+              <td class="text-center">${p.times || 1}</td>
+              <td class="text-right">${p.factor || ''}</td>
+              <td class="text-right">${p.distance || ''}</td>
+              <td class="text-right font-bold text-amber-800">${p.partial || 0}</td>
+              <td class="text-center text-muted">—</td>
+              <td class="text-muted text-xs">${escapeHtml(p.observations || '')}</td>
+            </tr>
+          `;
+        });
+      }
+
+      itemNumber += 1;
+    });
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Por favor permite ventanas emergentes para imprimir la planilla.');
+      return;
+    }
+
+    const printHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Planilla de Cómputos Métricos - ${escapeHtml(budgetName || 'APUPro')}</title>
+          <style>
+            @page {
+              size: landscape;
+              margin: 12mm;
+            }
+            body {
+              font-family: Arial, Helvetica, sans-serif;
+              font-size: 10px;
+              color: #1e293b;
+              margin: 0;
+              padding: 10px;
+            }
+            .header {
+              border-bottom: 2px solid #b45309;
+              padding-bottom: 8px;
+              margin-bottom: 12px;
+            }
+            .header h1 {
+              font-size: 16px;
+              color: #78350f;
+              margin: 0 0 6px 0;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+            }
+            .meta-grid {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 8px;
+              font-size: 10px;
+              background-color: #fef3c7;
+              padding: 8px;
+              border-radius: 6px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 10px;
+            }
+            th, td {
+              border: 1px solid #cbd5e1;
+              padding: 4px 6px;
+            }
+            th {
+              background-color: #d97706;
+              color: white;
+              font-size: 9px;
+              text-transform: uppercase;
+              text-align: center;
+            }
+            .chapter-row td {
+              background-color: #fef3c7;
+              font-weight: bold;
+              font-size: 11px;
+              color: #78350f;
+              border-color: #d97706;
+            }
+            .item-row td {
+              font-size: 10px;
+            }
+            .partial-row td {
+              background-color: #fffbeb;
+              font-size: 9px;
+              border-bottom: 1px dashed #e2e8f0;
+            }
+            .partial-name {
+              padding-left: 18px !important;
+              font-style: italic;
+              color: #78350f;
+            }
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+            .font-bold { font-weight: bold; }
+            .font-black { font-weight: 900; }
+            .text-muted { color: #94a3b8; }
+            .signatures {
+              margin-top: 30px;
+              display: flex;
+              justify-content: space-around;
+              page-break-inside: avoid;
+            }
+            .sig-box {
+              width: 200px;
+              border-top: 1px solid #475569;
+              text-align: center;
+              padding-top: 6px;
+              font-size: 10px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>PLANILLA DE CÓMPUTOS MÉTRICOS</h1>
+            <div class="meta-grid">
+              <div><strong>Presupuesto:</strong> ${escapeHtml(budgetName || '—')}</div>
+              <div><strong>Proyecto:</strong> ${escapeHtml(projectName || '—')}</div>
+              <div><strong>Cliente:</strong> ${escapeHtml(clientName || '—')}</div>
+              <div><strong>Fecha:</strong> ${today} | <strong>Moneda:</strong> ${currency}</div>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 30px;">N°</th>
+                <th>DESCRIPCIÓN DE LA PARTIDA</th>
+                <th style="width: 50px;">UND</th>
+                <th style="width: 55px;">LARGO</th>
+                <th style="width: 55px;">ANCHO</th>
+                <th style="width: 55px;">ALTO</th>
+                <th style="width: 50px;">VECES</th>
+                <th style="width: 55px;">FACTOR</th>
+                <th style="width: 60px;">DIST. (km)</th>
+                <th style="width: 65px;">PARCIAL</th>
+                <th style="width: 75px;">TOTAL</th>
+                <th style="width: 140px;">OBSERVACIONES</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+          <div class="signatures">
+            <div class="sig-box">Elaborado por (Ingeniero Inspector)</div>
+            <div class="sig-box">Revisado por (Ingeniero Residente)</div>
+            <div class="sig-box">Aprobado por (Cliente / Ente Contratante)</div>
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(printHtml);
+    printWindow.document.close();
+  };
+
+  /**
    * Abre el modal de búsqueda de partidas COVENIN para reemplazar o ajustar la descripción
    */
   const handleOpenCoveninModal = (targetItem) => {
@@ -1627,6 +2224,27 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       let lastChapter = null;
       let scCounter = 1;
 
+      const formatDescWithPartials = (baseDesc, item) => {
+        const cleanBase = (baseDesc || '').trim().toUpperCase();
+        if (!item.partials || item.partials.length === 0) return cleanBase;
+        const breakdown = item.partials
+          .map((p) => {
+            const name = (p.description || 'Pared').trim();
+            const dims = [
+              p.length ? `L=${p.length}` : '',
+              p.width ? `A=${p.width}` : '',
+              p.height ? `H=${p.height}` : '',
+              p.times && p.times > 1 ? `x${p.times}` : '',
+            ]
+              .filter(Boolean)
+              .join('×');
+            return `${name}${dims ? ` (${dims})` : ''}: ${p.partial || 0}`;
+          })
+          .join(', ');
+        const combined = `${cleanBase} [Desglose: ${breakdown}]`;
+        return combined.length <= 580 ? combined : cleanBase;
+      };
+
       for (let i = 0; i < itemsToProcess.length; i += 1) {
         const it = itemsToProcess[i];
         const chapName = (it.chapter || 'GENERAL').trim().toUpperCase();
@@ -1644,7 +2262,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         // se toma directamente de la base de datos sin necesidad de llamar a IA ni resolver.
         if (it.cod_par) {
           payloadItems.push({
-            description: (it.description || '').trim().toUpperCase(),
+            description: formatDescWithPartials(it.description, it),
             unit: (it.unit || 'M2').toUpperCase(),
             quantity: Number(it.quantity) || 0,
             performance: 1.0,
@@ -1678,7 +2296,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
 
         if (resolved && resolved.resolution_type === 'covenin' && resolved.cod_par) {
           payloadItems.push({
-            description: (resolved.matched_description || it.description).trim().toUpperCase(),
+            description: formatDescWithPartials(resolved.matched_description || it.description, it),
             unit: (resolved.matched_unit || it.unit || 'M2').toUpperCase(),
             quantity: Number(it.quantity) || 0,
             performance: Number(resolved.performance) || 1.0,
@@ -1695,7 +2313,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           scCounter += 1;
 
           payloadItems.push({
-            description: (resolved?.matched_description || it.description).trim().toUpperCase(),
+            description: formatDescWithPartials(resolved?.matched_description || it.description, it),
             unit: (resolved?.matched_unit || it.unit || 'M2').toUpperCase(),
             quantity: Number(it.quantity) || 0,
             performance: Number(resolved?.performance) || 1.0,
@@ -1724,7 +2342,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       // Limpiar borrador local tras crear el presupuesto con éxito
       try {
         localStorage.removeItem(DRAFT_STORAGE_KEY);
-      } catch {}
+      } catch (_e) {
+        // ignore
+      }
 
       handleClearAll(true);
       if (onCreated) {
@@ -2205,20 +2825,78 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         </div>
       </header>
 
-      {/* Barra de Acciones de Capítulo */}
-      <div className="px-4 sm:px-6 py-1.5 bg-amber-100/90 border-b border-amber-200 flex items-center justify-end gap-2 shrink-0">
-        <button
-          type="button"
-          onClick={() => {
-            setChapterModalInput('');
-            setShowChapterModal(true);
-          }}
-          className="text-xs font-bold text-amber-900 hover:text-amber-950 bg-white hover:bg-amber-50 border border-amber-300 px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
-          title="Agregar un nuevo capítulo a la planilla"
-        >
-          <FolderPlus className="w-3.5 h-3.5 text-amber-700" />
-          <span>+ Agregar Capítulo</span>
-        </button>
+      {/* Barra de Acciones y Controles: Vista Móvil/Tabla, Imprimir, Excel y Capítulo */}
+      <div className="px-3 sm:px-6 py-2 bg-amber-100/90 border-b border-amber-200 flex items-center justify-between gap-2 shrink-0 flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+          {/* Conmutador de Vista Móvil (Apilada) vs Tabla Clásica */}
+          <div className="inline-flex rounded-xl bg-white border border-amber-300 p-0.5 shadow-xs">
+            <button
+              type="button"
+              onClick={() => setViewMode('cards')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                viewMode === 'cards'
+                  ? 'bg-amber-500 text-white shadow-xs'
+                  : 'text-amber-900 hover:bg-amber-50'
+              }`}
+              title="Vista apilada ideal para teléfonos móviles sin desplazamiento horizontal"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Móvil</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                viewMode === 'table'
+                  ? 'bg-amber-500 text-white shadow-xs'
+                  : 'text-amber-900 hover:bg-amber-50'
+              }`}
+              title="Vista clásica en tabla de cómputos métricos"
+            >
+              <Table className="w-3.5 h-3.5" />
+              <span>Tabla</span>
+            </button>
+          </div>
+
+          {/* Botón Imprimir */}
+          <button
+            type="button"
+            onClick={handlePrintComputos}
+            disabled={isCommitting || validCount === 0}
+            className="px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-white hover:bg-amber-50 text-amber-950 border border-amber-300 shadow-xs transition-all disabled:opacity-40 cursor-pointer"
+            title="Imprimir planilla de cómputos en formato técnico"
+          >
+            <Printer className="w-3.5 h-3.5 text-amber-700" />
+            <span className="hidden sm:inline">Imprimir</span>
+          </button>
+
+          {/* Botón Exportar a Excel */}
+          <button
+            type="button"
+            onClick={handleExportExcelComputos}
+            disabled={isCommitting || validCount === 0}
+            className="px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-white hover:bg-emerald-50 text-emerald-950 border border-emerald-300 shadow-xs transition-all disabled:opacity-40 cursor-pointer"
+            title="Exportar planilla con fórmulas y desglose a Excel (.xls)"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Excel</span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setChapterModalInput('');
+              setShowChapterModal(true);
+            }}
+            className="text-xs font-bold text-amber-900 hover:text-amber-950 bg-white hover:bg-amber-50 border border-amber-300 px-2.5 py-1 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+            title="Agregar un nuevo capítulo a la planilla"
+          >
+            <FolderPlus className="w-3.5 h-3.5 text-amber-700" />
+            <span>+ Capítulo</span>
+          </button>
+        </div>
       </div>
 
       {/* CUERPO PRINCIPAL */}
@@ -2279,10 +2957,488 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
               </div>
             </div>
 
-            {/* TABLA PRINCIPAL: PLANILLA DE CÓMPUTOS MÉTRICOS CON FILA LIBRE SIEMPRE PRESENTE */}
-            <div className="bg-white border-2 border-gray-400 rounded-2xl shadow-md overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left border-collapse border border-gray-400 min-w-[1100px]">
+            {/* CUERPO DE LA PLANILLA: VISTA MÓVIL APILADA (CARDS) O VISTA TABLA CLÁSICA */}
+            {viewMode === 'cards' ? (
+              /* VISTA MÓVIL APILADA: CONTENEDORES HACIA ABAJO SIN DESPLAZAMIENTO HORIZONTAL */
+              <div className="space-y-4">
+                {capturedItems.map((it, idx) => {
+                  const prevItem = idx > 0 ? capturedItems[idx - 1] : null;
+                  const showChapHeader = !prevItem || prevItem.chapter !== it.chapter;
+                  const isBlankTrailing = isItemEmpty(it);
+                  const hasPartials = it.partials && it.partials.length > 0;
+                  const isExpanded = expandedPartials[it.id] !== false;
+
+                  return (
+                    <React.Fragment key={it.id}>
+                      {showChapHeader && (
+                        <div className="bg-amber-200/90 border-2 border-amber-400 rounded-2xl p-3 shadow-xs flex items-center justify-between gap-2">
+                          <span className="font-black text-amber-950 text-xs sm:text-sm tracking-wide flex items-center gap-2">
+                            <Layers className="w-4 h-4 text-amber-700" />
+                            CAPÍTULO: {it.chapter}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRenameChapter(it.chapter)}
+                            className="text-xs font-bold text-amber-900 bg-white hover:bg-amber-50 border border-amber-300 px-2.5 py-1 rounded-xl flex items-center gap-1 cursor-pointer shadow-xs"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+                            <span>Renombrar</span>
+                          </button>
+                        </div>
+                      )}
+
+                      <div
+                        className={`bg-white border-2 ${
+                          isBlankTrailing ? 'border-amber-200 bg-amber-50/20' : 'border-amber-300'
+                        } rounded-2xl p-3.5 sm:p-4 shadow-sm space-y-3`}
+                      >
+                        {/* Fila Superior: N° Item, Capítulo y Acciones Rápidas */}
+                        <div className="flex items-center justify-between border-b border-amber-200 pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-lg bg-amber-600 text-white font-extrabold text-xs flex items-center justify-center shadow-xs">
+                              {idx + 1}
+                            </span>
+                            <span className="text-[11px] font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md truncate max-w-[150px] sm:max-w-[250px]">
+                              {it.chapter}
+                            </span>
+                            {it.cod_par && (
+                              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">
+                                {it.cov_par || it.cod_par}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleInsertRowBelow(it)}
+                              className="p-1.5 text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                              title="Agregar partida debajo"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDuplicateRow(it)}
+                              disabled={isBlankTrailing}
+                              className="p-1.5 text-amber-700 hover:bg-amber-100 rounded-lg transition-colors cursor-pointer disabled:opacity-30"
+                              title="Duplicar partida"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveItem(it.id)}
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                              title="Eliminar partida"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* DESCRIPCIÓN DE LA PARTIDA */}
+                        <div className="space-y-1.5">
+                          <label className="block text-[11px] font-bold text-amber-950 uppercase">
+                            Descripción de la Partida
+                          </label>
+                          <div className="flex flex-col gap-1.5">
+                            <input
+                              type="text"
+                              value={it.description}
+                              onChange={(e) =>
+                                handleUpdateItemField(it.id, 'description', e.target.value.toUpperCase())
+                              }
+                              placeholder={
+                                isBlankTrailing
+                                  ? 'Escribe aquí la partida (ej: Demolición de pared...)'
+                                  : 'Descripción...'
+                              }
+                              className="w-full px-3 py-2 text-xs sm:text-sm font-bold bg-amber-50/30 border border-amber-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 rounded-xl uppercase placeholder:text-gray-400"
+                            />
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenCoveninModal(it)}
+                                className="text-[11px] font-bold text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-300 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                              >
+                                <Search className="w-3 h-3 text-sky-600" />
+                                <span>Buscar en Norma COVENIN</span>
+                              </button>
+                              {!it.cod_par && !isBlankTrailing && it.description && it.description.trim() && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const audit = auditDescription(it.description, it.cod_par, it.unit);
+                                    handleEnrichItem(it.id, audit.suggestion);
+                                  }}
+                                  className="text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                                >
+                                  <Sparkles className="w-3 h-3 text-amber-600" />
+                                  <span>Enriquecer Especificaciones</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* CONTENEDORES DE MEDIDAS APILADOS HACIA ABAJO (SIN SCROLL HORIZONTAL) */}
+                        {!hasPartials ? (
+                          <div className="space-y-2.5 bg-amber-50/50 border border-amber-200 rounded-xl p-3">
+                            {/* Fila 1: Unidad y N° Veces */}
+                            <div className="grid grid-cols-2 gap-2.5">
+                              <div>
+                                <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
+                                  UNIDAD (UND)
+                                </label>
+                                <select
+                                  value={it.unit || 'M2'}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'unit', e.target.value)}
+                                  className="w-full px-2.5 py-1.5 text-xs font-bold rounded-lg border border-amber-300 bg-white text-amber-950 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                                >
+                                  {COMMON_UNITS.map((u) => (
+                                    <option key={u} value={u}>
+                                      {u}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
+                                  N° VECES / PIEZAS
+                                </label>
+                                <input
+                                  type="number"
+                                  step="1"
+                                  min="1"
+                                  value={it.times ?? 1}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'times', e.target.value)}
+                                  className="w-full px-2.5 py-1.5 text-xs text-center font-bold rounded-lg border border-amber-300 bg-white"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Fila 2: Dimensiones Físicas (Largo, Ancho, Alto) */}
+                            <div className="grid grid-cols-3 gap-2">
+                              <div>
+                                <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
+                                  LARGO (m)
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={it.length ?? ''}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'length', e.target.value)}
+                                  placeholder="0.00"
+                                  className="w-full px-2 py-1.5 text-xs text-right font-medium rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
+                                  ANCHO (m)
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={it.width ?? ''}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'width', e.target.value)}
+                                  placeholder="0.00"
+                                  className="w-full px-2 py-1.5 text-xs text-right font-medium rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
+                                  ALTO (m)
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={it.height ?? ''}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'height', e.target.value)}
+                                  placeholder="0.00"
+                                  className="w-full px-2 py-1.5 text-xs text-right font-medium rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Fila 3: Factor Acero y Distancia Acarreo */}
+                            <div className="grid grid-cols-2 gap-2.5">
+                              <div>
+                                <label
+                                  className="block text-[10px] font-bold text-amber-900 mb-0.5"
+                                  title="Factor kg/m para acero"
+                                >
+                                  FACTOR (kg/m)
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.001"
+                                  value={it.factor ?? ''}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'factor', e.target.value)}
+                                  placeholder="1.000"
+                                  className="w-full px-2 py-1.5 text-xs text-right font-semibold rounded-lg border border-amber-300 bg-white"
+                                />
+                              </div>
+                              <div>
+                                <label
+                                  className="block text-[10px] font-bold text-amber-900 mb-0.5"
+                                  title="Distancia de transporte en Km"
+                                >
+                                  DISTANCIA (km)
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  value={it.distance ?? ''}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'distance', e.target.value)}
+                                  placeholder="—"
+                                  className="w-full px-2 py-1.5 text-xs text-right font-semibold rounded-lg border border-amber-300 bg-white"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Fila 4: Subtotal Parcial y Cantidad Total */}
+                            <div className="grid grid-cols-2 gap-2.5 pt-1">
+                              <div className="bg-white/80 p-2 rounded-xl border border-amber-200">
+                                <span className="block text-[9px] uppercase font-bold text-amber-700">
+                                  Subtotal Parcial
+                                </span>
+                                <span className="text-xs font-bold text-amber-900">
+                                  {it.partial > 0
+                                    ? Number(it.partial).toLocaleString('es-VE', { maximumFractionDigits: 3 })
+                                    : '—'}
+                                </span>
+                              </div>
+                              <div className="bg-amber-100 p-2 rounded-xl border-2 border-amber-400">
+                                <span className="block text-[10px] uppercase font-black text-amber-950">
+                                  CANTIDAD TOTAL ({it.unit})
+                                </span>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={it.quantity}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'quantity', e.target.value)}
+                                  className="w-full px-1.5 py-0.5 text-sm text-right font-black text-amber-950 bg-white rounded border border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          /* SECCIÓN CUANDO TIENE PARCIALES / PAREDES */
+                          <div className="bg-amber-100/60 border border-amber-300 rounded-xl p-3 flex items-center justify-between">
+                            <div>
+                              <span className="block text-[11px] font-extrabold text-amber-950">
+                                📐 Calculado mediante {it.partials.length} paredes/parciales
+                              </span>
+                              <span className="text-[10px] text-amber-800">
+                                La cantidad total se suma automáticamente desde el desglose inferior
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xs font-bold text-amber-700 block">Total Calculado</span>
+                              <span className="text-base font-black text-amber-950">
+                                {Number(it.quantity).toLocaleString('es-VE', { maximumFractionDigits: 3 })} {it.unit}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* SECCIÓN DESGLOSE DE PAREDES / PARCIALES */}
+                        <div className="space-y-2">
+                          {!hasPartials ? (
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePartials(it.id)}
+                              className="w-full py-2 px-3 rounded-xl bg-amber-100/80 hover:bg-amber-200/80 border border-amber-300 text-amber-950 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                              <Split className="w-3.5 h-3.5 text-amber-700" />
+                              <span>+ Desglosar en varias paredes / tramos</span>
+                            </button>
+                          ) : (
+                            <div className="space-y-2 border border-amber-300 rounded-xl p-3 bg-amber-50/60">
+                              <div className="flex items-center justify-between border-b border-amber-200 pb-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleExpandPartials(it.id)}
+                                  className="flex items-center gap-1.5 text-xs font-black text-amber-950 cursor-pointer"
+                                >
+                                  {isExpanded ? (
+                                    <ChevronUp className="w-4 h-4 text-amber-700" />
+                                  ) : (
+                                    <ChevronDown className="w-4 h-4 text-amber-700" />
+                                  )}
+                                  <span>🧱 Paredes / Parciales ({it.partials.length})</span>
+                                </button>
+
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAddPartial(it.id)}
+                                    className="text-[11px] font-bold text-amber-900 bg-white hover:bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-lg flex items-center gap-1 cursor-pointer shadow-xs"
+                                  >
+                                    <Plus className="w-3.5 h-3.5 text-amber-700" />
+                                    <span>Agregar Pared</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleClearPartials(it.id)}
+                                    className="text-[10px] text-red-600 hover:underline cursor-pointer"
+                                  >
+                                    Quitar
+                                  </button>
+                                </div>
+                              </div>
+
+                              {isExpanded && (
+                                <div className="space-y-2.5 pt-1">
+                                  {it.partials.map((p, pIdx) => (
+                                    <div
+                                      key={p.id}
+                                      className="bg-white border border-amber-200 rounded-xl p-2.5 shadow-xs space-y-2"
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1.5 flex-1 min-w-0 mr-2">
+                                          <span className="text-[10px] font-bold text-amber-700 shrink-0">
+                                            #{pIdx + 1}
+                                          </span>
+                                          <input
+                                            type="text"
+                                            value={p.description || ''}
+                                            onChange={(e) =>
+                                              handleUpdatePartialField(it.id, p.id, 'description', e.target.value)
+                                            }
+                                            placeholder={`Pared ${pIdx + 1} (ej: Pared Fachada, Pared Baño...)`}
+                                            className="w-full px-2 py-1 text-xs font-semibold bg-amber-50/30 border border-amber-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                          />
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRemovePartial(it.id, p.id)}
+                                          className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer shrink-0"
+                                          title="Eliminar esta pared"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+
+                                      <div className="grid grid-cols-4 gap-1.5">
+                                        <div>
+                                          <label className="block text-[9px] font-bold text-amber-800">Largo (m)</label>
+                                          <input
+                                            type="number"
+                                            step="0.01"
+                                            value={p.length ?? ''}
+                                            onChange={(e) =>
+                                              handleUpdatePartialField(it.id, p.id, 'length', e.target.value)
+                                            }
+                                            placeholder="0.00"
+                                            className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-[9px] font-bold text-amber-800">Ancho (m)</label>
+                                          <input
+                                            type="number"
+                                            step="0.01"
+                                            value={p.width ?? ''}
+                                            onChange={(e) =>
+                                              handleUpdatePartialField(it.id, p.id, 'width', e.target.value)
+                                            }
+                                            placeholder="0.00"
+                                            className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-[9px] font-bold text-amber-800">Alto (m)</label>
+                                          <input
+                                            type="number"
+                                            step="0.01"
+                                            value={p.height ?? ''}
+                                            onChange={(e) =>
+                                              handleUpdatePartialField(it.id, p.id, 'height', e.target.value)
+                                            }
+                                            placeholder="0.00"
+                                            className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-[9px] font-bold text-amber-800">Veces</label>
+                                          <input
+                                            type="number"
+                                            step="1"
+                                            min="1"
+                                            value={p.times ?? 1}
+                                            onChange={(e) =>
+                                              handleUpdatePartialField(it.id, p.id, 'times', e.target.value)
+                                            }
+                                            className="w-full px-1.5 py-1 text-xs text-center font-bold bg-white border border-amber-200 rounded-lg"
+                                          />
+                                        </div>
+                                      </div>
+
+                                      <div className="flex items-center justify-between bg-amber-50/80 p-2 rounded-lg text-xs">
+                                        <input
+                                          type="text"
+                                          value={p.observations ?? ''}
+                                          onChange={(e) =>
+                                            handleUpdatePartialField(it.id, p.id, 'observations', e.target.value)
+                                          }
+                                          placeholder="Notas / Eje de la pared..."
+                                          className="flex-1 mr-2 px-1.5 py-0.5 text-[11px] bg-white border border-amber-200 rounded"
+                                        />
+                                        <div className="shrink-0 text-right">
+                                          <span className="text-[10px] text-amber-700 block">Subtotal</span>
+                                          <span className="font-extrabold text-amber-950">
+                                            {Number(p.partial || 0).toLocaleString('es-VE', {
+                                              maximumFractionDigits: 3,
+                                            })}{' '}
+                                            {it.unit}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* OBSERVACIONES */}
+                        <div>
+                          <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
+                            OBSERVACIONES / UBICACIÓN
+                          </label>
+                          <input
+                            type="text"
+                            value={it.observations ?? ''}
+                            onChange={(e) => handleUpdateItemField(it.id, 'observations', e.target.value)}
+                            placeholder="Notas, eje, ubicación o especificaciones especiales..."
+                            className="w-full px-3 py-1.5 text-xs bg-amber-50/30 border border-amber-300 rounded-xl focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                          />
+                        </div>
+
+                        {/* BOTÓN AGREGAR PARTIDA DEBAJO */}
+                        <div className="pt-1 border-t border-amber-100 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => handleInsertRowBelow(it)}
+                            className="text-xs font-bold text-amber-900 hover:text-amber-950 bg-amber-100/60 hover:bg-amber-200/80 px-3 py-1 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5 text-amber-700" />
+                            <span>+ Agregar Partida Debajo</span>
+                          </button>
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+            ) : (
+              /* TABLA PRINCIPAL: PLANILLA DE CÓMPUTOS MÉTRICOS CON FILA LIBRE SIEMPRE PRESENTE */
+              <div className="bg-white border-2 border-gray-400 rounded-2xl shadow-md overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left border-collapse border border-gray-400 min-w-[1100px]">
                   <thead>
                     <tr className="bg-amber-200/90 text-amber-950 font-black uppercase border-b border-gray-400 text-center text-[11px] tracking-wide">
                       <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-12 bg-amber-300/80">
@@ -2379,6 +3535,22 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                   placeholder={isBlankTrailing ? 'Escribe aquí la partida...' : 'Descripción de la partida...'}
                                   className="w-full px-2 py-1 text-xs font-semibold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded uppercase placeholder:text-gray-400"
                                 />
+                                {it.partials && it.partials.length > 0 && (
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleExpandPartials(it.id)}
+                                      className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-200/80 hover:bg-amber-300 px-1.5 py-0.5 rounded cursor-pointer"
+                                    >
+                                      <span>🧱 {it.partials.length} paredes/parciales</span>
+                                      {expandedPartials[it.id] !== false ? (
+                                        <ChevronUp className="w-3 h-3" />
+                                      ) : (
+                                        <ChevronDown className="w-3 h-3" />
+                                      )}
+                                    </button>
+                                  </div>
+                                )}
                                 {!isBlankTrailing && it.description && it.description.trim() && (() => {
                                   const audit = auditDescription(it.description, it.cod_par, it.unit);
                                   if (audit.status === 'covenin') {
@@ -2576,6 +3748,23 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                 >
                                   <Search className="w-3.5 h-3.5" />
                                 </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleTogglePartials(it.id)}
+                                  disabled={isBlankTrailing}
+                                  className={`p-1 rounded transition-colors cursor-pointer disabled:opacity-30 ${
+                                    it.partials && it.partials.length > 0
+                                      ? 'text-amber-800 bg-amber-200 hover:bg-amber-300'
+                                      : 'text-amber-700 hover:text-amber-950 hover:bg-amber-100'
+                                  }`}
+                                  title={
+                                    it.partials && it.partials.length > 0
+                                      ? 'Ver/Gestionar desglose de paredes'
+                                      : 'Desglosar en varias paredes o tramos'
+                                  }
+                                >
+                                  <Split className="w-3.5 h-3.5" />
+                                </button>
                                 {!it.cod_par && !isBlankTrailing && it.description && it.description.trim() && (
                                   <button
                                     type="button"
@@ -2609,6 +3798,183 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                               </div>
                             </td>
                           </tr>
+                          {/* FILAS HIJAS DE SUB-PARCIALES / PAREDES EN LA TABLA */}
+                          {it.partials && it.partials.length > 0 && expandedPartials[it.id] !== false && (
+                            <>
+                              {it.partials.map((p, pIdx) => (
+                                <tr
+                                  key={p.id}
+                                  className="bg-amber-50/70 border-b border-amber-200 text-amber-950 text-xs hover:bg-amber-100/50"
+                                >
+                                  <td className="border border-amber-200 px-2 py-1 text-center font-bold text-[10px] text-amber-700 bg-amber-100/40">
+                                    ↳ {pIdx + 1}
+                                  </td>
+                                  <td className="border border-amber-200 px-2 py-1 pl-6">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-[10px] font-bold text-amber-800 shrink-0">
+                                        Pared/Tramo:
+                                      </span>
+                                      <input
+                                        type="text"
+                                        value={p.description || ''}
+                                        onChange={(e) =>
+                                          handleUpdatePartialField(
+                                            it.id,
+                                            p.id,
+                                            'description',
+                                            e.target.value
+                                          )
+                                        }
+                                        placeholder={`Pared ${pIdx + 1} (ej: Fachada, Baño...)`}
+                                        className="flex-1 px-1.5 py-0.5 text-xs font-semibold bg-white border border-amber-300 rounded focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                      />
+                                    </div>
+                                  </td>
+                                  <td className="border border-amber-200 px-1 py-1 text-center text-xs font-bold text-gray-500 bg-amber-50/30">
+                                    {it.unit || 'M2'}
+                                  </td>
+                                  <td className="border border-amber-200 px-1 py-1">
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={p.length ?? ''}
+                                      onChange={(e) =>
+                                        handleUpdatePartialField(it.id, p.id, 'length', e.target.value)
+                                      }
+                                      placeholder="0.00"
+                                      className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
+                                    />
+                                  </td>
+                                  <td className="border border-amber-200 px-1 py-1">
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={p.width ?? ''}
+                                      onChange={(e) =>
+                                        handleUpdatePartialField(it.id, p.id, 'width', e.target.value)
+                                      }
+                                      placeholder="0.00"
+                                      className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
+                                    />
+                                  </td>
+                                  <td className="border border-amber-200 px-1 py-1">
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={p.height ?? ''}
+                                      onChange={(e) =>
+                                        handleUpdatePartialField(it.id, p.id, 'height', e.target.value)
+                                      }
+                                      placeholder="0.00"
+                                      className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
+                                    />
+                                  </td>
+                                  <td className="border border-amber-200 px-1 py-1">
+                                    <input
+                                      type="number"
+                                      step="1"
+                                      min="1"
+                                      value={p.times ?? 1}
+                                      onChange={(e) =>
+                                        handleUpdatePartialField(it.id, p.id, 'times', e.target.value)
+                                      }
+                                      className="w-full px-1 py-0.5 text-xs text-center font-bold bg-white border border-amber-200 rounded"
+                                    />
+                                  </td>
+                                  <td className="border border-amber-200 px-1 py-1 bg-amber-50/30">
+                                    <input
+                                      type="number"
+                                      step="0.001"
+                                      value={p.factor ?? ''}
+                                      onChange={(e) =>
+                                        handleUpdatePartialField(it.id, p.id, 'factor', e.target.value)
+                                      }
+                                      placeholder="1.000"
+                                      className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
+                                    />
+                                  </td>
+                                  <td className="border border-amber-200 px-1 py-1 bg-amber-50/30">
+                                    <input
+                                      type="number"
+                                      step="0.1"
+                                      value={p.distance ?? ''}
+                                      onChange={(e) =>
+                                        handleUpdatePartialField(it.id, p.id, 'distance', e.target.value)
+                                      }
+                                      placeholder="—"
+                                      className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
+                                    />
+                                  </td>
+                                  <td className="border border-amber-200 px-2 py-1 text-right font-bold text-xs text-amber-900 bg-amber-100/50">
+                                    {Number(p.partial || 0).toLocaleString('es-VE', {
+                                      maximumFractionDigits: 3,
+                                    })}
+                                  </td>
+                                  <td className="border border-amber-200 px-1 py-1 text-center text-xs text-gray-400 bg-amber-50/20">
+                                    —
+                                  </td>
+                                  <td className="border border-amber-200 px-1 py-1">
+                                    <input
+                                      type="text"
+                                      value={p.observations ?? ''}
+                                      onChange={(e) =>
+                                        handleUpdatePartialField(
+                                          it.id,
+                                          p.id,
+                                          'observations',
+                                          e.target.value
+                                        )
+                                      }
+                                      placeholder="Eje, tramo, detalle..."
+                                      className="w-full px-1.5 py-0.5 text-xs bg-white border border-amber-200 rounded"
+                                    />
+                                  </td>
+                                  <td className="border border-amber-200 px-1 py-1 text-center bg-amber-100/30">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemovePartial(it.id, p.id)}
+                                      className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors cursor-pointer"
+                                      title="Eliminar esta pared"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                              <tr className="bg-amber-100/50 border-b border-amber-300">
+                                <td colSpan={13} className="px-4 py-1.5 text-xs">
+                                  <div className="flex items-center justify-between">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAddPartial(it.id)}
+                                      className="text-[11px] font-bold text-amber-900 hover:text-amber-950 bg-white hover:bg-amber-50 border border-amber-300 px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-xs cursor-pointer"
+                                    >
+                                      <Plus className="w-3 h-3 text-amber-700" />
+                                      <span>+ Agregar otra pared / tramo</span>
+                                    </button>
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xs font-bold text-amber-950">
+                                        Total suma paredes:{' '}
+                                        <strong>
+                                          {Number(it.quantity).toLocaleString('es-VE', {
+                                            maximumFractionDigits: 3,
+                                          })}{' '}
+                                          {it.unit}
+                                        </strong>
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleClearPartials(it.id)}
+                                        className="text-[10px] text-red-600 hover:underline cursor-pointer"
+                                      >
+                                        Quitar desglose
+                                      </button>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            </>
+                          )}
                         </React.Fragment>
                       );
                     })}
@@ -2616,6 +3982,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                 </table>
               </div>
             </div>
+            )}
           </div>
         </div>
       ) : (

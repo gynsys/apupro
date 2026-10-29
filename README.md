@@ -10,9 +10,8 @@ La documentación detallada del proyecto se encuentra organizada en el directori
 
 - **[Motor v2.0: WorkSpec + Compositor Determinista](file:///c:/Users/pablo/Documents/apupro_platform/readme/MOTOR_V2_WORKSPEC.md)** *(Nueva arquitectura en 2 fases con latencia reducida en 85% y cero alucinaciones de precios)*
 - **[Guía Maestra del Generador de APU con IA](file:///c:/Users/pablo/Documents/apupro_platform/readme/ai_apu_generator.md)** *(Pipeline defensivo multi-capa y normativa COVENIN)*
-- [Bitácora Cost360](file:///c:/Users/pablo/Documents/apupro_platform/readme/BITACORA_COST360.md)
+- [Base de datos de LULO a PostgreSQL](readme/Base%20de%20datos%20de%20LULO%20a%20PostgreSQL/README.md) *(documentación de la base Lulowin/Maprex y su conversión a PostgreSQL)*
 - [Bitácora Creación y Visor APU](file:///c:/Users/pablo/Documents/apupro_platform/readme/BITACORA_CREACION_Y_VISOR_APU.md)
-- [Consultas de Base de Datos](file:///c:/Users/pablo/Documents/apupro_platform/readme/DB_CONSULTAS.md)
 - [Importación de Presupuestos desde Archivo](readme/IMPORTACION_PRESUPUESTOS_DESDE_ARCHIVO.md)
 
 ---

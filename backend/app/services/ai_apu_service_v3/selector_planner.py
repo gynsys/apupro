@@ -28,12 +28,24 @@ REGLA DE ORO DE REDACCIÓN Y MEJORA TÉCNICA COVENIN (adapted_description):
   DEBES REDACTAR: "REPARACIÓN INTEGRAL DE LOSA DE TECHO DE CONCRETO ARMADO, INCLUYE REMOCIÓN DE FRISO/RECUBRIMIENTO DETERIORADO, LIMPIEZA CON CEPILLO DE ACERO EN ACERO DE REFUERZO CORROÍDO, APLICACIÓN DE CONVERTIDOR DE ÓXIDO Y RECUBRIMIENTO CON MORTERO ESTRUCTURAL DE ALTA RESISTENCIA".
 - Elimina cualquier mención coloquial a casas, quintas, apartamentos o clientes privados; usa terminología normativa formal de ingeniería civil.
 
+REGLAS DE ORO DE COHERENCIA CONSTRUCTIVA POR PRIMEROS PRINCIPIOS:
+1. CAUSALIDAD DIRECTA DE LA CUADRILLA (SIN OFICIOS FANTASMA):
+   - Cada cargo de mano de obra DEBE tener una relación de causa y efecto directa con la acción física de la partida.
+   - En DESMALEZAMIENTO, DEFORESTACIÓN, TALA, PODA O LIMPIEZA DE TERRENO: TERMINANTEMENTE PROHIBIDO incluir Albañil, Plomero, Electricista, Soldador o Carpintero. La cuadrilla natural se compone de: `CAPORAL`, `OBRERO DE 1RA` (operador de desmalezadora a motor / motosierra / machetero) y `AYUDANTE` (recogida, rastrilleo y apilado).
+   - En HERRERÍA, ESTRUCTURAS METÁLICAS O CERCAS CON TUBOS SOLDADOS: Si la partida involucra soldadura, corte de perfiles o fijación metálica, el oficial técnico debe ser `SOLDADOR DE 1RA` o `HERRERO DE 1RA` (no albañil).
+   - En PARTIDAS ATÍPICAS O ESPECIALIZADAS (ej. geomembranas PEAD, impermeabilizaciones, micropilotes): Asigna el especialista idóneo (`IMPERMEABILIZADOR DE 1RA`, `TÉCNICO ESPECIALISTA`) con sus herramientas y equipos correspondientes.
+2. ÁMBITO DE TRABAJO Y ESCALA POR UNIDAD DE MEDIDA:
+   - Si la unidad es territorial (`ha` = 10.000 m², `km` lineal o grandes volúmenes de tierra): PROHIBIDO asignar cuadrillas enanas de 1 o 2 trabajadores. Debes estructurar una BRIGADA DE CAMPO PROPORCIONAL (mínimo 4 a 8 trabajadores en hectáreas) con dotación coherente de equipos motrices (ej. 2 a 4 desmalezadoras de motor, machetes y rastrillos).
+   - Rendimiento diario proporcional: En `ha`, el rendimiento diario por brigada debe ser una fracción realista (típicamente 0.20 a 0.50 ha/día).
+3. PURGA OBLIGATORIA DE INSUMOS FANTASMA HEREDADOS (MODALIDAD A):
+   - Si la partida candidata base seleccionada contiene insumos que contradicen la acción física solicitada (por ejemplo, un Albañil o cemento en una partida base elegida para desmalezamiento), DEBES ELIMINARLOS quirúrgicamente con `op: "remove"`.
+
 MODALIDAD A — ADAPTACIÓN QUIRÚRGICA DESDE PARTIDA BASE (CUANDO HAY CANDIDATA COMPATIBLE):
 1. Analiza las partidas candidatas reales de la Base de Datos Oficial (con sus materiales, equipos, mano de obra y rendimiento real).
 2. Si al menos una candidata sirve como molde constructivo real para la actividad solicitada, elige su código en `selected_codpar` (puede ser la candidata #1, #2, #3, #4, #5 o #6).
 3. El sistema clonará intacta la partida base que elijas (conservando todos sus códigos oficiales, precios reales, depreciaciones y jornales).
-4. Por lo tanto, NO reescribas los insumos que ya están bien: emite en `material_ops`, `equipment_ops` o `labor_ops` ÚNICAMENTE las diferencias puntuales (`replace`, `remove`, `modify_qty`, `add`) entre la base y lo solicitado.
-5. Si la unidad solicitada es equivalente a la de la base y la escala es similar, usa `keep_base_performance: true`.
+4. Por lo tanto, NO reescribas los insumos que ya están bien: emite en `material_ops`, `equipment_ops` o `labor_ops` ÚNICAMENTE las diferencias puntuales (`replace`, `remove`, `modify_qty`, `add`) entre la base y lo solicitado. Si hay oficios ajenos a la actividad en la base, ELIMÍNALOS con `remove`.
+5. Si la unidad solicitada es equivalente a la de la base y la escala es similar, usa `keep_base_performance: true`. Si la unidad o la escala cambió (ej. de m2 a ha), usa `keep_base_performance: false` y ajusta `new_performance`.
 
 MODALIDAD B — CREACIÓN REGULADA DESDE CERO (`selected_codpar: "NONE"` CUANDO NO HAY COINCIDENCIA CONSTRUCTIVA):
 Si ninguna de las candidatas pertenece a la actividad/sistema constructivo solicitado (o si la lista de candidatas está vacía) PERO la descripción del usuario es completa y clara:
@@ -41,10 +53,11 @@ Si ninguna de las candidatas pertenece a la actividad/sistema constructivo solic
 2. Construye la receta completa usando operaciones `"op": "add"` en `material_ops`, `equipment_ops` y `labor_ops` siguiendo estas REGLAS OBLIGATORIAS COVENIN:
    - REGLA DE MATERIALES: Expresa consumos técnicos exactos por 1 unidad de medida (`target_unit`) con desperdicio normativo (`3%` a `10%`). Si la partida es solo Instalación (`I/S`), Demolición, Remoción o Desmontaje, PROHIBIDO incluir la compra del activo principal.
    - REGLA DE EQUIPOS: Incluye siempre `HERRAMIENTAS MENORES` (`new_quantity: 1.0`, `depreciation_factor: 1.0`, `estimated_price_usd: 1.50`). Para herramientas eléctricas o equipos propios, usa factor de depreciación diario (`depreciation_factor` entre `0.002` y `0.015`) sobre su valor de reposición en USD, o `1.0` si el precio es tarifa diaria.
-   - REGLA DE MANO DE OBRA: Usa exclusivamente cargos estándar del tabulador COVENIN para que reconcilien con la base de datos oficial:
-     * Supervisión: `MAESTRO DE OBRA` o `CAPORAL` con cantidad fraccionaria (`0.10` a `0.25`).
-     * Especialista(s): `ALBAÑIL DE 1RA`, `ELECTRICISTA DE 1RA`, `PLOMERO DE 1RA`, `PINTOR DE 1RA`, `IMPERMEABILIZADOR`, `SOLDADOR DE 1RA`, `CARPINTERO DE 1RA` o `MECÁNICO DE 1RA` (`1.0` a `2.0`).
-     * Apoyo: `AYUDANTE` y/o `OBRERO DE 1RA` (`1.0` a `4.0`).
+   - REGLA DE MANO DE OBRA: Asigna los oficios técnicos exactamente requeridos por la actividad física:
+     * Supervisión: `MAESTRO DE OBRA` o `CAPORAL` (`0.10` a `0.50`).
+     * Especialistas según oficio real: `ALBAÑIL DE 1RA` (albañilería/concreto), `SOLDADOR DE 1RA` o `HERRERO DE 1RA` (metálicas/soldadura), `PLOMERO DE 1RA` (tuberías/gas), `ELECTRICISTA DE 1RA` (electricidad), `PINTOR DE 1RA` (pintura), `IMPERMEABILIZADOR` (impermeabilización/geomembranas), `CARPINTERO DE 1RA` (madera/encofrados).
+     * En labores de campo/áreas verdes: NO usar especialistas de obra civil; usar `OBRERO DE 1RA` (operadores de desmalezadora/macheteros) y `AYUDANTE`.
+     * Apoyo: `AYUDANTE` y/o `OBRERO DE 1RA` dimensionados a la escala de la partida.
 3. Solo pon `"clarification_needed": true` si la descripción del usuario está incompleta o carece de actividad/material definitorio.
 - Responde SIEMPRE en formato JSON válido cumpliendo el esquema solicitado.
 """
@@ -200,12 +213,13 @@ def _build_v3_selector_prompt(
         f"PARTIDAS CANDIDATAS REALES EN BASE DE DATOS (CON SUS INSUMOS ACTUALES):\n"
         f"{candidates_block}\n"
         f"INSTRUCCIONES:\n"
-        f"1. Si alguna candidata corresponde a la familia constructiva solicitada, escoge en `selected_codpar` su código `codpar` exacto y declara en `material_ops`, `equipment_ops` y `labor_ops` ÚNICAMENTE los cambios puntuales necesarios (`replace`, `remove`, `modify_qty`, `add`).\n"
-        f"2. Si NINGUNA candidata tiene relación constructiva real con lo solicitado (o no hay candidatas) pero la descripción del usuario es completa, usa `\"selected_codpar\": \"NONE\"`, `\"keep_base_performance\": false`, asigna `\"new_performance\"` coherente con las Horas-Hombre de la cuadrilla y construye todos los materiales, equipos (incluyendo `HERRAMIENTAS MENORES`) y mano de obra (con cargos oficiales COVENIN: `MAESTRO DE OBRA`, `ALBAÑIL DE 1RA`/`ELECTRICISTA DE 1RA`/`PLOMERO DE 1RA`/`SOLDADOR DE 1RA`/`IMPERMEABILIZADOR`/`PINTOR DE 1RA`, `AYUDANTE`/`OBRERO DE 1RA`) mediante operaciones `\"op\": \"add\"`.\n"
-        f"3. REDACCIÓN Y MEJORA TÉCNICA OBLIGATORIA (adapted_description): NO copies el texto del usuario literalmente ni en minúsculas. MEJORA, EXPANDE Y PROFESIONALIZA la redacción convirtiéndola en una especificación técnica formal COVENIN en MAYÚSCULAS que detalle el elemento intervenido, los productos/materiales utilizados y todos los alcances de la partida.\n"
-        f"4. Si un insumo de la base se mantiene pero cambia su especificación (ej. otro tipo de bloque, otra resistencia de concreto, otro diámetro de tubería), usa `op: \"replace\"` indicando `target_code` del insumo original en la base.\n"
-        f"5. Si un insumo de la base sobra o contradice la solicitud del usuario, usa `op: \"remove\"` indicando su `target_code`.\n"
-        f"6. REGLA DE EQUIPOS DE LOGÍSTICA PESADA (SOLO POR SOLICITUD EXPLÍCITA): Elimina (`op: \"remove\"`) o abstente de agregar el WINCHE CABRESTANTE (+ GÜINCHERO), CAMIÓN F-350/VOLTEO/CONTENEDOR (+ CHOFER), COMPRESOR NEUMÁTICO (+ OPERADOR), PLANTA ELÉCTRICA/GENERADOR, BOMBA DE ACHIQUE, BOMBA DE CONCRETO, MINICARGADOR/BOBCAT, MONTACARGAS, PLATAFORMA ELEVADORA/MANLIFT, ANDAMIO TUBULAR/COLGANTE, EQUIPO AIRLESS, FRESADORA/ESCARIFICADORA DE PISO, CORTADORA DE PAVIMENTO DE CARRO, HIDROLAVADORA INDUSTRIAL, EQUIPO DE TOPOGRAFÍA, EQUIPO DE ENSAYO o EQUIPO DE OXICORTE/GRÚA/SEÑORITA salvo que el usuario lo haya solicitado expresamente en su descripción.\n\n"
+        f"1. Si alguna candidata corresponde a la familia constructiva solicitada, escoge en `selected_codpar` su código `codpar` exacto y declara en `material_ops`, `equipment_ops` y `labor_ops` ÚNICAMENTE los cambios puntuales necesarios (`replace`, `remove`, `modify_qty`, `add`). SI LA BASE CONTIENE OFICIOS AJENOS A LA ACTIVIDAD FÍSICA SOLICITADA (ej. albañil en desmalezamiento), ELIMÍNALOS OBLIGATORIAMENTE con `remove`.\n"
+        f"2. Si NINGUNA candidata tiene relación constructiva real con lo solicitado (o no hay candidatas) pero la descripción del usuario es completa, usa `\"selected_codpar\": \"NONE\"`, `\"keep_base_performance\": false`, asigna `\"new_performance\"` coherente con las Horas-Hombre de la cuadrilla y construye todos los materiales, equipos (incluyendo `HERRAMIENTAS MENORES`) y mano de obra con los oficios exactos que ejecutan la acción física mediante operaciones `\"op\": \"add\"`.\n"
+        f"3. COHERENCIA DE OFICIOS Y ÁMBITO DE TRABAJO: En desmalezamiento/limpieza de terreno PROHIBIDO albañil/plomero/electricista (usar Caporal + Obrero de 1ra + Ayudante). En herrería/cercas con soldadura incluir Soldador/Herrero de 1ra. Si la unidad es territorial (`ha`, `km`), dimensiona una BRIGADA DE TRABAJO (4 a 8 personas) con sus equipos a motor suficientes (desmalezadoras), y rendimiento diario fraccionario (ej. 0.20 a 0.50 ha/día).\n"
+        f"4. REDACCIÓN Y MEJORA TÉCNICA OBLIGATORIA (adapted_description): NO copies el texto del usuario literalmente ni en minúsculas. MEJORA, EXPANDE Y PROFESIONALIZA la redacción convirtiéndola en una especificación técnica formal COVENIN en MAYÚSCULAS que detalle el elemento intervenido, los productos/materiales utilizados y todos los alcances de la partida.\n"
+        f"5. Si un insumo de la base se mantiene pero cambia su especificación (ej. otro tipo de bloque, otra resistencia de concreto, otro diámetro de tubería), usa `op: \"replace\"` indicando `target_code` del insumo original en la base.\n"
+        f"6. Si un insumo de la base sobra o contradice la solicitud del usuario, usa `op: \"remove\"` indicando su `target_code`.\n"
+        f"7. REGLA DE EQUIPOS DE LOGÍSTICA PESADA (SOLO POR SOLICITUD EXPLÍCITA): Elimina (`op: \"remove\"`) o abstente de agregar el WINCHE CABRESTANTE (+ GÜINCHERO), CAMIÓN F-350/VOLTEO/CONTENEDOR (+ CHOFER), COMPRESOR NEUMÁTICO (+ OPERADOR), PLANTA ELÉCTRICA/GENERADOR, BOMBA DE ACHIQUE, BOMBA DE CONCRETO, MINICARGADOR/BOBCAT, MONTACARGAS, PLATAFORMA ELEVADORA/MANLIFT, ANDAMIO TUBULAR/COLGANTE, EQUIPO AIRLESS, FRESADORA/ESCARIFICADORA DE PISO, CORTADORA DE PAVIMENTO DE CARRO, HIDROLAVADORA INDUSTRIAL, EQUIPO DE TOPOGRAFÍA, EQUIPO DE ENSAYO o EQUIPO DE OXICORTE/GRÚA/SEÑORITA salvo que el usuario lo haya solicitado expresamente en su descripción.\n\n"
         f"Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta:\n"
         "{\n"
         '  "selected_codpar": "CODIGO_CANDIDATA_O_NONE",\n'
