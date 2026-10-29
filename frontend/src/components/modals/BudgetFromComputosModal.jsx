@@ -1647,18 +1647,18 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       const hasPartials = it.partials && it.partials.length > 0;
       rowsHtml += `
         <tr style="border-bottom: 1px solid #cbd5e1; font-size: 11px;">
-          <td style="text-align: center; border: 1px solid #cbd5e1; font-weight: bold; background-color: #f8fafc;">${itemNumber}</td>
-          <td style="border: 1px solid #cbd5e1; font-weight: 600;">${escapeHtml(it.description || '')}</td>
-          <td style="text-align: center; border: 1px solid #cbd5e1;">${escapeHtml(it.unit || '')}</td>
-          <td style="text-align: right; border: 1px solid #cbd5e1;">${hasPartials ? '—' : (it.length || '')}</td>
-          <td style="text-align: right; border: 1px solid #cbd5e1;">${hasPartials ? '—' : (it.width || '')}</td>
-          <td style="text-align: right; border: 1px solid #cbd5e1;">${hasPartials ? '—' : (it.height || '')}</td>
-          <td style="text-align: center; border: 1px solid #cbd5e1;">${hasPartials ? '—' : (it.times || 1)}</td>
-          <td style="text-align: right; border: 1px solid #cbd5e1;">${hasPartials ? '—' : (it.factor || '')}</td>
-          <td style="text-align: right; border: 1px solid #cbd5e1;">${hasPartials ? '—' : (it.distance || '')}</td>
-          <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: 600;">${hasPartials ? '—' : (it.partial || '')}</td>
-          <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; background-color: #fef3c7;">${it.quantity || 0}</td>
-          <td style="border: 1px solid #cbd5e1;">${escapeHtml(it.observations || '')}</td>
+          <td style="text-align: center; border: 1px solid #cbd5e1; font-weight: bold; background-color: #f8fafc; vertical-align: top;">${itemNumber}</td>
+          <td style="border: 1px solid #cbd5e1; font-weight: 600; width: 550px; white-space: normal; word-wrap: break-word; vertical-align: top; mso-line-break-rule: exactly;">${escapeHtml(it.description || '')}</td>
+          <td style="text-align: center; border: 1px solid #cbd5e1; font-size: 9px; font-weight: bold; color: #475569; vertical-align: top;">${escapeHtml(it.unit || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.length || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.width || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.height || '')}</td>
+          <td style="text-align: center; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.times || 1)}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.factor || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.distance || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: 600; vertical-align: top;">${hasPartials ? '—' : (it.partial || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; background-color: #fef3c7; vertical-align: top;">${it.quantity || 0}</td>
+          <td style="border: 1px solid #cbd5e1; vertical-align: top;">${escapeHtml(it.observations || '')}</td>
         </tr>
       `;
 
@@ -1666,20 +1666,20 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         it.partials.forEach((p, pIdx) => {
           rowsHtml += `
             <tr style="border-bottom: 1px dashed #cbd5e1; font-size: 10px; background-color: #fffbeb;">
-              <td style="text-align: center; border: 1px solid #cbd5e1; color: #d97706;">↳ ${pIdx + 1}</td>
-              <td style="border: 1px solid #cbd5e1; padding-left: 20px; font-style: italic; color: #78350f;">
+              <td style="text-align: center; border: 1px solid #cbd5e1; color: #d97706; vertical-align: top;">↳ ${pIdx + 1}</td>
+              <td style="border: 1px solid #cbd5e1; padding-left: 20px; font-style: italic; color: #78350f; width: 550px; white-space: normal; word-wrap: break-word; vertical-align: top;">
                 ${escapeHtml(p.description || `Pared ${pIdx + 1}`)}
               </td>
-              <td style="text-align: center; border: 1px solid #cbd5e1; color: #94a3b8;">${escapeHtml(it.unit || '')}</td>
-              <td style="text-align: right; border: 1px solid #cbd5e1;">${p.length || ''}</td>
-              <td style="text-align: right; border: 1px solid #cbd5e1;">${p.width || ''}</td>
-              <td style="text-align: right; border: 1px solid #cbd5e1;">${p.height || ''}</td>
-              <td style="text-align: center; border: 1px solid #cbd5e1;">${p.times || 1}</td>
-              <td style="text-align: right; border: 1px solid #cbd5e1;">${p.factor || ''}</td>
-              <td style="text-align: right; border: 1px solid #cbd5e1;">${p.distance || ''}</td>
-              <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; color: #b45309;">${p.partial || 0}</td>
-              <td style="text-align: right; border: 1px solid #cbd5e1; color: #94a3b8;">—</td>
-              <td style="border: 1px solid #cbd5e1; font-style: italic; color: #64748b;">${escapeHtml(p.observations || '')}</td>
+              <td style="text-align: center; border: 1px solid #cbd5e1; font-size: 8px; color: #94a3b8; vertical-align: top;">${escapeHtml(it.unit || '')}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${p.length || ''}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${p.width || ''}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${p.height || ''}</td>
+              <td style="text-align: center; border: 1px solid #cbd5e1; vertical-align: top;">${p.times || 1}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${p.factor || ''}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${p.distance || ''}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; color: #b45309; vertical-align: top;">${p.partial || 0}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; color: #94a3b8; vertical-align: top;">—</td>
+              <td style="border: 1px solid #cbd5e1; font-style: italic; color: #64748b; vertical-align: top;">${escapeHtml(p.observations || '')}</td>
             </tr>
           `;
         });
@@ -1705,31 +1705,33 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           </xml>
           <![endif]-->
           <style>
-            th { background-color: #d97706; color: #ffffff; border: 1px solid #b45309; padding: 6px; font-size: 11px; }
-            td { padding: 5px; }
+            th { background-color: #d97706; color: #ffffff; border: 1px solid #b45309; padding: 6px; font-size: 11px; vertical-align: middle; }
+            td { padding: 5px; vertical-align: top; }
           </style>
         </head>
         <body>
           <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif;">
             <tr>
-              <td colspan="12" style="font-size: 16px; font-weight: bold; text-align: center; padding: 10px; background-color: #fef3c7; color: #78350f; border: 1px solid #d97706;">
-                PLANILLA DE CÓMPUTOS MÉTRICOS - APUPRO
+              <td colspan="12" style="font-size: 16px; font-weight: bold; text-align: center; padding: 10px; color: #1e293b; border: none;">
+                Planilla de Cómputos Métricos
               </td>
             </tr>
             <tr>
-              <td colspan="6" style="padding: 4px; font-size: 11px;"><strong>Presupuesto:</strong> ${escapeHtml(budgetName || '—')}</td>
-              <td colspan="6" style="padding: 4px; font-size: 11px;"><strong>Proyecto:</strong> ${escapeHtml(projectName || '—')}</td>
+              <td colspan="12" style="padding: 4px 6px; font-size: 11px; text-align: left; font-weight: bold; color: #1e293b; border: none;">
+                Obra: <span style="font-weight: normal;">${escapeHtml(projectName || budgetName || '—')}</span>
+              </td>
             </tr>
             <tr>
-              <td colspan="6" style="padding: 4px; font-size: 11px;"><strong>Cliente:</strong> ${escapeHtml(clientName || '—')}</td>
-              <td colspan="6" style="padding: 4px; font-size: 11px;"><strong>Fecha:</strong> ${today} | <strong>Moneda:</strong> ${currency}</td>
+              <td colspan="12" style="padding: 4px 6px; font-size: 11px; text-align: left; font-weight: bold; color: #1e293b; border: none;">
+                Fecha: <span style="font-weight: normal;">${today}</span>
+              </td>
             </tr>
-            <tr><td colspan="12" style="height: 10px;"></td></tr>
+            <tr><td colspan="12" style="height: 8px; border: none;"></td></tr>
             <thead>
               <tr>
                 <th style="width: 40px;">N°</th>
-                <th style="width: 320px;">DESCRIPCIÓN DE LA PARTIDA</th>
-                <th style="width: 60px;">UND</th>
+                <th style="width: 550px; text-align: left;">DESCRIPCIÓN DE LA PARTIDA</th>
+                <th style="width: 50px; font-size: 9px;">UND</th>
                 <th style="width: 70px;">LARGO</th>
                 <th style="width: 70px;">ANCHO</th>
                 <th style="width: 70px;">ALTO</th>
@@ -1790,18 +1792,18 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       const hasPartials = it.partials && it.partials.length > 0;
       rowsHtml += `
         <tr class="item-row">
-          <td class="text-center font-bold">${itemNumber}</td>
-          <td class="font-bold">${escapeHtml(it.description || '')}</td>
-          <td class="text-center">${escapeHtml(it.unit || '')}</td>
-          <td class="text-right">${hasPartials ? '—' : (it.length || '')}</td>
-          <td class="text-right">${hasPartials ? '—' : (it.width || '')}</td>
-          <td class="text-right">${hasPartials ? '—' : (it.height || '')}</td>
-          <td class="text-center">${hasPartials ? '—' : (it.times || 1)}</td>
-          <td class="text-right">${hasPartials ? '—' : (it.factor || '')}</td>
-          <td class="text-right">${hasPartials ? '—' : (it.distance || '')}</td>
-          <td class="text-right font-semibold">${hasPartials ? '—' : (it.partial || '')}</td>
-          <td class="text-right font-black bg-amber-50">${it.quantity || 0}</td>
-          <td>${escapeHtml(it.observations || '')}</td>
+          <td class="text-center font-bold" style="vertical-align: top;">${itemNumber}</td>
+          <td class="font-bold text-left" style="width: 500px; white-space: normal; word-wrap: break-word; vertical-align: top;">${escapeHtml(it.description || '')}</td>
+          <td class="text-center font-bold" style="font-size: 8px; vertical-align: top;">${escapeHtml(it.unit || '')}</td>
+          <td class="text-right" style="vertical-align: top;">${hasPartials ? '—' : (it.length || '')}</td>
+          <td class="text-right" style="vertical-align: top;">${hasPartials ? '—' : (it.width || '')}</td>
+          <td class="text-right" style="vertical-align: top;">${hasPartials ? '—' : (it.height || '')}</td>
+          <td class="text-center" style="vertical-align: top;">${hasPartials ? '—' : (it.times || 1)}</td>
+          <td class="text-right" style="vertical-align: top;">${hasPartials ? '—' : (it.factor || '')}</td>
+          <td class="text-right" style="vertical-align: top;">${hasPartials ? '—' : (it.distance || '')}</td>
+          <td class="text-right font-semibold" style="vertical-align: top;">${hasPartials ? '—' : (it.partial || '')}</td>
+          <td class="text-right font-black bg-amber-50" style="vertical-align: top;">${it.quantity || 0}</td>
+          <td style="vertical-align: top;">${escapeHtml(it.observations || '')}</td>
         </tr>
       `;
 
@@ -1809,18 +1811,18 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         it.partials.forEach((p, pIdx) => {
           rowsHtml += `
             <tr class="partial-row">
-              <td class="text-center text-amber-700">↳ ${pIdx + 1}</td>
-              <td class="partial-name">${escapeHtml(p.description || `Pared ${pIdx + 1}`)}</td>
-              <td class="text-center text-muted">${escapeHtml(it.unit || '')}</td>
-              <td class="text-right">${p.length || ''}</td>
-              <td class="text-right">${p.width || ''}</td>
-              <td class="text-right">${p.height || ''}</td>
-              <td class="text-center">${p.times || 1}</td>
-              <td class="text-right">${p.factor || ''}</td>
-              <td class="text-right">${p.distance || ''}</td>
-              <td class="text-right font-bold text-amber-800">${p.partial || 0}</td>
-              <td class="text-center text-muted">—</td>
-              <td class="text-muted text-xs">${escapeHtml(p.observations || '')}</td>
+              <td class="text-center text-amber-700" style="vertical-align: top;">↳ ${pIdx + 1}</td>
+              <td class="partial-name" style="width: 500px; white-space: normal; word-wrap: break-word; vertical-align: top;">${escapeHtml(p.description || `Pared ${pIdx + 1}`)}</td>
+              <td class="text-center text-muted" style="font-size: 8px; vertical-align: top;">${escapeHtml(it.unit || '')}</td>
+              <td class="text-right" style="vertical-align: top;">${p.length || ''}</td>
+              <td class="text-right" style="vertical-align: top;">${p.width || ''}</td>
+              <td class="text-right" style="vertical-align: top;">${p.height || ''}</td>
+              <td class="text-center" style="vertical-align: top;">${p.times || 1}</td>
+              <td class="text-right" style="vertical-align: top;">${p.factor || ''}</td>
+              <td class="text-right" style="vertical-align: top;">${p.distance || ''}</td>
+              <td class="text-right font-bold text-amber-800" style="vertical-align: top;">${p.partial || 0}</td>
+              <td class="text-center text-muted" style="vertical-align: top;">—</td>
+              <td class="text-muted text-xs" style="vertical-align: top;">${escapeHtml(p.observations || '')}</td>
             </tr>
           `;
         });
@@ -1856,22 +1858,20 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
               border-bottom: 2px solid #b45309;
               padding-bottom: 8px;
               margin-bottom: 12px;
+              text-align: center;
             }
             .header h1 {
               font-size: 16px;
-              color: #78350f;
+              color: #1e293b;
               margin: 0 0 6px 0;
               text-transform: uppercase;
               letter-spacing: 1px;
             }
-            .meta-grid {
-              display: grid;
-              grid-template-columns: repeat(4, 1fr);
-              gap: 8px;
-              font-size: 10px;
-              background-color: #fef3c7;
-              padding: 8px;
-              border-radius: 6px;
+            .meta-left {
+              text-align: left;
+              font-size: 11px;
+              color: #1e293b;
+              line-height: 1.5;
             }
             table {
               width: 100%;
@@ -1931,20 +1931,33 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         </head>
         <body>
           <div class="header">
-            <h1>PLANILLA DE CÓMPUTOS MÉTRICOS</h1>
-            <div class="meta-grid">
-              <div><strong>Presupuesto:</strong> ${escapeHtml(budgetName || '—')}</div>
-              <div><strong>Proyecto:</strong> ${escapeHtml(projectName || '—')}</div>
-              <div><strong>Cliente:</strong> ${escapeHtml(clientName || '—')}</div>
-              <div><strong>Fecha:</strong> ${today} | <strong>Moneda:</strong> ${currency}</div>
+            <h1>Planilla de Cómputos Métricos</h1>
+            <div class="meta-left">
+              <div><strong>Obra:</strong> ${escapeHtml(projectName || budgetName || '—')}</div>
+              <div><strong>Fecha:</strong> ${today}</div>
             </div>
           </div>
           <table>
             <thead>
               <tr>
                 <th style="width: 30px;">N°</th>
-                <th>DESCRIPCIÓN DE LA PARTIDA</th>
-                <th style="width: 50px;">UND</th>
+                <th style="width: 500px; text-align: left;">DESCRIPCIÓN DE LA PARTIDA</th>
+                <th style="width: 45px; font-size: 8px;">UND</th>
+                <th style="width: 55px;">LARGO</th>
+                <th style="width: 55px;">ANCHO</th>
+                <th style="width: 55px;">ALTO</th>
+                <th style="width: 50px;">VECES</th>
+                <th style="width: 55px;">FACTOR</th>
+                <th style="width: 60px;">DIST. (km)</th>
+                <th style="width: 65px;">PARCIAL</th>
+                <th style="width: 75px;">TOTAL</th>
+                <th style="width: 140px;">OBSERVACIONES</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
                 <th style="width: 55px;">LARGO</th>
                 <th style="width: 55px;">ANCHO</th>
                 <th style="width: 55px;">ALTO</th>
@@ -2875,11 +2888,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
             type="button"
             onClick={handleExportExcelComputos}
             disabled={isCommitting || validCount === 0}
-            className="px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-white hover:bg-emerald-50 text-emerald-950 border border-emerald-300 shadow-xs transition-all disabled:opacity-40 cursor-pointer"
-            title="Exportar planilla con fórmulas y desglose a Excel (.xls)"
+            className="px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-white hover:bg-amber-50 text-amber-950 border border-amber-300 shadow-xs transition-all disabled:opacity-40 cursor-pointer"
+            title="Exportar planilla de cómputos a Excel (.xls)"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Excel</span>
+            <FileSpreadsheet className="w-3.5 h-3.5 text-amber-700" />
+            <span>Exportar</span>
           </button>
         </div>
 
@@ -3094,7 +3107,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                 <select
                                   value={it.unit || 'M2'}
                                   onChange={(e) => handleUpdateItemField(it.id, 'unit', e.target.value)}
-                                  className="w-full px-2.5 py-1.5 text-xs font-bold rounded-lg border border-amber-300 bg-white text-amber-950 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                                  className="w-full px-2 py-1 text-[11px] font-semibold rounded-lg border border-amber-300 bg-white text-amber-950 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
                                 >
                                   {COMMON_UNITS.map((u) => (
                                     <option key={u} value={u}>
@@ -3444,7 +3457,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                       <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-12 bg-amber-300/80">
                         N° DE ITEM
                       </th>
-                      <th rowSpan={2} className="border border-gray-400 px-3 py-2 text-left min-w-[240px] bg-amber-200/90">
+                      <th rowSpan={2} className="border border-gray-400 px-3 py-2 text-left min-w-[380px] sm:min-w-[460px] bg-amber-200/90">
                         DESCRIPCIÓN
                       </th>
                       <th colSpan={4} className="border border-gray-400 px-2 py-1 bg-amber-300/70">
@@ -3476,7 +3489,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                       </th>
                     </tr>
                     <tr className="bg-amber-100 text-amber-950 font-bold text-[10px] uppercase border-b border-gray-400 text-center">
-                      <th className="border border-gray-400 px-1 py-1 w-16" title="Unidad de medida">UND</th>
+                      <th className="border border-gray-400 px-0.5 py-1 w-14 text-[9px]" title="Unidad de medida">UND</th>
                       <th className="border border-gray-400 px-1 py-1 w-16">Largo</th>
                       <th className="border border-gray-400 px-1 py-1 w-16">Ancho</th>
                       <th className="border border-gray-400 px-1 py-1 w-16">Alto</th>
@@ -3612,11 +3625,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                             </td>
 
                             {/* UNIDAD */}
-                            <td className="border border-gray-300 px-1 py-1">
+                            <td className="border border-gray-300 px-0.5 py-1">
                               <select
                                 value={it.unit}
                                 onChange={(e) => handleUpdateItemField(it.id, 'unit', e.target.value)}
-                                className="w-full px-1 py-1 text-xs font-bold text-center bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded cursor-pointer"
+                                className="w-full px-0.5 py-0.5 text-[10px] font-semibold text-center text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded cursor-pointer"
                               >
                                 {COMMON_UNITS.map((u) => (
                                   <option key={u} value={u}>
@@ -3830,7 +3843,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                       />
                                     </div>
                                   </td>
-                                  <td className="border border-amber-200 px-1 py-1 text-center text-xs font-bold text-gray-500 bg-amber-50/30">
+                                  <td className="border border-amber-200 px-0.5 py-1 text-center text-[10px] font-semibold text-gray-500 bg-amber-50/30">
                                     {it.unit || 'M2'}
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1">
