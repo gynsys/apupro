@@ -346,5 +346,17 @@ export const budgetService = {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     return true;
+  },
+
+  recalibratePerformances: async (budgetId) => {
+    const response = await fetch(`${API_URL}/budgets/${budgetId}/recalibrate-performances`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Error al recalibrar rendimientos');
+    }
+    return response.json();
   }
 };

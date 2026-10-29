@@ -104,7 +104,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
         quantity: item.quantity ?? 0,
         unit: item.unit || 'und',
         code: item.code || '',
-        performance: item.performance || 1.0,
+        performance: (item.performance !== undefined && item.performance !== null) ? Number(item.performance) : null,
         selected: item.is_chapter ? '' : (item.selected_cod_par || ''),
         has_covenin_code_match: Boolean(item.has_covenin_code_match),
         apu_source: item.apu_source || null,
@@ -186,6 +186,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
         const partida = result.partida || {};
         const suppliedCode = String(target.code || '').trim();
         const finalCode = suppliedCode || String(partida.cod_par || `GEN-${target.row}`).trim();
+        const generatedPerf = Number(partida.rendimiento || partida.performance) || null;
 
         const generatedCandidate = {
           cod_par: finalCode,
@@ -205,6 +206,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
               generated_data: result,
               generated_code: finalCode,
               selected: finalCode,
+              performance: generatedPerf || it.performance || null,
               cov_par: generatedCandidate.cov_par,
               candidates: [
                 generatedCandidate,
@@ -343,11 +345,15 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
           const useGenerated = Boolean(generated && (item.selected === generatedCode || !item.has_covenin_code_match));
           const hasExcelApu = item.apu_source === 'excel_apu' || Boolean(item.materials?.length || item.equipments?.length || item.labors?.length);
 
+          const finalPerformance = (useGenerated ? (Number(generated?.partida?.performance || generated?.partida?.rendimiento) || null) : null)
+            || (item.performance ? Number(item.performance) : null)
+            || null;
+
           return {
             description: item.description.trim(),
             unit: (item.unit || 'und').trim() || 'und',
             quantity: Number(item.quantity) || 0,
-            performance: Number(item.performance) || (useGenerated ? Number(generated?.partida?.performance || generated?.partida?.rendimiento) : null) || 1.0,
+            performance: finalPerformance,
             is_chapter: Boolean(item.is_chapter),
             cod_par: item.is_chapter ? null : (item.selected || suppliedCode || null),
             cov_par: suppliedCode || (useGenerated ? (generated?.partida?.cov_par || generatedCode) : (item.cov_par || null)),

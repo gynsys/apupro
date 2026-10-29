@@ -226,6 +226,8 @@ export default function BudgetWorksheetView() {
                 onOpenChapterModal={() => { ws.setChapterName(""); ws.setShowChapterModal(true); }}
                 onExportExcel={ws.handleOpenExportExcelModal}
                 exportingExcel={ws.exportingBudgetExcel}
+                onRecalibratePerformances={ws.handleRecalibratePerformances}
+                recalibratingPerformances={ws.recalibratingPerformances}
                 showSettings={ws.showSettings}
                 setShowSettings={ws.setShowSettings}
                 setShowPrintModal={ws.setShowPrintModal}

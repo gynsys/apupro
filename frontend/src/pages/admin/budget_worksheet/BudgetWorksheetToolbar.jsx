@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, FolderPlus, Settings, Printer, Loader } from 'lucide-react';
+import { Plus, FolderPlus, Settings, Printer, Loader, Gauge } from 'lucide-react';
 import ExcelIcon from './ExcelIcon';
 
 export default function BudgetWorksheetToolbar({
@@ -7,6 +7,8 @@ export default function BudgetWorksheetToolbar({
   onOpenChapterModal,
   onExportExcel,
   exportingExcel,
+  onRecalibratePerformances,
+  recalibratingPerformances,
   showSettings,
   setShowSettings,
   setShowPrintModal,
@@ -41,6 +43,22 @@ export default function BudgetWorksheetToolbar({
           )}
           <span className="truncate">Exportar Excel</span>
         </button>
+
+        {onRecalibratePerformances && (
+          <button
+            onClick={onRecalibratePerformances}
+            disabled={recalibratingPerformances}
+            className="flex items-center justify-center gap-1.5 bg-white border border-slate-400 hover:border-amber-500 hover:bg-amber-50 hover:text-amber-800 text-slate-700 px-3 py-1.5 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 text-xs sm:text-sm cursor-pointer shadow-xs"
+            title="Recalibrar rendimientos según normas técnicas COVENIN y cuadrillas reales"
+          >
+            {recalibratingPerformances ? (
+              <Loader size={16} className="animate-spin text-amber-600 shrink-0" />
+            ) : (
+              <Gauge size={16} className="text-amber-600 shrink-0" />
+            )}
+            <span className="truncate">Recalibrar Rendimientos</span>
+          </button>
+        )}
 
         {/* VISIBLES EN MÓVIL (< md) */}
         <button 

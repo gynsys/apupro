@@ -679,6 +679,26 @@ export function useBudgetWorksheet() {
 
   const handleExportBudgetToExcel = handleOpenExportExcelModal;
 
+  const [recalibratingPerformances, setRecalibratingPerformances] = useState(false);
+
+  const handleRecalibratePerformances = async () => {
+    if (!budget?.id) return;
+    try {
+      setRecalibratingPerformances(true);
+      toast.loading('Recalibrando rendimientos con normas COVENIN y cuadrillas...', { id: 'recalibrate-perf' });
+      const res = await budgetService.recalibratePerformances(budget.id);
+      await loadBudget();
+      toast.success(
+        res.message || `Rendimientos recalibrados exitosamente (${res.updated_items || 0} partidas actualizadas)`,
+        { id: 'recalibrate-perf' }
+      );
+    } catch (err) {
+      toast.error(err.message || 'Error al recalibrar rendimientos', { id: 'recalibrate-perf' });
+    } finally {
+      setRecalibratingPerformances(false);
+    }
+  };
+
   return {
     id,
     budget,
@@ -762,5 +782,7 @@ export function useBudgetWorksheet() {
     handleOpenExportExcelModal,
     handleExportExcelWithOptions,
     handleExportBudgetToExcel,
+    recalibratingPerformances,
+    handleRecalibratePerformances,
   };
 }

@@ -750,10 +750,10 @@ def commit_budget_import(
                 unit = item.unit or "und"
 
             initial_perf = 1.0
-            if item.performance and float(item.performance) > 0:
-                initial_perf = float(item.performance)
-            elif cost_item and cost_item.RenPar and float(cost_item.RenPar) > 0:
+            if cost_item and cost_item.RenPar and float(cost_item.RenPar) > 0:
                 initial_perf = float(cost_item.RenPar)
+            elif item.performance and float(item.performance) > 0:
+                initial_perf = float(item.performance)
 
             db_item = BudgetItem(
                 budget_id=budget.id,
@@ -818,11 +818,10 @@ def commit_budget_import(
 
             items_created += 1
 
-        # Post-procesamiento y calibración determinista obligatoria para el FLUJO ANTIGUO
-        # En la NUEVA importación de Libros de APUs (excel_apu), se omite al 100% para respetar la copia fiel.
-        is_apu_workbook_flow = (payload.source_type == "excel_apu") or all(
-            it.is_chapter or bool(it.materials or it.equipments or it.labors)
-            for it in payload.items
+        # Post-procesamiento y calibración determinista obligatoria para el FLUJO ESTÁNDAR / IMÁGENES / LISTADOS
+        # En la importación de Libros de APUs de Excel (excel_apu), se omite para respetar la copia fiel.
+        is_apu_workbook_flow = (payload.source_type == "excel_apu") or any(
+            it.apu_source == "excel_apu" for it in payload.items
         )
         if not is_apu_workbook_flow:
             try:
