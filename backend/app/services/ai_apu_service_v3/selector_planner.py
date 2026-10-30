@@ -21,9 +21,9 @@ _V3_SELECTOR_SYSTEM_PROMPT = """Eres un Ingeniero Civil y de Costos Senior venez
 Tu trabajo opera en DOS modalidades según exista o no una partida base compatible:
 
 REGLA DE ORO DE REDACCIÓN Y MEJORA TÉCNICA COVENIN (adapted_description):
-- ESTÁ TERMINANTEMENTE PROHIBIDO devolver la descripción del usuario intacta, literal o en minúsculas.
-- DEBES MEJORAR, EXPANDIR Y PROFESIONALIZAR la descripción transformándola en una especificación técnica formal COVENIN en MAYÚSCULAS.
-- Estructura obligatoria: [ACCIÓN TÉCNICA NORMATIVA] + [ELEMENTO ESTRUCTURAL O CONSTRUCTIVO] + [MATERIALES, QUÍMICOS Y ESPECIFICACIONES] + [ALCANCES Y METODOLOGÍA INCLUIDA].
+- DEBES MEJORAR Y PROFESIONALIZAR la redacción del usuario en MAYÚSCULAS usando terminología técnica COVENIN formal, con ortografía y acentuación correctas.
+- PROHIBIDO INVENTAR FASES O ALCANCES ADICIONALES: Mantén estrictamente el alcance y la acción física solicitada por el usuario. Si el usuario solicita "ACARREO MANUAL DE MOBILIARIO Y ENSERES", NO inventes ni agregues "carga mecánica, transporte vehicular, descarga a contenedor, bote a relleno sanitario". Utiliza palabras y términos técnicos estrictamente asociados a lo que el usuario pidió originalmente.
+- Respeta la delimitación física de la partida para no solapar ni duplicar otras partidas del presupuesto (como transporte, bote o acarreo).
 - Ejemplo: Si el usuario escribe: "reparacion de losa de techo. incluye la remocion de recubrimiento en mal estado, cepillado de acero de refuerzo corroida, aplicacion de convertidor de oxido y la aplicacion de mortero de alta resistencia",
   DEBES REDACTAR: "REPARACIÓN INTEGRAL DE LOSA DE TECHO DE CONCRETO ARMADO, INCLUYE REMOCIÓN DE FRISO/RECUBRIMIENTO DETERIORADO, LIMPIEZA CON CEPILLO DE ACERO EN ACERO DE REFUERZO CORROÍDO, APLICACIÓN DE CONVERTIDOR DE ÓXIDO Y RECUBRIMIENTO CON MORTERO ESTRUCTURAL DE ALTA RESISTENCIA".
 - Elimina cualquier mención coloquial a casas, quintas, apartamentos o clientes privados; usa terminología normativa formal de ingeniería civil.
@@ -189,7 +189,8 @@ def _build_v3_selector_prompt(
     enriched_candidates: List[Dict[str, Any]],
     requested_unit: Optional[str] = None,
     execution_days: Optional[float] = None,
-    context: Optional[str] = None
+    context: Optional[str] = None,
+    quantity: Optional[float] = None,
 ) -> str:
     """Construye el prompt compacto para que la IA elija la mejor partida base o sintetice bajo reglas COVENIN."""
     if enriched_candidates:
@@ -202,6 +203,7 @@ def _build_v3_selector_prompt(
 
     unit_line = f"Unidad solicitada por el usuario: {requested_unit}\n" if requested_unit else "Unidad solicitada: Usar la unidad técnica normativa adecuada.\n"
     days_line = f"Días de ejecución estimados (para unidad Global Gl): {execution_days}\n" if execution_days else ""
+    qty_line = f"Cantidad de obra presupuestada: {quantity:g} {requested_unit or ''} (Verifica que Días de Ejecución = Cantidad / Rendimiento sea coherente con la escala de la obra).\n" if (quantity and quantity > 0) else ""
     ctx_line = f"Contexto adicional: {context}\n" if context else ""
 
     prompt = (
@@ -209,6 +211,7 @@ def _build_v3_selector_prompt(
         f"\"{user_description}\"\n"
         f"{unit_line}"
         f"{days_line}"
+        f"{qty_line}"
         f"{ctx_line}\n"
         f"PARTIDAS CANDIDATAS REALES EN BASE DE DATOS (CON SUS INSUMOS ACTUALES):\n"
         f"{candidates_block}\n"
@@ -216,10 +219,11 @@ def _build_v3_selector_prompt(
         f"1. Si alguna candidata corresponde a la familia constructiva solicitada, escoge en `selected_codpar` su código `codpar` exacto y declara en `material_ops`, `equipment_ops` y `labor_ops` ÚNICAMENTE los cambios puntuales necesarios (`replace`, `remove`, `modify_qty`, `add`). SI LA BASE CONTIENE OFICIOS AJENOS A LA ACTIVIDAD FÍSICA SOLICITADA (ej. albañil en desmalezamiento), ELIMÍNALOS OBLIGATORIAMENTE con `remove`.\n"
         f"2. Si NINGUNA candidata tiene relación constructiva real con lo solicitado (o no hay candidatas) pero la descripción del usuario es completa, usa `\"selected_codpar\": \"NONE\"`, `\"keep_base_performance\": false`, asigna `\"new_performance\"` coherente con las Horas-Hombre de la cuadrilla y construye todos los materiales, equipos (incluyendo `HERRAMIENTAS MENORES`) y mano de obra con los oficios exactos que ejecutan la acción física mediante operaciones `\"op\": \"add\"`.\n"
         f"3. COHERENCIA DE OFICIOS Y ÁMBITO DE TRABAJO: En desmalezamiento/limpieza de terreno PROHIBIDO albañil/plomero/electricista (usar Caporal + Obrero de 1ra + Ayudante). En herrería/cercas con soldadura incluir Soldador/Herrero de 1ra. Si la unidad es territorial (`ha`, `km`), dimensiona una BRIGADA DE TRABAJO (4 a 8 personas) con sus equipos a motor suficientes (desmalezadoras), y rendimiento diario fraccionario (ej. 0.20 a 0.50 ha/día).\n"
-        f"4. REDACCIÓN Y MEJORA TÉCNICA OBLIGATORIA (adapted_description): NO copies el texto del usuario literalmente ni en minúsculas. MEJORA, EXPANDE Y PROFESIONALIZA la redacción convirtiéndola en una especificación técnica formal COVENIN en MAYÚSCULAS que detalle el elemento intervenido, los productos/materiales utilizados y todos los alcances de la partida.\n"
+        f"4. REDACCIÓN Y MEJORA TÉCNICA (adapted_description): Profesionaliza la redacción en MAYÚSCULAS usando terminología técnica formal COVENIN pero SIN INVENTAR FASES O ALCANCES NO SOLICITADOS (ej: si piden acarreo manual, no agregues bote ni transporte vehicular ni contenedores; mantén las palabras asociadas a la acción y elemento pedido).\n"
         f"5. Si un insumo de la base se mantiene pero cambia su especificación (ej. otro tipo de bloque, otra resistencia de concreto, otro diámetro de tubería), usa `op: \"replace\"` indicando `target_code` del insumo original en la base.\n"
         f"6. Si un insumo de la base sobra o contradice la solicitud del usuario, usa `op: \"remove\"` indicando su `target_code`.\n"
-        f"7. REGLA DE EQUIPOS DE LOGÍSTICA PESADA (SOLO POR SOLICITUD EXPLÍCITA): Elimina (`op: \"remove\"`) o abstente de agregar el WINCHE CABRESTANTE (+ GÜINCHERO), CAMIÓN F-350/VOLTEO/CONTENEDOR (+ CHOFER), COMPRESOR NEUMÁTICO (+ OPERADOR), PLANTA ELÉCTRICA/GENERADOR, BOMBA DE ACHIQUE, BOMBA DE CONCRETO, MINICARGADOR/BOBCAT, MONTACARGAS, PLATAFORMA ELEVADORA/MANLIFT, ANDAMIO TUBULAR/COLGANTE, EQUIPO AIRLESS, FRESADORA/ESCARIFICADORA DE PISO, CORTADORA DE PAVIMENTO DE CARRO, HIDROLAVADORA INDUSTRIAL, EQUIPO DE TOPOGRAFÍA, EQUIPO DE ENSAYO o EQUIPO DE OXICORTE/GRÚA/SEÑORITA salvo que el usuario lo haya solicitado expresamente en su descripción.\n\n"
+        f"7. REGLA DE EQUIPOS DE LOGÍSTICA PESADA (SOLO POR SOLICITUD EXPLÍCITA): Elimina (`op: \"remove\"`) o abstente de agregar el WINCHE CABRESTANTE (+ GÜINCHERO), CAMIÓN F-350/VOLTEO/CONTENEDOR (+ CHOFER), COMPRESOR NEUMÁTICO (+ OPERADOR), PLANTA ELÉCTRICA/GENERADOR, BOMBA DE ACHIQUE, BOMBA DE CONCRETO, MINICARGADOR/BOBCAT, MONTACARGAS, PLATAFORMA ELEVADORA/MANLIFT, ANDAMIO TUBULAR/COLGANTE, EQUIPO AIRLESS, FRESADORA/ESCARIFICADORA DE PISO, CORTADORA DE PAVIMENTO DE CARRO, HIDROLAVADORA INDUSTRIAL, EQUIPO DE TOPOGRAFÍA, EQUIPO DE ENSAYO o EQUIPO DE OXICORTE/GRÚA/SEÑORITA salvo que el usuario lo haya solicitado expresamente en su descripción.\n"
+        f"8. UNIDADES COMPUESTAS DE TRANSPORTE Y ACARREO (M3-M, M3-KM, TON-KM): En 'M3-M' (volumen x metros de distancia horizontal), el rendimiento diario representa Volumen x Distancia (mínimo 100 a 300 M3-M/día para una cuadrilla de 1-2 obreros con carretillas, NUNCA rendimientos de excavación de 10-20 m3). En 'M3-KM' (transporte vehicular en camión), el rendimiento diario representa Volumen x Kilómetros (mínimo 300 a 800 M3-KM/día), y la tarifa del camión es diaria de alquiler (price_basis: 'tarifa_diaria', depreciation_factor: 1.0).\n\n"
         f"Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta:\n"
         "{\n"
         '  "selected_codpar": "CODIGO_CANDIDATA_O_NONE",\n'
@@ -248,7 +252,8 @@ def plan_v3_selection_and_deltas(
     enriched_candidates: List[Dict[str, Any]],
     requested_unit: Optional[str] = None,
     execution_days: Optional[float] = None,
-    context: Optional[str] = None
+    context: Optional[str] = None,
+    quantity: Optional[float] = None,
 ) -> Tuple[V3AdaptationPlan, Dict[str, Any], float, str]:
     """
     Ejecuta la selección de la mejor partida base y planificación de ajustes Delta con el LLM,
@@ -264,7 +269,8 @@ def plan_v3_selection_and_deltas(
         enriched_candidates=enriched_candidates,
         requested_unit=requested_unit,
         execution_days=execution_days,
-        context=context
+        context=context,
+        quantity=quantity,
     )
 
     default_cand: Dict[str, Any] = enriched_candidates[0]["apu"] if enriched_candidates else {}

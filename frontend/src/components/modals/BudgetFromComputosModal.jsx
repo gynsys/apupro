@@ -2588,6 +2588,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
             unit: it.unit || 'M2',
             sc_index: scCounter,
             auto_generate_sc: true,
+            quantity: Number(it.quantity) || 1.0,
           });
         } catch (errResolve) {
           console.error('Error resolviendo partida de cómputo:', errResolve);

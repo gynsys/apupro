@@ -28,6 +28,7 @@ def generate_apu_v3(
     execution_days: Optional[float] = None,
     deep_well_depth: Optional[float] = None,
     use_embeddings: bool = False,
+    quantity: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
     Punto de entrada principal para el Motor v3.0 (Selección de Mejor Partida Base + Ajustes Delta).
@@ -39,7 +40,7 @@ def generate_apu_v3(
         raise ValueError("db Session es obligatoria para el Motor v3.0")
 
     t_start = time.time()
-    logger.info("[V3 Engine] Iniciando generación v3.0 (use_embeddings=%s) para: %.80s", use_embeddings, user_description)
+    logger.info("[V3 Engine] Iniciando generación v3.0 (use_embeddings=%s, qty=%s) para: %.80s", use_embeddings, quantity, user_description)
 
     # ETAPA 1: Recuperar las mejores candidatas reales con sus insumos completos
     enriched_candidates, all_candidates_trace, retrieval_ms = fetch_enriched_candidates_for_v3(
@@ -59,6 +60,7 @@ def generate_apu_v3(
         requested_unit=requested_unit,
         execution_days=execution_days,
         context=context,
+        quantity=quantity,
     )
 
     if plan.clarification_needed:
@@ -91,11 +93,29 @@ def generate_apu_v3(
         deep_well_depth=deep_well_depth,
     )
 
+    # ETAPA 4: Lazo Cerrado de Diagnóstico y Auto-Corrección Físico-Económica
+    from app.services.ai_apu_service_v3.reviewer import review_and_correct_apu_closed_loop
+    result, diagnostics, closed_loop_audit = review_and_correct_apu_closed_loop(
+        apu=result,
+        user_description=user_description,
+        quantity=quantity,
+        allow_llm_revision=True,
+    )
+
     total_ms = (time.time() - t_start) * 1000.0
     total_deltas = len(plan.material_ops) + len(plan.equipment_ops) + len(plan.labor_ops)
 
     # Telemetría y trazabilidad compatible con el visor de auditoría y debugStorage.js
     result["generation_engine"] = "v3_delta"
+    result["closed_loop_diagnostics"] = {
+        "hh_per_unit": diagnostics.hh_per_unit,
+        "implicit_execution_days": diagnostics.implicit_execution_days,
+        "equipment_cost_day": diagnostics.equipment_cost_day,
+        "labor_cost_day": diagnostics.labor_cost_day,
+        "alerts_count": len(diagnostics.alerts),
+        "alerts": diagnostics.alert_summary_lines,
+        "actions_taken": closed_loop_audit,
+    }
     result["telemetria_v3"] = {
         "engine": "v3_delta",
         "candidate_retrieval_ms": round(retrieval_ms, 1),
@@ -105,6 +125,7 @@ def generate_apu_v3(
         "selected_codpar": plan.selected_codpar,
         "candidates_inspected": len(enriched_candidates),
         "total_deltas_applied": len(result.get("v3_applied_deltas", [])),
+        "closed_loop_corrections": len(closed_loop_audit),
     }
     result["debug_meta"] = result["telemetria_v3"]
     result["debug_base_selection"] = {

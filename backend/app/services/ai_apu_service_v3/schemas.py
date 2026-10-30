@@ -66,6 +66,10 @@ class V3EquipmentDeltaOp(BaseModel):
         default=None,
         description="Factor de depreciación/alquiler diario opcional"
     )
+    price_basis: Optional[Literal["tarifa_diaria", "valor_reposicion"]] = Field(
+        default="tarifa_diaria",
+        description="Indica si estimated_price_usd es tarifa/alquiler diario (factor 1.0) o valor de reposición de compra (aplica depreciación 0.002-0.015)"
+    )
     reason: str = Field(
         default="Ajuste de equipo según alcance solicitado",
         description="Justificación técnica del ajuste de equipo"
@@ -170,3 +174,39 @@ class V3GenerationMeta(BaseModel):
     candidates_evaluated: int = 0
     total_deltas_applied: int = 0
     summary: Dict[str, Any] = Field(default_factory=dict)
+
+
+class V3ReviewPatch(BaseModel):
+    """
+    Esquema restringido para la auto-revisión física y económica del APU en Lazo Cerrado.
+    La IA solo tiene permitido ajustar perillas existentes (rendimiento, cantidades de obreros
+    o factores de equipos), sin inventar nuevos insumos ni cambiar la unidad o el contrato.
+    """
+    new_performance: Optional[float] = Field(
+        default=None,
+        description="Nuevo rendimiento diario corregido si el anterior generaba HH/unidad o días irreales"
+    )
+    performance_reason: Optional[str] = Field(
+        default=None,
+        description="Explicación física del ajuste de rendimiento"
+    )
+    crew_qty_adjustments: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Ajuste de cantidades de cargos existentes: [{'codigo': '...', 'new_quantity': ...}]"
+    )
+    equipment_adjustments: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Ajuste de equipos existentes: [{'codigo': '...', 'new_quantity': ..., 'depreciation_factor': ...}]"
+    )
+    equipment_removals: List[str] = Field(
+        default_factory=list,
+        description="Códigos de insumos de equipo ajenos a la actividad a eliminar (ej. herramientas de postes o excavación en mudanzas)"
+    )
+    labor_removals: List[str] = Field(
+        default_factory=list,
+        description="Códigos de cargos de mano de obra ajenos a eliminar"
+    )
+    technical_justification: str = Field(
+        default="Ajuste de consistencia física y económica",
+        description="Justificación técnica integral de la corrección"
+    )

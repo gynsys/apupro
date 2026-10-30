@@ -143,6 +143,7 @@ class ResolveComputoRequest(BaseModel):
     unit: str = Field(default="M2", max_length=20)
     sc_index: int = Field(default=1, ge=1, le=9999)
     auto_generate_sc: bool = True
+    quantity: Optional[float] = Field(default=None, description="Cantidad estimada para cálculo de días de obra y lazo cerrado")
 
 
 class ResolveComputoResponse(BaseModel):
@@ -299,15 +300,15 @@ async def preview_budget_import(
 
 
 def _enrich_sparse_description(description: str, unit: str = "und") -> str:
-    """Enriquece descripciones telegráficas o ambiguas con parámetros constructivos
-    canónicos para evitar alucinaciones del modelo LLM generador de APUs."""
+    """Enriquece únicamente términos telegráficos aislados (1 a 3 palabras)
+    sin inventar alcances ni fases no solicitadas por el usuario."""
     clean = (description or "").strip()
     if not clean:
         return clean
 
-    # Si la descripción ya es extensa o detallada, respetarla
+    # Si la descripción ya tiene 4 o más palabras, respetar el alcance exacto del usuario sin inventar
     words = clean.split()
-    if len(words) >= 10 and any(kw in clean.lower() for kw in ("incluye", "espesor", "e=", "d=", "f'c", "calibre", "mortero", "andamios")):
+    if len(words) >= 4:
         return clean
 
     lower = clean.lower()
@@ -363,6 +364,7 @@ def _generate_apu_with_fallback(
     db: Session,
     description: str,
     unit: str,
+    quantity: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Ejecuta el motor de generación de APU v3.0 con respaldo en v2.0 y v1.0."""
     if not description or len(description.strip()) < 3:
@@ -384,6 +386,7 @@ def _generate_apu_with_fallback(
             db=db,
             requested_unit=unit,
             use_embeddings=False,
+            quantity=quantity,
         )
         if (
             v3_res.get("status") in ("completed", "success")
@@ -554,7 +557,12 @@ def resolve_computo_item(
     if payload.auto_generate_sc:
         try:
             check_ai_access(current_user)
-            gen_res = _generate_apu_with_fallback(db=db, description=description, unit=unit.lower())
+            gen_res = _generate_apu_with_fallback(
+                db=db,
+                description=description,
+                unit=unit.lower(),
+                quantity=payload.quantity,
+            )
             partida = gen_res.get("partida") or {}
             materials = gen_res.get("materials") or []
             equipments = gen_res.get("equipments") or []

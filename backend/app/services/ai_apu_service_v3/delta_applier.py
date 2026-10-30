@@ -245,7 +245,19 @@ def _apply_equipment_deltas(
             old_ref = result_eqs[idx] if (action == "replace" and idx >= 0) else {}
             new_qty = float(op_item.new_quantity) if (op_item.new_quantity is not None and op_item.new_quantity > 0) else float(old_ref.get("cantidad") or 1.0)
             est_price = float(op_item.estimated_price_usd) if (op_item.estimated_price_usd is not None and op_item.estimated_price_usd > 0) else float(old_ref.get("precio_unitario") or 100.0)
-            dep_factor = float(op_item.depreciation_factor) if (op_item.depreciation_factor is not None and op_item.depreciation_factor > 0) else float(old_ref.get("depreciacion") or 0.01)
+            
+            # Determinación inteligente de factor de depreciación/alquiler:
+            if op_item.depreciation_factor is not None and op_item.depreciation_factor > 0:
+                dep_factor = float(op_item.depreciation_factor)
+            elif old_ref.get("depreciacion") is not None and float(old_ref.get("depreciacion")) > 0:
+                dep_factor = float(old_ref.get("depreciacion"))
+            else:
+                basis = getattr(op_item, "price_basis", "tarifa_diaria") or "tarifa_diaria"
+                # Si es tarifa diaria o el precio parece tarifa (< 500 USD), el factor diario es 1.0
+                if basis == "tarifa_diaria" or est_price <= 400.0:
+                    dep_factor = 1.0
+                else:
+                    dep_factor = 0.01
 
             new_eq: Dict[str, Any] = {
                 "codigo": f"EQ-IA-{ia_counter:03d}",
