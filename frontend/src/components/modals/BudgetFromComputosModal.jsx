@@ -762,6 +762,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   const [chapterModalInput, setChapterModalInput] = useState('');
   const [renameChapterTarget, setRenameChapterTarget] = useState(null);
   const [renameChapterInput, setRenameChapterInput] = useState('');
+  const [deleteChapterTarget, setDeleteChapterTarget] = useState(null);
+  const [deleteChapterAction, setDeleteChapterAction] = useState('delete_all');
+  const [targetMoveChapter, setTargetMoveChapter] = useState('');
   const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [coveninTargetItemId, setCoveninTargetItemId] = useState(null);
   const [isCalibrationOpen, setIsCalibrationOpen] = useState(false);
@@ -1420,6 +1423,104 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     toast.success(`Capítulo renombrado a "${clean}"`);
     setRenameChapterTarget(null);
     setRenameChapterInput('');
+  };
+
+  /**
+   * Abre modal para confirmar la eliminación de un capítulo y sus partidas
+   */
+  const handlePromptDeleteChapter = (chapterName) => {
+    if (!chapterName) return;
+    const chap = chapterName.trim().toUpperCase();
+    const itemsInChapter = capturedItems.filter((it) => (it.chapter || '').trim().toUpperCase() === chap);
+    const filledCount = itemsInChapter.filter((it) => !isItemEmpty(it)).length;
+
+    // Obtener los otros capítulos únicos existentes en la planilla
+    const otherChaps = Array.from(
+      new Set(
+        capturedItems
+          .map((it) => (it.chapter || '').trim().toUpperCase())
+          .filter((c) => c && c !== chap)
+      )
+    );
+
+    setDeleteChapterTarget({
+      chapterName: chap,
+      filledCount,
+      otherChapters: otherChaps,
+    });
+    setDeleteChapterAction('delete_all');
+    setTargetMoveChapter(otherChaps[0] || '');
+  };
+
+  /**
+   * Confirma y aplica la eliminación del capítulo (o reubicación de sus partidas)
+   */
+  const handleConfirmDeleteChapter = () => {
+    if (!deleteChapterTarget) return;
+    const { chapterName, otherChapters } = deleteChapterTarget;
+
+    setCapturedItems((prev) => {
+      let updated;
+      if (deleteChapterAction === 'move' && targetMoveChapter) {
+        // Mover todas las partidas con datos al nuevo capítulo y agruparlas juntas
+        const movedItems = prev
+          .filter((it) => (it.chapter || '').trim().toUpperCase() === chapterName && !isItemEmpty(it))
+          .map((it) => ({ ...it, chapter: targetMoveChapter }));
+
+        const otherItems = prev.filter(
+          (it) => (it.chapter || '').trim().toUpperCase() !== chapterName
+        );
+
+        // Encontrar el último índice del capítulo destino para colocarlas consecutivamente
+        let lastTargetIdx = -1;
+        for (let i = otherItems.length - 1; i >= 0; i--) {
+          if ((otherItems[i].chapter || '').trim().toUpperCase() === targetMoveChapter) {
+            lastTargetIdx = i;
+            break;
+          }
+        }
+
+        if (lastTargetIdx >= 0) {
+          otherItems.splice(lastTargetIdx + 1, 0, ...movedItems);
+          updated = otherItems;
+        } else {
+          updated = [...otherItems, ...movedItems];
+        }
+      } else {
+        // Eliminar todas las filas pertenecientes a este capítulo
+        updated = prev.filter(
+          (it) => (it.chapter || '').trim().toUpperCase() !== chapterName
+        );
+      }
+
+      // Determinar cuál debe ser el activeChapter resultante
+      let nextActive = activeChapter;
+      if ((activeChapter || '').trim().toUpperCase() === chapterName) {
+        if (deleteChapterAction === 'move' && targetMoveChapter) {
+          nextActive = targetMoveChapter;
+        } else if (otherChapters.length > 0) {
+          nextActive = otherChapters[0];
+        } else {
+          nextActive = 'OBRAS PRELIMINARES';
+        }
+        setActiveChapter(nextActive);
+      }
+
+      // Si no queda ninguna fila, crear una fila en blanco con el siguiente capítulo activo
+      if (updated.length === 0) {
+        return [createBlankRow(nextActive)];
+      }
+
+      return normalizeRowsWithSingleTrailingBlank(updated, nextActive);
+    });
+
+    if (deleteChapterAction === 'move' && targetMoveChapter) {
+      toast.success(`Partidas movidas a "${targetMoveChapter}" y capítulo "${chapterName}" eliminado`);
+    } else {
+      toast.success(`Capítulo "${chapterName}" eliminado`);
+    }
+
+    setDeleteChapterTarget(null);
   };
 
   /**
@@ -2892,6 +2993,133 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         </div>
       )}
 
+      {/* Modal / Diálogo para Eliminar Capítulo */}
+      {deleteChapterTarget && (
+        <div className="absolute inset-0 z-[130] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 border-2 border-red-200 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-red-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-red-600 text-white flex items-center justify-center shadow-sm">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-red-950 font-bold text-base leading-tight">Eliminar Capítulo</h3>
+                  <p className="text-xs text-red-800">Esta acción removerá el capítulo de la planilla</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteChapterTarget(null)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-sm text-gray-700">
+                ¿Estás seguro de que deseas eliminar el capítulo{' '}
+                <strong className="text-red-950 font-extrabold uppercase">
+                  "{deleteChapterTarget.chapterName}"
+                </strong>
+                ?
+              </p>
+
+              {deleteChapterTarget.filledCount > 0 ? (
+                <div className="bg-amber-50 border border-amber-300 rounded-2xl p-3.5 text-xs text-amber-900 space-y-2.5">
+                  <div className="flex items-center gap-2 font-bold text-amber-950">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>
+                      Este capítulo contiene {deleteChapterTarget.filledCount} partida(s) con datos
+                    </span>
+                  </div>
+
+                  {deleteChapterTarget.otherChapters && deleteChapterTarget.otherChapters.length > 0 ? (
+                    <div className="space-y-2 pt-1">
+                      <span className="text-[11px] font-bold text-amber-950 block">
+                        ¿Qué deseas hacer con sus partidas?
+                      </span>
+                      <div className="space-y-1.5">
+                        <label className="flex items-start gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-amber-100/60">
+                          <input
+                            type="radio"
+                            name="chapterDeleteAction"
+                            checked={deleteChapterAction === 'delete_all'}
+                            onChange={() => setDeleteChapterAction('delete_all')}
+                            className="mt-0.5 text-red-600 focus:ring-red-500 cursor-pointer"
+                          />
+                          <div className="text-xs">
+                            <span className="font-bold text-red-900 block">Eliminar todas las partidas</span>
+                            <span className="text-gray-500 text-[11px]">Se borrarán las {deleteChapterTarget.filledCount} partidas del capítulo.</span>
+                          </div>
+                        </label>
+
+                        <label className="flex items-start gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-amber-100/60">
+                          <input
+                            type="radio"
+                            name="chapterDeleteAction"
+                            checked={deleteChapterAction === 'move'}
+                            onChange={() => setDeleteChapterAction('move')}
+                            className="mt-0.5 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                          />
+                          <div className="text-xs w-full">
+                            <span className="font-bold text-amber-950 block">Reubicar partidas en otro capítulo</span>
+                            <span className="text-gray-500 text-[11px]">Conservar las partidas y asignarlas a:</span>
+                            {deleteChapterAction === 'move' && (
+                              <select
+                                value={targetMoveChapter}
+                                onChange={(e) => setTargetMoveChapter(e.target.value)}
+                                className="w-full mt-1.5 px-2.5 py-1.5 text-xs font-bold border-2 border-amber-300 rounded-xl bg-white text-amber-950 focus:outline-none focus:border-amber-500"
+                              >
+                                {deleteChapterTarget.otherChapters.map((ch) => (
+                                  <option key={ch} value={ch}>
+                                    {ch}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-amber-800">
+                      Al no haber otros capítulos en la planilla, las partidas también se eliminarán y se iniciará un capítulo en blanco.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500 bg-gray-50 p-2.5 rounded-xl border border-gray-200">
+                  ℹ️ Este capítulo no contiene partidas con datos registrados y se eliminará de inmediato.
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setDeleteChapterTarget(null)}
+                className="px-3.5 py-1.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteChapter}
+                className="px-4 py-1.5 text-xs font-extrabold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors cursor-pointer shadow-sm flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>
+                  {deleteChapterAction === 'move' && deleteChapterTarget.filledCount > 0
+                    ? 'Mover y Eliminar Capítulo'
+                    : 'Eliminar Capítulo'}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de Búsqueda e Inclusión COVENIN (sin opciones IA ni Compartir) */}
       <BudgetSearchModal
         isOpen={showCatalogModal}
@@ -3173,14 +3401,26 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                             <Layers className="w-4 h-4 text-amber-700" />
                             CAPÍTULO: {it.chapter}
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => handleRenameChapter(it.chapter)}
-                            className="text-xs font-bold text-amber-900 bg-white hover:bg-amber-50 border border-amber-300 px-2.5 py-1 rounded-xl flex items-center gap-1 cursor-pointer shadow-xs"
-                          >
-                            <Edit3 className="w-3.5 h-3.5 text-amber-700" />
-                            <span>Renombrar</span>
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleRenameChapter(it.chapter)}
+                              className="text-xs font-bold text-amber-900 bg-white hover:bg-amber-50 border border-amber-300 px-2.5 py-1 rounded-xl flex items-center gap-1 cursor-pointer shadow-xs"
+                              title="Renombrar este capítulo"
+                            >
+                              <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+                              <span>Renombrar</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handlePromptDeleteChapter(it.chapter)}
+                              className="text-xs font-bold text-red-700 bg-white hover:bg-red-50 border border-red-300 px-2.5 py-1 rounded-xl flex items-center gap-1 cursor-pointer shadow-xs"
+                              title="Eliminar este capítulo"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                              <span>Eliminar</span>
+                            </button>
+                          </div>
                         </div>
                       )}
 
@@ -3698,15 +3938,26 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                     <Layers className="w-3.5 h-3.5 text-amber-700" />
                                     CAPÍTULO: {it.chapter}
                                   </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRenameChapter(it.chapter)}
-                                    className="text-[10px] font-bold text-amber-900 bg-white/90 hover:bg-white border border-amber-300 px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer shadow-xs"
-                                    title="Renombrar este capítulo"
-                                  >
-                                    <Edit3 className="w-3 h-3 text-amber-700" />
-                                    <span>Renombrar</span>
-                                  </button>
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRenameChapter(it.chapter)}
+                                      className="text-[10px] font-bold text-amber-900 bg-white/90 hover:bg-white border border-amber-300 px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer shadow-xs"
+                                      title="Renombrar este capítulo"
+                                    >
+                                      <Edit3 className="w-3 h-3 text-amber-700" />
+                                      <span>Renombrar</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handlePromptDeleteChapter(it.chapter)}
+                                      className="text-[10px] font-bold text-red-700 bg-white/90 hover:bg-red-50 border border-red-300 px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer shadow-xs hover:text-red-900"
+                                      title="Eliminar este capítulo"
+                                    >
+                                      <Trash2 className="w-3 h-3 text-red-600" />
+                                      <span>Eliminar</span>
+                                    </button>
+                                  </div>
                                 </div>
                               </td>
                             </tr>
