@@ -3251,10 +3251,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       {/* CUERPO PRINCIPAL */}
       {activeTab === 'sheet' ? (
         /* VISTA: PLANILLA DE CÓMPUTOS MÉTRICOS (TABLA CON FACTOR, DISTANCIA Y FILA LIBRE) */
-        <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 bg-[#FEF3C7]">
-          <div className="max-w-[1400px] mx-auto space-y-4">
-            {/* Encabezado de la Planilla de Cómputos Métricos */}
-            <div className="bg-white border-2 border-amber-300 rounded-2xl py-2 px-4 shadow-sm text-center">
+        <div className="flex-1 flex flex-col min-h-0 p-3 sm:p-4 space-y-3 bg-[#FEF3C7] overflow-hidden">
+          <div className="max-w-[1400px] w-full mx-auto flex flex-col flex-1 min-h-0 space-y-3">
+            {/* Encabezado fijo de la Planilla de Cómputos Métricos */}
+            <div className="bg-white border-2 border-amber-300 rounded-2xl py-1.5 px-4 shadow-sm text-center shrink-0">
               <h2 className="text-sm sm:text-base font-black text-amber-950 tracking-wider uppercase leading-tight">
                 PLANILLA DE CÓMPUTOS MÉTRICOS
               </h2>
@@ -3263,7 +3263,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
             {/* CUERPO DE LA PLANILLA: VISTA MÓVIL APILADA (CARDS) O VISTA TABLA CLÁSICA */}
             {viewMode === 'cards' ? (
               /* VISTA MÓVIL APILADA: CONTENEDORES HACIA ABAJO SIN DESPLAZAMIENTO HORIZONTAL */
-              <div className="space-y-4">
+              <div className="flex-1 overflow-y-auto space-y-4 pr-1">
                 {capturedItems.map((it, idx) => {
                   const prevItem = idx > 0 ? capturedItems[idx - 1] : null;
                   const showChapHeader = Boolean(
@@ -3754,53 +3754,53 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                 })}
               </div>
             ) : (
-              /* TABLA PRINCIPAL: PLANILLA DE CÓMPUTOS MÉTRICOS CON FILA LIBRE SIEMPRE PRESENTE */
-              <div className="bg-white border-2 border-gray-400 rounded-2xl shadow-md overflow-hidden">
-                <div className="overflow-x-auto">
+              /* TABLA PRINCIPAL: PLANILLA DE CÓMPUTOS MÉTRICOS CON FILA LIBRE SIEMPRE PRESENTE Y ENCABEZADO FIJO DESACOPLADO */
+              <div className="flex-1 min-h-0 bg-white border-2 border-gray-400 rounded-2xl shadow-md overflow-hidden flex flex-col">
+                <div className="flex-1 overflow-auto">
                   <table className="w-full text-xs text-left border-collapse border border-gray-400 min-w-[1100px]">
-                  <thead>
-                    <tr className="bg-amber-200/90 text-amber-950 font-black uppercase border-b border-gray-400 text-center text-[11px] tracking-wide">
-                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-12 bg-amber-300/80">
+                  <thead className="sticky top-0 z-20 shadow-xs">
+                    <tr className="bg-amber-200 text-amber-950 font-black uppercase border-b border-gray-400 text-center text-[11px] tracking-wide">
+                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-12 bg-amber-300">
                         N° DE ITEM
                       </th>
-                      <th rowSpan={2} className="border border-gray-400 px-3 py-2 text-left min-w-[380px] sm:min-w-[460px] bg-amber-200/90">
+                      <th rowSpan={2} className="border border-gray-400 px-3 py-2 text-left min-w-[380px] sm:min-w-[460px] bg-amber-200">
                         DESCRIPCIÓN
                       </th>
-                      <th colSpan={4} className="border border-gray-400 px-2 py-1 bg-amber-300/70">
+                      <th colSpan={4} className="border border-gray-400 px-2 py-1 bg-amber-300">
                         DIMENSIONES
                       </th>
-                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-14 bg-amber-200/90" title="Número de repeticiones o piezas iguales">
+                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-14 bg-amber-200" title="Número de repeticiones o piezas iguales">
                         N° DE VECES
                       </th>
-                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-20 bg-amber-300/80 text-amber-950" title="Factor de peso unitario para acero (kg/m) o factor multiplicador">
+                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-20 bg-amber-300 text-amber-950" title="Factor de peso unitario para acero (kg/m) o factor multiplicador">
                         <div className="leading-tight">
                           <span>FACTOR</span>
                           <span className="block text-[9px] font-semibold text-amber-800 normal-case">(Acero kg/m)</span>
                         </div>
                       </th>
-                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-20 bg-amber-300/80 text-amber-950" title="Distancia en kilómetros para acarreos y transportes (M3-KM, TON-KM)">
+                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-20 bg-amber-300 text-amber-950" title="Distancia en kilómetros para acarreos y transportes (M3-KM, TON-KM)">
                         <div className="leading-tight">
                           <span>DISTANCIA</span>
                           <span className="block text-[9px] font-semibold text-amber-800 normal-case">(Km acarreo)</span>
                         </div>
                       </th>
-                      <th colSpan={2} className="border border-gray-400 px-2 py-1 bg-amber-300/70">
+                      <th colSpan={2} className="border border-gray-400 px-2 py-1 bg-amber-300">
                         CANTIDAD
                       </th>
-                      <th rowSpan={2} className="border border-gray-400 px-3 py-2 min-w-[150px] bg-amber-200/90">
+                      <th rowSpan={2} className="border border-gray-400 px-3 py-2 min-w-[150px] bg-amber-200">
                         OBSERVACIONES
                       </th>
-                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-20 text-center bg-amber-300/80">
+                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-20 text-center bg-amber-300">
                         ACCIONES
                       </th>
                     </tr>
-                    <tr className="bg-amber-100 text-amber-950 font-bold text-[10px] uppercase border-b border-gray-400 text-center">
-                      <th className="border border-gray-400 px-0.5 py-1 w-14 text-[9px]" title="Unidad de medida">UND</th>
-                      <th className="border border-gray-400 px-1 py-1 w-16">Largo</th>
-                      <th className="border border-gray-400 px-1 py-1 w-16">Ancho</th>
-                      <th className="border border-gray-400 px-1 py-1 w-16">Alto</th>
-                      <th className="border border-gray-400 px-1 py-1 w-20">PARCIAL</th>
-                      <th className="border border-gray-400 px-1 py-1 w-24 bg-amber-200/80">TOTAL</th>
+                    <tr className="bg-amber-100 text-amber-950 font-bold text-[10px] uppercase border-b-2 border-gray-500 text-center">
+                      <th className="border border-gray-400 px-0.5 py-1 w-14 text-[9px] bg-amber-100" title="Unidad de medida">UND</th>
+                      <th className="border border-gray-400 px-1 py-1 w-16 bg-amber-100">Largo</th>
+                      <th className="border border-gray-400 px-1 py-1 w-16 bg-amber-100">Ancho</th>
+                      <th className="border border-gray-400 px-1 py-1 w-16 bg-amber-100">Alto</th>
+                      <th className="border border-gray-400 px-1 py-1 w-20 bg-amber-100">PARCIAL</th>
+                      <th className="border border-gray-400 px-1 py-1 w-24 bg-amber-200">TOTAL</th>
                     </tr>
                   </thead>
                   <tbody>
