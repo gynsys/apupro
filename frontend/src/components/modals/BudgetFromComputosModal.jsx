@@ -3127,8 +3127,43 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           </button>
         </div>
 
-        {/* Acciones de Cabecera: Abrir, Reiniciar y Cerrar */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Acciones de Cabecera: Acciones Rápidas (Iconos con Tooltips) + Abrir, Reiniciar y Cerrar */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Datos del Presupuesto */}
+          <button
+            type="button"
+            onClick={() => setShowProjectInfoModal(true)}
+            disabled={isCommitting}
+            className="p-1.5 sm:p-2 rounded-xl text-xs font-bold flex items-center justify-center transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 hover:text-amber-950 cursor-pointer shadow-xs"
+            title="Datos del Presupuesto (Nombre, Proyecto, Cliente, Moneda)"
+          >
+            <Edit3 className="w-4 h-4 text-amber-700" />
+          </button>
+
+          {/* Imprimir Planilla */}
+          <button
+            type="button"
+            onClick={handlePrintComputos}
+            disabled={isCommitting || validCount === 0}
+            className="p-1.5 sm:p-2 rounded-xl text-xs font-bold flex items-center justify-center transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 hover:text-amber-950 cursor-pointer shadow-xs disabled:opacity-40"
+            title="Imprimir planilla de cómputos en formato técnico"
+          >
+            <Printer className="w-4 h-4 text-amber-700" />
+          </button>
+
+          {/* Exportar a Excel */}
+          <button
+            type="button"
+            onClick={handleExportExcelComputos}
+            disabled={isCommitting || validCount === 0}
+            className="p-1.5 sm:p-2 rounded-xl text-xs font-bold flex items-center justify-center transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 hover:text-amber-950 cursor-pointer shadow-xs disabled:opacity-40"
+            title="Exportar planilla de cómputos a Excel (.xls)"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-amber-700" />
+          </button>
+
+          <div className="h-5 w-px bg-amber-300 mx-0.5 hidden sm:block" />
+
           <button
             type="button"
             onClick={handleOpenLoadModal}
@@ -3163,7 +3198,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         </div>
       </header>
 
-      {/* Barra de Acciones y Controles: Vista Móvil/Tabla, Imprimir, Excel y Capítulo */}
+      {/* Barra de Acciones y Controles: Vista Móvil/Tabla y Capítulo */}
       <div className="px-3 sm:px-6 py-2 bg-amber-100/90 border-b border-amber-200 flex items-center justify-between gap-2 shrink-0 flex-wrap">
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           {/* Conmutador de Vista Móvil (Apilada) vs Tabla Clásica */}
@@ -3195,30 +3230,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
               <span>Tabla</span>
             </button>
           </div>
-
-          {/* Botón Imprimir */}
-          <button
-            type="button"
-            onClick={handlePrintComputos}
-            disabled={isCommitting || validCount === 0}
-            className="px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-white hover:bg-amber-50 text-amber-950 border border-amber-300 shadow-xs transition-all disabled:opacity-40 cursor-pointer"
-            title="Imprimir planilla de cómputos en formato técnico"
-          >
-            <Printer className="w-3.5 h-3.5 text-amber-700" />
-            <span className="hidden sm:inline">Imprimir</span>
-          </button>
-
-          {/* Botón Exportar a Excel */}
-          <button
-            type="button"
-            onClick={handleExportExcelComputos}
-            disabled={isCommitting || validCount === 0}
-            className="px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-white hover:bg-amber-50 text-amber-950 border border-amber-300 shadow-xs transition-all disabled:opacity-40 cursor-pointer"
-            title="Exportar planilla de cómputos a Excel (.xls)"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-amber-700" />
-            <span>Exportar</span>
-          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -3242,46 +3253,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         /* VISTA: PLANILLA DE CÓMPUTOS MÉTRICOS (TABLA CON FACTOR, DISTANCIA Y FILA LIBRE) */
         <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 bg-[#FEF3C7]">
           <div className="max-w-[1400px] mx-auto space-y-4">
-            {/* Título de la Planilla y Acceso a Metadatos del Presupuesto */}
-            <div className="bg-white border-2 border-amber-300 rounded-2xl px-4 py-2.5 sm:px-5 sm:py-3 shadow-sm flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black shadow-xs shrink-0">
-                  <FileSpreadsheet className="w-4 h-4" />
-                </div>
-                <div>
-                  <h2 className="text-sm sm:text-base font-black text-amber-950 tracking-wider uppercase leading-tight">
-                    PLANILLA DE CÓMPUTOS MÉTRICOS
-                  </h2>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-amber-900 mt-0.5">
-                    <span className="font-bold text-amber-950">{budgetName || 'Sin nombre'}</span>
-                    {projectName && (
-                      <>
-                        <span className="text-amber-400">•</span>
-                        <span className="truncate max-w-[200px]">{projectName}</span>
-                      </>
-                    )}
-                    {clientName && (
-                      <>
-                        <span className="text-amber-400">•</span>
-                        <span className="truncate max-w-[150px]">Cliente: {clientName}</span>
-                      </>
-                    )}
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 font-extrabold text-[10px] border border-amber-300">
-                      {currency}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowProjectInfoModal(true)}
-                className="px-3 py-1.5 text-xs font-bold text-amber-950 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-xl transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
-                title="Editar nombre del presupuesto, proyecto, cliente y moneda"
-              >
-                <Edit3 className="w-3.5 h-3.5 text-amber-700" />
-                <span>Datos del Presupuesto</span>
-              </button>
+            {/* Encabezado de la Planilla de Cómputos Métricos */}
+            <div className="bg-white border-2 border-amber-300 rounded-2xl py-2 px-4 shadow-sm text-center">
+              <h2 className="text-sm sm:text-base font-black text-amber-950 tracking-wider uppercase leading-tight">
+                PLANILLA DE CÓMPUTOS MÉTRICOS
+              </h2>
             </div>
 
             {/* CUERPO DE LA PLANILLA: VISTA MÓVIL APILADA (CARDS) O VISTA TABLA CLÁSICA */}
