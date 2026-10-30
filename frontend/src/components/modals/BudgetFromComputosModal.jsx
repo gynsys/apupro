@@ -762,9 +762,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   const [chapterModalInput, setChapterModalInput] = useState('');
   const [renameChapterTarget, setRenameChapterTarget] = useState(null);
   const [renameChapterInput, setRenameChapterInput] = useState('');
-  const [deleteChapterTarget, setDeleteChapterTarget] = useState(null);
-  const [deleteChapterAction, setDeleteChapterAction] = useState('delete_all');
-  const [targetMoveChapter, setTargetMoveChapter] = useState('');
+  const [showProjectInfoModal, setShowProjectInfoModal] = useState(false);
   const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [coveninTargetItemId, setCoveninTargetItemId] = useState(null);
   const [isCalibrationOpen, setIsCalibrationOpen] = useState(false);
@@ -1426,101 +1424,45 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   };
 
   /**
-   * Abre modal para confirmar la eliminación de un capítulo y sus partidas
+   * Elimina únicamente el texto/encabezado del capítulo, conservando intactos todos los cómputos y mediciones.
    */
-  const handlePromptDeleteChapter = (chapterName) => {
+  const handleRemoveChapterHeader = (chapterName) => {
     if (!chapterName) return;
-    const chap = chapterName.trim().toUpperCase();
-    const itemsInChapter = capturedItems.filter((it) => (it.chapter || '').trim().toUpperCase() === chap);
-    const filledCount = itemsInChapter.filter((it) => !isItemEmpty(it)).length;
-
-    // Obtener los otros capítulos únicos existentes en la planilla
-    const otherChaps = Array.from(
-      new Set(
-        capturedItems
-          .map((it) => (it.chapter || '').trim().toUpperCase())
-          .filter((c) => c && c !== chap)
-      )
-    );
-
-    setDeleteChapterTarget({
-      chapterName: chap,
-      filledCount,
-      otherChapters: otherChaps,
-    });
-    setDeleteChapterAction('delete_all');
-    setTargetMoveChapter(otherChaps[0] || '');
-  };
-
-  /**
-   * Confirma y aplica la eliminación del capítulo (o reubicación de sus partidas)
-   */
-  const handleConfirmDeleteChapter = () => {
-    if (!deleteChapterTarget) return;
-    const { chapterName, otherChapters } = deleteChapterTarget;
+    const targetChap = chapterName.trim().toUpperCase();
 
     setCapturedItems((prev) => {
-      let updated;
-      if (deleteChapterAction === 'move' && targetMoveChapter) {
-        // Mover todas las partidas con datos al nuevo capítulo y agruparlas juntas
-        const movedItems = prev
-          .filter((it) => (it.chapter || '').trim().toUpperCase() === chapterName && !isItemEmpty(it))
-          .map((it) => ({ ...it, chapter: targetMoveChapter }));
+      // Encontrar el primer elemento con este capítulo
+      const firstIdx = prev.findIndex(
+        (it) => (it.chapter || '').trim().toUpperCase() === targetChap
+      );
+      if (firstIdx === -1) return prev;
 
-        const otherItems = prev.filter(
-          (it) => (it.chapter || '').trim().toUpperCase() !== chapterName
+      // Si hay un capítulo anterior en la lista antes de este bloque, las partidas pasan al capítulo anterior.
+      // Si era el primer capítulo, el capítulo queda vacío ("") para ocultar el encabezado.
+      let fallbackChapter = '';
+      if (firstIdx > 0 && prev[firstIdx - 1]?.chapter) {
+        fallbackChapter = prev[firstIdx - 1].chapter;
+      }
+
+      const updated = prev.map((it) => {
+        if ((it.chapter || '').trim().toUpperCase() === targetChap) {
+          return { ...it, chapter: fallbackChapter };
+        }
+        return it;
+      });
+
+      // Actualizar activeChapter si correspondía al capítulo eliminado
+      if ((activeChapter || '').trim().toUpperCase() === targetChap) {
+        const remainingChapters = Array.from(
+          new Set(updated.map((it) => (it.chapter || '').trim()).filter(Boolean))
         );
-
-        // Encontrar el último índice del capítulo destino para colocarlas consecutivamente
-        let lastTargetIdx = -1;
-        for (let i = otherItems.length - 1; i >= 0; i--) {
-          if ((otherItems[i].chapter || '').trim().toUpperCase() === targetMoveChapter) {
-            lastTargetIdx = i;
-            break;
-          }
-        }
-
-        if (lastTargetIdx >= 0) {
-          otherItems.splice(lastTargetIdx + 1, 0, ...movedItems);
-          updated = otherItems;
-        } else {
-          updated = [...otherItems, ...movedItems];
-        }
-      } else {
-        // Eliminar todas las filas pertenecientes a este capítulo
-        updated = prev.filter(
-          (it) => (it.chapter || '').trim().toUpperCase() !== chapterName
-        );
+        setActiveChapter(fallbackChapter || remainingChapters[0] || '');
       }
 
-      // Determinar cuál debe ser el activeChapter resultante
-      let nextActive = activeChapter;
-      if ((activeChapter || '').trim().toUpperCase() === chapterName) {
-        if (deleteChapterAction === 'move' && targetMoveChapter) {
-          nextActive = targetMoveChapter;
-        } else if (otherChapters.length > 0) {
-          nextActive = otherChapters[0];
-        } else {
-          nextActive = 'OBRAS PRELIMINARES';
-        }
-        setActiveChapter(nextActive);
-      }
-
-      // Si no queda ninguna fila, crear una fila en blanco con el siguiente capítulo activo
-      if (updated.length === 0) {
-        return [createBlankRow(nextActive)];
-      }
-
-      return normalizeRowsWithSingleTrailingBlank(updated, nextActive);
+      return normalizeRowsWithSingleTrailingBlank(updated, fallbackChapter || activeChapter || '');
     });
 
-    if (deleteChapterAction === 'move' && targetMoveChapter) {
-      toast.success(`Partidas movidas a "${targetMoveChapter}" y capítulo "${chapterName}" eliminado`);
-    } else {
-      toast.success(`Capítulo "${chapterName}" eliminado`);
-    }
-
-    setDeleteChapterTarget(null);
+    toast.success(`Encabezado "${chapterName}" eliminado (cómputos conservados)`);
   };
 
   /**
@@ -2994,127 +2936,97 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         </div>
       )}
 
-      {/* Modal / Diálogo para Eliminar Capítulo */}
-      {deleteChapterTarget && (
+      {/* Modal: Datos del Presupuesto y Proyecto */}
+      {showProjectInfoModal && (
         <div className="absolute inset-0 z-[130] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 border-2 border-red-200 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-red-100 pb-3">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 border-2 border-amber-300 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-amber-200 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-red-600 text-white flex items-center justify-center shadow-sm">
-                  <Trash2 className="w-5 h-5" />
+                <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-sm">
+                  <FileSpreadsheet className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-red-950 font-bold text-base leading-tight">Eliminar Capítulo</h3>
-                  <p className="text-xs text-red-800">Esta acción removerá el capítulo de la planilla</p>
+                  <h3 className="text-amber-950 font-bold text-base leading-tight">
+                    Datos del Presupuesto
+                  </h3>
+                  <p className="text-xs text-amber-800">
+                    Configura el nombre, proyecto, cliente y moneda
+                  </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setDeleteChapterTarget(null)}
+                onClick={() => setShowProjectInfoModal(false)}
                 className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3">
-              <p className="text-sm text-gray-700">
-                ¿Estás seguro de que deseas eliminar el capítulo{' '}
-                <strong className="text-red-950 font-extrabold uppercase">
-                  "{deleteChapterTarget.chapterName}"
-                </strong>
-                ?
-              </p>
+            <div className="space-y-3.5 py-1">
+              <div>
+                <label className="block text-xs font-bold text-amber-900 mb-1">
+                  Nombre del Presupuesto *
+                </label>
+                <input
+                  type="text"
+                  value={budgetName}
+                  onChange={(e) => setBudgetName(e.target.value)}
+                  placeholder="Ej. Presupuesto Inicial"
+                  className="w-full px-3.5 py-2 rounded-xl border-2 border-amber-300 text-amber-950 text-sm font-bold focus:outline-none focus:border-amber-500 bg-amber-50/30"
+                  autoFocus
+                />
+              </div>
 
-              {deleteChapterTarget.filledCount > 0 ? (
-                <div className="bg-amber-50 border border-amber-300 rounded-2xl p-3.5 text-xs text-amber-900 space-y-2.5">
-                  <div className="flex items-center gap-2 font-bold text-amber-950">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>
-                      Este capítulo contiene {deleteChapterTarget.filledCount} partida(s) con datos
-                    </span>
-                  </div>
+              <div>
+                <label className="block text-xs font-bold text-amber-900 mb-1">
+                  Proyecto / Obra
+                </label>
+                <input
+                  type="text"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  placeholder="Ej. Residencia Las Palmas"
+                  className="w-full px-3.5 py-2 rounded-xl border-2 border-amber-300 text-amber-950 text-sm focus:outline-none focus:border-amber-500 bg-amber-50/30"
+                />
+              </div>
 
-                  {deleteChapterTarget.otherChapters && deleteChapterTarget.otherChapters.length > 0 ? (
-                    <div className="space-y-2 pt-1">
-                      <span className="text-[11px] font-bold text-amber-950 block">
-                        ¿Qué deseas hacer con sus partidas?
-                      </span>
-                      <div className="space-y-1.5">
-                        <label className="flex items-start gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-amber-100/60">
-                          <input
-                            type="radio"
-                            name="chapterDeleteAction"
-                            checked={deleteChapterAction === 'delete_all'}
-                            onChange={() => setDeleteChapterAction('delete_all')}
-                            className="mt-0.5 text-red-600 focus:ring-red-500 cursor-pointer"
-                          />
-                          <div className="text-xs">
-                            <span className="font-bold text-red-900 block">Eliminar todas las partidas</span>
-                            <span className="text-gray-500 text-[11px]">Se borrarán las {deleteChapterTarget.filledCount} partidas del capítulo.</span>
-                          </div>
-                        </label>
-
-                        <label className="flex items-start gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-amber-100/60">
-                          <input
-                            type="radio"
-                            name="chapterDeleteAction"
-                            checked={deleteChapterAction === 'move'}
-                            onChange={() => setDeleteChapterAction('move')}
-                            className="mt-0.5 text-amber-600 focus:ring-amber-500 cursor-pointer"
-                          />
-                          <div className="text-xs w-full">
-                            <span className="font-bold text-amber-950 block">Reubicar partidas en otro capítulo</span>
-                            <span className="text-gray-500 text-[11px]">Conservar las partidas y asignarlas a:</span>
-                            {deleteChapterAction === 'move' && (
-                              <select
-                                value={targetMoveChapter}
-                                onChange={(e) => setTargetMoveChapter(e.target.value)}
-                                className="w-full mt-1.5 px-2.5 py-1.5 text-xs font-bold border-2 border-amber-300 rounded-xl bg-white text-amber-950 focus:outline-none focus:border-amber-500"
-                              >
-                                {deleteChapterTarget.otherChapters.map((ch) => (
-                                  <option key={ch} value={ch}>
-                                    {ch}
-                                  </option>
-                                ))}
-                              </select>
-                            )}
-                          </div>
-                        </label>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-[11px] text-amber-800">
-                      Al no haber otros capítulos en la planilla, las partidas también se eliminarán y se iniciará un capítulo en blanco.
-                    </p>
-                  )}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold text-amber-900 mb-1">
+                    Cliente
+                  </label>
+                  <input
+                    type="text"
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    placeholder="Nombre del cliente o empresa"
+                    className="w-full px-3.5 py-2 rounded-xl border-2 border-amber-300 text-amber-950 text-sm focus:outline-none focus:border-amber-500 bg-amber-50/30"
+                  />
                 </div>
-              ) : (
-                <p className="text-xs text-gray-500 bg-gray-50 p-2.5 rounded-xl border border-gray-200">
-                  ℹ️ Este capítulo no contiene partidas con datos registrados y se eliminará de inmediato.
-                </p>
-              )}
+                <div>
+                  <label className="block text-xs font-bold text-amber-900 mb-1">
+                    Moneda
+                  </label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border-2 border-amber-300 text-amber-950 text-sm font-bold bg-amber-100 cursor-pointer focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="USD">USD ($)</option>
+                    <option value="VES">VES (Bs.)</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-amber-200">
               <button
                 type="button"
-                onClick={() => setDeleteChapterTarget(null)}
-                className="px-3.5 py-1.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
+                onClick={() => setShowProjectInfoModal(false)}
+                className="px-4 py-2 text-xs font-extrabold text-amber-950 bg-amber-400 hover:bg-amber-500 rounded-xl transition-colors cursor-pointer shadow-sm"
               >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDeleteChapter}
-                className="px-4 py-1.5 text-xs font-extrabold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors cursor-pointer shadow-sm flex items-center gap-1.5"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>
-                  {deleteChapterAction === 'move' && deleteChapterTarget.filledCount > 0
-                    ? 'Mover y Eliminar Capítulo'
-                    : 'Eliminar Capítulo'}
-                </span>
+                Listo
               </button>
             </div>
           </div>
@@ -3330,57 +3242,46 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         /* VISTA: PLANILLA DE CÓMPUTOS MÉTRICOS (TABLA CON FACTOR, DISTANCIA Y FILA LIBRE) */
         <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 bg-[#FEF3C7]">
           <div className="max-w-[1400px] mx-auto space-y-4">
-            {/* Metadatos del Presupuesto */}
-            <div className="bg-white border-2 border-amber-300 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
-              <div className="text-center border-b border-amber-200 pb-2">
-                <h2 className="text-base sm:text-lg font-black text-amber-950 tracking-wider uppercase">
-                  PLANILLA DE CÓMPUTOS MÉTRICOS
-                </h2>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-bold text-amber-900 mb-1">
-                    Nombre del Presupuesto *
-                  </label>
-                  <input
-                    type="text"
-                    value={budgetName}
-                    onChange={(e) => setBudgetName(e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-xl border border-amber-300 text-amber-950 text-xs sm:text-sm font-bold focus:outline-none focus:border-amber-500 bg-amber-50/30"
-                  />
+            {/* Título de la Planilla y Acceso a Metadatos del Presupuesto */}
+            <div className="bg-white border-2 border-amber-300 rounded-2xl px-4 py-2.5 sm:px-5 sm:py-3 shadow-sm flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black shadow-xs shrink-0">
+                  <FileSpreadsheet className="w-4 h-4" />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-amber-900 mb-1">Proyecto / Obra</label>
-                  <input
-                    type="text"
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                    placeholder="Ej. Residencia Las Palmas"
-                    className="w-full px-3 py-1.5 rounded-xl border border-amber-300 text-amber-950 text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-amber-50/30"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-amber-900 mb-1">Cliente / Moneda</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={clientName}
-                      onChange={(e) => setClientName(e.target.value)}
-                      placeholder="Cliente"
-                      className="w-full px-3 py-1.5 rounded-xl border border-amber-300 text-amber-950 text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-amber-50/30"
-                    />
-                    <select
-                      value={currency}
-                      onChange={(e) => setCurrency(e.target.value)}
-                      className="px-2.5 py-1.5 rounded-xl border border-amber-300 text-amber-950 text-xs sm:text-sm font-bold bg-amber-100 cursor-pointer"
-                    >
-                      <option value="USD">USD</option>
-                      <option value="VES">VES</option>
-                    </select>
+                  <h2 className="text-sm sm:text-base font-black text-amber-950 tracking-wider uppercase leading-tight">
+                    PLANILLA DE CÓMPUTOS MÉTRICOS
+                  </h2>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-amber-900 mt-0.5">
+                    <span className="font-bold text-amber-950">{budgetName || 'Sin nombre'}</span>
+                    {projectName && (
+                      <>
+                        <span className="text-amber-400">•</span>
+                        <span className="truncate max-w-[200px]">{projectName}</span>
+                      </>
+                    )}
+                    {clientName && (
+                      <>
+                        <span className="text-amber-400">•</span>
+                        <span className="truncate max-w-[150px]">Cliente: {clientName}</span>
+                      </>
+                    )}
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 font-extrabold text-[10px] border border-amber-300">
+                      {currency}
+                    </span>
                   </div>
                 </div>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setShowProjectInfoModal(true)}
+                className="px-3 py-1.5 text-xs font-bold text-amber-950 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-xl transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
+                title="Editar nombre del presupuesto, proyecto, cliente y moneda"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+                <span>Datos del Presupuesto</span>
+              </button>
             </div>
 
             {/* CUERPO DE LA PLANILLA: VISTA MÓVIL APILADA (CARDS) O VISTA TABLA CLÁSICA */}
@@ -3389,7 +3290,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
               <div className="space-y-4">
                 {capturedItems.map((it, idx) => {
                   const prevItem = idx > 0 ? capturedItems[idx - 1] : null;
-                  const showChapHeader = !prevItem || prevItem.chapter !== it.chapter;
+                  const showChapHeader = Boolean(
+                    it.chapter &&
+                    it.chapter.trim() &&
+                    (!prevItem || (prevItem.chapter || '').trim().toUpperCase() !== it.chapter.trim().toUpperCase())
+                  );
                   const isBlankTrailing = isItemEmpty(it);
                   const hasPartials = it.partials && it.partials.length > 0;
                   const isExpanded = expandedPartials[it.id] !== false;
@@ -3414,9 +3319,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                             </button>
                             <button
                               type="button"
-                              onClick={() => handlePromptDeleteChapter(it.chapter)}
+                              onClick={() => handleRemoveChapterHeader(it.chapter)}
                               className="text-xs font-bold text-red-700 bg-white hover:bg-red-50 border border-red-300 px-2.5 py-1 rounded-xl flex items-center gap-1 cursor-pointer shadow-xs"
-                              title="Eliminar este capítulo"
+                              title="Eliminar encabezado del capítulo (los cómputos se conservan)"
                             >
                               <Trash2 className="w-3.5 h-3.5 text-red-600" />
                               <span>Eliminar</span>
@@ -3925,7 +3830,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                   <tbody>
                     {capturedItems.map((it, idx) => {
                       const prevItem = idx > 0 ? capturedItems[idx - 1] : null;
-                      const showChapHeader = !prevItem || prevItem.chapter !== it.chapter;
+                      const showChapHeader = Boolean(
+                        it.chapter &&
+                        it.chapter.trim() &&
+                        (!prevItem || (prevItem.chapter || '').trim().toUpperCase() !== it.chapter.trim().toUpperCase())
+                      );
                       const isBlankTrailing = isItemEmpty(it);
                       const hasPartials = Boolean(it.partials && it.partials.length > 0);
 
@@ -3951,9 +3860,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => handlePromptDeleteChapter(it.chapter)}
+                                      onClick={() => handleRemoveChapterHeader(it.chapter)}
                                       className="text-[10px] font-bold text-red-700 bg-white/90 hover:bg-red-50 border border-red-300 px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer shadow-xs hover:text-red-900"
-                                      title="Eliminar este capítulo"
+                                      title="Eliminar encabezado del capítulo (los cómputos se conservan)"
                                     >
                                       <Trash2 className="w-3 h-3 text-red-600" />
                                       <span>Eliminar</span>
