@@ -898,13 +898,23 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
   const [commitStepInfo, setCommitStepInfo] = useState({ current: 0, total: 0 });
   const [commitError, setCommitError] = useState(null);
 
-  // Modo de visualización: 'cards' (móvil apilado hacia abajo) o 'table' (tabla clásica)
+  // Modo de visualización automático según dispositivo: 'cards' en móviles/tablets (<1024px) o 'table' en escritorio
   const [viewMode, setViewMode] = useState(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       return 'cards';
     }
     return 'table';
   });
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window !== 'undefined') {
+        setViewMode(window.innerWidth < 1024 ? 'cards' : 'table');
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [expandedPartials, setExpandedPartials] = useState({});
 
   const messagesEndRef = useRef(null);
@@ -3140,6 +3150,21 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
             <Edit3 className="w-4 h-4 text-amber-700" />
           </button>
 
+          {/* Agregar Nuevo Capítulo */}
+          <button
+            type="button"
+            onClick={() => {
+              setChapterModalInput('');
+              setShowChapterModal(true);
+            }}
+            disabled={isCommitting}
+            className="px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 hover:text-amber-950 cursor-pointer shadow-xs"
+            title="Agregar un nuevo capítulo a la planilla"
+          >
+            <FolderPlus className="w-4 h-4 text-amber-700" />
+            <span className="hidden sm:inline">+ Capítulo</span>
+          </button>
+
           {/* Imprimir Planilla */}
           <button
             type="button"
@@ -3197,56 +3222,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           </button>
         </div>
       </header>
-
-      {/* Barra de Acciones y Controles: Vista Móvil/Tabla y Capítulo */}
-      <div className="px-3 sm:px-6 py-2 bg-amber-100/90 border-b border-amber-200 flex items-center justify-between gap-2 shrink-0 flex-wrap">
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-          {/* Conmutador de Vista Móvil (Apilada) vs Tabla Clásica */}
-          <div className="inline-flex rounded-xl bg-white border border-amber-300 p-0.5 shadow-xs">
-            <button
-              type="button"
-              onClick={() => setViewMode('cards')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                viewMode === 'cards'
-                  ? 'bg-amber-500 text-white shadow-xs'
-                  : 'text-amber-900 hover:bg-amber-50'
-              }`}
-              title="Vista apilada ideal para teléfonos móviles sin desplazamiento horizontal"
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span>Móvil</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('table')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                viewMode === 'table'
-                  ? 'bg-amber-500 text-white shadow-xs'
-                  : 'text-amber-900 hover:bg-amber-50'
-              }`}
-              title="Vista clásica en tabla de cómputos métricos"
-            >
-              <Table className="w-3.5 h-3.5" />
-              <span>Tabla</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setChapterModalInput('');
-              setShowChapterModal(true);
-            }}
-            className="text-xs font-bold text-amber-900 hover:text-amber-950 bg-white hover:bg-amber-50 border border-amber-300 px-2.5 py-1 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
-            title="Agregar un nuevo capítulo a la planilla"
-          >
-            <FolderPlus className="w-3.5 h-3.5 text-amber-700" />
-            <span>+ Capítulo</span>
-          </button>
-        </div>
-      </div>
 
       {/* CUERPO PRINCIPAL */}
       {activeTab === 'sheet' ? (
