@@ -195,3 +195,44 @@ export function calculateBudgetTotals(budget = {}) {
 
   return { subtotalPresupuesto: roundedSubtotal, ivaAmount, totalGeneral };
 }
+
+/**
+ * Incidencia de los costos directos del presupuesto.
+ * Los porcentajes se calculan sobre el costo directo total
+ * (materiales + equipos + mano de obra), no sobre el precio con IVA.
+ */
+export function calculateBudgetIncidence(budget = {}) {
+  const result = {
+    materials: { amount: 0, percent: 0 },
+    equipment: { amount: 0, percent: 0 },
+    labor: { amount: 0, percent: 0 },
+    directTotal: 0,
+  };
+
+  if (!budget || !Array.isArray(budget.items)) return result;
+
+  let matTotal = 0;
+  let eqTotal = 0;
+  let labTotal = 0;
+
+  budget.items
+    .filter(item => !item.is_chapter)
+    .forEach((item) => {
+      const breakdown = calculateItemBreakdown(item, budget);
+      const qty = parseFloat(item.quantity) || 0;
+      matTotal += breakdown.matCost * qty;
+      eqTotal += breakdown.eqCost * qty;
+      labTotal += breakdown.labCost * qty;
+    });
+
+  const directTotal = matTotal + eqTotal + labTotal;
+  const pct = (value) => (directTotal > 0 ? Math.round((value / directTotal) * 1000) / 10 : 0);
+  const round2 = (value) => Math.round((value + Number.EPSILON) * 100) / 100;
+
+  return {
+    materials: { amount: round2(matTotal), percent: pct(matTotal) },
+    equipment: { amount: round2(eqTotal), percent: pct(eqTotal) },
+    labor: { amount: round2(labTotal), percent: pct(labTotal) },
+    directTotal: round2(directTotal),
+  };
+}

@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { calculateBudgetIncidence } from '../../../utils/apuCalculations';
 
 export default function BudgetWorksheetFooter({
   budget,
@@ -9,7 +10,41 @@ export default function BudgetWorksheetFooter({
   ivaAmount,
   totalGeneral,
 }) {
+  const incidence = useMemo(() => calculateBudgetIncidence(budget), [budget]);
+
   if (!budget.items || budget.items.length === 0) return null;
+
+  const currencyCode = String(budget.currency || 'USD').toUpperCase();
+  const currencySymbol = ['BS', 'BS.', 'BSF', 'VES', 'BOLIVAR', 'BOLÍVAR'].some((code) => currencyCode.startsWith(code)) ? 'Bs.' : '$';
+  const money = (value) => Number(value || 0).toLocaleString('es-VE', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  const incidenceRows = [
+    { key: 'materials', label: 'Materiales', ...incidence.materials },
+    { key: 'equipment', label: 'Equipos', ...incidence.equipment },
+    { key: 'labor', label: 'Mano de obra', ...incidence.labor },
+  ];
+
+  const IncidenceCard = ({ compact = false }) => (
+    <div className={`${compact ? 'w-full' : 'w-[238px] shrink-0'} bg-white border border-slate-300 rounded-2xl px-3 py-2 shadow-sm no-print print:hidden`}>
+      <div className="flex items-center justify-between border-b border-slate-200 pb-1 mb-1">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Incidencia</span>
+        <span className="text-[9px] text-slate-400" title="Porcentaje sobre el costo directo total">costo directo</span>
+      </div>
+      {incidenceRows.map((row) => (
+        <div key={row.key} className="flex items-center justify-between gap-2 py-0.5">
+          <span className="text-[11px] font-medium text-slate-600">{row.label}</span>
+          <span className="text-[11px] font-mono font-semibold text-slate-800 whitespace-nowrap">
+            {currencySymbol} {money(row.amount)}
+          </span>
+          <span className="w-10 text-right text-[10px] font-mono text-slate-500">
+            {Number(row.percent || 0).toFixed(1)}%
+          </span>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="mt-2.5 sm:mt-4 flex-none">
@@ -46,6 +81,8 @@ export default function BudgetWorksheetFooter({
             </span>
           </div>
         </div>
+
+        <IncidenceCard compact />
       </div>
 
       {/* DESKTOP TOTALS & NOTES (>= md) */}
@@ -60,6 +97,8 @@ export default function BudgetWorksheetFooter({
             className="w-full bg-transparent border-0 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed"
           />
         </div>
+
+        <IncidenceCard />
 
         <div className="bg-slate-50 px-4 py-2 rounded-2xl border-2 border-slate-300 shadow-sm w-full md:w-auto md:min-w-[300px] shrink-0">
           <div className="flex justify-between items-center py-1">
