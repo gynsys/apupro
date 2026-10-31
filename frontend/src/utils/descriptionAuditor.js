@@ -9,10 +9,22 @@
 
 export const ACTION_PATTERNS = [
   { root: 'demol', label: 'Demolición' },
+  { root: 'remoc', label: 'Remoción' },
+  { root: 'remov', label: 'Remoción' },
+  { root: 'retir', label: 'Retiro' },
+  { root: 'desmont', label: 'Desmontaje' },
+  { root: 'desarm', label: 'Desarme' },
+  { root: 'desvalij', label: 'Desvalijamiento' },
   { root: 'tumbar', label: 'Demolición' },
   { root: 'derrib', label: 'Demolición' },
   { root: 'picar', label: 'Picado / Remoción' },
+  { root: 'picad', label: 'Picado' },
   { root: 'desmantel', label: 'Desmantelamiento' },
+  { root: 'extracc', label: 'Extracción' },
+  { root: 'tala', label: 'Tala' },
+  { root: 'poda', label: 'Poda' },
+  { root: 'deshierb', label: 'Deshierbe' },
+  { root: 'desmalez', label: 'Desmalezado' },
   { root: 'suministr', label: 'Suministro e instalación' },
   { root: 'instal', label: 'Instalación' },
   { root: 'colocac', label: 'Colocación' },
@@ -41,17 +53,21 @@ export const ACTION_PATTERNS = [
   { root: 'impermeabiliz', label: 'Impermeabilización' },
   { root: 'replant', label: 'Replanteo' },
   { root: 'nivel', label: 'Nivelación' },
-  { root: 'compact', label: 'Compactación' }
+  { root: 'compact', label: 'Compactación' },
+  { root: 'bache', label: 'Bacheo' },
+  { root: 'fresad', label: 'Fresado' },
+  { root: 'carg', label: 'Carga' }
 ];
 
 export const ELEMENT_PATTERNS = [
   'pared', 'muro', 'tabique', 'bloque', 'ladrillo', 'concreto', 'viga', 'columna',
   'zapata', 'fundacion', 'cimiento', 'piso', 'ceramica', 'porcelanato', 'granito',
   'tuberia', 'tubo', 'pvc', 'acero', 'hierro', 'metalic', 'baranda', 'escalera',
-  'bomba', 'tanque', 'valvula', 'puerta', 'ventana', 'reja', 'porton',
+  'bomba', 'tanque', 'valvula', 'puerta', 'marco', 'madera', 'ventana', 'reja', 'porton',
   'techo', 'cielorraso', 'cubierta', 'mortero', 'friso', 'escombro', 'tierra', 'zanja',
   'cabilla', 'malla', 'tablero', 'cable', 'conductor', 'luminaria', 'lampara',
-  'tomacorriente', 'interruptor', 'drywall', 'yeso', 'manto', 'asfalto'
+  'tomacorriente', 'interruptor', 'drywall', 'yeso', 'manto', 'asfalto',
+  'sanitari', 'lavaman', 'pocet', 'inodor', 'urinari', 'griferi', 'cerradur', 'vidri'
 ];
 
 export const SPEC_REGEX = /(?:e\s*=|espesor|d\s*=|diametro|f'?c|kg\/cm2|psi|calibre|cal\b|\b\d+(?:[.,]\d+)?\s*(?:cm|mm|m\b|"|''|pulg|hp|kva|w\b|btu|kg|ton)|1:\d|caucho|esmalte|epoxic|antioxid|antialcalino|premezclad|arcilla|cemento)/i;
@@ -324,6 +340,9 @@ export function auditDescription(description = '', cod_par = null, unit = '') {
 
   const ambDomain = getMaterialAmbiguityDomain(clean);
 
+  // Detectar si se trata de una actividad de remoción, demolición, retiro o desmontaje
+  const isDemolitionOrRemoval = /remoc|remov|retir|desmont|desarm|demol|tumbar|derrib|picar|picad|desmantel|extracc|tala|poda|deshierb|desmalez|bote|botar|acarr|limpiez/i.test(cleanLower);
+
   // Si tiene un dominio de ambigüedad y no contiene ya especificaciones muy detalladas (>8 palabras y spec explícita)
   const isMaterialAmbiguous = Boolean(ambDomain && (!hasSpec || words.length < 8));
 
@@ -333,11 +352,17 @@ export function auditDescription(description = '', cod_par = null, unit = '') {
   } else {
     if (!hasAction) missing.push('acción constructiva');
     if (!hasElement) missing.push('elemento constructivo');
-    if (!hasSpec) missing.push('especificación o espesor');
+    // Para actividades de demolición, remoción o desmonte no se exige espesor ni especificación de mezcla
+    if (!hasSpec && !isDemolitionOrRemoval) missing.push('especificación o espesor');
   }
 
   // Si es detallada y no es ambigua
-  const isDetailed = !isMaterialAmbiguous && ((hasAction && hasElement && (hasSpec || hasScope)) || (words.length >= 8 && (hasSpec || hasScope)));
+  // Una remoción/demolición que tenga acción y elemento ya es técnicamente completa (ej: "REMOCION DE MARCOS Y PUERTAS DE MADERA")
+  const isDetailed = !isMaterialAmbiguous && (
+    (isDemolitionOrRemoval && hasElement && hasAction) ||
+    (hasAction && hasElement && (hasSpec || hasScope)) ||
+    (words.length >= 7 && (hasSpec || hasScope || isDemolitionOrRemoval))
+  );
 
   if (isDetailed) {
     return {
@@ -384,17 +409,30 @@ export function generateEnrichedSuggestion(raw = '', unit = '') {
     return dom.variants[0].text;
   }
 
-  // Regla general para otras actividades constructivas
   const cleanUpper = clean.toUpperCase();
-  const includesText = 'INCLUYE MATERIALES, HERRAMIENTAS MENORES Y MANO DE OBRA ESPECIALIZADA';
 
-  const startsWithAction = /^(SUMINISTRO|CONSTRUCCI|DEMOLICI|INSTALACI|APLICACI|VACIADO|DESMONTE|ACARREO|LIMPIEZA|REPARACI)/i.test(cleanUpper);
+  // Caso 1: Remoción, demolición, desmontaje, retiro, tala, limpieza, bote, etc.
+  const isRemovalOrDemo =
+    /^(REMOCI|DEMOLICI|DESMONTE|DESMONTAJE|DESARME|RETIRO|PICADO|DESVALIJE|EXTRACCI|TALA|DESMALEZADO|BOTE|ACARREO|LIMPIEZA|DESMANTELAMIENTO)/i.test(cleanUpper) ||
+    /\b(REMOCION|DEMOLICION|DESMONTAJE|DESARME|RETIRO|DESMANTELAMIENTO)\b/i.test(cleanUpper);
+
+  if (isRemovalOrDemo) {
+    if (/INCLUYE|INCLUYENDO/i.test(cleanUpper)) {
+      return cleanUpper;
+    }
+    // Para actividades de remoción y demolición NUNCA se suministran ni instalan materiales
+    return `${cleanUpper}, INCLUYE DESMONTAJE, HERRAMIENTAS MENORES, EQUIPO DE PROTECCIÓN Y TRASLADO HASTA SITIO DE ACOPIO O BOTE`;
+  }
+
+  // Caso 2: Ya comienza con cualquier otra acción constructiva (construcción, aplicación, pintura, vaciado, etc.)
+  const startsWithAction = /^(SUMINISTRO|CONSTRUCCI|INSTALACI|APLICACI|VACIADO|COLOCACI|MONTAJE|FABRICACI|ARMADO|ENCOFRADO|FRISO|REVOQUE|REPARACI|REHABILITACI|IMPERMEABILIZACI|PINTURA|REPLANTEO|NIVELACI|COMPACTACI|EXCAVACI)/i.test(cleanUpper);
   if (startsWithAction) {
-    if (!/INCLUYE/i.test(cleanUpper)) {
-      return `${cleanUpper}, ${includesText}`;
+    if (!/INCLUYE|INCLUYENDO/i.test(cleanUpper)) {
+      return `${cleanUpper}, INCLUYE MATERIALES, HERRAMIENTAS MENORES Y MANO DE OBRA ESPECIALIZADA`;
     }
     return cleanUpper;
   }
 
-  return `SUMINISTRO E INSTALACIÓN DE ${cleanUpper}, ${includesText}`;
+  // Caso 3: Solo si es un elemento desnudo sin verbo de acción inicial (ej: "LÁMPARA LED", "PUERTA ENTAMBORADA")
+  return `SUMINISTRO E INSTALACIÓN DE ${cleanUpper}, INCLUYE MATERIALES, HERRAMIENTAS MENORES Y MANO DE OBRA ESPECIALIZADA`;
 }

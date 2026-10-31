@@ -148,6 +148,15 @@ export default function PartidasCalibrationModal({
     onConfirm(updated);
   };
 
+  const handleProceedWithOriginals = () => {
+    const originalItems = items.map((it) => ({
+      ...it,
+      description: (it.description || '').trim(),
+    }));
+    toast.success('Generando presupuesto con tus descripciones originales...');
+    onConfirm(originalItems);
+  };
+
   const displayedList = activeTab === 'incomplete' ? incompleteItems : calibratedItems;
 
   return (
@@ -195,7 +204,7 @@ export default function PartidasCalibrationModal({
             {incompleteItems.length > 0 && (
               <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-900 rounded-lg border border-amber-300">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                <span>{incompleteItems.length} Requieren afinación</span>
+                <span>{incompleteItems.length} Sugerencias disponibles</span>
               </div>
             )}
           </div>
@@ -210,6 +219,14 @@ export default function PartidasCalibrationModal({
               <span>Aplicar todas las sugerencias ({incompleteItems.length})</span>
             </button>
           )}
+        </div>
+
+        {/* NOTA ACLARATORIA: NO FORZADA */}
+        <div className="px-6 py-2 bg-amber-50/50 border-b border-amber-200/60 text-[11px] text-amber-900 flex items-center gap-2">
+          <Info className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+          <span>
+            <strong>Tus descripciones originales se respetan íntegramente.</strong> Las sugerencias son 100% opcionales y solo se aplican a las partidas donde pulses <em>"Usar sugerencia"</em> o si eliges una variante.
+          </span>
         </div>
 
         {/* TABS SELECTOR */}
@@ -405,14 +422,25 @@ export default function PartidasCalibrationModal({
             Volver a la planilla
           </button>
 
-          <button
-            type="button"
-            onClick={handleConfirmAndProceed}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs sm:text-sm font-extrabold flex items-center gap-2 shadow-md shadow-emerald-700/20 transition-all cursor-pointer"
-          >
-            <span>Generar Presupuesto con Partidas Calibradas</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleProceedWithOriginals}
+              className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition-colors cursor-pointer"
+              title="Generar el presupuesto respetando exactamente las descripciones que escribiste en la planilla"
+            >
+              Generar con mis descripciones originales
+            </button>
+
+            <button
+              type="button"
+              onClick={handleConfirmAndProceed}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs sm:text-sm font-extrabold flex items-center gap-2 shadow-md shadow-emerald-700/20 transition-all cursor-pointer"
+            >
+              <span>Generar Presupuesto</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
       </div>
