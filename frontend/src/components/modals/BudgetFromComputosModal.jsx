@@ -338,6 +338,15 @@ function computePartial(p) {
   const multFactor = f !== null && f > 0 ? f : 1;
   const multDist = dist !== null && dist > 0 ? dist : 1;
 
+  // Auto-calcular M3 de este tramo si tiene las 3 dimensiones físicas
+  if (l !== null && w !== null && h !== null && l > 0 && w > 0 && h > 0) {
+    const calcM3 = Math.round(l * w * h * t * 1000) / 1000;
+    if (p.m3 === '' || p.m3 == null || p._autoM3 === p.m3) {
+      p.m3 = calcM3;
+      p._autoM3 = calcM3;
+    }
+  }
+
   const dims = [];
   if (l !== null && !isNaN(l) && l > 0) dims.push(l);
   if (w !== null && !isNaN(w) && w > 0) dims.push(w);
@@ -362,10 +371,19 @@ function recomputeItemWithPartials(item) {
   }
   const total = item.partials.reduce((sum, p) => sum + computePartial(p), 0);
   const roundedTotal = Math.round(total * 10000) / 10000;
+
+  // Suma de M3 para botes y acarreo a partir de los parciales
+  const totalM3 = item.partials.reduce((sum, p) => {
+    const val = parseFloat(p.m3);
+    return sum + (!isNaN(val) && val > 0 ? val : 0);
+  }, 0);
+  const roundedM3 = totalM3 > 0 ? Math.round(totalM3 * 1000) / 1000 : (item.m3 || '');
+
   return {
     ...item,
     quantity: roundedTotal,
     partial: 0,
+    m3: roundedM3,
     length: '',
     width: '',
     height: '',
@@ -375,13 +393,20 @@ function recomputeItemWithPartials(item) {
 }
 
 /**
- * Recalcula dinámicamente las dimensiones, factor de acero y distancia de acarreo
- * según el estándar completo de la Planilla de Cómputos Métricos.
+ * Recalcula dinámicamente las dimensiones, factor de acero, distancia de acarreo
+ * y volumen en M3 (botes y acarreo) según el estándar completo de la Planilla de Cómputos Métricos.
  */
 function recomputeRow(row, field, value) {
   const updated = { ...row, [field]: value };
 
   if (field === 'description' || field === 'chapter' || field === 'observations' || field === 'unit') {
+    return updated;
+  }
+
+  // Modificación manual directa de la columna M3 (Botes y Acarreo)
+  if (field === 'm3') {
+    updated.m3 = value;
+    updated._autoM3 = null;
     return updated;
   }
 
@@ -405,6 +430,10 @@ function recomputeRow(row, field, value) {
     updated.quantity = qVal;
     const divisor = t * multDist;
     updated.partial = divisor > 0 ? Math.round((qVal / divisor) * 10000) / 10000 : qVal;
+    if (updated.unit === 'M3' && (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3)) {
+      updated.m3 = qVal;
+      updated._autoM3 = qVal;
+    }
     return updated;
   }
 
@@ -425,6 +454,18 @@ function recomputeRow(row, field, value) {
     updated.partial = parcial;
     updated.quantity = total;
 
+    // Auto-cálculo de M3 para botes y acarreo cuando se tienen las 3 dimensiones (Largo × Ancho × Alto)
+    if (l !== null && w !== null && h !== null && l > 0 && w > 0 && h > 0) {
+      const calcM3 = Math.round(l * w * h * t * 1000) / 1000;
+      if (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3) {
+        updated.m3 = calcM3;
+        updated._autoM3 = calcM3;
+      }
+    } else if (updated.unit === 'M3' && (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3)) {
+      updated.m3 = total;
+      updated._autoM3 = total;
+    }
+
     // Actualizar fórmula visible
     let formulaParts = [];
     if (t > 1) formulaParts.push(`${t} ×`);
@@ -437,12 +478,20 @@ function recomputeRow(row, field, value) {
     const pVal = Math.max(0, parseFloat(value) || 0);
     updated.partial = pVal;
     updated.quantity = Math.round(pVal * t * multDist * 10000) / 10000;
+    if (updated.unit === 'M3' && (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3)) {
+      updated.m3 = updated.quantity;
+      updated._autoM3 = updated.quantity;
+    }
   } else {
     // Si no hay dimensiones pero se modifica Factor, Distancia o Veces sobre una cantidad base
     const currentBase = updated.partial > 0 ? updated.partial : (parseFloat(updated.quantity) || 0);
     if (currentBase > 0) {
       const total = Math.round(currentBase * t * multFactor * multDist * 10000) / 10000;
       updated.quantity = total;
+      if (updated.unit === 'M3' && (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3)) {
+        updated.m3 = total;
+        updated._autoM3 = total;
+      }
     }
   }
 
@@ -464,6 +513,7 @@ function createBlankRow(chapter = 'OBRAS PRELIMINARES') {
     times: 1,
     factor: '',
     distance: '',
+    m3: '',
     partial: 0,
     quantity: 0,
     formula: '',
@@ -485,7 +535,8 @@ function isItemEmpty(item) {
     (item.width !== '' && item.width != null) ||
     (item.height !== '' && item.height != null) ||
     (item.factor !== '' && item.factor != null) ||
-    (item.distance !== '' && item.distance != null);
+    (item.distance !== '' && item.distance != null) ||
+    (item.m3 !== '' && item.m3 != null);
   const hasQty = item.quantity && Number(item.quantity) > 0;
   const hasObs = (item.observations || '').trim() !== '';
 
@@ -1713,6 +1764,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
             height: it.height || '',
             factor: it.factor || '',
             distance: it.distance || '',
+            m3: it.m3 || '',
             partial: it.partial || 0,
             observations: '',
           },
@@ -1725,6 +1777,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
             height: '',
             factor: '',
             distance: '',
+            m3: '',
             partial: 0,
             observations: '',
           },
@@ -1770,6 +1823,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           height: '',
           factor: '',
           distance: '',
+          m3: '',
           partial: 0,
           observations: '',
         };
@@ -1792,7 +1846,12 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         const updatedPartials = it.partials.map((p) => {
           if (p.id !== partialId) return p;
           const updatedP = { ...p, [field]: value };
-          updatedP.partial = computePartial(updatedP);
+          if (field === 'm3') {
+            updatedP.m3 = value;
+            updatedP._autoM3 = null;
+          } else {
+            updatedP.partial = computePartial(updatedP);
+          }
           return updatedP;
         });
         return recomputeItemWithPartials({ ...it, partials: updatedPartials });
@@ -1846,7 +1905,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         currentChapter = chap;
         rowsHtml += `
           <tr style="background-color: #fef3c7; font-weight: bold; font-size: 12px;">
-            <td colspan="12" style="padding: 8px; border: 1px solid #d97706; color: #78350f;">
+            <td colspan="13" style="padding: 8px; border: 1px solid #d97706; color: #78350f;">
               CAPÍTULO: ${escapeHtml(chap)}
             </td>
           </tr>
@@ -1865,6 +1924,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           <td style="text-align: center; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.times || 1)}</td>
           <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.factor || '')}</td>
           <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.distance || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; color: #78350f; vertical-align: top;">${hasPartials ? (it.m3 || '—') : (it.m3 || '')}</td>
           <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: 600; vertical-align: top;">${hasPartials ? '—' : (it.partial || '')}</td>
           <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; background-color: #fef3c7; vertical-align: top;">${it.quantity || 0}</td>
           <td style="border: 1px solid #cbd5e1; vertical-align: top;">${escapeHtml(it.observations || '')}</td>
@@ -1886,6 +1946,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
               <td style="text-align: center; border: 1px solid #cbd5e1; vertical-align: top;">${p.times || 1}</td>
               <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${p.factor || ''}</td>
               <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${p.distance || ''}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; color: #78350f; vertical-align: top;">${p.m3 || ''}</td>
               <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; color: #b45309; vertical-align: top;">${p.partial || 0}</td>
               <td style="text-align: right; border: 1px solid #cbd5e1; color: #94a3b8; vertical-align: top;">—</td>
               <td style="border: 1px solid #cbd5e1; font-style: italic; color: #64748b; vertical-align: top;">${escapeHtml(p.observations || '')}</td>
@@ -1921,21 +1982,21 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         <body>
           <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif;">
             <tr>
-              <td colspan="12" style="font-size: 22px; font-weight: bold; text-align: center; padding: 14px 6px; color: #1e293b; border: none;">
+              <td colspan="13" style="font-size: 22px; font-weight: bold; text-align: center; padding: 14px 6px; color: #1e293b; border: none;">
                 Planilla de Cómputos Métricos
               </td>
             </tr>
             <tr>
-              <td colspan="12" style="padding: 4px 6px; font-size: 11px; text-align: left; font-weight: bold; color: #1e293b; border: none;">
+              <td colspan="13" style="padding: 4px 6px; font-size: 11px; text-align: left; font-weight: bold; color: #1e293b; border: none;">
                 Obra: <span style="font-weight: normal;">${escapeHtml(projectName || budgetName || '—')}</span>
               </td>
             </tr>
             <tr>
-              <td colspan="12" style="padding: 4px 6px; font-size: 11px; text-align: left; font-weight: bold; color: #1e293b; border: none;">
+              <td colspan="13" style="padding: 4px 6px; font-size: 11px; text-align: left; font-weight: bold; color: #1e293b; border: none;">
                 Fecha: <span style="font-weight: normal;">${today}</span>
               </td>
             </tr>
-            <tr><td colspan="12" style="height: 8px; border: none;"></td></tr>
+            <tr><td colspan="13" style="height: 8px; border: none;"></td></tr>
             <thead>
               <tr>
                 <th style="width: 35px; font-size: 10px; text-align: center;">N°</th>
@@ -1947,6 +2008,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                 <th style="width: 65px; font-size: 9px; white-space: nowrap; text-align: center;">VECES</th>
                 <th style="width: 75px; font-size: 9px; white-space: nowrap; text-align: center;">FACTOR</th>
                 <th style="width: 80px; font-size: 9px; white-space: nowrap; text-align: center;">DIST. (km)</th>
+                <th style="width: 85px; font-size: 9px; white-space: nowrap; text-align: center;">M3 (BOTE)</th>
                 <th style="width: 85px; font-size: 9px; white-space: nowrap; text-align: center;">PARCIAL</th>
                 <th style="width: 85px; font-size: 9px; white-space: nowrap; text-align: center;">TOTAL</th>
                 <th style="width: 220px; font-size: 9px; text-align: left; white-space: nowrap;">OBSERVACIONES</th>
@@ -2021,7 +2083,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         currentChapter = chap;
         rowsHtml += `
           <tr class="chapter-row">
-            <td colspan="12">CAPÍTULO: ${escapeHtml(chap)}</td>
+            <td colspan="13">CAPÍTULO: ${escapeHtml(chap)}</td>
           </tr>
         `;
       }
@@ -2038,6 +2100,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
           <td class="text-center" style="vertical-align: top;">${hasPartials ? '—' : (it.times || 1)}</td>
           <td class="text-right" style="vertical-align: top;">${hasPartials ? '—' : (it.factor || '')}</td>
           <td class="text-right" style="vertical-align: top;">${hasPartials ? '—' : (it.distance || '')}</td>
+          <td class="text-right font-bold text-amber-900" style="vertical-align: top;">${hasPartials ? (it.m3 || '—') : (it.m3 || '')}</td>
           <td class="text-right font-semibold" style="vertical-align: top;">${hasPartials ? '—' : (it.partial || '')}</td>
           <td class="text-right font-black bg-amber-50" style="vertical-align: top;">${it.quantity || 0}</td>
           <td style="vertical-align: top;">${escapeHtml(it.observations || '')}</td>
@@ -2057,6 +2120,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
               <td class="text-center" style="vertical-align: top;">${p.times || 1}</td>
               <td class="text-right" style="vertical-align: top;">${p.factor || ''}</td>
               <td class="text-right" style="vertical-align: top;">${p.distance || ''}</td>
+              <td class="text-right font-bold text-amber-900" style="vertical-align: top;">${p.m3 || ''}</td>
               <td class="text-right font-bold text-amber-800" style="vertical-align: top;">${p.partial || 0}</td>
               <td class="text-center text-muted" style="vertical-align: top;">—</td>
               <td class="text-muted text-xs" style="vertical-align: top;">${escapeHtml(p.observations || '')}</td>
@@ -2187,21 +2251,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                 <th style="width: 50px;">VECES</th>
                 <th style="width: 55px;">FACTOR</th>
                 <th style="width: 60px;">DIST. (km)</th>
-                <th style="width: 65px;">PARCIAL</th>
-                <th style="width: 75px;">TOTAL</th>
-                <th style="width: 140px;">OBSERVACIONES</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rowsHtml}
-            </tbody>
-          </table>
-                <th style="width: 55px;">LARGO</th>
-                <th style="width: 55px;">ANCHO</th>
-                <th style="width: 55px;">ALTO</th>
-                <th style="width: 50px;">VECES</th>
-                <th style="width: 55px;">FACTOR</th>
-                <th style="width: 60px;">DIST. (km)</th>
+                <th style="width: 60px;">M3 (BOTE)</th>
                 <th style="width: 65px;">PARCIAL</th>
                 <th style="width: 75px;">TOTAL</th>
                 <th style="width: 140px;">OBSERVACIONES</th>
@@ -3455,8 +3505,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                               </div>
                             </div>
 
-                            {/* Fila 3: Factor Acero y Distancia Acarreo */}
-                            <div className="grid grid-cols-2 gap-2.5">
+                            {/* Fila 3: Factor Acero, Distancia Acarreo y M3 Botes */}
+                            <div className="grid grid-cols-3 gap-2">
                               <div>
                                 <label
                                   className="block text-[10px] font-bold text-amber-900 mb-0.5"
@@ -3478,7 +3528,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                   className="block text-[10px] font-bold text-amber-900 mb-0.5"
                                   title="Distancia de transporte en Km"
                                 >
-                                  DISTANCIA (km)
+                                  DIST. (km)
                                 </label>
                                 <input
                                   type="number"
@@ -3487,6 +3537,22 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                   onChange={(e) => handleUpdateItemField(it.id, 'distance', e.target.value)}
                                   placeholder="—"
                                   className="w-full px-2 py-1.5 text-xs text-right font-semibold rounded-lg border border-amber-300 bg-white"
+                                />
+                              </div>
+                              <div>
+                                <label
+                                  className="block text-[10px] font-bold text-amber-900 mb-0.5"
+                                  title="Volumen en M3 para bote de escombros y acarreo"
+                                >
+                                  M3 (BOTE)
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.001"
+                                  value={it.m3 ?? ''}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'm3', e.target.value)}
+                                  placeholder="—"
+                                  className="w-full px-2 py-1.5 text-xs text-right font-bold text-amber-950 rounded-lg border border-amber-300 bg-amber-50/40 focus:bg-white"
                                 />
                               </div>
                             </div>
@@ -3670,6 +3736,48 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                         </div>
                                       </div>
 
+                                      <div className="grid grid-cols-3 gap-1.5">
+                                        <div>
+                                          <label className="block text-[9px] font-bold text-amber-800">Factor</label>
+                                          <input
+                                            type="number"
+                                            step="0.001"
+                                            value={p.factor ?? ''}
+                                            onChange={(e) =>
+                                              handleUpdatePartialField(it.id, p.id, 'factor', e.target.value)
+                                            }
+                                            placeholder="1.000"
+                                            className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-[9px] font-bold text-amber-800">Dist. (km)</label>
+                                          <input
+                                            type="number"
+                                            step="0.1"
+                                            value={p.distance ?? ''}
+                                            onChange={(e) =>
+                                              handleUpdatePartialField(it.id, p.id, 'distance', e.target.value)
+                                            }
+                                            placeholder="—"
+                                            className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-[9px] font-bold text-amber-800">M3 (Bote)</label>
+                                          <input
+                                            type="number"
+                                            step="0.001"
+                                            value={p.m3 ?? ''}
+                                            onChange={(e) =>
+                                              handleUpdatePartialField(it.id, p.id, 'm3', e.target.value)
+                                            }
+                                            placeholder="—"
+                                            className="w-full px-1.5 py-1 text-xs text-right font-bold text-amber-950 bg-amber-50/40 border border-amber-200 rounded-lg"
+                                          />
+                                        </div>
+                                      </div>
+
                                       <div className="flex items-center justify-between bg-amber-50/80 p-2 rounded-lg text-xs">
                                         <input
                                           type="text"
@@ -3759,6 +3867,12 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                           <span className="block text-[9px] font-semibold text-amber-800 normal-case">(Km acarreo)</span>
                         </div>
                       </th>
+                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-20 bg-amber-300 text-amber-950" title="Volumen en metros cúbicos (M3) para botes y acarreo de material o escombros">
+                        <div className="leading-tight">
+                          <span>M3</span>
+                          <span className="block text-[9px] font-semibold text-amber-800 normal-case">(Bote/Acarreo)</span>
+                        </div>
+                      </th>
                       <th colSpan={2} className="border border-gray-400 px-2 py-1 bg-amber-300">
                         CANTIDAD
                       </th>
@@ -3793,7 +3907,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                         <React.Fragment key={it.id}>
                           {showChapHeader && (
                             <tr className="bg-amber-200/70 border-b border-gray-400">
-                              <td colSpan={13} className="px-3 py-1.5 font-black text-amber-950 text-[11px] tracking-wide border border-gray-400">
+                              <td colSpan={14} className="px-3 py-1.5 font-black text-amber-950 text-[11px] tracking-wide border border-gray-400">
                                 <div className="flex items-center justify-between">
                                   <span className="flex items-center gap-1.5">
                                     <Layers className="w-3.5 h-3.5 text-amber-700" />
@@ -4034,6 +4148,25 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                               )}
                             </td>
 
+                            {/* M3 (Botes y Acarreo) */}
+                            <td className="border border-gray-300 px-1 py-1 bg-amber-50/20">
+                              {hasPartials ? (
+                                <span className="block text-center text-xs text-amber-800 font-bold select-none" title="Volumen M3 total desglosado en parciales">
+                                  {it.m3 !== '' && it.m3 != null ? it.m3 : '—'}
+                                </span>
+                              ) : (
+                                <input
+                                  type="number"
+                                  step="0.001"
+                                  value={it.m3 ?? ''}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'm3', e.target.value)}
+                                  placeholder="—"
+                                  className="w-full px-1 py-1 text-xs text-right font-semibold text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                  title="Volumen en metros cúbicos (M3) para bote de escombros y acarreo"
+                                />
+                              )}
+                            </td>
+
                             {/* CANTIDAD PARCIAL */}
                             <td className="border border-gray-300 px-2 py-1 text-right font-semibold text-xs text-gray-700 bg-amber-50/30">
                               {hasPartials ? (
@@ -4247,6 +4380,19 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                       className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
                                     />
                                   </td>
+                                  <td className="border border-amber-200 px-1 py-1 bg-amber-50/30">
+                                    <input
+                                      type="number"
+                                      step="0.001"
+                                      value={p.m3 ?? ''}
+                                      onChange={(e) =>
+                                        handleUpdatePartialField(it.id, p.id, 'm3', e.target.value)
+                                      }
+                                      placeholder="—"
+                                      className="w-full px-1 py-0.5 text-xs text-right font-semibold text-amber-950 bg-white border border-amber-200 rounded"
+                                      title="M3 bote y acarreo de este tramo"
+                                    />
+                                  </td>
                                   <td className="border border-amber-200 px-2 py-1 text-right font-bold text-xs text-amber-900 bg-amber-100/50">
                                     {Number(p.partial || 0).toLocaleString('es-VE', {
                                       maximumFractionDigits: 3,
@@ -4284,7 +4430,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                 </tr>
                               ))}
                               <tr className="bg-amber-100/50 border-b border-amber-300">
-                                <td colSpan={13} className="px-4 py-1.5 text-xs">
+                                <td colSpan={14} className="px-4 py-1.5 text-xs">
                                   <div className="flex items-center justify-between">
                                     <button
                                       type="button"

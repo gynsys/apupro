@@ -1034,7 +1034,7 @@ def export_computos_excel(
     partial_row_fill = PatternFill(start_color="FFFBEB", end_color="FFFBEB", fill_type="solid")
 
     # 1. Título General
-    ws.merge_cells("A1:L1")
+    ws.merge_cells("A1:M1")
     t_cell = ws["A1"]
     t_cell.value = "Planilla de Cómputos Métricos"
     t_cell.font = title_font
@@ -1067,6 +1067,7 @@ def export_computos_excel(
         "VECES",
         "FACTOR",
         "DIST. (km)",
+        "M3 (BOTE)",
         "PARCIAL",
         "TOTAL",
         "OBSERVACIONES",
@@ -1091,9 +1092,10 @@ def export_computos_excel(
         "G": 10,  # VECES
         "H": 11,  # FACTOR
         "I": 12,  # DIST. (km)
-        "J": 13,  # PARCIAL
-        "K": 14,  # TOTAL
-        "L": 26,  # OBSERVACIONES
+        "J": 13,  # M3 (BOTE)
+        "K": 13,  # PARCIAL
+        "L": 14,  # TOTAL
+        "M": 26,  # OBSERVACIONES
     }
     for col_letter, width in col_widths.items():
         ws.column_dimensions[col_letter].width = width
@@ -1116,12 +1118,12 @@ def export_computos_excel(
         chap = (item.get("chapter") or "GENERAL").strip().upper()
         if chap != current_chapter:
             current_chapter = chap
-            ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=12)
+            ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=13)
             c_chap = ws.cell(row=current_row, column=1, value=f"CAPÍTULO: {chap}")
             c_chap.font = chap_font
             c_chap.fill = chap_fill
             c_chap.alignment = Alignment(horizontal="left", vertical="center", indent=1)
-            for c_idx in range(1, 13):
+            for c_idx in range(1, 14):
                 ws.cell(row=current_row, column=c_idx).border = chap_border
             ws.row_dimensions[current_row].height = 24
             current_row += 1
@@ -1166,23 +1168,28 @@ def export_computos_excel(
         c_i = ws.cell(row=current_row, column=9, value="—" if has_partials else _parse_num(item.get("distance")))
         c_i.alignment = Alignment(horizontal="right" if not has_partials else "center", vertical="top")
 
-        # J: Parcial
-        c_j = ws.cell(row=current_row, column=10, value="—" if has_partials else _parse_num(item.get("partial")))
-        c_j.alignment = Alignment(horizontal="right" if not has_partials else "center", vertical="top")
-        c_j.font = Font(name="Calibri", size=10, bold=True)
+        # J: M3 Botes y Acarreo
+        c_j = ws.cell(row=current_row, column=10, value=_parse_num(item.get("m3")))
+        c_j.alignment = Alignment(horizontal="right", vertical="top")
+        c_j.font = Font(name="Calibri", size=10, bold=True, color="78350F")
 
-        # K: Total
-        c_k = ws.cell(row=current_row, column=11, value=_parse_num(item.get("quantity") or 0))
-        c_k.alignment = Alignment(horizontal="right", vertical="top")
-        c_k.font = Font(name="Calibri", size=10.5, bold=True, color="1E293B")
-        c_k.fill = total_fill
+        # K: Parcial
+        c_k = ws.cell(row=current_row, column=11, value="—" if has_partials else _parse_num(item.get("partial")))
+        c_k.alignment = Alignment(horizontal="right" if not has_partials else "center", vertical="top")
+        c_k.font = Font(name="Calibri", size=10, bold=True)
 
-        # L: Observaciones
-        c_l = ws.cell(row=current_row, column=12, value=str(item.get("observations") or "").strip())
-        c_l.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
-        c_l.font = Font(name="Calibri", size=9.5)
+        # L: Total
+        c_l = ws.cell(row=current_row, column=12, value=_parse_num(item.get("quantity") or 0))
+        c_l.alignment = Alignment(horizontal="right", vertical="top")
+        c_l.font = Font(name="Calibri", size=10.5, bold=True, color="1E293B")
+        c_l.fill = total_fill
 
-        for c_idx in range(1, 13):
+        # M: Observaciones
+        c_m = ws.cell(row=current_row, column=13, value=str(item.get("observations") or "").strip())
+        c_m.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+        c_m.font = Font(name="Calibri", size=9.5)
+
+        for c_idx in range(1, 14):
             ws.cell(row=current_row, column=c_idx).border = cell_border
 
         current_row += 1
@@ -1225,19 +1232,27 @@ def export_computos_excel(
                 p_i = ws.cell(row=current_row, column=9, value=_parse_num(part.get("distance")))
                 p_i.alignment = Alignment(horizontal="right", vertical="top")
 
-                p_j = ws.cell(row=current_row, column=10, value=_parse_num(part.get("partial") or 0))
+                # J: M3 Botes y Acarreo de tramo
+                p_j = ws.cell(row=current_row, column=10, value=_parse_num(part.get("m3")))
                 p_j.alignment = Alignment(horizontal="right", vertical="top")
-                p_j.font = Font(name="Calibri", size=9.5, bold=True, color="B45309")
+                p_j.font = Font(name="Calibri", size=9.5, bold=True, color="78350F")
 
-                p_k = ws.cell(row=current_row, column=11, value="—")
-                p_k.alignment = Alignment(horizontal="center", vertical="top")
-                p_k.font = Font(name="Calibri", size=9, color="94A3B8")
+                # K: Parcial
+                p_k = ws.cell(row=current_row, column=11, value=_parse_num(part.get("partial") or 0))
+                p_k.alignment = Alignment(horizontal="right", vertical="top")
+                p_k.font = Font(name="Calibri", size=9.5, bold=True, color="B45309")
 
-                p_l = ws.cell(row=current_row, column=12, value=str(part.get("observations") or "").strip())
-                p_l.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
-                p_l.font = Font(name="Calibri", size=9, italic=True, color="64748B")
+                # L: Total
+                p_l = ws.cell(row=current_row, column=12, value="—")
+                p_l.alignment = Alignment(horizontal="center", vertical="top")
+                p_l.font = Font(name="Calibri", size=9, color="94A3B8")
 
-                for c_idx in range(1, 13):
+                # M: Observaciones
+                p_m = ws.cell(row=current_row, column=13, value=str(part.get("observations") or "").strip())
+                p_m.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+                p_m.font = Font(name="Calibri", size=9, italic=True, color="64748B")
+
+                for c_idx in range(1, 14):
                     cell = ws.cell(row=current_row, column=c_idx)
                     cell.fill = partial_row_fill
                     cell.border = cell_border
