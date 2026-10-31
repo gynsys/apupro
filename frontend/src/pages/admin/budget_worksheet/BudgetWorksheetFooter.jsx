@@ -38,7 +38,7 @@ export default function BudgetWorksheetFooter({
           <span className="text-[11px] font-mono font-semibold text-slate-800 whitespace-nowrap">
             {currencySymbol} {money(row.amount)}
           </span>
-          <span className="w-10 text-right text-[10px] font-mono text-slate-500">
+          <span className="w-11 text-right text-[10px] font-mono font-bold text-[#F59E0B]">
             {Number(row.percent || 0).toFixed(1)}%
           </span>
         </div>

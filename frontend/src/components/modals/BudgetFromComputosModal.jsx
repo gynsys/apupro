@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { budgetService } from '../../services/budgetService';
 import BudgetSearchModal from '../../pages/admin/budget_worksheet/BudgetSearchModal';
+import MathQuantityInput from '../../pages/admin/budget_worksheet/MathQuantityInput';
 import PartidasCalibrationModal from './PartidasCalibrationModal';
 import { auditDescription, generateEnrichedSuggestion } from '../../utils/descriptionAuditor';
 import { useDatabaseContext } from '../../contexts/DatabaseContext';
@@ -426,7 +427,7 @@ function recomputeRow(row, field, value) {
   const multDist = dist !== null && dist > 0 ? dist : 1;
 
   if (field === 'quantity') {
-    const qVal = Math.max(0, parseFloat(value) || 0);
+    const qVal = Math.max(0, parseFloat(String(value).replace(',', '.')) || 0);
     updated.quantity = qVal;
     const divisor = t * multDist;
     updated.partial = divisor > 0 ? Math.round((qVal / divisor) * 10000) / 10000 : qVal;
@@ -3573,11 +3574,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                 <span className="block text-[10px] uppercase font-black text-amber-950">
                                   CANTIDAD TOTAL ({it.unit})
                                 </span>
-                                <input
-                                  type="number"
-                                  step="0.01"
+                                <MathQuantityInput
                                   value={it.quantity}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'quantity', e.target.value)}
+                                  onChange={(val) => handleUpdateItemField(it.id, 'quantity', val)}
                                   className="w-full px-1.5 py-0.5 text-sm text-right font-black text-amber-950 bg-white rounded border border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-500"
                                 />
                               </div>
@@ -4171,17 +4170,20 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
 
                             {/* CANTIDAD TOTAL */}
                             <td className="border border-gray-300 px-1 py-1 bg-amber-100/60">
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={it.quantity}
-                                readOnly={hasPartials}
-                                onChange={(e) => handleUpdateItemField(it.id, 'quantity', e.target.value)}
-                                title={hasPartials ? "Total calculado automáticamente por la suma de parciales" : ""}
-                                className={`w-full px-1.5 py-1 text-xs text-right font-extrabold text-amber-950 bg-white border border-amber-300 rounded ${
-                                  hasPartials ? 'bg-amber-100/50 cursor-default select-none' : 'focus:outline-none focus:ring-1 focus:ring-amber-500'
-                                }`}
-                              />
+                              {hasPartials ? (
+                                <span
+                                  className="block w-full px-1.5 py-1 text-xs text-right font-extrabold text-amber-950 bg-amber-100/50 rounded cursor-default select-none border border-amber-300"
+                                  title="Total calculado automáticamente por la suma de parciales"
+                                >
+                                  {Number(it.quantity || 0).toLocaleString('es-VE', { maximumFractionDigits: 3 })}
+                                </span>
+                              ) : (
+                                <MathQuantityInput
+                                  value={it.quantity}
+                                  onChange={(val) => handleUpdateItemField(it.id, 'quantity', val)}
+                                  className="w-full px-1.5 py-1 text-xs text-right font-extrabold text-amber-950 bg-white border border-amber-300 rounded focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                />
+                              )}
                             </td>
 
                             {/* OBSERVACIONES */}
@@ -4662,11 +4664,9 @@ M2`}
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
                                   Total *
                                 </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
+                                <MathQuantityInput
                                   value={editForm.quantity}
-                                  onChange={(e) => handleEditFormFieldChange('quantity', e.target.value)}
+                                  onChange={(val) => handleEditFormFieldChange('quantity', val)}
                                   className="w-full px-2 py-1 text-xs text-right font-extrabold rounded-lg border border-amber-400 bg-white text-amber-950"
                                 />
                               </div>
