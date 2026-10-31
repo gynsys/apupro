@@ -49,7 +49,11 @@ export default function BudgetWorksheetFooter({
                 type="button"
                 onClick={() => exportResourceSummaryToExcel(budget, row.key)}
                 className="p-0.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded transition-colors cursor-pointer"
-                title={`Exportar resumen de ${row.label.toLowerCase()} a Excel`}
+                title={
+                  row.key === 'equipment'
+                    ? 'Exportar resumen de equipos a Excel (con subcapítulo de vehículos y maquinarias pesadas)'
+                    : `Exportar resumen de ${row.label.toLowerCase()} a Excel`
+                }
               >
                 <FileSpreadsheet className="w-3.5 h-3.5" />
               </button>
@@ -57,7 +61,11 @@ export default function BudgetWorksheetFooter({
                 type="button"
                 onClick={() => printResourceSummary(budget, row.key)}
                 className="p-0.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors cursor-pointer"
-                title={`Imprimir resumen de ${row.label.toLowerCase()}`}
+                title={
+                  row.key === 'equipment'
+                    ? 'Imprimir resumen de equipos (con subcapítulo de vehículos y maquinarias pesadas)'
+                    : `Imprimir resumen de ${row.label.toLowerCase()}`
+                }
               >
                 <Printer className="w-3.5 h-3.5" />
               </button>

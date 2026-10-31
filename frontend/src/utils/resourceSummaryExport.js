@@ -15,14 +15,18 @@ function escapeHtml(str) {
 }
 
 /**
- * Formatea números en estándar venezolano / latinoamericano (1.234,56)
+ * Formatea números en estándar venezolano / latinoamericano estricto:
+ * - Separador de miles: punto (.)
+ * - Separador de decimales: coma (,)
+ * - Redondeo estricto a 2 decimales (o según el parámetro)
  */
-function formatNumber(val, decimals = 2) {
+export function formatNumber(val, decimals = 2) {
   const num = Number(val || 0);
-  return num.toLocaleString('es-VE', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
+  if (isNaN(num)) return '0,00';
+  const fixed = num.toFixed(decimals);
+  const [intPart, decPart] = fixed.split('.');
+  const withThousands = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return decPart !== undefined ? `${withThousands},${decPart}` : withThousands;
 }
 
 /**
@@ -37,8 +41,103 @@ function getCurrencySymbol(budget) {
 }
 
 /**
+ * Clasifica si un equipo corresponde a "Vehículos y Maquinarias Pesadas"
+ * o a "Herramientas y Equipos Menores".
+ */
+export function isVehicleOrHeavyEquipment(eqOrDesc) {
+  const desc = typeof eqOrDesc === 'string'
+    ? eqOrDesc
+    : (eqOrDesc?.description || eqOrDesc?.descripcion || eqOrDesc?.Descri || '');
+
+  if (!desc) return false;
+
+  // Si tiene un campo explícito en el objeto
+  if (typeof eqOrDesc === 'object' && eqOrDesc !== null) {
+    if (eqOrDesc.is_heavy === true || eqOrDesc.is_vehicle === true) return true;
+    const cat = String(eqOrDesc.category || eqOrDesc.categoria || eqOrDesc.subgrupo || eqOrDesc.tipo || '').toLowerCase();
+    if (/pesad|vehic|maquinaria|transporte|amarill/i.test(cat)) return true;
+    if (/menor|herramienta|livian|manual/i.test(cat)) return false;
+  }
+
+  // Normalizar removiendo tildes para búsqueda ultra-confiable
+  const d = desc
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  // Excepciones de equipos menores / herramientas manuales que podrían contener palabras similares
+  if (/rana|bailarina|plancha|manual|portatil|trompo/i.test(d)) {
+    if (!/camion|camioneta|pickup|tractor|retro/i.test(d)) {
+      return false;
+    }
+  }
+
+  // Palabras clave de Vehículos y Maquinarias Pesadas (sin tildes por la normalización)
+  const heavyKeywords = [
+    // Vehículos de transporte y carga
+    /\bcamion\b/i,
+    /\bcamiones\b/i,
+    /\bcamioneta\b/i,
+    /\bpick-?up\b/i,
+    /\bgandola\b/i,
+    /\bgandolas\b/i,
+    /\bchuto\b/i,
+    /\bchutos\b/i,
+    /\bvolteo\b/i,
+    /\bcisterna\b/i,
+    /\bmixer\b/i,
+    /\bhormigonera\b/i,
+    /\bvolqueta\b/i,
+    /\bvolquetas\b/i,
+    /\bfurgon\b/i,
+    /\blowboy\b/i,
+    /\blow-?boy\b/i,
+    /\bautobus\b/i,
+    /\bvehiculo\b/i,
+    /\bvehiculos\b/i,
+    /\btrailer\b/i,
+    /\bremolque\b/i,
+
+    // Maquinaria pesada / movimiento de tierras / elevación
+    /\bretroexcavador/i,
+    /\bexcavador/i,
+    /\bjumbo\b/i,
+    /\btractor/i,
+    /\bbulldozer\b/i,
+    /\bpayloader\b/i,
+    /\bpay-?loader\b/i,
+    /\bcargador\s+(?:frontal|sobre\s+orugas|de\s+ruedas)/i,
+    /\bminicargador/i,
+    /\bbobcat\b/i,
+    /\bmotonivelador/i,
+    /\bpatrol\b/i,
+    /\bmototrailla/i,
+    /\bvibrocompactador/i,
+    /\bcompactador\s+(?:autopropulsado|de\s+rodillo|pata\s+de\s+cabra|neumatico|tandem)/i,
+    /\brodillo\s+(?:vibratorio|liso|pata\s+de\s+cabra|autopropulsado)/i,
+    /\bpavimentador/i,
+    /\bfinisher\b/i,
+    /\bfresadora\b/i,
+    /\bgrua\b/i,
+    /\bgruas\b/i,
+    /\bmontacargas\b/i,
+    /\btelehandler\b/i,
+    /\bpiloteadora/i,
+    /\bperforadora\s+(?:hidraulica|de\s+pozo|sobre\s+orugas)/i,
+    /\bdraga\b/i,
+    /\bdumper\b/i,
+    /\bzanjadora/i,
+    /\btraila\b/i,
+  ];
+
+  return heavyKeywords.some((regex) => regex.test(d));
+}
+
+/**
  * Agrupa y consolida los recursos del presupuesto (Materiales, Equipos o Mano de Obra)
  * sin columna de referencia, replicando fielmente la estructura técnica de MaPreX.
+ * Para equipos, clasifica en subcapítulos de Vehículos/Maquinarias Pesadas y Equipos Menores.
  */
 export function getBudgetResourceSummary(budget, resourceType) {
   if (!budget || !Array.isArray(budget.items)) {
@@ -59,7 +158,6 @@ export function getBudgetResourceSummary(budget, resourceType) {
   const bonoInFcas = rawBonoInFcas === true || (rawBonoInFcas !== false && fcasPercent >= 1000);
 
   const round2 = (val) => Math.round((Number(val || 0) + Number.EPSILON) * 100) / 100;
-  const round4 = (val) => Math.round((Number(val || 0) + Number.EPSILON) * 10000) / 10000;
 
   const map = new Map();
 
@@ -81,15 +179,15 @@ export function getBudgetResourceSummary(budget, resourceType) {
           const p = parseFloat(mat.precio_unitario ?? mat.price ?? mat.precio ?? mat.CosMat ?? 0) * exRate;
           const unitPrice = round2(p * (1 + (matInflation / 100)));
 
-          const totalQty = round4(itemQty * q * (1 + w / 100));
+          const totalQty = round2(itemQty * q * (1 + w / 100));
           const totalCost = round2(totalQty * unitPrice);
 
           const key = `${desc}___${unit}`;
           if (map.has(key)) {
             const existing = map.get(key);
-            existing.cantidad += totalQty;
-            existing.total += totalCost;
-            existing.precio = existing.cantidad > 0 ? existing.total / existing.cantidad : unitPrice;
+            existing.cantidad = round2(existing.cantidad + totalQty);
+            existing.total = round2(existing.total + totalCost);
+            existing.precio = existing.cantidad > 0 ? round2(existing.total / existing.cantidad) : unitPrice;
           } else {
             map.set(key, {
               description: desc,
@@ -110,14 +208,15 @@ export function getBudgetResourceSummary(budget, resourceType) {
           const p = parseFloat(eq.precio_unitario ?? eq.price ?? eq.precio ?? eq.CosDia ?? 0) * exRate;
           const baseDailyPrice = round2(p * (1 + (eqInflation / 100)));
 
-          const daysNeeded = round4((itemQty * q) / perf);
+          const daysNeeded = round2((itemQty * q) / perf);
           const totalCost = round2(daysNeeded * d * baseDailyPrice);
+          const isHeavy = isVehicleOrHeavyEquipment(eq);
 
           const key = `${desc}___${d.toFixed(6)}`;
           if (map.has(key)) {
             const existing = map.get(key);
-            existing.cantidad += daysNeeded;
-            existing.total += totalCost;
+            existing.cantidad = round2(existing.cantidad + daysNeeded);
+            existing.total = round2(existing.total + totalCost);
           } else {
             map.set(key, {
               description: desc,
@@ -125,6 +224,7 @@ export function getBudgetResourceSummary(budget, resourceType) {
               depreciacion: d,
               cantidad: daysNeeded,
               total: totalCost,
+              isHeavy,
             });
           }
         });
@@ -146,14 +246,14 @@ export function getBudgetResourceSummary(budget, resourceType) {
           const fcasMonto = round2(baseJornal * (fcasPercent / 100));
           const dailyCostPerWorker = round2(baseJornal + (bonoInFcas ? 0 : baseBono) + fcasMonto);
 
-          const daysNeeded = round4((itemQty * q) / perf);
+          const daysNeeded = round2((itemQty * q) / perf);
           const totalCost = round2(daysNeeded * dailyCostPerWorker);
 
           const key = `${desc}___${baseJornal.toFixed(2)}___${baseBono.toFixed(2)}`;
           if (map.has(key)) {
             const existing = map.get(key);
-            existing.cantidad += daysNeeded;
-            existing.total += totalCost;
+            existing.cantidad = round2(existing.cantidad + daysNeeded);
+            existing.total = round2(existing.total + totalCost);
           } else {
             map.set(key, {
               description: desc,
@@ -170,6 +270,32 @@ export function getBudgetResourceSummary(budget, resourceType) {
   const list = Array.from(map.values()).sort((a, b) => a.description.localeCompare(b.description));
   const totalGeneral = round2(list.reduce((acc, row) => acc + row.total, 0));
 
+  if (resourceType === 'equipment') {
+    const minorList = list.filter((it) => !it.isHeavy);
+    const heavyList = list.filter((it) => it.isHeavy);
+    const totalMinor = round2(minorList.reduce((acc, row) => acc + row.total, 0));
+    const totalHeavy = round2(heavyList.reduce((acc, row) => acc + row.total, 0));
+
+    return {
+      items: list,
+      totalGeneral,
+      subchapters: {
+        minor: {
+          title: 'HERRAMIENTAS Y EQUIPOS MENORES',
+          items: minorList,
+          total: totalMinor,
+        },
+        heavy: {
+          title: 'VEHÍCULOS Y MAQUINARIAS PESADAS',
+          items: heavyList,
+          total: totalHeavy,
+        },
+      },
+      hasHeavyEquipment: heavyList.length > 0,
+      hasMinorEquipment: minorList.length > 0,
+    };
+  }
+
   return { items: list, totalGeneral };
 }
 
@@ -177,7 +303,8 @@ export function getBudgetResourceSummary(budget, resourceType) {
  * Imprime el reporte oficial de resumen de recursos en formato PDF / Papel
  */
 export function printResourceSummary(budget, resourceType) {
-  const { items, totalGeneral } = getBudgetResourceSummary(budget, resourceType);
+  const summaryData = getBudgetResourceSummary(budget, resourceType);
+  const { items, totalGeneral } = summaryData;
 
   if (!items || items.length === 0) {
     toast.error('No hay insumos registrados para este resumen.');
@@ -211,7 +338,7 @@ export function printResourceSummary(budget, resourceType) {
         <tr>
           <td style="text-align: left;">${escapeHtml(it.description)}</td>
           <td style="text-align: center;">${escapeHtml(it.unit)}</td>
-          <td style="text-align: right; font-family: monospace;">${formatNumber(it.cantidad, 4)}</td>
+          <td style="text-align: right; font-family: monospace;">${formatNumber(it.cantidad, 2)}</td>
           <td style="text-align: right; font-family: monospace;">${formatNumber(it.precio, 2)}</td>
           <td style="text-align: right; font-family: monospace; font-weight: 600;">${formatNumber(it.total, 2)}</td>
         </tr>
@@ -222,26 +349,69 @@ export function printResourceSummary(budget, resourceType) {
     title = 'RESUMEN DE EQUIPOS DEL PRESUPUESTO';
     theadHtml = `
       <tr>
-        <th style="text-align: left; width: 55%;">Descripción</th>
+        <th style="text-align: left; width: 52%;">Descripción</th>
         <th style="text-align: right; width: 12%;">Precio ${escapeHtml(currencySym)}</th>
         <th style="text-align: right; width: 10%;">COP/Dep.</th>
-        <th style="text-align: right; width: 11%;">Cantidad</th>
-        <th style="text-align: right; width: 12%;">Total ${escapeHtml(currencySym)}</th>
+        <th style="text-align: right; width: 12%;">Cantidad</th>
+        <th style="text-align: right; width: 14%;">Total ${escapeHtml(currencySym)}</th>
       </tr>
     `;
-    rowsHtml = items
-      .map(
-        (it) => `
-        <tr>
-          <td style="text-align: left;">${escapeHtml(it.description)}</td>
-          <td style="text-align: right; font-family: monospace;">${formatNumber(it.precio, 2)}</td>
-          <td style="text-align: right; font-family: monospace;">${formatNumber(it.depreciacion, 6)}</td>
-          <td style="text-align: right; font-family: monospace;">${formatNumber(it.cantidad, 4)}</td>
-          <td style="text-align: right; font-family: monospace; font-weight: 600;">${formatNumber(it.total, 2)}</td>
+
+    const renderEqRow = (it) => `
+      <tr>
+        <td style="text-align: left; padding-left: 12px;">${escapeHtml(it.description)}</td>
+        <td style="text-align: right; font-family: monospace;">${formatNumber(it.precio, 2)}</td>
+        <td style="text-align: right; font-family: monospace;">${formatNumber(it.depreciacion, it.depreciacion < 0.01 && it.depreciacion > 0 ? 6 : 2)}</td>
+        <td style="text-align: right; font-family: monospace;">${formatNumber(it.cantidad, 2)}</td>
+        <td style="text-align: right; font-family: monospace; font-weight: 600;">${formatNumber(it.total, 2)}</td>
+      </tr>
+    `;
+
+    const { subchapters, hasHeavyEquipment, hasMinorEquipment } = summaryData;
+
+    if (hasHeavyEquipment && hasMinorEquipment) {
+      rowsHtml = `
+        <tr class="subchapter-header">
+          <td colspan="5">1. HERRAMIENTAS Y EQUIPOS MENORES</td>
         </tr>
-      `
-      )
-      .join('');
+        ${subchapters.minor.items.map(renderEqRow).join('')}
+        <tr class="subtotal-row">
+          <td colspan="4" style="text-align: right;">Subtotal Herramientas y Equipos Menores ${escapeHtml(currencySym)}:</td>
+          <td style="text-align: right; font-family: monospace;">${formatNumber(subchapters.minor.total, 2)}</td>
+        </tr>
+        <tr class="subchapter-header">
+          <td colspan="5">2. VEHÍCULOS Y MAQUINARIAS PESADAS</td>
+        </tr>
+        ${subchapters.heavy.items.map(renderEqRow).join('')}
+        <tr class="subtotal-row">
+          <td colspan="4" style="text-align: right;">Subtotal Vehículos y Maquinarias Pesadas ${escapeHtml(currencySym)}:</td>
+          <td style="text-align: right; font-family: monospace;">${formatNumber(subchapters.heavy.total, 2)}</td>
+        </tr>
+      `;
+    } else if (hasHeavyEquipment) {
+      rowsHtml = `
+        <tr class="subchapter-header">
+          <td colspan="5">VEHÍCULOS Y MAQUINARIAS PESADAS</td>
+        </tr>
+        ${subchapters.heavy.items.map(renderEqRow).join('')}
+        <tr class="subtotal-row">
+          <td colspan="4" style="text-align: right;">Subtotal Vehículos y Maquinarias Pesadas ${escapeHtml(currencySym)}:</td>
+          <td style="text-align: right; font-family: monospace;">${formatNumber(subchapters.heavy.total, 2)}</td>
+        </tr>
+      `;
+    } else {
+      rowsHtml = `
+        <tr class="subchapter-header">
+          <td colspan="5">HERRAMIENTAS Y EQUIPOS MENORES</td>
+        </tr>
+        ${subchapters?.minor?.items?.map(renderEqRow).join('') || items.map(renderEqRow).join('')}
+        <tr class="subtotal-row">
+          <td colspan="4" style="text-align: right;">Subtotal Herramientas y Equipos Menores ${escapeHtml(currencySym)}:</td>
+          <td style="text-align: right; font-family: monospace;">${formatNumber(totalGeneral, 2)}</td>
+        </tr>
+      `;
+    }
+
     footnote =
       'Nota: La cantidad necesaria de equipos con presencia física en la obra depende del cronograma de trabajo, el cual definirá la simultaneidad de las actividades.';
   } else if (resourceType === 'labor') {
@@ -262,7 +432,7 @@ export function printResourceSummary(budget, resourceType) {
           <td style="text-align: left;">${escapeHtml(it.description)}</td>
           <td style="text-align: right; font-family: monospace;">${formatNumber(it.jornal, 2)}</td>
           <td style="text-align: right; font-family: monospace;">${formatNumber(it.bono, 2)}</td>
-          <td style="text-align: right; font-family: monospace;">${formatNumber(it.cantidad, 4)}</td>
+          <td style="text-align: right; font-family: monospace;">${formatNumber(it.cantidad, 2)}</td>
           <td style="text-align: right; font-family: monospace; font-weight: 600;">${formatNumber(it.total, 2)}</td>
         </tr>
       `
@@ -343,6 +513,25 @@ export function printResourceSummary(budget, resourceType) {
           tr:nth-child(even) td {
             background-color: #fcfcfd;
           }
+          .subchapter-header td {
+            background-color: #f1f5f9;
+            font-weight: 800;
+            font-size: 10px;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-top: 1.5px solid #0f172a;
+            border-bottom: 1px solid #cbd5e1;
+            padding: 6px 8px;
+          }
+          .subtotal-row td {
+            background-color: #f8fafc;
+            border-top: 1px solid #cbd5e1;
+            border-bottom: 1.5px solid #64748b;
+            font-weight: bold;
+            font-size: 10px;
+            padding: 5px 8px;
+          }
           .total-row td {
             border-top: 2px solid #0f172a;
             border-bottom: 2px solid #0f172a;
@@ -376,7 +565,7 @@ export function printResourceSummary(budget, resourceType) {
           <tbody>
             ${rowsHtml}
             <tr class="total-row">
-              <td colspan="${resourceType === 'equipment' ? 4 : resourceType === 'labor' ? 4 : 4}" style="text-align: right;">Total General ${escapeHtml(currencySym)}:</td>
+              <td colspan="${resourceType === 'equipment' ? 4 : 4}" style="text-align: right;">Total General ${resourceType === 'equipment' ? 'Equipos ' : ''}${escapeHtml(currencySym)}:</td>
               <td style="text-align: right; font-family: monospace;">${formatNumber(totalGeneral, 2)}</td>
             </tr>
           </tbody>
@@ -404,7 +593,8 @@ export function printResourceSummary(budget, resourceType) {
  * Exporta el reporte oficial de resumen de recursos a Microsoft Excel (.xls / .xlsx)
  */
 export function exportResourceSummaryToExcel(budget, resourceType) {
-  const { items, totalGeneral } = getBudgetResourceSummary(budget, resourceType);
+  const summaryData = getBudgetResourceSummary(budget, resourceType);
+  const { items, totalGeneral } = summaryData;
 
   if (!items || items.length === 0) {
     toast.error('No hay insumos registrados para este resumen.');
@@ -440,9 +630,9 @@ export function exportResourceSummaryToExcel(budget, resourceType) {
         <tr>
           <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: left;">${escapeHtml(it.description)}</td>
           <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: center;">${escapeHtml(it.unit)}</td>
-          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; mso-number-format:'\\#\\,\\#\\#0\\.0000';">${it.cantidad.toFixed(4).replace('.', ',')}</td>
-          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; mso-number-format:'\\#\\,\\#\\#0\\.00';">${it.precio.toFixed(2).replace('.', ',')}</td>
-          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; font-weight: bold; mso-number-format:'\\#\\,\\#\\#0\\.00';">${it.total.toFixed(2).replace('.', ',')}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; mso-number-format:'\\#\\,\\#\\#0\\.00';">${formatNumber(it.cantidad, 2)}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; mso-number-format:'\\#\\,\\#\\#0\\.00';">${formatNumber(it.precio, 2)}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; font-weight: bold; mso-number-format:'\\#\\,\\#\\#0\\.00';">${formatNumber(it.total, 2)}</td>
         </tr>
       `
       )
@@ -459,19 +649,70 @@ export function exportResourceSummaryToExcel(budget, resourceType) {
         <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: right;">Total ${escapeHtml(currencySym)}</th>
       </tr>
     `;
-    rowsHtml = items
-      .map(
-        (it) => `
-        <tr>
-          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: left;">${escapeHtml(it.description)}</td>
-          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; mso-number-format:'\\#\\,\\#\\#0\\.00';">${it.precio.toFixed(2).replace('.', ',')}</td>
-          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; mso-number-format:'\\#\\,\\#\\#0\\.000000';">${it.depreciacion.toFixed(6).replace('.', ',')}</td>
-          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; mso-number-format:'\\#\\,\\#\\#0\\.0000';">${it.cantidad.toFixed(4).replace('.', ',')}</td>
-          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; font-weight: bold; mso-number-format:'\\#\\,\\#\\#0\\.00';">${it.total.toFixed(2).replace('.', ',')}</td>
+
+    const renderExcelEqRow = (it) => `
+      <tr>
+        <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: left; padding-left: 12px;">${escapeHtml(it.description)}</td>
+        <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; mso-number-format:'\\#\\,\\#\\#0\\.00';">${formatNumber(it.precio, 2)}</td>
+        <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; mso-number-format:'\\#\\,\\#\\#0\\.00';">${formatNumber(it.depreciacion, it.depreciacion < 0.01 && it.depreciacion > 0 ? 6 : 2)}</td>
+        <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; mso-number-format:'\\#\\,\\#\\#0\\.00';">${formatNumber(it.cantidad, 2)}</td>
+        <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; font-weight: bold; mso-number-format:'\\#\\,\\#\\#0\\.00';">${formatNumber(it.total, 2)}</td>
+      </tr>
+    `;
+
+    const { subchapters, hasHeavyEquipment, hasMinorEquipment } = summaryData;
+
+    if (hasHeavyEquipment && hasMinorEquipment) {
+      rowsHtml = `
+        <tr style="background-color: #e2e8f0; font-weight: bold;">
+          <td colspan="5" style="border: 1px solid #cbd5e1; padding: 6px; font-size: 11pt; color: #0f172a;">
+            1. HERRAMIENTAS Y EQUIPOS MENORES
+          </td>
         </tr>
-      `
-      )
-      .join('');
+        ${subchapters.minor.items.map(renderExcelEqRow).join('')}
+        <tr style="background-color: #f8fafc; font-weight: bold;">
+          <td colspan="4" style="border: 1px solid #cbd5e1; text-align: right; padding: 5px;">Subtotal Herramientas y Equipos Menores ${escapeHtml(currencySym)}:</td>
+          <td style="border: 1px solid #cbd5e1; text-align: right; padding: 5px; mso-number-format:'\\#\\,\\#\\#0\\.00';">${formatNumber(subchapters.minor.total, 2)}</td>
+        </tr>
+        <tr style="background-color: #e2e8f0; font-weight: bold;">
+          <td colspan="5" style="border: 1px solid #cbd5e1; padding: 6px; font-size: 11pt; color: #0f172a;">
+            2. VEHÍCULOS Y MAQUINARIAS PESADAS
+          </td>
+        </tr>
+        ${subchapters.heavy.items.map(renderExcelEqRow).join('')}
+        <tr style="background-color: #f8fafc; font-weight: bold;">
+          <td colspan="4" style="border: 1px solid #cbd5e1; text-align: right; padding: 5px;">Subtotal Vehículos y Maquinarias Pesadas ${escapeHtml(currencySym)}:</td>
+          <td style="border: 1px solid #cbd5e1; text-align: right; padding: 5px; mso-number-format:'\\#\\,\\#\\#0\\.00';">${formatNumber(subchapters.heavy.total, 2)}</td>
+        </tr>
+      `;
+    } else if (hasHeavyEquipment) {
+      rowsHtml = `
+        <tr style="background-color: #e2e8f0; font-weight: bold;">
+          <td colspan="5" style="border: 1px solid #cbd5e1; padding: 6px; font-size: 11pt; color: #0f172a;">
+            VEHÍCULOS Y MAQUINARIAS PESADAS
+          </td>
+        </tr>
+        ${subchapters.heavy.items.map(renderExcelEqRow).join('')}
+        <tr style="background-color: #f8fafc; font-weight: bold;">
+          <td colspan="4" style="border: 1px solid #cbd5e1; text-align: right; padding: 5px;">Subtotal Vehículos y Maquinarias Pesadas ${escapeHtml(currencySym)}:</td>
+          <td style="border: 1px solid #cbd5e1; text-align: right; padding: 5px; mso-number-format:'\\#\\,\\#\\#0\\.00';">${formatNumber(subchapters.heavy.total, 2)}</td>
+        </tr>
+      `;
+    } else {
+      rowsHtml = `
+        <tr style="background-color: #e2e8f0; font-weight: bold;">
+          <td colspan="5" style="border: 1px solid #cbd5e1; padding: 6px; font-size: 11pt; color: #0f172a;">
+            HERRAMIENTAS Y EQUIPOS MENORES
+          </td>
+        </tr>
+        ${subchapters?.minor?.items?.map(renderExcelEqRow).join('') || items.map(renderExcelEqRow).join('')}
+        <tr style="background-color: #f8fafc; font-weight: bold;">
+          <td colspan="4" style="border: 1px solid #cbd5e1; text-align: right; padding: 5px;">Subtotal Herramientas y Equipos Menores ${escapeHtml(currencySym)}:</td>
+          <td style="border: 1px solid #cbd5e1; text-align: right; padding: 5px; mso-number-format:'\\#\\,\\#\\#0\\.00';">${formatNumber(totalGeneral, 2)}</td>
+        </tr>
+      `;
+    }
+
     footnote =
       'Nota: La cantidad necesaria de equipos con presencia física en la obra depende del cronograma de trabajo, el cual definirá la simultaneidad de las actividades.';
   } else if (resourceType === 'labor') {
@@ -491,10 +732,10 @@ export function exportResourceSummaryToExcel(budget, resourceType) {
         (it) => `
         <tr>
           <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: left;">${escapeHtml(it.description)}</td>
-          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; mso-number-format:'\\#\\,\\#\\#0\\.00';">${it.jornal.toFixed(2).replace('.', ',')}</td>
-          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; mso-number-format:'\\#\\,\\#\\#0\\.00';">${it.bono.toFixed(2).replace('.', ',')}</td>
-          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; mso-number-format:'\\#\\,\\#\\#0\\.0000';">${it.cantidad.toFixed(4).replace('.', ',')}</td>
-          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; font-weight: bold; mso-number-format:'\\#\\,\\#\\#0\\.00';">${it.total.toFixed(2).replace('.', ',')}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; mso-number-format:'\\#\\,\\#\\#0\\.00';">${formatNumber(it.jornal, 2)}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; mso-number-format:'\\#\\,\\#\\#0\\.00';">${formatNumber(it.bono, 2)}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; mso-number-format:'\\#\\,\\#\\#0\\.00';">${formatNumber(it.cantidad, 2)}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; font-weight: bold; mso-number-format:'\\#\\,\\#\\#0\\.00';">${formatNumber(it.total, 2)}</td>
         </tr>
       `
       )
@@ -541,8 +782,8 @@ export function exportResourceSummaryToExcel(budget, resourceType) {
           <tbody>
             ${rowsHtml}
             <tr style="background-color: #f1f5f9; font-weight: bold;">
-              <td colspan="${colSpan}" style="border: 1px solid #cbd5e1; text-align: right; padding: 6px;">Total General ${escapeHtml(currencySym)}:</td>
-              <td style="border: 1px solid #cbd5e1; text-align: right; padding: 6px; mso-number-format:'\\#\\,\\#\\#0\\.00';">${totalGeneral.toFixed(2).replace('.', ',')}</td>
+              <td colspan="${colSpan}" style="border: 1px solid #cbd5e1; text-align: right; padding: 6px;">Total General ${resourceType === 'equipment' ? 'Equipos ' : ''}${escapeHtml(currencySym)}:</td>
+              <td style="border: 1px solid #cbd5e1; text-align: right; padding: 6px; mso-number-format:'\\#\\,\\#\\#0\\.00';">${formatNumber(totalGeneral, 2)}</td>
             </tr>
           </tbody>
         </table>
