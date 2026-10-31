@@ -329,12 +329,17 @@ function escapeHtml(text) {
  */
 function computePartial(p) {
   if (!p) return 0;
-  const l = p.length !== '' && p.length != null ? parseFloat(p.length) : null;
-  const w = p.width !== '' && p.width != null ? parseFloat(p.width) : null;
-  const h = p.height !== '' && p.height != null ? parseFloat(p.height) : null;
-  const t = p.times !== '' && p.times != null && !isNaN(parseFloat(p.times)) ? parseFloat(p.times) : 1;
-  const f = p.factor !== '' && p.factor != null && !isNaN(parseFloat(p.factor)) ? parseFloat(p.factor) : null;
-  const dist = p.distance !== '' && p.distance != null && !isNaN(parseFloat(p.distance)) ? parseFloat(p.distance) : null;
+  const parseNum = (v) => {
+    if (v === '' || v == null) return null;
+    const n = parseFloat(String(v).replace(',', '.'));
+    return isNaN(n) ? null : n;
+  };
+  const l = parseNum(p.length);
+  const w = parseNum(p.width);
+  const h = parseNum(p.height);
+  const t = parseNum(p.times) ?? 1;
+  const f = parseNum(p.factor);
+  const dist = parseNum(p.distance);
 
   const multFactor = f !== null && f > 0 ? f : 1;
   const multDist = dist !== null && dist > 0 ? dist : 1;
@@ -357,8 +362,11 @@ function computePartial(p) {
     const baseGeom = dims.reduce((acc, curr) => acc * curr, 1);
     return Math.round(baseGeom * multFactor * multDist * t * 10000) / 10000;
   }
-  if (p.partial !== '' && p.partial != null && !isNaN(parseFloat(p.partial))) {
-    return Math.round(parseFloat(p.partial) * multFactor * multDist * t * 10000) / 10000;
+  if (p.partial !== '' && p.partial != null) {
+    const pVal = parseFloat(String(p.partial).replace(',', '.'));
+    if (!isNaN(pVal)) {
+      return Math.round(pVal * multFactor * multDist * t * 10000) / 10000;
+    }
   }
   return 0;
 }
@@ -375,7 +383,7 @@ function recomputeItemWithPartials(item) {
 
   // Suma de M3 para botes y acarreo a partir de los parciales
   const totalM3 = item.partials.reduce((sum, p) => {
-    const val = parseFloat(p.m3);
+    const val = parseFloat(String(p.m3).replace(',', '.'));
     return sum + (!isNaN(val) && val > 0 ? val : 0);
   }, 0);
   const roundedM3 = totalM3 > 0 ? Math.round(totalM3 * 1000) / 1000 : (item.m3 || '');
@@ -406,7 +414,8 @@ function recomputeRow(row, field, value) {
 
   // Modificación manual directa de la columna M3 (Botes y Acarreo)
   if (field === 'm3') {
-    updated.m3 = value;
+    const parsedM3 = value === '' || value == null ? '' : (parseFloat(String(value).replace(',', '.')) || value);
+    updated.m3 = parsedM3;
     updated._autoM3 = null;
     return updated;
   }
@@ -416,12 +425,18 @@ function recomputeRow(row, field, value) {
     return recomputeItemWithPartials(updated);
   }
 
-  const l = updated.length !== '' && updated.length != null ? parseFloat(updated.length) : null;
-  const w = updated.width !== '' && updated.width != null ? parseFloat(updated.width) : null;
-  const h = updated.height !== '' && updated.height != null ? parseFloat(updated.height) : null;
-  const t = updated.times !== '' && updated.times != null ? Math.max(1, parseFloat(updated.times) || 1) : 1;
-  const f = updated.factor !== '' && updated.factor != null && !isNaN(parseFloat(updated.factor)) ? parseFloat(updated.factor) : null;
-  const dist = updated.distance !== '' && updated.distance != null && !isNaN(parseFloat(updated.distance)) ? parseFloat(updated.distance) : null;
+  const parseNum = (v) => {
+    if (v === '' || v == null) return null;
+    const n = parseFloat(String(v).replace(',', '.'));
+    return isNaN(n) ? null : n;
+  };
+
+  const l = parseNum(updated.length);
+  const w = parseNum(updated.width);
+  const h = parseNum(updated.height);
+  const t = Math.max(1, parseNum(updated.times) || 1);
+  const f = parseNum(updated.factor);
+  const dist = parseNum(updated.distance);
 
   const multFactor = f !== null && f > 0 ? f : 1;
   const multDist = dist !== null && dist > 0 ? dist : 1;
@@ -476,7 +491,7 @@ function recomputeRow(row, field, value) {
     if (dist !== null) formulaParts.push(`× ${dist}km`);
     updated.formula = formulaParts.join(' ');
   } else if (field === 'partial') {
-    const pVal = Math.max(0, parseFloat(value) || 0);
+    const pVal = Math.max(0, parseFloat(String(value).replace(',', '.')) || 0);
     updated.partial = pVal;
     updated.quantity = Math.round(pVal * t * multDist * 10000) / 10000;
     if (updated.unit === 'M3' && (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3)) {
@@ -485,7 +500,7 @@ function recomputeRow(row, field, value) {
     }
   } else {
     // Si no hay dimensiones pero se modifica Factor, Distancia o Veces sobre una cantidad base
-    const currentBase = updated.partial > 0 ? updated.partial : (parseFloat(updated.quantity) || 0);
+    const currentBase = updated.partial > 0 ? updated.partial : (parseFloat(String(updated.quantity).replace(',', '.')) || 0);
     if (currentBase > 0) {
       const total = Math.round(currentBase * t * multFactor * multDist * 10000) / 10000;
       updated.quantity = total;
@@ -502,10 +517,10 @@ function recomputeRow(row, field, value) {
 /**
  * Genera una nueva fila vacía estándar
  */
-function createBlankRow(chapter = 'OBRAS PRELIMINARES') {
+function createBlankRow(chapter = '') {
   return {
     id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    chapter: (chapter || 'OBRAS PRELIMINARES').trim().toUpperCase(),
+    chapter: (chapter ?? '').trim().toUpperCase(),
     description: '',
     unit: 'M2',
     length: '',
@@ -571,7 +586,7 @@ function extractCoveninSearchKeywords(text) {
 /**
  * Asegura que la planilla SIEMPRE tenga exactamente una fila libre al final para continuar escribiendo
  */
-function normalizeRowsWithSingleTrailingBlank(items, defaultChapter = 'OBRAS PRELIMINARES') {
+function normalizeRowsWithSingleTrailingBlank(items, defaultChapter = '') {
   if (!items || items.length === 0) {
     return [createBlankRow(defaultChapter)];
   }
@@ -584,7 +599,7 @@ function normalizeRowsWithSingleTrailingBlank(items, defaultChapter = 'OBRAS PRE
 
   // Si la última fila tiene contenido, agregar una nueva fila vacía al final
   if (!isItemEmpty(cleaned[cleaned.length - 1])) {
-    const lastChapter = cleaned[cleaned.length - 1].chapter || defaultChapter;
+    const lastChapter = cleaned[cleaned.length - 1].chapter ?? defaultChapter ?? '';
     cleaned.push(createBlankRow(lastChapter));
   }
 
@@ -787,13 +802,15 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         const saved = window.localStorage.getItem(DRAFT_STORAGE_KEY);
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed?.activeChapter) return parsed.activeChapter;
+          if (parsed && parsed.activeChapter !== undefined && parsed.activeChapter !== null) {
+            return parsed.activeChapter;
+          }
         }
       }
     } catch (_e) {
       // ignore
     }
-    return 'OBRAS PRELIMINARES';
+    return '';
   });
 
   const [isOnline, setIsOnline] = useState(() =>
@@ -872,14 +889,15 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) {
-            return normalizeRowsWithSingleTrailingBlank(parsed.items, parsed.activeChapter || 'OBRAS PRELIMINARES');
+            const chap = parsed.activeChapter !== undefined && parsed.activeChapter !== null ? parsed.activeChapter : '';
+            return normalizeRowsWithSingleTrailingBlank(parsed.items, chap);
           }
         }
       }
     } catch (e) {
       console.error('Error cargando borrador previo de cómputos:', e);
     }
-    return [createBlankRow('OBRAS PRELIMINARES')];
+    return [createBlankRow('')];
   });
 
   // Datos del presupuesto para guardar
@@ -1514,14 +1532,45 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
       });
 
       // Actualizar activeChapter si correspondía al capítulo eliminado
+      let nextActiveChapter = activeChapter;
       if ((activeChapter || '').trim().toUpperCase() === targetChap) {
         const remainingChapters = Array.from(
           new Set(updated.map((it) => (it.chapter || '').trim()).filter(Boolean))
         );
-        setActiveChapter(fallbackChapter || remainingChapters[0] || '');
+        nextActiveChapter = fallbackChapter || remainingChapters[0] || '';
+        setActiveChapter(nextActiveChapter);
       }
 
-      return normalizeRowsWithSingleTrailingBlank(updated, fallbackChapter || activeChapter || '');
+      const finalItems = normalizeRowsWithSingleTrailingBlank(updated, nextActiveChapter);
+
+      // Persistencia INMEDIATA en localStorage para que F5 / recarga nunca restaure el capítulo eliminado
+      try {
+        const nonBlank = finalItems.filter((it) => !isItemEmpty(it));
+        const draftPayload = {
+          id: currentDraftId,
+          savedAt: new Date().toISOString(),
+          budgetName: (budgetName || '').trim(),
+          projectName: (projectName || '').trim(),
+          clientName: (clientName || '').trim(),
+          currency,
+          activeChapter: nextActiveChapter,
+          items: nonBlank,
+          itemCount: nonBlank.length,
+        };
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftPayload));
+
+        const existingList = getSavedComputosList();
+        const updatedList = [
+          draftPayload,
+          ...existingList.filter((item) => item.id !== currentDraftId && item.budgetName !== draftPayload.budgetName),
+        ];
+        localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(updatedList));
+        setSavedList(updatedList);
+      } catch (_e) {
+        // ignore
+      }
+
+      return finalItems;
     });
 
     toast.success(`Encabezado "${chapterName}" eliminado (cómputos conservados)`);
@@ -3452,12 +3501,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
                                   N° VECES / PIEZAS
                                 </label>
-                                <input
-                                  type="number"
-                                  step="1"
-                                  min="1"
+                                <MathQuantityInput
                                   value={it.times ?? 1}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'times', e.target.value)}
+                                  onChange={(val) => handleUpdateItemField(it.id, 'times', val)}
+                                  min={1}
+                                  integerOnly
                                   className="w-full px-2.5 py-1.5 text-xs text-center font-bold rounded-lg border border-amber-300 bg-white"
                                 />
                               </div>
@@ -3469,11 +3517,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
                                   LARGO (m)
                                 </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
+                                <MathQuantityInput
                                   value={it.length ?? ''}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'length', e.target.value)}
+                                  onChange={(val) => handleUpdateItemField(it.id, 'length', val)}
+                                  allowEmpty
                                   placeholder="0.00"
                                   className="w-full px-2 py-1.5 text-xs text-right font-medium rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
                                 />
@@ -3482,11 +3529,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
                                   ANCHO (m)
                                 </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
+                                <MathQuantityInput
                                   value={it.width ?? ''}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'width', e.target.value)}
+                                  onChange={(val) => handleUpdateItemField(it.id, 'width', val)}
+                                  allowEmpty
                                   placeholder="0.00"
                                   className="w-full px-2 py-1.5 text-xs text-right font-medium rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
                                 />
@@ -3495,11 +3541,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
                                   ALTO (m)
                                 </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
+                                <MathQuantityInput
                                   value={it.height ?? ''}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'height', e.target.value)}
+                                  onChange={(val) => handleUpdateItemField(it.id, 'height', val)}
+                                  allowEmpty
                                   placeholder="0.00"
                                   className="w-full px-2 py-1.5 text-xs text-right font-medium rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
                                 />
@@ -3515,12 +3560,12 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                 >
                                   FACTOR (kg/m)
                                 </label>
-                                <input
-                                  type="number"
-                                  step="0.001"
+                                <MathQuantityInput
                                   value={it.factor ?? ''}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'factor', e.target.value)}
+                                  onChange={(val) => handleUpdateItemField(it.id, 'factor', val)}
+                                  allowEmpty
                                   placeholder="1.000"
+                                  title="Factor de peso para acero o factor multiplicador"
                                   className="w-full px-2 py-1.5 text-xs text-right font-semibold rounded-lg border border-amber-300 bg-white"
                                 />
                               </div>
@@ -3531,12 +3576,12 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                 >
                                   DIST. (km)
                                 </label>
-                                <input
-                                  type="number"
-                                  step="0.1"
+                                <MathQuantityInput
                                   value={it.distance ?? ''}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'distance', e.target.value)}
+                                  onChange={(val) => handleUpdateItemField(it.id, 'distance', val)}
+                                  allowEmpty
                                   placeholder="—"
+                                  title="Distancia de transporte en Km"
                                   className="w-full px-2 py-1.5 text-xs text-right font-semibold rounded-lg border border-amber-300 bg-white"
                                 />
                               </div>
@@ -3547,12 +3592,12 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                 >
                                   M3 (BOTE)
                                 </label>
-                                <input
-                                  type="number"
-                                  step="0.001"
+                                <MathQuantityInput
                                   value={it.m3 ?? ''}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'm3', e.target.value)}
+                                  onChange={(val) => handleUpdateItemField(it.id, 'm3', val)}
+                                  allowEmpty
                                   placeholder="—"
+                                  title="Volumen en M3 para bote de escombros y acarreo"
                                   className="w-full px-2 py-1.5 text-xs text-right font-bold text-amber-950 rounded-lg border border-amber-300 bg-amber-50/40 focus:bg-white"
                                 />
                               </div>
@@ -3683,53 +3728,49 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                       <div className="grid grid-cols-4 gap-1.5">
                                         <div>
                                           <label className="block text-[9px] font-bold text-amber-800">Largo (m)</label>
-                                          <input
-                                            type="number"
-                                            step="0.01"
+                                          <MathQuantityInput
                                             value={p.length ?? ''}
-                                            onChange={(e) =>
-                                              handleUpdatePartialField(it.id, p.id, 'length', e.target.value)
+                                            onChange={(val) =>
+                                              handleUpdatePartialField(it.id, p.id, 'length', val)
                                             }
+                                            allowEmpty
                                             placeholder="0.00"
                                             className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
                                           />
                                         </div>
                                         <div>
                                           <label className="block text-[9px] font-bold text-amber-800">Ancho (m)</label>
-                                          <input
-                                            type="number"
-                                            step="0.01"
+                                          <MathQuantityInput
                                             value={p.width ?? ''}
-                                            onChange={(e) =>
-                                              handleUpdatePartialField(it.id, p.id, 'width', e.target.value)
+                                            onChange={(val) =>
+                                              handleUpdatePartialField(it.id, p.id, 'width', val)
                                             }
+                                            allowEmpty
                                             placeholder="0.00"
                                             className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
                                           />
                                         </div>
                                         <div>
                                           <label className="block text-[9px] font-bold text-amber-800">Alto (m)</label>
-                                          <input
-                                            type="number"
-                                            step="0.01"
+                                          <MathQuantityInput
                                             value={p.height ?? ''}
-                                            onChange={(e) =>
-                                              handleUpdatePartialField(it.id, p.id, 'height', e.target.value)
+                                            onChange={(val) =>
+                                              handleUpdatePartialField(it.id, p.id, 'height', val)
                                             }
+                                            allowEmpty
                                             placeholder="0.00"
                                             className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
                                           />
                                         </div>
                                         <div>
                                           <label className="block text-[9px] font-bold text-amber-800">Veces</label>
-                                          <input
-                                            type="number"
-                                            step="1"
-                                            min="1"
+                                          <MathQuantityInput
                                             value={p.times ?? 1}
-                                            onChange={(e) =>
-                                              handleUpdatePartialField(it.id, p.id, 'times', e.target.value)
+                                            onChange={(val) =>
+                                              handleUpdatePartialField(it.id, p.id, 'times', val)
                                             }
+                                            min={1}
+                                            integerOnly
                                             className="w-full px-1.5 py-1 text-xs text-center font-bold bg-white border border-amber-200 rounded-lg"
                                           />
                                         </div>
@@ -3738,40 +3779,38 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                       <div className="grid grid-cols-3 gap-1.5">
                                         <div>
                                           <label className="block text-[9px] font-bold text-amber-800">Factor</label>
-                                          <input
-                                            type="number"
-                                            step="0.001"
+                                          <MathQuantityInput
                                             value={p.factor ?? ''}
-                                            onChange={(e) =>
-                                              handleUpdatePartialField(it.id, p.id, 'factor', e.target.value)
+                                            onChange={(val) =>
+                                              handleUpdatePartialField(it.id, p.id, 'factor', val)
                                             }
+                                            allowEmpty
                                             placeholder="1.000"
                                             className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
                                           />
                                         </div>
                                         <div>
                                           <label className="block text-[9px] font-bold text-amber-800">Dist. (km)</label>
-                                          <input
-                                            type="number"
-                                            step="0.1"
+                                          <MathQuantityInput
                                             value={p.distance ?? ''}
-                                            onChange={(e) =>
-                                              handleUpdatePartialField(it.id, p.id, 'distance', e.target.value)
+                                            onChange={(val) =>
+                                              handleUpdatePartialField(it.id, p.id, 'distance', val)
                                             }
+                                            allowEmpty
                                             placeholder="—"
                                             className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
                                           />
                                         </div>
                                         <div>
                                           <label className="block text-[9px] font-bold text-amber-800">M3 (Bote)</label>
-                                          <input
-                                            type="number"
-                                            step="0.001"
+                                          <MathQuantityInput
                                             value={p.m3 ?? ''}
-                                            onChange={(e) =>
-                                              handleUpdatePartialField(it.id, p.id, 'm3', e.target.value)
+                                            onChange={(val) =>
+                                              handleUpdatePartialField(it.id, p.id, 'm3', val)
                                             }
+                                            allowEmpty
                                             placeholder="—"
+                                            title="M3 bote y acarreo de este tramo"
                                             className="w-full px-1.5 py-1 text-xs text-right font-bold text-amber-950 bg-amber-50/40 border border-amber-200 rounded-lg"
                                           />
                                         </div>
@@ -4045,11 +4084,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                               {hasPartials ? (
                                 <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
                               ) : (
-                                <input
-                                  type="number"
-                                  step="0.01"
+                                <MathQuantityInput
                                   value={it.length ?? ''}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'length', e.target.value)}
+                                  onChange={(val) => handleUpdateItemField(it.id, 'length', val)}
+                                  allowEmpty
                                   placeholder="—"
                                   className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
                                 />
@@ -4061,11 +4099,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                               {hasPartials ? (
                                 <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
                               ) : (
-                                <input
-                                  type="number"
-                                  step="0.01"
+                                <MathQuantityInput
                                   value={it.width ?? ''}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'width', e.target.value)}
+                                  onChange={(val) => handleUpdateItemField(it.id, 'width', val)}
+                                  allowEmpty
                                   placeholder="—"
                                   className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
                                 />
@@ -4077,11 +4114,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                               {hasPartials ? (
                                 <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
                               ) : (
-                                <input
-                                  type="number"
-                                  step="0.01"
+                                <MathQuantityInput
                                   value={it.height ?? ''}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'height', e.target.value)}
+                                  onChange={(val) => handleUpdateItemField(it.id, 'height', val)}
+                                  allowEmpty
                                   placeholder="—"
                                   className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
                                 />
@@ -4093,12 +4129,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                               {hasPartials ? (
                                 <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
                               ) : (
-                                <input
-                                  type="number"
-                                  step="1"
-                                  min="1"
+                                <MathQuantityInput
                                   value={it.times ?? 1}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'times', e.target.value)}
+                                  onChange={(val) => handleUpdateItemField(it.id, 'times', val)}
+                                  min={1}
+                                  integerOnly
                                   className="w-full px-1 py-1 text-xs text-center font-bold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
                                 />
                               )}
@@ -4109,14 +4144,13 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                               {hasPartials ? (
                                 <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
                               ) : (
-                                <input
-                                  type="number"
-                                  step="0.001"
+                                <MathQuantityInput
                                   value={it.factor ?? ''}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'factor', e.target.value)}
+                                  onChange={(val) => handleUpdateItemField(it.id, 'factor', val)}
+                                  allowEmpty
                                   placeholder="1.000"
                                   className="w-full px-1 py-1 text-xs text-right font-semibold text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                                  title="Factor de peso para acero (ej: 0.994 kg/m para 1/2&quot;, 1.552 para 5/8&quot;) o factor de conversión"
+                                  title='Factor de peso para acero (ej: 0.994 kg/m para 1/2", 1.552 para 5/8") o factor de conversión'
                                 />
                               )}
                             </td>
@@ -4126,11 +4160,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                               {hasPartials ? (
                                 <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
                               ) : (
-                                <input
-                                  type="number"
-                                  step="0.1"
+                                <MathQuantityInput
                                   value={it.distance ?? ''}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'distance', e.target.value)}
+                                  onChange={(val) => handleUpdateItemField(it.id, 'distance', val)}
+                                  allowEmpty
                                   placeholder="—"
                                   className="w-full px-1 py-1 text-xs text-right font-semibold text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
                                   title="Distancia en kilómetros para partidas de transporte y acarreo (M3-KM, TON-KM)"
@@ -4145,11 +4178,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                   {it.m3 !== '' && it.m3 != null ? it.m3 : '—'}
                                 </span>
                               ) : (
-                                <input
-                                  type="number"
-                                  step="0.001"
+                                <MathQuantityInput
                                   value={it.m3 ?? ''}
-                                  onChange={(e) => handleUpdateItemField(it.id, 'm3', e.target.value)}
+                                  onChange={(val) => handleUpdateItemField(it.id, 'm3', val)}
+                                  allowEmpty
                                   placeholder="—"
                                   className="w-full px-1 py-1 text-xs text-right font-semibold text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
                                   title="Volumen en metros cúbicos (M3) para bote de escombros y acarreo"
@@ -4302,85 +4334,78 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                     {it.unit || 'M2'}
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1">
-                                    <input
-                                      type="number"
-                                      step="0.01"
+                                    <MathQuantityInput
                                       value={p.length ?? ''}
-                                      onChange={(e) =>
-                                        handleUpdatePartialField(it.id, p.id, 'length', e.target.value)
+                                      onChange={(val) =>
+                                        handleUpdatePartialField(it.id, p.id, 'length', val)
                                       }
+                                      allowEmpty
                                       placeholder="0.00"
                                       className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
                                     />
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1">
-                                    <input
-                                      type="number"
-                                      step="0.01"
+                                    <MathQuantityInput
                                       value={p.width ?? ''}
-                                      onChange={(e) =>
-                                        handleUpdatePartialField(it.id, p.id, 'width', e.target.value)
+                                      onChange={(val) =>
+                                        handleUpdatePartialField(it.id, p.id, 'width', val)
                                       }
+                                      allowEmpty
                                       placeholder="0.00"
                                       className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
                                     />
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1">
-                                    <input
-                                      type="number"
-                                      step="0.01"
+                                    <MathQuantityInput
                                       value={p.height ?? ''}
-                                      onChange={(e) =>
-                                        handleUpdatePartialField(it.id, p.id, 'height', e.target.value)
+                                      onChange={(val) =>
+                                        handleUpdatePartialField(it.id, p.id, 'height', val)
                                       }
+                                      allowEmpty
                                       placeholder="0.00"
                                       className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
                                     />
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1">
-                                    <input
-                                      type="number"
-                                      step="1"
-                                      min="1"
+                                    <MathQuantityInput
                                       value={p.times ?? 1}
-                                      onChange={(e) =>
-                                        handleUpdatePartialField(it.id, p.id, 'times', e.target.value)
+                                      onChange={(val) =>
+                                        handleUpdatePartialField(it.id, p.id, 'times', val)
                                       }
+                                      min={1}
+                                      integerOnly
                                       className="w-full px-1 py-0.5 text-xs text-center font-bold bg-white border border-amber-200 rounded"
                                     />
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1 bg-amber-50/30">
-                                    <input
-                                      type="number"
-                                      step="0.001"
+                                    <MathQuantityInput
                                       value={p.factor ?? ''}
-                                      onChange={(e) =>
-                                        handleUpdatePartialField(it.id, p.id, 'factor', e.target.value)
+                                      onChange={(val) =>
+                                        handleUpdatePartialField(it.id, p.id, 'factor', val)
                                       }
+                                      allowEmpty
                                       placeholder="1.000"
                                       className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
                                     />
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1 bg-amber-50/30">
-                                    <input
-                                      type="number"
-                                      step="0.1"
+                                    <MathQuantityInput
                                       value={p.distance ?? ''}
-                                      onChange={(e) =>
-                                        handleUpdatePartialField(it.id, p.id, 'distance', e.target.value)
+                                      onChange={(val) =>
+                                        handleUpdatePartialField(it.id, p.id, 'distance', val)
                                       }
+                                      allowEmpty
                                       placeholder="—"
                                       className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
                                     />
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1 bg-amber-50/30">
-                                    <input
-                                      type="number"
-                                      step="0.001"
+                                    <MathQuantityInput
                                       value={p.m3 ?? ''}
-                                      onChange={(e) =>
-                                        handleUpdatePartialField(it.id, p.id, 'm3', e.target.value)
+                                      onChange={(val) =>
+                                        handleUpdatePartialField(it.id, p.id, 'm3', val)
                                       }
+                                      allowEmpty
                                       placeholder="—"
                                       className="w-full px-1 py-0.5 text-xs text-right font-semibold text-amber-950 bg-white border border-amber-200 rounded"
                                       title="M3 bote y acarreo de este tramo"
@@ -4573,11 +4598,10 @@ M2`}
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
                                   Largo
                                 </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
+                                <MathQuantityInput
                                   value={editForm.length ?? ''}
-                                  onChange={(e) => handleEditFormFieldChange('length', e.target.value)}
+                                  onChange={(val) => handleEditFormFieldChange('length', val)}
+                                  allowEmpty
                                   className="w-full px-2 py-1 text-xs text-right rounded-lg border border-amber-300 bg-white font-medium"
                                   placeholder="0.00"
                                 />
@@ -4586,11 +4610,10 @@ M2`}
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
                                   Ancho
                                 </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
+                                <MathQuantityInput
                                   value={editForm.width ?? ''}
-                                  onChange={(e) => handleEditFormFieldChange('width', e.target.value)}
+                                  onChange={(val) => handleEditFormFieldChange('width', val)}
+                                  allowEmpty
                                   className="w-full px-2 py-1 text-xs text-right rounded-lg border border-amber-300 bg-white font-medium"
                                   placeholder="0.00"
                                 />
@@ -4599,11 +4622,10 @@ M2`}
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
                                   Alto
                                 </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
+                                <MathQuantityInput
                                   value={editForm.height ?? ''}
-                                  onChange={(e) => handleEditFormFieldChange('height', e.target.value)}
+                                  onChange={(val) => handleEditFormFieldChange('height', val)}
+                                  allowEmpty
                                   className="w-full px-2 py-1 text-xs text-right rounded-lg border border-amber-300 bg-white font-medium"
                                   placeholder="0.00"
                                 />
@@ -4612,12 +4634,11 @@ M2`}
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
                                   N° Veces
                                 </label>
-                                <input
-                                  type="number"
-                                  step="1"
-                                  min="1"
+                                <MathQuantityInput
                                   value={editForm.times ?? 1}
-                                  onChange={(e) => handleEditFormFieldChange('times', e.target.value)}
+                                  onChange={(val) => handleEditFormFieldChange('times', val)}
+                                  min={1}
+                                  integerOnly
                                   className="w-full px-2 py-1 text-xs text-center font-bold rounded-lg border border-amber-300 bg-white"
                                 />
                               </div>
@@ -4625,11 +4646,10 @@ M2`}
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5" title="Factor de peso para acero (ej: 0.994 kg/m para cabilla 1/2&quot;)">
                                   Factor (kg/m)
                                 </label>
-                                <input
-                                  type="number"
-                                  step="0.001"
+                                <MathQuantityInput
                                   value={editForm.factor ?? ''}
-                                  onChange={(e) => handleEditFormFieldChange('factor', e.target.value)}
+                                  onChange={(val) => handleEditFormFieldChange('factor', val)}
+                                  allowEmpty
                                   className="w-full px-2 py-1 text-xs text-right rounded-lg border border-amber-300 bg-white font-medium"
                                   placeholder="1.000"
                                 />
@@ -4638,11 +4658,10 @@ M2`}
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5" title="Distancia en kilómetros para acarreos y transportes">
                                   Distancia (km)
                                 </label>
-                                <input
-                                  type="number"
-                                  step="0.1"
+                                <MathQuantityInput
                                   value={editForm.distance ?? ''}
-                                  onChange={(e) => handleEditFormFieldChange('distance', e.target.value)}
+                                  onChange={(val) => handleEditFormFieldChange('distance', val)}
+                                  allowEmpty
                                   className="w-full px-2 py-1 text-xs text-right rounded-lg border border-amber-300 bg-white font-medium"
                                   placeholder="—"
                                 />

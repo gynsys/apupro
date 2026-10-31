@@ -1,9 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 
-export default function MathQuantityInput({ value, onChange, onSave, className }) {
+export default function MathQuantityInput({
+  value,
+  onChange,
+  onSave,
+  className = '',
+  placeholder = '',
+  allowEmpty = false,
+  readOnly = false,
+  disabled = false,
+  title,
+  min,
+  integerOnly = false,
+}) {
   const formatVal = (v) => {
-    if (v === null || v === undefined || v === '') return '0';
+    if (v === null || v === undefined || v === '') {
+      return allowEmpty ? '' : '0';
+    }
     return String(v).replace(/\./g, ',');
   };
 
@@ -15,16 +29,22 @@ export default function MathQuantityInput({ value, onChange, onSave, className }
     if (!isFocused) {
       setLocalVal(formatVal(value));
     }
-  }, [value, isFocused]);
+  }, [value, isFocused, allowEmpty]);
 
   const evaluateExpression = (expr) => {
-    if (expr === '' || expr === null || expr === undefined) return 0;
+    if (expr === '' || expr === null || expr === undefined) {
+      return allowEmpty ? '' : 0;
+    }
     const str = String(expr).replace(/,/g, '.').trim();
+    if (str === '') return allowEmpty ? '' : 0;
     if (!/^[\d\s+\-*/().]+$/.test(str)) return null;
     try {
       const res = Function(`"use strict"; return (${str})`)();
       if (typeof res === 'number' && !isNaN(res) && isFinite(res)) {
-        return Math.max(0, Math.round(res * 10000) / 10000);
+        let finalVal = Math.round(res * 10000) / 10000;
+        if (min !== undefined && finalVal < min) finalVal = min;
+        if (integerOnly) finalVal = Math.round(finalVal);
+        return finalVal;
       }
     } catch {
       return null;
@@ -33,6 +53,7 @@ export default function MathQuantityInput({ value, onChange, onSave, className }
   };
 
   const handleInputChange = (e) => {
+    if (readOnly || disabled) return;
     const text = e.target.value;
     setLocalVal(text);
 
@@ -45,6 +66,7 @@ export default function MathQuantityInput({ value, onChange, onSave, className }
   };
 
   const handleCommit = () => {
+    if (readOnly || disabled) return;
     setIsFocused(false);
     setPreviewVal(null);
 
@@ -67,12 +89,14 @@ export default function MathQuantityInput({ value, onChange, onSave, className }
         type="text"
         value={isFocused ? localVal : formatVal(value)}
         onFocus={() => {
+          if (readOnly || disabled) return;
           setIsFocused(true);
           setLocalVal(formatVal(value));
         }}
         onChange={handleInputChange}
         onBlur={handleCommit}
         onKeyDown={(e) => {
+          if (readOnly || disabled) return;
           if (e.key === 'Enter') {
             e.preventDefault();
             e.target.blur();
@@ -83,13 +107,21 @@ export default function MathQuantityInput({ value, onChange, onSave, className }
             e.target.blur();
           }
         }}
-        title="Admite fórmulas matemáticas: ej. 12,5 * 3 o 12.5 * 3. Pulsa Enter para resolver."
+        placeholder={placeholder}
+        readOnly={readOnly}
+        disabled={disabled}
+        title={title || "Admite operaciones: ej. 2,5 * 3 o 4 + 1.2. Pulsa Enter para calcular."}
         className={className}
       />
       {isFocused && previewVal !== null && (
         <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 bg-slate-900 text-amber-300 text-[11px] font-mono font-bold px-2 py-0.5 rounded-lg shadow-xl z-30 pointer-events-none whitespace-nowrap flex items-center gap-1 border border-slate-700 animate-in fade-in zoom-in-95">
           <span className="text-slate-400">=</span>
-          <span>{previewVal.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
+          <span>
+            {Number(previewVal).toLocaleString('es-VE', {
+              minimumFractionDigits: integerOnly ? 0 : 2,
+              maximumFractionDigits: 4,
+            })}
+          </span>
         </div>
       )}
     </div>
