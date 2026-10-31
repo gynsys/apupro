@@ -283,7 +283,24 @@ export const MATERIAL_AMBIGUITY_DOMAINS = [
 export function getMaterialAmbiguityDomain(text = '') {
   if (!text) return null;
   const clean = text.trim();
+  const cleanLower = clean.toLowerCase();
+
+  // Si la actividad es demolición, remoción, picado, desmonte, retiro o bote,
+  // NUNCA aplican los dominios de suministro/instalación de materiales nuevos
+  // (ej: demoler cerámica NO requiere elegir si es porcelanato o caico).
+  const isDemolitionOrRemoval = /remoc|remov|retir|desmont|desarm|demol|tumbar|derrib|picar|picad|desmantel|extracc|tala|poda|deshierb|desmalez|bote|botar|acarr|limpiez/i.test(cleanLower);
+
+  if (isDemolitionOrRemoval) {
+    // Si la descripción de demolición es sumamente escueta (< 4 palabras, ej: "DEMOLICIÓN")
+    const words = cleanLower.split(/\s+/).filter(Boolean);
+    if (words.length <= 3) {
+      return MATERIAL_AMBIGUITY_DOMAINS.find((d) => d.id === 'demolicion') || null;
+    }
+    return null;
+  }
+
   for (const dom of MATERIAL_AMBIGUITY_DOMAINS) {
+    if (dom.id === 'demolicion') continue;
     if (dom.match.test(clean)) {
       return dom;
     }
@@ -338,13 +355,14 @@ export function auditDescription(description = '', cod_par = null, unit = '') {
   const hasSpec = SPEC_REGEX.test(cleanLower);
   const hasScope = /incluye|incluyendo|con mortero|con acabado|hasta h=|suministro e instalaci|a dos caras/i.test(cleanLower);
 
-  const ambDomain = getMaterialAmbiguityDomain(clean);
-
   // Detectar si se trata de una actividad de remoción, demolición, retiro o desmontaje
   const isDemolitionOrRemoval = /remoc|remov|retir|desmont|desarm|demol|tumbar|derrib|picar|picad|desmantel|extracc|tala|poda|deshierb|desmalez|bote|botar|acarr|limpiez/i.test(cleanLower);
 
-  // Si tiene un dominio de ambigüedad y no contiene ya especificaciones muy detalladas (>8 palabras y spec explícita)
-  const isMaterialAmbiguous = Boolean(ambDomain && (!hasSpec || words.length < 8));
+  // Dominio de ambigüedad (no aplica a demoliciones/remociones que ya tengan su alcance destructivo)
+  const ambDomain = isDemolitionOrRemoval ? null : getMaterialAmbiguityDomain(clean);
+
+  // Si tiene un dominio de ambigüedad y no contiene ya especificaciones muy detalladas (menos de 8 palabras y sin spec)
+  const isMaterialAmbiguous = Boolean(ambDomain && words.length < 8 && !hasSpec);
 
   const missing = [];
   if (isMaterialAmbiguous) {
@@ -357,7 +375,7 @@ export function auditDescription(description = '', cod_par = null, unit = '') {
   }
 
   // Si es detallada y no es ambigua
-  // Una remoción/demolición que tenga acción y elemento ya es técnicamente completa (ej: "REMOCION DE MARCOS Y PUERTAS DE MADERA")
+  // Una remoción/demolición que tenga acción y elemento ya es técnicamente completa (ej: "DEMOLICION DE REVESTIMIENTO DE CERAMICA EN PAREDES CON EL USO DE EQUIPOS MANUALES")
   const isDetailed = !isMaterialAmbiguous && (
     (isDemolitionOrRemoval && hasElement && hasAction) ||
     (hasAction && hasElement && (hasSpec || hasScope)) ||
