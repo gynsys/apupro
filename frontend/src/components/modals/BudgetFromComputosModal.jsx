@@ -3855,23 +3855,14 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                       <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-14 bg-amber-200" title="Número de repeticiones o piezas iguales">
                         N° DE VECES
                       </th>
-                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-20 bg-amber-300 text-amber-950" title="Factor de peso unitario para acero (kg/m) o factor multiplicador">
-                        <div className="leading-tight">
-                          <span>FACTOR</span>
-                          <span className="block text-[9px] font-semibold text-amber-800 normal-case">(Acero kg/m)</span>
-                        </div>
+                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-16 bg-amber-300 text-amber-950" title="Factor de peso unitario para acero (kg/m) o factor multiplicador">
+                        FACTOR
                       </th>
                       <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-20 bg-amber-300 text-amber-950" title="Distancia en kilómetros para acarreos y transportes (M3-KM, TON-KM)">
-                        <div className="leading-tight">
-                          <span>DISTANCIA</span>
-                          <span className="block text-[9px] font-semibold text-amber-800 normal-case">(Km acarreo)</span>
-                        </div>
+                        DISTANCIA
                       </th>
-                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-20 bg-amber-300 text-amber-950" title="Volumen en metros cúbicos (M3) para botes y acarreo de material o escombros">
-                        <div className="leading-tight">
-                          <span>M3</span>
-                          <span className="block text-[9px] font-semibold text-amber-800 normal-case">(Bote/Acarreo)</span>
-                        </div>
+                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-16 bg-amber-300 text-amber-950" title="Volumen en metros cúbicos (M3) para botes y acarreo de material o escombros">
+                        M3
                       </th>
                       <th colSpan={2} className="border border-gray-400 px-2 py-1 bg-amber-300">
                         CANTIDAD
