@@ -3875,7 +3875,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                       </th>
                     </tr>
                     <tr className="bg-amber-100 text-amber-950 font-bold text-[10px] uppercase border-b-2 border-gray-500 text-center">
-                      <th className="border border-gray-400 px-0.5 py-1 w-14 text-[9px] bg-amber-100" title="Unidad de medida">UND</th>
+                      <th className="border border-gray-400 px-1 py-1 w-[84px] min-w-[84px] text-[10px] bg-amber-100 font-bold" title="Unidad de medida">UND</th>
                       <th className="border border-gray-400 px-1 py-1 w-16 bg-amber-100">Largo</th>
                       <th className="border border-gray-400 px-1 py-1 w-16 bg-amber-100">Ancho</th>
                       <th className="border border-gray-400 px-1 py-1 w-16 bg-amber-100">Alto</th>
@@ -4027,11 +4027,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                             </td>
 
                             {/* UNIDAD */}
-                            <td className="border border-gray-300 px-0.5 py-1">
+                            <td className="border border-gray-300 px-1 py-1 w-[84px] min-w-[84px]">
                               <select
                                 value={it.unit}
                                 onChange={(e) => handleUpdateItemField(it.id, 'unit', e.target.value)}
-                                className="w-full px-0.5 py-0.5 text-[10px] font-semibold text-center text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded cursor-pointer"
+                                className="w-full px-1 py-1 text-xs font-bold text-center text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded cursor-pointer"
                               >
                                 {COMMON_UNITS.map((u) => (
                                   <option key={u} value={u}>
@@ -4296,7 +4296,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
                                       />
                                     </div>
                                   </td>
-                                  <td className="border border-amber-200 px-0.5 py-1 text-center text-[10px] font-semibold text-gray-500 bg-amber-50/30">
+                                  <td className="border border-amber-200 px-1 py-1 w-[84px] min-w-[84px] text-center text-xs font-bold text-amber-900 bg-amber-50/30">
                                     {it.unit || 'M2'}
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1">
