@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
+import { FileSpreadsheet, Printer } from 'lucide-react';
 import { calculateBudgetIncidence } from '../../../utils/apuCalculations';
+import { exportResourceSummaryToExcel, printResourceSummary } from '../../../utils/resourceSummaryExport';
 
 export default function BudgetWorksheetFooter({
   budget,
@@ -27,22 +29,42 @@ export default function BudgetWorksheetFooter({
   ];
 
   const IncidenceCard = ({ compact = false }) => (
-    <div className={`${compact ? 'w-full' : 'w-[238px] shrink-0'} bg-white border border-slate-300 rounded-2xl px-3 py-2 shadow-sm no-print print:hidden`}>
-      <div className="flex items-center justify-between border-b border-slate-200 pb-1 mb-1">
+    <div className={`${compact ? 'w-full' : 'w-full md:w-[310px] md:h-[86px] shrink-0'} bg-white border-2 border-slate-300 rounded-2xl px-3 py-1.5 shadow-sm no-print print:hidden flex flex-col justify-between`}>
+      <div className="flex items-center justify-between border-b border-slate-200 pb-0.5 leading-none">
         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Incidencia</span>
         <span className="text-[9px] text-slate-400" title="Porcentaje sobre el costo directo total">costo directo</span>
       </div>
-      {incidenceRows.map((row) => (
-        <div key={row.key} className="flex items-center justify-between gap-2 py-0.5">
-          <span className="text-[11px] font-medium text-slate-600">{row.label}</span>
-          <span className="text-[11px] font-mono font-semibold text-slate-800 whitespace-nowrap">
-            {currencySymbol} {money(row.amount)}
-          </span>
-          <span className="w-11 text-right text-[10px] font-mono font-bold text-[#F59E0B]">
-            {Number(row.percent || 0).toFixed(1)}%
-          </span>
-        </div>
-      ))}
+      <div className="flex flex-col justify-around flex-1 py-0.5">
+        {incidenceRows.map((row) => (
+          <div key={row.key} className="flex items-center justify-between gap-1.5 leading-tight">
+            <span className="w-[72px] shrink-0 text-[11px] font-medium text-slate-600 truncate">{row.label}</span>
+            <span className="flex-1 text-right text-[11px] font-mono font-semibold text-slate-800 pr-1 whitespace-nowrap">
+              {currencySymbol} {money(row.amount)}
+            </span>
+            <span className="w-10 text-right text-[10px] font-mono font-bold text-[#F59E0B] shrink-0">
+              {Number(row.percent || 0).toFixed(1)}%
+            </span>
+            <div className="flex items-center gap-0.5 shrink-0 pl-1 border-l border-slate-200">
+              <button
+                type="button"
+                onClick={() => exportResourceSummaryToExcel(budget, row.key)}
+                className="p-0.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded transition-colors cursor-pointer"
+                title={`Exportar resumen de ${row.label.toLowerCase()} a Excel`}
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => printResourceSummary(budget, row.key)}
+                className="p-0.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                title={`Imprimir resumen de ${row.label.toLowerCase()}`}
+              >
+                <Printer className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 
