@@ -160,6 +160,15 @@ def test_summary_and_progress(client):
     assert corrected["executed_amount"] == round(data["items"][0]["unit_price"] * 4, 2)
     assert corrected["entries"][0]["quantity"] == 4.0
 
+    synced = client.post("/budgets/budget-test/control-obra/progress/sync", json={
+        "items": [{"item_id": "item-1", "quantity": 6}],
+        "entry_date": "2026-11-03",
+        "notes": "cómputos",
+    })
+    assert synced.status_code == 200
+    final = client.get("/budgets/budget-test/control-obra").json()
+    assert final["executed_amount"] == round(data["items"][0]["unit_price"] * 6, 2)
+
 
 def test_period_close_reopen_and_progress(client):
     response = client.post("/budgets/budget-test/control-obra/periods", json={

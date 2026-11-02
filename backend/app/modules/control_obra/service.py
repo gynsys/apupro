@@ -14,6 +14,7 @@ from app.modules.control_obra.domain import (
     ControlObraError,
     Modification,
     ModificationLine,
+    q2,
 )
 from app.modules.control_obra.models import (
     ControlObraAddendum,
@@ -626,3 +627,65 @@ def update_progress(
     db.commit()
     db.refresh(row)
     return row
+
+
+def sync_progress(
+    db: Session,
+    budget: Budget,
+    items: List[Dict[str, Any]],
+    entry_date: date,
+    notes: str = "Sincronizado desde cómputos",
+    user_id: str = "",
+) -> Dict[str, Any]:
+    """Lleva cantidades objetivo desde una planilla de cómputos.
+
+    No reemplaza el historial: crea un ajuste por la diferencia entre la
+    cantidad ejecutada actual y la cantidad objetivo. Si la diferencia es
+    negativa, crea un reverso.
+    """
+    if not items:
+        raise ControlObraError("No hay cantidades de cómputos para llevar")
+    closed = _closed_period_for_date(db, budget, entry_date)
+    if closed:
+        raise ControlObraError(f"El período '{closed.name}' está cerrado. Reábrelo para sincronizar cómputos.")
+
+    entries = (
+        db.query(ControlObraProgressEntry)
+        .filter(ControlObraProgressEntry.budget_id == budget.id)
+        .all()
+    )
+    current: Dict[str, float] = {}
+    for entry in entries:
+        sign = -1.0 if entry.entry_type == "reversal" else 1.0
+        current[entry.budget_item_id] = current.get(entry.budget_item_id, 0.0) + sign * float(entry.quantity)
+
+    changed = 0
+    for item in items:
+        item_id = item.get("item_id")
+        quantity = Decimal(str(item.get("quantity", 0)))
+        if quantity < 0:
+            raise ControlObraError("La cantidad de cómputo no puede ser negativa")
+        if not db.query(BudgetItem).filter_by(id=item_id, budget_id=budget.id).first():
+            raise ControlObraError(f"Partida no encontrada: {item_id}")
+        difference = q2(quantity - Decimal(str(current.get(item_id, 0.0))))
+        if difference == 0:
+            continue
+        row = ControlObraProgressEntry(
+            budget_id=budget.id,
+            budget_item_id=item_id,
+            entry_date=entry_date,
+            quantity=float(abs(difference)),
+            notes=notes,
+            entry_type="execution" if difference > 0 else "reversal",
+            created_by=user_id,
+        )
+        db.add(row)
+        _audit(
+            db, budget, "progress", "synced", item_id,
+            f"Cantidad objetivo: {quantity}; ajuste: {difference}", user_id,
+        )
+        changed += 1
+    if changed == 0:
+        raise ControlObraError("Las cantidades de cómputos coinciden con el avance registrado")
+    db.commit()
+    return {"updated": changed, "entry_date": entry_date.isoformat()}

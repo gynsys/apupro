@@ -27,6 +27,7 @@ from app.modules.control_obra.service import (
     reopen_period,
     set_plan,
     summary,
+    sync_progress,
     update_progress,
 )
 from app.db.models.arko import ArkoAdmin
@@ -47,6 +48,17 @@ class ProgressUpdate(BaseModel):
     quantity: float = Field(ge=0)
     entry_date: date
     notes: str = ""
+
+
+class SyncProgressItem(BaseModel):
+    item_id: str
+    quantity: float = Field(ge=0)
+
+
+class SyncProgressRequest(BaseModel):
+    items: List[SyncProgressItem]
+    entry_date: date
+    notes: str = "Sincronizado desde cómputos"
 
 
 class ModificationLineCreate(BaseModel):
@@ -139,6 +151,28 @@ def put_progress(
     except ControlObraError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"id": row.id, "message": "Avance corregido"}
+
+
+@router.post("/progress/sync")
+def sync_progress_endpoint(
+    budget_id: str,
+    payload: SyncProgressRequest,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    budget = _budget_or_404(db, budget_id, current_user)
+    try:
+        result = sync_progress(
+            db,
+            budget,
+            [item.model_dump() for item in payload.items],
+            payload.entry_date,
+            payload.notes,
+            str(current_user.id),
+        )
+    except ControlObraError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return result
 
 
 @router.post("/modifications", status_code=status.HTTP_201_CREATED)

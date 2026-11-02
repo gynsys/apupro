@@ -792,7 +792,7 @@ const INITIAL_WELCOME_MESSAGE = {
     '¡Hola! Soy tu asistente de cómputos en campo. Anota tus partidas aquí o edítalas directamente en la Planilla de Cómputos Métricos. Puedes pulsar "Guardar" en cualquier momento para pausar y retomar tu trabajo después.',
 };
 
-export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, initialBudget = null }) {
+export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, initialBudget = null, onSendToPartidas = null }) {
   // Pestaña activa: 'sheet' (Planilla de Cómputos) | 'chat' (Asistente de Campo)
   const [activeTab, setActiveTab] = useState('sheet');
 
@@ -906,6 +906,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     const rows = initialBudget.items.map((item, index) => ({
       ...createBlankRow(chapter),
       id: `budget-${item.item_id || item.id || index}`,
+      item_id: item.item_id || item.id || null,
+      cod_par: item.code || item.cod_par || '',
+      cov_par: item.code || item.cov_par || '',
       description: item.description || '',
       unit: String(item.unit || 'M2').toUpperCase(),
       quantity: Number(item.current_quantity ?? item.quantity ?? item.original_quantity ?? 0),
@@ -2135,6 +2138,29 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   };
 
   /**
+   * Envía las cantidades de la planilla a la pestaña Partidas del control de obra.
+   * No crea un presupuesto nuevo ni duplica el historial de avance.
+   */
+  const handleSendToPartidas = () => {
+    if (!onSendToPartidas) return;
+    const rows = capturedItems
+      .filter((it) => !isItemEmpty(it) && Number(it.quantity) > 0)
+      .map((it) => ({
+        item_id: it.item_id || null,
+        cod_par: it.cod_par || it.code || '',
+        description: it.description || '',
+        unit: it.unit || '',
+        chapter: it.chapter || '',
+        quantity: Number(it.quantity),
+      }));
+    if (rows.length === 0) {
+      toast.error('No hay cantidades de cómputos para llevar a Partidas.');
+      return;
+    }
+    onSendToPartidas(rows);
+  };
+
+  /**
    * Imprime la Planilla de Cómputos Métricos en formato técnico de ingeniería
    */
   const handlePrintComputos = () => {
@@ -3308,6 +3334,19 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
           >
             <FileSpreadsheet className="w-4 h-4 text-amber-700" />
           </button>
+
+          {onSendToPartidas && (
+            <button
+              type="button"
+              onClick={handleSendToPartidas}
+              disabled={isCommitting || validCount === 0}
+              className="px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer shadow-sm disabled:opacity-40"
+              title="Llevar las cantidades de la planilla a la pestaña Partidas"
+            >
+              <Send className="w-4 h-4" />
+              <span className="hidden sm:inline">Llevar a Partidas</span>
+            </button>
+          )}
 
           <div className="h-5 w-px bg-amber-300 mx-0.5 hidden sm:block" />
 

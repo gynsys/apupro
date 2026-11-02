@@ -192,6 +192,37 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
     }
   };
 
+  const sendComputosToPartidas = async (rows) => {
+    const items = rows
+      .map((row) => {
+        const match = data?.items?.find((item) =>
+          (row.item_id && item.item_id === row.item_id) ||
+          (!row.item_id && row.cod_par && item.code === row.cod_par)
+        );
+        return match ? { item_id: match.item_id, quantity: Number(row.quantity) } : null;
+      })
+      .filter(Boolean);
+
+    if (items.length === 0) {
+      toast.error('No se encontraron partidas del presupuesto en la planilla.');
+      return;
+    }
+
+    try {
+      await controlObraService.syncProgress(budgetId, {
+        items,
+        entry_date: today(),
+        notes: 'Sincronizado desde planilla de cómputos',
+      });
+      toast.success('Cómputos llevados a Partidas.');
+      setShowComputos(false);
+      setTab('partidas');
+      await load();
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
   const createAddendum = async () => {
     if (!Number(addendumForm.amount)) {
       toast.error('Ingresa el monto del adendum.');
@@ -530,6 +561,7 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
       <BudgetFromComputosModal
         isOpen={showComputos}
         onClose={() => setShowComputos(false)}
+        onSendToPartidas={sendComputosToPartidas}
         initialBudget={{
           id: budgetId,
           name: data?.budget_name || budgetName,
