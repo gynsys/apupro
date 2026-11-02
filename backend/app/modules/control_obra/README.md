@@ -50,9 +50,14 @@ que amplía los recursos disponibles.
 ## Avance
 
 ```text
-Avance físico = Ejecutado / Presupuesto modificado
-Avance financiero = Ejecutado / Monto contractual vigente
+Peso partida = Monto vigente partida / Monto modificado total
+
+Avance físico = Σ (Peso partida × Avance de la partida)
+Avance financiero = Monto certificado o ejecutado / Monto contractual vigente
 ```
+
+El avance de cada partida se limita a 100% para el avance contractual. Los
+excesos de cantidad se muestran por partida y no inflan el porcentaje total.
 
 El avance financiero usa el monto contractual:
 

@@ -293,11 +293,11 @@ class ControlObra:
         total = Decimal("0")
         for item_id, quantity in quantities.items():
             item = self.items[item_id]
-            total += quantity * item.unit_price
+            total += q2(quantity * item.unit_price)
         for modification in self.approved_modifications:
             for line in modification.lines:
                 if line.is_new_item:
-                    total += line.quantity_delta * self._line_price(line)
+                    total += q2(line.quantity_delta * self._line_price(line))
         return q2(total)
 
     @property
@@ -438,9 +438,35 @@ class ControlObra:
 
     @property
     def physical_percent(self) -> Decimal:
+        """Avance físico ponderado por el monto vigente de cada partida.
+
+        Se calcula explícitamente como Σ(peso_i × avance_i), no como una
+        simple división de montos. El avance de cada partida se limita a 100%
+        para el avance contractual; los excesos se reflejan en item_progress.
+        """
         if self.modified_amount <= 0:
             return Decimal("0")
-        return q2(self.executed_amount / self.modified_amount * Decimal("100"))
+        quantities = self.current_quantities()
+        executed = self.executed_quantities()
+        weighted = Decimal("0")
+        total_weight = Decimal("0")
+
+        for item_id, item in self.items.items():
+            current = quantities[item_id]
+            if current <= 0:
+                continue
+            current_amount = q2(current * item.unit_price)
+            weight = current_amount / self.modified_amount
+            item_ratio = min(Decimal("1"), executed[item_id] / current)
+            weighted += weight * item_ratio
+            total_weight += weight
+
+        # Las obras extras sin partida de ejecución forman parte del alcance,
+        # pero todavía no tienen avance registrado; su peso queda en el
+        # denominador mediante modified_amount.
+        if total_weight <= 0:
+            return Decimal("0")
+        return q2(weighted * Decimal("100"))
 
     @property
     def financial_percent(self) -> Decimal:
