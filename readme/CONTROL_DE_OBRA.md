@@ -245,6 +245,19 @@ Control de Obra
 La corrección se audita con la acción `progress_corrected`. No se elimina
 el registro original.
 
+### Llevar cómputos a Partidas
+
+```text
+Control de Obra
+→ Cómputos
+→ Editar cantidades en la planilla
+→ Llevar a Partidas
+```
+
+Se crea un ajuste por la diferencia entre la cantidad ejecutada actual y la
+cantidad de la planilla. Si la diferencia es negativa, se registra un reverso.
+No se reemplaza el historial.
+
 ### Modificación
 
 ```text
@@ -335,6 +348,7 @@ Base:
 | GET | `/` | Resumen completo |
 | POST | `/progress` | Registrar avance |
 | PUT | `/progress/{id}` | Corregir avance |
+| POST | `/progress/sync` | Llevar cantidades de cómputos |
 | POST | `/modifications` | Crear modificación |
 | POST | `/modifications/{id}/approve` | Aprobar modificación |
 | POST | `/addenda` | Crear adendum |
