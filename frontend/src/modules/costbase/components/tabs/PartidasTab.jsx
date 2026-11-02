@@ -178,15 +178,17 @@ const PartidasTab = ({ onlyCoded, selectedDatabase = 'master' }) => {
         <div className="flex-1">
           {items.length > 0 ? (
             <ul className="divide-y" style={{ borderColor: 'rgba(148,163,255,0.15)' }}>
-              {items.map((item) => (
+              {items.map((item) => {
+                const targetId = (selectedDatabase === 'personalizada' || selectedDatabase === 'compartidos' || item.id) ? (item.id || item.CodPar) : item.CodPar;
+                return (
                 <li
-                  key={item.CodPar}
+                  key={item.id || item.CodPar}
                   className="group transition-all duration-200 border-l-4 border-transparent hover:border-blue-600 hover:bg-blue-50/90 hover:shadow-md hover:translate-x-1"
                 >
                   <div className="px-5 py-4 flex items-center justify-between gap-4">
                     <div
                       className="flex items-start gap-3 min-w-0 flex-1 cursor-pointer"
-                      onClick={() => navigate(`/cost360/apu/${item.CodPar}?from=admin-db&db=${selectedDatabase || 'master'}`, { state: { from: '/cost360/admin-db' } })}
+                      onClick={() => navigate(`/cost360/apu/${targetId}?from=admin-db&db=${selectedDatabase || 'master'}`, { state: { from: '/cost360/admin-db' } })}
                     >
                       <div
                         className="mt-0.5 p-2 rounded-lg shrink-0 transition-colors duration-150"
@@ -225,7 +227,8 @@ const PartidasTab = ({ onlyCoded, selectedDatabase = 'master' }) => {
                     </div>
                   </div>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           ) : !loading ? (
             <div className="py-20 text-center">

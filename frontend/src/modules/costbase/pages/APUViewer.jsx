@@ -63,6 +63,7 @@ export default function APUViewer() {
         const apuData = await cost360Service.fetchApuDetails(id, dbId);
         setData(apuData);
         setItem({
+          id: apuData.partida.id || id,
           cod_par: apuData.partida.CodPar,
           cov_par: apuData.partida.CovPar,
           description: apuData.partida.Descri,
@@ -206,7 +207,7 @@ export default function APUViewer() {
         labors: item.labors
       };
       const updateFn = cost360Service.updateApuDetails || updateApuDetails;
-      await updateFn(item.cod_par || id, payload, dbId);
+      await updateFn(item.id || item.cod_par || id, payload, dbId);
       toast.success("APU guardado exitosamente");
       const apuData = await cost360Service.fetchApuDetails(id, dbId);
       setData(apuData);
@@ -240,7 +241,7 @@ export default function APUViewer() {
               toast.dismiss(t.id);
               try {
                 setDeleting(true);
-                await cost360Service.deleteCustomApu(id);
+                await cost360Service.deleteCustomApu(item?.id || id);
                 toast.success("Partida eliminada correctamente");
                 navigate(fromParam || '/cost360?db=personalizada');
               } catch (err) {

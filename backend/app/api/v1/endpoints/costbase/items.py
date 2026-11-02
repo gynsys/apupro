@@ -1,5 +1,6 @@
 import json
 import urllib.parse
+import uuid
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import or_, func
@@ -36,16 +37,29 @@ from app.api.v1.endpoints.costbase.common import (
 router = APIRouter()
 
 
+def _is_uuid_like(val: str) -> bool:
+    if not val:
+        return False
+    clean = str(val).strip()
+    try:
+        uuid.UUID(clean)
+        return True
+    except (ValueError, AttributeError):
+        return False
+
+
 def _find_custom_cost_item(
     db: Session,
     item_code: str,
     user_id: Optional[int] = None,
     is_superadmin: bool = False
 ) -> Optional[CustomCostItem]:
-    target = item_code.strip().upper()
+    target = item_code.strip()
+    target_lower = target.lower()
+    target_upper = target.upper()
 
-    # 1. Búsqueda directa por UUID
-    direct_query = db.query(CustomCostItem).filter(CustomCostItem.id == item_code.strip())
+    # 1. Búsqueda directa por UUID (case-insensitive)
+    direct_query = db.query(CustomCostItem).filter(func.lower(CustomCostItem.id) == target_lower)
     if user_id is not None and not is_superadmin:
         direct_query = direct_query.filter(or_(
             CustomCostItem.user_id == user_id,
@@ -56,7 +70,7 @@ def _find_custom_cost_item(
     if ci:
         return ci
 
-    # 2. Búsqueda en partidas del usuario (o todas si es superadmin)
+    # 2. Búsqueda en partidas del usuario (o todas si es superadmin), ordenadas por más recientes primero
     query = db.query(CustomCostItem)
     if user_id is not None and not is_superadmin:
         query = query.filter(or_(
@@ -64,15 +78,21 @@ def _find_custom_cost_item(
             CustomCostItem.user_id.is_(None),
             CustomCostItem.shared_with_user_id == user_id,
         ))
-    candidates = query.all()
+    candidates = query.order_by(CustomCostItem.created_at.desc()).all()
 
     fallback_match: Optional[CustomCostItem] = None
 
     for candidate in candidates:
         cand_id_upper = candidate.id.upper()
-        cand_cust_prefix = f"CUST-{candidate.id[:4].upper()}"
+        cand_cust_prefix_4 = f"CUST-{candidate.id[:4].upper()}"
+        cand_cust_prefix_8 = f"CUST-{candidate.id[:8].upper()}"
 
-        matches = (cand_id_upper == target or cand_cust_prefix == target)
+        matches = (
+            cand_id_upper == target_upper or
+            cand_cust_prefix_4 == target_upper or
+            cand_cust_prefix_8 == target_upper or
+            (target_upper.startswith("CUST-") and cand_id_upper.startswith(target_upper.replace("CUST-", "")))
+        )
 
         if not matches:
             try:
@@ -83,13 +103,15 @@ def _find_custom_cost_item(
                         data.get("CodPar"),
                         data.get("cov_par"),
                         data.get("CovPar"),
+                        data.get("id"),
+                        data.get("custom_id"),
                         (data.get("partida", {}).get("cod_par") if isinstance(data.get("partida"), dict) else None),
                         (data.get("partida", {}).get("CodPar") if isinstance(data.get("partida"), dict) else None),
                         (data.get("partida", {}).get("cov_par") if isinstance(data.get("partida"), dict) else None),
                         (data.get("partida", {}).get("CovPar") if isinstance(data.get("partida"), dict) else None),
                     ]
                     for c in codes:
-                        if c and str(c).strip().upper() == target:
+                        if c and str(c).strip().upper() == target_upper:
                             matches = True
                             break
             except Exception:
@@ -238,8 +260,9 @@ def _build_custom_apu_response(ci: CustomCostItem, item_code: str) -> Dict[str, 
     pre_uni = float(data.get("pre_uni") or data.get("PreUni") or calc_pre_uni)
 
     partida = {
+        "id": ci.id,
         "CodPar": cod,
-        "CovPar": cov,
+        "CovPar": cov or cod,
         "Descri": desc,
         "UniPar": unit,
         "PreUni": round(pre_uni, 4),
@@ -365,21 +388,31 @@ def get_apu(
             getattr(current_user, 'role', '') in ['admin', 'superadmin']
         )
 
-    # 1. Si se solicita explícitamente base personalizada/compartidos o código CUST-
-    if database_id in ("personalizada", "compartidos") or item_code.startswith("CUST-"):
-        ci = _find_custom_cost_item(db, item_code, user_id=user_id, is_superadmin=is_superadmin)
+    clean_code = urllib.parse.unquote(item_code).strip()
+
+    # 1. Si es base personalizada/compartidos, o si es un UUID o código CUST-
+    is_custom_requested = database_id in ("personalizada", "compartidos")
+    is_custom_code = (
+        clean_code.startswith("CUST-") or
+        item_code.startswith("CUST-") or
+        _is_uuid_like(clean_code) or
+        _is_uuid_like(item_code)
+    )
+
+    if is_custom_requested or is_custom_code:
+        ci = _find_custom_cost_item(db, clean_code, user_id=user_id, is_superadmin=is_superadmin) or _find_custom_cost_item(db, item_code, user_id=user_id, is_superadmin=is_superadmin)
         if ci:
-            return _build_custom_apu_response(ci, item_code)
-        if database_id in ("personalizada", "compartidos"):
-            raise HTTPException(status_code=404, detail="Partida no encontrada en la base seleccionada")
+            return _build_custom_apu_response(ci, clean_code)
+        if is_custom_requested:
+            raise HTTPException(status_code=404, detail="Partida no encontrada en la base personalizada")
 
     # 2. Buscar en catálogo maestro
-    item = get_item_by_code(db, item_code)
+    item = get_item_by_code(db, clean_code) or get_item_by_code(db, item_code)
     if not item:
         # Fallback a búsqueda en CustomCostItem si no se halló en la base maestra
-        ci = _find_custom_cost_item(db, item_code, user_id=user_id, is_superadmin=is_superadmin)
+        ci = _find_custom_cost_item(db, clean_code, user_id=user_id, is_superadmin=is_superadmin) or _find_custom_cost_item(db, item_code, user_id=user_id, is_superadmin=is_superadmin)
         if ci:
-            return _build_custom_apu_response(ci, item_code)
+            return _build_custom_apu_response(ci, clean_code)
         raise HTTPException(status_code=404, detail="Partida no encontrada")
 
     factors = get_db_factors(db, database_id)
@@ -453,7 +486,7 @@ def update_master_apu_route(
 
     clean_code = urllib.parse.unquote(item_code).strip()
 
-    if database_id == "personalizada" or clean_code.startswith("CUST-") or item_code.startswith("CUST-"):
+    if database_id in ("personalizada", "compartidos") or clean_code.startswith("CUST-") or item_code.startswith("CUST-") or _is_uuid_like(clean_code) or _is_uuid_like(item_code):
         ci = _find_custom_cost_item(db, clean_code, user_id=user_id, is_superadmin=is_superadmin) or _find_custom_cost_item(db, item_code, user_id=user_id, is_superadmin=is_superadmin)
         if ci:
             if not is_superadmin and ci.user_id is not None and user_id is not None and ci.user_id != user_id:

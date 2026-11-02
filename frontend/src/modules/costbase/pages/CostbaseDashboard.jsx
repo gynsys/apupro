@@ -317,10 +317,12 @@ const Cost360Dashboard = () => {
             <div className="flex-1">
             {items.length > 0 ? (
               <ul className="divide-y" style={{ borderColor: 'rgba(148,163,255,0.15)' }}>
-                {items.map((item) => (
+                {items.map((item) => {
+                  const targetId = (selectedDatabase === 'personalizada' || selectedDatabase === 'compartidos' || item.id) ? (item.id || item.CodPar) : item.CodPar;
+                  return (
                   <li
-                    key={item.CodPar}
-                    onClick={() => navigate(`/cost360/apu/${item.CodPar}?db=${selectedDatabase}`)}
+                    key={item.id || item.CodPar}
+                    onClick={() => navigate(`/cost360/apu/${targetId}?db=${selectedDatabase}`)}
                     className="group cursor-pointer transition-all duration-200 border-l-4 border-transparent hover:border-blue-600 hover:bg-blue-50/90 hover:shadow-md hover:translate-x-1"
                   >
                     <div className="px-5 py-4 flex items-center justify-between gap-4">
@@ -363,7 +365,8 @@ const Cost360Dashboard = () => {
                       </div>
                     </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             ) : !loading ? (
               <div className="py-20 text-center">

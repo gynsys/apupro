@@ -577,9 +577,10 @@ const CatalogResourceTab = ({ resourceType, title, config, selectedDatabase, adm
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {usesModal.apus.map(apu => {
-                            const apuUrl = `/cost360/apu/${apu.CodPar}${selectedDatabase ? `?db=${selectedDatabase}` : ''}`;
+                            const targetId = (selectedDatabase === 'personalizada' || selectedDatabase === 'compartidos' || apu.id) ? (apu.id || apu.CodPar) : apu.CodPar;
+                            const apuUrl = `/cost360/apu/${targetId}${selectedDatabase ? `?db=${selectedDatabase}` : ''}`;
                             return (
-                              <tr key={apu.CodPar} className="hover:bg-blue-50/50 transition-colors group">
+                              <tr key={apu.id || apu.CodPar} className="hover:bg-blue-50/50 transition-colors group">
                                 <td className="px-4 py-2.5 font-mono whitespace-nowrap">
                                   <a
                                     href={apuUrl}

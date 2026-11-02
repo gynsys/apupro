@@ -5,6 +5,7 @@ import { budgetService } from '../../../services/budgetService';
 import { API_URL } from '../../../services/api';
 import { useDatabaseContext } from '../../../contexts/DatabaseContext';
 import { useCostbaseSearch as useCost360Search } from '../../../modules/costbase/hooks/useCostbaseSearch';
+import costbaseService from '../../../modules/costbase/services/costbaseService';
 import { SiteConfigContext } from '../../../App';
 import { calculateItemPU, calculateBudgetTotals } from '../../../utils/apuCalculations';
 
@@ -267,10 +268,10 @@ export function useBudgetWorksheet() {
 
       let materials = [], equipments = [], labors = [];
       try {
-        const apuCode = item.CodPar || item.codigo;
-        const apuRes = await fetch(`${API_URL}/cost360/items/${apuCode}/apu?database_id=${activeDatabase.id}`);
-        if (apuRes.ok) {
-          const apuData = await apuRes.json();
+        const apuCode = item.id || item.CodPar || item.codigo;
+        const dbId = activeDatabase?.id || 'master';
+        const apuData = await costbaseService.fetchApuDetails(apuCode, dbId);
+        if (apuData) {
           materials = (apuData.materiales || []).map(m => ({
             id: `m-${m.codigo}`,
             codigo: m.codigo,
@@ -279,7 +280,7 @@ export function useBudgetWorksheet() {
             cantidad: m.cantidad,
             desperdicio: m.desperdicio || 0,
             precio_unitario: m.precio_unitario,
-            origen: activeDatabase.is_master ? 'historico' : 'base_personalizada'
+            origen: activeDatabase?.is_master ? 'historico' : 'base_personalizada'
           }));
           equipments = (apuData.equipos || []).map(e => ({
             id: `e-${e.codigo}`,
@@ -289,7 +290,7 @@ export function useBudgetWorksheet() {
             cantidad: e.cantidad,
             depreciacion: e.depreciacion ?? 1.0,
             precio_unitario: e.precio_unitario,
-            origen: activeDatabase.is_master ? 'historico' : 'base_personalizada'
+            origen: activeDatabase?.is_master ? 'historico' : 'base_personalizada'
           }));
           labors = (apuData.mano_obra || []).map(l => ({
             id: `l-${l.codigo}`,
@@ -300,7 +301,7 @@ export function useBudgetWorksheet() {
             jornal: l.jornal,
             bono: l.bono,
             precio_unitario: l.precio_unitario,
-            origen: activeDatabase.is_master ? 'historico' : 'base_personalizada'
+            origen: activeDatabase?.is_master ? 'historico' : 'base_personalizada'
           }));
         }
       } catch (apuError) {

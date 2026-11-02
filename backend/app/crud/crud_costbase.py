@@ -786,8 +786,21 @@ def save_custom_apu(
     except Exception as emb_err:
         logger.error("Error al generar embedding para CustomCostItem: %s", emb_err, exc_info=True)
 
+    new_item_id = str(uuid.uuid4())
+
+    try:
+        data_obj = json.loads(apu_data) if isinstance(apu_data, str) else dict(apu_data)
+        if isinstance(data_obj, dict):
+            data_obj["id"] = new_item_id
+            data_obj["custom_id"] = new_item_id
+            if not data_obj.get("cod_par") or str(data_obj.get("cod_par")).startswith("NEW-"):
+                data_obj["cod_par"] = f"CUST-{new_item_id[:8].upper()}"
+            apu_data = json.dumps(data_obj, ensure_ascii=False)
+    except Exception as data_err:
+        logger.warning("No se pudo enriquecer apu_data con ID de CustomCostItem: %s", data_err)
+
     new_item = CustomCostItem(
-        id=str(uuid.uuid4()),
+        id=new_item_id,
         user_id=user_id,
         description=clean_desc,
         unit=clean_unit,
@@ -846,28 +859,38 @@ def delete_custom_apu(
     user_id: Optional[int] = None,
     is_superadmin: bool = False
 ) -> bool:
-    # 1. Buscar por UUID exacto
-    item = db.query(CustomCostItem).filter(CustomCostItem.id == item_id).first()
+    clean_id = item_id.strip()
+    # 1. Buscar por UUID exacto (case-insensitive)
+    item = db.query(CustomCostItem).filter(func.lower(CustomCostItem.id) == clean_id.lower()).first()
 
     # 2. Si no coincide, buscar por prefijo o dentro de apu_data
     if not item:
-        all_custom = db.query(CustomCostItem).all()
+        query = db.query(CustomCostItem)
+        if user_id is not None and not is_superadmin:
+            query = query.filter(or_(CustomCostItem.user_id == user_id, CustomCostItem.user_id.is_(None)))
+        all_custom = query.order_by(CustomCostItem.created_at.desc()).all()
         for ci in all_custom:
-            if ci.id.startswith(item_id.lower()) or item_id in ci.id:
+            if ci.id.lower().startswith(clean_id.lower()) or clean_id.lower() in ci.id.lower():
                 item = ci
                 break
             try:
-                data = json.loads(ci.apu_data)
-                if data.get("cod_par") == item_id:
-                    item = ci
-                    break
+                data = json.loads(ci.apu_data) if isinstance(ci.apu_data, str) else ci.apu_data
+                if isinstance(data, dict):
+                    codes = [
+                        data.get("cod_par"), data.get("CodPar"),
+                        data.get("cov_par"), data.get("CovPar"),
+                        data.get("id"), data.get("custom_id")
+                    ]
+                    if any(c and str(c).strip().upper() == clean_id.upper() for c in codes):
+                        item = ci
+                        break
             except Exception:
                 continue
 
     if not item:
         return False
 
-    # Verificar permiso: solo superadmin o el dueÃ±o de la partida
+    # Verificar permiso: solo superadmin o el dueño de la partida
     if not is_superadmin and item.user_id is not None and user_id is not None and item.user_id != user_id:
         raise PermissionError("No tienes permiso para eliminar esta partida personalizada")
 

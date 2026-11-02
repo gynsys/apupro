@@ -6,6 +6,7 @@ const DatabaseContext = createContext(null);
 // Default databases fallback
 const DEFAULT_DATABASES = [
   { id: 'master', name: 'Base Maestra', description: 'Base de datos oficial de CostBase', is_master: true, is_active: true },
+  { id: 'personalizada', name: 'Base Personalizada', description: 'Partidas y APUs creados por el usuario', is_master: false, is_active: true }
 ];
 
 export const DatabaseProvider = ({ children }) => {
@@ -28,15 +29,26 @@ export const DatabaseProvider = ({ children }) => {
         dbList = [DEFAULT_DATABASES[0], ...dbList];
       }
 
-      // Ensure master is always first
-      const sortedDatabases = [
-        ...dbList.filter(db => db.id === 'master' || db.is_master),
-        ...dbList.filter(db => db.id !== 'master' && !db.is_master)
-      ];
+      // Ensure personalizada database is always included
+      const hasPersonalizada = dbList.some(db => db.id === 'personalizada');
+      if (!hasPersonalizada) {
+        dbList.push(DEFAULT_DATABASES[1]);
+      }
+
+      // Ensure master is always first, then personalizada, then others
+      const masterDbs = dbList.filter(db => db.id === 'master' || db.is_master);
+      const personalDbs = dbList.filter(db => db.id === 'personalizada');
+      const otherDbs = dbList.filter(db => db.id !== 'master' && !db.is_master && db.id !== 'personalizada');
+      const sortedDatabases = [...masterDbs, ...personalDbs, ...otherDbs];
       
       if (sortedDatabases.length > 0) {
         setDatabases(sortedDatabases);
-        setActiveDatabase(sortedDatabases[0]);
+        setActiveDatabase(prev => {
+          if (prev && sortedDatabases.some(d => d.id === prev.id)) {
+            return sortedDatabases.find(d => d.id === prev.id);
+          }
+          return sortedDatabases[0];
+        });
       } else {
         // If no databases returned, use default
         setDatabases(DEFAULT_DATABASES);

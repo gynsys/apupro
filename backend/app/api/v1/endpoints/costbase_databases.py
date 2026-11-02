@@ -51,10 +51,12 @@ def list_databases(db: Session = Depends(get_db), current_user = Depends(get_cur
     
     logger.warning(f"[LIST_DB] user_email='{user_email}' total_dbs={len(databases)}")
 
+    has_master = False
     for db_obj in databases:
-        # Mostrar si es maestra, si estÃ¡ publicada, o si le pertenece al usuario
+        # Mostrar si es maestra, si está publicada, o si le pertenece al usuario
         if getattr(db_obj, 'is_master', False):
             user_dbs.append(db_obj)
+            has_master = True
             logger.warning(f"[LIST_DB] Included {db_obj.id} because is_master")
         elif getattr(db_obj, 'is_published', False):
             user_dbs.append(db_obj)
@@ -66,26 +68,47 @@ def list_databases(db: Session = Depends(get_db), current_user = Depends(get_cur
                 user_dbs.append(db_obj)
                 logger.warning(f"[LIST_DB] Included {db_obj.id} because owner matches")
 
-    # Para usuarios normales, ocultar los factores de inflaciÃ³n de bases publicadas
+    # Inyectar Base Personalizada (base virtual de partidas creadas por el usuario)
+    personalizada_db = {
+        "id": "personalizada",
+        "name": "Base Personalizada",
+        "description": "Partidas y APUs creados por el usuario",
+        "is_master": False,
+        "is_active": True,
+        "material_inflation": 0.0,
+        "labor_inflation": 0.0,
+        "equipment_inflation": 0.0,
+        "source_database_id": "master",
+        "created_at": None,
+        "created_by": None,
+        "owner_id": user_email,
+        "is_published": False,
+        "published_at": None,
+    }
+    insert_idx = 1 if has_master else 0
+    user_dbs.insert(insert_idx, personalizada_db)
+
+    # Para usuarios normales, ocultar los factores de inflación de bases publicadas
     if not is_superadmin:
         sanitized_dbs = []
         for d in user_dbs:
-            if getattr(d, 'is_published', False):
+            is_pub = getattr(d, 'is_published', False) if not isinstance(d, dict) else d.get('is_published', False)
+            if is_pub:
                 sanitized_dbs.append({
-                    "id": d.id,
-                    "name": d.name,
-                    "description": d.description,
-                    "is_master": d.is_master,
-                    "is_active": d.is_active,
+                    "id": getattr(d, 'id', None) if not isinstance(d, dict) else d.get('id'),
+                    "name": getattr(d, 'name', '') if not isinstance(d, dict) else d.get('name'),
+                    "description": getattr(d, 'description', '') if not isinstance(d, dict) else d.get('description'),
+                    "is_master": getattr(d, 'is_master', False) if not isinstance(d, dict) else d.get('is_master', False),
+                    "is_active": getattr(d, 'is_active', True) if not isinstance(d, dict) else d.get('is_active', True),
                     "material_inflation": 0.0,
                     "labor_inflation": 0.0,
                     "equipment_inflation": 0.0,
-                    "source_database_id": d.source_database_id,
-                    "created_at": d.created_at,
-                    "created_by": d.created_by,
-                    "owner_id": d.owner_id,
-                    "is_published": d.is_published,
-                    "published_at": d.published_at,
+                    "source_database_id": getattr(d, 'source_database_id', None) if not isinstance(d, dict) else d.get('source_database_id'),
+                    "created_at": getattr(d, 'created_at', None) if not isinstance(d, dict) else d.get('created_at'),
+                    "created_by": getattr(d, 'created_by', None) if not isinstance(d, dict) else d.get('created_by'),
+                    "owner_id": getattr(d, 'owner_id', None) if not isinstance(d, dict) else d.get('owner_id'),
+                    "is_published": True,
+                    "published_at": getattr(d, 'published_at', None) if not isinstance(d, dict) else d.get('published_at'),
                 })
             else:
                 sanitized_dbs.append(d)
@@ -135,7 +158,25 @@ def initialize_master_database(db: Session = Depends(get_db)):
 
 @router.get("/{database_id}")
 def get_database(database_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
-    """Obtener detalles de una base de datos especÃ­fica"""
+    """Obtener detalles de una base de datos específica"""
+    if database_id == "personalizada":
+        user_email = current_user.email.lower() if current_user.email else ""
+        return {
+            "id": "personalizada",
+            "name": "Base Personalizada",
+            "description": "Partidas y APUs creados por el usuario",
+            "is_master": False,
+            "is_active": True,
+            "material_inflation": 0.0,
+            "labor_inflation": 0.0,
+            "equipment_inflation": 0.0,
+            "source_database_id": "master",
+            "created_at": None,
+            "created_by": None,
+            "owner_id": user_email,
+            "is_published": False,
+            "published_at": None,
+        }
     database = get_database_by_id(db, database_id)
     if not database:
         raise HTTPException(status_code=404, detail="Base de datos no encontrada")

@@ -76,13 +76,13 @@ export default function ImportFromDbPanel({
         <div className="mt-4 border border-slate-200 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
           <ul className="divide-y divide-slate-100">
             {searchResults.map((res) => (
-              <li key={res.CodPar} className="p-3 hover:bg-slate-50 flex items-center justify-between gap-4 transition-colors">
+              <li key={res.id || res.CodPar} className="p-3 hover:bg-slate-50 flex items-center justify-between gap-4 transition-colors">
                 <div>
                   <p className="text-sm font-bold text-slate-800 font-mono mb-1">{res.CovPar || res.CodPar}</p>
                   <p className="text-xs text-slate-600 line-clamp-1">{res.Descri}</p>
                 </div>
                 <button
-                  onClick={() => onImportApu && onImportApu(res.CodPar)}
+                  onClick={() => onImportApu && onImportApu(res.id || res.CodPar)}
                   className="px-3 py-1.5 bg-blue-50 text-blue-700 text-xs font-bold rounded-lg hover:bg-blue-100 shrink-0 transition-colors cursor-pointer"
                 >
                   Usar como base
