@@ -55,6 +55,22 @@ class BudgetItem:
     def original_amount(self) -> Decimal:
         return q2(self.original_quantity * self.unit_price)
 
+    @property
+    def hours_per_unit(self) -> Decimal:
+        """HH por unidad a partir de la mano de obra del APU.
+
+        La cantidad de cada renglón de mano de obra se expresa en jornadas
+        (8 horas) y el rendimiento en unidades por jornada.
+        """
+        workers = sum((dec(row.get("cantidad", 0)) for row in self.labors), Decimal("0"))
+        performance = dec(self.performance)
+        if performance <= 0:
+            performance = Decimal("1")
+        return q2(workers * Decimal("8") / performance)
+
+    def hours_for_quantity(self, quantity: Any) -> Decimal:
+        return q2(self.hours_per_unit * dec(quantity))
+
 
 @dataclass
 class ModificationLine:
@@ -474,14 +490,42 @@ class ControlObra:
             return Decimal("0")
         return q2(self.executed_amount / self.contract_amount * Decimal("100"))
 
+    @property
+    def total_budget_hours(self) -> Decimal:
+        quantities = self.current_quantities()
+        total = Decimal("0")
+        for item_id, item in self.items.items():
+            total += item.hours_for_quantity(quantities[item_id])
+        return q2(total)
+
+    @property
+    def total_executed_hours(self) -> Decimal:
+        quantities = self.current_quantities()
+        executed = self.executed_quantities()
+        total = Decimal("0")
+        for item_id, item in self.items.items():
+            # El avance contractual no debe superar la cantidad vigente.
+            total += item.hours_for_quantity(min(quantities[item_id], executed[item_id]))
+        return q2(total)
+
+    @property
+    def physical_percent_hh(self) -> Decimal:
+        total = self.total_budget_hours
+        if total <= 0:
+            return Decimal("0")
+        return q2(self.total_executed_hours / total * Decimal("100"))
+
     def item_progress(self) -> List[Dict[str, Any]]:
         quantities = self.current_quantities()
         executed = self.executed_quantities()
+        total_hours = self.total_budget_hours
         rows = []
         for item_id, item in self.items.items():
             current = quantities[item_id]
             done = executed[item_id]
             pct_item = q2(done / current * Decimal("100")) if current > 0 else Decimal("0")
+            budget_hours = item.hours_for_quantity(current)
+            executed_hours = item.hours_for_quantity(min(current, done))
             rows.append({
                 "item_id": item_id,
                 "code": item.code,
@@ -495,6 +539,11 @@ class ControlObra:
                 "unit_price": item.unit_price,
                 "executed_amount": q2(done * item.unit_price),
                 "current_amount": q2(current * item.unit_price),
+                "hours_per_unit": item.hours_per_unit,
+                "budget_hours": budget_hours,
+                "executed_hours": executed_hours,
+                "hours_weight": q2(budget_hours / total_hours * Decimal("100")) if total_hours > 0 else Decimal("0"),
+                "physical_percent_hh": q2(executed_hours / budget_hours * Decimal("100")) if budget_hours > 0 else Decimal("0"),
             })
         return rows
 
@@ -510,6 +559,9 @@ class ControlObra:
             "available_amount": self.available_amount,
             "executed_amount": self.executed_amount,
             "physical_percent": self.physical_percent,
+            "physical_percent_hh": self.physical_percent_hh,
+            "budget_hours": self.total_budget_hours,
+            "executed_hours": self.total_executed_hours,
             "financial_percent": self.financial_percent,
             "items": self.item_progress(),
         }

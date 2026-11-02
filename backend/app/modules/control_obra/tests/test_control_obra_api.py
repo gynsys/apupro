@@ -147,6 +147,9 @@ def test_summary_and_progress(client):
     assert data["executed_amount"] == expected
     assert data["physical_percent"] == 25.0
     assert data["financial_percent"] == 25.0
+    assert data["budget_hours"] == 80.0
+    assert data["physical_percent_hh"] == 25.0
+    assert data["items"][0]["hours_per_unit"] == 8.0
     assert len(data["entries"]) == 1
 
     entry_id = data["entries"][0]["id"]

@@ -274,12 +274,13 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
           <div className="flex-1 p-8 text-center text-slate-500">No se pudo cargar el control de obra.</div>
         ) : (
           <>
-            <div className="px-4 sm:px-6 py-3 grid grid-cols-2 lg:grid-cols-5 gap-2 border-b border-slate-200 bg-white shrink-0">
+            <div className="px-4 sm:px-6 py-3 grid grid-cols-2 lg:grid-cols-6 gap-2 border-b border-slate-200 bg-white shrink-0">
               <Card label="Original" value={money(data.original_amount, currency)} />
               <Card label="Modificado" value={money(data.modified_amount, currency)} />
               <Card label="Ejecutado" value={money(data.executed_amount, currency)} />
               <Card label="Avance físico" value={pct(data.physical_percent)} accent />
               <Card label="Avance financiero" value={pct(data.financial_percent)} accent />
+              <Card label="Avance HH" value={pct(data.physical_percent_hh)} accent />
             </div>
 
             <div className="px-4 sm:px-6 border-b border-slate-200 flex gap-1 overflow-x-auto bg-white shrink-0 min-h-[38px]">
@@ -327,6 +328,10 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
                         <th className="p-2 text-right">Modificada</th>
                         <th className="p-2 text-right">Ejecutada</th>
                         <th className="p-2 text-right">% Físico</th>
+                        <th className="p-2 text-right">HH pres.</th>
+                        <th className="p-2 text-right">HH ejec.</th>
+                        <th className="p-2 text-right">% HH</th>
+                        <th className="p-2 text-right">Peso HH</th>
                         <th className="p-2 text-right">Registrar</th>
                       </tr>
                     </thead>
@@ -341,6 +346,10 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
                             <td className="p-2 text-right">{item.current_quantity} {item.unit}</td>
                             <td className="p-2 text-right">{item.executed_quantity} {item.unit}</td>
                             <td className="p-2 text-right font-semibold">{pct(item.physical_percent)}</td>
+                            <td className="p-2 text-right">{item.budget_hours}</td>
+                            <td className="p-2 text-right">{item.executed_hours}</td>
+                            <td className="p-2 text-right font-semibold">{pct(item.physical_percent_hh)}</td>
+                            <td className="p-2 text-right">{pct(item.hours_weight)}</td>
                             <td className="p-2">
                               <div className="flex items-center gap-1 justify-end">
                                 <input type="number" min="0" step="0.01" placeholder="Cant."

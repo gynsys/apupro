@@ -181,6 +181,11 @@ def summary(db: Session, budget: Budget) -> Dict[str, Any]:
             "unit_price": _number(row["unit_price"]),
             "executed_amount": _number(row["executed_amount"]),
             "current_amount": _number(row["current_amount"]),
+            "hours_per_unit": _number(row["hours_per_unit"]),
+            "budget_hours": _number(row["budget_hours"]),
+            "executed_hours": _number(row["executed_hours"]),
+            "hours_weight": _number(row["hours_weight"]),
+            "physical_percent_hh": _number(row["physical_percent_hh"]),
         })
     entries = (
         db.query(ControlObraProgressEntry)
@@ -213,6 +218,9 @@ def summary(db: Session, budget: Budget) -> Dict[str, Any]:
         "available_amount": _number(data["available_amount"]),
         "executed_amount": _number(data["executed_amount"]),
         "physical_percent": _number(data["physical_percent"]),
+        "physical_percent_hh": _number(data["physical_percent_hh"]),
+        "budget_hours": _number(data["budget_hours"]),
+        "executed_hours": _number(data["executed_hours"]),
         "financial_percent": _number(data["financial_percent"]),
         "items": items,
         "entries": entry_rows,
