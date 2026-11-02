@@ -902,6 +902,17 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
 
   useEffect(() => {
     if (!isOpen || !initialBudget?.items) return;
+
+    // La primera vez que se abre desde Control de Obra, la planilla nace en
+    // cero para que los ingenieros capturen los cómputos ejecutados. En
+    // aperturas posteriores se conserva el borrador de la planilla.
+    const openingKey = `control_obra_computos_opened_${initialBudget.id || 'budget'}`;
+    try {
+      if (window.localStorage.getItem(openingKey) === '1') return;
+    } catch (_e) {
+      // Si localStorage no está disponible, se inicializa igualmente.
+    }
+
     const chapter = 'GENERAL';
     const rows = initialBudget.items.map((item, index) => ({
       ...createBlankRow(chapter),
@@ -911,10 +922,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
       cov_par: item.code || item.cov_par || '',
       description: item.description || '',
       unit: String(item.unit || 'M2').toUpperCase(),
-      quantity: Number(item.current_quantity ?? item.quantity ?? item.original_quantity ?? 0),
-      partial: Number(item.current_quantity ?? item.quantity ?? item.original_quantity ?? 0),
+      quantity: 0,
+      partial: 0,
       isDefaultQty: true,
-      observations: 'Cantidad generada desde el presupuesto',
+      observations: 'Cantidad inicial en cero para cómputos de obra',
     }));
     setCapturedItems(normalizeRowsWithSingleTrailingBlank(rows, chapter));
     setActiveChapter(chapter);
@@ -922,6 +933,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     setProjectName(initialBudget.project_name || initialBudget.name || '');
     setClientName(initialBudget.client_name || '');
     setMessages([INITIAL_WELCOME_MESSAGE]);
+    try {
+      window.localStorage.setItem(openingKey, '1');
+    } catch (_e) {
+      // ignore
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialBudget?.id]);
 
