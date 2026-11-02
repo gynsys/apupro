@@ -9,6 +9,15 @@ from app.db.models.strategic_ally import StrategicAlly
 from app.db.models.market import CostMaterialFamily, CostMarketIndicator
 from app.db.models.backup_logs import BackupLog
 from app.db.models.notification import Notification
+from app.modules.control_obra.models import (
+    ControlObraAddendum,
+    ControlObraAudit,
+    ControlObraModification,
+    ControlObraModificationItem,
+    ControlObraPeriod,
+    ControlObraPlan,
+    ControlObraProgressEntry,
+)
 
 __all__ = [
     "LLMProvider",
@@ -27,6 +36,13 @@ __all__ = [
     "CostMaterialFamily",
     "CostMarketIndicator",
     "BackupLog",
-    "Notification"
+    "Notification",
+    "ControlObraAddendum",
+    "ControlObraAudit",
+    "ControlObraModification",
+    "ControlObraModificationItem",
+    "ControlObraPeriod",
+    "ControlObraPlan",
+    "ControlObraProgressEntry",
 ]
 

@@ -2,6 +2,8 @@
 backend/.env
 frontend/.env
 .env
+credentials.json
+*credentials*.json
 
 # Python
 __pycache__/
@@ -67,6 +69,7 @@ frontend/.tmp-esbuild/
 check_*.py
 test_*.py
 !backend/tests/*.py
+!backend/app/modules/control_obra/tests/*.py
 
 # Graphify
 graphify-out/

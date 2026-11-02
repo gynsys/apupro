@@ -1,0 +1,144 @@
+{
+  "budget_id": "436619ef-c7ca-4373-9651-971dd8bc4dea",
+  "budget_name": "Presupuesto de Ejemplo costbase.net",
+  "currency": "USD",
+  "original_amount": "1352.26",
+  "modifications": [
+    {
+      "code": "DIS-001",
+      "type": "decrease",
+      "status": "approved",
+      "amount": "108.50"
+    },
+    {
+      "code": "AUM-001",
+      "type": "increase",
+      "status": "approved",
+      "amount": "106.23"
+    },
+    {
+      "code": "OE-001",
+      "type": "extra_work",
+      "status": "approved",
+      "amount": "500.00"
+    }
+  ],
+  "addenda": [
+    {
+      "code": "AD-001",
+      "status": "approved",
+      "amount": "500.00"
+    }
+  ],
+  "summary": {
+    "original_amount": "1352.26",
+    "addendum_amount": "500.00",
+    "contract_amount": "1852.26",
+    "modified_amount": "1849.99",
+    "available_amount": "2.27",
+    "executed_amount": "459.04",
+    "physical_percent": "24.81",
+    "financial_percent": "24.78"
+  },
+  "items": [
+    {
+      "item_id": "cf0e137c-61c5-41fb-b8f4-d57a0b31c9e1",
+      "code": "EOP072",
+      "description": "DEFORESTACION LIVIANA Y LIMPIEZA PARA TERRACEO (RASTROJOS, VEGETACION BAJA EN GENERAL, CON ALTURA INFERIOR A 8 M.), EN AREAS COMPRENDIDAS ENTRE 1 Y 5 HA. INCLUYE DESRAIZAMIENTO Y ELIMINACION DE TRINCHERAS",
+      "unit": "ha",
+      "original_quantity": "1.0",
+      "current_quantity": "1.10",
+      "executed_quantity": "0.40",
+      "pending_quantity": "0.70",
+      "physical_percent": "36.36",
+      "unit_price": "1062.31",
+      "executed_amount": "424.92",
+      "current_amount": "1168.54"
+    },
+    {
+      "item_id": "7eacb57f-571f-4c0c-9302-e0bcb4c54152",
+      "code": "EMT030",
+      "description": "EXCAVACION PARA BANQUEOS INCLUYENDO CARGA, EN CUALQUIER TIPO DE MATERIAL, CON EMPLEO DE TRACTORES CON ESCARIFICADOR Y CARGADOR.",
+      "unit": "m3",
+      "original_quantity": "1.0",
+      "current_quantity": "1.0",
+      "executed_quantity": "0.25",
+      "pending_quantity": "0.75",
+      "physical_percent": "25.00",
+      "unit_price": "12.47",
+      "executed_amount": "3.12",
+      "current_amount": "12.47"
+    },
+    {
+      "item_id": "6bee15c9-e01e-4ac9-b67d-c80089534035",
+      "code": "EMT007",
+      "description": "CONSTRUCCION DE TERRAPLENES, UTILIZANDO MATERIAL TRANSPORTADO POR CAMIONES",
+      "unit": "m3",
+      "original_quantity": "1.0",
+      "current_quantity": "1.0",
+      "executed_quantity": "0",
+      "pending_quantity": "1.00",
+      "physical_percent": "0.00",
+      "unit_price": "13.22",
+      "executed_amount": "0.00",
+      "current_amount": "13.22"
+    },
+    {
+      "item_id": "b76f6626-4ba5-4d44-a34d-b955f2823d9b",
+      "code": "8512C418",
+      "description": "CARGA CON EQUIPO LIVIANO DE MATERIAL PROVENIENTE DE LAS EXCAVACIONES PARA ASIENTO DE FUNDACIONES, ZANJAS U OTROS.",
+      "unit": "m3",
+      "original_quantity": "100.0",
+      "current_quantity": "30.00",
+      "executed_quantity": "20.00",
+      "pending_quantity": "10.00",
+      "physical_percent": "66.67",
+      "unit_price": "1.55",
+      "executed_amount": "31.00",
+      "current_amount": "46.50"
+    },
+    {
+      "item_id": "26baa386-c138-46b8-8100-d6b3b69f7283",
+      "code": "EMT010",
+      "description": "EXCAVACION EN TIERRA A MANO PARA ASIENTO DE FUNDACIONES, ZANJAS, U OTROS, HASTA PROFUNDIDADES COMPRENDIDAS ENTRE 1.50 Y 3.00 M",
+      "unit": "m3",
+      "original_quantity": "1.0",
+      "current_quantity": "1.0",
+      "executed_quantity": "0",
+      "pending_quantity": "1.00",
+      "physical_percent": "0.00",
+      "unit_price": "41.05",
+      "executed_amount": "0.00",
+      "current_amount": "41.05"
+    },
+    {
+      "item_id": "f11840b4-073c-4103-821b-e4eb719f56be",
+      "code": "EP088",
+      "description": "COMPACTACION DE RELLENOS CON APISONADORES DE PERCUSION, CORRESPONDIENTE A LOS ASIENTOS DE FUNDACIONES, ZANJAS U OTROS.",
+      "unit": "m3",
+      "original_quantity": "1.0",
+      "current_quantity": "1.0",
+      "executed_quantity": "0",
+      "pending_quantity": "1.00",
+      "physical_percent": "0.00",
+      "unit_price": "43.18",
+      "executed_amount": "0.00",
+      "current_amount": "43.18"
+    },
+    {
+      "item_id": "37b9a2a6-3937-4c73-b0a1-196f63b085a8",
+      "code": "E412SC001",
+      "description": "REACONDICIONAMIENTO DE PAREDES A RAPEL: ESCARIFICACIÓN DE FRISO BASE DAÑADO, SALPICADO CON MORTERO, RECONSTRUCCIÓN DE FRISO BASE Y APLICACIÓN DE MEZCLILLA. NO INCLUYE SUMINISTRO DE MATERIALES.",
+      "unit": "m2",
+      "original_quantity": "1.0",
+      "current_quantity": "1.0",
+      "executed_quantity": "0",
+      "pending_quantity": "1.00",
+      "physical_percent": "0.00",
+      "unit_price": "25.03",
+      "executed_amount": "0.00",
+      "current_amount": "25.03"
+    }
+  ],
+  "generated_at": "2026-11-01"
+}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Settings, Printer, RefreshCw, Database, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Settings, Printer, RefreshCw, Database, ChevronDown, Activity } from 'lucide-react';
 import { useDatabaseContext } from '../../../contexts/DatabaseContext';
 
 export default function BudgetWorksheetHeader({
@@ -11,6 +11,7 @@ export default function BudgetWorksheetHeader({
   showSettings,
   setShowSettings,
   setShowPrintModal,
+  onOpenControlObra,
 }) {
   const navigate = useNavigate();
   const [headerDbDropdownOpen, setHeaderDbDropdownOpen] = useState(false);
@@ -58,6 +59,15 @@ export default function BudgetWorksheetHeader({
           >
             <Printer size={17} />
           </button>
+          {onOpenControlObra && (
+            <button
+              onClick={onOpenControlObra}
+              className="p-1.5 bg-white border border-blue-400 hover:border-blue-600 hover:bg-blue-50 text-blue-700 rounded transition-all duration-200 cursor-pointer shadow-xs"
+              title="Control de Obra"
+            >
+              <Activity size={17} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -108,6 +118,16 @@ export default function BudgetWorksheetHeader({
             <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
             {syncing ? 'Actualizando...' : 'Actualizar Precios'}
           </button>
+
+          {onOpenControlObra && (
+            <button
+              onClick={onOpenControlObra}
+              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-blue-400 hover:border-blue-600 hover:bg-blue-50 text-blue-700 rounded-xl transition-all duration-200 font-medium text-sm cursor-pointer shadow-xs"
+            >
+              <Activity size={16} />
+              Control de Obra
+            </button>
+          )}
 
           <button 
             onClick={() => setShowSettings(!showSettings)}
