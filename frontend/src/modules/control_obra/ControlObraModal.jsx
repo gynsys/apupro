@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Activity, Check, Loader2, Plus, RefreshCw, X, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { controlObraService } from './controlObraService';
+import BudgetFromComputosModal from '../../components/modals/BudgetFromComputosModal';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -22,6 +23,7 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
   const [periods, setPeriods] = useState([]);
   const [curveData, setCurveData] = useState([]);
   const [periodForm, setPeriodForm] = useState({ name: '', start_date: today(), end_date: today() });
+  const [showComputos, setShowComputos] = useState(false);
   const [tab, setTab] = useState('resumen');
   const [progress, setProgress] = useState({});
   const [modForm, setModForm] = useState({
@@ -250,10 +252,10 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
             </div>
 
             <div className="px-4 sm:px-6 border-b border-slate-200 flex gap-1 overflow-x-auto bg-white shrink-0 min-h-[38px]">
-              {['resumen', 'partidas', 'avances', 'modificaciones', 'adendum', 'periodos', 'curva'].map((key) => (
-                <button key={key} onClick={() => setTab(key)}
+              {['resumen', 'partidas', 'computos', 'avances', 'modificaciones', 'adendum', 'periodos', 'curva'].map((key) => (
+                <button key={key} onClick={() => key === 'computos' ? setShowComputos(true) : setTab(key)}
                   className={`px-3 py-2 text-xs font-semibold whitespace-nowrap rounded-t-lg ${tab === key ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
-                  {{ resumen: 'Resumen', partidas: 'Partidas', avances: 'Avances', modificaciones: 'Modificaciones', adendum: 'Adendum', periodos: 'Períodos', curva: 'Curva S' }[key]}
+                  {{ resumen: 'Resumen', partidas: 'Partidas', computos: 'Cómputos', avances: 'Avances', modificaciones: 'Modificaciones', adendum: 'Adendum', periodos: 'Períodos', curva: 'Curva S' }[key]}
                 </button>
               ))}
             </div>
@@ -524,6 +526,18 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
           </>
         )}
       </div>
+
+      <BudgetFromComputosModal
+        isOpen={showComputos}
+        onClose={() => setShowComputos(false)}
+        initialBudget={{
+          id: budgetId,
+          name: data?.budget_name || budgetName,
+          project_name: data?.budget_name || budgetName,
+          client_name: '',
+          items: data?.items || [],
+        }}
+      />
     </div>
   );
 }

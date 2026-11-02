@@ -792,7 +792,7 @@ const INITIAL_WELCOME_MESSAGE = {
     '¡Hola! Soy tu asistente de cómputos en campo. Anota tus partidas aquí o edítalas directamente en la Planilla de Cómputos Métricos. Puedes pulsar "Guardar" en cualquier momento para pausar y retomar tu trabajo después.',
 };
 
-export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) {
+export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, initialBudget = null }) {
   // Pestaña activa: 'sheet' (Planilla de Cómputos) | 'chat' (Asistente de Campo)
   const [activeTab, setActiveTab] = useState('sheet');
 
@@ -899,6 +899,28 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated }) 
     }
     return [createBlankRow('')];
   });
+
+  useEffect(() => {
+    if (!isOpen || !initialBudget?.items) return;
+    const chapter = 'GENERAL';
+    const rows = initialBudget.items.map((item, index) => ({
+      ...createBlankRow(chapter),
+      id: `budget-${item.item_id || item.id || index}`,
+      description: item.description || '',
+      unit: String(item.unit || 'M2').toUpperCase(),
+      quantity: Number(item.current_quantity ?? item.quantity ?? item.original_quantity ?? 0),
+      partial: Number(item.current_quantity ?? item.quantity ?? item.original_quantity ?? 0),
+      isDefaultQty: true,
+      observations: 'Cantidad generada desde el presupuesto',
+    }));
+    setCapturedItems(normalizeRowsWithSingleTrailingBlank(rows, chapter));
+    setActiveChapter(chapter);
+    setBudgetName(initialBudget.name ? `Cómputos - ${initialBudget.name}` : 'Planilla de Cómputos');
+    setProjectName(initialBudget.project_name || initialBudget.name || '');
+    setClientName(initialBudget.client_name || '');
+    setMessages([INITIAL_WELCOME_MESSAGE]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialBudget?.id]);
 
   // Datos del presupuesto para guardar
   const [budgetName, setBudgetName] = useState(() => {
