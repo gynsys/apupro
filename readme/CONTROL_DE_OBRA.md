@@ -178,6 +178,44 @@ Avance físico = Σ (Peso_i × Avance_i)
 El límite a 100% evita que una partida excedida infle el avance contractual.
 Los excesos se muestran por partida en `item_progress`.
 
+### Avance físico ponderado por horas hombre
+
+Cada APU debe tener mano de obra. Las horas hombre por unidad se calculan
+desde los renglones de mano de obra y el rendimiento:
+
+```text
+HH por unidad_i = (Σ cantidad de trabajadores_i × 8 horas) / rendimiento_i
+```
+
+```text
+HH presupuestadas_i = HH por unidad_i × cantidad vigente_i
+```
+
+```text
+Peso HH_i = HH presupuestadas_i / HH presupuestadas totales
+```
+
+```text
+HH ejecutadas_i = HH por unidad_i × cantidad ejecutada_i
+```
+
+```text
+Avance HH = Σ (Peso HH_i × min(HH ejecutadas_i / HH presupuestadas_i, 1))
+```
+
+El factor `8` corresponde a la jornada laboral usada por el editor de APU.
+La interfaz muestra:
+
+- Avance HH.
+- HH presupuestadas.
+- HH ejecutadas.
+- Peso HH.
+- Porcentaje HH por partida.
+
+Este indicador es independiente del avance financiero. Una partida con mucha
+mano de obra pesa más que una partida con mucho material, aunque el monto sea
+similar.
+
 ### Avance financiero
 
 Implementación actual:
