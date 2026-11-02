@@ -27,6 +27,7 @@ from app.modules.control_obra.service import (
     reopen_period,
     set_plan,
     summary,
+    update_progress,
 )
 from app.db.models.arko import ArkoAdmin
 
@@ -40,6 +41,12 @@ class ProgressCreate(BaseModel):
     entry_date: date
     notes: str = ""
     entry_type: str = "execution"
+
+
+class ProgressUpdate(BaseModel):
+    quantity: float = Field(ge=0)
+    entry_date: date
+    notes: str = ""
 
 
 class ModificationLineCreate(BaseModel):
@@ -114,6 +121,24 @@ def post_progress(
     except ControlObraError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"id": row.id, "message": "Avance registrado"}
+
+
+@router.put("/progress/{entry_id}")
+def put_progress(
+    budget_id: str,
+    entry_id: str,
+    payload: ProgressUpdate,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    budget = _budget_or_404(db, budget_id, current_user)
+    try:
+        row = update_progress(
+            db, budget, entry_id, payload.quantity, payload.entry_date, payload.notes, str(current_user.id)
+        )
+    except ControlObraError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"id": row.id, "message": "Avance corregido"}
 
 
 @router.post("/modifications", status_code=status.HTTP_201_CREATED)

@@ -147,6 +147,18 @@ def test_summary_and_progress(client):
     assert data["executed_amount"] == expected
     assert data["physical_percent"] == 25.0
     assert data["financial_percent"] == 25.0
+    assert len(data["entries"]) == 1
+
+    entry_id = data["entries"][0]["id"]
+    updated = client.put(f"/budgets/budget-test/control-obra/progress/{entry_id}", json={
+        "quantity": 4,
+        "entry_date": "2026-11-02",
+        "notes": "corregido",
+    })
+    assert updated.status_code == 200
+    corrected = client.get("/budgets/budget-test/control-obra").json()
+    assert corrected["executed_amount"] == round(data["items"][0]["unit_price"] * 4, 2)
+    assert corrected["entries"][0]["quantity"] == 4.0
 
 
 def test_period_close_reopen_and_progress(client):

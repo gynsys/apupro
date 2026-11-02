@@ -181,6 +181,26 @@ def summary(db: Session, budget: Budget) -> Dict[str, Any]:
             "executed_amount": _number(row["executed_amount"]),
             "current_amount": _number(row["current_amount"]),
         })
+    entries = (
+        db.query(ControlObraProgressEntry)
+        .filter(ControlObraProgressEntry.budget_id == budget.id)
+        .order_by(ControlObraProgressEntry.entry_date.desc(), ControlObraProgressEntry.created_at.desc())
+        .all()
+    )
+    item_by_id = {row["item_id"]: row for row in items}
+    entry_rows = []
+    for entry in entries:
+        item = item_by_id.get(entry.budget_item_id, {})
+        entry_rows.append({
+            "id": entry.id,
+            "item_id": entry.budget_item_id,
+            "code": item.get("code", ""),
+            "description": item.get("description", ""),
+            "entry_date": entry.entry_date.isoformat(),
+            "quantity": _number(entry.quantity),
+            "notes": entry.notes or "",
+            "entry_type": entry.entry_type,
+        })
     return {
         "budget_id": budget.id,
         "budget_name": budget.name,
@@ -194,6 +214,7 @@ def summary(db: Session, budget: Budget) -> Dict[str, Any]:
         "physical_percent": _number(data["physical_percent"]),
         "financial_percent": _number(data["financial_percent"]),
         "items": items,
+        "entries": entry_rows,
         "modifications": [
             {
                 "id": mod.id,
@@ -572,6 +593,36 @@ def create_progress(
         created_by=created_by,
     )
     db.add(row)
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+def update_progress(
+    db: Session,
+    budget: Budget,
+    entry_id: str,
+    quantity: float,
+    entry_date: date,
+    notes: str = "",
+    user_id: str = "",
+) -> ControlObraProgressEntry:
+    row = (
+        db.query(ControlObraProgressEntry)
+        .filter_by(id=entry_id, budget_id=budget.id)
+        .first()
+    )
+    if not row:
+        raise ControlObraError("Registro de avance no encontrado")
+    if quantity < 0:
+        raise ControlObraError("La cantidad ejecutada no puede ser negativa")
+    closed = _closed_period_for_date(db, budget, entry_date)
+    if closed:
+        raise ControlObraError(f"El período '{closed.name}' está cerrado. Reábrelo para corregir el avance.")
+    _audit(db, budget, "progress", "corrected", row.id, f"Cantidad: {row.quantity} -> {quantity}", user_id)
+    row.quantity = float(quantity)
+    row.entry_date = entry_date
+    row.notes = notes
     db.commit()
     db.refresh(row)
     return row

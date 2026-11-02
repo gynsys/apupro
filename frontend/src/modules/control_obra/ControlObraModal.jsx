@@ -168,6 +168,28 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
     }
   };
 
+  const editProgress = async (entry) => {
+    const rawQuantity = window.prompt('Nueva cantidad ejecutada:', entry.quantity);
+    if (rawQuantity === null) return;
+    const quantity = Number(rawQuantity);
+    if (!Number.isFinite(quantity) || quantity < 0) {
+      toast.error('Cantidad inválida.');
+      return;
+    }
+    const entryDate = window.prompt('Fecha (AAAA-MM-DD):', entry.entry_date) || entry.entry_date;
+    try {
+      await controlObraService.updateProgress(budgetId, entry.id, {
+        quantity,
+        entry_date: entryDate,
+        notes: entry.notes || '',
+      });
+      toast.success('Avance corregido.');
+      await load();
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
   const createAddendum = async () => {
     if (!Number(addendumForm.amount)) {
       toast.error('Ingresa el monto del adendum.');
@@ -228,10 +250,10 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
             </div>
 
             <div className="px-4 sm:px-6 border-b border-slate-200 flex gap-1 overflow-x-auto bg-white shrink-0 min-h-[38px]">
-              {['resumen', 'partidas', 'modificaciones', 'adendum', 'periodos', 'curva'].map((key) => (
+              {['resumen', 'partidas', 'avances', 'modificaciones', 'adendum', 'periodos', 'curva'].map((key) => (
                 <button key={key} onClick={() => setTab(key)}
                   className={`px-3 py-2 text-xs font-semibold whitespace-nowrap rounded-t-lg ${tab === key ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
-                  {{ resumen: 'Resumen', partidas: 'Partidas', modificaciones: 'Modificaciones', adendum: 'Adendum', periodos: 'Períodos', curva: 'Curva S' }[key]}
+                  {{ resumen: 'Resumen', partidas: 'Partidas', avances: 'Avances', modificaciones: 'Modificaciones', adendum: 'Adendum', periodos: 'Períodos', curva: 'Curva S' }[key]}
                 </button>
               ))}
             </div>
@@ -306,6 +328,40 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
                       })}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {tab === 'avances' && (
+                <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-slate-100 text-slate-600">
+                      <tr>
+                        <th className="p-2 text-left">Fecha</th>
+                        <th className="p-2 text-left">Código</th>
+                        <th className="p-2 text-left">Partida</th>
+                        <th className="p-2 text-right">Cantidad</th>
+                        <th className="p-2 text-left">Nota</th>
+                        <th className="p-2 text-center">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(data.entries || []).map((entry) => (
+                        <tr key={entry.id} className="border-t border-slate-100">
+                          <td className="p-2">{entry.entry_date}</td>
+                          <td className="p-2 font-mono">{entry.code}</td>
+                          <td className="p-2 max-w-[380px] truncate" title={entry.description}>{entry.description}</td>
+                          <td className="p-2 text-right">{entry.quantity}</td>
+                          <td className="p-2">{entry.notes}</td>
+                          <td className="p-2 text-center">
+                            <button onClick={() => editProgress(entry)} className="text-blue-600 hover:underline font-semibold">
+                              Editar
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {(data.entries || []).length === 0 && <p className="p-4 text-sm text-slate-500">Sin avances registrados.</p>}
                 </div>
               )}
 
