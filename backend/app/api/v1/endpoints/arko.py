@@ -137,7 +137,7 @@ def register_arko_admin(data: RegisterRequest) -> dict:
                 db.delete(user)
                 db.commit()
             
-            # Almacenar datos temporalmente en Redis (NO en base de datos)
+            # Almacenar datos temporalmente en Redis (o memoria como fallback)
             registration_data = {
                 "email": clean_email,
                 "hashed_password": get_password_hash(data.password),
@@ -145,21 +145,23 @@ def register_arko_admin(data: RegisterRequest) -> dict:
                 "username": clean_username or clean_email.split('@')[0]
             }
             
-            # Guardar en Redis con expiración de 15 minutos
-            if not redis_cache.store_pending_registration(clean_email, registration_data, expiry_seconds=900):
-                raise HTTPException(status_code=500, detail="Error storing registration data")
+            # Guardar en Redis/Memoria con expiración de 15 minutos
+            stored_reg = redis_cache.store_pending_registration(clean_email, registration_data, expiry_seconds=900)
+            stored_code = redis_cache.store_verification_code(clean_email, code, expiry_seconds=900)
+
+            if not stored_reg or not stored_code:
+                logger.error(f"[REGISTER] Falló el almacenamiento temporal para {clean_email}")
+                raise HTTPException(status_code=500, detail="Error al almacenar datos temporales de registro")
             
-            # Guardar código de verificación separadamente
-            if not redis_cache.store_verification_code(clean_email, code, expiry_seconds=900):
-                raise HTTPException(status_code=500, detail="Error storing verification code")
-            
-            # Enviar correo de verificación
-            email_sent = send_verification_email(clean_email, code)
+            # Enviar correo de verificación (con tolerancia a fallas)
+            email_sent = False
+            try:
+                email_sent = send_verification_email(clean_email, code)
+            except Exception as mail_err:
+                logger.error(f"[REGISTER] Error inesperado enviando correo a {clean_email}: {mail_err}", exc_info=True)
             
             if not email_sent:
-                # El correo falló pero NO bloqueamos el registro.
-                # El usuario puede usar "Reenviar código" desde la pantalla de verificación.
-                logger.error(f"[REGISTER] Falló el envío del correo de verificación a {clean_email}. El registro continúa.")
+                logger.warning(f"[REGISTER] No se pudo enviar el correo de verificación a {clean_email}. El registro continúa.")
             
             return {
                 "message": "Registration initiated. Please check your email for verification code.",
@@ -171,7 +173,7 @@ def register_arko_admin(data: RegisterRequest) -> dict:
         raise
     except Exception as e:
         logger.error(f"Error registering user: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail=f"Error al registrar usuario: {str(e)}")
 
 class ForgotPasswordRequest(BaseModel):
     email: str

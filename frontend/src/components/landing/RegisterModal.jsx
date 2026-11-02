@@ -224,6 +224,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
                     )}
                   </button>
                 </div>
+                <p className="text-[11px] text-gray-500 mt-1">Mínimo 8 caracteres, al menos una mayúscula y un número.</p>
               </div>
               
               {error && (

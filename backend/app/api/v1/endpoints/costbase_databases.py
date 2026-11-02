@@ -1,7 +1,7 @@
 ﻿from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.base import get_db
-from app.api.v1.endpoints.arko import get_current_arko_admin
+from app.api.v1.endpoints.arko import get_current_arko_admin, get_optional_arko_admin
 from app.schemas.costbase import (
     Cost360DatabaseCreate, Cost360DatabaseUpdate, Cost360DatabaseListResponse
 )
@@ -25,13 +25,16 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.get("", response_model=Cost360DatabaseListResponse)
-def list_databases(db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
+def list_databases(
+    db: Session = Depends(get_db),
+    current_user: Optional[ArkoAdmin] = Depends(get_optional_arko_admin)
+):
     """Listar todas las bases de datos Cost360 disponibles para el usuario"""
     try:
         databases = get_all_databases(db)
     except Exception as e:
-        # Si falla, es altamente probable que sea porque faltan las columnas nuevas en producciÃ³n.
-        # Hacemos un parche automÃ¡tico (auto-migrate).
+        # Si falla, es altamente probable que sea porque faltan las columnas nuevas en producción.
+        # Hacemos un parche automático (auto-migrate).
         db.rollback()
         db.execute(text("ALTER TABLE cost360_databases ADD COLUMN IF NOT EXISTS owner_id VARCHAR(255);"))
         db.execute(text("ALTER TABLE cost360_databases ADD COLUMN IF NOT EXISTS is_published BOOLEAN DEFAULT FALSE;"))
@@ -42,12 +45,14 @@ def list_databases(db: Session = Depends(get_db), current_user = Depends(get_cur
         
     # Filtrar por bases maestras o bases que le pertenecen al usuario
     user_dbs = []
-    user_email = current_user.email.lower() if current_user.email else ""
-    is_superadmin = (
-        getattr(current_user, 'is_superadmin', False) or
-        (user_email == 'admin@arko360.net') or
-        getattr(current_user, 'role', '') in ['admin', 'superadmin']
-    )
+    user_email = current_user.email.lower() if (current_user and getattr(current_user, 'email', None)) else ""
+    is_superadmin = False
+    if current_user:
+        is_superadmin = (
+            getattr(current_user, 'is_superadmin', False) or
+            (user_email == 'admin@arko360.net') or
+            getattr(current_user, 'role', '') in ['admin', 'superadmin']
+        )
     
     logger.warning(f"[LIST_DB] user_email='{user_email}' total_dbs={len(databases)}")
 
@@ -69,24 +74,25 @@ def list_databases(db: Session = Depends(get_db), current_user = Depends(get_cur
                 logger.warning(f"[LIST_DB] Included {db_obj.id} because owner matches")
 
     # Inyectar Base Personalizada (base virtual de partidas creadas por el usuario)
-    personalizada_db = {
-        "id": "personalizada",
-        "name": "Base Personalizada",
-        "description": "Partidas y APUs creados por el usuario",
-        "is_master": False,
-        "is_active": True,
-        "material_inflation": 0.0,
-        "labor_inflation": 0.0,
-        "equipment_inflation": 0.0,
-        "source_database_id": "master",
-        "created_at": None,
-        "created_by": None,
-        "owner_id": user_email,
-        "is_published": False,
-        "published_at": None,
-    }
-    insert_idx = 1 if has_master else 0
-    user_dbs.insert(insert_idx, personalizada_db)
+    if current_user:
+        personalizada_db = {
+            "id": "personalizada",
+            "name": "Base Personalizada",
+            "description": "Partidas y APUs creados por el usuario",
+            "is_master": False,
+            "is_active": True,
+            "material_inflation": 0.0,
+            "labor_inflation": 0.0,
+            "equipment_inflation": 0.0,
+            "source_database_id": "master",
+            "created_at": None,
+            "created_by": None,
+            "owner_id": user_email,
+            "is_published": False,
+            "published_at": None,
+        }
+        insert_idx = 1 if has_master else 0
+        user_dbs.insert(insert_idx, personalizada_db)
 
     # Para usuarios normales, ocultar los factores de inflación de bases publicadas
     if not is_superadmin:
@@ -157,10 +163,14 @@ def initialize_master_database(db: Session = Depends(get_db)):
     return {"status": "ok", "message": "Base de datos maestra inicializada"}
 
 @router.get("/{database_id}")
-def get_database(database_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
+def get_database(
+    database_id: str,
+    db: Session = Depends(get_db),
+    current_user: Optional[ArkoAdmin] = Depends(get_optional_arko_admin)
+):
     """Obtener detalles de una base de datos específica"""
     if database_id == "personalizada":
-        user_email = current_user.email.lower() if current_user.email else ""
+        user_email = current_user.email.lower() if (current_user and getattr(current_user, 'email', None)) else ""
         return {
             "id": "personalizada",
             "name": "Base Personalizada",

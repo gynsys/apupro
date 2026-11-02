@@ -14,12 +14,21 @@ const getAuthHeaders = () => {
 export const costbaseDatabaseService = {
   // Obtener todas las bases de datos
   getAll: async () => {
-    const response = await fetch(`${API_URL}/cost360/databases`, {
-      headers: getAuthHeaders(),
-      credentials: 'include'
-    });
-    if (!response.ok) throw new Error('Error al cargar bases de datos');
-    return response.json();
+    try {
+      const response = await fetch(`${API_URL}/cost360/databases`, {
+        headers: getAuthHeaders(),
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        if (response.status === 401) {
+          return { databases: [] };
+        }
+        return { databases: [] };
+      }
+      return await response.json();
+    } catch (err) {
+      return { databases: [] };
+    }
   },
 
   // Obtener una base de datos por ID
