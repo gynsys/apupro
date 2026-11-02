@@ -232,6 +232,19 @@ Control de Obra
 → Registrar
 ```
 
+### Corregir avance
+
+```text
+Control de Obra
+→ Avances
+→ Editar
+→ Nueva cantidad y fecha
+→ Guardar
+```
+
+La corrección se audita con la acción `progress_corrected`. No se elimina
+el registro original.
+
 ### Modificación
 
 ```text
@@ -321,6 +334,7 @@ Base:
 |---|---|---|
 | GET | `/` | Resumen completo |
 | POST | `/progress` | Registrar avance |
+| PUT | `/progress/{id}` | Corregir avance |
 | POST | `/modifications` | Crear modificación |
 | POST | `/modifications/{id}/approve` | Aprobar modificación |
 | POST | `/addenda` | Crear adendum |
