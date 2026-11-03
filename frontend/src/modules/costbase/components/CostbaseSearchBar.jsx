@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { FiSearch } from 'react-icons/fi';
-import { Loader, X, Layers, ChevronDown, RotateCcw } from 'lucide-react';
+import { Loader, X, Layers, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 import coveninTreeData from '../data/covenin_tree.json';
 import { SiteConfigContext } from '../../../App';
 
@@ -82,10 +82,10 @@ const Cost360SearchBar = ({
         <button
           type="button"
           onClick={() => setCategoriesOpen(prev => !prev)}
-          className="w-full flex items-center justify-between px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100/60 transition-colors cursor-pointer select-none"
+          className="w-full flex items-center justify-between px-3 sm:px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100/60 transition-colors cursor-pointer select-none"
         >
           <div className="flex items-center gap-2 min-w-0">
-            <Layers size={14} className={hasCategoryFilter ? 'text-blue-600 shrink-0' : 'text-amber-700 shrink-0'} />
+            <Layers size={15} className={hasCategoryFilter ? 'text-blue-600 shrink-0' : 'text-amber-700 shrink-0'} />
             <span className="font-bold text-slate-800 text-xs sm:text-sm shrink-0">
               Clasificación COVENIN
             </span>
@@ -95,7 +95,7 @@ const Cost360SearchBar = ({
               </span>
             ) : (
               <span className="text-[11px] text-slate-400 font-normal hidden sm:inline">
-                (Opcional: filtrar por capítulos y subcapítulos)
+                (Opcional: filtrar por capítulos)
               </span>
             )}
           </div>
@@ -116,92 +116,142 @@ const Cost360SearchBar = ({
                 <span>Limpiar</span>
               </span>
             )}
-            <div className="flex items-center gap-1 text-slate-500 text-[11px]">
-              <span className="hidden sm:inline font-normal">{categoriesOpen ? 'Ocultar' : 'Explorar'}</span>
-              <ChevronDown
-                size={15}
-                className={`transition-transform duration-200 ${categoriesOpen ? 'rotate-180' : ''}`}
-              />
-            </div>
+            
+            {/* Indicador claro y visible de Recoger / Explorar */}
+            {categoriesOpen ? (
+              <span className="text-[11px] font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-lg flex items-center gap-1 transition-colors">
+                <ChevronUp size={14} className="text-amber-800" />
+                <span>Recoger</span>
+              </span>
+            ) : (
+              <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded-lg flex items-center gap-1 transition-colors">
+                <ChevronDown size={14} className="text-slate-500" />
+                <span>Explorar</span>
+              </span>
+            )}
           </div>
         </button>
 
         {categoriesOpen && (
-          <div className="p-3 border-t border-slate-200 bg-slate-50/70 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 animate-in fade-in duration-150">
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Tipo de Obra</label>
-              <select 
-                value={selectedTipoObra}
-                onChange={(e) => {
-                  setSelectedTipoObra(e.target.value);
-                  setSelectedCapitulo('');
-                  setSelectedSubcapitulo('');
-                  setSelectedPartida('');
-                }}
-                className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs transition-colors hover:border-[#324ADD] focus:outline-none focus:border-[#324ADD] focus:ring-2 focus:ring-[#324ADD]/20"
-              >
-                <option value="">Todos los Tipos...</option>
-                {visibleTree.map(cat => (
-                  <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
-                ))}
-              </select>
+          <div className="p-3 border-t border-slate-200 bg-slate-50/80 flex flex-col gap-3 animate-in fade-in duration-150">
+            {/* Los 4 Selectores */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Tipo de Obra</label>
+                <select 
+                  value={selectedTipoObra}
+                  onChange={(e) => {
+                    setSelectedTipoObra(e.target.value);
+                    setSelectedCapitulo('');
+                    setSelectedSubcapitulo('');
+                    setSelectedPartida('');
+                  }}
+                  className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-2 text-xs transition-colors hover:border-[#324ADD] focus:outline-none focus:border-[#324ADD] focus:ring-2 focus:ring-[#324ADD]/20 cursor-pointer"
+                >
+                  <option value="">Todos los Tipos...</option>
+                  {visibleTree.map(cat => (
+                    <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Capítulo</label>
+                <select 
+                  value={selectedCapitulo}
+                  onChange={(e) => {
+                    setSelectedCapitulo(e.target.value);
+                    setSelectedSubcapitulo('');
+                    setSelectedPartida('');
+                  }}
+                  disabled={!selectedTipoObra}
+                  className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-2 text-xs transition-colors hover:border-[#324ADD] focus:outline-none focus:border-[#324ADD] focus:ring-2 focus:ring-[#324ADD]/20 disabled:opacity-50 cursor-pointer"
+                >
+                  <option value="">Todos los Capítulos...</option>
+                  {selectedTipoObra && coveninTree.find(c => c.code === selectedTipoObra)?.children?.map(cap => (
+                    <option key={cap.code} value={cap.code}>{cap.code} - {cap.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Subcapítulo</label>
+                <select 
+                  value={selectedSubcapitulo}
+                  onChange={(e) => {
+                    setSelectedSubcapitulo(e.target.value);
+                    setSelectedPartida('');
+                  }}
+                  disabled={!selectedCapitulo}
+                  className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-2 text-xs transition-colors hover:border-[#324ADD] focus:outline-none focus:border-[#324ADD] focus:ring-2 focus:ring-[#324ADD]/20 disabled:opacity-50 cursor-pointer"
+                >
+                  <option value="">Todos los Subcapítulos...</option>
+                  {selectedCapitulo && coveninTree.find(c => c.code === selectedTipoObra)?.children?.find(c => c.code === selectedCapitulo)?.children?.map(sub => (
+                    <option key={sub.code} value={sub.code}>{sub.code} - {sub.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Partida Base</label>
+                <select 
+                  value={selectedPartida}
+                  onChange={(e) => {
+                    setSelectedPartida(e.target.value);
+                    if (e.target.value) {
+                      // Al seleccionar la partida base terminal, se recoge automáticamente para ver el listado
+                      setCategoriesOpen(false);
+                    }
+                  }}
+                  disabled={!selectedSubcapitulo || !hasFourthLevel}
+                  className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-2 text-xs transition-colors hover:border-[#324ADD] focus:outline-none focus:border-[#324ADD] focus:ring-2 focus:ring-[#324ADD]/20 disabled:opacity-50 cursor-pointer"
+                >
+                  {!selectedSubcapitulo ? (
+                    <option value="">Selecciona el Subcapítulo...</option>
+                  ) : !hasFourthLevel ? (
+                    <option value="">No aplica (sin desglose)</option>
+                  ) : (
+                    <>
+                      <option value="">Todas las Partidas...</option>
+                      {currentSub.children.map(par => (
+                        <option key={par.code} value={par.code}>{par.code} - {par.name}</option>
+                      ))}
+                    </>
+                  )}
+                </select>
+              </div>
             </div>
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Capítulo</label>
-              <select 
-                value={selectedCapitulo}
-                onChange={(e) => {
-                  setSelectedCapitulo(e.target.value);
-                  setSelectedSubcapitulo('');
-                  setSelectedPartida('');
-                }}
-                disabled={!selectedTipoObra}
-                className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs transition-colors hover:border-[#324ADD] focus:outline-none focus:border-[#324ADD] focus:ring-2 focus:ring-[#324ADD]/20 disabled:opacity-50"
-              >
-                <option value="">Todos los Capítulos...</option>
-                {selectedTipoObra && coveninTree.find(c => c.code === selectedTipoObra)?.children?.map(cap => (
-                  <option key={cap.code} value={cap.code}>{cap.code} - {cap.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Subcapítulo</label>
-              <select 
-                value={selectedSubcapitulo}
-                onChange={(e) => {
-                  setSelectedSubcapitulo(e.target.value);
-                  setSelectedPartida('');
-                }}
-                disabled={!selectedCapitulo}
-                className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs transition-colors hover:border-[#324ADD] focus:outline-none focus:border-[#324ADD] focus:ring-2 focus:ring-[#324ADD]/20 disabled:opacity-50"
-              >
-                <option value="">Todos los Subcapítulos...</option>
-                {selectedCapitulo && coveninTree.find(c => c.code === selectedTipoObra)?.children?.find(c => c.code === selectedCapitulo)?.children?.map(sub => (
-                  <option key={sub.code} value={sub.code}>{sub.code} - {sub.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Partida Base</label>
-              <select 
-                value={selectedPartida}
-                onChange={(e) => setSelectedPartida(e.target.value)}
-                disabled={!selectedSubcapitulo || !hasFourthLevel}
-                className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs transition-colors hover:border-[#324ADD] focus:outline-none focus:border-[#324ADD] focus:ring-2 focus:ring-[#324ADD]/20 disabled:opacity-50"
-              >
-                {!selectedSubcapitulo ? (
-                  <option value="">Selecciona el Subcapítulo...</option>
-                ) : !hasFourthLevel ? (
-                  <option value="">No aplica (sin desglose)</option>
+
+            {/* Barra inferior de confirmación y recoger para ganar espacio */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-2 border-t border-slate-200/90">
+              <div className="text-[11px] text-slate-600 font-medium truncate">
+                {hasCategoryFilter ? (
+                  <span className="text-amber-950 font-bold truncate">
+                    Filtro activo: {categorySummary}
+                  </span>
                 ) : (
-                  <>
-                    <option value="">Todas las Partidas...</option>
-                    {currentSub.children.map(par => (
-                      <option key={par.code} value={par.code}>{par.code} - {par.name}</option>
-                    ))}
-                  </>
+                  <span className="text-slate-500">Selecciona los niveles o recoge para ver todo</span>
                 )}
-              </select>
+              </div>
+              <div className="flex items-center gap-2">
+                {hasCategoryFilter && (
+                  <button
+                    type="button"
+                    onClick={handleClearCategories}
+                    className="px-3 py-2 text-xs text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl font-bold border border-rose-200 transition-colors flex items-center justify-center gap-1 cursor-pointer shrink-0"
+                    title="Limpiar filtros"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Limpiar</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setCategoriesOpen(false)}
+                  className="flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  title="Recoger selectores para dejar espacio al listado de partidas"
+                >
+                  <ChevronUp size={16} />
+                  <span>Recoger y ver partidas</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
