@@ -81,13 +81,12 @@ export default function BudgetWorksheetHeader({
             onMouseLeave={() => setHeaderDbDropdownOpen(false)}
           >
             <button
+              type="button"
               onClick={() => setHeaderDbDropdownOpen(prev => !prev)}
-              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-white border border-slate-400 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 text-slate-700 rounded-xl transition-all duration-200 font-medium text-xs sm:text-sm cursor-pointer shadow-xs"
+              className="w-[34px] h-[34px] p-0 bg-white border border-slate-400 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 text-slate-700 rounded-xl transition-all duration-200 flex items-center justify-center cursor-pointer shadow-xs shrink-0"
+              title={`Base de Datos: ${activeDatabase?.name || 'Base Maestra'}`}
             >
-              <Database className="w-[19px] h-[19px] sm:w-4 sm:h-4 shrink-0" />
-              <span className="hidden sm:inline">Base de Datos</span>
-              <span className="sm:hidden font-bold">BD</span>
-              <ChevronDown size={14} className={headerDbDropdownOpen ? 'rotate-180 transition-transform duration-200' : 'transition-transform duration-200'} />
+              <Database size={18} className="shrink-0 text-slate-700 hover:text-blue-700" />
             </button>
             {headerDbDropdownOpen && (
               <>
@@ -116,21 +115,23 @@ export default function BudgetWorksheetHeader({
           </div>
 
           <button 
+            type="button"
             onClick={onSyncPrices}
             disabled={syncing}
-            className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-400 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 text-slate-700 rounded-xl transition-all duration-200 font-medium text-sm cursor-pointer shadow-xs"
+            className="w-[34px] h-[34px] p-0 bg-white border border-slate-400 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 text-slate-700 rounded-xl transition-all duration-200 flex items-center justify-center cursor-pointer shadow-xs shrink-0"
+            title="Actualizar Precios"
           >
-            <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
-            {syncing ? 'Actualizando...' : 'Actualizar Precios'}
+            <RefreshCw size={17} className={`shrink-0 ${syncing ? 'animate-spin text-blue-600' : ''}`} />
           </button>
 
           {onOpenControlObra && (
             <button
+              type="button"
               onClick={onOpenControlObra}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-blue-400 hover:border-blue-600 hover:bg-blue-50 text-blue-700 rounded-xl transition-all duration-200 font-medium text-sm cursor-pointer shadow-xs"
+              className="w-[34px] h-[34px] p-0 bg-white border border-blue-400 hover:border-blue-600 hover:bg-blue-50 text-blue-700 rounded-xl transition-all duration-200 flex items-center justify-center cursor-pointer shadow-xs shrink-0"
+              title="Control de Obra"
             >
-              <Activity size={16} />
-              Control de Obra
+              <Activity size={17} className="shrink-0" />
             </button>
           )}
 

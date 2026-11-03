@@ -60,33 +60,9 @@ export default function BudgetSearchModal({
               <span className="truncate">Buscar Partida</span>
             </h2>
 
-            {/* Pill badge que muestra el origen actualmente seleccionado */}
-            <span 
-              onClick={() => setMobileMenuOpen(true)}
-              className="text-[10px] sm:text-xs font-semibold bg-amber-200/70 hover:bg-amber-200 text-amber-950 px-2 py-0.5 rounded-full truncate max-w-[130px] sm:max-w-[200px] cursor-pointer transition-colors border border-amber-300/60"
-              title={`Origen activo: ${activeDatabase?.name || 'Base Maestra'}. Toca para cambiar.`}
-            >
-              {activeDatabase?.name || 'Base Maestra'}
-            </span>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0 ml-2">
-            {/* Botón Desde IA directo en cabecera */}
-            {showAiOption && (
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  onOpenAIApuModal?.();
-                }}
-                className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl transition-transform active:scale-95 font-semibold shadow-xs text-xs cursor-pointer whitespace-nowrap"
-                title="Crear APU con Inteligencia Artificial e insertar directamente al presupuesto"
-              >
-                <Sparkles size={13} className="text-amber-300 animate-pulse shrink-0" />
-                <span className="hidden xs:inline">Desde IA</span>
-                <span className="xs:hidden">IA</span>
-              </button>
-            )}
+          <div className="flex items-center shrink-0 ml-2">
 
             <button 
               type="button"
