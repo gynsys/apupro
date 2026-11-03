@@ -84,7 +84,7 @@ export default function MathQuantityInput({
   };
 
   return (
-    <div className="relative inline-flex items-center justify-center w-full">
+    <div className="relative inline-flex items-center justify-center w-full min-w-0">
       <input
         type="text"
         value={isFocused ? localVal : formatVal(value)}
@@ -111,7 +111,7 @@ export default function MathQuantityInput({
         readOnly={readOnly}
         disabled={disabled}
         title={title || "Admite operaciones: ej. 2,5 * 3 o 4 + 1.2. Pulsa Enter para calcular."}
-        className={className}
+        className={`min-w-0 ${className}`}
       />
       {isFocused && previewVal !== null && (
         <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 bg-slate-900 text-amber-300 text-[11px] font-mono font-bold px-2 py-0.5 rounded-lg shadow-xl z-30 pointer-events-none whitespace-nowrap flex items-center gap-1 border border-slate-700 animate-in fade-in zoom-in-95">

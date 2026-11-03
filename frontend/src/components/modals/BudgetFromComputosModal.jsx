@@ -3250,160 +3250,293 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
       />
 
       {/* Header Principal con Selector de Modo (Planilla vs Asistente/Chat) */}
-      <header className="px-4 sm:px-6 py-2.5 border-b border-amber-200 flex items-center justify-between bg-[#FEF3C7] shrink-0 shadow-sm">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/30 shrink-0">
-            <Calculator className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="text-amber-900 font-bold text-base sm:text-lg leading-tight truncate">
-                Cómputos Métricos
-              </h2>
-              <span
-                className={`hidden sm:inline-block text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
-                  isOnline
-                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                    : 'bg-amber-200 text-amber-900 border-amber-400 animate-pulse'
-                }`}
-              >
-                {isOnline ? '● En línea' : '⚡ Modo Offline'}
-              </span>
+      <header className="border-b border-amber-200 bg-[#FEF3C7] shrink-0 shadow-sm">
+        {/* --- VISTA DESKTOP (>= sm) --- */}
+        <div className="hidden sm:flex items-center justify-between px-4 sm:px-6 py-2.5">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/30 shrink-0">
+              <Calculator className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-amber-900 font-bold text-base sm:text-lg leading-tight truncate">
+                  Cómputos Métricos
+                </h2>
+                <span
+                  className={`hidden sm:inline-block text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
+                    isOnline
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      : 'bg-amber-200 text-amber-900 border-amber-400 animate-pulse'
+                  }`}
+                >
+                  {isOnline ? '● En línea' : '⚡ Modo Offline'}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Selector de Pestaña Central: Planilla de Cómputos vs Chat Asistente */}
-        <div className="flex items-center gap-1 bg-amber-200/80 p-1 rounded-xl border border-amber-300 shrink-0">
-          <button
-            type="button"
-            onClick={() => setActiveTab('sheet')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === 'sheet'
-                ? 'bg-amber-600 text-white shadow-sm'
-                : 'text-amber-900 hover:bg-amber-300/60'
-            }`}
-          >
-            <Table className="w-4 h-4" />
-            <span>Planilla ({validCount})</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('chat')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === 'chat'
-                ? 'bg-amber-600 text-white shadow-sm'
-                : 'text-amber-900 hover:bg-amber-300/60'
-            }`}
-          >
-            <Bot className="w-4 h-4" />
-            <span>Asistente / Chat</span>
-          </button>
-        </div>
-
-        {/* Acciones de Cabecera: Acciones Rápidas (Iconos con Tooltips) + Abrir, Reiniciar y Cerrar */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {/* Datos del Presupuesto */}
-          <button
-            type="button"
-            onClick={() => setShowProjectInfoModal(true)}
-            disabled={isCommitting}
-            className="p-1.5 sm:p-2 rounded-xl text-xs font-bold flex items-center justify-center transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 hover:text-amber-950 cursor-pointer shadow-xs"
-            title="Datos del Presupuesto (Nombre, Proyecto, Cliente, Moneda)"
-          >
-            <Edit3 className="w-4 h-4 text-amber-700" />
-          </button>
-
-          {/* Agregar Nuevo Capítulo */}
-          <button
-            type="button"
-            onClick={() => {
-              setChapterModalInput('');
-              setShowChapterModal(true);
-            }}
-            disabled={isCommitting}
-            className="px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 hover:text-amber-950 cursor-pointer shadow-xs"
-            title="Agregar un nuevo capítulo a la planilla"
-          >
-            <FolderPlus className="w-4 h-4 text-amber-700" />
-            <span className="hidden sm:inline">+ Capítulo</span>
-          </button>
-
-          {/* Imprimir Planilla */}
-          <button
-            type="button"
-            onClick={handlePrintComputos}
-            disabled={isCommitting || validCount === 0}
-            className="p-1.5 sm:p-2 rounded-xl text-xs font-bold flex items-center justify-center transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 hover:text-amber-950 cursor-pointer shadow-xs disabled:opacity-40"
-            title="Imprimir planilla de cómputos en formato técnico"
-          >
-            <Printer className="w-4 h-4 text-amber-700" />
-          </button>
-
-          {/* Exportar a Excel */}
-          <button
-            type="button"
-            onClick={handleExportExcelComputos}
-            disabled={isCommitting || validCount === 0}
-            className="p-1.5 sm:p-2 rounded-xl text-xs font-bold flex items-center justify-center transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 hover:text-amber-950 cursor-pointer shadow-xs disabled:opacity-40"
-            title="Exportar planilla de cómputos a Excel (.xls)"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-amber-700" />
-          </button>
-
-          {onSendToPartidas && (
+          {/* Selector de Pestaña Central: Planilla de Cómputos vs Chat Asistente */}
+          <div className="flex items-center gap-1 bg-amber-200/80 p-1 rounded-xl border border-amber-300 shrink-0">
             <button
               type="button"
-              onClick={handleSendToPartidas}
-              disabled={isCommitting || validCount === 0}
-              className="px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer shadow-sm disabled:opacity-40"
-              title="Llevar las cantidades de la planilla a la pestaña Partidas"
+              onClick={() => setActiveTab('sheet')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === 'sheet'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-amber-900 hover:bg-amber-300/60'
+              }`}
             >
-              <Send className="w-4 h-4" />
-              <span className="hidden sm:inline">Llevar a Partidas</span>
+              <Table className="w-4 h-4" />
+              <span>Planilla ({validCount})</span>
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => setActiveTab('chat')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === 'chat'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-amber-900 hover:bg-amber-300/60'
+              }`}
+            >
+              <Bot className="w-4 h-4" />
+              <span>Asistente / Chat</span>
+            </button>
+          </div>
 
-          <div className="h-5 w-px bg-amber-300 mx-0.5 hidden sm:block" />
+          {/* Acciones de Cabecera Desktop */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowProjectInfoModal(true)}
+              disabled={isCommitting}
+              className="p-1.5 sm:p-2 rounded-xl text-xs font-bold flex items-center justify-center transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 hover:text-amber-950 cursor-pointer shadow-xs"
+              title="Datos del Presupuesto (Nombre, Proyecto, Cliente, Moneda)"
+            >
+              <Edit3 className="w-4 h-4 text-amber-700" />
+            </button>
 
-          <button
-            type="button"
-            onClick={handleOpenLoadModal}
-            disabled={isCommitting}
-            className="px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shadow-xs"
-            title="Abrir cómputos guardados"
-          >
-            <FolderOpen className="w-3.5 h-3.5 text-amber-700" />
-            <span>Abrir{savedList.length > 0 ? ` (${savedList.length})` : ''}</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                setChapterModalInput('');
+                setShowChapterModal(true);
+              }}
+              disabled={isCommitting}
+              className="px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 hover:text-amber-950 cursor-pointer shadow-xs"
+              title="Agregar un nuevo capítulo a la planilla"
+            >
+              <FolderPlus className="w-4 h-4 text-amber-700" />
+              <span className="hidden sm:inline">+ Capítulo</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => handleClearAll()}
-            disabled={isCommitting}
-            className="px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shadow-xs"
-            title="Limpiar planilla y reiniciar"
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
-            <span className="hidden md:inline">Reiniciar</span>
-          </button>
+            <button
+              type="button"
+              onClick={handlePrintComputos}
+              disabled={isCommitting || validCount === 0}
+              className="p-1.5 sm:p-2 rounded-xl text-xs font-bold flex items-center justify-center transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 hover:text-amber-950 cursor-pointer shadow-xs disabled:opacity-40"
+              title="Imprimir planilla de cómputos en formato técnico"
+            >
+              <Printer className="w-4 h-4 text-amber-700" />
+            </button>
 
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isCommitting}
-            className="text-amber-700 hover:text-amber-900 hover:bg-amber-200/50 rounded-full p-2 transition-colors cursor-pointer"
-            title="Cerrar"
-          >
-            <X className="w-5 h-5" />
-          </button>
+            <button
+              type="button"
+              onClick={handleExportExcelComputos}
+              disabled={isCommitting || validCount === 0}
+              className="p-1.5 sm:p-2 rounded-xl text-xs font-bold flex items-center justify-center transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 hover:text-amber-950 cursor-pointer shadow-xs disabled:opacity-40"
+              title="Exportar planilla de cómputos a Excel (.xls)"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-amber-700" />
+            </button>
+
+            {onSendToPartidas && (
+              <button
+                type="button"
+                onClick={handleSendToPartidas}
+                disabled={isCommitting || validCount === 0}
+                className="px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer shadow-sm disabled:opacity-40"
+                title="Llevar las cantidades de la planilla a la pestaña Partidas"
+              >
+                <Send className="w-4 h-4" />
+                <span className="hidden sm:inline">Llevar a Partidas</span>
+              </button>
+            )}
+
+            <div className="h-5 w-px bg-amber-300 mx-0.5 hidden sm:block" />
+
+            <button
+              type="button"
+              onClick={handleOpenLoadModal}
+              disabled={isCommitting}
+              className="px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shadow-xs"
+              title="Abrir cómputos guardados"
+            >
+              <FolderOpen className="w-3.5 h-3.5 text-amber-700" />
+              <span>Abrir{savedList.length > 0 ? ` (${savedList.length})` : ''}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleClearAll()}
+              disabled={isCommitting}
+              className="px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shadow-xs"
+              title="Limpiar planilla y reiniciar"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
+              <span className="hidden md:inline">Reiniciar</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isCommitting}
+              className="text-amber-700 hover:text-amber-900 hover:bg-amber-200/50 rounded-full p-2 transition-colors cursor-pointer"
+              title="Cerrar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* --- VISTA MÓVIL (< sm) --- */}
+        <div className="sm:hidden flex flex-col p-2 gap-2 bg-[#FEF3C7]">
+          {/* Fila 1 Móvil: Botón Cerrar visible + Título compacto + Barra de Herramientas Deslizable */}
+          <div className="flex items-center justify-between gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isCommitting}
+                className="p-1.5 rounded-xl bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 shadow-xs cursor-pointer touch-target flex items-center justify-center"
+                title="Cerrar Planilla"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <span className="font-extrabold text-amber-950 text-xs truncate max-w-[100px]">
+                Cómputos
+              </span>
+              <span
+                className={`w-2 h-2 rounded-full shrink-0 ${isOnline ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                title={isOnline ? 'En línea' : 'Offline'}
+              />
+            </div>
+
+            {/* Barra de Herramientas Móvil: scroll horizontal sin perder ningún botón */}
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar shrink-0 pl-1 py-0.5">
+              <button
+                type="button"
+                onClick={() => setShowProjectInfoModal(true)}
+                disabled={isCommitting}
+                className="p-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 shadow-xs cursor-pointer shrink-0"
+                title="Datos del Presupuesto"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setChapterModalInput('');
+                  setShowChapterModal(true);
+                }}
+                disabled={isCommitting}
+                className="p-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 shadow-xs cursor-pointer shrink-0 flex items-center gap-1 text-[11px] font-bold"
+                title="Agregar Capítulo"
+              >
+                <FolderPlus className="w-3.5 h-3.5 text-amber-700" />
+                <span>+ Cap</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleOpenLoadModal}
+                disabled={isCommitting}
+                className="p-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 shadow-xs cursor-pointer shrink-0 flex items-center gap-1 text-[11px] font-bold"
+                title="Abrir cómputos guardados"
+              >
+                <FolderOpen className="w-3.5 h-3.5 text-amber-700" />
+                <span>Abrir{savedList.length > 0 ? ` (${savedList.length})` : ''}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleExportExcelComputos}
+                disabled={isCommitting || validCount === 0}
+                className="p-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 shadow-xs cursor-pointer shrink-0 disabled:opacity-40"
+                title="Exportar a Excel"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-amber-700" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handlePrintComputos}
+                disabled={isCommitting || validCount === 0}
+                className="p-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 shadow-xs cursor-pointer shrink-0 disabled:opacity-40"
+                title="Imprimir Planilla"
+              >
+                <Printer className="w-3.5 h-3.5 text-amber-700" />
+              </button>
+
+              {onSendToPartidas && (
+                <button
+                  type="button"
+                  onClick={handleSendToPartidas}
+                  disabled={isCommitting || validCount === 0}
+                  className="px-2 py-1.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs cursor-pointer shrink-0 flex items-center gap-1 text-[11px] font-bold disabled:opacity-40"
+                  title="Llevar a Partidas"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>A Partidas</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => handleClearAll()}
+                disabled={isCommitting}
+                className="p-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 shadow-xs cursor-pointer shrink-0"
+                title="Reiniciar Planilla"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
+              </button>
+            </div>
+          </div>
+
+          {/* Fila 2 Móvil: Selector de Pestañas a 2 columnas completas (fácil de tocar) */}
+          <div className="grid grid-cols-2 gap-1 bg-amber-200/80 p-1 rounded-xl border border-amber-300">
+            <button
+              type="button"
+              onClick={() => setActiveTab('sheet')}
+              className={`py-1.5 rounded-lg text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === 'sheet'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-amber-900 hover:bg-amber-300/60'
+              }`}
+            >
+              <Table className="w-3.5 h-3.5" />
+              <span>Planilla ({validCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('chat')}
+              className={`py-1.5 rounded-lg text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === 'chat'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-amber-900 hover:bg-amber-300/60'
+              }`}
+            >
+              <Bot className="w-3.5 h-3.5" />
+              <span>Asistente / Chat</span>
+            </button>
+          </div>
         </div>
       </header>
 
       {/* CUERPO PRINCIPAL */}
       {activeTab === 'sheet' ? (
         /* VISTA: PLANILLA DE CÓMPUTOS MÉTRICOS (TABLA CON FACTOR, DISTANCIA Y FILA LIBRE) */
-        <div className="flex-1 flex flex-col min-h-0 p-3 sm:p-4 space-y-3 bg-[#FEF3C7] overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 p-2 sm:p-4 space-y-2.5 sm:space-y-3 bg-[#FEF3C7] overflow-hidden">
           <div className="max-w-[1400px] w-full mx-auto flex flex-col flex-1 min-h-0 space-y-3">
             {/* Encabezado fijo de la Planilla de Cómputos Métricos */}
             <div className="bg-white border-2 border-amber-300 rounded-2xl py-1.5 px-4 shadow-sm text-center shrink-0">
@@ -3461,7 +3594,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                       <div
                         className={`bg-white border-2 ${
                           isBlankTrailing ? 'border-amber-200 bg-amber-50/20' : 'border-amber-300'
-                        } rounded-2xl p-3.5 sm:p-4 shadow-sm space-y-3`}
+                        } rounded-2xl p-2.5 sm:p-4 shadow-sm space-y-2.5 sm:space-y-3`}
                       >
                         {/* Fila Superior: N° Item, Capítulo y Acciones Rápidas */}
                         <div className="flex items-center justify-between border-b border-amber-200 pb-2">
@@ -3736,7 +3869,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                               <span>+ Desglosar en parciales / filas</span>
                             </button>
                           ) : (
-                            <div className="space-y-2 border border-amber-300 rounded-xl p-3 bg-amber-50/60">
+                            <div className="space-y-2 border border-amber-300 rounded-xl p-2 sm:p-3 bg-amber-50/60">
                               <div className="flex items-center justify-between border-b border-amber-200 pb-2">
                                 <button
                                   type="button"
@@ -3893,7 +4026,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                                         </div>
                                       </div>
 
-                                      <div className="flex items-center justify-between bg-amber-50/80 p-2 rounded-lg text-xs">
+                                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 bg-amber-50/90 p-2 rounded-xl border border-amber-200/80 text-xs">
                                         <input
                                           type="text"
                                           value={p.observations ?? ''}
@@ -3901,11 +4034,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                                             handleUpdatePartialField(it.id, p.id, 'observations', e.target.value)
                                           }
                                           placeholder="Notas / Eje / Detalle..."
-                                          className="flex-1 mr-2 px-1.5 py-0.5 text-[11px] bg-white border border-amber-200 rounded"
+                                          className="min-w-0 flex-1 px-2 py-1 text-[11px] bg-white border border-amber-200 rounded-lg focus:outline-none focus:border-amber-400"
                                         />
-                                        <div className="shrink-0 text-right">
-                                          <span className="text-[10px] text-amber-700 block">Subtotal</span>
-                                          <span className="font-extrabold text-amber-950">
+                                        <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 px-1 pt-0.5 sm:pt-0">
+                                          <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Subtotal:</span>
+                                          <span className="font-mono font-black text-amber-950 text-xs sm:text-sm whitespace-nowrap bg-white px-2 py-0.5 rounded-md border border-amber-200/80 shadow-2xs">
                                             {Number(p.partial || 0).toLocaleString('es-VE', {
                                               maximumFractionDigits: 3,
                                             })}{' '}
@@ -5004,7 +5137,8 @@ M2`}
                 ) : (
                   <>
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Confirmar y Generar Presupuesto ({validCount})</span>
+                    <span className="sm:hidden">Generar ({validCount})</span>
+                    <span className="hidden sm:inline">Confirmar y Generar Presupuesto ({validCount})</span>
                   </>
                 )}
               </button>
