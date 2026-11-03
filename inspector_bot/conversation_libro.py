@@ -244,8 +244,9 @@ async def process_full_report_for_libro(update: Update, context: ContextTypes.DE
     obreros = parsed.get("obreros", "")
     caporal = parsed.get("caporal", "") or parsed.get("caporal_obra", "")
     equipos = parsed.get("equipos") or parsed.get("maquinaria") or ""
+    ensayos = parsed.get("control_calidad") or parsed.get("ensayos") or ""
 
-    # 1. Generar la redacción formal de ingeniería con IA (incluyendo maquinaria y equipos)
+    # 1. Generar la redacción formal de ingeniería con IA (incluyendo maquinaria, equipos y ensayos)
     desc_labor_ai = generate_labor_description_ai(
         actividades=actividades,
         obra=obra,
@@ -253,6 +254,7 @@ async def process_full_report_for_libro(update: Update, context: ContextTypes.DE
         fecha=fecha,
         obreros=f"{obreros}, Caporal: {caporal}".strip(", "),
         equipos=equipos,
+        ensayos=ensayos,
     )
 
     # 2. Resumen ejecutivo de actividades por partida (limpio de clima)
@@ -453,6 +455,7 @@ async def handle_regenerate_libro_desc(update: Update, context: ContextTypes.DEF
         fecha=entry_data.get("fecha", ""),
         obreros=entry_data.get("personal", ""),
         equipos=entry_data.get("equipos", ""),
+        ensayos=entry_data.get("control_calidad", ""),
     )
     entry_data["descripcion_labor"] = new_desc
 
@@ -1007,6 +1010,7 @@ async def handle_observaciones(update: Update, context: ContextTypes.DEFAULT_TYP
         fecha=entry.get("fecha", ""),
         obreros=entry.get("personal", ""),
         equipos=entry.get("equipos", ""),
+        ensayos=entry.get("control_calidad", ""),
     )
 
     # Personal de inspección: SOLO INSPECTORES, NUNCA EL RESIDENTE

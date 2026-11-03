@@ -735,8 +735,9 @@ async def execute_register_to_libro_ai(update: Update, context: ContextTypes.DEF
     obreros = report.get("obreros", "")
     caporal = report.get("caporal", "") or report.get("caporal_obra", "")
     equipos = report.get("equipos") or report.get("maquinaria") or ""
+    ensayos = report.get("control_calidad") or report.get("ensayos") or ""
 
-    # 1. Generar la redacción formal de ingeniería con IA (incluyendo maquinaria y equipos)
+    # 1. Generar la redacción formal de ingeniería con IA (incluyendo maquinaria, equipos y ensayos)
     desc_labor_ai = generate_labor_description_ai(
         actividades=actividades,
         obra=obra,
@@ -744,6 +745,7 @@ async def execute_register_to_libro_ai(update: Update, context: ContextTypes.DEF
         fecha=fecha,
         obreros=f"{obreros}, Caporal: {caporal}".strip(", "),
         equipos=equipos,
+        ensayos=ensayos,
     )
 
     # 2. Resumen ejecutivo de actividades para G13

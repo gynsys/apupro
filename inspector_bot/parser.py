@@ -190,6 +190,7 @@ def parse_inspection_message(text: str) -> Dict[str, Any]:
         "equipos": "",
         "observaciones": "",
         "control_calidad": "",
+        "ensayos": "",
         "revisado_por": "",
         "raw_text": text,
     }
@@ -470,9 +471,9 @@ def parse_inspection_message(text: str) -> Dict[str, Any]:
                 data["observaciones"] = val
             continue
 
-        # 14. CONTROL DE CALIDAD
+        # 14. CONTROL DE CALIDAD Y ENSAYOS
         match_cc = re.match(
-            r"^[\s\*\_\#\-\•\>]*(?:Control\s+de\s+calidad|Calidad)[\s\*\_\#]*[:=;][\s\*\_\#]*(.*)$",
+            r"^[\s\*\_\#\-\•\>]*(?:Control\s+de\s+calidad|Calidad|Ensayos?(?:\s+realizados?|\s+de\s+laboratorio|\s+de\s+campo)?|Pruebas?(?:\s+y\s+ensayos?|\s+de\s+calidad)?)[\s\*\_\#]*[:=;\-][\s\*\_\#]*(.*)$",
             line,
             re.IGNORECASE,
         )
@@ -481,6 +482,7 @@ def parse_inspection_message(text: str) -> Dict[str, Any]:
             val = match_cc.group(1).strip().strip("*._#")
             if val:
                 data["control_calidad"] = val
+                data["ensayos"] = val
             continue
 
         # 15. REVISADO POR
@@ -535,6 +537,7 @@ def parse_inspection_message(text: str) -> Dict[str, Any]:
                     data["observaciones"] = clean_item
         elif current_section == "control_calidad":
             data["control_calidad"] = (data["control_calidad"] + " " + line.strip("*.")).strip()
+            data["ensayos"] = data["control_calidad"]
         elif current_section == "revisado_por":
             data["revisado_por"] = (data["revisado_por"] + " " + line.strip("*.")).strip()
         elif current_section == "actividades":
@@ -604,6 +607,7 @@ def parse_inspection_message(text: str) -> Dict[str, Any]:
     data["equipos"] = data["equipos"].strip().strip("*.")
     data["observaciones"] = data["observaciones"].strip().strip("*.")
     data["control_calidad"] = data["control_calidad"].strip().strip("*.")
+    data["ensayos"] = data["control_calidad"]
     data["revisado_por"] = data["revisado_por"].strip().strip("*.")
 
     # Depuración estricta de actividades: eliminar clima o tiempo que se haya colado
