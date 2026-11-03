@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Database, FileText, Sparkles, X, Plus, ChevronDown, Share2 } from 'lucide-react';
+import { Search, Database, FileText, Sparkles, X, Plus, ChevronDown, Share2, Menu, Check } from 'lucide-react';
 import { CostbaseSearchBar as Cost360SearchBar } from '../../../modules/costbase/components/CostbaseSearchBar';
 
 export default function BudgetSearchModal({
@@ -34,6 +34,7 @@ export default function BudgetSearchModal({
 }) {
   const [modalDbDropdownOpen, setModalDbDropdownOpen] = useState(false);
   const [modalBudgetDropdownOpen, setModalBudgetDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (!isOpen) return null;
 
@@ -41,29 +42,200 @@ export default function BudgetSearchModal({
     <div className={`fixed inset-0 bg-slate-900/50 backdrop-blur-sm ${zIndexClass} flex items-start justify-center p-0 sm:p-4 sm:pt-20`}>
       <div className="w-full h-full sm:h-[80vh] sm:max-w-4xl bg-amber-100 rounded-none sm:rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Header Fila 1: Título y Botón Cerrar fijo a la derecha */}
-        <div className="flex items-center justify-between px-3.5 sm:px-6 py-2.5 sm:py-3.5 bg-white/70 border-b border-amber-600/15 shrink-0">
-          <h2 className="m-0 text-base sm:text-xl font-bold text-amber-900 flex items-center gap-2 truncate">
-            <Search className="text-sky-600 shrink-0" size={20} />
-            <span className="truncate">Buscar Partidas</span>
-          </h2>
-          <button 
-            type="button"
-            onClick={() => {
-              setSearchQuery('');
-              setSearchCovenin('');
-              onClose();
-            }}
-            className="text-amber-800 hover:text-amber-950 bg-amber-200/50 hover:bg-amber-200 transition-colors p-1.5 rounded-xl cursor-pointer shrink-0 ml-2"
-            title="Cerrar modal"
-          >
-            <X size={20} />
-          </button>
+        {/* Header Fila 1: Título con Menú Hamburguesa y Botón Cerrar fijo a la derecha */}
+        <div className="relative flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3.5 bg-white/80 border-b border-amber-600/15 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            {/* Botón Menú Hamburguesa */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(prev => !prev)}
+              className="p-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-colors cursor-pointer shrink-0 flex items-center justify-center active:scale-95"
+              title="Seleccionar Base de Datos o Presupuesto"
+            >
+              <Menu size={18} />
+            </button>
+
+            <h2 className="m-0 text-sm sm:text-lg font-bold text-amber-900 flex items-center gap-1.5 truncate">
+              <Search className="text-sky-600 shrink-0 hidden sm:inline" size={18} />
+              <span className="truncate">Buscar Partida</span>
+            </h2>
+
+            {/* Pill badge que muestra el origen actualmente seleccionado */}
+            <span 
+              onClick={() => setMobileMenuOpen(true)}
+              className="text-[10px] sm:text-xs font-semibold bg-amber-200/70 hover:bg-amber-200 text-amber-950 px-2 py-0.5 rounded-full truncate max-w-[130px] sm:max-w-[200px] cursor-pointer transition-colors border border-amber-300/60"
+              title={`Origen activo: ${activeDatabase?.name || 'Base Maestra'}. Toca para cambiar.`}
+            >
+              {activeDatabase?.name || 'Base Maestra'}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+            {/* Botón Desde IA directo en cabecera */}
+            {showAiOption && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenAIApuModal?.();
+                }}
+                className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl transition-transform active:scale-95 font-semibold shadow-xs text-xs cursor-pointer whitespace-nowrap"
+                title="Crear APU con Inteligencia Artificial e insertar directamente al presupuesto"
+              >
+                <Sparkles size={13} className="text-amber-300 animate-pulse shrink-0" />
+                <span className="hidden xs:inline">Desde IA</span>
+                <span className="xs:hidden">IA</span>
+              </button>
+            )}
+
+            <button 
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setSearchCovenin('');
+                onClose();
+              }}
+              className="text-amber-800 hover:text-amber-950 bg-amber-200/50 hover:bg-amber-200 transition-colors p-1.5 rounded-xl cursor-pointer shrink-0"
+              title="Cerrar modal"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Menú desplegable hamburguesa (Selectores de Base de Datos y Presupuestos) */}
+          {mobileMenuOpen && (
+            <>
+              <div 
+                className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150" 
+                onClick={() => setMobileMenuOpen(false)} 
+              />
+              <div className="absolute top-full left-2 right-2 sm:left-4 sm:right-auto sm:w-80 z-50 bg-white border border-amber-300/90 rounded-2xl shadow-2xl p-3 animate-in fade-in slide-in-from-top-2 duration-200 mt-1">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Database size={14} className="text-amber-700" />
+                    Seleccionar Origen
+                  </span>
+                  <button 
+                    type="button"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+
+                {/* Sección 1: Bases de Datos */}
+                <div className="mb-3">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Bases de Datos
+                  </label>
+                  <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                    {databases.map(db => (
+                      <button
+                        key={db.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveDatabase(db);
+                          setSearchQuery('');
+                          setSearchCovenin('');
+                          setMobileMenuOpen(false);
+                        }}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
+                          activeDatabase?.id === db.id 
+                            ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200' 
+                            : 'text-slate-700 hover:bg-slate-50 border border-transparent'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2 truncate">
+                          <Database size={13} className={activeDatabase?.id === db.id ? 'text-blue-600' : 'text-slate-400'} />
+                          <span className="truncate">{db.name}</span>
+                        </span>
+                        {activeDatabase?.id === db.id && (
+                          <Check size={14} className="text-blue-600 shrink-0" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Sección 2: Presupuestos */}
+                <div className="mb-2">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Copiar de Presupuesto
+                  </label>
+                  <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                    {availableBudgets.filter(b => b.id !== currentBudgetId).map(b => (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveDatabase({ id: 'budget_' + b.id, name: b.name, is_budget: true });
+                          setSearchQuery('');
+                          setSearchCovenin('');
+                          setMobileMenuOpen(false);
+                        }}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
+                          activeDatabase?.id === 'budget_' + b.id
+                            ? 'bg-amber-50 text-amber-900 font-bold border border-amber-300'
+                            : 'text-slate-700 hover:bg-slate-50 border border-transparent'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2 truncate">
+                          <FileText size={13} className={activeDatabase?.id === 'budget_' + b.id ? 'text-amber-700' : 'text-slate-400'} />
+                          <span className="truncate">{b.name}</span>
+                        </span>
+                        {activeDatabase?.id === 'budget_' + b.id && (
+                          <Check size={14} className="text-amber-700 shrink-0" />
+                        )}
+                      </button>
+                    ))}
+                    {availableBudgets.length <= 1 && (
+                      <div className="text-center py-2 text-xs text-slate-400 italic">
+                        No hay otros presupuestos disponibles
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Opciones Adicionales */}
+                <div className="pt-2 border-t border-slate-100 flex flex-col gap-1">
+                  {showAiOption && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        onClose();
+                        onOpenAIApuModal?.();
+                      }}
+                      className="w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-medium text-purple-700 hover:bg-purple-50 flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <Sparkles size={13} className="text-purple-600" />
+                      <span>Crear APU con Inteligencia Artificial</span>
+                    </button>
+                  )}
+                  {showSharedOption && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        onClose();
+                        onOpenImportSharedPartida?.();
+                      }}
+                      className="w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-medium text-sky-700 hover:bg-sky-50 flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <Share2 size={13} className="text-sky-600" />
+                      <span>Partidas Compartidas de Otro Usuario</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Header Fila 2: Selectores de Origen y Acciones (scrollable horizontal en móvil) */}
-        <div className="px-3 sm:px-6 py-2 bg-amber-50/70 border-b border-amber-600/10 flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0">
-          {/* Dropdown Base de Datos */}
+        {/* Header Fila 2: Visible en pantallas medianas/grandes (desktop) para acceso directo rápido */}
+        <div className="hidden sm:flex px-6 py-2 bg-amber-50/70 border-b border-amber-600/10 items-center gap-2 overflow-x-auto no-scrollbar shrink-0">
+          {/* Dropdown Base de Datos Desktop */}
           <div 
             className="relative shrink-0"
             onMouseEnter={() => setModalDbDropdownOpen(true)}
@@ -107,7 +279,7 @@ export default function BudgetSearchModal({
             )}
           </div>
 
-          {/* Dropdown Presupuestos */}
+          {/* Dropdown Presupuestos Desktop */}
           <div 
             className="relative shrink-0"
             onMouseEnter={() => setModalBudgetDropdownOpen(true)}
@@ -154,23 +326,7 @@ export default function BudgetSearchModal({
             )}
           </div>
 
-          {/* Botón Desde IA */}
-          {showAiOption && (
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onOpenAIApuModal?.();
-              }}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl transition-transform active:scale-95 font-semibold shadow-xs text-xs sm:text-sm cursor-pointer whitespace-nowrap"
-              title="Crear APU con Inteligencia Artificial e insertar directamente al presupuesto"
-            >
-              <Sparkles size={14} className="text-amber-300 animate-pulse shrink-0" />
-              <span>Desde IA</span>
-            </button>
-          )}
-
-          {/* Botón De Otro Usuario */}
+          {/* Botón De Otro Usuario Desktop */}
           {showSharedOption && (
             <button
               type="button"
