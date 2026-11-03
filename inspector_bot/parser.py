@@ -3,6 +3,7 @@ Parser inteligente de mensajes de inspección de obra.
 Extrae información estructurada a partir de textos diarios enviados por mensajería.
 """
 import re
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 
@@ -45,6 +46,12 @@ def normalize_date_string(d_str: str) -> str:
     """Normaliza cadenas de fecha a formato estándar DD/MM/YYYY."""
     if not d_str:
         return ""
+    clean_val = d_str.strip().strip("*._-").lower()
+    if clean_val in ("hoy", "fecha de hoy", "el día de hoy", "el dia de hoy"):
+        return datetime.now().strftime("%d/%m/%Y")
+    if clean_val in ("ayer", "el día de ayer", "el dia de ayer"):
+        return (datetime.now() - timedelta(days=1)).strftime("%d/%m/%Y")
+
     m = re.search(r"\b([0-9]{1,2})[/\-\.]([0-9]{1,2})[/\-\.]([0-9]{2,4})\b", d_str)
     if m:
         d, mo, y = int(m.group(1)), int(m.group(2)), int(m.group(3))

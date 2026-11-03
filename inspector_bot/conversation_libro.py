@@ -82,17 +82,26 @@ logger = logging.getLogger(__name__)
 
 
 def is_full_inspection_report(text: str) -> bool:
-    """Determina si un mensaje de texto contiene un reporte diario completo de obra."""
+    """Determina si un mensaje de texto contiene un reporte diario completo o resumido de obra."""
     if not text:
         return False
     lower = text.lower()
     report_keywords = (
         "obra",
         "actividades",
+        "actividad",
+        "labores",
+        "labor",
+        "partida",
+        "partidas",
         "fecha",
+        "jornada",
+        "clima",
+        "tiempo",
         "residente",
         "inspector",
         "obreros",
+        "personal",
         "empresa",
         "contratista",
         "demolición",
@@ -102,6 +111,8 @@ def is_full_inspection_report(text: str) -> bool:
         "maquinaria",
         "equipos",
         "observaciones",
+        "ensayos",
+        "calidad",
     )
     matches = sum(1 for kw in report_keywords if kw in lower)
     return matches >= 2
@@ -236,6 +247,8 @@ async def process_full_report_for_libro(update: Update, context: ContextTypes.DE
     empresa = parsed.get("empresa", "")
     residente = parsed.get("ing_residente", "")
     existing_meta = get_project_metadata(obra)
+    if existing_meta and existing_meta.get("obra"):
+        obra = existing_meta["obra"]
     inspector_val = resolve_single_inspector(
         parsed.get("ing_inspectores", []),
         existing_meta.get("ing_inspector", ""),

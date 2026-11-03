@@ -5,10 +5,12 @@ por usuario o por proyecto para no tener que solicitarlos repetidamente.
 """
 import json
 import logging
+import re
 import sqlite3
+import unicodedata
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, Optional, Set
 
 from inspector_bot.config import DATA_DIR
 
@@ -186,15 +188,78 @@ def save_project_metadata(project_name: str, user_id: Optional[int], data: Dict[
         conn.commit()
 
 
+def _strip_accents_str(text: str) -> str:
+    """Elimina acentos y diacríticos de una cadena de texto."""
+    if not text:
+        return ""
+    return "".join(c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn")
+
+
+def _tokenize_project(text: str) -> Set[str]:
+    """Tokeniza un nombre de proyecto descartando palabras genéricas frecuentes."""
+    norm = _strip_accents_str(text.lower())
+    tokens = set(re.findall(r"[a-z0-9]{3,}", norm))
+    generic_words = {
+        "del", "los", "las", "para", "por", "con", "una", "sin", "entre",
+        "libro", "obra", "test", "prueba", "rehabilitacion", "construccion",
+        "integral", "proyecto", "mantenimiento", "reparacion", "unidad",
+    }
+    return tokens - generic_words
+
+
 def get_project_metadata(project_name: str) -> Dict[str, Any]:
-    """Obtiene los datos generales de un proyecto."""
+    """Obtiene los datos generales de un proyecto (coincidencia exacta o difusa inteligente)."""
+    if not project_name or not project_name.strip():
+        return {}
     init_db()
     project_id = project_name.strip().upper()
     with _get_connection() as conn:
         cursor = conn.cursor()
+        # 1. Búsqueda exacta rápida
         cursor.execute("SELECT * FROM project_metadata WHERE project_id = ?", (project_id,))
         row = cursor.fetchone()
-        return dict(row) if row else {}
+        if row:
+            return dict(row)
+
+        # 2. Búsqueda inteligente por tokens y similitud para nombres abreviados o resumidos
+        cursor.execute("SELECT * FROM project_metadata")
+        all_rows = cursor.fetchall()
+        if not all_rows:
+            return {}
+
+        query_tokens = _tokenize_project(project_name)
+        q_norm = _strip_accents_str(project_name.lower())
+
+        best_row: Optional[sqlite3.Row] = None
+        best_score = 0.0
+
+        for r in all_rows:
+            p_name = r["obra"] or r["project_id"]
+            p_norm = _strip_accents_str(p_name.lower())
+
+            # Coincidencia directa de subcadena (ej: "Ukatira" en "Rehabilitación Integral... Ukatira")
+            if q_norm and (q_norm in p_norm or p_norm in q_norm):
+                return dict(r)
+
+            if query_tokens:
+                p_tokens = _tokenize_project(p_name)
+                common = query_tokens & p_tokens
+                if common:
+                    # Si coincide una palabra distintiva (>= 5 letras) o múltiples tokens
+                    if len(common) >= 2 or any(len(w) >= 5 for w in common):
+                        score = len(common) / len(query_tokens | p_tokens)
+                        if score > best_score and score >= 0.25:
+                            best_score = score
+                            best_row = r
+
+        if best_row:
+            return dict(best_row)
+
+        # Si solo hay un único proyecto registrado en la base de datos
+        if len(all_rows) == 1 and not query_tokens:
+            return dict(all_rows[0])
+
+        return {}
 
 
 def get_recent_projects(user_id: Optional[int] = None) -> List[str]:
