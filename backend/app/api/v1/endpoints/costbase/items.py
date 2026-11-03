@@ -640,8 +640,19 @@ def update_master_item_route(
 def delete_master_item_route(
     item_code: str,
     database_id: str = "master",
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin)
 ) -> Dict[str, str]:
+    # La base maestra es global: solo el superadmin real puede eliminarla.
+    is_superadmin = (
+        getattr(current_user, "is_superadmin", False) is True or
+        getattr(current_user, "email", "") == "admin@arko360.net"
+    )
+    if not is_superadmin:
+        raise HTTPException(
+            status_code=403,
+            detail="Solo el superadmin puede eliminar partidas de la base maestra",
+        )
     set_schema_for_db(db, database_id)
     if not delete_master_item(db, item_code):
         raise HTTPException(status_code=404, detail="Partida no encontrada")
