@@ -49,7 +49,7 @@ export default function Header({ onLoginClick }) {
             </button>
             <button 
               onClick={onLoginClick}
-              className="px-4 sm:px-5 py-2 text-xs sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all duration-300 shadow-[0_0_15px_-5px_rgba(37,99,235,0.5)] min-h-[40px] touch-target flex items-center justify-center cursor-pointer"
+              className="px-3 sm:px-5 h-[30px] sm:h-auto min-h-[30px] sm:min-h-[40px] py-1 sm:py-2 text-xs sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all duration-300 shadow-[0_0_15px_-5px_rgba(37,99,235,0.5)] flex items-center justify-center cursor-pointer"
             >
               Iniciar Sesión
             </button>
