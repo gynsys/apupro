@@ -30,6 +30,7 @@ from .helpers import (
     compute_budget_summary_metrics,
     ensure_budget_performance_indexes,
     ensure_budget_share_columns,
+    seed_example_budget_for_user,
 )
 
 router = APIRouter()
@@ -78,6 +79,12 @@ def get_budgets(
 ) -> List[Budget]:
     """Lista los presupuestos pertenecientes al usuario autenticado con su conteo de partidas y monto total."""
     ensure_budget_performance_indexes(db)
+    user_id_str = str(current_user.id)
+    # Si el usuario no tiene ningún presupuesto registrado, auto-generar el 'Presupuesto de Ejemplo costbase.net'
+    count_existing = db.query(Budget).filter(Budget.user_id == user_id_str).count()
+    if count_existing == 0:
+        seed_example_budget_for_user(db, current_user.id)
+
     eager_options = (
         selectinload(Budget.items).selectinload(BudgetItem.materials),
         selectinload(Budget.items).selectinload(BudgetItem.equipments),
@@ -87,7 +94,7 @@ def get_budgets(
         budgets = (
             db.query(Budget)
             .options(*eager_options)
-            .filter(Budget.user_id == str(current_user.id))
+            .filter(Budget.user_id == user_id_str)
             .offset(skip)
             .limit(limit)
             .all()

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { costbaseDatabaseService } from '../services/costbaseDatabaseService';
+import { AuthContext } from '../context/AuthContext';
 
 const DatabaseContext = createContext(null);
 
@@ -10,13 +11,15 @@ const DEFAULT_DATABASES = [
 ];
 
 export const DatabaseProvider = ({ children }) => {
+  const { user } = useContext(AuthContext) || {};
+  const currentUserId = user?.id || user?.email || null;
   const [activeDatabase, setActiveDatabase] = useState(DEFAULT_DATABASES[0]);
   const [databases, setDatabases] = useState(DEFAULT_DATABASES);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadDatabases();
-  }, []);
+  }, [currentUserId]);
 
   const loadDatabases = async () => {
     try {

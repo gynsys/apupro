@@ -39,6 +39,7 @@ def list_databases(
         db.execute(text("ALTER TABLE cost360_databases ADD COLUMN IF NOT EXISTS owner_id VARCHAR(255);"))
         db.execute(text("ALTER TABLE cost360_databases ADD COLUMN IF NOT EXISTS is_published BOOLEAN DEFAULT FALSE;"))
         db.execute(text("ALTER TABLE cost360_databases ADD COLUMN IF NOT EXISTS published_at TIMESTAMP WITH TIME ZONE;"))
+        db.execute(text("UPDATE custom_cost_items SET user_id = 1 WHERE user_id IS NULL;"))
         db.commit()
         # Reintentar la consulta
         databases = get_all_databases(db)
@@ -332,6 +333,8 @@ def update_database_route(database_id: str, payload: Cost360DatabaseUpdate, db: 
 @router.delete("/{database_id}")
 def delete_database_route(database_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_arko_admin)):
     """Eliminar una base de datos personalizada"""
+    if database_id in ("personalizada", "master", "compartidos"):
+        raise HTTPException(status_code=400, detail="No se pueden eliminar las bases de datos del sistema.")
     try:
         db_obj = get_database_by_id(db, database_id)
         if not db_obj:

@@ -82,9 +82,9 @@ def get_items_paginated(
         else:
             query = query.filter(CustomCostItem.shared_with_user_id.is_(None))
             if user_id is not None:
-                query = query.filter(or_(CustomCostItem.user_id == user_id, CustomCostItem.user_id.is_(None)))
+                query = query.filter(CustomCostItem.user_id == user_id)
             else:
-                query = query.filter(CustomCostItem.user_id.is_(None))
+                return 0, []
 
         if search:
             words = search.split()
@@ -867,7 +867,7 @@ def delete_custom_apu(
     if not item:
         query = db.query(CustomCostItem)
         if user_id is not None and not is_superadmin:
-            query = query.filter(or_(CustomCostItem.user_id == user_id, CustomCostItem.user_id.is_(None)))
+            query = query.filter(CustomCostItem.user_id == user_id)
         all_custom = query.order_by(CustomCostItem.created_at.desc()).all()
         for ci in all_custom:
             if ci.id.lower().startswith(clean_id.lower()) or clean_id.lower() in ci.id.lower():

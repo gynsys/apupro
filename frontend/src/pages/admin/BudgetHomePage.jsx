@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useContext } from 'react';
+import { AuthContext } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
   Folder, FolderOpen, Plus, FileText, Trash2, Edit3, Copy, Search,
@@ -22,9 +23,10 @@ const CURRENCY_FORMATTER = new Intl.NumberFormat('es-VE', {
 });
 const BUDGETS_CACHE_KEY = 'budgets_summary_cache_v1';
 
-function getCachedBudgets() {
+function getCachedBudgets(userId) {
+  if (!userId) return null;
   try {
-    const raw = sessionStorage.getItem(BUDGETS_CACHE_KEY);
+    const raw = sessionStorage.getItem(`${BUDGETS_CACHE_KEY}_${userId}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : null;
@@ -48,7 +50,9 @@ function buildTotalsMap(list) {
 }
 
 export default function BudgetHomePage() {
-  const initialCached = useMemo(() => getCachedBudgets(), []);
+  const { user } = useContext(AuthContext) || {};
+  const currentUserId = user?.id || user?.email || null;
+  const initialCached = useMemo(() => getCachedBudgets(currentUserId), [currentUserId]);
   const [budgets, setBudgets] = useState(() => initialCached || []);
   const [loading, setLoading] = useState(() => !initialCached);
   const [searchTerm, setSearchTerm] = useState('');
@@ -88,10 +92,12 @@ export default function BudgetHomePage() {
       lastFetchRef.current = Date.now();
       const data = await budgetService.getAll();
       setBudgets(data);
-      try {
-        sessionStorage.setItem(BUDGETS_CACHE_KEY, JSON.stringify(data));
-      } catch {
-        // Ignorar errores de cuota en sessionStorage
+      if (currentUserId) {
+        try {
+          sessionStorage.setItem(`${BUDGETS_CACHE_KEY}_${currentUserId}`, JSON.stringify(data));
+        } catch {
+          // Ignorar errores de cuota en sessionStorage
+        }
       }
 
       const immediateTotals = buildTotalsMap(data);
@@ -125,7 +131,7 @@ export default function BudgetHomePage() {
 
   useEffect(() => {
     loadBudgets(Boolean(initialCached));
-  }, []);
+  }, [currentUserId]);
 
   // Un presupuesto compartido por otro usuario aparece sin refrescar la página, sin parpadeo de spinner.
   useEffect(() => {

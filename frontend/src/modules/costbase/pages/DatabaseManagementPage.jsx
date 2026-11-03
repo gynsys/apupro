@@ -184,8 +184,8 @@ export default function DatabaseManagementPage() {
   };
 
   const confirmDelete = (database) => {
-    if (database.is_master) {
-      toast.error('No se puede eliminar la base de datos maestra');
+    if (database.is_master || database.id === 'personalizada' || database.id === 'compartidos') {
+      toast.error('No se puede eliminar una base de datos del sistema');
       return;
     }
     setDatabaseToDelete(database);
@@ -357,8 +357,10 @@ export default function DatabaseManagementPage() {
             </div>
           </div>
 
-          {/* Tarjetas de Bases Duplicadas */}
-          {databases.map((db) => (
+          {/* Tarjetas de Bases Duplicadas / Personalizadas (excluyendo las virtuales ya mostradas arriba) */}
+          {databases
+            .filter((db) => db.id !== 'personalizada' && db.id !== 'compartidos')
+            .map((db) => (
             <div
               key={db.id}
               className="tarjeta-presupuesto-ambar group cursor-default relative !flex !flex-col !items-stretch justify-between !h-[250px]"

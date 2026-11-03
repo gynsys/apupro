@@ -63,7 +63,6 @@ def _find_custom_cost_item(
     if user_id is not None and not is_superadmin:
         direct_query = direct_query.filter(or_(
             CustomCostItem.user_id == user_id,
-            CustomCostItem.user_id.is_(None),
             CustomCostItem.shared_with_user_id == user_id,
         ))
     ci = direct_query.first()
@@ -75,7 +74,6 @@ def _find_custom_cost_item(
     if user_id is not None and not is_superadmin:
         query = query.filter(or_(
             CustomCostItem.user_id == user_id,
-            CustomCostItem.user_id.is_(None),
             CustomCostItem.shared_with_user_id == user_id,
         ))
     candidates = query.order_by(CustomCostItem.created_at.desc()).all()

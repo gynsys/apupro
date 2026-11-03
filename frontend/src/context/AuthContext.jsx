@@ -96,6 +96,11 @@ export const AuthProvider = ({ children }) => {
         : await loginArkoAdmin(email, password);
 
       if (response.success || response.token_type === 'bearer') {
+        try {
+          sessionStorage.clear();
+        } catch (e) {
+          // Ignorar
+        }
         // Cargar datos reales del usuario tras login exitoso
         const userData = await fetchCurrentUserShared(true);
         const finalUser = userData || { email };
@@ -122,6 +127,11 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       setUser(null);
       setCachedUser(null);
+      try {
+        sessionStorage.clear();
+      } catch (e) {
+        // Ignorar
+      }
     }
   };
 

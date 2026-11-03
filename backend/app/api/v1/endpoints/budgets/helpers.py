@@ -1,14 +1,22 @@
 """
 Helper utilities and database checks for budget endpoints.
 """
+import json
 import math
+from pathlib import Path
 from typing import Any, Optional, Tuple
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.logging import logger
 from app.db.models.backup_logs import BackupLog
-from app.db.models.budget import Budget
+from app.db.models.budget import (
+    Budget,
+    BudgetItem,
+    BudgetAPUMaterial as DBMaterial,
+    BudgetAPUEquipment as DBEquipment,
+    BudgetAPULabor as DBLabor,
+)
 
 _BUDGET_INDEXES_ENSURED: bool = False
 
@@ -165,3 +173,186 @@ def log_backup_action(
     except Exception as e:
         db.rollback()
         logger.error(f"Error al registrar accion de backup en auditoria: {e}", exc_info=True)
+
+
+def seed_example_budget_for_user(db: Session, target_user_id: Any) -> Optional[Budget]:
+    """
+    Crea o clona el 'Presupuesto de Ejemplo costbase.net' para un usuario si no posee ningún presupuesto.
+    """
+    target_user_id_str = str(target_user_id).strip()
+    if not target_user_id_str:
+        return None
+
+    try:
+        existing = db.query(Budget).filter(Budget.user_id == target_user_id_str).first()
+        if existing:
+            return existing
+
+        template = db.query(Budget).filter(
+            Budget.name == "Presupuesto de Ejemplo costbase.net"
+        ).first()
+
+        if template:
+            new_budget = Budget(
+                user_id=target_user_id_str,
+                name=template.name,
+                description=template.description,
+                currency=template.currency,
+                exchange_rate=template.exchange_rate,
+                fcas_percent=template.fcas_percent,
+                admin_percent=template.admin_percent,
+                profit_percent=template.profit_percent,
+                iva_percent=template.iva_percent,
+                labor_bonus=template.labor_bonus,
+                bono_in_fcas=template.bono_in_fcas,
+                material_inflation=template.material_inflation,
+                labor_inflation=template.labor_inflation,
+                equipment_inflation=template.equipment_inflation,
+                company_name=template.company_name,
+                company_rif=template.company_rif,
+                project_name=template.project_name,
+                client_name=template.client_name,
+                ubicacion=template.ubicacion,
+                notes=template.notes
+            )
+            db.add(new_budget)
+            db.flush()
+
+            for item in template.items:
+                new_item = BudgetItem(
+                    budget_id=new_budget.id,
+                    cod_par=item.cod_par,
+                    cov_par=item.cov_par,
+                    description=item.description,
+                    unit=item.unit,
+                    quantity=item.quantity,
+                    performance=item.performance,
+                    order=item.order,
+                    is_chapter=item.is_chapter,
+                    is_pending=item.is_pending
+                )
+                db.add(new_item)
+                db.flush()
+
+                for m in item.materials:
+                    db.add(DBMaterial(
+                        budget_item_id=new_item.id,
+                        codigo=m.codigo,
+                        descripcion=m.descripcion,
+                        unidad=m.unidad,
+                        precio_unitario=m.precio_unitario,
+                        cantidad=m.cantidad,
+                        desperdicio=m.desperdicio
+                    ))
+                for e in item.equipments:
+                    db.add(DBEquipment(
+                        budget_item_id=new_item.id,
+                        codigo=e.codigo,
+                        descripcion=e.descripcion,
+                        cantidad=e.cantidad,
+                        unidad=e.unidad,
+                        precio_unitario=e.precio_unitario,
+                        depreciacion=e.depreciacion
+                    ))
+                for l in item.labors:
+                    db.add(DBLabor(
+                        budget_item_id=new_item.id,
+                        codigo=l.codigo,
+                        descripcion=l.descripcion,
+                        cantidad=l.cantidad,
+                        jornal=l.jornal,
+                        bono=l.bono
+                    ))
+
+            db.commit()
+            db.refresh(new_budget)
+            logger.info("Presupuesto de ejemplo clonado exitosamente para el usuario %s", target_user_id_str)
+            return new_budget
+
+        # Fallback: cargar desde fixture JSON
+        fixture_path = Path(__file__).resolve().parent.parent.parent.parent / "modules" / "control_obra" / "fixtures" / "example_budget.json"
+        if fixture_path.exists():
+            with open(fixture_path, encoding="utf-8") as f:
+                data = json.load(f)
+
+            new_budget = Budget(
+                user_id=target_user_id_str,
+                name=data.get("name", "Presupuesto de Ejemplo costbase.net"),
+                description=data.get("description"),
+                currency=data.get("currency", "USD"),
+                exchange_rate=data.get("exchange_rate", 1.0),
+                fcas_percent=data.get("fcas_percent", 417.0),
+                admin_percent=data.get("admin_percent", 15.0),
+                profit_percent=data.get("profit_percent", 10.0),
+                iva_percent=data.get("iva_percent", 16.0),
+                labor_bonus=data.get("labor_bonus", 0.0),
+                bono_in_fcas=data.get("bono_in_fcas", False),
+                material_inflation=data.get("material_inflation", 0.0),
+                labor_inflation=data.get("labor_inflation", 0.0),
+                equipment_inflation=data.get("equipment_inflation", 0.0),
+                company_name=data.get("company_name", ""),
+                company_rif=data.get("company_rif", ""),
+                project_name=data.get("project_name", ""),
+                client_name=data.get("client_name", ""),
+                ubicacion=data.get("ubicacion", ""),
+                notes=data.get("notes")
+            )
+            db.add(new_budget)
+            db.flush()
+
+            for item_data in data.get("items", []):
+                new_item = BudgetItem(
+                    budget_id=new_budget.id,
+                    cod_par=item_data.get("cod_par", ""),
+                    cov_par=item_data.get("cov_par", ""),
+                    description=item_data.get("description", ""),
+                    unit=item_data.get("unit", ""),
+                    quantity=item_data.get("quantity", 0.0),
+                    performance=item_data.get("performance", 1.0),
+                    order=item_data.get("order", 1),
+                    is_chapter=item_data.get("is_chapter", False),
+                    is_pending=item_data.get("is_pending", False)
+                )
+                db.add(new_item)
+                db.flush()
+
+                for m in item_data.get("materials", []):
+                    db.add(DBMaterial(
+                        budget_item_id=new_item.id,
+                        codigo=m.get("codigo", ""),
+                        descripcion=m.get("descripcion", ""),
+                        unidad=m.get("unidad", ""),
+                        precio_unitario=m.get("precio_unitario", 0.0),
+                        cantidad=m.get("cantidad", 0.0),
+                        desperdicio=m.get("desperdicio", 0.0)
+                    ))
+                for e in item_data.get("equipments", []):
+                    db.add(DBEquipment(
+                        budget_item_id=new_item.id,
+                        codigo=e.get("codigo", ""),
+                        descripcion=e.get("descripcion", ""),
+                        cantidad=e.get("cantidad", 0.0),
+                        unidad=e.get("unidad", ""),
+                        precio_unitario=e.get("precio_unitario", 0.0),
+                        depreciacion=e.get("depreciacion", 1.0)
+                    ))
+                for l in item_data.get("labors", []):
+                    db.add(DBLabor(
+                        budget_item_id=new_item.id,
+                        codigo=l.get("codigo", ""),
+                        descripcion=l.get("descripcion", ""),
+                        cantidad=l.get("cantidad", 0.0),
+                        jornal=l.get("jornal", 0.0),
+                        bono=l.get("bono", 0.0)
+                    ))
+
+            db.commit()
+            db.refresh(new_budget)
+            logger.info("Presupuesto de ejemplo creado desde fixture para el usuario %s", target_user_id_str)
+            return new_budget
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error sembrando presupuesto de ejemplo para {target_user_id}: {e}", exc_info=True)
+        return None
+
+    return None
