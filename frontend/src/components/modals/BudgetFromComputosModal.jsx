@@ -3399,9 +3399,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
         </div>
 
         {/* --- VISTA MÓVIL (< sm) --- */}
-        <div className="sm:hidden flex flex-col p-2 gap-2 bg-[#FEF3C7]">
-          {/* Fila 1 Móvil: Botón Cerrar visible + Título compacto + Barra de Herramientas Deslizable */}
-          <div className="flex items-center justify-between gap-1.5">
+        <div className="sm:hidden flex flex-col p-2 gap-2 bg-[#FEF3C7] border-b border-amber-200">
+          {/* Fila 1 Móvil: Botón Cerrar visible + Título compacto + Barra de Herramientas Deslizable sin desbordes */}
+          <div className="flex items-center justify-between gap-1.5 w-full min-w-0">
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
@@ -3412,23 +3412,30 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
               >
                 <X className="w-4 h-4" />
               </button>
-              <span className="font-extrabold text-amber-950 text-xs truncate max-w-[100px]">
-                Cómputos
-              </span>
-              <span
-                className={`w-2 h-2 rounded-full shrink-0 ${isOnline ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                title={isOnline ? 'En línea' : 'Offline'}
-              />
+              <button
+                type="button"
+                onClick={() => setShowProjectInfoModal(true)}
+                className="flex items-center gap-1 text-left min-w-0 cursor-pointer"
+                title="Toca para editar datos del presupuesto"
+              >
+                <span className="font-extrabold text-amber-950 text-xs truncate max-w-[85px]">
+                  {budgetName || 'Cómputos'}
+                </span>
+                <span
+                  className={`w-2 h-2 rounded-full shrink-0 ${isOnline ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                  title={isOnline ? 'En línea' : 'Offline'}
+                />
+              </button>
             </div>
 
-            {/* Barra de Herramientas Móvil: scroll horizontal sin perder ningún botón */}
-            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar shrink-0 pl-1 py-0.5">
+            {/* Barra de Herramientas Móvil: estrictamente dentro del ancho (flex-1 min-w-0) con scroll horizontal */}
+            <div className="flex-1 min-w-0 overflow-x-auto no-scrollbar flex items-center justify-end gap-1 pl-1 py-0.5">
               <button
                 type="button"
                 onClick={() => setShowProjectInfoModal(true)}
                 disabled={isCommitting}
                 className="p-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 shadow-xs cursor-pointer shrink-0"
-                title="Datos del Presupuesto"
+                title="Datos del Presupuesto (Nombre, Obra, Cliente)"
               >
                 <Edit3 className="w-3.5 h-3.5 text-amber-700" />
               </button>
@@ -3440,22 +3447,21 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                   setShowChapterModal(true);
                 }}
                 disabled={isCommitting}
-                className="p-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 shadow-xs cursor-pointer shrink-0 flex items-center gap-1 text-[11px] font-bold"
+                className="p-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 shadow-xs cursor-pointer shrink-0"
                 title="Agregar Capítulo"
               >
                 <FolderPlus className="w-3.5 h-3.5 text-amber-700" />
-                <span>+ Cap</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleOpenLoadModal}
                 disabled={isCommitting}
-                className="p-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 shadow-xs cursor-pointer shrink-0 flex items-center gap-1 text-[11px] font-bold"
+                className="p-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 shadow-xs cursor-pointer shrink-0 flex items-center gap-0.5 text-[11px] font-bold"
                 title="Abrir cómputos guardados"
               >
                 <FolderOpen className="w-3.5 h-3.5 text-amber-700" />
-                <span>Abrir{savedList.length > 0 ? ` (${savedList.length})` : ''}</span>
+                {savedList.length > 0 && <span className="text-[10px] text-amber-800 font-extrabold">{savedList.length}</span>}
               </button>
 
               <button
@@ -3483,11 +3489,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                   type="button"
                   onClick={handleSendToPartidas}
                   disabled={isCommitting || validCount === 0}
-                  className="px-2 py-1.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs cursor-pointer shrink-0 flex items-center gap-1 text-[11px] font-bold disabled:opacity-40"
+                  className="p-1.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs cursor-pointer shrink-0 disabled:opacity-40"
                   title="Llevar a Partidas"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>A Partidas</span>
                 </button>
               )}
 
@@ -5048,7 +5053,7 @@ M2`}
       )}
 
       {/* BARRA INFERIOR DE ACCIÓN (Siempre accesible en ambas vistas con botón Guardar y Generar) */}
-      <div className="p-3 sm:p-4 bg-[#FEF3C7] border-t border-amber-200 shrink-0">
+      <div className="p-2 sm:p-4 pb-safe bg-[#FEF3C7] border-t border-amber-200 shrink-0">
         <div className="max-w-4xl mx-auto space-y-2.5">
           {commitError && (
             <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
@@ -5088,7 +5093,50 @@ M2`}
           )}
 
           {/* Barra de Guardar Borrador y Confirmación del Presupuesto */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-amber-100/90 border border-amber-300 rounded-2xl p-2.5 shadow-xs">
+          {/* --- VERSIÓN MÓVIL TIPO APP (< sm) --- */}
+          <div className="sm:hidden flex items-center justify-between gap-2 bg-amber-100/95 backdrop-blur border border-amber-300 rounded-2xl p-2 shadow-xs">
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              disabled={isCommitting}
+              className="px-3 py-2 rounded-xl bg-white hover:bg-amber-50 active:bg-amber-100 border border-amber-300 text-amber-950 text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 touch-target"
+              title="Guardar borrador"
+            >
+              {saveStatus ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 animate-pulse" />
+                  <span className="text-emerald-700 font-extrabold text-[11px]">{saveStatus}</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 text-amber-700" />
+                  <span className="text-[11px]">Guardar</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleConfirmAndGenerateBudget}
+              disabled={isCommitting || validCount === 0}
+              className="flex-1 py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md shadow-amber-600/30 disabled:opacity-50 transition-all cursor-pointer touch-target min-w-0"
+            >
+              {isCommitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Generando...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Generar Presupuesto ({validCount})</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* --- VERSIÓN ESCRITORIO CON CAMPO DE NOMBRE COMPLETO (>= sm) --- */}
+          <div className="hidden sm:flex items-center justify-between gap-2.5 bg-amber-100/90 border border-amber-300 rounded-2xl p-2.5 shadow-xs">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <FileCheck2 className="w-4 h-4 text-amber-600 shrink-0 ml-1" />
               <input
@@ -5102,7 +5150,6 @@ M2`}
             </div>
 
             <div className="flex items-center gap-2">
-              {/* BOTÓN GUARDAR BORRADOR (Reemplaza al anterior botón de Nueva Fila) */}
               <button
                 type="button"
                 onClick={handleSaveDraft}
@@ -5137,8 +5184,7 @@ M2`}
                 ) : (
                   <>
                     <CheckCircle2 className="w-4 h-4" />
-                    <span className="sm:hidden">Generar ({validCount})</span>
-                    <span className="hidden sm:inline">Confirmar y Generar Presupuesto ({validCount})</span>
+                    <span>Confirmar y Generar Presupuesto ({validCount})</span>
                   </>
                 )}
               </button>
