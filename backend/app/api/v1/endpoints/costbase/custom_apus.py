@@ -154,7 +154,7 @@ def share_apu_with_user(
     else:
         shared = CustomCostItem(
             id=str(uuid.uuid4()),
-            user_id=current_user.id,
+            user_id=payload.recipient_id,
             description=item.description,
             unit=item.unit or "und",
             performance=item.performance or 1.0,
@@ -196,17 +196,11 @@ def delete_custom_apu_route(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
     db: Session = Depends(get_db)
 ) -> Dict[str, str]:
-    is_superadmin = (
-        getattr(current_user, 'is_superadmin', False) or
-        (current_user.email == 'admin@arko360.net') or
-        getattr(current_user, 'role', '') in ['admin', 'superadmin']
-    )
     try:
         success = delete_custom_apu(
             db=db,
             item_id=item_id,
             user_id=current_user.id,
-            is_superadmin=is_superadmin
         )
         if not success:
             raise HTTPException(status_code=404, detail="Partida personalizada no encontrada")

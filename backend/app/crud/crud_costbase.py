@@ -857,41 +857,25 @@ def delete_custom_apu(
     db: Session,
     item_id: str,
     user_id: Optional[int] = None,
-    is_superadmin: bool = False
 ) -> bool:
+    """Elimina un APU personalizado solo si pertenece al usuario autenticado.
+
+    No hay excepciones para superadmin ni búsquedas por prefijo/código: el
+    identificador debe ser el UUID exacto y el dueño debe coincidir.
+    """
+    if user_id is None:
+        raise PermissionError("No tienes permiso para eliminar esta partida personalizada")
+
     clean_id = item_id.strip()
-    # 1. Buscar por UUID exacto (case-insensitive)
-    item = db.query(CustomCostItem).filter(func.lower(CustomCostItem.id) == clean_id.lower()).first()
-
-    # 2. Si no coincide, buscar por prefijo o dentro de apu_data
-    if not item:
-        query = db.query(CustomCostItem)
-        if user_id is not None and not is_superadmin:
-            query = query.filter(CustomCostItem.user_id == user_id)
-        all_custom = query.order_by(CustomCostItem.created_at.desc()).all()
-        for ci in all_custom:
-            if ci.id.lower().startswith(clean_id.lower()) or clean_id.lower() in ci.id.lower():
-                item = ci
-                break
-            try:
-                data = json.loads(ci.apu_data) if isinstance(ci.apu_data, str) else ci.apu_data
-                if isinstance(data, dict):
-                    codes = [
-                        data.get("cod_par"), data.get("CodPar"),
-                        data.get("cov_par"), data.get("CovPar"),
-                        data.get("id"), data.get("custom_id")
-                    ]
-                    if any(c and str(c).strip().upper() == clean_id.upper() for c in codes):
-                        item = ci
-                        break
-            except Exception:
-                continue
-
+    item = (
+        db.query(CustomCostItem)
+        .filter(func.lower(CustomCostItem.id) == clean_id.lower())
+        .first()
+    )
     if not item:
         return False
 
-    # Verificar permiso: solo superadmin o el dueño de la partida
-    if not is_superadmin and item.user_id is not None and user_id is not None and item.user_id != user_id:
+    if item.user_id is None or int(item.user_id) != int(user_id):
         raise PermissionError("No tienes permiso para eliminar esta partida personalizada")
 
     db.delete(item)

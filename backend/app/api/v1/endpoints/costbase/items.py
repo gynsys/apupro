@@ -54,28 +54,28 @@ def _find_custom_cost_item(
     user_id: Optional[int] = None,
     is_superadmin: bool = False
 ) -> Optional[CustomCostItem]:
+    if user_id is None:
+        return None
     target = item_code.strip()
     target_lower = target.lower()
     target_upper = target.upper()
 
-    # 1. Búsqueda directa por UUID (case-insensitive)
+    # 1. Búsqueda directa por UUID (case-insensitive), solo del usuario o
+    #    de un APU compartido con él. Un superadmin no puede ver APUs ajenos.
     direct_query = db.query(CustomCostItem).filter(func.lower(CustomCostItem.id) == target_lower)
-    if user_id is not None and not is_superadmin:
-        direct_query = direct_query.filter(or_(
-            CustomCostItem.user_id == user_id,
-            CustomCostItem.shared_with_user_id == user_id,
-        ))
+    direct_query = direct_query.filter(or_(
+        CustomCostItem.user_id == user_id,
+        CustomCostItem.shared_with_user_id == user_id,
+    ))
     ci = direct_query.first()
     if ci:
         return ci
 
-    # 2. Búsqueda en partidas del usuario (o todas si es superadmin), ordenadas por más recientes primero
-    query = db.query(CustomCostItem)
-    if user_id is not None and not is_superadmin:
-        query = query.filter(or_(
-            CustomCostItem.user_id == user_id,
-            CustomCostItem.shared_with_user_id == user_id,
-        ))
+    # 2. Búsqueda en partidas del usuario, nunca en las de otros usuarios.
+    query = db.query(CustomCostItem).filter(or_(
+        CustomCostItem.user_id == user_id,
+        CustomCostItem.shared_with_user_id == user_id,
+    ))
     candidates = query.order_by(CustomCostItem.created_at.desc()).all()
 
     fallback_match: Optional[CustomCostItem] = None
@@ -487,7 +487,7 @@ def update_master_apu_route(
     if database_id in ("personalizada", "compartidos") or clean_code.startswith("CUST-") or item_code.startswith("CUST-") or _is_uuid_like(clean_code) or _is_uuid_like(item_code):
         ci = _find_custom_cost_item(db, clean_code, user_id=user_id, is_superadmin=is_superadmin) or _find_custom_cost_item(db, item_code, user_id=user_id, is_superadmin=is_superadmin)
         if ci:
-            if not is_superadmin and ci.user_id is not None and user_id is not None and ci.user_id != user_id:
+            if ci.user_id is None or int(ci.user_id) != int(user_id):
                 raise HTTPException(status_code=403, detail="No tienes permisos para editar esta partida")
 
             if payload.description is not None:
@@ -561,7 +561,7 @@ def update_master_apu_route(
     if not updated_item:
         ci = _find_custom_cost_item(db, clean_code, user_id=user_id, is_superadmin=is_superadmin) or _find_custom_cost_item(db, item_code, user_id=user_id, is_superadmin=is_superadmin)
         if ci:
-            if not is_superadmin and ci.user_id is not None and user_id is not None and ci.user_id != user_id:
+            if ci.user_id is None or int(ci.user_id) != int(user_id):
                 raise HTTPException(status_code=403, detail="No tienes permisos para editar esta partida")
             if payload.description is not None:
                 ci.description = payload.description.strip()
