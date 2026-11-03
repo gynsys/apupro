@@ -283,23 +283,14 @@ export default function AppLayout() {
       <header
         className="print:hidden min-h-[3.5rem] pt-safe sticky top-0 z-50 flex items-center px-3 sm:px-4 gap-2 sm:gap-3"
         style={{
-          background: 'rgba(255,255,255,0.75)',
+          background: 'rgba(255,255,255,0.85)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
           borderBottom: '1px solid rgba(255,255,255,0.6)',
           boxShadow: '0 1px 24px 0 rgba(80,100,200,0.07)',
         }}
       >
-        {/* Hamburger */}
-        <button
-          className="lg:hidden p-2 rounded-xl text-slate-500 hover:bg-white/80 transition-colors touch-target flex items-center justify-center cursor-pointer"
-          onClick={() => setSidebarOpen(true)}
-          aria-label="Abrir menú"
-        >
-          <Menu size={22} />
-        </button>
-
-        {/* Logo */}
+        {/* Logo / Brand */}
         <button
           className="flex items-center gap-2 cursor-pointer"
           onClick={() => navigate('/budgets')}
@@ -307,20 +298,21 @@ export default function AppLayout() {
           <div className="bg-blue-600 text-white p-1.5 rounded-xl shadow-sm">
             <Layout size={18} />
           </div>
-          <span className="text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-600 hidden sm:block">
+          <span className="text-base sm:text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-600 block">
             CostBase
           </span>
         </button>
 
-        <div className="flex-1" />
+        <div className="flex-1 min-w-0" />
         <div id="header-actions-portal" className="flex items-center" />
 
         {/* Right controls */}
         {isAuthenticated ? (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+            {/* Solo en desktop: Ayuda, Home y Logout visible */}
             <button
               onClick={() => setShowHelpDrawer(true)}
-              className="p-2 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50/70 transition-colors cursor-pointer min-w-[38px] min-h-[38px] flex items-center justify-center"
+              className="hidden md:flex p-2 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50/70 transition-colors cursor-pointer min-w-[38px] min-h-[38px] items-center justify-center"
               title="Centro de Ayuda"
             >
               <HelpCircle size={19} />
@@ -328,7 +320,7 @@ export default function AppLayout() {
             <NotificationBell />
             <button
               onClick={() => navigate('/budgets')}
-              className="p-2 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50/70 transition-colors min-w-[38px] min-h-[38px] flex items-center justify-center cursor-pointer"
+              className="hidden md:flex p-2 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50/70 transition-colors min-w-[38px] min-h-[38px] items-center justify-center cursor-pointer"
               title="Inicio"
             >
               <Home size={19} />
@@ -342,7 +334,7 @@ export default function AppLayout() {
             </button>
             <button
               onClick={handleLogout}
-              className="p-2 rounded-xl text-slate-500 hover:text-red-500 hover:bg-red-50/70 transition-colors cursor-pointer min-w-[38px] min-h-[38px] flex items-center justify-center"
+              className="hidden md:flex p-2 rounded-xl text-slate-500 hover:text-red-500 hover:bg-red-50/70 transition-colors cursor-pointer min-w-[38px] min-h-[38px] items-center justify-center"
               title="Cerrar Sesión"
             >
               <LogOut size={19} />
@@ -402,16 +394,124 @@ export default function AppLayout() {
               <div className="flex-1 overflow-y-auto">
                 <SidebarContent isMobile={true} />
               </div>
+              {/* Pie del menú móvil con opciones rápidas */}
+              <div className="p-3 border-t border-slate-200/70 bg-slate-50/80 flex flex-col gap-2 shrink-0">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      setSidebarOpen(false);
+                      setShowHelpDrawer(true);
+                    }}
+                    className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                  >
+                    <HelpCircle size={15} className="text-blue-600" />
+                    Ayuda
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSidebarOpen(false);
+                      setShowAccountModal(true);
+                    }}
+                    className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                  >
+                    <Settings size={15} className="text-slate-600" />
+                    Ajustes
+                  </button>
+                </div>
+                {isAuthenticated && (
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-600 hover:bg-red-100"
+                  >
+                    <LogOut size={15} />
+                    Cerrar Sesión
+                  </button>
+                )}
+              </div>
             </div>
           </>
         )}
 
         {/* ── MAIN CONTENT ──────────────────────────────────── */}
-        <main className="flex-1 overflow-y-auto print:h-auto print:block print:overflow-visible min-w-0 relative">
+        <main className="flex-1 overflow-y-auto print:h-auto print:block print:overflow-visible min-w-0 relative pb-16 lg:pb-0">
           <Outlet />
         </main>
 
       </div>
+
+      {/* ── MOBILE BOTTOM NAVIGATION BAR (lg:hidden) ────────── */}
+      <nav
+        aria-label="Navegación móvil inferior"
+        className="print:hidden lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] pb-safe transition-transform duration-200"
+      >
+        <div className="grid grid-cols-5 h-14 items-center px-1">
+          {/* 1. Presupuestos */}
+          <Link
+            to="/budgets"
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 min-h-[44px] touch-target rounded-lg transition-colors ${
+              location.pathname.startsWith('/budgets') && !location.pathname.includes('/costbase')
+                ? 'text-blue-600 font-bold'
+                : 'text-slate-500 hover:text-slate-800 font-medium'
+            }`}
+          >
+            <FileText size={20} className={location.pathname.startsWith('/budgets') && !location.pathname.includes('/costbase') ? 'stroke-[2.4]' : 'stroke-[1.8]'} />
+            <span className="text-[10px] leading-tight truncate">Presupuestos</span>
+          </Link>
+
+          {/* 2. Bases de Datos */}
+          <Link
+            to="/costbase"
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 min-h-[44px] touch-target rounded-lg transition-colors ${
+              (location.pathname === '/costbase' || location.pathname === '/costbase/databases' || location.pathname.startsWith('/cost360')) && !location.pathname.includes('ai-generator')
+                ? 'text-blue-600 font-bold'
+                : 'text-slate-500 hover:text-slate-800 font-medium'
+            }`}
+          >
+            <Database size={20} className={(location.pathname === '/costbase' || location.pathname === '/costbase/databases' || location.pathname.startsWith('/cost360')) && !location.pathname.includes('ai-generator') ? 'stroke-[2.4]' : 'stroke-[1.8]'} />
+            <span className="text-[10px] leading-tight truncate">Bases</span>
+          </Link>
+
+          {/* 3. Crear APU con IA */}
+          <Link
+            to="/costbase/ai-generator?mode=ia"
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 min-h-[44px] touch-target rounded-lg transition-colors ${
+              location.pathname.includes('ai-generator')
+                ? 'text-indigo-600 font-bold'
+                : 'text-slate-500 hover:text-slate-800 font-medium'
+            }`}
+          >
+            <div className={`p-1 rounded-full ${location.pathname.includes('ai-generator') ? 'bg-indigo-100 text-indigo-600' : 'text-slate-500'}`}>
+              <Cpu size={19} className={location.pathname.includes('ai-generator') ? 'stroke-[2.4]' : 'stroke-[1.8]'} />
+            </div>
+            <span className="text-[10px] leading-tight truncate">Crear APU</span>
+          </Link>
+
+          {/* 4. Calculadora FCAS */}
+          <Link
+            to="/fcas"
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 min-h-[44px] touch-target rounded-lg transition-colors ${
+              location.pathname.startsWith('/fcas')
+                ? 'text-blue-600 font-bold'
+                : 'text-slate-500 hover:text-slate-800 font-medium'
+            }`}
+          >
+            <Calculator size={20} className={location.pathname.startsWith('/fcas') ? 'stroke-[2.4]' : 'stroke-[1.8]'} />
+            <span className="text-[10px] leading-tight truncate">FCAS</span>
+          </Link>
+
+          {/* 5. Menú Más */}
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 min-h-[44px] touch-target rounded-lg transition-colors cursor-pointer ${
+              sidebarOpen ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-800 font-medium'
+            }`}
+          >
+            <Menu size={20} className={sidebarOpen ? 'stroke-[2.4]' : 'stroke-[1.8]'} />
+            <span className="text-[10px] leading-tight truncate">Más</span>
+          </button>
+        </div>
+      </nav>
       
       {/* Input oculto para Crear Presupuesto desde Archivo */}
       <input

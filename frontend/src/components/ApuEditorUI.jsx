@@ -95,6 +95,7 @@ export default function ApuEditorUI({
     isOpen: false,
     targetRow: null
   });
+  const [mobileTab, setMobileTab] = useState('all');
   const sectionRows = (type) => filterBlankComponentRows(item[type]);
 
   useEffect(() => {
@@ -266,8 +267,35 @@ export default function ApuEditorUI({
         </div>
       </div>
 
+      {/* Selector de Pestañas en Móvil (< md) */}
+      <div className="md:hidden sticky top-14 z-20 bg-slate-50/95 backdrop-blur py-1.5 -mx-2 px-2 border-b border-slate-200">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          {[
+            { key: 'all', label: 'Todo' },
+            { key: 'materials', label: `1. Materiales (${sectionRows('materials').length})` },
+            { key: 'equipments', label: `2. Equipos (${sectionRows('equipments').length})` },
+            { key: 'labors', label: `3. Mano Obra (${sectionRows('labors').length})` },
+            { key: 'summary', label: '4. Resumen & P.U.' }
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setMobileTab(tab.key)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer touch-target ${
+                mobileTab === tab.key
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="space-y-6">
         {/* 1. MATERIALES */}
+        {(mobileTab === 'all' || mobileTab === 'materials') && (
         <div className="bg-white border border-slate-400 rounded-lg shadow-sm overflow-hidden">
           <div className="bg-slate-100 px-4 py-2 border-b border-slate-400 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -399,8 +427,10 @@ export default function ApuEditorUI({
             </span>
           </div>
         </div>
+        )}
 
         {/* 2. EQUIPOS */}
+        {(mobileTab === 'all' || mobileTab === 'equipments') && (
         <div className="bg-white border border-slate-400 rounded-lg shadow-sm overflow-hidden">
           <div className="bg-slate-100 px-4 py-2 border-b border-slate-400 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -519,8 +549,10 @@ export default function ApuEditorUI({
             </div>
           </div>
         </div>
+        )}
 
         {/* 3. MANO DE OBRA */}
+        {(mobileTab === 'all' || mobileTab === 'labors') && (
         <div className="bg-white border border-slate-400 rounded-lg shadow-sm overflow-hidden">
           <div className="bg-slate-100 px-4 py-2 border-b border-slate-400 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -721,10 +753,11 @@ export default function ApuEditorUI({
             </div>
           </div>
         </div>
+        )}
 
         {/* BOTTOM SUMMARY BLOCK */}
-        {/* BOTTOM SUMMARY BLOCK (CLASSIC LULO STYLE) */}
-        <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-end gap-4 sm:gap-6 mt-6 sm:mt-8">
+        {(mobileTab === 'all' || mobileTab === 'summary') && (
+          <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-end gap-4 sm:gap-6 mt-6 sm:mt-8">
           {/* Left Stats Block */}
           <div className="w-full lg:w-auto bg-slate-50 border border-slate-300 shadow-sm p-1 overflow-x-auto">
             <table className="w-full text-xs font-bold text-slate-700 border-collapse min-w-[280px]">
@@ -892,6 +925,7 @@ export default function ApuEditorUI({
             </table>
           </div>
         </div>
+        )}
 
       </div>
 

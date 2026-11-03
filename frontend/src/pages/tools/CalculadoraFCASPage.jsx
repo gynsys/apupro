@@ -119,7 +119,7 @@ export default function CalculadoraFCASPage() {
   };
 
   return (
-    <div className="absolute inset-0 p-4 md:p-6 overflow-hidden flex flex-col bg-slate-50 print:static print:h-auto print:overflow-visible print:bg-white print:p-0">
+    <div className="absolute top-0 left-0 right-0 bottom-16 lg:bottom-0 p-4 md:p-6 overflow-hidden flex flex-col bg-slate-50 print:static print:h-auto print:overflow-visible print:bg-white print:p-0">
       <CalculadoraFCAS
         isPage={true}
         initialSalarioBase={

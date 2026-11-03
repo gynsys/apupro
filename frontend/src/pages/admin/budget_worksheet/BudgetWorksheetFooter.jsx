@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { FileSpreadsheet, Printer } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { FileSpreadsheet, Printer, ChevronUp, X } from 'lucide-react';
 import { calculateBudgetIncidence } from '../../../utils/apuCalculations';
 import { exportResourceSummaryToExcel, printResourceSummary } from '../../../utils/resourceSummaryExport';
 
@@ -12,6 +12,7 @@ export default function BudgetWorksheetFooter({
   ivaAmount,
   totalGeneral,
 }) {
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const incidence = useMemo(() => calculateBudgetIncidence(budget), [budget]);
 
   if (!budget.items || budget.items.length === 0) return null;
@@ -77,7 +78,15 @@ export default function BudgetWorksheetFooter({
           <span className="flex-1 text-right text-[11px] font-mono font-semibold text-slate-800 pr-1 whitespace-nowrap">
             {currencySymbol} {money(adminAndProfitAmount)}
           </span>
-          <div className="w-[78px] shrink-0" />
+          <span className="w-10 shrink-0" />
+          <div className="invisible flex items-center gap-0.5 shrink-0 pl-1 border-l border-transparent">
+            <div className="p-0.5">
+              <div className="w-3.5 h-3.5" />
+            </div>
+            <div className="p-0.5">
+              <div className="w-3.5 h-3.5" />
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -85,41 +94,99 @@ export default function BudgetWorksheetFooter({
 
   return (
     <div className="mt-2.5 sm:mt-4 flex-none">
-      {/* MOBILE COMPACT TOTALS & NOTES (< md) */}
-      <div className="md:hidden flex flex-col gap-2">
-        <div className="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-xs focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-100 transition-all">
-          <textarea
-            value={notesText}
-            onChange={(e) => setNotesText(e.target.value)}
-            onBlur={onSaveNotes}
-            placeholder="Notas u observaciones del presupuesto..."
-            rows={1}
-            className="w-full bg-transparent border-0 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none resize-none leading-normal"
-          />
+      {/* MOBILE COMPACT STICKY SUMMARY BAR & BOTTOM SHEET (< md) */}
+      <div className="md:hidden">
+        {/* Barra Compacta Flotante */}
+        <div className="bg-white/95 backdrop-blur border border-slate-300 rounded-xl px-3 py-2 shadow-md flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[10px] uppercase font-bold text-slate-500 shrink-0">TOTAL:</span>
+            <span className="font-mono font-black text-slate-900 text-sm truncate">
+              {currencySymbol} {money(totalGeneral)}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMobileSheetOpen(true)}
+            className="flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 px-2.5 py-1 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer touch-target"
+          >
+            <ChevronUp size={14} />
+            <span>Desglose</span>
+          </button>
         </div>
 
-        <div className="bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">SUBTOTAL</span>
-            <span className="font-mono font-bold text-slate-700 text-xs leading-none">
-              {subtotalPresupuesto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-          </div>
-          <div className="flex flex-col text-center px-2 border-x border-slate-200">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">I.V.A. ({budget.iva_percent ?? 16}%)</span>
-            <span className="font-mono font-bold text-slate-700 text-xs leading-none">
-              {ivaAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-          </div>
-          <div className="flex flex-col text-right">
-            <span className="text-[10px] text-blue-600 font-bold uppercase tracking-wider leading-none mb-0.5">TOTAL ({budget.currency})</span>
-            <span className="font-mono font-extrabold text-blue-900 text-sm leading-none">
-              {totalGeneral.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-          </div>
-        </div>
+        {/* BOTTOM SHEET MODAL */}
+        {mobileSheetOpen && (
+          <div className="fixed inset-0 z-50 flex flex-col justify-end">
+            <div
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
+              onClick={() => setMobileSheetOpen(false)}
+            />
+            <div className="relative bg-white rounded-t-3xl shadow-2xl p-4 pb-safe max-h-[85dvh] overflow-y-auto flex flex-col gap-3 z-10 border-t border-slate-200 animate-in slide-in-from-bottom-6 duration-200">
+              {/* Drag Handle & Header */}
+              <div className="flex flex-col items-center gap-1.5 -mt-1 pb-2 border-b border-slate-100">
+                <div className="w-10 h-1 bg-slate-300 rounded-full" />
+                <div className="flex items-center justify-between w-full pt-1">
+                  <h3 className="font-bold text-sm text-slate-800">Resumen y Desglose de Totales</h3>
+                  <button
+                    type="button"
+                    onClick={() => setMobileSheetOpen(false)}
+                    className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 text-xs"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
 
-        <IncidenceCard compact />
+              {/* Totales principales */}
+              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex flex-col gap-2">
+                <div className="flex justify-between items-center text-xs text-slate-600">
+                  <span>Subtotal Costo Directo + Admin/Utilidad:</span>
+                  <span className="font-mono font-semibold text-slate-800">
+                    {currencySymbol} {money(subtotalPresupuesto)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-xs text-slate-600">
+                  <span>I.V.A. ({budget.iva_percent ?? 16}%):</span>
+                  <span className="font-mono font-semibold text-slate-800">
+                    {currencySymbol} {money(ivaAmount)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm font-bold text-blue-900 pt-2 border-t border-slate-200">
+                  <span>TOTAL GENERAL ({budget.currency}):</span>
+                  <span className="font-mono text-base font-black text-blue-700">
+                    {currencySymbol} {money(totalGeneral)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Incidencias de Insumos */}
+              <IncidenceCard compact />
+
+              {/* Notas del Presupuesto */}
+              <div className="bg-white p-2.5 rounded-2xl border border-slate-200">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                  Notas u Observaciones:
+                </label>
+                <textarea
+                  value={notesText}
+                  onChange={(e) => setNotesText(e.target.value)}
+                  onBlur={onSaveNotes}
+                  placeholder="Escribe notas, términos de validez o condiciones de pago..."
+                  rows={2}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-500 resize-none"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setMobileSheetOpen(false)}
+                className="w-full py-2.5 bg-blue-600 text-white font-semibold rounded-xl text-xs hover:bg-blue-700 transition-colors shadow-sm cursor-pointer"
+              >
+                Cerrar Desglose
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* DESKTOP TOTALS & NOTES (>= md) */}

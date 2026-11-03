@@ -22,18 +22,19 @@ export default function BudgetWorksheetToolbar({
         <Plus size={18} /> Agregar Partida
       </button>
 
-      <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
+      {/* Fila de Acciones: en móvil chips con scroll horizontal suave; en desktop fila flex */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 pt-0.5 w-full sm:w-auto -mx-1 px-1 sm:mx-0 sm:px-0">
         <button  
           onClick={onOpenChapterModal}
-          className="flex items-center justify-center gap-2 bg-white border border-slate-400 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-3 py-1.5 rounded-xl font-medium transition-all duration-200 text-xs sm:text-sm cursor-pointer shadow-xs"
+          className="flex items-center justify-center gap-1.5 bg-white border border-slate-300 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-3 py-1.5 rounded-xl font-medium transition-all duration-200 text-xs sm:text-sm cursor-pointer shadow-xs whitespace-nowrap shrink-0 touch-target"
         >
-          <FolderPlus size={16} className="shrink-0" /> <span className="truncate">Agregar Capítulo</span>
+          <FolderPlus size={16} className="shrink-0 text-amber-600" /> <span>+ Capítulo</span>
         </button>
 
         <button
           onClick={onExportExcel}
           disabled={exportingExcel}
-          className="flex items-center justify-center gap-2 bg-white border border-slate-400 hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 text-xs sm:text-sm cursor-pointer shadow-xs"
+          className="flex items-center justify-center gap-1.5 bg-white border border-slate-300 hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 text-xs sm:text-sm cursor-pointer shadow-xs whitespace-nowrap shrink-0 touch-target"
           title="Exportar presupuesto a Excel"
         >
           {exportingExcel ? (
@@ -41,14 +42,14 @@ export default function BudgetWorksheetToolbar({
           ) : (
             <ExcelIcon size={16} className="text-emerald-600 shrink-0" />
           )}
-          <span className="truncate">Exportar Excel</span>
+          <span>Excel</span>
         </button>
 
         {onRecalibratePerformances && (
           <button
             onClick={onRecalibratePerformances}
             disabled={recalibratingPerformances}
-            className="flex items-center justify-center gap-1.5 bg-white border border-slate-400 hover:border-amber-500 hover:bg-amber-50 hover:text-amber-800 text-slate-700 px-3 py-1.5 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 text-xs sm:text-sm cursor-pointer shadow-xs"
+            className="flex items-center justify-center gap-1.5 bg-white border border-slate-300 hover:border-amber-500 hover:bg-amber-50 hover:text-amber-800 text-slate-700 px-3 py-1.5 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 text-xs sm:text-sm cursor-pointer shadow-xs whitespace-nowrap shrink-0 touch-target"
             title="Recalibrar rendimientos según normas técnicas COVENIN y cuadrillas reales"
           >
             {recalibratingPerformances ? (
@@ -56,23 +57,23 @@ export default function BudgetWorksheetToolbar({
             ) : (
               <Gauge size={16} className="text-amber-600 shrink-0" />
             )}
-            <span className="truncate">Recalibrar Rendimientos</span>
+            <span>Recalibrar</span>
           </button>
         )}
 
         {/* VISIBLES EN MÓVIL (< md) */}
         <button 
           onClick={() => setShowSettings(!showSettings)}
-          className="md:hidden flex items-center justify-center gap-2 bg-white border border-slate-400 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-3 py-1.5 rounded font-medium transition-all duration-200 text-xs cursor-pointer shadow-xs"
+          className="md:hidden flex items-center justify-center gap-1.5 bg-white border border-slate-300 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-3 py-1.5 rounded-xl font-medium transition-all duration-200 text-xs cursor-pointer shadow-xs whitespace-nowrap shrink-0 touch-target"
         >
-          <Settings size={16} className="shrink-0 text-slate-600" /> <span className="truncate">Configuración</span>
+          <Settings size={15} className="shrink-0 text-slate-600" /> <span>Ajustes</span>
         </button>
 
         <button 
           onClick={() => setShowPrintModal(true)}
-          className="md:hidden flex items-center justify-center gap-2 bg-white border border-slate-400 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-3 py-1.5 rounded font-medium transition-all duration-200 text-xs cursor-pointer shadow-xs"
+          className="md:hidden flex items-center justify-center gap-1.5 bg-white border border-slate-300 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-3 py-1.5 rounded-xl font-medium transition-all duration-200 text-xs cursor-pointer shadow-xs whitespace-nowrap shrink-0 touch-target"
         >
-          <Printer size={16} className="shrink-0 text-amber-600" /> <span className="truncate">Imprimir</span>
+          <Printer size={15} className="shrink-0 text-slate-600" /> <span>Imprimir</span>
         </button>
       </div>
     </div>

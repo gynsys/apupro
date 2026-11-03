@@ -359,7 +359,14 @@ export default function DatabaseManagementPage() {
 
           {/* Tarjetas de Bases Duplicadas / Personalizadas (excluyendo las virtuales ya mostradas arriba) */}
           {databases
-            .filter((db) => db.id !== 'personalizada' && db.id !== 'compartidos')
+            .filter((db) => {
+              const id = (db.id || '').toLowerCase();
+              const name = (db.name || '').trim().toLowerCase();
+              return id !== 'personalizada' && 
+                     id !== 'compartidos' && 
+                     name !== 'base personalizada' && 
+                     name !== 'compartidos conmigo';
+            })
             .map((db) => (
             <div
               key={db.id}

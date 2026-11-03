@@ -169,7 +169,7 @@ const Cost360Dashboard = () => {
   ];
 
   return (
-    <div className="absolute inset-0 p-2 sm:p-4 md:p-6 flex flex-col overflow-hidden gap-3 sm:gap-4">
+    <div className="absolute top-0 left-0 right-0 bottom-16 lg:bottom-0 p-2 sm:p-4 md:p-6 flex flex-col overflow-hidden gap-3 sm:gap-4">
 
       <div className="rounded-2xl overflow-hidden" style={glassStrong}>
         <div

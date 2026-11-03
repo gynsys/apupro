@@ -43,6 +43,13 @@ def list_databases(
         db.commit()
         # Reintentar la consulta
         databases = get_all_databases(db)
+
+    # Asegurar que registros huérfanos sin user_id se asignen al administrador principal (user 1)
+    try:
+        db.execute(text("UPDATE custom_cost_items SET user_id = 1 WHERE user_id IS NULL;"))
+        db.commit()
+    except Exception:
+        db.rollback()
         
     # Filtrar por bases maestras o bases que le pertenecen al usuario
     user_dbs = []

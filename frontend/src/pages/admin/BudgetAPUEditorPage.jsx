@@ -660,165 +660,269 @@ export default function BudgetAPUEditorPage() {
       )}
       
       <div className="print:hidden flex flex-col min-h-full">
-        {/* TOOLBAR */}
-        <div className="flex items-center justify-between mb-4 sticky top-0 z-30 bg-gray-50/95 backdrop-blur py-3 px-4 md:px-6 border-b border-gray-200/50 shadow-sm">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate(`/budgets/${id}`)}
-              className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 hover:border-blue-400 hover:shadow-md transition-all duration-200 shrink-0 shadow-sm"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <div className="flex items-center gap-3">
-              {/* Indicador de Partida (ej. 1/88, 50/88) */}
-              <div 
-                className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-sm"
-                title={`Partida ${currentPosition} de ${totalApus} del presupuesto`}
-              >
-                <Calculator size={16} className="text-blue-600 shrink-0" />
-                <span className="text-base md:text-lg font-black text-slate-800 leading-none font-mono">
-                  {currentPosition}/{totalApus}
-                </span>
-              </div>
-              
-              {/* Navegación APUs */}
-              <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+        {/* TOOLBAR (Mobile-First y Responsive) */}
+        <div className="sticky top-0 z-30 bg-gray-50/95 backdrop-blur border-b border-gray-200/50 shadow-sm mb-4">
+          {/* VISTA MÓVIL (< md) */}
+          <div className="md:hidden flex flex-col gap-2 p-2.5">
+            {/* Fila 1: Botón volver, posición, navegación y acciones */}
+            <div className="flex items-center justify-between gap-1.5">
+              <div className="flex items-center gap-1.5 min-w-0">
                 <button
-                  onClick={() => prevItem && navigate(`/budgets/${id}/item/${prevItem.id}`)}
-                  disabled={!prevItem}
-                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer disabled:cursor-not-allowed"
-                  title={prevItem ? `Ir a APU anterior (${currentPosition - 1}/${totalApus})` : "Este es el primer APU"}
+                  onClick={() => navigate(`/budgets/${id}`)}
+                  className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 text-slate-700 shrink-0 touch-target flex items-center justify-center shadow-xs"
+                  title="Volver"
                 >
-                  <ChevronLeft size={20} className="text-slate-700" />
+                  <ArrowLeft size={18} />
                 </button>
-                <div className="w-px h-4 bg-slate-200 mx-1"></div>
-                <button
-                  onClick={() => nextItem && navigate(`/budgets/${id}/item/${nextItem.id}`)}
-                  disabled={!nextItem}
-                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer disabled:cursor-not-allowed"
-                  title={nextItem ? `Ir a siguiente APU (${currentPosition + 1}/${totalApus})` : "Este es el último APU"}
+                <div 
+                  className="flex items-center gap-1 bg-white px-2.5 py-1.5 rounded-xl border border-slate-200 shadow-xs shrink-0"
+                  title={`Partida ${currentPosition} de ${totalApus}`}
                 >
-                  <ChevronRight size={20} className="text-slate-700" />
-                </button>
+                  <Calculator size={14} className="text-blue-600 shrink-0" />
+                  <span className="text-xs font-black text-slate-800 font-mono">
+                    {currentPosition}/{totalApus}
+                  </span>
+                </div>
+                {/* Navegación APUs */}
+                <div className="flex items-center bg-white border border-slate-200 rounded-xl p-0.5 shadow-xs shrink-0">
+                  <button
+                    onClick={() => prevItem && navigate(`/budgets/${id}/item/${prevItem.id}`)}
+                    disabled={!prevItem}
+                    className="p-1 rounded hover:bg-slate-100 disabled:opacity-25"
+                    title="Anterior APU"
+                  >
+                    <ChevronLeft size={18} className="text-slate-700" />
+                  </button>
+                  <button
+                    onClick={() => nextItem && navigate(`/budgets/${id}/item/${nextItem.id}`)}
+                    disabled={!nextItem}
+                    className="p-1 rounded hover:bg-slate-100 disabled:opacity-25"
+                    title="Siguiente APU"
+                  >
+                    <ChevronRight size={18} className="text-slate-700" />
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+              {/* Botones de acción derecha */}
+              <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => history.undo().catch(() => toast.error('No se pudo deshacer'))}
                   disabled={!history.canUndo || history.busy}
-                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                  title="Deshacer (Ctrl+Z)"
+                  className="p-1.5 bg-white border border-slate-300 rounded-xl text-slate-700 disabled:opacity-25 shadow-xs"
+                  title="Deshacer"
                 >
-                  <Undo2 size={19} className="text-slate-700" />
+                  <Undo2 size={16} />
                 </button>
-                <div className="w-px h-4 bg-slate-200 mx-1"></div>
                 <button
-                  onClick={() => history.redo().catch(() => toast.error('No se pudo rehacer'))}
-                  disabled={!history.canRedo || history.busy}
-                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                  title="Rehacer (Ctrl+Y)"
+                  onClick={() => setPrintModalOpen(true)}
+                  className="p-1.5 bg-white border border-slate-300 rounded-xl text-slate-700 shadow-xs"
+                  title="Imprimir"
                 >
-                  <Redo2 size={19} className="text-slate-700" />
+                  <Printer size={16} />
                 </button>
+                <ExportApuExcelButton
+                  item={item}
+                  materials={item.materials || []}
+                  equipments={item.equipments || []}
+                  labors={item.labors || []}
+                  settings={{
+                    ...budget,
+                    currency: budget.currency,
+                    exchange_rate: budget.exchange_rate,
+                    fcas_percent: budget.fcas_percent,
+                    bono_in_fcas: budget.bono_in_fcas,
+                    labor_bonus: budget.labor_bonus,
+                    material_inflation: budget.material_inflation,
+                    equipment_inflation: budget.equipment_inflation,
+                    labor_inflation: budget.labor_inflation,
+                    admin_percent: budget.admin_percent,
+                    profit_percent: budget.profit_percent ?? budget.util_percent ?? 10,
+                    iva_percent: 0,
+                    project_name: budget.name,
+                    client_name: budget.client_name
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Fila 2: Chips de Métricas P.U. y Cantidad */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+              <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-emerald-300 shadow-xs shrink-0">
+                <span className="text-[10px] font-bold text-emerald-700 uppercase">P.U:</span>
+                <span className="text-xs font-black text-emerald-800 font-mono">
+                  {pu.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currencyLabel}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-slate-200 shadow-xs shrink-0">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Cant:</span>
+                <span className="text-xs font-bold text-slate-800 font-mono">
+                  {(parseFloat(item?.quantity) || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {item?.unit || ''}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-blue-300 shadow-xs shrink-0">
+                <span className="text-[10px] font-bold text-blue-700 uppercase">Total:</span>
+                <span className="text-xs font-black text-blue-800 font-mono">
+                  {totalPartida.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currencyLabel}
+                </span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            {/* Cantidad de la partida en el presupuesto */}
-            <div 
-              className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-sm"
-              title={`Cantidad presupuestada para esta partida: ${(parseFloat(item?.quantity) || 0).toLocaleString('es-VE')} ${item?.unit || ''}`}
-            >
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Cant:
-              </span>
-              <span className="text-base md:text-lg font-bold text-slate-800 leading-none">
-                {(parseFloat(item?.quantity) || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-              {item?.unit && (
-                <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                  {item.unit}
+
+          {/* VISTA DESKTOP (>= md) */}
+          <div className="hidden md:flex items-center justify-between py-3 px-6">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate(`/budgets/${id}`)}
+                className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 hover:border-blue-400 hover:shadow-md transition-all duration-200 shrink-0 shadow-sm"
+              >
+                <ArrowLeft size={20} />
+              </button>
+              <div className="flex items-center gap-3">
+                <div 
+                  className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-sm"
+                  title={`Partida ${currentPosition} de ${totalApus} del presupuesto`}
+                >
+                  <Calculator size={16} className="text-blue-600 shrink-0" />
+                  <span className="text-base md:text-lg font-black text-slate-800 leading-none font-mono">
+                    {currentPosition}/{totalApus}
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+                  <button
+                    onClick={() => prevItem && navigate(`/budgets/${id}/item/${prevItem.id}`)}
+                    disabled={!prevItem}
+                    className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer disabled:cursor-not-allowed"
+                    title={prevItem ? `Ir a APU anterior (${currentPosition - 1}/${totalApus})` : "Este es el primer APU"}
+                  >
+                    <ChevronLeft size={20} className="text-slate-700" />
+                  </button>
+                  <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                  <button
+                    onClick={() => nextItem && navigate(`/budgets/${id}/item/${nextItem.id}`)}
+                    disabled={!nextItem}
+                    className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer disabled:cursor-not-allowed"
+                    title={nextItem ? `Ir a siguiente APU (${currentPosition + 1}/${totalApus})` : "Este es el último APU"}
+                  >
+                    <ChevronRight size={20} className="text-slate-700" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+                  <button
+                    onClick={() => history.undo().catch(() => toast.error('No se pudo deshacer'))}
+                    disabled={!history.canUndo || history.busy}
+                    className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                    title="Deshacer (Ctrl+Z)"
+                  >
+                    <Undo2 size={19} className="text-slate-700" />
+                  </button>
+                  <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                  <button
+                    onClick={() => history.redo().catch(() => toast.error('No se pudo rehacer'))}
+                    disabled={!history.canRedo || history.busy}
+                    className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                    title="Rehacer (Ctrl+Y)"
+                  >
+                    <Redo2 size={19} className="text-slate-700" />
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div 
+                className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-sm"
+                title={`Cantidad presupuestada para esta partida: ${(parseFloat(item?.quantity) || 0).toLocaleString('es-VE')} ${item?.unit || ''}`}
+              >
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Cant:
                 </span>
-              )}
-            </div>
+                <span className="text-base md:text-lg font-bold text-slate-800 leading-none">
+                  {(parseFloat(item?.quantity) || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                {item?.unit && (
+                  <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                    {item.unit}
+                  </span>
+                )}
+              </div>
 
-            {/* Precio unitario del APU */}
-            <div 
-              className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-emerald-200 shadow-sm"
-              title={`Precio unitario del APU: ${pu.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currencyLabel}`}
-            >
-              <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">
-                P.U:
-              </span>
-              <span className="text-base md:text-lg font-bold text-emerald-700 leading-none">
-                {pu.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-              <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
-                {currencyLabel}
-              </span>
-            </div>
+              <div 
+                className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-emerald-200 shadow-sm"
+                title={`Precio unitario del APU: ${pu.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currencyLabel}`}
+              >
+                <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">
+                  P.U:
+                </span>
+                <span className="text-base md:text-lg font-bold text-emerald-700 leading-none">
+                  {pu.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                  {currencyLabel}
+                </span>
+              </div>
 
-            {/* Total Partida en vivo (P.U. x Cantidad) */}
-            <div 
-              className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-blue-200 shadow-sm"
-              title={`Total de esta partida: ${(parseFloat(item?.quantity) || 0).toLocaleString('es-VE')} ${item?.unit || 'und'} x ${pu.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-            >
-              <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
-                Total Partida:
-              </span>
-              <span className="text-base md:text-lg font-bold text-blue-700 leading-none">
-                {totalPartida.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-              <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
-                {currencyLabel}
-              </span>
-            </div>
+              <div 
+                className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-blue-200 shadow-sm"
+                title={`Total de esta partida: ${(parseFloat(item?.quantity) || 0).toLocaleString('es-VE')} ${item?.unit || 'und'} x ${pu.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              >
+                <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
+                  Total Partida:
+                </span>
+                <span className="text-base md:text-lg font-bold text-blue-700 leading-none">
+                  {totalPartida.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                  {currencyLabel}
+                </span>
+              </div>
 
-            {/* Total sin IVA en vivo */}
-            <div 
-              className="hidden sm:flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-sm"
-              title="Total del presupuesto sin IVA (se recalcula automáticamente al modificar este APU)"
-            >
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Total sin IVA:
-              </span>
-              <span className="text-base md:text-lg font-bold text-slate-700 leading-none">
-                {subtotalPresupuesto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-              <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                {currencyLabel}
-              </span>
-            </div>
+              <div 
+                className="hidden sm:flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-sm"
+                title="Total del presupuesto sin IVA (se recalcula automáticamente al modificar este APU)"
+              >
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Total sin IVA:
+                </span>
+                <span className="text-base md:text-lg font-bold text-slate-700 leading-none">
+                  {subtotalPresupuesto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                  {currencyLabel}
+                </span>
+              </div>
 
-            <button
-              onClick={() => setPrintModalOpen(true)}
-              className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 hover:border-blue-400 hover:shadow-md transition-all duration-200 shadow-sm"
-              title="Imprimir"
-            >
-              <Printer size={20} />
-            </button>
-            <ExportApuExcelButton
-              item={item}
-              materials={item.materials || []}
-              equipments={item.equipments || []}
-              labors={item.labors || []}
-              settings={{
-                ...budget,
-                currency: budget.currency,
-                exchange_rate: budget.exchange_rate,
-                fcas_percent: budget.fcas_percent,
-                bono_in_fcas: budget.bono_in_fcas,
-                labor_bonus: budget.labor_bonus,
-                material_inflation: budget.material_inflation,
-                equipment_inflation: budget.equipment_inflation,
-                labor_inflation: budget.labor_inflation,
-                admin_percent: budget.admin_percent,
-                profit_percent: budget.profit_percent ?? budget.util_percent ?? 10,
-                iva_percent: 0,
-                project_name: budget.name,
-                client_name: budget.client_name
-              }}
-            />
+              <button
+                onClick={() => setPrintModalOpen(true)}
+                className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 hover:border-blue-400 hover:shadow-md transition-all duration-200 shadow-sm"
+                title="Imprimir"
+              >
+                <Printer size={20} />
+              </button>
+              <ExportApuExcelButton
+                item={item}
+                materials={item.materials || []}
+                equipments={item.equipments || []}
+                labors={item.labors || []}
+                settings={{
+                  ...budget,
+                  currency: budget.currency,
+                  exchange_rate: budget.exchange_rate,
+                  fcas_percent: budget.fcas_percent,
+                  bono_in_fcas: budget.bono_in_fcas,
+                  labor_bonus: budget.labor_bonus,
+                  material_inflation: budget.material_inflation,
+                  equipment_inflation: budget.equipment_inflation,
+                  labor_inflation: budget.labor_inflation,
+                  admin_percent: budget.admin_percent,
+                  profit_percent: budget.profit_percent ?? budget.util_percent ?? 10,
+                  iva_percent: 0,
+                  project_name: budget.name,
+                  client_name: budget.client_name
+                }}
+              />
+            </div>
           </div>
         </div>
 
