@@ -3,9 +3,14 @@ Configuración central del Bot de Inspección de Obras.
 """
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde .env raíz o del sistema
+ROOT_DIR: Path = Path(__file__).resolve().parent.parent
+load_dotenv(ROOT_DIR / ".env")
 
 # Token de autenticación del Bot en Telegram (suministrado por @BotFather)
-BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "8853208267:AAGt7qEeFZuKf4QWEV6c-w2dtfTsT34VtsA")
+BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "8853208267:AAFNyzrFiftKjRIfWeOeft89dsgYdDXRoP8")
 
 # Directorios de almacenamiento de archivos
 BASE_DIR: Path = Path(__file__).resolve().parent
