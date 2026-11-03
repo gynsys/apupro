@@ -10,6 +10,7 @@ from app.api.v1.endpoints.arko import get_current_arko_admin
 from app.db.base import get_db
 from app.db.models.arko import ArkoAdmin
 from app.db.models.budget import (
+    Budget,
     BudgetAPUEquipment as DBEquipment,
     BudgetAPULabor as DBLabor,
     BudgetAPUMaterial as DBMaterial,
@@ -30,6 +31,24 @@ from app.schemas.budget import (
 router = APIRouter()
 
 
+def _owned_item_or_404(
+    db: Session, budget_id: str, item_id: str, current_user: ArkoAdmin
+) -> BudgetItem:
+    budget = db.query(Budget).filter(
+        Budget.id == budget_id,
+        Budget.user_id == str(current_user.id),
+    ).first()
+    if not budget:
+        raise HTTPException(status_code=404, detail="Budget not found")
+    item = db.query(BudgetItem).filter(
+        BudgetItem.id == item_id,
+        BudgetItem.budget_id == budget_id,
+    ).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return item
+
+
 # ---------------------------------------------------------------------------
 # Materials
 # ---------------------------------------------------------------------------
@@ -47,6 +66,7 @@ def add_material_to_item(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> DBMaterial:
     """Agrega un material al APU de la partida."""
+    _owned_item_or_404(db, budget_id, item_id, current_user)
     db_item = db.query(BudgetItem).filter(BudgetItem.id == item_id, BudgetItem.budget_id == budget_id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -74,6 +94,7 @@ def update_material_in_item(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> DBMaterial:
     """Actualiza un material del APU."""
+    _owned_item_or_404(db, budget_id, item_id, current_user)
     comp = db.query(DBMaterial).filter(DBMaterial.id == component_id, DBMaterial.budget_item_id == item_id).first()
     if not comp:
         raise HTTPException(status_code=404, detail="Material not found")
@@ -95,6 +116,7 @@ def delete_material_from_item(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> Dict[str, bool]:
     """Elimina un material del APU."""
+    _owned_item_or_404(db, budget_id, item_id, current_user)
     comp = db.query(DBMaterial).filter(DBMaterial.id == component_id, DBMaterial.budget_item_id == item_id).first()
     if not comp:
         raise HTTPException(status_code=404, detail="Material not found")
@@ -120,6 +142,7 @@ def add_equipment_to_item(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> DBEquipment:
     """Agrega un equipo al APU de la partida."""
+    _owned_item_or_404(db, budget_id, item_id, current_user)
     db_item = db.query(BudgetItem).filter(BudgetItem.id == item_id, BudgetItem.budget_id == budget_id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -147,6 +170,7 @@ def update_equipment_in_item(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> DBEquipment:
     """Actualiza un equipo del APU."""
+    _owned_item_or_404(db, budget_id, item_id, current_user)
     comp = db.query(DBEquipment).filter(DBEquipment.id == component_id, DBEquipment.budget_item_id == item_id).first()
     if not comp:
         raise HTTPException(status_code=404, detail="Equipment not found")
@@ -168,6 +192,7 @@ def delete_equipment_from_item(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> Dict[str, bool]:
     """Elimina un equipo del APU."""
+    _owned_item_or_404(db, budget_id, item_id, current_user)
     comp = db.query(DBEquipment).filter(DBEquipment.id == component_id, DBEquipment.budget_item_id == item_id).first()
     if not comp:
         raise HTTPException(status_code=404, detail="Equipment not found")
@@ -193,6 +218,7 @@ def add_labor_to_item(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> DBLabor:
     """Agrega una labor (mano de obra) al APU de la partida."""
+    _owned_item_or_404(db, budget_id, item_id, current_user)
     db_item = db.query(BudgetItem).filter(BudgetItem.id == item_id, BudgetItem.budget_id == budget_id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -220,6 +246,7 @@ def update_labor_in_item(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> DBLabor:
     """Actualiza una labor del APU."""
+    _owned_item_or_404(db, budget_id, item_id, current_user)
     comp = db.query(DBLabor).filter(DBLabor.id == component_id, DBLabor.budget_item_id == item_id).first()
     if not comp:
         raise HTTPException(status_code=404, detail="Labor not found")
@@ -241,6 +268,7 @@ def delete_labor_from_item(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> Dict[str, bool]:
     """Elimina una labor del APU."""
+    _owned_item_or_404(db, budget_id, item_id, current_user)
     comp = db.query(DBLabor).filter(DBLabor.id == component_id, DBLabor.budget_item_id == item_id).first()
     if not comp:
         raise HTTPException(status_code=404, detail="Labor not found")

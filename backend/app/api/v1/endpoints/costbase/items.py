@@ -482,6 +482,12 @@ def update_master_apu_route(
             getattr(current_user, 'role', '') in ['admin', 'superadmin']
         )
 
+    if database_id == "master" and not is_superadmin:
+        raise HTTPException(
+            status_code=403,
+            detail="Solo el superadmin puede modificar la base maestra",
+        )
+
     clean_code = urllib.parse.unquote(item_code).strip()
 
     if database_id in ("personalizada", "compartidos") or clean_code.startswith("CUST-") or item_code.startswith("CUST-") or _is_uuid_like(clean_code) or _is_uuid_like(item_code):

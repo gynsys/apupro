@@ -20,6 +20,18 @@ from app.services.email import (
 
 router = APIRouter()
 
+
+def _require_superadmin(current_user: ArkoAdmin) -> None:
+    is_superadmin = (
+        getattr(current_user, "is_superadmin", False) is True or
+        getattr(current_user, "email", "") == "admin@arko360.net"
+    )
+    if not is_superadmin:
+        raise HTTPException(
+            status_code=403,
+            detail="Solo el superadmin puede administrar usuarios",
+        )
+
 class SubscriptionRequest(BaseModel):
     plan_name: str
 
@@ -95,6 +107,7 @@ def search_users(
 @router.get("/", response_model=List[UserListResponse])
 def get_users(current_user = Depends(get_current_arko_admin)):
     """Obtener lista de usuarios (solo admin)"""
+    _require_superadmin(current_user)
     with ArkoSessionLocal() as db:
         users = db.query(ArkoAdmin).order_by(ArkoAdmin.created_at.desc()).all()
         return [
@@ -120,6 +133,7 @@ def get_users(current_user = Depends(get_current_arko_admin)):
 @router.put("/{user_id}", response_model=UserListResponse)
 def update_user(user_id: int, user_data: UserUpdateRequest, current_user = Depends(get_current_arko_admin)):
     """Actualizar usuario (solo admin)"""
+    _require_superadmin(current_user)
     with ArkoSessionLocal() as db:
         user = db.query(ArkoAdmin).filter(ArkoAdmin.id == user_id).first()
         if not user:
@@ -191,6 +205,7 @@ def update_user(user_id: int, user_data: UserUpdateRequest, current_user = Depen
 @router.post("/system/process-expirations")
 def process_plan_expirations(current_user = Depends(get_current_arko_admin)):
     """Verifica y vence los planes expirados, y genera alertas de 3 días."""
+    _require_superadmin(current_user)
     processed_expired = 0
     processed_warnings = 0
     now = datetime.utcnow()
@@ -386,6 +401,7 @@ def create_demo_budget(current_user = Depends(get_current_arko_admin)):
 @router.delete("/{user_id}")
 def delete_user(user_id: int, current_user = Depends(get_current_arko_admin)):
     """Eliminar usuario (solo admin)"""
+    _require_superadmin(current_user)
     with ArkoSessionLocal() as db:
         user = db.query(ArkoAdmin).filter(ArkoAdmin.id == user_id).first()
         if not user:
