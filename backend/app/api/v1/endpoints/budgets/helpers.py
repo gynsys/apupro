@@ -91,50 +91,44 @@ def compute_budget_summary_metrics(budget: Budget) -> Tuple[int, float]:
         items_count += 1
         perf = float(item.performance or 1.0) or 1.0
 
-        mat_cost = 0.0
-        for m in (item.materials or []):
-            q = float(m.cantidad or 0.0)
-            w = float(m.desperdicio or 0.0)
-            p = float(m.precio_unitario or 0.0) * ex_rate
-            base_cost = (q * (1.0 + w / 100.0)) * p
-            mat_cost += base_cost * (1.0 + (mat_inf / 100.0))
+        mat_cost = _round_half_up_2(sum(
+            _round_half_up_2((float(m.cantidad or 0.0) * (1.0 + float(m.desperdicio or 0.0) / 100.0)) * (float(m.precio_unitario or 0.0) * ex_rate)) * (1.0 + (mat_inf / 100.0))
+            for m in (item.materials or [])
+        ))
 
-        eq_total_day = 0.0
-        for eq in (item.equipments or []):
-            q = float(eq.cantidad or 0.0)
-            d = float(eq.depreciacion if eq.depreciacion is not None else 1.0)
-            p = float(eq.precio_unitario or 0.0) * ex_rate
-            base_cost = q * d * p
-            eq_total_day += base_cost * (1.0 + (eq_inf / 100.0))
-        eq_cost = eq_total_day / perf
+        eq_total_day = _round_half_up_2(sum(
+            _round_half_up_2(float(eq.cantidad or 0.0) * float(eq.depreciacion if eq.depreciacion is not None else 1.0) * (float(eq.precio_unitario or 0.0) * ex_rate)) * (1.0 + (eq_inf / 100.0))
+            for eq in (item.equipments or [])
+        ))
+        eq_cost = _round_half_up_2(eq_total_day / perf)
 
-        tot_jornal = 0.0
-        for lab in (item.labors or []):
-            q = float(lab.cantidad or 0.0)
-            j = float(lab.jornal or 0.0) * ex_rate
-            base_cost = q * j
-            tot_jornal += base_cost * (1.0 + (lab_inf / 100.0))
+        tot_jornal = _round_half_up_2(sum(
+            _round_half_up_2(float(lab.cantidad or 0.0) * (float(lab.jornal or 0.0) * ex_rate)) * (1.0 + (lab_inf / 100.0))
+            for lab in (item.labors or [])
+        ))
 
         tot_bono = 0.0
         if not bono_in_fcas:
-            for lab in (item.labors or []):
-                q = float(lab.cantidad or 0.0)
-                raw_b = float(lab.bono or 0.0)
-                b_bonus = raw_b if raw_b > 0 else default_labor_bonus
-                b = b_bonus * ex_rate
-                base_cost = q * b
-                tot_bono += base_cost * (1.0 + (lab_inf / 100.0))
+            tot_bono = _round_half_up_2(sum(
+                _round_half_up_2(
+                    float(lab.cantidad or 0.0) * (
+                        (float(lab.bono) if (lab.bono is not None and not (isinstance(lab.bono, str) and str(lab.bono).strip() == "")) else default_labor_bonus) * ex_rate
+                    )
+                ) * (1.0 + (lab_inf / 100.0))
+                for lab in (item.labors or [])
+            ))
 
-        fcas_monto = tot_jornal * (fcas_percent / 100.0)
-        lab_cost = (tot_jornal + tot_bono + fcas_monto) / perf
+        fcas_monto = _round_half_up_2(tot_jornal * (fcas_percent / 100.0))
+        lab_total_day = _round_half_up_2(tot_jornal + tot_bono + fcas_monto)
+        lab_cost = _round_half_up_2(lab_total_day / perf)
 
-        subtotal_a = mat_cost + eq_cost + lab_cost
-        admin_cost = subtotal_a * (admin_percent / 100.0)
-        subtotal_b = subtotal_a + admin_cost
-        profit_cost = subtotal_b * (profit_percent / 100.0)
-        subtotal_c = subtotal_b + profit_cost
+        subtotal_a = _round_half_up_2(mat_cost + eq_cost + lab_cost)
+        admin_cost = _round_half_up_2(subtotal_a * (admin_percent / 100.0))
+        subtotal_b = _round_half_up_2(subtotal_a + admin_cost)
+        profit_cost = _round_half_up_2(subtotal_b * (profit_percent / 100.0))
+        subtotal_c = _round_half_up_2(subtotal_b + profit_cost)
 
-        pu = _round_half_up_2(subtotal_c)
+        pu = subtotal_c
         qty = float(item.quantity or 0.0)
         item_total = _round_half_up_2(pu * qty)
         subtotal_presupuesto += item_total
