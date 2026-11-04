@@ -220,7 +220,7 @@ function recomputeRow(row, field, value) {
   if (field === 'quantity') {
     const qVal = Math.max(0, parseFloat(String(value).replace(',', '.')) || 0);
     updated.quantity = qVal;
-    const divisor = t * multDist;
+    const divisor = t;
     updated.partial = divisor > 0 ? Math.round((qVal / divisor) * 10000) / 10000 : qVal;
     if (updated.unit === 'M3' && (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3)) {
       updated.m3 = qVal;
@@ -237,11 +237,11 @@ function recomputeRow(row, field, value) {
   if (dims.length > 0) {
     const baseGeom = dims.reduce((acc, curr) => acc * curr, 1);
     
-    // Parcial = base geométrica * Factor (ej: metros lineales de cabilla * kg/m)
-    const parcial = Math.round(baseGeom * multFactor * 10000) / 10000;
+    // Parcial = base geométrica * Factor * Distancia (para 1 vez)
+    const parcial = Math.round(baseGeom * multFactor * multDist * 10000) / 10000;
     
-    // Total = Parcial * N° Veces * Distancia (si aplica acarreo M3-KM)
-    const total = Math.round(parcial * t * multDist * 10000) / 10000;
+    // Total = Parcial * N° Veces
+    const total = Math.round(parcial * t * 10000) / 10000;
 
     updated.partial = parcial;
     updated.quantity = total;
@@ -268,11 +268,11 @@ function recomputeRow(row, field, value) {
     updated.formula = formulaParts.join(' ');
   } else if (m3Val !== null && !isNaN(m3Val) && m3Val > 0) {
     // Si no hay dimensiones pero hay volumen M3 directo (ej. transporte M3-KM o botes)
-    // Parcial = volumen M3 * Factor
-    const parcial = Math.round(m3Val * multFactor * 10000) / 10000;
+    // Parcial = volumen M3 * Factor * Distancia (para 1 vez)
+    const parcial = Math.round(m3Val * multFactor * multDist * 10000) / 10000;
     
-    // Total = Parcial * N° Veces * Distancia (M3 * km para transporte)
-    const total = Math.round(parcial * t * multDist * 10000) / 10000;
+    // Total = Parcial * N° Veces
+    const total = Math.round(parcial * t * 10000) / 10000;
 
     updated.partial = parcial;
     updated.quantity = total;
@@ -286,7 +286,7 @@ function recomputeRow(row, field, value) {
   } else if (field === 'partial') {
     const pVal = Math.max(0, parseFloat(String(value).replace(',', '.')) || 0);
     updated.partial = pVal;
-    updated.quantity = Math.round(pVal * t * multDist * 10000) / 10000;
+    updated.quantity = Math.round(pVal * t * 10000) / 10000;
     if (updated.unit === 'M3' && (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3)) {
       updated.m3 = updated.quantity;
       updated._autoM3 = updated.quantity;
@@ -295,7 +295,9 @@ function recomputeRow(row, field, value) {
     // Si no hay dimensiones ni M3 pero se modifica Factor, Distancia o Veces sobre una cantidad base
     const currentBase = updated.partial > 0 ? updated.partial : (parseFloat(String(updated.quantity).replace(',', '.')) || 0);
     if (currentBase > 0) {
-      const total = Math.round(currentBase * t * multFactor * multDist * 10000) / 10000;
+      const parcial = Math.round(currentBase * multFactor * multDist * 10000) / 10000;
+      const total = Math.round(parcial * t * 10000) / 10000;
+      updated.partial = parcial;
       updated.quantity = total;
       if (updated.unit === 'M3' && (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3)) {
         updated.m3 = total;

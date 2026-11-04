@@ -202,7 +202,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
           if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) {
             const chap = parsed.activeChapter !== undefined && parsed.activeChapter !== null ? parsed.activeChapter : '';
             const reconciled = parsed.items.map((it) => {
-              if ((!it.partials || it.partials.length === 0) && it.m3 && it.distance && (!it.quantity || Number(it.quantity) === 0)) {
+              if ((!it.partials || it.partials.length === 0) && it.m3 && it.distance) {
                 return recomputeRow(it, 'distance', it.distance);
               }
               return it;
@@ -1352,7 +1352,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
           <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.factor || '')}</td>
           <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.distance || '')}</td>
           <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; color: #78350f; vertical-align: top;">${hasPartials ? (it.m3 || '—') : (it.m3 || '')}</td>
-          <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: 600; vertical-align: top;">${hasPartials ? '—' : (it.partial || '')}</td>
           <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; background-color: #fef3c7; vertical-align: top;">${it.quantity || 0}</td>
           <td style="border: 1px solid #cbd5e1; vertical-align: top;">${escapeHtml(it.observations || '')}</td>
         </tr>
@@ -1374,8 +1373,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
               <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${p.factor || ''}</td>
               <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${p.distance || ''}</td>
               <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; color: #78350f; vertical-align: top;">${p.m3 || ''}</td>
-              <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; color: #b45309; vertical-align: top;">${p.partial || 0}</td>
-              <td style="text-align: right; border: 1px solid #cbd5e1; color: #94a3b8; vertical-align: top;">—</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; color: #b45309; background-color: #fef3c7; vertical-align: top;">${p.partial || 0}</td>
               <td style="border: 1px solid #cbd5e1; font-style: italic; color: #64748b; vertical-align: top;">${escapeHtml(p.observations || '')}</td>
             </tr>
           `;
@@ -1423,7 +1421,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                 Fecha: <span style="font-weight: normal;">${today}</span>
               </td>
             </tr>
-            <tr><td colspan="13" style="height: 8px; border: none;"></td></tr>
+            <tr><td colspan="12" style="height: 8px; border: none;"></td></tr>
             <thead>
               <tr>
                 <th style="width: 35px; font-size: 10px; text-align: center;">N°</th>
@@ -1436,7 +1434,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                 <th style="width: 75px; font-size: 9px; white-space: nowrap; text-align: center;">FACTOR</th>
                 <th style="width: 80px; font-size: 9px; white-space: nowrap; text-align: center;">DIST. (km)</th>
                 <th style="width: 85px; font-size: 9px; white-space: nowrap; text-align: center;">M3 (BOTE)</th>
-                <th style="width: 85px; font-size: 9px; white-space: nowrap; text-align: center;">PARCIAL</th>
                 <th style="width: 85px; font-size: 9px; white-space: nowrap; text-align: center;">TOTAL</th>
                 <th style="width: 220px; font-size: 9px; text-align: left; white-space: nowrap;">OBSERVACIONES</th>
               </tr>
@@ -1551,7 +1548,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
           <td class="text-right" style="vertical-align: top;">${hasPartials ? '—' : (it.factor || '')}</td>
           <td class="text-right" style="vertical-align: top;">${hasPartials ? '—' : (it.distance || '')}</td>
           <td class="text-right font-bold text-amber-900" style="vertical-align: top;">${hasPartials ? (it.m3 || '—') : (it.m3 || '')}</td>
-          <td class="text-right font-semibold" style="vertical-align: top;">${hasPartials ? '—' : (it.partial || '')}</td>
           <td class="text-right font-black bg-amber-50" style="vertical-align: top;">${it.quantity || 0}</td>
           <td style="vertical-align: top;">${escapeHtml(it.observations || '')}</td>
         </tr>
@@ -1571,8 +1567,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
               <td class="text-right" style="vertical-align: top;">${p.factor || ''}</td>
               <td class="text-right" style="vertical-align: top;">${p.distance || ''}</td>
               <td class="text-right font-bold text-amber-900" style="vertical-align: top;">${p.m3 || ''}</td>
-              <td class="text-right font-bold text-amber-800" style="vertical-align: top;">${p.partial || 0}</td>
-              <td class="text-center text-muted" style="vertical-align: top;">—</td>
+              <td class="text-right font-bold text-amber-900 bg-amber-50" style="vertical-align: top;">${p.partial || 0}</td>
               <td class="text-muted text-xs" style="vertical-align: top;">${escapeHtml(p.observations || '')}</td>
             </tr>
           `;
@@ -1702,7 +1697,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                 <th style="width: 55px;">FACTOR</th>
                 <th style="width: 60px;">DIST. (km)</th>
                 <th style="width: 60px;">M3 (BOTE)</th>
-                <th style="width: 65px;">PARCIAL</th>
                 <th style="width: 75px;">TOTAL</th>
                 <th style="width: 140px;">OBSERVACIONES</th>
               </tr>
@@ -3191,26 +3185,16 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                               </div>
                             </div>
 
-                            {/* Fila 4: Subtotal Parcial y Cantidad Total */}
-                            <div className="grid grid-cols-2 gap-2.5 pt-1">
-                              <div className="bg-white/80 p-2 rounded-xl border border-amber-200">
-                                <span className="block text-[9px] uppercase font-bold text-amber-700">
-                                  Subtotal Parcial
-                                </span>
-                                <span className="text-xs font-bold text-amber-900">
-                                  {it.partial > 0
-                                    ? Number(it.partial).toLocaleString('es-VE', { maximumFractionDigits: 3 })
-                                    : '—'}
-                                </span>
-                              </div>
-                              <div className="bg-amber-100 p-2 rounded-xl border-2 border-amber-400">
-                                <span className="block text-[10px] uppercase font-black text-amber-950">
+                            {/* Fila 4: Cantidad Total */}
+                            <div className="pt-1">
+                              <div className="bg-amber-100 p-2.5 rounded-xl border-2 border-amber-400">
+                                <span className="block text-[10px] uppercase font-black text-amber-950 mb-1">
                                   CANTIDAD TOTAL ({it.unit})
                                 </span>
                                 <MathQuantityInput
                                   value={it.quantity}
                                   onChange={(val) => handleUpdateItemField(it.id, 'quantity', val)}
-                                  className="w-full px-1.5 py-0.5 text-sm text-right font-black text-amber-950 bg-white rounded border border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                  className="w-full px-2 py-1 text-sm text-right font-black text-amber-950 bg-white rounded border border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-500"
                                 />
                               </div>
                             </div>
@@ -3512,8 +3496,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                       <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-16 bg-amber-300 text-amber-950" title="Volumen en metros cúbicos (M3) para botes y acarreo de material o escombros">
                         M3
                       </th>
-                      <th colSpan={2} className="border border-gray-400 px-2 py-1 bg-amber-300">
-                        CANTIDAD
+                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-24 bg-amber-200 text-amber-950 font-extrabold text-center" title="Cantidad total calculada">
+                        TOTAL
                       </th>
                       <th rowSpan={2} className="border border-gray-400 px-3 py-2 min-w-[150px] bg-amber-200">
                         OBSERVACIONES
@@ -3527,14 +3511,12 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                       <th className="border border-gray-400 px-1 py-1 w-16 bg-amber-100">Largo</th>
                       <th className="border border-gray-400 px-1 py-1 w-16 bg-amber-100">Ancho</th>
                       <th className="border border-gray-400 px-1 py-1 w-16 bg-amber-100">Alto</th>
-                      <th className="border border-gray-400 px-1 py-1 w-20 bg-amber-100">PARCIAL</th>
-                      <th className="border border-gray-400 px-1 py-1 w-24 bg-amber-200">TOTAL</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredCapturedItems.length === 0 ? (
                       <tr>
-                        <td colSpan={14} className="text-center py-10 bg-white border border-gray-300">
+                        <td colSpan={13} className="text-center py-10 bg-white border border-gray-300">
                           <div className="flex flex-col items-center justify-center gap-2 text-amber-900">
                             <Search className="w-6 h-6 text-amber-600/60" />
                             <p className="font-bold text-sm">
@@ -3565,7 +3547,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                         <React.Fragment key={it.id}>
                           {showChapHeader && (
                             <tr className="bg-amber-200/70 border-b border-gray-400">
-                              <td colSpan={14} className="px-3 py-1.5 font-black text-amber-950 text-[11px] tracking-wide border border-gray-400">
+                              <td colSpan={13} className="px-3 py-1.5 font-black text-amber-950 text-[11px] tracking-wide border border-gray-400">
                                 <div className="flex items-center justify-between">
                                   <span className="flex items-center gap-1.5">
                                     <Layers className="w-3.5 h-3.5 text-amber-700" />
@@ -3818,17 +3800,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                               )}
                             </td>
 
-                            {/* CANTIDAD PARCIAL */}
-                            <td className="border border-gray-300 px-2 py-1 text-right font-semibold text-xs text-gray-700 bg-amber-50/30">
-                              {hasPartials ? (
-                                <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
-                              ) : it.partial > 0 ? (
-                                Number(it.partial).toLocaleString('es-VE', { maximumFractionDigits: 3 })
-                              ) : (
-                                '—'
-                              )}
-                            </td>
-
                             {/* CANTIDAD TOTAL */}
                             <td className="border border-gray-300 px-1 py-1 bg-amber-100/60">
                               {hasPartials ? (
@@ -4040,13 +4011,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                                       title="M3 bote y acarreo de este tramo"
                                     />
                                   </td>
-                                  <td className="border border-amber-200 px-2 py-1 text-right font-bold text-xs text-amber-900 bg-amber-100/50">
+                                  {/* TOTAL DEL PARCIAL */}
+                                  <td className="border border-amber-200 px-2 py-1 text-right font-bold text-xs text-amber-950 bg-amber-100/60">
                                     {Number(p.partial || 0).toLocaleString('es-VE', {
                                       maximumFractionDigits: 3,
                                     })}
-                                  </td>
-                                  <td className="border border-amber-200 px-1 py-1 text-center text-xs text-gray-400 bg-amber-50/20">
-                                    —
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1">
                                     <input
@@ -4077,7 +4046,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                                 </tr>
                               ))}
                               <tr className="bg-amber-100/50 border-b border-amber-300">
-                                <td colSpan={14} className="px-4 py-1.5 text-xs">
+                                <td colSpan={13} className="px-4 py-1.5 text-xs">
                                   <div className="flex items-center justify-between">
                                     <button
                                       type="button"

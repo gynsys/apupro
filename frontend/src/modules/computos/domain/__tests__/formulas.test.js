@@ -81,7 +81,11 @@ describe('fórmulas de cómputos', () => {
     expect(withM3.quantity).toBe(30.4);
 
     const withDist = recomputeRow(withM3, 'distance', '4.8');
-    expect(withDist.partial).toBe(30.4);
+    expect(withDist.partial).toBe(145.92);
     expect(withDist.quantity).toBe(145.92);
+
+    const withTimes = recomputeRow(withDist, 'times', '2');
+    expect(withTimes.partial).toBe(145.92);
+    expect(withTimes.quantity).toBe(291.84);
   });
 });
