@@ -3591,24 +3591,13 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                                       <Plus className="w-3 h-3 text-amber-700" />
                                       <span>Agregar fila</span>
                                     </button>
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-xs font-bold text-amber-950">
-                                        Total parciales:{' '}
-                                        <strong>
-                                          {Number(it.quantity).toLocaleString('es-VE', {
-                                            maximumFractionDigits: 3,
-                                          })}{' '}
-                                          {it.unit}
-                                        </strong>
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleClearPartials(it.id)}
-                                        className="text-[10px] text-red-600 hover:underline cursor-pointer"
-                                      >
-                                        Quitar desglose
-                                      </button>
-                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleClearPartials(it.id)}
+                                      className="text-[10px] text-red-600 hover:underline cursor-pointer"
+                                    >
+                                      Quitar desglose
+                                    </button>
                                   </div>
                                 </td>
                               </tr>
