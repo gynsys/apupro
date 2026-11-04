@@ -82,6 +82,10 @@ import {
   commitComputoImport,
 } from '../../modules/computos/services/computosApi.js';
 import { createRowsState, rowsReducer } from '../../modules/computos/state/rowsReducer.js';
+import SavedComputosModal from '../../modules/computos/components/SavedComputosModal.jsx';
+import { AddChapterModal, RenameChapterModal } from '../../modules/computos/components/ChapterModals.jsx';
+import ProjectInfoModal from '../../modules/computos/components/ProjectInfoModal.jsx';
+import GenerationProgressModal from '../../modules/computos/components/GenerationProgressModal.jsx';
 
 
 function escapeHtml(text) {
@@ -2023,432 +2027,49 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
 
   return (
     <div className="fixed inset-0 z-[100] w-full h-[100dvh] bg-[#FEF3C7] flex flex-col overflow-hidden select-none sm:select-auto">
-      {/* Overlay de Progreso al Generar Presupuesto */}
-      {isCommitting && (
-        <div className="absolute inset-0 z-[120] bg-[#FEF3C7]/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
-          <div className="max-w-md w-full bg-white border-2 border-amber-300 rounded-3xl p-6 sm:p-8 shadow-xl space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500 text-white flex items-center justify-center mx-auto shadow-lg shadow-amber-500/30">
-              <RefreshCw className="w-7 h-7 animate-spin" />
-            </div>
-            <h3 className="text-amber-950 font-extrabold text-lg">
-              Procesando Cómputos y Generando Presupuesto
-            </h3>
-            <p className="text-xs sm:text-sm text-amber-800 leading-relaxed font-medium">
-              {commitProgressText || 'Buscando coincidencias en la base de datos y estructurando APUs...'}
-            </p>
-            {commitStepInfo.total > 0 && (
-              <div className="space-y-1.5 pt-1">
-                <div className="w-full h-2.5 bg-amber-100 rounded-full overflow-hidden border border-amber-200">
-                  <div
-                    className="h-full bg-amber-500 transition-all duration-300 rounded-full"
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        Math.round((commitStepInfo.current / commitStepInfo.total) * 100)
-                      )}%`,
-                    }}
-                  />
-                </div>
-                <p className="text-[11px] font-bold text-amber-700">
-                  Partida {commitStepInfo.current} de {commitStepInfo.total}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <GenerationProgressModal
+        isOpen={isCommitting}
+        text={commitProgressText}
+        stepInfo={commitStepInfo}
+      />
 
-      {/* Modal / Diálogo para Abrir Cómputos Guardados */}
-      {showOpenModal && (
-        <div className="absolute inset-0 z-[130] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 border-2 border-amber-300 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-amber-200 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-sm">
-                  <FolderOpen className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-amber-950 font-bold text-base leading-tight">Cómputos Guardados</h3>
-                  <p className="text-xs text-amber-800">Selecciona un archivo guardado para continuar</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowOpenModal(false)}
-                className="text-amber-700 hover:text-amber-950 p-1 rounded-full hover:bg-amber-100 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <SavedComputosModal
+        isOpen={showOpenModal}
+        savedList={savedList}
+        onClose={() => setShowOpenModal(false)}
+        onCreate={handleCreateNewComputo}
+        onLoad={handleLoadSavedComputo}
+        onDelete={handleDeleteSavedComputo}
+      />
 
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-amber-900">
-                {savedList.length} archivo(s) disponible(s)
-              </span>
-              <button
-                type="button"
-                onClick={handleCreateNewComputo}
-                className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Nuevo Cómputo</span>
-              </button>
-            </div>
+      <AddChapterModal
+        isOpen={showChapterModal}
+        value={chapterModalInput}
+        onChange={setChapterModalInput}
+        onClose={() => setShowChapterModal(false)}
+        onSubmit={handleAddChapterToSheet}
+      />
 
-            <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
-              {savedList.length === 0 ? (
-                <div className="py-8 text-center text-amber-800 text-xs">
-                  <FolderOpen className="w-8 h-8 text-amber-400 mx-auto mb-2" />
-                  <p className="font-bold">No hay cómputos guardados en tu cuenta.</p>
-                  <p className="text-amber-700 mt-1">
-                    Presiona el botón <strong>Guardar</strong> en la parte inferior para almacenar tus planillas y sincronizarlas entre tu teléfono y tu PC.
-                  </p>
-                </div>
-              ) : (
-                savedList.map((item) => (
-                  <div
-                    key={item.id}
-                    onClick={() => handleLoadSavedComputo(item)}
-                    className="p-3 rounded-2xl border border-amber-200 hover:border-amber-400 bg-amber-50/50 hover:bg-amber-100/60 transition-all flex items-center justify-between gap-3 cursor-pointer group"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs sm:text-sm font-extrabold text-amber-950 truncate group-hover:text-amber-900">
-                        {item.budgetName}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[11px] text-amber-800">
-                        {item.projectName && <span>Obra: <strong>{item.projectName}</strong></span>}
-                        <span>• {item.itemCount || (item.items?.length || 0)} partida(s)</span>
-                        <span>
-                          • {new Date(item.savedAt).toLocaleDateString('es-VE')}{' '}
-                          {new Date(item.savedAt).toLocaleTimeString('es-VE', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      </div>
-                    </div>
+      <RenameChapterModal
+        isOpen={Boolean(renameChapterTarget)}
+        value={renameChapterInput}
+        onChange={setRenameChapterInput}
+        onClose={() => { setRenameChapterTarget(null); setRenameChapterInput(''); }}
+        onSubmit={handleConfirmRenameChapter}
+      />
 
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleLoadSavedComputo(item)}
-                        className="px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-600 text-white hover:bg-amber-700 shadow-xs cursor-pointer"
-                      >
-                        Abrir
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteSavedComputo(item.id, e)}
-                        className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                        title="Eliminar de la lista"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="border-t border-amber-200 pt-3 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowOpenModal(false)}
-                className="px-4 py-1.5 rounded-xl border border-amber-300 text-amber-950 text-xs font-bold hover:bg-amber-100 cursor-pointer"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal / Diálogo para Agregar Nuevo Capítulo a la Planilla */}
-      {showChapterModal && (
-        <div className="absolute inset-0 z-[130] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 border-2 border-amber-300 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-amber-200 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-sm">
-                  <Layers className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-amber-950 font-bold text-base leading-tight">Agregar Capítulo a la Planilla</h3>
-                  <p className="text-xs text-amber-800">Crea una nueva sección para agrupar partidas</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowChapterModal(false)}
-                className="text-amber-700 hover:text-amber-950 p-1 rounded-full hover:bg-amber-100 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (chapterModalInput.trim()) {
-                  handleAddChapterToSheet(chapterModalInput.trim());
-                }
-              }}
-              className="space-y-3"
-            >
-              <div>
-                <label className="block text-xs font-bold text-amber-950 mb-1">
-                  Nombre del Capítulo:
-                </label>
-                <input
-                  type="text"
-                  value={chapterModalInput}
-                  onChange={(e) => setChapterModalInput(e.target.value)}
-                  placeholder="Ej. ESTRUCTURAS, ALBAÑILERÍA..."
-                  autoFocus
-                  className="w-full px-3 py-2 text-sm font-bold border-2 border-amber-300 rounded-xl bg-amber-50/30 text-amber-950 focus:outline-none focus:border-amber-500 uppercase"
-                />
-              </div>
-
-              <div>
-                <p className="text-[11px] font-bold text-amber-800 mb-1.5">Capítulos frecuentes:</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    'OBRAS PRELIMINARES',
-                    'MOVIMIENTO DE TIERRAS',
-                    'ESTRUCTURAS',
-                    'ALBAÑILERÍA',
-                    'INSTALACIONES ELÉCTRICAS',
-                    'INSTALACIONES SANITARIAS',
-                    'ACABADOS',
-                    'IMPERMEABILIZACIÓN',
-                  ].map((sug) => (
-                    <button
-                      key={sug}
-                      type="button"
-                      onClick={() => setChapterModalInput(sug)}
-                      className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
-                        chapterModalInput === sug
-                          ? 'bg-amber-500 text-white border-amber-600'
-                          : 'bg-amber-50 hover:bg-amber-100 text-amber-950 border-amber-200'
-                      }`}
-                    >
-                      {sug}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-amber-200">
-                <button
-                  type="button"
-                  onClick={() => setShowChapterModal(false)}
-                  className="px-3.5 py-1.5 rounded-xl border border-amber-300 text-amber-950 text-xs font-bold hover:bg-amber-50 cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={!chapterModalInput.trim()}
-                  className="px-4 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
-                >
-                  + Agregar a la Planilla
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal / Diálogo para Renombrar Capítulo */}
-      {renameChapterTarget && (
-        <div className="absolute inset-0 z-[130] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 border-2 border-amber-300 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-amber-200 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-sm">
-                  <Edit3 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-amber-950 font-bold text-base leading-tight">Renombrar Capítulo</h3>
-                  <p className="text-xs text-amber-800">Actualiza el título del capítulo en la planilla</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setRenameChapterTarget(null);
-                  setRenameChapterInput('');
-                }}
-                className="text-amber-700 hover:text-amber-950 p-1 rounded-full hover:bg-amber-100 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleConfirmRenameChapter} className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-amber-950 mb-1">
-                  Nuevo nombre para este capítulo:
-                </label>
-                <input
-                  type="text"
-                  value={renameChapterInput}
-                  onChange={(e) => setRenameChapterInput(e.target.value)}
-                  placeholder="Ej. ESTRUCTURAS DE CONCRETO..."
-                  autoFocus
-                  className="w-full px-3 py-2 text-sm font-bold border-2 border-amber-300 rounded-xl bg-amber-50/30 text-amber-950 focus:outline-none focus:border-amber-500 uppercase"
-                />
-              </div>
-
-              <div>
-                <p className="text-[11px] font-bold text-amber-800 mb-1.5">Sugerencias rápidas:</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    'OBRAS PRELIMINARES',
-                    'MOVIMIENTO DE TIERRAS',
-                    'ESTRUCTURAS',
-                    'ALBAÑILERÍA',
-                    'INSTALACIONES ELÉCTRICAS',
-                    'INSTALACIONES SANITARIAS',
-                    'ACABADOS',
-                    'IMPERMEABILIZACIÓN',
-                  ].map((sug) => (
-                    <button
-                      key={sug}
-                      type="button"
-                      onClick={() => setRenameChapterInput(sug)}
-                      className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
-                        renameChapterInput === sug
-                          ? 'bg-amber-500 text-white border-amber-600'
-                          : 'bg-amber-50 hover:bg-amber-100 text-amber-950 border-amber-200'
-                      }`}
-                    >
-                      {sug}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-amber-200">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRenameChapterTarget(null);
-                    setRenameChapterInput('');
-                  }}
-                  className="px-3.5 py-1.5 rounded-xl border border-amber-300 text-amber-950 text-xs font-bold hover:bg-amber-50 cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={!renameChapterInput.trim()}
-                  className="px-4 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
-                >
-                  Guardar Nombre
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Datos del Presupuesto y Proyecto */}
-      {showProjectInfoModal && (
-        <div className="absolute inset-0 z-[130] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 border-2 border-amber-300 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-amber-200 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-sm">
-                  <FileSpreadsheet className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-amber-950 font-bold text-base leading-tight">
-                    Datos del Presupuesto
-                  </h3>
-                  <p className="text-xs text-amber-800">
-                    Configura el nombre, proyecto, cliente y moneda
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowProjectInfoModal(false)}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3.5 py-1">
-              <div>
-                <label className="block text-xs font-bold text-amber-900 mb-1">
-                  Nombre del Presupuesto *
-                </label>
-                <input
-                  type="text"
-                  value={budgetName}
-                  onChange={(e) => setBudgetName(e.target.value)}
-                  placeholder="Ej. Presupuesto Inicial"
-                  className="w-full px-3.5 py-2 rounded-xl border-2 border-amber-300 text-amber-950 text-sm font-bold focus:outline-none focus:border-amber-500 bg-amber-50/30"
-                  autoFocus
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-amber-900 mb-1">
-                  Proyecto / Obra
-                </label>
-                <input
-                  type="text"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                  placeholder="Ej. Residencia Las Palmas"
-                  className="w-full px-3.5 py-2 rounded-xl border-2 border-amber-300 text-amber-950 text-sm focus:outline-none focus:border-amber-500 bg-amber-50/30"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-2">
-                  <label className="block text-xs font-bold text-amber-900 mb-1">
-                    Cliente
-                  </label>
-                  <input
-                    type="text"
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    placeholder="Nombre del cliente o empresa"
-                    className="w-full px-3.5 py-2 rounded-xl border-2 border-amber-300 text-amber-950 text-sm focus:outline-none focus:border-amber-500 bg-amber-50/30"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-amber-900 mb-1">
-                    Moneda
-                  </label>
-                  <select
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border-2 border-amber-300 text-amber-950 text-sm font-bold bg-amber-100 cursor-pointer focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="USD">USD ($)</option>
-                    <option value="VES">VES (Bs.)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-amber-200">
-              <button
-                type="button"
-                onClick={() => setShowProjectInfoModal(false)}
-                className="px-4 py-2 text-xs font-extrabold text-amber-950 bg-amber-400 hover:bg-amber-500 rounded-xl transition-colors cursor-pointer shadow-sm"
-              >
-                Listo
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ProjectInfoModal
+        isOpen={showProjectInfoModal}
+        budgetName={budgetName}
+        projectName={projectName}
+        clientName={clientName}
+        currency={currency}
+        onBudgetNameChange={setBudgetName}
+        onProjectNameChange={setProjectName}
+        onClientNameChange={setClientName}
+        onCurrencyChange={setCurrency}
+        onClose={() => setShowProjectInfoModal(false)}
+      />
 
       {/* Modal de Búsqueda e Inclusión COVENIN (sin opciones IA ni Compartir) */}
       <BudgetSearchModal
