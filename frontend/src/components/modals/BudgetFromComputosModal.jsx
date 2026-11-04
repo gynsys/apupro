@@ -332,8 +332,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
         const nonBlank = capturedItems.filter((it) => !isItemEmpty(it));
         if (nonBlank.length > 0 || projectName || clientName) {
           const draftPayload = {
+            id: currentDraftId,
             savedAt: new Date().toISOString(),
-            budgetName: (budgetName || '').trim(),
+            budgetName: (budgetName || '').trim() || 'Planilla de Cómputos',
             projectName: (projectName || '').trim(),
             clientName: (clientName || '').trim(),
             currency,
@@ -345,10 +346,37 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
       } catch (e) {
         // noop
       }
-    }, 800);
+    }, 500);
 
-    return () => clearTimeout(timer);
-  }, [capturedItems, budgetName, projectName, clientName, currency, activeChapter]);
+    // Auto-sincronización multidispositivo en la nube (Móvil <-> PC)
+    const cloudTimer = setTimeout(() => {
+      try {
+        const nonBlank = capturedItems.filter((it) => !isItemEmpty(it));
+        if (nonBlank.length > 0 || projectName || clientName) {
+          const draftPayload = {
+            id: currentDraftId,
+            savedAt: new Date().toISOString(),
+            budgetName: (budgetName || '').trim() || 'Planilla de Cómputos',
+            projectName: (projectName || '').trim(),
+            clientName: (clientName || '').trim(),
+            currency,
+            activeChapter,
+            items: nonBlank,
+          };
+          saveComputosDraft(draftPayload).catch((err) => {
+            console.warn('Auto-sync nube no crítico:', err);
+          });
+        }
+      } catch (_e) {
+        // noop
+      }
+    }, 1500);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(cloudTimer);
+    };
+  }, [capturedItems, budgetName, projectName, clientName, currency, activeChapter, currentDraftId]);
 
   useEffect(() => {
     if (isOpen) {
@@ -576,100 +604,101 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   /**
    * Sincronización multidispositivo (Nube <-> Local) al abrir el modal principal
    */
+  const syncCloudAndLocalDrafts = useCallback(async () => {
+    try {
+      const localList = getSavedComputosList();
+      let localDraft = null;
+      try {
+        const rawActive = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (rawActive) {
+          localDraft = JSON.parse(rawActive);
+          if (localDraft?.id && Array.isArray(localDraft.items) && localDraft.items.length > 0) {
+            if (!localList.some((d) => d.id === localDraft.id)) {
+              localList.unshift(localDraft);
+            }
+          }
+        }
+      } catch (_e) {
+        // ignore
+      }
+
+      const serverDrafts = await getComputosDrafts().catch(() => null);
+      if (!Array.isArray(serverDrafts)) return;
+
+      const draftMap = new Map();
+      serverDrafts.forEach((d) => {
+        if (d && d.id) draftMap.set(d.id, d);
+      });
+
+      // Detectar borradores locales que no estén en la nube para subirlos (ej. guardados sin conexión)
+      const unsyncedLocals = [];
+      localList.forEach((d) => {
+        if (d && d.id) {
+          if (!draftMap.has(d.id)) {
+            draftMap.set(d.id, d);
+            unsyncedLocals.push(d);
+          }
+        }
+      });
+
+      const merged = Array.from(draftMap.values()).sort(
+        (a, b) => new Date(b.savedAt || 0) - new Date(a.savedAt || 0)
+      );
+
+      try {
+        localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(merged));
+      } catch (_e) {
+        // ignore
+      }
+      setSavedList(merged);
+
+      // SINCRONIZACIÓN INTELIGENTE ENTRE DISPOSITIVOS (Móvil <-> PC):
+      // Si la nube tiene un borrador más reciente que el que tenemos en este dispositivo:
+      // (por ejemplo: el usuario estuvo editando en el teléfono y ahora abre la PC, o viceversa)
+      if (merged.length > 0) {
+        const newestCloudDraft = merged[0];
+        const cloudTime = new Date(newestCloudDraft.savedAt || 0).getTime();
+        const localTime = new Date(localDraft?.savedAt || 0).getTime();
+        const currentNonBlank = capturedItems.filter((it) => !isItemEmpty(it));
+
+        if (currentNonBlank.length === 0 || cloudTime > localTime + 2000) {
+          executeLoadSavedComputo(newestCloudDraft);
+        } else if (localTime > cloudTime + 2000 && localDraft && localDraft.items?.length > 0) {
+          saveComputosDraft(localDraft).catch(() => {});
+        }
+      }
+
+      // Subir borradores locales pendientes a la nube en segundo plano
+      if (unsyncedLocals.length > 0) {
+        for (const localDraftItem of unsyncedLocals) {
+          saveComputosDraft(localDraftItem).catch((err) => {
+            console.warn('Aviso: Sincronización de borrador local a la nube:', err);
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('Error sincronizando cómputos en la nube:', err);
+    }
+  }, [capturedItems]);
+
   useEffect(() => {
     if (!isOpen) return;
 
-    let isMounted = true;
-    const syncCloudAndLocalDrafts = async () => {
-      try {
-        const localList = getSavedComputosList();
-        // Recoger también si hay un borrador activo en local que aún no esté en la lista
-        try {
-          const rawActive = localStorage.getItem(DRAFT_STORAGE_KEY);
-          if (rawActive) {
-            const parsedActive = JSON.parse(rawActive);
-            if (parsedActive?.id && Array.isArray(parsedActive.items) && parsedActive.items.length > 0) {
-              if (!localList.some((d) => d.id === parsedActive.id)) {
-                localList.unshift(parsedActive);
-              }
-            }
-          }
-        } catch (_e) {
-          // ignore
-        }
+    syncCloudAndLocalDrafts();
 
-        const serverDrafts = await getComputosDrafts().catch(() => null);
-        if (!isMounted) return;
-
-        if (Array.isArray(serverDrafts)) {
-          const draftMap = new Map();
-          serverDrafts.forEach((d) => {
-            if (d && d.id) draftMap.set(d.id, d);
-          });
-
-          // Detectar borradores locales que no estén en la nube para subirlos (ej. guardados desde el móvil)
-          const unsyncedLocals = [];
-          localList.forEach((d) => {
-            if (d && d.id) {
-              if (!draftMap.has(d.id)) {
-                draftMap.set(d.id, d);
-                unsyncedLocals.push(d);
-              }
-            }
-          });
-
-          const merged = Array.from(draftMap.values()).sort(
-            (a, b) => new Date(b.savedAt || 0) - new Date(a.savedAt || 0)
-          );
-
-          try {
-            localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(merged));
-          } catch (_e) {
-            // ignore
-          }
-          setSavedList(merged);
-
-          // Si la pantalla actual está vacía (sin partidas válidas) y no había borrador local activo con partidas,
-          // cargar automáticamente el último cómputo guardado para que el usuario en PC vea de inmediato lo que hizo en el móvil.
-          const currentNonBlank = capturedItems.filter((it) => !isItemEmpty(it));
-          if (currentNonBlank.length === 0 && merged.length > 0) {
-            let localHasItems = false;
-            try {
-              const rawLocal = localStorage.getItem(DRAFT_STORAGE_KEY);
-              if (rawLocal) {
-                const p = JSON.parse(rawLocal);
-                if (Array.isArray(p.items) && p.items.some((it) => !isItemEmpty(it))) {
-                  localHasItems = true;
-                }
-              }
-            } catch (_e) {
-              // ignore
-            }
-
-            if (!localHasItems) {
-              executeLoadSavedComputo(merged[0]);
-            }
-          }
-
-          // Subir borradores locales pendientes a la nube en segundo plano
-          if (unsyncedLocals.length > 0) {
-            for (const localDraft of unsyncedLocals) {
-              saveComputosDraft(localDraft).catch((err) => {
-                console.warn('Aviso: Sincronización de borrador local a la nube:', err);
-              });
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('Error sincronizando cómputos en la nube:', err);
+    const handleWindowFocus = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        syncCloudAndLocalDrafts();
       }
     };
 
-    syncCloudAndLocalDrafts();
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleWindowFocus);
     return () => {
-      isMounted = false;
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleWindowFocus);
     };
-  }, [isOpen]);
+  }, [isOpen, syncCloudAndLocalDrafts]);
 
   /**
    * Elimina un cómputo de la lista de guardados y de la nube

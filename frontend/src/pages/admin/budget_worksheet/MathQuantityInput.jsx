@@ -60,8 +60,15 @@ export default function MathQuantityInput({
     if (/[+\-*/()]/.test(text)) {
       const evalRes = evaluateExpression(text);
       setPreviewVal(evalRes);
+      if (evalRes !== null && evalRes !== undefined && onChange) {
+        onChange(evalRes);
+      }
     } else {
       setPreviewVal(null);
+      const evaluated = evaluateExpression(text);
+      if (evaluated !== null && evaluated !== undefined && onChange) {
+        onChange(evaluated);
+      }
     }
   };
 

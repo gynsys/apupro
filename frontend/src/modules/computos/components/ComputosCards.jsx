@@ -119,7 +119,7 @@ export default function ComputosCards({
 
                       <div
                         className={`bg-white border-2 ${
-                          isBlankTrailing ? 'border-amber-200 bg-amber-50/20' : 'border-amber-300'
+                          isBlankTrailing ? 'border-dashed border-amber-400 bg-amber-50/30' : 'border-amber-300'
                         } rounded-2xl p-2.5 sm:p-4 shadow-sm space-y-2.5 sm:space-y-3`}
                       >
                         {/* Fila Superior: N° Item, Capítulo y Acciones Rápidas */}
@@ -131,6 +131,11 @@ export default function ComputosCards({
                             <span className="text-[11px] font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md truncate max-w-[150px] sm:max-w-[250px]">
                               {it.chapter}
                             </span>
+                            {isBlankTrailing && (
+                              <span className="text-[10px] font-extrabold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded-full border border-amber-300">
+                                Fila libre
+                              </span>
+                            )}
                             {it.cod_par && (
                               <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">
                                 {it.cov_par || it.cod_par}
@@ -139,31 +144,26 @@ export default function ComputosCards({
                           </div>
 
                           <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleInsertRowBelow(it)}
-                              className="p-1.5 text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
-                              title="Agregar partida debajo"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDuplicateRow(it)}
-                              disabled={isBlankTrailing}
-                              className="p-1.5 text-amber-700 hover:bg-amber-100 rounded-lg transition-colors cursor-pointer disabled:opacity-30"
-                              title="Duplicar partida"
-                            >
-                              <Copy className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveItem(it.id)}
-                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                              title="Eliminar partida"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {!isBlankTrailing && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDuplicateRow(it)}
+                                  className="p-1.5 text-amber-700 hover:bg-amber-100 rounded-lg transition-colors cursor-pointer"
+                                  title="Duplicar partida"
+                                >
+                                  <Copy className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveItem(it.id)}
+                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                  title="Eliminar partida"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
 
@@ -181,7 +181,7 @@ export default function ComputosCards({
                               }
                               placeholder={
                                 isBlankTrailing
-                                  ? 'Escribe aquí la partida (ej: Demolición de pared...)'
+                                  ? 'Escribe aquí la partida (al llenar se agregará otra fila automáticamente)...'
                                   : 'Descripción...'
                               }
                               className="w-full px-3 py-2 text-xs sm:text-sm font-bold bg-amber-50/30 border border-amber-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 rounded-xl uppercase placeholder:text-gray-400"
@@ -582,18 +582,6 @@ export default function ComputosCards({
                             placeholder="Notas, eje, ubicación o especificaciones especiales..."
                             className="w-full px-3 py-1.5 text-xs bg-amber-50/30 border border-amber-300 rounded-xl focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
                           />
-                        </div>
-
-                        {/* BOTÓN AGREGAR PARTIDA DEBAJO */}
-                        <div className="pt-1 border-t border-amber-100 flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => handleInsertRowBelow(it)}
-                            className="text-xs font-bold text-amber-900 hover:text-amber-950 bg-amber-100/60 hover:bg-amber-200/80 px-3 py-1 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
-                          >
-                            <Plus className="w-3.5 h-3.5 text-amber-700" />
-                            <span>+ Agregar Partida Debajo</span>
-                          </button>
                         </div>
                       </div>
                     </React.Fragment>
