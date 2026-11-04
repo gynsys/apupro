@@ -11,7 +11,7 @@ import {
   PURE_UNIT_LINE_RE,
   MEASURE_TRAILING_RE,
 } from './patterns.js';
-import { evaluateMeasurementFormula } from './formulas.js';
+import { evaluateMeasurementFormula, round2 } from './formulas.js';
 
 function createBlankRow(chapter = '') {
   return {
@@ -173,7 +173,7 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
 
       const multFactor = parsedFactor ? Number(parsedFactor) : 1;
       const multDist = parsedDistance ? Number(parsedDistance) : 1;
-      const finalQuantity = Math.round(qty * multFactor * multDist * 10000) / 10000;
+      const finalQuantity = round2(qty * multFactor * multDist);
 
       items.push({
         chapter: currentChap,
@@ -187,7 +187,7 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
         times: formulaEval?.times ?? 1,
         factor: parsedFactor,
         distance: parsedDistance,
-        partial: formulaEval?.partial ? Math.round(formulaEval.partial * multFactor * 10000) / 10000 : finalQuantity,
+        partial: formulaEval?.partial ? round2(formulaEval.partial * multFactor) : finalQuantity,
         observations: '',
         isDefaultQty: false,
       });
@@ -241,7 +241,7 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
 
     const multFactor = parsedFactor ? Number(parsedFactor) : 1;
     const multDist = parsedDistance ? Number(parsedDistance) : 1;
-    const finalQuantity = Math.round(qty * multFactor * multDist * 10000) / 10000;
+    const finalQuantity = round2(qty * multFactor * multDist);
 
     items.push({
       chapter: currentChap,
@@ -255,7 +255,7 @@ function parseComputosInput(text, defaultChapter = 'OBRAS PRELIMINARES') {
       times,
       factor: parsedFactor,
       distance: parsedDistance,
-      partial: Math.round(partial * multFactor * 10000) / 10000,
+      partial: round2(partial * multFactor),
       observations: '',
       isDefaultQty,
     });

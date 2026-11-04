@@ -13,6 +13,7 @@ export default function MathQuantityInput({
   title,
   min,
   integerOnly = false,
+  decimals = 2,
 }) {
   const formatVal = (v) => {
     if (v === null || v === undefined || v === '') {
@@ -41,7 +42,8 @@ export default function MathQuantityInput({
     try {
       const res = Function(`"use strict"; return (${str})`)();
       if (typeof res === 'number' && !isNaN(res) && isFinite(res)) {
-        let finalVal = Math.round(res * 10000) / 10000;
+        const factor = Math.pow(10, decimals);
+        let finalVal = Math.round(res * factor) / factor;
         if (min !== undefined && finalVal < min) finalVal = min;
         if (integerOnly) finalVal = Math.round(finalVal);
         return finalVal;
@@ -125,8 +127,8 @@ export default function MathQuantityInput({
           <span className="text-slate-400">=</span>
           <span>
             {Number(previewVal).toLocaleString('es-VE', {
-              minimumFractionDigits: integerOnly ? 0 : 2,
-              maximumFractionDigits: 4,
+              minimumFractionDigits: integerOnly ? 0 : decimals,
+              maximumFractionDigits: decimals,
             })}
           </span>
         </div>

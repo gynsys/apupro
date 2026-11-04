@@ -4,6 +4,11 @@
 
 import { UNIT_PATTERN, normalizeUnitStr } from './units.js';
 
+function round2(val) {
+  if (val === null || val === undefined || isNaN(val) || val === '') return 0;
+  return Math.round(Number(val) * 100) / 100;
+}
+
 function evaluateMeasurementFormula(rawLine) {
   if (!rawLine || typeof rawLine !== 'string') return null;
   const trimmed = rawLine.trim();
@@ -42,7 +47,7 @@ function evaluateMeasurementFormula(rawLine) {
     const val = Function(`"use strict"; return (${expr});`)();
     if (typeof val !== 'number' || !Number.isFinite(val) || val <= 0) return null;
 
-    const quantity = Math.round(val * 10000) / 10000;
+    const quantity = round2(val);
 
     let length = '';
     let width = '';
@@ -58,18 +63,18 @@ function evaluateMeasurementFormula(rawLine) {
       if (parts.length === 2) {
         length = parts[0];
         width = parts[1];
-        partial = Math.round(length * width * 10000) / 10000;
+        partial = round2(length * width);
       } else if (parts.length === 3) {
         length = parts[0];
         width = parts[1];
         height = parts[2];
-        partial = Math.round(length * width * height * 10000) / 10000;
+        partial = round2(length * width * height);
       } else if (parts.length >= 4) {
         times = parts[0];
         length = parts[1];
         width = parts[2];
         height = parts[3];
-        partial = Math.round(length * width * height * 10000) / 10000;
+        partial = round2(length * width * height);
       }
     }
 
@@ -113,7 +118,7 @@ function computePartial(p) {
 
   // Auto-calcular M3 de este tramo si tiene las 3 dimensiones físicas
   if (l !== null && w !== null && h !== null && l > 0 && w > 0 && h > 0) {
-    const calcM3 = Math.round(l * w * h * t * 1000) / 1000;
+    const calcM3 = round2(l * w * h * t);
     if (p.m3 === '' || p.m3 == null || p._autoM3 === p.m3) {
       p.m3 = calcM3;
       p._autoM3 = calcM3;
@@ -127,19 +132,19 @@ function computePartial(p) {
 
   if (dims.length > 0) {
     const baseGeom = dims.reduce((acc, curr) => acc * curr, 1);
-    return Math.round(baseGeom * multFactor * multDist * t * 10000) / 10000;
+    return round2(baseGeom * multFactor * multDist * t);
   }
 
   // Si no hay dimensiones físicas pero hay volumen M3 directo (transporte M3-KM o botes)
   const m3Val = parseNum(p.m3);
   if (m3Val !== null && !isNaN(m3Val) && m3Val > 0) {
-    return Math.round(m3Val * multFactor * multDist * t * 10000) / 10000;
+    return round2(m3Val * multFactor * multDist * t);
   }
 
   if (p.partial !== '' && p.partial != null) {
     const pVal = parseFloat(String(p.partial).replace(',', '.'));
     if (!isNaN(pVal)) {
-      return Math.round(pVal * multFactor * multDist * t * 10000) / 10000;
+      return round2(pVal * multFactor * multDist * t);
     }
   }
   return 0;
@@ -154,14 +159,14 @@ function recomputeItemWithPartials(item) {
     return item;
   }
   const total = item.partials.reduce((sum, p) => sum + computePartial(p), 0);
-  const roundedTotal = Math.round(total * 10000) / 10000;
+  const roundedTotal = round2(total);
 
   // Suma de M3 para botes y acarreo a partir de los parciales
   const totalM3 = item.partials.reduce((sum, p) => {
     const val = parseFloat(String(p.m3).replace(',', '.'));
     return sum + (!isNaN(val) && val > 0 ? val : 0);
   }, 0);
-  const roundedM3 = totalM3 > 0 ? Math.round(totalM3 * 1000) / 1000 : (item.m3 || '');
+  const roundedM3 = totalM3 > 0 ? round2(totalM3) : (item.m3 || '');
 
   return {
     ...item,
@@ -221,7 +226,7 @@ function recomputeRow(row, field, value) {
     const qVal = Math.max(0, parseFloat(String(value).replace(',', '.')) || 0);
     updated.quantity = qVal;
     const divisor = t;
-    updated.partial = divisor > 0 ? Math.round((qVal / divisor) * 10000) / 10000 : qVal;
+    updated.partial = divisor > 0 ? round2(qVal / divisor) : round2(qVal);
     if (updated.unit === 'M3' && (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3)) {
       updated.m3 = qVal;
       updated._autoM3 = qVal;
@@ -238,17 +243,17 @@ function recomputeRow(row, field, value) {
     const baseGeom = dims.reduce((acc, curr) => acc * curr, 1);
     
     // Parcial = base geométrica * Factor * Distancia (para 1 vez)
-    const parcial = Math.round(baseGeom * multFactor * multDist * 10000) / 10000;
+    const parcial = round2(baseGeom * multFactor * multDist);
     
     // Total = Parcial * N° Veces
-    const total = Math.round(parcial * t * 10000) / 10000;
+    const total = round2(parcial * t);
 
     updated.partial = parcial;
     updated.quantity = total;
 
     // Auto-cálculo de M3 para botes y acarreo cuando se tienen las 3 dimensiones (Largo × Ancho × Alto)
     if (l !== null && w !== null && h !== null && l > 0 && w > 0 && h > 0) {
-      const calcM3 = Math.round(l * w * h * t * 1000) / 1000;
+      const calcM3 = round2(l * w * h * t);
       if (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3) {
         updated.m3 = calcM3;
         updated._autoM3 = calcM3;
@@ -269,10 +274,10 @@ function recomputeRow(row, field, value) {
   } else if (m3Val !== null && !isNaN(m3Val) && m3Val > 0) {
     // Si no hay dimensiones pero hay volumen M3 directo (ej. transporte M3-KM o botes)
     // Parcial = volumen M3 * Factor * Distancia (para 1 vez)
-    const parcial = Math.round(m3Val * multFactor * multDist * 10000) / 10000;
+    const parcial = round2(m3Val * multFactor * multDist);
     
     // Total = Parcial * N° Veces
-    const total = Math.round(parcial * t * 10000) / 10000;
+    const total = round2(parcial * t);
 
     updated.partial = parcial;
     updated.quantity = total;
@@ -286,7 +291,7 @@ function recomputeRow(row, field, value) {
   } else if (field === 'partial') {
     const pVal = Math.max(0, parseFloat(String(value).replace(',', '.')) || 0);
     updated.partial = pVal;
-    updated.quantity = Math.round(pVal * t * 10000) / 10000;
+    updated.quantity = round2(pVal * t);
     if (updated.unit === 'M3' && (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3)) {
       updated.m3 = updated.quantity;
       updated._autoM3 = updated.quantity;
@@ -295,8 +300,8 @@ function recomputeRow(row, field, value) {
     // Si no hay dimensiones ni M3 pero se modifica Factor, Distancia o Veces sobre una cantidad base
     const currentBase = updated.partial > 0 ? updated.partial : (parseFloat(String(updated.quantity).replace(',', '.')) || 0);
     if (currentBase > 0) {
-      const parcial = Math.round(currentBase * multFactor * multDist * 10000) / 10000;
-      const total = Math.round(parcial * t * 10000) / 10000;
+      const parcial = round2(currentBase * multFactor * multDist);
+      const total = round2(parcial * t);
       updated.partial = parcial;
       updated.quantity = total;
       if (updated.unit === 'M3' && (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3)) {
@@ -314,6 +319,7 @@ function recomputeRow(row, field, value) {
  */
 
 export {
+  round2,
   evaluateMeasurementFormula,
   computePartial,
   recomputeItemWithPartials,

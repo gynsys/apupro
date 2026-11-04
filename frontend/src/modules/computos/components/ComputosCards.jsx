@@ -367,7 +367,7 @@ export default function ComputosCards({
                             <div className="text-right">
                               <span className="text-xs font-bold text-amber-700 block">Total Calculado</span>
                               <span className="text-base font-black text-amber-950">
-                                {Number(it.quantity).toLocaleString('es-VE', { maximumFractionDigits: 3 })} {it.unit}
+                                {Number(it.quantity).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {it.unit}
                               </span>
                             </div>
                           </div>
@@ -556,7 +556,8 @@ export default function ComputosCards({
                                           <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Subtotal:</span>
                                           <span className="font-mono font-black text-amber-950 text-xs sm:text-sm whitespace-nowrap bg-white px-2 py-0.5 rounded-md border border-amber-200/80 shadow-2xs">
                                             {Number(p.partial || 0).toLocaleString('es-VE', {
-                                              maximumFractionDigits: 3,
+                                              minimumFractionDigits: 2,
+                                              maximumFractionDigits: 2,
                                             })}{' '}
                                             {it.unit}
                                           </span>

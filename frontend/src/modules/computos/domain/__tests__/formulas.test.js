@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  round2,
   evaluateMeasurementFormula,
   computePartial,
   recomputeItemWithPartials,
@@ -87,5 +88,27 @@ describe('fórmulas de cómputos', () => {
     const withTimes = recomputeRow(withDist, 'times', '2');
     expect(withTimes.partial).toBe(145.92);
     expect(withTimes.quantity).toBe(291.84);
+  });
+
+  it('redondea a dos decimales con round2', () => {
+    expect(round2(20.304)).toBe(20.3);
+    expect(round2(0.2358)).toBe(0.24);
+    expect(round2(3.242)).toBe(3.24);
+    expect(round2(145.92)).toBe(145.92);
+    expect(round2(null)).toBe(0);
+  });
+
+  it('redondea cálculos de mediciones y filas a exactamente dos decimales', () => {
+    const evalRes = evaluateMeasurementFormula('11.28 x 1.80');
+    expect(evalRes.quantity).toBe(20.3);
+
+    const partialVal = computePartial({ length: 11.28, width: 0.12, height: 2.1 });
+    expect(partialVal).toBe(2.84);
+
+    const base = { length: '', width: '', height: '', times: 1, factor: '', distance: '', partial: 0, quantity: 0, unit: 'M3', formula: '' };
+    const rowCalc = recomputeRow(recomputeRow(recomputeRow(base, 'length', '6.55'), 'width', '0.12'), 'height', '0.3');
+    expect(rowCalc.partial).toBe(0.24);
+    expect(rowCalc.quantity).toBe(0.24);
+    expect(rowCalc.m3).toBe(0.24);
   });
 });

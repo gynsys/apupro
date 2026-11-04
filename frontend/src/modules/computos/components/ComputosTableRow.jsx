@@ -304,7 +304,7 @@ function ComputosTableRow({
                                   className="block w-full px-1.5 py-1 text-xs text-right font-extrabold text-amber-950 bg-amber-100/50 rounded cursor-default select-none border border-amber-300"
                                   title="Total calculado automáticamente por la suma de parciales"
                                 >
-                                  {Number(it.quantity || 0).toLocaleString('es-VE', { maximumFractionDigits: 3 })}
+                                  {Number(it.quantity || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                               ) : (
                                 <MathQuantityInput
@@ -511,7 +511,8 @@ function ComputosTableRow({
                                   {/* TOTAL DEL PARCIAL */}
                                   <td className="border border-amber-200 px-2 py-1 text-right font-bold text-xs text-amber-950 bg-amber-100/60">
                                     {Number(p.partial || 0).toLocaleString('es-VE', {
-                                      maximumFractionDigits: 3,
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
                                     })}
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1">
