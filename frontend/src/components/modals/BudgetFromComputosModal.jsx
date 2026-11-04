@@ -35,7 +35,6 @@ import {
   ChevronUp,
   Split,
 } from 'lucide-react';
-import { budgetService } from '../../services/budgetService';
 import BudgetSearchModal from '../../pages/admin/budget_worksheet/BudgetSearchModal';
 import MathQuantityInput from '../../pages/admin/budget_worksheet/MathQuantityInput';
 import PartidasCalibrationModal from './PartidasCalibrationModal';
@@ -68,6 +67,22 @@ import {
   normalizeRowsWithSingleTrailingBlank,
   parseComputosInput,
 } from '../../modules/computos/domain/rows.js';
+import {
+  DRAFT_STORAGE_KEY,
+  SAVED_LIST_STORAGE_KEY,
+  getSavedComputosList,
+  hasOpenedComputos,
+  markComputosOpened,
+} from '../../modules/computos/services/computosStorage.js';
+import {
+  getAllBudgets,
+  getComputosDrafts,
+  saveComputosDraft,
+  deleteComputosDraft,
+  exportComputosExcel,
+  resolveComputo,
+  commitComputoImport,
+} from '../../modules/computos/services/computosApi.js';
 
 
 function escapeHtml(text) {
@@ -78,25 +93,6 @@ function escapeHtml(text) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
-}
-
-// Claves persistentes para guardar borradores de trabajo
-const DRAFT_STORAGE_KEY = 'costbase_computos_saved_draft_v2';
-const SAVED_LIST_STORAGE_KEY = 'costbase_computos_saved_list_v2';
-
-function getSavedComputosList() {
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const data = window.localStorage.getItem(SAVED_LIST_STORAGE_KEY);
-      if (data) {
-        const parsed = JSON.parse(data);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    }
-  } catch (_e) {
-    // ignore
-  }
-  return [];
 }
 
 const INITIAL_WELCOME_MESSAGE = {
@@ -227,12 +223,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     // La primera vez que se abre desde Control de Obra, la planilla nace en
     // cero para que los ingenieros capturen los cómputos ejecutados. En
     // aperturas posteriores se conserva el borrador de la planilla.
-    const openingKey = `control_obra_computos_opened_${initialBudget.id || 'budget'}`;
-    try {
-      if (window.localStorage.getItem(openingKey) === '1') return;
-    } catch (_e) {
-      // Si localStorage no está disponible, se inicializa igualmente.
-    }
+    if (hasOpenedComputos(initialBudget.id)) return;
 
     const chapter = 'GENERAL';
     const rows = initialBudget.items.map((item, index) => ({
@@ -254,11 +245,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     setProjectName(initialBudget.project_name || initialBudget.name || '');
     setClientName(initialBudget.client_name || '');
     setMessages([INITIAL_WELCOME_MESSAGE]);
-    try {
-      window.localStorage.setItem(openingKey, '1');
-    } catch (_e) {
-      // ignore
-    }
+    markComputosOpened(initialBudget.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialBudget?.id]);
 
@@ -379,7 +366,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
 
   useEffect(() => {
     if (isOpen) {
-      budgetService.getAll()
+      getAllBudgets()
         .then((res) => {
           if (Array.isArray(res)) setAvailableBudgets(res);
           else if (Array.isArray(res?.data)) setAvailableBudgets(res.data);
@@ -492,7 +479,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
 
       // 3. Sincronizar en la cuenta (nube) para que esté disponible en PC y móvil
       try {
-        const res = await budgetService.saveComputosDraft(draftPayload);
+        const res = await saveComputosDraft(draftPayload);
         if (res && Array.isArray(res.drafts)) {
           setSavedList(res.drafts);
           try {
@@ -589,7 +576,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   const handleOpenLoadModal = async () => {
     setShowOpenModal(true);
     try {
-      const serverDrafts = await budgetService.getComputosDrafts();
+      const serverDrafts = await getComputosDrafts();
       if (Array.isArray(serverDrafts)) {
         const localList = getSavedComputosList();
         const draftMap = new Map();
@@ -641,7 +628,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
           // ignore
         }
 
-        const serverDrafts = await budgetService.getComputosDrafts().catch(() => null);
+        const serverDrafts = await getComputosDrafts().catch(() => null);
         if (!isMounted) return;
 
         if (Array.isArray(serverDrafts)) {
@@ -697,7 +684,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
           // Subir borradores locales pendientes a la nube en segundo plano
           if (unsyncedLocals.length > 0) {
             for (const localDraft of unsyncedLocals) {
-              budgetService.saveComputosDraft(localDraft).catch((err) => {
+              saveComputosDraft(localDraft).catch((err) => {
                 console.warn('Aviso: Sincronización de borrador local a la nube:', err);
               });
             }
@@ -748,7 +735,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                 toast.success('Cómputo eliminado de la lista');
 
                 try {
-                  const res = await budgetService.deleteComputosDraft(savedId);
+                  const res = await deleteComputosDraft(savedId);
                   if (res && Array.isArray(res.drafts)) {
                     setSavedList(res.drafts);
                     try {
@@ -1493,7 +1480,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
 
     const toastId = toast.loading('Generando archivo Excel (.xlsx)...');
     try {
-      await budgetService.exportComputosExcel(payload);
+      await exportComputosExcel(payload);
       toast.success('Planilla exportada a Excel (.xlsx) con éxito', { id: toastId });
     } catch (err) {
       console.warn('Fallo exportación nativa por backend, usando exportación de contingencia:', err);
@@ -2048,7 +2035,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
 
         let resolved = null;
         try {
-          resolved = await budgetService.resolveComputo({
+          resolved = await resolveComputo({
             description: it.description,
             unit: it.unit || 'M2',
             sc_index: scCounter,
@@ -2095,7 +2082,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
 
       setCommitProgressText('Guardando presupuesto y abriendo hoja de trabajo...');
 
-      const result = await budgetService.commitImport({
+      const result = await commitComputoImport({
         name: cleanBudgetName,
         project_name: (projectName || cleanBudgetName).trim(),
         client_name: clientName.trim() || null,
