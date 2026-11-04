@@ -1,6 +1,7 @@
 import React from 'react';
 import { Bot, Edit3, Save, Sparkles, Table, Trash2, User } from 'lucide-react';
 import MathQuantityInput from '../../../pages/admin/budget_worksheet/MathQuantityInput';
+import { COMMON_UNITS } from '../domain/units.js';
 
 export default function ComputosChat({
   validCount,
