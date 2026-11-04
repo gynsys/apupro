@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useContext } from 'react';
+import React, { useState, useRef, useEffect, useContext, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import {
   Bot,
@@ -1087,6 +1087,35 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   // Cantidad real de partidas cargadas (sin contar la fila vacía de edición)
   const validItems = capturedItems.filter((it) => !isItemEmpty(it));
   const validCount = validItems.length;
+
+  // Filtro de búsqueda por descripción en la planilla de cómputos
+  const [descriptionFilter, setDescriptionFilter] = useState('');
+
+  // Partidas enriquecidas con su índice original para preservar la numeración de ítems
+  const itemsWithOriginalIndex = useMemo(() => {
+    return capturedItems.map((it, idx) => ({ ...it, originalIndex: idx }));
+  }, [capturedItems]);
+
+  // Lista filtrada de partidas según el término de búsqueda
+  const filteredCapturedItems = useMemo(() => {
+    const q = (descriptionFilter || '').trim();
+    if (!q) return itemsWithOriginalIndex;
+    const cleanQ = q.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    return itemsWithOriginalIndex.filter((it) => {
+      const desc = (it.description || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      if (desc.includes(cleanQ)) return true;
+      if (it.cod_par && it.cod_par.toLowerCase().includes(cleanQ)) return true;
+      if (it.observations && it.observations.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(cleanQ)) return true;
+      if (it.partials && it.partials.length > 0) {
+        return it.partials.some((p) => {
+          const pDesc = (p.description || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+          const pObs = (p.observations || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+          return pDesc.includes(cleanQ) || pObs.includes(cleanQ);
+        });
+      }
+      return false;
+    });
+  }, [itemsWithOriginalIndex, descriptionFilter]);
 
   const appendMessage = (msg) => {
     setMessages((prev) => [
@@ -3553,9 +3582,46 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
             {/* CUERPO DE LA PLANILLA: VISTA MÓVIL APILADA (CARDS) O VISTA TABLA CLÁSICA */}
             {viewMode === 'cards' ? (
               /* VISTA MÓVIL APILADA: CONTENEDORES HACIA ABAJO SIN DESPLAZAMIENTO HORIZONTAL */
-              <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-                {capturedItems.map((it, idx) => {
-                  const prevItem = idx > 0 ? capturedItems[idx - 1] : null;
+              <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                {/* Buscador móvil de descripciones */}
+                <div className="relative">
+                  <Search className="w-4 h-4 text-amber-800/60 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={descriptionFilter}
+                    onChange={(e) => setDescriptionFilter(e.target.value)}
+                    placeholder="Filtrar partida por descripción..."
+                    className="w-full bg-white text-slate-800 text-xs font-semibold pl-9 pr-8 py-2 rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 focus:outline-none shadow-xs"
+                  />
+                  {descriptionFilter && (
+                    <button
+                      type="button"
+                      onClick={() => setDescriptionFilter('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-amber-700 hover:text-red-600 rounded cursor-pointer"
+                      title="Limpiar filtro"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {filteredCapturedItems.length === 0 ? (
+                  <div className="bg-white border-2 border-amber-200 rounded-2xl p-6 text-center shadow-xs">
+                    <Search className="w-7 h-7 text-amber-600/60 mx-auto mb-2" />
+                    <p className="font-bold text-xs sm:text-sm text-amber-950">
+                      No se encontraron partidas que coincidan con "{descriptionFilter}"
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setDescriptionFilter('')}
+                      className="mt-2.5 text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 px-3 py-1 rounded-xl cursor-pointer"
+                    >
+                      Limpiar filtro
+                    </button>
+                  </div>
+                ) : (
+                  filteredCapturedItems.map((it, idx) => {
+                  const prevItem = idx > 0 ? filteredCapturedItems[idx - 1] : null;
                   const showChapHeader = Boolean(
                     it.chapter &&
                     it.chapter.trim() &&
@@ -3605,7 +3671,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                         <div className="flex items-center justify-between border-b border-amber-200 pb-2">
                           <div className="flex items-center gap-2">
                             <span className="w-6 h-6 rounded-lg bg-amber-600 text-white font-extrabold text-xs flex items-center justify-center shadow-xs">
-                              {idx + 1}
+                              {it.originalIndex !== undefined ? it.originalIndex + 1 : idx + 1}
                             </span>
                             <span className="text-[11px] font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md truncate max-w-[150px] sm:max-w-[250px]">
                               {it.chapter}
@@ -4087,7 +4153,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                       </div>
                     </React.Fragment>
                   );
-                })}
+                }))}
               </div>
             ) : (
               /* TABLA PRINCIPAL: PLANILLA DE CÓMPUTOS MÉTRICOS CON FILA LIBRE SIEMPRE PRESENTE Y ENCABEZADO FIJO DESACOPLADO */
@@ -4100,7 +4166,29 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                         N° DE ITEM
                       </th>
                       <th rowSpan={2} className="border border-gray-400 px-3 py-2 text-left min-w-[380px] sm:min-w-[460px] bg-amber-200">
-                        DESCRIPCIÓN
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="shrink-0 text-amber-950 font-black tracking-wide">DESCRIPCIÓN</span>
+                          <div className="relative flex-1 max-w-[240px] sm:max-w-[280px]">
+                            <Search className="w-3.5 h-3.5 text-amber-800/60 absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <input
+                              type="text"
+                              value={descriptionFilter}
+                              onChange={(e) => setDescriptionFilter(e.target.value)}
+                              placeholder="Filtrar descripción..."
+                              className="w-full bg-white text-slate-800 text-xs font-medium pl-7 pr-7 py-1 rounded-lg border border-amber-400/80 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 focus:outline-none normal-case placeholder:normal-case placeholder:text-amber-900/40 shadow-2xs transition-all"
+                            />
+                            {descriptionFilter && (
+                              <button
+                                type="button"
+                                onClick={() => setDescriptionFilter('')}
+                                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-amber-700 hover:text-red-600 rounded cursor-pointer"
+                                title="Limpiar filtro"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </th>
                       <th colSpan={4} className="border border-gray-400 px-2 py-1 bg-amber-300">
                         DIMENSIONES
@@ -4137,8 +4225,27 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                     </tr>
                   </thead>
                   <tbody>
-                    {capturedItems.map((it, idx) => {
-                      const prevItem = idx > 0 ? capturedItems[idx - 1] : null;
+                    {filteredCapturedItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={14} className="text-center py-10 bg-white border border-gray-300">
+                          <div className="flex flex-col items-center justify-center gap-2 text-amber-900">
+                            <Search className="w-6 h-6 text-amber-600/60" />
+                            <p className="font-bold text-sm">
+                              No se encontraron partidas que coincidan con "{descriptionFilter}"
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setDescriptionFilter('')}
+                              className="text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 px-3 py-1 rounded-lg cursor-pointer"
+                            >
+                              Limpiar filtro
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredCapturedItems.map((it, idx) => {
+                      const prevItem = idx > 0 ? filteredCapturedItems[idx - 1] : null;
                       const showChapHeader = Boolean(
                         it.chapter &&
                         it.chapter.trim() &&
@@ -4188,7 +4295,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                           >
                             {/* N° DE ITEM */}
                             <td className="border border-gray-300 px-2 py-1 text-center font-bold text-xs bg-amber-50/40">
-                              {idx + 1}
+                              {it.originalIndex !== undefined ? it.originalIndex + 1 : idx + 1}
                             </td>
 
                             {/* DESCRIPCIÓN */}
@@ -4698,7 +4805,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                           )}
                         </React.Fragment>
                       );
-                    })}
+                    }))}
                   </tbody>
                 </table>
               </div>
