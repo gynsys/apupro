@@ -83,10 +83,12 @@ export default function BudgetWorksheetHeader({
             <button
               type="button"
               onClick={() => setHeaderDbDropdownOpen(prev => !prev)}
-              className="w-[34px] h-[34px] p-0 bg-white border border-slate-400 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 text-slate-700 rounded-xl transition-all duration-200 flex items-center justify-center cursor-pointer shadow-xs shrink-0"
+              className="w-[34px] h-[34px] sm:w-auto sm:h-auto p-0 sm:px-3 sm:py-1.5 bg-white border border-slate-400 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 text-slate-700 rounded-xl transition-all duration-200 flex items-center justify-center sm:gap-2 cursor-pointer shadow-xs shrink-0 text-xs sm:text-sm font-medium"
               title={`Base de Datos: ${activeDatabase?.name || 'Base Maestra'}`}
             >
-              <Database size={18} className="shrink-0 text-slate-700 hover:text-blue-700" />
+              <Database className="w-[18px] h-[18px] sm:w-4 sm:h-4 shrink-0 text-slate-700 hover:text-blue-700" />
+              <span className="hidden sm:inline">Base de Datos</span>
+              <ChevronDown size={14} className={`hidden sm:inline transition-transform duration-200 ${headerDbDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {headerDbDropdownOpen && (
               <>
@@ -118,20 +120,22 @@ export default function BudgetWorksheetHeader({
             type="button"
             onClick={onSyncPrices}
             disabled={syncing}
-            className="w-[34px] h-[34px] p-0 bg-white border border-slate-400 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 text-slate-700 rounded-xl transition-all duration-200 flex items-center justify-center cursor-pointer shadow-xs shrink-0"
+            className="w-[34px] h-[34px] sm:w-auto sm:h-auto p-0 sm:px-3 sm:py-1.5 bg-white border border-slate-400 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 text-slate-700 rounded-xl transition-all duration-200 flex items-center justify-center sm:gap-2 cursor-pointer shadow-xs shrink-0 text-xs sm:text-sm font-medium"
             title="Actualizar Precios"
           >
             <RefreshCw size={17} className={`shrink-0 ${syncing ? 'animate-spin text-blue-600' : ''}`} />
+            <span className="hidden sm:inline">{syncing ? 'Actualizando...' : 'Actualizar Precios'}</span>
           </button>
 
           {onOpenControlObra && (
             <button
               type="button"
               onClick={onOpenControlObra}
-              className="w-[34px] h-[34px] p-0 bg-white border border-blue-400 hover:border-blue-600 hover:bg-blue-50 text-blue-700 rounded-xl transition-all duration-200 flex items-center justify-center cursor-pointer shadow-xs shrink-0"
+              className="w-[34px] h-[34px] sm:w-auto sm:h-auto p-0 sm:px-3 sm:py-1.5 bg-white border border-blue-400 hover:border-blue-600 hover:bg-blue-50 text-blue-700 rounded-xl transition-all duration-200 flex items-center justify-center sm:gap-2 cursor-pointer shadow-xs shrink-0 text-xs sm:text-sm font-medium"
               title="Control de Obra"
             >
               <Activity size={17} className="shrink-0" />
+              <span className="hidden sm:inline">Control de Obra</span>
             </button>
           )}
 

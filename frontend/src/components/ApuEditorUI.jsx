@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Wrench, Users, Search, Trash2, Loader, Sparkles } from 'lucide-react';
+import { Package, Wrench, Users, Search, Trash2, Loader, Sparkles, Plus, Calculator, TrendingUp } from 'lucide-react';
 import { numeroALetras } from '../utils/numberToLetters';
 import { calculateItemBreakdown } from '../utils/apuCalculations';
 import { filterBlankComponentRows, isBlankComponentRow } from '../utils/apuRows';
@@ -209,7 +209,7 @@ export default function ApuEditorUI({
   const puHoras = horasHombresRend ? costos.unitPrice / horasHombresRend : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20 md:pb-0">
       <div className="bg-white border-2 border-slate-200 rounded-xl shadow-sm p-3 sm:p-4">
         <div className="flex flex-col md:flex-row items-stretch md:items-end gap-3 sm:gap-4">
           <div className="w-full md:w-32 shrink-0">
@@ -268,26 +268,27 @@ export default function ApuEditorUI({
       </div>
 
       {/* Selector de Pestañas en Móvil (< md) */}
-      <div className="md:hidden sticky top-14 z-20 bg-slate-50/95 backdrop-blur py-1.5 -mx-2 px-2 border-b border-slate-200">
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+      <div className="md:hidden sticky top-12 z-20 bg-slate-50/95 backdrop-blur py-2 -mx-2 px-2 border-b border-slate-200">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
           {[
-            { key: 'all', label: 'Todo' },
-            { key: 'materials', label: `1. Materiales (${sectionRows('materials').length})` },
-            { key: 'equipments', label: `2. Equipos (${sectionRows('equipments').length})` },
-            { key: 'labors', label: `3. Mano Obra (${sectionRows('labors').length})` },
-            { key: 'summary', label: '4. Resumen & P.U.' }
+            { key: 'all', label: 'Todo', icon: null },
+            { key: 'materials', label: `Materiales (${sectionRows('materials').length})`, icon: '📦' },
+            { key: 'equipments', label: `Equipos (${sectionRows('equipments').length})`, icon: '🚜' },
+            { key: 'labors', label: `Mano Obra (${sectionRows('labors').length})`, icon: '👷' },
+            { key: 'summary', label: 'Resumen & P.U.', icon: '📊' }
           ].map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => setMobileTab(tab.key)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer touch-target ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer flex items-center gap-1 shadow-2xs ${
                 mobileTab === tab.key
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-500/20'
                   : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'
               }`}
             >
-              {tab.label}
+              {tab.icon && <span>{tab.icon}</span>}
+              <span>{tab.label}</span>
             </button>
           ))}
         </div>
@@ -303,7 +304,123 @@ export default function ApuEditorUI({
               <h3 className="font-bold text-orange-800 text-sm tracking-wide">1. MATERIALES ( {sectionRows('materials').length} )</h3>
             </div>
           </div>
-          <div className="overflow-x-auto">
+          {/* Vista Mobile Cards (< md) */}
+          <div className="md:hidden divide-y divide-slate-200">
+            {item.materials?.map(mat => {
+              const isBlank = isBlankComponentRow(mat);
+              const subtotal = isBlank ? 0 : ((mat.cantidad * (mat.precio_unitario * exRate) * (1 + (mat.desperdicio || 0) / 100)) * (1 + (material_inflation/100)));
+              return (
+                <div key={mat.id} className="p-3 bg-white hover:bg-slate-50/80 transition-colors">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                        <span className="font-mono text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                          {mat.codigo || 'S/C'}
+                        </span>
+                        <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                          {mat.unidad || 'UND'}
+                        </span>
+                        {mat.origen && renderOrigenTag(mat.origen)}
+                      </div>
+                      <CatalogAutocomplete
+                        type="materials"
+                        value={mat.descripcion || ''}
+                        onChange={(val) => safeFn(onComponentChange)('materials', mat.id, 'descripcion', val)}
+                        onBlur={(val) => safeFn(onComponentBlur)('materials', mat.id, 'descripcion', val)}
+                        onSelect={(data) => handleCatalogSelect('materials', mat, data)}
+                        placeholder="Descripción del material..."
+                        inputClassName="w-full bg-slate-50/70 border border-slate-200 focus:bg-white focus:ring-1 focus:ring-blue-500 rounded-lg px-2 py-1 text-xs font-semibold text-slate-800"
+                        openOnFocus={String(mat.id).startsWith('NEW-')}
+                      />
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setMaterialModal({ isOpen: true, targetRow: mat })}
+                        className="text-slate-400 hover:text-blue-600 p-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 transition-colors"
+                        title="Buscar en catálogo"
+                      >
+                        <Search size={14} />
+                      </button>
+                      {!isBlank && (
+                        <button
+                          type="button"
+                          onClick={() => safeFn(onRemoveRow)('materials', mat.id)}
+                          disabled={deletingId === mat.id}
+                          className="text-red-400 hover:text-red-600 p-1.5 rounded-lg bg-red-50 hover:bg-red-100 transition-colors cursor-pointer"
+                          title="Eliminar material"
+                        >
+                          {deletingId === mat.id ? <Loader size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {mat.descripcion && (
+                    <div className="flex items-center gap-1.5 mb-2 print:hidden no-print">
+                      <MercadoLibreBadge description={mat.descripcion} />
+                      <EpaBadge description={mat.descripcion} />
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-3 gap-2 bg-slate-50/80 p-2 rounded-xl border border-slate-200/80">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-0.5 text-center">
+                        Cant.
+                      </label>
+                      <DecimalInput 
+                        className="w-full text-center bg-white border border-slate-300 rounded-lg px-1 py-1.5 text-xs font-bold text-slate-800 focus:border-blue-500 focus:outline-none"
+                        value={mat.cantidad}
+                        onChange={(val) => safeFn(onComponentChange)('materials', mat.id, 'cantidad', val)}
+                        onBlur={(val) => safeFn(onComponentBlur)('materials', mat.id, 'cantidad', val)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-0.5 text-center">
+                        Desp. %
+                      </label>
+                      <DecimalInput 
+                        className="w-full text-center bg-white border border-slate-300 rounded-lg px-1 py-1.5 text-xs font-bold text-slate-800 focus:border-blue-500 focus:outline-none"
+                        value={mat.desperdicio ?? 0}
+                        onChange={(val) => safeFn(onComponentChange)('materials', mat.id, 'desperdicio', val)}
+                        onBlur={(val) => safeFn(onComponentBlur)('materials', mat.id, 'desperdicio', val)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-0.5 text-center">
+                        Precio ($)
+                      </label>
+                      <DecimalInput 
+                        className="w-full text-center bg-white border border-slate-300 rounded-lg px-1 py-1.5 text-xs font-bold text-slate-800 focus:border-blue-500 focus:outline-none"
+                        value={Number((mat.precio_unitario * exRate).toFixed(2))}
+                        onChange={(val) => safeFn(onComponentChange)('materials', mat.id, 'precio_unitario', val / exRate)}
+                        onBlur={(val) => safeFn(onComponentBlur)('materials', mat.id, 'precio_unitario', val / exRate)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-2 pt-1 text-xs">
+                    <span className="text-[11px] font-semibold text-slate-500">Subtotal Material:</span>
+                    <span className="font-bold text-slate-900 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-md">
+                      $ {subtotal.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="p-2.5 bg-slate-50">
+              <button
+                type="button"
+                onClick={() => setMaterialModal({ isOpen: true, targetRow: null })}
+                className="w-full py-2 bg-white hover:bg-slate-100 border border-slate-300 hover:border-orange-400 text-orange-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <Plus size={14} className="text-orange-600" />
+                <span>Agregar Material</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse min-w-[620px]">
               <thead>
                 <tr className="bg-white border-b border-slate-200 text-xs font-bold text-slate-600">
@@ -438,7 +555,113 @@ export default function ApuEditorUI({
               <h3 className="font-bold text-indigo-800 text-sm tracking-wide">2. EQUIPOS ( {sectionRows('equipments').length} )</h3>
             </div>
           </div>
-          <div className="overflow-x-auto">
+          {/* Vista Mobile Cards (< md) */}
+          <div className="md:hidden divide-y divide-slate-200">
+            {item.equipments?.map(eq => {
+              const isBlank = isBlankComponentRow(eq);
+              const subtotalDia = isBlank ? 0 : ((eq.cantidad * (eq.depreciacion ?? 1.0) * (eq.precio_unitario * exRate)) * (1 + (equipment_inflation/100)));
+              return (
+                <div key={eq.id} className="p-3 bg-white hover:bg-slate-50/80 transition-colors">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                        <span className="font-mono text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                          {eq.codigo || 'S/C'}
+                        </span>
+                        {eq.origen && renderOrigenTag(eq.origen)}
+                      </div>
+                      <CatalogAutocomplete
+                        type="equipments"
+                        value={eq.descripcion || ''}
+                        onChange={(val) => safeFn(onComponentChange)('equipments', eq.id, 'descripcion', val)}
+                        onBlur={(val) => safeFn(onComponentBlur)('equipments', eq.id, 'descripcion', val)}
+                        onSelect={(data) => handleCatalogSelect('equipments', eq, data)}
+                        placeholder="Descripción del equipo o herramienta..."
+                        inputClassName="w-full bg-slate-50/70 border border-slate-200 focus:bg-white focus:ring-1 focus:ring-indigo-500 rounded-lg px-2 py-1 text-xs font-semibold text-slate-800"
+                        openOnFocus={String(eq.id).startsWith('NEW-')}
+                      />
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setEquipmentModal({ isOpen: true, targetRow: eq })}
+                        className="text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg bg-slate-100 hover:bg-indigo-50 transition-colors"
+                        title="Buscar en catálogo"
+                      >
+                        <Search size={14} />
+                      </button>
+                      {!isBlank && (
+                        <button
+                          type="button"
+                          onClick={() => safeFn(onRemoveRow)('equipments', eq.id)}
+                          disabled={deletingId === eq.id}
+                          className="text-red-400 hover:text-red-600 p-1.5 rounded-lg bg-red-50 hover:bg-red-100 transition-colors cursor-pointer"
+                          title="Eliminar equipo"
+                        >
+                          {deletingId === eq.id ? <Loader size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 bg-slate-50/80 p-2 rounded-xl border border-slate-200/80">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-0.5 text-center">
+                        Cant.
+                      </label>
+                      <DecimalInput 
+                        className="w-full text-center bg-white border border-slate-300 rounded-lg px-1 py-1.5 text-xs font-bold text-slate-800 focus:border-indigo-500 focus:outline-none"
+                        value={eq.cantidad}
+                        onChange={(val) => safeFn(onComponentChange)('equipments', eq.id, 'cantidad', val)}
+                        onBlur={(val) => safeFn(onComponentBlur)('equipments', eq.id, 'cantidad', val)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-0.5 text-center">
+                        Deprec.
+                      </label>
+                      <DecimalInput 
+                        className="w-full text-center bg-white border border-slate-300 rounded-lg px-1 py-1.5 text-xs font-bold text-slate-800 focus:border-indigo-500 focus:outline-none"
+                        value={eq.depreciacion ?? 1.0}
+                        onChange={(val) => safeFn(onComponentChange)('equipments', eq.id, 'depreciacion', val)}
+                        onBlur={(val) => safeFn(onComponentBlur)('equipments', eq.id, 'depreciacion', val)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-0.5 text-center">
+                        Precio/Tarifa
+                      </label>
+                      <DecimalInput 
+                        className="w-full text-center bg-white border border-slate-300 rounded-lg px-1 py-1.5 text-xs font-bold text-slate-800 focus:border-indigo-500 focus:outline-none"
+                        value={Number((eq.precio_unitario * exRate).toFixed(2))}
+                        onChange={(val) => safeFn(onComponentChange)('equipments', eq.id, 'precio_unitario', val / exRate)}
+                        onBlur={(val) => safeFn(onComponentBlur)('equipments', eq.id, 'precio_unitario', val / exRate)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-2 pt-1 text-xs">
+                    <span className="text-[11px] font-semibold text-slate-500">Costo Día:</span>
+                    <span className="font-bold text-slate-900 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded-md">
+                      $ {subtotalDia.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="p-2.5 bg-slate-50">
+              <button
+                type="button"
+                onClick={() => setEquipmentModal({ isOpen: true, targetRow: null })}
+                className="w-full py-2 bg-white hover:bg-slate-100 border border-slate-300 hover:border-indigo-400 text-indigo-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <Plus size={14} className="text-indigo-600" />
+                <span>Agregar Equipo</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse min-w-[620px]">
               <thead>
                 <tr className="bg-white border-b border-slate-200 text-xs font-bold text-slate-600">
@@ -560,7 +783,113 @@ export default function ApuEditorUI({
               <h3 className="font-bold text-teal-800 text-sm tracking-wide">3. MANO DE OBRA ( {sectionRows('labors').length} )</h3>
             </div>
           </div>
-          <div className="overflow-x-auto">
+          {/* Vista Mobile Cards (< md) */}
+          <div className="md:hidden divide-y divide-slate-200">
+            {item.labors?.map(lab => {
+              const isBlank = isBlankComponentRow(lab);
+              const totJornalRow = isBlank ? 0 : (lab.cantidad * (lab.jornal * exRate) * (1 + (labor_inflation/100)));
+              const totBonoRow = isBlank ? 0 : (lab.cantidad * ((lab.bono || labor_bonus || 0) * exRate) * (1 + (labor_inflation/100)));
+              return (
+                <div key={lab.id} className="p-3 bg-white hover:bg-slate-50/80 transition-colors">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                        <span className="font-mono text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                          {lab.codigo || 'S/C'}
+                        </span>
+                        {lab.origen && renderOrigenTag(lab.origen)}
+                      </div>
+                      <CatalogAutocomplete
+                        type="labors"
+                        value={lab.descripcion || ''}
+                        onChange={(val) => safeFn(onComponentChange)('labors', lab.id, 'descripcion', val)}
+                        onBlur={(val) => safeFn(onComponentBlur)('labors', lab.id, 'descripcion', val)}
+                        onSelect={(data) => handleCatalogSelect('labors', lab, data)}
+                        placeholder="Descripción de la mano de obra..."
+                        inputClassName="w-full bg-slate-50/70 border border-slate-200 focus:bg-white focus:ring-1 focus:ring-teal-500 rounded-lg px-2 py-1 text-xs font-semibold text-slate-800"
+                        openOnFocus={String(lab.id).startsWith('NEW-')}
+                      />
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setLaborModal({ isOpen: true, targetRow: lab })}
+                        className="text-slate-400 hover:text-emerald-600 p-1.5 rounded-lg bg-slate-100 hover:bg-emerald-50 transition-colors"
+                        title="Buscar en catálogo"
+                      >
+                        <Search size={14} />
+                      </button>
+                      {!isBlank && (
+                        <button
+                          type="button"
+                          onClick={() => safeFn(onRemoveRow)('labors', lab.id)}
+                          disabled={deletingId === lab.id}
+                          className="text-red-400 hover:text-red-600 p-1.5 rounded-lg bg-red-50 hover:bg-red-100 transition-colors cursor-pointer"
+                          title="Eliminar mano de obra"
+                        >
+                          {deletingId === lab.id ? <Loader size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 bg-slate-50/80 p-2 rounded-xl border border-slate-200/80">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-0.5 text-center">
+                        Cant.
+                      </label>
+                      <DecimalInput 
+                        className="w-full text-center bg-white border border-slate-300 rounded-lg px-1 py-1.5 text-xs font-bold text-slate-800 focus:border-teal-500 focus:outline-none"
+                        value={lab.cantidad}
+                        onChange={(val) => safeFn(onComponentChange)('labors', lab.id, 'cantidad', val)}
+                        onBlur={(val) => safeFn(onComponentBlur)('labors', lab.id, 'cantidad', val)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-0.5 text-center">
+                        Jornal ($)
+                      </label>
+                      <DecimalInput 
+                        className="w-full text-center bg-white border border-slate-300 rounded-lg px-1 py-1.5 text-xs font-bold text-slate-800 focus:border-teal-500 focus:outline-none"
+                        value={Number((lab.jornal * exRate).toFixed(2))}
+                        onChange={(val) => safeFn(onComponentChange)('labors', lab.id, 'jornal', val / exRate)}
+                        onBlur={(val) => safeFn(onComponentBlur)('labors', lab.id, 'jornal', val / exRate)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-0.5 text-center">
+                        Bono ($)
+                      </label>
+                      <DecimalInput 
+                        className="w-full text-center bg-white border border-slate-300 rounded-lg px-1 py-1.5 text-xs font-bold text-slate-800 focus:border-teal-500 focus:outline-none opacity-80"
+                        value={isBlankComponentRow(lab) ? 0 : Number(((lab.bono || labor_bonus || 0) * exRate).toFixed(2))}
+                        disabled
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-2 pt-1 text-xs">
+                    <span className="text-[11px] font-semibold text-slate-500">Total Jornal + Bono:</span>
+                    <span className="font-bold text-slate-900 bg-teal-50 border border-teal-200/80 px-2 py-0.5 rounded-md">
+                      $ {(totJornalRow + totBonoRow).toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="p-2.5 bg-slate-50">
+              <button
+                type="button"
+                onClick={() => setLaborModal({ isOpen: true, targetRow: null })}
+                className="w-full py-2 bg-white hover:bg-slate-100 border border-slate-300 hover:border-emerald-500 text-emerald-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <Plus size={14} className="text-emerald-600" />
+                <span>Agregar Mano de Obra</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse min-w-[620px]">
               <thead>
                 <tr className="bg-white border-b border-slate-200 text-xs font-bold text-slate-600">
@@ -659,7 +988,35 @@ export default function ApuEditorUI({
               </tbody>
             </table>
           </div>
-          <div className="bg-slate-50 p-4 border-t border-slate-300">
+          {/* Mobile FCAS & Labor Summary Card (< md) */}
+          <div className="md:hidden bg-slate-50 border-t border-slate-300 p-3 space-y-2 text-xs">
+            <div className="flex justify-between items-center text-slate-700">
+              <span>Total Jornal Diario:</span>
+              <span className="font-semibold text-slate-900">$ {totJornal.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            </div>
+            <div className="flex justify-between items-center text-slate-700">
+              <span>Total Bono Diario:</span>
+              <span className="font-semibold text-slate-900">$ {totBono.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            </div>
+            <div className="flex justify-between items-center text-slate-700">
+              <span>F.C.A.S. ({fcas_percent}%):</span>
+              <span className="font-semibold text-slate-900">$ {fcasMonto.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            </div>
+            <div className="flex justify-between items-center pt-1.5 border-t border-slate-200 font-bold text-slate-800">
+              <span>Total Diario Cuadrilla:</span>
+              <span className="text-slate-950 font-black text-sm">$ {totGeneralManoObra.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            </div>
+            <div className="flex justify-between items-center bg-red-50 p-2 rounded-lg border border-red-200/80 text-red-900 font-bold">
+              <span>Costo Unitario M.O.:</span>
+              <span className="font-black text-sm">$ {costoUnitarioManoObra.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            </div>
+            <div className="flex justify-between items-center text-slate-600 text-[11px]">
+              <span>% Incidencia M.O.:</span>
+              <span className="font-bold text-slate-800">{incidenciaManoObra.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} %</span>
+            </div>
+          </div>
+
+          <div className="hidden md:block bg-slate-50 p-4 border-t border-slate-300">
             <div className="flex justify-end">
               <table className="w-full md:w-[650px] text-xs font-bold text-slate-700 border-collapse">
                 <thead>
@@ -757,7 +1114,119 @@ export default function ApuEditorUI({
 
         {/* BOTTOM SUMMARY BLOCK */}
         {(mobileTab === 'all' || mobileTab === 'summary') && (
-          <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-end gap-4 sm:gap-6 mt-6 sm:mt-8">
+          <>
+          {/* Vista Mobile Cards para Resumen (< md) */}
+          <div className="md:hidden space-y-4">
+            {/* Tarjeta de Costos Directos */}
+            <div className="bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden">
+              <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 font-bold text-xs text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Calculator size={14} className="text-blue-600" />
+                <span>Desglose de Costo Directo (Subtotal A)</span>
+              </div>
+              <div className="p-3 space-y-2 text-xs">
+                <div className="flex justify-between items-center text-slate-600">
+                  <span className="flex items-center gap-1.5">📦 Materiales</span>
+                  <span className="font-bold text-slate-800">$ {costos.materiales.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-600">
+                  <span className="flex items-center gap-1.5">🚜 Equipos</span>
+                  <span className="font-bold text-slate-800">$ {costos.equipos.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-600">
+                  <span className="flex items-center gap-1.5">👷 Mano de Obra</span>
+                  <span className="font-bold text-slate-800">$ {costoUnitarioManoObra.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-slate-200 font-black text-sm text-blue-900 bg-blue-50/60 p-2 rounded-lg">
+                  <span>Costo Directo (Subtotal A):</span>
+                  <span>$ {costos.subtotalA.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tarjeta de Indirectos, Utilidad y Precio Unitario */}
+            <div className="bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden">
+              <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 font-bold text-xs text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <TrendingUp size={14} className="text-emerald-600" />
+                <span>Indirectos, Utilidad y Precio Unitario</span>
+              </div>
+              <div className="p-3 space-y-2.5 text-xs">
+                <div className="flex justify-between items-center gap-2">
+                  <span className="text-slate-600">Administración ({admin_percent}%):</span>
+                  <span className="font-bold text-slate-800">$ {costos.adminCost.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                </div>
+
+                <div className="flex justify-between items-center text-slate-700 font-semibold bg-slate-50 px-2 py-1 rounded">
+                  <span>Subtotal B (Directo + Admin):</span>
+                  <span>$ {costos.subtotalB.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                </div>
+
+                <div className="flex justify-between items-center gap-2">
+                  <span className="text-slate-600">Utilidad ({profit_percent}%):</span>
+                  <span className="font-bold text-slate-800">$ {costos.profitCost.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                </div>
+
+                <div className="flex justify-between items-center text-slate-800 font-bold bg-slate-100 px-2 py-1.5 rounded">
+                  <span>Subtotal C (Precio Sin IVA):</span>
+                  <span className="text-blue-900 font-black">$ {costos.subtotalC.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                </div>
+
+                {iva_percent > 0 ? (
+                  <>
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span>IVA ({iva_percent}%):</span>
+                      <span className="font-bold text-slate-800">$ {costos.ivaCost.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    </div>
+                    <div className="p-3 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-xl shadow-sm text-center">
+                      <span className="block text-[10px] font-semibold text-blue-200 uppercase tracking-wider mb-0.5">
+                        Precio Unitario Final con IVA ({currency})
+                      </span>
+                      <span className="block text-2xl font-black">
+                        $ {costos.unitPriceWithIva.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      </span>
+                      <span className="block text-[10px] text-blue-200 mt-1 italic">
+                        SON: {numeroALetras(costos.unitPriceWithIva)} {String(currency).toUpperCase().includes('USD') ? 'DÓLARES' : 'Bs.'} ctms
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-3 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-xl shadow-sm text-center">
+                    <span className="block text-[10px] font-semibold text-blue-200 uppercase tracking-wider mb-0.5">
+                      Precio Unitario Final ({currency})
+                    </span>
+                    <span className="block text-2xl font-black">
+                      $ {costos.subtotalC.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </span>
+                    <span className="block text-[10px] text-blue-200 mt-1 italic">
+                      SON: {numeroALetras(costos.subtotalC)} {String(currency).toUpperCase().includes('USD') ? 'DÓLARES' : 'Bs.'} ctms
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Tarjeta de Horas Hombre y Rendimiento */}
+            <div className="bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs space-y-1.5">
+              <div className="flex justify-between text-slate-600">
+                <span>Rendimiento:</span>
+                <span className="font-bold text-slate-800">{rendimiento} {item.unit || 'UND'}/día</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Horas Hombre / Día:</span>
+                <span className="font-bold text-slate-800">{horasHombres.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} hrs</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Horas Hombre x Rend.:</span>
+                <span className="font-bold text-slate-800">{horasHombresRend.toLocaleString('es-VE', {minimumFractionDigits: 3, maximumFractionDigits: 3})} hrs</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>PU / Horas Hombre:</span>
+                <span className="font-bold text-slate-800">$ {puHoras.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Summary Block (>= md) - 100% Sin Modificaciones */}
+          <div className="hidden md:flex flex-col lg:flex-row justify-between items-stretch lg:items-end gap-4 sm:gap-6 mt-6 sm:mt-8">
           {/* Left Stats Block */}
           <div className="w-full lg:w-auto bg-slate-50 border border-slate-300 shadow-sm p-1 overflow-x-auto">
             <table className="w-full text-xs font-bold text-slate-700 border-collapse min-w-[280px]">
@@ -925,8 +1394,26 @@ export default function ApuEditorUI({
             </table>
           </div>
         </div>
+          </>
         )}
 
+      </div>
+
+      {/* Barra Flotante Inferior en Mobile con Totales y P.U. */}
+      <div className="md:hidden fixed bottom-14 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-300/80 px-3.5 py-2 shadow-lg flex items-center justify-between">
+        <div>
+          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-tight">Precio Unitario</span>
+          <span className="text-sm font-black text-emerald-700">
+            $ {(costos.unitPriceWithIva || costos.subtotalC || 0).toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+            <span className="text-[10px] font-bold text-slate-500 ml-1">/{item.unit || item.unidad || 'UND'}</span>
+          </span>
+        </div>
+        <div className="text-right">
+          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-tight">Rendimiento</span>
+          <span className="text-xs font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md">
+            {rendimiento} {item.unit || item.unidad || 'UND'}/día
+          </span>
+        </div>
       </div>
 
       <EquipmentSelectorModal
