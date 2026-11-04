@@ -46,7 +46,7 @@ exports[`PRUEBA 8 — Snapshot E2E del prompt guiado > golden: construcción 1`]
 exports[`PRUEBA 8 — Snapshot E2E del prompt guiado > golden: demolición 1`] = `
 {
   "accion": "demolición",
-  "finalPrompt": "demolición manual con mandarria y cincel de paredes de bloques de arcilla Espesor e=10 cm Incluye acarreo interno y apilado unidad m2",
+  "finalPrompt": "demolición manual con mandarria y cincel de paredes de bloques de arcilla Espesor e=10 cm Sin camión (solo acarreo interno y apilado) unidad m2",
   "steps": [
     "metodo",
     "elemento",
@@ -91,7 +91,7 @@ exports[`PRUEBA 8 — Snapshot E2E del prompt guiado > golden: instalación 1`] 
 exports[`PRUEBA 8 — Snapshot E2E del prompt guiado > golden: pintura 1`] = `
 {
   "accion": "pintura",
-  "finalPrompt": "pintura en paredes interiores con Pintura de caucho clase A (lavable) A 2 manos con empastado y preparación de superficie A nivel de planta baja hasta 3 m unidad m2",
+  "finalPrompt": "pintura en paredes interiores con Pintura de caucho clase A (lavable) A 2 manos con empastado y preparación de superficie Sin andamio tubular (planta baja hasta 3 m con escalera/caballetes) unidad m2",
   "steps": [
     "superficie",
     "tipo_pintura",

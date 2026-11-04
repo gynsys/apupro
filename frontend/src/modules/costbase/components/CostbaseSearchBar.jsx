@@ -133,7 +133,23 @@ const Cost360SearchBar = ({
         </button>
 
         {categoriesOpen && (
-          <div className="p-3 border-t border-slate-200 bg-slate-50/80 flex flex-col gap-3 animate-in fade-in duration-150">
+          <div className="p-3 border-t border-slate-200 bg-slate-50/90 flex flex-col gap-2.5 max-h-[48vh] sm:max-h-none overflow-y-auto overscroll-contain animate-in fade-in duration-150">
+            {/* Barra superior de acción rápida para ver partidas inmediatamente en mobile */}
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200">
+              <span className="text-[11px] font-bold text-amber-950 truncate">
+                {hasCategoryFilter ? categorySummary : 'Selecciona una categoría COVENIN'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCategoriesOpen(false)}
+                className="px-3 py-1.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold text-xs rounded-xl shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer shrink-0"
+                title="Recoger filtros y explorar listado de partidas"
+              >
+                <ChevronUp size={14} />
+                <span>Ver partidas</span>
+              </button>
+            </div>
+
             {/* Los 4 Selectores */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
               <div>
@@ -177,8 +193,17 @@ const Cost360SearchBar = ({
                 <select 
                   value={selectedSubcapitulo}
                   onChange={(e) => {
-                    setSelectedSubcapitulo(e.target.value);
+                    const nextSub = e.target.value;
+                    setSelectedSubcapitulo(nextSub);
                     setSelectedPartida('');
+                    if (nextSub) {
+                      const subObj = coveninTree.find(c => c.code === selectedTipoObra)?.children?.find(c => c.code === selectedCapitulo)?.children?.find(s => s.code === nextSub);
+                      const hasFourth = subObj?.children?.length > 0;
+                      // Si no tiene desglose de 4to nivel, auto-recoger para ver partidas inmediatamente
+                      if (!hasFourth) {
+                        setCategoriesOpen(false);
+                      }
+                    }
                   }}
                   disabled={!selectedCapitulo}
                   className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-2 text-xs transition-colors hover:border-[#324ADD] focus:outline-none focus:border-[#324ADD] focus:ring-2 focus:ring-[#324ADD]/20 disabled:opacity-50 cursor-pointer"
@@ -257,81 +282,83 @@ const Cost360SearchBar = ({
         )}
       </div>
 
-      {/* Barra de Búsqueda Principal y Selectores en la misma fila */}
-      <form onSubmit={(e) => { e.preventDefault(); if(onSearch) onSearch(); }} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-        <div className="relative w-full sm:w-[150px] shrink-0">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-            <FiSearch className="text-slate-400 text-sm" />
+      {/* Barra de Búsqueda Principal y Selectores */}
+      <form onSubmit={(e) => { e.preventDefault(); if(onSearch) onSearch(); }} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <div className="flex items-center gap-2">
+          <div className="relative w-28 sm:w-[150px] shrink-0">
+            <div className="absolute inset-y-0 left-0 pl-2.5 sm:pl-3.5 flex items-center pointer-events-none">
+              <FiSearch className="text-slate-400 text-xs sm:text-sm" />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-7 sm:pl-9 pr-2 sm:pr-3 py-1.5 sm:py-2 rounded-xl text-xs placeholder:text-[11px] sm:placeholder:text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-medium"
+              style={{
+                background: 'rgba(255,255,255,0.85)',
+                border: '1.5px solid #cbd5e1',
+                boxShadow: 'inset 0 1px 3px rgba(80,100,200,0.05)',
+              }}
+              placeholder="Cód. COVENIN"
+              value={searchCovenin}
+              onChange={(e) => setSearchCovenin(e.target.value)}
+            />
           </div>
-          <input
-            type="text"
-            className="block w-full pl-9 pr-3 py-2 rounded-xl text-xs placeholder:text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-medium"
-            style={{
-              background: 'rgba(255,255,255,0.85)',
-              border: '1.5px solid #cbd5e1',
-              boxShadow: 'inset 0 1px 3px rgba(80,100,200,0.05)',
-            }}
-            placeholder="Cód. COVENIN"
-            value={searchCovenin}
-            onChange={(e) => setSearchCovenin(e.target.value)}
-          />
-        </div>
 
-        <div className="relative flex-1 min-w-0">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-            <FiSearch className="text-slate-400 text-sm" />
-          </div>
-          <input
-            type="text"
-            className="block w-full pl-9 pr-8 py-2 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-medium"
-            style={{
-              background: 'rgba(255,255,255,0.85)',
-              border: '1.5px solid #cbd5e1',
-              boxShadow: 'inset 0 1px 3px rgba(80,100,200,0.05)',
-            }}
-            placeholder="Ej: excavación a maquina..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center gap-1.5">
-            {isSearching && (
-              <div className="text-blue-500 pointer-events-none">
-                <Loader className="animate-spin" size={15} />
-              </div>
-            )}
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200/60 transition-colors"
-                title="Limpiar búsqueda"
-              >
-                <X size={14} />
-              </button>
-            )}
+          <div className="relative flex-1 min-w-0">
+            <div className="absolute inset-y-0 left-0 pl-2.5 sm:pl-3.5 flex items-center pointer-events-none">
+              <FiSearch className="text-slate-400 text-xs sm:text-sm" />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-7 sm:pl-9 pr-7 sm:pr-8 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-medium"
+              style={{
+                background: 'rgba(255,255,255,0.85)',
+                border: '1.5px solid #cbd5e1',
+                boxShadow: 'inset 0 1px 3px rgba(80,100,200,0.05)',
+              }}
+              placeholder="Ej: excavación a maquina..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <div className="absolute inset-y-0 right-0 pr-2 flex items-center gap-1">
+              {isSearching && (
+                <div className="text-blue-500 pointer-events-none">
+                  <Loader className="animate-spin" size={14} />
+                </div>
+              )}
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-200/60 transition-colors"
+                  title="Limpiar búsqueda"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Búsqueda Inversa Toggles */}
         <div className="flex items-center justify-between sm:justify-start gap-3 shrink-0 px-1 text-xs whitespace-nowrap pt-0.5 sm:pt-0">
-          <span className="text-slate-600 font-medium text-xs">Buscar por:</span>
+          <span className="text-slate-600 font-medium text-[11px] sm:text-xs">Buscar por:</span>
           
           <label className="flex items-center cursor-pointer gap-1.5">
             <div className="relative">
               <input type="checkbox" className="sr-only" checked={searchDesc} onChange={(e) => setSearchDesc(e.target.checked)} />
-              <div className={`block w-7 h-[17px] rounded-full transition-colors ${searchDesc ? 'bg-blue-500' : 'bg-slate-300'}`}></div>
-              <div className={`absolute left-[2px] top-[2px] bg-white w-[13px] h-[13px] rounded-full transition-transform ${searchDesc ? 'transform translate-x-[11px]' : ''}`}></div>
+              <div className={`block w-6 h-[15px] sm:w-7 sm:h-[17px] rounded-full transition-colors ${searchDesc ? 'bg-blue-500' : 'bg-slate-300'}`}></div>
+              <div className={`absolute left-[2px] top-[2px] bg-white w-[11px] h-[11px] sm:w-[13px] sm:h-[13px] rounded-full transition-transform ${searchDesc ? 'transform translate-x-[9px] sm:translate-x-[11px]' : ''}`}></div>
             </div>
-            <span className="text-slate-700 select-none font-medium text-xs">Descripción</span>
+            <span className="text-slate-700 select-none font-medium text-[11px] sm:text-xs">Descripción</span>
           </label>
 
           <label className="flex items-center cursor-pointer gap-1.5" title="Busca dentro de los Materiales, Equipos y Mano de Obra de las partidas">
             <div className="relative">
               <input type="checkbox" className="sr-only" checked={searchInsumos} onChange={(e) => setSearchInsumos(e.target.checked)} />
-              <div className={`block w-7 h-[17px] rounded-full transition-colors ${searchInsumos ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
-              <div className={`absolute left-[2px] top-[2px] bg-white w-[13px] h-[13px] rounded-full transition-transform ${searchInsumos ? 'transform translate-x-[11px]' : ''}`}></div>
+              <div className={`block w-6 h-[15px] sm:w-7 sm:h-[17px] rounded-full transition-colors ${searchInsumos ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
+              <div className={`absolute left-[2px] top-[2px] bg-white w-[11px] h-[11px] sm:w-[13px] sm:h-[13px] rounded-full transition-transform ${searchInsumos ? 'transform translate-x-[9px] sm:translate-x-[11px]' : ''}`}></div>
             </div>
-            <span className="text-slate-700 select-none font-medium text-xs">Materiales</span>
+            <span className="text-slate-700 select-none font-medium text-[11px] sm:text-xs">Materiales</span>
           </label>
         </div>
       </form>

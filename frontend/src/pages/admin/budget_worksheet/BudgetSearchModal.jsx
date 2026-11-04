@@ -39,8 +39,8 @@ export default function BudgetSearchModal({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className={`fixed inset-0 bg-slate-900/50 backdrop-blur-sm ${zIndexClass} flex items-start justify-center p-0 sm:p-4 sm:pt-20`}>
-      <div className="w-full h-full sm:h-[80vh] sm:max-w-4xl bg-amber-100 rounded-none sm:rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
+    <div className={`fixed inset-0 bg-slate-900/50 backdrop-blur-sm ${zIndexClass} flex flex-col sm:flex-row items-center justify-start sm:justify-center p-0 sm:p-4 sm:pt-20`}>
+      <div className="w-full h-[100dvh] sm:h-[80vh] sm:max-w-4xl bg-amber-100 rounded-none sm:rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header Fila 1: Título con Menú Hamburguesa y Botón Cerrar fijo a la derecha */}
         <div className="relative flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3.5 bg-white/80 border-b border-amber-600/15 shrink-0">
@@ -344,7 +344,7 @@ export default function BudgetSearchModal({
           </div>
         )}
 
-        <div className="overflow-y-auto p-3 sm:p-4 flex-1 bg-white/20">
+        <div className="overflow-y-auto p-3 sm:p-4 flex-1 min-h-0 bg-white/20 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
           {searchResults.length === 0 && !searching ? (
             <div className="text-center py-12 text-amber-700/70 text-sm font-medium">
               No se encontraron partidas.
