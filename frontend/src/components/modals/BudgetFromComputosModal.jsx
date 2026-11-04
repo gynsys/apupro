@@ -1,8 +1,6 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback, useReducer } from 'react';
 import { toast } from 'react-hot-toast';
 import {
-  Bot,
-  User,
   Send,
   X,
   Sparkles,
@@ -45,7 +43,6 @@ import { SiteConfigContext } from '../../App';
 
 import {
   COMMON_UNITS,
-  UNIT_ALIASES,
   normalizeUnitStr,
   inferUnitFromDescription,
 } from '../../modules/computos/domain/units.js';
@@ -55,7 +52,6 @@ import {
   MEASURE_TRAILING_RE,
 } from '../../modules/computos/domain/patterns.js';
 import {
-  evaluateMeasurementFormula,
   recomputeRow,
 } from '../../modules/computos/domain/formulas.js';
 import {
@@ -63,7 +59,6 @@ import {
   isItemEmpty,
   extractCoveninSearchKeywords,
   normalizeRowsWithSingleTrailingBlank,
-  parseComputosInput,
 } from '../../modules/computos/domain/rows.js';
 import {
   DRAFT_STORAGE_KEY,
@@ -86,7 +81,6 @@ import SavedComputosModal from '../../modules/computos/components/SavedComputosM
 import { AddChapterModal, RenameChapterModal } from '../../modules/computos/components/ChapterModals.jsx';
 import ProjectInfoModal from '../../modules/computos/components/ProjectInfoModal.jsx';
 import GenerationProgressModal from '../../modules/computos/components/GenerationProgressModal.jsx';
-import ComputosChat from '../../modules/computos/components/ComputosChat.jsx';
 import ComputosSheet from '../../modules/computos/components/ComputosSheet.jsx';
 
 
@@ -100,18 +94,7 @@ function escapeHtml(text) {
     .replace(/'/g, '&#39;');
 }
 
-const INITIAL_WELCOME_MESSAGE = {
-  id: 'welcome',
-  role: 'bot',
-  type: 'welcome',
-  content:
-    '¡Hola! Soy tu asistente de cómputos en campo. Anota tus partidas aquí o edítalas directamente en la Planilla de Cómputos Métricos. Puedes pulsar "Guardar" en cualquier momento para pausar y retomar tu trabajo después.',
-};
-
 export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, initialBudget = null, onSendToPartidas = null }) {
-  // Pestaña activa: 'sheet' (Planilla de Cómputos) | 'chat' (Asistente de Campo)
-  const [activeTab, setActiveTab] = useState('sheet');
-
   const [activeChapter, setActiveChapter] = useState(() => {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
@@ -133,14 +116,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
 
-  const [messages, setMessages] = useState([INITIAL_WELCOME_MESSAGE]);
-  const [inputText, setInputText] = useState('');
 
-  // Estado para editar un cómputo en vivo (en el chat)
-  const [editingItemId, setEditingItemId] = useState(null);
-  const [editForm, setEditForm] = useState(null);
-
-  const [lastCapturedItemId, setLastCapturedItemId] = useState(null);
   const [saveStatus, setSaveStatus] = useState(null);
   const [showOpenModal, setShowOpenModal] = useState(false);
   const [showChapterModal, setShowChapterModal] = useState(false);
@@ -256,7 +232,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     setBudgetName(initialBudget.name ? `Cómputos - ${initialBudget.name}` : 'Planilla de Cómputos');
     setProjectName(initialBudget.project_name || initialBudget.name || '');
     setClientName(initialBudget.client_name || '');
-    setMessages([INITIAL_WELCOME_MESSAGE]);
     markComputosOpened(initialBudget.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialBudget?.id]);
@@ -348,8 +323,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   }, []);
   const [expandedPartials, setExpandedPartials] = useState({});
 
-  const messagesEndRef = useRef(null);
-  const textareaRef = useRef(null);
+
 
   // Auto-guardado en segundo plano de borradores para no perder nada si se cierra inesperadamente
   useEffect(() => {
@@ -398,12 +372,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     };
   }, []);
 
-  useEffect(() => {
-    if (isOpen && activeTab === 'chat') {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, isOpen, activeTab]);
-
   // Cantidad real de partidas cargadas (sin contar la fila vacía de edición)
   const validItems = capturedItems.filter((it) => !isItemEmpty(it));
   const validCount = validItems.length;
@@ -436,16 +404,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
       return false;
     });
   }, [itemsWithOriginalIndex, descriptionFilter]);
-
-  const appendMessage = (msg) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        ...msg,
-      },
-    ]);
-  };
 
   /**
    * Guarda explícitamente el borrador actual en localStorage y en la lista de guardados (con sincronización en la nube)
@@ -782,7 +740,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     setProjectName('');
     setClientName('');
     setActiveChapter('OBRAS PRELIMINARES');
-    setMessages([INITIAL_WELCOME_MESSAGE]);
     setSaveStatus(null);
     setShowOpenModal(false);
     toast.success('Nueva planilla en blanco iniciada');
@@ -969,176 +926,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   /**
    * Registra un cómputo tanto en la Planilla como en el Chat
    */
-  const registerCapturedComputo = ({
-    chapter,
-    description,
-    quantity,
-    formula,
-    unit,
-    length = '',
-    width = '',
-    height = '',
-    times = 1,
-    factor = '',
-    distance = '',
-    partial = null,
-    observations = '',
-    isDefaultQty = false,
-  }) => {
-    const normalizedUnit = (unit || 'M2').toUpperCase();
-    const itemId = `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const finalQty = Number(quantity) || 1;
-    const finalFormula = formula || String(finalQty);
-    const newItem = {
-      id: itemId,
-      chapter: (chapter || activeChapter || 'GENERAL').trim().toUpperCase(),
-      description: (description || '').trim().toUpperCase(),
-      unit: normalizedUnit,
-      length: length !== '' && length != null ? length : '',
-      width: width !== '' && width != null ? width : '',
-      height: height !== '' && height != null ? height : '',
-      times: times || 1,
-      factor: factor !== '' && factor != null ? factor : '',
-      distance: distance !== '' && distance != null ? distance : '',
-      partial: partial != null ? partial : finalQty,
-      quantity: finalQty,
-      formula: finalFormula,
-      observations: observations || '',
-      isDefaultQty,
-    };
-
-    setCapturedItems((prev) => {
-      const nonBlank = prev.filter((it) => !isItemEmpty(it));
-      return normalizeRowsWithSingleTrailingBlank([...nonBlank, newItem], activeChapter);
-    });
-    setLastCapturedItemId(itemId);
-
-    if (isDefaultQty) {
-      appendMessage({
-        role: 'bot',
-        type: 'item_captured',
-        itemId,
-        content: `Cómputo registrado: **${newItem.description}** (${newItem.quantity} ${newItem.unit}). Puedes editarlo con el botón "✏️ Editar" o continuar anotando.`,
-      });
-    } else {
-      appendMessage({
-        role: 'bot',
-        type: 'item_captured',
-        itemId,
-        content: `Cómputo registrado: **${newItem.description}** (${newItem.formula} = ${newItem.quantity} ${newItem.unit}).`,
-      });
-    }
-
-    return newItem;
-  };
-
-  const handleSendMessage = (overrideText = null) => {
-    const raw = (overrideText !== null ? overrideText : inputText).trim();
-    if (!raw || isCommitting) return;
-
-    if (overrideText === null) {
-      setInputText('');
-    }
-    appendMessage({ role: 'user', content: raw });
-
-    // 1. ¿Actualización de medidas para el último cómputo registrado?
-    const pureMeas = evaluateMeasurementFormula(raw);
-    if (pureMeas && lastCapturedItemId) {
-      const targetItem = capturedItems.find((it) => it.id === lastCapturedItemId);
-      if (targetItem) {
-        const finalUnit = pureMeas.explicitUnit || pureMeas.inferredUnit || targetItem.unit;
-        setCapturedItems((prev) =>
-          prev.map((it) =>
-            it.id === lastCapturedItemId
-              ? {
-                  ...it,
-                  quantity: pureMeas.quantity,
-                  partial: pureMeas.partial,
-                  formula: pureMeas.formula,
-                  unit: finalUnit,
-                  length: pureMeas.length ?? '',
-                  width: pureMeas.width ?? '',
-                  height: pureMeas.height ?? '',
-                  times: pureMeas.times ?? 1,
-                  isDefaultQty: false,
-                }
-              : it
-          )
-        );
-        appendMessage({
-          role: 'bot',
-          type: 'item_captured',
-          itemId: lastCapturedItemId,
-          content: `📐 Medición actualizada para **${targetItem.description}**: ${pureMeas.formula} = **${pureMeas.quantity} ${finalUnit}**.`,
-        });
-        return;
-      }
-    }
-
-    // 2. ¿Selección de unidad directa?
-    const rawUnitKey = raw.replace(/[^a-zA-Z0-9²³]/g, '').toLowerCase();
-    if (UNIT_ALIASES[rawUnitKey] && lastCapturedItemId) {
-      const chosenUnit = UNIT_ALIASES[rawUnitKey];
-      const targetItem = capturedItems.find((it) => it.id === lastCapturedItemId);
-      if (targetItem) {
-        setCapturedItems((prev) =>
-          prev.map((it) =>
-            it.id === lastCapturedItemId ? { ...it, unit: chosenUnit } : it
-          )
-        );
-        appendMessage({
-          role: 'bot',
-          type: 'item_captured',
-          itemId: lastCapturedItemId,
-          content: `Unidad actualizada a **${chosenUnit}** para **${targetItem.description}**.`,
-        });
-        return;
-      }
-    }
-
-    // 3. Analizar input con el analizador inteligente de cómputos
-    const parsed = parseComputosInput(raw, activeChapter);
-
-    if (parsed.activeChapter && parsed.activeChapter !== activeChapter) {
-      setActiveChapter(parsed.activeChapter);
-    }
-
-    if (parsed.items.length === 0) {
-      if (parsed.activeChapter) {
-        appendMessage({
-          role: 'bot',
-          content: `📂 Capítulo activo cambiado a **${parsed.activeChapter}**. Ahora escribe la descripción de la partida, sus dimensiones y unidad.`,
-        });
-        return;
-      }
-      appendMessage({
-        role: 'bot',
-        content:
-          'Escribe la partida con sus medidas y unidad, por ejemplo:\n`Capitulo Impermeabilizacion`\n`Remoción de manto asfáltico 10.50*7.50 m2`\nO cambia a la pestaña "Planilla" para editar directamente en la tabla.',
-      });
-      return;
-    }
-
-    for (const it of parsed.items) {
-      registerCapturedComputo({
-        chapter: it.chapter || parsed.activeChapter || activeChapter,
-        description: it.description,
-        quantity: it.quantity,
-        formula: it.formula,
-        unit: it.unit,
-        length: it.length,
-        width: it.width,
-        height: it.height,
-        times: it.times,
-        factor: it.factor,
-        distance: it.distance,
-        partial: it.partial,
-        observations: it.observations,
-        isDefaultQty: it.isDefaultQty,
-      });
-    }
-  };
-
   /**
    * Actualiza directamente cualquier celda de la Planilla de Cómputos
    * y garantiza que SIEMPRE exista una fila libre al final
@@ -1696,50 +1483,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     setCoveninTargetItemId(null);
   };
 
-  /**
-   * Manejadores para edición en vivo de cómputos en el Chat
-   */
-  const handleStartEdit = (item) => {
-    setEditingItemId(item.id);
-    setEditForm({ ...item });
-  };
-
-  const handleEditFormFieldChange = (field, value) => {
-    if (!editForm) return;
-    setEditForm((prev) => recomputeRow(prev, field, value));
-  };
-
-  const handleSaveEdit = () => {
-    if (!editForm) return;
-    const finalDesc = (editForm.description || '').trim().toUpperCase();
-    setCapturedItems((prev) => {
-      const updated = prev.map((it) =>
-        it.id === editForm.id ? { ...editForm, description: finalDesc } : it
-      );
-      return normalizeRowsWithSingleTrailingBlank(updated, activeChapter);
-    });
-    setEditingItemId(null);
-    setEditForm(null);
-    appendMessage({
-      role: 'bot',
-      content: `✏️ Cómputo actualizado: **${finalDesc}** (${editForm.quantity} ${editForm.unit}).`,
-    });
-  };
-
-  const handleCancelEdit = () => {
-    setEditingItemId(null);
-    setEditForm(null);
-  };
-
   const handleRemoveItem = (itemId) => {
     rowsDispatch({
       type: 'REMOVE_ROW',
       payload: { itemId, activeChapter },
     });
-    if (editingItemId === itemId) {
-      setEditingItemId(null);
-      setEditForm(null);
-    }
   };
 
   const executeClearAll = () => {
@@ -1757,7 +1505,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     setProjectName('');
     setClientName('');
     setActiveChapter('OBRAS PRELIMINARES');
-    setMessages([INITIAL_WELCOME_MESSAGE]);
     setSaveStatus(null);
     toast.success('Planilla reiniciada');
   };
@@ -1813,7 +1560,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     setProjectName('');
     setClientName('');
     setActiveChapter('OBRAS PRELIMINARES');
-    setMessages([INITIAL_WELCOME_MESSAGE]);
     setSaveStatus(null);
   };
 
@@ -2141,32 +1887,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
             </div>
           </div>
 
-          {/* Selector de Pestaña Central: Planilla de Cómputos vs Chat Asistente */}
-          <div className="flex items-center gap-1 bg-amber-200/80 p-1 rounded-xl border border-amber-300 shrink-0">
-            <button
-              type="button"
-              onClick={() => setActiveTab('sheet')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
-                activeTab === 'sheet'
-                  ? 'bg-amber-600 text-white shadow-sm'
-                  : 'text-amber-900 hover:bg-amber-300/60'
-              }`}
-            >
-              <Table className="w-4 h-4" />
-              <span>Planilla ({validCount})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('chat')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
-                activeTab === 'chat'
-                  ? 'bg-amber-600 text-white shadow-sm'
-                  : 'text-amber-900 hover:bg-amber-300/60'
-              }`}
-            >
-              <Bot className="w-4 h-4" />
-              <span>Asistente / Chat</span>
-            </button>
+          {/* Indicador de Partidas en Planilla */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-200/80 rounded-xl border border-amber-300 text-xs font-extrabold text-amber-900 shrink-0">
+            <Table className="w-4 h-4 text-amber-800" />
+            <span>Planilla ({validCount})</span>
           </div>
 
           {/* Acciones de Cabecera Desktop */}
@@ -2374,77 +2098,31 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
             </div>
           </div>
 
-          {/* Fila 2 Móvil: Selector de Pestañas a 2 columnas completas (fácil de tocar) */}
-          <div className="grid grid-cols-2 gap-1 bg-amber-200/80 p-1 rounded-xl border border-amber-300">
-            <button
-              type="button"
-              onClick={() => setActiveTab('sheet')}
-              className={`py-1.5 rounded-lg text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                activeTab === 'sheet'
-                  ? 'bg-amber-600 text-white shadow-sm'
-                  : 'text-amber-900 hover:bg-amber-300/60'
-              }`}
-            >
-              <Table className="w-3.5 h-3.5" />
-              <span>Planilla ({validCount})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('chat')}
-              className={`py-1.5 rounded-lg text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                activeTab === 'chat'
-                  ? 'bg-amber-600 text-white shadow-sm'
-                  : 'text-amber-900 hover:bg-amber-300/60'
-              }`}
-            >
-              <Bot className="w-3.5 h-3.5" />
-              <span>Asistente / Chat</span>
-            </button>
-          </div>
         </div>
       </header>
 
       {/* CUERPO PRINCIPAL */}
-      {activeTab === 'sheet' ? (
-        <ComputosSheet
-          descriptionFilter={descriptionFilter}
-          expandedPartials={expandedPartials}
-          filteredCapturedItems={filteredCapturedItems}
-          handleAddPartial={handleAddPartial}
-          handleClearPartials={handleClearPartials}
-          handleDuplicateRow={handleDuplicateRow}
-          handleEnrichItem={handleEnrichItem}
-          handleInsertRowBelow={handleInsertRowBelow}
-          handleOpenCoveninModal={handleOpenCoveninModal}
-          handleRemoveChapterHeader={handleRemoveChapterHeader}
-          handleRemoveItem={handleRemoveItem}
-          handleRemovePartial={handleRemovePartial}
-          handleRenameChapter={handleRenameChapter}
-          handleToggleExpandPartials={handleToggleExpandPartials}
-          handleTogglePartials={handleTogglePartials}
-          handleUpdateItemField={handleUpdateItemField}
-          handleUpdatePartialField={handleUpdatePartialField}
-          setDescriptionFilter={setDescriptionFilter}
-          viewMode={viewMode}
-        />
-      ) : (
-        /* VISTA: CHAT ASISTENTE DE CAMPO */
-                <ComputosChat
-          validCount={validCount}
-          setActiveTab={setActiveTab}
-          messages={messages}
-          capturedItems={capturedItems}
-          editingItemId={editingItemId}
-          editForm={editForm}
-          setEditForm={setEditForm}
-          handleCancelEdit={handleCancelEdit}
-          handleEditFormFieldChange={handleEditFormFieldChange}
-          handleSaveEdit={handleSaveEdit}
-          handleStartEdit={handleStartEdit}
-          handleRemoveItem={handleRemoveItem}
-          messagesEndRef={messagesEndRef}
-        />
-      )}
+      <ComputosSheet
+        descriptionFilter={descriptionFilter}
+        expandedPartials={expandedPartials}
+        filteredCapturedItems={filteredCapturedItems}
+        handleAddPartial={handleAddPartial}
+        handleClearPartials={handleClearPartials}
+        handleDuplicateRow={handleDuplicateRow}
+        handleEnrichItem={handleEnrichItem}
+        handleInsertRowBelow={handleInsertRowBelow}
+        handleOpenCoveninModal={handleOpenCoveninModal}
+        handleRemoveChapterHeader={handleRemoveChapterHeader}
+        handleRemoveItem={handleRemoveItem}
+        handleRemovePartial={handleRemovePartial}
+        handleRenameChapter={handleRenameChapter}
+        handleToggleExpandPartials={handleToggleExpandPartials}
+        handleTogglePartials={handleTogglePartials}
+        handleUpdateItemField={handleUpdateItemField}
+        handleUpdatePartialField={handleUpdatePartialField}
+        setDescriptionFilter={setDescriptionFilter}
+        viewMode={viewMode}
+      />
 
       {/* BARRA INFERIOR DE ACCIÓN (Siempre accesible en ambas vistas con botón Guardar y Generar) */}
       <div className="p-2 sm:p-4 pb-safe bg-[#FEF3C7] border-t border-amber-200 shrink-0">
@@ -2452,37 +2130,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
           {commitError && (
             <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
               {commitError}
-            </div>
-          )}
-
-          {/* Input de Chat (solo visible cuando estamos en la pestaña Chat) */}
-          {activeTab === 'chat' && (
-            <div className="flex items-end gap-2">
-              <textarea
-                ref={textareaRef}
-                rows={2}
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-                disabled={isCommitting}
-                placeholder="Escribe Descripción, Medidas (ej: 10.50*7.50 m) y Unidad (M2)... Presiona Enter"
-                className="flex-1 bg-white border-2 border-amber-300 rounded-2xl px-4 py-2.5 text-sm text-amber-950 focus:outline-none focus:border-amber-500 placeholder:text-amber-700/60 shadow-inner resize-none"
-              />
-              <button
-                type="button"
-                onClick={() => handleSendMessage()}
-                disabled={!inputText.trim() || isCommitting}
-                className="h-11 px-4 sm:px-5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold flex items-center justify-center gap-1.5 disabled:opacity-50 transition-all shadow-md shadow-amber-500/20 shrink-0 cursor-pointer"
-                title="Agregar partida"
-              >
-                <Send className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">Agregar</span>
-              </button>
             </div>
           )}
 
