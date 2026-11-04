@@ -19,19 +19,6 @@ import { COMMON_UNITS } from '../domain/units.js';
 import { auditDescription } from '../../../utils/descriptionAuditor';
 
 function ComputosTableRow({
-  AlertTriangle,
-  CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  Copy,
-  Database,
-  Edit3,
-  Layers,
-  Plus,
-  Search,
-  Sparkles,
-  Split,
-  Trash2,
   expandedPartials,
   handleAddPartial,
   handleClearPartials,

@@ -17,16 +17,6 @@ import { COMMON_UNITS } from '../domain/units.js';
 import { isItemEmpty } from '../domain/rows.js';
 import { auditDescription } from '../../../utils/descriptionAuditor';
 export default function ComputosCards({
-  ChevronDown,
-  ChevronUp,
-  Copy,
-  Edit3,
-  Layers,
-  Plus,
-  Search,
-  Sparkles,
-  Split,
-  Trash2,
   descriptionFilter,
   expandedPartials,
   filteredCapturedItems,
