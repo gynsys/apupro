@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useContext, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useContext, useMemo, useCallback, useReducer } from 'react';
 import { toast } from 'react-hot-toast';
 import {
   Bot,
@@ -56,8 +56,6 @@ import {
 } from '../../modules/computos/domain/patterns.js';
 import {
   evaluateMeasurementFormula,
-  computePartial,
-  recomputeItemWithPartials,
   recomputeRow,
 } from '../../modules/computos/domain/formulas.js';
 import {
@@ -83,6 +81,7 @@ import {
   resolveComputo,
   commitComputoImport,
 } from '../../modules/computos/services/computosApi.js';
+import { createRowsState, rowsReducer } from '../../modules/computos/state/rowsReducer.js';
 
 
 function escapeHtml(text) {
@@ -193,7 +192,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   });
 
   // Lista de partidas en la Planilla de Cómputos (inicializada con borrador previo o con 1 fila libre)
-  const [capturedItems, setCapturedItems] = useState(() => {
+  const [rowsState, rowsDispatch] = useReducer(rowsReducer, null, () => {
+    let initialRows = [createBlankRow('')];
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         const saved = window.localStorage.getItem(DRAFT_STORAGE_KEY);
@@ -201,21 +201,27 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
           const parsed = JSON.parse(saved);
           if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) {
             const chap = parsed.activeChapter !== undefined && parsed.activeChapter !== null ? parsed.activeChapter : '';
-            const reconciled = parsed.items.map((it) => {
+            initialRows = parsed.items.map((it) => {
               if ((!it.partials || it.partials.length === 0) && it.m3 && it.distance) {
                 return recomputeRow(it, 'distance', it.distance);
               }
               return it;
             });
-            return normalizeRowsWithSingleTrailingBlank(reconciled, chap);
           }
         }
       }
     } catch (e) {
       console.error('Error cargando borrador previo de cómputos:', e);
     }
-    return [createBlankRow('')];
+    return createRowsState(initialRows, activeChapter);
   });
+  const capturedItems = rowsState.rows;
+  const setCapturedItems = useCallback((nextRows) => {
+    rowsDispatch({
+      type: 'SET_ROWS',
+      payload: { rows: nextRows, activeChapter },
+    });
+  }, [activeChapter]);
 
   useEffect(() => {
     if (!isOpen || !initialBudget?.items) return;
@@ -1132,12 +1138,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
    * y garantiza que SIEMPRE exista una fila libre al final
    */
   const handleUpdateItemField = (itemId, field, value) => {
-    setCapturedItems((prev) => {
-      const updated = prev.map((it) => {
-        if (it.id !== itemId) return it;
-        return recomputeRow(it, field, value);
-      });
-      return normalizeRowsWithSingleTrailingBlank(updated, activeChapter);
+    rowsDispatch({
+      type: 'UPDATE_FIELD',
+      payload: { itemId, field, value, activeChapter },
     });
   };
 
@@ -1145,14 +1148,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
    * Duplica una partida existente
    */
   const handleDuplicateRow = (item) => {
-    const newId = `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const duplicated = {
-      ...item,
-      id: newId,
-    };
-    setCapturedItems((prev) => {
-      const nonBlank = prev.filter((it) => !isItemEmpty(it));
-      return normalizeRowsWithSingleTrailingBlank([...nonBlank, duplicated], activeChapter);
+    rowsDispatch({
+      type: 'DUPLICATE_ROW',
+      payload: { item, activeChapter },
     });
   };
 
@@ -1160,15 +1158,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
    * Inserta una nueva fila vacía justo debajo de la fila actual
    */
   const handleInsertRowBelow = (targetItem) => {
-    const newRow = createBlankRow(targetItem?.chapter || activeChapter);
-    setCapturedItems((prev) => {
-      const targetIdx = prev.findIndex((it) => it.id === targetItem.id);
-      if (targetIdx === -1) {
-        return normalizeRowsWithSingleTrailingBlank([...prev, newRow], activeChapter);
-      }
-      const updated = [...prev];
-      updated.splice(targetIdx + 1, 0, newRow);
-      return normalizeRowsWithSingleTrailingBlank(updated, activeChapter);
+    rowsDispatch({
+      type: 'INSERT_ROW_BELOW',
+      payload: { targetItem, activeChapter },
     });
   };
 
@@ -1176,44 +1168,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
    * Habilita el desglose de sub-cómputos/parciales (múltiples paredes/tramos) para una partida
    */
   const handleTogglePartials = (itemId) => {
-    setCapturedItems((prev) => {
-      const updated = prev.map((it) => {
-        if (it.id !== itemId) return it;
-        if (it.partials && it.partials.length > 0) {
-          return it;
-        }
-        const initialPartials = [
-          {
-            id: `part-${Date.now()}-1`,
-            description: 'Parcial 1',
-            times: it.times || 1,
-            length: it.length || '',
-            width: it.width || '',
-            height: it.height || '',
-            factor: it.factor || '',
-            distance: it.distance || '',
-            m3: it.m3 || '',
-            partial: it.partial || 0,
-            observations: '',
-          },
-          {
-            id: `part-${Date.now()}-2`,
-            description: 'Parcial 2',
-            times: 1,
-            length: '',
-            width: '',
-            height: '',
-            factor: '',
-            distance: '',
-            m3: '',
-            partial: 0,
-            observations: '',
-          },
-        ];
-        initialPartials[0].partial = computePartial(initialPartials[0]);
-        return recomputeItemWithPartials({ ...it, partials: initialPartials });
-      });
-      return updated;
+    rowsDispatch({
+      type: 'TOGGLE_PARTIALS',
+      payload: { itemId, activeChapter },
     });
     setExpandedPartials((prev) => ({ ...prev, [itemId]: true }));
     toast.success('Desglose de parciales activado');
@@ -1223,12 +1180,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
    * Remueve completamente el desglose de parciales de una partida
    */
   const handleClearPartials = (itemId) => {
-    setCapturedItems((prev) => {
-      const updated = prev.map((it) => {
-        if (it.id !== itemId) return it;
-        return { ...it, partials: null };
-      });
-      return updated;
+    rowsDispatch({
+      type: 'CLEAR_PARTIALS',
+      payload: { itemId, activeChapter },
     });
     toast.success('Desglose de parciales removido');
   };
@@ -1237,28 +1191,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
    * Agrega un nuevo parcial / fila adicional a una partida
    */
   const handleAddPartial = (itemId) => {
-    setCapturedItems((prev) => {
-      const updated = prev.map((it) => {
-        if (it.id !== itemId) return it;
-        const currentList = it.partials || [];
-        const nextNum = currentList.length + 1;
-        const newPartial = {
-          id: `part-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          description: `Parcial ${nextNum}`,
-          times: 1,
-          length: '',
-          width: '',
-          height: '',
-          factor: '',
-          distance: '',
-          m3: '',
-          partial: 0,
-          observations: '',
-        };
-        const newList = [...currentList, newPartial];
-        return recomputeItemWithPartials({ ...it, partials: newList });
-      });
-      return updated;
+    rowsDispatch({
+      type: 'ADD_PARTIAL',
+      payload: { itemId, activeChapter },
     });
     setExpandedPartials((prev) => ({ ...prev, [itemId]: true }));
   };
@@ -1267,23 +1202,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
    * Actualiza un campo de un parcial individual y recalcula automáticamente la cantidad total de la partida
    */
   const handleUpdatePartialField = (itemId, partialId, field, value) => {
-    setCapturedItems((prev) => {
-      const updated = prev.map((it) => {
-        if (it.id !== itemId) return it;
-        if (!it.partials) return it;
-        const updatedPartials = it.partials.map((p) => {
-          if (p.id !== partialId) return p;
-          const updatedP = { ...p, [field]: value };
-          if (field === 'm3') {
-            updatedP.m3 = value;
-            updatedP._autoM3 = null;
-          }
-          updatedP.partial = computePartial(updatedP);
-          return updatedP;
-        });
-        return recomputeItemWithPartials({ ...it, partials: updatedPartials });
-      });
-      return updated;
+    rowsDispatch({
+      type: 'UPDATE_PARTIAL_FIELD',
+      payload: { itemId, partialId, field, value, activeChapter },
     });
   };
 
@@ -1291,17 +1212,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
    * Elimina un tramo / pared individual del desglose
    */
   const handleRemovePartial = (itemId, partialId) => {
-    setCapturedItems((prev) => {
-      const updated = prev.map((it) => {
-        if (it.id !== itemId) return it;
-        if (!it.partials) return it;
-        const filtered = it.partials.filter((p) => p.id !== partialId);
-        if (filtered.length === 0) {
-          return { ...it, partials: null };
-        }
-        return recomputeItemWithPartials({ ...it, partials: filtered });
-      });
-      return updated;
+    rowsDispatch({
+      type: 'REMOVE_PARTIAL',
+      payload: { itemId, partialId, activeChapter },
     });
   };
 
@@ -1813,9 +1726,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   };
 
   const handleRemoveItem = (itemId) => {
-    setCapturedItems((prev) => {
-      const filtered = prev.filter((it) => it.id !== itemId);
-      return normalizeRowsWithSingleTrailingBlank(filtered, activeChapter);
+    rowsDispatch({
+      type: 'REMOVE_ROW',
+      payload: { itemId, activeChapter },
     });
     if (editingItemId === itemId) {
       setEditingItemId(null);
