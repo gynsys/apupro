@@ -467,7 +467,7 @@ def parse_inspection_message(text: str) -> Dict[str, Any]:
 
         # 13. OBSERVACIONES
         match_obs = re.match(
-            r"^[\s\*\_\#\-\•\>]*(?:Observaciones(?:\s+generales|\s+de\s+la\s+jornada|\s+de\s+inspecci[oó]n|\s+del\s+d[ií]a)?|Observaci[oó]n|Notas?(?:\s+importantes?)?)[\s\*\_\#]*[:=;\-]?[\s\*\_\#]*(.*)$",
+            r"^[\s\*\_\#\-\•\>]*(?:Observaciones?(?:\s+generales|\s+de\s+la\s+jornada|\s+de\s+inspecci[oó]n|\s+del\s+d[ií]a|\s+de\s+obra|\s+en\s+obra|\s+t[eé]cnicas)?|Notas?(?:\s+importantes?|\s+de\s+obra|\s+t[eé]cnicas)?)[\s\*\_\#]*[:=;\-]?[\s\*\_\#]*(.*)$",
             line,
             re.IGNORECASE,
         )

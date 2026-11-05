@@ -1050,12 +1050,26 @@ async def nuevo_libro_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("ℹ️ Aún no existe un archivo de libro acumulativo para esta obra.")
 
 
+async def global_error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Maneja excepciones no capturadas globalmente y notifica de forma amigable al usuario."""
+    logger.error("Excepción no controlada procesando actualización: %s", context.error, exc_info=context.error)
+    if isinstance(update, Update) and update.effective_message:
+        try:
+            await update.effective_message.reply_text(
+                "⚠️ Hubo un detalle al procesar el mensaje, pero la sesión sigue activa. "
+                "Por favor revisa con /libro o intenta enviarlo nuevamente."
+            )
+        except Exception as e:
+            logger.debug("No se pudo enviar notificación de error al usuario: %s", e)
+
+
 def create_bot_app() -> Application:
     """Construye y configura la aplicación de Telegram Bot."""
     if not BOT_TOKEN or BOT_TOKEN.startswith("PEGA_"):
         raise ValueError("Token de Telegram no configurado. Define TELEGRAM_BOT_TOKEN.")
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_error_handler(global_error_handler)
 
     # Handlers de comandos
     app.add_handler(CommandHandler("start", start_command))

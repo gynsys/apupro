@@ -118,55 +118,101 @@ def is_full_inspection_report(text: str) -> bool:
     return matches >= 2
 
 
+def _clean_md(val: Any) -> str:
+    """Evita que caracteres especiales de texto libre rompan el formateador Markdown de Telegram."""
+    if not val:
+        return ""
+    s = str(val).strip()
+    s = s.replace("**", "")
+    s = s.replace("*", "")
+    s = s.replace("_", "-")
+    s = s.replace("`", "'")
+    return s
+
+
+async def safe_reply_markdown(msg_target, text: str, reply_markup=None):
+    """Envía un mensaje con formato Markdown de manera segura, con fallback a texto plano si falla el parseo."""
+    try:
+        return await msg_target.reply_text(
+            text,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=reply_markup,
+        )
+    except Exception as exc:
+        logger.warning("Fallo al enviar mensaje con Markdown (%s). Enviando como texto plano.", exc)
+        plain_text = text.replace("*", "").replace("`", "").replace("_", "")
+        return await msg_target.reply_text(
+            plain_text,
+            reply_markup=reply_markup,
+        )
+
+
+async def safe_edit_markdown(query_message, text: str, reply_markup=None):
+    """Edita un mensaje con formato Markdown de manera segura, con fallback a texto plano si falla el parseo."""
+    try:
+        return await query_message.edit_text(
+            text,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=reply_markup,
+        )
+    except Exception as exc:
+        logger.warning("Fallo al editar mensaje con Markdown (%s). Editando como texto plano.", exc)
+        plain_text = text.replace("*", "").replace("`", "").replace("_", "")
+        return await query_message.edit_text(
+            plain_text,
+            reply_markup=reply_markup,
+        )
+
+
 def build_libro_entry_preview(
     obra: str,
     entry_data: Dict[str, Any],
     general_data: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Construye la vista previa estructurada en bloques claros de la Página 15."""
-    fecha = entry_data.get("fecha") or "No indicada"
-    horas = entry_data.get("horas_trabajadas") or "8 HORAS"
-    clima = entry_data.get("clima") or "SOLEADO"
-    personal = entry_data.get("personal") or "Personal estándar en obra"
-    personal_insp = entry_data.get("personal_inspeccion") or "_(Ninguno reportado)_"
-    equipos = entry_data.get("equipos") or "_(En blanco - no reportado)_"
-    resumen_act = entry_data.get("resumen_actividades") or "• Actividades ejecutadas en obra"
-    desc_labor = entry_data.get("descripcion_labor") or "Labores ejecutadas según cronograma."
-    cc = entry_data.get("control_calidad") or "_(En blanco - no reportado)_"
-    rev = entry_data.get("revisado_por") or "_(En blanco - no reportado)_"
+    fecha = _clean_md(entry_data.get("fecha")) or "No indicada"
+    horas = _clean_md(entry_data.get("horas_trabajadas")) or "8 HORAS"
+    clima = _clean_md(entry_data.get("clima")) or "SOLEADO"
+    personal = _clean_md(entry_data.get("personal")) or "Personal estándar en obra"
+    personal_insp = _clean_md(entry_data.get("personal_inspeccion")) or "Ninguno reportado"
+    equipos = _clean_md(entry_data.get("equipos")) or "En blanco - no reportado"
+    resumen_act = _clean_md(entry_data.get("resumen_actividades")) or "• Actividades ejecutadas en obra"
+    desc_labor = _clean_md(entry_data.get("descripcion_labor")) or "Labores ejecutadas según cronograma."
+    cc = _clean_md(entry_data.get("control_calidad")) or "En blanco - no reportado"
+    rev = _clean_md(entry_data.get("revisado_por")) or "En blanco - no reportado"
+    obs = _clean_md(entry_data.get("observaciones")) or "En blanco - no reportado"
+    obra_clean = _clean_md(obra)
 
     profesionales_str = ""
     if general_data:
-        res_n = general_data.get("ing_residente") or "No indicado"
-        res_civ = general_data.get("civ_residente") or "En blanco"
-        insp_n = general_data.get("ing_inspector") or "No indicado"
-        insp_civ = general_data.get("civ_inspector") or "En blanco"
+        res_n = _clean_md(general_data.get("ing_residente")) or "No indicado"
+        res_civ = _clean_md(general_data.get("civ_residente")) or "En blanco"
+        insp_n = _clean_md(general_data.get("ing_inspector")) or "No indicado"
+        insp_civ = _clean_md(general_data.get("civ_inspector")) or "En blanco"
         profesionales_str = (
             f"👷 *Residente:* `{res_n}` (CIV: `{res_civ}`)\n"
             f"🕵️ *Inspector:* `{insp_n}` (CIV: `{insp_civ}`)\n\n"
         )
 
-    obs = entry_data.get("observaciones") or "_(En blanco - no reportado)_"
-
-    return (
-        "📋 *VISTA PREVIA: HOJA DE CONTROL DIARIO*\n"
-        "*(Formato legal según Página 15 del Libro de Obra CIV)*\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🏗️ *Obra:* {obra}\n"
-        f"📅 *Fecha:* `{fecha}`  |  ⏱️ *Jornada:* `{horas}`\n"
-        f"☀️ *Estado del Tiempo:* `{clima}`\n\n"
-        f"{profesionales_str}"
-        f"👥 *Personal en Obra:*\n{personal}\n\n"
-        f"👷 *Personal de Inspección:*\n{personal_insp}\n\n"
-        f"🚜 *Equipos y Herramientas:*\n{equipos}\n\n"
-        f"📌 *Resumen de Actividades por Partida:*\n{resumen_act}\n\n"
-        f"📝 *Descripción de la Labor Diaria:*\n{desc_labor}\n\n"
-        f"💬 *Observaciones:*\n{obs}\n\n"
-        f"🔍 *Control de Calidad:* {cc}\n"
-        f"✍️ *Revisado Por:* {rev}\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "👇 *Revisa los bloques. Puedes editar cualquier campo directamente en Telegram antes de guardar en el Libro de Obra (.xlsx):*"
-    )
+    lines = [
+        "📋 *VISTA PREVIA: HOJA DE CONTROL DIARIO*",
+        "*(Formato legal según Página 15 del Libro de Obra CIV)*",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        f"🏗️ *Obra:* {obra_clean}",
+        f"📅 *Fecha:* `{fecha}`  |  ⏱️ *Jornada:* `{horas}`",
+        f"☀️ *Estado del Tiempo:* `{clima}`\n",
+        profesionales_str + f"👥 *Personal en Obra:*\n{personal}\n",
+        f"👷 *Personal de Inspección:*\n{personal_insp}\n",
+        f"🚜 *Equipos y Herramientas:*\n{equipos}\n",
+        f"📌 *Resumen de Actividades por Partida:*\n{resumen_act}\n",
+        f"📝 *Descripción de la Labor Diaria:*\n{desc_labor}\n",
+        f"💬 *Observaciones:*\n{obs}\n",
+        f"🔍 *Control de Calidad:* {cc}",
+        f"✍️ *Revisado Por:* {rev}",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        "👇 *Revisa los bloques. Puedes editar cualquier campo directamente en Telegram antes de guardar en el Libro de Obra (.xlsx):*",
+    ]
+    return "\n".join(lines)
 
 
 def get_libro_entry_preview_keyboard() -> InlineKeyboardMarkup:
@@ -332,9 +378,9 @@ async def process_full_report_for_libro(update: Update, context: ContextTypes.DE
     }
 
     preview_text = build_libro_entry_preview(obra, entry_data, general_data)
-    sent_preview = await msg_target.reply_text(
+    sent_preview = await safe_reply_markdown(
+        msg_target,
         preview_text,
-        parse_mode=ParseMode.MARKDOWN,
         reply_markup=get_libro_entry_preview_keyboard(),
     )
     if sent_preview:
@@ -596,9 +642,9 @@ async def handle_start_edit_libro_field(update: Update, context: ContextTypes.DE
         f"💡 _Tip: Puedes copiar el texto de arriba, modificar lo que desees corregir (p. ej. eliminar alucinaciones o agregar especificaciones exactas), y enviarlo por este chat._"
     )
 
-    sent = await query.message.reply_text(
+    sent = await safe_reply_markdown(
+        query.message,
         prompt_text,
-        parse_mode=ParseMode.MARKDOWN,
         reply_markup=cancel_kb,
     )
     if sent:
@@ -624,19 +670,11 @@ async def handle_cancel_or_back_preview(update: Update, context: ContextTypes.DE
     general_data = pending["general_data"]
 
     preview_text = build_libro_entry_preview(obra, entry_data, general_data)
-    try:
-        await query.message.edit_text(
-            preview_text,
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=get_libro_entry_preview_keyboard(),
-        )
-    except Exception as exc:
-        logger.debug("No se pudo editar texto al regresar a vista previa: %s", exc)
-        await query.message.reply_text(
-            preview_text,
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=get_libro_entry_preview_keyboard(),
-        )
+    await safe_edit_markdown(
+        query.message,
+        preview_text,
+        reply_markup=get_libro_entry_preview_keyboard(),
+    )
 
 
 async def handle_save_edited_field(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str) -> bool:
@@ -1580,9 +1618,9 @@ async def handle_select_sheet_to_edit(update: Update, context: ContextTypes.DEFA
         )
 
         if query.message:
-            sent_msg = await query.message.reply_text(
+            sent_msg = await safe_reply_markdown(
+                query.message,
                 full_text,
-                parse_mode=ParseMode.MARKDOWN,
                 reply_markup=get_libro_entry_preview_keyboard(),
             )
             if sent_msg:
