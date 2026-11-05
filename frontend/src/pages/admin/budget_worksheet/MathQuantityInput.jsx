@@ -19,6 +19,17 @@ export default function MathQuantityInput({
     if (v === null || v === undefined || v === '') {
       return allowEmpty ? '' : '0';
     }
+    const n = parseFloat(String(v).replace(',', '.'));
+    if (!isNaN(n) && Number.isFinite(n)) {
+      if (integerOnly) {
+        return String(Math.round(n));
+      }
+      if (typeof decimals === 'number') {
+        const factor = Math.pow(10, decimals);
+        const rounded = Math.round(n * factor) / factor;
+        return String(rounded).replace(/\./g, ',');
+      }
+    }
     return String(v).replace(/\./g, ',');
   };
 

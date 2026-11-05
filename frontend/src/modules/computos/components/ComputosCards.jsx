@@ -300,6 +300,7 @@ export default function ComputosCards({
                                   value={it.factor ?? ''}
                                   onChange={(val) => handleUpdateItemField(it.id, 'factor', val)}
                                   allowEmpty
+                                  decimals={3}
                                   placeholder="1.000"
                                   title="Factor de peso para acero o factor multiplicador"
                                   className="w-full px-2 py-1.5 text-xs text-right font-semibold rounded-lg border border-amber-300 bg-white"
@@ -511,6 +512,7 @@ export default function ComputosCards({
                                               handleUpdatePartialField(it.id, p.id, 'factor', val)
                                             }
                                             allowEmpty
+                                            decimals={3}
                                             placeholder="1.000"
                                             className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
                                           />

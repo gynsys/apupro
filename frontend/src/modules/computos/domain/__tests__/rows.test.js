@@ -3,6 +3,7 @@ import {
   createBlankRow,
   isItemEmpty,
   extractCoveninSearchKeywords,
+  sanitizeItemDecimals,
   normalizeRowsWithSingleTrailingBlank,
   parseComputosInput,
 } from '../rows.js';
@@ -59,5 +60,24 @@ describe('filas de cómputos', () => {
 
   it('devuelve lista vacía con texto vacío', () => {
     expect(parseComputosInput('')).toEqual({ items: [], activeChapter: 'OBRAS PRELIMINARES' });
+  });
+
+  it('sanitiza decimales de partidas viejas a dos decimales', () => {
+    const rawItem = {
+      description: 'CONCRETO',
+      quantity: 0.2358,
+      partial: 0.2358,
+      m3: 0.2358,
+      partials: [{ partial: 0.2358, m3: 0.2358 }],
+    };
+    const sanitized = sanitizeItemDecimals(rawItem);
+    expect(sanitized.quantity).toBe(0.24);
+    expect(sanitized.partial).toBe(0.24);
+    expect(sanitized.m3).toBe(0.24);
+    expect(sanitized.partials[0].partial).toBe(0.24);
+    expect(sanitized.partials[0].m3).toBe(0.24);
+
+    const normalized = normalizeRowsWithSingleTrailingBlank([rawItem], 'ESTRUCTURAS');
+    expect(normalized[0].quantity).toBe(0.24);
   });
 });

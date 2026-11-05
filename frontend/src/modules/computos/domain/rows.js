@@ -81,6 +81,31 @@ function extractCoveninSearchKeywords(text) {
   return clean.slice(0, 2).join(' ');
 }
 
+function sanitizeItemDecimals(item) {
+  if (!item) return item;
+  const parseRound = (v) => {
+    if (v === '' || v == null) return v;
+    const n = parseFloat(String(v).replace(',', '.'));
+    return isNaN(n) ? v : round2(n);
+  };
+  const sanitized = {
+    ...item,
+    quantity: parseRound(item.quantity) ?? 0,
+    partial: parseRound(item.partial) ?? 0,
+  };
+  if (item.m3 !== '' && item.m3 != null) {
+    sanitized.m3 = parseRound(item.m3);
+  }
+  if (Array.isArray(item.partials) && item.partials.length > 0) {
+    sanitized.partials = item.partials.map((p) => ({
+      ...p,
+      partial: parseRound(p.partial) ?? 0,
+      m3: p.m3 !== '' && p.m3 != null ? parseRound(p.m3) : p.m3,
+    }));
+  }
+  return sanitized;
+}
+
 /**
  * Asegura que la planilla SIEMPRE tenga exactamente una fila libre al final para continuar escribiendo
  */
@@ -90,7 +115,7 @@ function normalizeRowsWithSingleTrailingBlank(items, defaultChapter = '') {
     return [createBlankRow(defaultChapter)];
   }
 
-  const cleaned = [...items];
+  const cleaned = items.map(sanitizeItemDecimals);
   // Quitar filas vacías consecutivas del final excepto una
   while (cleaned.length > 1 && isItemEmpty(cleaned[cleaned.length - 1]) && isItemEmpty(cleaned[cleaned.length - 2])) {
     cleaned.pop();
@@ -269,6 +294,7 @@ export {
   createBlankRow,
   isItemEmpty,
   extractCoveninSearchKeywords,
+  sanitizeItemDecimals,
   normalizeRowsWithSingleTrailingBlank,
   parseComputosInput,
 };

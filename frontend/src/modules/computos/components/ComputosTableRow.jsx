@@ -256,6 +256,7 @@ function ComputosTableRow({
                                   value={it.factor ?? ''}
                                   onChange={(val) => handleUpdateItemField(it.id, 'factor', val)}
                                   allowEmpty
+                                  decimals={3}
                                   placeholder="1.000"
                                   className="w-full px-1 py-1 text-xs text-right font-semibold text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
                                   title='Factor de peso para acero (ej: 0.994 kg/m para 1/2", 1.552 para 5/8") o factor de conversión'
@@ -481,6 +482,7 @@ function ComputosTableRow({
                                         handleUpdatePartialField(it.id, p.id, 'factor', val)
                                       }
                                       allowEmpty
+                                      decimals={3}
                                       placeholder="1.000"
                                       className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
                                     />
