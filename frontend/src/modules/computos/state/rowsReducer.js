@@ -8,6 +8,7 @@
  */
 import { createBlankRow, isItemEmpty, normalizeRowsWithSingleTrailingBlank } from '../domain/rows.js';
 import { computePartial, recomputeItemWithPartials, recomputeRow } from '../domain/formulas.js';
+import { applyReactiveLinks, computeLinkedQuantity } from '../domain/links.js';
 
 function newId(prefix) {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -43,7 +44,8 @@ export function rowsReducer(state, action) {
       const updated = rows.map((row) =>
         row.id === payload.itemId ? recomputeRow(row, payload.field, payload.value) : row
       );
-      return { ...state, activeChapter, rows: normalizeRowsWithSingleTrailingBlank(updated, activeChapter) };
+      const withLinks = applyReactiveLinks(updated);
+      return { ...state, activeChapter, rows: normalizeRowsWithSingleTrailingBlank(withLinks, activeChapter) };
     }
 
     case 'DUPLICATE_ROW': {
@@ -69,7 +71,8 @@ export function rowsReducer(state, action) {
 
     case 'REMOVE_ROW': {
       const filtered = rows.filter((row) => row.id !== payload.itemId);
-      return { ...state, activeChapter, rows: normalizeRowsWithSingleTrailingBlank(filtered, activeChapter) };
+      const withLinks = applyReactiveLinks(filtered);
+      return { ...state, activeChapter, rows: normalizeRowsWithSingleTrailingBlank(withLinks, activeChapter) };
     }
 
     case 'TOGGLE_PARTIALS': {
@@ -153,7 +156,8 @@ export function rowsReducer(state, action) {
         });
         return recomputeItemWithPartials({ ...row, partials });
       });
-      return { ...state, activeChapter, rows: updated };
+      const withLinks = applyReactiveLinks(updated);
+      return { ...state, activeChapter, rows: withLinks };
     }
 
     case 'REMOVE_PARTIAL': {
@@ -162,6 +166,71 @@ export function rowsReducer(state, action) {
         const filtered = row.partials.filter((partial) => partial.id !== payload.partialId);
         if (filtered.length === 0) return { ...row, partials: null };
         return recomputeItemWithPartials({ ...row, partials: filtered });
+      });
+      const withLinks = applyReactiveLinks(updated);
+      return { ...state, activeChapter, rows: withLinks };
+    }
+
+    case 'LINK_ROWS': {
+      const source = rows.find((r) => r.id === payload.sourceItemId);
+      if (!source) return state;
+
+      const calculatedQty = computeLinkedQuantity(source.quantity, payload.linkConfig);
+
+      if (payload.isNewRow) {
+        const newRow = {
+          ...createBlankRow(payload.newRowData?.chapter || activeChapter),
+          id: newId('item'),
+          chapter: payload.newRowData?.chapter || source.chapter || activeChapter,
+          description: (payload.newRowData?.description || 'PARTIDA VINCULADA').toUpperCase(),
+          unit: payload.newRowData?.unit || 'M2',
+          quantity: calculatedQty,
+          partial: calculatedQty,
+          distance: payload.linkConfig?.distance || '',
+          factor: payload.linkConfig?.factor || '',
+          observations: `Medición vinculada a: ${source.description || 'Ítem origen'}`,
+          linkedTo: {
+            sourceItemId: source.id,
+            sourceDescription: source.description || '',
+            formulaType: payload.linkConfig?.formulaType || 'custom',
+            factor: payload.linkConfig?.factor || 1,
+            distance: payload.linkConfig?.distance || null,
+            label: payload.linkConfig?.label || `Vinculado a: ${source.description || 'Ítem origen'}`,
+          },
+        };
+        const nonBlank = rows.filter((r) => !isItemEmpty(r));
+        return {
+          ...state,
+          activeChapter,
+          rows: normalizeRowsWithSingleTrailingBlank([...nonBlank, newRow], activeChapter),
+        };
+      }
+
+      // Vincular a partida existente
+      const updated = rows.map((r) => {
+        if (r.id !== payload.targetItemId) return r;
+        return {
+          ...r,
+          quantity: calculatedQty,
+          partial: calculatedQty,
+          distance: payload.linkConfig?.distance || r.distance || '',
+          linkedTo: {
+            sourceItemId: source.id,
+            sourceDescription: source.description || '',
+            formulaType: payload.linkConfig?.formulaType || 'custom',
+            factor: payload.linkConfig?.factor || 1,
+            distance: payload.linkConfig?.distance || null,
+            label: payload.linkConfig?.label || `Vinculado a: ${source.description || 'Ítem origen'}`,
+          },
+        };
+      });
+      return { ...state, activeChapter, rows: updated };
+    }
+
+    case 'UNLINK_ROW': {
+      const updated = rows.map((r) => {
+        if (r.id !== payload.itemId) return r;
+        return { ...r, linkedTo: null };
       });
       return { ...state, activeChapter, rows: updated };
     }

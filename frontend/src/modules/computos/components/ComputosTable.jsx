@@ -30,12 +30,15 @@ export default function ComputosTable({
   handleEnrichItem,
   handleInsertRowBelow,
   handleOpenCoveninModal,
+  handleOpenLinkModal,
+  handleOpenStirrupModal,
   handleRemoveChapterHeader,
   handleRemoveItem,
   handleRemovePartial,
   handleRenameChapter,
   handleToggleExpandPartials,
   handleTogglePartials,
+  handleUnlinkRow,
   handleUpdateItemField,
   handleUpdatePartialField,
   setDescriptionFilter,
@@ -150,12 +153,15 @@ export default function ComputosTable({
                             handleEnrichItem={handleEnrichItem}
                             handleInsertRowBelow={handleInsertRowBelow}
                             handleOpenCoveninModal={handleOpenCoveninModal}
+                            handleOpenLinkModal={handleOpenLinkModal}
+                            handleOpenStirrupModal={handleOpenStirrupModal}
                             handleRemoveChapterHeader={handleRemoveChapterHeader}
                             handleRemoveItem={handleRemoveItem}
                             handleRemovePartial={handleRemovePartial}
                             handleRenameChapter={handleRenameChapter}
                             handleToggleExpandPartials={handleToggleExpandPartials}
                             handleTogglePartials={handleTogglePartials}
+                            handleUnlinkRow={handleUnlinkRow}
                             handleUpdateItemField={handleUpdateItemField}
                             handleUpdatePartialField={handleUpdatePartialField}
                           />

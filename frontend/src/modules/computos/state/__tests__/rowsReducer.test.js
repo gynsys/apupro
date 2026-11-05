@@ -85,6 +85,79 @@ describe('rowsReducer', () => {
     });
     expect(cleared.rows[0].partials).toBeNull();
   });
+
+  it('vincula una nueva partida derivada (efecto cascada) y actualiza reactivamente', () => {
+    const sourceRow = {
+      ...createBlankRow('GENERAL'),
+      id: 'excavacion',
+      description: 'EXCAVACION EN TIERRA',
+      quantity: 10,
+      unit: 'M3',
+    };
+    const state = stateWithRows([sourceRow]);
+
+    // Vincular partida derivada de Bote (esponjamiento 1.25)
+    const linkedState = rowsReducer(state, {
+      type: 'LINK_ROWS',
+      payload: {
+        sourceItemId: 'excavacion',
+        isNewRow: true,
+        newRowData: {
+          description: 'TRANSPORTE Y BOTE DE TIERRA',
+          unit: 'M3',
+          chapter: 'GENERAL',
+        },
+        linkConfig: {
+          formulaType: 'bote_esponjamiento',
+          factor: 1.25,
+          distance: 5,
+          label: 'Bote de escombros (x1.25 x 5km)',
+        },
+      },
+    });
+
+    const boteRow = linkedState.rows.find((r) => r.description.includes('TRANSPORTE Y BOTE'));
+    expect(boteRow).toBeDefined();
+    // 10 * 1.25 * 5 = 62.5
+    expect(boteRow.quantity).toBe(62.5);
+    expect(boteRow.linkedTo.sourceItemId).toBe('excavacion');
+
+    // Ahora cambiamos la cantidad de excavacion a 20 (UPDATE_FIELD)
+    const cascadedState = rowsReducer(linkedState, {
+      type: 'UPDATE_FIELD',
+      payload: {
+        itemId: 'excavacion',
+        field: 'quantity',
+        value: '20',
+        activeChapter: 'GENERAL',
+      },
+    });
+
+    const updatedBote = cascadedState.rows.find((r) => r.id === boteRow.id);
+    // 20 * 1.25 * 5 = 125
+    expect(updatedBote.quantity).toBe(125);
+
+    // Romper vínculo con UNLINK_ROW
+    const unlinkedState = rowsReducer(cascadedState, {
+      type: 'UNLINK_ROW',
+      payload: { itemId: boteRow.id },
+    });
+    const severedBote = unlinkedState.rows.find((r) => r.id === boteRow.id);
+    expect(severedBote.linkedTo).toBeNull();
+
+    // Modificar excavacion a 30 no debe afectar al bote desvinculado
+    const afterSeverState = rowsReducer(unlinkedState, {
+      type: 'UPDATE_FIELD',
+      payload: {
+        itemId: 'excavacion',
+        field: 'quantity',
+        value: '30',
+        activeChapter: 'GENERAL',
+      },
+    });
+    const finalBote = afterSeverState.rows.find((r) => r.id === boteRow.id);
+    expect(finalBote.quantity).toBe(125);
+  });
 });
 
 describe('selectores de filas', () => {

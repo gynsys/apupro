@@ -1,6 +1,7 @@
 import React, { useRef, useLayoutEffect } from 'react';
 import {
   AlertTriangle,
+  Calculator,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -8,14 +9,17 @@ import {
   Database,
   Edit3,
   Layers,
+  Link2,
   Plus,
   Search,
   Sparkles,
   Split,
   Trash2,
+  Unlink2,
 } from 'lucide-react';
 import MathQuantityInput from '../../../pages/admin/budget_worksheet/MathQuantityInput';
 import { COMMON_UNITS } from '../domain/units.js';
+import { isSteelRow, REBAR_DIAMETERS, getRebarSpec } from '../domain/steel.js';
 import { auditDescription } from '../../../utils/descriptionAuditor';
 
 function ComputosTableRow({
@@ -26,12 +30,15 @@ function ComputosTableRow({
   handleEnrichItem,
   handleInsertRowBelow,
   handleOpenCoveninModal,
+  handleOpenLinkModal,
+  handleOpenStirrupModal,
   handleRemoveChapterHeader,
   handleRemoveItem,
   handleRemovePartial,
   handleRenameChapter,
   handleToggleExpandPartials,
   handleTogglePartials,
+  handleUnlinkRow,
   handleUpdateItemField,
   handleUpdatePartialField,
   hasPartials,
@@ -40,6 +47,7 @@ function ComputosTableRow({
   it,
   showChapHeader,
 }) {
+  const isSteel = isSteelRow(it);
   const descInputRef = useRef(null);
   const cursorRef = useRef(null);
 
@@ -120,7 +128,7 @@ function ComputosTableRow({
                                   className="w-full px-2 py-1 text-xs font-semibold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded uppercase placeholder:text-gray-400"
                                 />
                                 {hasPartials ? (
-                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                  <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                                     <button
                                       type="button"
                                       onClick={() => handleToggleExpandPartials(it.id)}
@@ -143,10 +151,26 @@ function ComputosTableRow({
                                       <Plus className="w-3 h-3 text-emerald-700" />
                                       <span>+ Agregar fila</span>
                                     </button>
+                                    {!isBlankTrailing && !it.linkedTo && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenLinkModal && handleOpenLinkModal(it)}
+                                        className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-300 px-1.5 py-0.5 rounded cursor-pointer transition-colors shadow-2xs"
+                                        title="Vincular con partida derivada (Bote de escombros, friso, pintura, etc.)"
+                                      >
+                                        <Link2 className="w-3 h-3 text-sky-600" />
+                                        <span>🔗 Vincular</span>
+                                      </button>
+                                    )}
+                                    {isSteel && (
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-indigo-100 text-indigo-900 border border-indigo-300">
+                                        ⛓️ Acero
+                                      </span>
+                                    )}
                                   </div>
                                 ) : (
                                   !isBlankTrailing && (
-                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                    <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                                       <button
                                         type="button"
                                         onClick={() => handleTogglePartials(it.id)}
@@ -156,8 +180,51 @@ function ComputosTableRow({
                                         <Split className="w-3 h-3 text-amber-700" />
                                         <span>+ Desglosar en filas / parciales</span>
                                       </button>
+                                      {!it.linkedTo && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleOpenLinkModal && handleOpenLinkModal(it)}
+                                          className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-300 px-1.5 py-0.5 rounded cursor-pointer transition-colors shadow-2xs"
+                                          title="Vincular con partida derivada (Bote de escombros, friso, pintura, etc.)"
+                                        >
+                                          <Link2 className="w-3 h-3 text-sky-600" />
+                                          <span>🔗 Vincular</span>
+                                        </button>
+                                      )}
+                                      {isSteel && (
+                                        <>
+                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-indigo-100 text-indigo-900 border border-indigo-300">
+                                            ⛓️ Acero
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleOpenStirrupModal && handleOpenStirrupModal(it, null)}
+                                            className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-300 px-1.5 py-0.5 rounded cursor-pointer transition-colors shadow-2xs"
+                                            title="Micro-calculadora geométrica de estribo"
+                                          >
+                                            <Calculator className="w-3 h-3 text-indigo-600" />
+                                            <span>📐 Estribo</span>
+                                          </button>
+                                        </>
+                                      )}
                                     </div>
                                   )
+                                )}
+                                {it.linkedTo && (
+                                  <div className="flex items-center gap-1.5 px-2 py-0.5 mt-0.5 rounded-md bg-sky-100 border border-sky-300 text-[10px] font-semibold text-sky-900 w-fit">
+                                    <Link2 className="w-3 h-3 text-sky-700 shrink-0" />
+                                    <span className="truncate max-w-[280px]">
+                                      {it.linkedTo.label || `Vinculado a: ${it.linkedTo.sourceDescription}`}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUnlinkRow && handleUnlinkRow(it.id)}
+                                      className="p-0.5 text-sky-700 hover:text-red-700 hover:bg-sky-200 rounded transition-colors cursor-pointer"
+                                      title="Desvincular y editar libremente"
+                                    >
+                                      <Unlink2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
                                 )}
                                 {!isBlankTrailing && it.description && it.description.trim() && (() => {
                                   const audit = auditDescription(it.description, it.cod_par, it.unit);
@@ -243,16 +310,38 @@ function ComputosTableRow({
                                   value={it.length ?? ''}
                                   onChange={(val) => handleUpdateItemField(it.id, 'length', val)}
                                   allowEmpty
-                                  placeholder="—"
+                                  placeholder={isSteel ? 'Long. m' : '—'}
                                   className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                  title={isSteel ? 'Longitud de corte de la barra (m)' : 'Longitud / Largo (m)'}
                                 />
                               )}
                             </td>
 
-                            {/* ANCHO */}
+                            {/* ANCHO / DIÁMETRO REBAR */}
                             <td className="border border-gray-300 px-1 py-1">
                               {hasPartials ? (
                                 <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
+                              ) : isSteel ? (
+                                <select
+                                  value={it.rebarDiameter || ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    const spec = getRebarSpec(val);
+                                    handleUpdateItemField(it.id, 'rebarDiameter', val);
+                                    if (spec) {
+                                      handleUpdateItemField(it.id, 'factor', spec.kgm);
+                                    }
+                                  }}
+                                  className="w-full px-1 py-1 text-xs font-bold text-center text-indigo-950 bg-indigo-50/70 border border-indigo-200 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                                  title="Seleccione diámetro comercial COVENIN / ASTM"
+                                >
+                                  <option value="">Ø Diám...</option>
+                                  {REBAR_DIAMETERS.map((d) => (
+                                    <option key={d.diameter} value={d.diameter}>
+                                      {d.label}
+                                    </option>
+                                  ))}
+                                </select>
                               ) : (
                                 <MathQuantityInput
                                   value={it.width ?? ''}
@@ -264,7 +353,7 @@ function ComputosTableRow({
                               )}
                             </td>
 
-                            {/* ALTO */}
+                            {/* ALTO / BARRAS */}
                             <td className="border border-gray-300 px-1 py-1">
                               {hasPartials ? (
                                 <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
@@ -273,13 +362,14 @@ function ComputosTableRow({
                                   value={it.height ?? ''}
                                   onChange={(val) => handleUpdateItemField(it.id, 'height', val)}
                                   allowEmpty
-                                  placeholder="—"
+                                  placeholder={isSteel ? 'Barras' : '—'}
                                   className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                  title={isSteel ? 'Número de barras por elemento' : 'Alto (m)'}
                                 />
                               )}
                             </td>
 
-                            {/* N° DE VECES */}
+                            {/* N° DE VECES / PIEZAS */}
                             <td className="border border-gray-300 px-1 py-1">
                               {hasPartials ? (
                                 <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
@@ -290,6 +380,7 @@ function ComputosTableRow({
                                   min={1}
                                   integerOnly
                                   className="w-full px-1 py-1 text-xs text-center font-bold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                  title={isSteel ? 'Número de piezas / elementos iguales' : 'Número de repeticiones'}
                                 />
                               )}
                             </td>
@@ -304,17 +395,19 @@ function ComputosTableRow({
                                   onChange={(val) => handleUpdateItemField(it.id, 'factor', val)}
                                   allowEmpty
                                   decimals={3}
-                                  placeholder="1.000"
-                                  className="w-full px-1 py-1 text-xs text-right font-semibold text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                                  title='Factor de peso para acero (ej: 0.994 kg/m para 1/2", 1.552 para 5/8") o factor de conversión'
+                                  placeholder={isSteel ? 'kg/m' : '1.000'}
+                                  className={`w-full px-1 py-1 text-xs text-right font-semibold rounded ${
+                                    isSteel ? 'text-indigo-950 bg-indigo-50/40 font-bold' : 'text-amber-950 bg-transparent'
+                                  } focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500`}
+                                  title={isSteel ? 'Factor nominal de peso kg/m según diámetro de cabilla' : 'Factor multiplicador'}
                                 />
                               )}
                             </td>
 
                             {/* DISTANCIA (Km Acarreo) */}
                             <td className="border border-gray-300 px-1 py-1 bg-amber-50/30">
-                              {hasPartials ? (
-                                <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
+                              {hasPartials || isSteel ? (
+                                <span className="block text-center text-xs text-gray-300 font-bold select-none" title={isSteel ? 'No aplica a acero' : 'Desglosado en parciales'}>—</span>
                               ) : (
                                 <MathQuantityInput
                                   value={it.distance ?? ''}
@@ -333,6 +426,8 @@ function ComputosTableRow({
                                 <span className="block text-center text-xs text-amber-800 font-bold select-none" title="Volumen M3 total desglosado en parciales">
                                   {it.m3 !== '' && it.m3 != null ? it.m3 : '—'}
                                 </span>
+                              ) : isSteel ? (
+                                <span className="block text-center text-xs text-gray-300 font-bold select-none" title="No aplica a acero">—</span>
                               ) : (
                                 <MathQuantityInput
                                   value={it.m3 ?? ''}
@@ -473,6 +568,17 @@ function ComputosTableRow({
                                         placeholder={`Parcial ${pIdx + 1} (ej: Fachada, Eje 1-2, Tramo A...)`}
                                         className="flex-1 px-1.5 py-0.5 text-xs font-semibold bg-white border border-amber-300 rounded focus:outline-none focus:ring-1 focus:ring-amber-500"
                                       />
+                                      {isSteel && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleOpenStirrupModal && handleOpenStirrupModal(it, p)}
+                                          className="text-[9px] font-bold text-indigo-800 bg-indigo-100 hover:bg-indigo-200 border border-indigo-300 px-1.5 py-0.5 rounded cursor-pointer transition-colors shadow-2xs flex items-center gap-1 shrink-0"
+                                          title="Micro-calculadora geométrica de estribo"
+                                        >
+                                          <Calculator className="w-2.5 h-2.5 text-indigo-600" />
+                                          <span>Estribo</span>
+                                        </button>
+                                      )}
                                     </div>
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1 w-[84px] min-w-[84px] text-center text-xs font-bold text-amber-900 bg-amber-50/30">
@@ -485,20 +591,44 @@ function ComputosTableRow({
                                         handleUpdatePartialField(it.id, p.id, 'length', val)
                                       }
                                       allowEmpty
-                                      placeholder="0.00"
+                                      placeholder={isSteel ? 'Long. m' : '0.00'}
                                       className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
+                                      title={isSteel ? 'Longitud de corte (m)' : 'Largo (m)'}
                                     />
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1">
-                                    <MathQuantityInput
-                                      value={p.width ?? ''}
-                                      onChange={(val) =>
-                                        handleUpdatePartialField(it.id, p.id, 'width', val)
-                                      }
-                                      allowEmpty
-                                      placeholder="0.00"
-                                      className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
-                                    />
+                                    {isSteel ? (
+                                      <select
+                                        value={p.rebarDiameter || ''}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          const spec = getRebarSpec(val);
+                                          handleUpdatePartialField(it.id, p.id, 'rebarDiameter', val);
+                                          if (spec) {
+                                            handleUpdatePartialField(it.id, p.id, 'factor', spec.kgm);
+                                          }
+                                        }}
+                                        className="w-full px-1 py-0.5 text-xs font-bold text-center text-indigo-950 bg-indigo-50/70 border border-indigo-200 rounded cursor-pointer"
+                                        title="Seleccione diámetro de cabilla"
+                                      >
+                                        <option value="">Ø Diám...</option>
+                                        {REBAR_DIAMETERS.map((d) => (
+                                          <option key={d.diameter} value={d.diameter}>
+                                            {d.label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    ) : (
+                                      <MathQuantityInput
+                                        value={p.width ?? ''}
+                                        onChange={(val) =>
+                                          handleUpdatePartialField(it.id, p.id, 'width', val)
+                                        }
+                                        allowEmpty
+                                        placeholder="0.00"
+                                        className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
+                                      />
+                                    )}
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1">
                                     <MathQuantityInput
@@ -507,8 +637,9 @@ function ComputosTableRow({
                                         handleUpdatePartialField(it.id, p.id, 'height', val)
                                       }
                                       allowEmpty
-                                      placeholder="0.00"
+                                      placeholder={isSteel ? 'Barras' : '0.00'}
                                       className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
+                                      title={isSteel ? 'Número de barras' : 'Alto (m)'}
                                     />
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1">
@@ -520,6 +651,7 @@ function ComputosTableRow({
                                       min={1}
                                       integerOnly
                                       className="w-full px-1 py-0.5 text-xs text-center font-bold bg-white border border-amber-200 rounded"
+                                      title={isSteel ? 'Número de piezas iguales' : 'Veces'}
                                     />
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1 bg-amber-50/30">
@@ -530,32 +662,43 @@ function ComputosTableRow({
                                       }
                                       allowEmpty
                                       decimals={3}
-                                      placeholder="1.000"
-                                      className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
+                                      placeholder={isSteel ? 'kg/m' : '1.000'}
+                                      className={`w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded ${
+                                        isSteel ? 'font-bold text-indigo-950 bg-indigo-50/30' : ''
+                                      }`}
+                                      title={isSteel ? 'Factor nominal kg/m' : 'Factor multiplicador'}
                                     />
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1 bg-amber-50/30">
-                                    <MathQuantityInput
-                                      value={p.distance ?? ''}
-                                      onChange={(val) =>
-                                        handleUpdatePartialField(it.id, p.id, 'distance', val)
-                                      }
-                                      allowEmpty
-                                      placeholder="—"
-                                      className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
-                                    />
+                                    {isSteel ? (
+                                      <span className="block text-center text-xs text-gray-300 font-bold select-none" title="No aplica a acero">—</span>
+                                    ) : (
+                                      <MathQuantityInput
+                                        value={p.distance ?? ''}
+                                        onChange={(val) =>
+                                          handleUpdatePartialField(it.id, p.id, 'distance', val)
+                                        }
+                                        allowEmpty
+                                        placeholder="—"
+                                        className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
+                                      />
+                                    )}
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1 bg-amber-50/30">
-                                    <MathQuantityInput
-                                      value={p.m3 ?? ''}
-                                      onChange={(val) =>
-                                        handleUpdatePartialField(it.id, p.id, 'm3', val)
-                                      }
-                                      allowEmpty
-                                      placeholder="—"
-                                      className="w-full px-1 py-0.5 text-xs text-right font-semibold text-amber-950 bg-white border border-amber-200 rounded"
-                                      title="M3 bote y acarreo de este tramo"
-                                    />
+                                    {isSteel ? (
+                                      <span className="block text-center text-xs text-gray-300 font-bold select-none" title="No aplica a acero">—</span>
+                                    ) : (
+                                      <MathQuantityInput
+                                        value={p.m3 ?? ''}
+                                        onChange={(val) =>
+                                          handleUpdatePartialField(it.id, p.id, 'm3', val)
+                                        }
+                                        allowEmpty
+                                        placeholder="—"
+                                        className="w-full px-1 py-0.5 text-xs text-right font-semibold text-amber-950 bg-white border border-amber-200 rounded"
+                                        title="M3 bote y acarreo de este tramo"
+                                      />
+                                    )}
                                   </td>
                                   {/* TOTAL DEL PARCIAL */}
                                   <td className="border border-amber-200 px-2 py-1 text-right font-bold text-xs text-amber-950 bg-amber-100/60">

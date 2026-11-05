@@ -1,20 +1,24 @@
 import React from 'react';
 import {
+  Calculator,
   ChevronDown,
   ChevronUp,
   Copy,
   Edit3,
   Layers,
+  Link2,
   Plus,
   Search,
   Sparkles,
   Split,
   Trash2,
+  Unlink2,
   X,
 } from 'lucide-react';
 import MathQuantityInput from '../../../pages/admin/budget_worksheet/MathQuantityInput';
 import { COMMON_UNITS } from '../domain/units.js';
 import { isItemEmpty } from '../domain/rows.js';
+import { isSteelRow, REBAR_DIAMETERS, getRebarSpec } from '../domain/steel.js';
 import { auditDescription } from '../../../utils/descriptionAuditor';
 export default function ComputosCards({
   descriptionFilter,
@@ -26,12 +30,15 @@ export default function ComputosCards({
   handleEnrichItem,
   handleInsertRowBelow,
   handleOpenCoveninModal,
+  handleOpenLinkModal,
+  handleOpenStirrupModal,
   handleRemoveChapterHeader,
   handleRemoveItem,
   handleRemovePartial,
   handleRenameChapter,
   handleToggleExpandPartials,
   handleTogglePartials,
+  handleUnlinkRow,
   handleUpdateItemField,
   handleUpdatePartialField,
   setDescriptionFilter,
@@ -99,6 +106,7 @@ export default function ComputosCards({
                     (!prevItem || (prevItem.chapter || '').trim().toUpperCase() !== it.chapter.trim().toUpperCase())
                   );
                   const isBlankTrailing = isItemEmpty(it);
+                  const isSteel = isSteelRow(it);
                   const hasPartials = it.partials && it.partials.length > 0;
                   const isExpanded = expandedPartials[it.id] !== false;
 
@@ -157,6 +165,11 @@ export default function ComputosCards({
                                 {it.cov_par || it.cod_par}
                               </span>
                             )}
+                            {isSteel && (
+                              <span className="text-[10px] font-extrabold text-indigo-900 bg-indigo-100 px-2 py-0.5 rounded border border-indigo-300">
+                                ⛓️ Acero
+                              </span>
+                            )}
                           </div>
 
                           <div className="flex items-center gap-1">
@@ -200,6 +213,24 @@ export default function ComputosCards({
                               }
                               className="w-full px-3 py-2 text-xs sm:text-sm font-bold bg-amber-50/30 border border-amber-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 rounded-xl uppercase placeholder:text-gray-400"
                             />
+                            {it.linkedTo && (
+                              <div className="flex items-center justify-between gap-1.5 px-2.5 py-1 rounded-xl bg-sky-100 border border-sky-300 text-xs font-semibold text-sky-950">
+                                <div className="flex items-center gap-1.5 truncate">
+                                  <Link2 className="w-3.5 h-3.5 text-sky-700 shrink-0" />
+                                  <span className="truncate">
+                                    {it.linkedTo.label || `Vinculado a: ${it.linkedTo.sourceDescription}`}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUnlinkRow && handleUnlinkRow(it.id)}
+                                  className="p-1 text-sky-700 hover:text-red-700 rounded-lg hover:bg-sky-200 transition-colors shrink-0 cursor-pointer"
+                                  title="Desvincular partida"
+                                >
+                                  <Unlink2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
                             <div className="flex flex-wrap items-center gap-1.5">
                               <button
                                 type="button"
@@ -209,6 +240,26 @@ export default function ComputosCards({
                                 <Search className="w-3 h-3 text-sky-600" />
                                 <span>Buscar en Norma COVENIN</span>
                               </button>
+                              {!isBlankTrailing && !it.linkedTo && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenLinkModal && handleOpenLinkModal(it)}
+                                  className="text-[11px] font-bold text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-300 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                                >
+                                  <Link2 className="w-3 h-3 text-sky-600" />
+                                  <span>Vincular Partida</span>
+                                </button>
+                              )}
+                              {isSteel && !hasPartials && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenStirrupModal && handleOpenStirrupModal(it, null)}
+                                  className="text-[11px] font-bold text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-300 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                                >
+                                  <Calculator className="w-3 h-3 text-indigo-600" />
+                                  <span>📐 Estribo</span>
+                                </button>
+                              )}
                               {!it.cod_par && !isBlankTrailing && it.description && it.description.trim() && (
                                 <button
                                   type="button"
@@ -236,7 +287,7 @@ export default function ComputosCards({
                                   UNIDAD (UND)
                                 </label>
                                 <select
-                                  value={it.unit || 'M2'}
+                                  value={it.unit || (isSteel ? 'KG' : 'M2')}
                                   onChange={(e) => handleUpdateItemField(it.id, 'unit', e.target.value)}
                                   className="w-full px-2 py-1 text-[11px] font-semibold rounded-lg border border-amber-300 bg-white text-amber-950 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
                                 >
@@ -249,7 +300,7 @@ export default function ComputosCards({
                               </div>
                               <div>
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
-                                  N° VECES / PIEZAS
+                                  {isSteel ? 'N° PIEZAS IGUALES' : 'N° VECES / PIEZAS'}
                                 </label>
                                 <MathQuantityInput
                                   value={it.times ?? 1}
@@ -265,37 +316,59 @@ export default function ComputosCards({
                             <div className="grid grid-cols-3 gap-2">
                               <div>
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
-                                  LARGO (m)
+                                  {isSteel ? 'LONG. (m)' : 'LARGO (m)'}
                                 </label>
                                 <MathQuantityInput
                                   value={it.length ?? ''}
                                   onChange={(val) => handleUpdateItemField(it.id, 'length', val)}
                                   allowEmpty
-                                  placeholder="0.00"
+                                  placeholder={isSteel ? 'Long. m' : '0.00'}
                                   className="w-full px-2 py-1.5 text-xs text-right font-medium rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
                                 />
                               </div>
                               <div>
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
-                                  ANCHO (m)
+                                  {isSteel ? 'DIÁMETRO Ø' : 'ANCHO (m)'}
                                 </label>
-                                <MathQuantityInput
-                                  value={it.width ?? ''}
-                                  onChange={(val) => handleUpdateItemField(it.id, 'width', val)}
-                                  allowEmpty
-                                  placeholder="0.00"
-                                  className="w-full px-2 py-1.5 text-xs text-right font-medium rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
-                                />
+                                {isSteel ? (
+                                  <select
+                                    value={it.rebarDiameter || ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      const spec = getRebarSpec(val);
+                                      handleUpdateItemField(it.id, 'rebarDiameter', val);
+                                      if (spec) {
+                                        handleUpdateItemField(it.id, 'factor', spec.kgm);
+                                      }
+                                    }}
+                                    className="w-full px-1.5 py-1.5 text-xs font-bold rounded-lg border border-indigo-300 bg-indigo-50/70 text-indigo-950 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                                  >
+                                    <option value="">Ø Diám...</option>
+                                    {REBAR_DIAMETERS.map((d) => (
+                                      <option key={d.diameter} value={d.diameter}>
+                                        {d.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <MathQuantityInput
+                                    value={it.width ?? ''}
+                                    onChange={(val) => handleUpdateItemField(it.id, 'width', val)}
+                                    allowEmpty
+                                    placeholder="0.00"
+                                    className="w-full px-2 py-1.5 text-xs text-right font-medium rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                  />
+                                )}
                               </div>
                               <div>
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
-                                  ALTO (m)
+                                  {isSteel ? 'N° BARRAS' : 'ALTO (m)'}
                                 </label>
                                 <MathQuantityInput
                                   value={it.height ?? ''}
                                   onChange={(val) => handleUpdateItemField(it.id, 'height', val)}
                                   allowEmpty
-                                  placeholder="0.00"
+                                  placeholder={isSteel ? 'Barras' : '0.00'}
                                   className="w-full px-2 py-1.5 text-xs text-right font-medium rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
                                 />
                               </div>
@@ -308,16 +381,18 @@ export default function ComputosCards({
                                   className="block text-[10px] font-bold text-amber-900 mb-0.5"
                                   title="Factor kg/m para acero"
                                 >
-                                  FACTOR (kg/m)
+                                  {isSteel ? 'PESO kg/m' : 'FACTOR'}
                                 </label>
                                 <MathQuantityInput
                                   value={it.factor ?? ''}
                                   onChange={(val) => handleUpdateItemField(it.id, 'factor', val)}
                                   allowEmpty
                                   decimals={3}
-                                  placeholder="1.000"
+                                  placeholder={isSteel ? 'kg/m' : '1.000'}
                                   title="Factor de peso para acero o factor multiplicador"
-                                  className="w-full px-2 py-1.5 text-xs text-right font-semibold rounded-lg border border-amber-300 bg-white"
+                                  className={`w-full px-2 py-1.5 text-xs text-right font-semibold rounded-lg border border-amber-300 ${
+                                    isSteel ? 'bg-indigo-50/50 text-indigo-950 font-bold' : 'bg-white'
+                                  }`}
                                 />
                               </div>
                               <div>
@@ -327,14 +402,20 @@ export default function ComputosCards({
                                 >
                                   DIST. (km)
                                 </label>
-                                <MathQuantityInput
-                                  value={it.distance ?? ''}
-                                  onChange={(val) => handleUpdateItemField(it.id, 'distance', val)}
-                                  allowEmpty
-                                  placeholder="—"
-                                  title="Distancia de transporte en Km"
-                                  className="w-full px-2 py-1.5 text-xs text-right font-semibold rounded-lg border border-amber-300 bg-white"
-                                />
+                                {isSteel ? (
+                                  <div className="w-full px-2 py-1.5 text-xs text-center font-bold text-gray-300 rounded-lg border border-amber-200 bg-gray-50 select-none">
+                                    —
+                                  </div>
+                                ) : (
+                                  <MathQuantityInput
+                                    value={it.distance ?? ''}
+                                    onChange={(val) => handleUpdateItemField(it.id, 'distance', val)}
+                                    allowEmpty
+                                    placeholder="—"
+                                    title="Distancia de transporte en Km"
+                                    className="w-full px-2 py-1.5 text-xs text-right font-semibold rounded-lg border border-amber-300 bg-white"
+                                  />
+                                )}
                               </div>
                               <div>
                                 <label
@@ -343,14 +424,20 @@ export default function ComputosCards({
                                 >
                                   M3 (BOTE)
                                 </label>
-                                <MathQuantityInput
-                                  value={it.m3 ?? ''}
-                                  onChange={(val) => handleUpdateItemField(it.id, 'm3', val)}
-                                  allowEmpty
-                                  placeholder="—"
-                                  title="Volumen en M3 para bote de escombros y acarreo"
-                                  className="w-full px-2 py-1.5 text-xs text-right font-bold text-amber-950 rounded-lg border border-amber-300 bg-amber-50/40 focus:bg-white"
-                                />
+                                {isSteel ? (
+                                  <div className="w-full px-2 py-1.5 text-xs text-center font-bold text-gray-300 rounded-lg border border-amber-200 bg-gray-50 select-none">
+                                    —
+                                  </div>
+                                ) : (
+                                  <MathQuantityInput
+                                    value={it.m3 ?? ''}
+                                    onChange={(val) => handleUpdateItemField(it.id, 'm3', val)}
+                                    allowEmpty
+                                    placeholder="—"
+                                    title="Volumen en M3 para bote de escombros y acarreo"
+                                    className="w-full px-2 py-1.5 text-xs text-right font-bold text-amber-950 rounded-lg border border-amber-300 bg-amber-50/40 focus:bg-white"
+                                  />
+                                )}
                               </div>
                             </div>
 
@@ -455,6 +542,17 @@ export default function ComputosCards({
                                             placeholder={`Parcial ${pIdx + 1} (ej: Fachada, Eje 1-2, Tramo A...)`}
                                             className="w-full px-2 py-1 text-xs font-semibold bg-amber-50/30 border border-amber-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
                                           />
+                                          {isSteel && (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleOpenStirrupModal && handleOpenStirrupModal(it, p)}
+                                              className="px-2 py-0.5 text-[10px] font-bold text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-300 rounded-lg flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+                                              title="Micro-calculadora de estribo"
+                                            >
+                                              <Calculator className="w-3 h-3 text-indigo-600" />
+                                              <span>Estribo</span>
+                                            </button>
+                                          )}
                                         </div>
                                         <button
                                           type="button"
@@ -468,43 +566,65 @@ export default function ComputosCards({
 
                                       <div className="grid grid-cols-4 gap-1.5">
                                         <div>
-                                          <label className="block text-[9px] font-bold text-amber-800">Largo (m)</label>
+                                          <label className="block text-[9px] font-bold text-amber-800">{isSteel ? 'Long. (m)' : 'Largo (m)'}</label>
                                           <MathQuantityInput
                                             value={p.length ?? ''}
                                             onChange={(val) =>
                                               handleUpdatePartialField(it.id, p.id, 'length', val)
                                             }
                                             allowEmpty
-                                            placeholder="0.00"
+                                            placeholder={isSteel ? 'Long. m' : '0.00'}
                                             className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
                                           />
                                         </div>
                                         <div>
-                                          <label className="block text-[9px] font-bold text-amber-800">Ancho (m)</label>
-                                          <MathQuantityInput
-                                            value={p.width ?? ''}
-                                            onChange={(val) =>
-                                              handleUpdatePartialField(it.id, p.id, 'width', val)
-                                            }
-                                            allowEmpty
-                                            placeholder="0.00"
-                                            className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
-                                          />
+                                          <label className="block text-[9px] font-bold text-amber-800">{isSteel ? 'Diámetro' : 'Ancho (m)'}</label>
+                                          {isSteel ? (
+                                            <select
+                                              value={p.rebarDiameter || ''}
+                                              onChange={(e) => {
+                                                const val = e.target.value;
+                                                const spec = getRebarSpec(val);
+                                                handleUpdatePartialField(it.id, p.id, 'rebarDiameter', val);
+                                                if (spec) {
+                                                  handleUpdatePartialField(it.id, p.id, 'factor', spec.kgm);
+                                                }
+                                              }}
+                                              className="w-full px-1 py-1 text-xs font-bold rounded-lg border border-indigo-300 bg-indigo-50/70 text-indigo-950 focus:outline-none cursor-pointer"
+                                            >
+                                              <option value="">Ø Diám...</option>
+                                              {REBAR_DIAMETERS.map((d) => (
+                                                <option key={d.diameter} value={d.diameter}>
+                                                  {d.label}
+                                                </option>
+                                              ))}
+                                            </select>
+                                          ) : (
+                                            <MathQuantityInput
+                                              value={p.width ?? ''}
+                                              onChange={(val) =>
+                                                handleUpdatePartialField(it.id, p.id, 'width', val)
+                                              }
+                                              allowEmpty
+                                              placeholder="0.00"
+                                              className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
+                                            />
+                                          )}
                                         </div>
                                         <div>
-                                          <label className="block text-[9px] font-bold text-amber-800">Alto (m)</label>
+                                          <label className="block text-[9px] font-bold text-amber-800">{isSteel ? 'Barras' : 'Alto (m)'}</label>
                                           <MathQuantityInput
                                             value={p.height ?? ''}
                                             onChange={(val) =>
                                               handleUpdatePartialField(it.id, p.id, 'height', val)
                                             }
                                             allowEmpty
-                                            placeholder="0.00"
+                                            placeholder={isSteel ? 'Barras' : '0.00'}
                                             className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
                                           />
                                         </div>
                                         <div>
-                                          <label className="block text-[9px] font-bold text-amber-800">Veces</label>
+                                          <label className="block text-[9px] font-bold text-amber-800">{isSteel ? 'Piezas' : 'Veces'}</label>
                                           <MathQuantityInput
                                             value={p.times ?? 1}
                                             onChange={(val) =>
@@ -519,7 +639,7 @@ export default function ComputosCards({
 
                                       <div className="grid grid-cols-3 gap-1.5">
                                         <div>
-                                          <label className="block text-[9px] font-bold text-amber-800">Factor</label>
+                                          <label className="block text-[9px] font-bold text-amber-800">{isSteel ? 'Peso kg/m' : 'Factor'}</label>
                                           <MathQuantityInput
                                             value={p.factor ?? ''}
                                             onChange={(val) =>
@@ -527,34 +647,48 @@ export default function ComputosCards({
                                             }
                                             allowEmpty
                                             decimals={3}
-                                            placeholder="1.000"
-                                            className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
+                                            placeholder={isSteel ? 'kg/m' : '1.000'}
+                                            className={`w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg ${
+                                              isSteel ? 'bg-indigo-50/50 text-indigo-950 font-bold' : ''
+                                            }`}
                                           />
                                         </div>
                                         <div>
                                           <label className="block text-[9px] font-bold text-amber-800">Dist. (km)</label>
-                                          <MathQuantityInput
-                                            value={p.distance ?? ''}
-                                            onChange={(val) =>
-                                              handleUpdatePartialField(it.id, p.id, 'distance', val)
-                                            }
-                                            allowEmpty
-                                            placeholder="—"
-                                            className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
-                                          />
+                                          {isSteel ? (
+                                            <div className="w-full px-1.5 py-1 text-xs text-center font-bold text-gray-300 bg-gray-50 border border-amber-200 rounded-lg select-none">
+                                              —
+                                            </div>
+                                          ) : (
+                                            <MathQuantityInput
+                                              value={p.distance ?? ''}
+                                              onChange={(val) =>
+                                                handleUpdatePartialField(it.id, p.id, 'distance', val)
+                                              }
+                                              allowEmpty
+                                              placeholder="—"
+                                              className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
+                                            />
+                                          )}
                                         </div>
                                         <div>
                                           <label className="block text-[9px] font-bold text-amber-800">M3 (Bote)</label>
-                                          <MathQuantityInput
-                                            value={p.m3 ?? ''}
-                                            onChange={(val) =>
-                                              handleUpdatePartialField(it.id, p.id, 'm3', val)
-                                            }
-                                            allowEmpty
-                                            placeholder="—"
-                                            title="M3 bote y acarreo de este tramo"
-                                            className="w-full px-1.5 py-1 text-xs text-right font-bold text-amber-950 bg-amber-50/40 border border-amber-200 rounded-lg"
-                                          />
+                                          {isSteel ? (
+                                            <div className="w-full px-1.5 py-1 text-xs text-center font-bold text-gray-300 bg-gray-50 border border-amber-200 rounded-lg select-none">
+                                              —
+                                            </div>
+                                          ) : (
+                                            <MathQuantityInput
+                                              value={p.m3 ?? ''}
+                                              onChange={(val) =>
+                                                handleUpdatePartialField(it.id, p.id, 'm3', val)
+                                              }
+                                              allowEmpty
+                                              placeholder="—"
+                                              title="M3 bote y acarreo de este tramo"
+                                              className="w-full px-1.5 py-1 text-xs text-right font-bold text-amber-950 bg-amber-50/40 border border-amber-200 rounded-lg"
+                                            />
+                                          )}
                                         </div>
                                       </div>
 

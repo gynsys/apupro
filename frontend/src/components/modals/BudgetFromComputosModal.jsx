@@ -82,6 +82,8 @@ import { AddChapterModal, RenameChapterModal } from '../../modules/computos/comp
 import ProjectInfoModal from '../../modules/computos/components/ProjectInfoModal.jsx';
 import GenerationProgressModal from '../../modules/computos/components/GenerationProgressModal.jsx';
 import ComputosSheet from '../../modules/computos/components/ComputosSheet.jsx';
+import LinkPartidaModal from '../../modules/computos/components/modals/LinkPartidaModal.jsx';
+import StirrupCalculatorModal from '../../modules/computos/components/modals/StirrupCalculatorModal.jsx';
 
 
 function escapeHtml(text) {
@@ -126,6 +128,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   const [showProjectInfoModal, setShowProjectInfoModal] = useState(false);
   const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [coveninTargetItemId, setCoveninTargetItemId] = useState(null);
+  const [linkModalItem, setLinkModalItem] = useState(null);
+  const [stirrupModalTarget, setStirrupModalTarget] = useState(null);
   const [isCalibrationOpen, setIsCalibrationOpen] = useState(false);
   const [pendingBudgetItems, setPendingBudgetItems] = useState([]);
   const [availableBudgets, setAvailableBudgets] = useState([]);
@@ -408,6 +412,16 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   const [descriptionFilter, setDescriptionFilter] = useState('');
 
   // Partidas enriquecidas con su índice original para preservar la numeración de ítems
+  const chapters = useMemo(() => {
+    return Array.from(
+      new Set(
+        capturedItems
+          .map((it) => (it.chapter || '').trim())
+          .filter(Boolean)
+      )
+    );
+  }, [capturedItems]);
+
   const itemsWithOriginalIndex = useMemo(() => {
     return capturedItems.map((it, idx) => ({ ...it, originalIndex: idx }));
   }, [capturedItems]);
@@ -1043,6 +1057,55 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   /**
    * Expande o colapsa el panel de paredes/parciales de una partida
    */
+  const handleOpenLinkModal = (item) => {
+    setLinkModalItem(item);
+  };
+
+  const handleConfirmLink = (linkData) => {
+    rowsDispatch({
+      type: 'LINK_ROWS',
+      payload: { ...linkData, activeChapter },
+    });
+    toast.success('Partida vinculada exitosamente con actualización en cascada');
+    setLinkModalItem(null);
+  };
+
+  const handleUnlinkRow = (itemId) => {
+    rowsDispatch({
+      type: 'UNLINK_ROW',
+      payload: { itemId, activeChapter },
+    });
+    toast.success('Vínculo eliminado');
+  };
+
+  const handleOpenStirrupModal = (item, partial = null) => {
+    setStirrupModalTarget({ item, partial });
+  };
+
+  const handleApplyStirrup = ({ cutLengthM, count, colWidthCm, colHeightCm }) => {
+    if (!stirrupModalTarget) return;
+    const { item, partial } = stirrupModalTarget;
+    if (partial) {
+      handleUpdatePartialField(item.id, partial.id, 'length', cutLengthM);
+      if (count) {
+        handleUpdatePartialField(item.id, partial.id, 'times', count);
+      }
+      const obsNote = `Estribo ${colWidthCm}x${colHeightCm}cm`;
+      const currentObs = partial.observations ? `${partial.observations} | ${obsNote}` : obsNote;
+      handleUpdatePartialField(item.id, partial.id, 'observations', currentObs);
+    } else {
+      handleUpdateItemField(item.id, 'length', cutLengthM);
+      if (count) {
+        handleUpdateItemField(item.id, 'times', count);
+      }
+      const obsNote = `Estribo ${colWidthCm}x${colHeightCm}cm`;
+      const currentObs = item.observations ? `${item.observations} | ${obsNote}` : obsNote;
+      handleUpdateItemField(item.id, 'observations', currentObs);
+    }
+    toast.success(`Estribo de corte ${cutLengthM}m aplicado correctamente`);
+    setStirrupModalTarget(null);
+  };
+
   const handleToggleExpandPartials = (itemId) => {
     setExpandedPartials((prev) => ({
       ...prev,
@@ -1848,6 +1911,24 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
         onClose={() => setShowProjectInfoModal(false)}
       />
 
+      <LinkPartidaModal
+        isOpen={Boolean(linkModalItem)}
+        sourceItem={linkModalItem}
+        availableTargetItems={capturedItems.filter((it) => it.id !== linkModalItem?.id && !isItemEmpty(it))}
+        chapters={chapters}
+        activeChapter={activeChapter}
+        onClose={() => setLinkModalItem(null)}
+        onConfirmLink={handleConfirmLink}
+      />
+
+      <StirrupCalculatorModal
+        isOpen={Boolean(stirrupModalTarget)}
+        targetItem={stirrupModalTarget?.item}
+        targetPartial={stirrupModalTarget?.partial}
+        onClose={() => setStirrupModalTarget(null)}
+        onApplyStirrup={handleApplyStirrup}
+      />
+
       {/* Modal de Búsqueda e Inclusión COVENIN (sin opciones IA ni Compartir) */}
       <BudgetSearchModal
         isOpen={showCatalogModal}
@@ -2141,12 +2222,15 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
         handleEnrichItem={handleEnrichItem}
         handleInsertRowBelow={handleInsertRowBelow}
         handleOpenCoveninModal={handleOpenCoveninModal}
+        handleOpenLinkModal={handleOpenLinkModal}
+        handleOpenStirrupModal={handleOpenStirrupModal}
         handleRemoveChapterHeader={handleRemoveChapterHeader}
         handleRemoveItem={handleRemoveItem}
         handleRemovePartial={handleRemovePartial}
         handleRenameChapter={handleRenameChapter}
         handleToggleExpandPartials={handleToggleExpandPartials}
         handleTogglePartials={handleTogglePartials}
+        handleUnlinkRow={handleUnlinkRow}
         handleUpdateItemField={handleUpdateItemField}
         handleUpdatePartialField={handleUpdatePartialField}
         setDescriptionFilter={setDescriptionFilter}
