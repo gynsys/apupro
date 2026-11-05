@@ -3,7 +3,7 @@
  */
 
 import { UNIT_PATTERN, normalizeUnitStr } from './units.js';
-import { getRebarSpec } from './steel.js';
+import { getRebarSpec, isSteelRow } from './steel.js';
 import { computeGeometryBase, GEOMETRY_TYPES } from './geometry.js';
 
 function round2(val) {
@@ -101,13 +101,15 @@ function evaluateMeasurementFormula(rawLine) {
   }
 }
 
-function computePartial(p) {
+function computePartial(p, parentUnit = '') {
   if (!p) return 0;
   const parseNum = (v) => {
     if (v === '' || v == null) return null;
     const n = parseFloat(String(v).replace(',', '.'));
     return isNaN(n) ? null : n;
   };
+
+  const normUnit = String(p.unit || parentUnit || '').trim().toUpperCase();
 
   // Sincronizar factor de acero si tiene diámetro de cabilla seleccionado
   if (p.rebarDiameter && (!p.factor || p.factor === '')) {
@@ -127,16 +129,29 @@ function computePartial(p) {
   const multFactor = f !== null && f > 0 ? f : 1;
   const multDist = dist !== null && dist > 0 ? dist : 1;
 
-  // Cálculo de figuras geométricas especiales (Cilindro, Triángulo, Zapata piramidal, Zanja)
+  // Cálculo de acero de refuerzo (Cabillas)
+  const isSteel = isSteelRow(p) || Boolean(p.rebarDiameter) || normUnit === 'KG';
+  if (isSteel && l !== null && h !== null && f !== null && l > 0 && h > 0 && f > 0) {
+    const unitWeight = round2(l * h * f);
+    const parcial = round2(unitWeight * t);
+    p.partial = parcial;
+    p.formula = t > 1
+      ? `${t} × (${l}m × ${h} barras × ${f} kg/m) = ${parcial} kg`
+      : `(${l}m × ${h} barras × ${f} kg/m) = ${parcial} kg`;
+    return parcial;
+  }
+
+  // Cálculo de figuras geométricas especiales (Cilindro, Triángulo, Trapecio, Zapata piramidal, Zanja)
   if (p.geometryType && p.geometryType !== GEOMETRY_TYPES.RECTANGLE) {
-    const geomResult = computeGeometryBase(p, p.unit || 'M3');
+    const geomResult = computeGeometryBase(p, normUnit || 'M3');
     if (geomResult.baseGeom !== null) {
       const parcial = round2(geomResult.baseGeom * multFactor * multDist * t);
       p.partial = parcial;
+      p.formula = t > 1 ? `${t} × [${geomResult.formulaStr}]` : geomResult.formulaStr;
       if (geomResult.trenchDetails) {
         p.trenchDetails = geomResult.trenchDetails;
       }
-      if (p.unit === 'M3' || (!p.unit && geomResult.baseGeom > 0)) {
+      if (normUnit === 'M3' || (!normUnit && geomResult.baseGeom > 0)) {
         p.m3 = parcial;
         p._autoM3 = parcial;
       }
@@ -160,19 +175,37 @@ function computePartial(p) {
 
   if (dims.length > 0) {
     const baseGeom = dims.reduce((acc, curr) => acc * curr, 1);
-    return round2(baseGeom * multFactor * multDist * t);
+    const parcial = round2(baseGeom * multFactor * multDist * t);
+    p.partial = parcial;
+
+    let innerParts = [dims.map((d) => `${d}m`).join(' × ')];
+    if (f !== null && f !== 1) innerParts.push(`× ${f}`);
+    if (dist !== null && dist > 0) innerParts.push(`× ${dist}km`);
+    const innerStr = innerParts.join(' ');
+    const displayUnit = normUnit || (dims.length === 3 ? 'm³' : dims.length === 2 ? 'm²' : 'm');
+
+    p.formula = t > 1
+      ? `${t} × (${innerStr}) = ${parcial} ${displayUnit}`
+      : `(${innerStr}) = ${parcial} ${displayUnit}`;
+
+    return parcial;
   }
 
   // Si no hay dimensiones físicas pero hay volumen M3 directo (transporte M3-KM o botes)
   const m3Val = parseNum(p.m3);
   if (m3Val !== null && !isNaN(m3Val) && m3Val > 0) {
-    return round2(m3Val * multFactor * multDist * t);
+    const parcial = round2(m3Val * multFactor * multDist * t);
+    p.partial = parcial;
+    p.formula = `${t > 1 ? `${t} × ` : ''}${m3Val} m³${dist !== null && dist > 0 ? ` × ${dist}km` : ''}${f !== null && f !== 1 ? ` × ${f}` : ''} = ${parcial} ${normUnit || 'm³'}`;
+    return parcial;
   }
 
   if (p.partial !== '' && p.partial != null) {
     const pVal = parseFloat(String(p.partial).replace(',', '.'));
     if (!isNaN(pVal)) {
-      return round2(pVal * multFactor * multDist * t);
+      const parcial = round2(pVal * multFactor * multDist * t);
+      p.formula = `${parcial} ${normUnit || ''}`.trim();
+      return parcial;
     }
   }
   return 0;
@@ -181,12 +214,11 @@ function computePartial(p) {
 /**
  * Recalcula la cantidad total de una partida a partir de la suma de sus parciales (paredes/tramos)
  */
-
 function recomputeItemWithPartials(item) {
   if (!item.partials || item.partials.length === 0) {
     return item;
   }
-  const total = item.partials.reduce((sum, p) => sum + computePartial(p), 0);
+  const total = item.partials.reduce((sum, p) => sum + computePartial(p, item.unit), 0);
   const roundedTotal = round2(total);
 
   // Suma de M3 para botes y acarreo a partir de los parciales
@@ -196,11 +228,16 @@ function recomputeItemWithPartials(item) {
   }, 0);
   const roundedM3 = totalM3 > 0 ? round2(totalM3) : (item.m3 || '');
 
+  const partialSummary = item.partials.length <= 4
+    ? item.partials.map((p) => `${p.partial || 0}`).join(' + ') + ` = ${roundedTotal} ${item.unit || ''}`
+    : `Σ (${item.partials.length} parciales) = ${roundedTotal} ${item.unit || ''}`;
+
   return {
     ...item,
     quantity: roundedTotal,
     partial: 0,
     m3: roundedM3,
+    formula: partialSummary,
     length: '',
     width: '',
     height: '',
@@ -271,6 +308,19 @@ function recomputeRow(row, field, value) {
     return updated;
   }
 
+  // Cálculo de acero de refuerzo (Cabillas)
+  const isSteel = isSteelRow(updated) || Boolean(updated.rebarDiameter) || updated.unit === 'KG';
+  if (isSteel && l !== null && h !== null && f !== null && l > 0 && h > 0 && f > 0) {
+    const unitWeight = round2(l * h * f);
+    const total = round2(unitWeight * t);
+    updated.partial = unitWeight;
+    updated.quantity = total;
+    updated.formula = t > 1
+      ? `${t} × (${l}m × ${h} barras × ${f} kg/m) = ${total} kg`
+      : `(${l}m × ${h} barras × ${f} kg/m) = ${total} kg`;
+    return updated;
+  }
+
   // Cálculo de figuras geométricas especiales (Cilindro, Triángulo, Zapata piramidal, Zanja)
   if (updated.geometryType && updated.geometryType !== GEOMETRY_TYPES.RECTANGLE) {
     const geomResult = computeGeometryBase(updated, updated.unit);
@@ -320,14 +370,16 @@ function recomputeRow(row, field, value) {
       updated._autoM3 = total;
     }
 
-    // Actualizar fórmula visible
-    let formulaParts = [];
-    if (t > 1) formulaParts.push(`${t} ×`);
-    const dimsStr = dims.map((d) => String(d)).join(' × ');
-    formulaParts.push(dimsStr);
-    if (f !== null) formulaParts.push(`× ${f}`);
-    if (dist !== null) formulaParts.push(`× ${dist}km`);
-    updated.formula = formulaParts.join(' ');
+    // Actualizar fórmula visible con parámetros numéricos explícitos
+    let innerParts = [dims.map((d) => `${d}m`).join(' × ')];
+    if (f !== null && f !== 1) innerParts.push(`× ${f}`);
+    if (dist !== null && dist > 0) innerParts.push(`× ${dist}km`);
+    const innerStr = innerParts.join(' ');
+    const displayUnit = updated.unit || (dims.length === 3 ? 'm³' : dims.length === 2 ? 'm²' : 'm');
+
+    updated.formula = t > 1
+      ? `${t} × (${innerStr}) = ${total} ${displayUnit}`
+      : `(${innerStr}) = ${total} ${displayUnit}`;
   } else if (m3Val !== null && !isNaN(m3Val) && m3Val > 0) {
     // Si no hay dimensiones pero hay volumen M3 directo (ej. transporte M3-KM o botes)
     // Parcial = volumen M3 * Factor * Distancia (para 1 vez)
@@ -339,12 +391,7 @@ function recomputeRow(row, field, value) {
     updated.partial = parcial;
     updated.quantity = total;
 
-    let formulaParts = [];
-    if (t > 1) formulaParts.push(`${t} ×`);
-    formulaParts.push(`${m3Val} m³`);
-    if (f !== null) formulaParts.push(`× ${f}`);
-    if (dist !== null) formulaParts.push(`× ${dist}km`);
-    updated.formula = formulaParts.join(' ');
+    updated.formula = `${t > 1 ? `${t} × ` : ''}${m3Val} m³${dist !== null && dist > 0 ? ` × ${dist}km` : ''}${f !== null && f !== 1 ? ` × ${f}` : ''} = ${total} ${updated.unit || 'm³'}`;
   } else if (field === 'partial') {
     const pVal = Math.max(0, parseFloat(String(value).replace(',', '.')) || 0);
     updated.partial = pVal;

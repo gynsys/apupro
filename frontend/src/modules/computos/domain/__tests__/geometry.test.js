@@ -12,9 +12,10 @@ describe('Intelligent Geometry Templates', () => {
       unit: 'M3',
     };
     const res = computeGeometryBase(row, 'M3');
-    // π * (0.40)^2 / 4 * 3.00 = 0.37699... -> 0.38 m3
+    // 3.1416 * (0.40)^2 / 4 * 3.00 = 0.37699... -> 0.38 m3
     expect(res.baseGeom).toBe(0.38);
-    expect(res.formulaStr).toContain('π');
+    expect(res.formulaStr).toContain('3.1416');
+    expect(res.formulaStr).toContain('/ 4');
   });
 
   it('computes cylinder lateral area for M2 (A = π·D·H)', () => {
@@ -40,6 +41,39 @@ describe('Intelligent Geometry Templates', () => {
     const res = computeGeometryBase(row, 'M3');
     // (2.00 * 1.50 / 2) * 10 = 15.00 m3
     expect(res.baseGeom).toBe(15);
+    expect(res.formulaStr).toContain('/ 2');
+  });
+
+  it('computes trapezoid section area for M2 (A = (B + b)·h / 2)', () => {
+    const row = {
+      geometryType: GEOMETRY_TYPES.TRAPEZOID,
+      length: 2.50, // Base Mayor B = 2.50m
+      width: 1.50,  // Base Menor b = 1.50m
+      height: 1.20, // Altura h = 1.20m
+      unit: 'M2',
+    };
+    const res = computeGeometryBase(row, 'M2');
+    // ((2.50 + 1.50) * 1.20) / 2 = (4.00 * 1.20) / 2 = 2.40 m2
+    expect(res.baseGeom).toBe(2.40);
+    expect(res.formulaStr).toContain('/ 2');
+    expect(res.formulaStr).toBe('(((2.5m + 1.5m) × 1.2m) / 2) = 2.4m²');
+  });
+
+  it('computes trapezoid canal/trench volume for M3 (V = ((B + b)·h / 2) · L)', () => {
+    const row = {
+      geometryType: GEOMETRY_TYPES.TRAPEZOID,
+      length: 2.00, // Base Mayor B = 2.00m
+      width: 1.00,  // Base Menor b = 1.00m
+      height: 0.80, // Altura h = 0.80m
+      distance: 10.00, // Longitud L = 10.00m
+      unit: 'M3',
+    };
+    const res = computeGeometryBase(row, 'M3');
+    // ((2.00 + 1.00) * 0.80 / 2) * 10 = (3.00 * 0.40) * 10 = 12.00 m3
+    expect(res.baseGeom).toBe(12.00);
+    expect(res.formulaStr).toContain('/ 2');
+    expect(res.formulaStr).toContain('10m');
+    expect(res.formulaStr).toBe('[(((2m + 1m) × 0.8m) / 2) × 10m] = 12m³');
   });
 
   it('computes truncated pyramid footing volume: H/3 · (A1 + A2 + √(A1·A2))', () => {

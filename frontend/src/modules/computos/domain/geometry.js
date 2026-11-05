@@ -2,16 +2,18 @@
  * Módulo de Plantillas de Geometría Inteligente para la Planilla de Cómputos Métricos.
  * 
  * Permite calcular figuras más allá del prisma rectangular tradicional (L × A × H):
- * 1. Cilindro / Pilote / Columna Circular
- * 2. Sección Triangular / Talud / Cubierta a 2 Aguas
- * 3. Zapata Troncocónica / Piramidal
- * 4. Zanja y Tubería (Excavación + Cama de arena + Relleno compactado)
+ * 1. Cilindro / Pilote / Columna Circular (con constante 3.1416 explícita y división / 4)
+ * 2. Sección Triangular / Talud / Cubierta a 2 Aguas (con división / 2 explícita)
+ * 3. Trapecio / Canal / Talud Trapecial (((Base Mayor + Base Menor) × Altura / 2) × Longitud)
+ * 4. Zapata Troncocónica / Piramidal (con división / 3 y raíz cuadrada explícita)
+ * 5. Zanja y Tubería (Excavación + Cama de arena + Relleno compactado)
  */
 
 export const GEOMETRY_TYPES = {
   RECTANGLE: 'rectangle',
   CYLINDER: 'cylinder',
   TRIANGLE: 'triangle',
+  TRAPEZOID: 'trapezoid',
   TRUNCATED_PYRAMID: 'truncated_pyramid',
   TRENCH: 'trench',
 };
@@ -29,28 +31,35 @@ export const GEOMETRY_CONFIGS = [
     label: 'Cilindro / Pilote / Columna Circular',
     shortLabel: 'Cilindro',
     icon: '⚪',
-    description: 'Diámetro ∅ y Altura H (V = π·D²/4 · H)',
+    description: 'Diámetro ∅ y Altura H ((3.1416 × D² / 4) × H)',
   },
   {
     id: GEOMETRY_TYPES.TRIANGLE,
     label: 'Triángulo / Talud / 2 Aguas',
     shortLabel: 'Triángulo',
     icon: '📐',
-    description: 'Base × Altura / 2 × Longitud',
+    description: '(Base × Altura / 2) × Longitud',
+  },
+  {
+    id: GEOMETRY_TYPES.TRAPEZOID,
+    label: 'Trapecio / Canal / Talud Trapecial',
+    shortLabel: 'Trapecio',
+    icon: '⏢',
+    description: '((Base Mayor + Base Menor) × Altura / 2) × Longitud',
   },
   {
     id: GEOMETRY_TYPES.TRUNCATED_PYRAMID,
     label: 'Zapata Troncocónica / Piramidal',
     shortLabel: 'Piramidal',
     icon: '🏛️',
-    description: 'H/3 · (A₁ + A₂ + √(A₁·A₂))',
+    description: '(H / 3) × (A₁ + A₂ + √(A₁ × A₂))',
   },
   {
     id: GEOMETRY_TYPES.TRENCH,
     label: 'Zanja / Tubería (Excavación + Cama + Relleno)',
     shortLabel: 'Zanja',
     icon: '⛏️',
-    description: 'Longitud, Ancho y Profundidad con desglose de cama y relleno',
+    description: 'Longitud × Ancho × Profundidad con desglose numérico',
   },
 ];
 
@@ -66,7 +75,9 @@ function parseNum(v) {
 }
 
 /**
- * Calcula la base geométrica (1 unidad/vez) para una figura según sus parámetros y la unidad de la partida
+ * Calcula la base geométrica (1 unidad/vez) para una figura según sus parámetros y la unidad de la partida,
+ * generando una cadena de fórmula que muestra TODOS los valores numéricos y constantes explícitos (3.1416, / 2, / 3, / 4).
+ * 
  * @param {Object} row - Fila o parcial con campos geométricos
  * @param {string} unit - Unidad de medida (M3, M2, ML, etc.)
  * @returns {{ baseGeom: number, formulaStr: string, trenchDetails?: Object }}
@@ -83,56 +94,110 @@ export function computeGeometryBase(row, unit = 'M3') {
 
       if (d !== null && d > 0) {
         if (normUnit === 'M2') {
-          // Área lateral del cilindro (encofrado o pintura): π · D · H
+          // Área lateral del cilindro (encofrado o pintura): 3.1416 × D × H
           const heightVal = h !== null && h > 0 ? h : 1;
-          const area = Math.PI * d * heightVal;
+          const area = 3.1416 * d * heightVal;
+          const roundedArea = round2(area);
           const formulaStr = h !== null && h > 0
-            ? `π · (${d}m) × ${h}m`
-            : `π · (${d}m)`;
-          return { baseGeom: round2(area), formulaStr };
+            ? `(3.1416 × ${d}m × ${h}m) = ${roundedArea}m²`
+            : `(3.1416 × ${d}m) = ${roundedArea}m²`;
+          return { baseGeom: roundedArea, formulaStr };
         } else if (normUnit === 'M' || normUnit === 'ML') {
-          // Perímetro circular: π · D
-          const perim = Math.PI * d;
-          return { baseGeom: round2(perim), formulaStr: `π · (${d}m)` };
+          // Perímetro circular: 3.1416 × D
+          const perim = round2(3.1416 * d);
+          return { baseGeom: perim, formulaStr: `(3.1416 × ${d}m) = ${perim}m` };
         } else {
-          // Volumen del cilindro (M3): π · D² / 4 · H
+          // Volumen del cilindro (M3): (3.1416 × D² / 4) × H
           const heightVal = h !== null && h > 0 ? h : 1;
-          const vol = (Math.PI * Math.pow(d, 2) / 4) * heightVal;
-          const formulaStr = `π · (${d}m)² / 4${h !== null && h > 0 ? ` × ${h}m` : ''}`;
-          return { baseGeom: round2(vol), formulaStr };
+          const vol = ((3.1416 * Math.pow(d, 2)) / 4) * heightVal;
+          const roundedVol = round2(vol);
+          const formulaStr = h !== null && h > 0
+            ? `((3.1416 × (${d}m)² / 4) × ${h}m) = ${roundedVol}m³`
+            : `(3.1416 × (${d}m)² / 4) = ${roundedVol}m³`;
+          return { baseGeom: roundedVol, formulaStr };
         }
       }
       break;
     }
 
     case GEOMETRY_TYPES.TRIANGLE: {
-      // row.length actúa como Base (m), row.width como Altura del triángulo (m), row.height como Largo del tramo (m)
+      // row.length = Base (m), row.width = Altura del triángulo (m), row.height = Largo del tramo (m)
       const base = parseNum(row.triangleBase ?? row.length);
       const hTri = parseNum(row.triangleHeight ?? row.width);
       const length = parseNum(row.height);
 
       if (base !== null && base > 0 && hTri !== null && hTri > 0) {
         const areaTri = (base * hTri) / 2;
+        const roundedArea = round2(areaTri);
         if (normUnit === 'M2') {
           return {
-            baseGeom: round2(areaTri),
-            formulaStr: `(${base}m × ${hTri}m) / 2`,
+            baseGeom: roundedArea,
+            formulaStr: `((${base}m × ${hTri}m) / 2) = ${roundedArea}m²`,
           };
         }
-        // Volumen M3 = Área triángulo * Largo
+        // Volumen M3 = (Base × Altura / 2) × Largo
         const lenVal = length !== null && length > 0 ? length : 1;
         const vol = areaTri * lenVal;
+        const roundedVol = round2(vol);
         const formulaStr = length !== null && length > 0
-          ? `((${base}m × ${hTri}m) / 2) × ${length}m`
-          : `(${base}m × ${hTri}m) / 2`;
-        return { baseGeom: round2(vol), formulaStr };
+          ? `(((${base}m × ${hTri}m) / 2) × ${length}m) = ${roundedVol}m³`
+          : `((${base}m × ${hTri}m) / 2) = ${roundedVol}m³`;
+        return { baseGeom: roundedVol, formulaStr };
+      }
+      break;
+    }
+
+    case GEOMETRY_TYPES.TRAPEZOID: {
+      // Trapecio: Base Mayor B, Base Menor b, Altura h, y Longitud L (para M3)
+      // Si baseMinor está explícito en la fila:
+      let bMaj = parseNum(row.baseMajor);
+      let bMin = parseNum(row.baseMinor);
+      let h = parseNum(row.height);
+      let len = parseNum(row.trapezoidLength ?? row.length);
+
+      // Si no hay baseMajor separado:
+      // Si normUnit es M2: length = Base Mayor, width = Base Menor, height = Altura
+      // Si normUnit es M3: length = Longitud L, width = Base Mayor, baseMinor = Base Menor (o width = bMaj, baseMinor = bMin)
+      if (bMaj === null) {
+        if (normUnit === 'M2' || len === null || len <= 0) {
+          bMaj = parseNum(row.length);
+          bMin = parseNum(row.width ?? row.baseMinor);
+          h = parseNum(row.height);
+          len = 1;
+        } else {
+          // En M3, si width tiene la Base Mayor y baseMinor la Menor
+          if (row.baseMinor !== undefined && row.baseMinor !== null && row.baseMinor !== '') {
+            bMaj = parseNum(row.width);
+            bMin = parseNum(row.baseMinor);
+            len = parseNum(row.length);
+          } else {
+            bMaj = parseNum(row.length);
+            bMin = parseNum(row.width);
+            len = parseNum(row.distance ?? row.trapezoidLength ?? 1);
+          }
+        }
+      }
+
+      if (bMaj !== null && bMaj > 0 && bMin !== null && bMin > 0 && h !== null && h > 0) {
+        const areaTrap = ((bMaj + bMin) * h) / 2;
+        const roundedArea = round2(areaTrap);
+        if (normUnit === 'M2') {
+          const formulaStr = `(((${bMaj}m + ${bMin}m) × ${h}m) / 2) = ${roundedArea}m²`;
+          return { baseGeom: roundedArea, formulaStr };
+        }
+        const lenVal = len !== null && len > 0 ? len : 1;
+        const vol = areaTrap * lenVal;
+        const roundedVol = round2(vol);
+        const formulaStr = lenVal > 1
+          ? `[(((${bMaj}m + ${bMin}m) × ${h}m) / 2) × ${lenVal}m] = ${roundedVol}m³`
+          : `(((${bMaj}m + ${bMin}m) × ${h}m) / 2) = ${roundedVol}m³`;
+        return { baseGeom: roundedVol, formulaStr };
       }
       break;
     }
 
     case GEOMETRY_TYPES.TRUNCATED_PYRAMID: {
       // row.length = Lado base mayor L1 (m), row.width = Lado base menor L2 (m), row.height = Altura H (m)
-      // O si se especifican áreas A1 y A2 directamente
       const l1 = parseNum(row.baseMajor ?? row.length);
       const l2 = parseNum(row.baseMinor ?? row.width);
       const h = parseNum(row.height);
@@ -142,8 +207,9 @@ export function computeGeometryBase(row, unit = 'M3') {
         const a2 = l2 !== null && l2 > 0 ? Math.pow(l2, 2) : 0;
         // Fórmula de zapata piramidal / tronco de pirámide: H/3 * (A1 + A2 + sqrt(A1 * A2))
         const vol = (h / 3) * (a1 + a2 + Math.sqrt(a1 * a2));
-        const formulaStr = `${h}m/3 · [${round2(a1)} + ${round2(a2)} + √(${round2(a1)}·${round2(a2)})]`;
-        return { baseGeom: round2(vol), formulaStr };
+        const roundedVol = round2(vol);
+        const formulaStr = `(${h}m / 3) × [(${l1}m)² + (${l2 || 0}m)² + √(${round2(a1)} × ${round2(a2)})] = ${roundedVol}m³`;
+        return { baseGeom: roundedVol, formulaStr };
       }
       break;
     }
@@ -159,7 +225,7 @@ export function computeGeometryBase(row, unit = 'M3') {
       if (l !== null && l > 0 && w !== null && w > 0 && h !== null && h > 0) {
         const vExc = round2(l * w * h);
         const vBed = bedH !== null && bedH > 0 ? round2(l * w * bedH) : 0;
-        const vPipe = pipeDiam !== null && pipeDiam > 0 ? round2((Math.PI * Math.pow(pipeDiam, 2) / 4) * l) : 0;
+        const vPipe = pipeDiam !== null && pipeDiam > 0 ? round2(((3.1416 * Math.pow(pipeDiam, 2)) / 4) * l) : 0;
         const vBackfill = Math.max(0, round2(vExc - vBed - vPipe));
 
         const trenchDetails = {
@@ -169,7 +235,6 @@ export function computeGeometryBase(row, unit = 'M3') {
           backfillM3: vBackfill,
         };
 
-        // Si la partida específica es Cama de arena o Relleno, podemos retornar el valor correspondiente
         const descUpper = String(row.description || '').toUpperCase();
         let activeVol = vExc;
         let label = 'Excavación';
@@ -181,7 +246,7 @@ export function computeGeometryBase(row, unit = 'M3') {
           label = 'Relleno';
         }
 
-        const formulaStr = `${l}m × ${w}m × ${h}m (${label}: ${activeVol}m³)`;
+        const formulaStr = `${l}m × ${w}m × ${h}m = ${activeVol}m³ [Exc: ${vExc}m³ | Cama: ${vBed}m³ | Relleno: ${vBackfill}m³]`;
         return { baseGeom: activeVol, formulaStr, trenchDetails };
       }
       break;
@@ -189,7 +254,6 @@ export function computeGeometryBase(row, unit = 'M3') {
 
     case GEOMETRY_TYPES.RECTANGLE:
     default:
-      // Se maneja en formulas.js estándar
       break;
   }
 
