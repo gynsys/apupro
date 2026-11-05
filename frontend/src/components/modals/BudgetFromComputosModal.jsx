@@ -209,6 +209,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     });
   }, [activeChapter]);
 
+  // Bandera para rastrear si el usuario ha realizado modificaciones locales no guardadas
+  const isDirtyRef = useRef(false);
+  const isSyncingRef = useRef(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
   useEffect(() => {
     if (!isOpen || !initialBudget?.items) return;
 
@@ -216,6 +221,21 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     // cero para que los ingenieros capturen los cómputos ejecutados. En
     // aperturas posteriores se conserva el borrador de la planilla.
     if (hasOpenedComputos(initialBudget.id)) return;
+
+    // Verificar si ya existe un borrador previo guardado para este presupuesto (local o nube)
+    const existingDraft = (getSavedComputosList() || []).find(
+      (d) =>
+        d.budgetId === initialBudget.id ||
+        d.budgetName === `Cómputos - ${initialBudget.name}` ||
+        (d.projectName && (initialBudget.project_name || initialBudget.name) && d.projectName === (initialBudget.project_name || initialBudget.name))
+    ) || (readDraft()?.budgetId === initialBudget.id ? readDraft() : null);
+
+    if (existingDraft && Array.isArray(existingDraft.items) && existingDraft.items.length > 0) {
+      executeLoadSavedComputo(existingDraft, { notify: false });
+      markComputosOpened(initialBudget.id);
+      isDirtyRef.current = false;
+      return;
+    }
 
     const chapter = 'GENERAL';
     const rows = initialBudget.items.map((item, index) => ({
@@ -237,6 +257,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     setProjectName(initialBudget.project_name || initialBudget.name || '');
     setClientName(initialBudget.client_name || '');
     markComputosOpened(initialBudget.id);
+    isDirtyRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialBudget?.id]);
 
@@ -331,12 +352,17 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
 
   // Auto-guardado en segundo plano de borradores para no perder nada si se cierra inesperadamente
   useEffect(() => {
+    // Si el usuario no ha realizado modificaciones locales en esta sesión, NO auto-guardar
+    // para no sobrescribir datos de otros dispositivos ni inventar timestamps falsos
+    if (!isDirtyRef.current) return;
+
     const timer = setTimeout(() => {
       try {
         const nonBlank = capturedItems.filter((it) => !isItemEmpty(it));
         if (nonBlank.length > 0 || projectName || clientName) {
           const draftPayload = {
             id: currentDraftId,
+            budgetId: initialBudget?.id || null,
             savedAt: new Date().toISOString(),
             budgetName: (budgetName || '').trim() || 'Planilla de Cómputos',
             projectName: (projectName || '').trim(),
@@ -359,6 +385,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
         if (nonBlank.length > 0 || projectName || clientName) {
           const draftPayload = {
             id: currentDraftId,
+            budgetId: initialBudget?.id || null,
             savedAt: new Date().toISOString(),
             budgetName: (budgetName || '').trim() || 'Planilla de Cómputos',
             projectName: (projectName || '').trim(),
@@ -380,7 +407,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
       clearTimeout(timer);
       clearTimeout(cloudTimer);
     };
-  }, [capturedItems, budgetName, projectName, clientName, currency, activeChapter, currentDraftId]);
+  }, [capturedItems, budgetName, projectName, clientName, currency, activeChapter, currentDraftId, initialBudget?.id]);
 
   useEffect(() => {
     if (isOpen) {
@@ -460,6 +487,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
 
       const draftPayload = {
         id: currentDraftId,
+        budgetId: initialBudget?.id || null,
         savedAt: nowIso,
         budgetName: cleanName,
         projectName: (projectName || '').trim(),
@@ -481,6 +509,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
       ];
       localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(updatedList));
       setSavedList(updatedList);
+      isDirtyRef.current = false;
 
       const timeStr = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
       setSaveStatus(`Guardado ${timeStr}`);
@@ -512,7 +541,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   /**
    * Carga un cómputo guardado previamente
    */
-  const executeLoadSavedComputo = (savedItem) => {
+  const executeLoadSavedComputo = (savedItem, { notify = true } = {}) => {
+    if (!savedItem) return;
     setCurrentDraftId(savedItem.id || `draft-${Date.now()}`);
     setBudgetName(savedItem.budgetName || `Presupuesto de Cómputos`);
     setProjectName(savedItem.projectName || '');
@@ -537,8 +567,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
       // ignore
     }
 
+    isDirtyRef.current = false;
     setShowOpenModal(false);
-    toast.success(`Cómputo "${savedItem.budgetName}" cargado en pantalla`);
+    if (notify) {
+      toast.success(`Cómputo "${savedItem.budgetName}" cargado en pantalla`);
+    }
   };
 
   const handleLoadSavedComputo = (savedItem) => {
@@ -618,7 +651,12 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   /**
    * Sincronización multidispositivo (Nube <-> Local) al abrir el modal principal
    */
-  const syncCloudAndLocalDrafts = useCallback(async () => {
+  const syncCloudAndLocalDrafts = useCallback(async (options = {}) => {
+    const { force = false } = options;
+    if (isSyncingRef.current) return;
+    isSyncingRef.current = true;
+    setIsSyncing(true);
+
     try {
       const localList = getSavedComputosList();
       let localDraft = null;
@@ -637,7 +675,12 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
       }
 
       const serverDrafts = await getComputosDrafts().catch(() => null);
-      if (!Array.isArray(serverDrafts)) return;
+      if (!Array.isArray(serverDrafts)) {
+        if (force) {
+          toast.error('No se pudo conectar con el servidor para sincronizar');
+        }
+        return;
+      }
 
       const draftMap = new Map();
       serverDrafts.forEach((d) => {
@@ -666,18 +709,38 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
       }
       setSavedList(merged);
 
-      // SINCRONIZACIÓN INTELIGENTE ENTRE DISPOSITIVOS (Móvil <-> PC):
-      // Si la nube tiene un borrador más reciente que el que tenemos en este dispositivo:
-      // (por ejemplo: el usuario estuvo editando en el teléfono y ahora abre la PC, o viceversa)
-      if (merged.length > 0) {
-        const newestCloudDraft = merged[0];
-        const cloudTime = new Date(newestCloudDraft.savedAt || 0).getTime();
+      // Buscar el borrador más relevante para el contexto actual:
+      let matchingDraft = null;
+      if (initialBudget?.id) {
+        matchingDraft = merged.find(
+          (d) =>
+            d.budgetId === initialBudget.id ||
+            d.budgetName === `Cómputos - ${initialBudget.name}` ||
+            (d.projectName && (initialBudget.project_name || initialBudget.name) && d.projectName === (initialBudget.project_name || initialBudget.name))
+        );
+      }
+      if (!matchingDraft && currentDraftId) {
+        matchingDraft = merged.find((d) => d.id === currentDraftId);
+      }
+      if (!matchingDraft && merged.length > 0) {
+        matchingDraft = merged[0];
+      }
+
+      if (matchingDraft) {
+        const cloudTime = new Date(matchingDraft.savedAt || 0).getTime();
         const localTime = new Date(localDraft?.savedAt || 0).getTime();
         const currentNonBlank = capturedItems.filter((it) => !isItemEmpty(it));
 
-        if (currentNonBlank.length === 0 || cloudTime > localTime + 2000) {
-          executeLoadSavedComputo(newestCloudDraft);
-        } else if (localTime > cloudTime + 2000 && localDraft && localDraft.items?.length > 0) {
+        if (force) {
+          executeLoadSavedComputo(matchingDraft, { notify: false });
+          isDirtyRef.current = false;
+          toast.success(`Planilla sincronizada con "${matchingDraft.budgetName}"`);
+        } else if (!isDirtyRef.current) {
+          if (currentNonBlank.length === 0 || cloudTime > localTime + 1000) {
+            executeLoadSavedComputo(matchingDraft, { notify: false });
+            isDirtyRef.current = false;
+          }
+        } else if (localTime > cloudTime + 2000 && localDraft && localDraft.items?.length > 0 && isDirtyRef.current) {
           saveComputosDraft(localDraft).catch(() => {});
         }
       }
@@ -692,17 +755,39 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
       }
     } catch (err) {
       console.warn('Error sincronizando cómputos en la nube:', err);
+      if (force) {
+        toast.error('Error al sincronizar con la nube');
+      }
+    } finally {
+      isSyncingRef.current = false;
+      setIsSyncing(false);
     }
-  }, [capturedItems]);
+  }, [capturedItems, currentDraftId, initialBudget]);
+
+  // Sincronización periódica en segundo plano (cada 8 segundos)
+  // Permite que si el usuario añade partidas en PC, aparezcan en el móvil automáticamente
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const interval = setInterval(() => {
+      if (!isDirtyRef.current) {
+        syncCloudAndLocalDrafts({ isBackground: true });
+      }
+    }, 8000);
+
+    return () => clearInterval(interval);
+  }, [isOpen, syncCloudAndLocalDrafts]);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    syncCloudAndLocalDrafts();
+    syncCloudAndLocalDrafts({ isBackground: true });
 
     const handleWindowFocus = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-        syncCloudAndLocalDrafts();
+        if (!isDirtyRef.current) {
+          syncCloudAndLocalDrafts({ isBackground: true });
+        }
       }
     };
 
@@ -974,6 +1059,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
    * y garantiza que SIEMPRE exista una fila libre al final
    */
   const handleUpdateItemField = (itemId, field, value) => {
+    isDirtyRef.current = true;
     rowsDispatch({
       type: 'UPDATE_FIELD',
       payload: { itemId, field, value, activeChapter },
@@ -984,6 +1070,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
    * Duplica una partida existente
    */
   const handleDuplicateRow = (item) => {
+    isDirtyRef.current = true;
     rowsDispatch({
       type: 'DUPLICATE_ROW',
       payload: { item, activeChapter },
@@ -994,6 +1081,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
    * Inserta una nueva fila vacía justo debajo de la fila actual
    */
   const handleInsertRowBelow = (targetItem) => {
+    isDirtyRef.current = true;
     rowsDispatch({
       type: 'INSERT_ROW_BELOW',
       payload: { targetItem, activeChapter },
@@ -1004,6 +1092,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
    * Habilita el desglose de sub-cómputos/parciales (múltiples paredes/tramos) para una partida
    */
   const handleTogglePartials = (itemId) => {
+    isDirtyRef.current = true;
     rowsDispatch({
       type: 'TOGGLE_PARTIALS',
       payload: { itemId, activeChapter },
@@ -1016,6 +1105,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
    * Remueve completamente el desglose de parciales de una partida
    */
   const handleClearPartials = (itemId) => {
+    isDirtyRef.current = true;
     rowsDispatch({
       type: 'CLEAR_PARTIALS',
       payload: { itemId, activeChapter },
@@ -1027,6 +1117,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
    * Agrega un nuevo parcial / fila adicional a una partida
    */
   const handleAddPartial = (itemId) => {
+    isDirtyRef.current = true;
     rowsDispatch({
       type: 'ADD_PARTIAL',
       payload: { itemId, activeChapter },
@@ -1038,6 +1129,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
    * Actualiza un campo de un parcial individual y recalcula automáticamente la cantidad total de la partida
    */
   const handleUpdatePartialField = (itemId, partialId, field, value) => {
+    isDirtyRef.current = true;
     rowsDispatch({
       type: 'UPDATE_PARTIAL_FIELD',
       payload: { itemId, partialId, field, value, activeChapter },
@@ -1048,6 +1140,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
    * Elimina un tramo / pared individual del desglose
    */
   const handleRemovePartial = (itemId, partialId) => {
+    isDirtyRef.current = true;
     rowsDispatch({
       type: 'REMOVE_PARTIAL',
       payload: { itemId, partialId, activeChapter },
@@ -1062,6 +1155,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   };
 
   const handleConfirmLink = (linkData) => {
+    isDirtyRef.current = true;
     rowsDispatch({
       type: 'LINK_ROWS',
       payload: { ...linkData, activeChapter },
@@ -1071,6 +1165,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   };
 
   const handleUnlinkRow = (itemId) => {
+    isDirtyRef.current = true;
     rowsDispatch({
       type: 'UNLINK_ROW',
       payload: { itemId, activeChapter },
@@ -1538,6 +1633,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
    */
   const handleSelectCoveninPartida = (coveninItem) => {
     if (!coveninTargetItemId || !coveninItem) return;
+    isDirtyRef.current = true;
     const cleanDesc = (coveninItem.Descri || '').trim().toUpperCase();
     const cleanUnit = normalizeUnitStr(coveninItem.UniPar) || 'UND';
 
@@ -1576,6 +1672,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   };
 
   const handleRemoveItem = (itemId) => {
+    isDirtyRef.current = true;
     rowsDispatch({
       type: 'REMOVE_ROW',
       payload: { itemId, activeChapter },
@@ -1904,10 +2001,22 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
         projectName={projectName}
         clientName={clientName}
         currency={currency}
-        onBudgetNameChange={setBudgetName}
-        onProjectNameChange={setProjectName}
-        onClientNameChange={setClientName}
-        onCurrencyChange={setCurrency}
+        onBudgetNameChange={(val) => {
+          isDirtyRef.current = true;
+          setBudgetName(val);
+        }}
+        onProjectNameChange={(val) => {
+          isDirtyRef.current = true;
+          setProjectName(val);
+        }}
+        onClientNameChange={(val) => {
+          isDirtyRef.current = true;
+          setClientName(val);
+        }}
+        onCurrencyChange={(val) => {
+          isDirtyRef.current = true;
+          setCurrency(val);
+        }}
         onClose={() => setShowProjectInfoModal(false)}
       />
 
@@ -2066,6 +2175,17 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
 
             <button
               type="button"
+              onClick={() => syncCloudAndLocalDrafts({ force: true })}
+              disabled={isCommitting || isSyncing}
+              className="px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shadow-xs disabled:opacity-50"
+              title="Sincronizar planilla con la nube (Móvil / PC)"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-amber-700 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span className="hidden md:inline">{isSyncing ? 'Sincronizando...' : 'Actualizar'}</span>
+            </button>
+
+            <button
+              type="button"
               onClick={handleOpenLoadModal}
               disabled={isCommitting}
               className="px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shadow-xs"
@@ -2151,6 +2271,16 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                 title="Agregar Capítulo"
               >
                 <FolderPlus className="w-3.5 h-3.5 text-amber-700" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => syncCloudAndLocalDrafts({ force: true })}
+                disabled={isCommitting || isSyncing}
+                className="p-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 shadow-xs cursor-pointer shrink-0 disabled:opacity-50"
+                title="Sincronizar con la nube (Móvil / PC)"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-amber-700 ${isSyncing ? 'animate-spin' : ''}`} />
               </button>
 
               <button

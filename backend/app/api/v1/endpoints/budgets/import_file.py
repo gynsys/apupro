@@ -921,9 +921,12 @@ def save_computos_draft(
             item["savedAt"] = datetime.utcnow().isoformat()
 
         clean_name = (item.get("budgetName") or "").strip()
+        incoming_budget_id = str(item.get("budgetId") or "").strip()
         drafts = [
             d for d in drafts
-            if str(d.get("id")) != draft_id and (not clean_name or (d.get("budgetName") or "").strip() != clean_name)
+            if str(d.get("id")) != draft_id
+            and (not clean_name or (d.get("budgetName") or "").strip() != clean_name)
+            and (not incoming_budget_id or str(d.get("budgetId") or "").strip() != incoming_budget_id)
         ]
         drafts.insert(0, item)
 

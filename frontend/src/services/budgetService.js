@@ -1,5 +1,18 @@
 import { API_URL } from './api';
 
+const getAuthHeaders = () => {
+  const token = typeof localStorage !== 'undefined'
+    ? (localStorage.getItem('arko_admin_token') || localStorage.getItem('token') || localStorage.getItem('access_token'))
+    : null;
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
+
 export const budgetService = {
   // BUDGETS
   getAll: async () => {
@@ -361,7 +374,10 @@ export const budgetService = {
   },
 
   getComputosDrafts: async () => {
+    const headers = getAuthHeaders();
+    delete headers['Content-Type'];
     const response = await fetch(`${API_URL}/budgets/computos/drafts`, {
+      headers,
       credentials: 'include'
     });
     if (!response.ok) {
@@ -374,7 +390,7 @@ export const budgetService = {
   saveComputosDraft: async (payload) => {
     const response = await fetch(`${API_URL}/budgets/computos/drafts`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       credentials: 'include',
       body: JSON.stringify(payload)
     });
@@ -386,8 +402,11 @@ export const budgetService = {
   },
 
   deleteComputosDraft: async (draftId) => {
+    const headers = getAuthHeaders();
+    delete headers['Content-Type'];
     const response = await fetch(`${API_URL}/budgets/computos/drafts/${encodeURIComponent(draftId)}`, {
       method: 'DELETE',
+      headers,
       credentials: 'include'
     });
     if (!response.ok) {
@@ -400,7 +419,7 @@ export const budgetService = {
   exportComputosExcel: async (payload) => {
     const response = await fetch(`${API_URL}/budgets/computos/export-excel`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       credentials: 'include',
       body: JSON.stringify(payload)
     });

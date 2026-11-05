@@ -63,4 +63,17 @@ describe('persistencia de cómputos', () => {
     expect(hasOpenedComputos('b1')).toBe(true);
     expect(hasOpenedComputos('b2')).toBe(false);
   });
+
+  it('encuentra borradores guardados por budgetId para sincronización multidispositivo', () => {
+    const list = [
+      { id: 'd1', budgetId: 'b-100', budgetName: 'Cómputos - Edificio', items: [{ id: 'row-1' }] },
+      { id: 'd2', budgetId: 'b-200', budgetName: 'Cómputos - Puente', items: [] },
+    ];
+    writeSavedComputosList(list);
+    const saved = getSavedComputosList();
+    const match = saved.find((d) => d.budgetId === 'b-100');
+    expect(match).toBeDefined();
+    expect(match.id).toBe('d1');
+    expect(match.items).toHaveLength(1);
+  });
 });
