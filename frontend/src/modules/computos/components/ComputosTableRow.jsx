@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useLayoutEffect } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -40,6 +40,30 @@ function ComputosTableRow({
   it,
   showChapHeader,
 }) {
+  const descInputRef = useRef(null);
+  const cursorRef = useRef(null);
+
+  const handleDescriptionChange = (e) => {
+    const input = e.target;
+    cursorRef.current = {
+      start: input.selectionStart,
+      end: input.selectionEnd,
+    };
+    handleUpdateItemField(it.id, 'description', input.value.toUpperCase());
+  };
+
+  useLayoutEffect(() => {
+    if (cursorRef.current && descInputRef.current && document.activeElement === descInputRef.current) {
+      const { start, end } = cursorRef.current;
+      try {
+        descInputRef.current.setSelectionRange(start, end);
+      } catch (_e) {
+        // ignore
+      }
+      cursorRef.current = null;
+    }
+  });
+
   return (
 <React.Fragment key={it.id}>
                           {showChapHeader && (
@@ -88,20 +112,20 @@ function ComputosTableRow({
                             <td className="border border-gray-300 px-1 py-1">
                               <div className="flex flex-col gap-0.5">
                                 <input
+                                  ref={descInputRef}
                                   type="text"
                                   value={it.description}
-                                  onChange={(e) =>
-                                    handleUpdateItemField(it.id, 'description', e.target.value.toUpperCase())
-                                  }
+                                  onChange={handleDescriptionChange}
                                   placeholder={isBlankTrailing ? 'Escribe aquí la partida...' : 'Descripción de la partida...'}
                                   className="w-full px-2 py-1 text-xs font-semibold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded uppercase placeholder:text-gray-400"
                                 />
-                                {it.partials && it.partials.length > 0 && (
+                                {hasPartials ? (
                                   <div className="flex items-center gap-1.5 mt-0.5">
                                     <button
                                       type="button"
                                       onClick={() => handleToggleExpandPartials(it.id)}
                                       className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-200/80 hover:bg-amber-300 px-1.5 py-0.5 rounded cursor-pointer"
+                                      title="Mostrar / Ocultar desglose de filas"
                                     >
                                       <span>🧱 {it.partials.length} parciales</span>
                                       {expandedPartials[it.id] !== false ? (
@@ -110,7 +134,30 @@ function ComputosTableRow({
                                         <ChevronDown className="w-3 h-3" />
                                       )}
                                     </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAddPartial(it.id)}
+                                      className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 px-1.5 py-0.5 rounded cursor-pointer transition-colors shadow-2xs"
+                                      title="Agregar otra fila o tramo de medición a esta partida"
+                                    >
+                                      <Plus className="w-3 h-3 text-emerald-700" />
+                                      <span>+ Agregar fila</span>
+                                    </button>
                                   </div>
+                                ) : (
+                                  !isBlankTrailing && (
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleTogglePartials(it.id)}
+                                        className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 px-2 py-0.5 rounded cursor-pointer transition-colors shadow-2xs"
+                                        title="Desglosar esta partida en múltiples filas o tramos de medición"
+                                      >
+                                        <Split className="w-3 h-3 text-amber-700" />
+                                        <span>+ Desglosar en filas / parciales</span>
+                                      </button>
+                                    </div>
+                                  )
                                 )}
                                 {!isBlankTrailing && it.description && it.description.trim() && (() => {
                                   const audit = auditDescription(it.description, it.cod_par, it.unit);

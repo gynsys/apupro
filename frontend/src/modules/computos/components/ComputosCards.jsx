@@ -36,6 +36,22 @@ export default function ComputosCards({
   handleUpdatePartialField,
   setDescriptionFilter,
 }) {
+  const handleCardDescriptionChange = (e, itId) => {
+    const input = e.target;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    handleUpdateItemField(itId, 'description', input.value.toUpperCase());
+    requestAnimationFrame(() => {
+      if (input && document.activeElement === input) {
+        try {
+          input.setSelectionRange(start, end);
+        } catch (_e) {
+          // ignore
+        }
+      }
+    });
+  };
+
   return (
 <div className="flex-1 overflow-y-auto space-y-3 pr-1">
                 {/* Buscador móvil de descripciones */}
@@ -176,9 +192,7 @@ export default function ComputosCards({
                             <input
                               type="text"
                               value={it.description}
-                              onChange={(e) =>
-                                handleUpdateItemField(it.id, 'description', e.target.value.toUpperCase())
-                              }
+                              onChange={(e) => handleCardDescriptionChange(e, it.id)}
                               placeholder={
                                 isBlankTrailing
                                   ? 'Escribe aquí la partida (al llenar se agregará otra fila automáticamente)...'
@@ -567,6 +581,14 @@ export default function ComputosCards({
                                       </div>
                                     </div>
                                   ))}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAddPartial(it.id)}
+                                    className="w-full py-2 px-3 rounded-xl bg-white hover:bg-amber-100 border border-amber-300 text-amber-950 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs mt-2"
+                                  >
+                                    <Plus className="w-3.5 h-3.5 text-amber-700" />
+                                    <span>+ Agregar otra fila a esta partida</span>
+                                  </button>
                                 </div>
                               )}
                             </div>
