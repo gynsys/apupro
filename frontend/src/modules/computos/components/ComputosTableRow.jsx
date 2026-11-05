@@ -20,6 +20,7 @@ import {
 import MathQuantityInput from '../../../pages/admin/budget_worksheet/MathQuantityInput';
 import { COMMON_UNITS } from '../domain/units.js';
 import { isSteelRow, REBAR_DIAMETERS, getRebarSpec } from '../domain/steel.js';
+import { GEOMETRY_CONFIGS, GEOMETRY_TYPES } from '../domain/geometry.js';
 import { auditDescription } from '../../../utils/descriptionAuditor';
 
 function ComputosTableRow({
@@ -191,6 +192,23 @@ function ComputosTableRow({
                                           <span>🔗 Vincular</span>
                                         </button>
                                       )}
+                                      {!isSteel && (
+                                        <div className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-950 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded shadow-2xs">
+                                          <span className="text-amber-700">Forma:</span>
+                                          <select
+                                            value={it.geometryType || GEOMETRY_TYPES.RECTANGLE}
+                                            onChange={(e) => handleUpdateItemField(it.id, 'geometryType', e.target.value)}
+                                            className="bg-transparent font-bold text-amber-950 focus:outline-none cursor-pointer"
+                                            title="Seleccione forma geométrica para fórmulas automáticas"
+                                          >
+                                            {GEOMETRY_CONFIGS.map((g) => (
+                                              <option key={g.id} value={g.id}>
+                                                {g.icon} {g.shortLabel}
+                                              </option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                      )}
                                       {isSteel && (
                                         <>
                                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-indigo-100 text-indigo-900 border border-indigo-300">
@@ -209,6 +227,15 @@ function ComputosTableRow({
                                       )}
                                     </div>
                                   )
+                                )}
+                                {it.geometryType === GEOMETRY_TYPES.TRENCH && it.trenchDetails && (
+                                  <div className="flex items-center gap-1.5 px-2 py-0.5 mt-0.5 rounded-md bg-amber-100 border border-amber-300 text-[10px] font-bold text-amber-950 w-fit">
+                                    <span>⛏️ Excavación: {it.trenchDetails.excavationM3} m³</span>
+                                    <span>|</span>
+                                    <span>Cama: {it.trenchDetails.beddingM3} m³</span>
+                                    <span>|</span>
+                                    <span>Relleno: {it.trenchDetails.backfillM3} m³</span>
+                                  </div>
                                 )}
                                 {it.linkedTo && (
                                   <div className="flex items-center gap-1.5 px-2 py-0.5 mt-0.5 rounded-md bg-sky-100 border border-sky-300 text-[10px] font-semibold text-sky-900 w-fit">
@@ -310,9 +337,21 @@ function ComputosTableRow({
                                   value={it.length ?? ''}
                                   onChange={(val) => handleUpdateItemField(it.id, 'length', val)}
                                   allowEmpty
-                                  placeholder={isSteel ? 'Long. m' : '—'}
+                                  placeholder={
+                                    isSteel ? 'Long. m' :
+                                    it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diám. Ø' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base m' :
+                                    it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado May.' :
+                                    it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Long. m' : '—'
+                                  }
                                   className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                                  title={isSteel ? 'Longitud de corte de la barra (m)' : 'Longitud / Largo (m)'}
+                                  title={
+                                    isSteel ? 'Longitud de corte de la barra (m)' :
+                                    it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diámetro del cilindro / pilote en metros' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base del triángulo en metros' :
+                                    it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado de base mayor en metros' :
+                                    it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Longitud de la zanja en metros' : 'Longitud / Largo (m)'
+                                  }
                                 />
                               )}
                             </td>
@@ -329,7 +368,7 @@ function ComputosTableRow({
                                     const spec = getRebarSpec(val);
                                     handleUpdateItemField(it.id, 'rebarDiameter', val);
                                     if (spec) {
-                                      handleUpdateItemField(it.id, 'factor', spec.kgm);
+                                      handleUpdateItemField(it.id, 'factor', spec.weightKgM);
                                     }
                                   }}
                                   className="w-full px-1 py-1 text-xs font-bold text-center text-indigo-950 bg-indigo-50/70 border border-indigo-200 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
@@ -337,18 +376,29 @@ function ComputosTableRow({
                                 >
                                   <option value="">Ø Diám...</option>
                                   {REBAR_DIAMETERS.map((d) => (
-                                    <option key={d.diameter} value={d.diameter}>
-                                      {d.label}
+                                    <option key={d.inches} value={d.inches}>
+                                      {d.label} ({d.weightKgM} kg/m)
                                     </option>
                                   ))}
                                 </select>
+                              ) : it.geometryType === GEOMETRY_TYPES.CYLINDER ? (
+                                <span className="block text-center text-xs text-gray-400 font-bold select-none" title="No aplica para sección circular">—</span>
                               ) : (
                                 <MathQuantityInput
                                   value={it.width ?? ''}
                                   onChange={(val) => handleUpdateItemField(it.id, 'width', val)}
                                   allowEmpty
-                                  placeholder="—"
+                                  placeholder={
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Alt. Triáng.' :
+                                    it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado Men.' :
+                                    it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Ancho m' : '—'
+                                  }
                                   className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
+                                  title={
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Altura del triángulo en metros' :
+                                    it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado de base menor en metros' :
+                                    it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Ancho de la zanja en metros' : 'Ancho (m)'
+                                  }
                                 />
                               )}
                             </td>
@@ -362,9 +412,21 @@ function ComputosTableRow({
                                   value={it.height ?? ''}
                                   onChange={(val) => handleUpdateItemField(it.id, 'height', val)}
                                   allowEmpty
-                                  placeholder={isSteel ? 'Barras' : '—'}
+                                  placeholder={
+                                    isSteel ? 'Barras' :
+                                    it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura H' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Largo m' :
+                                    it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Altura H' :
+                                    it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Prof. H' : '—'
+                                  }
                                   className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                                  title={isSteel ? 'Número de barras por elemento' : 'Alto (m)'}
+                                  title={
+                                    isSteel ? 'Número de barras por elemento' :
+                                    it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura o profundidad del cilindro en metros' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Longitud del tramo a 2 aguas en metros' :
+                                    it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Altura de la zapata piramidal en metros' :
+                                    it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Profundidad de la zanja en metros' : 'Alto (m)'
+                                  }
                                 />
                               )}
                             </td>
@@ -568,6 +630,20 @@ function ComputosTableRow({
                                         placeholder={`Parcial ${pIdx + 1} (ej: Fachada, Eje 1-2, Tramo A...)`}
                                         className="flex-1 px-1.5 py-0.5 text-xs font-semibold bg-white border border-amber-300 rounded focus:outline-none focus:ring-1 focus:ring-amber-500"
                                       />
+                                      {!isSteel && (
+                                        <select
+                                          value={p.geometryType || GEOMETRY_TYPES.RECTANGLE}
+                                          onChange={(e) => handleUpdatePartialField(it.id, p.id, 'geometryType', e.target.value)}
+                                          className="text-[10px] font-bold bg-amber-50 text-amber-950 border border-amber-300 rounded px-1 py-0.5 cursor-pointer shrink-0"
+                                          title="Forma geométrica de este parcial"
+                                        >
+                                          {GEOMETRY_CONFIGS.map((g) => (
+                                            <option key={g.id} value={g.id}>
+                                              {g.icon} {g.shortLabel}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      )}
                                       {isSteel && (
                                         <button
                                           type="button"
@@ -591,9 +667,21 @@ function ComputosTableRow({
                                         handleUpdatePartialField(it.id, p.id, 'length', val)
                                       }
                                       allowEmpty
-                                      placeholder={isSteel ? 'Long. m' : '0.00'}
+                                      placeholder={
+                                        isSteel ? 'Long. m' :
+                                        p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diám. Ø' :
+                                        p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base m' :
+                                        p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado May.' :
+                                        p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Long. m' : '0.00'
+                                      }
                                       className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
-                                      title={isSteel ? 'Longitud de corte (m)' : 'Largo (m)'}
+                                      title={
+                                        isSteel ? 'Longitud de corte (m)' :
+                                        p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diámetro del cilindro / pilote en metros' :
+                                        p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base del triángulo en metros' :
+                                        p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado de base mayor en metros' :
+                                        p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Longitud de la zanja en metros' : 'Largo (m)'
+                                      }
                                     />
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1">
@@ -605,7 +693,7 @@ function ComputosTableRow({
                                           const spec = getRebarSpec(val);
                                           handleUpdatePartialField(it.id, p.id, 'rebarDiameter', val);
                                           if (spec) {
-                                            handleUpdatePartialField(it.id, p.id, 'factor', spec.kgm);
+                                            handleUpdatePartialField(it.id, p.id, 'factor', spec.weightKgM);
                                           }
                                         }}
                                         className="w-full px-1 py-0.5 text-xs font-bold text-center text-indigo-950 bg-indigo-50/70 border border-indigo-200 rounded cursor-pointer"
@@ -613,11 +701,13 @@ function ComputosTableRow({
                                       >
                                         <option value="">Ø Diám...</option>
                                         {REBAR_DIAMETERS.map((d) => (
-                                          <option key={d.diameter} value={d.diameter}>
-                                            {d.label}
+                                          <option key={d.inches} value={d.inches}>
+                                            {d.label} ({d.weightKgM} kg/m)
                                           </option>
                                         ))}
                                       </select>
+                                    ) : p.geometryType === GEOMETRY_TYPES.CYLINDER ? (
+                                      <span className="block text-center text-xs text-gray-400 font-bold select-none" title="No aplica para sección circular">—</span>
                                     ) : (
                                       <MathQuantityInput
                                         value={p.width ?? ''}
@@ -625,8 +715,17 @@ function ComputosTableRow({
                                           handleUpdatePartialField(it.id, p.id, 'width', val)
                                         }
                                         allowEmpty
-                                        placeholder="0.00"
+                                        placeholder={
+                                          p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Alt. Triáng.' :
+                                          p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado Men.' :
+                                          p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Ancho m' : '0.00'
+                                        }
                                         className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
+                                        title={
+                                          p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Altura del triángulo en metros' :
+                                          p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado de base menor en metros' :
+                                          p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Ancho de la zanja en metros' : 'Ancho (m)'
+                                        }
                                       />
                                     )}
                                   </td>
@@ -637,9 +736,21 @@ function ComputosTableRow({
                                         handleUpdatePartialField(it.id, p.id, 'height', val)
                                       }
                                       allowEmpty
-                                      placeholder={isSteel ? 'Barras' : '0.00'}
+                                      placeholder={
+                                        isSteel ? 'Barras' :
+                                        p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura H' :
+                                        p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Largo m' :
+                                        p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Altura H' :
+                                        p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Prof. H' : '0.00'
+                                      }
                                       className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
-                                      title={isSteel ? 'Número de barras' : 'Alto (m)'}
+                                      title={
+                                        isSteel ? 'Número de barras' :
+                                        p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura o profundidad del cilindro en metros' :
+                                        p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Longitud del tramo a 2 aguas en metros' :
+                                        p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Altura de la zapata piramidal en metros' :
+                                        p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Profundidad de la zanja en metros' : 'Alto / Espesor (m)'
+                                      }
                                     />
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1">

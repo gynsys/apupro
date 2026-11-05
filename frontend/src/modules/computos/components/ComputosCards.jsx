@@ -19,6 +19,7 @@ import MathQuantityInput from '../../../pages/admin/budget_worksheet/MathQuantit
 import { COMMON_UNITS } from '../domain/units.js';
 import { isItemEmpty } from '../domain/rows.js';
 import { isSteelRow, REBAR_DIAMETERS, getRebarSpec } from '../domain/steel.js';
+import { GEOMETRY_CONFIGS, GEOMETRY_TYPES } from '../domain/geometry.js';
 import { auditDescription } from '../../../utils/descriptionAuditor';
 export default function ComputosCards({
   descriptionFilter,
@@ -280,6 +281,26 @@ export default function ComputosCards({
                         {/* CONTENEDORES DE MEDIDAS APILADOS HACIA ABAJO (SIN SCROLL HORIZONTAL) */}
                         {!hasPartials ? (
                           <div className="space-y-2.5 bg-amber-50/50 border border-amber-200 rounded-xl p-3">
+                            {/* Selector de Geometría Inteligente */}
+                            {!isSteel && !isBlankTrailing && (
+                              <div className="flex items-center justify-between gap-2 pb-2 border-b border-amber-200">
+                                <label className="text-[10px] font-bold text-amber-950 uppercase flex items-center gap-1">
+                                  <span>📐 Forma Geométrica:</span>
+                                </label>
+                                <select
+                                  value={it.geometryType || GEOMETRY_TYPES.RECTANGLE}
+                                  onChange={(e) => handleUpdateItemField(it.id, 'geometryType', e.target.value)}
+                                  className="px-2 py-1 text-xs font-bold rounded-lg border border-amber-300 bg-white text-amber-950 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-xs"
+                                >
+                                  {GEOMETRY_CONFIGS.map((g) => (
+                                    <option key={g.id} value={g.id}>
+                                      {g.icon} {g.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+
                             {/* Fila 1: Unidad y N° Veces */}
                             <div className="grid grid-cols-2 gap-2.5">
                               <div>
@@ -316,19 +337,37 @@ export default function ComputosCards({
                             <div className="grid grid-cols-3 gap-2">
                               <div>
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
-                                  {isSteel ? 'LONG. (m)' : 'LARGO (m)'}
+                                  {
+                                    isSteel ? 'LONG. (m)' :
+                                    it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'DIÁMETRO Ø' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'BASE (m)' :
+                                    it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'LADO MAYOR' :
+                                    it.geometryType === GEOMETRY_TYPES.TRENCH ? 'LONGITUD' : 'LARGO (m)'
+                                  }
                                 </label>
                                 <MathQuantityInput
                                   value={it.length ?? ''}
                                   onChange={(val) => handleUpdateItemField(it.id, 'length', val)}
                                   allowEmpty
-                                  placeholder={isSteel ? 'Long. m' : '0.00'}
+                                  placeholder={
+                                    isSteel ? 'Long. m' :
+                                    it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diám. Ø' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base m' :
+                                    it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado May.' :
+                                    it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Long. m' : '0.00'
+                                  }
                                   className="w-full px-2 py-1.5 text-xs text-right font-medium rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
                                 />
                               </div>
                               <div>
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
-                                  {isSteel ? 'DIÁMETRO Ø' : 'ANCHO (m)'}
+                                  {
+                                    isSteel ? 'DIÁMETRO Ø' :
+                                    it.geometryType === GEOMETRY_TYPES.CYLINDER ? '— (CIRCULAR)' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'ALT. TRIÁNG.' :
+                                    it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'LADO MENOR' :
+                                    it.geometryType === GEOMETRY_TYPES.TRENCH ? 'ANCHO' : 'ANCHO (m)'
+                                  }
                                 </label>
                                 {isSteel ? (
                                   <select
@@ -338,41 +377,70 @@ export default function ComputosCards({
                                       const spec = getRebarSpec(val);
                                       handleUpdateItemField(it.id, 'rebarDiameter', val);
                                       if (spec) {
-                                        handleUpdateItemField(it.id, 'factor', spec.kgm);
+                                        handleUpdateItemField(it.id, 'factor', spec.weightKgM);
                                       }
                                     }}
                                     className="w-full px-1.5 py-1.5 text-xs font-bold rounded-lg border border-indigo-300 bg-indigo-50/70 text-indigo-950 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
                                   >
                                     <option value="">Ø Diám...</option>
                                     {REBAR_DIAMETERS.map((d) => (
-                                      <option key={d.diameter} value={d.diameter}>
-                                        {d.label}
+                                      <option key={d.inches} value={d.inches}>
+                                        {d.label} ({d.weightKgM} kg/m)
                                       </option>
                                     ))}
                                   </select>
+                                ) : it.geometryType === GEOMETRY_TYPES.CYLINDER ? (
+                                  <div className="w-full px-2 py-1.5 text-xs text-center font-bold text-gray-300 rounded-lg border border-amber-200 bg-gray-50 select-none">
+                                    —
+                                  </div>
                                 ) : (
                                   <MathQuantityInput
                                     value={it.width ?? ''}
                                     onChange={(val) => handleUpdateItemField(it.id, 'width', val)}
                                     allowEmpty
-                                    placeholder="0.00"
+                                    placeholder={
+                                      it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Alt. Triáng.' :
+                                      it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado Men.' :
+                                      it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Ancho m' : '0.00'
+                                    }
                                     className="w-full px-2 py-1.5 text-xs text-right font-medium rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
                                   />
                                 )}
                               </div>
                               <div>
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
-                                  {isSteel ? 'N° BARRAS' : 'ALTO (m)'}
+                                  {
+                                    isSteel ? 'N° BARRAS' :
+                                    it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'ALTURA H' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'LARGO TRAMO' :
+                                    it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'ALTURA H' :
+                                    it.geometryType === GEOMETRY_TYPES.TRENCH ? 'PROFUNDIDAD' : 'ALTO (m)'
+                                  }
                                 </label>
                                 <MathQuantityInput
                                   value={it.height ?? ''}
                                   onChange={(val) => handleUpdateItemField(it.id, 'height', val)}
                                   allowEmpty
-                                  placeholder={isSteel ? 'Barras' : '0.00'}
+                                  placeholder={
+                                    isSteel ? 'Barras' :
+                                    it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura H' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Largo m' :
+                                    it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Altura H' :
+                                    it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Prof. H' : '0.00'
+                                  }
                                   className="w-full px-2 py-1.5 text-xs text-right font-medium rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
                                 />
                               </div>
                             </div>
+
+                            {/* Desglose de zanjas en móvil */}
+                            {it.geometryType === GEOMETRY_TYPES.TRENCH && it.trenchDetails && (
+                              <div className="bg-amber-100/90 border border-amber-300 rounded-lg p-2 text-[11px] font-bold text-amber-950 flex flex-wrap items-center justify-between gap-1">
+                                <span>⛏️ Exc: {it.trenchDetails.excavationM3} m³</span>
+                                <span>Cama: {it.trenchDetails.beddingM3} m³</span>
+                                <span>Relleno: {it.trenchDetails.backfillM3} m³</span>
+                              </div>
+                            )}
 
                             {/* Fila 3: Factor Acero, Distancia Acarreo y M3 Botes */}
                             <div className="grid grid-cols-3 gap-2">
@@ -542,6 +610,20 @@ export default function ComputosCards({
                                             placeholder={`Parcial ${pIdx + 1} (ej: Fachada, Eje 1-2, Tramo A...)`}
                                             className="w-full px-2 py-1 text-xs font-semibold bg-amber-50/30 border border-amber-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
                                           />
+                                          {!isSteel && (
+                                            <select
+                                              value={p.geometryType || GEOMETRY_TYPES.RECTANGLE}
+                                              onChange={(e) => handleUpdatePartialField(it.id, p.id, 'geometryType', e.target.value)}
+                                              className="px-1.5 py-0.5 text-[10px] font-bold rounded border border-amber-300 bg-white text-amber-950 cursor-pointer shrink-0"
+                                              title="Forma geométrica de este tramo"
+                                            >
+                                              {GEOMETRY_CONFIGS.map((g) => (
+                                                <option key={g.id} value={g.id}>
+                                                  {g.icon} {g.shortLabel}
+                                                </option>
+                                              ))}
+                                            </select>
+                                          )}
                                           {isSteel && (
                                             <button
                                               type="button"
@@ -566,19 +648,41 @@ export default function ComputosCards({
 
                                       <div className="grid grid-cols-4 gap-1.5">
                                         <div>
-                                          <label className="block text-[9px] font-bold text-amber-800">{isSteel ? 'Long. (m)' : 'Largo (m)'}</label>
+                                          <label className="block text-[9px] font-bold text-amber-800">
+                                            {
+                                              isSteel ? 'Long. (m)' :
+                                              p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diám. Ø' :
+                                              p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base (m)' :
+                                              p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado May.' :
+                                              p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Long. (m)' : 'Largo (m)'
+                                            }
+                                          </label>
                                           <MathQuantityInput
                                             value={p.length ?? ''}
                                             onChange={(val) =>
                                               handleUpdatePartialField(it.id, p.id, 'length', val)
                                             }
                                             allowEmpty
-                                            placeholder={isSteel ? 'Long. m' : '0.00'}
+                                            placeholder={
+                                              isSteel ? 'Long. m' :
+                                              p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diám. Ø' :
+                                              p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base m' :
+                                              p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado May.' :
+                                              p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Long. m' : '0.00'
+                                            }
                                             className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
                                           />
                                         </div>
                                         <div>
-                                          <label className="block text-[9px] font-bold text-amber-800">{isSteel ? 'Diámetro' : 'Ancho (m)'}</label>
+                                          <label className="block text-[9px] font-bold text-amber-800">
+                                            {
+                                              isSteel ? 'Diámetro' :
+                                              p.geometryType === GEOMETRY_TYPES.CYLINDER ? '— (Circ.)' :
+                                              p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Alt. Triáng.' :
+                                              p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado Men.' :
+                                              p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Ancho (m)' : 'Ancho (m)'
+                                            }
+                                          </label>
                                           {isSteel ? (
                                             <select
                                               value={p.rebarDiameter || ''}
@@ -587,18 +691,22 @@ export default function ComputosCards({
                                                 const spec = getRebarSpec(val);
                                                 handleUpdatePartialField(it.id, p.id, 'rebarDiameter', val);
                                                 if (spec) {
-                                                  handleUpdatePartialField(it.id, p.id, 'factor', spec.kgm);
+                                                  handleUpdatePartialField(it.id, p.id, 'factor', spec.weightKgM);
                                                 }
                                               }}
                                               className="w-full px-1 py-1 text-xs font-bold rounded-lg border border-indigo-300 bg-indigo-50/70 text-indigo-950 focus:outline-none cursor-pointer"
                                             >
                                               <option value="">Ø Diám...</option>
                                               {REBAR_DIAMETERS.map((d) => (
-                                                <option key={d.diameter} value={d.diameter}>
-                                                  {d.label}
+                                                <option key={d.inches} value={d.inches}>
+                                                  {d.label} ({d.weightKgM} kg/m)
                                                 </option>
                                               ))}
                                             </select>
+                                          ) : p.geometryType === GEOMETRY_TYPES.CYLINDER ? (
+                                            <div className="w-full px-1.5 py-1 text-xs text-center font-bold text-gray-300 bg-gray-50 border border-amber-200 rounded-lg select-none">
+                                              —
+                                            </div>
                                           ) : (
                                             <MathQuantityInput
                                               value={p.width ?? ''}
@@ -606,20 +714,38 @@ export default function ComputosCards({
                                                 handleUpdatePartialField(it.id, p.id, 'width', val)
                                               }
                                               allowEmpty
-                                              placeholder="0.00"
+                                              placeholder={
+                                                p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Alt. Triáng.' :
+                                                p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado Men.' :
+                                                p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Ancho m' : '0.00'
+                                              }
                                               className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
                                             />
                                           )}
                                         </div>
                                         <div>
-                                          <label className="block text-[9px] font-bold text-amber-800">{isSteel ? 'Barras' : 'Alto (m)'}</label>
+                                          <label className="block text-[9px] font-bold text-amber-800">
+                                            {
+                                              isSteel ? 'Barras' :
+                                              p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura H' :
+                                              p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Largo (m)' :
+                                              p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Altura H' :
+                                              p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Prof. (m)' : 'Alto (m)'
+                                            }
+                                          </label>
                                           <MathQuantityInput
                                             value={p.height ?? ''}
                                             onChange={(val) =>
                                               handleUpdatePartialField(it.id, p.id, 'height', val)
                                             }
                                             allowEmpty
-                                            placeholder={isSteel ? 'Barras' : '0.00'}
+                                            placeholder={
+                                              isSteel ? 'Barras' :
+                                              p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura H' :
+                                              p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Largo m' :
+                                              p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Altura H' :
+                                              p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Prof. H' : '0.00'
+                                            }
                                             className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
                                           />
                                         </div>
@@ -691,6 +817,14 @@ export default function ComputosCards({
                                           )}
                                         </div>
                                       </div>
+
+                                      {p.geometryType === GEOMETRY_TYPES.TRENCH && p.trenchDetails && (
+                                        <div className="bg-amber-100/90 border border-amber-300 rounded-lg p-1.5 text-[10px] font-bold text-amber-950 flex flex-wrap items-center justify-between gap-1">
+                                          <span>⛏️ Exc: {p.trenchDetails.excavationM3} m³</span>
+                                          <span>Cama: {p.trenchDetails.beddingM3} m³</span>
+                                          <span>Relleno: {p.trenchDetails.backfillM3} m³</span>
+                                        </div>
+                                      )}
 
                                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 bg-amber-50/90 p-2 rounded-xl border border-amber-200/80 text-xs">
                                         <input

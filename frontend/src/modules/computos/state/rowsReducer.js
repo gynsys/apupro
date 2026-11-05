@@ -9,6 +9,7 @@
 import { createBlankRow, isItemEmpty, normalizeRowsWithSingleTrailingBlank } from '../domain/rows.js';
 import { computePartial, recomputeItemWithPartials, recomputeRow } from '../domain/formulas.js';
 import { applyReactiveLinks, computeLinkedQuantity } from '../domain/links.js';
+import { getRebarSpec } from '../domain/steel.js';
 
 function newId(prefix) {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -147,6 +148,12 @@ export function rowsReducer(state, action) {
         const partials = row.partials.map((partial) => {
           if (partial.id !== payload.partialId) return partial;
           const next = { ...partial, [payload.field]: payload.value };
+          if (payload.field === 'rebarDiameter') {
+            const spec = getRebarSpec(payload.value);
+            if (spec) {
+              next.factor = spec.weightKgM;
+            }
+          }
           if (payload.field === 'm3') {
             next.m3 = payload.value;
             next._autoM3 = null;

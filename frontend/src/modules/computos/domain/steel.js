@@ -4,15 +4,15 @@
  */
 
 export const REBAR_DIAMETERS = [
-  { label: '3/8" (N° 3)', designation: 'N° 3', inches: '3/8"', mm: 9.5, weightKgM: 0.559 },
-  { label: '1/2" (N° 4)', designation: 'N° 4', inches: '1/2"', mm: 12.7, weightKgM: 0.994 },
-  { label: '5/8" (N° 5)', designation: 'N° 5', inches: '5/8"', mm: 15.9, weightKgM: 1.552 },
-  { label: '3/4" (N° 6)', designation: 'N° 6', inches: '3/4"', mm: 19.1, weightKgM: 2.235 },
-  { label: '7/8" (N° 7)', designation: 'N° 7', inches: '7/8"', mm: 22.2, weightKgM: 3.042 },
-  { label: '1" (N° 8)', designation: 'N° 8', inches: '1"', mm: 25.4, weightKgM: 3.973 },
-  { label: '1-1/8" (N° 9)', designation: 'N° 9', inches: '1-1/8"', mm: 28.7, weightKgM: 5.060 },
-  { label: '1-1/4" (N° 10)', designation: 'N° 10', inches: '1-1/4"', mm: 32.3, weightKgM: 6.404 },
-  { label: '1-3/8" (N° 11)', designation: 'N° 11', inches: '1-3/8"', mm: 35.8, weightKgM: 7.907 },
+  { label: '3/8" (N° 3)', designation: 'N° 3', inches: '3/8"', mm: 9.5, weightKgM: 0.559, diameter: '3/8"', kgm: 0.559 },
+  { label: '1/2" (N° 4)', designation: 'N° 4', inches: '1/2"', mm: 12.7, weightKgM: 0.994, diameter: '1/2"', kgm: 0.994 },
+  { label: '5/8" (N° 5)', designation: 'N° 5', inches: '5/8"', mm: 15.9, weightKgM: 1.552, diameter: '5/8"', kgm: 1.552 },
+  { label: '3/4" (N° 6)', designation: 'N° 6', inches: '3/4"', mm: 19.1, weightKgM: 2.235, diameter: '3/4"', kgm: 2.235 },
+  { label: '7/8" (N° 7)', designation: 'N° 7', inches: '7/8"', mm: 22.2, weightKgM: 3.042, diameter: '7/8"', kgm: 3.042 },
+  { label: '1" (N° 8)', designation: 'N° 8', inches: '1"', mm: 25.4, weightKgM: 3.973, diameter: '1"', kgm: 3.973 },
+  { label: '1-1/8" (N° 9)', designation: 'N° 9', inches: '1-1/8"', mm: 28.7, weightKgM: 5.060, diameter: '1-1/8"', kgm: 5.060 },
+  { label: '1-1/4" (N° 10)', designation: 'N° 10', inches: '1-1/4"', mm: 32.3, weightKgM: 6.404, diameter: '1-1/4"', kgm: 6.404 },
+  { label: '1-3/8" (N° 11)', designation: 'N° 11', inches: '1-3/8"', mm: 35.8, weightKgM: 7.907, diameter: '1-3/8"', kgm: 7.907 },
 ];
 
 /**
@@ -37,7 +37,10 @@ export function getRebarSpec(diameterStr) {
       (r) =>
         r.inches.toLowerCase() === clean ||
         r.designation.toLowerCase() === clean ||
-        r.label.toLowerCase().includes(clean)
+        r.label.toLowerCase().includes(clean) ||
+        (r.diameter && r.diameter.toLowerCase() === clean) ||
+        clean.includes(r.inches.toLowerCase()) ||
+        clean.includes(r.designation.toLowerCase())
     ) || null
   );
 }

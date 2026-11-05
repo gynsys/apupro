@@ -3,6 +3,8 @@
  */
 
 import { UNIT_PATTERN, normalizeUnitStr } from './units.js';
+import { getRebarSpec } from './steel.js';
+import { computeGeometryBase, GEOMETRY_TYPES } from './geometry.js';
 
 function round2(val) {
   if (val === null || val === undefined || isNaN(val) || val === '') return 0;
@@ -106,6 +108,15 @@ function computePartial(p) {
     const n = parseFloat(String(v).replace(',', '.'));
     return isNaN(n) ? null : n;
   };
+
+  // Sincronizar factor de acero si tiene diámetro de cabilla seleccionado
+  if (p.rebarDiameter && (!p.factor || p.factor === '')) {
+    const spec = getRebarSpec(p.rebarDiameter);
+    if (spec) {
+      p.factor = spec.weightKgM;
+    }
+  }
+
   const l = parseNum(p.length);
   const w = parseNum(p.width);
   const h = parseNum(p.height);
@@ -115,6 +126,23 @@ function computePartial(p) {
 
   const multFactor = f !== null && f > 0 ? f : 1;
   const multDist = dist !== null && dist > 0 ? dist : 1;
+
+  // Cálculo de figuras geométricas especiales (Cilindro, Triángulo, Zapata piramidal, Zanja)
+  if (p.geometryType && p.geometryType !== GEOMETRY_TYPES.RECTANGLE) {
+    const geomResult = computeGeometryBase(p, p.unit || 'M3');
+    if (geomResult.baseGeom !== null) {
+      const parcial = round2(geomResult.baseGeom * multFactor * multDist * t);
+      p.partial = parcial;
+      if (geomResult.trenchDetails) {
+        p.trenchDetails = geomResult.trenchDetails;
+      }
+      if (p.unit === 'M3' || (!p.unit && geomResult.baseGeom > 0)) {
+        p.m3 = parcial;
+        p._autoM3 = parcial;
+      }
+      return parcial;
+    }
+  }
 
   // Auto-calcular M3 de este tramo si tiene las 3 dimensiones físicas
   if (l !== null && w !== null && h !== null && l > 0 && w > 0 && h > 0) {
@@ -193,6 +221,15 @@ function recomputeRow(row, field, value) {
     return updated;
   }
 
+  // Sincronizar factor de acero automáticamente al cambiar diámetro de cabilla
+  if (field === 'rebarDiameter') {
+    updated.rebarDiameter = value;
+    const spec = getRebarSpec(value);
+    if (spec) {
+      updated.factor = spec.weightKgM;
+    }
+  }
+
   // Modificación manual directa de la columna M3 (Botes y Acarreo)
   if (field === 'm3') {
     const parsedM3 = value === '' || value == null ? '' : (parseFloat(String(value).replace(',', '.')) || value);
@@ -232,6 +269,26 @@ function recomputeRow(row, field, value) {
       updated._autoM3 = qVal;
     }
     return updated;
+  }
+
+  // Cálculo de figuras geométricas especiales (Cilindro, Triángulo, Zapata piramidal, Zanja)
+  if (updated.geometryType && updated.geometryType !== GEOMETRY_TYPES.RECTANGLE) {
+    const geomResult = computeGeometryBase(updated, updated.unit);
+    if (geomResult.baseGeom !== null) {
+      const parcial = round2(geomResult.baseGeom * multFactor * multDist);
+      const total = round2(parcial * t);
+      updated.partial = parcial;
+      updated.quantity = total;
+      updated.formula = t > 1 ? `${t} × [${geomResult.formulaStr}]` : geomResult.formulaStr;
+      if (geomResult.trenchDetails) {
+        updated.trenchDetails = geomResult.trenchDetails;
+      }
+      if (updated.unit === 'M3') {
+        updated.m3 = total;
+        updated._autoM3 = total;
+      }
+      return updated;
+    }
   }
 
   const dims = [];
