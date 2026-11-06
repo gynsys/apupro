@@ -413,11 +413,21 @@ function recomputeRow(row, field, value) {
 }
 
 /**
+ * Limpia anotaciones internas o desgloses obsoletos de la fórmula para presentación visual limpia.
+ * Ejemplo: "4m × 1m × 0.5m = 2m³ [Exc: 2m³ | Cama: 0m³ | Relleno: 2m³]" -> "4m × 1m × 0.5m = 2m³"
+ */
+function cleanFormulaDisplay(formula) {
+  if (!formula || typeof formula !== 'string') return '';
+  return formula.replace(/\s*\[(?:Exc|Excavaci[oó]n):[^\]]*\]/gi, '').trim();
+}
+
+/**
  * Genera una nueva fila vacía estándar
  */
 
 export {
   round2,
+  cleanFormulaDisplay,
   evaluateMeasurementFormula,
   computePartial,
   recomputeItemWithPartials,

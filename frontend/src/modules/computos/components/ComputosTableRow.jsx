@@ -21,6 +21,7 @@ import MathQuantityInput from '../../../pages/admin/budget_worksheet/MathQuantit
 import { COMMON_UNITS } from '../domain/units.js';
 import { isSteelRow, REBAR_DIAMETERS, getRebarSpec } from '../domain/steel.js';
 import { GEOMETRY_CONFIGS, GEOMETRY_TYPES } from '../domain/geometry.js';
+import { cleanFormulaDisplay } from '../domain/formulas.js';
 import { auditDescription } from '../../../utils/descriptionAuditor';
 
 function ComputosTableRow({
@@ -228,10 +229,10 @@ function ComputosTableRow({
                                     </div>
                                   )
                                 )}
-                                {it.formula && !isBlankTrailing && (
+                                {cleanFormulaDisplay(it.formula) && !isBlankTrailing && (
                                   <div className="flex items-center gap-1.5 px-2 py-0.5 mt-0.5 rounded bg-amber-100/90 border border-amber-300 text-[10px] font-mono text-amber-950 w-fit shadow-2xs">
                                     <span className="text-amber-800 font-bold">📐 Fórmula:</span>
-                                    <span>{it.formula}</span>
+                                    <span>{cleanFormulaDisplay(it.formula)}</span>
                                   </div>
                                 )}
                                 {it.linkedTo && (
@@ -663,10 +664,10 @@ function ComputosTableRow({
                                         </button>
                                       )}
                                     </div>
-                                    {p.formula && (
+                                    {cleanFormulaDisplay(p.formula) && (
                                       <div className="flex items-center gap-1 px-1.5 py-0.5 mt-0.5 rounded bg-amber-100/70 border border-amber-200 text-[9.5px] font-mono text-amber-950 w-fit">
                                         <span className="text-amber-800 font-bold">📐</span>
-                                        <span>{p.formula}</span>
+                                        <span>{cleanFormulaDisplay(p.formula)}</span>
                                       </div>
                                     )}
                                   </td>

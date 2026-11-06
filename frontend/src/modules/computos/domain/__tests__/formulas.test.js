@@ -5,6 +5,7 @@ import {
   computePartial,
   recomputeItemWithPartials,
   recomputeRow,
+  cleanFormulaDisplay,
 } from '../formulas.js';
 
 describe('fórmulas de cómputos', () => {
@@ -110,5 +111,16 @@ describe('fórmulas de cómputos', () => {
     expect(rowCalc.partial).toBe(0.24);
     expect(rowCalc.quantity).toBe(0.24);
     expect(rowCalc.m3).toBe(0.24);
+  });
+
+  it('limpia desgloses antiguos de zanjas en cleanFormulaDisplay', () => {
+    const rawFormula = '4m × 1m × 0.5m = 2m³ [Exc: 2m³ | Cama: 0m³ | Relleno: 2m³]';
+    expect(cleanFormulaDisplay(rawFormula)).toBe('4m × 1m × 0.5m = 2m³');
+
+    const cleanFormula = '4m × 1m × 0.5m = 2m³';
+    expect(cleanFormulaDisplay(cleanFormula)).toBe('4m × 1m × 0.5m = 2m³');
+
+    expect(cleanFormulaDisplay('')).toBe('');
+    expect(cleanFormulaDisplay(null)).toBe('');
   });
 });

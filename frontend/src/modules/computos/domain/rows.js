@@ -11,7 +11,7 @@ import {
   PURE_UNIT_LINE_RE,
   MEASURE_TRAILING_RE,
 } from './patterns.js';
-import { evaluateMeasurementFormula, round2 } from './formulas.js';
+import { evaluateMeasurementFormula, round2, cleanFormulaDisplay } from './formulas.js';
 
 function createBlankRow(chapter = '') {
   return {
@@ -90,6 +90,7 @@ function sanitizeItemDecimals(item) {
   };
   const sanitized = {
     ...item,
+    formula: item.formula ? cleanFormulaDisplay(item.formula) : item.formula,
     quantity: parseRound(item.quantity) ?? 0,
     partial: parseRound(item.partial) ?? 0,
   };
@@ -99,6 +100,7 @@ function sanitizeItemDecimals(item) {
   if (Array.isArray(item.partials) && item.partials.length > 0) {
     sanitized.partials = item.partials.map((p) => ({
       ...p,
+      formula: p.formula ? cleanFormulaDisplay(p.formula) : p.formula,
       partial: parseRound(p.partial) ?? 0,
       m3: p.m3 !== '' && p.m3 != null ? parseRound(p.m3) : p.m3,
     }));

@@ -20,6 +20,7 @@ import { COMMON_UNITS } from '../domain/units.js';
 import { isItemEmpty } from '../domain/rows.js';
 import { isSteelRow, REBAR_DIAMETERS, getRebarSpec } from '../domain/steel.js';
 import { GEOMETRY_CONFIGS, GEOMETRY_TYPES } from '../domain/geometry.js';
+import { cleanFormulaDisplay } from '../domain/formulas.js';
 import { auditDescription } from '../../../utils/descriptionAuditor';
 export default function ComputosCards({
   descriptionFilter,
@@ -511,10 +512,10 @@ export default function ComputosCards({
                             </div>
 
                             {/* Fórmula visible con valores numéricos */}
-                            {it.formula && !isBlankTrailing && (
+                            {cleanFormulaDisplay(it.formula) && !isBlankTrailing && (
                               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-100/90 border border-amber-300 text-[11px] font-mono text-amber-950 shadow-2xs">
                                 <span className="text-amber-800 font-bold shrink-0">📐 Fórmula:</span>
-                                <span className="font-semibold break-all">{it.formula}</span>
+                                <span className="font-semibold break-all">{cleanFormulaDisplay(it.formula)}</span>
                               </div>
                             )}
 
@@ -841,10 +842,10 @@ export default function ComputosCards({
                                       </div>
 
                                       {/* Fórmula del parcial */}
-                                      {p.formula && (
+                                      {cleanFormulaDisplay(p.formula) && (
                                         <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-100/80 border border-amber-200 text-[10px] font-mono text-amber-950">
                                           <span className="text-amber-800 font-bold shrink-0">📐</span>
-                                          <span className="break-all">{p.formula}</span>
+                                          <span className="break-all">{cleanFormulaDisplay(p.formula)}</span>
                                         </div>
                                       )}
 

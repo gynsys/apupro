@@ -53,6 +53,7 @@ import {
 } from '../../modules/computos/domain/patterns.js';
 import {
   recomputeRow,
+  cleanFormulaDisplay,
 } from '../../modules/computos/domain/formulas.js';
 import {
   createBlankRow,
@@ -1238,7 +1239,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
           <td style="text-align: center; border: 1px solid #cbd5e1; font-weight: bold; background-color: #f8fafc; vertical-align: top;">${itemNumber}</td>
           <td style="border: 1px solid #cbd5e1; font-weight: 600; width: 550px; white-space: normal; word-wrap: break-word; vertical-align: top; mso-line-break-rule: exactly;">
             ${escapeHtml(it.description || '')}
-            ${it.formula ? `<br/><span style="font-family: monospace; font-size: 9px; color: #78350f; background-color: #fef3c7;">📐 ${escapeHtml(it.formula)}</span>` : ''}
+            ${cleanFormulaDisplay(it.formula) ? `<br/><span style="font-family: monospace; font-size: 9px; color: #78350f; background-color: #fef3c7;">📐 ${escapeHtml(cleanFormulaDisplay(it.formula))}</span>` : ''}
           </td>
           <td style="text-align: center; border: 1px solid #cbd5e1; font-size: 11px; font-weight: bold; color: #1e293b; vertical-align: top;">${escapeHtml(it.unit || '')}</td>
           <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.length || '')}</td>
@@ -1260,7 +1261,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
               <td style="text-align: center; border: 1px solid #cbd5e1; color: #d97706; vertical-align: top;">↳ ${pIdx + 1}</td>
               <td style="border: 1px solid #cbd5e1; padding-left: 20px; font-style: italic; color: #78350f; width: 550px; white-space: normal; word-wrap: break-word; vertical-align: top;">
                 ${escapeHtml(p.description || `Pared ${pIdx + 1}`)}
-                ${p.formula ? `<br/><span style="font-family: monospace; font-size: 8.5px; color: #78350f; background-color: #fef3c7;">📐 ${escapeHtml(p.formula)}</span>` : ''}
+                ${cleanFormulaDisplay(p.formula) ? `<br/><span style="font-family: monospace; font-size: 8.5px; color: #78350f; background-color: #fef3c7;">📐 ${escapeHtml(cleanFormulaDisplay(p.formula))}</span>` : ''}
               </td>
               <td style="text-align: center; border: 1px solid #cbd5e1; font-size: 10px; color: #64748b; vertical-align: top;">${escapeHtml(it.unit || '')}</td>
               <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${p.length || ''}</td>
@@ -1438,7 +1439,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
           <td class="text-center font-bold" style="vertical-align: top;">${itemNumber}</td>
           <td class="font-bold text-left" style="width: 500px; white-space: normal; word-wrap: break-word; vertical-align: top;">
             ${escapeHtml(it.description || '')}
-            ${it.formula ? `<div style="font-family: monospace; font-size: 8.5px; color: #78350f; background: #fef3c7; padding: 1px 4px; border-radius: 3px; margin-top: 2px; width: fit-content;">📐 ${escapeHtml(it.formula)}</div>` : ''}
+            ${cleanFormulaDisplay(it.formula) ? `<div style="font-family: monospace; font-size: 8.5px; color: #78350f; background: #fef3c7; padding: 1px 4px; border-radius: 3px; margin-top: 2px; width: fit-content;">📐 ${escapeHtml(cleanFormulaDisplay(it.formula))}</div>` : ''}
           </td>
           <td class="text-center font-bold" style="font-size: 11px; vertical-align: top;">${escapeHtml(it.unit || '')}</td>
           <td class="text-right" style="vertical-align: top;">${hasPartials ? '—' : (it.length || '')}</td>
@@ -1460,7 +1461,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
               <td class="text-center text-amber-700" style="vertical-align: top;">↳ ${pIdx + 1}</td>
               <td class="partial-name" style="width: 500px; white-space: normal; word-wrap: break-word; vertical-align: top;">
                 ${escapeHtml(p.description || `Pared ${pIdx + 1}`)}
-                ${p.formula ? `<div style="font-family: monospace; font-size: 8px; color: #78350f; background: #fef3c7; padding: 1px 4px; border-radius: 3px; margin-top: 1px; width: fit-content;">📐 ${escapeHtml(p.formula)}</div>` : ''}
+                ${cleanFormulaDisplay(p.formula) ? `<div style="font-family: monospace; font-size: 8px; color: #78350f; background: #fef3c7; padding: 1px 4px; border-radius: 3px; margin-top: 1px; width: fit-content;">📐 ${escapeHtml(cleanFormulaDisplay(p.formula))}</div>` : ''}
               </td>
               <td class="text-center text-muted" style="font-size: 10px; vertical-align: top;">${escapeHtml(it.unit || '')}</td>
               <td class="text-right" style="vertical-align: top;">${p.length || ''}</td>
