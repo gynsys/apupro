@@ -242,7 +242,7 @@ export default function ComputosCards({
                                 <Search className="w-3 h-3 text-sky-600" />
                                 <span>Buscar en Norma COVENIN</span>
                               </button>
-                              {!isBlankTrailing && !it.linkedTo && (
+                              {!isBlankTrailing && (
                                 <button
                                   type="button"
                                   onClick={() => handleOpenLinkModal && handleOpenLinkModal(it)}
@@ -279,18 +279,18 @@ export default function ComputosCards({
                           <div className="space-y-2.5 bg-amber-50/50 border border-amber-200 rounded-xl p-3">
                             {/* Selector de Geometría Inteligente */}
                             {!isSteel && !isBlankTrailing && (
-                              <div className="flex items-center justify-between gap-2 pb-2 border-b border-amber-200">
-                                <label className="text-[10px] font-bold text-amber-950 uppercase flex items-center gap-1">
-                                  <span>📐 Forma Geométrica:</span>
+                              <div className="flex items-center justify-between gap-2 pb-2 border-b border-amber-200 min-w-0">
+                                <label className="text-[10px] font-bold text-amber-950 uppercase flex items-center gap-1 shrink-0">
+                                  <span>📐 Forma:</span>
                                 </label>
                                 <select
                                   value={it.geometryType || GEOMETRY_TYPES.RECTANGLE}
                                   onChange={(e) => handleUpdateItemField(it.id, 'geometryType', e.target.value)}
-                                  className="px-2 py-1 text-xs font-bold rounded-lg border border-amber-300 bg-white text-amber-950 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-xs"
+                                  className="flex-1 min-w-0 max-w-full truncate px-2 py-1 text-xs font-bold rounded-lg border border-amber-300 bg-white text-amber-950 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-xs"
                                 >
                                   {GEOMETRY_CONFIGS.map((g) => (
                                     <option key={g.id} value={g.id}>
-                                      {g.icon} {g.label}
+                                      {g.icon} {g.shortLabel}
                                     </option>
                                   ))}
                                 </select>

@@ -241,6 +241,25 @@ describe('rowsReducer', () => {
     expect(unlinkedRejas.linkedTo).toBeNull();
     expect(unlinkedRejas.quantity).toBe(8);
   });
+
+  it('permite deshacer (UNDO) y rehacer (REDO) cambios en la planilla', () => {
+    const row = { ...createBlankRow('GENERAL'), id: 'r1', description: 'Pared', quantity: 10 };
+    const state = stateWithRows([row]);
+
+    const afterDelete = rowsReducer(state, {
+      type: 'REMOVE_ROW',
+      payload: { itemId: 'r1', activeChapter: 'GENERAL' },
+    });
+    expect(afterDelete.rows.some((r) => r.id === 'r1')).toBe(false);
+    expect(afterDelete.history).toHaveLength(1);
+
+    const afterUndo = rowsReducer(afterDelete, { type: 'UNDO' });
+    expect(afterUndo.rows.some((r) => r.id === 'r1')).toBe(true);
+    expect(afterUndo.rows.find((r) => r.id === 'r1').quantity).toBe(10);
+
+    const afterRedo = rowsReducer(afterUndo, { type: 'REDO' });
+    expect(afterRedo.rows.some((r) => r.id === 'r1')).toBe(false);
+  });
 });
 
 describe('selectores de filas', () => {

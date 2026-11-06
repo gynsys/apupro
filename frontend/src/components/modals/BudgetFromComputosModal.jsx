@@ -32,6 +32,8 @@ import {
   ChevronDown,
   ChevronUp,
   Split,
+  Undo2,
+  Redo2,
 } from 'lucide-react';
 import BudgetSearchModal from '../../pages/admin/budget_worksheet/BudgetSearchModal';
 import MathQuantityInput from '../../pages/admin/budget_worksheet/MathQuantityInput';
@@ -203,10 +205,53 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     return createRowsState(initialRows, activeChapter);
   });
   const capturedItems = rowsState.rows;
+  const canUndo = (rowsState.history?.length || 0) > 0;
+  const canRedo = (rowsState.future?.length || 0) > 0;
+
+  const handleUndo = useCallback(() => {
+    if ((rowsState.history?.length || 0) === 0) return;
+    isDirtyRef.current = true;
+    hasUserEditedSessionRef.current = true;
+    rowsDispatch({ type: 'UNDO' });
+    toast.success('Cambio deshecho', { id: 'toast-undo' });
+  }, [rowsState.history?.length]);
+
+  const handleRedo = useCallback(() => {
+    if ((rowsState.future?.length || 0) === 0) return;
+    isDirtyRef.current = true;
+    hasUserEditedSessionRef.current = true;
+    rowsDispatch({ type: 'REDO' });
+    toast.success('Cambio rehecho', { id: 'toast-redo' });
+  }, [rowsState.future?.length]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+          if (canRedo) {
+            e.preventDefault();
+            handleRedo();
+          }
+        } else if (canUndo) {
+          e.preventDefault();
+          handleUndo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        if (canRedo) {
+          e.preventDefault();
+          handleRedo();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, canUndo, canRedo, handleUndo, handleRedo]);
+
   const setCapturedItems = useCallback((nextRows) => {
     rowsDispatch({
       type: 'SET_ROWS',
-      payload: { rows: nextRows, activeChapter },
+      payload: { rows: nextRows, activeChapter, skipHistory: true },
     });
   }, [activeChapter]);
 
@@ -2311,6 +2356,27 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
 
             <button
               type="button"
+              onClick={handleUndo}
+              disabled={isCommitting || !canUndo}
+              className="px-2 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shadow-xs disabled:opacity-40"
+              title="Deshacer último cambio (Ctrl+Z)"
+            >
+              <Undo2 className="w-3.5 h-3.5 text-amber-700" />
+              <span className="hidden lg:inline">Deshacer</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleRedo}
+              disabled={isCommitting || !canRedo}
+              className="p-1.5 rounded-xl text-xs font-bold flex items-center justify-center transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shadow-xs disabled:opacity-40"
+              title="Rehacer cambio (Ctrl+Y)"
+            >
+              <Redo2 className="w-3.5 h-3.5 text-amber-700" />
+            </button>
+
+            <button
+              type="button"
               onClick={() => syncCloudAndLocalDrafts({ force: true })}
               disabled={isCommitting || isSyncing}
               className="px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shadow-xs disabled:opacity-50"
@@ -2386,6 +2452,16 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
 
             {/* Barra de Herramientas Móvil: estrictamente dentro del ancho (flex-1 min-w-0) con scroll horizontal */}
             <div className="flex-1 min-w-0 overflow-x-auto no-scrollbar flex items-center justify-end gap-1 pl-1 py-0.5">
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={isCommitting || !canUndo}
+                className="p-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 shadow-xs cursor-pointer shrink-0 disabled:opacity-40"
+                title="Deshacer último cambio"
+              >
+                <Undo2 className="w-3.5 h-3.5 text-amber-700" />
+              </button>
+
               <button
                 type="button"
                 onClick={() => setShowProjectInfoModal(true)}

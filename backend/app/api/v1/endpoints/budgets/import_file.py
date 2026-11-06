@@ -963,6 +963,40 @@ def save_computos_draft(
 
         clean_name = (item.get("budgetName") or "").strip()
         incoming_budget_id = str(item.get("budgetId") or "").strip()
+
+        # Conservar hasta 5 versiones anteriores (puntos de restauración) cuando el contenido cambia
+        existing_match = next(
+            (
+                d for d in drafts
+                if str(d.get("id")) == draft_id
+                or (clean_name and (d.get("budgetName") or "").strip() == clean_name)
+                or (incoming_budget_id and str(d.get("budgetId") or "").strip() == incoming_budget_id)
+            ),
+            None,
+        )
+        if existing_match and isinstance(existing_match.get("items"), list) and len(existing_match["items"]) > 0:
+            prev_versions = list(existing_match.get("versions") or item.get("versions") or [])
+            if existing_match.get("items") != item.get("items"):
+                snapshot = {
+                    "savedAt": existing_match.get("savedAt") or datetime.utcnow().isoformat(),
+                    "itemCount": len(existing_match["items"]),
+                    "items": existing_match["items"],
+                }
+                # Evitar duplicar snapshots consecutivos del mismo minuto salvo que cambie el número de filas/parciales
+                last_ver = prev_versions[0] if prev_versions else None
+                last_ver_minute = str(last_ver.get("savedAt") or "")[:16] if last_ver else ""
+                curr_ver_minute = str(snapshot["savedAt"])[:16]
+                prev_partials_count = sum(len(r.get("partials") or []) for r in (last_ver.get("items") or [])) if last_ver else -1
+                curr_partials_count = sum(len(r.get("partials") or []) for r in existing_match["items"])
+                if (
+                    not last_ver
+                    or last_ver_minute != curr_ver_minute
+                    or last_ver.get("itemCount") != snapshot["itemCount"]
+                    or prev_partials_count != curr_partials_count
+                ):
+                    prev_versions.insert(0, snapshot)
+            item["versions"] = prev_versions[:5]
+
         drafts = [
             d for d in drafts
             if str(d.get("id")) != draft_id

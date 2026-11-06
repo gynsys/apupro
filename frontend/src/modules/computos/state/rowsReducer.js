@@ -18,14 +18,27 @@ function newId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+const MAX_HISTORY_STEPS = 30;
+
+function cloneRowsSnapshot(rows) {
+  try {
+    return JSON.parse(JSON.stringify(rows || []));
+  } catch (_e) {
+    return Array.isArray(rows) ? [...rows] : [];
+  }
+}
+
 export function createRowsState(rows = null, activeChapter = '') {
   return {
     rows: normalizeRowsWithSingleTrailingBlank(rows || [createBlankRow(activeChapter)], activeChapter),
     activeChapter,
+    history: [],
+    future: [],
+    _lastHistoryMeta: null,
   };
 }
 
-export function rowsReducer(state, action) {
+function rowsReducerCore(state, action) {
   const { type, payload = {} } = action || {};
   const activeChapter = payload.activeChapter ?? state.activeChapter ?? '';
   const rows = state.rows;
@@ -344,4 +357,74 @@ export function rowsReducer(state, action) {
     default:
       return state;
   }
+}
+
+export function rowsReducer(state, action) {
+  const { type, payload = {} } = action || {};
+
+  if (type === 'UNDO') {
+    const history = state.history || [];
+    if (history.length === 0) return state;
+    const previousRows = history[history.length - 1];
+    const nextHistory = history.slice(0, -1);
+    const nextFuture = [cloneRowsSnapshot(state.rows), ...(state.future || [])].slice(0, MAX_HISTORY_STEPS);
+    return {
+      ...state,
+      rows: previousRows,
+      history: nextHistory,
+      future: nextFuture,
+      _lastHistoryMeta: null,
+    };
+  }
+
+  if (type === 'REDO') {
+    const future = state.future || [];
+    if (future.length === 0) return state;
+    const nextRows = future[0];
+    const nextFuture = future.slice(1);
+    const nextHistory = [...(state.history || []), cloneRowsSnapshot(state.rows)].slice(-MAX_HISTORY_STEPS);
+    return {
+      ...state,
+      rows: nextRows,
+      history: nextHistory,
+      future: nextFuture,
+      _lastHistoryMeta: null,
+    };
+  }
+
+  const nextState = rowsReducerCore(state, action);
+  if (nextState === state || nextState.rows === state.rows || payload.skipHistory) {
+    return nextState;
+  }
+
+  // Agrupar tecleo continuo en descripción u observaciones para que Deshacer revierta palabras completas
+  const now = Date.now();
+  const isTextTyping =
+    type === 'UPDATE_FIELD' &&
+    (payload.field === 'description' || payload.field === 'observations');
+  const prevMeta = state._lastHistoryMeta;
+  const shouldMergeWithLastStep =
+    isTextTyping &&
+    prevMeta &&
+    prevMeta.type === type &&
+    prevMeta.itemId === payload.itemId &&
+    prevMeta.field === payload.field &&
+    now - prevMeta.timestamp < 1500;
+
+  const currentHistory = state.history || [];
+  const nextHistory = shouldMergeWithLastStep
+    ? currentHistory
+    : [...currentHistory, cloneRowsSnapshot(state.rows)].slice(-MAX_HISTORY_STEPS);
+
+  return {
+    ...nextState,
+    history: nextHistory,
+    future: [],
+    _lastHistoryMeta: {
+      type,
+      itemId: payload.itemId || null,
+      field: payload.field || null,
+      timestamp: now,
+    },
+  };
 }
