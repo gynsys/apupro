@@ -56,10 +56,10 @@ export const GEOMETRY_CONFIGS = [
   },
   {
     id: GEOMETRY_TYPES.TRENCH,
-    label: 'Zanja / Tubería (Excavación + Cama + Relleno)',
+    label: 'Zanja / Excavación (L × A × Prof.)',
     shortLabel: 'Zanja',
     icon: '⛏️',
-    description: 'Longitud × Ancho × Profundidad con desglose numérico',
+    description: 'Longitud × Ancho × Profundidad (m³)',
   },
 ];
 
@@ -219,35 +219,11 @@ export function computeGeometryBase(row, unit = 'M3') {
       const l = parseNum(row.length);
       const w = parseNum(row.width);
       const h = parseNum(row.height);
-      const pipeDiam = parseNum(row.trenchPipeDiameter ?? row.pipeDiameter); // m
-      const bedH = parseNum(row.trenchBeddingHeight ?? row.beddingHeight); // m
 
       if (l !== null && l > 0 && w !== null && w > 0 && h !== null && h > 0) {
         const vExc = round2(l * w * h);
-        const vBed = bedH !== null && bedH > 0 ? round2(l * w * bedH) : 0;
-        const vPipe = pipeDiam !== null && pipeDiam > 0 ? round2(((3.1416 * Math.pow(pipeDiam, 2)) / 4) * l) : 0;
-        const vBackfill = Math.max(0, round2(vExc - vBed - vPipe));
-
-        const trenchDetails = {
-          excavationM3: vExc,
-          beddingM3: vBed,
-          pipeM3: vPipe,
-          backfillM3: vBackfill,
-        };
-
-        const descUpper = String(row.description || '').toUpperCase();
-        let activeVol = vExc;
-        let label = 'Excavación';
-        if (descUpper.includes('CAMA') || descUpper.includes('ARENA')) {
-          activeVol = vBed > 0 ? vBed : vExc;
-          label = 'Cama';
-        } else if (descUpper.includes('RELLENO') || descUpper.includes('COMPACTADO')) {
-          activeVol = vBackfill > 0 ? vBackfill : vExc;
-          label = 'Relleno';
-        }
-
-        const formulaStr = `${l}m × ${w}m × ${h}m = ${activeVol}m³ [Exc: ${vExc}m³ | Cama: ${vBed}m³ | Relleno: ${vBackfill}m³]`;
-        return { baseGeom: activeVol, formulaStr, trenchDetails };
+        const formulaStr = `${l}m × ${w}m × ${h}m = ${vExc}m³`;
+        return { baseGeom: vExc, formulaStr };
       }
       break;
     }

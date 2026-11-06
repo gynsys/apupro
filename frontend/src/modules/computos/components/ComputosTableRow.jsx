@@ -234,15 +234,6 @@ function ComputosTableRow({
                                     <span>{it.formula}</span>
                                   </div>
                                 )}
-                                {it.geometryType === GEOMETRY_TYPES.TRENCH && it.trenchDetails && (
-                                  <div className="flex items-center gap-1.5 px-2 py-0.5 mt-0.5 rounded-md bg-amber-100 border border-amber-300 text-[10px] font-bold text-amber-950 w-fit">
-                                    <span>⛏️ Excavación: {it.trenchDetails.excavationM3} m³</span>
-                                    <span>|</span>
-                                    <span>Cama: {it.trenchDetails.beddingM3} m³</span>
-                                    <span>|</span>
-                                    <span>Relleno: {it.trenchDetails.backfillM3} m³</span>
-                                  </div>
-                                )}
                                 {it.linkedTo && (
                                   <div className="flex items-center gap-1.5 px-2 py-0.5 mt-0.5 rounded-md bg-sky-100 border border-sky-300 text-[10px] font-semibold text-sky-900 w-fit">
                                     <Link2 className="w-3 h-3 text-sky-700 shrink-0" />

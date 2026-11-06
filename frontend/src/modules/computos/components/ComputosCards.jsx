@@ -439,15 +439,6 @@ export default function ComputosCards({
                               </div>
                             </div>
 
-                            {/* Desglose de zanjas en móvil */}
-                            {it.geometryType === GEOMETRY_TYPES.TRENCH && it.trenchDetails && (
-                              <div className="bg-amber-100/90 border border-amber-300 rounded-lg p-2 text-[11px] font-bold text-amber-950 flex flex-wrap items-center justify-between gap-1">
-                                <span>⛏️ Exc: {it.trenchDetails.excavationM3} m³</span>
-                                <span>Cama: {it.trenchDetails.beddingM3} m³</span>
-                                <span>Relleno: {it.trenchDetails.backfillM3} m³</span>
-                              </div>
-                            )}
-
                             {/* Fila 3: Factor Acero, Distancia Acarreo y M3 Botes */}
                             <div className="grid grid-cols-3 gap-2">
                               <div>
@@ -854,14 +845,6 @@ export default function ComputosCards({
                                         <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-100/80 border border-amber-200 text-[10px] font-mono text-amber-950">
                                           <span className="text-amber-800 font-bold shrink-0">📐</span>
                                           <span className="break-all">{p.formula}</span>
-                                        </div>
-                                      )}
-
-                                      {p.geometryType === GEOMETRY_TYPES.TRENCH && p.trenchDetails && (
-                                        <div className="bg-amber-100/90 border border-amber-300 rounded-lg p-1.5 text-[10px] font-bold text-amber-950 flex flex-wrap items-center justify-between gap-1">
-                                          <span>⛏️ Exc: {p.trenchDetails.excavationM3} m³</span>
-                                          <span>Cama: {p.trenchDetails.beddingM3} m³</span>
-                                          <span>Relleno: {p.trenchDetails.backfillM3} m³</span>
                                         </div>
                                       )}
 

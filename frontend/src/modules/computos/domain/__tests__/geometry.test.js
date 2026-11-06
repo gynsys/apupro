@@ -89,25 +89,19 @@ describe('Intelligent Geometry Templates', () => {
     expect(res.baseGeom).toBe(1.40);
   });
 
-  it('computes trench and pipeline excavation, bedding and backfill', () => {
+  it('computes trench excavation volume (V = Longitud × Ancho × Profundidad)', () => {
     const row = {
       geometryType: GEOMETRY_TYPES.TRENCH,
       length: 20.00, // Longitud 20m
       width: 0.80,   // Ancho 0.80m
       height: 1.50,  // Profundidad 1.50m
-      trenchBeddingHeight: 0.10, // Cama de arena 10cm
-      trenchPipeDiameter: 0.30,  // Tubo Ø 30cm
-      description: 'EXCAVACIÓN EN ZANJA PARA TUBERÍA',
       unit: 'M3',
     };
     const res = computeGeometryBase(row, 'M3');
     // Excavación = 20 * 0.80 * 1.50 = 24.00 m3
     expect(res.baseGeom).toBe(24);
-    expect(res.trenchDetails.excavationM3).toBe(24);
-    // Cama de arena = 20 * 0.80 * 0.10 = 1.60 m3
-    expect(res.trenchDetails.beddingM3).toBe(1.60);
-    // Relleno = Excavación - Cama - Tubo
-    expect(res.trenchDetails.backfillM3).toBeLessThan(24);
+    expect(res.formulaStr).toBe('20m × 0.8m × 1.5m = 24m³');
+    expect(res.formulaStr).not.toContain('Cama');
   });
 
   it('integrates seamlessly with recomputeRow and times multiplier', () => {

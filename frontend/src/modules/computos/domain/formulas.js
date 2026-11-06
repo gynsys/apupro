@@ -148,9 +148,6 @@ function computePartial(p, parentUnit = '') {
       const parcial = round2(geomResult.baseGeom * multFactor * multDist * t);
       p.partial = parcial;
       p.formula = t > 1 ? `${t} × [${geomResult.formulaStr}]` : geomResult.formulaStr;
-      if (geomResult.trenchDetails) {
-        p.trenchDetails = geomResult.trenchDetails;
-      }
       if (normUnit === 'M3' || (!normUnit && geomResult.baseGeom > 0)) {
         p.m3 = parcial;
         p._autoM3 = parcial;
@@ -330,9 +327,6 @@ function recomputeRow(row, field, value) {
       updated.partial = parcial;
       updated.quantity = total;
       updated.formula = t > 1 ? `${t} × [${geomResult.formulaStr}]` : geomResult.formulaStr;
-      if (geomResult.trenchDetails) {
-        updated.trenchDetails = geomResult.trenchDetails;
-      }
       if (updated.unit === 'M3') {
         updated.m3 = total;
         updated._autoM3 = total;
