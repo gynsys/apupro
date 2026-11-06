@@ -41,10 +41,9 @@ export default function LinkPartidaModal({
     () => recommendedTemplates[0]?.defaultDistance || ''
   );
   // Cuando se vincula con una partida existente:
-  // 'pull_to_current': trae el cómputo de la partida seleccionada hacia esta partida (ej: Rejas 5 + Ventana 50 = 55)
-  // 'push_to_selected': envía el cómputo de esta partida hacia la seleccionada (ej: Ventana 50 + Rejas 5 = 55)
+  // 'pull_to_current': agrega el parcial "Viene de [partida seleccionada]" en esta partida
+  // 'push_to_selected': agrega el parcial "Viene de [esta partida]" en la partida seleccionada
   const [linkDirection, setLinkDirection] = useState('pull_to_current');
-  const [linkMode, setLinkMode] = useState('add');
 
   const currentTemplate = useMemo(
     () => recommendedTemplates.find((t) => t.id === selectedTemplateId) || recommendedTemplates[0],
@@ -101,28 +100,24 @@ export default function LinkPartidaModal({
 
   const targetOwnQty = useMemo(() => {
     if (isNewRow || !effectiveTargetItem) return 0;
-    const own = getRowOwnQuantity(effectiveTargetItem);
-    return own > 0 ? own : Number(effectiveTargetItem.quantity || 0);
+    return Number(effectiveTargetItem.quantity || 0);
   }, [isNewRow, effectiveTargetItem]);
 
   const previewQty = useMemo(() => {
     if (isNewRow) return linkedContributionQty;
-    return linkMode === 'add'
-      ? round2(targetOwnQty + linkedContributionQty)
-      : linkedContributionQty;
-  }, [isNewRow, linkMode, targetOwnQty, linkedContributionQty]);
+    return round2(targetOwnQty + linkedContributionQty);
+  }, [isNewRow, targetOwnQty, linkedContributionQty]);
 
   const handleConfirm = () => {
     const finalSource = effectiveSourceItem || sourceItem;
     const finalTargetId = isNewRow ? null : (effectiveTargetItem?.id || targetItemId);
-    const effectiveMode = isNewRow ? 'replace' : linkMode;
 
     const linkConfig = {
       formulaType: selectedTemplateId,
       factor: Number(factor) || 1,
       distance: currentTemplate?.hasDistance && distance ? Number(distance) : null,
-      mode: effectiveMode,
-      label: `🔗 ${effectiveMode === 'add' ? 'Sumado con' : 'Vinculado a'}: ${(finalSource.description || 'Ítem origen').slice(0, 30)}... (×${factor}${
+      mode: isNewRow ? 'replace' : 'add',
+      label: `🔗 Viene de: ${(finalSource.description || 'Ítem origen').slice(0, 35)} (×${factor}${
         currentTemplate?.hasDistance && distance ? ` × ${distance}km` : ''
       })`,
     };
@@ -356,42 +351,19 @@ export default function LinkPartidaModal({
                   </select>
                 </div>
 
-                {/* Selección de modo: Sumar vs Reemplazar */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setLinkMode('add')}
-                    className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
-                      linkMode === 'add'
-                        ? 'bg-emerald-50 border-emerald-500 text-emerald-950 ring-1 ring-emerald-400 font-bold'
-                        : 'bg-white border-amber-200 text-slate-700 hover:bg-amber-50'
-                    }`}
-                  >
-                    <div className="text-[11px] font-bold">➕ Sumar mediciones (Acumular)</div>
-                    <div className="text-[10px] opacity-80">
-                      Suma el cómputo propio + el cómputo vinculado
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLinkMode('replace')}
-                    className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
-                      linkMode === 'replace'
-                        ? 'bg-amber-100 border-amber-500 text-amber-950 ring-1 ring-amber-400 font-bold'
-                        : 'bg-white border-amber-200 text-slate-700 hover:bg-amber-50'
-                    }`}
-                  >
-                    <div className="text-[11px] font-bold">🟰 Igualar / Reemplazar</div>
-                    <div className="text-[10px] opacity-80">
-                      Sustituye la medición por el valor vinculado
-                    </div>
-                  </button>
+                {/* Aviso claro: se agregará un parcial nuevo sin sustituir nada */}
+                <div className="bg-emerald-50/90 border border-emerald-300 rounded-lg px-2.5 py-2 text-[11px] text-emerald-950">
+                  <span className="font-bold">➕ Nuevo parcial automático:</span> No se sustituye ninguna medición existente; se agregará un parcial con la descripción{' '}
+                  <span className="font-bold underline">
+                    &ldquo;Viene de {effectiveSourceItem?.description || 'la partida vinculada'}&rdquo;
+                  </span>
+                  .
                 </div>
 
-                {/* Selección de dónde queda el total acumulado */}
+                {/* Selección de en cuál partida se agrega el parcial */}
                 <div>
                   <label className="block text-[10px] font-bold text-amber-900 mb-1">
-                    ¿EN CUÁL PARTIDA SE ACUMULA EL RESULTADO?
+                    ¿EN CUÁL PARTIDA SE AGREGA EL PARCIAL?
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <button
@@ -407,7 +379,7 @@ export default function LinkPartidaModal({
                         📍 En esta partida ({(sourceItem.description || 'Actual').slice(0, 22)})
                       </div>
                       <div className="text-[10px] text-amber-800">
-                        Toma los {selectedTargetItem?.quantity || 0} {selectedTargetItem?.unit || ''} de la seleccionada
+                        Agrega parcial &ldquo;Viene de {(selectedTargetItem?.description || '').slice(0, 18)}&rdquo; ({selectedTargetItem?.quantity || 0} {selectedTargetItem?.unit || ''})
                       </div>
                     </button>
                     <button
@@ -423,7 +395,7 @@ export default function LinkPartidaModal({
                         🎯 En la seleccionada ({(selectedTargetItem?.description || 'Destino').slice(0, 22)})
                       </div>
                       <div className="text-[10px] text-amber-800">
-                        Envía los {sourceItem.quantity || 0} {sourceItem.unit || ''} hacia la seleccionada
+                        Agrega parcial &ldquo;Viene de {(sourceItem.description || '').slice(0, 18)}&rdquo; ({sourceItem.quantity || 0} {sourceItem.unit || ''})
                       </div>
                     </button>
                   </div>
@@ -439,9 +411,10 @@ export default function LinkPartidaModal({
                 Resultado Vinculado en Tiempo Real:
               </span>
               <span className="text-xs text-emerald-950 font-medium">
-                {!isNewRow && linkMode === 'add' ? (
+                {!isNewRow ? (
                   <>
-                    {targetOwnQty} {effectiveTargetItem?.unit || sourceItem.unit} (propio) + (
+                    {targetOwnQty} {effectiveTargetItem?.unit || sourceItem.unit} (actual) + Parcial &ldquo;Viene de{' '}
+                    {(effectiveSourceItem?.description || '').slice(0, 24)}&rdquo; (
                     {effectiveSourceItem?.quantity || 0} {effectiveSourceItem?.unit || ''} × {factor}
                     {currentTemplate?.hasDistance && distance ? ` × ${distance} km` : ''})
                   </>

@@ -42,9 +42,28 @@ export function rowsReducer(state, action) {
       };
 
     case 'UPDATE_FIELD': {
-      const updated = rows.map((row) =>
-        row.id === payload.itemId ? recomputeRow(row, payload.field, payload.value) : row
-      );
+      const updated = rows.map((row) => {
+        if (row.id !== payload.itemId) return row;
+        // Si la fila tiene parciales y se actualiza una dimensión física en la fila padre,
+        // sincronizar el primer parcial propio (no vinculado) antes de recalcular
+        if (
+          Array.isArray(row.partials) &&
+          row.partials.length > 0 &&
+          ['length', 'width', 'height', 'times', 'factor', 'distance'].includes(payload.field)
+        ) {
+          const firstOwnIdx = row.partials.findIndex((p) => !p?.linkedTo);
+          if (firstOwnIdx !== -1) {
+            const nextPartials = row.partials.map((p, idx) => {
+              if (idx !== firstOwnIdx) return p;
+              const nextP = { ...p, [payload.field]: payload.value };
+              nextP.partial = computePartial(nextP, row.unit);
+              return nextP;
+            });
+            return recomputeItemWithPartials({ ...row, partials: nextPartials });
+          }
+        }
+        return recomputeRow(row, payload.field, payload.value);
+      });
       const withLinks = applyReactiveLinks(updated);
       return { ...state, activeChapter, rows: normalizeRowsWithSingleTrailingBlank(withLinks, activeChapter) };
     }
@@ -221,36 +240,76 @@ export function rowsReducer(state, action) {
         };
       }
 
-      // Vincular a partida existente (por defecto suma la medición propia + la medición vinculada)
+      // Vincular a partida existente: NUNCA sustituye nada, agrega un parcial nuevo
+      // con la descripción "Viene de [partida origen]"
       const updated = rows.map((r) => {
         if (r.id !== payload.targetItemId) return r;
-        const baseQty =
-          typeof r._ownQuantity === 'number' && Number.isFinite(r._ownQuantity)
-            ? r._ownQuantity
-            : Number(r.quantity) || 0;
-        const ownFormula = r._ownFormula ?? r.formula ?? '';
-        const mode = payload.linkConfig?.mode || 'add';
-        const totalQty = mode === 'add' ? round2(baseQty + calculatedQty) : calculatedQty;
 
-        return {
-          ...r,
-          _ownQuantity: baseQty,
-          _ownFormula: ownFormula,
-          quantity: totalQty,
-          partial: totalQty,
-          distance: payload.linkConfig?.distance || r.distance || '',
+        let existingPartials = [];
+        if (Array.isArray(r.partials) && r.partials.length > 0) {
+          existingPartials = [...r.partials];
+        } else {
+          const hasOwnData =
+            Number(r.quantity) > 0 ||
+            Number(r.partial) > 0 ||
+            Boolean(r.length) ||
+            Boolean(r.width) ||
+            Boolean(r.height) ||
+            Boolean(r.m3);
+
+          if (hasOwnData) {
+            const firstOwn = {
+              id: newId('part'),
+              description: 'Parcial 1',
+              times: r.times || 1,
+              length: r.length || '',
+              width: r.width || '',
+              height: r.height || '',
+              factor: r.factor || '',
+              distance: r.distance || '',
+              m3: r.m3 || '',
+              geometryType: r.geometryType || undefined,
+              rebarDiameter: r.rebarDiameter || undefined,
+              partial: Number(r.quantity || r.partial || 0),
+              observations: r.observations || '',
+            };
+            firstOwn.partial = computePartial(firstOwn, r.unit);
+            existingPartials = [firstOwn];
+          }
+        }
+
+        const factorNum = Number(payload.linkConfig?.factor || 1);
+        const distNum = payload.linkConfig?.distance ? Number(payload.linkConfig.distance) : null;
+        const sourceDesc = (source.description || 'partida vinculada').trim();
+
+        const linkedPartial = {
+          id: newId('part'),
+          description: `Viene de ${sourceDesc}`,
+          times: 1,
+          length: '',
+          width: '',
+          height: '',
+          factor: factorNum !== 1 ? factorNum : '',
+          distance: distNum || '',
+          m3: '',
+          partial: calculatedQty,
+          observations: '',
           linkedTo: {
             sourceItemId: source.id,
-            sourceDescription: source.description || '',
+            sourceDescription: sourceDesc,
+            sourceQuantity: Number(source.quantity || 0),
+            sourceUnit: source.unit || '',
             formulaType: payload.linkConfig?.formulaType || 'custom',
-            factor: payload.linkConfig?.factor || 1,
-            distance: payload.linkConfig?.distance || null,
-            mode,
-            baseQuantity: baseQty,
-            baseFormula: ownFormula,
-            label: payload.linkConfig?.label || `Vinculado a: ${source.description || 'Ítem origen'}`,
+            factor: factorNum,
+            distance: distNum,
           },
         };
+        linkedPartial.partial = computePartial(linkedPartial, r.unit);
+
+        return recomputeItemWithPartials({
+          ...r,
+          partials: [...existingPartials, linkedPartial],
+        });
       });
       const withLinks = applyReactiveLinks(updated);
       return { ...state, activeChapter, rows: withLinks };
@@ -259,6 +318,14 @@ export function rowsReducer(state, action) {
     case 'UNLINK_ROW': {
       const updated = rows.map((r) => {
         if (r.id !== payload.itemId) return r;
+        // Si tiene parciales vinculados, eliminar los parciales que provienen de vínculo
+        if (Array.isArray(r.partials) && r.partials.some((p) => p?.linkedTo)) {
+          const remaining = r.partials.filter((p) => !p?.linkedTo);
+          if (remaining.length === 0) {
+            return { ...r, partials: null, quantity: 0, partial: 0, formula: '', linkedTo: null };
+          }
+          return recomputeItemWithPartials({ ...r, partials: remaining, linkedTo: null });
+        }
         const ownQty = getRowOwnQuantity(r);
         const ownFormula = r._ownFormula ?? r.linkedTo?.baseFormula ?? '';
         const restoredQty = r.linkedTo?.mode === 'add' ? ownQty : (ownQty > 0 ? ownQty : r.quantity);

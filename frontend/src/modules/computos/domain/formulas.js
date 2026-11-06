@@ -129,6 +129,19 @@ function computePartial(p, parentUnit = '') {
   const multFactor = f !== null && f > 0 ? f : 1;
   const multDist = dist !== null && dist > 0 ? dist : 1;
 
+  // Si el parcial proviene de una vinculación reactiva con otra partida ("Viene de ...")
+  if (p.linkedTo && p.linkedTo.sourceQuantity !== undefined) {
+    const baseSource = Math.max(0, Number(p.linkedTo.sourceQuantity || 0));
+    const parcial = round2(baseSource * multFactor * multDist * t);
+    p.partial = parcial;
+    const parts = [`${baseSource} ${p.linkedTo.sourceUnit || normUnit || ''}`.trim()];
+    if (f !== null && f !== 1) parts.push(`× ${f}`);
+    if (dist !== null && dist > 0) parts.push(`× ${dist}km`);
+    if (t > 1) parts.unshift(`${t} ×`);
+    p.formula = `🔗 ${parts.join(' ')} = ${parcial} ${normUnit || ''}`.trim();
+    return parcial;
+  }
+
   // Cálculo de acero de refuerzo (Cabillas)
   const isSteel = isSteelRow(p) || Boolean(p.rebarDiameter) || normUnit === 'KG';
   if (isSteel && l !== null && h !== null && f !== null && l > 0 && h > 0 && f > 0) {

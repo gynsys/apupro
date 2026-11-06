@@ -1267,6 +1267,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
       type: 'LINK_ROWS',
       payload: { ...linkData, activeChapter },
     });
+    if (linkData?.targetItemId) {
+      setExpandedPartials((prev) => ({ ...prev, [linkData.targetItemId]: true }));
+    }
     toast.success('Partida vinculada exitosamente con actualización en cascada');
     setLinkModalItem(null);
   };

@@ -4,7 +4,7 @@
  * gobierna reactivamente el cálculo de la otra (ej: Excavación -> Bote de escombros).
  */
 
-import { round2 } from './formulas.js';
+import { round2, recomputeItemWithPartials } from './formulas.js';
 
 export const LINK_TEMPLATES = [
   {
@@ -164,32 +164,76 @@ export function applyReactiveLinks(rows) {
   });
 
   return rows.map((row) => {
-    if (!row.linkedTo || !row.linkedTo.sourceItemId) {
-      return row;
+    let currentRow = row;
+
+    // 1. Si la fila tiene parciales donde alguno proviene de una vinculación ("Viene de ...")
+    if (Array.isArray(currentRow.partials) && currentRow.partials.some((p) => p?.linkedTo?.sourceItemId)) {
+      let partialsChanged = false;
+      const nextPartials = currentRow.partials.map((p) => {
+        if (!p?.linkedTo?.sourceItemId) return p;
+        const source = rowMap.get(p.linkedTo.sourceItemId);
+        if (!source) {
+          partialsChanged = true;
+          return { ...p, linkedTo: null };
+        }
+        const nextSourceQty = Number(source.quantity || 0);
+        const nextSourceDesc = source.description || p.linkedTo.sourceDescription || '';
+        const nextSourceUnit = source.unit || p.linkedTo.sourceUnit || '';
+        if (
+          p.linkedTo.sourceQuantity === nextSourceQty &&
+          p.linkedTo.sourceDescription === nextSourceDesc
+        ) {
+          return p;
+        }
+        partialsChanged = true;
+        const nextDesc =
+          !p.description || /^viene de\b/i.test(p.description.trim())
+            ? `Viene de ${nextSourceDesc || 'partida vinculada'}`
+            : p.description;
+        return {
+          ...p,
+          description: nextDesc,
+          linkedTo: {
+            ...p.linkedTo,
+            sourceQuantity: nextSourceQty,
+            sourceDescription: nextSourceDesc,
+            sourceUnit: nextSourceUnit,
+          },
+        };
+      });
+
+      if (partialsChanged) {
+        currentRow = recomputeItemWithPartials({ ...currentRow, partials: nextPartials });
+        rowMap.set(currentRow.id, currentRow);
+      }
     }
 
-    const source = rowMap.get(row.linkedTo.sourceItemId);
-    const ownQty = getRowOwnQuantity(row);
-    const ownFormula = row._ownFormula ?? row.linkedTo?.baseFormula ?? '';
+    // 2. Si la fila completa tiene vínculo directo (ej: nueva partida derivada sin desglose)
+    if (!currentRow.linkedTo || !currentRow.linkedTo.sourceItemId) {
+      return currentRow;
+    }
+
+    const source = rowMap.get(currentRow.linkedTo.sourceItemId);
+    const ownQty = getRowOwnQuantity(currentRow);
+    const ownFormula = currentRow._ownFormula ?? currentRow.linkedTo?.baseFormula ?? '';
 
     if (!source) {
-      // Si la partida origen fue eliminada, restauramos su medición propia y quitamos el link
-      const restoredQty = ownQty > 0 ? ownQty : Number(row.quantity) || 0;
+      const restoredQty = ownQty > 0 ? ownQty : Number(currentRow.quantity) || 0;
       return {
-        ...row,
+        ...currentRow,
         quantity: restoredQty,
         partial: restoredQty,
-        formula: ownFormula || row.formula || '',
+        formula: ownFormula || currentRow.formula || '',
         linkedTo: null,
       };
     }
 
-    const linkedQty = computeLinkedQuantity(source.quantity, row.linkedTo);
-    const mode = row.linkedTo.mode || (ownQty > 0 ? 'add' : 'replace');
+    const linkedQty = computeLinkedQuantity(source.quantity, currentRow.linkedTo);
+    const mode = currentRow.linkedTo.mode || (ownQty > 0 ? 'add' : 'replace');
     const calculatedQty = mode === 'add' ? round2(ownQty + linkedQty) : linkedQty;
-    const unitLabel = String(row.unit || '').toLowerCase();
+    const unitLabel = String(currentRow.unit || '').toLowerCase();
 
-    let nextFormula = row.formula || '';
+    let nextFormula = currentRow.formula || '';
     if (mode === 'add' && ownQty > 0) {
       const basePart = ownFormula ? `${ownFormula}` : `${ownQty}${unitLabel}`;
       nextFormula = `${basePart} + [Vinculado: ${linkedQty}${unitLabel}] = ${calculatedQty}${unitLabel}`;
@@ -197,15 +241,17 @@ export function applyReactiveLinks(rows) {
       nextFormula = ownFormula;
     }
 
-    if (row.quantity === calculatedQty && row.formula === nextFormula) {
-      return row;
+    if (currentRow.quantity === calculatedQty && currentRow.formula === nextFormula) {
+      return currentRow;
     }
 
-    return {
-      ...row,
+    const updatedRow = {
+      ...currentRow,
       quantity: calculatedQty,
       partial: calculatedQty,
       formula: nextFormula,
     };
+    rowMap.set(updatedRow.id, updatedRow);
+    return updatedRow;
   });
 }

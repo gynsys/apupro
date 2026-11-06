@@ -200,6 +200,11 @@ describe('rowsReducer', () => {
 
     const updatedRejas = linkedState.rows.find((r) => r.id === 'remocion-rejas');
     expect(updatedRejas.quantity).toBe(55);
+    expect(updatedRejas.partials).toHaveLength(2);
+    expect(updatedRejas.partials[0].description).toBe('Parcial 1');
+    expect(updatedRejas.partials[0].partial).toBe(5);
+    expect(updatedRejas.partials[1].description).toBe('Viene de REMOCION DE VENTANAS');
+    expect(updatedRejas.partials[1].partial).toBe(50);
 
     // Si cambia la medición de Remoción de ventana a 60 M2, Remoción de rejas pasa a 5 + 60 = 65 M2
     const afterVentanaEdit = rowsReducer(linkedState, {

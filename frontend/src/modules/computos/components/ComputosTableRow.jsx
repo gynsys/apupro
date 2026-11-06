@@ -153,12 +153,12 @@ function ComputosTableRow({
                                       <Plus className="w-3 h-3 text-emerald-700" />
                                       <span>+ Agregar fila</span>
                                     </button>
-                                    {!isBlankTrailing && !it.linkedTo && (
+                                    {!isBlankTrailing && (
                                       <button
                                         type="button"
                                         onClick={() => handleOpenLinkModal && handleOpenLinkModal(it)}
                                         className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-300 px-1.5 py-0.5 rounded cursor-pointer transition-colors shadow-2xs"
-                                        title="Vincular con partida derivada (Bote de escombros, friso, pintura, etc.)"
+                                        title="Vincular con otra partida (agrega parcial 'Viene de...' o crea partida derivada)"
                                       >
                                         <Link2 className="w-3 h-3 text-sky-600" />
                                         <span>🔗 Vincular</span>
@@ -605,8 +605,15 @@ function ComputosTableRow({
                                   </td>
                                   <td className="border border-amber-200 px-2 py-1 pl-6">
                                     <div className="flex items-center gap-1.5">
-                                      <span className="text-[10px] font-bold text-amber-800 shrink-0">
-                                        Parcial:
+                                      <span className="text-[10px] font-bold text-amber-800 shrink-0 flex items-center gap-1">
+                                        {p.linkedTo ? (
+                                          <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-sky-100 text-sky-800 border border-sky-300 text-[9px] font-extrabold">
+                                            <Link2 className="w-2.5 h-2.5 text-sky-600" />
+                                            <span>Vinculado:</span>
+                                          </span>
+                                        ) : (
+                                          'Parcial:'
+                                        )}
                                       </span>
                                       <input
                                         type="text"
