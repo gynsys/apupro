@@ -1,4 +1,21 @@
 import { API_URL } from './api';
+import {
+  isDeviceOfflineModeActive,
+  isNetworkOfflineError,
+  saveOfflineBudgetsList,
+  getOfflineBudgetsList,
+  saveOfflineBudgetDetail,
+  getOfflineBudgetDetail,
+  saveOfflineCoveninCatalog,
+  searchOfflineCoveninCatalog,
+  enqueueOfflineOperation,
+} from '../modules/offline';
+
+function notifyOfflineChanged() {
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    window.dispatchEvent(new CustomEvent('costbase:offline-updated'));
+  }
+}
 
 const getAuthHeaders = () => {
   const token = typeof localStorage !== 'undefined'
@@ -16,11 +33,23 @@ const getAuthHeaders = () => {
 export const budgetService = {
   // BUDGETS
   getAll: async () => {
-    const response = await fetch(`${API_URL}/budgets/`, {
-      credentials: 'include'
-    });
-    if (!response.ok) throw new Error('Error al cargar presupuestos');
-    return response.json();
+    try {
+      const response = await fetch(`${API_URL}/budgets/`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Error al cargar presupuestos');
+      const data = await response.json();
+      if (isDeviceOfflineModeActive() && Array.isArray(data)) {
+        saveOfflineBudgetsList(data);
+      }
+      return data;
+    } catch (err) {
+      if (isDeviceOfflineModeActive() && isNetworkOfflineError(err)) {
+        const cached = await getOfflineBudgetsList();
+        if (cached) return cached;
+      }
+      throw err;
+    }
   },
 
   generateAPUReport: async (id) => {
@@ -32,17 +61,29 @@ export const budgetService = {
   },
 
   searchComponents: async (type, query, databaseId = 'master', limit = 50, signal = null) => {
-    // type is 'materials', 'equipments', or 'labors'
-    // databaseId is the ID of the selected database (e.g., 'master', 'personalizada', 'junio')
-    const response = await fetch(
-      `${API_URL}/cost360/${type}?search=${encodeURIComponent(query)}&database_id=${databaseId}&limit=${limit}`,
-      {
-        credentials: 'include',
-        signal,
+    // type is 'materials', 'equipments', or 'labors' (or 'partidas')
+    try {
+      const response = await fetch(
+        `${API_URL}/cost360/${type}?search=${encodeURIComponent(query)}&database_id=${databaseId}&limit=${limit}`,
+        {
+          credentials: 'include',
+          signal,
+        }
+      );
+      if (!response.ok) throw new Error(`Error al buscar ${type}`);
+      const data = await response.json();
+      if (isDeviceOfflineModeActive() && type === 'partidas') {
+        const items = Array.isArray(data) ? data : data?.items || [];
+        if (items.length > 0) saveOfflineCoveninCatalog(items);
       }
-    );
-    if (!response.ok) throw new Error(`Error al buscar ${type}`);
-    return response.json();
+      return data;
+    } catch (err) {
+      if (isDeviceOfflineModeActive() && isNetworkOfflineError(err) && type === 'partidas') {
+        const localMatches = await searchOfflineCoveninCatalog(query, limit);
+        return { items: localMatches, total: localMatches.length, offline: true };
+      }
+      throw err;
+    }
   },
 
   addComponent: async (budgetId, itemId, type, data) => {
@@ -79,11 +120,23 @@ export const budgetService = {
   },
 
   getById: async (id) => {
-    const response = await fetch(`${API_URL}/budgets/${id}`, {
-      credentials: 'include'
-    });
-    if (!response.ok) throw new Error('Error al cargar el presupuesto');
-    return response.json();
+    try {
+      const response = await fetch(`${API_URL}/budgets/${id}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Error al cargar el presupuesto');
+      const data = await response.json();
+      if (isDeviceOfflineModeActive() && data) {
+        saveOfflineBudgetDetail(data);
+      }
+      return data;
+    } catch (err) {
+      if (isDeviceOfflineModeActive() && isNetworkOfflineError(err)) {
+        const cached = await getOfflineBudgetDetail(id);
+        if (cached) return cached;
+      }
+      throw err;
+    }
   },
 
   create: async (data) => {
@@ -104,14 +157,35 @@ export const budgetService = {
   },
 
   updateItem: async (budgetId, itemId, data) => {
-    const response = await fetch(`${API_URL}/budgets/${budgetId}/items/${itemId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(data)
-    });
-    if (!response.ok) throw new Error('Error al actualizar item');
-    return response.json();
+    try {
+      const response = await fetch(`${API_URL}/budgets/${budgetId}/items/${itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error('Error al actualizar item');
+      return response.json();
+    } catch (err) {
+      if (isDeviceOfflineModeActive() && isNetworkOfflineError(err)) {
+        await enqueueOfflineOperation({
+          type: 'UPDATE_BUDGET_ITEM',
+          budgetId,
+          itemId,
+          payload: data,
+        });
+        const cached = await getOfflineBudgetDetail(budgetId);
+        if (cached && Array.isArray(cached.items)) {
+          const updatedItems = cached.items.map((it) =>
+            String(it.id) === String(itemId) ? { ...it, ...data } : it
+          );
+          await saveOfflineBudgetDetail({ ...cached, items: updatedItems });
+        }
+        notifyOfflineChanged();
+        return { id: itemId, ...data, _offlineQueued: true };
+      }
+      throw err;
+    }
   },
 
   deleteItem: async (budgetId, itemId) => {
@@ -304,19 +378,40 @@ export const budgetService = {
   },
 
   enrichDescription: async (payload) => {
-    const response = await fetch(`${API_URL}/budgets/import/enrich-description`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(payload)
-    });
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const error = new Error(errorData.detail || 'No se pudo analizar la descripción de la partida');
-      error.status = response.status;
-      throw error;
+    try {
+      const response = await fetch(`${API_URL}/budgets/import/enrich-description`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const error = new Error(errorData.detail || 'No se pudo analizar la descripción de la partida');
+        error.status = response.status;
+        throw error;
+      }
+      return response.json();
+    } catch (err) {
+      if (isDeviceOfflineModeActive() && isNetworkOfflineError(err)) {
+        const localMatches = await searchOfflineCoveninCatalog(payload?.description || '', 8);
+        return {
+          status: localMatches.length > 0 ? 'complete' : 'incomplete',
+          covenin_matches: localMatches.map((m) => ({
+            code: m.code,
+            description: m.description,
+            unit: m.unit,
+            chapter: m.chapter || 'CATÁLOGO LOCAL OFFLINE',
+          })),
+          questions: [],
+          enriched_description: String(payload?.description || '').toUpperCase(),
+          recommended_unit: localMatches[0]?.unit || payload?.current_unit || 'UND',
+          recommended_code: localMatches[0]?.code || '',
+          offline: true,
+        };
+      }
+      throw err;
     }
-    return response.json();
   },
 
   exportExcel: async (budgetId, payload = null) => {
@@ -404,17 +499,29 @@ export const budgetService = {
   },
 
   saveComputosDraft: async (payload) => {
-    const response = await fetch(`${API_URL}/budgets/computos/drafts`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      credentials: 'include',
-      body: JSON.stringify(payload)
-    });
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || 'Error al guardar borrador de cómputos en la nube');
+    try {
+      const response = await fetch(`${API_URL}/budgets/computos/drafts`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Error al guardar borrador de cómputos en la nube');
+      }
+      return response.json();
+    } catch (err) {
+      if (isDeviceOfflineModeActive() && isNetworkOfflineError(err)) {
+        await enqueueOfflineOperation({
+          type: 'SAVE_COMPUTOS_DRAFT',
+          payload,
+        });
+        notifyOfflineChanged();
+        return { ...payload, _offlineQueued: true };
+      }
+      throw err;
     }
-    return response.json();
   },
 
   deleteComputosDraft: async (draftId) => {

@@ -15,6 +15,7 @@ import BudgetImportChoiceModal from '../modals/BudgetImportChoiceModal';
 import { Crown, Receipt, HelpCircle, ClipboardList } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import HelpDrawer from '../help/HelpDrawer';
+import { OfflineStatusBanner } from '../../modules/offline';
 
 const NAV_ITEMS = [
   { name: 'Presupuestos', href: '/budgets',           Icon: FileText },
@@ -305,6 +306,7 @@ export default function AppLayout() {
 
         <div className="flex-1 min-w-0" />
         <div id="header-actions-portal" className="flex items-center" />
+        {isAuthenticated && <OfflineStatusBanner user={user} />}
 
         {/* Right controls */}
         {isAuthenticated ? (

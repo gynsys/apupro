@@ -1,5 +1,11 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { loginArkoAdmin, loginLandingSite, loginGoogleArkoAdmin, API_URL } from '../services/api';
+import {
+  getPersistedSuperAdminUser,
+  isNetworkOfflineError,
+  syncServiceWorkerForUser,
+  disableAndPurgeOfflineMode,
+} from '../modules/offline';
 
 export const AuthContext = createContext(null);
 
@@ -9,9 +15,10 @@ let inflightMePromise = null;
 function getCachedUser() {
   try {
     const raw = sessionStorage.getItem(USER_SESSION_CACHE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (raw) return JSON.parse(raw);
+    return getPersistedSuperAdminUser();
   } catch {
-    return null;
+    return getPersistedSuperAdminUser();
   }
 }
 
@@ -29,7 +36,7 @@ function setCachedUser(userData) {
 
 /**
  * Obtiene los datos reales del usuario autenticado desde /arko/me deduplicando llamadas concurrentes.
- * Retorna null si no está autenticado o hay error.
+ * Retorna null si no está autenticado; si no hay red y existe sesión offline de Superadmin, la preserva.
  */
 export async function fetchCurrentUserShared(forceRefresh = false) {
   if (!forceRefresh && inflightMePromise) {
@@ -48,7 +55,13 @@ export async function fetchCurrentUserShared(forceRefresh = false) {
       });
       if (!response.ok) return null;
       return await response.json();
-    } catch {
+    } catch (err) {
+      if (isNetworkOfflineError(err)) {
+        const offlineSuperAdmin = getPersistedSuperAdminUser();
+        if (offlineSuperAdmin) {
+          return offlineSuperAdmin;
+        }
+      }
       return null;
     } finally {
       inflightMePromise = null;
@@ -70,16 +83,33 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
         setUser(userData);
         setCachedUser(userData);
+        syncServiceWorkerForUser(userData);
+      } else {
+        const offlineSuperAdmin =
+          typeof navigator !== 'undefined' && navigator.onLine === false
+            ? getPersistedSuperAdminUser()
+            : null;
+        if (offlineSuperAdmin) {
+          setIsAuthenticated(true);
+          setUser(offlineSuperAdmin);
+        } else {
+          setIsAuthenticated(false);
+          setUser(null);
+          setCachedUser(null);
+          disableAndPurgeOfflineMode();
+        }
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      const offlineSuperAdmin = isNetworkOfflineError(error) ? getPersistedSuperAdminUser() : null;
+      if (offlineSuperAdmin) {
+        setIsAuthenticated(true);
+        setUser(offlineSuperAdmin);
       } else {
         setIsAuthenticated(false);
         setUser(null);
         setCachedUser(null);
       }
-    } catch (error) {
-      console.error('Auth check failed:', error);
-      setIsAuthenticated(false);
-      setUser(null);
-      setCachedUser(null);
     } finally {
       setLoading(false);
     }
@@ -107,6 +137,7 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
         setUser(finalUser);
         setCachedUser(finalUser);
+        syncServiceWorkerForUser(finalUser);
         return { success: true };
       }
       return { success: false, error: 'Login failed' };
@@ -127,6 +158,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       setUser(null);
       setCachedUser(null);
+      disableAndPurgeOfflineMode();
       try {
         sessionStorage.clear();
       } catch (e) {
@@ -144,6 +176,7 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
         setUser(finalUser);
         setCachedUser(finalUser);
+        syncServiceWorkerForUser(finalUser);
         return { success: true };
       }
       return { success: false, error: 'Login failed' };

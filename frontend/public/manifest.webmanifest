@@ -1,0 +1,25 @@
+{
+  "name": "CostBase - Modo Obra",
+  "short_name": "CostBase",
+  "description": "Plataforma de Presupuestos, Cómputos Métricos y Análisis de Precios Unitarios (APU)",
+  "start_url": "/budgets",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f0f4ff",
+  "theme_color": "#1d4ed8",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/logo-cb-new.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo-cb-new.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
