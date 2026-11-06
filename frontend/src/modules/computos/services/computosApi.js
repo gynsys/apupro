@@ -28,6 +28,10 @@ export function resolveComputo(payload) {
   return budgetService.resolveComputo(payload);
 }
 
+export function enrichComputoDescription(payload) {
+  return budgetService.enrichDescription(payload);
+}
+
 export function commitComputoImport(payload) {
   return budgetService.commitImport(payload);
 }

@@ -9,7 +9,6 @@ import {
   Link2,
   Plus,
   Search,
-  Sparkles,
   Split,
   Trash2,
   Unlink2,
@@ -21,7 +20,7 @@ import { isItemEmpty } from '../domain/rows.js';
 import { isSteelRow, REBAR_DIAMETERS, getRebarSpec } from '../domain/steel.js';
 import { GEOMETRY_CONFIGS, GEOMETRY_TYPES } from '../domain/geometry.js';
 import { cleanFormulaDisplay } from '../domain/formulas.js';
-import { auditDescription } from '../../../utils/descriptionAuditor';
+import DescriptionEnricher from './DescriptionEnricher.jsx';
 export default function ComputosCards({
   descriptionFilter,
   expandedPartials,
@@ -30,6 +29,7 @@ export default function ComputosCards({
   handleClearPartials,
   handleDuplicateRow,
   handleEnrichItem,
+  handleApplyCoveninCandidate,
   handleInsertRowBelow,
   handleOpenCoveninModal,
   handleOpenLinkModal,
@@ -263,17 +263,12 @@ export default function ComputosCards({
                                 </button>
                               )}
                               {!it.cod_par && !isBlankTrailing && it.description && it.description.trim() && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const audit = auditDescription(it.description, it.cod_par, it.unit);
-                                    handleEnrichItem(it.id, audit.suggestion);
-                                  }}
-                                  className="text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
-                                >
-                                  <Sparkles className="w-3 h-3 text-amber-600" />
-                                  <span>Enriquecer Especificaciones</span>
-                                </button>
+                                <DescriptionEnricher
+                                  item={it}
+                                  showLabel
+                                  onApplyDescription={handleEnrichItem}
+                                  onApplyCovenin={handleApplyCoveninCandidate}
+                                />
                               )}
                             </div>
                           </div>

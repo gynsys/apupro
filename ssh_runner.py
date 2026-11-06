@@ -13,9 +13,11 @@ def run_ssh_command(cmd: str) -> str:
     ]
     try:
         result = subprocess.run(ssh_cmd, capture_output=True, text=True, encoding='utf-8', errors='replace', check=False)
-        print(result.stdout)
+        sys.stdout.buffer.write((result.stdout or "").encode('utf-8', errors='replace'))
+        sys.stdout.buffer.flush()
         if result.stderr:
-            print("STDERR:", result.stderr)
+            sys.stderr.buffer.write((f"STDERR: {result.stderr}\n").encode('utf-8', errors='replace'))
+            sys.stderr.buffer.flush()
         return ""
     except Exception as e:
         print(f"Error executing SSH command: {e}")

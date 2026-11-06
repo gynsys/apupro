@@ -31,6 +31,7 @@ from app.services.ai_apu_service import generate_apu_with_ai
 from app.services.ai_apu_service_v2 import generate_apu_v2
 from app.services.ai_apu_service_v3 import generate_apu_v3
 from app.services.budget_import import build_preview
+from app.services.budget_import.description_enricher import enrich_description
 from app.services.budget_import.errors import BudgetImportError, OCRError
 from app.services.budget_import.matching import find_candidates, refine_with_llm
 from app.services.budget_postprocessor import is_labor_only_activity, recalibrate_budget_performances
@@ -144,6 +145,22 @@ class ResolveComputoRequest(BaseModel):
     sc_index: int = Field(default=1, ge=1, le=9999)
     auto_generate_sc: bool = True
     quantity: Optional[float] = Field(default=None, description="Cantidad estimada para cálculo de días de obra y lazo cerrado")
+
+
+class EnrichDescriptionRequest(BaseModel):
+    description: str = Field(min_length=3, max_length=1200)
+    unit: str = Field(default="", max_length=20)
+
+
+class EnrichDescriptionResponse(BaseModel):
+    suggested_description: str = ""
+    source: str = "none"
+    base_candidate: Optional[Candidate] = None
+    candidates: List[Candidate] = []
+    confidence: str = "media"
+    reasoning: str = ""
+    ai_used: bool = False
+    warnings: List[str] = []
 
 
 class ResolveComputoResponse(BaseModel):
@@ -473,6 +490,30 @@ def generate_import_apu(
         "labors": result.get("labors") or [],
         "advertencias": result.get("advertencias") or [],
     }
+
+
+@router.post("/import/enrich-description", response_model=EnrichDescriptionResponse)
+def enrich_computo_description(
+    payload: EnrichDescriptionRequest,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """Sugiere la descripción final de una partida: mejor coincidencia COVENIN + redacción con IA."""
+    use_ai = True
+    try:
+        check_ai_access(current_user)
+    except HTTPException as access_exc:
+        if access_exc.status_code != 403:
+            raise
+        use_ai = False
+
+    try:
+        return enrich_description(db, payload.description, payload.unit, use_ai=use_ai)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.error("Error enriqueciendo descripción de cómputos: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="No se pudo analizar la descripción de la partida.")
 
 
 @router.post("/import/resolve-computo", response_model=ResolveComputoResponse)

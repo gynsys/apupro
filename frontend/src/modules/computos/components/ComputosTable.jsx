@@ -28,6 +28,7 @@ export default function ComputosTable({
   handleClearPartials,
   handleDuplicateRow,
   handleEnrichItem,
+  handleApplyCoveninCandidate,
   handleInsertRowBelow,
   handleOpenCoveninModal,
   handleOpenLinkModal,
@@ -151,6 +152,7 @@ export default function ComputosTable({
                             handleClearPartials={handleClearPartials}
                             handleDuplicateRow={handleDuplicateRow}
                             handleEnrichItem={handleEnrichItem}
+                            handleApplyCoveninCandidate={handleApplyCoveninCandidate}
                             handleInsertRowBelow={handleInsertRowBelow}
                             handleOpenCoveninModal={handleOpenCoveninModal}
                             handleOpenLinkModal={handleOpenLinkModal}

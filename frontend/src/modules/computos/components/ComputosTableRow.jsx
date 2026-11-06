@@ -1,6 +1,5 @@
 import React, { useRef, useLayoutEffect } from 'react';
 import {
-  AlertTriangle,
   Calculator,
   CheckCircle2,
   ChevronDown,
@@ -12,7 +11,6 @@ import {
   Link2,
   Plus,
   Search,
-  Sparkles,
   Split,
   Trash2,
   Unlink2,
@@ -23,6 +21,7 @@ import { isSteelRow, REBAR_DIAMETERS, getRebarSpec } from '../domain/steel.js';
 import { GEOMETRY_CONFIGS, GEOMETRY_TYPES } from '../domain/geometry.js';
 import { cleanFormulaDisplay } from '../domain/formulas.js';
 import { auditDescription } from '../../../utils/descriptionAuditor';
+import DescriptionEnricher from './DescriptionEnricher.jsx';
 
 function ComputosTableRow({
   expandedPartials,
@@ -30,6 +29,7 @@ function ComputosTableRow({
   handleClearPartials,
   handleDuplicateRow,
   handleEnrichItem,
+  handleApplyCoveninCandidate,
   handleInsertRowBelow,
   handleOpenCoveninModal,
   handleOpenLinkModal,
@@ -164,6 +164,13 @@ function ComputosTableRow({
                                         <span>🔗 Vincular</span>
                                       </button>
                                     )}
+                                    {!isBlankTrailing && !it.cod_par && (
+                                      <DescriptionEnricher
+                                        item={it}
+                                        onApplyDescription={handleEnrichItem}
+                                        onApplyCovenin={handleApplyCoveninCandidate}
+                                      />
+                                    )}
                                     {isSteel && (
                                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-indigo-100 text-indigo-900 border border-indigo-300">
                                         ⛓️ Acero
@@ -209,6 +216,13 @@ function ComputosTableRow({
                                             ))}
                                           </select>
                                         </div>
+                                      )}
+                                      {!isBlankTrailing && !it.cod_par && (
+                                        <DescriptionEnricher
+                                          item={it}
+                                          onApplyDescription={handleEnrichItem}
+                                          onApplyCovenin={handleApplyCoveninCandidate}
+                                        />
                                       )}
                                       {isSteel && (
                                         <>
@@ -262,44 +276,7 @@ function ComputosTableRow({
                                     );
                                   }
                                   if (audit.status === 'warning') {
-                                    const hasVariants = audit.materialVariants && audit.materialVariants.length > 0;
-                                    return (
-                                      <div className="flex flex-col gap-1 px-1.5 py-1 text-[9px] font-semibold text-amber-900 bg-amber-100/90 rounded border border-amber-300">
-                                        <div className="flex items-center justify-between gap-1">
-                                          <div className="flex items-center gap-1 truncate">
-                                            <AlertTriangle className="w-2.5 h-2.5 text-amber-600 shrink-0" />
-                                            <span className="truncate">
-                                              {hasVariants ? `Material ambiguo (${audit.materialDomain})` : `Falta detalle (${audit.missing.join(', ')})`}
-                                            </span>
-                                          </div>
-                                          <button
-                                            type="button"
-                                            onClick={() => handleEnrichItem(it.id, audit.suggestion)}
-                                            className="text-[9px] font-bold bg-amber-600 hover:bg-amber-700 text-white px-1.5 py-0.5 rounded shadow-xs flex items-center gap-0.5 transition-colors cursor-pointer shrink-0"
-                                            title="Completar con especificación técnica estándar"
-                                          >
-                                            <Sparkles className="w-2.5 h-2.5" />
-                                            <span>Enriquecer</span>
-                                          </button>
-                                        </div>
-                                        {hasVariants && (
-                                          <div className="flex flex-wrap items-center gap-1 pt-0.5 border-t border-amber-200/80">
-                                            <span className="text-[8px] text-amber-800 font-bold shrink-0">Opciones:</span>
-                                            {audit.materialVariants.slice(0, 4).map((v, vIdx) => (
-                                              <button
-                                                key={vIdx}
-                                                type="button"
-                                                onClick={() => handleEnrichItem(it.id, v.text)}
-                                                className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-white hover:bg-amber-200 text-amber-950 border border-amber-300 cursor-pointer transition-colors shadow-2xs"
-                                                title={v.text}
-                                              >
-                                                {v.name}
-                                              </button>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
+                                    return null;
                                   }
                                   return (
                                     <div className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold text-sky-800 bg-sky-100/80 rounded w-fit border border-sky-300">
@@ -575,19 +552,6 @@ function ComputosTableRow({
                                 >
                                   <Split className="w-3.5 h-3.5" />
                                 </button>
-                                {!it.cod_par && !isBlankTrailing && it.description && it.description.trim() && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const audit = auditDescription(it.description, it.cod_par, it.unit);
-                                      handleEnrichItem(it.id, audit.suggestion);
-                                    }}
-                                    className="p-1 text-amber-700 hover:text-amber-950 hover:bg-amber-100 rounded transition-colors cursor-pointer"
-                                    title="Enriquecer descripción técnica"
-                                  >
-                                    <Sparkles className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
                                 <button
                                   type="button"
                                   onClick={() => handleDuplicateRow(it)}

@@ -1772,6 +1772,33 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   };
 
   /**
+   * Aplica a una fila una partida COVENIN oficial sugerida por el asistente de descripción
+   * (candidata con formato { cod_par, cov_par, description, unit }).
+   */
+  const handleApplyCoveninCandidate = (itemId, candidate) => {
+    if (!itemId || !candidate || !candidate.description) return;
+    isDirtyRef.current = true;
+    const officialDesc = candidate.description.trim().toUpperCase();
+    const officialUnit = normalizeUnitStr(candidate.unit) || 'UND';
+    const officialCode = candidate.cov_par || candidate.cod_par || '';
+    const applyCandidate = (it) => {
+      if (it.id !== itemId) return it;
+      return {
+        ...it,
+        description: officialDesc,
+        unit: officialUnit,
+        cod_par: candidate.cod_par || '',
+        cov_par: officialCode,
+        coveninCode: officialCode,
+      };
+    };
+
+    setCapturedItems((prev) => normalizeRowsWithSingleTrailingBlank(prev.map(applyCandidate), activeChapter));
+    setPendingBudgetItems((prev) => prev.map(applyCandidate));
+    toast.success(`Partida actualizada según COVENIN: "${officialDesc.slice(0, 35)}..."`);
+  };
+
+  /**
    * Proceso de Confirmar y Generar Presupuesto con Validación Previa Anti-alucinación
    */
   const handleConfirmAndGenerateBudget = async () => {
@@ -2361,6 +2388,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
         handleClearPartials={handleClearPartials}
         handleDuplicateRow={handleDuplicateRow}
         handleEnrichItem={handleEnrichItem}
+        handleApplyCoveninCandidate={handleApplyCoveninCandidate}
         handleInsertRowBelow={handleInsertRowBelow}
         handleOpenCoveninModal={handleOpenCoveninModal}
         handleOpenLinkModal={handleOpenLinkModal}
