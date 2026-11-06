@@ -212,6 +212,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
 
   // Bandera para rastrear si el usuario ha realizado modificaciones locales no guardadas
   const isDirtyRef = useRef(false);
+  const hasUserEditedSessionRef = useRef(false);
+  const lastLocalSaveTimeRef = useRef(0);
+  const latestStateRef = useRef({});
   const isSyncingRef = useRef(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -351,58 +354,92 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
 
 
 
-  // Auto-guardado en segundo plano de borradores para no perder nada si se cierra inesperadamente
+  // Mantener referencia actualizada del estado actual sin recrear callbacks de sincronización
+  latestStateRef.current = {
+    capturedItems,
+    currentDraftId,
+    initialBudget,
+    budgetName,
+    projectName,
+    clientName,
+    currency,
+    activeChapter,
+  };
+
+  // Auto-guardado y sincronización silenciosa en segundo plano sin saltos en el frontend
   useEffect(() => {
-    // Si el usuario no ha realizado modificaciones locales en esta sesión, NO auto-guardar
-    // para no sobrescribir datos de otros dispositivos ni inventar timestamps falsos
     if (!isDirtyRef.current) return;
+    hasUserEditedSessionRef.current = true;
+
+    const sharedSavedAt = new Date().toISOString();
+    const sharedSavedMs = new Date(sharedSavedAt).getTime();
+
+    const buildDraftPayload = () => {
+      const nonBlank = capturedItems.filter((it) => !isItemEmpty(it));
+      if (nonBlank.length === 0 && !projectName && !clientName) return null;
+      const cleanName = (budgetName || '').trim() || 'Planilla de Cómputos';
+      return {
+        id: currentDraftId,
+        budgetId: initialBudget?.id || null,
+        savedAt: sharedSavedAt,
+        budgetName: cleanName,
+        projectName: (projectName || '').trim(),
+        clientName: (clientName || '').trim(),
+        currency,
+        activeChapter,
+        items: nonBlank,
+        itemCount: nonBlank.length,
+      };
+    };
 
     const timer = setTimeout(() => {
       try {
-        const nonBlank = capturedItems.filter((it) => !isItemEmpty(it));
-        if (nonBlank.length > 0 || projectName || clientName) {
-          const draftPayload = {
-            id: currentDraftId,
-            budgetId: initialBudget?.id || null,
-            savedAt: new Date().toISOString(),
-            budgetName: (budgetName || '').trim() || 'Planilla de Cómputos',
-            projectName: (projectName || '').trim(),
-            clientName: (clientName || '').trim(),
-            currency,
-            activeChapter,
-            items: nonBlank,
-          };
+        const draftPayload = buildDraftPayload();
+        if (draftPayload) {
+          lastLocalSaveTimeRef.current = sharedSavedMs;
           localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftPayload));
-        }
-      } catch (e) {
-        // noop
-      }
-    }, 500);
-
-    // Auto-sincronización multidispositivo en la nube (Móvil <-> PC)
-    const cloudTimer = setTimeout(() => {
-      try {
-        const nonBlank = capturedItems.filter((it) => !isItemEmpty(it));
-        if (nonBlank.length > 0 || projectName || clientName) {
-          const draftPayload = {
-            id: currentDraftId,
-            budgetId: initialBudget?.id || null,
-            savedAt: new Date().toISOString(),
-            budgetName: (budgetName || '').trim() || 'Planilla de Cómputos',
-            projectName: (projectName || '').trim(),
-            clientName: (clientName || '').trim(),
-            currency,
-            activeChapter,
-            items: nonBlank,
-          };
-          saveComputosDraft(draftPayload).catch((err) => {
-            console.warn('Auto-sync nube no crítico:', err);
-          });
+          const existingList = getSavedComputosList();
+          const updatedList = [
+            draftPayload,
+            ...existingList.filter(
+              (item) => item.id !== currentDraftId && item.budgetName !== draftPayload.budgetName
+            ),
+          ];
+          localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(updatedList));
+          setSavedList(updatedList);
         }
       } catch (_e) {
         // noop
       }
-    }, 1500);
+    }, 350);
+
+    // Auto-sincronización multidispositivo en segundo plano usando el mismo timestamp
+    const cloudTimer = setTimeout(() => {
+      try {
+        const draftPayload = buildDraftPayload();
+        if (draftPayload) {
+          lastLocalSaveTimeRef.current = sharedSavedMs;
+          localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftPayload));
+          saveComputosDraft(draftPayload)
+            .then((res) => {
+              isDirtyRef.current = false;
+              if (res && Array.isArray(res.drafts)) {
+                setSavedList(res.drafts);
+                try {
+                  localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(res.drafts));
+                } catch (_e) {
+                  // ignore
+                }
+              }
+            })
+            .catch((err) => {
+              console.warn('Auto-sync nube no crítico:', err);
+            });
+        }
+      } catch (_e) {
+        // noop
+      }
+    }, 1200);
 
     return () => {
       clearTimeout(timer);
@@ -485,6 +522,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
         (budgetName || '').trim() ||
         `Presupuesto de Cómputos - ${new Date().toLocaleDateString('es-VE')}`;
       const nowIso = new Date().toISOString();
+      lastLocalSaveTimeRef.current = new Date(nowIso).getTime();
 
       const draftPayload = {
         id: currentDraftId,
@@ -560,6 +598,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
       );
     } else {
       setCapturedItems([createBlankRow(savedItem.activeChapter || 'OBRAS PRELIMINARES')]);
+    }
+
+    if (savedItem.savedAt) {
+      lastLocalSaveTimeRef.current = new Date(savedItem.savedAt).getTime();
     }
 
     try {
@@ -650,13 +692,26 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   };
 
   /**
-   * Sincronización multidispositivo (Nube <-> Local) al abrir el modal principal
+   * Sincronización multidispositivo (Nube <-> Local) en segundo plano sin producir saltos en la tabla
    */
   const syncCloudAndLocalDrafts = useCallback(async (options = {}) => {
-    const { force = false } = options;
+    const { force = false, isBackground = false } = options;
     if (isSyncingRef.current) return;
     isSyncingRef.current = true;
-    setIsSyncing(true);
+    if (force && !isBackground) {
+      setIsSyncing(true);
+    }
+
+    const {
+      capturedItems: latestCapturedItems = [],
+      currentDraftId: latestDraftId,
+      initialBudget: latestInitialBudget,
+      budgetName: latestBudgetName,
+      projectName: latestProjectName,
+      clientName: latestClientName,
+      currency: latestCurrency,
+      activeChapter: latestActiveChapter,
+    } = latestStateRef.current;
 
     try {
       const localList = getSavedComputosList();
@@ -675,6 +730,35 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
         // ignore
       }
 
+      // Si hay ediciones locales pendientes y el usuario pulsó Actualizar manualmente, subir primero
+      if (force && isDirtyRef.current) {
+        const currentNonBlank = latestCapturedItems.filter((it) => !isItemEmpty(it));
+        if (currentNonBlank.length > 0) {
+          const nowIso = new Date().toISOString();
+          lastLocalSaveTimeRef.current = new Date(nowIso).getTime();
+          const payloadToPush = {
+            id: latestDraftId,
+            budgetId: latestInitialBudget?.id || null,
+            savedAt: nowIso,
+            budgetName: (latestBudgetName || '').trim() || 'Planilla de Cómputos',
+            projectName: (latestProjectName || '').trim(),
+            clientName: (latestClientName || '').trim(),
+            currency: latestCurrency,
+            activeChapter: latestActiveChapter,
+            items: currentNonBlank,
+            itemCount: currentNonBlank.length,
+          };
+          localDraft = payloadToPush;
+          try {
+            localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payloadToPush));
+          } catch (_e) {
+            // ignore
+          }
+          await saveComputosDraft(payloadToPush).catch(() => {});
+          isDirtyRef.current = false;
+        }
+      }
+
       const serverDrafts = await getComputosDrafts().catch(() => null);
       if (!Array.isArray(serverDrafts)) {
         if (force) {
@@ -688,7 +772,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
         if (d && d.id) draftMap.set(d.id, d);
       });
 
-      // Detectar borradores locales que no estén en la nube para subirlos (ej. guardados sin conexión)
+      // Detectar borradores locales que no estén en la nube para subirlos en segundo plano
       const unsyncedLocals = [];
       localList.forEach((d) => {
         if (d && d.id) {
@@ -712,36 +796,47 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
 
       // Buscar el borrador más relevante para el contexto actual:
       let matchingDraft = null;
-      if (initialBudget?.id) {
+      if (latestInitialBudget?.id) {
         matchingDraft = merged.find(
           (d) =>
-            d.budgetId === initialBudget.id ||
-            d.budgetName === `Cómputos - ${initialBudget.name}` ||
-            (d.projectName && (initialBudget.project_name || initialBudget.name) && d.projectName === (initialBudget.project_name || initialBudget.name))
+            d.budgetId === latestInitialBudget.id ||
+            d.budgetName === `Cómputos - ${latestInitialBudget.name}` ||
+            (d.projectName && (latestInitialBudget.project_name || latestInitialBudget.name) && d.projectName === (latestInitialBudget.project_name || latestInitialBudget.name))
         );
       }
-      if (!matchingDraft && currentDraftId) {
-        matchingDraft = merged.find((d) => d.id === currentDraftId);
+      if (!matchingDraft && latestDraftId) {
+        matchingDraft = merged.find((d) => d.id === latestDraftId);
       }
-      if (!matchingDraft && merged.length > 0) {
+      if (!matchingDraft && merged.length > 0 && !hasUserEditedSessionRef.current) {
         matchingDraft = merged[0];
       }
 
       if (matchingDraft) {
         const cloudTime = new Date(matchingDraft.savedAt || 0).getTime();
-        const localTime = new Date(localDraft?.savedAt || 0).getTime();
-        const currentNonBlank = capturedItems.filter((it) => !isItemEmpty(it));
+        const localTime = Math.max(
+          new Date(localDraft?.savedAt || 0).getTime(),
+          lastLocalSaveTimeRef.current
+        );
+        const currentNonBlank = latestCapturedItems.filter((it) => !isItemEmpty(it));
+        const itemsAreIdentical =
+          Array.isArray(matchingDraft.items) &&
+          JSON.stringify(matchingDraft.items) === JSON.stringify(currentNonBlank);
 
         if (force) {
-          executeLoadSavedComputo(matchingDraft, { notify: false });
+          if (!itemsAreIdentical && cloudTime > localTime) {
+            executeLoadSavedComputo(matchingDraft, { notify: false });
+          }
           isDirtyRef.current = false;
           toast.success(`Planilla sincronizada con "${matchingDraft.budgetName}"`);
-        } else if (!isDirtyRef.current) {
-          if (currentNonBlank.length === 0 || cloudTime > localTime + 1000) {
+        } else if (!isDirtyRef.current && !hasUserEditedSessionRef.current) {
+          if (
+            !itemsAreIdentical &&
+            (currentNonBlank.length === 0 || cloudTime > localTime + 2000)
+          ) {
             executeLoadSavedComputo(matchingDraft, { notify: false });
             isDirtyRef.current = false;
           }
-        } else if (localTime > cloudTime + 2000 && localDraft && localDraft.items?.length > 0 && isDirtyRef.current) {
+        } else if (localTime > cloudTime + 2000 && localDraft && localDraft.items?.length > 0) {
           saveComputosDraft(localDraft).catch(() => {});
         }
       }
@@ -761,12 +856,13 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
       }
     } finally {
       isSyncingRef.current = false;
-      setIsSyncing(false);
+      if (force && !isBackground) {
+        setIsSyncing(false);
+      }
     }
-  }, [capturedItems, currentDraftId, initialBudget]);
+  }, []);
 
-  // Sincronización periódica en segundo plano (cada 8 segundos)
-  // Permite que si el usuario añade partidas en PC, aparezcan en el móvil automáticamente
+  // Sincronización periódica silenciosa en segundo plano (cada 8 segundos)
   useEffect(() => {
     if (!isOpen) return;
 
@@ -781,6 +877,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
 
   useEffect(() => {
     if (!isOpen) return;
+    hasUserEditedSessionRef.current = false;
 
     syncCloudAndLocalDrafts({ isBackground: true });
 
@@ -863,6 +960,9 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
    */
   const executeCreateNewComputo = () => {
     const newId = `draft-${Date.now()}`;
+    hasUserEditedSessionRef.current = true;
+    isDirtyRef.current = false;
+    lastLocalSaveTimeRef.current = Date.now();
     setCurrentDraftId(newId);
     setCapturedItems([createBlankRow('OBRAS PRELIMINARES')]);
     setBudgetName(`Presupuesto de Cómputos - ${new Date().toLocaleDateString('es-VE')}`);
@@ -920,6 +1020,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     const name = (newChapName || '').trim().toUpperCase();
     if (!name) return;
 
+    isDirtyRef.current = true;
+    hasUserEditedSessionRef.current = true;
     setActiveChapter(name);
 
     setCapturedItems((prev) => {
@@ -968,6 +1070,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
       return;
     }
 
+    isDirtyRef.current = true;
+    hasUserEditedSessionRef.current = true;
     setCapturedItems((prev) =>
       prev.map((it) => (it.chapter === renameChapterTarget ? { ...it, chapter: clean } : it))
     );
@@ -985,6 +1089,8 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   const handleRemoveChapterHeader = (chapterName) => {
     if (!chapterName) return;
     const targetChap = chapterName.trim().toUpperCase();
+    isDirtyRef.current = true;
+    hasUserEditedSessionRef.current = true;
 
     setCapturedItems((prev) => {
       // Encontrar el primer elemento con este capítulo
@@ -1696,11 +1802,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     } catch {
       // noop
     }
+    hasUserEditedSessionRef.current = true;
+    isDirtyRef.current = false;
+    lastLocalSaveTimeRef.current = Date.now();
     setCapturedItems([createBlankRow('OBRAS PRELIMINARES')]);
-    setLastCapturedItemId(null);
-    setEditingItemId(null);
-    setEditForm(null);
-    setInputText('');
     setBudgetName(`Presupuesto de Cómputos - ${new Date().toLocaleDateString('es-VE')}`);
     setProjectName('');
     setClientName('');
@@ -1751,11 +1856,10 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     } catch {
       // noop
     }
+    hasUserEditedSessionRef.current = true;
+    isDirtyRef.current = false;
+    lastLocalSaveTimeRef.current = Date.now();
     setCapturedItems([createBlankRow('OBRAS PRELIMINARES')]);
-    setLastCapturedItemId(null);
-    setEditingItemId(null);
-    setEditForm(null);
-    setInputText('');
     setBudgetName(`Presupuesto de Cómputos - ${new Date().toLocaleDateString('es-VE')}`);
     setProjectName('');
     setClientName('');
@@ -1764,11 +1868,13 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   };
 
   /**
-   * Enriquecer la descripción de una partida con especificaciones técnicas estándar
+   * Enriquecer la descripción de una partida con especificaciones técnicas estándar en segundo plano
    */
-  const handleEnrichItem = (id, enrichedText) => {
+  const handleEnrichItem = (id, enrichedText, options = {}) => {
     handleUpdateItemField(id, 'description', (enrichedText || '').toUpperCase());
-    toast.success('Descripción enriquecida con especificaciones técnicas');
+    if (!options?.silent) {
+      toast.success('Descripción enriquecida con especificaciones técnicas');
+    }
   };
 
   /**
@@ -1778,6 +1884,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   const handleApplyCoveninCandidate = (itemId, candidate) => {
     if (!itemId || !candidate || !candidate.description) return;
     isDirtyRef.current = true;
+    hasUserEditedSessionRef.current = true;
     const officialDesc = candidate.description.trim().toUpperCase();
     const officialUnit = normalizeUnitStr(candidate.unit) || 'UND';
     const officialCode = candidate.cov_par || candidate.cod_par || '';
@@ -1799,7 +1906,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   };
 
   /**
-   * Proceso de Confirmar y Generar Presupuesto con Validación Previa Anti-alucinación
+   * Proceso de Confirmar y Generar Presupuesto directamente sin modales intermedios de salto
    */
   const handleConfirmAndGenerateBudget = async () => {
     const finalItems = capturedItems.filter((it) => !isItemEmpty(it) && it.description.trim());
@@ -1809,18 +1916,6 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
       } else {
         toast.error('Las partidas en la planilla deben tener una descripción válida.');
       }
-      return;
-    }
-
-    // Verificar si hay partidas S/C con descripciones incompletas o ambiguas
-    const itemsNeedingCalibration = finalItems.filter((it) => {
-      const audit = auditDescription(it.description, it.cod_par, it.unit);
-      return audit.status === 'warning';
-    });
-
-    if (itemsNeedingCalibration.length > 0) {
-      setPendingBudgetItems(finalItems);
-      setIsCalibrationOpen(true);
       return;
     }
 
@@ -2465,7 +2560,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
               <input
                 type="text"
                 value={budgetName}
-                onChange={(e) => setBudgetName(e.target.value)}
+                onChange={(e) => {
+                  isDirtyRef.current = true;
+                  hasUserEditedSessionRef.current = true;
+                  setBudgetName(e.target.value);
+                }}
                 disabled={isCommitting}
                 placeholder="Nombre del presupuesto..."
                 className="flex-1 min-w-0 bg-white border border-amber-300 rounded-xl px-3 py-1.5 text-xs sm:text-sm font-bold text-amber-950 focus:outline-none focus:border-amber-500"

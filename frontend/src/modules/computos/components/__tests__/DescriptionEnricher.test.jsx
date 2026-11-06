@@ -40,43 +40,45 @@ describe('DescriptionEnricher', () => {
     expect(screen.getByRole('button').disabled).toBe(true);
   });
 
-  it('muestra la sugerencia y solo modifica la partida al aplicar', async () => {
+  it('actualiza la descripción en segundo plano sin abrir cajas que salten la fila y permite deshacer', async () => {
     enrichComputoDescription.mockResolvedValue(aiResult);
     const onApplyDescription = vi.fn();
     render(<DescriptionEnricher item={item} onApplyDescription={onApplyDescription} onApplyCovenin={() => {}} />);
 
     fireEvent.click(screen.getByRole('button'));
-    await screen.findByText('EXCAVACION MANUAL EN TIERRA PARA ZANJAS');
+    await screen.findByText('COVENIN + IA');
     expect(enrichComputoDescription).toHaveBeenCalledWith({ description: 'excavacion de zanja', unit: 'M3' });
-    expect(onApplyDescription).not.toHaveBeenCalled();
+    expect(onApplyDescription).toHaveBeenCalledWith('it-1', 'EXCAVACION MANUAL EN TIERRA PARA ZANJAS', { silent: true });
 
-    fireEvent.click(screen.getByText('Aplicar'));
-    expect(onApplyDescription).toHaveBeenCalledWith('it-1', 'EXCAVACION MANUAL EN TIERRA PARA ZANJAS');
-    await waitFor(() => expect(screen.queryByText('Aplicar')).toBeNull());
+    fireEvent.click(screen.getByText('Deshacer'));
+    expect(onApplyDescription).toHaveBeenLastCalledWith('it-1', 'excavacion de zanja', { silent: true });
+    await waitFor(() => expect(screen.queryByText('COVENIN + IA')).toBeNull());
   });
 
-  it('permite usar otra partida oficial COVENIN y excluye la base de las alternativas', async () => {
+  it('permite usar una partida oficial COVENIN desde el menú flotante bajo demanda', async () => {
     enrichComputoDescription.mockResolvedValue(aiResult);
     const onApplyCovenin = vi.fn();
     render(<DescriptionEnricher item={item} onApplyDescription={() => {}} onApplyCovenin={onApplyCovenin} />);
 
     fireEvent.click(screen.getByRole('button'));
-    await screen.findByText('Otras coincidencias COVENIN');
-    expect(screen.getAllByText('Usar')).toHaveLength(1);
+    const toggleBtn = await screen.findByText('(2 COVENIN)');
+    fireEvent.click(toggleBtn);
+    await screen.findByText('Coincidencias COVENIN');
+    const useButtons = screen.getAllByText('Usar');
+    expect(useButtons).toHaveLength(2);
 
-    fireEvent.click(screen.getByText('Usar'));
+    fireEvent.click(useButtons[1]);
     expect(onApplyCovenin).toHaveBeenCalledWith('it-1', aiResult.candidates[1]);
   });
 
-  it('descartar cierra la sugerencia sin aplicar cambios', async () => {
+  it('permite cerrar el aviso compacto con el botón de cierre', async () => {
     enrichComputoDescription.mockResolvedValue(aiResult);
     const onApplyDescription = vi.fn();
     render(<DescriptionEnricher item={item} onApplyDescription={onApplyDescription} onApplyCovenin={() => {}} />);
 
     fireEvent.click(screen.getByRole('button'));
-    await screen.findByText('Descartar');
-    fireEvent.click(screen.getByText('Descartar'));
-    expect(screen.queryByText('EXCAVACION MANUAL EN TIERRA PARA ZANJAS')).toBeNull();
-    expect(onApplyDescription).not.toHaveBeenCalled();
+    await screen.findByTitle('Cerrar aviso');
+    fireEvent.click(screen.getByTitle('Cerrar aviso'));
+    expect(screen.queryByText('COVENIN + IA')).toBeNull();
   });
 });

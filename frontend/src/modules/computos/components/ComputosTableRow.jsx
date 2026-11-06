@@ -171,6 +171,26 @@ function ComputosTableRow({
                                         onApplyCovenin={handleApplyCoveninCandidate}
                                       />
                                     )}
+                                    {!isBlankTrailing && it.description && it.description.trim() && (() => {
+                                      const audit = auditDescription(it.description, it.cod_par, it.unit);
+                                      if (audit.status === 'covenin') {
+                                        return (
+                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800 bg-emerald-100/90 rounded w-fit border border-emerald-300">
+                                            <Database className="w-2.5 h-2.5 text-emerald-600" />
+                                            <span>COVENIN: {it.cod_par}</span>
+                                          </span>
+                                        );
+                                      }
+                                      if (audit.status === 'warning') {
+                                        return null;
+                                      }
+                                      return (
+                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold text-sky-800 bg-sky-100/80 rounded w-fit border border-sky-300">
+                                          <CheckCircle2 className="w-2.5 h-2.5 text-sky-600" />
+                                          <span>S/C Detallada</span>
+                                        </span>
+                                      );
+                                    })()}
                                     {isSteel && (
                                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-indigo-100 text-indigo-900 border border-indigo-300">
                                         ⛓️ Acero
@@ -224,6 +244,26 @@ function ComputosTableRow({
                                           onApplyCovenin={handleApplyCoveninCandidate}
                                         />
                                       )}
+                                      {!isBlankTrailing && it.description && it.description.trim() && (() => {
+                                        const audit = auditDescription(it.description, it.cod_par, it.unit);
+                                        if (audit.status === 'covenin') {
+                                          return (
+                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800 bg-emerald-100/90 rounded w-fit border border-emerald-300">
+                                              <Database className="w-2.5 h-2.5 text-emerald-600" />
+                                              <span>COVENIN: {it.cod_par}</span>
+                                            </span>
+                                          );
+                                        }
+                                        if (audit.status === 'warning') {
+                                          return null;
+                                        }
+                                        return (
+                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold text-sky-800 bg-sky-100/80 rounded w-fit border border-sky-300">
+                                            <CheckCircle2 className="w-2.5 h-2.5 text-sky-600" />
+                                            <span>S/C Detallada</span>
+                                          </span>
+                                        );
+                                      })()}
                                       {isSteel && (
                                         <>
                                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-indigo-100 text-indigo-900 border border-indigo-300">
@@ -265,26 +305,6 @@ function ComputosTableRow({
                                     </button>
                                   </div>
                                 )}
-                                {!isBlankTrailing && it.description && it.description.trim() && (() => {
-                                  const audit = auditDescription(it.description, it.cod_par, it.unit);
-                                  if (audit.status === 'covenin') {
-                                    return (
-                                      <div className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800 bg-emerald-100/90 rounded w-fit border border-emerald-300">
-                                        <Database className="w-2.5 h-2.5 text-emerald-600" />
-                                        <span>COVENIN: {it.cod_par}</span>
-                                      </div>
-                                    );
-                                  }
-                                  if (audit.status === 'warning') {
-                                    return null;
-                                  }
-                                  return (
-                                    <div className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold text-sky-800 bg-sky-100/80 rounded w-fit border border-sky-300">
-                                      <CheckCircle2 className="w-2.5 h-2.5 text-sky-600" />
-                                      <span>S/C Detallada</span>
-                                    </div>
-                                  );
-                                })()}
                               </div>
                             </td>
 
