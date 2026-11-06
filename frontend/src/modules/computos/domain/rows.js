@@ -104,6 +104,16 @@ function sanitizeItemDecimals(item) {
       partial: parseRound(p.partial) ?? 0,
       m3: p.m3 !== '' && p.m3 != null ? parseRound(p.m3) : p.m3,
     }));
+    const sumPartials = round2(
+      sanitized.partials.reduce((sum, p) => sum + (Number(p.partial) || 0), 0)
+    );
+    if (sanitized.linkedTo) {
+      sanitized.linkedTo = null;
+      sanitized.quantity = sumPartials;
+      sanitized.partial = 0;
+    } else if (sumPartials > 0 && sanitized.quantity !== sumPartials) {
+      sanitized.quantity = sumPartials;
+    }
   }
   return sanitized;
 }
