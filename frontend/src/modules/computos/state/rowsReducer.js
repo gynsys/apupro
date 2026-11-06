@@ -7,8 +7,8 @@
  * - los parciales recalculan la cantidad total.
  */
 import { createBlankRow, isItemEmpty, normalizeRowsWithSingleTrailingBlank } from '../domain/rows.js';
-import { computePartial, recomputeItemWithPartials, recomputeRow } from '../domain/formulas.js';
-import { applyReactiveLinks, computeLinkedQuantity } from '../domain/links.js';
+import { computePartial, recomputeItemWithPartials, recomputeRow, round2 } from '../domain/formulas.js';
+import { applyReactiveLinks, computeLinkedQuantity, getRowOwnQuantity } from '../domain/links.js';
 import { getRebarSpec } from '../domain/steel.js';
 
 function newId(prefix) {
@@ -109,14 +109,16 @@ export function rowsReducer(state, action) {
         first.partial = computePartial(first);
         return recomputeItemWithPartials({ ...row, partials: [first, second] });
       });
-      return { ...state, activeChapter, rows: updated };
+      const withLinks = applyReactiveLinks(updated);
+      return { ...state, activeChapter, rows: withLinks };
     }
 
     case 'CLEAR_PARTIALS': {
       const updated = rows.map((row) =>
-        row.id === payload.itemId ? { ...row, partials: null } : row
+        row.id === payload.itemId ? recomputeRow({ ...row, partials: null }, '_clearPartials', null) : row
       );
-      return { ...state, activeChapter, rows: updated };
+      const withLinks = applyReactiveLinks(updated);
+      return { ...state, activeChapter, rows: withLinks };
     }
 
     case 'ADD_PARTIAL': {
@@ -139,7 +141,8 @@ export function rowsReducer(state, action) {
         };
         return recomputeItemWithPartials({ ...row, partials: [...currentList, partial] });
       });
-      return { ...state, activeChapter, rows: updated };
+      const withLinks = applyReactiveLinks(updated);
+      return { ...state, activeChapter, rows: withLinks };
     }
 
     case 'UPDATE_PARTIAL_FIELD': {
@@ -193,6 +196,8 @@ export function rowsReducer(state, action) {
           unit: payload.newRowData?.unit || 'M2',
           quantity: calculatedQty,
           partial: calculatedQty,
+          _ownQuantity: 0,
+          _ownFormula: '',
           distance: payload.linkConfig?.distance || '',
           factor: payload.linkConfig?.factor || '',
           observations: `Medición vinculada a: ${source.description || 'Ítem origen'}`,
@@ -202,6 +207,9 @@ export function rowsReducer(state, action) {
             formulaType: payload.linkConfig?.formulaType || 'custom',
             factor: payload.linkConfig?.factor || 1,
             distance: payload.linkConfig?.distance || null,
+            mode: 'replace',
+            baseQuantity: 0,
+            baseFormula: '',
             label: payload.linkConfig?.label || `Vinculado a: ${source.description || 'Ítem origen'}`,
           },
         };
@@ -213,13 +221,23 @@ export function rowsReducer(state, action) {
         };
       }
 
-      // Vincular a partida existente
+      // Vincular a partida existente (por defecto suma la medición propia + la medición vinculada)
       const updated = rows.map((r) => {
         if (r.id !== payload.targetItemId) return r;
+        const baseQty =
+          typeof r._ownQuantity === 'number' && Number.isFinite(r._ownQuantity)
+            ? r._ownQuantity
+            : Number(r.quantity) || 0;
+        const ownFormula = r._ownFormula ?? r.formula ?? '';
+        const mode = payload.linkConfig?.mode || 'add';
+        const totalQty = mode === 'add' ? round2(baseQty + calculatedQty) : calculatedQty;
+
         return {
           ...r,
-          quantity: calculatedQty,
-          partial: calculatedQty,
+          _ownQuantity: baseQty,
+          _ownFormula: ownFormula,
+          quantity: totalQty,
+          partial: totalQty,
           distance: payload.linkConfig?.distance || r.distance || '',
           linkedTo: {
             sourceItemId: source.id,
@@ -227,19 +245,33 @@ export function rowsReducer(state, action) {
             formulaType: payload.linkConfig?.formulaType || 'custom',
             factor: payload.linkConfig?.factor || 1,
             distance: payload.linkConfig?.distance || null,
+            mode,
+            baseQuantity: baseQty,
+            baseFormula: ownFormula,
             label: payload.linkConfig?.label || `Vinculado a: ${source.description || 'Ítem origen'}`,
           },
         };
       });
-      return { ...state, activeChapter, rows: updated };
+      const withLinks = applyReactiveLinks(updated);
+      return { ...state, activeChapter, rows: withLinks };
     }
 
     case 'UNLINK_ROW': {
       const updated = rows.map((r) => {
         if (r.id !== payload.itemId) return r;
-        return { ...r, linkedTo: null };
+        const ownQty = getRowOwnQuantity(r);
+        const ownFormula = r._ownFormula ?? r.linkedTo?.baseFormula ?? '';
+        const restoredQty = r.linkedTo?.mode === 'add' ? ownQty : (ownQty > 0 ? ownQty : r.quantity);
+        return {
+          ...r,
+          quantity: restoredQty,
+          partial: restoredQty,
+          formula: ownFormula,
+          linkedTo: null,
+        };
       });
-      return { ...state, activeChapter, rows: updated };
+      const withLinks = applyReactiveLinks(updated);
+      return { ...state, activeChapter, rows: withLinks };
     }
 
     default:

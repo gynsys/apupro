@@ -158,6 +158,84 @@ describe('rowsReducer', () => {
     const finalBote = afterSeverState.rows.find((r) => r.id === boteRow.id);
     expect(finalBote.quantity).toBe(125);
   });
+
+  it('suma las mediciones al vincular dos partidas existentes (ej: Remoción de rejas 5 M2 + Remoción de ventana 50 M2 = 55 M2)', () => {
+    const rejasRow = {
+      ...createBlankRow('GENERAL'),
+      id: 'remocion-rejas',
+      description: 'REMOCION DE REJAS METALICAS',
+      length: '5',
+      width: '1',
+      quantity: 5,
+      partial: 5,
+      unit: 'M2',
+    };
+    const ventanaRow = {
+      ...createBlankRow('GENERAL'),
+      id: 'remocion-ventana',
+      description: 'REMOCION DE VENTANAS',
+      length: '10',
+      width: '5',
+      quantity: 50,
+      partial: 50,
+      unit: 'M2',
+    };
+    const state = stateWithRows([rejasRow, ventanaRow]);
+
+    // Vincular acumulando en Remoción de rejas (5 M2 propios + 50 M2 de ventana = 55 M2)
+    const linkedState = rowsReducer(state, {
+      type: 'LINK_ROWS',
+      payload: {
+        sourceItemId: 'remocion-ventana',
+        targetItemId: 'remocion-rejas',
+        isNewRow: false,
+        linkConfig: {
+          formulaType: 'custom',
+          factor: 1,
+          mode: 'add',
+          label: 'Sumado con: REMOCION DE VENTANAS',
+        },
+      },
+    });
+
+    const updatedRejas = linkedState.rows.find((r) => r.id === 'remocion-rejas');
+    expect(updatedRejas.quantity).toBe(55);
+
+    // Si cambia la medición de Remoción de ventana a 60 M2, Remoción de rejas pasa a 5 + 60 = 65 M2
+    const afterVentanaEdit = rowsReducer(linkedState, {
+      type: 'UPDATE_FIELD',
+      payload: {
+        itemId: 'remocion-ventana',
+        field: 'width',
+        value: '6',
+        activeChapter: 'GENERAL',
+      },
+    });
+    const rejasAfterVentana = afterVentanaEdit.rows.find((r) => r.id === 'remocion-rejas');
+    expect(rejasAfterVentana.quantity).toBe(65);
+
+    // Si cambia la dimensión propia de Remoción de rejas (largo 8 x ancho 1 = 8 M2), pasa a 8 + 60 = 68 M2
+    const afterRejasEdit = rowsReducer(afterVentanaEdit, {
+      type: 'UPDATE_FIELD',
+      payload: {
+        itemId: 'remocion-rejas',
+        field: 'length',
+        value: '8',
+        activeChapter: 'GENERAL',
+      },
+    });
+    const rejasAfterOwnEdit = afterRejasEdit.rows.find((r) => r.id === 'remocion-rejas');
+    expect(rejasAfterOwnEdit.quantity).toBe(68);
+
+    // Al desvincular, Remoción de rejas recupera su medición propia (8 M2)
+    const unlinkedState = rowsReducer(afterRejasEdit, {
+      type: 'UNLINK_ROW',
+      payload: { itemId: 'remocion-rejas' },
+    });
+    const unlinkedRejas = unlinkedState.rows.find((r) => r.id === 'remocion-rejas');
+    expect(unlinkedRejas.linkedTo).toBeNull();
+    expect(unlinkedRejas.quantity).toBe(8);
+  });
 });
 
 describe('selectores de filas', () => {

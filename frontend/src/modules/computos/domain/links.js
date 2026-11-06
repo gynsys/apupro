@@ -138,6 +138,20 @@ export function computeLinkedQuantity(sourceQuantity, linkConfig) {
 }
 
 /**
+ * Obtiene la medición propia (base sin el vínculo) de una fila.
+ */
+export function getRowOwnQuantity(row) {
+  if (!row) return 0;
+  if (typeof row._ownQuantity === 'number' && Number.isFinite(row._ownQuantity)) {
+    return row._ownQuantity;
+  }
+  if (typeof row.linkedTo?.baseQuantity === 'number' && Number.isFinite(row.linkedTo.baseQuantity)) {
+    return row.linkedTo.baseQuantity;
+  }
+  return 0;
+}
+
+/**
  * Recorre todas las filas de la planilla y actualiza de manera reactiva aquellas
  * que se encuentren vinculadas a otra fila de la misma planilla
  */
@@ -155,13 +169,35 @@ export function applyReactiveLinks(rows) {
     }
 
     const source = rowMap.get(row.linkedTo.sourceItemId);
+    const ownQty = getRowOwnQuantity(row);
+    const ownFormula = row._ownFormula ?? row.linkedTo?.baseFormula ?? '';
+
     if (!source) {
-      // Si la partida origen fue eliminada, conservamos la cantidad pero quitamos el link
-      return { ...row, linkedTo: null };
+      // Si la partida origen fue eliminada, restauramos su medición propia y quitamos el link
+      const restoredQty = ownQty > 0 ? ownQty : Number(row.quantity) || 0;
+      return {
+        ...row,
+        quantity: restoredQty,
+        partial: restoredQty,
+        formula: ownFormula || row.formula || '',
+        linkedTo: null,
+      };
     }
 
-    const calculatedQty = computeLinkedQuantity(source.quantity, row.linkedTo);
-    if (row.quantity === calculatedQty) {
+    const linkedQty = computeLinkedQuantity(source.quantity, row.linkedTo);
+    const mode = row.linkedTo.mode || (ownQty > 0 ? 'add' : 'replace');
+    const calculatedQty = mode === 'add' ? round2(ownQty + linkedQty) : linkedQty;
+    const unitLabel = String(row.unit || '').toLowerCase();
+
+    let nextFormula = row.formula || '';
+    if (mode === 'add' && ownQty > 0) {
+      const basePart = ownFormula ? `${ownFormula}` : `${ownQty}${unitLabel}`;
+      nextFormula = `${basePart} + [Vinculado: ${linkedQty}${unitLabel}] = ${calculatedQty}${unitLabel}`;
+    } else if (ownFormula) {
+      nextFormula = ownFormula;
+    }
+
+    if (row.quantity === calculatedQty && row.formula === nextFormula) {
       return row;
     }
 
@@ -169,6 +205,7 @@ export function applyReactiveLinks(rows) {
       ...row,
       quantity: calculatedQty,
       partial: calculatedQty,
+      formula: nextFormula,
     };
   });
 }

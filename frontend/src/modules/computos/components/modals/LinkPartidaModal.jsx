@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link2, X, Plus, CheckCircle, ArrowRight, Sparkles } from 'lucide-react';
-import { getRecommendedLinkTemplates, computeLinkedQuantity } from '../../domain/links.js';
+import { getRecommendedLinkTemplates, computeLinkedQuantity, getRowOwnQuantity } from '../../domain/links.js';
+import { round2 } from '../../domain/formulas.js';
 import { COMMON_UNITS } from '../../domain/units.js';
 
 export default function LinkPartidaModal({
@@ -39,6 +40,11 @@ export default function LinkPartidaModal({
   const [distance, setDistance] = useState(
     () => recommendedTemplates[0]?.defaultDistance || ''
   );
+  // Cuando se vincula con una partida existente:
+  // 'pull_to_current': trae el cómputo de la partida seleccionada hacia esta partida (ej: Rejas 5 + Ventana 50 = 55)
+  // 'push_to_selected': envía el cómputo de esta partida hacia la seleccionada (ej: Ventana 50 + Rejas 5 = 55)
+  const [linkDirection, setLinkDirection] = useState('pull_to_current');
+  const [linkMode, setLinkMode] = useState('add');
 
   const currentTemplate = useMemo(
     () => recommendedTemplates.find((t) => t.id === selectedTemplateId) || recommendedTemplates[0],
@@ -55,33 +61,75 @@ export default function LinkPartidaModal({
     }
   }, [currentTemplate]);
 
-  // Si elige partida existente, seleccionar la primera por defecto
+  // Si elige partida existente, seleccionar la primera por defecto y usar factor 1.0 para suma directa
   useEffect(() => {
-    if (!isNewRow && availableTargetItems.length > 0 && !targetItemId) {
-      setTargetItemId(availableTargetItems[0].id);
+    if (!isNewRow) {
+      if (availableTargetItems.length > 0 && !targetItemId) {
+        const firstTarget = availableTargetItems[0];
+        setTargetItemId(firstTarget.id);
+        setLinkDirection(Number(firstTarget.quantity || 0) > 0 ? 'pull_to_current' : 'push_to_selected');
+      }
+      if (selectedTemplateId !== 'custom') {
+        setSelectedTemplateId('custom');
+        setFactor(1.0);
+        setDistance('');
+      }
     }
-  }, [isNewRow, availableTargetItems, targetItemId]);
+  }, [isNewRow, availableTargetItems, targetItemId, selectedTemplateId]);
 
-  const previewQty = useMemo(() => {
-    return computeLinkedQuantity(sourceItem.quantity, {
+  const selectedTargetItem = useMemo(
+    () => availableTargetItems.find((it) => it.id === targetItemId) || null,
+    [availableTargetItems, targetItemId]
+  );
+
+  const effectiveSourceItem = useMemo(() => {
+    if (isNewRow) return sourceItem;
+    return linkDirection === 'pull_to_current' && selectedTargetItem ? selectedTargetItem : sourceItem;
+  }, [isNewRow, linkDirection, selectedTargetItem, sourceItem]);
+
+  const effectiveTargetItem = useMemo(() => {
+    if (isNewRow) return null;
+    return linkDirection === 'pull_to_current' ? sourceItem : selectedTargetItem;
+  }, [isNewRow, linkDirection, sourceItem, selectedTargetItem]);
+
+  const linkedContributionQty = useMemo(() => {
+    return computeLinkedQuantity(effectiveSourceItem?.quantity, {
       factor,
       distance: currentTemplate?.hasDistance ? distance : null,
     });
-  }, [sourceItem.quantity, factor, distance, currentTemplate]);
+  }, [effectiveSourceItem?.quantity, factor, distance, currentTemplate]);
+
+  const targetOwnQty = useMemo(() => {
+    if (isNewRow || !effectiveTargetItem) return 0;
+    const own = getRowOwnQuantity(effectiveTargetItem);
+    return own > 0 ? own : Number(effectiveTargetItem.quantity || 0);
+  }, [isNewRow, effectiveTargetItem]);
+
+  const previewQty = useMemo(() => {
+    if (isNewRow) return linkedContributionQty;
+    return linkMode === 'add'
+      ? round2(targetOwnQty + linkedContributionQty)
+      : linkedContributionQty;
+  }, [isNewRow, linkMode, targetOwnQty, linkedContributionQty]);
 
   const handleConfirm = () => {
+    const finalSource = effectiveSourceItem || sourceItem;
+    const finalTargetId = isNewRow ? null : (effectiveTargetItem?.id || targetItemId);
+    const effectiveMode = isNewRow ? 'replace' : linkMode;
+
     const linkConfig = {
       formulaType: selectedTemplateId,
       factor: Number(factor) || 1,
       distance: currentTemplate?.hasDistance && distance ? Number(distance) : null,
-      label: `🔗 Vinculado a: ${(sourceItem.description || 'Ítem origen').slice(0, 30)}... (×${factor}${
+      mode: effectiveMode,
+      label: `🔗 ${effectiveMode === 'add' ? 'Sumado con' : 'Vinculado a'}: ${(finalSource.description || 'Ítem origen').slice(0, 30)}... (×${factor}${
         currentTemplate?.hasDistance && distance ? ` × ${distance}km` : ''
       })`,
     };
 
     onConfirmLink({
-      sourceItemId: sourceItem.id,
-      targetItemId: isNewRow ? null : targetItemId,
+      sourceItemId: finalSource.id,
+      targetItemId: finalTargetId,
       linkConfig,
       isNewRow,
       newRowData: isNewRow
@@ -283,21 +331,103 @@ export default function LinkPartidaModal({
                 </div>
               </div>
             ) : (
-              <div className="bg-amber-50/50 border border-amber-200 rounded-xl p-3">
-                <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
-                  SELECCIONA LA PARTIDA DESTINO EXISTENTE
-                </label>
-                <select
-                  value={targetItemId}
-                  onChange={(e) => setTargetItemId(e.target.value)}
-                  className="w-full px-2.5 py-2 text-xs font-semibold bg-white border border-amber-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
-                >
-                  {availableTargetItems.map((item, idx) => (
-                    <option key={item.id} value={item.id}>
-                      #{idx + 1} - {item.description || 'Sin descripción'} ({item.quantity} {item.unit})
-                    </option>
-                  ))}
-                </select>
+              <div className="space-y-3 bg-amber-50/50 border border-amber-200 rounded-xl p-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
+                    SELECCIONA LA OTRA PARTIDA A VINCULAR
+                  </label>
+                  <select
+                    value={targetItemId}
+                    onChange={(e) => {
+                      const nextId = e.target.value;
+                      setTargetItemId(nextId);
+                      const found = availableTargetItems.find((it) => it.id === nextId);
+                      if (found) {
+                        setLinkDirection(Number(found.quantity || 0) > 0 ? 'pull_to_current' : 'push_to_selected');
+                      }
+                    }}
+                    className="w-full px-2.5 py-2 text-xs font-semibold bg-white border border-amber-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                  >
+                    {availableTargetItems.map((item, idx) => (
+                      <option key={item.id} value={item.id}>
+                        #{idx + 1} - {item.description || 'Sin descripción'} ({item.quantity} {item.unit})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Selección de modo: Sumar vs Reemplazar */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setLinkMode('add')}
+                    className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
+                      linkMode === 'add'
+                        ? 'bg-emerald-50 border-emerald-500 text-emerald-950 ring-1 ring-emerald-400 font-bold'
+                        : 'bg-white border-amber-200 text-slate-700 hover:bg-amber-50'
+                    }`}
+                  >
+                    <div className="text-[11px] font-bold">➕ Sumar mediciones (Acumular)</div>
+                    <div className="text-[10px] opacity-80">
+                      Suma el cómputo propio + el cómputo vinculado
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLinkMode('replace')}
+                    className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
+                      linkMode === 'replace'
+                        ? 'bg-amber-100 border-amber-500 text-amber-950 ring-1 ring-amber-400 font-bold'
+                        : 'bg-white border-amber-200 text-slate-700 hover:bg-amber-50'
+                    }`}
+                  >
+                    <div className="text-[11px] font-bold">🟰 Igualar / Reemplazar</div>
+                    <div className="text-[10px] opacity-80">
+                      Sustituye la medición por el valor vinculado
+                    </div>
+                  </button>
+                </div>
+
+                {/* Selección de dónde queda el total acumulado */}
+                <div>
+                  <label className="block text-[10px] font-bold text-amber-900 mb-1">
+                    ¿EN CUÁL PARTIDA SE ACUMULA EL RESULTADO?
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setLinkDirection('pull_to_current')}
+                      className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
+                        linkDirection === 'pull_to_current'
+                          ? 'bg-amber-100 border-amber-600 text-amber-950 ring-1 ring-amber-500 font-bold'
+                          : 'bg-white border-amber-200 text-slate-700 hover:bg-amber-50'
+                      }`}
+                    >
+                      <div className="text-[11px] font-bold line-clamp-1">
+                        📍 En esta partida ({(sourceItem.description || 'Actual').slice(0, 22)})
+                      </div>
+                      <div className="text-[10px] text-amber-800">
+                        Toma los {selectedTargetItem?.quantity || 0} {selectedTargetItem?.unit || ''} de la seleccionada
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLinkDirection('push_to_selected')}
+                      className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
+                        linkDirection === 'push_to_selected'
+                          ? 'bg-amber-100 border-amber-600 text-amber-950 ring-1 ring-amber-500 font-bold'
+                          : 'bg-white border-amber-200 text-slate-700 hover:bg-amber-50'
+                      }`}
+                    >
+                      <div className="text-[11px] font-bold line-clamp-1">
+                        🎯 En la seleccionada ({(selectedTargetItem?.description || 'Destino').slice(0, 22)})
+                      </div>
+                      <div className="text-[10px] text-amber-800">
+                        Envía los {sourceItem.quantity || 0} {sourceItem.unit || ''} hacia la seleccionada
+                      </div>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -309,8 +439,18 @@ export default function LinkPartidaModal({
                 Resultado Vinculado en Tiempo Real:
               </span>
               <span className="text-xs text-emerald-950 font-medium">
-                {sourceItem.quantity} {sourceItem.unit} × {factor}
-                {currentTemplate?.hasDistance && distance ? ` × ${distance} km` : ''}
+                {!isNewRow && linkMode === 'add' ? (
+                  <>
+                    {targetOwnQty} {effectiveTargetItem?.unit || sourceItem.unit} (propio) + (
+                    {effectiveSourceItem?.quantity || 0} {effectiveSourceItem?.unit || ''} × {factor}
+                    {currentTemplate?.hasDistance && distance ? ` × ${distance} km` : ''})
+                  </>
+                ) : (
+                  <>
+                    {effectiveSourceItem?.quantity || 0} {effectiveSourceItem?.unit || ''} × {factor}
+                    {currentTemplate?.hasDistance && distance ? ` × ${distance} km` : ''}
+                  </>
+                )}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -321,7 +461,7 @@ export default function LinkPartidaModal({
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}{' '}
-                  {isNewRow ? newUnit : availableTargetItems.find((it) => it.id === targetItemId)?.unit || newUnit}
+                  {isNewRow ? newUnit : effectiveTargetItem?.unit || newUnit}
                 </span>
               </div>
             </div>

@@ -232,6 +232,8 @@ function recomputeItemWithPartials(item) {
   return {
     ...item,
     quantity: roundedTotal,
+    _ownQuantity: roundedTotal,
+    _ownFormula: partialSummary,
     partial: 0,
     m3: roundedM3,
     formula: partialSummary,
@@ -296,6 +298,8 @@ function recomputeRow(row, field, value) {
   if (field === 'quantity') {
     const qVal = Math.max(0, parseFloat(String(value).replace(',', '.')) || 0);
     updated.quantity = qVal;
+    updated._ownQuantity = qVal;
+    updated._ownFormula = '';
     const divisor = t;
     updated.partial = divisor > 0 ? round2(qVal / divisor) : round2(qVal);
     if (updated.unit === 'M3' && (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3)) {
@@ -315,6 +319,8 @@ function recomputeRow(row, field, value) {
     updated.formula = t > 1
       ? `${t} × (${l}m × ${h} barras × ${f} kg/m) = ${total} kg`
       : `(${l}m × ${h} barras × ${f} kg/m) = ${total} kg`;
+    updated._ownQuantity = total;
+    updated._ownFormula = updated.formula;
     return updated;
   }
 
@@ -327,6 +333,8 @@ function recomputeRow(row, field, value) {
       updated.partial = parcial;
       updated.quantity = total;
       updated.formula = t > 1 ? `${t} × [${geomResult.formulaStr}]` : geomResult.formulaStr;
+      updated._ownQuantity = total;
+      updated._ownFormula = updated.formula;
       if (updated.unit === 'M3') {
         updated.m3 = total;
         updated._autoM3 = total;
@@ -374,6 +382,8 @@ function recomputeRow(row, field, value) {
     updated.formula = t > 1
       ? `${t} × (${innerStr}) = ${total} ${displayUnit}`
       : `(${innerStr}) = ${total} ${displayUnit}`;
+    updated._ownQuantity = total;
+    updated._ownFormula = updated.formula;
   } else if (m3Val !== null && !isNaN(m3Val) && m3Val > 0) {
     // Si no hay dimensiones pero hay volumen M3 directo (ej. transporte M3-KM o botes)
     // Parcial = volumen M3 * Factor * Distancia (para 1 vez)
@@ -386,10 +396,14 @@ function recomputeRow(row, field, value) {
     updated.quantity = total;
 
     updated.formula = `${t > 1 ? `${t} × ` : ''}${m3Val} m³${dist !== null && dist > 0 ? ` × ${dist}km` : ''}${f !== null && f !== 1 ? ` × ${f}` : ''} = ${total} ${updated.unit || 'm³'}`;
+    updated._ownQuantity = total;
+    updated._ownFormula = updated.formula;
   } else if (field === 'partial') {
     const pVal = Math.max(0, parseFloat(String(value).replace(',', '.')) || 0);
     updated.partial = pVal;
     updated.quantity = round2(pVal * t);
+    updated._ownQuantity = updated.quantity;
+    updated._ownFormula = '';
     if (updated.unit === 'M3' && (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3)) {
       updated.m3 = updated.quantity;
       updated._autoM3 = updated.quantity;
@@ -402,10 +416,17 @@ function recomputeRow(row, field, value) {
       const total = round2(parcial * t);
       updated.partial = parcial;
       updated.quantity = total;
+      updated._ownQuantity = total;
       if (updated.unit === 'M3' && (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3)) {
         updated.m3 = total;
         updated._autoM3 = total;
       }
+    } else {
+      updated.quantity = 0;
+      updated.partial = 0;
+      updated.formula = '';
+      updated._ownQuantity = 0;
+      updated._ownFormula = '';
     }
   }
 
