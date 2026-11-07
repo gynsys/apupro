@@ -537,23 +537,23 @@ export default function BudgetReviewPage() {
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-5 space-y-5">
       {/* Encabezado Principal + Selector de Base de Datos + Acciones de Nueva Auditoría */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-6 space-y-4">
-        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-          <div>
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-5 space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
+          <div className="shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="p-2 rounded-xl bg-blue-600 text-white shadow-xs">
                 <ShieldAlert size={22} />
               </div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-                Revisor y Auditor de Presupuestos
+              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight whitespace-nowrap">
+                Revisor de Presupuestos
               </h1>
             </div>
           </div>
 
-          {/* Controles de Base de Datos y Nueva Auditoría */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          {/* Controles de Base de Datos y Nueva Auditoría en una sola fila */}
+          <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 sm:gap-2.5">
             {/* Selector de Base de Datos de Contraste */}
-            <div className="flex items-center gap-1.5 bg-slate-100 border border-slate-300 rounded-xl px-3 py-1.5">
+            <div className="flex items-center gap-1.5 bg-slate-100 border border-slate-300 rounded-xl px-2.5 sm:px-3 py-1.5 shrink-0">
               <Database size={15} className="text-blue-600 shrink-0" />
               <div className="flex flex-col">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 leading-none">
@@ -578,13 +578,13 @@ export default function BudgetReviewPage() {
               </div>
             </div>
 
-            {/* Selector de presupuesto existente */}
-            <div className="flex items-center gap-2">
+            {/* Selector de presupuesto existente + Auditar */}
+            <div className="flex items-center gap-1.5 shrink-0">
               <select
                 value={selectedBudgetId}
                 onChange={(e) => setSelectedBudgetId(e.target.value)}
                 disabled={runningAudit}
-                className="px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 bg-slate-50 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[195px]"
+                className="px-2.5 sm:px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 bg-slate-50 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 w-40 sm:w-48 truncate"
               >
                 <option value="">Presupuesto en sistema...</option>
                 {budgets.map((b) => (
@@ -597,14 +597,14 @@ export default function BudgetReviewPage() {
                 type="button"
                 onClick={handleAuditExistingBudget}
                 disabled={runningAudit || !selectedBudgetId}
-                className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs sm:text-sm font-bold shadow-xs transition flex items-center gap-1.5 shrink-0 cursor-pointer"
+                className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs sm:text-sm font-bold shadow-xs transition flex items-center gap-1.5 shrink-0 cursor-pointer"
               >
-                {runningAudit ? <Loader2 size={16} className="animate-spin" /> : <Activity size={16} />}
+                {runningAudit ? <Loader2 size={15} className="animate-spin" /> : <Activity size={15} />}
                 <span>Auditar</span>
               </button>
             </div>
 
-            {/* Cargar Archivo (abre modal Importar Presupuesto desde Archivo) */}
+            {/* Cargar Archivo (en la misma fila, alineado con los controles) */}
             <input
               ref={fileInputRef}
               type="file"
@@ -616,7 +616,7 @@ export default function BudgetReviewPage() {
               type="button"
               onClick={() => setShowImportChoiceModal(true)}
               disabled={runningAudit}
-              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs sm:text-sm font-bold shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs sm:text-sm font-bold shadow-xs transition flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
             >
               <UploadCloud size={16} />
               <span>Cargar</span>
