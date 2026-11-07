@@ -18,6 +18,7 @@ from app.api.v1.endpoints.dedup import router_dedup
 from app.api.v1.endpoints import users as users_module
 from app.api.v1.endpoints import allies
 from app.modules.control_obra.router import router as control_obra_router
+from app.modules.budget_review.router import router as budget_review_router
 
 api_router = APIRouter()
 
@@ -35,6 +36,7 @@ api_router.include_router(costbase_databases.router, prefix="/cost360/databases"
 api_router.include_router(search_v6.router, prefix="/cost360/v6", tags=["cost360_v6"])
 api_router.include_router(budgets.router, prefix="/budgets", tags=["budgets"])
 api_router.include_router(control_obra_router, tags=["control-obra"])
+api_router.include_router(budget_review_router, tags=["budget-review"])
 api_router.include_router(uploads.router, prefix="/uploads", tags=["uploads"])
 api_router.include_router(market.router, prefix="/market", tags=["market"])
 api_router.include_router(llm.router, prefix="/llm", tags=["llm"])
@@ -44,4 +46,3 @@ api_router.include_router(payments.router, prefix="/payments", tags=["payments"]
 api_router.include_router(router_dedup, prefix="/dedup", tags=["dedup"])
 api_router.include_router(users_module.router, prefix="/users", tags=["users"])
 api_router.include_router(allies.router, prefix="/allies", tags=["allies"])
-

@@ -18,6 +18,12 @@ from app.modules.control_obra.models import (
     ControlObraPlan,
     ControlObraProgressEntry,
 )
+from app.modules.budget_review.models import (
+    ReviewAPUComponent,
+    ReviewFinding,
+    ReviewItem,
+    ReviewSnapshot,
+)
 
 __all__ = [
     "LLMProvider",
@@ -44,5 +50,9 @@ __all__ = [
     "ControlObraPeriod",
     "ControlObraPlan",
     "ControlObraProgressEntry",
+    "ReviewSnapshot",
+    "ReviewItem",
+    "ReviewAPUComponent",
+    "ReviewFinding",
 ]
 

@@ -2,7 +2,7 @@ import React, { useState, useContext, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Layout, LogOut, Menu, X, Home, Settings,
-  FileText, Database, Server, Cpu, ChevronRight, Copy, Calculator
+  FileText, Database, Server, Cpu, ChevronRight, Copy, Calculator, ShieldAlert
 } from 'lucide-react';
 import { FaTools, FaFileUpload } from 'react-icons/fa';
 import { AuthContext } from '../../context/AuthContext';
@@ -19,6 +19,7 @@ import { OfflineStatusBanner } from '../../modules/offline';
 
 const NAV_ITEMS = [
   { name: 'Presupuestos', href: '/budgets',           Icon: FileText },
+  { name: 'Auditor de Presupuestos', href: '/budget-review', Icon: ShieldAlert },
   { name: 'Visor Bases de Datos', href: '/costbase',   altHrefs: ['/cost360'], Icon: Database, exact: true  },
   { name: 'Gestion Bases de Datos', href: '/costbase/databases', altHrefs: ['/cost360/databases'], Icon: Server   },
   { name: 'Crear APU nuevo', href: '/costbase/ai-generator?mode=manual', altHrefs: ['/cost360/ai-generator?mode=manual', '/cost360/ai-generator'], Icon: FileText },

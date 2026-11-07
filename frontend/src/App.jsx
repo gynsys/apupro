@@ -10,6 +10,7 @@ import CostbaseDashboard from './modules/costbase/pages/CostbaseDashboard.jsx';
 import APUViewer from './modules/costbase/pages/APUViewer.jsx';
 import AIApuGeneratorPage from './modules/costbase/pages/AIApuGeneratorPage.jsx';
 import DatabaseManagementPage from './modules/costbase/pages/DatabaseManagementPage.jsx';
+import { BudgetReviewPage } from './modules/budget_review/index.js';
 import AppLayout from './components/layout/AppLayout.jsx';
 import { API_URL } from './services/api';
 import { Toaster } from 'react-hot-toast';
@@ -153,6 +154,18 @@ function App() {
                     <Route index element={<BudgetHomePage />} />
                     <Route path=":id" element={<BudgetWorksheetPage />} />
                     <Route path=":id/item/:itemId" element={<BudgetAPUEditorPage />} />
+                  </Route>
+
+                  {/* RUTA DE REVISIÓN Y AUDITORÍA DE PRESUPUESTOS */}
+                  <Route
+                    path="/budget-review"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout />
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route index element={<BudgetReviewPage />} />
                   </Route>
 
                   {/* Rutas retrocompatibles usando el slug */}
