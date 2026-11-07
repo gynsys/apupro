@@ -4,7 +4,7 @@
  * Si un usuario no-superadmin inicia sesión o cierra sesión, el SW es desregistrado y su caché eliminada.
  */
 
-const CACHE_NAME = 'costbase-superadmin-shell-v1';
+const CACHE_NAME = 'costbase-superadmin-shell-v2';
 const APP_SHELL_URLS = [
   '/',
   '/index.html',
@@ -85,7 +85,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // 2. Recursos estáticos de Vite (/admin-assets/*, imágenes, fuentes, CSS, JS):
-  // Estrategia Cache-First con actualización en red
+  // Estrategia Cache-First con respuesta válida garantizada (nunca devuelve undefined a respondWith)
   if (
     url.pathname.startsWith('/admin-assets/') ||
     url.pathname.startsWith('/images/') ||
@@ -97,19 +97,22 @@ self.addEventListener('fetch', (event) => {
     url.pathname.endsWith('.webmanifest')
   ) {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        const networkFetch = fetch(request)
-          .then((response) => {
-            if (response && response.ok) {
-              const clone = response.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-            }
-            return response;
-          })
-          .catch(() => cached);
+      (async () => {
+        const cached = await caches.match(request);
+        if (cached) return cached;
 
-        return cached || networkFetch;
-      })
+        try {
+          const response = await fetch(request);
+          if (response && response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        } catch (_err) {
+          // Nunca devolver undefined a event.respondWith (evita TypeError: Failed to convert value to 'Response')
+          return new Response('', { status: 504, statusText: 'Offline Asset Miss' });
+        }
+      })()
     );
   }
 });

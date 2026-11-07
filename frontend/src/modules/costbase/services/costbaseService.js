@@ -1,4 +1,9 @@
 import axios from 'axios';
+import {
+  isDeviceOfflineModeActive,
+  saveOfflineCoveninCatalog,
+  searchOfflineCoveninCatalog,
+} from '../../offline';
 
 // Get the base API URL from environment variables, fallback to generic
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
@@ -58,8 +63,19 @@ export const fetchItems = async (skip = 0, limit = 50, search = '', chapter = ''
     if (covenin) params.covenin = normalizeCoveninCode(covenin);
     
     const response = await cost360ApiClient.get('/items', { params });
-    return response.data;
+    const data = response.data;
+    if (isDeviceOfflineModeActive() && data?.items?.length > 0) {
+      saveOfflineCoveninCatalog(data.items);
+    }
+    return data;
   } catch (error) {
+    if (isDeviceOfflineModeActive()) {
+      const q = search || covenin || '';
+      const localItems = await searchOfflineCoveninCatalog(q, limit);
+      if (localItems && localItems.length > 0) {
+        return { items: localItems, total: localItems.length, offline: true };
+      }
+    }
     console.error("Error fetching cost items:", error);
     throw error;
   }

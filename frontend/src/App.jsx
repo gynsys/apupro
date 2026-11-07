@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import BudgetHomePage from './pages/admin/BudgetHomePage.jsx';
 import BudgetWorksheetPage from './pages/admin/BudgetWorksheetPage.jsx';
+import BudgetAPUEditorPage from './pages/admin/BudgetAPUEditorPage.jsx';
 import AppLayout from './components/layout/AppLayout.jsx';
 import { API_URL } from './services/api';
 import { Toaster } from 'react-hot-toast';
@@ -11,7 +12,6 @@ import { DatabaseProvider } from './contexts/DatabaseContext.jsx';
 import { UserCostosProvider } from './context/UserCostosContext.jsx';
 
 const LandingPage = lazy(() => import('./pages/LandingPage.jsx'));
-const BudgetAPUEditorPage = lazy(() => import('./pages/admin/BudgetAPUEditorPage.jsx'));
 const SharedBudgetPage = lazy(() => import('./pages/admin/SharedBudgetPage.jsx'));
 const SharedPartidaPage = lazy(() => import('./pages/admin/SharedPartidaPage.jsx'));
 const CalculadoraFCASPage = lazy(() => import('./pages/tools/CalculadoraFCASPage.jsx'));

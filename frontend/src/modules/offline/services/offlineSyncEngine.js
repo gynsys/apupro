@@ -136,7 +136,7 @@ export async function prepareDeviceForOfflineWork({ user, onProgress } = {}) {
     const q = COVENIN_SEED_QUERIES[idx];
     try {
       const res = await fetch(
-        `${API_URL}/cost360/partidas?search=${encodeURIComponent(q)}&database_id=master&limit=100`,
+        `${API_URL}/cost360/items?search=${encodeURIComponent(q)}&database_id=master&limit=100`,
         {
           headers,
           credentials: 'include',
@@ -146,7 +146,7 @@ export async function prepareDeviceForOfflineWork({ user, onProgress } = {}) {
         const data = await res.json();
         const items = Array.isArray(data) ? data : data?.items || [];
         items.forEach((it) => {
-          const code = String(it.code || it.cod_par || it.id || '').trim();
+          const code = String(it.CovPar || it.CodPar || it.code || it.cod_par || it.id || '').trim();
           if (code && !collectedMap.has(code)) {
             collectedMap.set(code, it);
           }

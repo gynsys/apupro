@@ -21,6 +21,10 @@ export default function NotificationBell() {
   // Función para obtener notificaciones con manejo de concurrencia
   const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      setLoading(false);
+      return;
+    }
     const currentFetchId = ++fetchIdRef.current;
     setLoading(true);
     try {
@@ -116,6 +120,10 @@ export default function NotificationBell() {
 
     const connect = async () => {
       if (cancelled) return;
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        reconnectTimer = setTimeout(connect, 10000);
+        return;
+      }
       try {
         const storedToken = token || localStorage.getItem('token') || localStorage.getItem('access_token');
         const headers = { Accept: 'text/event-stream' };

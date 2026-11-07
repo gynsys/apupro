@@ -254,11 +254,31 @@ export async function getOfflineCachedBudgetsCount() {
 
 export async function saveOfflineCoveninCatalog(items) {
   if (!Array.isArray(items) || items.length === 0 || !isDeviceOfflineModeActive()) return false;
+  const normalizeItem = (it) => {
+    const code = String(it.CovPar || it.CodPar || it.code || it.cod_par || it.id || '').trim();
+    const description = String(it.Descri || it.DesPar || it.description || it.des_par || '').toUpperCase();
+    const unit = String(it.UniPar || it.unit || it.uni_par || 'UND').toUpperCase();
+    const chapter = String(it.chapter || '').toUpperCase();
+    const unit_price = Number(it.PrePar || it.unit_price || it.pre_par || 0);
+    return {
+      code,
+      CodPar: it.CodPar || code,
+      CovPar: it.CovPar || code,
+      Descri: description,
+      UniPar: unit,
+      PrePar: unit_price,
+      description,
+      unit,
+      chapter,
+      unit_price,
+    };
+  };
+
   const db = await openOfflineDb();
   if (!db) {
     items.forEach((it) => {
-      const code = String(it.code || it.cod_par || it.id || '').trim();
-      if (code) memoryFallback[STORE_COVENIN].set(code, { ...it, code });
+      const normalized = normalizeItem(it);
+      if (normalized.code) memoryFallback[STORE_COVENIN].set(normalized.code, normalized);
     });
     return true;
   }
@@ -268,15 +288,9 @@ export async function saveOfflineCoveninCatalog(items) {
       const tx = db.transaction(STORE_COVENIN, 'readwrite');
       const store = tx.objectStore(STORE_COVENIN);
       items.forEach((it) => {
-        const code = String(it.code || it.cod_par || it.id || '').trim();
-        if (code) {
-          store.put({
-            code,
-            description: String(it.description || it.des_par || '').toUpperCase(),
-            unit: String(it.unit || it.uni_par || 'UND').toUpperCase(),
-            chapter: String(it.chapter || '').toUpperCase(),
-            unit_price: Number(it.unit_price || it.pre_par || 0),
-          });
+        const normalized = normalizeItem(it);
+        if (normalized.code) {
+          store.put(normalized);
         }
       });
       tx.oncomplete = () => resolve(true);
