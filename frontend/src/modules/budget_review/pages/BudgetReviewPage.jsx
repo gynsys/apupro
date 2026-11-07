@@ -1223,33 +1223,31 @@ export default function BudgetReviewPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
                       <button
                         type="button"
                         onClick={() => setFindingViewMode('executive')}
-                        title="Vista informe ejecutivo: Detalle de correcciones con numeración H-01..."
-                        className={`px-2.5 py-1 text-xs font-bold rounded-md flex items-center gap-1.5 transition cursor-pointer ${
+                        title="Detalle de correcciones (H-01...)"
+                        className={`p-1.5 rounded-md flex items-center justify-center transition cursor-pointer ${
                           findingViewMode === 'executive'
                             ? 'bg-white text-slate-900 shadow-xs'
                             : 'text-slate-500 hover:text-slate-800'
                         }`}
                       >
-                        <ListChecks size={13} />
-                        <span>Detalle de Correcciones</span>
+                        <ListChecks size={15} />
                       </button>
                       <button
                         type="button"
                         onClick={() => setFindingViewMode('detailed')}
-                        title="Vista en fichas con valores de presupuesto vs base de contraste"
-                        className={`px-2.5 py-1 text-xs font-bold rounded-md flex items-center gap-1.5 transition cursor-pointer ${
+                        title="Fichas técnicas con valores de presupuesto vs base de contraste"
+                        className={`p-1.5 rounded-md flex items-center justify-center transition cursor-pointer ${
                           findingViewMode === 'detailed'
                             ? 'bg-white text-slate-900 shadow-xs'
                             : 'text-slate-500 hover:text-slate-800'
                         }`}
                       >
-                        <LayoutGrid size={13} />
-                        <span>Fichas Técnicas</span>
+                        <LayoutGrid size={15} />
                       </button>
                     </div>
 
@@ -1270,11 +1268,10 @@ export default function BudgetReviewPage() {
                         navigator.clipboard.writeText(`Detalle de correcciones:\n\n${text}`);
                         toast.success('Lista copiada al portapapeles');
                       }}
-                      className="px-2.5 py-1.5 text-xs font-bold rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-1 cursor-pointer transition"
-                      title="Copiar texto oficial del detalle de correcciones"
+                      className="p-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center justify-center cursor-pointer transition shadow-2xs"
+                      title="Copiar lista de correcciones al portapapeles"
                     >
-                      <Copy size={13} />
-                      <span className="hidden sm:inline">Copiar Lista</span>
+                      <Copy size={15} />
                     </button>
                   </div>
                 </div>
