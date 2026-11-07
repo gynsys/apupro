@@ -682,25 +682,6 @@ export default function BudgetReviewPage() {
     return Array.from(groups.values());
   }, [uniqueFindings, itemMap]);
 
-  const filteredFindingGroups = useMemo(() => {
-    const groups = new Map();
-    filteredFindings.forEach((f) => {
-      const groupKey = f.review_item_id || f.item_code || 'GENERAL';
-      if (!groups.has(groupKey)) {
-        const item = itemMap.get(f.review_item_id) || null;
-        groups.set(groupKey, {
-          key: groupKey,
-          title: getItemRef(f, itemMap),
-          description: item?.description || '',
-          unit: item?.unit || '',
-          entries: [],
-        });
-      }
-      groups.get(groupKey).entries.push(f);
-    });
-    return Array.from(groups.values());
-  }, [filteredFindings, itemMap]);
-
   const [verificationCode, setVerificationCode] = useState('');
   useEffect(() => {
     if (!activeReport || typeof crypto === 'undefined' || !crypto.subtle) {
@@ -745,6 +726,25 @@ export default function BudgetReviewPage() {
     }
     return true;
   });
+
+  const filteredFindingGroups = useMemo(() => {
+    const groups = new Map();
+    filteredFindings.forEach((f) => {
+      const groupKey = f.review_item_id || f.item_code || 'GENERAL';
+      if (!groups.has(groupKey)) {
+        const item = itemMap.get(f.review_item_id) || null;
+        groups.set(groupKey, {
+          key: groupKey,
+          title: getItemRef(f, itemMap),
+          description: item?.description || '',
+          unit: item?.unit || '',
+          entries: [],
+        });
+      }
+      groups.get(groupKey).entries.push(f);
+    });
+    return Array.from(groups.values());
+  }, [filteredFindings, itemMap]);
 
   const nonChapterItems = (activeReport?.items || []).filter((it) => !it.is_chapter);
   const discrepantItems = nonChapterItems.filter((it) => (it.findings?.length || 0) > 0);
