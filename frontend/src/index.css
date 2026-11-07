@@ -69,10 +69,9 @@ html, body {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  /* Ocultar la app principal SOLO cuando se esté imprimiendo un APU, Presupuesto o Informe de Revisión */
+  /* Ocultar la app principal SOLO cuando se esté imprimiendo un APU o un Presupuesto montado en document.body */
   body:has(#print-apu-layout) > *:not(#print-apu-layout),
-  body:has(#print-budget-layout) > *:not(#print-budget-layout),
-  body:has(#print-budget-review-layout) > *:not(#print-budget-review-layout) {
+  body:has(#print-budget-layout) > *:not(#print-budget-layout) {
     display: none !important;
   }
   /* Mostrar SOLO el contenedor de impresion APU */

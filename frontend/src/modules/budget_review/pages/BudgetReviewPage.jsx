@@ -772,11 +772,13 @@ export default function BudgetReviewPage() {
                 type="button"
                 onClick={() => {
                   const prevTitle = document.title;
-                  document.title = '';
+                  document.title = activeReport?.report_code
+                    ? `Informe_${activeReport.report_code}`
+                    : 'Informe_Revision_Presupuesto';
                   window.print();
                   setTimeout(() => {
                     document.title = prevTitle;
-                  }, 500);
+                  }, 800);
                 }}
                 title="Imprimir / Exportar a PDF"
                 className="p-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center justify-center cursor-pointer shadow-2xs transition"
@@ -2249,19 +2251,23 @@ export default function BudgetReviewPage() {
             margin: 0;
           }
           @media print {
-            html, body {
+            html, body, #root, #root > div, main {
               margin: 0 !important;
               padding: 0 !important;
               background: #ffffff !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
               color: #0f172a !important;
+              height: auto !important;
+              min-height: auto !important;
+              overflow: visible !important;
             }
             #print-budget-review-layout {
               display: block !important;
               padding: 14mm !important;
               background: #ffffff !important;
               color: #0f172a !important;
+              width: 100% !important;
             }
             .print-avoid-break {
               break-inside: avoid !important;
