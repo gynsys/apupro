@@ -736,38 +736,36 @@ export default function BudgetReviewPage() {
                   <Copy size={15} className="text-indigo-600" />
                   <span>Guardar Como...</span>
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNewVersionBudgetId(activeReport.source_budget_id || '');
-                    setShowNewVersionModal(true);
-                  }}
-                  className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-extrabold flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                >
-                  <GitBranch size={15} />
-                  <span>
-                    Revisar Corrección (Nueva Versión v{(activeReport.version_number || 1) + 1})
-                  </span>
-                </button>
               </>
             )}
           </div>
 
           {activeReport && (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setNewVersionBudgetId(activeReport.source_budget_id || '');
+                  setShowNewVersionModal(true);
+                }}
+                title={`Revisar Corrección (Nueva Versión v${(activeReport.version_number || 1) + 1})`}
+                className="p-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center cursor-pointer shadow-2xs transition"
+              >
+                <GitBranch size={16} />
+              </button>
+
               <button
                 type="button"
                 onClick={handleDownloadExcel}
                 disabled={downloadingExcel}
-                className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                title="Descargar Informe Excel (.xlsx)"
+                className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white flex items-center justify-center cursor-pointer shadow-2xs transition"
               >
                 {downloadingExcel ? (
-                  <Loader2 size={14} className="animate-spin" />
+                  <Loader2 size={16} className="animate-spin" />
                 ) : (
-                  <Download size={14} />
+                  <Download size={16} />
                 )}
-                <span>Descargar Informe Excel (.xlsx)</span>
               </button>
 
               <button
@@ -780,10 +778,10 @@ export default function BudgetReviewPage() {
                     document.title = prevTitle;
                   }, 500);
                 }}
-                className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                title="Imprimir / Exportar a PDF"
+                className="p-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center justify-center cursor-pointer shadow-2xs transition"
               >
-                <Printer size={14} />
-                <span>Imprimir / PDF</span>
+                <Printer size={16} />
               </button>
             </div>
           )}
