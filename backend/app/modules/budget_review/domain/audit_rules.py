@@ -315,7 +315,7 @@ def evaluate_item_audit_rules(
         item_data["ai_audit_summary"] = (
             ai_eval.get("summary")
             or ai_eval.get("technical_diagnosis")
-            or "APU especial analizado por IA."
+            or "APU especial analizado técnicamente."
         )
 
         # REGLA DE ORO: Si el APU está bien estructurado, NO se rechaza ni se generan errores forzados.

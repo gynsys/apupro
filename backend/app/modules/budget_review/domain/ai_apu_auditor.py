@@ -74,15 +74,24 @@ EQUIPOS Y HERRAMIENTAS ({len(equipments)} ítems):
 MANO DE OBRA ({len(labors)} ítems):
 {lab_summary}
 
-INSTRUCCIONES CLAVE DE REVISIÓN:
+INSTRUCCIONES CLAVE DE REVISIÓN Y FÓRMULAS ESTÁNDAR:
 1. Una partida especial no codificada NO DEBE SER RECHAZADA si su APU está bien estructurado.
 2. NO sugieras homologar con la base maestra ni con códigos COVENIN.
-3. Evalúa si el APU está BIEN ESTRUCTURADO:
-   - ¿Tiene los materiales lógicos y esenciales para ejecutar "{desc}"?
-   - ¿La cuadrilla de mano de obra es adecuada para la labor?
-   - ¿Cuenta con herramientas o equipos para su ejecución?
-   - ¿El rendimiento ({perf} {unit}/día) es técnicamente razonable y físicamente factible?
-4. DICTAMEN:
+3. Evalúa con base en fórmulas estándar de ingeniería de costos (COVENIN / FONDONORMA):
+   a) MATERIALES (CanIns):
+      - Fórmula: CanIns = Consumo Teórico Geométrico * (1 + % Desperdicio).
+      - Verifica que las cantidades unitarias guarden relación física con la unidad de medida "{unit}".
+      - Ejemplo: Si la unidad es M2 de impermeabilización con manto, el CanIns de manto debe rondar 1.10 - 1.15 M2 (10% traslape). Si es pintura, el galón debe rendir ~15 a 20 M2 por mano.
+   b) MANO DE OBRA (H-H):
+      - Relación: Horas-Hombre = (Total Trabajadores en Cuadrilla * 8 horas) / Rendimiento Diario ({perf} {unit}/día).
+      - Verifica que el oficio principal (ej. albañil, electricista, soldador) esté acompañado de ayudante/obrero si la labor lo exige.
+   c) EQUIPOS Y HERRAMIENTAS:
+      - Para maquinaria mayor: debe incluir equipo coherente con el rendimiento diario.
+      - Para labores manuales: debe contemplar herramientas menores o implementos de seguridad.
+      - Depreciación: no debe ser manipulada artificialmente a 0.00 ni sobredimensionada.
+   d) RENDIMIENTO ({perf} {unit}/día):
+      - ¿Es físicamente factible para una jornada de 8 horas con la cuadrilla indicada?
+4. DICTAMEN TÉCNICO:
    - Si el APU está bien estructurado, completo y coherente:
      status="CONFORME", is_well_structured=true, summary="APU especial técnicamente estructurado y justificado.", defects=[]
    - Si tiene omisiones graves reales (ej. omite el material principal descrito, 0 mano de obra para instalación, o rendimiento disparatado):

@@ -1642,8 +1642,8 @@ export default function BudgetReviewPage() {
                               }`}
                             >
                               {isObserved
-                                ? 'APU Especial Observado por IA'
-                                : 'APU Especial Conforme (Validado por IA)'}
+                                ? 'APU Especial Observado'
+                                : 'APU Especial Conforme'}
                             </span>
                           </div>
                           <span className="text-xs font-bold text-slate-600">
@@ -1662,7 +1662,7 @@ export default function BudgetReviewPage() {
                                 isObserved ? 'bg-amber-500' : 'bg-emerald-500'
                               }`}
                             ></span>
-                            <span>Dictamen Técnico de IA:</span>
+                            <span>Dictamen de Estructura APU:</span>
                           </div>
                           <p className="m-0 text-slate-700 leading-relaxed font-medium">
                             {it.ai_audit_summary ||
