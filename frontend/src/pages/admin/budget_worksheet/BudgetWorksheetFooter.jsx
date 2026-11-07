@@ -35,17 +35,17 @@ export default function BudgetWorksheetFooter({
       <div className="flex items-center justify-between border-b border-slate-200 pb-0.5 leading-none">
         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Incidencia</span>
       </div>
-      <div className="flex flex-col justify-around flex-1 py-0.5 gap-0.5">
+      <div className="grid grid-cols-[auto_1fr_40px_44px] items-center gap-x-1.5 gap-y-0.5 flex-1 py-0.5 leading-tight">
         {incidenceRows.map((row) => (
-          <div key={row.key} className="flex items-center justify-between gap-1.5 leading-tight">
-            <span className="w-[72px] shrink-0 text-[11px] font-medium text-slate-600 truncate">{row.label}</span>
-            <span className="flex-1 text-right text-[11px] font-mono font-semibold text-slate-800 pr-1 whitespace-nowrap">
+          <React.Fragment key={row.key}>
+            <span className="text-[11px] font-medium text-slate-600 truncate">{row.label}</span>
+            <span className="text-right text-[11px] font-mono font-semibold text-slate-800 pr-1 whitespace-nowrap">
               {currencySymbol} {money(row.amount)}
             </span>
-            <span className="w-10 text-right text-[10px] font-mono font-bold text-[#78350F] shrink-0">
+            <span className="text-right text-[10px] font-mono font-bold text-[#78350F] whitespace-nowrap">
               {Number(row.percent || 0).toFixed(1)}%
             </span>
-            <div className="flex items-center gap-0.5 shrink-0 pl-1 border-l border-slate-200">
+            <div className="flex items-center gap-0.5 pl-1 border-l border-slate-200">
               <button
                 type="button"
                 onClick={() => exportResourceSummaryToExcel(budget, row.key)}
@@ -71,23 +71,15 @@ export default function BudgetWorksheetFooter({
                 <Printer className="w-3.5 h-3.5" />
               </button>
             </div>
-          </div>
+          </React.Fragment>
         ))}
-        <div className="flex items-center justify-between gap-1.5 leading-tight pt-1 mt-0.5 border-t border-slate-100">
-          <span className="text-[11px] font-medium text-slate-600 truncate">Admin + Utilidad</span>
-          <span className="flex-1 text-right text-[11px] font-mono font-semibold text-slate-800 pr-1 whitespace-nowrap">
-            {currencySymbol} {money(adminAndProfitAmount)}
-          </span>
-          <span className="w-10 shrink-0" />
-          <div className="invisible flex items-center gap-0.5 shrink-0 pl-1 border-l border-transparent">
-            <div className="p-0.5">
-              <div className="w-3.5 h-3.5" />
-            </div>
-            <div className="p-0.5">
-              <div className="w-3.5 h-3.5" />
-            </div>
-          </div>
-        </div>
+        <div className="col-span-4 border-t border-slate-100 my-0.5" />
+        <span className="text-[11px] font-medium text-slate-600 truncate">Admin + Utilidad</span>
+        <span className="text-right text-[11px] font-mono font-semibold text-slate-800 pr-1 whitespace-nowrap">
+          {currencySymbol} {money(adminAndProfitAmount)}
+        </span>
+        <span />
+        <span />
       </div>
     </div>
   );

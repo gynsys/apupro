@@ -50,6 +50,7 @@ Thumbs.db
 bot.log
 test_chatbot_report.json
 inspector_bot/data/
+libro_obra_bot/data/
 
 # Database dumps
 *.dump

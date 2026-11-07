@@ -10,7 +10,7 @@ ROOT_DIR: Path = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT_DIR / ".env")
 
 # Token de autenticación del Bot en Telegram (suministrado por @BotFather)
-BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "8853208267:AAFNyzrFiftKjRIfWeOeft89dsgYdDXRoP8")
+BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "8853208267:AAGU3Ib1C4eFFJrygK8mya4dSUoWqv-RaUY")
 
 # Directorios de almacenamiento de archivos
 BASE_DIR: Path = Path(__file__).resolve().parent

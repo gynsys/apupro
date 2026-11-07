@@ -1794,10 +1794,14 @@ async def cancel_libro_obra_menu(update: Update, context: ContextTypes.DEFAULT_T
             await query.message.reply_text(ficha_msg, parse_mode=ParseMode.MARKDOWN)
         elif data == "btn_menu_libro":
             await show_libro_obra_hub(update, context)
-        elif data == "btn_libro_ver":
+        elif data == "btn_libro_ver" or data == "btn_libro_editar":
             await show_saved_libros_menu(update, context)
         elif data == "btn_libro_eliminar":
             await show_delete_libro_menu(update, context)
+        elif data == "btn_libro_registrar":
+            await start_libro_obra_flow(update, context)
+        elif data in ("btn_libro_descartar", "btn_cancel"):
+            await cancel_libro_obra(update, context)
         elif data in ("btn_menu_home", "btn_reset"):
             await return_to_clean_main_menu(update, context)
     return ConversationHandler.END
@@ -1829,9 +1833,10 @@ def get_libro_obra_conversation_handler() -> ConversationHandler:
             CommandHandler("menu", cancel_libro_obra),
             CommandHandler("libro", cancel_libro_obra),
             CommandHandler("libros", cancel_libro_obra),
-            CallbackQueryHandler(cancel_libro_obra_menu, pattern="^(btn_menu_ficha|btn_menu_home|btn_reset|btn_show_action_menu|btn_menu_libro|btn_libro_ver|btn_libro_eliminar)$"),
+            CallbackQueryHandler(cancel_libro_obra_menu, pattern="^(btn_menu_ficha|btn_menu_home|btn_reset|btn_show_action_menu|btn_menu_libro|btn_libro_ver|btn_libro_eliminar|btn_libro_registrar|btn_libro_descartar|btn_libro_editar|btn_cancel)$"),
             MessageHandler(filters.PHOTO, cancel_libro_obra_photo),
         ],
         allow_reentry=True,
         per_message=False,
+        conversation_timeout=900,
     )
