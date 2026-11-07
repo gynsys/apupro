@@ -72,6 +72,7 @@ export default function BudgetReviewPage() {
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedItemId, setExpandedItemId] = useState(null);
+  const [showUnchangedByItem, setShowUnchangedByItem] = useState({});
 
   const fileInputRef = useRef(null);
 
@@ -181,7 +182,23 @@ export default function BudgetReviewPage() {
   });
 
   const nonChapterItems = (activeReport?.items || []).filter((it) => !it.is_chapter);
+  const discrepantItems = nonChapterItems.filter((it) => (it.findings?.length || 0) > 0);
+  const cleanItemsCount = nonChapterItems.length - discrepantItems.length;
   const uncodedItems = nonChapterItems.filter((it) => it.is_uncoded);
+
+  const isComponentDiscrepant = (comp) => {
+    if (comp.code === 'OMITIDO') return true;
+    if (comp.master_quantity === null || comp.master_quantity === undefined) return true;
+    if (Math.abs(Number(comp.quantity || 0) - Number(comp.master_quantity || 0)) > 0.001) return true;
+    if (
+      comp.master_waste_or_deprec !== null &&
+      comp.master_waste_or_deprec !== undefined &&
+      Math.abs(Number(comp.waste_or_deprec || 0) - Number(comp.master_waste_or_deprec || 0)) > 0.0005
+    ) {
+      return true;
+    }
+    return false;
+  };
 
   const healthColor = (score = 100) => {
     if (score >= 85) return 'text-emerald-600 bg-emerald-50 border-emerald-200';
@@ -489,7 +506,7 @@ export default function BudgetReviewPage() {
                       : 'border-transparent text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  Comparador Partida por Partida ({nonChapterItems.length})
+                  Partidas con Discrepancias APU ({discrepantItems.length} de {nonChapterItems.length})
                 </button>
                 <button
                   type="button"
@@ -613,142 +630,230 @@ export default function BudgetReviewPage() {
               </div>
             )}
 
-            {/* PESTAÑA 2: COMPARADOR DE PARTIDAS Y RECETAS APU */}
+            {/* PESTAÑA 2: PARTIDAS CON DISCREPANCIAS Y RECETAS APU */}
             {activeTab === 'items' && (
-              <div className="divide-y divide-slate-200">
-                {nonChapterItems.map((it) => {
-                  const isExpanded = expandedItemId === it.id;
-                  const itemFindingsCount = it.findings?.length || 0;
-                  return (
-                    <div key={it.id} className="p-3.5 sm:p-4 hover:bg-slate-50/60 transition">
-                      <div
-                        onClick={() => setExpandedItemId(isExpanded ? null : it.id)}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 cursor-pointer"
-                      >
-                        <div className="space-y-1 flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-md bg-slate-900 text-white text-xs font-bold">
-                              #{it.row_number} · {it.original_code || 'S/C'}
-                            </span>
-                            {it.matched_master_code && (
-                              <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
-                                Maestro: {it.matched_master_code} ({Math.round(it.description_similarity * 100)}% sim.)
-                              </span>
-                            )}
-                            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px] font-semibold">
-                              {ORIGIN_LABELS[it.origin_source] || it.origin_source}
-                            </span>
-                            {itemFindingsCount > 0 ? (
-                              <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs font-bold flex items-center gap-1">
-                                <AlertTriangle size={12} />
-                                {itemFindingsCount} hallazgo(s)
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-1">
-                                <CheckCircle2 size={12} />
-                                Sin discrepancias
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs sm:text-sm font-semibold text-slate-800 line-clamp-2">
-                            {it.description}
-                          </p>
-                        </div>
+              <div>
+                {cleanItemsCount > 0 && (
+                  <div className="bg-slate-50 border-b border-slate-200 px-4 py-2.5 flex items-center justify-between text-xs text-slate-600">
+                    <span>
+                      Mostrando únicamente las <strong>{discrepantItems.length}</strong> partida(s) con discrepancias detectadas. Se omitieron <strong>{cleanItemsCount}</strong> partida(s) que coinciden sin fallas con la base maestra.
+                    </span>
+                  </div>
+                )}
 
-                        <div className="flex items-center gap-4 text-xs shrink-0">
-                          <div>
-                            <span className="text-slate-400 block text-[10px] uppercase font-bold">
-                              Unidad
-                            </span>
-                            <span className="font-bold text-slate-800">
-                              {it.unit} {it.master_unit && it.master_unit !== it.unit ? `(Maestro: ${it.master_unit})` : ''}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 block text-[10px] uppercase font-bold">
-                              Rendimiento
-                            </span>
-                            <span className="font-bold text-slate-800">
-                              {it.performance}{' '}
-                              {it.master_performance ? `/ ${it.master_performance}` : ''}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 block text-[10px] uppercase font-bold">
-                              P.U. Calc
-                            </span>
-                            <span className="font-bold text-slate-900">
-                              ${Number(it.calculated_unit_price || 0).toFixed(2)}
-                            </span>
-                          </div>
-                          {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                        </div>
-                      </div>
+                {discrepantItems.length === 0 ? (
+                  <div className="py-10 text-center text-slate-500 text-sm">
+                    <CheckCircle2 size={32} className="mx-auto text-emerald-500 mb-2" />
+                    Las {nonChapterItems.length} partidas del presupuesto coinciden al 100% con la estructura de la base maestra (0 discrepancias).
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-200">
+                    {discrepantItems.map((it) => {
+                      const isExpanded =
+                        expandedItemId === it.id ||
+                        (expandedItemId === null && discrepantItems.length <= 5);
+                      const itemFindingsCount = it.findings?.length || 0;
+                      const allComps = it.components || [];
+                      const discrepantComps = allComps.filter(isComponentDiscrepant);
+                      const unchangedCompsCount = allComps.length - discrepantComps.length;
+                      const showAllComps = Boolean(showUnchangedByItem[it.id]);
+                      const visibleComps = showAllComps ? allComps : discrepantComps;
+                      const perfDiffers =
+                        it.master_performance !== null &&
+                        it.master_performance !== undefined &&
+                        Math.abs(Number(it.performance || 0) - Number(it.master_performance || 0)) > 0.001;
 
-                      {isExpanded && (
-                        <div className="mt-3 pt-3 border-t border-slate-200 space-y-3">
-                          {it.master_description && (
-                            <div className="bg-slate-100 rounded-xl p-2.5 text-xs text-slate-700">
-                              <strong>Descripción Maestra ({it.matched_master_code}):</strong>{' '}
-                              {it.master_description}
+                      return (
+                        <div key={it.id} className="p-3.5 sm:p-4 hover:bg-slate-50/60 transition">
+                          <div
+                            onClick={() =>
+                              setExpandedItemId(
+                                expandedItemId === it.id ? '__COLLAPSED__' : it.id
+                              )
+                            }
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 cursor-pointer"
+                          >
+                            <div className="space-y-1 flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-slate-900 text-white text-xs font-bold">
+                                  #{it.row_number} · {it.original_code || 'S/C'}
+                                </span>
+                                {it.matched_master_code && (
+                                  <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
+                                    Maestro: {it.matched_master_code} ({Math.round(it.description_similarity * 100)}% sim.)
+                                  </span>
+                                )}
+                                <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px] font-semibold">
+                                  {ORIGIN_LABELS[it.origin_source] || it.origin_source}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs font-bold flex items-center gap-1">
+                                  <AlertTriangle size={12} />
+                                  {itemFindingsCount} discrepancia(s)
+                                </span>
+                              </div>
+                              <p className="text-xs sm:text-sm font-semibold text-slate-800 line-clamp-2">
+                                {it.description}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-4 text-xs shrink-0">
+                              <div>
+                                <span className="text-slate-400 block text-[10px] uppercase font-bold">
+                                  Unidad
+                                </span>
+                                <span className="font-bold text-slate-800">
+                                  {it.unit}{' '}
+                                  {it.master_unit && it.master_unit !== it.unit
+                                    ? `(Maestro: ${it.master_unit})`
+                                    : ''}
+                                </span>
+                              </div>
+                              <div
+                                className={
+                                  perfDiffers
+                                    ? 'bg-red-50 border border-red-200 px-2 py-0.5 rounded-lg'
+                                    : ''
+                                }
+                              >
+                                <span className="text-slate-400 block text-[10px] uppercase font-bold">
+                                  Rendimiento (Imp / Maestro)
+                                </span>
+                                <span
+                                  className={`font-bold ${
+                                    perfDiffers ? 'text-red-700' : 'text-slate-800'
+                                  }`}
+                                >
+                                  {it.performance}{' '}
+                                  {it.master_performance ? `/ ${it.master_performance}` : ''}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block text-[10px] uppercase font-bold">
+                                  P.U. Calc
+                                </span>
+                                <span className="font-bold text-slate-900">
+                                  ${Number(it.calculated_unit_price || 0).toFixed(2)}
+                                </span>
+                              </div>
+                              {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                            </div>
+                          </div>
+
+                          {isExpanded && (
+                            <div className="mt-3 pt-3 border-t border-slate-200 space-y-3">
+                              {it.master_description && (
+                                <div className="bg-slate-100 rounded-xl p-2.5 text-xs text-slate-700">
+                                  <strong>Descripción Maestra ({it.matched_master_code}):</strong>{' '}
+                                  {it.master_description}
+                                </div>
+                              )}
+
+                              {allComps.length > 0 ? (
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="font-bold text-slate-700">
+                                      Insumos con discrepancia en este APU: {discrepantComps.length}
+                                    </span>
+                                    {unchangedCompsCount > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setShowUnchangedByItem((prev) => ({
+                                            ...prev,
+                                            [it.id]: !prev[it.id],
+                                          }))
+                                        }
+                                        className="text-blue-600 hover:underline font-semibold cursor-pointer"
+                                      >
+                                        {showAllComps
+                                          ? 'Ocultar insumos sin cambios'
+                                          : `Ver también ${unchangedCompsCount} insumo(s) sin cambios`}
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {visibleComps.length === 0 ? (
+                                    <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg p-2">
+                                      Todos los insumos del APU coinciden con el maestro (la discrepancia de esta partida está en rendimiento, unidad o cabecera).
+                                    </p>
+                                  ) : (
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full text-xs border-collapse">
+                                        <thead>
+                                          <tr className="bg-slate-100 text-slate-600 text-left">
+                                            <th className="p-2 font-bold">Tipo</th>
+                                            <th className="p-2 font-bold">Código Imp.</th>
+                                            <th className="p-2 font-bold">Código Maestro</th>
+                                            <th className="p-2 font-bold">Descripción</th>
+                                            <th className="p-2 font-bold text-right">Cant. Imp.</th>
+                                            <th className="p-2 font-bold text-right">Cant. Maestra</th>
+                                            <th className="p-2 font-bold text-right">Desp. / Deprec Imp.</th>
+                                            <th className="p-2 font-bold text-right">Desp. / Deprec Maestro</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                          {visibleComps.map((comp) => {
+                                            const isDiff = isComponentDiscrepant(comp);
+                                            const isOmitted = comp.code === 'OMITIDO';
+                                            return (
+                                              <tr
+                                                key={comp.id}
+                                                className={
+                                                  isOmitted
+                                                    ? 'bg-red-50/70'
+                                                    : isDiff
+                                                    ? 'bg-amber-50/70'
+                                                    : ''
+                                                }
+                                              >
+                                                <td className="p-2 font-semibold uppercase text-[11px]">
+                                                  {comp.component_type}
+                                                </td>
+                                                <td className="p-2 font-mono font-bold">
+                                                  {isOmitted ? (
+                                                    <span className="text-red-700">OMITIDO</span>
+                                                  ) : (
+                                                    comp.code
+                                                  )}
+                                                </td>
+                                                <td className="p-2 font-mono text-slate-600">
+                                                  {comp.resolved_master_code || '-'}
+                                                </td>
+                                                <td className="p-2 truncate max-w-[260px]">
+                                                  {comp.description}
+                                                </td>
+                                                <td className="p-2 text-right font-bold text-red-700">
+                                                  {comp.quantity}
+                                                </td>
+                                                <td className="p-2 text-right text-emerald-700 font-semibold">
+                                                  {comp.master_quantity ?? 'Extra (No en maestro)'}
+                                                </td>
+                                                <td className="p-2 text-right font-semibold">
+                                                  {comp.waste_or_deprec}
+                                                </td>
+                                                <td className="p-2 text-right text-slate-600">
+                                                  {comp.master_waste_or_deprec ?? '-'}
+                                                </td>
+                                              </tr>
+                                            );
+                                          })}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-slate-500 italic">
+                                  Esta partida fue cargada desde hoja resumen sin desglose interno de insumos APU.
+                                </p>
+                              )}
                             </div>
                           )}
-
-                          {it.components && it.components.length > 0 ? (
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-xs border-collapse">
-                                <thead>
-                                  <tr className="bg-slate-100 text-slate-600 text-left">
-                                    <th className="p-2 font-bold">Tipo</th>
-                                    <th className="p-2 font-bold">Código Imp.</th>
-                                    <th className="p-2 font-bold">Código Maestro</th>
-                                    <th className="p-2 font-bold">Descripción</th>
-                                    <th className="p-2 font-bold text-right">Cant. Imp.</th>
-                                    <th className="p-2 font-bold text-right">Cant. Maestra</th>
-                                    <th className="p-2 font-bold text-right">Desp. / Deprec Imp.</th>
-                                    <th className="p-2 font-bold text-right">Desp. / Deprec Maestro</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                  {it.components.map((comp) => {
-                                    const qtyChanged =
-                                      comp.master_quantity !== null &&
-                                      comp.master_quantity !== undefined &&
-                                      Math.abs(comp.quantity - comp.master_quantity) > 0.001;
-                                    return (
-                                      <tr key={comp.id} className={qtyChanged ? 'bg-amber-50/60' : ''}>
-                                        <td className="p-2 font-semibold uppercase text-[11px]">
-                                          {comp.component_type}
-                                        </td>
-                                        <td className="p-2 font-mono font-bold">{comp.code}</td>
-                                        <td className="p-2 font-mono text-slate-600">
-                                          {comp.resolved_master_code || '-'}
-                                        </td>
-                                        <td className="p-2 truncate max-w-[260px]">{comp.description}</td>
-                                        <td className="p-2 text-right font-bold">{comp.quantity}</td>
-                                        <td className="p-2 text-right text-emerald-700 font-semibold">
-                                          {comp.master_quantity ?? 'No en maestro'}
-                                        </td>
-                                        <td className="p-2 text-right">{comp.waste_or_deprec}</td>
-                                        <td className="p-2 text-right text-slate-600">
-                                          {comp.master_waste_or_deprec ?? '-'}
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
-                          ) : (
-                            <p className="text-xs text-slate-500 italic">
-                              Esta partida fue cargada desde hoja resumen sin desglose interno de insumos APU.
-                            </p>
-                          )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 

@@ -467,7 +467,62 @@ def _execute_snapshot_audit(
         db.add(rev_item)
         db.flush()
 
-        for comp_dict in (norm_mats + norm_eqs + norm_labs):
+        seen_mat_codes = {c["resolved_master_code"] for c in norm_mats if c["resolved_master_code"]}
+        seen_eq_codes = {c["resolved_master_code"] for c in norm_eqs if c["resolved_master_code"]}
+        seen_lab_codes = {c["resolved_master_code"] for c in norm_labs if c["resolved_master_code"]}
+
+        omitted_master_comps: List[Dict[str, Any]] = []
+        if (norm_mats or norm_eqs or norm_labs) and master_recipe:
+            for m_code, m_mst in mst_mat_map.items():
+                if m_code not in seen_mat_codes:
+                    omitted_master_comps.append({
+                        "component_type": "material",
+                        "code": "OMITIDO",
+                        "resolved_master_code": m_code,
+                        "description": str(m_mst.get("description") or ""),
+                        "unit": str(m_mst.get("unit") or "und"),
+                        "quantity": 0.0,
+                        "master_quantity": float(m_mst.get("quantity") or 0.0),
+                        "unit_price": 0.0,
+                        "master_unit_price": float(m_mst.get("unit_price") or 0.0),
+                        "waste_or_deprec": 0.0,
+                        "master_waste_or_deprec": float(m_mst.get("waste_or_deprec") or 0.0),
+                        "bonus": 0.0,
+                    })
+            for e_code, e_mst in mst_eq_map.items():
+                if e_code not in seen_eq_codes:
+                    omitted_master_comps.append({
+                        "component_type": "equipment",
+                        "code": "OMITIDO",
+                        "resolved_master_code": e_code,
+                        "description": str(e_mst.get("description") or ""),
+                        "unit": str(e_mst.get("unit") or "día"),
+                        "quantity": 0.0,
+                        "master_quantity": float(e_mst.get("quantity") or 0.0),
+                        "unit_price": 0.0,
+                        "master_unit_price": float(e_mst.get("unit_price") or 0.0),
+                        "waste_or_deprec": 0.0,
+                        "master_waste_or_deprec": float(e_mst.get("waste_or_deprec") or 1.0),
+                        "bonus": 0.0,
+                    })
+            for l_code, l_mst in mst_lab_map.items():
+                if l_code not in seen_lab_codes:
+                    omitted_master_comps.append({
+                        "component_type": "labor",
+                        "code": "OMITIDO",
+                        "resolved_master_code": l_code,
+                        "description": str(l_mst.get("description") or ""),
+                        "unit": "día",
+                        "quantity": 0.0,
+                        "master_quantity": float(l_mst.get("quantity") or 0.0),
+                        "unit_price": 0.0,
+                        "master_unit_price": float(l_mst.get("unit_price") or 0.0),
+                        "waste_or_deprec": 0.0,
+                        "master_waste_or_deprec": 0.0,
+                        "bonus": 0.0,
+                    })
+
+        for comp_dict in (norm_mats + norm_eqs + norm_labs + omitted_master_comps):
             db.add(
                 ReviewAPUComponent(
                     review_item_id=rev_item.id,
@@ -877,10 +932,11 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
         ws_find.column_dimensions[get_column_letter(idx)].width = width
     ws_find.freeze_panes = "A2"
 
-    # 3. Hoja Comparativo de Partidas
-    ws_items = wb.create_sheet("Comparativo Partidas")
+    # 3. Hoja Partidas con Discrepancias (Solo partidas con hallazgos)
+    ws_items = wb.create_sheet("Partidas con Discrepancias")
     ws_items.append([
         "Fila",
+        "N° Hallazgos",
         "Código Importado",
         "Código Maestro",
         "Origen Catalográfico",
@@ -896,10 +952,11 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
     ])
     style_header_row(ws_items, 1)
     for it in detail["items"]:
-        if it.is_chapter:
+        if it.is_chapter or not it.findings:
             continue
         ws_items.append([
             it.row_number,
+            len(it.findings),
             it.original_code,
             it.matched_master_code or "S/C",
             it.origin_source or "-",
@@ -913,7 +970,7 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
             round(it.description_similarity * 100.0, 1),
             it.description,
         ])
-    for idx, width in enumerate([7, 16, 16, 26, 12, 14, 12, 15, 15, 15, 15, 16, 70], start=1):
+    for idx, width in enumerate([7, 13, 16, 16, 26, 12, 14, 12, 15, 15, 15, 15, 16, 70], start=1):
         ws_items.column_dimensions[get_column_letter(idx)].width = width
     ws_items.freeze_panes = "A2"
 
