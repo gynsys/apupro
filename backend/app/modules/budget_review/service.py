@@ -1,12 +1,12 @@
 """Servicio orquestador de Revisión y Auditoría de Presupuestos (Maprex vs CostBase)."""
 from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import datetime
 import io
 import logging
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 import uuid
 
 from openpyxl import Workbook
@@ -369,12 +369,16 @@ def _execute_snapshot_audit(
     uncoded_count = 0
     non_chapter_count = 0
 
-    # Detectar códigos de partida duplicados en todo el presupuesto
-    code_occurrences = Counter(
-        str(it.get("code") or "").strip().upper()
-        for it in raw_items
-        if not it.get("is_chapter") and str(it.get("code") or "").strip()
-    )
+    # Detectar códigos de partida duplicados en todo el presupuesto y registrar sus ubicaciones
+    code_occurrences: Counter[str] = Counter()
+    code_locations: Dict[str, List[int]] = defaultdict(list)
+    for idx_scan, it_scan in enumerate(raw_items, start=1):
+        if not it_scan.get("is_chapter") and str(it_scan.get("code") or "").strip():
+            c_key = str(it_scan.get("code")).strip().upper()
+            code_occurrences[c_key] += 1
+            code_locations[c_key].append(int(it_scan.get("row") or idx_scan))
+
+    reported_duplicate_codes: Set[str] = set()
 
     for idx, raw in enumerate(raw_items, start=1):
         is_chap = bool(raw.get("is_chapter"))
@@ -675,18 +679,27 @@ def _execute_snapshot_audit(
             rev_item.ai_audit_status = item_eval_payload["ai_audit_status"]
             rev_item.ai_audit_summary = item_eval_payload.get("ai_audit_summary")
 
-        if orig_code and code_occurrences.get(orig_code.upper(), 0) > 1:
+        orig_key = orig_code.upper() if orig_code else ""
+        if (
+            orig_key
+            and code_occurrences.get(orig_key, 0) > 1
+            and orig_key not in reported_duplicate_codes
+        ):
+            reported_duplicate_codes.add(orig_key)
+            locs = code_locations.get(orig_key, [])
+            locs_str = f" (filas {', '.join(f'#{r}' for r in locs)})" if locs else ""
+            count = code_occurrences[orig_key]
             item_findings.append({
                 "rule_id": "EST-007",
                 "category": "ESTRUCTURA",
                 "severity": "MEDIA",
                 "item_code": effective_display_code,
                 "field_name": "duplicate_partida",
-                "imported_value": f"{code_occurrences[orig_code.upper()]} partidas con código {orig_code}",
-                "master_value": "Código único o subcapítulo diferenciado",
+                "imported_value": f"{count} partidas con código {orig_code}",
+                "master_value": "Código único por partida",
                 "diff_percent": None,
-                "message": f"El código de partida '{effective_display_code}' aparece {code_occurrences[orig_code.upper()]} veces en el presupuesto.",
-                "suggestion": "Verificar si la partida fue duplicada accidentalmente en varios capítulos.",
+                "message": f"El código de partida aparece {count} veces en el presupuesto{locs_str}",
+                "suggestion": "Verificar si la partida fue duplicada accidentalmente en varios capítulos o consolidar metrados.",
             })
 
         for f_dict in item_findings:

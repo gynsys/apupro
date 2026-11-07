@@ -108,6 +108,7 @@ const RULE_HEADLINES = {
   'UNC-001': 'APU no codificado',
   'ARI-001': 'Error aritmético',
   'DUP-001': 'Duplicidad explícita',
+  'EST-007': 'Duplicidad de partida',
   'REN-001': 'Rendimiento atípico',
   'REN-002': 'Rendimiento inflado',
   'EST-001': 'Partida atípica / fuera de norma',
@@ -121,8 +122,11 @@ const getFindingHeadline = (f) => {
   if (f.category === 'RENDIMIENTO') return 'Rendimiento atípico';
   if (f.category === 'COHERENCIA') return 'Error aritmético';
   if (f.category === 'SIN_CODIGO') return 'APU no codificado';
+  if (f.category === 'ESTRUCTURA') return 'Duplicidad / estructura de partida';
   return 'Desviación técnica';
 };
+
+const cleanMessage = (msg) => (msg || '').trim().replace(/\.+$/, '');
 
 const getEffectiveItemCode = (f, itemMap) => {
   if (f?.rule_id === 'ARI-001' && f?.item_code) return f.item_code;
@@ -519,7 +523,22 @@ export default function BudgetReviewPage() {
     }
   };
 
-  const filteredFindings = (activeReport?.findings || []).filter((f) => {
+  const uniqueFindings = useMemo(() => {
+    const raw = activeReport?.findings || [];
+    const seen = new Set();
+    const result = [];
+    for (const f of raw) {
+      // Deduplicar hallazgos idénticos sobre la misma regla e ítem (ej: EST-007 por código repetido en varias filas)
+      const key = `${f.rule_id || ''}-${f.item_code || ''}-${f.component_code || ''}-${(f.message || '').trim()}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push(f);
+      }
+    }
+    return result;
+  }, [activeReport?.findings]);
+
+  const filteredFindings = uniqueFindings.filter((f) => {
     if (severityFilter !== 'ALL' && f.severity !== severityFilter) return false;
     if (categoryFilter !== 'ALL' && f.category !== categoryFilter) return false;
     if (searchQuery.trim()) {
@@ -1225,7 +1244,7 @@ export default function BudgetReviewPage() {
                             const headline = getFindingHeadline(f);
                             const itemRef = getItemRef(f, itemMap);
                             const sug = f.suggestion ? ` Sugerencia: ${f.suggestion}.` : '';
-                            return `• ${hCode} (${sev}) — ${headline} (${itemRef}): ${f.message}.${sug}`;
+                            return `• ${hCode} (${sev}) — ${headline} (${itemRef}): ${cleanMessage(f.message)}.${sug}`;
                           })
                           .join('\n');
                         navigator.clipboard.writeText(`Detalle de correcciones:\n\n${text}`);
@@ -1291,7 +1310,7 @@ export default function BudgetReviewPage() {
                                   ({itemRef}):
                                 </span>
                                 <span className="text-slate-700 font-medium">
-                                  {f.message}.
+                                  {cleanMessage(f.message)}.
                                 </span>
                               </div>
 
@@ -2350,8 +2369,8 @@ export default function BudgetReviewPage() {
           </div>
 
           <div className="space-y-2 text-xs">
-            {activeReport.findings && activeReport.findings.length > 0 ? (
-              activeReport.findings.map((f, i) => {
+            {uniqueFindings && uniqueFindings.length > 0 ? (
+              uniqueFindings.map((f, i) => {
                 const hCode = `H-${String(i + 1).padStart(2, '0')}`;
                 const sev = SEVERITY_CONFIG[f.severity]?.label || 'Media';
                 const headline = getFindingHeadline(f);
@@ -2366,7 +2385,7 @@ export default function BudgetReviewPage() {
                       <span className="font-bold text-slate-700 uppercase mr-1">({sev})</span>
                       <span className="font-extrabold text-slate-900 mr-1">— {headline}</span>
                       <span className="font-bold text-blue-900 mr-1.5">({itemRef}):</span>
-                      <span className="text-slate-800 font-medium">{f.message}.</span>
+                      <span className="text-slate-800 font-medium">{cleanMessage(f.message)}.</span>
                     </div>
                     {f.suggestion && (
                       <div className="pl-4 text-[11px] text-slate-700 mt-0.5">
