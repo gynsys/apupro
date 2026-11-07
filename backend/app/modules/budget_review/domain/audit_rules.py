@@ -321,7 +321,7 @@ def evaluate_item_audit_rules(
             "master_value": f"Sugerido: {eq_code} ({eq_score * 100:.0f}%)" if eq_code else "Sin equivalente directo",
             "diff_percent": None,
             "message": (
-                f"Partida sin código en base maestra CostBase/Maprex. "
+                "Partida sin código en la base de referencia seleccionada. "
                 + (
                     f"Equivalente más parecido: {eq_code} ({eq_score * 100:.0f}% similitud: '{eq_desc[:80]}')."
                     if eq_code
@@ -361,7 +361,7 @@ def evaluate_item_audit_rules(
                 f"registrada en CostBase con ese código (similitud {desc_sim * 100:.0f}%)."
             ),
             "suggestion": (
-                "En Maprex y CostBase este código fue asignado a partidas distintas o el contratista cambió "
+                "En catálogos históricos (Base Agosto vs Base Maestra) este código fue asignado a partidas distintas o el contratista cambió "
                 "la descripción manteniendo el código. Homologar por descripción y código COVENIN."
             ),
         })
@@ -505,7 +505,7 @@ def evaluate_item_audit_rules(
                     "imported_value": str(m_imp.get("description") or "")[:60],
                     "master_value": str(m_mst.get("description") or "")[:60],
                     "diff_percent": None,
-                    "message": f"El código de material {m_code} difiere en descripción entre Maprex y CostBase.",
+                    "message": f"El código de material {m_code} difiere en descripción entre Base Agosto y Base Maestra.",
                     "suggestion": "Validar la descripción del insumo de bioseguridad.",
                 })
 
@@ -595,10 +595,10 @@ def evaluate_item_audit_rules(
                         "master_value": f"{mst_dep:.5f}",
                         "diff_percent": round(dep_diff_pct, 2),
                         "message": (
-                            f"Diferencia nativa Maprex vs CostBase en factor de equipo {e_code}: "
-                            f"Maprex usa alquiler diario ({imp_dep:.4f}) y CostBase factor compuesto ({mst_dep:.5f})."
+                            f"Diferencia de catálogo histórico (Base Agosto vs Base Maestra) en factor de equipo {e_code}: "
+                            f"Base Agosto usa alquiler diario ({imp_dep:.4f}) y Base Maestra factor compuesto ({mst_dep:.5f})."
                         ),
-                        "suggestion": "No es manipulación del contratista; proviene del catálogo nativo de Maprex.",
+                        "suggestion": "No es manipulación del contratista; proviene del catálogo de Base Agosto.",
                     })
                 elif abs(dep_diff_pct) > 5.0:
                     findings.append({

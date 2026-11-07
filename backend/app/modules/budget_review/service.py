@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 from collections import Counter
+from datetime import datetime
 import io
 import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple
+import uuid
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -42,7 +44,7 @@ _TABLES_INITIALIZED = False
 
 
 def ensure_review_tables() -> None:
-    """Crea las tablas aisladas de revisión si aún no existen en la base de datos."""
+    """Crea y auto-migra las tablas aisladas de revisión si aún no existen en la base de datos."""
     global _TABLES_INITIALIZED
     if _TABLES_INITIALIZED:
         return
@@ -56,6 +58,27 @@ def ensure_review_tables() -> None:
                 ReviewFinding.__table__,
             ],
         )
+        required_columns = [
+            ("review_budget_snapshots", "audit_group_id", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS audit_group_id VARCHAR"),
+            ("review_budget_snapshots", "parent_snapshot_id", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS parent_snapshot_id VARCHAR"),
+            ("review_budget_snapshots", "version_number", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS version_number INTEGER NOT NULL DEFAULT 1"),
+            ("review_budget_snapshots", "review_status", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS review_status VARCHAR NOT NULL DEFAULT 'EN_REVISION'"),
+            ("review_budget_snapshots", "auditor_notes", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS auditor_notes TEXT"),
+            ("review_budget_snapshots", "updated_at", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
+            ("review_findings", "finding_status", "ALTER TABLE review_findings ADD COLUMN IF NOT EXISTS finding_status VARCHAR NOT NULL DEFAULT 'PENDIENTE'"),
+            ("review_findings", "auditor_comment", "ALTER TABLE review_findings ADD COLUMN IF NOT EXISTS auditor_comment TEXT"),
+        ]
+        with engine.begin() as conn:
+            existing_rows = conn.execute(
+                text(
+                    "SELECT table_name, column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name IN ('review_budget_snapshots', 'review_findings')"
+                )
+            ).fetchall()
+            existing_pairs = {(r[0], r[1]) for r in existing_rows}
+            for tbl, col, stmt in required_columns:
+                if (tbl, col) not in existing_pairs:
+                    conn.execute(text(stmt))
         _TABLES_INITIALIZED = True
     except Exception as exc:
         logger.error("Error inicializando tablas de revisión de presupuestos: %s", exc, exc_info=True)
@@ -234,7 +257,21 @@ def _execute_snapshot_audit(
         raise ValueError("El user_id es obligatorio para registrar la auditoría.")
 
     ensure_review_tables()
-    schema = _resolve_schema_name(db, database_id)
+    parent_id = header_info.get("parent_snapshot_id")
+    parent_snap: Optional[ReviewSnapshot] = None
+    if parent_id:
+        parent_snap = (
+            db.query(ReviewSnapshot)
+            .filter(ReviewSnapshot.id == str(parent_id).strip())
+            .first()
+        )
+
+    effective_db_id = (
+        database_id
+        or (parent_snap.database_id if parent_snap else "master")
+        or "master"
+    )
+    schema = _resolve_schema_name(db, effective_db_id)
     ref_maps = _load_master_reference_maps(db, schema)
 
     fcas_pct = float(header_info.get("fcas_percent") if header_info.get("fcas_percent") is not None else 417.0)
@@ -242,16 +279,49 @@ def _execute_snapshot_audit(
     profit_pct = float(header_info.get("profit_percent") if header_info.get("profit_percent") is not None else 10.0)
     iva_pct = float(header_info.get("iva_percent") if header_info.get("iva_percent") is not None else 16.0)
 
+    new_snap_id = str(uuid.uuid4())
+    group_id = new_snap_id
+    version_num = 1
+    if parent_snap:
+        group_id = parent_snap.audit_group_id or parent_snap.id
+        if not parent_snap.audit_group_id:
+            parent_snap.audit_group_id = group_id
+        existing_versions = (
+            db.query(ReviewSnapshot.version_number)
+            .filter(
+                (ReviewSnapshot.audit_group_id == group_id)
+                | (ReviewSnapshot.id == group_id)
+            )
+            .all()
+        )
+        max_ver = max([int(r[0] or 1) for r in existing_versions] + [int(parent_snap.version_number or 1)])
+        version_num = max_ver + 1
+
+    base_name = str(
+        header_info.get("name")
+        or (parent_snap.name if parent_snap else None)
+        or "Presupuesto Auditado"
+    )
+    if parent_snap and not header_info.get("custom_name_provided"):
+        clean_base = re.sub(r"\s*\(v\d+\)\s*$", "", base_name, flags=re.IGNORECASE).strip()
+        base_name = f"{clean_base} (v{version_num})"
+
     snapshot = ReviewSnapshot(
+        id=new_snap_id,
         user_id=str(user_id),
         source_type=str(header_info.get("source_type") or "file"),
         source_budget_id=header_info.get("source_budget_id"),
         source_filename=header_info.get("source_filename"),
-        database_id=database_id or "master",
-        name=str(header_info.get("name") or "Presupuesto Auditado"),
-        project_name=header_info.get("project_name"),
-        client_name=header_info.get("client_name"),
+        database_id=effective_db_id,
+        name=base_name,
+        project_name=header_info.get("project_name") or (parent_snap.project_name if parent_snap else None),
+        client_name=header_info.get("client_name") or (parent_snap.client_name if parent_snap else None),
         currency=str(header_info.get("currency") or "USD"),
+        audit_group_id=group_id,
+        parent_snapshot_id=parent_snap.id if parent_snap else None,
+        version_number=version_num,
+        review_status=str(header_info.get("review_status") or "EN_REVISION"),
+        auditor_notes=header_info.get("auditor_notes"),
         fcas_percent=fcas_pct,
         admin_percent=admin_pct,
         profit_percent=profit_pct,
@@ -431,6 +501,7 @@ def _execute_snapshot_audit(
                 profit_percent=profit_pct,
             )
             master_calc_price = mst_breakdown["unit_price"] or float(master_item.get("unit_price") or 0.0)
+            master_item["unit_price"] = master_calc_price
 
         desc_sim = (
             compute_description_similarity(desc, master_item["description"])
@@ -621,6 +692,11 @@ def audit_existing_budget(
     user_id: str,
     budget_id: str,
     database_id: str = "master",
+    parent_snapshot_id: Optional[str] = None,
+    custom_name: Optional[str] = None,
+    project_name: Optional[str] = None,
+    client_name: Optional[str] = None,
+    auditor_notes: Optional[str] = None,
 ) -> ReviewSnapshot:
     """Crea un snapshot inmutable de un presupuesto existente en CostBase y ejecuta la auditoría completa."""
     if not budget_id or not budget_id.strip():
@@ -643,9 +719,12 @@ def audit_existing_budget(
         "source_type": "existing_budget",
         "source_budget_id": budget.id,
         "source_filename": None,
-        "name": budget.name,
-        "project_name": budget.project_name,
-        "client_name": budget.client_name,
+        "parent_snapshot_id": parent_snapshot_id,
+        "custom_name_provided": bool(custom_name and custom_name.strip()),
+        "name": (custom_name.strip() if custom_name and custom_name.strip() else budget.name),
+        "project_name": (project_name.strip() if project_name and project_name.strip() else budget.project_name),
+        "client_name": (client_name.strip() if client_name and client_name.strip() else budget.client_name),
+        "auditor_notes": auditor_notes,
         "currency": budget.currency or "USD",
         "fcas_percent": budget.fcas_percent,
         "admin_percent": budget.admin_percent,
@@ -713,8 +792,13 @@ def audit_uploaded_file(
     file_bytes: bytes,
     filename: str,
     database_id: str = "master",
+    parent_snapshot_id: Optional[str] = None,
+    custom_name: Optional[str] = None,
+    project_name: Optional[str] = None,
+    client_name: Optional[str] = None,
+    auditor_notes: Optional[str] = None,
 ) -> ReviewSnapshot:
-    """Importa un archivo externo (Maprex Excel APU, Excel presupuesto, CSV o PDF) a la base de revisión y lo audita."""
+    """Importa un archivo externo (Excel APU, Excel presupuesto, CSV o PDF) a la base de revisión y lo audita."""
     if not file_bytes:
         raise ValueError("El archivo subido está vacío.")
     if not filename:
@@ -726,9 +810,12 @@ def audit_uploaded_file(
         "source_type": preview.get("source_type") or "file",
         "source_budget_id": None,
         "source_filename": filename,
-        "name": hdr.get("budget_name") or filename,
-        "project_name": hdr.get("project_name"),
-        "client_name": hdr.get("client_name"),
+        "parent_snapshot_id": parent_snapshot_id,
+        "custom_name_provided": bool(custom_name and custom_name.strip()),
+        "name": (custom_name.strip() if custom_name and custom_name.strip() else (hdr.get("budget_name") or filename)),
+        "project_name": (project_name.strip() if project_name and project_name.strip() else hdr.get("project_name")),
+        "client_name": (client_name.strip() if client_name and client_name.strip() else hdr.get("client_name")),
+        "auditor_notes": auditor_notes,
         "currency": hdr.get("currency") or "USD",
         "fcas_percent": hdr.get("fcas_percent") if hdr.get("fcas_percent") is not None else 417.0,
         "admin_percent": hdr.get("admin_percent") if hdr.get("admin_percent") is not None else 15.0,
@@ -764,8 +851,8 @@ def audit_uploaded_file(
     )
 
 
-def list_review_snapshots(db: Session, user_id: str, limit: int = 30) -> List[ReviewSnapshot]:
-    """Lista las auditorías recientes del usuario."""
+def list_review_snapshots(db: Session, user_id: str, limit: int = 100) -> List[ReviewSnapshot]:
+    """Lista las auditorías del usuario ordenadas por fecha de actualización."""
     ensure_review_tables()
     return (
         db.query(ReviewSnapshot)
@@ -776,8 +863,59 @@ def list_review_snapshots(db: Session, user_id: str, limit: int = 30) -> List[Re
     )
 
 
+def _finding_signature(f: ReviewFinding) -> str:
+    """Genera una firma determinista para comparar un hallazgo entre versiones sucesivas."""
+    return f"{f.rule_id}|{str(f.item_code or '').upper()}|{str(f.component_code or '').upper()}|{str(f.field_name or '').lower()}"
+
+
+def _compute_version_comparison(
+    current_snap: ReviewSnapshot, parent_snap: ReviewSnapshot
+) -> Dict[str, Any]:
+    """Compara los hallazgos de la versión actual frente a la versión anterior para detectar correcciones."""
+    parent_map: Dict[str, ReviewFinding] = {
+        _finding_signature(pf): pf for pf in (parent_snap.findings or [])
+    }
+    current_map: Dict[str, ReviewFinding] = {
+        _finding_signature(cf): cf for cf in (current_snap.findings or [])
+    }
+
+    resolved_keys = [k for k in parent_map if k not in current_map]
+    persistent_keys = [k for k in current_map if k in parent_map]
+    new_keys = [k for k in current_map if k not in parent_map]
+
+    resolved_findings = [
+        {
+            "rule_id": parent_map[k].rule_id,
+            "category": parent_map[k].category,
+            "severity": parent_map[k].severity,
+            "item_code": parent_map[k].item_code,
+            "component_code": parent_map[k].component_code,
+            "component_description": parent_map[k].component_description,
+            "field_name": parent_map[k].field_name,
+            "previous_imported_value": parent_map[k].imported_value,
+            "master_value": parent_map[k].master_value,
+            "message": parent_map[k].message,
+        }
+        for k in resolved_keys
+    ]
+
+    return {
+        "previous_snapshot_id": parent_snap.id,
+        "previous_version_number": int(parent_snap.version_number or 1),
+        "previous_name": parent_snap.name,
+        "previous_health_score": float(parent_snap.health_score or 0.0),
+        "health_delta": round(float(current_snap.health_score or 0.0) - float(parent_snap.health_score or 0.0), 1),
+        "resolved_findings_count": len(resolved_keys),
+        "persistent_findings_count": len(persistent_keys),
+        "new_findings_count": len(new_keys),
+        "resolved_findings": resolved_findings,
+        "persistent_keys": persistent_keys,
+        "new_keys": new_keys,
+    }
+
+
 def get_review_snapshot_detail(db: Session, snapshot_id: str, user_id: str) -> Dict[str, Any]:
-    """Obtiene el detalle completo de un snapshot de auditoría con desgloses estadísticos."""
+    """Obtiene el detalle completo de un snapshot de auditoría con desgloses estadísticos y versiones."""
     if not snapshot_id:
         raise ValueError("El snapshot_id es obligatorio.")
     ensure_review_tables()
@@ -802,6 +940,28 @@ def get_review_snapshot_detail(db: Session, snapshot_id: str, user_id: str) -> D
     )
     category_counts = Counter(f.category for f in snap.findings)
 
+    group_id = snap.audit_group_id or snap.id
+    version_history = (
+        db.query(ReviewSnapshot)
+        .filter(
+            (ReviewSnapshot.audit_group_id == group_id)
+            | (ReviewSnapshot.id == group_id)
+        )
+        .order_by(ReviewSnapshot.version_number.asc(), ReviewSnapshot.created_at.asc())
+        .all()
+    )
+
+    version_comparison: Optional[Dict[str, Any]] = None
+    if snap.parent_snapshot_id:
+        parent_snap = (
+            db.query(ReviewSnapshot)
+            .options(selectinload(ReviewSnapshot.findings))
+            .filter(ReviewSnapshot.id == snap.parent_snapshot_id)
+            .first()
+        )
+        if parent_snap:
+            version_comparison = _compute_version_comparison(snap, parent_snap)
+
     return {
         "id": snap.id,
         "name": snap.name,
@@ -812,6 +972,11 @@ def get_review_snapshot_detail(db: Session, snapshot_id: str, user_id: str) -> D
         "source_budget_id": snap.source_budget_id,
         "database_id": snap.database_id,
         "currency": snap.currency,
+        "audit_group_id": group_id,
+        "parent_snapshot_id": snap.parent_snapshot_id,
+        "version_number": int(snap.version_number or 1),
+        "review_status": snap.review_status or "EN_REVISION",
+        "auditor_notes": snap.auditor_notes,
         "fcas_percent": snap.fcas_percent,
         "admin_percent": snap.admin_percent,
         "profit_percent": snap.profit_percent,
@@ -825,11 +990,219 @@ def get_review_snapshot_detail(db: Session, snapshot_id: str, user_id: str) -> D
         "info_findings_count": snap.info_findings_count,
         "health_score": snap.health_score,
         "created_at": snap.created_at,
+        "updated_at": snap.updated_at or snap.created_at,
         "origin_breakdown": dict(origin_counts),
         "category_breakdown": dict(category_counts),
+        "version_history": version_history,
+        "version_comparison": version_comparison,
         "items": snap.items,
         "findings": snap.findings,
     }
+
+
+def update_review_snapshot(
+    db: Session,
+    snapshot_id: str,
+    user_id: str,
+    name: Optional[str] = None,
+    project_name: Optional[str] = None,
+    client_name: Optional[str] = None,
+    review_status: Optional[str] = None,
+    auditor_notes: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Guarda cambios de metadatos, estado y observaciones del auditor sobre una auditoría existente."""
+    if not snapshot_id:
+        raise ValueError("El snapshot_id es obligatorio.")
+    ensure_review_tables()
+    snap = db.query(ReviewSnapshot).filter(ReviewSnapshot.id == snapshot_id).first()
+    if not snap:
+        raise LookupError("Auditoría no encontrada.")
+
+    if name is not None and name.strip():
+        snap.name = name.strip()
+    if project_name is not None:
+        snap.project_name = project_name.strip() or None
+    if client_name is not None:
+        snap.client_name = client_name.strip() or None
+    if review_status is not None and review_status.strip():
+        snap.review_status = review_status.strip().upper()
+    if auditor_notes is not None:
+        snap.auditor_notes = auditor_notes
+
+    snap.updated_at = datetime.utcnow()
+    db.commit()
+    return get_review_snapshot_detail(db=db, snapshot_id=snap.id, user_id=user_id)
+
+
+def clone_review_snapshot(
+    db: Session,
+    snapshot_id: str,
+    user_id: str,
+    new_name: str,
+    project_name: Optional[str] = None,
+    client_name: Optional[str] = None,
+    review_status: Optional[str] = "EN_REVISION",
+    auditor_notes: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Guardar Como: crea una copia independiente completa de la auditoría actual con otro nombre."""
+    if not snapshot_id:
+        raise ValueError("El snapshot_id es obligatorio.")
+    if not new_name or not new_name.strip():
+        raise ValueError("El nuevo nombre de la auditoría es obligatorio.")
+    ensure_review_tables()
+
+    source: Optional[ReviewSnapshot] = (
+        db.query(ReviewSnapshot)
+        .options(
+            selectinload(ReviewSnapshot.items).selectinload(ReviewItem.components),
+            selectinload(ReviewSnapshot.items).selectinload(ReviewItem.findings),
+            selectinload(ReviewSnapshot.findings),
+        )
+        .filter(ReviewSnapshot.id == snapshot_id)
+        .first()
+    )
+    if not source:
+        raise LookupError("Auditoría origen no encontrada.")
+
+    new_id = str(uuid.uuid4())
+    cloned = ReviewSnapshot(
+        id=new_id,
+        user_id=str(user_id),
+        source_type=source.source_type,
+        source_budget_id=source.source_budget_id,
+        source_filename=source.source_filename,
+        database_id=source.database_id,
+        name=new_name.strip(),
+        project_name=project_name.strip() if project_name is not None else source.project_name,
+        client_name=client_name.strip() if client_name is not None else source.client_name,
+        currency=source.currency,
+        audit_group_id=new_id,
+        parent_snapshot_id=None,
+        version_number=1,
+        review_status=(review_status or "EN_REVISION").strip().upper(),
+        auditor_notes=auditor_notes if auditor_notes is not None else source.auditor_notes,
+        fcas_percent=source.fcas_percent,
+        admin_percent=source.admin_percent,
+        profit_percent=source.profit_percent,
+        iva_percent=source.iva_percent,
+        total_items=source.total_items,
+        coded_items_count=source.coded_items_count,
+        uncoded_items_count=source.uncoded_items_count,
+        critical_findings_count=source.critical_findings_count,
+        high_findings_count=source.high_findings_count,
+        medium_findings_count=source.medium_findings_count,
+        info_findings_count=source.info_findings_count,
+        health_score=source.health_score,
+    )
+    db.add(cloned)
+    db.flush()
+
+    item_id_map: Dict[str, str] = {}
+    for it in source.items:
+        new_item_id = str(uuid.uuid4())
+        item_id_map[it.id] = new_item_id
+        cloned_item = ReviewItem(
+            id=new_item_id,
+            snapshot_id=cloned.id,
+            row_number=it.row_number,
+            sheet_name=it.sheet_name,
+            original_code=it.original_code,
+            normalized_code=it.normalized_code,
+            covenin_code=it.covenin_code,
+            matched_master_code=it.matched_master_code,
+            origin_source=it.origin_source,
+            description=it.description,
+            master_description=it.master_description,
+            description_similarity=it.description_similarity,
+            unit=it.unit,
+            master_unit=it.master_unit,
+            quantity=it.quantity,
+            performance=it.performance,
+            master_performance=it.master_performance,
+            imported_unit_price=it.imported_unit_price,
+            calculated_unit_price=it.calculated_unit_price,
+            master_unit_price=it.master_unit_price,
+            is_chapter=it.is_chapter,
+            is_uncoded=it.is_uncoded,
+            suggested_equivalent_code=it.suggested_equivalent_code,
+            suggested_equivalent_desc=it.suggested_equivalent_desc,
+            suggested_equivalent_score=it.suggested_equivalent_score,
+        )
+        db.add(cloned_item)
+        db.flush()
+
+        for comp in it.components:
+            db.add(
+                ReviewAPUComponent(
+                    id=str(uuid.uuid4()),
+                    review_item_id=cloned_item.id,
+                    component_type=comp.component_type,
+                    code=comp.code,
+                    resolved_master_code=comp.resolved_master_code,
+                    description=comp.description,
+                    unit=comp.unit,
+                    quantity=comp.quantity,
+                    master_quantity=comp.master_quantity,
+                    unit_price=comp.unit_price,
+                    master_unit_price=comp.master_unit_price,
+                    waste_or_deprec=comp.waste_or_deprec,
+                    master_waste_or_deprec=comp.master_waste_or_deprec,
+                    bonus=comp.bonus,
+                )
+            )
+
+    for f in source.findings:
+        db.add(
+            ReviewFinding(
+                snapshot_id=cloned.id,
+                review_item_id=item_id_map.get(f.review_item_id or "") if f.review_item_id else None,
+                rule_id=f.rule_id,
+                category=f.category,
+                severity=f.severity,
+                item_code=f.item_code,
+                component_code=f.component_code,
+                component_description=f.component_description,
+                field_name=f.field_name,
+                imported_value=f.imported_value,
+                master_value=f.master_value,
+                diff_percent=f.diff_percent,
+                message=f.message,
+                suggestion=f.suggestion,
+                finding_status=f.finding_status or "PENDIENTE",
+                auditor_comment=f.auditor_comment,
+            )
+        )
+
+    db.commit()
+    return get_review_snapshot_detail(db=db, snapshot_id=cloned.id, user_id=user_id)
+
+
+def update_review_finding(
+    db: Session,
+    snapshot_id: str,
+    finding_id: int,
+    user_id: str,
+    finding_status: str,
+    auditor_comment: Optional[str] = None,
+) -> ReviewFinding:
+    """Actualiza el estado de un hallazgo puntual (PENDIENTE, CORREGIDO, JUSTIFICADO, RECHAZADO) y su nota."""
+    ensure_review_tables()
+    finding = (
+        db.query(ReviewFinding)
+        .filter(
+            ReviewFinding.id == int(finding_id),
+            ReviewFinding.snapshot_id == str(snapshot_id),
+        )
+        .first()
+    )
+    if not finding:
+        raise LookupError("Hallazgo no encontrado.")
+    finding.finding_status = (finding_status or "PENDIENTE").strip().upper()
+    if auditor_comment is not None:
+        finding.auditor_comment = auditor_comment
+    db.commit()
+    db.refresh(finding)
+    return finding
 
 
 def delete_review_snapshot(db: Session, snapshot_id: str, user_id: str) -> None:
@@ -843,7 +1216,7 @@ def delete_review_snapshot(db: Session, snapshot_id: str, user_id: str) -> None:
 
 
 def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tuple[bytes, str]:
-    """Genera un archivo Excel (.xlsx) profesional con las 4 hojas del Informe de Auditoría de Presupuesto."""
+    """Genera un archivo Excel (.xlsx) profesional con las hojas del Informe de Auditoría de Presupuesto."""
     detail = get_review_snapshot_detail(db, snapshot_id, user_id)
     wb = Workbook()
 
@@ -852,6 +1225,7 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
     crit_fill = PatternFill("solid", fgColor="FEE2E2")
     high_fill = PatternFill("solid", fgColor="FFEDD5")
     info_fill = PatternFill("solid", fgColor="E0F2FE")
+    resolved_fill = PatternFill("solid", fgColor="DCFCE7")
 
     def style_header_row(ws: Any, row_idx: int = 1) -> None:
         for cell in ws[row_idx]:
@@ -865,30 +1239,43 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
     ws_sum.append(["Campo / Indicador", "Valor"])
     style_header_row(ws_sum, 1)
     summary_rows = [
-        ("Nombre del Presupuesto", detail["name"]),
+        ("Nombre de la Auditoría", detail["name"]),
+        ("Versión del Expediente", f"v{detail['version_number']}"),
+        ("Estado de Revisión", detail["review_status"]),
         ("Obra / Proyecto", detail["project_name"] or "-"),
-        ("Cliente / Contratante", detail["client_name"] or "-"),
+        ("Empresa / Contratista", detail["client_name"] or "-"),
         ("Fuente de Auditoría", detail["source_filename"] or f"Presupuesto CostBase ({detail['source_budget_id']})"),
-        ("Base de Datos de Contraste", detail["database_id"]),
+        ("Base de Datos de Referencia", detail["database_id"]),
         ("Moneda", detail["currency"]),
         ("Puntaje de Salud (0 - 100)", detail["health_score"]),
         ("Total Partidas Auditadas", detail["total_items"]),
-        ("Partidas Codificadas (CostBase / Maprex)", detail["coded_items_count"]),
+        ("Partidas Codificadas en Base", detail["coded_items_count"]),
         ("Partidas Sin Código COVENIN (S/C)", detail["uncoded_items_count"]),
         ("Hallazgos Severidad CRÍTICA", detail["critical_findings_count"]),
         ("Hallazgos Severidad ALTA", detail["high_findings_count"]),
         ("Hallazgos Severidad MEDIA", detail["medium_findings_count"]),
-        ("Notas Nativas Maprex vs CostBase (INFO)", detail["info_findings_count"]),
+        ("Diferencias de Catálogo Histórico (INFO)", detail["info_findings_count"]),
+        ("Observaciones del Auditor", detail["auditor_notes"] or "-"),
     ]
+    if detail.get("version_comparison"):
+        vc = detail["version_comparison"]
+        summary_rows.extend([
+            ("Comparado contra Versión Anterior", f"v{vc['previous_version_number']} ({vc['previous_name']})"),
+            ("Evolución Índice de Salud", f"{vc['previous_health_score']}% -> {detail['health_score']}% ({vc['health_delta']:+.1f}%)"),
+            ("Hallazgos Corregidos / Subsanados", vc["resolved_findings_count"]),
+            ("Hallazgos Persistentes", vc["persistent_findings_count"]),
+            ("Hallazgos Nuevos en esta Versión", vc["new_findings_count"]),
+        ])
     for k, v in summary_rows:
-        ws_sum.append([k, v])
+        ws_sum.append([str(k), str(v) if v is not None else "-"])
     ws_sum.column_dimensions["A"].width = 42
-    ws_sum.column_dimensions["B"].width = 50
+    ws_sum.column_dimensions["B"].width = 60
 
     # 2. Hoja Hallazgos de Auditoría
     ws_find = wb.create_sheet("Hallazgos de Auditoria")
     ws_find.append([
         "Severidad",
+        "Estado Hallazgo",
         "Regla",
         "Categoría",
         "Código Partida",
@@ -896,15 +1283,18 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
         "Descripción Insumo",
         "Campo Auditado",
         "Valor Presupuesto",
-        "Valor Maestro CostBase",
+        "Valor Base Referencia",
         "% Diferencia",
         "Diagnóstico",
         "Sugerencia Técnica",
+        "Comentario Auditor",
     ])
     style_header_row(ws_find, 1)
     for f in detail["findings"]:
+        sev_label = "CAT_HISTORICO" if f.severity == "INFO_MAPREX" else f.severity
         ws_find.append([
-            f.severity,
+            sev_label,
+            getattr(f, "finding_status", None) or "PENDIENTE",
             f.rule_id,
             f.category,
             f.item_code,
@@ -916,6 +1306,7 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
             f"{f.diff_percent:+.2f}%" if f.diff_percent is not None else "-",
             f.message,
             f.suggestion or "-",
+            getattr(f, "auditor_comment", None) or "-",
         ])
         row_cells = ws_find[ws_find.max_row]
         if f.severity == "CRITICA":
@@ -928,7 +1319,7 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
             for c in row_cells[:4]:
                 c.fill = info_fill
 
-    for idx, width in enumerate([14, 10, 16, 16, 16, 38, 16, 20, 22, 14, 65, 55], start=1):
+    for idx, width in enumerate([15, 15, 10, 16, 16, 16, 38, 16, 20, 22, 14, 65, 55, 40], start=1):
         ws_find.column_dimensions[get_column_letter(idx)].width = width
     ws_find.freeze_panes = "A2"
 
@@ -936,17 +1327,17 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
     ws_items = wb.create_sheet("Partidas con Discrepancias")
     ws_items.append([
         "Fila",
-        "N° Hallazgos",
-        "Código Importado",
-        "Código Maestro",
+        "N° Discrepancias",
+        "Código Presupuesto",
+        "Código Base",
         "Origen Catalográfico",
         "Unidad Imp.",
-        "Unidad Maestra",
+        "Unidad Base",
         "Cantidad",
         "Rend. Importado",
-        "Rend. Maestro",
+        "Rend. Base",
         "P.U. Calculado",
-        "P.U. Maestro Ref.",
+        "P.U. Base Ref.",
         "Similitud Desc. %",
         "Descripción Presupuesto",
     ])
@@ -970,7 +1361,7 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
             round(it.description_similarity * 100.0, 1),
             it.description,
         ])
-    for idx, width in enumerate([7, 13, 16, 16, 26, 12, 14, 12, 15, 15, 15, 15, 16, 70], start=1):
+    for idx, width in enumerate([7, 15, 16, 16, 26, 12, 14, 12, 15, 15, 15, 15, 16, 70], start=1):
         ws_items.column_dimensions[get_column_letter(idx)].width = width
     ws_items.freeze_panes = "A2"
 
@@ -981,9 +1372,9 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
         "Código Declarado",
         "Unidad",
         "Descripción en Presupuesto",
-        "Equivalente Maestro Sugerido",
+        "Equivalente Sugerido",
         "% Similitud",
-        "Descripción Maestro Sugerido",
+        "Descripción Equivalente Sugerido",
     ])
     style_header_row(ws_sc, 1)
     for it in detail["items"]:
@@ -1002,8 +1393,42 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
         ws_sc.column_dimensions[get_column_letter(idx)].width = width
     ws_sc.freeze_panes = "A2"
 
+    # 5. Hoja Control de Correcciones (si esta versión proviene de una re-auditoría)
+    if detail.get("version_comparison"):
+        vc = detail["version_comparison"]
+        ws_ver = wb.create_sheet("Correcciones Subsanadas")
+        ws_ver.append([
+            "Estado",
+            "Regla",
+            "Categoría",
+            "Código Partida",
+            "Código Insumo",
+            "Campo",
+            "Valor en Versión Anterior",
+            "Valor Base Referencia",
+            "Detalle Subsanado",
+        ])
+        style_header_row(ws_ver, 1)
+        for rf in vc.get("resolved_findings") or []:
+            ws_ver.append([
+                "CORREGIDO EN ESTA VERSIÓN",
+                rf.get("rule_id") or "-",
+                rf.get("category") or "-",
+                rf.get("item_code") or "-",
+                rf.get("component_code") or "-",
+                rf.get("field_name") or "-",
+                rf.get("previous_imported_value") or "-",
+                rf.get("master_value") or "-",
+                rf.get("message") or "-",
+            ])
+            for c in ws_ver[ws_ver.max_row][:3]:
+                c.fill = resolved_fill
+        for idx, width in enumerate([26, 12, 16, 16, 16, 16, 24, 24, 65], start=1):
+            ws_ver.column_dimensions[get_column_letter(idx)].width = width
+        ws_ver.freeze_panes = "A2"
+
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
-    safe_name = re.sub(r"[^a-zA-Z0-9_-]+", "_", str(detail["name"]))[:45]
-    return buf.getvalue(), f"Auditoria_{safe_name}.xlsx"
+    safe_name = re.sub(r"[^a-zA-Z0-9_-]+", "_", str(detail["name"]))[:45] or "Presupuesto"
+    return buf.getvalue(), f"Auditoria_{safe_name}_v{detail['version_number']}.xlsx"

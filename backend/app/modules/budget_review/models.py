@@ -33,6 +33,14 @@ class ReviewSnapshot(Base):
     client_name = Column(String, nullable=True)
     currency = Column(String, nullable=False, default="USD")
 
+    # Control de expediente, versiones y estado de revisión (CRUD Auditoría)
+    audit_group_id = Column(String, nullable=True, index=True)
+    parent_snapshot_id = Column(String, nullable=True, index=True)
+    version_number = Column(Integer, nullable=False, default=1)
+    review_status = Column(String, nullable=False, default="EN_REVISION")
+    # Estados: 'EN_REVISION', 'CON_OBSERVACIONES', 'CORREGIDO', 'APROBADO', 'RECHAZADO'
+    auditor_notes = Column(Text, nullable=True)
+
     fcas_percent = Column(Float, nullable=False, default=417.0)
     admin_percent = Column(Float, nullable=False, default=15.0)
     profit_percent = Column(Float, nullable=False, default=10.0)
@@ -48,6 +56,7 @@ class ReviewSnapshot(Base):
     health_score = Column(Float, nullable=False, default=100.0)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     items = relationship(
         "ReviewItem",
@@ -186,6 +195,10 @@ class ReviewFinding(Base):
 
     message = Column(Text, nullable=False)
     suggestion = Column(Text, nullable=True)
+
+    finding_status = Column(String, nullable=False, default="PENDIENTE")
+    # Estados: 'PENDIENTE', 'CORREGIDO', 'JUSTIFICADO', 'RECHAZADO'
+    auditor_comment = Column(Text, nullable=True)
 
     snapshot = relationship("ReviewSnapshot", back_populates="findings")
     item = relationship("ReviewItem", back_populates="findings")

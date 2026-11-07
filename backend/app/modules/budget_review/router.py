@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import io
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
@@ -14,16 +14,23 @@ from app.db.base import get_db
 from app.db.models.arko import ArkoAdmin
 from app.modules.budget_review.schemas import (
     AuditFromBudgetRequest,
+    FindingOut,
+    ReviewFindingUpdateRequest,
+    ReviewSnapshotCloneRequest,
     ReviewSnapshotDetailOut,
     ReviewSnapshotSummaryOut,
+    ReviewSnapshotUpdateRequest,
 )
 from app.modules.budget_review.service import (
     audit_existing_budget,
     audit_uploaded_file,
+    clone_review_snapshot,
     delete_review_snapshot,
     export_audit_report_excel,
     get_review_snapshot_detail,
     list_review_snapshots,
+    update_review_finding,
+    update_review_snapshot,
 )
 
 logger = logging.getLogger(__name__)
@@ -75,6 +82,11 @@ def run_audit_on_existing_budget(
             user_id=user_id,
             budget_id=payload.budget_id,
             database_id=payload.database_id,
+            parent_snapshot_id=payload.parent_snapshot_id,
+            custom_name=payload.name,
+            project_name=payload.project_name,
+            client_name=payload.client_name,
+            auditor_notes=payload.auditor_notes,
         )
         return get_review_snapshot_detail(db=db, snapshot_id=snapshot.id, user_id=user_id)
     except LookupError as exc:
@@ -93,10 +105,15 @@ def run_audit_on_existing_budget(
 def run_audit_on_uploaded_file(
     file: UploadFile = File(...),
     database_id: str = Form("master"),
+    parent_snapshot_id: Optional[str] = Form(None),
+    name: Optional[str] = Form(None),
+    project_name: Optional[str] = Form(None),
+    client_name: Optional[str] = Form(None),
+    auditor_notes: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> Dict[str, Any]:
-    """Importa un archivo (Libro Excel de APUs de Maprex/CostBase, presupuesto Excel, CSV o PDF) y lo audita."""
+    """Importa un archivo (Libro Excel de APUs, presupuesto Excel, CSV o PDF) y lo audita."""
     user_id = _resolve_user_id(current_user)
     if not file.filename:
         raise HTTPException(
@@ -116,6 +133,11 @@ def run_audit_on_uploaded_file(
             file_bytes=raw_bytes,
             filename=file.filename,
             database_id=database_id,
+            parent_snapshot_id=parent_snapshot_id,
+            custom_name=name,
+            project_name=project_name,
+            client_name=client_name,
+            auditor_notes=auditor_notes,
         )
         return get_review_snapshot_detail(db=db, snapshot_id=snapshot.id, user_id=user_id)
     except HTTPException:
@@ -147,6 +169,99 @@ def get_snapshot_by_id(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error al cargar el informe de auditoría.",
+        ) from exc
+
+
+@router.patch("/snapshots/{snapshot_id}", response_model=ReviewSnapshotDetailOut)
+def save_snapshot_changes(
+    snapshot_id: str,
+    payload: ReviewSnapshotUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """Guardar: actualiza nombre, proyecto, contratista, estado de revisión y observaciones del auditor."""
+    user_id = _resolve_user_id(current_user)
+    try:
+        return update_review_snapshot(
+            db=db,
+            snapshot_id=snapshot_id,
+            user_id=user_id,
+            name=payload.name,
+            project_name=payload.project_name,
+            client_name=payload.client_name,
+            review_status=payload.review_status,
+            auditor_notes=payload.auditor_notes,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.error("Error guardando cambios en auditoría %s: %s", snapshot_id, exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudieron guardar los cambios de la auditoría.",
+        ) from exc
+
+
+@router.post("/snapshots/{snapshot_id}/clone", response_model=ReviewSnapshotDetailOut)
+def save_snapshot_as_copy(
+    snapshot_id: str,
+    payload: ReviewSnapshotCloneRequest,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """Guardar Como: clona la auditoría actual con un nuevo nombre y expediente independiente."""
+    user_id = _resolve_user_id(current_user)
+    try:
+        return clone_review_snapshot(
+            db=db,
+            snapshot_id=snapshot_id,
+            user_id=user_id,
+            new_name=payload.name,
+            project_name=payload.project_name,
+            client_name=payload.client_name,
+            review_status=payload.review_status,
+            auditor_notes=payload.auditor_notes,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.error("Error clonando auditoría %s: %s", snapshot_id, exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo duplicar la auditoría.",
+        ) from exc
+
+
+@router.patch("/snapshots/{snapshot_id}/findings/{finding_id}", response_model=FindingOut)
+def update_single_finding(
+    snapshot_id: str,
+    finding_id: int,
+    payload: ReviewFindingUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Any:
+    """Actualiza el estado de un hallazgo puntual (PENDIENTE, CORREGIDO, JUSTIFICADO, RECHAZADO) y comentario."""
+    user_id = _resolve_user_id(current_user)
+    try:
+        return update_review_finding(
+            db=db,
+            snapshot_id=snapshot_id,
+            finding_id=finding_id,
+            user_id=user_id,
+            finding_status=payload.finding_status,
+            auditor_comment=payload.auditor_comment,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.error("Error actualizando hallazgo %s: %s", finding_id, exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo actualizar el hallazgo.",
         ) from exc
 
 
