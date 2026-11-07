@@ -86,9 +86,10 @@ def ensure_review_tables() -> None:
 
 
 def _resolve_schema_name(db: Session, database_id: str) -> str:
-    """Resuelve de forma segura el esquema de PostgreSQL correspondiente a database_id."""
+    """Resuelve de forma segura el esquema de PostgreSQL correspondiente a database_id y ajusta search_path."""
     clean_id = (database_id or "master").strip()
     if not clean_id or clean_id == "master":
+        db.execute(text("SET search_path TO public"))
         return "public"
     if not _SAFE_SCHEMA_RE.match(clean_id):
         raise ValueError("Identificador de base de datos inválido.")
@@ -98,7 +99,9 @@ def _resolve_schema_name(db: Session, database_id: str) -> str:
         ),
         {"sname": clean_id},
     ).fetchone()
-    return clean_id if row else "public"
+    resolved = clean_id if row else "public"
+    db.execute(text(f'SET search_path TO "{resolved}", public'))
+    return resolved
 
 
 def _load_master_reference_maps(db: Session, schema: str) -> Dict[str, Dict[str, str]]:
@@ -808,6 +811,7 @@ def audit_uploaded_file(
     clean_mode = (import_mode or "budget").strip().lower()
     if clean_mode not in {"apu_workbook", "budget", "compute_notes"}:
         clean_mode = "budget"
+    _resolve_schema_name(db, database_id)
     preview = build_preview(file_bytes, filename, db, mode=clean_mode)
     hdr = preview.get("header") or {}
     header_info = {
