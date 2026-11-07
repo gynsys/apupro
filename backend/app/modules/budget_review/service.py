@@ -73,6 +73,9 @@ def ensure_review_tables() -> None:
             ("review_budget_snapshots", "institution_name", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS institution_name VARCHAR"),
             ("review_budget_snapshots", "institution_logo", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS institution_logo TEXT"),
             ("review_budget_snapshots", "conclusion_text", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS conclusion_text TEXT"),
+            ("review_budget_snapshots", "approver_name", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS approver_name VARCHAR"),
+            ("review_budget_snapshots", "approver_civ", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS approver_civ VARCHAR"),
+            ("review_budget_snapshots", "approver_department", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS approver_department VARCHAR"),
             ("review_findings", "finding_status", "ALTER TABLE review_findings ADD COLUMN IF NOT EXISTS finding_status VARCHAR NOT NULL DEFAULT 'PENDIENTE'"),
             ("review_findings", "auditor_comment", "ALTER TABLE review_findings ADD COLUMN IF NOT EXISTS auditor_comment TEXT"),
             ("review_budget_items", "ai_audit_status", "ALTER TABLE review_budget_items ADD COLUMN IF NOT EXISTS ai_audit_status VARCHAR"),
@@ -336,6 +339,9 @@ def _execute_snapshot_audit(
     inst_name = header_info.get("institution_name") or (parent_snap.institution_name if parent_snap else None)
     inst_logo = header_info.get("institution_logo") or (parent_snap.institution_logo if parent_snap else None)
     user_conclusion = header_info.get("conclusion_text") or (parent_snap.conclusion_text if parent_snap else None)
+    appr_name = header_info.get("approver_name") or (parent_snap.approver_name if parent_snap else None)
+    appr_civ = header_info.get("approver_civ") or (parent_snap.approver_civ if parent_snap else None)
+    appr_dept = header_info.get("approver_department") or (parent_snap.approver_department if parent_snap else None)
 
     snapshot = ReviewSnapshot(
         id=new_snap_id,
@@ -354,6 +360,9 @@ def _execute_snapshot_audit(
         document_reference=doc_ref.strip() if doc_ref and doc_ref.strip() else None,
         institution_name=inst_name.strip() if inst_name and inst_name.strip() else None,
         institution_logo=inst_logo.strip() if inst_logo and inst_logo.strip() else None,
+        approver_name=appr_name.strip() if appr_name and appr_name.strip() else None,
+        approver_civ=appr_civ.strip() if appr_civ and appr_civ.strip() else None,
+        approver_department=appr_dept.strip() if appr_dept and appr_dept.strip() else None,
         audit_group_id=group_id,
         parent_snapshot_id=parent_snap.id if parent_snap else None,
         version_number=version_num,
@@ -1076,6 +1085,9 @@ def get_review_snapshot_detail(db: Session, snapshot_id: str, user_id: str) -> D
         "document_reference": snap.document_reference,
         "institution_name": snap.institution_name,
         "institution_logo": snap.institution_logo,
+        "approver_name": snap.approver_name,
+        "approver_civ": snap.approver_civ,
+        "approver_department": snap.approver_department,
         "conclusion_text": snap.conclusion_text,
         "chapters_count": chapters_count,
         "audit_group_id": group_id,
@@ -1122,6 +1134,9 @@ def update_review_snapshot(
     institution_name: Optional[str] = None,
     institution_logo: Optional[str] = None,
     conclusion_text: Optional[str] = None,
+    approver_name: Optional[str] = None,
+    approver_civ: Optional[str] = None,
+    approver_department: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Guarda cambios de metadatos, estado y observaciones del auditor sobre una auditoría existente."""
     if not snapshot_id:
@@ -1155,6 +1170,12 @@ def update_review_snapshot(
         snap.institution_logo = institution_logo.strip() or None
     if conclusion_text is not None:
         snap.conclusion_text = conclusion_text.strip() or None
+    if approver_name is not None:
+        snap.approver_name = approver_name.strip() or None
+    if approver_civ is not None:
+        snap.approver_civ = approver_civ.strip() or None
+    if approver_department is not None:
+        snap.approver_department = approver_department.strip() or None
 
     snap.updated_at = datetime.utcnow()
     db.commit()
@@ -1177,6 +1198,9 @@ def clone_review_snapshot(
     institution_name: Optional[str] = None,
     institution_logo: Optional[str] = None,
     conclusion_text: Optional[str] = None,
+    approver_name: Optional[str] = None,
+    approver_civ: Optional[str] = None,
+    approver_department: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Guardar Como: crea una copia independiente completa de la auditoría actual con otro nombre."""
     if not snapshot_id:
@@ -1217,6 +1241,9 @@ def clone_review_snapshot(
         institution_name=institution_name.strip() if institution_name and institution_name.strip() else source.institution_name,
         institution_logo=institution_logo.strip() if institution_logo and institution_logo.strip() else source.institution_logo,
         conclusion_text=conclusion_text.strip() if conclusion_text and conclusion_text.strip() else source.conclusion_text,
+        approver_name=approver_name.strip() if approver_name and approver_name.strip() else source.approver_name,
+        approver_civ=approver_civ.strip() if approver_civ and approver_civ.strip() else source.approver_civ,
+        approver_department=approver_department.strip() if approver_department and approver_department.strip() else source.approver_department,
         audit_group_id=new_id,
         parent_snapshot_id=None,
         version_number=1,

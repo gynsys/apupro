@@ -218,6 +218,9 @@ def save_snapshot_changes(
             institution_name=payload.institution_name,
             institution_logo=payload.institution_logo,
             conclusion_text=payload.conclusion_text,
+            approver_name=payload.approver_name,
+            approver_civ=payload.approver_civ,
+            approver_department=payload.approver_department,
         )
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
@@ -257,6 +260,9 @@ def save_snapshot_as_copy(
             institution_name=payload.institution_name,
             institution_logo=payload.institution_logo,
             conclusion_text=payload.conclusion_text,
+            approver_name=payload.approver_name,
+            approver_civ=payload.approver_civ,
+            approver_department=payload.approver_department,
         )
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc

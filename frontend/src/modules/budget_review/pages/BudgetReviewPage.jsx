@@ -224,6 +224,9 @@ export default function BudgetReviewPage() {
   const [formDocRef, setFormDocRef] = useState('');
   const [formInstitution, setFormInstitution] = useState('');
   const [formLogo, setFormLogo] = useState('');
+  const [formApproverName, setFormApproverName] = useState('');
+  const [formApproverCiv, setFormApproverCiv] = useState('');
+  const [formApproverDepartment, setFormApproverDepartment] = useState('Dirección de Control de Obras y Proyectos');
   const [formConclusion, setFormConclusion] = useState('');
   const [findingViewMode, setFindingViewMode] = useState('executive'); // 'executive' (H-01...) | 'detailed'
 
@@ -271,6 +274,9 @@ export default function BudgetReviewPage() {
     setFormDocRef(report.document_reference || '');
     setFormInstitution(report.institution_name || '');
     setFormLogo(report.institution_logo || '');
+    setFormApproverName(report.approver_name || '');
+    setFormApproverCiv(report.approver_civ || '');
+    setFormApproverDepartment(report.approver_department || 'Dirección de Control de Obras y Proyectos');
     setFormConclusion(report.conclusion_text || '');
   };
 
@@ -443,6 +449,9 @@ export default function BudgetReviewPage() {
     setFormDocRef(activeReport.document_reference || '');
     setFormInstitution(activeReport.institution_name || '');
     setFormLogo(activeReport.institution_logo || '');
+    setFormApproverName(activeReport.approver_name || '');
+    setFormApproverCiv(activeReport.approver_civ || '');
+    setFormApproverDepartment(activeReport.approver_department || 'Dirección de Control de Obras y Proyectos');
     setFormConclusion(activeReport.conclusion_text || '');
     setShowSaveModal(true);
   };
@@ -486,6 +495,9 @@ export default function BudgetReviewPage() {
         document_reference: formDocRef.trim() || null,
         institution_name: formInstitution.trim() || null,
         institution_logo: formLogo ? formLogo.trim() : null,
+        approver_name: formApproverName.trim() || null,
+        approver_civ: formApproverCiv.trim() || null,
+        approver_department: formApproverDepartment.trim() || null,
         conclusion_text: formConclusion.trim() || null,
       };
       const updatedDetail = saveAsMode
@@ -970,7 +982,9 @@ export default function BudgetReviewPage() {
                 : 'bg-emerald-50/80 border-emerald-500 text-emerald-950'
             }`}>
               <span className="font-extrabold uppercase tracking-wide block mb-1">
-                Conclusión preliminar / Dictamen Técnico:
+                {activeReport.review_status === 'CONFORME' || (activeReport.critical_findings_count === 0 && activeReport.high_findings_count === 0 && activeReport.medium_findings_count === 0)
+                  ? 'Conclusión del Informe Técnico:'
+                  : 'Conclusión preliminar / Dictamen Técnico:'}
               </span>
               <p className="m-0 font-medium">
                 {activeReport.conclusion_text || 'Sin dictamen registrado.'}
@@ -2137,7 +2151,7 @@ export default function BudgetReviewPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
-                    Ing. Revisor Técnico
+                    Ingeniero Revisor
                   </label>
                   <input
                     type="text"
@@ -2161,6 +2175,47 @@ export default function BudgetReviewPage() {
                 </div>
               </div>
 
+              {/* Representante / Autoridad del Ente Contratante */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Representante del Ente Contratante (Firma)
+                  </label>
+                  <input
+                    type="text"
+                    value={formApproverName}
+                    onChange={(e) => setFormApproverName(e.target.value)}
+                    placeholder="Ej. Ing. Juan Pérez"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    CIV del Representante
+                  </label>
+                  <input
+                    type="text"
+                    value={formApproverCiv}
+                    onChange={(e) => setFormApproverCiv(e.target.value)}
+                    placeholder="Ej. 145.890"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Dirección / Departamento del Ente Contratante
+                </label>
+                <input
+                  type="text"
+                  value={formApproverDepartment}
+                  onChange={(e) => setFormApproverDepartment(e.target.value)}
+                  placeholder="Ej. Dirección de Control de Obras y Proyectos"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
                   Estado Oficial del Expediente
@@ -2180,7 +2235,9 @@ export default function BudgetReviewPage() {
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Conclusión Preliminar del Informe Técnico
+                  {formStatus === 'CONFORME'
+                    ? 'Conclusión del Informe Técnico'
+                    : 'Conclusión Preliminar del Informe Técnico'}
                 </label>
                 <textarea
                   rows={3}
@@ -2480,10 +2537,12 @@ export default function BudgetReviewPage() {
           </div>
         </div>
 
-        {/* Conclusión preliminar / Dictamen Técnico */}
+        {/* Conclusión del Informe Técnico / Dictamen */}
         <div className="border-l-4 border-slate-900 bg-slate-50 p-3 mb-4 print-avoid-break text-xs">
           <span className="font-black uppercase tracking-wider text-slate-900 block mb-1">
-            Conclusión preliminar:
+            {activeReport.review_status === 'CONFORME' || (activeReport.critical_findings_count === 0 && activeReport.high_findings_count === 0 && activeReport.medium_findings_count === 0)
+              ? 'Conclusión del Informe Técnico:'
+              : 'Conclusión preliminar:'}
           </span>
           <p className="m-0 leading-relaxed text-slate-800 font-medium">
             {activeReport.conclusion_text ||
@@ -2538,26 +2597,31 @@ export default function BudgetReviewPage() {
                 {activeReport.reviewer_name || 'Ingeniero Revisor'}
               </div>
               <div className="font-mono text-slate-700 text-xs font-semibold">
-                {activeReport.reviewer_civ ? `CIV: ${activeReport.reviewer_civ}` : 'Colegio de Ingenieros de Venezuela'}
+                {activeReport.reviewer_civ ? `CIV: ${activeReport.reviewer_civ}` : 'CIV: —'}
               </div>
-              <div className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mt-0.5">
-                Revisor Técnico / Auditor de Presupuesto
+              <div className="text-slate-600 text-[11px] font-bold mt-0.5">
+                Ingeniero Revisor
               </div>
             </div>
 
             <div>
               <div className="border-b border-slate-900 w-3/4 mx-auto mb-2 h-14 flex items-end justify-center">
-                {/* Sello institucional */}
+                {/* Sello institucional / Firma Ente Contratante */}
               </div>
               <div className="font-black text-slate-900 text-sm">
-                {activeReport.institution_name || 'Ente Contratante / Institución'}
+                {activeReport.approver_name || 'Ing. Director de Obras'}
               </div>
-              <div className="text-slate-700 text-xs font-semibold">
-                Dirección de Control de Obras y Proyectos
+              <div className="font-mono text-slate-700 text-xs font-semibold">
+                {activeReport.approver_civ ? `CIV: ${activeReport.approver_civ}` : 'CIV: —'}
               </div>
-              <div className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mt-0.5">
-                Firma y Sello Oficial de Conformidad
+              <div className="text-slate-600 text-[11px] font-bold mt-0.5">
+                {activeReport.approver_department || 'Dirección de Control de Obras y Proyectos'}
               </div>
+              {activeReport.institution_name && (
+                <div className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mt-0.5">
+                  {activeReport.institution_name}
+                </div>
+              )}
             </div>
           </div>
         </div>

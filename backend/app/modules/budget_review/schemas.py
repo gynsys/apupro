@@ -24,6 +24,9 @@ class AuditFromBudgetRequest(BaseModel):
     institution_name: Optional[str] = None
     institution_logo: Optional[str] = None
     conclusion_text: Optional[str] = None
+    approver_name: Optional[str] = None
+    approver_civ: Optional[str] = None
+    approver_department: Optional[str] = None
 
 
 class ReviewSnapshotUpdateRequest(BaseModel):
@@ -41,6 +44,9 @@ class ReviewSnapshotUpdateRequest(BaseModel):
     institution_name: Optional[str] = None
     institution_logo: Optional[str] = None
     conclusion_text: Optional[str] = None
+    approver_name: Optional[str] = None
+    approver_civ: Optional[str] = None
+    approver_department: Optional[str] = None
 
 
 class ReviewSnapshotCloneRequest(BaseModel):
@@ -58,6 +64,9 @@ class ReviewSnapshotCloneRequest(BaseModel):
     institution_name: Optional[str] = None
     institution_logo: Optional[str] = None
     conclusion_text: Optional[str] = None
+    approver_name: Optional[str] = None
+    approver_civ: Optional[str] = None
+    approver_department: Optional[str] = None
 
 
 class ReviewFindingUpdateRequest(BaseModel):
@@ -172,6 +181,9 @@ class ReviewSnapshotSummaryOut(BaseModel):
     institution_name: Optional[str] = None
     institution_logo: Optional[str] = None
     conclusion_text: Optional[str] = None
+    approver_name: Optional[str] = None
+    approver_civ: Optional[str] = None
+    approver_department: Optional[str] = None
     chapters_count: int = 0
     total_items: int
     coded_items_count: int

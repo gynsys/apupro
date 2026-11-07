@@ -42,6 +42,11 @@ class ReviewSnapshot(Base):
     institution_logo = Column(Text, nullable=True)
     conclusion_text = Column(Text, nullable=True)
 
+    # Firma de Conformidad por el Ente Contratante
+    approver_name = Column(String(200), nullable=True)
+    approver_civ = Column(String(100), nullable=True)
+    approver_department = Column(String(255), nullable=True)
+
     # Control de expediente, versiones y estado de revisión (CRUD Auditoría)
     audit_group_id = Column(String, nullable=True, index=True)
     parent_snapshot_id = Column(String, nullable=True, index=True)
