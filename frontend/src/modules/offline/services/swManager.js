@@ -24,6 +24,12 @@ export async function syncServiceWorkerForUser(user) {
     persistSuperAdminUser(user);
     try {
       const registration = await navigator.serviceWorker.register(SW_URL, { scope: '/' });
+      // Forzar verificación de nueva versión en el servidor
+      try {
+        await registration.update();
+      } catch (_uErr) {
+        // En offline update() puede fallar silenciosamente
+      }
       const discoveredAssets = [];
       if (typeof document !== 'undefined') {
         document.querySelectorAll('script[src], link[rel="stylesheet"][href], link[rel="modulepreload"][href]').forEach((el) => {

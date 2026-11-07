@@ -1262,8 +1262,7 @@ export default function BudgetReviewPage() {
                             const sev = SEVERITY_CONFIG[f.severity]?.label || 'Media';
                             const headline = getFindingHeadline(f);
                             const itemRef = getItemRef(f, itemMap);
-                            const sug = f.suggestion ? ` Sugerencia: ${f.suggestion}.` : '';
-                            return `• ${hCode} (${sev}) — ${headline} (${itemRef}): ${cleanMessage(f.message)}.${sug}`;
+                            return `• ${hCode} (${sev}) — ${headline} (${itemRef}): ${cleanMessage(f.message)}.`;
                           })
                           .join('\n');
                         navigator.clipboard.writeText(`Detalle de correcciones:\n\n${text}`);
@@ -1331,13 +1330,6 @@ export default function BudgetReviewPage() {
                                   {cleanMessage(f.message)}.
                                 </span>
                               </div>
-
-                              {f.suggestion && (
-                                <div className="pl-3 text-xs font-semibold text-emerald-800 bg-emerald-50/80 rounded-lg px-2.5 py-1 border border-emerald-200/60 inline-flex items-center gap-1.5">
-                                  <span className="font-extrabold text-emerald-900">Sugerencia:</span>
-                                  <span className="font-normal text-emerald-950">{f.suggestion}</span>
-                                </div>
-                              )}
                             </div>
 
                             <div className="shrink-0 flex items-center gap-2 self-end sm:self-start">
@@ -2416,11 +2408,6 @@ export default function BudgetReviewPage() {
                       <span className="font-bold text-blue-900 mr-1.5">({itemRef}):</span>
                       <span className="text-slate-800 font-medium">{cleanMessage(f.message)}.</span>
                     </div>
-                    {f.suggestion && (
-                      <div className="pl-4 text-[11px] text-slate-700 mt-0.5">
-                        <span className="font-bold text-slate-900">Sugerencia:</span> {f.suggestion}
-                      </div>
-                    )}
                   </div>
                 );
               })
