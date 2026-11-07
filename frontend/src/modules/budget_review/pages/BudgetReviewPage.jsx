@@ -535,9 +535,13 @@ export default function BudgetReviewPage() {
     REVIEW_STATUS_CONFIG.EN_REVISION;
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-6 py-5 space-y-5">
-      {/* Encabezado Principal + Selector de Base de Datos + Acciones de Nueva Auditoría */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-5 space-y-4">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 py-5">
+      {/* =========================================================================
+          1. VISTA INTERACTIVA WEB (OCULTA AUTOMÁTICAMENTE AL IMPRIMIR / PDF)
+         ========================================================================= */}
+      <div className="print:hidden space-y-5">
+        {/* Encabezado Principal + Selector de Base de Datos + Acciones de Nueva Auditoría */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-5 space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
           <div className="shrink-0">
             <div className="flex items-center gap-2.5">
@@ -2122,5 +2126,235 @@ export default function BudgetReviewPage() {
         onSelectMode={handleImportChoiceSelect}
       />
     </div>
-  );
+    {/* FIN DE VISTA INTERACTIVA WEB (print:hidden) */}
+
+    {/* =========================================================================
+        2. INFORME TÉCNICO EJECUTIVO OFICIAL (EXCLUSIVO PARA IMPRESIÓN Y PDF)
+       ========================================================================= */}
+    {activeReport && (
+      <div className="hidden print:block w-full bg-white text-slate-900 font-sans text-xs leading-normal">
+        {/* Configuración global de página e impresión */}
+        <style>{`
+          @media print {
+            @page {
+              size: letter portrait;
+              margin: 14mm 15mm 15mm 15mm;
+            }
+            body {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color: #0f172a !important;
+              background: #ffffff !important;
+            }
+            .print-avoid-break {
+              break-inside: avoid !important;
+              page-break-inside: avoid !important;
+            }
+          }
+        `}</style>
+
+        {/* Encabezado Oficial */}
+        <div className="border-b-2 border-slate-900 pb-3 mb-4 print-avoid-break">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-0.5">
+                {activeReport.institution_name
+                  ? activeReport.institution_name.toUpperCase()
+                  : 'AUDITORÍA Y CONTROL TÉCNICO DE COSTOS DE CONSTRUCCIÓN'}
+              </span>
+              <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight">
+                INFORME DE REVISIÓN TÉCNICA DE PRESUPUESTO
+              </h1>
+              <p className="text-[10px] text-slate-500 italic mt-0.5">
+                Documento técnico de evaluación comparativa de partidas, rendimientos, recetas APU y consistencia matemática.
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="font-mono font-black text-sm text-slate-900 border-2 border-slate-900 px-2.5 py-1 rounded">
+                {activeReport.report_code || `RT-${new Date(activeReport.created_at).getFullYear()}-001`}
+              </div>
+              <span className="text-[10px] text-slate-600 block mt-1 font-semibold">
+                Versión {activeReport.version_number || 1} · {new Date(activeReport.created_at).toLocaleDateString('es-VE')}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Ficha de Identificación del Expediente (Viñetas Oficiales) */}
+        <div className="border border-slate-300 rounded-lg p-3.5 mb-4 print-avoid-break bg-slate-50/60">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+            <div>
+              <span className="font-bold text-slate-900">• Informe:</span>{' '}
+              <span className="font-mono font-bold text-slate-900">
+                {activeReport.report_code || `RT-${new Date(activeReport.created_at).getFullYear()}-001`}
+              </span>
+            </div>
+            <div>
+              <span className="font-bold text-slate-900">• Documento:</span>{' '}
+              <span className="font-medium">
+                {activeReport.document_reference || activeReport.source_filename || `Presupuesto de Obra — v${activeReport.version_number}`}
+              </span>
+            </div>
+            <div>
+              <span className="font-bold text-slate-900">• Obra:</span>{' '}
+              <span className="font-medium">{activeReport.project_name || 'Sin especificar'}</span>
+            </div>
+            <div>
+              <span className="font-bold text-slate-900">• Revisión:</span>{' '}
+              <span>
+                {new Date(activeReport.created_at).toLocaleDateString('es-VE')} |{' '}
+                <strong>{activeReport.reviewer_name || 'Ing. Revisor'}</strong>
+                {activeReport.reviewer_civ ? `, CIV ${activeReport.reviewer_civ}` : ''}
+              </span>
+            </div>
+            <div>
+              <span className="font-bold text-slate-900">• Empresa:</span>{' '}
+              <span className="font-medium">{activeReport.client_name || 'Sin especificar'}</span>
+            </div>
+            <div>
+              <span className="font-bold text-slate-900">• Base de Contraste:</span>{' '}
+              <span className="font-bold text-slate-900">{getDatabaseLabel(activeReport.database_id)}</span>
+            </div>
+            {activeReport.institution_name && (
+              <div>
+                <span className="font-bold text-slate-900">• Institución:</span>{' '}
+                <span className="font-medium">{activeReport.institution_name}</span>
+              </div>
+            )}
+            <div>
+              <span className="font-bold text-slate-900">• Estado del Dictamen:</span>{' '}
+              <span className="font-bold uppercase text-slate-900">
+                {currentStatusBadge.label}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Alcance de la Revisión */}
+        <div className="mb-4 print-avoid-break">
+          <div className="border-l-4 border-slate-900 bg-slate-100/70 px-3 py-1.5 text-xs text-slate-900 font-medium">
+            Se revisó el <strong>100%</strong> del presupuesto (<strong>{activeReport.chapters_count || 0}</strong> capítulos,{' '}
+            <strong>{activeReport.total_items}</strong> partidas y <strong>{activeReport.total_items}</strong> APUs analizados).
+          </div>
+        </div>
+
+        {/* Matriz de Hallazgos Técnicos */}
+        <div className="border border-slate-300 rounded-lg p-3 mb-4 print-avoid-break">
+          <div className="font-black text-[11px] uppercase tracking-wider text-slate-900 mb-2 border-b border-slate-200 pb-1">
+            Matriz de hallazgos técnicos
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-xs">
+            <div className="bg-slate-50 p-2 rounded border border-slate-200">
+              <span className="text-slate-500 block text-[10px] uppercase font-bold">• Partidas revisadas:</span>
+              <span className="text-base font-black text-slate-900">{activeReport.total_items}</span>
+            </div>
+            <div className="bg-slate-50 p-2 rounded border border-slate-200">
+              <span className="text-slate-500 block text-[10px] uppercase font-bold">• APUs analizados:</span>
+              <span className="text-base font-black text-slate-900">{activeReport.total_items}</span>{' '}
+              <span className="text-[10px] text-slate-600 block">
+                ({activeReport.coded_items_count} codificados COVENIN / {activeReport.uncoded_items_count} sin codificación)
+              </span>
+            </div>
+            <div className="bg-slate-50 p-2 rounded border border-slate-200">
+              <span className="text-slate-500 block text-[10px] uppercase font-bold">• Errores detectados:</span>
+              <span className="text-base font-black text-red-700">
+                {activeReport.critical_findings_count + activeReport.high_findings_count + activeReport.medium_findings_count}
+              </span>{' '}
+              <span className="text-[10px] text-slate-600 block">
+                ({activeReport.critical_findings_count} Críticas, {activeReport.high_findings_count} Altas, {activeReport.medium_findings_count} Medias)
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Conclusión preliminar / Dictamen Técnico */}
+        <div className="border-l-4 border-slate-900 bg-slate-50 p-3 mb-4 print-avoid-break text-xs">
+          <span className="font-black uppercase tracking-wider text-slate-900 block mb-1">
+            Conclusión preliminar:
+          </span>
+          <p className="m-0 leading-relaxed text-slate-800 font-medium">
+            {activeReport.conclusion_text ||
+              'El presupuesto no es apto para aprobación inmediata. Presenta desviaciones estructurales que deben ser subsanadas previo a su tramitación contractual o financiera.'}
+          </p>
+        </div>
+
+        {/* Detalle de Correcciones */}
+        <div className="mb-6">
+          <div className="font-black text-xs uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-2 print-avoid-break">
+            Detalle de correcciones:
+          </div>
+
+          <div className="space-y-2 text-xs">
+            {activeReport.findings && activeReport.findings.length > 0 ? (
+              activeReport.findings.map((f, i) => {
+                const hCode = `H-${String(i + 1).padStart(2, '0')}`;
+                const sev = SEVERITY_CONFIG[f.severity]?.label || 'Media';
+                const headline = getFindingHeadline(f);
+                const itemRef = getItemRef(f);
+                return (
+                  <div
+                    key={f.id}
+                    className="print-avoid-break pb-2 border-b border-slate-200 text-xs leading-relaxed"
+                  >
+                    <div>
+                      <span className="font-black text-slate-900 mr-1">• {hCode}</span>
+                      <span className="font-bold text-slate-700 uppercase mr-1">({sev})</span>
+                      <span className="font-extrabold text-slate-900 mr-1">— {headline}</span>
+                      <span className="font-bold text-blue-900 mr-1.5">({itemRef}):</span>
+                      <span className="text-slate-800 font-medium">{f.message}.</span>
+                    </div>
+                    {f.suggestion && (
+                      <div className="pl-4 text-[11px] text-slate-700 mt-0.5">
+                        <span className="font-bold text-slate-900">Sugerencia:</span> {f.suggestion}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-slate-500 italic py-2">
+                No se detectaron discrepancias técnicas con respecto a la base de contraste seleccionada.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Firmas y Conformidad Técnica */}
+        <div className="pt-8 mt-6 border-t-2 border-slate-400 print-avoid-break">
+          <div className="grid grid-cols-2 gap-10 text-center text-xs">
+            <div>
+              <div className="border-b border-slate-900 w-3/4 mx-auto mb-2 h-14 flex items-end justify-center">
+                {/* Firma manuscrita */}
+              </div>
+              <div className="font-black text-slate-900 text-sm">
+                {activeReport.reviewer_name || 'Ingeniero Revisor'}
+              </div>
+              <div className="font-mono text-slate-700 text-xs font-semibold">
+                {activeReport.reviewer_civ ? `CIV: ${activeReport.reviewer_civ}` : 'Colegio de Ingenieros de Venezuela'}
+              </div>
+              <div className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mt-0.5">
+                Revisor Técnico / Auditor de Presupuesto
+              </div>
+            </div>
+
+            <div>
+              <div className="border-b border-slate-900 w-3/4 mx-auto mb-2 h-14 flex items-end justify-center">
+                {/* Sello institucional */}
+              </div>
+              <div className="font-black text-slate-900 text-sm">
+                {activeReport.institution_name || 'Ente Contratante / Institución'}
+              </div>
+              <div className="text-slate-700 text-xs font-semibold">
+                Dirección de Control de Obras y Proyectos
+              </div>
+              <div className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mt-0.5">
+                Firma y Sello Oficial de Conformidad
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+);
 }
