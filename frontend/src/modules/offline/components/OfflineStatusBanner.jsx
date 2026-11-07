@@ -45,7 +45,22 @@ export default function OfflineStatusBanner({ user }) {
 
   useEffect(() => {
     if (!allowed) return;
-    refreshStats();
+    refreshStats().then(async () => {
+      // Auto-sincronización silenciosa en segundo plano para el Superadmin:
+      // Si hay conexión y aún no se han descargado los presupuestos al almacén offline,
+      // iniciar la descarga automáticamente sin requerir clic manual.
+      if (typeof navigator !== 'undefined' && navigator.onLine !== false) {
+        const currentCount = await getOfflineCachedBudgetsCount();
+        if (currentCount === 0) {
+          try {
+            await prepareDeviceForOfflineWork({ user });
+            await refreshStats();
+          } catch (_e) {
+            // Silencioso en auto-sync inicial
+          }
+        }
+      }
+    });
 
     const handleOnline = async () => {
       setIsOnline(true);

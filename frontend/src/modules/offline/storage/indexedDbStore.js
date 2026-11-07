@@ -177,19 +177,69 @@ export async function getOfflineBudgetsList() {
 
 export async function saveOfflineBudgetDetail(budget) {
   if (!budget || !budget.id || !isDeviceOfflineModeActive()) return false;
+  const canonicalId = String(budget.id);
   return putRecord(STORE_BUDGETS_DETAIL, {
     ...budget,
-    id: Number(budget.id) || String(budget.id),
+    id: canonicalId,
     _cachedAt: new Date().toISOString(),
   });
 }
 
 export async function getOfflineBudgetDetail(budgetId) {
   if (!budgetId || !isDeviceOfflineModeActive()) return null;
+  const strKey = String(budgetId);
+  const byStr = await getRecord(STORE_BUDGETS_DETAIL, strKey);
+  if (byStr) return byStr;
+
   const numId = Number(budgetId);
-  const byNum = !Number.isNaN(numId) ? await getRecord(STORE_BUDGETS_DETAIL, numId) : null;
-  if (byNum) return byNum;
-  return getRecord(STORE_BUDGETS_DETAIL, String(budgetId));
+  if (!Number.isNaN(numId)) {
+    const byNum = await getRecord(STORE_BUDGETS_DETAIL, numId);
+    if (byNum) return byNum;
+  }
+
+  // Fallback 1: Búsqueda flexible en todos los registros detallados de IndexedDB
+  const allDetails = await getAllRecords(STORE_BUDGETS_DETAIL);
+  const matchedDetail = allDetails.find((b) => b && String(b.id) === strKey);
+  if (matchedDetail) return matchedDetail;
+
+  // Fallback 2: Si el usuario desconectó internet antes de abrir el detalle de este presupuesto,
+  // construir un objeto base desde la lista resumen en caché (IndexedDB o sessionStorage)
+  // para que pueda abrir el presupuesto en vez de mostrar "Error cargando el presupuesto".
+  const summaryList = await getOfflineBudgetsList();
+  let summaryItem = Array.isArray(summaryList)
+    ? summaryList.find((b) => b && String(b.id) === strKey)
+    : null;
+
+  if (!summaryItem && typeof window !== 'undefined' && window.sessionStorage) {
+    try {
+      for (let i = 0; i < window.sessionStorage.length; i++) {
+        const k = window.sessionStorage.key(i);
+        if (k && k.startsWith('budgets_summary_cache_v1')) {
+          const parsed = JSON.parse(window.sessionStorage.getItem(k) || '[]');
+          if (Array.isArray(parsed)) {
+            const found = parsed.find((b) => b && String(b.id) === strKey);
+            if (found) {
+              summaryItem = found;
+              break;
+            }
+          }
+        }
+      }
+    } catch (_e) {
+      // ignore
+    }
+  }
+
+  if (summaryItem) {
+    return {
+      ...summaryItem,
+      id: summaryItem.id,
+      items: Array.isArray(summaryItem.items) ? summaryItem.items : [],
+      _offlineSummaryFallback: true,
+    };
+  }
+
+  return null;
 }
 
 export async function getOfflineCachedBudgetsCount() {

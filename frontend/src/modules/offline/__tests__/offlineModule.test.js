@@ -102,4 +102,31 @@ describe('Módulo Offline exclusivo para Superadmin', () => {
     expect(isNetworkOfflineError(new TypeError('Failed to fetch'))).toBe(true);
     expect(isNetworkOfflineError(new Error('HTTP 401 Unauthorized'))).toBe(false);
   });
+
+  it('recupera presupuestos con ID tipo UUID (string) y usa fallback de lista resumen si no había detalle previo', async () => {
+    persistSuperAdminUser({ id: 1, email: 'admin@arko360.net', is_superadmin: true });
+
+    const uuidId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+    await saveOfflineBudgetDetail({
+      id: uuidId,
+      project_name: 'Presupuesto UUID',
+      items: [{ id: 'item-uuid-1', description: 'PARTIDA DE PRUEBA' }],
+    });
+
+    const loadedUuid = await getOfflineBudgetDetail(uuidId);
+    expect(loadedUuid).not.toBeNull();
+    expect(loadedUuid.project_name).toBe('Presupuesto UUID');
+    expect(loadedUuid.items).toHaveLength(1);
+
+    // Fallback desde lista resumen cuando el detalle aún no se había descargado
+    const summaryOnlyId = 'f9e8d7c6-b5a4-3210-fedc-ba9876543210';
+    await saveOfflineBudgetsList([
+      { id: summaryOnlyId, project_name: 'Solo en Resumen', currency: 'USD' },
+    ]);
+
+    const fallbackBudget = await getOfflineBudgetDetail(summaryOnlyId);
+    expect(fallbackBudget).not.toBeNull();
+    expect(fallbackBudget.project_name).toBe('Solo en Resumen');
+    expect(Array.isArray(fallbackBudget.items)).toBe(true);
+  });
 });

@@ -22,13 +22,35 @@ export function isSuperAdminOfflineAllowed(user) {
 
 /**
  * Verifica si el dispositivo tiene habilitado actualmente el Modo Offline de Superadmin
- * en almacenamiento local.
+ * en almacenamiento local (incluyendo respaldo automático desde la sesión activa en sessionStorage).
  * @returns {boolean}
  */
 export function isDeviceOfflineModeActive() {
   if (typeof window === 'undefined' || !window.localStorage) return false;
   try {
-    return window.localStorage.getItem(SUPERADMIN_OFFLINE_FLAG_KEY) === '1';
+    if (window.localStorage.getItem(SUPERADMIN_OFFLINE_FLAG_KEY) === '1') {
+      return true;
+    }
+    const rawPersisted = window.localStorage.getItem(SUPERADMIN_USER_STORAGE_KEY);
+    if (rawPersisted) {
+      const parsed = JSON.parse(rawPersisted);
+      if (isSuperAdminOfflineAllowed(parsed)) {
+        window.localStorage.setItem(SUPERADMIN_OFFLINE_FLAG_KEY, '1');
+        return true;
+      }
+    }
+    if (window.sessionStorage) {
+      const rawSession = window.sessionStorage.getItem('arko_cached_user_v1');
+      if (rawSession) {
+        const sessionUser = JSON.parse(rawSession);
+        if (isSuperAdminOfflineAllowed(sessionUser)) {
+          window.localStorage.setItem(SUPERADMIN_USER_STORAGE_KEY, JSON.stringify(sessionUser));
+          window.localStorage.setItem(SUPERADMIN_OFFLINE_FLAG_KEY, '1');
+          return true;
+        }
+      }
+    }
+    return false;
   } catch (_e) {
     return false;
   }

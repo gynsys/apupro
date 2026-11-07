@@ -41,10 +41,29 @@ export const budgetService = {
       const data = await response.json();
       if (isDeviceOfflineModeActive() && Array.isArray(data)) {
         saveOfflineBudgetsList(data);
+        // Pre-cachear en segundo plano el detalle de los presupuestos para que al desconectar internet abran al instante
+        if (typeof navigator !== 'undefined' && navigator.onLine !== false) {
+          Promise.allSettled(
+            data.slice(0, 25).map(async (b) => {
+              if (!b || !b.id) return;
+              const existing = await getOfflineBudgetDetail(b.id);
+              if (existing && !existing._offlineSummaryFallback && Array.isArray(existing.items)) {
+                return;
+              }
+              const detailRes = await fetch(`${API_URL}/budgets/${b.id}`, {
+                credentials: 'include',
+              });
+              if (detailRes.ok) {
+                const detail = await detailRes.json();
+                await saveOfflineBudgetDetail(detail);
+              }
+            })
+          ).then(() => notifyOfflineChanged());
+        }
       }
       return data;
     } catch (err) {
-      if (isDeviceOfflineModeActive() && isNetworkOfflineError(err)) {
+      if (isDeviceOfflineModeActive()) {
         const cached = await getOfflineBudgetsList();
         if (cached) return cached;
       }
@@ -131,7 +150,7 @@ export const budgetService = {
       }
       return data;
     } catch (err) {
-      if (isDeviceOfflineModeActive() && isNetworkOfflineError(err)) {
+      if (isDeviceOfflineModeActive()) {
         const cached = await getOfflineBudgetDetail(id);
         if (cached) return cached;
       }
