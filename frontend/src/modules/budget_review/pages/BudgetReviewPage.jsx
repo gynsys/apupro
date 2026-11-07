@@ -695,8 +695,15 @@ export default function BudgetReviewPage() {
 
               <button
                 type="button"
-                onClick={() => window.print()}
-                className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                onClick={() => {
+                  const prevTitle = document.title;
+                  document.title = '';
+                  window.print();
+                  setTimeout(() => {
+                    document.title = prevTitle;
+                  }, 500);
+                }}
+                className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
               >
                 <Printer size={14} />
                 <span>Imprimir / PDF</span>
@@ -737,58 +744,54 @@ export default function BudgetReviewPage() {
           <div className="bg-white rounded-2xl border border-slate-300 shadow-sm p-5 sm:p-6 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 pb-4">
               <div>
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-md">
-                  Dictamen Oficial de Revisión Técnica
-                </span>
-                <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight mt-1.5 uppercase">
+                <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight uppercase">
                   INFORME DE REVISIÓN TÉCNICA DE PRESUPUESTO
                 </h2>
-                <p className="text-[11px] sm:text-xs text-slate-500 italic mt-0.5">
-                  Documento emitido conforme a las bases de costos, normas técnicas y parámetros de contraste institucional.
-                </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <div className="font-mono font-black text-sm text-slate-900 border-2 border-slate-900 px-3 py-1 rounded-lg bg-slate-50 shadow-2xs">
+                    {activeReport.report_code || `RT-${new Date(activeReport.created_at).getFullYear()}-001`}
+                  </div>
+                  <span className="text-[10px] text-slate-500 block mt-0.5 font-bold">
+                    Versión {activeReport.version_number || 1} · {new Date(activeReport.created_at).toLocaleDateString('es-VE')}
+                  </span>
+                </div>
                 <button
                   type="button"
                   onClick={() => openSaveDialog(false)}
                   className="px-3.5 py-2 rounded-xl border border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs transition"
                 >
                   <Edit3 size={14} className="text-blue-700" />
-                  <span>Editar Datos del Revisor / Informe</span>
+                  <span className="hidden sm:inline">Editar Datos del Revisor / Informe</span>
                 </button>
               </div>
             </div>
 
-            {/* Metadatos Ejecutivos en Viñetas */}
+            {/* Metadatos Ejecutivos en Viñetas (Sin duplicar el código de informe) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-xs sm:text-sm text-slate-800 bg-slate-50/70 p-4 rounded-xl border border-slate-200">
               <div className="space-y-1.5">
                 <div>
-                  <span className="font-bold text-slate-900">• Informe:</span>{' '}
-                  <span className="font-extrabold font-mono text-blue-800 bg-white px-2 py-0.5 rounded border border-slate-300">
-                    {activeReport.report_code || `RT-${new Date(activeReport.created_at).getFullYear()}-001`}
-                  </span>
-                </div>
-                <div>
                   <span className="font-bold text-slate-900">• Obra:</span>{' '}
-                  <span>{activeReport.project_name || 'Sin especificar'}</span>
+                  <span className="font-medium">{activeReport.project_name || 'Sin especificar'}</span>
                 </div>
                 <div>
                   <span className="font-bold text-slate-900">• Empresa:</span>{' '}
-                  <span>{activeReport.client_name || 'Sin especificar'}</span>
+                  <span className="font-medium">{activeReport.client_name || 'Sin especificar'}</span>
                 </div>
-                {activeReport.institution_name && (
-                  <div>
-                    <span className="font-bold text-slate-900">• Institución:</span>{' '}
-                    <span>{activeReport.institution_name}</span>
-                  </div>
-                )}
+                <div>
+                  <span className="font-bold text-slate-900">• Estado del Dictamen:</span>{' '}
+                  <span className={`px-2 py-0.5 rounded-md border text-xs font-bold ${currentStatusBadge.badgeClass}`}>
+                    {currentStatusBadge.label} (v{activeReport.version_number || 1})
+                  </span>
+                </div>
               </div>
 
               <div className="space-y-1.5">
                 <div>
                   <span className="font-bold text-slate-900">• Documento:</span>{' '}
-                  <span>{activeReport.document_reference || activeReport.source_filename || `Presupuesto de Obra — v${activeReport.version_number}`}</span>
+                  <span className="font-medium">{activeReport.document_reference || activeReport.source_filename || `Presupuesto de Obra — v${activeReport.version_number}`}</span>
                 </div>
                 <div>
                   <span className="font-bold text-slate-900">• Revisión:</span>{' '}
@@ -802,6 +805,14 @@ export default function BudgetReviewPage() {
                   <span className="font-bold text-slate-900">• Base de Contraste:</span>{' '}
                   <span className="font-bold text-blue-700">{getDatabaseLabel(activeReport.database_id)}</span>
                 </div>
+                {activeReport.institution_name && (
+                  <div>
+                    <span className="font-bold text-slate-900">• Institución:</span>{' '}
+                    <span className="font-medium">{activeReport.institution_name}</span>
+                  </div>
+                )}
+              </div>
+            </div>
                 <div>
                   <span className="font-bold text-slate-900">• Estado Expediente:</span>{' '}
                   <span className={`px-2 py-0.5 rounded-md border text-xs font-bold ${currentStatusBadge.badgeClass}`}>
@@ -1093,7 +1104,7 @@ export default function BudgetReviewPage() {
                       : 'border-transparent text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  APUs Sin Código COVENIN y Equivalentes ({uncodedItems.length})
+                  Partidas Especiales / APUs No Codificados ({uncodedItems.length})
                 </button>
                 {activeReport.version_comparison && (
                   <button
@@ -1605,7 +1616,7 @@ export default function BudgetReviewPage() {
               </div>
             )}
 
-            {/* PESTAÑA 3: PARTIDAS SIN CÓDIGO COVENIN (S/C) */}
+            {/* PESTAÑA 3: PARTIDAS ESPECIALES Y APUs NO CODIFICADOS */}
             {activeTab === 'uncoded' && (
               <div className="p-4 space-y-3">
                 {uncodedItems.length === 0 ? (
@@ -1615,41 +1626,80 @@ export default function BudgetReviewPage() {
                     referencia.
                   </div>
                 ) : (
-                  uncodedItems.map((it) => (
-                    <div
-                      key={it.id}
-                      className="rounded-xl border border-violet-200 bg-violet-50/30 p-4 space-y-2"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="px-2.5 py-0.5 rounded-md bg-violet-100 text-violet-900 font-extrabold text-xs">
-                          Fila #{it.row_number} · Código declarado: {it.original_code || 'S/C'} ({it.unit})
-                        </span>
-                        {it.suggested_equivalent_code && (
-                          <span className="px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-xs">
-                            Candidato Sugerido: {it.suggested_equivalent_code} (Similitud:{' '}
-                            {Math.round((it.suggested_equivalent_score || 0) * 100)}%)
+                  uncodedItems.map((it) => {
+                    const isObserved = it.ai_audit_status === 'OBSERVADO';
+                    return (
+                      <div
+                        key={it.id}
+                        className={`rounded-2xl border p-4 space-y-2.5 transition ${
+                          isObserved
+                            ? 'border-amber-200 bg-amber-50/40'
+                            : 'border-emerald-200 bg-emerald-50/30'
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2.5 py-0.5 rounded-md bg-slate-900 text-white font-extrabold text-xs">
+                              Fila #{it.row_number} · {it.original_code || 'S/C'} ({it.unit})
+                            </span>
+                            <span
+                              className={`px-2.5 py-0.5 rounded-md border text-xs font-bold ${
+                                isObserved
+                                  ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                  : 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                              }`}
+                            >
+                              {isObserved
+                                ? 'APU Especial Observado por IA'
+                                : 'APU Especial Conforme (Validado por IA)'}
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold text-slate-600">
+                            Rendimiento: {it.performance} {it.unit}/día
                           </span>
+                        </div>
+
+                        <p className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                          {it.description}
+                        </p>
+
+                        <div className="text-xs rounded-xl p-3 bg-white border border-slate-200 text-slate-800 space-y-1">
+                          <div className="font-extrabold flex items-center gap-1.5 text-slate-900">
+                            <span
+                              className={`w-2 h-2 rounded-full ${
+                                isObserved ? 'bg-amber-500' : 'bg-emerald-500'
+                              }`}
+                            ></span>
+                            <span>Dictamen Técnico de IA:</span>
+                          </div>
+                          <p className="m-0 text-slate-700 leading-relaxed font-medium">
+                            {it.ai_audit_summary ||
+                              'APU especial técnicamente estructurado y justificado con insumos coherentes.'}
+                          </p>
+                        </div>
+
+                        {it.components && it.components.length > 0 && (
+                          <div className="pt-2 border-t border-slate-200/80 flex flex-wrap gap-2 text-[11px] text-slate-600">
+                            <span className="font-bold text-slate-700">Composición APU:</span>
+                            <span>
+                              {it.components.filter((c) => c.component_type === 'material').length}{' '}
+                              materiales
+                            </span>
+                            <span>•</span>
+                            <span>
+                              {it.components.filter((c) => c.component_type === 'labor').length}{' '}
+                              mano de obra
+                            </span>
+                            <span>•</span>
+                            <span>
+                              {it.components.filter((c) => c.component_type === 'equipment').length}{' '}
+                              equipos
+                            </span>
+                          </div>
                         )}
                       </div>
-                      <p className="text-xs sm:text-sm font-bold text-slate-900">{it.description}</p>
-                      {it.suggested_equivalent_desc ? (
-                        <div className="text-xs bg-white rounded-lg p-2.5 border border-violet-200 text-slate-700">
-                          <strong className="text-emerald-700">
-                            Partida Codificada Sugerida ({it.suggested_equivalent_code}):
-                          </strong>{' '}
-                          {it.suggested_equivalent_desc}
-                        </div>
-                      ) : (
-                        <div className="text-xs text-amber-800 flex items-center gap-1.5">
-                          <Info size={14} />
-                          <span>
-                            Partida especial sin equivalente cercano en el catálogo. Requiere revisión
-                            manual de insumos.
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             )}
@@ -2132,13 +2182,13 @@ export default function BudgetReviewPage() {
         2. INFORME TÉCNICO EJECUTIVO OFICIAL (EXCLUSIVO PARA IMPRESIÓN Y PDF)
        ========================================================================= */}
     {activeReport && (
-      <div className="hidden print:block w-full bg-white text-slate-900 font-sans text-xs leading-normal">
-        {/* Configuración global de página e impresión */}
+      <div className="hidden print:block w-full bg-white text-slate-900 font-sans text-xs leading-normal p-[14mm]">
+        {/* Configuración de página e impresión sin encabezados de navegador */}
         <style>{`
           @media print {
             @page {
               size: letter portrait;
-              margin: 14mm 15mm 15mm 15mm;
+              margin: 0 !important;
             }
             body {
               -webkit-print-color-adjust: exact !important;
@@ -2155,39 +2205,29 @@ export default function BudgetReviewPage() {
 
         {/* Encabezado Oficial */}
         <div className="border-b-2 border-slate-900 pb-3 mb-4 print-avoid-break">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-0.5">
-                {activeReport.institution_name
-                  ? activeReport.institution_name.toUpperCase()
-                  : 'AUDITORÍA Y CONTROL TÉCNICO DE COSTOS DE CONSTRUCCIÓN'}
-              </span>
               <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight">
                 INFORME DE REVISIÓN TÉCNICA DE PRESUPUESTO
               </h1>
-              <p className="text-[10px] text-slate-500 italic mt-0.5">
-                Documento técnico de evaluación comparativa de partidas, rendimientos, recetas APU y consistencia matemática.
-              </p>
             </div>
             <div className="text-right shrink-0">
-              <div className="font-mono font-black text-sm text-slate-900 border-2 border-slate-900 px-2.5 py-1 rounded">
+              <div className="font-mono font-black text-sm text-slate-900 border-2 border-slate-900 px-3 py-1 rounded-lg bg-slate-50">
                 {activeReport.report_code || `RT-${new Date(activeReport.created_at).getFullYear()}-001`}
               </div>
-              <span className="text-[10px] text-slate-600 block mt-1 font-semibold">
+              <span className="text-[10px] text-slate-600 block mt-0.5 font-bold">
                 Versión {activeReport.version_number || 1} · {new Date(activeReport.created_at).toLocaleDateString('es-VE')}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Ficha de Identificación del Expediente (Viñetas Oficiales) */}
+        {/* Ficha de Identificación del Expediente (Viñetas Oficiales sin duplicar código) */}
         <div className="border border-slate-300 rounded-lg p-3.5 mb-4 print-avoid-break bg-slate-50/60">
           <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
             <div>
-              <span className="font-bold text-slate-900">• Informe:</span>{' '}
-              <span className="font-mono font-bold text-slate-900">
-                {activeReport.report_code || `RT-${new Date(activeReport.created_at).getFullYear()}-001`}
-              </span>
+              <span className="font-bold text-slate-900">• Obra:</span>{' '}
+              <span className="font-medium">{activeReport.project_name || 'Sin especificar'}</span>
             </div>
             <div>
               <span className="font-bold text-slate-900">• Documento:</span>{' '}
@@ -2196,8 +2236,8 @@ export default function BudgetReviewPage() {
               </span>
             </div>
             <div>
-              <span className="font-bold text-slate-900">• Obra:</span>{' '}
-              <span className="font-medium">{activeReport.project_name || 'Sin especificar'}</span>
+              <span className="font-bold text-slate-900">• Empresa:</span>{' '}
+              <span className="font-medium">{activeReport.client_name || 'Sin especificar'}</span>
             </div>
             <div>
               <span className="font-bold text-slate-900">• Revisión:</span>{' '}
@@ -2208,8 +2248,10 @@ export default function BudgetReviewPage() {
               </span>
             </div>
             <div>
-              <span className="font-bold text-slate-900">• Empresa:</span>{' '}
-              <span className="font-medium">{activeReport.client_name || 'Sin especificar'}</span>
+              <span className="font-bold text-slate-900">• Estado del Dictamen:</span>{' '}
+              <span className="font-bold uppercase text-slate-900">
+                {currentStatusBadge.label}
+              </span>
             </div>
             <div>
               <span className="font-bold text-slate-900">• Base de Contraste:</span>{' '}
@@ -2221,12 +2263,6 @@ export default function BudgetReviewPage() {
                 <span className="font-medium">{activeReport.institution_name}</span>
               </div>
             )}
-            <div>
-              <span className="font-bold text-slate-900">• Estado del Dictamen:</span>{' '}
-              <span className="font-bold uppercase text-slate-900">
-                {currentStatusBadge.label}
-              </span>
-            </div>
           </div>
         </div>
 

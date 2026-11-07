@@ -136,6 +136,8 @@ class ReviewItemOut(BaseModel):
     suggested_equivalent_code: Optional[str] = None
     suggested_equivalent_desc: Optional[str] = None
     suggested_equivalent_score: Optional[float] = None
+    ai_audit_status: Optional[str] = None
+    ai_audit_summary: Optional[str] = None
     components: List[ReviewComponentOut] = []
     findings: List[FindingOut] = []
 

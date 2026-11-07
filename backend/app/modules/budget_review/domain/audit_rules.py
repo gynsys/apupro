@@ -305,35 +305,40 @@ def evaluate_item_audit_rules(
             })
 
     # -------------------------------------------------------------------------
-    # B. PARTIDAS SIN CODIFICACIÓN O NO ENCONTRADAS EN BASE MAESTRA
+    # B. PARTIDAS SIN CODIFICACIÓN O ESPECIALES (AUDITORÍA TÉCNICA CON IA)
     # -------------------------------------------------------------------------
     if not master_item:
-        eq_code = item_data.get("suggested_equivalent_code")
-        eq_score = float(item_data.get("suggested_equivalent_score") or 0.0)
-        eq_desc = item_data.get("suggested_equivalent_desc") or ""
-        findings.append({
-            "rule_id": "SIN-001",
-            "category": "SIN_CODIGO",
-            "severity": "ALTA" if not eq_code else "MEDIA",
-            "item_code": code or "S/C",
-            "field_name": "cod_par",
-            "imported_value": code or "S/C",
-            "master_value": f"Sugerido: {eq_code} ({eq_score * 100:.0f}%)" if eq_code else "Sin equivalente directo",
-            "diff_percent": None,
-            "message": (
-                "Partida sin código en la base de referencia seleccionada. "
-                + (
-                    f"Equivalente más parecido: {eq_code} ({eq_score * 100:.0f}% similitud: '{eq_desc[:80]}')."
-                    if eq_code
-                    else "No se encontró una partida codificada equivalente con suficiente similitud."
-                )
-            ),
-            "suggestion": (
-                f"Evaluar homologación con la partida maestra {eq_code} y auditar su receta APU."
-                if eq_code
-                else "Auditar manualmente precios, rendimientos e insumos de este APU especial (S/C)."
-            ),
-        })
+        from app.modules.budget_review.domain.ai_apu_auditor import audit_uncoded_apu_with_ai
+
+        ai_eval = audit_uncoded_apu_with_ai(item_data)
+        item_data["ai_audit_status"] = ai_eval.get("status", "CONFORME")
+        item_data["ai_audit_summary"] = (
+            ai_eval.get("summary")
+            or ai_eval.get("technical_diagnosis")
+            or "APU especial analizado por IA."
+        )
+
+        # REGLA DE ORO: Si el APU está bien estructurado, NO se rechaza ni se generan errores forzados.
+        # Tampoco se sugieren homologaciones arbitrarias con partidas de otros catálogos.
+        if not ai_eval.get("is_well_structured", True):
+            defects = ai_eval.get("defects") or []
+            defect_msg = (
+                "; ".join(defects)
+                if defects
+                else (ai_eval.get("technical_diagnosis") or "Inconsistencia en la estructura de insumos del APU.")
+            )
+            findings.append({
+                "rule_id": "AI-UNC-001",
+                "category": "ESTRUCTURA",
+                "severity": "MEDIA",
+                "item_code": code or "S/C",
+                "field_name": "apu_structure",
+                "imported_value": f"{len(materials)} materiales / {len(labors)} mano de obra / {len(equipments)} equipos",
+                "master_value": "APU completo estructurado",
+                "diff_percent": None,
+                "message": f"Partida no codificada con estructura de APU incompleta u observada: {defect_msg}",
+                "suggestion": "Completar los insumos o cuadrilla requerida para la ejecución conforme al alcance de la partida.",
+            })
         return findings
 
     # -------------------------------------------------------------------------

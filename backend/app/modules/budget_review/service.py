@@ -74,12 +74,14 @@ def ensure_review_tables() -> None:
             ("review_budget_snapshots", "conclusion_text", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS conclusion_text TEXT"),
             ("review_findings", "finding_status", "ALTER TABLE review_findings ADD COLUMN IF NOT EXISTS finding_status VARCHAR NOT NULL DEFAULT 'PENDIENTE'"),
             ("review_findings", "auditor_comment", "ALTER TABLE review_findings ADD COLUMN IF NOT EXISTS auditor_comment TEXT"),
+            ("review_budget_items", "ai_audit_status", "ALTER TABLE review_budget_items ADD COLUMN IF NOT EXISTS ai_audit_status VARCHAR"),
+            ("review_budget_items", "ai_audit_summary", "ALTER TABLE review_budget_items ADD COLUMN IF NOT EXISTS ai_audit_summary TEXT"),
         ]
         with engine.begin() as conn:
             existing_rows = conn.execute(
                 text(
                     "SELECT table_name, column_name FROM information_schema.columns "
-                    "WHERE table_schema = 'public' AND table_name IN ('review_budget_snapshots', 'review_findings')"
+                    "WHERE table_schema = 'public' AND table_name IN ('review_budget_snapshots', 'review_findings', 'review_budget_items')"
                 )
             ).fetchall()
             existing_pairs = {(r[0], r[1]) for r in existing_rows}
@@ -418,18 +420,10 @@ def _execute_snapshot_audit(
             uncoded_count += 1
             uncoded_flag = True
             origin_src = "SIN_CODIGO_COVENIN"
-            candidates = raw.get("candidates") or []
-            if not candidates and desc:
-                try:
-                    candidates = find_candidates(db, orig_code, desc, unit, limit=3)
-                except Exception as exc:
-                    logger.error("Error buscando candidatos equivalentes: %s", exc, exc_info=True)
-                    candidates = []
-            if candidates:
-                best = candidates[0]
-                suggested_code = str(best.get("cod_par") or "")
-                suggested_desc = str(best.get("description") or "")
-                suggested_score = float(best.get("score") or 0.0)
+            # No forzar búsqueda ni sugerencias de homologaciones arbitrarias
+            suggested_code = None
+            suggested_desc = None
+            suggested_score = None
         else:
             coded_count += 1
             uncoded_flag = False
@@ -668,6 +662,10 @@ def _execute_snapshot_audit(
             admin_percent=admin_pct,
             profit_percent=profit_pct,
         )
+
+        if item_eval_payload.get("ai_audit_status"):
+            rev_item.ai_audit_status = item_eval_payload["ai_audit_status"]
+            rev_item.ai_audit_summary = item_eval_payload.get("ai_audit_summary")
 
         if orig_code and code_occurrences.get(orig_code.upper(), 0) > 1:
             item_findings.append({
@@ -1240,6 +1238,8 @@ def clone_review_snapshot(
             suggested_equivalent_code=it.suggested_equivalent_code,
             suggested_equivalent_desc=it.suggested_equivalent_desc,
             suggested_equivalent_score=it.suggested_equivalent_score,
+            ai_audit_status=it.ai_audit_status,
+            ai_audit_summary=it.ai_audit_summary,
         )
         db.add(cloned_item)
         db.flush()

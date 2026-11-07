@@ -119,3 +119,35 @@ def test_code_collision_detection() -> None:
     assert compute_snapshot_health_score(findings, 10) < 100.0
     calc = calculate_apu_unit_price(10.0, [], [], [])
     assert calc["unit_price"] == 0.0
+
+
+def test_uncoded_apu_not_rejected_when_well_structured() -> None:
+    """Verifica que una partida no codificada (S/C) con APU bien estructurado NO se rechace ni sugiera homologaciones."""
+    uncoded_item = {
+        "original_code": "ESP-001",
+        "description": "SUMINISTRO E INSTALACION DE MANTO ASFALTICO 4MM POLIESTER",
+        "unit": "M2",
+        "quantity": 100.0,
+        "performance": 40.0,
+        "imported_unit_price": 25.0,
+        "calculated_unit_price": 25.0,
+        "materials": [
+            {"code": "MAT-01", "description": "MANTO ASFALTICO 4MM", "quantity": 1.15, "unit": "M2"},
+            {"code": "MAT-02", "description": "IMPRIMADOR ASFALTICO", "quantity": 0.25, "unit": "GAL"},
+        ],
+        "equipments": [
+            {"code": "EQU-01", "description": "SOPLETE Y REGULADOR", "quantity": 1.0, "waste_or_deprec": 1.0},
+        ],
+        "labors": [
+            {"code": "MO-01", "description": "IMPERMEABILIZADOR", "quantity": 1.0},
+            {"code": "MO-02", "description": "AYUDANTE", "quantity": 1.0},
+        ],
+    }
+    findings = evaluate_item_audit_rules(uncoded_item, None, None)
+    # No debe tener SIN-001 ni sugerir homologación
+    assert not any(f["rule_id"] == "SIN-001" for f in findings)
+    assert not any("Evaluar homologación" in (f.get("suggestion") or "") for f in findings)
+    assert not any("Equivalente más parecido" in (f.get("message") or "") for f in findings)
+    # Al estar bien estructurado, el status debe ser CONFORME
+    assert uncoded_item.get("ai_audit_status") == "CONFORME"
+

@@ -121,6 +121,8 @@ class ReviewItem(Base):
     suggested_equivalent_code = Column(String, nullable=True)
     suggested_equivalent_desc = Column(Text, nullable=True)
     suggested_equivalent_score = Column(Float, nullable=True)
+    ai_audit_status = Column(String, nullable=True)  # CONFORME | OBSERVADO
+    ai_audit_summary = Column(Text, nullable=True)
 
     snapshot = relationship("ReviewSnapshot", back_populates="items")
     components = relationship(
