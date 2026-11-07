@@ -631,7 +631,7 @@ export default function BudgetReviewPage() {
           </div>
 
           {/* Controles de Base de Datos y Nueva Auditoría en una sola fila */}
-          <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 sm:gap-2.5">
+          <div className="flex flex-wrap xl:flex-nowrap items-center gap-2 sm:gap-2.5">
             {/* Selector de Base de Datos de Contraste */}
             <div className="flex items-center gap-1.5 bg-slate-100 border border-slate-300 rounded-xl px-2.5 sm:px-3 py-1.5 shrink-0">
               <Database size={15} className="text-blue-600 shrink-0" />
@@ -658,13 +658,13 @@ export default function BudgetReviewPage() {
               </div>
             </div>
 
-            {/* Selector de presupuesto existente + Auditar */}
+            {/* Presupuesto existente + Auditar + Cargar (Agrupados para que Cargar nunca quede aislado) */}
             <div className="flex items-center gap-1.5 shrink-0">
               <select
                 value={selectedBudgetId}
                 onChange={(e) => setSelectedBudgetId(e.target.value)}
                 disabled={runningAudit}
-                className="px-2.5 sm:px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 bg-slate-50 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 w-40 sm:w-48 truncate"
+                className="px-2.5 sm:px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 bg-slate-50 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 w-36 sm:w-44 truncate"
               >
                 <option value="">Presupuesto en sistema...</option>
                 {budgets.map((b) => (
@@ -682,9 +682,19 @@ export default function BudgetReviewPage() {
                 {runningAudit ? <Loader2 size={15} className="animate-spin" /> : <Activity size={15} />}
                 <span>Auditar</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setShowImportChoiceModal(true)}
+                disabled={runningAudit}
+                title="Cargar archivo Excel, LuloWin o PDF"
+                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs sm:text-sm font-bold shadow-xs transition flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+              >
+                <UploadCloud size={16} />
+                <span>Cargar</span>
+              </button>
             </div>
 
-            {/* Cargar Archivo (en la misma fila, alineado con los controles) */}
+            {/* Cargar Archivo input nativo */}
             <input
               ref={fileInputRef}
               type="file"
@@ -692,15 +702,6 @@ export default function BudgetReviewPage() {
               onChange={handleFileUpload}
               className="hidden"
             />
-            <button
-              type="button"
-              onClick={() => setShowImportChoiceModal(true)}
-              disabled={runningAudit}
-              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs sm:text-sm font-bold shadow-xs transition flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
-            >
-              <UploadCloud size={16} />
-              <span>Cargar</span>
-            </button>
           </div>
         </div>
 
@@ -2247,19 +2248,30 @@ export default function BudgetReviewPage() {
         2. INFORME TÉCNICO EJECUTIVO OFICIAL (EXCLUSIVO PARA IMPRESIÓN Y PDF)
        ========================================================================= */}
     {activeReport && (
-      <div className="hidden print:block w-full bg-white text-slate-900 font-sans text-xs leading-normal p-[14mm]">
+      <div
+        id="print-budget-review-layout"
+        className="hidden print:block w-full bg-white text-slate-900 font-sans text-xs leading-normal p-[14mm]"
+      >
         {/* Configuración de página e impresión sin encabezados de navegador */}
         <style>{`
+          @page {
+            size: letter portrait;
+            margin: 0;
+          }
           @media print {
-            @page {
-              size: letter portrait;
+            html, body {
               margin: 0 !important;
-            }
-            body {
+              padding: 0 !important;
+              background: #ffffff !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
               color: #0f172a !important;
+            }
+            #print-budget-review-layout {
+              display: block !important;
+              padding: 14mm !important;
               background: #ffffff !important;
+              color: #0f172a !important;
             }
             .print-avoid-break {
               break-inside: avoid !important;

@@ -69,9 +69,10 @@ html, body {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  /* Ocultar la app principal SOLO cuando se esté imprimiendo un APU o un Presupuesto */
+  /* Ocultar la app principal SOLO cuando se esté imprimiendo un APU, Presupuesto o Informe de Revisión */
   body:has(#print-apu-layout) > *:not(#print-apu-layout),
-  body:has(#print-budget-layout) > *:not(#print-budget-layout) {
+  body:has(#print-budget-layout) > *:not(#print-budget-layout),
+  body:has(#print-budget-review-layout) > *:not(#print-budget-review-layout) {
     display: none !important;
   }
   /* Mostrar SOLO el contenedor de impresion APU */
@@ -87,6 +88,18 @@ html, body {
   }
   /* Mostrar SOLO el contenedor de impresion Presupuesto */
   #print-budget-layout {
+    display: block !important;
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 12mm 15mm !important;
+    box-sizing: border-box !important;
+    background-color: white !important;
+  }
+  /* Mostrar SOLO el contenedor de impresion Informe de Revision */
+  #print-budget-review-layout {
     display: block !important;
     position: static !important;
     left: auto !important;
