@@ -488,10 +488,6 @@ export default function BudgetReviewPage() {
                 Revisor y Auditor de Presupuestos
               </h1>
             </div>
-            <p className="text-xs sm:text-sm text-slate-600 mt-1.5">
-              Audita presupuestos sobre una copia aislada contra la base de datos del mes que selecciones (ej.{' '}
-              <strong>Base Agosto</strong>, <strong>Base Maestra</strong>). Guarda versiones y verifica correcciones cuando el contratista entregue ajustes.
-            </p>
           </div>
 
           {/* Controles de Base de Datos y Nueva Auditoría */}
