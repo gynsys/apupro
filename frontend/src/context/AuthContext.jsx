@@ -39,6 +39,12 @@ function setCachedUser(userData) {
  * Retorna null si no está autenticado; si no hay red y existe sesión offline de Superadmin, la preserva.
  */
 export async function fetchCurrentUserShared(forceRefresh = false) {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    const offlineSuperAdmin = getPersistedSuperAdminUser();
+    if (offlineSuperAdmin) {
+      return offlineSuperAdmin;
+    }
+  }
   if (!forceRefresh && inflightMePromise) {
     return inflightMePromise;
   }

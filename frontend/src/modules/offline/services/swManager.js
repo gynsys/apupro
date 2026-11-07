@@ -24,9 +24,21 @@ export async function syncServiceWorkerForUser(user) {
     persistSuperAdminUser(user);
     try {
       const registration = await navigator.serviceWorker.register(SW_URL, { scope: '/' });
+      const discoveredAssets = [];
+      if (typeof document !== 'undefined') {
+        document.querySelectorAll('script[src], link[rel="stylesheet"][href], link[rel="modulepreload"][href]').forEach((el) => {
+          const rawUrl = el.getAttribute('src') || el.getAttribute('href');
+          if (rawUrl && rawUrl.startsWith('/')) {
+            discoveredAssets.push(rawUrl);
+          }
+        });
+      }
       const targetWorker = registration.active || registration.waiting || registration.installing;
       if (targetWorker) {
-        targetWorker.postMessage({ type: 'ENABLE_SUPERADMIN_OFFLINE' });
+        targetWorker.postMessage({
+          type: 'ENABLE_SUPERADMIN_OFFLINE',
+          assets: discoveredAssets,
+        });
       }
       return true;
     } catch (_err) {

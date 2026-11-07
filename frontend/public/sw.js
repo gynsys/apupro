@@ -4,7 +4,7 @@
  * Si un usuario no-superadmin inicia sesión o cierra sesión, el SW es desregistrado y su caché eliminada.
  */
 
-const CACHE_NAME = 'costbase-superadmin-shell-v2';
+const CACHE_NAME = 'costbase-superadmin-shell-v3';
 const APP_SHELL_URLS = [
   '/',
   '/index.html',
@@ -12,14 +12,43 @@ const APP_SHELL_URLS = [
   '/logo-cb-new.png',
 ];
 
+async function precacheDiscoveredAssets(cache, extraUrls = []) {
+  const toCache = new Set([...APP_SHELL_URLS, ...extraUrls]);
+  try {
+    const htmlRes = await fetch('/index.html', { cache: 'no-cache' });
+    if (htmlRes && htmlRes.ok) {
+      await cache.put('/index.html', htmlRes.clone());
+      const htmlText = await htmlRes.text();
+      const attrRegex = /(?:src|href)=["']([^"']+\.(?:js|css|png|svg|woff2|webmanifest))["']/gi;
+      let match;
+      while ((match = attrRegex.exec(htmlText)) !== null) {
+        const ref = match[1];
+        if (ref.startsWith('/')) {
+          toCache.add(ref);
+        }
+      }
+    }
+  } catch (_e) {
+    // ignore
+  }
+
+  await Promise.allSettled(
+    Array.from(toCache).map(async (url) => {
+      const existing = await cache.match(url);
+      if (!existing) {
+        const res = await fetch(url);
+        if (res && res.ok) {
+          await cache.put(url, res);
+        }
+      }
+    })
+  );
+}
+
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(APP_SHELL_URLS).catch(() => {
-        // Ignorar errores individuales de precarga
-      });
-    })
+    caches.open(CACHE_NAME).then((cache) => precacheDiscoveredAssets(cache))
   );
 });
 
@@ -40,8 +69,9 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'ENABLE_SUPERADMIN_OFFLINE') {
+    const extraAssets = Array.isArray(event.data.assets) ? event.data.assets : [];
     caches.open(CACHE_NAME).then((cache) => {
-      cache.addAll(APP_SHELL_URLS).catch(() => {});
+      precacheDiscoveredAssets(cache, extraAssets).catch(() => {});
     });
   }
 });

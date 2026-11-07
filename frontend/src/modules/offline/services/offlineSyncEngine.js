@@ -200,9 +200,48 @@ export async function flushOfflineOutbox() {
           body: JSON.stringify(op.payload),
         });
         ok = res.ok;
+      } else if (op.type === 'COMMIT_COMPUTOS_IMPORT' && op.payload) {
+        const res = await fetch(`${API_URL}/budgets/import/commit`, {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify(op.payload),
+        });
+        ok = res.ok;
+      } else if (op.type === 'ADD_BUDGET_ITEM' && op.budgetId && op.payload) {
+        const res = await fetch(`${API_URL}/budgets/${op.budgetId}/items`, {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify(op.payload),
+        });
+        ok = res.ok;
       } else if (op.type === 'UPDATE_BUDGET_ITEM' && op.budgetId && op.itemId && op.payload) {
-        const res = await fetch(`${API_URL}/budgets/${op.budgetId}/items/${op.itemId}`, {
-          method: 'PUT',
+        if (String(op.itemId).startsWith('offline-item-')) {
+          ok = true;
+        } else {
+          const res = await fetch(`${API_URL}/budgets/${op.budgetId}/items/${op.itemId}`, {
+            method: 'PUT',
+            headers,
+            credentials: 'include',
+            body: JSON.stringify(op.payload),
+          });
+          ok = res.ok;
+        }
+      } else if (op.type === 'DELETE_BUDGET_ITEM' && op.budgetId && op.itemId) {
+        if (String(op.itemId).startsWith('offline-item-')) {
+          ok = true;
+        } else {
+          const res = await fetch(`${API_URL}/budgets/${op.budgetId}/items/${op.itemId}`, {
+            method: 'DELETE',
+            headers,
+            credentials: 'include',
+          });
+          ok = res.ok || res.status === 404;
+        }
+      } else if (op.type === 'REORDER_BUDGET_ITEMS' && op.budgetId && op.payload) {
+        const res = await fetch(`${API_URL}/budgets/${op.budgetId}/items/reorder`, {
+          method: 'POST',
           headers,
           credentials: 'include',
           body: JSON.stringify(op.payload),
@@ -216,6 +255,37 @@ export async function flushOfflineOutbox() {
           body: JSON.stringify(op.payload),
         });
         ok = res.ok;
+      } else if (op.type === 'ADD_APU_COMPONENT' && op.budgetId && op.itemId && op.compType && op.payload) {
+        const res = await fetch(`${API_URL}/budgets/${op.budgetId}/items/${op.itemId}/${op.compType}`, {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify(op.payload),
+        });
+        ok = res.ok;
+      } else if (op.type === 'UPDATE_APU_COMPONENT' && op.budgetId && op.itemId && op.compType && op.componentId && op.payload) {
+        if (String(op.componentId).startsWith('offline-')) {
+          ok = true;
+        } else {
+          const res = await fetch(`${API_URL}/budgets/${op.budgetId}/items/${op.itemId}/${op.compType}/${op.componentId}`, {
+            method: 'PUT',
+            headers,
+            credentials: 'include',
+            body: JSON.stringify(op.payload),
+          });
+          ok = res.ok;
+        }
+      } else if (op.type === 'DELETE_APU_COMPONENT' && op.budgetId && op.itemId && op.compType && op.componentId) {
+        if (String(op.componentId).startsWith('offline-')) {
+          ok = true;
+        } else {
+          const res = await fetch(`${API_URL}/budgets/${op.budgetId}/items/${op.itemId}/${op.compType}/${op.componentId}`, {
+            method: 'DELETE',
+            headers,
+            credentials: 'include',
+          });
+          ok = res.ok || res.status === 404;
+        }
       } else {
         // Operación desconocida: descartar para no bloquear cola
         ok = true;

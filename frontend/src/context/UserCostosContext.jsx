@@ -138,6 +138,9 @@ export function UserCostosProvider({ children }) {
       } catch (_) {}
       return confirmed;
     } catch (err) {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        return optimistic;
+      }
       // Revertir optimistic update en caso de error
       setError(err.message);
       throw err;

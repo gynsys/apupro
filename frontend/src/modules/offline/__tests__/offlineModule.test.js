@@ -129,4 +129,27 @@ describe('Módulo Offline exclusivo para Superadmin', () => {
     expect(fallbackBudget.project_name).toBe('Solo en Resumen');
     expect(Array.isArray(fallbackBudget.items)).toBe(true);
   });
+
+  it('normaliza el catálogo COVENIN con campos CodPar/CovPar/Descri/UniPar para CostbaseSearch y enriquecedor', async () => {
+    persistSuperAdminUser({ id: 1, email: 'admin@arko360.net', is_superadmin: true });
+
+    await saveOfflineCoveninCatalog([
+      {
+        CodPar: 'E325000120',
+        CovPar: 'E325.000.120',
+        Descri: 'CONCRETO DE RCC 210 KG/CM2 A LOS 28 DIAS EN COLUMNAS',
+        UniPar: 'M3',
+        PrePar: 185.5,
+      },
+    ]);
+
+    const results = await searchOfflineCoveninCatalog('concreto columnas');
+    expect(results).toHaveLength(1);
+    expect(results[0].CodPar).toBe('E325000120');
+    expect(results[0].CovPar).toBe('E325.000.120');
+    expect(results[0].Descri).toContain('CONCRETO');
+    expect(results[0].UniPar).toBe('M3');
+    expect(results[0].description).toContain('CONCRETO');
+    expect(results[0].unit).toBe('M3');
+  });
 });

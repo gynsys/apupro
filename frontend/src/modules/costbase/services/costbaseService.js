@@ -51,6 +51,11 @@ export const normalizeCoveninCode = (code) => {
  * @returns {Promise<Array>} List of items
  */
 export const fetchItems = async (skip = 0, limit = 50, search = '', chapter = '', database_id = 'master', search_desc = true, search_insumos = false, covenin = '', only_coded = null) => {
+  if (isDeviceOfflineModeActive() && typeof navigator !== 'undefined' && navigator.onLine === false) {
+    const q = search || covenin || '';
+    const localItems = await searchOfflineCoveninCatalog(q, limit);
+    return { items: localItems, total: localItems.length, offline: true };
+  }
   try {
     let final_only_coded = only_coded;
     if (final_only_coded === null && database_id === 'master') {
@@ -87,10 +92,32 @@ export const fetchItems = async (skip = 0, limit = 50, search = '', chapter = ''
  * @returns {Promise<Object>} APU details including materials, labor, and equipment
  */
 export const fetchApuDetails = async (itemCode, database_id = 'master') => {
-  const response = await cost360ApiClient.get(`/items/${itemCode}/apu`, {
-    params: { database_id }
-  });
-  return response.data;
+  if (isDeviceOfflineModeActive() && typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return {
+      item: { CodPar: itemCode },
+      materiales: [],
+      equipos: [],
+      mano_obra: [],
+      offline: true,
+    };
+  }
+  try {
+    const response = await cost360ApiClient.get(`/items/${itemCode}/apu`, {
+      params: { database_id }
+    });
+    return response.data;
+  } catch (error) {
+    if (isDeviceOfflineModeActive()) {
+      return {
+        item: { CodPar: itemCode },
+        materiales: [],
+        equipos: [],
+        mano_obra: [],
+        offline: true,
+      };
+    }
+    throw error;
+  }
 };
 
 export const updateApuDetails = async (itemCode, apuData, database_id = 'master') => {
@@ -101,8 +128,18 @@ export const updateApuDetails = async (itemCode, apuData, database_id = 'master'
 };
 
 export const fetchCategoriesTree = async () => {
-  const response = await cost360ApiClient.get('/categories_tree');
-  return response.data;
+  if (isDeviceOfflineModeActive() && typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return [];
+  }
+  try {
+    const response = await cost360ApiClient.get('/categories_tree');
+    return response.data;
+  } catch (error) {
+    if (isDeviceOfflineModeActive()) {
+      return [];
+    }
+    throw error;
+  }
 };
 
 export const generateAIApu = async (

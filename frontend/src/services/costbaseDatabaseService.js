@@ -14,6 +14,9 @@ const getAuthHeaders = () => {
 export const costbaseDatabaseService = {
   // Obtener todas las bases de datos
   getAll: async () => {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      return { databases: [] };
+    }
     try {
       const response = await fetch(`${API_URL}/cost360/databases`, {
         headers: getAuthHeaders(),

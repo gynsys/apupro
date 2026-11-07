@@ -5,6 +5,11 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import BudgetHomePage from './pages/admin/BudgetHomePage.jsx';
 import BudgetWorksheetPage from './pages/admin/BudgetWorksheetPage.jsx';
 import BudgetAPUEditorPage from './pages/admin/BudgetAPUEditorPage.jsx';
+import CalculadoraFCASPage from './pages/tools/CalculadoraFCASPage.jsx';
+import CostbaseDashboard from './modules/costbase/pages/CostbaseDashboard.jsx';
+import APUViewer from './modules/costbase/pages/APUViewer.jsx';
+import AIApuGeneratorPage from './modules/costbase/pages/AIApuGeneratorPage.jsx';
+import DatabaseManagementPage from './modules/costbase/pages/DatabaseManagementPage.jsx';
 import AppLayout from './components/layout/AppLayout.jsx';
 import { API_URL } from './services/api';
 import { Toaster } from 'react-hot-toast';
@@ -14,11 +19,6 @@ import { UserCostosProvider } from './context/UserCostosContext.jsx';
 const LandingPage = lazy(() => import('./pages/LandingPage.jsx'));
 const SharedBudgetPage = lazy(() => import('./pages/admin/SharedBudgetPage.jsx'));
 const SharedPartidaPage = lazy(() => import('./pages/admin/SharedPartidaPage.jsx'));
-const CalculadoraFCASPage = lazy(() => import('./pages/tools/CalculadoraFCASPage.jsx'));
-const CostbaseDashboard = lazy(() => import('./modules/costbase/pages/CostbaseDashboard.jsx'));
-const APUViewer = lazy(() => import('./modules/costbase/pages/APUViewer.jsx'));
-const AIApuGeneratorPage = lazy(() => import('./modules/costbase/pages/AIApuGeneratorPage.jsx'));
-const DatabaseManagementPage = lazy(() => import('./modules/costbase/pages/DatabaseManagementPage.jsx'));
 const AdminDatabasePage = lazy(() => import('./modules/costbase/pages/AdminDatabasePage.jsx'));
 const MarketAdminPage = lazy(() => import('./modules/market/pages/MarketAdminPage.jsx'));
 
@@ -37,6 +37,9 @@ function App() {
   }, []);
 
   const fetchSiteConfig = async () => {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      return;
+    }
     try {
       const response = await fetch(`${API_URL}/arko/config`);
       if (response.ok) {
