@@ -676,3 +676,52 @@ def compute_snapshot_health_score(findings: List[Dict[str, Any]], total_items: i
         # INFO_MAPREX no penaliza porque es diferencia nativa entre catálogos Maprex y CostBase
     normalized_penalty = penalty / max(1.0, total_items / 10.0)
     return round(max(0.0, min(100.0, 100.0 - normalized_penalty)), 1)
+
+
+def generate_default_executive_conclusion(
+    health_score: float,
+    critical_count: int,
+    high_count: int,
+    medium_count: int,
+    uncoded_count: int,
+    total_items: int,
+    findings: List[Dict[str, Any]],
+) -> str:
+    """Genera una conclusión técnica preliminar y ejecutiva según los hallazgos reales detectados."""
+    total_errors = critical_count + high_count + medium_count
+    if total_errors == 0 and uncoded_count == 0:
+        return (
+            "El presupuesto evaluado cumple satisfactoriamente con los criterios de rendimientos, "
+            "consumos de materiales, equipos y mano de obra establecidos en la base técnica de referencia. "
+            "Se considera técnicamente APTO para su tramitación y aprobación."
+        )
+
+    issues: List[str] = []
+    rule_ids = {str(f.get("rule_id") or "") for f in findings}
+    if any(r in rule_ids for r in ["LAB-001", "LAB-002"]):
+        issues.append("desviaciones estructurales en la asignación de cuadrillas")
+    if any(r in rule_ids for r in ["MAT-002", "MAT-003"]):
+        issues.append("sobreconsumo de materiales sin memoria de cálculo")
+    if any(r in rule_ids for r in ["EQU-003", "EQU-004"]):
+        issues.append("omisión o alteración de factores de depreciación en maquinaria y equipos")
+    if any(r in rule_ids for r in ["REN-001"]):
+        issues.append("rendimientos atípicos fuera de los estándares de producción")
+    if any(r in rule_ids for r in ["ARI-001"]):
+        issues.append("errores aritméticos en sumatorias de partidas o capítulos")
+    if any(r in rule_ids for r in ["DUP-001"]):
+        issues.append("duplicidad de partidas dentro del presupuesto")
+    if uncoded_count > 0:
+        issues.append(f"{uncoded_count} APUs atípicos sin codificación COVENIN o discrepantes con la base de referencia")
+
+    issues_text = ", ".join(issues) if issues else "discrepancias técnicas detectadas frente a la base de datos de referencia institucional"
+
+    if critical_count > 0 or high_count > 0 or health_score < 75.0:
+        return (
+            f"El presupuesto no es apto para aprobación inmediata en su estado actual. "
+            f"Presenta {issues_text}. Se requiere la subsanación formal de los hallazgos señalados "
+            f"por parte de la empresa contratista previo a cualquier compromiso contractual o financiero."
+        )
+    return (
+        f"El presupuesto presenta consistencia técnica global, pero registra {total_errors} observaciones "
+        f"moderadas que ameritan justificación técnica o ajustes menores antes de su aprobación definitiva."
+    )

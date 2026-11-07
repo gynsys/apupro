@@ -87,6 +87,12 @@ def run_audit_on_existing_budget(
             project_name=payload.project_name,
             client_name=payload.client_name,
             auditor_notes=payload.auditor_notes,
+            report_code=payload.report_code,
+            reviewer_name=payload.reviewer_name,
+            reviewer_civ=payload.reviewer_civ,
+            document_reference=payload.document_reference,
+            institution_name=payload.institution_name,
+            conclusion_text=payload.conclusion_text,
         )
         return get_review_snapshot_detail(db=db, snapshot_id=snapshot.id, user_id=user_id)
     except LookupError as exc:
@@ -111,6 +117,12 @@ def run_audit_on_uploaded_file(
     project_name: Optional[str] = Form(None),
     client_name: Optional[str] = Form(None),
     auditor_notes: Optional[str] = Form(None),
+    report_code: Optional[str] = Form(None),
+    reviewer_name: Optional[str] = Form(None),
+    reviewer_civ: Optional[str] = Form(None),
+    document_reference: Optional[str] = Form(None),
+    institution_name: Optional[str] = Form(None),
+    conclusion_text: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> Dict[str, Any]:
@@ -139,6 +151,12 @@ def run_audit_on_uploaded_file(
             project_name=project_name,
             client_name=client_name,
             auditor_notes=auditor_notes,
+            report_code=report_code,
+            reviewer_name=reviewer_name,
+            reviewer_civ=reviewer_civ,
+            document_reference=document_reference,
+            institution_name=institution_name,
+            conclusion_text=conclusion_text,
             import_mode=mode,
         )
         return get_review_snapshot_detail(db=db, snapshot_id=snapshot.id, user_id=user_id)
@@ -181,7 +199,7 @@ def save_snapshot_changes(
     db: Session = Depends(get_db),
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> Dict[str, Any]:
-    """Guardar: actualiza nombre, proyecto, contratista, estado de revisión y observaciones del auditor."""
+    """Guardar: actualiza metadatos, datos del revisor, conclusión y observaciones del auditor."""
     user_id = _resolve_user_id(current_user)
     try:
         return update_review_snapshot(
@@ -193,6 +211,12 @@ def save_snapshot_changes(
             client_name=payload.client_name,
             review_status=payload.review_status,
             auditor_notes=payload.auditor_notes,
+            report_code=payload.report_code,
+            reviewer_name=payload.reviewer_name,
+            reviewer_civ=payload.reviewer_civ,
+            document_reference=payload.document_reference,
+            institution_name=payload.institution_name,
+            conclusion_text=payload.conclusion_text,
         )
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
@@ -225,6 +249,12 @@ def save_snapshot_as_copy(
             client_name=payload.client_name,
             review_status=payload.review_status,
             auditor_notes=payload.auditor_notes,
+            report_code=payload.report_code,
+            reviewer_name=payload.reviewer_name,
+            reviewer_civ=payload.reviewer_civ,
+            document_reference=payload.document_reference,
+            institution_name=payload.institution_name,
+            conclusion_text=payload.conclusion_text,
         )
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc

@@ -22,6 +22,13 @@ import {
   X,
   Loader2,
   ArrowUpRight,
+  Edit3,
+  UserCheck,
+  Building2,
+  FileText,
+  ListFilter,
+  ListChecks,
+  LayoutGrid,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { budgetReviewService } from '../services/budgetReviewService';
@@ -94,6 +101,34 @@ const ORIGIN_LABELS = {
   SIN_CODIGO_COVENIN: 'Sin Codificación COVENIN (S/C)',
 };
 
+const RULE_HEADLINES = {
+  'LAB-001': 'Cuadrilla alterada',
+  'MAT-002': 'Sobreconsumo de material',
+  'EQU-003': 'Omisión de depreciación',
+  'UNC-001': 'APU no codificado',
+  'ARI-001': 'Error aritmético',
+  'DUP-001': 'Duplicidad explícita',
+  'REN-001': 'Rendimiento atípico',
+  'REN-002': 'Rendimiento inflado',
+  'EST-001': 'Partida atípica / fuera de norma',
+};
+
+const getFindingHeadline = (f) => {
+  if (f.rule_id && RULE_HEADLINES[f.rule_id]) return RULE_HEADLINES[f.rule_id];
+  if (f.category === 'MANO_OBRA') return 'Cuadrilla alterada';
+  if (f.category === 'MATERIALES') return 'Desviación en consumo de material';
+  if (f.category === 'EQUIPOS') return 'Discrepancia en equipo / depreciación';
+  if (f.category === 'RENDIMIENTO') return 'Rendimiento atípico';
+  if (f.category === 'COHERENCIA') return 'Error aritmético';
+  if (f.category === 'SIN_CODIGO') return 'APU no codificado';
+  return 'Desviación técnica';
+};
+
+const getItemRef = (f) => {
+  if (f.rule_id === 'ARI-001' && f.item_code) return `Capítulo ${f.item_code}`;
+  return f.item_code ? `Partida ${f.item_code}` : 'Presupuesto General';
+};
+
 export default function BudgetReviewPage() {
   const { activeDatabase, databases } = useDatabase();
 
@@ -138,6 +173,13 @@ export default function BudgetReviewPage() {
   const [formClient, setFormClient] = useState('');
   const [formStatus, setFormStatus] = useState('EN_REVISION');
   const [formNotes, setFormNotes] = useState('');
+  const [formReportCode, setFormReportCode] = useState('');
+  const [formReviewerName, setFormReviewerName] = useState('');
+  const [formReviewerCiv, setFormReviewerCiv] = useState('');
+  const [formDocRef, setFormDocRef] = useState('');
+  const [formInstitution, setFormInstitution] = useState('');
+  const [formConclusion, setFormConclusion] = useState('');
+  const [findingViewMode, setFindingViewMode] = useState('executive'); // 'executive' (H-01...) | 'detailed'
 
   const [showNewVersionModal, setShowNewVersionModal] = useState(false);
   const [newVersionBudgetId, setNewVersionBudgetId] = useState('');
@@ -158,6 +200,12 @@ export default function BudgetReviewPage() {
     setFormClient(report.client_name || '');
     setFormStatus(report.review_status || 'EN_REVISION');
     setFormNotes(report.auditor_notes || '');
+    setFormReportCode(report.report_code || '');
+    setFormReviewerName(report.reviewer_name || '');
+    setFormReviewerCiv(report.reviewer_civ || '');
+    setFormDocRef(report.document_reference || '');
+    setFormInstitution(report.institution_name || '');
+    setFormConclusion(report.conclusion_text || '');
   };
 
   const loadInitialData = async () => {
@@ -323,6 +371,12 @@ export default function BudgetReviewPage() {
     setFormClient(activeReport.client_name || '');
     setFormStatus(activeReport.review_status || 'EN_REVISION');
     setFormNotes(activeReport.auditor_notes || '');
+    setFormReportCode(isSaveAs ? '' : activeReport.report_code || '');
+    setFormReviewerName(activeReport.reviewer_name || '');
+    setFormReviewerCiv(activeReport.reviewer_civ || '');
+    setFormDocRef(activeReport.document_reference || '');
+    setFormInstitution(activeReport.institution_name || '');
+    setFormConclusion(activeReport.conclusion_text || '');
     setShowSaveModal(true);
   };
 
@@ -337,10 +391,16 @@ export default function BudgetReviewPage() {
     try {
       const payload = {
         name: formName.trim(),
-        project_name: formProject.trim(),
-        client_name: formClient.trim(),
+        project_name: formProject.trim() || null,
+        client_name: formClient.trim() || null,
         review_status: formStatus,
-        auditor_notes: formNotes,
+        auditor_notes: formNotes || null,
+        report_code: formReportCode.trim() || null,
+        reviewer_name: formReviewerName.trim() || null,
+        reviewer_civ: formReviewerCiv.trim() || null,
+        document_reference: formDocRef.trim() || null,
+        institution_name: formInstitution.trim() || null,
+        conclusion_text: formConclusion.trim() || null,
       };
       const updatedDetail = saveAsMode
         ? await budgetReviewService.saveSnapshotAs(activeReport.id, payload)
@@ -354,7 +414,7 @@ export default function BudgetReviewPage() {
       toast.success(
         saveAsMode
           ? `Auditoría guardada como "${updatedDetail.name}"`
-          : 'Cambios de la auditoría guardados correctamente'
+          : 'Datos del informe y revisor guardados correctamente'
       );
     } catch (error) {
       toast.error(error.message || 'No se pudo guardar la auditoría');
@@ -669,76 +729,162 @@ export default function BudgetReviewPage() {
       {/* Panel del Informe Activo */}
       {!runningAudit && activeReport && (
         <>
-          {/* Ficha de Identificación del Expediente y Línea de Tiempo de Versiones */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-md bg-slate-900 text-white text-xs font-extrabold">
-                    Versión v{activeReport.version_number || 1}
+          {/* TARJETA OFICIAL: INFORME DE REVISIÓN TÉCNICA DE PRESUPUESTO */}
+          <div className="bg-white rounded-2xl border border-slate-300 shadow-sm p-5 sm:p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 pb-4">
+              <div>
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-md">
+                  Dictamen Oficial de Revisión Técnica
+                </span>
+                <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight mt-1.5 uppercase">
+                  INFORME DE REVISIÓN TÉCNICA DE PRESUPUESTO
+                </h2>
+                <p className="text-[11px] sm:text-xs text-slate-500 italic mt-0.5">
+                  Documento emitido conforme a las bases de costos, normas técnicas y parámetros de contraste institucional.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => openSaveDialog(false)}
+                  className="px-3.5 py-2 rounded-xl border border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs transition"
+                >
+                  <Edit3 size={14} className="text-blue-700" />
+                  <span>Editar Datos del Revisor / Informe</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Metadatos Ejecutivos en Viñetas */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-xs sm:text-sm text-slate-800 bg-slate-50/70 p-4 rounded-xl border border-slate-200">
+              <div className="space-y-1.5">
+                <div>
+                  <span className="font-bold text-slate-900">• Informe:</span>{' '}
+                  <span className="font-extrabold font-mono text-blue-800 bg-white px-2 py-0.5 rounded border border-slate-300">
+                    {activeReport.report_code || `RT-${new Date(activeReport.created_at).getFullYear()}-001`}
                   </span>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-md border text-xs font-bold ${currentStatusBadge.badgeClass}`}
-                  >
-                    {currentStatusBadge.label}
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 text-xs font-bold flex items-center gap-1">
-                    <Database size={12} />
-                    Contraste: {getDatabaseLabel(activeReport.database_id)}
-                  </span>
-                  <h2 className="text-base sm:text-lg font-extrabold text-slate-900">
-                    {activeReport.name}
-                  </h2>
                 </div>
-                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600">
-                  <span>
-                    <strong>Obra / Proyecto:</strong> {activeReport.project_name || 'Sin especificar'}
-                  </span>
-                  <span>
-                    <strong>Empresa / Contratista:</strong>{' '}
-                    {activeReport.client_name || 'Sin especificar'}
-                  </span>
-                  <span>
-                    <strong>Fecha Revisión:</strong>{' '}
-                    {new Date(activeReport.created_at).toLocaleString()}
-                  </span>
+                <div>
+                  <span className="font-bold text-slate-900">• Obra:</span>{' '}
+                  <span>{activeReport.project_name || 'Sin especificar'}</span>
                 </div>
-                {activeReport.auditor_notes && (
-                  <p className="text-xs bg-amber-50/70 border border-amber-200 text-slate-800 rounded-lg px-3 py-1.5 mt-1">
-                    <strong>Dictamen / Notas del Auditor:</strong> {activeReport.auditor_notes}
-                  </p>
+                <div>
+                  <span className="font-bold text-slate-900">• Empresa:</span>{' '}
+                  <span>{activeReport.client_name || 'Sin especificar'}</span>
+                </div>
+                {activeReport.institution_name && (
+                  <div>
+                    <span className="font-bold text-slate-900">• Institución:</span>{' '}
+                    <span>{activeReport.institution_name}</span>
+                  </div>
                 )}
               </div>
 
-              {/* Selector de Versiones del mismo Expediente (v1, v2, v3...) */}
-              {activeReport.version_history && activeReport.version_history.length > 1 && (
-                <div className="flex items-center gap-1.5 flex-wrap bg-slate-50 p-2 rounded-xl border border-slate-200">
-                  <span className="text-[11px] font-bold text-slate-500 uppercase px-1">
-                    Historial de Versiones:
-                  </span>
-                  {activeReport.version_history.map((ver) => {
-                    const isCurr = ver.id === activeReport.id;
-                    return (
-                      <button
-                        key={ver.id}
-                        type="button"
-                        onClick={() => handleSelectSnapshot(ver.id)}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
-                          isCurr
-                            ? 'bg-blue-600 text-white shadow-2xs'
-                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
-                        }`}
-                      >
-                        <span>v{ver.version_number}</span>
-                        <span className="text-[10px] opacity-85">({ver.health_score}%)</span>
-                      </button>
-                    );
-                  })}
+              <div className="space-y-1.5">
+                <div>
+                  <span className="font-bold text-slate-900">• Documento:</span>{' '}
+                  <span>{activeReport.document_reference || activeReport.source_filename || `Presupuesto de Obra — v${activeReport.version_number}`}</span>
                 </div>
-              )}
+                <div>
+                  <span className="font-bold text-slate-900">• Revisión:</span>{' '}
+                  <span>
+                    {new Date(activeReport.created_at).toLocaleDateString('es-VE')} |{' '}
+                    <strong>{activeReport.reviewer_name || 'Ing. Revisor'}</strong>
+                    {activeReport.reviewer_civ ? `, CIV ${activeReport.reviewer_civ}` : ''}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-900">• Base de Contraste:</span>{' '}
+                  <span className="font-bold text-blue-700">{getDatabaseLabel(activeReport.database_id)}</span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-900">• Estado Expediente:</span>{' '}
+                  <span className={`px-2 py-0.5 rounded-md border text-xs font-bold ${currentStatusBadge.badgeClass}`}>
+                    {currentStatusBadge.label} (v{activeReport.version_number || 1})
+                  </span>
+                </div>
+              </div>
             </div>
 
-            {/* Banner de Comparativa Automática entre Versiones (cuando se audita una corrección) */}
+            {/* Alcance de la Revisión */}
+            <div className="px-4 py-2.5 rounded-xl bg-blue-50/50 border border-blue-200 text-xs sm:text-sm text-blue-950 font-medium">
+              Se revisó el <strong>100%</strong> del presupuesto (<strong>{activeReport.chapters_count || 0}</strong> capítulos,{' '}
+              <strong>{activeReport.total_items}</strong> partidas y <strong>{activeReport.total_items}</strong> APUs analizados).
+            </div>
+
+            {/* Matriz de Hallazgos Técnicos */}
+            <div className="space-y-2">
+              <h3 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                <ListFilter size={16} className="text-blue-600" />
+                <span>Matriz de hallazgos técnicos</span>
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs sm:text-sm">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                  <span className="text-slate-500 block text-[11px] font-bold uppercase">• Partidas revisadas:</span>
+                  <span className="text-base font-black text-slate-900">{activeReport.total_items}</span>
+                </div>
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                  <span className="text-slate-500 block text-[11px] font-bold uppercase">• APUs analizados:</span>
+                  <span className="text-base font-black text-slate-900">{activeReport.total_items}</span>{' '}
+                  <span className="text-xs text-slate-600">
+                    ({activeReport.coded_items_count} codificados COVENIN / {activeReport.uncoded_items_count} sin codificación)
+                  </span>
+                </div>
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                  <span className="text-slate-500 block text-[11px] font-bold uppercase">• Errores / Desviaciones:</span>
+                  <span className="text-base font-black text-red-700">
+                    {activeReport.critical_findings_count + activeReport.high_findings_count + activeReport.medium_findings_count}
+                  </span>{' '}
+                  <span className="text-xs text-slate-600">
+                    ({activeReport.critical_findings_count} Críticas, {activeReport.high_findings_count} Altas, {activeReport.medium_findings_count} Medias)
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Conclusión preliminar / dictamen técnico */}
+            <div className={`p-4 rounded-xl border-l-4 text-xs sm:text-sm leading-relaxed ${
+              activeReport.critical_findings_count > 0 || activeReport.high_findings_count > 0
+                ? 'bg-amber-50/80 border-amber-500 text-amber-950'
+                : 'bg-emerald-50/80 border-emerald-500 text-emerald-950'
+            }`}>
+              <span className="font-extrabold uppercase tracking-wide block mb-1">
+                Conclusión preliminar / Dictamen Técnico:
+              </span>
+              <p className="m-0 font-medium">
+                {activeReport.conclusion_text || 'Sin dictamen registrado.'}
+              </p>
+            </div>
+
+            {/* Selector de Versiones del mismo Expediente (v1, v2, v3...) */}
+            {activeReport.version_history && activeReport.version_history.length > 1 && (
+              <div className="flex items-center gap-1.5 flex-wrap bg-slate-50 p-2 rounded-xl border border-slate-200">
+                <span className="text-[11px] font-bold text-slate-500 uppercase px-1">
+                  Historial de Versiones:
+                </span>
+                {activeReport.version_history.map((ver) => {
+                  const isCurr = ver.id === activeReport.id;
+                  return (
+                    <button
+                      key={ver.id}
+                      type="button"
+                      onClick={() => handleSelectSnapshot(ver.id)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                        isCurr
+                          ? 'bg-blue-600 text-white shadow-2xs'
+                          : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>v{ver.version_number}</span>
+                      <span className="text-[10px] opacity-85">({ver.health_score}%)</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Banner de Comparativa Automática entre Versiones */}
             {activeReport.version_comparison && (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div className="space-y-1">
@@ -962,34 +1108,91 @@ export default function BudgetReviewPage() {
               </div>
 
               {activeTab === 'findings' && (
-                <div className="flex flex-wrap items-center gap-2 pb-2 sm:pb-1">
-                  <select
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                    className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-slate-50 font-semibold text-slate-700"
-                  >
-                    <option value="ALL">Todas las categorías</option>
-                    <option value="RENDIMIENTO">Rendimientos</option>
-                    <option value="MATERIALES">Materiales</option>
-                    <option value="EQUIPOS">Equipos y Depreciación</option>
-                    <option value="MANO_OBRA">Mano de Obra</option>
-                    <option value="ESTRUCTURA">Estructura / Colisión</option>
-                    <option value="COHERENCIA">Coherencia Matemática</option>
-                    <option value="SIN_CODIGO">Sin Código (S/C)</option>
-                  </select>
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 sm:pb-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={categoryFilter}
+                      onChange={(e) => setCategoryFilter(e.target.value)}
+                      className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-slate-50 font-semibold text-slate-700"
+                    >
+                      <option value="ALL">Todas las categorías</option>
+                      <option value="RENDIMIENTO">Rendimientos</option>
+                      <option value="MATERIALES">Materiales</option>
+                      <option value="EQUIPOS">Equipos y Depreciación</option>
+                      <option value="MANO_OBRA">Mano de Obra</option>
+                      <option value="ESTRUCTURA">Estructura / Colisión</option>
+                      <option value="COHERENCIA">Coherencia Matemática</option>
+                      <option value="SIN_CODIGO">Sin Código (S/C)</option>
+                    </select>
 
-                  <div className="relative">
-                    <Search
-                      size={14}
-                      className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
-                    />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Buscar código o insumo..."
-                      className="pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <div className="relative">
+                      <Search
+                        size={14}
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+                      />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Buscar código o insumo..."
+                        className="pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => setFindingViewMode('executive')}
+                        title="Vista informe ejecutivo: Detalle de correcciones con numeración H-01..."
+                        className={`px-2.5 py-1 text-xs font-bold rounded-md flex items-center gap-1.5 transition cursor-pointer ${
+                          findingViewMode === 'executive'
+                            ? 'bg-white text-slate-900 shadow-xs'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        <ListChecks size={13} />
+                        <span>Detalle de Correcciones</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFindingViewMode('detailed')}
+                        title="Vista en fichas con valores de presupuesto vs base de contraste"
+                        className={`px-2.5 py-1 text-xs font-bold rounded-md flex items-center gap-1.5 transition cursor-pointer ${
+                          findingViewMode === 'detailed'
+                            ? 'bg-white text-slate-900 shadow-xs'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        <LayoutGrid size={13} />
+                        <span>Fichas Técnicas</span>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!filteredFindings.length) return;
+                        const text = filteredFindings
+                          .map((f, i) => {
+                            const hCode = `H-${String(i + 1).padStart(2, '0')}`;
+                            const sev = SEVERITY_CONFIG[f.severity]?.label || 'Media';
+                            const headline = getFindingHeadline(f);
+                            const itemRef = getItemRef(f);
+                            const sug = f.suggestion ? ` Sugerencia: ${f.suggestion}.` : '';
+                            return `• ${hCode} (${sev}) — ${headline} (${itemRef}): ${f.message}.${sug}`;
+                          })
+                          .join('\n');
+                        navigator.clipboard.writeText(`Detalle de correcciones:\n\n${text}`);
+                        toast.success('Lista copiada al portapapeles');
+                      }}
+                      className="px-2.5 py-1.5 text-xs font-bold rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-1 cursor-pointer transition"
+                      title="Copiar texto oficial del detalle de correcciones"
+                    >
+                      <Copy size={13} />
+                      <span className="hidden sm:inline">Copiar Lista</span>
+                    </button>
                   </div>
                 </div>
               )}
@@ -1002,6 +1205,77 @@ export default function BudgetReviewPage() {
                   <div className="py-10 text-center text-slate-500 text-sm">
                     <CheckCircle2 size={32} className="mx-auto text-emerald-500 mb-2" />
                     No hay hallazgos que coincidan con el filtro actual.
+                  </div>
+                ) : findingViewMode === 'executive' ? (
+                  <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+                    <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                        <h4 className="text-xs sm:text-sm font-black text-slate-900 tracking-wide uppercase">
+                          Detalle de correcciones:
+                        </h4>
+                      </div>
+                      <span className="text-xs font-bold text-slate-500">
+                        {filteredFindings.length} hallazgo{filteredFindings.length !== 1 ? 's' : ''} registrado{filteredFindings.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+
+                    <div className="p-4 sm:p-5 divide-y divide-slate-100 space-y-1">
+                      {filteredFindings.map((f, i) => {
+                        const hCode = `H-${String(i + 1).padStart(2, '0')}`;
+                        const sev = SEVERITY_CONFIG[f.severity] || SEVERITY_CONFIG.MEDIA;
+                        const headline = getFindingHeadline(f);
+                        const itemRef = getItemRef(f);
+                        return (
+                          <div
+                            key={f.id}
+                            className="pt-3 pb-3 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-start justify-between gap-3 text-xs sm:text-sm leading-relaxed"
+                          >
+                            <div className="space-y-1.5 min-w-0">
+                              <div>
+                                <span className="text-slate-400 font-black mr-1.5">•</span>
+                                <span className="font-extrabold text-slate-900 mr-1.5">{hCode}</span>
+                                <span
+                                  className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase mr-1.5 border ${sev.badgeClass}`}
+                                >
+                                  ({sev.label})
+                                </span>
+                                <span className="font-extrabold text-slate-900 mr-1">
+                                  — {headline}
+                                </span>
+                                <span className="font-bold text-blue-700 mr-1.5">
+                                  ({itemRef}):
+                                </span>
+                                <span className="text-slate-700 font-medium">
+                                  {f.message}.
+                                </span>
+                              </div>
+
+                              {f.suggestion && (
+                                <div className="pl-3 text-xs font-semibold text-emerald-800 bg-emerald-50/80 rounded-lg px-2.5 py-1 border border-emerald-200/60 inline-flex items-center gap-1.5">
+                                  <span className="font-extrabold text-emerald-900">Sugerencia:</span>
+                                  <span className="font-normal text-emerald-950">{f.suggestion}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="shrink-0 flex items-center gap-2 self-end sm:self-start">
+                              <select
+                                value={f.finding_status || 'PENDIENTE'}
+                                onChange={(e) => handleFindingStatusChange(f.id, e.target.value)}
+                                className="px-2 py-1 text-[11px] font-bold rounded-lg border border-slate-300 bg-slate-50 text-slate-800 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              >
+                                {FINDING_STATUS_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 ) : (
                   filteredFindings.map((f) => {
@@ -1548,18 +1822,23 @@ export default function BudgetReviewPage() {
         <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
           <form
             onSubmit={handleConfirmSave}
-            className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-lg w-full overflow-hidden"
+            className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden"
           >
-            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 {saveAsMode ? (
                   <Copy size={18} className="text-indigo-600" />
                 ) : (
                   <Save size={18} className="text-emerald-600" />
                 )}
-                <h3 className="text-base font-extrabold text-slate-900">
-                  {saveAsMode ? 'Guardar Auditoría Como (Nueva Copia)' : 'Guardar Datos de la Auditoría'}
-                </h3>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    {saveAsMode ? 'Guardar Auditoría Como (Nueva Copia)' : 'Guardar Datos Oficiales del Informe'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Configura los datos del informe ejecutivo, revisor técnico y dictamen institucional.
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
@@ -1570,18 +1849,59 @@ export default function BudgetReviewPage() {
               </button>
             </div>
 
-            <div className="p-5 space-y-3.5 text-xs sm:text-sm">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Nombre de la Auditoría *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+            <div className="p-5 space-y-3.5 text-xs sm:text-sm overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Código de Informe Oficial
+                  </label>
+                  <input
+                    type="text"
+                    value={formReportCode}
+                    onChange={(e) => setFormReportCode(e.target.value)}
+                    placeholder="Ej. RT-2026-018"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-900"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Documento Evaluado (Ref. / Fecha)
+                  </label>
+                  <input
+                    type="text"
+                    value={formDocRef}
+                    onChange={(e) => setFormDocRef(e.target.value)}
+                    placeholder="Ej. Presupuesto de Obra — Versión 03 (28/10/2026)"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Nombre del Registro / Expediente *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Institución / Ente Contratante
+                  </label>
+                  <input
+                    type="text"
+                    value={formInstitution}
+                    onChange={(e) => setFormInstitution(e.target.value)}
+                    placeholder="Ej. Gobernación / Alcaldía / Ente Público..."
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1591,7 +1911,7 @@ export default function BudgetReviewPage() {
                     type="text"
                     value={formProject}
                     onChange={(e) => setFormProject(e.target.value)}
-                    placeholder="Ej. Rehabilitación Vial..."
+                    placeholder="Ej. Rehabilitación de Edificio Administrativo..."
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -1603,8 +1923,35 @@ export default function BudgetReviewPage() {
                     type="text"
                     value={formClient}
                     onChange={(e) => setFormClient(e.target.value)}
-                    placeholder="Ej. Constructora XYZ..."
+                    placeholder="Ej. Constructora Ejemplo, C.A."
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Ing. Revisor Técnico
+                  </label>
+                  <input
+                    type="text"
+                    value={formReviewerName}
+                    onChange={(e) => setFormReviewerName(e.target.value)}
+                    placeholder="Ej. Ing. Carlos Mendoza"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    CIV del Ingeniero Revisor
+                  </label>
+                  <input
+                    type="text"
+                    value={formReviewerCiv}
+                    onChange={(e) => setFormReviewerCiv(e.target.value)}
+                    placeholder="Ej. 184.920"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                   />
                 </div>
               </div>
@@ -1628,19 +1975,32 @@ export default function BudgetReviewPage() {
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Dictamen / Observaciones del Auditor
+                  Conclusión Preliminar del Informe Técnico
                 </label>
                 <textarea
                   rows={3}
+                  value={formConclusion}
+                  onChange={(e) => setFormConclusion(e.target.value)}
+                  placeholder="Texto oficial de conclusión (se genera automáticamente con los hallazgos o puedes redactar tu propio dictamen)..."
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm leading-relaxed"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Dictamen / Observaciones Adicionales
+                </label>
+                <textarea
+                  rows={2}
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
-                  placeholder="Anota conclusiones, compromisos de corrección o condiciones para aprobar..."
+                  placeholder="Anota observaciones particulares, requerimientos para la próxima entrega o instrucciones..."
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
 
-            <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
+            <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => setShowSaveModal(false)}
@@ -1651,7 +2011,7 @@ export default function BudgetReviewPage() {
               <button
                 type="submit"
                 disabled={savingMeta}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
               >
                 {savingMeta ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                 <span>{saveAsMode ? 'Guardar Nueva Copia' : 'Guardar Cambios'}</span>

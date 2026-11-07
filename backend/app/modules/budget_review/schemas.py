@@ -17,6 +17,12 @@ class AuditFromBudgetRequest(BaseModel):
     project_name: Optional[str] = None
     client_name: Optional[str] = None
     auditor_notes: Optional[str] = None
+    report_code: Optional[str] = None
+    reviewer_name: Optional[str] = None
+    reviewer_civ: Optional[str] = None
+    document_reference: Optional[str] = None
+    institution_name: Optional[str] = None
+    conclusion_text: Optional[str] = None
 
 
 class ReviewSnapshotUpdateRequest(BaseModel):
@@ -27,6 +33,12 @@ class ReviewSnapshotUpdateRequest(BaseModel):
     client_name: Optional[str] = None
     review_status: Optional[str] = None
     auditor_notes: Optional[str] = None
+    report_code: Optional[str] = None
+    reviewer_name: Optional[str] = None
+    reviewer_civ: Optional[str] = None
+    document_reference: Optional[str] = None
+    institution_name: Optional[str] = None
+    conclusion_text: Optional[str] = None
 
 
 class ReviewSnapshotCloneRequest(BaseModel):
@@ -37,6 +49,12 @@ class ReviewSnapshotCloneRequest(BaseModel):
     client_name: Optional[str] = None
     review_status: Optional[str] = "EN_REVISION"
     auditor_notes: Optional[str] = None
+    report_code: Optional[str] = None
+    reviewer_name: Optional[str] = None
+    reviewer_civ: Optional[str] = None
+    document_reference: Optional[str] = None
+    institution_name: Optional[str] = None
+    conclusion_text: Optional[str] = None
 
 
 class ReviewFindingUpdateRequest(BaseModel):
@@ -141,6 +159,13 @@ class ReviewSnapshotSummaryOut(BaseModel):
     version_number: int = 1
     review_status: str = "EN_REVISION"
     auditor_notes: Optional[str] = None
+    report_code: Optional[str] = None
+    reviewer_name: Optional[str] = None
+    reviewer_civ: Optional[str] = None
+    document_reference: Optional[str] = None
+    institution_name: Optional[str] = None
+    conclusion_text: Optional[str] = None
+    chapters_count: int = 0
     total_items: int
     coded_items_count: int
     uncoded_items_count: int

@@ -54,6 +54,12 @@ export const budgetReviewService = {
         project_name: options.projectName || null,
         client_name: options.clientName || null,
         auditor_notes: options.auditorNotes || null,
+        report_code: options.reportCode || null,
+        reviewer_name: options.reviewerName || null,
+        reviewer_civ: options.reviewerCiv || null,
+        document_reference: options.documentReference || null,
+        institution_name: options.institutionName || null,
+        conclusion_text: options.conclusionText || null,
       }),
     });
     if (!res.ok) {
@@ -84,6 +90,24 @@ export const budgetReviewService = {
     }
     if (options.auditorNotes) {
       formData.append('auditor_notes', options.auditorNotes);
+    }
+    if (options.reportCode) {
+      formData.append('report_code', options.reportCode);
+    }
+    if (options.reviewerName) {
+      formData.append('reviewer_name', options.reviewerName);
+    }
+    if (options.reviewerCiv) {
+      formData.append('reviewer_civ', options.reviewerCiv);
+    }
+    if (options.documentReference) {
+      formData.append('document_reference', options.documentReference);
+    }
+    if (options.institutionName) {
+      formData.append('institution_name', options.institutionName);
+    }
+    if (options.conclusionText) {
+      formData.append('conclusion_text', options.conclusionText);
     }
 
     const res = await fetch(`${BASE}/audit-file`, {

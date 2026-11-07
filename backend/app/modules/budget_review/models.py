@@ -33,6 +33,14 @@ class ReviewSnapshot(Base):
     client_name = Column(String, nullable=True)
     currency = Column(String, nullable=False, default="USD")
 
+    # Datos ejecutivos del informe y del Ingeniero Revisor
+    report_code = Column(String(100), nullable=True)
+    reviewer_name = Column(String(200), nullable=True)
+    reviewer_civ = Column(String(100), nullable=True)
+    document_reference = Column(String(255), nullable=True)
+    institution_name = Column(String(255), nullable=True)
+    conclusion_text = Column(Text, nullable=True)
+
     # Control de expediente, versiones y estado de revisión (CRUD Auditoría)
     audit_group_id = Column(String, nullable=True, index=True)
     parent_snapshot_id = Column(String, nullable=True, index=True)
