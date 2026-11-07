@@ -677,21 +677,24 @@ def evaluate_item_audit_rules(
 
 
 def compute_snapshot_health_score(findings: List[Dict[str, Any]], total_items: int) -> float:
-    """Calcula un puntaje de salud (0 a 100) ponderado por el total de partidas auditadas."""
+    """Porcentaje de partidas aprobadas (0 a 100): partidas sin observaciones / total de partidas.
+
+    Una partida se considera con observaciones si tiene al menos un hallazgo de severidad
+    CRITICA, ALTA o MEDIA. INFO_MAPREX no penaliza porque es diferencia nativa entre catálogos.
+    Los hallazgos a nivel de capítulo (ARI-001) no corresponden a una partida y no se cuentan.
+    """
     if total_items <= 0:
         return 100.0
-    penalty = 0.0
-    for f in findings:
-        sev = f.get("severity")
-        if sev == "CRITICA":
-            penalty += 6.0
-        elif sev == "ALTA":
-            penalty += 3.0
-        elif sev == "MEDIA":
-            penalty += 1.0
-        # INFO_MAPREX no penaliza porque es diferencia nativa entre catálogos Maprex y CostBase
-    normalized_penalty = penalty / max(1.0, total_items / 10.0)
-    return round(max(0.0, min(100.0, 100.0 - normalized_penalty)), 1)
+    observed_codes = {
+        str(f.get("item_code") or "").strip().upper()
+        for f in findings
+        if f.get("severity") in {"CRITICA", "ALTA", "MEDIA"}
+        and f.get("rule_id") != "ARI-001"
+        and str(f.get("item_code") or "").strip()
+    }
+    observed_count = min(len(observed_codes), total_items)
+    approved = total_items - observed_count
+    return round(approved / total_items * 100.0, 1)
 
 
 def generate_default_executive_conclusion(

@@ -294,20 +294,39 @@ def test_structural_rules_emission() -> None:
 
 
 def test_health_score_calculation_bounds() -> None:
-    """Verifica los límites y penalizaciones del índice de salud técnica del presupuesto."""
+    """El puntaje es el % de partidas aprobadas (sin hallazgos CRITICA/ALTA/MEDIA) sobre el total."""
     # Presupuesto perfecto sin hallazgos
     assert compute_snapshot_health_score([], total_items=10) == 100.0
 
-    # Presupuesto con 1 hallazgo informativo Maprex
-    score_info = compute_snapshot_health_score([{"severity": "INFO_MAPREX"}], total_items=10)
-    assert score_info >= 98.0
+    # Un hallazgo informativo Maprex no penaliza
+    score_info = compute_snapshot_health_score(
+        [{"severity": "INFO_MAPREX", "item_code": "A1"}], total_items=10
+    )
+    assert score_info == 100.0
 
-    # Presupuesto con hallazgo crítico
-    score_crit = compute_snapshot_health_score([{"severity": "CRITICA"}], total_items=10)
-    assert score_crit < score_info
+    # 1 partida observada de 10 -> 90 % aprobadas
+    score_crit = compute_snapshot_health_score(
+        [{"severity": "CRITICA", "item_code": "A1"}], total_items=10
+    )
+    assert score_crit == 90.0
 
-    # Presupuesto con múltiples hallazgos críticos nunca debe ser menor a 0.0 ni mayor a 100.0
-    many_findings = [{"severity": "CRITICA"}] * 50
+    # Varios hallazgos sobre la misma partida cuentan una sola partida observada
+    same_item = [
+        {"severity": "CRITICA", "item_code": "A1"},
+        {"severity": "MEDIA", "item_code": "a1"},
+    ]
+    assert compute_snapshot_health_score(same_item, total_items=10) == 90.0
+
+    # 40 de 100 partidas observadas -> 60 % aprobadas
+    forty = [{"severity": "ALTA", "item_code": f"P{i}"} for i in range(40)]
+    assert compute_snapshot_health_score(forty, total_items=100) == 60.0
+
+    # Los hallazgos de capítulo (ARI-001) no cuentan como partida observada
+    chapter = [{"severity": "ALTA", "rule_id": "ARI-001", "item_code": "CAP1"}]
+    assert compute_snapshot_health_score(chapter, total_items=10) == 100.0
+
+    # Nunca excede los límites 0..100
+    many_findings = [{"severity": "CRITICA", "item_code": f"X{i}"} for i in range(50)]
     score_many = compute_snapshot_health_score(many_findings, total_items=5)
-    assert 0.0 <= score_many <= 100.0
+    assert score_many == 0.0
 

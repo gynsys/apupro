@@ -34,6 +34,10 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { budgetReviewService } from '../services/budgetReviewService';
+import {
+  RESOLVED_FINDING_STATUSES,
+  computePartidaApprovalStats,
+} from '../domain/approvalStats.js';
 import { budgetService } from '../../../services/budgetService';
 import { useDatabase } from '../../../contexts/DatabaseContext';
 import BudgetImportChoiceModal from '../../../components/modals/BudgetImportChoiceModal';
@@ -173,6 +177,61 @@ const getItemRef = (f, itemMap) => {
   const code = getEffectiveItemCode(f, itemMap);
   return code ? `Partida ${code}` : 'Presupuesto General';
 };
+
+const FINDING_STATUS_SHORT_LABEL = {
+  PENDIENTE: 'Pendiente',
+  CORREGIDO: 'Corregido',
+  JUSTIFICADO: 'Justificado',
+  RECHAZADO: 'No aceptado',
+};
+
+const toHexDigest = (buffer) =>
+  Array.from(new Uint8Array(buffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+
+/** Tarjeta con el puntaje (% de partidas aprobadas) y el semáforo Aprobadas / Con Observaciones. */
+function ReviewScoreBanner({ stats }) {
+  const tone = stats.allApproved
+    ? { label: 'Aprobadas', color: '#047857', bg: '#d1fae5', border: '#6ee7b7' }
+    : { label: 'Con Observaciones', color: '#b45309', bg: '#fef3c7', border: '#fcd34d' };
+  return (
+    <div
+      className="border border-slate-300 rounded-lg p-3 print-avoid-break"
+      style={{ breakInside: 'avoid' }}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="font-black text-[11px] uppercase tracking-wider text-slate-900">
+            Resultado de la revisión
+          </div>
+          <div className="text-xs text-slate-700 mt-0.5">
+            <strong>{stats.approved}</strong> de <strong>{stats.total}</strong> partidas aprobadas
+            {stats.observed > 0 ? ` · ${stats.observed} con observaciones` : ''}
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <div className="text-2xl font-black text-slate-900 leading-none">{stats.score}%</div>
+            <div className="text-[10px] uppercase font-bold text-slate-500">Aprobadas</div>
+          </div>
+          <span
+            className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase border"
+            style={{ color: tone.color, background: tone.bg, borderColor: tone.border }}
+          >
+            {tone.label}
+          </span>
+        </div>
+      </div>
+      <div
+        className="mt-2 h-2 w-full rounded-full overflow-hidden"
+        style={{ background: '#fde68a' }}
+      >
+        <div style={{ width: `${stats.score}%`, height: '100%', background: '#10b981' }} />
+      </div>
+    </div>
+  );
+}
 
 export default function BudgetReviewPage() {
   const { activeDatabase, databases } = useDatabase();
@@ -583,17 +642,79 @@ export default function BudgetReviewPage() {
   const uniqueFindings = useMemo(() => {
     const raw = activeReport?.findings || [];
     const seen = new Set();
-    const result = [];
+    const groups = new Map();
     for (const f of raw) {
       // Deduplicar hallazgos idénticos sobre la misma regla e ítem (ej: EST-007 por código repetido en varias filas)
       const key = `${f.rule_id || ''}-${f.item_code || ''}-${f.component_code || ''}-${(f.message || '').trim()}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        result.push(f);
-      }
+      if (seen.has(key)) continue;
+      seen.add(key);
+      // Agrupar por partida para que los hallazgos de una misma partida queden consecutivos (H-01, H-02...)
+      const groupKey = f.review_item_id || f.item_code || 'GENERAL';
+      if (!groups.has(groupKey)) groups.set(groupKey, []);
+      groups.get(groupKey).push(f);
     }
-    return result;
+    return Array.from(groups.values()).flat();
   }, [activeReport?.findings]);
+
+  const partidaStats = useMemo(
+    () => computePartidaApprovalStats(activeReport?.items),
+    [activeReport?.items]
+  );
+
+  const isReportConforme = activeReport?.review_status === 'APROBADO' || partidaStats.allApproved;
+
+  const printFindingGroups = useMemo(() => {
+    const groups = new Map();
+    uniqueFindings.forEach((f, i) => {
+      const groupKey = f.review_item_id || f.item_code || 'GENERAL';
+      if (!groups.has(groupKey)) {
+        const item = itemMap.get(f.review_item_id) || null;
+        groups.set(groupKey, {
+          key: groupKey,
+          title: getItemRef(f, itemMap),
+          description: item?.description || '',
+          unit: item?.unit || '',
+          entries: [],
+        });
+      }
+      groups.get(groupKey).entries.push({ finding: f, hCode: `H-${String(i + 1).padStart(2, '0')}` });
+    });
+    return Array.from(groups.values());
+  }, [uniqueFindings, itemMap]);
+
+  const [verificationCode, setVerificationCode] = useState('');
+  useEffect(() => {
+    if (!activeReport || typeof crypto === 'undefined' || !crypto.subtle) {
+      setVerificationCode('');
+      return undefined;
+    }
+    let cancelled = false;
+    const payload = JSON.stringify({
+      id: activeReport.id,
+      code: activeReport.report_code,
+      version: activeReport.version_number,
+      created: activeReport.created_at,
+      score: partidaStats.score,
+      findings: uniqueFindings.map((f) => [f.rule_id, f.item_code, f.message, f.finding_status]),
+      conclusion: activeReport.conclusion_text,
+      reviewer: [activeReport.reviewer_name, activeReport.reviewer_civ],
+      approver: [activeReport.approver_name, activeReport.approver_civ],
+    });
+    crypto.subtle
+      .digest('SHA-256', new TextEncoder().encode(payload))
+      .then((buf) => {
+        if (cancelled) return;
+        const hex = toHexDigest(buf).slice(0, 16).toUpperCase();
+        setVerificationCode(hex.match(/.{4}/g).join('-'));
+      })
+      .catch((err) => {
+        console.error('No se pudo generar el código de verificación del informe:', err);
+        if (!cancelled) setVerificationCode('');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeReport, uniqueFindings, partidaStats.score]);
 
   const filteredFindings = uniqueFindings.filter((f) => {
     if (severityFilter !== 'ALL' && f.severity !== severityFilter) return false;
@@ -945,6 +1066,9 @@ export default function BudgetReviewPage() {
               <strong>{activeReport.total_items}</strong> partidas y <strong>{activeReport.total_items}</strong> APUs analizados).
             </div>
 
+            {/* Puntaje: % de partidas aprobadas y semáforo */}
+            <ReviewScoreBanner stats={partidaStats} />
+
             {/* Matriz de Hallazgos Técnicos */}
             <div className="space-y-2">
               <h3 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
@@ -982,7 +1106,7 @@ export default function BudgetReviewPage() {
                 : 'bg-emerald-50/80 border-emerald-500 text-emerald-950'
             }`}>
               <span className="font-extrabold uppercase tracking-wide block mb-1">
-                {activeReport.review_status === 'CONFORME' || (activeReport.critical_findings_count === 0 && activeReport.high_findings_count === 0 && activeReport.medium_findings_count === 0)
+                {isReportConforme
                   ? 'Conclusión del Informe Técnico:'
                   : 'Conclusión preliminar / Dictamen Técnico:'}
               </span>
@@ -2235,7 +2359,7 @@ export default function BudgetReviewPage() {
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  {formStatus === 'CONFORME'
+                  {formStatus === 'APROBADO'
                     ? 'Conclusión del Informe Técnico'
                     : 'Conclusión Preliminar del Informe Técnico'}
                 </label>
@@ -2394,11 +2518,26 @@ export default function BudgetReviewPage() {
         id="print-budget-review-layout"
         className="hidden print:block w-full bg-white text-slate-900 font-sans text-xs leading-normal p-[14mm]"
       >
-        {/* Configuración de página e impresión sin encabezados de navegador */}
+        {/* Configuración de página: pie con código, numeración y fecha en cada hoja */}
         <style>{`
           @page {
             size: letter portrait;
-            margin: 0;
+            margin: 12mm 14mm 18mm 14mm;
+            @bottom-left {
+              content: ${JSON.stringify(`${activeReport.report_code || 'Informe de Revisión'} · v${activeReport.version_number || 1}`)};
+              font: 8pt Arial, sans-serif;
+              color: #64748b;
+            }
+            @bottom-center {
+              content: "Página " counter(page) " de " counter(pages);
+              font: 8pt Arial, sans-serif;
+              color: #64748b;
+            }
+            @bottom-right {
+              content: ${JSON.stringify(`Emitido el ${new Date(activeReport.created_at).toLocaleDateString('es-VE')}`)};
+              font: 8pt Arial, sans-serif;
+              color: #64748b;
+            }
           }
           @media print {
             html, body, #root, #root > div, main {
@@ -2414,7 +2553,7 @@ export default function BudgetReviewPage() {
             }
             #print-budget-review-layout {
               display: block !important;
-              padding: 14mm !important;
+              padding: 0 !important;
               background: #ffffff !important;
               color: #0f172a !important;
               width: 100% !important;
@@ -2428,11 +2567,11 @@ export default function BudgetReviewPage() {
 
         {/* Logo Institucional Centrado en Encabezado de Impresión */}
         {activeReport.institution_logo && (
-          <div className="flex justify-center mb-4 print-avoid-break">
+          <div className="flex justify-center mb-2 print-avoid-break">
             <img
               src={activeReport.institution_logo}
               alt={activeReport.institution_name || 'Logo Institucional'}
-              className="max-h-24 max-w-[280px] object-contain drop-shadow-2xs"
+              style={{ maxHeight: '18mm', maxWidth: '60mm', objectFit: 'contain' }}
             />
           </div>
         )}
@@ -2469,10 +2608,12 @@ export default function BudgetReviewPage() {
                 {activeReport.document_reference || activeReport.source_filename || `Presupuesto de Obra — v${activeReport.version_number}`}
               </span>
             </div>
-            <div>
-              <span className="font-bold text-slate-900">• Empresa:</span>{' '}
-              <span className="font-medium">{activeReport.client_name || 'Sin especificar'}</span>
-            </div>
+            {activeReport.client_name && (
+              <div>
+                <span className="font-bold text-slate-900">• Empresa:</span>{' '}
+                <span className="font-medium">{activeReport.client_name}</span>
+              </div>
+            )}
             <div>
               <span className="font-bold text-slate-900">• Revisión:</span>{' '}
               <span>
@@ -2508,6 +2649,11 @@ export default function BudgetReviewPage() {
           </div>
         </div>
 
+        {/* Puntaje: % de partidas aprobadas y semáforo */}
+        <div className="mb-4 print-avoid-break">
+          <ReviewScoreBanner stats={partidaStats} />
+        </div>
+
         {/* Matriz de Hallazgos Técnicos */}
         <div className="border border-slate-300 rounded-lg p-3 mb-4 print-avoid-break">
           <div className="font-black text-[11px] uppercase tracking-wider text-slate-900 mb-2 border-b border-slate-200 pb-1">
@@ -2540,7 +2686,7 @@ export default function BudgetReviewPage() {
         {/* Conclusión del Informe Técnico / Dictamen */}
         <div className="border-l-4 border-slate-900 bg-slate-50 p-3 mb-4 print-avoid-break text-xs">
           <span className="font-black uppercase tracking-wider text-slate-900 block mb-1">
-            {activeReport.review_status === 'CONFORME' || (activeReport.critical_findings_count === 0 && activeReport.high_findings_count === 0 && activeReport.medium_findings_count === 0)
+            {isReportConforme
               ? 'Conclusión del Informe Técnico:'
               : 'Conclusión preliminar:'}
           </span>
@@ -2550,34 +2696,95 @@ export default function BudgetReviewPage() {
           </p>
         </div>
 
+        {/* Observaciones del auditor */}
+        {activeReport.auditor_notes && activeReport.auditor_notes.trim() && (
+          <div className="border-l-4 border-slate-400 bg-white p-3 mb-4 print-avoid-break text-xs">
+            <span className="font-black uppercase tracking-wider text-slate-900 block mb-1">
+              Observaciones del auditor:
+            </span>
+            <p className="m-0 leading-relaxed text-slate-800 font-medium whitespace-pre-wrap">
+              {activeReport.auditor_notes.trim()}
+            </p>
+          </div>
+        )}
+
+        {/* Verificación de correcciones frente a la versión anterior */}
+        {activeReport.version_comparison && (
+          <div className="mb-4 text-xs">
+            <div className="font-black text-xs uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-2 print-avoid-break">
+              Verificación de correcciones vs. versión anterior (v{activeReport.version_comparison.previous_version_number}):
+            </div>
+            <div className="print-avoid-break mb-1.5 text-slate-800">
+              <strong>{activeReport.version_comparison.resolved_findings_count}</strong> corregidos ·{' '}
+              <strong>{activeReport.version_comparison.persistent_findings_count}</strong> sin corregir ·{' '}
+              <strong>{activeReport.version_comparison.new_findings_count}</strong> nuevos. Partidas aprobadas:{' '}
+              <strong>{activeReport.version_comparison.previous_health_score}%</strong> →{' '}
+              <strong>{partidaStats.score}%</strong>.
+            </div>
+            {(activeReport.version_comparison.resolved_findings || []).map((rf, idx) => (
+              <div
+                key={`${rf.rule_id}-${rf.item_code}-${rf.component_code || ''}-${idx}`}
+                className="print-avoid-break pb-1 border-b border-slate-200 leading-relaxed"
+              >
+                <span className="font-black text-emerald-800 mr-1">✓ Subsanado</span>
+                <span className="font-extrabold text-slate-900 mr-1">— {getFindingHeadline(rf)}</span>
+                <span className="font-bold text-blue-900 mr-1.5">(Partida {rf.item_code}):</span>
+                <span className="text-slate-800 font-medium">{cleanMessage(rf.message)}.</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Detalle de Correcciones */}
-        <div className="mb-6">
+        <div className="mb-4">
           <div className="font-black text-xs uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-2 print-avoid-break">
             Detalle de correcciones:
           </div>
 
-          <div className="space-y-2 text-xs">
-            {uniqueFindings && uniqueFindings.length > 0 ? (
-              uniqueFindings.map((f, i) => {
-                const hCode = `H-${String(i + 1).padStart(2, '0')}`;
-                const sev = SEVERITY_CONFIG[f.severity]?.label || 'Media';
-                const headline = getFindingHeadline(f);
-                const itemRef = getItemRef(f, itemMap);
-                return (
-                  <div
-                    key={f.id}
-                    className="print-avoid-break pb-2 border-b border-slate-200 text-xs leading-relaxed"
-                  >
-                    <div>
-                      <span className="font-black text-slate-900 mr-1">• {hCode}</span>
-                      <span className="font-bold text-slate-700 uppercase mr-1">({sev})</span>
-                      <span className="font-extrabold text-slate-900 mr-1">— {headline}</span>
-                      <span className="font-bold text-blue-900 mr-1.5">({itemRef}):</span>
-                      <span className="text-slate-800 font-medium">{cleanMessage(f.message)}.</span>
+          <div className="space-y-3 text-xs">
+            {printFindingGroups.length > 0 ? (
+              printFindingGroups.map((group) => (
+                <div key={group.key}>
+                  <div className="print-avoid-break flex items-baseline justify-between gap-2 bg-slate-100 border border-slate-300 rounded px-2 py-1">
+                    <div className="min-w-0">
+                      <span className="font-black text-blue-900 mr-1.5">{group.title}</span>
+                      {group.description && (
+                        <span className="text-slate-700 font-medium">
+                          {group.description.length > 90
+                            ? `${group.description.slice(0, 90).trim()}…`
+                            : group.description}
+                          {group.unit ? ` (${group.unit})` : ''}
+                        </span>
+                      )}
                     </div>
+                    <span className="shrink-0 text-[10px] font-black uppercase text-amber-800">
+                      Con observaciones
+                    </span>
                   </div>
-                );
-              })
+                  {group.entries.map(({ finding: f, hCode }) => {
+                    const sev = SEVERITY_CONFIG[f.severity]?.label || 'Media';
+                    const statusKey = f.finding_status || 'PENDIENTE';
+                    return (
+                      <div
+                        key={f.id}
+                        className="print-avoid-break pt-1.5 pb-1.5 pl-2 border-b border-slate-200 text-xs leading-relaxed"
+                      >
+                        <span className="font-black text-slate-900 mr-1">• {hCode}</span>
+                        <span className="font-bold text-slate-700 uppercase mr-1">({sev})</span>
+                        <span className="font-extrabold text-slate-900 mr-1">— {getFindingHeadline(f)}:</span>
+                        <span className="text-slate-800 font-medium">{cleanMessage(f.message)}.</span>{' '}
+                        <span
+                          className={`text-[10px] font-black uppercase ${
+                            RESOLVED_FINDING_STATUSES.has(statusKey) ? 'text-emerald-700' : 'text-slate-500'
+                          }`}
+                        >
+                          [{FINDING_STATUS_SHORT_LABEL[statusKey] || statusKey}]
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))
             ) : (
               <div className="text-slate-500 italic py-2">
                 No se detectaron discrepancias técnicas con respecto a la base de contraste seleccionada.
@@ -2587,10 +2794,10 @@ export default function BudgetReviewPage() {
         </div>
 
         {/* Firmas y Conformidad Técnica */}
-        <div className="pt-8 mt-6 border-t-2 border-slate-400 print-avoid-break">
+        <div className="pt-4 mt-3 print-avoid-break">
           <div className="grid grid-cols-2 gap-10 text-center text-xs">
             <div>
-              <div className="border-b border-slate-900 w-3/4 mx-auto mb-2 h-14 flex items-end justify-center">
+              <div className="border-b border-slate-900 w-3/4 mx-auto mb-1.5 h-10 flex items-end justify-center">
                 {/* Firma manuscrita */}
               </div>
               <div className="font-black text-slate-900 text-sm">
@@ -2605,7 +2812,7 @@ export default function BudgetReviewPage() {
             </div>
 
             <div>
-              <div className="border-b border-slate-900 w-3/4 mx-auto mb-2 h-14 flex items-end justify-center">
+              <div className="border-b border-slate-900 w-3/4 mx-auto mb-1.5 h-10 flex items-end justify-center">
                 {/* Sello institucional / Firma Ente Contratante */}
               </div>
               <div className="font-black text-slate-900 text-sm">
@@ -2624,6 +2831,11 @@ export default function BudgetReviewPage() {
               )}
             </div>
           </div>
+          {verificationCode && (
+            <div className="mt-3 text-center text-[9px] text-slate-500 font-mono">
+              Código de verificación del informe: {verificationCode}
+            </div>
+          )}
         </div>
       </div>,
       document.body
