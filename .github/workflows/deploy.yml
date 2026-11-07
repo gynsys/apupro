@@ -99,6 +99,11 @@ jobs:
             git reset --hard origin/main
             restore_env
             
+            # Free up disk space before pulling new layers
+            docker image prune -f || true
+            docker builder prune -af || true
+            journalctl --vacuum-size=50M || true
+
             # Pull the new images
             docker compose pull
             
