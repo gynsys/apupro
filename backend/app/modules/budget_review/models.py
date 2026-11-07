@@ -212,3 +212,10 @@ class ReviewFinding(Base):
 
     snapshot = relationship("ReviewSnapshot", back_populates="findings")
     item = relationship("ReviewItem", back_populates="findings")
+
+    @property
+    def covenin_code(self) -> Optional[str]:
+        """Retorna el código COVENIN oficial asociado a la partida si existe."""
+        if self.item and self.item.covenin_code:
+            return self.item.covenin_code
+        return None

@@ -172,7 +172,18 @@ def evaluate_item_audit_rules(
         raise ValueError("item_data debe ser un diccionario válido.")
 
     findings: List[Dict[str, Any]] = []
-    code = str(item_data.get("original_code") or "").strip()
+    orig_code = str(item_data.get("original_code") or "").strip()
+    cov_code = str(
+        item_data.get("covenin_code")
+        or (master_item.get("cov_par") if master_item else "")
+        or ""
+    ).strip()
+    # Para el informe técnico de revisión, priorizar el código COVENIN (CovPar) sobre el código interno (CodPar)
+    code = (
+        cov_code
+        if (cov_code and cov_code.upper() not in {"S/C", "E S/C", "ES/C"})
+        else orig_code
+    )
     desc = str(item_data.get("description") or "").strip()
     unit = str(item_data.get("unit") or "").strip()
     qty = float(item_data.get("quantity") or 0.0)

@@ -75,6 +75,7 @@ class FindingOut(BaseModel):
     category: str
     severity: str
     item_code: str
+    covenin_code: Optional[str] = None
     component_code: Optional[str] = None
     component_description: Optional[str] = None
     field_name: str

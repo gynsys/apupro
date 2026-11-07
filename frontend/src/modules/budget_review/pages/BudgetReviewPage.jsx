@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import {
   ShieldAlert,
   FileSpreadsheet,
@@ -124,9 +124,28 @@ const getFindingHeadline = (f) => {
   return 'Desviación técnica';
 };
 
-const getItemRef = (f) => {
-  if (f.rule_id === 'ARI-001' && f.item_code) return `Capítulo ${f.item_code}`;
-  return f.item_code ? `Partida ${f.item_code}` : 'Presupuesto General';
+const getEffectiveItemCode = (f, itemMap) => {
+  if (f?.rule_id === 'ARI-001' && f?.item_code) return f.item_code;
+  let covCode = f?.covenin_code;
+  if (!covCode && itemMap && f?.review_item_id) {
+    const it = itemMap.get(f.review_item_id);
+    if (it && it.covenin_code && it.covenin_code.toUpperCase() !== 'S/C') {
+      covCode = it.covenin_code;
+    }
+  }
+  if (!covCode && itemMap && f?.item_code) {
+    const it = itemMap.get(f.item_code) || itemMap.get(String(f.item_code).toUpperCase());
+    if (it && it.covenin_code && it.covenin_code.toUpperCase() !== 'S/C') {
+      covCode = it.covenin_code;
+    }
+  }
+  return covCode || f?.item_code || '';
+};
+
+const getItemRef = (f, itemMap) => {
+  if (f?.rule_id === 'ARI-001' && f?.item_code) return `Capítulo ${f.item_code}`;
+  const code = getEffectiveItemCode(f, itemMap);
+  return code ? `Partida ${code}` : 'Presupuesto General';
 };
 
 export default function BudgetReviewPage() {
@@ -188,6 +207,24 @@ export default function BudgetReviewPage() {
 
   const fileInputRef = useRef(null);
   const correctionFileInputRef = useRef(null);
+
+  const itemMap = useMemo(() => {
+    const map = new Map();
+    if (activeReport?.items) {
+      activeReport.items.forEach((it) => {
+        if (it.id) map.set(it.id, it);
+        if (it.original_code) {
+          map.set(it.original_code, it);
+          map.set(it.original_code.toUpperCase(), it);
+        }
+        if (it.covenin_code) {
+          map.set(it.covenin_code, it);
+          map.set(it.covenin_code.toUpperCase(), it);
+        }
+      });
+    }
+    return map;
+  }, [activeReport?.items]);
 
   useEffect(() => {
     loadInitialData();
@@ -1186,7 +1223,7 @@ export default function BudgetReviewPage() {
                             const hCode = `H-${String(i + 1).padStart(2, '0')}`;
                             const sev = SEVERITY_CONFIG[f.severity]?.label || 'Media';
                             const headline = getFindingHeadline(f);
-                            const itemRef = getItemRef(f);
+                            const itemRef = getItemRef(f, itemMap);
                             const sug = f.suggestion ? ` Sugerencia: ${f.suggestion}.` : '';
                             return `• ${hCode} (${sev}) — ${headline} (${itemRef}): ${f.message}.${sug}`;
                           })
@@ -1232,7 +1269,7 @@ export default function BudgetReviewPage() {
                         const hCode = `H-${String(i + 1).padStart(2, '0')}`;
                         const sev = SEVERITY_CONFIG[f.severity] || SEVERITY_CONFIG.MEDIA;
                         const headline = getFindingHeadline(f);
-                        const itemRef = getItemRef(f);
+                        const itemRef = getItemRef(f, itemMap);
                         return (
                           <div
                             key={f.id}
@@ -1303,7 +1340,7 @@ export default function BudgetReviewPage() {
                               {f.rule_id} · {f.category}
                             </span>
                             <span className="text-xs font-extrabold text-slate-900">
-                              Partida: {f.item_code || 'S/C'}
+                              Partida: {getEffectiveItemCode(f, itemMap) || 'S/C'}
                             </span>
                             {f.component_code && (
                               <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
@@ -1716,7 +1753,7 @@ export default function BudgetReviewPage() {
                             CORREGIDO EN v{activeReport.version_number}
                           </span>
                           <span className="text-xs font-bold text-slate-800">
-                            Partida: {rf.item_code} · Regla {rf.rule_id} ({rf.category})
+                            Partida: {getEffectiveItemCode(rf, itemMap) || rf.item_code} · Regla {rf.rule_id} ({rf.category})
                           </span>
                           {rf.component_code && (
                             <span className="text-xs font-semibold text-emerald-800">
@@ -2318,7 +2355,7 @@ export default function BudgetReviewPage() {
                 const hCode = `H-${String(i + 1).padStart(2, '0')}`;
                 const sev = SEVERITY_CONFIG[f.severity]?.label || 'Media';
                 const headline = getFindingHeadline(f);
-                const itemRef = getItemRef(f);
+                const itemRef = getItemRef(f, itemMap);
                 return (
                   <div
                     key={f.id}

@@ -638,8 +638,16 @@ def _execute_snapshot_audit(
                 )
             )
 
+        display_cov = cov_code or (master_item.get("cov_par") if master_item else None)
+        effective_display_code = (
+            display_cov
+            if (display_cov and display_cov.upper() not in {"S/C", "E S/C", "ES/C"})
+            else orig_code
+        )
+
         item_eval_payload = {
             "original_code": orig_code,
+            "covenin_code": display_cov,
             "description": desc,
             "unit": unit,
             "quantity": qty,
@@ -672,12 +680,12 @@ def _execute_snapshot_audit(
                 "rule_id": "EST-007",
                 "category": "ESTRUCTURA",
                 "severity": "MEDIA",
-                "item_code": orig_code,
+                "item_code": effective_display_code,
                 "field_name": "duplicate_partida",
                 "imported_value": f"{code_occurrences[orig_code.upper()]} partidas con código {orig_code}",
                 "master_value": "Código único o subcapítulo diferenciado",
                 "diff_percent": None,
-                "message": f"El código de partida '{orig_code}' aparece {code_occurrences[orig_code.upper()]} veces en el presupuesto.",
+                "message": f"El código de partida '{effective_display_code}' aparece {code_occurrences[orig_code.upper()]} veces en el presupuesto.",
                 "suggestion": "Verificar si la partida fue duplicada accidentalmente en varios capítulos.",
             })
 
@@ -689,7 +697,7 @@ def _execute_snapshot_audit(
                     rule_id=f_dict["rule_id"],
                     category=f_dict["category"],
                     severity=f_dict["severity"],
-                    item_code=f_dict.get("item_code") or orig_code,
+                    item_code=f_dict.get("item_code") or effective_display_code,
                     component_code=f_dict.get("component_code"),
                     component_description=f_dict.get("component_description"),
                     field_name=f_dict.get("field_name") or "",
