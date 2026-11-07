@@ -86,7 +86,7 @@ export default function DatabaseManagementPage() {
         await Promise.all(
           dbs.map(async (db) => {
             try {
-              const res = await cost360Service.fetchItems(0, 1, '', '', db.id, true, false, '', true);
+              const res = await cost360Service.fetchItems(0, 1, '', '', db.id, true, false, '', db.id === 'master');
               counts[db.id] = res?.total ?? 0;
             } catch (e) {
               counts[db.id] = 0;

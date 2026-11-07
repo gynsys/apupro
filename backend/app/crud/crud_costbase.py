@@ -302,7 +302,7 @@ def get_items_paginated(
         query = query.filter(CostItem.Categoria == categoria)
     if tipo_actividad:
         query = query.filter(CostItem.TipoActividad == tipo_actividad)
-    if only_coded:
+    if only_coded and database_id == "master":
         covenin_regex = r'^\s*([A-Za-z]{1,2}[\.\-\s]?[0-9\.\-\s]+|[0-9\.\-\s]+RA|RA[\.\-\s]?[0-9]+)\s*$'
         query = query.filter(
             or_(
@@ -312,7 +312,7 @@ def get_items_paginated(
             )
         )
 
-    if hidden_categories and not covenin and not chapter and not is_superadmin:
+    if hidden_categories and database_id == "master" and not covenin and not chapter and not is_superadmin:
         hc_list = [hc.strip() for hc in hidden_categories.split(',')]
         for hc in hc_list:
             if hc:
