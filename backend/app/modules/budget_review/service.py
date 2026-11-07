@@ -797,6 +797,7 @@ def audit_uploaded_file(
     project_name: Optional[str] = None,
     client_name: Optional[str] = None,
     auditor_notes: Optional[str] = None,
+    import_mode: str = "budget",
 ) -> ReviewSnapshot:
     """Importa un archivo externo (Excel APU, Excel presupuesto, CSV o PDF) a la base de revisión y lo audita."""
     if not file_bytes:
@@ -804,7 +805,10 @@ def audit_uploaded_file(
     if not filename:
         raise ValueError("El nombre del archivo es requerido.")
 
-    preview = build_preview(file_bytes, filename, db, mode="budget")
+    clean_mode = (import_mode or "budget").strip().lower()
+    if clean_mode not in {"apu_workbook", "budget", "compute_notes"}:
+        clean_mode = "budget"
+    preview = build_preview(file_bytes, filename, db, mode=clean_mode)
     hdr = preview.get("header") or {}
     header_info = {
         "source_type": preview.get("source_type") or "file",

@@ -105,6 +105,7 @@ def run_audit_on_existing_budget(
 def run_audit_on_uploaded_file(
     file: UploadFile = File(...),
     database_id: str = Form("master"),
+    mode: str = Form("budget"),
     parent_snapshot_id: Optional[str] = Form(None),
     name: Optional[str] = Form(None),
     project_name: Optional[str] = Form(None),
@@ -138,6 +139,7 @@ def run_audit_on_uploaded_file(
             project_name=project_name,
             client_name=client_name,
             auditor_notes=auditor_notes,
+            import_mode=mode,
         )
         return get_review_snapshot_detail(db=db, snapshot_id=snapshot.id, user_id=user_id)
     except HTTPException:

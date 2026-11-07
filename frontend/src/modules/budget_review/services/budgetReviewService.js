@@ -67,6 +67,9 @@ export const budgetReviewService = {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('database_id', databaseId || 'master');
+    if (options.mode) {
+      formData.append('mode', options.mode);
+    }
     if (options.parentSnapshotId) {
       formData.append('parent_snapshot_id', options.parentSnapshotId);
     }

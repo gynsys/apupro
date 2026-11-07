@@ -27,6 +27,7 @@ import toast from 'react-hot-toast';
 import { budgetReviewService } from '../services/budgetReviewService';
 import { budgetService } from '../../../services/budgetService';
 import { useDatabase } from '../../../contexts/DatabaseContext';
+import BudgetImportChoiceModal from '../../../components/modals/BudgetImportChoiceModal';
 
 const SEVERITY_CONFIG = {
   CRITICA: {
@@ -141,6 +142,7 @@ export default function BudgetReviewPage() {
   const [showNewVersionModal, setShowNewVersionModal] = useState(false);
   const [newVersionBudgetId, setNewVersionBudgetId] = useState('');
   const [newVersionNotes, setNewVersionNotes] = useState('');
+  const [showImportChoiceModal, setShowImportChoiceModal] = useState(false);
 
   const fileInputRef = useRef(null);
   const correctionFileInputRef = useRef(null);
@@ -207,14 +209,15 @@ export default function BudgetReviewPage() {
     }
   };
 
-  const handleFileUpload = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
+  const handleImportChoiceSelect = async (file, mode) => {
+    setShowImportChoiceModal(false);
     if (!file) return;
 
     setRunningAudit(true);
     try {
-      const detail = await budgetReviewService.auditUploadedFile(file, selectedDbId);
+      const detail = await budgetReviewService.auditUploadedFile(file, selectedDbId, {
+        mode: mode || 'budget',
+      });
       setActiveReport(detail);
       syncFormWithReport(detail);
       const updatedSnaps = await budgetReviewService.listSnapshots();
@@ -225,6 +228,13 @@ export default function BudgetReviewPage() {
     } finally {
       setRunningAudit(false);
     }
+  };
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    await handleImportChoiceSelect(file, 'budget');
   };
 
   // Subir o Auditar Nueva Versión Corregida (v2, v3...)
@@ -501,7 +511,11 @@ export default function BudgetReviewPage() {
                 >
                   {availableDatabases.map((dbItem) => (
                     <option key={dbItem.id} value={dbItem.id}>
-                      {dbItem.name}
+                      {dbItem.id === 'base_agosto'
+                        ? 'Base Agosto (12.652 partidas)'
+                        : dbItem.id === 'master'
+                        ? `${dbItem.name} (18.880 partidas)`
+                        : dbItem.name}
                     </option>
                   ))}
                 </select>
@@ -534,7 +548,7 @@ export default function BudgetReviewPage() {
               </button>
             </div>
 
-            {/* Subir Archivo Excel / PDF */}
+            {/* Cargar Archivo (abre modal Importar Presupuesto desde Archivo) */}
             <input
               ref={fileInputRef}
               type="file"
@@ -544,12 +558,12 @@ export default function BudgetReviewPage() {
             />
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => setShowImportChoiceModal(true)}
               disabled={runningAudit}
               className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs sm:text-sm font-bold shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <UploadCloud size={16} />
-              <span>Importar Archivo (.xlsx / .pdf)</span>
+              <span>Cargar</span>
             </button>
           </div>
         </div>
@@ -1744,6 +1758,13 @@ export default function BudgetReviewPage() {
           </div>
         </div>
       )}
+
+      {/* Modal compartido: Importar Presupuesto desde Archivo (Libro de APUs / Presupuesto / Cómputos) */}
+      <BudgetImportChoiceModal
+        isOpen={showImportChoiceModal}
+        onClose={() => setShowImportChoiceModal(false)}
+        onSelectMode={handleImportChoiceSelect}
+      />
     </div>
   );
 }
