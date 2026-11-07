@@ -151,3 +151,163 @@ def test_uncoded_apu_not_rejected_when_well_structured() -> None:
     # Al estar bien estructurado, el status debe ser CONFORME
     assert uncoded_item.get("ai_audit_status") == "CONFORME"
 
+
+def test_partida_code_prioritizes_covpar() -> None:
+    """Verifica que el código oficial COVENIN (CovPar) tenga prioridad sobre el código interno (CodPar)."""
+    master_item = {
+        "cod_par": "CAR013",
+        "cov_par": "C078750000",
+        "description": "ACERO DE REFUERZO FY=4200 KG/CM2 CABILLAS",
+        "unit": "KGF",
+        "performance": 400.0,
+    }
+    item_data = {
+        "original_code": "CAR013",
+        "covenin_code": "C078750000",
+        "description": "ACERO DE REFUERZO CABILLAS",
+        "unit": "KGF",
+        "quantity": 500.0,
+        "performance": 200.0,  # Rendimiento alterado -> genera hallazgo REN-001
+        "materials": [],
+        "equipments": [],
+        "labors": [],
+    }
+    findings = evaluate_item_audit_rules(item_data, master_item, None)
+    assert len(findings) > 0
+    for f in findings:
+        # El item_code reportado debe ser el COVENIN C078750000, NUNCA CAR013
+        assert f["item_code"] == "C078750000", f"Se esperaba CovPar C078750000 pero se obtuvo {f['item_code']}"
+
+
+def test_partida_code_fallback_when_uncoded() -> None:
+    """Verifica que si no hay CovPar o es S/C, se use el código original del presupuesto."""
+    item_sc = {
+        "original_code": "CUST-999",
+        "covenin_code": "S/C",
+        "description": "INSTALACION ESPECIAL DE TABIQUERIA ACUSTICA",
+        "unit": "",  # Genera EST-001
+        "quantity": 10.0,
+        "performance": 15.0,
+        "materials": [],
+        "equipments": [],
+        "labors": [],
+    }
+    findings = evaluate_item_audit_rules(item_sc, None, None)
+    assert any(f["rule_id"] == "EST-001" for f in findings)
+    est_finding = next(f for f in findings if f["rule_id"] == "EST-001")
+    assert est_finding["item_code"] == "CUST-999"
+
+
+def test_duplicate_partida_scan_and_single_emission() -> None:
+    """Verifica que la detección de partidas duplicadas emita un solo hallazgo por código e incluya filas."""
+    from collections import Counter, defaultdict
+
+    raw_items = [
+        {"row": 1, "code": "CAP1", "is_chapter": True},
+        {"row": 2, "code": "ARB023", "cov_par": "U803100700", "is_chapter": False},
+        {"row": 3, "code": "E311110", "cov_par": "E311110", "is_chapter": False},
+        {"row": 4, "code": "ARB023", "cov_par": "U803100700", "is_chapter": False},
+        {"row": 5, "code": "M110000", "cov_par": "M110000", "is_chapter": False},
+        {"row": 6, "code": "ARB023", "cov_par": "U803100700", "is_chapter": False},
+    ]
+
+    code_occurrences = Counter()
+    code_locations = defaultdict(list)
+    for idx_scan, it_scan in enumerate(raw_items, start=1):
+        if not it_scan.get("is_chapter") and str(it_scan.get("code") or "").strip():
+            c_key = str(it_scan.get("code")).strip().upper()
+            code_occurrences[c_key] += 1
+            code_locations[c_key].append(int(it_scan.get("row") or idx_scan))
+
+    reported_duplicate_codes = set()
+    emitted_findings = []
+
+    for raw in raw_items:
+        if raw.get("is_chapter"):
+            continue
+        orig_code = str(raw.get("code") or "").strip()
+        display_cov = str(raw.get("cov_par") or "").strip()
+        effective_code = display_cov if (display_cov and display_cov.upper() != "S/C") else orig_code
+        orig_key = orig_code.upper() if orig_code else ""
+
+        if orig_key and code_occurrences.get(orig_key, 0) > 1 and orig_key not in reported_duplicate_codes:
+            reported_duplicate_codes.add(orig_key)
+            locs = code_locations.get(orig_key, [])
+            locs_str = f" (filas {', '.join(f'#{r}' for r in locs)})" if locs else ""
+            count = code_occurrences[orig_key]
+            emitted_findings.append({
+                "rule_id": "EST-007",
+                "item_code": effective_code,
+                "message": f"El código de partida aparece {count} veces en el presupuesto{locs_str}",
+            })
+
+    # Debe haber EXACTAMENTE 1 hallazgo EST-007, a pesar de que ARB023 aparece 3 veces
+    assert len(emitted_findings) == 1
+    f = emitted_findings[0]
+    assert f["item_code"] == "U803100700"
+    assert "3 veces en el presupuesto (filas #2, #4, #6)" in f["message"]
+    # El mensaje no debe terminar con punto duplicado
+    assert not f["message"].endswith("..")
+
+
+def test_clean_message_formatting_no_double_dots() -> None:
+    """Verifica que la función saneadora de mensajes evite el doble punto final."""
+    import re
+
+    def clean_message(msg: str) -> str:
+        return re.sub(r"\.+$", "", (msg or "").strip())
+
+    msg_with_dot = "Rendimiento reducido importado 300 vs maestro 400 (-25.0%)."
+    msg_with_double_dot = "Factor manipulado en equipo (+900.0%).. "
+    msg_without_dot = "El código de partida aparece 2 veces en el presupuesto"
+
+    assert clean_message(msg_with_dot) == "Rendimiento reducido importado 300 vs maestro 400 (-25.0%)"
+    assert clean_message(msg_with_double_dot) == "Factor manipulado en equipo (+900.0%)"
+    assert clean_message(msg_without_dot) == "El código de partida aparece 2 veces en el presupuesto"
+    # Concatenar un solo punto para la oración final
+    assert f"{clean_message(msg_with_dot)}." == "Rendimiento reducido importado 300 vs maestro 400 (-25.0%)."
+
+
+def test_structural_rules_emission() -> None:
+    """Verifica que las reglas estructurales EST-001, EST-002, EST-003, EST-004, EST-005 emitan hallazgos claros."""
+    item_broken = {
+        "original_code": "PART-01",
+        "description": "SUMINISTRO Y CONSTRUCCION DE MURO DE BLOQUE",
+        "unit": "",  # EST-001
+        "quantity": -5.0,  # EST-002
+        "performance": 0.0,  # EST-003
+        "materials": [],  # EST-005 (dice suministro pero no tiene materiales)
+        "equipments": [
+            {"code": "AND01", "resolved_master_code": "AND01"},
+            {"code": "AND01", "resolved_master_code": "AND01"},  # EST-004 (equipo duplicado)
+        ],
+        "labors": [],  # EST-006 (tiene equipo pero no tiene mano de obra)
+    }
+    findings = evaluate_item_audit_rules(item_broken, None, None)
+    rule_ids = {f["rule_id"] for f in findings}
+    assert "EST-001" in rule_ids
+    assert "EST-002" in rule_ids
+    assert "EST-003" in rule_ids
+    assert "EST-004" in rule_ids
+    assert "EST-005" in rule_ids
+    assert "EST-006" in rule_ids
+
+
+def test_health_score_calculation_bounds() -> None:
+    """Verifica los límites y penalizaciones del índice de salud técnica del presupuesto."""
+    # Presupuesto perfecto sin hallazgos
+    assert compute_snapshot_health_score([], total_items=10) == 100.0
+
+    # Presupuesto con 1 hallazgo informativo Maprex
+    score_info = compute_snapshot_health_score([{"severity": "INFO_MAPREX"}], total_items=10)
+    assert score_info >= 98.0
+
+    # Presupuesto con hallazgo crítico
+    score_crit = compute_snapshot_health_score([{"severity": "CRITICA"}], total_items=10)
+    assert score_crit < score_info
+
+    # Presupuesto con múltiples hallazgos críticos nunca debe ser menor a 0.0 ni mayor a 100.0
+    many_findings = [{"severity": "CRITICA"}] * 50
+    score_many = compute_snapshot_health_score(many_findings, total_items=5)
+    assert 0.0 <= score_many <= 100.0
+

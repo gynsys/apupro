@@ -102,16 +102,36 @@ const ORIGIN_LABELS = {
 };
 
 const RULE_HEADLINES = {
+  // Mano de Obra
   'LAB-001': 'Cuadrilla alterada',
+  'LAB-002': 'Categoría laboral omitida',
+  // Materiales
+  'MAT-001': 'Material maestro omitido',
   'MAT-002': 'Sobreconsumo de material',
+  'MAT-003': 'Desperdicio excesivo de material',
+  'MAT-004': 'Discrepancia en código de material',
+  // Equipos y Depreciaciones
+  'EQU-001': 'Equipo maestro omitido',
+  'EQU-002': 'Equipo atípico en APU',
   'EQU-003': 'Omisión de depreciación',
-  'UNC-001': 'APU no codificado',
-  'ARI-001': 'Error aritmético',
-  'DUP-001': 'Duplicidad explícita',
-  'EST-007': 'Duplicidad de partida',
-  'REN-001': 'Rendimiento atípico',
+  'EQU-004': 'Discrepancia en depreciación',
+  // Rendimientos
+  'REN-001': 'Rendimiento atípico / reducido',
   'REN-002': 'Rendimiento inflado',
-  'EST-001': 'Partida atípica / fuera de norma',
+  // Estructura y Duplicidad
+  'EST-001': 'Falta de unidad de medida',
+  'EST-002': 'Cómputo métrico inválido',
+  'EST-003': 'Rendimiento nulo o inválido',
+  'EST-004': 'Insumo duplicado en APU',
+  'EST-005': 'Omisión total de materiales',
+  'EST-006': 'Omisión total de mano de obra',
+  'EST-007': 'Duplicidad de partida',
+  'DUP-001': 'Duplicidad explícita',
+  'COL-001': 'Colisión de código de partida',
+  // Aritmética y Coherencia
+  'ARI-001': 'Error aritmético en capítulo',
+  'COH-001': 'Descuadre aritmético en APU',
+  'UNC-001': 'APU no codificado observado',
 };
 
 const getFindingHeadline = (f) => {
