@@ -39,6 +39,7 @@ class ReviewSnapshot(Base):
     reviewer_civ = Column(String(100), nullable=True)
     document_reference = Column(String(255), nullable=True)
     institution_name = Column(String(255), nullable=True)
+    institution_logo = Column(Text, nullable=True)
     conclusion_text = Column(Text, nullable=True)
 
     # Control de expediente, versiones y estado de revisión (CRUD Auditoría)

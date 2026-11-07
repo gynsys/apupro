@@ -71,6 +71,7 @@ def ensure_review_tables() -> None:
             ("review_budget_snapshots", "reviewer_civ", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS reviewer_civ VARCHAR"),
             ("review_budget_snapshots", "document_reference", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS document_reference VARCHAR"),
             ("review_budget_snapshots", "institution_name", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS institution_name VARCHAR"),
+            ("review_budget_snapshots", "institution_logo", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS institution_logo TEXT"),
             ("review_budget_snapshots", "conclusion_text", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS conclusion_text TEXT"),
             ("review_findings", "finding_status", "ALTER TABLE review_findings ADD COLUMN IF NOT EXISTS finding_status VARCHAR NOT NULL DEFAULT 'PENDIENTE'"),
             ("review_findings", "auditor_comment", "ALTER TABLE review_findings ADD COLUMN IF NOT EXISTS auditor_comment TEXT"),
@@ -333,6 +334,7 @@ def _execute_snapshot_audit(
     rev_name = header_info.get("reviewer_name") or (parent_snap.reviewer_name if parent_snap else None)
     rev_civ = header_info.get("reviewer_civ") or (parent_snap.reviewer_civ if parent_snap else None)
     inst_name = header_info.get("institution_name") or (parent_snap.institution_name if parent_snap else None)
+    inst_logo = header_info.get("institution_logo") or (parent_snap.institution_logo if parent_snap else None)
     user_conclusion = header_info.get("conclusion_text") or (parent_snap.conclusion_text if parent_snap else None)
 
     snapshot = ReviewSnapshot(
@@ -351,6 +353,7 @@ def _execute_snapshot_audit(
         reviewer_civ=rev_civ.strip() if rev_civ and rev_civ.strip() else None,
         document_reference=doc_ref.strip() if doc_ref and doc_ref.strip() else None,
         institution_name=inst_name.strip() if inst_name and inst_name.strip() else None,
+        institution_logo=inst_logo.strip() if inst_logo and inst_logo.strip() else None,
         audit_group_id=group_id,
         parent_snapshot_id=parent_snap.id if parent_snap else None,
         version_number=version_num,
@@ -1072,6 +1075,7 @@ def get_review_snapshot_detail(db: Session, snapshot_id: str, user_id: str) -> D
         "reviewer_civ": snap.reviewer_civ,
         "document_reference": snap.document_reference,
         "institution_name": snap.institution_name,
+        "institution_logo": snap.institution_logo,
         "conclusion_text": snap.conclusion_text,
         "chapters_count": chapters_count,
         "audit_group_id": group_id,
@@ -1116,6 +1120,7 @@ def update_review_snapshot(
     reviewer_civ: Optional[str] = None,
     document_reference: Optional[str] = None,
     institution_name: Optional[str] = None,
+    institution_logo: Optional[str] = None,
     conclusion_text: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Guarda cambios de metadatos, estado y observaciones del auditor sobre una auditoría existente."""
@@ -1146,6 +1151,8 @@ def update_review_snapshot(
         snap.document_reference = document_reference.strip() or None
     if institution_name is not None:
         snap.institution_name = institution_name.strip() or None
+    if institution_logo is not None:
+        snap.institution_logo = institution_logo.strip() or None
     if conclusion_text is not None:
         snap.conclusion_text = conclusion_text.strip() or None
 
@@ -1168,6 +1175,7 @@ def clone_review_snapshot(
     reviewer_civ: Optional[str] = None,
     document_reference: Optional[str] = None,
     institution_name: Optional[str] = None,
+    institution_logo: Optional[str] = None,
     conclusion_text: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Guardar Como: crea una copia independiente completa de la auditoría actual con otro nombre."""
@@ -1207,6 +1215,7 @@ def clone_review_snapshot(
         reviewer_civ=reviewer_civ.strip() if reviewer_civ and reviewer_civ.strip() else source.reviewer_civ,
         document_reference=document_reference.strip() if document_reference and document_reference.strip() else source.document_reference,
         institution_name=institution_name.strip() if institution_name and institution_name.strip() else source.institution_name,
+        institution_logo=institution_logo.strip() if institution_logo and institution_logo.strip() else source.institution_logo,
         conclusion_text=conclusion_text.strip() if conclusion_text and conclusion_text.strip() else source.conclusion_text,
         audit_group_id=new_id,
         parent_snapshot_id=None,

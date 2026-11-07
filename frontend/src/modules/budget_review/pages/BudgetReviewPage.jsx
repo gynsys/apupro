@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ShieldAlert,
   FileSpreadsheet,
@@ -29,6 +30,7 @@ import {
   ListFilter,
   ListChecks,
   LayoutGrid,
+  Image as ImageIcon,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { budgetReviewService } from '../services/budgetReviewService';
@@ -221,6 +223,7 @@ export default function BudgetReviewPage() {
   const [formReviewerCiv, setFormReviewerCiv] = useState('');
   const [formDocRef, setFormDocRef] = useState('');
   const [formInstitution, setFormInstitution] = useState('');
+  const [formLogo, setFormLogo] = useState('');
   const [formConclusion, setFormConclusion] = useState('');
   const [findingViewMode, setFindingViewMode] = useState('executive'); // 'executive' (H-01...) | 'detailed'
 
@@ -231,6 +234,7 @@ export default function BudgetReviewPage() {
 
   const fileInputRef = useRef(null);
   const correctionFileInputRef = useRef(null);
+  const logoInputRef = useRef(null);
 
   const itemMap = useMemo(() => {
     const map = new Map();
@@ -266,6 +270,7 @@ export default function BudgetReviewPage() {
     setFormReviewerCiv(report.reviewer_civ || '');
     setFormDocRef(report.document_reference || '');
     setFormInstitution(report.institution_name || '');
+    setFormLogo(report.institution_logo || '');
     setFormConclusion(report.conclusion_text || '');
   };
 
@@ -437,8 +442,27 @@ export default function BudgetReviewPage() {
     setFormReviewerCiv(activeReport.reviewer_civ || '');
     setFormDocRef(activeReport.document_reference || '');
     setFormInstitution(activeReport.institution_name || '');
+    setFormLogo(activeReport.institution_logo || '');
     setFormConclusion(activeReport.conclusion_text || '');
     setShowSaveModal(true);
+  };
+
+  const handleLogoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('La imagen del logo no debe superar los 2 MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      setFormLogo(uploadEvent.target.result);
+      toast.success('Logo cargado correctamente');
+    };
+    reader.onerror = () => {
+      toast.error('Error al leer el archivo de imagen');
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleConfirmSave = async (e) => {
@@ -461,6 +485,7 @@ export default function BudgetReviewPage() {
         reviewer_civ: formReviewerCiv.trim() || null,
         document_reference: formDocRef.trim() || null,
         institution_name: formInstitution.trim() || null,
+        institution_logo: formLogo ? formLogo.trim() : null,
         conclusion_text: formConclusion.trim() || null,
       };
       const updatedDetail = saveAsMode
@@ -775,10 +800,12 @@ export default function BudgetReviewPage() {
                   document.title = activeReport?.report_code
                     ? `Informe_${activeReport.report_code}`
                     : 'Informe_Revision_Presupuesto';
+                  document.body.classList.add('printing-budget-review');
                   window.print();
                   setTimeout(() => {
                     document.title = prevTitle;
-                  }, 800);
+                    document.body.classList.remove('printing-budget-review');
+                  }, 1000);
                 }}
                 title="Imprimir / Exportar a PDF"
                 className="p-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center justify-center cursor-pointer shadow-2xs transition"
@@ -819,6 +846,15 @@ export default function BudgetReviewPage() {
         <>
           {/* TARJETA OFICIAL: INFORME DE REVISIÓN TÉCNICA DE PRESUPUESTO */}
           <div className="bg-white rounded-2xl border border-slate-300 shadow-sm p-5 sm:p-6 space-y-4">
+            {activeReport.institution_logo && (
+              <div className="flex justify-center pb-2">
+                <img
+                  src={activeReport.institution_logo}
+                  alt={activeReport.institution_name || 'Logo Institucional'}
+                  className="max-h-20 max-w-[240px] object-contain drop-shadow-2xs"
+                />
+              </div>
+            )}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 pb-4">
               <div>
                 <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight uppercase">
@@ -2016,6 +2052,63 @@ export default function BudgetReviewPage() {
                 </div>
               </div>
 
+              {/* Logo Institucional / Empresa */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Logo Institucional o de Empresa (Centrado en Encabezado)
+                </label>
+                <input
+                  type="file"
+                  ref={logoInputRef}
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                />
+                {formLogo ? (
+                  <div className="flex flex-col items-center justify-center p-3.5 border border-slate-200 rounded-xl bg-slate-50/80 gap-2">
+                    <img
+                      src={formLogo}
+                      alt="Vista previa del logo"
+                      className="max-h-20 max-w-[220px] object-contain drop-shadow-2xs"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => logoInputRef.current?.click()}
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                      >
+                        Cambiar logo
+                      </button>
+                      <span className="text-slate-300">|</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormLogo('');
+                          if (logoInputRef.current) logoInputRef.current.value = '';
+                        }}
+                        className="text-xs font-semibold text-rose-600 hover:text-rose-800 underline cursor-pointer"
+                      >
+                        Eliminar logo
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => logoInputRef.current?.click()}
+                    className="w-full flex flex-col items-center justify-center py-4 px-3 border-2 border-dashed border-slate-300 hover:border-blue-400 rounded-xl bg-slate-50/70 hover:bg-blue-50/30 transition text-slate-500 cursor-pointer group"
+                  >
+                    <ImageIcon size={26} className="text-slate-400 group-hover:text-blue-600 mb-1 transition" />
+                    <span className="text-xs font-bold text-slate-700 group-hover:text-blue-700 transition">
+                      Cargar Logo (PNG, JPG, SVG - Máx 2 MB)
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      Se mostrará centrado en la cabecera del informe técnico y PDF
+                    </span>
+                  </button>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Obra / Proyecto</label>
@@ -2239,7 +2332,7 @@ export default function BudgetReviewPage() {
     {/* =========================================================================
         2. INFORME TÉCNICO EJECUTIVO OFICIAL (EXCLUSIVO PARA IMPRESIÓN Y PDF)
        ========================================================================= */}
-    {activeReport && (
+    {activeReport && typeof document !== 'undefined' && createPortal(
       <div
         id="print-budget-review-layout"
         className="hidden print:block w-full bg-white text-slate-900 font-sans text-xs leading-normal p-[14mm]"
@@ -2275,6 +2368,17 @@ export default function BudgetReviewPage() {
             }
           }
         `}</style>
+
+        {/* Logo Institucional Centrado en Encabezado de Impresión */}
+        {activeReport.institution_logo && (
+          <div className="flex justify-center mb-4 print-avoid-break">
+            <img
+              src={activeReport.institution_logo}
+              alt={activeReport.institution_name || 'Logo Institucional'}
+              className="max-h-24 max-w-[280px] object-contain drop-shadow-2xs"
+            />
+          </div>
+        )}
 
         {/* Encabezado Oficial */}
         <div className="border-b-2 border-slate-900 pb-3 mb-4 print-avoid-break">
@@ -2457,7 +2561,8 @@ export default function BudgetReviewPage() {
             </div>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     )}
   </div>
 );

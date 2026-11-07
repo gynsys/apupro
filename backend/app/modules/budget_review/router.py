@@ -216,6 +216,7 @@ def save_snapshot_changes(
             reviewer_civ=payload.reviewer_civ,
             document_reference=payload.document_reference,
             institution_name=payload.institution_name,
+            institution_logo=payload.institution_logo,
             conclusion_text=payload.conclusion_text,
         )
     except LookupError as exc:
@@ -254,6 +255,7 @@ def save_snapshot_as_copy(
             reviewer_civ=payload.reviewer_civ,
             document_reference=payload.document_reference,
             institution_name=payload.institution_name,
+            institution_logo=payload.institution_logo,
             conclusion_text=payload.conclusion_text,
         )
     except LookupError as exc:
