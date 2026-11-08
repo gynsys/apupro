@@ -1070,6 +1070,51 @@ def get_review_snapshot_detail(db: Session, snapshot_id: str, user_id: str) -> D
 
     chapters_count = sum(1 for it in snap.items if it.is_chapter)
 
+    total_original_amount = 0.0
+    total_adjusted_amount = 0.0
+    items_with_monetary_diff = 0
+
+    for it in snap.items:
+        if it.is_chapter:
+            continue
+        qty = float(it.quantity) if it.quantity and it.quantity > 0 else 1.0
+        eval_pu = (
+            float(it.imported_unit_price)
+            if it.imported_unit_price and it.imported_unit_price > 0
+            else float(it.calculated_unit_price or 0.0)
+        )
+        if eval_pu <= 0.0 and it.calculated_unit_price and it.calculated_unit_price > 0:
+            eval_pu = float(it.calculated_unit_price)
+
+        if it.master_unit_price is not None and it.master_unit_price > 0:
+            base_pu = float(it.master_unit_price)
+        else:
+            base_pu = eval_pu
+
+        orig_line = qty * eval_pu
+        adj_line = qty * base_pu
+        total_original_amount += orig_line
+        total_adjusted_amount += adj_line
+        if abs(orig_line - adj_line) > 0.001:
+            items_with_monetary_diff += 1
+
+    net_incidence = total_original_amount - total_adjusted_amount
+    incidence_percent = (
+        (net_incidence / total_adjusted_amount * 100.0)
+        if total_adjusted_amount > 0
+        else 0.0
+    )
+
+    monetary_summary = {
+        "original_amount": round(total_original_amount, 2),
+        "adjusted_amount": round(total_adjusted_amount, 2),
+        "net_incidence": round(net_incidence, 2),
+        "incidence_percent": round(incidence_percent, 2),
+        "items_with_diff": items_with_monetary_diff,
+        "is_overcost": net_incidence > 0.001,
+        "is_undervalued": net_incidence < -0.001,
+    }
+
     return {
         "id": snap.id,
         "name": snap.name,
@@ -1115,6 +1160,7 @@ def get_review_snapshot_detail(db: Session, snapshot_id: str, user_id: str) -> D
         "category_breakdown": dict(category_counts),
         "version_history": version_history,
         "version_comparison": version_comparison,
+        "monetary_summary": monetary_summary,
         "items": snap.items,
         "findings": snap.findings,
     }
@@ -1584,19 +1630,62 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
 
     # Incidencia Monetaria y Variaciones Económicas (SI include_monetary_impact es True)
     if detail.get("include_monetary_impact", True) is not False:
-        ws_rep.append(["INCIDENCIA MONETARIA Y VARIACIONES ECONÓMICAS:"])
+        m_sum = detail.get("monetary_summary") or {}
+        orig_amt = float(m_sum.get("original_amount") or 0.0)
+        adj_amt = float(m_sum.get("adjusted_amount") or 0.0)
+        net_inc = float(m_sum.get("net_incidence") or 0.0)
+        inc_pct = float(m_sum.get("incidence_percent") or 0.0)
+        curr = detail.get("currency", "$")
+        if curr == "USD":
+            curr = "$"
+        elif curr == "VES":
+            curr = "Bs."
+
+        ws_rep.append(["INCIDENCIA MONETARIA Y VARIACIÓN ECONÓMICA:"])
         ws_rep.cell(ws_rep.max_row, 1).font = Font(bold=True, size=10, color="0F172A")
+
+        if orig_amt > 0:
+            sign_str = "+" if net_inc > 0 else ""
+            label_tipo = "Sobrecosto" if net_inc > 0 else ("Subvaluación" if net_inc < 0 else "Variación Neta")
+            color_inc = "B91C1C" if net_inc > 0 else ("047857" if net_inc < 0 else "0F172A")
+
+            orig_str = f"{curr} {orig_amt:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            adj_str = f"{curr} {adj_amt:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            inc_str = f"{sign_str}{curr} {net_inc:,.2f} ({sign_str}{inc_pct:.2f}%)".replace(",", "X").replace(".", ",").replace("X", ".")
+
+            ws_rep.append(["• Monto Presupuesto Evaluado:", orig_str])
+            ws_rep.cell(ws_rep.max_row, 1).font = Font(bold=True, size=9)
+            ws_rep.cell(ws_rep.max_row, 2).font = Font(bold=True, size=9, color="0F172A")
+
+            ws_rep.append([f"• Incidencia Técnica ({label_tipo}):", inc_str])
+            ws_rep.cell(ws_rep.max_row, 1).font = Font(bold=True, size=9)
+            ws_rep.cell(ws_rep.max_row, 2).font = Font(bold=True, size=9, color=color_inc)
+
+            ws_rep.append(["• Monto Presupuesto Ajustado:", adj_str])
+            ws_rep.cell(ws_rep.max_row, 1).font = Font(bold=True, size=9)
+            ws_rep.cell(ws_rep.max_row, 2).font = Font(bold=True, size=9, color="1E3A8A")
+
+            dictamen_econ = (
+                f"Las desviaciones técnicas y rendimientos modificados detectados representan una variación económica de "
+                f"{inc_str} frente a los costos técnicos de la base de referencia oficial. "
+                f"Se recomienda subsanar los APUs observados y fijar el presupuesto oficial ajustado de contratación en {adj_str}."
+                if net_inc != 0 else
+                "No se evidencia variación monetaria neta entre los análisis del presupuesto y los costos de la base técnica oficial."
+            )
+        else:
+            dictamen_econ = (
+                "Las modificaciones técnicas, alteraciones en rendimientos y variaciones en consumo de insumos detectadas "
+                "en las partidas observadas representan una incidencia económica directa en la estructura de costos y precios unitarios del presupuesto. "
+                "Se requiere la revisión financiera y conciliación de costos unitarios de los análisis observados previo a cualquier aprobación definitiva."
+            )
+
         ws_rep.merge_cells(f"A{ws_rep.max_row + 1}:G{ws_rep.max_row + 1}")
         cell_mon = ws_rep[f"A{ws_rep.max_row}"]
-        cell_mon.value = (
-            "Las modificaciones técnicas, alteraciones en rendimientos y variaciones en consumo de insumos detectadas "
-            "en las partidas observadas representan una incidencia económica directa en la estructura de costos y precios unitarios del presupuesto. "
-            "Se requiere la revisión financiera y conciliación de costos unitarios de los análisis observados previo a cualquier aprobación definitiva."
-        )
+        cell_mon.value = dictamen_econ
         cell_mon.font = Font(size=9, color="1E293B")
         cell_mon.fill = section_fill
         cell_mon.alignment = Alignment(wrap_text=True, vertical="center")
-        ws_rep.row_dimensions[ws_rep.max_row].height = 36
+        ws_rep.row_dimensions[ws_rep.max_row].height = 40
         ws_rep.append([])
 
     # Comparativa vs Versión Anterior (si existe)

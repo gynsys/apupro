@@ -228,5 +228,6 @@ class ReviewSnapshotDetailOut(ReviewSnapshotSummaryOut):
     category_breakdown: Dict[str, int] = {}
     version_history: List[ReviewSnapshotSummaryOut] = []
     version_comparison: Optional[VersionComparisonSummary] = None
+    monetary_summary: Optional[Dict[str, Any]] = None
     items: List[ReviewItemOut] = []
     findings: List[FindingOut] = []

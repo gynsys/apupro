@@ -813,6 +813,50 @@ export default function BudgetReviewPage() {
     [activeReport?.items]
   );
 
+  const currencySymbol = activeReport?.currency === 'VES' ? 'Bs.' : '$';
+  const formatMoney = (amount) => {
+    const num = Number(amount) || 0;
+    return `${currencySymbol} ${num.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const monetarySummary = useMemo(() => {
+    if (activeReport?.monetary_summary) {
+      return activeReport.monetary_summary;
+    }
+    const items = activeReport?.items || [];
+    let orig = 0;
+    let adj = 0;
+    let diffCount = 0;
+    items.forEach((it) => {
+      if (it.is_chapter) return;
+      const qty = Number(it.quantity) > 0 ? Number(it.quantity) : 1;
+      let evalPu = Number(it.imported_unit_price) > 0 ? Number(it.imported_unit_price) : Number(it.calculated_unit_price || 0);
+      if (evalPu <= 0 && Number(it.calculated_unit_price) > 0) {
+        evalPu = Number(it.calculated_unit_price);
+      }
+      const basePu = (it.master_unit_price !== null && it.master_unit_price !== undefined && Number(it.master_unit_price) > 0)
+        ? Number(it.master_unit_price)
+        : evalPu;
+
+      const origLine = qty * evalPu;
+      const adjLine = qty * basePu;
+      orig += origLine;
+      adj += adjLine;
+      if (Math.abs(origLine - adjLine) > 0.001) diffCount++;
+    });
+    const net = orig - adj;
+    const pct = adj > 0 ? (net / adj) * 100 : 0;
+    return {
+      original_amount: orig,
+      adjusted_amount: adj,
+      net_incidence: net,
+      incidence_percent: pct,
+      items_with_diff: diffCount,
+      is_overcost: net > 0.001,
+      is_undervalued: net < -0.001,
+    };
+  }, [activeReport?.items, activeReport?.monetary_summary]);
+
   const isReportConforme = activeReport?.review_status === 'APROBADO' || partidaStats.allApproved;
 
   const printFindingGroups = useMemo(() => {
@@ -1285,13 +1329,69 @@ export default function BudgetReviewPage() {
 
             {/* Incidencia Monetaria y Variaciones Económicas (solo si el switch está activo) */}
             {activeReport?.include_monetary_impact !== false && (
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm leading-relaxed">
-                <span className="font-extrabold uppercase tracking-wide block mb-1 text-slate-900">
-                  Incidencia Monetaria y Variaciones Económicas:
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm leading-relaxed space-y-2.5">
+                <span className="font-extrabold uppercase tracking-wide block text-slate-900">
+                  Incidencia Monetaria y Variación Económica:
                 </span>
-                <p className="m-0 font-medium text-slate-700">
-                  Las modificaciones técnicas, alteraciones en rendimientos y variaciones en consumo de insumos detectadas en las partidas observadas representan una incidencia económica directa en la estructura de costos y precios unitarios del presupuesto. Se requiere la revisión financiera y conciliación de costos unitarios de los análisis observados previo a cualquier aprobación definitiva.
-                </p>
+
+                {monetarySummary.original_amount > 0 ? (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 py-1">
+                      <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                        <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                          Monto Presupuesto Evaluado
+                        </span>
+                        <span className="font-extrabold text-slate-900 text-sm">
+                          {formatMoney(monetarySummary.original_amount)}
+                        </span>
+                      </div>
+                      <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                        <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                          Incidencia Técnica ({monetarySummary.net_incidence > 0 ? 'Sobrecosto' : monetarySummary.net_incidence < 0 ? 'Subvaluación' : 'Variación Neta'})
+                        </span>
+                        <span className={`font-extrabold text-sm ${
+                          monetarySummary.net_incidence > 0 ? 'text-red-700' : monetarySummary.net_incidence < 0 ? 'text-emerald-700' : 'text-slate-800'
+                        }`}>
+                          {monetarySummary.net_incidence > 0 ? '+' : ''}
+                          {formatMoney(monetarySummary.net_incidence)}{' '}
+                          <span className="text-xs font-bold">
+                            ({monetarySummary.net_incidence > 0 ? '+' : ''}{monetarySummary.incidence_percent.toFixed(2)}%)
+                          </span>
+                        </span>
+                      </div>
+                      <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                        <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                          Monto Presupuesto Ajustado
+                        </span>
+                        <span className="font-extrabold text-blue-900 text-sm">
+                          {formatMoney(monetarySummary.adjusted_amount)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="m-0 font-medium text-slate-700 leading-relaxed pt-0.5">
+                      {monetarySummary.net_incidence !== 0 ? (
+                        <>
+                          Las desviaciones técnicas y rendimientos modificados detectados representan una variación económica de{' '}
+                          <strong className={monetarySummary.net_incidence > 0 ? 'text-red-800' : 'text-emerald-800'}>
+                            {monetarySummary.net_incidence > 0 ? '+' : ''}
+                            {formatMoney(monetarySummary.net_incidence)} ({monetarySummary.net_incidence > 0 ? '+' : ''}{monetarySummary.incidence_percent.toFixed(2)}%)
+                          </strong>{' '}
+                          frente a la base técnica oficial. Se recomienda subsanar los APUs observados y fijar el presupuesto oficial ajustado de contratación en{' '}
+                          <strong className="text-blue-900">
+                            {formatMoney(monetarySummary.adjusted_amount)}
+                          </strong>.
+                        </>
+                      ) : (
+                        'No se evidencia variación monetaria neta entre los análisis del presupuesto y los costos de la base técnica oficial.'
+                      )}
+                    </p>
+                  </>
+                ) : (
+                  <p className="m-0 font-medium text-slate-700">
+                    Las modificaciones técnicas, alteraciones en rendimientos y variaciones en consumo de insumos detectadas en las partidas observadas representan una incidencia económica directa en la estructura de costos y precios unitarios del presupuesto. Se requiere la revisión financiera y conciliación de costos unitarios de los análisis observados previo a cualquier aprobación definitiva.
+                  </p>
+                )}
               </div>
             )}
 
@@ -2888,15 +2988,71 @@ export default function BudgetReviewPage() {
           </div>
         )}
 
-        {/* Incidencia Monetaria y Variaciones Económicas (solo si el switch está activo) */}
+        {/* Incidencia Monetaria y Variación Económica (solo si el switch está activo) */}
         {activeReport?.include_monetary_impact !== false && (
-          <div className="bg-slate-50 border border-slate-200 rounded p-3 mb-4 print-avoid-break text-xs">
-            <span className="font-black uppercase tracking-wider text-slate-900 block mb-1">
-              Incidencia Monetaria y Variaciones Económicas:
+          <div className="bg-slate-50 border border-slate-200 rounded p-3 mb-4 print-avoid-break text-xs space-y-2">
+            <span className="font-black uppercase tracking-wider text-slate-900 block">
+              Incidencia Monetaria y Variación Económica:
             </span>
-            <p className="m-0 leading-relaxed text-slate-800 font-medium">
-              Las modificaciones técnicas, alteraciones en rendimientos y variaciones en consumo de insumos detectadas en las partidas observadas representan una incidencia económica directa en la estructura de costos y precios unitarios del presupuesto. Se requiere la revisión financiera y conciliación de costos unitarios de los análisis observados previo a cualquier aprobación definitiva.
-            </p>
+
+            {monetarySummary.original_amount > 0 ? (
+              <>
+                <div className="grid grid-cols-3 gap-2 py-1">
+                  <div className="bg-white p-2 rounded border border-slate-300">
+                    <span className="block text-[9px] font-bold text-slate-600 uppercase tracking-wider">
+                      Monto Presupuesto Evaluado
+                    </span>
+                    <span className="font-black text-slate-900 text-xs">
+                      {formatMoney(monetarySummary.original_amount)}
+                    </span>
+                  </div>
+                  <div className="bg-white p-2 rounded border border-slate-300">
+                    <span className="block text-[9px] font-bold text-slate-600 uppercase tracking-wider">
+                      Incidencia Técnica ({monetarySummary.net_incidence > 0 ? 'Sobrecosto' : monetarySummary.net_incidence < 0 ? 'Subvaluación' : 'Variación Neta'})
+                    </span>
+                    <span className={`font-black text-xs ${
+                      monetarySummary.net_incidence > 0 ? 'text-red-700' : monetarySummary.net_incidence < 0 ? 'text-emerald-700' : 'text-slate-900'
+                    }`}>
+                      {monetarySummary.net_incidence > 0 ? '+' : ''}
+                      {formatMoney(monetarySummary.net_incidence)}{' '}
+                      <span className="text-[10px] font-bold">
+                        ({monetarySummary.net_incidence > 0 ? '+' : ''}{monetarySummary.incidence_percent.toFixed(2)}%)
+                      </span>
+                    </span>
+                  </div>
+                  <div className="bg-white p-2 rounded border border-slate-300">
+                    <span className="block text-[9px] font-bold text-slate-600 uppercase tracking-wider">
+                      Monto Presupuesto Ajustado
+                    </span>
+                    <span className="font-black text-blue-900 text-xs">
+                      {formatMoney(monetarySummary.adjusted_amount)}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="m-0 leading-relaxed text-slate-800 font-medium">
+                  {monetarySummary.net_incidence !== 0 ? (
+                    <>
+                      Las desviaciones técnicas y rendimientos modificados detectados representan una variación económica de{' '}
+                      <strong className={monetarySummary.net_incidence > 0 ? 'text-red-800' : 'text-emerald-800'}>
+                        {monetarySummary.net_incidence > 0 ? '+' : ''}
+                        {formatMoney(monetarySummary.net_incidence)} ({monetarySummary.net_incidence > 0 ? '+' : ''}{monetarySummary.incidence_percent.toFixed(2)}%)
+                      </strong>{' '}
+                      frente a la base técnica oficial. Se recomienda subsanar los APUs observados y fijar el presupuesto oficial ajustado de contratación en{' '}
+                      <strong className="text-blue-900">
+                        {formatMoney(monetarySummary.adjusted_amount)}
+                      </strong>.
+                    </>
+                  ) : (
+                    'No se evidencia variación monetaria neta entre los análisis del presupuesto y los costos de la base técnica oficial.'
+                  )}
+                </p>
+              </>
+            ) : (
+              <p className="m-0 leading-relaxed text-slate-800 font-medium">
+                Las modificaciones técnicas, alteraciones en rendimientos y variaciones en consumo de insumos detectadas en las partidas observadas representan una incidencia económica directa en la estructura de costos y precios unitarios del presupuesto. Se requiere la revisión financiera y conciliación de costos unitarios de los análisis observados previo a cualquier aprobación definitiva.
+              </p>
+            )}
           </div>
         )}
 
