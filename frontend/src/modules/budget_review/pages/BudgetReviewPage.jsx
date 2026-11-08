@@ -252,25 +252,6 @@ const setStoredReviewerProfile = (profile) => {
 export default function BudgetReviewPage() {
   const { activeDatabase, databases } = useDatabase();
 
-  // Filtrar bases de datos válidas para contraste (excluir 'personalizada' y enriquecer con la base del reporte activo)
-  const availableDatabases = useMemo(() => {
-    const list = (databases || [])
-      .filter((d) => d.id !== 'personalizada')
-      .map((d) => ({ ...d }));
-    if (!list.some((d) => d.id === 'base_agosto')) {
-      list.push({ id: 'base_agosto', name: 'Base Agosto', description: 'Base oficial Corte Agosto' });
-    }
-    if (activeReport?.database_id && !list.some((d) => d.id === activeReport.database_id)) {
-      const cleanName = activeReport.database_id.replace(/^base_/, 'Base ').replace(/_/g, ' ');
-      list.push({
-        id: activeReport.database_id,
-        name: cleanName.charAt(0).toUpperCase() + cleanName.slice(1),
-        description: 'Base de datos de la auditoría',
-      });
-    }
-    return list;
-  }, [databases, activeReport?.database_id]);
-
   const [selectedDbId, setSelectedDbId] = useState(
     activeDatabase?.id && activeDatabase.id !== 'personalizada' ? activeDatabase.id : 'base_agosto'
   );
@@ -337,6 +318,25 @@ export default function BudgetReviewPage() {
   const fileInputRef = useRef(null);
   const correctionFileInputRef = useRef(null);
   const logoInputRef = useRef(null);
+
+  // Filtrar bases de datos válidas para contraste (excluir 'personalizada' y enriquecer con la base del reporte activo)
+  const availableDatabases = useMemo(() => {
+    const list = (databases || [])
+      .filter((d) => d.id !== 'personalizada')
+      .map((d) => ({ ...d }));
+    if (!list.some((d) => d.id === 'base_agosto')) {
+      list.push({ id: 'base_agosto', name: 'Base Agosto', description: 'Base oficial Corte Agosto' });
+    }
+    if (activeReport?.database_id && !list.some((d) => d.id === activeReport.database_id)) {
+      const cleanName = activeReport.database_id.replace(/^base_/, 'Base ').replace(/_/g, ' ');
+      list.push({
+        id: activeReport.database_id,
+        name: cleanName.charAt(0).toUpperCase() + cleanName.slice(1),
+        description: 'Base de datos de la auditoría',
+      });
+    }
+    return list;
+  }, [databases, activeReport?.database_id]);
 
   const itemMap = useMemo(() => {
     const map = new Map();

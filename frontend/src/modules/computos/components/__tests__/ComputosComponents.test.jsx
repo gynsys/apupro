@@ -42,6 +42,6 @@ describe('componentes de la planilla', () => {
     render(<ComputosSheet {...baseProps} viewMode="table" onAddMacroRows={() => {}} />);
     fireEvent.click(screen.getByText('Incluir pared perimetral'));
     expect(screen.getByText(/Cómputo en cascada/i)).toBeTruthy();
-    expect(screen.getByText('Incluir en planilla')).toBeTruthy();
+    expect(screen.getByText(/Incluir en planilla/i)).toBeTruthy();
   });
 });
