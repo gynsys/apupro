@@ -1908,12 +1908,28 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
 
             for idx, f in enumerate(f_list, start=1):
                 headline = _get_excel_finding_headline(f)
-                status_str = getattr(f, "finding_status", None) or "PENDIENTE"
+                status_raw = getattr(f, "finding_status", None) or "PENDIENTE"
+                rule_id_val = getattr(f, "rule_id", "")
+                if status_raw == "PENDIENTE":
+                    if rule_id_val in ("MAT-005", "EQU-005"):
+                        status_tag = "[DEBE CONSIGNAR 1 COTIZACIÓN]"
+                    elif rule_id_val == "LAB-003":
+                        status_tag = "[CONSIGNAR SOPORTE / ESTUDIAR]"
+                    else:
+                        status_tag = "[PENDIENTE]"
+                else:
+                    status_tag = f"[{status_raw}]"
+
                 clean_diagnosis = _clean_excel_msg(getattr(f, "message", ""))
+                if rule_id_val in ("MAT-005", "EQU-005") and "cotizaci" not in clean_diagnosis.lower():
+                    clean_diagnosis += "; la empresa contratista debe consignar 1 cotización comercial de proveedor"
+                elif rule_id_val == "LAB-003" and "soporte" not in clean_diagnosis.lower():
+                    clean_diagnosis += "; requiere estudio del revisor y consignar soporte curricular"
+
                 sugg_str = getattr(f, "suggestion", None) or ""
 
                 ws_rep.append([
-                    f"  {idx}. {headline}: {clean_diagnosis}. [{status_str}]"
+                    f"  {idx}. {headline}: {clean_diagnosis}. {status_tag}"
                 ])
                 ws_rep.merge_cells(f"A{ws_rep.max_row}:G{ws_rep.max_row}")
                 ws_rep.cell(ws_rep.max_row, 1).font = Font(size=9, color="1E293B")

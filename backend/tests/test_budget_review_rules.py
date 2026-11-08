@@ -400,7 +400,7 @@ def test_uncoded_apu_detects_unregistered_materials_and_equipment_and_specialize
 
     # Verificar sugerencias específicas
     mat_finding = next(f for f in findings if f["rule_id"] == "MAT-005")
-    assert "3 cotizaciones comerciales vigentes" in mat_finding["suggestion"]
+    assert "1 cotización comercial" in mat_finding["suggestion"]
     assert "RESINA EPÓXICA" in mat_finding["message"]
 
     equ_finding = next(f for f in findings if f["rule_id"] == "EQU-005")
@@ -437,7 +437,7 @@ def test_executive_conclusion_includes_quotes_and_specialized_labor() -> None:
         total_items=3,
         findings=findings,
     )
-    assert "3 cotizaciones comerciales" in conclusion
+    assert "1 cotización comercial" in conclusion
     assert "equipos no catalogados" in conclusion
     assert "mano de obra técnica especializada" in conclusion
 

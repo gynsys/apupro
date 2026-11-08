@@ -379,6 +379,7 @@ def evaluate_item_audit_rules(
             if m.get("is_in_database") is False:
                 m_code = str(m.get("code") or "S/C").strip()
                 m_desc = str(m.get("description") or m_code).strip()
+                m_name_display = m_desc if (m_desc and m_desc.upper() != m_code.upper()) else m_code
                 m_p = float(m.get("unit_price") or 0.0)
                 findings.append({
                     "rule_id": "MAT-005",
@@ -392,11 +393,12 @@ def evaluate_item_audit_rules(
                     "master_value": "No registrado en base de referencia",
                     "diff_percent": None,
                     "message": (
-                        f"Material '{m_desc}' (código {m_code}) no registrado en la base de datos de referencia oficial. "
-                        f"El precio unitario propuesto ({f'${m_p:,.2f}' if m_p > 0 else '0.00'}) carece de contraste oficial regulado."
+                        f"Material no registrado en {m_code} ({m_name_display}): no catalogado en la base de datos de referencia oficial. "
+                        f"El precio unitario propuesto ({f'${m_p:,.2f}' if m_p > 0 else '0.00'}) carece de contraste oficial regulado; "
+                        f"la empresa contratista debe consignar 1 cotización comercial de proveedor para sustentar su costo."
                     ),
                     "suggestion": (
-                        "Solicitar a la empresa contratista 3 cotizaciones comerciales vigentes de proveedores reconocidos "
+                        "Solicitar a la empresa contratista consignar 1 cotización comercial vigente de proveedor reconocido "
                         "y ficha técnica del material para sustentar y validar el precio unitario propuesto en el APU."
                     ),
                 })
@@ -406,6 +408,7 @@ def evaluate_item_audit_rules(
             if e.get("is_in_database") is False:
                 e_code = str(e.get("code") or "S/C").strip()
                 e_desc = str(e.get("description") or e_code).strip()
+                e_name_display = e_desc if (e_desc and e_desc.upper() != e_code.upper()) else e_code
                 e_p = float(e.get("unit_price") or 0.0)
                 findings.append({
                     "rule_id": "EQU-005",
@@ -419,11 +422,12 @@ def evaluate_item_audit_rules(
                     "master_value": "No registrado en base de referencia",
                     "diff_percent": None,
                     "message": (
-                        f"Equipo o maquinaria '{e_desc}' (código {e_code}) no registrado en la base de referencia oficial. "
-                        f"El costo diario/horario propuesto ({f'${e_p:,.2f}/día' if e_p > 0 else '0.00'}) carece de tarifa oficial de contraste."
+                        f"Equipo no registrado en {e_code} ({e_name_display}): no catalogado en la base de referencia oficial. "
+                        f"El costo propuesto ({f'${e_p:,.2f}/día' if e_p > 0 else '0.00'}) carece de tarifa oficial de contraste; "
+                        f"la empresa contratista debe consignar 1 cotización comercial con memoria de cálculo horario."
                     ),
                     "suggestion": (
-                        "Solicitar a la empresa contratista cotizaciones comerciales de adquisición o alquiler, acompañadas de la memoria "
+                        "Solicitar a la empresa contratista consignar 1 cotización comercial de adquisición o alquiler, acompañada de la memoria "
                         "de cálculo de costos horarios (depreciación, consumibles, operación y mantenimiento) para validar la tarifa en el APU."
                     ),
                 })
@@ -432,6 +436,7 @@ def evaluate_item_audit_rules(
         for l_row in labors:
             l_code = str(l_row.get("code") or "S/C").strip()
             l_desc = str(l_row.get("description") or l_code).strip()
+            l_name_display = l_desc if (l_desc and l_desc.upper() != l_code.upper()) else l_code
             l_p = float(l_row.get("unit_price") or 0.0)
             is_in_db = l_row.get("is_in_database") is not False
             is_spec = is_specialized_labor_profile(l_desc)
@@ -449,8 +454,9 @@ def evaluate_item_audit_rules(
                     "master_value": "Tarifa especial / no tabulada",
                     "diff_percent": None,
                     "message": (
-                        f"Personal técnico o categoría de mano de obra especializada no tipificada en el tabulador oficial de referencia: "
-                        f"'{l_desc}' (código {l_code}). Requiere especial atención para el análisis y estudio de su costo ({f'${l_p:,.2f}/día' if l_p > 0 else '0.00'})."
+                        f"Mano de obra especializada o no tabulada en {l_code} ({l_name_display}): categoría no tipificada en el tabulador oficial de referencia. "
+                        f"Costo propuesto: {f'${l_p:,.2f}/día' if l_p > 0 else '0.00'}; requiere especial atención del auditor para estudiar el costo. "
+                        f"La empresa contratista debe consignar soporte curricular y justificación de honorarios."
                     ),
                     "suggestion": (
                         "Poner atención y estudiar detalladamente el costo de la mano de obra especializada (ej. calculistas con alta experiencia, "
@@ -637,6 +643,7 @@ def evaluate_item_audit_rules(
         for m_code, m_imp in imp_mats.items():
             if m_code not in mst_mats and m_imp.get("is_in_database") is False:
                 m_desc = str(m_imp.get("description") or m_code).strip()
+                m_name_display = m_desc if (m_desc and m_desc.upper() != m_code.upper()) else m_code
                 m_p = float(m_imp.get("unit_price") or 0.0)
                 findings.append({
                     "rule_id": "MAT-005",
@@ -650,11 +657,12 @@ def evaluate_item_audit_rules(
                     "master_value": "Insumo adicional no registrado en base de referencia",
                     "diff_percent": None,
                     "message": (
-                        f"Material adicional '{m_desc}' (código {m_code}) incorporado al APU y no registrado en la base de referencia oficial. "
-                        f"El precio unitario propuesto ({f'${m_p:,.2f}' if m_p > 0 else '0.00'}) carece de contraste oficial regulado."
+                        f"Material adicional en {m_code} ({m_name_display}): incorporado al APU y no registrado en la base de referencia oficial. "
+                        f"El precio unitario propuesto ({f'${m_p:,.2f}' if m_p > 0 else '0.00'}) carece de contraste oficial regulado; "
+                        f"la empresa contratista debe consignar 1 cotización comercial de proveedor para sustentar su costo."
                     ),
                     "suggestion": (
-                        "Solicitar a la empresa contratista 3 cotizaciones comerciales vigentes de proveedores reconocidos "
+                        "Solicitar a la empresa contratista consignar 1 cotización comercial vigente de proveedor reconocido "
                         "y ficha técnica del material para sustentar y validar el precio unitario propuesto en el APU."
                     ),
                 })
@@ -910,7 +918,7 @@ def generate_default_executive_conclusion(
     if any(r in rule_ids for r in ["MAT-002", "MAT-003"]):
         issues.append("sobreconsumo de materiales sin memoria de cálculo")
     if any(r in rule_ids for r in ["MAT-005"]):
-        issues.append("materiales no registrados en la base de referencia que requieren 3 cotizaciones comerciales")
+        issues.append("materiales no registrados en la base de referencia que requieren consignar 1 cotización comercial")
     if any(r in rule_ids for r in ["EQU-003", "EQU-004"]):
         issues.append("omisión o alteración de factores de depreciación en maquinaria y equipos")
     if any(r in rule_ids for r in ["EQU-005"]):

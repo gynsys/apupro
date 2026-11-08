@@ -157,6 +157,22 @@ const getFindingHeadline = (f) => {
 
 const cleanMessage = (msg) => (msg || '').trim().replace(/\.+$/, '');
 
+const formatFindingDiagnosis = (f) => {
+  let msg = cleanMessage(f?.message || '');
+  if (!msg) return '';
+  const ruleId = f?.rule_id || '';
+  if (ruleId === 'MAT-005' || ruleId === 'EQU-005') {
+    if (!/debe consignar 1 cotizaci[oó]n/i.test(msg)) {
+      msg = `${msg}; la empresa contratista debe consignar 1 cotización comercial de proveedor`;
+    }
+  } else if (ruleId === 'LAB-003') {
+    if (!/soporte curricular/i.test(msg)) {
+      msg = `${msg}; el revisor debe estudiar el costo de la especialidad y solicitar soporte curricular`;
+    }
+  }
+  return cleanMessage(msg);
+};
+
 const getEffectiveItemCode = (f, itemMap) => {
   if (f?.rule_id === 'ARI-001' && f?.item_code) return f.item_code;
   let covCode = f?.covenin_code;
@@ -1631,10 +1647,18 @@ export default function BudgetReviewPage() {
                           .map((group) => {
                             const header = group.title + (group.description ? ` - ${group.description}` : '');
                             const items = group.entries
-                              .map(
-                                (f, i) =>
-                                  `  ${i + 1}. ${getFindingHeadline(f)}: ${cleanMessage(f.message)}.`
-                              )
+                              .map((f, i) => {
+                                const statusKey = f.finding_status || 'PENDIENTE';
+                                let tag = `[${FINDING_STATUS_SHORT_LABEL[statusKey] || statusKey}]`;
+                                if (statusKey === 'PENDIENTE') {
+                                  if (f.rule_id === 'MAT-005' || f.rule_id === 'EQU-005') {
+                                    tag = '[DEBE CONSIGNAR 1 COTIZACIÓN]';
+                                  } else if (f.rule_id === 'LAB-003') {
+                                    tag = '[CONSIGNAR SOPORTE / ESTUDIAR]';
+                                  }
+                                }
+                                return `  ${i + 1}. ${getFindingHeadline(f)}: ${formatFindingDiagnosis(f)}. ${tag}`;
+                              })
                               .join('\n');
                             return `${header}\n${items}`;
                           })
@@ -1706,12 +1730,23 @@ export default function BudgetReviewPage() {
                                       {getFindingHeadline(f)}:
                                     </span>
                                     <span className="text-slate-700 font-medium">
-                                      {cleanMessage(f.message)}.
+                                      {formatFindingDiagnosis(f)}.
                                     </span>
                                   </div>
                                 </div>
 
                                 <div className="shrink-0 flex items-center gap-2 self-end sm:self-start">
+                                  {(f.finding_status === 'PENDIENTE' || !f.finding_status) && (
+                                    f.rule_id === 'MAT-005' || f.rule_id === 'EQU-005' ? (
+                                      <span className="px-2 py-0.5 text-[10px] font-black uppercase text-amber-900 bg-amber-100/90 rounded border border-amber-300">
+                                        Debe consignar 1 cotización
+                                      </span>
+                                    ) : f.rule_id === 'LAB-003' ? (
+                                      <span className="px-2 py-0.5 text-[10px] font-black uppercase text-indigo-900 bg-indigo-100/90 rounded border border-indigo-300">
+                                        Consignar soporte
+                                      </span>
+                                    ) : null
+                                  )}
                                   <select
                                     value={f.finding_status || 'PENDIENTE'}
                                     onChange={(e) => handleFindingStatusChange(f.id, e.target.value)}
@@ -1769,6 +1804,17 @@ export default function BudgetReviewPage() {
                             )}
 
                             {/* Selector de Estado de Revisión del Hallazgo */}
+                            {(f.finding_status === 'PENDIENTE' || !f.finding_status) && (
+                              f.rule_id === 'MAT-005' || f.rule_id === 'EQU-005' ? (
+                                <span className="px-2 py-0.5 text-[10px] font-black uppercase text-amber-900 bg-amber-100/90 rounded border border-amber-300 shrink-0">
+                                  Debe consignar 1 cotización
+                                </span>
+                              ) : f.rule_id === 'LAB-003' ? (
+                                <span className="px-2 py-0.5 text-[10px] font-black uppercase text-indigo-900 bg-indigo-100/90 rounded border border-indigo-300 shrink-0">
+                                  Consignar soporte
+                                </span>
+                              ) : null
+                            )}
                             <select
                               value={f.finding_status || 'PENDIENTE'}
                               onChange={(e) => handleFindingStatusChange(f.id, e.target.value)}
@@ -1783,7 +1829,7 @@ export default function BudgetReviewPage() {
                           </div>
                         </div>
 
-                        <p className="text-xs sm:text-sm font-semibold text-slate-800">{f.message}</p>
+                        <p className="text-xs sm:text-sm font-semibold text-slate-800">{formatFindingDiagnosis(f)}</p>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2.5 pt-2.5 border-t border-slate-200/60 text-xs">
                           <div className="bg-white/80 rounded-lg px-2.5 py-1.5 border border-slate-200/80">
@@ -3175,14 +3221,35 @@ export default function BudgetReviewPage() {
                       >
                         <span className="font-black text-slate-900 mr-1">{idx + 1}.</span>
                         <span className="font-extrabold text-slate-900 mr-1">{getFindingHeadline(f)}:</span>
-                        <span className="text-slate-800 font-medium">{cleanMessage(f.message)}.</span>{' '}
-                        <span
-                          className={`text-[10px] font-black uppercase ${
-                            RESOLVED_FINDING_STATUSES.has(statusKey) ? 'text-emerald-700' : 'text-slate-500'
-                          }`}
-                        >
-                          [{FINDING_STATUS_SHORT_LABEL[statusKey] || statusKey}]
-                        </span>
+                        <span className="text-slate-800 font-medium">{formatFindingDiagnosis(f)}.</span>{' '}
+                        {(() => {
+                          if (RESOLVED_FINDING_STATUSES.has(statusKey)) {
+                            return (
+                              <span className="text-[10px] font-black uppercase text-emerald-700">
+                                [{FINDING_STATUS_SHORT_LABEL[statusKey] || statusKey}]
+                              </span>
+                            );
+                          }
+                          if (f.rule_id === 'MAT-005' || f.rule_id === 'EQU-005') {
+                            return (
+                              <span className="text-[10px] font-black uppercase text-amber-900 bg-amber-100/90 px-1.5 py-0.5 rounded border border-amber-300">
+                                [DEBE CONSIGNAR 1 COTIZACIÓN]
+                              </span>
+                            );
+                          }
+                          if (f.rule_id === 'LAB-003') {
+                            return (
+                              <span className="text-[10px] font-black uppercase text-indigo-900 bg-indigo-100/90 px-1.5 py-0.5 rounded border border-indigo-300">
+                                [CONSIGNAR SOPORTE / ESTUDIAR]
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="text-[10px] font-black uppercase text-slate-500">
+                              [{FINDING_STATUS_SHORT_LABEL[statusKey] || statusKey}]
+                            </span>
+                          );
+                        })()}
                       </div>
                     );
                   })}
