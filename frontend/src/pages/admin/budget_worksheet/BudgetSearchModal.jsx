@@ -302,6 +302,22 @@ export default function BudgetSearchModal({
             )}
           </div>
 
+          {/* Botón Crear APU con IA Desktop */}
+          {showAiOption && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenAIApuModal?.();
+              }}
+              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 rounded-xl transition-colors font-semibold shadow-xs text-xs sm:text-sm cursor-pointer whitespace-nowrap"
+              title="Crear APU con el generador de Inteligencia Artificial e insertar directamente al presupuesto"
+            >
+              <Sparkles size={14} className="text-purple-600 shrink-0" />
+              <span>Crear con IA</span>
+            </button>
+          )}
+
           {/* Botón De Otro Usuario Desktop */}
           {showSharedOption && (
             <button
