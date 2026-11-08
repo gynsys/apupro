@@ -47,8 +47,29 @@ export default function MathQuantityInput({
     if (expr === '' || expr === null || expr === undefined) {
       return allowEmpty ? '' : 0;
     }
-    const str = String(expr).replace(/,/g, '.').trim();
+    let str = String(expr).trim();
     if (str === '') return allowEmpty ? '' : 0;
+
+    // Soportar '=' inicial estilo hoja de cálculo / Excel
+    if (str.startsWith('=')) {
+      str = str.slice(1).trim();
+    }
+
+    // Normalizar coma decimal a punto
+    str = str.replace(/,/g, '.');
+
+    // Normalizar multiplicaciones: 'x', 'X', '×'
+    // Ej: "2x3", "2 x 3", "2.5 X 4", "10×2"
+    str = str.replace(/(\d)\s*[xX\u00d7]\s*(\d)/g, '$1 * $2');
+    str = str.replace(/\s*[xX\u00d7]\s*/g, ' * ');
+
+    // Normalizar divisiones: '÷' o ':' entre números
+    str = str.replace(/[\u00f7]/g, '/');
+    str = str.replace(/(\d)\s*:\s*(\d)/g, '$1 / $2');
+
+    // Limpiar espacios extra
+    str = str.trim();
+
     if (!/^[\d\s+\-*/().]+$/.test(str)) return null;
     try {
       const res = Function(`"use strict"; return (${str})`)();
@@ -70,7 +91,8 @@ export default function MathQuantityInput({
     const text = e.target.value;
     setLocalVal(text);
 
-    if (/[+\-*/()]/.test(text)) {
+    // Detectar si contiene algún operador matemático o '='
+    if (/[+\-*/()xX\u00d7\u00f7=]/.test(text)) {
       const evalRes = evaluateExpression(text);
       setPreviewVal(evalRes);
       if (evalRes !== null && evalRes !== undefined && onChange) {

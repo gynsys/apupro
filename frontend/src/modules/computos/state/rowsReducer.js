@@ -193,7 +193,7 @@ function rowsReducerCore(state, action) {
             next.m3 = payload.value;
             next._autoM3 = null;
           }
-          next.partial = computePartial(next);
+          next.partial = computePartial(next, row.unit);
           return next;
         });
         return recomputeItemWithPartials({ ...row, partials });
