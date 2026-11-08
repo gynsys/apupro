@@ -1,15 +1,19 @@
 """Servicio orquestador de Revisión y Auditoría de Presupuestos (Maprex vs CostBase)."""
 from __future__ import annotations
 
+import base64
 from collections import Counter, defaultdict
 from datetime import datetime
 import io
 import logging
+import os
 import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 import uuid
 
+from PIL import Image as PILImage
 from openpyxl import Workbook
+from openpyxl.drawing.image import Image as OpenpyxlImage
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from sqlalchemy import text
@@ -1493,14 +1497,66 @@ def _clean_excel_msg(msg: str) -> str:
     return (msg or "").strip().rstrip(".")
 
 
+def _load_excel_logo_image(logo_val: Optional[str]) -> Optional[OpenpyxlImage]:
+    """Carga y redimensiona el logo institucional para incrustarlo en la cabecera de la hoja de auditoría de Excel."""
+    if not logo_val or not isinstance(logo_val, str):
+        return None
+    try:
+        raw_data: Optional[bytes] = None
+        trimmed = logo_val.strip()
+        if trimmed.startswith("data:"):
+            parts = trimmed.split(",", 1)
+            if len(parts) == 2:
+                raw_data = base64.b64decode(parts[1])
+        elif os.path.exists(trimmed):
+            with open(trimmed, "rb") as f:
+                raw_data = f.read()
+        else:
+            try:
+                raw_data = base64.b64decode(trimmed)
+            except Exception:
+                raw_data = None
+
+        if not raw_data:
+            return None
+
+        pil_img = PILImage.open(io.BytesIO(raw_data))
+        if pil_img.mode not in ("RGB", "RGBA"):
+            pil_img = pil_img.convert("RGBA")
+
+        # Mantener proporción con altura máxima ~48px y ancho máximo ~200px
+        max_w, max_h = 200, 48
+        w, h = pil_img.size
+        if w > 0 and h > 0:
+            ratio = min(max_w / w, max_h / h, 1.0)
+            new_size = (max(1, int(w * ratio)), max(1, int(h * ratio)))
+            resized = pil_img.resize(new_size, PILImage.Resampling.LANCZOS)
+            out_buf = io.BytesIO()
+            resized.save(out_buf, format="PNG")
+            out_buf.seek(0)
+            return OpenpyxlImage(out_buf)
+    except Exception as exc:
+        logger.error("Error al procesar logo institucional para Excel: %s", exc, exc_info=True)
+    return None
+
+
 def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tuple[bytes, str]:
-    """Genera un archivo Excel (.xlsx) profesional con el Informe de Auditoría y la hoja Hallazgos de Auditoría."""
+    """Genera un archivo Excel (.xlsx) profesional con el Informe de Auditoría y la hoja Hallazgos de Auditoría.
+
+    La hoja 'Informe de Auditoria' es una copia fiel del informe oficial de impresión, incluyendo
+    logo institucional, encabezado oficial, ficha del expediente, resumen técnico, resultado,
+    conclusión, incidencia monetaria, detalle de partidas con observaciones y firmas de conformidad técnica.
+    """
+    if not snapshot_id or not user_id:
+        raise ValueError("snapshot_id y user_id son obligatorios para exportar el informe a Excel")
+
     detail = get_review_snapshot_detail(db, snapshot_id, user_id)
     wb = Workbook()
 
     header_fill = PatternFill("solid", fgColor="0A4275")
     header_font = Font(color="FFFFFF", bold=True, size=10)
     section_fill = PatternFill("solid", fgColor="F1F5F9")
+    card_fill = PatternFill("solid", fgColor="F8FAFC")
     item_header_fill = PatternFill("solid", fgColor="E2E8F0")
 
     def style_header_row(ws: Any, row_idx: int = 1) -> None:
@@ -1510,53 +1566,86 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
             cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
     # =========================================================================
-    # 1. Hoja "Informe de Auditoria": Tal cual el informe oficial que se imprime
+    # 1. Hoja "Informe de Auditoria": Copia fiel del informe oficial de impresión
     # =========================================================================
     ws_rep = wb.active
     ws_rep.title = "Informe de Auditoria"
 
-    # Encabezado principal
-    ws_rep.merge_cells("A1:G1")
-    cell_title = ws_rep["A1"]
-    cell_title.value = "INFORME DE REVISIÓN TÉCNICA DE PRESUPUESTO"
-    cell_title.font = Font(color="FFFFFF", bold=True, size=13)
-    cell_title.fill = header_fill
-    cell_title.alignment = Alignment(horizontal="center", vertical="center")
-    ws_rep.row_dimensions[1].height = 28
+    # Logo Institucional Centrado (si existe en los datos del revisor / informe)
+    logo_img = _load_excel_logo_image(detail.get("institution_logo"))
+    if logo_img:
+        ws_rep.row_dimensions[1].height = 45
+        ws_rep.add_image(logo_img, "D1")
+        ws_rep.append([])  # Fila vacía separadora
+        ws_rep.row_dimensions[2].height = 6
 
-    rev_civ_str = f", CIV {detail['reviewer_civ']}" if detail.get("reviewer_civ") else ""
-    rev_full_str = f"{detail.get('reviewer_name') or 'Ing. Revisor'}{rev_civ_str}"
+    # Encabezado Oficial
+    title_row = ws_rep.max_row + 1
+    report_code = detail.get("report_code") or f"RT-{detail['created_at'].year if isinstance(detail['created_at'], datetime) else '2026'}-001"
+    version_num = detail.get("version_number", 1)
     rev_date_str = (
         detail["created_at"].strftime("%d/%m/%Y")
         if isinstance(detail["created_at"], datetime)
         else str(detail["created_at"])[:10]
     )
-    report_code = detail.get("report_code") or f"RT-{detail['created_at'].year if isinstance(detail['created_at'], datetime) else '2026'}-001"
-    version_num = detail.get("version_number", 1)
 
-    ws_rep.merge_cells("A2:G2")
-    cell_sub = ws_rep["A2"]
-    cell_sub.value = f"Código: {report_code}   |   Versión {version_num} - {rev_date_str}"
-    cell_sub.font = Font(color="334155", italic=True, size=10, bold=True)
-    cell_sub.alignment = Alignment(horizontal="center", vertical="center")
-    ws_rep.row_dimensions[2].height = 20
+    ws_rep.append([
+        "INFORME DE REVISIÓN TÉCNICA DE PRESUPUESTO",
+        "", "", "", "",
+        f"{report_code}\nVersión {version_num} · {rev_date_str}",
+        ""
+    ])
+    ws_rep.merge_cells(f"A{title_row}:E{title_row}")
+    ws_rep.merge_cells(f"F{title_row}:G{title_row}")
 
-    # Ficha de identificación
-    ws_rep.append([])  # Fila 3 vacía
+    cell_title = ws_rep.cell(title_row, 1)
+    cell_title.font = Font(bold=True, size=13, color="FFFFFF")
+    cell_title.fill = header_fill
+    cell_title.alignment = Alignment(horizontal="center", vertical="center")
 
-    ws_rep.append(["• Obra / Proyecto:", detail.get("project_name") or "-", "", "• Documento Evaluado:", detail.get("document_reference") or detail.get("source_filename") or f"v{version_num}"])
-    ws_rep.append(["• Empresa / Contratista:", detail.get("client_name") or "Sin especificar", "", "• Revisión:", f"{rev_date_str} | {rev_full_str}"])
-    ws_rep.append(["• Estado del Dictamen:", detail.get("review_status") or "EN_REVISION", "", "• Base de Contraste:", detail.get("database_id") or "Base de referencia"])
-    if detail.get("institution_name"):
-        ws_rep.append(["• Institución:", detail["institution_name"], "", "", ""])
-
-    for r in range(4, ws_rep.max_row + 1):
-        ws_rep.cell(r, 1).font = Font(bold=True, size=9)
-        ws_rep.cell(r, 2).font = Font(size=9)
-        ws_rep.cell(r, 4).font = Font(bold=True, size=9)
-        ws_rep.cell(r, 5).font = Font(size=9)
+    cell_code = ws_rep.cell(title_row, 6)
+    cell_code.font = Font(bold=True, size=9, color="FFFFFF")
+    cell_code.fill = PatternFill("solid", fgColor="0F172A")
+    cell_code.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    ws_rep.row_dimensions[title_row].height = 32
 
     ws_rep.append([])
+    ws_rep.row_dimensions[ws_rep.max_row].height = 8
+
+    # Ficha de identificación del expediente (2 columnas con viñetas)
+    rev_civ_str = f", CIV {detail['reviewer_civ']}" if detail.get("reviewer_civ") else ""
+    rev_full_str = f"{detail.get('reviewer_name') or 'Ing. Revisor'}{rev_civ_str}"
+    doc_ref = detail.get("document_reference") or detail.get("source_filename") or f"Presupuesto de Obra — v{version_num}"
+    client_str = detail.get("client_name") or "Sin especificar"
+    db_label = detail.get("database_id") or "Base de referencia"
+    status_label = detail.get("review_status") or "EN_REVISION"
+
+    card_start = ws_rep.max_row + 1
+    ws_rep.append(["• Obra:", detail.get("project_name") or "Sin especificar", "", "• Documento:", doc_ref, "", ""])
+    ws_rep.merge_cells(f"E{card_start}:G{card_start}")
+
+    ws_rep.append(["• Empresa:", client_str, "", "• Revisión:", f"{rev_date_str} | {rev_full_str}", "", ""])
+    ws_rep.merge_cells(f"E{card_start + 1}:G{card_start + 1}")
+
+    ws_rep.append(["• Estado del Dictamen:", status_label, "", "• Base de Contraste:", db_label, "", ""])
+    ws_rep.merge_cells(f"E{card_start + 2}:G{card_start + 2}")
+
+    if detail.get("institution_name"):
+        inst_card_row = ws_rep.max_row + 1
+        ws_rep.append(["• Institución:", detail["institution_name"], "", "", "", "", ""])
+        ws_rep.merge_cells(f"B{inst_card_row}:G{inst_card_row}")
+
+    for r in range(card_start, ws_rep.max_row + 1):
+        ws_rep.cell(r, 1).font = Font(bold=True, size=9, color="0F172A")
+        ws_rep.cell(r, 2).font = Font(size=9, color="1E293B")
+        ws_rep.cell(r, 4).font = Font(bold=True, size=9, color="0F172A")
+        ws_rep.cell(r, 5).font = Font(size=9, color="1E293B")
+        for col in range(1, 8):
+            ws_rep.cell(r, col).fill = card_fill
+        ws_rep.row_dimensions[r].height = 19
+
+    ws_rep.append([])
+    ws_rep.row_dimensions[ws_rep.max_row].height = 8
 
     # Alcance y Resumen Técnico
     total_items = detail.get("total_items", 0)
@@ -1571,29 +1660,47 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
         f"y {total_items} análisis de precios unitarios (APU). "
         + (f"Se detectaron {total_findings} errores o desviaciones técnicas que requieren corrección." if total_findings > 0 else "No se detectaron desviaciones técnicas con respecto a la base de contraste seleccionada.")
     )
-    ws_rep.merge_cells(f"A{ws_rep.max_row + 1}:G{ws_rep.max_row + 1}")
+    ws_rep.append([scope_text])
+    ws_rep.merge_cells(f"A{ws_rep.max_row}:G{ws_rep.max_row}")
     cell_scope = ws_rep[f"A{ws_rep.max_row}"]
-    cell_scope.value = scope_text
     cell_scope.font = Font(size=9, color="0F172A")
     cell_scope.fill = section_fill
     cell_scope.alignment = Alignment(wrap_text=True, vertical="center")
     ws_rep.row_dimensions[ws_rep.max_row].height = 36
 
     ws_rep.append([])
+    ws_rep.row_dimensions[ws_rep.max_row].height = 8
 
-    # Resultado de la revisión
+    # Resultado de la revisión (Semáforo de Partidas)
     items = detail.get("items") or []
     items_with_findings = [it for it in items if not it.is_chapter and getattr(it, "findings", None)]
     approved_items_count = max(0, total_items - len(items_with_findings))
+    has_obs = len(items_with_findings) > 0
+    score_fill = PatternFill("solid", fgColor="FEF3C7" if has_obs else "D1FAE5")
 
-    ws_rep.merge_cells(f"A{ws_rep.max_row + 1}:G{ws_rep.max_row + 1}")
-    cell_score = ws_rep[f"A{ws_rep.max_row}"]
-    cell_score.value = f"RESULTADO DE LA REVISIÓN: {approved_items_count} de {total_items} partidas aprobadas · {len(items_with_findings)} con observaciones  [{detail.get('review_status', 'EN_REVISION')}]"
-    cell_score.font = Font(bold=True, size=10, color="92400E" if len(items_with_findings) > 0 else "065F46")
-    cell_score.alignment = Alignment(vertical="center")
-    ws_rep.row_dimensions[ws_rep.max_row].height = 22
+    res_row = ws_rep.max_row + 1
+    ws_rep.append([
+        f"RESULTADO DE LA REVISIÓN:   {approved_items_count} de {total_items} partidas aprobadas · {len(items_with_findings)} con observaciones",
+        "", "", "", "",
+        "CON OBSERVACIONES" if has_obs else "APROBADO",
+        ""
+    ])
+    ws_rep.merge_cells(f"A{res_row}:E{res_row}")
+    ws_rep.merge_cells(f"F{res_row}:G{res_row}")
+
+    cell_score_txt = ws_rep.cell(res_row, 1)
+    cell_score_txt.font = Font(bold=True, size=10, color="0F172A")
+    cell_score_txt.alignment = Alignment(vertical="center", indent=1)
+
+    cell_score_tag = ws_rep.cell(res_row, 6)
+    cell_score_tag.font = Font(bold=True, size=10, color="92400E" if has_obs else "065F46")
+    cell_score_tag.alignment = Alignment(horizontal="center", vertical="center")
+    for col in range(1, 8):
+        ws_rep.cell(res_row, col).fill = score_fill
+    ws_rep.row_dimensions[res_row].height = 24
 
     ws_rep.append([])
+    ws_rep.row_dimensions[ws_rep.max_row].height = 8
 
     # Conclusión Preliminar / Dictamen Técnico
     is_conforme = detail.get("review_status") == "APROBADO" or len(items_with_findings) == 0
@@ -1606,29 +1713,31 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
     ws_rep.append([conclusion_title])
     ws_rep.cell(ws_rep.max_row, 1).font = Font(bold=True, size=10, color="0F172A")
 
-    ws_rep.merge_cells(f"A{ws_rep.max_row + 1}:G{ws_rep.max_row + 1}")
+    ws_rep.append([conclusion_body])
+    ws_rep.merge_cells(f"A{ws_rep.max_row}:G{ws_rep.max_row}")
     cell_conc = ws_rep[f"A{ws_rep.max_row}"]
-    cell_conc.value = conclusion_body
     cell_conc.font = Font(size=9, color="1E293B")
     cell_conc.fill = section_fill
     cell_conc.alignment = Alignment(wrap_text=True, vertical="center")
-    ws_rep.row_dimensions[ws_rep.max_row].height = 45
+    ws_rep.row_dimensions[ws_rep.max_row].height = 42
 
     ws_rep.append([])
+    ws_rep.row_dimensions[ws_rep.max_row].height = 8
 
     # Observaciones del auditor (si existen)
     if detail.get("auditor_notes") and detail["auditor_notes"].strip():
         ws_rep.append(["OBSERVACIONES DEL AUDITOR:"])
         ws_rep.cell(ws_rep.max_row, 1).font = Font(bold=True, size=10, color="0F172A")
-        ws_rep.merge_cells(f"A{ws_rep.max_row + 1}:G{ws_rep.max_row + 1}")
+        ws_rep.append([detail["auditor_notes"].strip()])
+        ws_rep.merge_cells(f"A{ws_rep.max_row}:G{ws_rep.max_row}")
         cell_notes = ws_rep[f"A{ws_rep.max_row}"]
-        cell_notes.value = detail["auditor_notes"].strip()
         cell_notes.font = Font(size=9, color="1E293B")
         cell_notes.alignment = Alignment(wrap_text=True, vertical="center")
         ws_rep.row_dimensions[ws_rep.max_row].height = 30
         ws_rep.append([])
+        ws_rep.row_dimensions[ws_rep.max_row].height = 8
 
-    # Incidencia Monetaria y Variaciones Económicas (SI include_monetary_impact es True)
+    # Incidencia Monetaria y Variación Económica (si include_monetary_impact es True)
     if detail.get("include_monetary_impact", True) is not False:
         m_sum = detail.get("monetary_summary") or {}
         orig_amt = float(m_sum.get("original_amount") or 0.0)
@@ -1679,31 +1788,45 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
                 "Se requiere la revisión financiera y conciliación de costos unitarios de los análisis observados previo a cualquier aprobación definitiva."
             )
 
-        ws_rep.merge_cells(f"A{ws_rep.max_row + 1}:G{ws_rep.max_row + 1}")
+        ws_rep.append([dictamen_econ])
+        ws_rep.merge_cells(f"A{ws_rep.max_row}:G{ws_rep.max_row}")
         cell_mon = ws_rep[f"A{ws_rep.max_row}"]
-        cell_mon.value = dictamen_econ
         cell_mon.font = Font(size=9, color="1E293B")
         cell_mon.fill = section_fill
         cell_mon.alignment = Alignment(wrap_text=True, vertical="center")
-        ws_rep.row_dimensions[ws_rep.max_row].height = 40
+        ws_rep.row_dimensions[ws_rep.max_row].height = 42
         ws_rep.append([])
+        ws_rep.row_dimensions[ws_rep.max_row].height = 8
 
-    # Comparativa vs Versión Anterior (si existe)
+    # Verificación vs Versión Anterior (si existe)
     if detail.get("version_comparison"):
         vc = detail["version_comparison"]
         ws_rep.append([f"VERIFICACIÓN DE CORRECCIONES VS. VERSIÓN ANTERIOR (v{vc.get('previous_version_number', 1)}):"])
         ws_rep.cell(ws_rep.max_row, 1).font = Font(bold=True, size=10, color="0F172A")
-        ws_rep.merge_cells(f"A{ws_rep.max_row + 1}:G{ws_rep.max_row + 1}")
+        ws_rep.append([f"{vc.get('resolved_findings_count', 0)} corregidos · {vc.get('persistent_findings_count', 0)} sin corregir · {vc.get('new_findings_count', 0)} nuevos."])
+        ws_rep.merge_cells(f"A{ws_rep.max_row}:G{ws_rep.max_row}")
         cell_vc = ws_rep[f"A{ws_rep.max_row}"]
-        cell_vc.value = f"{vc.get('resolved_findings_count', 0)} corregidos · {vc.get('persistent_findings_count', 0)} sin corregir · {vc.get('new_findings_count', 0)} nuevos."
         cell_vc.font = Font(size=9, bold=True, color="065F46")
         cell_vc.alignment = Alignment(vertical="center")
+
+        resolved_list = vc.get("resolved_findings") or []
+        for rf in resolved_list:
+            headline = _get_excel_finding_headline(rf)
+            item_code_val = getattr(rf, "item_code", "")
+            clean_msg = _clean_excel_msg(getattr(rf, "message", ""))
+            ws_rep.append([f"  ✓ Subsanado — {headline} (Partida {item_code_val}): {clean_msg}."])
+            ws_rep.merge_cells(f"A{ws_rep.max_row}:G{ws_rep.max_row}")
+            ws_rep.cell(ws_rep.max_row, 1).font = Font(size=8, color="065F46")
+            ws_rep.cell(ws_rep.max_row, 1).alignment = Alignment(wrap_text=True, vertical="center")
+
         ws_rep.append([])
+        ws_rep.row_dimensions[ws_rep.max_row].height = 8
 
     # Detalle de Correcciones por Partida (idéntico al informe impreso)
     ws_rep.append(["DETALLE DE CORRECCIONES:"])
     ws_rep.cell(ws_rep.max_row, 1).font = Font(bold=True, size=11, color="0F172A")
     ws_rep.append([])
+    ws_rep.row_dimensions[ws_rep.max_row].height = 6
 
     # Agrupar hallazgos por partida
     item_lookup = {it.id: it for it in items}
@@ -1726,19 +1849,19 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
             unit_str = f" ({it.unit})" if it and it.unit else ""
 
             # Fila de cabecera de la partida
-            ws_rep.merge_cells(f"A{ws_rep.max_row + 1}:F{ws_rep.max_row + 1}")
-            cell_partida = ws_rep[f"A{ws_rep.max_row}"]
-            cell_partida.value = f"Partida {item_code_str}  {desc_str[:120]}{unit_str}"
+            p_row = ws_rep.max_row + 1
+            ws_rep.append([f"Partida {item_code_str}  {desc_str[:120]}{unit_str}", "", "", "", "", "", "CON OBSERVACIONES"])
+            ws_rep.merge_cells(f"A{p_row}:F{p_row}")
+            cell_partida = ws_rep.cell(p_row, 1)
             cell_partida.font = Font(bold=True, size=9, color="1E3A8A")
             cell_partida.fill = item_header_fill
             cell_partida.alignment = Alignment(vertical="center")
 
-            cell_obs = ws_rep.cell(ws_rep.max_row, 7)
-            cell_obs.value = "CON OBSERVACIONES"
+            cell_obs = ws_rep.cell(p_row, 7)
             cell_obs.font = Font(bold=True, size=8, color="92400E")
             cell_obs.fill = item_header_fill
             cell_obs.alignment = Alignment(horizontal="center", vertical="center")
-            ws_rep.row_dimensions[ws_rep.max_row].height = 20
+            ws_rep.row_dimensions[p_row].height = 20
 
             for idx, f in enumerate(f_list, start=1):
                 headline = _get_excel_finding_headline(f)
@@ -1763,8 +1886,79 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
                     ws_rep.cell(ws_rep.max_row, 1).alignment = Alignment(wrap_text=True, vertical="center")
                     ws_rep.row_dimensions[ws_rep.max_row].height = 18
 
-            ws_rep.append([])  # Separador entre partidas
+            ws_rep.append([])
+            ws_rep.row_dimensions[ws_rep.max_row].height = 6
 
+    # =========================================================================
+    # Firmas y Conformidad Técnica (Tal como en la impresión oficial)
+    # =========================================================================
+    ws_rep.append([])
+    ws_rep.row_dimensions[ws_rep.max_row].height = 14
+    ws_rep.append(["FIRMAS Y CONFORMIDAD TÉCNICA:"])
+    ws_rep.cell(ws_rep.max_row, 1).font = Font(bold=True, size=10, color="0F172A")
+
+    ws_rep.append([])  # Espacio para firma física manuscrita / sello
+    ws_rep.row_dimensions[ws_rep.max_row].height = 36
+
+    # Líneas de firma
+    sig_line_row = ws_rep.max_row + 1
+    ws_rep.append(["", "____________________________________", "", "", "____________________________________", "", ""])
+    ws_rep.merge_cells(f"B{sig_line_row}:C{sig_line_row}")
+    ws_rep.merge_cells(f"E{sig_line_row}:G{sig_line_row}")
+    ws_rep.cell(sig_line_row, 2).alignment = Alignment(horizontal="center")
+    ws_rep.cell(sig_line_row, 5).alignment = Alignment(horizontal="center")
+    ws_rep.cell(sig_line_row, 2).font = Font(bold=True, size=9, color="334155")
+    ws_rep.cell(sig_line_row, 5).font = Font(bold=True, size=9, color="334155")
+    ws_rep.row_dimensions[sig_line_row].height = 16
+
+    # Nombres de los profesionales
+    names_row = ws_rep.max_row + 1
+    rev_name = detail.get("reviewer_name") or "Ingeniero Revisor"
+    app_name = detail.get("approver_name") or "Ing. Director de Obras"
+    ws_rep.append(["", rev_name, "", "", app_name, "", ""])
+    ws_rep.merge_cells(f"B{names_row}:C{names_row}")
+    ws_rep.merge_cells(f"E{names_row}:G{names_row}")
+    ws_rep.cell(names_row, 2).font = Font(bold=True, size=10, color="0F172A")
+    ws_rep.cell(names_row, 2).alignment = Alignment(horizontal="center")
+    ws_rep.cell(names_row, 5).font = Font(bold=True, size=10, color="0F172A")
+    ws_rep.cell(names_row, 5).alignment = Alignment(horizontal="center")
+    ws_rep.row_dimensions[names_row].height = 18
+
+    # CIVs
+    civ_row = ws_rep.max_row + 1
+    rev_civ = f"CIV: {detail['reviewer_civ']}" if detail.get("reviewer_civ") else "CIV: —"
+    app_civ = f"CIV: {detail['approver_civ']}" if detail.get("approver_civ") else "CIV: —"
+    ws_rep.append(["", rev_civ, "", "", app_civ, "", ""])
+    ws_rep.merge_cells(f"B{civ_row}:C{civ_row}")
+    ws_rep.merge_cells(f"E{civ_row}:G{civ_row}")
+    ws_rep.cell(civ_row, 2).font = Font(size=9, color="475569")
+    ws_rep.cell(civ_row, 2).alignment = Alignment(horizontal="center")
+    ws_rep.cell(civ_row, 5).font = Font(size=9, color="475569")
+    ws_rep.cell(civ_row, 5).alignment = Alignment(horizontal="center")
+    ws_rep.row_dimensions[civ_row].height = 16
+
+    # Cargo / Rol / Dirección
+    role_row = ws_rep.max_row + 1
+    app_dept = detail.get("approver_department") or "Dirección de Control de Obras y Proyectos"
+    ws_rep.append(["", "Ingeniero Revisor", "", "", app_dept, "", ""])
+    ws_rep.merge_cells(f"B{role_row}:C{role_row}")
+    ws_rep.merge_cells(f"E{role_row}:G{role_row}")
+    ws_rep.cell(role_row, 2).font = Font(bold=True, size=9, color="475569")
+    ws_rep.cell(role_row, 2).alignment = Alignment(horizontal="center")
+    ws_rep.cell(role_row, 5).font = Font(bold=True, size=9, color="475569")
+    ws_rep.cell(role_row, 5).alignment = Alignment(horizontal="center")
+    ws_rep.row_dimensions[role_row].height = 16
+
+    # Institución (debajo del aprobador)
+    if detail.get("institution_name"):
+        inst_row = ws_rep.max_row + 1
+        ws_rep.append(["", "", "", "", detail["institution_name"], "", ""])
+        ws_rep.merge_cells(f"E{inst_row}:G{inst_row}")
+        ws_rep.cell(inst_row, 5).font = Font(bold=True, size=8, color="64748B")
+        ws_rep.cell(inst_row, 5).alignment = Alignment(horizontal="center")
+        ws_rep.row_dimensions[inst_row].height = 15
+
+    # Configuración de ancho de columnas y vista de impresión de la hoja
     ws_rep.column_dimensions["A"].width = 24
     ws_rep.column_dimensions["B"].width = 30
     ws_rep.column_dimensions["C"].width = 4
@@ -1772,6 +1966,15 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
     ws_rep.column_dimensions["E"].width = 35
     ws_rep.column_dimensions["F"].width = 16
     ws_rep.column_dimensions["G"].width = 20
+
+    ws_rep.page_setup.orientation = ws_rep.ORIENTATION_PORTRAIT
+    ws_rep.page_setup.paperSize = ws_rep.PAPERSIZE_LETTER
+    ws_rep.sheet_properties.pageSetUpPr.fitToPage = True
+    ws_rep.page_setup.fitToWidth = 1
+    ws_rep.page_setup.fitToHeight = 0
+    ws_rep.oddFooter.left.text = f"{report_code} · v{version_num}"
+    ws_rep.oddFooter.center.text = "Página &P de &N"
+    ws_rep.oddFooter.right.text = f"Emitido el {rev_date_str}"
 
     # =========================================================================
     # 2. Hoja "Hallazgos de Auditoria" con ÚNICAMENTE las 11 columnas del archivo
