@@ -59,6 +59,19 @@ describe('rowsReducer', () => {
     expect(isItemEmpty(state.rows[0])).toBe(true);
   });
 
+  it('agrega filas de una macro actividad antes de la fila vacía final', () => {
+    const existing = { ...createBlankRow('GENERAL'), id: 'r1', description: 'Partida existente' };
+    const macro = { ...createBlankRow('PARED PERIMETRAL'), id: 'm1', description: 'Pared perimetral', quantity: 54 };
+    const state = rowsReducer(stateWithRows([existing]), {
+      type: 'ADD_ROWS',
+      payload: { rows: [macro], activeChapter: 'GENERAL' },
+    });
+    expect(state.rows.filter((r) => !isItemEmpty(r))).toHaveLength(2);
+    expect(state.rows[0].id).toBe('r1');
+    expect(state.rows[1].id).toBe('m1');
+    expect(isItemEmpty(state.rows[state.rows.length - 1])).toBe(true);
+  });
+
   it('activa y elimina parciales', () => {
     const row = { ...createBlankRow('GENERAL'), id: 'r1', description: 'Pared', partial: 4 };
     const state = rowsReducer(stateWithRows([row]), {

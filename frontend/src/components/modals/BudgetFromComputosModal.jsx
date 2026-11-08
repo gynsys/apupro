@@ -1218,6 +1218,16 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     });
   };
 
+  const handleAddMacroRows = (rows) => {
+    if (!Array.isArray(rows) || rows.length === 0) return;
+    isDirtyRef.current = true;
+    rowsDispatch({
+      type: 'ADD_ROWS',
+      payload: { rows, activeChapter },
+    });
+    toast.success(`${rows.length} partida(s) agregadas a la planilla`);
+  };
+
   /**
    * Duplica una partida existente
    */
@@ -2578,6 +2588,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
         handleUpdatePartialField={handleUpdatePartialField}
         setDescriptionFilter={setDescriptionFilter}
         viewMode={viewMode}
+        onAddMacroRows={handleAddMacroRows}
       />
 
       {/* BARRA INFERIOR DE ACCIÓN (Siempre accesible en ambas vistas con botón Guardar y Generar) */}

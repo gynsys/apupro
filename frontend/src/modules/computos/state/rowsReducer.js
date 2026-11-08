@@ -54,6 +54,16 @@ function rowsReducerCore(state, action) {
         ),
       };
 
+    case 'ADD_ROWS': {
+      const incoming = Array.isArray(payload.rows) ? payload.rows : [];
+      const base = rows.filter((row, index) => !(index === rows.length - 1 && isItemEmpty(row)));
+      return {
+        ...state,
+        activeChapter,
+        rows: normalizeRowsWithSingleTrailingBlank([...base, ...incoming], activeChapter),
+      };
+    }
+
     case 'UPDATE_FIELD': {
       const updated = rows.map((row) => {
         if (row.id !== payload.itemId) return row;
