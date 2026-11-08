@@ -4,7 +4,7 @@
  * Si un usuario no-superadmin inicia sesión o cierra sesión, el SW es desregistrado y su caché eliminada.
  */
 
-const CACHE_NAME = 'costbase-superadmin-shell-v20';
+const CACHE_NAME = 'costbase-superadmin-shell-v21';
 const APP_SHELL_URLS = [
   '/',
   '/index.html',

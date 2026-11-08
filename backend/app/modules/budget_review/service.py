@@ -1652,7 +1652,15 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
     rev_full_str = f"{detail.get('reviewer_name') or 'Ing. Revisor'}{rev_civ_str}"
     doc_ref = detail.get("document_reference") or detail.get("source_filename") or f"Presupuesto de Obra — v{version_num}"
     client_str = detail.get("client_name") or "Sin especificar"
-    db_label = detail.get("database_id") or "Base de referencia"
+    db_raw = str(detail.get("database_id") or "master").strip()
+    if db_raw == "base_agosto":
+        db_label = "Base Agosto"
+    elif db_raw == "master":
+        db_label = "Base Maestra"
+    elif db_raw.lower().startswith("base_"):
+        db_label = "Base " + db_raw[5:].capitalize()
+    else:
+        db_label = db_raw.capitalize() if db_raw else "Base Maestra"
     status_label = detail.get("review_status") or "EN_REVISION"
 
     card_start = ws_rep.max_row + 1

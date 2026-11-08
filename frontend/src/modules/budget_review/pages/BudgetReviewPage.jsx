@@ -252,15 +252,24 @@ const setStoredReviewerProfile = (profile) => {
 export default function BudgetReviewPage() {
   const { activeDatabase, databases } = useDatabase();
 
-  // Filtrar bases de datos válidas para contraste (excluir 'personalizada' si se desea o mantener todas)
-  const contrastDatabases = (databases || []).filter((d) => d.id !== 'personalizada');
-  const hasBaseAgosto = contrastDatabases.some((d) => d.id === 'base_agosto');
-  const availableDatabases = hasBaseAgosto
-    ? contrastDatabases
-    : [
-        ...contrastDatabases,
-        { id: 'base_agosto', name: 'Base Agosto', description: 'Base oficial Corte Agosto' },
-      ];
+  // Filtrar bases de datos válidas para contraste (excluir 'personalizada' y enriquecer con la base del reporte activo)
+  const availableDatabases = useMemo(() => {
+    const list = (databases || [])
+      .filter((d) => d.id !== 'personalizada')
+      .map((d) => ({ ...d }));
+    if (!list.some((d) => d.id === 'base_agosto')) {
+      list.push({ id: 'base_agosto', name: 'Base Agosto', description: 'Base oficial Corte Agosto' });
+    }
+    if (activeReport?.database_id && !list.some((d) => d.id === activeReport.database_id)) {
+      const cleanName = activeReport.database_id.replace(/^base_/, 'Base ').replace(/_/g, ' ');
+      list.push({
+        id: activeReport.database_id,
+        name: cleanName.charAt(0).toUpperCase() + cleanName.slice(1),
+        description: 'Base de datos de la auditoría',
+      });
+    }
+    return list;
+  }, [databases, activeReport?.database_id]);
 
   const [selectedDbId, setSelectedDbId] = useState(
     activeDatabase?.id && activeDatabase.id !== 'personalizada' ? activeDatabase.id : 'base_agosto'
@@ -321,6 +330,7 @@ export default function BudgetReviewPage() {
 
   const [showNewVersionModal, setShowNewVersionModal] = useState(false);
   const [newVersionBudgetId, setNewVersionBudgetId] = useState('');
+  const [newVersionDbId, setNewVersionDbId] = useState('');
   const [newVersionNotes, setNewVersionNotes] = useState('');
   const [showImportChoiceModal, setShowImportChoiceModal] = useState(false);
 
@@ -352,6 +362,9 @@ export default function BudgetReviewPage() {
 
   const syncFormWithReport = (report) => {
     if (!report) return;
+    if (report.database_id) {
+      setSelectedDbId(report.database_id);
+    }
     const stored = getStoredReviewerProfile() || {};
     setFormName(report.name || '');
     setFormProject(report.project_name || '');
@@ -507,12 +520,33 @@ export default function BudgetReviewPage() {
     }
   };
 
+  const getDatabaseOptionLabel = (dbItem) => {
+    if (!dbItem) return '';
+    const count = dbItem.total_items || dbItem.items_count;
+    if (count) {
+      return `${dbItem.name} (${Number(count).toLocaleString('es-VE')} partidas)`;
+    }
+    if (dbItem.id === 'base_agosto') return 'Base Agosto (12.652 partidas)';
+    if (dbItem.id === 'master') return `${dbItem.name || 'Base Maestra'} (18.880 partidas)`;
+    return dbItem.name || dbItem.id;
+  };
+
   const getDatabaseLabel = (dbId) => {
     if (!dbId) return 'Base Maestra';
+    const found = availableDatabases.find((d) => d.id === dbId);
+    if (found) return found.name;
     if (dbId === 'base_agosto') return 'Base Agosto';
     if (dbId === 'master') return 'Base Maestra';
-    const found = availableDatabases.find((d) => d.id === dbId);
-    return found ? found.name : dbId;
+    const clean = String(dbId).replace(/^base_/, 'Base ').replace(/_/g, ' ');
+    return clean.charAt(0).toUpperCase() + clean.slice(1);
+  };
+
+  const openNewVersionModal = () => {
+    if (!activeReport) return;
+    setNewVersionBudgetId(activeReport.source_budget_id || '');
+    setNewVersionDbId(activeReport.database_id || selectedDbId || 'base_agosto');
+    setNewVersionNotes('');
+    setShowNewVersionModal(true);
   };
 
   const handleAuditExistingBudget = async () => {
@@ -571,12 +605,13 @@ export default function BudgetReviewPage() {
     event.target.value = '';
     if (!file || !activeReport) return;
 
+    const targetDbId = newVersionDbId || activeReport.database_id || selectedDbId;
     setShowNewVersionModal(false);
     setRunningAudit(true);
     try {
       const detail = await budgetReviewService.auditUploadedFile(
         file,
-        activeReport.database_id || selectedDbId,
+        targetDbId,
         {
           parentSnapshotId: activeReport.id,
           projectName: activeReport.project_name,
@@ -589,7 +624,7 @@ export default function BudgetReviewPage() {
       setNewVersionNotes('');
       const updatedSnaps = await budgetReviewService.listSnapshots();
       setSnapshots(updatedSnaps || []);
-      toast.success(`Nueva versión v${detail.version_number} generada y comparada contra v${activeReport.version_number}`);
+      toast.success(`Nueva versión v${detail.version_number} generada contra ${getDatabaseLabel(targetDbId)} y comparada con v${activeReport.version_number}`);
     } catch (error) {
       toast.error(error.message || 'Error al auditar la versión corregida');
     } finally {
@@ -603,12 +638,13 @@ export default function BudgetReviewPage() {
       toast.error('Selecciona el presupuesto corregido a evaluar');
       return;
     }
+    const targetDbId = newVersionDbId || activeReport.database_id || selectedDbId;
     setShowNewVersionModal(false);
     setRunningAudit(true);
     try {
       const detail = await budgetReviewService.auditExistingBudget(
         targetBudgetId,
-        activeReport.database_id || selectedDbId,
+        targetDbId,
         {
           parentSnapshotId: activeReport.id,
           projectName: activeReport.project_name,
@@ -621,7 +657,7 @@ export default function BudgetReviewPage() {
       setNewVersionNotes('');
       const updatedSnaps = await budgetReviewService.listSnapshots();
       setSnapshots(updatedSnaps || []);
-      toast.success(`Nueva versión v${detail.version_number} auditada y comparada contra v${activeReport.version_number}`);
+      toast.success(`Nueva versión v${detail.version_number} auditada contra ${getDatabaseLabel(targetDbId)} y comparada con v${activeReport.version_number}`);
     } catch (error) {
       toast.error(error.message || 'Error al auditar la versión corregida');
     } finally {
@@ -1023,11 +1059,7 @@ export default function BudgetReviewPage() {
                 >
                   {availableDatabases.map((dbItem) => (
                     <option key={dbItem.id} value={dbItem.id}>
-                      {dbItem.id === 'base_agosto'
-                        ? 'Base Agosto (12.652 partidas)'
-                        : dbItem.id === 'master'
-                        ? `${dbItem.name} (18.880 partidas)`
-                        : dbItem.name}
+                      {getDatabaseOptionLabel(dbItem)}
                     </option>
                   ))}
                 </select>
@@ -1130,10 +1162,7 @@ export default function BudgetReviewPage() {
               <>
                 <button
                   type="button"
-                  onClick={() => {
-                    setNewVersionBudgetId(activeReport.source_budget_id || '');
-                    setShowNewVersionModal(true);
-                  }}
+                  onClick={openNewVersionModal}
                   title={`Revisar Corrección (Nueva Versión v${(activeReport.version_number || 1) + 1})`}
                   className="p-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center cursor-pointer shadow-2xs transition"
                 >
@@ -2722,11 +2751,34 @@ export default function BudgetReviewPage() {
 
             <div className="p-5 space-y-4 text-xs sm:text-sm">
               <p className="text-slate-600">
-                Cuando la empresa contratista entrega el presupuesto corregido, cárgpalo aquí. El sistema lo
-                evaluará contra <strong>{getDatabaseLabel(activeReport.database_id)}</strong> y comparará
+                Cuando la empresa contratista entrega el presupuesto corregido, cárgalo aquí. El sistema lo
+                evaluará contra <strong>{getDatabaseLabel(newVersionDbId || activeReport.database_id)}</strong> y comparará
                 automáticamente qué hallazgos de la <strong>v{activeReport.version_number}</strong> fueron
                 subsanados y cuáles persisten.
               </p>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Base de Contraste para la Auditoría
+                </label>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-300 bg-white">
+                  <Database size={16} className="text-blue-600 shrink-0" />
+                  <select
+                    value={newVersionDbId || activeReport.database_id || selectedDbId}
+                    onChange={(e) => setNewVersionDbId(e.target.value)}
+                    className="flex-1 bg-transparent text-xs sm:text-sm font-bold text-slate-900 focus:outline-none cursor-pointer"
+                  >
+                    {availableDatabases.map((dbItem) => (
+                      <option key={dbItem.id} value={dbItem.id}>
+                        {getDatabaseOptionLabel(dbItem)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <span className="text-[11px] text-slate-500 mt-1 block">
+                  Por defecto preseleccionada la base de la v{activeReport.version_number}: <strong>{getDatabaseLabel(activeReport.database_id)}</strong>.
+                </span>
+              </div>
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
