@@ -997,13 +997,13 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
         ],
     ),
 
-    # 33. FRISOS Y TRABAJOS EN FACHADAS / ALTURA (Andamio Tubular/Colgante/Manlift vs Escaleras/Caballetes)
+    # 33. FRISOS Y TRABAJOS EN FACHADAS / ALTURA (Rapel/Cuerdas vs Andamios vs Escaleras)
     ConstructionFamilyOntology(
         family_id="FRISOS_Y_TRABAJOS_ALTURA_ANDAMIAJE",
         name="Trabajos de Friso, Revoque o Pintura en Fachadas y Altura",
         activation_patterns=[
             re.compile(
-                r"\b(friso|frisos|frisar|revoque|encamisado|pintura|pintar)\b.*\b(fachada|fachadas|exterior|exteriores|altura|doble\s+altura)\b",
+                r"\b(friso|frisos|frisar|revoque|encamisado|pintura|pintar|lavado|limpieza|sellado|mantenimiento|reparaci[oó]n|impermeabili\w+)\b.*\b(fachada|fachadas|exterior|exteriores|altura|doble\s+altura)\b|\b(fachada|fachadas|altura)\b.*\b(friso|frisos|frisar|revoque|encamisado|pintura|pintar|lavado|limpieza|sellado|mantenimiento|reparaci[oó]n|impermeabili\w+)\b",
                 re.IGNORECASE,
             )
         ],
@@ -1011,15 +1011,16 @@ ONTOLOGY_REGISTRY: List[ConstructionFamilyOntology] = [
         required_parameters=[
             ParametricRequirement(
                 param_id="medio_elevacion_andamio",
-                label="Medio de trabajo en altura (escalera/caballetes vs andamio tubular, colgante o manlift)",
+                label="Medio de trabajo en altura (rapel/cuerdas vs andamio tubular, colgante o manlift vs escaleras)",
                 detection_patterns=[
                     re.compile(
-                        r"\b(andamio|andamios|sin\s+andamio|con\s+andamio|escalera|caballete|burro|gu[ií]ndola|colgante|rapel|manlift|plataforma\s+elevadora|planta\s+baja|hasta\s+3\s*m)\b",
+                        r"\b(andamio|andamios|sin\s+andamio|con\s+andamio|escalera|escaleras|caballete|caballetes|burro|burros|gu[ií]ndola|colgante|r[aá]pel|cuerdas?|trabajo\s+vertical|silleta|arn[eé]s|manlift|plataforma\s+elevadora|planta\s+baja|hasta\s+3\s*m)\b",
                         re.IGNORECASE,
                     )
                 ],
-                question="¿El APU debe incluir el alquiler de andamios tubulares, colgantes o plataforma elevadora (manlift), o se trabajará con escaleras/caballetes (sin andamio tubular)?",
+                question="¿Qué medio de trabajo en altura se utilizará para la fachada? (Ej: Trabajo a rapel / cuerdas, Andamio tubular, Andamio colgante o Escaleras)",
                 default_options=[
+                    "Trabajo vertical suspendido a rapel (con cuerdas y arnés)",
                     "Sin andamio tubular (con escaleras o caballetes hasta 3 m)",
                     "Incluye alquiler de andamio tubular en el APU",
                     "Incluye andamio colgante / guíndola para fachada",
