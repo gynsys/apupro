@@ -54,6 +54,7 @@ class ReviewSnapshot(Base):
     review_status = Column(String, nullable=False, default="EN_REVISION")
     # Estados: 'EN_REVISION', 'CON_OBSERVACIONES', 'CORREGIDO', 'APROBADO', 'RECHAZADO'
     auditor_notes = Column(Text, nullable=True)
+    include_monetary_impact = Column(Boolean, nullable=False, default=True)
 
     fcas_percent = Column(Float, nullable=False, default=417.0)
     admin_percent = Column(Float, nullable=False, default=15.0)

@@ -30,6 +30,7 @@ import {
   ListChecks,
   LayoutGrid,
   Image as ImageIcon,
+  Settings,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { budgetReviewService } from '../services/budgetReviewService';
@@ -224,6 +225,27 @@ function ReviewScoreBanner({ stats }) {
   );
 }
 
+const REVIEWER_PROFILE_KEY = 'costbase_reviewer_profile_settings';
+
+const getStoredReviewerProfile = () => {
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem(REVIEWER_PROFILE_KEY) : null;
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+const setStoredReviewerProfile = (profile) => {
+  try {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(REVIEWER_PROFILE_KEY, JSON.stringify(profile));
+    }
+  } catch (e) {
+    console.error('Error guardando perfil del revisor en localStorage', e);
+  }
+};
+
 export default function BudgetReviewPage() {
   const { activeDatabase, databases } = useDatabase();
 
@@ -278,7 +300,21 @@ export default function BudgetReviewPage() {
   const [formApproverCiv, setFormApproverCiv] = useState('');
   const [formApproverDepartment, setFormApproverDepartment] = useState('Dirección de Control de Obras y Proyectos');
   const [formConclusion, setFormConclusion] = useState('');
+  const [formIncludeMonetaryImpact, setFormIncludeMonetaryImpact] = useState(true);
   const [findingViewMode, setFindingViewMode] = useState('executive'); // 'executive' (H-01...) | 'detailed'
+
+  // Estados del Modal de Configuración Fija del Revisor e Institución (Ruedita ⚙️)
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [settingsReviewerName, setSettingsReviewerName] = useState('');
+  const [settingsReviewerCiv, setSettingsReviewerCiv] = useState('');
+  const [settingsInstitution, setSettingsInstitution] = useState('');
+  const [settingsApproverName, setSettingsApproverName] = useState('');
+  const [settingsApproverCiv, setSettingsApproverCiv] = useState('');
+  const [settingsApproverDepartment, setSettingsApproverDepartment] = useState('Dirección de Control de Obras y Proyectos');
+  const [settingsLogo, setSettingsLogo] = useState('');
+  const [settingsIncludeMonetaryImpact, setSettingsIncludeMonetaryImpact] = useState(true);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const settingsLogoInputRef = useRef(null);
 
   const [showNewVersionModal, setShowNewVersionModal] = useState(false);
   const [newVersionBudgetId, setNewVersionBudgetId] = useState('');
@@ -313,21 +349,138 @@ export default function BudgetReviewPage() {
 
   const syncFormWithReport = (report) => {
     if (!report) return;
+    const stored = getStoredReviewerProfile() || {};
     setFormName(report.name || '');
     setFormProject(report.project_name || '');
     setFormClient(report.client_name || '');
     setFormStatus(report.review_status || 'EN_REVISION');
     setFormNotes(report.auditor_notes || '');
     setFormReportCode(report.report_code || '');
-    setFormReviewerName(report.reviewer_name || '');
-    setFormReviewerCiv(report.reviewer_civ || '');
+    setFormReviewerName(report.reviewer_name || stored.reviewer_name || '');
+    setFormReviewerCiv(report.reviewer_civ || stored.reviewer_civ || '');
     setFormDocRef(report.document_reference || '');
-    setFormInstitution(report.institution_name || '');
-    setFormLogo(report.institution_logo || '');
-    setFormApproverName(report.approver_name || '');
-    setFormApproverCiv(report.approver_civ || '');
-    setFormApproverDepartment(report.approver_department || 'Dirección de Control de Obras y Proyectos');
+    setFormInstitution(report.institution_name || stored.institution_name || '');
+    setFormLogo(report.institution_logo || stored.institution_logo || '');
+    setFormApproverName(report.approver_name || stored.approver_name || '');
+    setFormApproverCiv(report.approver_civ || stored.approver_civ || '');
+    setFormApproverDepartment(report.approver_department || stored.approver_department || 'Dirección de Control de Obras y Proyectos');
     setFormConclusion(report.conclusion_text || '');
+    setFormIncludeMonetaryImpact(
+      report.include_monetary_impact !== undefined
+        ? Boolean(report.include_monetary_impact)
+        : (stored.include_monetary_impact !== undefined ? Boolean(stored.include_monetary_impact) : true)
+    );
+  };
+
+  const applyStoredProfileIfEmpty = async (reportDetail) => {
+    if (!reportDetail) return reportDetail;
+    const stored = getStoredReviewerProfile();
+    if (!stored) return reportDetail;
+    const missingReviewer = !reportDetail.reviewer_name && stored.reviewer_name;
+    const missingInstitution = !reportDetail.institution_name && stored.institution_name;
+    const missingLogo = !reportDetail.institution_logo && stored.institution_logo;
+
+    if (missingReviewer || missingInstitution || missingLogo) {
+      try {
+        const payload = {
+          reviewer_name: reportDetail.reviewer_name || stored.reviewer_name || null,
+          reviewer_civ: reportDetail.reviewer_civ || stored.reviewer_civ || null,
+          institution_name: reportDetail.institution_name || stored.institution_name || null,
+          institution_logo: reportDetail.institution_logo || stored.institution_logo || null,
+          approver_name: reportDetail.approver_name || stored.approver_name || null,
+          approver_civ: reportDetail.approver_civ || stored.approver_civ || null,
+          approver_department: reportDetail.approver_department || stored.approver_department || null,
+          include_monetary_impact: reportDetail.include_monetary_impact !== undefined
+            ? reportDetail.include_monetary_impact
+            : (stored.include_monetary_impact !== undefined ? stored.include_monetary_impact : true),
+        };
+        const updated = await budgetReviewService.saveSnapshot(reportDetail.id, payload);
+        return updated;
+      } catch (e) {
+        console.error('Error aplicando perfil almacenado a la auditoría:', e);
+      }
+    }
+    return reportDetail;
+  };
+
+  const openSettingsModal = () => {
+    const stored = getStoredReviewerProfile() || {};
+    setSettingsReviewerName(activeReport?.reviewer_name || stored.reviewer_name || '');
+    setSettingsReviewerCiv(activeReport?.reviewer_civ || stored.reviewer_civ || '');
+    setSettingsInstitution(activeReport?.institution_name || stored.institution_name || '');
+    setSettingsApproverName(activeReport?.approver_name || stored.approver_name || '');
+    setSettingsApproverCiv(activeReport?.approver_civ || stored.approver_civ || '');
+    setSettingsApproverDepartment(
+      activeReport?.approver_department || stored.approver_department || 'Dirección de Control de Obras y Proyectos'
+    );
+    setSettingsLogo(activeReport?.institution_logo || stored.institution_logo || '');
+    setSettingsIncludeMonetaryImpact(
+      activeReport?.include_monetary_impact !== undefined
+        ? Boolean(activeReport.include_monetary_impact)
+        : (stored.include_monetary_impact !== undefined ? Boolean(stored.include_monetary_impact) : true)
+    );
+    setShowSettingsModal(true);
+  };
+
+  const handleSettingsLogoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('La imagen del logo no debe superar los 2 MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      setSettingsLogo(uploadEvent.target.result);
+      toast.success('Logo cargado correctamente');
+    };
+    reader.onerror = () => {
+      toast.error('Error al leer el archivo de imagen');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveSettings = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const profile = {
+      reviewer_name: settingsReviewerName.trim() || null,
+      reviewer_civ: settingsReviewerCiv.trim() || null,
+      institution_name: settingsInstitution.trim() || null,
+      approver_name: settingsApproverName.trim() || null,
+      approver_civ: settingsApproverCiv.trim() || null,
+      approver_department: settingsApproverDepartment.trim() || null,
+      institution_logo: settingsLogo ? settingsLogo.trim() : null,
+      include_monetary_impact: Boolean(settingsIncludeMonetaryImpact),
+    };
+    setStoredReviewerProfile(profile);
+
+    if (activeReport) {
+      setSavingSettings(true);
+      try {
+        const payload = {
+          reviewer_name: profile.reviewer_name,
+          reviewer_civ: profile.reviewer_civ,
+          institution_name: profile.institution_name,
+          approver_name: profile.approver_name,
+          approver_civ: profile.approver_civ,
+          approver_department: profile.approver_department,
+          institution_logo: profile.institution_logo,
+          include_monetary_impact: profile.include_monetary_impact,
+        };
+        const updatedDetail = await budgetReviewService.saveSnapshot(activeReport.id, payload);
+        setActiveReport(updatedDetail);
+        syncFormWithReport(updatedDetail);
+        toast.success('Configuración guardada y aplicada al informe actual');
+      } catch (err) {
+        console.error('Error aplicando configuración a la auditoría activa:', err);
+        toast.success('Configuración del revisor e institución guardada');
+      } finally {
+        setSavingSettings(false);
+      }
+    } else {
+      toast.success('Configuración del revisor e institución guardada');
+    }
+    setShowSettingsModal(false);
   };
 
   const loadInitialData = async () => {
@@ -366,7 +519,8 @@ export default function BudgetReviewPage() {
     }
     setRunningAudit(true);
     try {
-      const detail = await budgetReviewService.auditExistingBudget(selectedBudgetId, selectedDbId);
+      let detail = await budgetReviewService.auditExistingBudget(selectedBudgetId, selectedDbId);
+      detail = await applyStoredProfileIfEmpty(detail);
       setActiveReport(detail);
       syncFormWithReport(detail);
       const updatedSnaps = await budgetReviewService.listSnapshots();
@@ -385,9 +539,10 @@ export default function BudgetReviewPage() {
 
     setRunningAudit(true);
     try {
-      const detail = await budgetReviewService.auditUploadedFile(file, selectedDbId, {
+      let detail = await budgetReviewService.auditUploadedFile(file, selectedDbId, {
         mode: mode || 'budget',
       });
+      detail = await applyStoredProfileIfEmpty(detail);
       setActiveReport(detail);
       syncFormWithReport(detail);
       const updatedSnaps = await budgetReviewService.listSnapshots();
@@ -503,6 +658,9 @@ export default function BudgetReviewPage() {
     setFormApproverCiv(activeReport.approver_civ || '');
     setFormApproverDepartment(activeReport.approver_department || 'Dirección de Control de Obras y Proyectos');
     setFormConclusion(activeReport.conclusion_text || '');
+    setFormIncludeMonetaryImpact(
+      activeReport.include_monetary_impact !== undefined ? Boolean(activeReport.include_monetary_impact) : true
+    );
     setShowSaveModal(true);
   };
 
@@ -527,28 +685,31 @@ export default function BudgetReviewPage() {
   const handleConfirmSave = async (e) => {
     e.preventDefault();
     if (!activeReport) return;
-    if (!formName.trim()) {
+    const nameToSave = saveAsMode ? formName.trim() : (formName.trim() || activeReport.name);
+    if (!nameToSave) {
       toast.error('El nombre de la auditoría es obligatorio');
       return;
     }
     setSavingMeta(true);
     try {
+      const stored = getStoredReviewerProfile() || {};
       const payload = {
-        name: formName.trim(),
+        name: nameToSave,
         project_name: formProject.trim() || null,
         client_name: formClient.trim() || null,
         review_status: formStatus,
         auditor_notes: formNotes || null,
         report_code: formReportCode.trim() || null,
-        reviewer_name: formReviewerName.trim() || null,
-        reviewer_civ: formReviewerCiv.trim() || null,
         document_reference: formDocRef.trim() || null,
-        institution_name: formInstitution.trim() || null,
-        institution_logo: formLogo ? formLogo.trim() : null,
-        approver_name: formApproverName.trim() || null,
-        approver_civ: formApproverCiv.trim() || null,
-        approver_department: formApproverDepartment.trim() || null,
         conclusion_text: formConclusion.trim() || null,
+        include_monetary_impact: Boolean(formIncludeMonetaryImpact),
+        reviewer_name: activeReport.reviewer_name || stored.reviewer_name || null,
+        reviewer_civ: activeReport.reviewer_civ || stored.reviewer_civ || null,
+        institution_name: activeReport.institution_name || stored.institution_name || null,
+        institution_logo: activeReport.institution_logo || stored.institution_logo || null,
+        approver_name: activeReport.approver_name || stored.approver_name || null,
+        approver_civ: activeReport.approver_civ || stored.approver_civ || null,
+        approver_department: activeReport.approver_department || stored.approver_department || null,
       };
       const updatedDetail = saveAsMode
         ? await budgetReviewService.saveSnapshotAs(activeReport.id, payload)
@@ -912,6 +1073,15 @@ export default function BudgetReviewPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
+                onClick={openSettingsModal}
+                title="Configuración de Datos Fijos (Revisor, Ente Contratante y Logo)"
+                className="p-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 hover:text-blue-600 flex items-center justify-center cursor-pointer shadow-2xs transition"
+              >
+                <Settings size={16} />
+              </button>
+
+              <button
+                type="button"
                 onClick={() => {
                   setNewVersionBudgetId(activeReport.source_budget_id || '');
                   setShowNewVersionModal(true);
@@ -1020,7 +1190,7 @@ export default function BudgetReviewPage() {
                   className="px-3.5 py-2 rounded-xl border border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs transition"
                 >
                   <Edit3 size={14} className="text-blue-700" />
-                  <span className="hidden sm:inline">Editar Datos del Revisor / Informe</span>
+                  <span className="hidden sm:inline">Editar Datos del Informe</span>
                 </button>
               </div>
             </div>
@@ -1041,6 +1211,11 @@ export default function BudgetReviewPage() {
                   <span className={`px-2 py-0.5 rounded-md border text-xs font-bold ${currentStatusBadge.badgeClass}`}>
                     {currentStatusBadge.label} (v{activeReport.version_number || 1})
                   </span>
+                  {activeReport.include_monetary_impact === false && (
+                    <span className="ml-2 px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-300 text-[10px] font-bold">
+                      Sin incidencias monetarias
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -1440,7 +1615,7 @@ export default function BudgetReviewPage() {
                           </div>
 
                           <div className="flex items-center gap-2">
-                            {f.diff_percent !== null && f.diff_percent !== undefined && (
+                            {activeReport?.include_monetary_impact !== false && f.diff_percent !== null && f.diff_percent !== undefined && (
                               <span
                                 className={`text-xs font-extrabold px-2 py-0.5 rounded-md ${
                                   Math.abs(f.diff_percent) > 20
@@ -1598,14 +1773,16 @@ export default function BudgetReviewPage() {
                                   {it.master_performance ? `/ ${it.master_performance}` : ''}
                                 </span>
                               </div>
-                              <div>
-                                <span className="text-slate-400 block text-[10px] uppercase font-bold">
-                                  P.U. Calc
-                                </span>
-                                <span className="font-bold text-slate-900">
-                                  ${Number(it.calculated_unit_price || 0).toFixed(2)}
-                                </span>
-                              </div>
+                              {activeReport?.include_monetary_impact !== false && (
+                                <div>
+                                  <span className="text-slate-400 block text-[10px] uppercase font-bold">
+                                    P.U. Calc
+                                  </span>
+                                  <span className="font-bold text-slate-900">
+                                    ${Number(it.calculated_unit_price || 0).toFixed(2)}
+                                  </span>
+                                </div>
+                              )}
                               {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                             </div>
                           </div>
@@ -1989,12 +2166,224 @@ export default function BudgetReviewPage() {
         </div>
       )}
 
+      {/* MODAL CONFIGURACIÓN PREDETERMINADA DEL REVISOR E INSTITUCIÓN (Ruedita ⚙️) */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+          <form
+            onSubmit={handleSaveSettings}
+            className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+          >
+            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between shrink-0 bg-slate-50">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-blue-100 text-blue-700 rounded-xl">
+                  <Settings size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    Configuración de Datos Fijos del Revisor
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Estos datos institucionales y de firma se guardan de forma permanente para todas tus revisiones.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSettingsModal(false)}
+                className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer rounded-lg hover:bg-slate-200/60"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs sm:text-sm overflow-y-auto flex-1">
+              {/* Sección 1: Ingeniero Revisor */}
+              <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/80 space-y-3">
+                <span className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <UserCheck size={14} className="text-blue-600" />
+                  Datos del Ingeniero Revisor
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Nombre y Apellido</label>
+                    <input
+                      type="text"
+                      value={settingsReviewerName}
+                      onChange={(e) => setSettingsReviewerName(e.target.value)}
+                      placeholder="Ej. Ing. Carlos Mendoza"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">N° CIV</label>
+                    <input
+                      type="text"
+                      value={settingsReviewerCiv}
+                      onChange={(e) => setSettingsReviewerCiv(e.target.value)}
+                      placeholder="Ej. 184.920"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Sección 2: Ente Contratante / Institución */}
+              <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/80 space-y-3">
+                <span className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Building2 size={14} className="text-blue-600" />
+                  Ente Contratante / Institución Oficial
+                </span>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Institución / Ente Contratante</label>
+                  <input
+                    type="text"
+                    value={settingsInstitution}
+                    onChange={(e) => setSettingsInstitution(e.target.value)}
+                    placeholder="Ej. Alcaldía Bolivariana / Gobernación / Ministerio..."
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Representante del Ente (Firma)</label>
+                    <input
+                      type="text"
+                      value={settingsApproverName}
+                      onChange={(e) => setSettingsApproverName(e.target.value)}
+                      placeholder="Ej. Ing. Juan Pérez"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">CIV del Representante</label>
+                    <input
+                      type="text"
+                      value={settingsApproverCiv}
+                      onChange={(e) => setSettingsApproverCiv(e.target.value)}
+                      placeholder="Ej. 145.890"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono bg-white"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Dirección / Departamento Oficial</label>
+                  <input
+                    type="text"
+                    value={settingsApproverDepartment}
+                    onChange={(e) => setSettingsApproverDepartment(e.target.value)}
+                    placeholder="Ej. Dirección de Control de Obras y Proyectos"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Sección 3: Logo Institucional */}
+              <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/80 space-y-2">
+                <span className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <ImageIcon size={14} className="text-blue-600" />
+                  Logo Institucional o de Empresa
+                </span>
+                <input
+                  type="file"
+                  ref={settingsLogoInputRef}
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  onChange={handleSettingsLogoUpload}
+                  className="hidden"
+                />
+                {settingsLogo ? (
+                  <div className="flex flex-col items-center justify-center p-3 border border-slate-200 rounded-xl bg-white gap-2">
+                    <img
+                      src={settingsLogo}
+                      alt="Logo institucional"
+                      className="max-h-16 max-w-[200px] object-contain"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => settingsLogoInputRef.current?.click()}
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                      >
+                        Cambiar logo
+                      </button>
+                      <span className="text-slate-300">|</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSettingsLogo('');
+                          if (settingsLogoInputRef.current) settingsLogoInputRef.current.value = '';
+                        }}
+                        className="text-xs font-semibold text-rose-600 hover:text-rose-800 underline cursor-pointer"
+                      >
+                        Eliminar logo
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => settingsLogoInputRef.current?.click()}
+                    className="w-full flex flex-col items-center justify-center py-3 px-3 border-2 border-dashed border-slate-300 hover:border-blue-400 rounded-xl bg-white transition text-slate-500 cursor-pointer group"
+                  >
+                    <ImageIcon size={22} className="text-slate-400 group-hover:text-blue-600 mb-1" />
+                    <span className="text-xs font-bold text-slate-700 group-hover:text-blue-700">
+                      Cargar Logo Institucional (PNG, JPG, SVG)
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      Se incluirá en el encabezado oficial de todos tus informes y PDFs
+                    </span>
+                  </button>
+                )}
+              </div>
+
+              {/* Sección 4: Incidencias Monetarias por defecto */}
+              <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-200/80 flex items-center justify-between gap-3">
+                <div>
+                  <span className="font-bold text-slate-800 block text-xs">
+                    Incorporar incidencias monetarias por defecto
+                  </span>
+                  <span className="text-[11px] text-slate-500 block leading-tight">
+                    Predefinir si las revisiones evaluarán diferencias económicas además del aspecto técnico.
+                  </span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={settingsIncludeMonetaryImpact}
+                    onChange={(e) => setSettingsIncludeMonetaryImpact(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            </div>
+
+            <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowSettingsModal(false)}
+                className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-xs font-bold cursor-pointer hover:bg-slate-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={savingSettings}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                {savingSettings ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                <span>Guardar Configuración Fija</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* MODAL 2: GUARDAR / GUARDAR COMO (CRUD Update & Clone) */}
       {showSaveModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
           <form
             onSubmit={handleConfirmSave}
-            className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden"
+            className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
           >
             <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
@@ -2008,7 +2397,7 @@ export default function BudgetReviewPage() {
                     {saveAsMode ? 'Guardar Auditoría Como (Nueva Copia)' : 'Guardar Datos Oficiales del Informe'}
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    Configura los datos del informe ejecutivo, revisor técnico y dictamen institucional.
+                    Configura los datos del informe ejecutivo, dictamen y observaciones específicas de esta revisión.
                   </p>
                 </div>
               </div>
@@ -2022,6 +2411,22 @@ export default function BudgetReviewPage() {
             </div>
 
             <div className="p-5 space-y-3.5 text-xs sm:text-sm overflow-y-auto flex-1">
+              {saveAsMode && (
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Nombre del Registro / Expediente *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    placeholder="Ej. Auditoría Presupuesto - Copia de Trabajo"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
+                  />
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
@@ -2051,96 +2456,12 @@ export default function BudgetReviewPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Nombre del Registro / Expediente *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Institución / Ente Contratante
-                  </label>
-                  <input
-                    type="text"
-                    value={formInstitution}
-                    onChange={(e) => setFormInstitution(e.target.value)}
-                    placeholder="Ej. Gobernación / Alcaldía / Ente Público..."
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* Logo Institucional / Empresa */}
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Logo Institucional o de Empresa (Centrado en Encabezado)
-                </label>
-                <input
-                  type="file"
-                  ref={logoInputRef}
-                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                  onChange={handleLogoUpload}
-                  className="hidden"
-                />
-                {formLogo ? (
-                  <div className="flex flex-col items-center justify-center p-3.5 border border-slate-200 rounded-xl bg-slate-50/80 gap-2">
-                    <img
-                      src={formLogo}
-                      alt="Vista previa del logo"
-                      className="max-h-20 max-w-[220px] object-contain drop-shadow-2xs"
-                    />
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => logoInputRef.current?.click()}
-                        className="text-xs font-semibold text-blue-600 hover:text-blue-800 underline cursor-pointer"
-                      >
-                        Cambiar logo
-                      </button>
-                      <span className="text-slate-300">|</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormLogo('');
-                          if (logoInputRef.current) logoInputRef.current.value = '';
-                        }}
-                        className="text-xs font-semibold text-rose-600 hover:text-rose-800 underline cursor-pointer"
-                      >
-                        Eliminar logo
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => logoInputRef.current?.click()}
-                    className="w-full flex flex-col items-center justify-center py-4 px-3 border-2 border-dashed border-slate-300 hover:border-blue-400 rounded-xl bg-slate-50/70 hover:bg-blue-50/30 transition text-slate-500 cursor-pointer group"
-                  >
-                    <ImageIcon size={26} className="text-slate-400 group-hover:text-blue-600 mb-1 transition" />
-                    <span className="text-xs font-bold text-slate-700 group-hover:text-blue-700 transition">
-                      Cargar Logo (PNG, JPG, SVG - Máx 2 MB)
-                    </span>
-                    <span className="text-[11px] text-slate-400">
-                      Se mostrará centrado en la cabecera del informe técnico y PDF
-                    </span>
-                  </button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
                   <label className="block font-bold text-slate-700 mb-1">Obra / Proyecto</label>
                   <input
                     type="text"
                     value={formProject}
                     onChange={(e) => setFormProject(e.target.value)}
-                    placeholder="Ej. Rehabilitación de Edificio Administrativo..."
+                    placeholder="Ej. Rehabilitación de Fachadas..."
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -2158,72 +2479,27 @@ export default function BudgetReviewPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Switch para indicar o no la incorporación de incidencias monetarias en modificaciones */}
+              <div className="p-3.5 bg-blue-50/60 border border-blue-200/80 rounded-xl flex items-center justify-between gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Ingeniero Revisor
-                  </label>
-                  <input
-                    type="text"
-                    value={formReviewerName}
-                    onChange={(e) => setFormReviewerName(e.target.value)}
-                    placeholder="Ej. Ing. Carlos Mendoza"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <span className="font-bold text-blue-950 block text-xs sm:text-sm">
+                    Incorporar incidencias monetarias en las modificaciones
+                  </span>
+                  <span className="text-[11px] text-blue-800/80 block leading-tight mt-0.5">
+                    {formIncludeMonetaryImpact
+                      ? 'Activo: El informe y PDF incluirán precios unitarios, montos y porcentajes económicos de variación.'
+                      : 'Inactivo: El informe omitirá importes económicos y se centrará únicamente en dictamen técnico.'}
+                  </span>
                 </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    CIV del Ingeniero Revisor
-                  </label>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
                   <input
-                    type="text"
-                    value={formReviewerCiv}
-                    onChange={(e) => setFormReviewerCiv(e.target.value)}
-                    placeholder="Ej. 184.920"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                    type="checkbox"
+                    checked={formIncludeMonetaryImpact}
+                    onChange={(e) => setFormIncludeMonetaryImpact(e.target.checked)}
+                    className="sr-only peer"
                   />
-                </div>
-              </div>
-
-              {/* Representante / Autoridad del Ente Contratante */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Representante del Ente Contratante (Firma)
-                  </label>
-                  <input
-                    type="text"
-                    value={formApproverName}
-                    onChange={(e) => setFormApproverName(e.target.value)}
-                    placeholder="Ej. Ing. Juan Pérez"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    CIV del Representante
-                  </label>
-                  <input
-                    type="text"
-                    value={formApproverCiv}
-                    onChange={(e) => setFormApproverCiv(e.target.value)}
-                    placeholder="Ej. 145.890"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Dirección / Departamento del Ente Contratante
+                  <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
-                <input
-                  type="text"
-                  value={formApproverDepartment}
-                  onChange={(e) => setFormApproverDepartment(e.target.value)}
-                  placeholder="Ej. Dirección de Control de Obras y Proyectos"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
               </div>
 
               <div>
@@ -2270,13 +2546,34 @@ export default function BudgetReviewPage() {
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+
+              {/* Pie con enlace directo a configuración de datos fijos */}
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <span className="truncate">
+                  Revisor institucional:{' '}
+                  <strong className="text-slate-800">
+                    {activeReport?.reviewer_name || 'Sin configurar'}
+                  </strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSaveModal(false);
+                    openSettingsModal();
+                  }}
+                  className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer shrink-0"
+                >
+                  <Settings size={13} />
+                  <span>Configurar datos fijos del revisor</span>
+                </button>
+              </div>
             </div>
 
             <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => setShowSaveModal(false)}
-                className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-xs font-bold cursor-pointer"
+                className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-xs font-bold cursor-pointer hover:bg-slate-100"
               >
                 Cancelar
               </button>
@@ -2513,6 +2810,11 @@ export default function BudgetReviewPage() {
               <span className="font-bold uppercase text-slate-900">
                 {currentStatusBadge.label}
               </span>
+              {activeReport.include_monetary_impact === false && (
+                <span className="text-[8pt] font-semibold text-slate-600 block">
+                  (Evaluación técnica sin incidencias monetarias)
+                </span>
+              )}
             </div>
             <div>
               <span className="font-bold text-slate-900">• Base de Contraste:</span>{' '}

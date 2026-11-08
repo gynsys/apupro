@@ -27,6 +27,7 @@ class AuditFromBudgetRequest(BaseModel):
     approver_name: Optional[str] = None
     approver_civ: Optional[str] = None
     approver_department: Optional[str] = None
+    include_monetary_impact: bool = True
 
 
 class ReviewSnapshotUpdateRequest(BaseModel):
@@ -47,6 +48,7 @@ class ReviewSnapshotUpdateRequest(BaseModel):
     approver_name: Optional[str] = None
     approver_civ: Optional[str] = None
     approver_department: Optional[str] = None
+    include_monetary_impact: Optional[bool] = None
 
 
 class ReviewSnapshotCloneRequest(BaseModel):
@@ -67,6 +69,7 @@ class ReviewSnapshotCloneRequest(BaseModel):
     approver_name: Optional[str] = None
     approver_civ: Optional[str] = None
     approver_department: Optional[str] = None
+    include_monetary_impact: bool = True
 
 
 class ReviewFindingUpdateRequest(BaseModel):
@@ -184,6 +187,7 @@ class ReviewSnapshotSummaryOut(BaseModel):
     approver_name: Optional[str] = None
     approver_civ: Optional[str] = None
     approver_department: Optional[str] = None
+    include_monetary_impact: bool = True
     chapters_count: int = 0
     total_items: int
     coded_items_count: int

@@ -221,6 +221,7 @@ def save_snapshot_changes(
             approver_name=payload.approver_name,
             approver_civ=payload.approver_civ,
             approver_department=payload.approver_department,
+            include_monetary_impact=payload.include_monetary_impact,
         )
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
@@ -263,6 +264,7 @@ def save_snapshot_as_copy(
             approver_name=payload.approver_name,
             approver_civ=payload.approver_civ,
             approver_department=payload.approver_department,
+            include_monetary_impact=payload.include_monetary_impact,
         )
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc

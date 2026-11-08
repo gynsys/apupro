@@ -76,6 +76,7 @@ def ensure_review_tables() -> None:
             ("review_budget_snapshots", "approver_name", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS approver_name VARCHAR"),
             ("review_budget_snapshots", "approver_civ", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS approver_civ VARCHAR"),
             ("review_budget_snapshots", "approver_department", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS approver_department VARCHAR"),
+            ("review_budget_snapshots", "include_monetary_impact", "ALTER TABLE review_budget_snapshots ADD COLUMN IF NOT EXISTS include_monetary_impact BOOLEAN NOT NULL DEFAULT TRUE"),
             ("review_findings", "finding_status", "ALTER TABLE review_findings ADD COLUMN IF NOT EXISTS finding_status VARCHAR NOT NULL DEFAULT 'PENDIENTE'"),
             ("review_findings", "auditor_comment", "ALTER TABLE review_findings ADD COLUMN IF NOT EXISTS auditor_comment TEXT"),
             ("review_budget_items", "ai_audit_status", "ALTER TABLE review_budget_items ADD COLUMN IF NOT EXISTS ai_audit_status VARCHAR"),
@@ -1088,6 +1089,7 @@ def get_review_snapshot_detail(db: Session, snapshot_id: str, user_id: str) -> D
         "approver_name": snap.approver_name,
         "approver_civ": snap.approver_civ,
         "approver_department": snap.approver_department,
+        "include_monetary_impact": getattr(snap, "include_monetary_impact", True) if getattr(snap, "include_monetary_impact", None) is not None else True,
         "conclusion_text": snap.conclusion_text,
         "chapters_count": chapters_count,
         "audit_group_id": group_id,
@@ -1137,6 +1139,7 @@ def update_review_snapshot(
     approver_name: Optional[str] = None,
     approver_civ: Optional[str] = None,
     approver_department: Optional[str] = None,
+    include_monetary_impact: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """Guarda cambios de metadatos, estado y observaciones del auditor sobre una auditoría existente."""
     if not snapshot_id:
@@ -1176,6 +1179,8 @@ def update_review_snapshot(
         snap.approver_civ = approver_civ.strip() or None
     if approver_department is not None:
         snap.approver_department = approver_department.strip() or None
+    if include_monetary_impact is not None:
+        snap.include_monetary_impact = bool(include_monetary_impact)
 
     snap.updated_at = datetime.utcnow()
     db.commit()
@@ -1201,6 +1206,7 @@ def clone_review_snapshot(
     approver_name: Optional[str] = None,
     approver_civ: Optional[str] = None,
     approver_department: Optional[str] = None,
+    include_monetary_impact: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """Guardar Como: crea una copia independiente completa de la auditoría actual con otro nombre."""
     if not snapshot_id:
@@ -1244,6 +1250,7 @@ def clone_review_snapshot(
         approver_name=approver_name.strip() if approver_name and approver_name.strip() else source.approver_name,
         approver_civ=approver_civ.strip() if approver_civ and approver_civ.strip() else source.approver_civ,
         approver_department=approver_department.strip() if approver_department and approver_department.strip() else source.approver_department,
+        include_monetary_impact=bool(include_monetary_impact) if include_monetary_impact is not None else getattr(source, "include_monetary_impact", True),
         audit_group_id=new_id,
         parent_snapshot_id=None,
         version_number=1,
