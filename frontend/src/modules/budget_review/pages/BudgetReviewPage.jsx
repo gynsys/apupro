@@ -1211,11 +1211,6 @@ export default function BudgetReviewPage() {
                   <span className={`px-2 py-0.5 rounded-md border text-xs font-bold ${currentStatusBadge.badgeClass}`}>
                     {currentStatusBadge.label} (v{activeReport.version_number || 1})
                   </span>
-                  {activeReport.include_monetary_impact === false && (
-                    <span className="ml-2 px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-300 text-[10px] font-bold">
-                      Sin incidencias monetarias
-                    </span>
-                  )}
                 </div>
               </div>
 
@@ -1273,10 +1268,10 @@ export default function BudgetReviewPage() {
             <ReviewScoreBanner stats={partidaStats} />
 
             {/* Conclusión preliminar / dictamen técnico */}
-            <div className={`p-4 rounded-xl border-l-4 text-xs sm:text-sm leading-relaxed ${
+            <div className={`p-4 rounded-xl border text-xs sm:text-sm leading-relaxed ${
               activeReport.critical_findings_count > 0 || activeReport.high_findings_count > 0
-                ? 'bg-amber-50/80 border-amber-500 text-amber-950'
-                : 'bg-emerald-50/80 border-emerald-500 text-emerald-950'
+                ? 'bg-amber-50/80 border-amber-200 text-amber-950'
+                : 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
             }`}>
               <span className="font-extrabold uppercase tracking-wide block mb-1">
                 {isReportConforme
@@ -1287,6 +1282,18 @@ export default function BudgetReviewPage() {
                 {activeReport.conclusion_text || 'Sin dictamen registrado.'}
               </p>
             </div>
+
+            {/* Incidencia Monetaria y Variaciones Económicas (solo si el switch está activo) */}
+            {activeReport?.include_monetary_impact !== false && (
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm leading-relaxed">
+                <span className="font-extrabold uppercase tracking-wide block mb-1 text-slate-900">
+                  Incidencia Monetaria y Variaciones Económicas:
+                </span>
+                <p className="m-0 font-medium text-slate-700">
+                  Las modificaciones técnicas, alteraciones en rendimientos y variaciones en consumo de insumos detectadas en las partidas observadas representan una incidencia económica directa en la estructura de costos y precios unitarios del presupuesto. Se requiere la revisión financiera y conciliación de costos unitarios de los análisis observados previo a cualquier aprobación definitiva.
+                </p>
+              </div>
+            )}
 
             {/* Selector de Versiones del mismo Expediente (v1, v2, v3...) */}
             {activeReport.version_history && activeReport.version_history.length > 1 && (
@@ -1615,7 +1622,7 @@ export default function BudgetReviewPage() {
                           </div>
 
                           <div className="flex items-center gap-2">
-                            {activeReport?.include_monetary_impact !== false && f.diff_percent !== null && f.diff_percent !== undefined && (
+                            {f.diff_percent !== null && f.diff_percent !== undefined && (
                               <span
                                 className={`text-xs font-extrabold px-2 py-0.5 rounded-md ${
                                   Math.abs(f.diff_percent) > 20
@@ -1773,16 +1780,14 @@ export default function BudgetReviewPage() {
                                   {it.master_performance ? `/ ${it.master_performance}` : ''}
                                 </span>
                               </div>
-                              {activeReport?.include_monetary_impact !== false && (
-                                <div>
-                                  <span className="text-slate-400 block text-[10px] uppercase font-bold">
-                                    P.U. Calc
-                                  </span>
-                                  <span className="font-bold text-slate-900">
-                                    ${Number(it.calculated_unit_price || 0).toFixed(2)}
-                                  </span>
-                                </div>
-                              )}
+                              <div>
+                                <span className="text-slate-400 block text-[10px] uppercase font-bold">
+                                  P.U. Calc
+                                </span>
+                                <span className="font-bold text-slate-900">
+                                  ${Number(it.calculated_unit_price || 0).toFixed(2)}
+                                </span>
+                              </div>
                               {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                             </div>
                           </div>
@@ -2339,10 +2344,10 @@ export default function BudgetReviewPage() {
               <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-200/80 flex items-center justify-between gap-3">
                 <div>
                   <span className="font-bold text-slate-800 block text-xs">
-                    Incorporar incidencias monetarias por defecto
+                    Incluir párrafo de incidencias monetarias por defecto
                   </span>
                   <span className="text-[11px] text-slate-500 block leading-tight">
-                    Predefinir si las revisiones evaluarán diferencias económicas además del aspecto técnico.
+                    Predefinir si los nuevos informes incluirán el párrafo de incidencia económica y variación de costos.
                   </span>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer shrink-0">
@@ -2479,16 +2484,16 @@ export default function BudgetReviewPage() {
                 </div>
               </div>
 
-              {/* Switch para indicar o no la incorporación de incidencias monetarias en modificaciones */}
+              {/* Switch para indicar o no la incorporación del párrafo de incidencias monetarias */}
               <div className="p-3.5 bg-blue-50/60 border border-blue-200/80 rounded-xl flex items-center justify-between gap-3">
                 <div>
                   <span className="font-bold text-blue-950 block text-xs sm:text-sm">
-                    Incorporar incidencias monetarias en las modificaciones
+                    Incluir párrafo de incidencias monetarias en el informe
                   </span>
                   <span className="text-[11px] text-blue-800/80 block leading-tight mt-0.5">
                     {formIncludeMonetaryImpact
-                      ? 'Activo: El informe y PDF incluirán precios unitarios, montos y porcentajes económicos de variación.'
-                      : 'Inactivo: El informe omitirá importes económicos y se centrará únicamente en dictamen técnico.'}
+                      ? 'Activo: Incorpora en el informe y PDF el párrafo oficial sobre incidencia económica y variaciones de costos.'
+                      : 'Inactivo: Excluye el párrafo de incidencia económica, manteniendo el enfoque normativo.'}
                   </span>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer shrink-0">
@@ -2830,7 +2835,7 @@ export default function BudgetReviewPage() {
         </div>
 
         {/* Alcance y Resumen Técnico de la Revisión */}
-        <div className="border-l-4 border-slate-900 bg-slate-100/70 p-2.5 mb-3 print-avoid-break text-xs text-slate-900 leading-relaxed">
+        <div className="bg-slate-100/70 rounded p-2.5 mb-3 print-avoid-break text-xs text-slate-900 leading-relaxed">
           Se revisó el <strong>100%</strong> del presupuesto, evaluando un total de{' '}
           <strong>{activeReport.chapters_count || 0}</strong>{' '}
           {activeReport.chapters_count === 1 ? 'capítulo' : 'capítulos'},{' '}
@@ -2859,7 +2864,7 @@ export default function BudgetReviewPage() {
         </div>
 
         {/* Conclusión del Informe Técnico / Dictamen */}
-        <div className="border-l-4 border-slate-900 bg-slate-50 p-3 mb-4 print-avoid-break text-xs">
+        <div className="bg-slate-50 border border-slate-200 rounded p-3 mb-4 print-avoid-break text-xs">
           <span className="font-black uppercase tracking-wider text-slate-900 block mb-1">
             {isReportConforme
               ? 'Conclusión del Informe Técnico:'
@@ -2873,7 +2878,7 @@ export default function BudgetReviewPage() {
 
         {/* Observaciones del auditor */}
         {activeReport.auditor_notes && activeReport.auditor_notes.trim() && (
-          <div className="border-l-4 border-slate-400 bg-white p-3 mb-4 print-avoid-break text-xs">
+          <div className="bg-white border border-slate-200 rounded p-3 mb-4 print-avoid-break text-xs">
             <span className="font-black uppercase tracking-wider text-slate-900 block mb-1">
               Observaciones del auditor:
             </span>
@@ -2883,10 +2888,22 @@ export default function BudgetReviewPage() {
           </div>
         )}
 
+        {/* Incidencia Monetaria y Variaciones Económicas (solo si el switch está activo) */}
+        {activeReport?.include_monetary_impact !== false && (
+          <div className="bg-slate-50 border border-slate-200 rounded p-3 mb-4 print-avoid-break text-xs">
+            <span className="font-black uppercase tracking-wider text-slate-900 block mb-1">
+              Incidencia Monetaria y Variaciones Económicas:
+            </span>
+            <p className="m-0 leading-relaxed text-slate-800 font-medium">
+              Las modificaciones técnicas, alteraciones en rendimientos y variaciones en consumo de insumos detectadas en las partidas observadas representan una incidencia económica directa en la estructura de costos y precios unitarios del presupuesto. Se requiere la revisión financiera y conciliación de costos unitarios de los análisis observados previo a cualquier aprobación definitiva.
+            </p>
+          </div>
+        )}
+
         {/* Verificación de correcciones frente a la versión anterior */}
         {activeReport.version_comparison && (
           <div className="mb-4 text-xs">
-            <div className="font-black text-xs uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-2 print-avoid-break">
+            <div className="font-black text-xs uppercase tracking-wider text-slate-900 mb-2 print-avoid-break">
               Verificación de correcciones vs. versión anterior (v{activeReport.version_comparison.previous_version_number}):
             </div>
             <div className="print-avoid-break mb-1.5 text-slate-800">
@@ -2912,7 +2929,7 @@ export default function BudgetReviewPage() {
 
         {/* Detalle de Correcciones */}
         <div className="mb-4">
-          <div className="font-black text-xs uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-2 print-avoid-break">
+          <div className="font-black text-xs uppercase tracking-wider text-slate-900 mb-2 print-avoid-break">
             Detalle de correcciones:
           </div>
 

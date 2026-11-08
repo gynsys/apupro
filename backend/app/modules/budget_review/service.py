@@ -1392,17 +1392,70 @@ def delete_review_snapshot(db: Session, snapshot_id: str, user_id: str) -> None:
     db.commit()
 
 
+RULE_HEADLINES: Dict[str, str] = {
+    "MAT-001": "Omisión crítica de material",
+    "MAT-002": "Sobreconsumo de material",
+    "MAT-003": "Insumo de material no perteneciente a la base",
+    "MAT-004": "Desperdicio de material manipulado",
+    "LAB-001": "Cuadrilla alterada",
+    "LAB-002": "Omisión crítica de mano de obra",
+    "LAB-003": "Mano de obra no perteneciente a la base",
+    "EQU-001": "Omisión crítica de equipo",
+    "EQU-002": "Equipo no perteneciente a la base",
+    "EQU-003": "Cantidad de equipo alterada",
+    "EQU-004": "Discrepancia en depreciación",
+    "PERF-001": "Rendimiento modificado",
+    "EST-001": "Discrepancia en unidad de medida",
+    "EST-002": "Código COVENIN no registrado en base",
+    "EST-003": "Rendimiento nulo o inválido",
+    "EST-004": "Insumo duplicado en APU",
+    "EST-005": "Omisión total de materiales",
+    "EST-006": "Omisión total de mano de obra",
+    "EST-007": "Duplicidad de partida",
+    "DUP-001": "Duplicidad explícita",
+    "COL-001": "Colisión de código de partida",
+    "ARI-001": "Error aritmético en capítulo",
+    "COH-001": "Descuadre aritmético en APU",
+    "UNC-001": "APU no codificado observado",
+    "AI-UNC-001": "Estructura técnica de APU observada",
+}
+
+
+def _get_excel_finding_headline(f: Any) -> str:
+    rule_id = getattr(f, "rule_id", None)
+    if rule_id and rule_id in RULE_HEADLINES:
+        return RULE_HEADLINES[rule_id]
+    category = getattr(f, "category", "")
+    if category == "MANO_OBRA":
+        return "Cuadrilla alterada"
+    if category == "MATERIALES":
+        return "Desviación en consumo de material"
+    if category == "EQUIPOS":
+        return "Discrepancia en equipo / depreciación"
+    if category == "RENDIMIENTO":
+        return "Rendimiento atípico"
+    if category == "COHERENCIA":
+        return "Error aritmético"
+    if category == "SIN_CODIGO":
+        return "APU no codificado"
+    if category == "ESTRUCTURA":
+        return "Duplicidad / estructura de partida"
+    return "Desviación técnica"
+
+
+def _clean_excel_msg(msg: str) -> str:
+    return (msg or "").strip().rstrip(".")
+
+
 def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tuple[bytes, str]:
-    """Genera un archivo Excel (.xlsx) profesional con las hojas del Informe de Auditoría de Presupuesto."""
+    """Genera un archivo Excel (.xlsx) profesional con el Informe de Auditoría y la hoja Hallazgos de Auditoría."""
     detail = get_review_snapshot_detail(db, snapshot_id, user_id)
     wb = Workbook()
 
     header_fill = PatternFill("solid", fgColor="0A4275")
     header_font = Font(color="FFFFFF", bold=True, size=10)
-    crit_fill = PatternFill("solid", fgColor="FEE2E2")
-    high_fill = PatternFill("solid", fgColor="FFEDD5")
-    info_fill = PatternFill("solid", fgColor="E0F2FE")
-    resolved_fill = PatternFill("solid", fgColor="DCFCE7")
+    section_fill = PatternFill("solid", fgColor="F1F5F9")
+    item_header_fill = PatternFill("solid", fgColor="E2E8F0")
 
     def style_header_row(ws: Any, row_idx: int = 1) -> None:
         for cell in ws[row_idx]:
@@ -1410,65 +1463,232 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
             cell.font = header_font
             cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
-    # 1. Hoja Resumen Ejecutivo
-    ws_sum = wb.active
-    ws_sum.title = "Resumen Ejecutivo"
-    ws_sum.append(["INFORME DE REVISIÓN TÉCNICA DE PRESUPUESTO", ""])
-    ws_sum.append(["Campo / Indicador", "Detalle Técnico"])
-    style_header_row(ws_sum, 2)
+    # =========================================================================
+    # 1. Hoja "Informe de Auditoria": Tal cual el informe oficial que se imprime
+    # =========================================================================
+    ws_rep = wb.active
+    ws_rep.title = "Informe de Auditoria"
 
-    total_errors = (
-        int(detail.get("critical_findings_count") or 0)
-        + int(detail.get("high_findings_count") or 0)
-        + int(detail.get("medium_findings_count") or 0)
-    )
-    rev_civ_str = f" | CIV {detail['reviewer_civ']}" if detail.get("reviewer_civ") else ""
-    rev_full_str = f"{detail.get('reviewer_name') or 'No especificado'}{rev_civ_str}"
+    # Encabezado principal
+    ws_rep.merge_cells("A1:G1")
+    cell_title = ws_rep["A1"]
+    cell_title.value = "INFORME DE REVISIÓN TÉCNICA DE PRESUPUESTO"
+    cell_title.font = Font(color="FFFFFF", bold=True, size=13)
+    cell_title.fill = header_fill
+    cell_title.alignment = Alignment(horizontal="center", vertical="center")
+    ws_rep.row_dimensions[1].height = 28
+
+    rev_civ_str = f", CIV {detail['reviewer_civ']}" if detail.get("reviewer_civ") else ""
+    rev_full_str = f"{detail.get('reviewer_name') or 'Ing. Revisor'}{rev_civ_str}"
     rev_date_str = (
         detail["created_at"].strftime("%d/%m/%Y")
         if isinstance(detail["created_at"], datetime)
         else str(detail["created_at"])[:10]
     )
+    report_code = detail.get("report_code") or f"RT-{detail['created_at'].year if isinstance(detail['created_at'], datetime) else '2026'}-001"
+    version_num = detail.get("version_number", 1)
 
-    summary_rows = [
-        ("• Informe:", detail.get("report_code") or f"RT-{detail['created_at'].year if isinstance(detail['created_at'], datetime) else '2026'}-001"),
-        ("• Obra / Proyecto:", detail.get("project_name") or "-"),
-        ("• Empresa / Contratista:", detail.get("client_name") or "-"),
-        ("• Institución / Ente Contratante:", detail.get("institution_name") or "-"),
-        ("• Documento Evaluado:", detail.get("document_reference") or detail.get("source_filename") or f"v{detail['version_number']}"),
-        ("• Fecha y Revisor:", f"{rev_date_str} | {rev_full_str}"),
-        ("• Base de Contraste Aplicada:", detail["database_id"]),
-        ("• Alcance de la Revisión:", f"Se revisó el 100% del presupuesto ({detail.get('chapters_count', 0)} capítulos, {detail['total_items']} partidas y {detail['total_items']} APUs analizados)."),
-        ("--- MATRIZ DE HALLAZGOS TÉCNICOS ---", "--------------------------------------------------------"),
-        ("• Partidas revisadas:", detail["total_items"]),
-        ("• APUs analizados:", f"{detail['total_items']} ({detail['coded_items_count']} codificados COVENIN / {detail['uncoded_items_count']} sin codificación)"),
-        ("• Errores / Desviaciones Detectadas:", f"{total_errors} ({detail['critical_findings_count']} Críticos, {detail['high_findings_count']} Altos, {detail['medium_findings_count']} Medios)"),
-        ("• Diferencias de Catálogo Histórico (INFO):", detail["info_findings_count"]),
-        ("• Índice de Salud Técnica (0 - 100):", f"{detail['health_score']} / 100"),
-        ("• Estado / Dictamen:", detail["review_status"]),
-        ("• Conclusión Técnica Preliminar:", detail.get("conclusion_text") or "-"),
-        ("• Observaciones Adicionales:", detail.get("auditor_notes") or "-"),
-    ]
+    ws_rep.merge_cells("A2:G2")
+    cell_sub = ws_rep["A2"]
+    cell_sub.value = f"Código: {report_code}   |   Versión {version_num} - {rev_date_str}"
+    cell_sub.font = Font(color="334155", italic=True, size=10, bold=True)
+    cell_sub.alignment = Alignment(horizontal="center", vertical="center")
+    ws_rep.row_dimensions[2].height = 20
+
+    # Ficha de identificación
+    ws_rep.append([])  # Fila 3 vacía
+
+    ws_rep.append(["• Obra / Proyecto:", detail.get("project_name") or "-", "", "• Documento Evaluado:", detail.get("document_reference") or detail.get("source_filename") or f"v{version_num}"])
+    ws_rep.append(["• Empresa / Contratista:", detail.get("client_name") or "Sin especificar", "", "• Revisión:", f"{rev_date_str} | {rev_full_str}"])
+    ws_rep.append(["• Estado del Dictamen:", detail.get("review_status") or "EN_REVISION", "", "• Base de Contraste:", detail.get("database_id") or "Base de referencia"])
+    if detail.get("institution_name"):
+        ws_rep.append(["• Institución:", detail["institution_name"], "", "", ""])
+
+    for r in range(4, ws_rep.max_row + 1):
+        ws_rep.cell(r, 1).font = Font(bold=True, size=9)
+        ws_rep.cell(r, 2).font = Font(size=9)
+        ws_rep.cell(r, 4).font = Font(bold=True, size=9)
+        ws_rep.cell(r, 5).font = Font(size=9)
+
+    ws_rep.append([])
+
+    # Alcance y Resumen Técnico
+    total_items = detail.get("total_items", 0)
+    chapters_count = detail.get("chapters_count", 0)
+    coded_count = detail.get("coded_items_count", 0)
+    uncoded_count = detail.get("uncoded_items_count", 0)
+    total_findings = len(detail.get("findings") or [])
+
+    scope_text = (
+        f"Se revisó el 100% del presupuesto, evaluando un total de {chapters_count} capítulos, "
+        f"{total_items} partidas ({coded_count} codificadas bajo norma COVENIN y {uncoded_count} sin codificación) "
+        f"y {total_items} análisis de precios unitarios (APU). "
+        + (f"Se detectaron {total_findings} errores o desviaciones técnicas que requieren corrección." if total_findings > 0 else "No se detectaron desviaciones técnicas con respecto a la base de contraste seleccionada.")
+    )
+    ws_rep.merge_cells(f"A{ws_rep.max_row + 1}:G{ws_rep.max_row + 1}")
+    cell_scope = ws_rep[f"A{ws_rep.max_row}"]
+    cell_scope.value = scope_text
+    cell_scope.font = Font(size=9, color="0F172A")
+    cell_scope.fill = section_fill
+    cell_scope.alignment = Alignment(wrap_text=True, vertical="center")
+    ws_rep.row_dimensions[ws_rep.max_row].height = 36
+
+    ws_rep.append([])
+
+    # Resultado de la revisión
+    items = detail.get("items") or []
+    items_with_findings = [it for it in items if not it.is_chapter and getattr(it, "findings", None)]
+    approved_items_count = max(0, total_items - len(items_with_findings))
+
+    ws_rep.merge_cells(f"A{ws_rep.max_row + 1}:G{ws_rep.max_row + 1}")
+    cell_score = ws_rep[f"A{ws_rep.max_row}"]
+    cell_score.value = f"RESULTADO DE LA REVISIÓN: {approved_items_count} de {total_items} partidas aprobadas · {len(items_with_findings)} con observaciones  [{detail.get('review_status', 'EN_REVISION')}]"
+    cell_score.font = Font(bold=True, size=10, color="92400E" if len(items_with_findings) > 0 else "065F46")
+    cell_score.alignment = Alignment(vertical="center")
+    ws_rep.row_dimensions[ws_rep.max_row].height = 22
+
+    ws_rep.append([])
+
+    # Conclusión Preliminar / Dictamen Técnico
+    is_conforme = detail.get("review_status") == "APROBADO" or len(items_with_findings) == 0
+    conclusion_title = "CONCLUSIÓN DEL INFORME TÉCNICO:" if is_conforme else "CONCLUSIÓN PRELIMINAR:"
+    conclusion_body = detail.get("conclusion_text") or (
+        "El presupuesto cumple satisfactoriamente con la evaluación técnica normativa."
+        if is_conforme else
+        "El presupuesto no es apto para aprobación inmediata en su estado actual. Presenta desviaciones estructurales que deben ser subsanadas previo a su tramitación contractual o financiera."
+    )
+    ws_rep.append([conclusion_title])
+    ws_rep.cell(ws_rep.max_row, 1).font = Font(bold=True, size=10, color="0F172A")
+
+    ws_rep.merge_cells(f"A{ws_rep.max_row + 1}:G{ws_rep.max_row + 1}")
+    cell_conc = ws_rep[f"A{ws_rep.max_row}"]
+    cell_conc.value = conclusion_body
+    cell_conc.font = Font(size=9, color="1E293B")
+    cell_conc.fill = section_fill
+    cell_conc.alignment = Alignment(wrap_text=True, vertical="center")
+    ws_rep.row_dimensions[ws_rep.max_row].height = 45
+
+    ws_rep.append([])
+
+    # Observaciones del auditor (si existen)
+    if detail.get("auditor_notes") and detail["auditor_notes"].strip():
+        ws_rep.append(["OBSERVACIONES DEL AUDITOR:"])
+        ws_rep.cell(ws_rep.max_row, 1).font = Font(bold=True, size=10, color="0F172A")
+        ws_rep.merge_cells(f"A{ws_rep.max_row + 1}:G{ws_rep.max_row + 1}")
+        cell_notes = ws_rep[f"A{ws_rep.max_row}"]
+        cell_notes.value = detail["auditor_notes"].strip()
+        cell_notes.font = Font(size=9, color="1E293B")
+        cell_notes.alignment = Alignment(wrap_text=True, vertical="center")
+        ws_rep.row_dimensions[ws_rep.max_row].height = 30
+        ws_rep.append([])
+
+    # Incidencia Monetaria y Variaciones Económicas (SI include_monetary_impact es True)
+    if detail.get("include_monetary_impact", True) is not False:
+        ws_rep.append(["INCIDENCIA MONETARIA Y VARIACIONES ECONÓMICAS:"])
+        ws_rep.cell(ws_rep.max_row, 1).font = Font(bold=True, size=10, color="0F172A")
+        ws_rep.merge_cells(f"A{ws_rep.max_row + 1}:G{ws_rep.max_row + 1}")
+        cell_mon = ws_rep[f"A{ws_rep.max_row}"]
+        cell_mon.value = (
+            "Las modificaciones técnicas, alteraciones en rendimientos y variaciones en consumo de insumos detectadas "
+            "en las partidas observadas representan una incidencia económica directa en la estructura de costos y precios unitarios del presupuesto. "
+            "Se requiere la revisión financiera y conciliación de costos unitarios de los análisis observados previo a cualquier aprobación definitiva."
+        )
+        cell_mon.font = Font(size=9, color="1E293B")
+        cell_mon.fill = section_fill
+        cell_mon.alignment = Alignment(wrap_text=True, vertical="center")
+        ws_rep.row_dimensions[ws_rep.max_row].height = 36
+        ws_rep.append([])
+
+    # Comparativa vs Versión Anterior (si existe)
     if detail.get("version_comparison"):
         vc = detail["version_comparison"]
-        summary_rows.extend([
-            ("--- COMPARATIVA DE CORRECCIONES ---", "--------------------------------------------------------"),
-            ("• Versión Anterior:", f"v{vc['previous_version_number']} ({vc['previous_name']})"),
-            ("• Evolución Índice de Salud:", f"{vc['previous_health_score']}% -> {detail['health_score']}% ({vc['health_delta']:+.1f}%)"),
-            ("• Hallazgos Corregidos / Subsanados:", vc["resolved_findings_count"]),
-            ("• Hallazgos Persistentes:", vc["persistent_findings_count"]),
-            ("• Hallazgos Nuevos en esta Versión:", vc["new_findings_count"]),
-        ])
-    for k, v in summary_rows:
-        ws_sum.append([str(k), str(v) if v is not None else "-"])
-    ws_sum.column_dimensions["A"].width = 44
-    ws_sum.column_dimensions["B"].width = 85
+        ws_rep.append([f"VERIFICACIÓN DE CORRECCIONES VS. VERSIÓN ANTERIOR (v{vc.get('previous_version_number', 1)}):"])
+        ws_rep.cell(ws_rep.max_row, 1).font = Font(bold=True, size=10, color="0F172A")
+        ws_rep.merge_cells(f"A{ws_rep.max_row + 1}:G{ws_rep.max_row + 1}")
+        cell_vc = ws_rep[f"A{ws_rep.max_row}"]
+        cell_vc.value = f"{vc.get('resolved_findings_count', 0)} corregidos · {vc.get('persistent_findings_count', 0)} sin corregir · {vc.get('new_findings_count', 0)} nuevos."
+        cell_vc.font = Font(size=9, bold=True, color="065F46")
+        cell_vc.alignment = Alignment(vertical="center")
+        ws_rep.append([])
 
-    # 2. Hoja Hallazgos de Auditoría
+    # Detalle de Correcciones por Partida (idéntico al informe impreso)
+    ws_rep.append(["DETALLE DE CORRECCIONES:"])
+    ws_rep.cell(ws_rep.max_row, 1).font = Font(bold=True, size=11, color="0F172A")
+    ws_rep.append([])
+
+    # Agrupar hallazgos por partida
+    item_lookup = {it.id: it for it in items}
+    item_code_lookup = {it.original_code: it for it in items}
+
+    grouped_findings: Dict[str, List[Any]] = defaultdict(list)
+    for f in detail.get("findings") or []:
+        key = getattr(f, "review_item_id", None) or getattr(f, "item_code", None) or "GENERAL"
+        grouped_findings[str(key)].append(f)
+
+    if not grouped_findings:
+        ws_rep.append(["No se detectaron discrepancias técnicas con respecto a la base de contraste seleccionada."])
+        ws_rep.cell(ws_rep.max_row, 1).font = Font(italic=True, size=9, color="64748B")
+    else:
+        for group_key, f_list in grouped_findings.items():
+            first_f = f_list[0]
+            it = item_lookup.get(getattr(first_f, "review_item_id", None)) or item_code_lookup.get(getattr(first_f, "item_code", None))
+            item_code_str = getattr(first_f, "item_code", "") or (it.original_code if it else "")
+            desc_str = (it.description if it else getattr(first_f, "component_description", "")) or ""
+            unit_str = f" ({it.unit})" if it and it.unit else ""
+
+            # Fila de cabecera de la partida
+            ws_rep.merge_cells(f"A{ws_rep.max_row + 1}:F{ws_rep.max_row + 1}")
+            cell_partida = ws_rep[f"A{ws_rep.max_row}"]
+            cell_partida.value = f"Partida {item_code_str}  {desc_str[:120]}{unit_str}"
+            cell_partida.font = Font(bold=True, size=9, color="1E3A8A")
+            cell_partida.fill = item_header_fill
+            cell_partida.alignment = Alignment(vertical="center")
+
+            cell_obs = ws_rep.cell(ws_rep.max_row, 7)
+            cell_obs.value = "CON OBSERVACIONES"
+            cell_obs.font = Font(bold=True, size=8, color="92400E")
+            cell_obs.fill = item_header_fill
+            cell_obs.alignment = Alignment(horizontal="center", vertical="center")
+            ws_rep.row_dimensions[ws_rep.max_row].height = 20
+
+            for idx, f in enumerate(f_list, start=1):
+                headline = _get_excel_finding_headline(f)
+                status_str = getattr(f, "finding_status", None) or "PENDIENTE"
+                clean_diagnosis = _clean_excel_msg(getattr(f, "message", ""))
+                sugg_str = getattr(f, "suggestion", None) or ""
+
+                ws_rep.append([
+                    f"  {idx}. {headline}: {clean_diagnosis}. [{status_str}]"
+                ])
+                ws_rep.merge_cells(f"A{ws_rep.max_row}:G{ws_rep.max_row}")
+                ws_rep.cell(ws_rep.max_row, 1).font = Font(size=9, color="1E293B")
+                ws_rep.cell(ws_rep.max_row, 1).alignment = Alignment(wrap_text=True, vertical="center")
+                ws_rep.row_dimensions[ws_rep.max_row].height = 22
+
+                if sugg_str and sugg_str != "-":
+                    ws_rep.append([
+                        f"      Sugerencia técnica: {sugg_str}"
+                    ])
+                    ws_rep.merge_cells(f"A{ws_rep.max_row}:G{ws_rep.max_row}")
+                    ws_rep.cell(ws_rep.max_row, 1).font = Font(size=8, italic=True, color="475569")
+                    ws_rep.cell(ws_rep.max_row, 1).alignment = Alignment(wrap_text=True, vertical="center")
+                    ws_rep.row_dimensions[ws_rep.max_row].height = 18
+
+            ws_rep.append([])  # Separador entre partidas
+
+    ws_rep.column_dimensions["A"].width = 24
+    ws_rep.column_dimensions["B"].width = 30
+    ws_rep.column_dimensions["C"].width = 4
+    ws_rep.column_dimensions["D"].width = 24
+    ws_rep.column_dimensions["E"].width = 35
+    ws_rep.column_dimensions["F"].width = 16
+    ws_rep.column_dimensions["G"].width = 20
+
+    # =========================================================================
+    # 2. Hoja "Hallazgos de Auditoria" con ÚNICAMENTE las 11 columnas del archivo
+    # =========================================================================
     ws_find = wb.create_sheet("Hallazgos de Auditoria")
     ws_find.append([
-        "Severidad",
-        "Estado Hallazgo",
         "Regla",
         "Categoría",
         "Código Partida",
@@ -1480,14 +1700,15 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
         "% Diferencia",
         "Diagnóstico",
         "Sugerencia Técnica",
-        "Comentario Auditor",
     ])
     style_header_row(ws_find, 1)
-    for f in detail["findings"]:
-        sev_label = "CAT_HISTORICO" if f.severity == "INFO_MAPREX" else f.severity
+
+    crit_fill = PatternFill("solid", fgColor="FEE2E2")
+    high_fill = PatternFill("solid", fgColor="FFEDD5")
+    info_fill = PatternFill("solid", fgColor="E0F2FE")
+
+    for f in detail.get("findings") or []:
         ws_find.append([
-            sev_label,
-            getattr(f, "finding_status", None) or "PENDIENTE",
             f.rule_id,
             f.category,
             f.item_code,
@@ -1499,129 +1720,24 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
             f"{f.diff_percent:+.2f}%" if f.diff_percent is not None else "-",
             f.message,
             f.suggestion or "-",
-            getattr(f, "auditor_comment", None) or "-",
         ])
         row_cells = ws_find[ws_find.max_row]
-        if f.severity == "CRITICA":
-            for c in row_cells[:4]:
+        if getattr(f, "severity", "") == "CRITICA":
+            for c in row_cells[:3]:
                 c.fill = crit_fill
-        elif f.severity == "ALTA":
-            for c in row_cells[:4]:
+        elif getattr(f, "severity", "") == "ALTA":
+            for c in row_cells[:3]:
                 c.fill = high_fill
-        elif f.severity == "INFO_MAPREX":
-            for c in row_cells[:4]:
+        elif getattr(f, "severity", "") == "INFO_MAPREX":
+            for c in row_cells[:3]:
                 c.fill = info_fill
 
-    for idx, width in enumerate([15, 15, 10, 16, 16, 16, 38, 16, 20, 22, 14, 65, 55, 40], start=1):
+    for idx, width in enumerate([12, 16, 16, 16, 38, 16, 20, 22, 14, 65, 55], start=1):
         ws_find.column_dimensions[get_column_letter(idx)].width = width
     ws_find.freeze_panes = "A2"
-
-    # 3. Hoja Partidas con Discrepancias (Solo partidas con hallazgos)
-    ws_items = wb.create_sheet("Partidas con Discrepancias")
-    ws_items.append([
-        "Fila",
-        "N° Discrepancias",
-        "Código Presupuesto",
-        "Código Base",
-        "Origen Catalográfico",
-        "Unidad Imp.",
-        "Unidad Base",
-        "Cantidad",
-        "Rend. Importado",
-        "Rend. Base",
-        "P.U. Calculado",
-        "P.U. Base Ref.",
-        "Similitud Desc. %",
-        "Descripción Presupuesto",
-    ])
-    style_header_row(ws_items, 1)
-    for it in detail["items"]:
-        if it.is_chapter or not it.findings:
-            continue
-        ws_items.append([
-            it.row_number,
-            len(it.findings),
-            it.original_code,
-            it.matched_master_code or "S/C",
-            it.origin_source or "-",
-            it.unit,
-            it.master_unit or "-",
-            it.quantity,
-            it.performance,
-            it.master_performance if it.master_performance is not None else "-",
-            round(it.calculated_unit_price, 2),
-            round(it.master_unit_price, 2) if it.master_unit_price is not None else "-",
-            round(it.description_similarity * 100.0, 1),
-            it.description,
-        ])
-    for idx, width in enumerate([7, 15, 16, 16, 26, 12, 14, 12, 15, 15, 15, 15, 16, 70], start=1):
-        ws_items.column_dimensions[get_column_letter(idx)].width = width
-    ws_items.freeze_panes = "A2"
-
-    # 4. Hoja Partidas Sin Código COVENIN (S/C)
-    ws_sc = wb.create_sheet("Partidas S-C y Equivalentes")
-    ws_sc.append([
-        "Fila",
-        "Código Declarado",
-        "Unidad",
-        "Descripción en Presupuesto",
-        "Equivalente Sugerido",
-        "% Similitud",
-        "Descripción Equivalente Sugerido",
-    ])
-    style_header_row(ws_sc, 1)
-    for it in detail["items"]:
-        if it.is_chapter or not it.is_uncoded:
-            continue
-        ws_sc.append([
-            it.row_number,
-            it.original_code or "S/C",
-            it.unit,
-            it.description,
-            it.suggested_equivalent_code or "Sin candidato cercano",
-            f"{(it.suggested_equivalent_score or 0.0) * 100.0:.1f}%",
-            it.suggested_equivalent_desc or "-",
-        ])
-    for idx, width in enumerate([7, 18, 12, 65, 24, 14, 65], start=1):
-        ws_sc.column_dimensions[get_column_letter(idx)].width = width
-    ws_sc.freeze_panes = "A2"
-
-    # 5. Hoja Control de Correcciones (si esta versión proviene de una re-auditoría)
-    if detail.get("version_comparison"):
-        vc = detail["version_comparison"]
-        ws_ver = wb.create_sheet("Correcciones Subsanadas")
-        ws_ver.append([
-            "Estado",
-            "Regla",
-            "Categoría",
-            "Código Partida",
-            "Código Insumo",
-            "Campo",
-            "Valor en Versión Anterior",
-            "Valor Base Referencia",
-            "Detalle Subsanado",
-        ])
-        style_header_row(ws_ver, 1)
-        for rf in vc.get("resolved_findings") or []:
-            ws_ver.append([
-                "CORREGIDO EN ESTA VERSIÓN",
-                rf.get("rule_id") or "-",
-                rf.get("category") or "-",
-                rf.get("item_code") or "-",
-                rf.get("component_code") or "-",
-                rf.get("field_name") or "-",
-                rf.get("previous_imported_value") or "-",
-                rf.get("master_value") or "-",
-                rf.get("message") or "-",
-            ])
-            for c in ws_ver[ws_ver.max_row][:3]:
-                c.fill = resolved_fill
-        for idx, width in enumerate([26, 12, 16, 16, 16, 16, 24, 24, 65], start=1):
-            ws_ver.column_dimensions[get_column_letter(idx)].width = width
-        ws_ver.freeze_panes = "A2"
 
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
-    safe_name = re.sub(r"[^a-zA-Z0-9_-]+", "_", str(detail["name"]))[:45] or "Presupuesto"
-    return buf.getvalue(), f"Auditoria_{safe_name}_v{detail['version_number']}.xlsx"
+    safe_name = re.sub(r"[^a-zA-Z0-9_-]+", "_", str(detail.get("name", "Presupuesto")))[:45] or "Presupuesto"
+    return buf.getvalue(), f"Auditoria_{safe_name}_v{version_num}.xlsx"
