@@ -122,24 +122,39 @@ def _resolve_schema_name(db: Session, database_id: str) -> str:
     return resolved
 
 
-def _load_master_reference_maps(db: Session, schema: str) -> Dict[str, Dict[str, str]]:
-    """Carga los mapeos ref_code -> código nativo Maprex para Materiales, Equipos y Mano de Obra."""
+def _load_master_reference_maps(
+    db: Session,
+    schema: str,
+) -> Tuple[Dict[str, Dict[str, str]], Dict[str, Set[str]], Dict[str, Dict[str, float]]]:
+    """Carga los mapeos ref_code -> código nativo Maprex, conjunto de códigos del catálogo y precios oficiales."""
     ref_maps: Dict[str, Dict[str, str]] = {"material": {}, "equipment": {}, "labor": {}}
+    catalog_codes: Dict[str, Set[str]] = {"material": set(), "equipment": set(), "labor": set()}
+    catalog_prices: Dict[str, Dict[str, float]] = {"material": {}, "equipment": {}, "labor": {}}
+
     queries = [
-        ("material", f'SELECT ref_code, "CodMat" FROM "{schema}".cost360_materials WHERE ref_code IS NOT NULL'),
-        ("equipment", f'SELECT ref_code, "CodEqu" FROM "{schema}".cost360_equipment WHERE ref_code IS NOT NULL'),
-        ("labor", f'SELECT ref_code, "CodMan" FROM "{schema}".cost360_labor WHERE ref_code IS NOT NULL'),
+        ("material", f'SELECT "CodMat", ref_code, "CosMat" FROM "{schema}".cost360_materials'),
+        ("equipment", f'SELECT "CodEqu", ref_code, "CosDia" FROM "{schema}".cost360_equipment'),
+        ("labor", f'SELECT "CodMan", ref_code, "Jornal" FROM "{schema}".cost360_labor'),
     ]
     for kind, sql in queries:
         try:
             rows = db.execute(text(sql)).fetchall()
-            for ref_val, native_val in rows:
-                if ref_val and native_val:
-                    ref_maps[kind][str(ref_val).strip().upper()] = str(native_val).strip().upper()
+            for native_val, ref_val, price_val in rows:
+                p = float(price_val or 0.0)
+                if native_val:
+                    n_code = str(native_val).strip().upper()
+                    catalog_codes[kind].add(n_code)
+                    catalog_prices[kind][n_code] = p
+                if ref_val:
+                    r_code = str(ref_val).strip().upper()
+                    catalog_codes[kind].add(r_code)
+                    catalog_prices[kind][r_code] = p
+                    if native_val:
+                        ref_maps[kind][r_code] = str(native_val).strip().upper()
         except Exception as exc:
-            logger.error("Error cargando ref_code para %s: %s", kind, exc, exc_info=True)
+            logger.error("Error cargando catálogo para %s en esquema %s: %s", kind, schema, exc, exc_info=True)
             db.rollback()
-    return ref_maps
+    return ref_maps, catalog_codes, catalog_prices
 
 
 def _fetch_master_item_and_recipe(
@@ -293,7 +308,7 @@ def _execute_snapshot_audit(
         or "master"
     )
     schema = _resolve_schema_name(db, effective_db_id)
-    ref_maps = _load_master_reference_maps(db, schema)
+    ref_maps, catalog_codes, catalog_prices = _load_master_reference_maps(db, schema)
 
     fcas_pct = float(header_info.get("fcas_percent") if header_info.get("fcas_percent") is not None else 417.0)
     admin_pct = float(header_info.get("admin_percent") if header_info.get("admin_percent") is not None else 15.0)
@@ -468,6 +483,11 @@ def _execute_snapshot_audit(
             c_raw = str(m.get("codigo") or m.get("code") or "").strip().upper()
             resolved = ref_maps["material"].get(c_raw, c_raw)
             m_mst = mst_mat_map.get(resolved)
+            is_in_cat = (c_raw in catalog_codes["material"]) or (resolved in catalog_codes["material"])
+            is_in_db = bool(m_mst) or is_in_cat
+            cat_price = catalog_prices["material"].get(resolved) or catalog_prices["material"].get(c_raw)
+            mst_unit_p = float(m_mst["unit_price"]) if m_mst else (cat_price if cat_price is not None else None)
+
             norm_mats.append({
                 "component_type": "material",
                 "code": c_raw,
@@ -477,10 +497,11 @@ def _execute_snapshot_audit(
                 "quantity": float(m.get("cantidad") if m.get("cantidad") is not None else (m.get("quantity") or 0.0)),
                 "master_quantity": float(m_mst["quantity"]) if m_mst else None,
                 "unit_price": float(m.get("precio_unitario") if m.get("precio_unitario") is not None else (m.get("unit_price") or 0.0)),
-                "master_unit_price": float(m_mst["unit_price"]) if m_mst else None,
+                "master_unit_price": mst_unit_p,
                 "waste_or_deprec": float(m.get("desperdicio") if m.get("desperdicio") is not None else 0.0),
                 "master_waste_or_deprec": float(m_mst["waste_or_deprec"]) if m_mst else None,
                 "bonus": 0.0,
+                "is_in_database": is_in_db,
             })
 
         norm_eqs: List[Dict[str, Any]] = []
@@ -488,6 +509,11 @@ def _execute_snapshot_audit(
             c_raw = str(e.get("codigo") or e.get("code") or "").strip().upper()
             resolved = ref_maps["equipment"].get(c_raw, c_raw)
             e_mst = mst_eq_map.get(resolved)
+            is_in_cat = (c_raw in catalog_codes["equipment"]) or (resolved in catalog_codes["equipment"])
+            is_in_db = bool(e_mst) or is_in_cat
+            cat_price = catalog_prices["equipment"].get(resolved) or catalog_prices["equipment"].get(c_raw)
+            mst_unit_p = float(e_mst["unit_price"]) if e_mst else (cat_price if cat_price is not None else None)
+
             norm_eqs.append({
                 "component_type": "equipment",
                 "code": c_raw,
@@ -497,10 +523,11 @@ def _execute_snapshot_audit(
                 "quantity": float(e.get("cantidad") if e.get("cantidad") is not None else (e.get("quantity") or 0.0)),
                 "master_quantity": float(e_mst["quantity"]) if e_mst else None,
                 "unit_price": float(e.get("precio_unitario") if e.get("precio_unitario") is not None else (e.get("unit_price") or 0.0)),
-                "master_unit_price": float(e_mst["unit_price"]) if e_mst else None,
+                "master_unit_price": mst_unit_p,
                 "waste_or_deprec": float(e.get("depreciacion") if e.get("depreciacion") is not None else 1.0),
                 "master_waste_or_deprec": float(e_mst["waste_or_deprec"]) if e_mst else None,
                 "bonus": 0.0,
+                "is_in_database": is_in_db,
             })
 
         norm_labs: List[Dict[str, Any]] = []
@@ -508,6 +535,11 @@ def _execute_snapshot_audit(
             c_raw = str(l_row.get("codigo") or l_row.get("code") or "").strip().upper()
             resolved = ref_maps["labor"].get(c_raw, c_raw)
             l_mst = mst_lab_map.get(resolved)
+            is_in_cat = (c_raw in catalog_codes["labor"]) or (resolved in catalog_codes["labor"])
+            is_in_db = bool(l_mst) or is_in_cat
+            cat_price = catalog_prices["labor"].get(resolved) or catalog_prices["labor"].get(c_raw)
+            mst_unit_p = float(l_mst["unit_price"]) if l_mst else (cat_price if cat_price is not None else None)
+
             norm_labs.append({
                 "component_type": "labor",
                 "code": c_raw,
@@ -517,10 +549,11 @@ def _execute_snapshot_audit(
                 "quantity": float(l_row.get("cantidad") if l_row.get("cantidad") is not None else (l_row.get("quantity") or 0.0)),
                 "master_quantity": float(l_mst["quantity"]) if l_mst else None,
                 "unit_price": float(l_row.get("jornal") if l_row.get("jornal") is not None else (l_row.get("unit_price") or 0.0)),
-                "master_unit_price": float(l_mst["unit_price"]) if l_mst else None,
+                "master_unit_price": mst_unit_p,
                 "waste_or_deprec": 0.0,
                 "master_waste_or_deprec": 0.0,
                 "bonus": float(l_row.get("bono") if l_row.get("bono") is not None else (l_row.get("bonus") or 0.0)),
+                "is_in_database": is_in_db,
             })
 
         calc_breakdown = calculate_apu_unit_price(
@@ -1447,13 +1480,15 @@ RULE_HEADLINES: Dict[str, str] = {
     "MAT-002": "Sobreconsumo de material",
     "MAT-003": "Insumo de material no perteneciente a la base",
     "MAT-004": "Desperdicio de material manipulado",
+    "MAT-005": "Material no registrado (requiere cotización)",
     "LAB-001": "Cuadrilla alterada",
     "LAB-002": "Omisión crítica de mano de obra",
-    "LAB-003": "Mano de obra no perteneciente a la base",
+    "LAB-003": "Mano de obra especializada / no tabulada",
     "EQU-001": "Omisión crítica de equipo",
     "EQU-002": "Equipo no perteneciente a la base",
     "EQU-003": "Cantidad de equipo alterada",
     "EQU-004": "Discrepancia en depreciación",
+    "EQU-005": "Equipo no registrado (requiere cotización)",
     "PERF-001": "Rendimiento modificado",
     "EST-001": "Discrepancia en unidad de medida",
     "EST-002": "Código COVENIN no registrado en base",

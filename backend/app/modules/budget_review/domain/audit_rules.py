@@ -6,6 +6,7 @@ import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 import unicodedata
 
+from app.modules.budget_review.domain.ai_apu_auditor import audit_uncoded_apu_with_ai
 from app.modules.budget_review.domain.maprex_baseline import (
     KNOWN_MATERIAL_CODE_COLLISIONS,
     KNOWN_PARTIDA_CODE_COLLISIONS,
@@ -13,6 +14,30 @@ from app.modules.budget_review.domain.maprex_baseline import (
     is_native_maprex_deprec_difference,
     normalize_unit,
 )
+
+_SPECIALIZED_LABOR_PATTERNS: Tuple[str, ...] = (
+    r"\bcalculista\b",
+    r"\blaboratorio\b",
+    r"\blaboratorista\b",
+    r"\bespecialista\b",
+    r"\bgeotecn",
+    r"\bpatolog",
+    r"\bconsultor\b",
+    r"\bestructurista\b",
+    r"\bensayista\b",
+    r"\binspector\b",
+    r"\bperito\b",
+    r"\bbuzo\b",
+    r"\bcertificad[oa]\b",
+)
+_SPECIALIZED_LABOR_RE = re.compile("|".join(_SPECIALIZED_LABOR_PATTERNS), re.IGNORECASE)
+
+
+def is_specialized_labor_profile(description: str) -> bool:
+    """Detecta si la descripción de la mano de obra corresponde a personal técnico especializado o de consultoría."""
+    if not isinstance(description, str) or not description.strip():
+        return False
+    return bool(_SPECIALIZED_LABOR_RE.search(description.strip()))
 
 STOPWORDS: Set[str] = {
     "DE", "LA", "EL", "EN", "CON", "PARA", "POR", "LOS", "LAS", "DEL", "AL",
@@ -319,8 +344,6 @@ def evaluate_item_audit_rules(
     # B. PARTIDAS SIN CODIFICACIÓN O ESPECIALES (AUDITORÍA TÉCNICA CON IA)
     # -------------------------------------------------------------------------
     if not master_item:
-        from app.modules.budget_review.domain.ai_apu_auditor import audit_uncoded_apu_with_ai
-
         ai_eval = audit_uncoded_apu_with_ai(item_data)
         item_data["ai_audit_status"] = ai_eval.get("status", "CONFORME")
         item_data["ai_audit_summary"] = (
@@ -350,6 +373,92 @@ def evaluate_item_audit_rules(
                 "message": f"Partida no codificada con estructura de APU incompleta u observada: {defect_msg}",
                 "suggestion": "Completar los insumos o cuadrilla requerida para la ejecución conforme al alcance de la partida.",
             })
+
+        # Detección de materiales no tipificados en base de referencia (solicitud de cotización)
+        for m in materials:
+            if m.get("is_in_database") is False:
+                m_code = str(m.get("code") or "S/C").strip()
+                m_desc = str(m.get("description") or m_code).strip()
+                m_p = float(m.get("unit_price") or 0.0)
+                findings.append({
+                    "rule_id": "MAT-005",
+                    "category": "MATERIALES",
+                    "severity": "MEDIA",
+                    "item_code": code or "S/C",
+                    "component_code": m_code,
+                    "component_description": m_desc,
+                    "field_name": "unit_price",
+                    "imported_value": f"${m_p:,.2f}" if m_p > 0 else "Sin precio",
+                    "master_value": "No registrado en base de referencia",
+                    "diff_percent": None,
+                    "message": (
+                        f"Material '{m_desc}' (código {m_code}) no registrado en la base de datos de referencia oficial. "
+                        f"El precio unitario propuesto ({f'${m_p:,.2f}' if m_p > 0 else '0.00'}) carece de contraste oficial regulado."
+                    ),
+                    "suggestion": (
+                        "Solicitar a la empresa contratista 3 cotizaciones comerciales vigentes de proveedores reconocidos "
+                        "y ficha técnica del material para sustentar y validar el precio unitario propuesto en el APU."
+                    ),
+                })
+
+        # Detección de equipos no tipificados en base de referencia (solicitud de cotización)
+        for e in equipments:
+            if e.get("is_in_database") is False:
+                e_code = str(e.get("code") or "S/C").strip()
+                e_desc = str(e.get("description") or e_code).strip()
+                e_p = float(e.get("unit_price") or 0.0)
+                findings.append({
+                    "rule_id": "EQU-005",
+                    "category": "EQUIPOS",
+                    "severity": "MEDIA",
+                    "item_code": code or "S/C",
+                    "component_code": e_code,
+                    "component_description": e_desc,
+                    "field_name": "unit_price",
+                    "imported_value": f"${e_p:,.2f}/día" if e_p > 0 else "Sin costo",
+                    "master_value": "No registrado en base de referencia",
+                    "diff_percent": None,
+                    "message": (
+                        f"Equipo o maquinaria '{e_desc}' (código {e_code}) no registrado en la base de referencia oficial. "
+                        f"El costo diario/horario propuesto ({f'${e_p:,.2f}/día' if e_p > 0 else '0.00'}) carece de tarifa oficial de contraste."
+                    ),
+                    "suggestion": (
+                        "Solicitar a la empresa contratista cotizaciones comerciales de adquisición o alquiler, acompañadas de la memoria "
+                        "de cálculo de costos horarios (depreciación, consumibles, operación y mantenimiento) para validar la tarifa en el APU."
+                    ),
+                })
+
+        # Detección de mano de obra especializada o no tabulada (estudio de costo y soporte curricular)
+        for l_row in labors:
+            l_code = str(l_row.get("code") or "S/C").strip()
+            l_desc = str(l_row.get("description") or l_code).strip()
+            l_p = float(l_row.get("unit_price") or 0.0)
+            is_in_db = l_row.get("is_in_database") is not False
+            is_spec = is_specialized_labor_profile(l_desc)
+
+            if not is_in_db or is_spec:
+                findings.append({
+                    "rule_id": "LAB-003",
+                    "category": "MANO_OBRA",
+                    "severity": "MEDIA",
+                    "item_code": code or "S/C",
+                    "component_code": l_code,
+                    "component_description": l_desc,
+                    "field_name": "jornal",
+                    "imported_value": f"${l_p:,.2f}/día" if l_p > 0 else "Sin jornal",
+                    "master_value": "Tarifa especial / no tabulada",
+                    "diff_percent": None,
+                    "message": (
+                        f"Personal técnico o categoría de mano de obra especializada no tipificada en el tabulador oficial de referencia: "
+                        f"'{l_desc}' (código {l_code}). Requiere especial atención para el análisis y estudio de su costo ({f'${l_p:,.2f}/día' if l_p > 0 else '0.00'})."
+                    ),
+                    "suggestion": (
+                        "Poner atención y estudiar detalladamente el costo de la mano de obra especializada (ej. calculistas con alta experiencia, "
+                        "analistas de laboratorio especializados, técnicos certificados); solicitar a la empresa contratista soporte curricular, "
+                        "certificación de experiencia demostrable y memoria de cálculo de honorarios o jornales."
+                    ),
+                })
+
         return findings
 
     # -------------------------------------------------------------------------
@@ -525,6 +634,31 @@ def evaluate_item_audit_rules(
                     "suggestion": "Validar la descripción del insumo de bioseguridad.",
                 })
 
+        for m_code, m_imp in imp_mats.items():
+            if m_code not in mst_mats and m_imp.get("is_in_database") is False:
+                m_desc = str(m_imp.get("description") or m_code).strip()
+                m_p = float(m_imp.get("unit_price") or 0.0)
+                findings.append({
+                    "rule_id": "MAT-005",
+                    "category": "MATERIALES",
+                    "severity": "MEDIA",
+                    "item_code": code,
+                    "component_code": m_code,
+                    "component_description": m_desc,
+                    "field_name": "unit_price",
+                    "imported_value": f"${m_p:,.2f}" if m_p > 0 else "Sin precio",
+                    "master_value": "Insumo adicional no registrado en base de referencia",
+                    "diff_percent": None,
+                    "message": (
+                        f"Material adicional '{m_desc}' (código {m_code}) incorporado al APU y no registrado en la base de referencia oficial. "
+                        f"El precio unitario propuesto ({f'${m_p:,.2f}' if m_p > 0 else '0.00'}) carece de contraste oficial regulado."
+                    ),
+                    "suggestion": (
+                        "Solicitar a la empresa contratista 3 cotizaciones comerciales vigentes de proveedores reconocidos "
+                        "y ficha técnica del material para sustentar y validar el precio unitario propuesto en el APU."
+                    ),
+                })
+
     # 2. EQUIPOS Y DEPRECIACIÓN
     mst_eqs = {
         str(e.get("code") or "").strip().upper(): e
@@ -635,6 +769,31 @@ def evaluate_item_audit_rules(
                         "suggestion": f"Corregir el factor de depreciación del equipo {e_code} a {mst_dep:.5f}.",
                     })
 
+        for e_code, e_imp in imp_eqs.items():
+            if e_code not in mst_eqs and e_imp.get("is_in_database") is False:
+                e_desc = str(e_imp.get("description") or e_code).strip()
+                e_p = float(e_imp.get("unit_price") or 0.0)
+                findings.append({
+                    "rule_id": "EQU-005",
+                    "category": "EQUIPOS",
+                    "severity": "MEDIA",
+                    "item_code": code,
+                    "component_code": e_code,
+                    "component_description": e_desc,
+                    "field_name": "unit_price",
+                    "imported_value": f"${e_p:,.2f}/día" if e_p > 0 else "Sin costo",
+                    "master_value": "Equipo adicional no registrado en base de referencia",
+                    "diff_percent": None,
+                    "message": (
+                        f"Equipo o maquinaria adicional '{e_desc}' (código {e_code}) incorporado al APU y no registrado en la base de referencia oficial. "
+                        f"El costo diario/horario propuesto ({f'${e_p:,.2f}/día' if e_p > 0 else '0.00'}) carece de tarifa oficial de contraste."
+                    ),
+                    "suggestion": (
+                        "Solicitar a la empresa contratista cotizaciones comerciales de adquisición o alquiler, acompañadas de la memoria "
+                        "de cálculo de costos horarios (depreciación, consumibles, operación y mantenimiento) para validar la tarifa en el APU."
+                    ),
+                })
+
     # 3. MANO DE OBRA
     mst_labs = {
         str(l_row.get("code") or "").strip().upper(): l_row
@@ -672,6 +831,35 @@ def evaluate_item_audit_rules(
                         ),
                         "suggestion": f"Restablecer la cantidad de personal en cuadrilla a {mst_q:.2f}.",
                     })
+
+        for l_code, l_imp in imp_labs.items():
+            l_desc = str(l_imp.get("description") or l_code).strip()
+            l_p = float(l_imp.get("unit_price") or 0.0)
+            is_in_db = l_imp.get("is_in_database") is not False
+            is_spec = is_specialized_labor_profile(l_desc)
+
+            if (l_code not in mst_labs and not is_in_db) or is_spec:
+                findings.append({
+                    "rule_id": "LAB-003",
+                    "category": "MANO_OBRA",
+                    "severity": "MEDIA",
+                    "item_code": code,
+                    "component_code": l_code,
+                    "component_description": l_desc,
+                    "field_name": "jornal",
+                    "imported_value": f"${l_p:,.2f}/día" if l_p > 0 else "Sin jornal",
+                    "master_value": "Tarifa especial / no tabulada",
+                    "diff_percent": None,
+                    "message": (
+                        f"Personal técnico o categoría de mano de obra especializada no tipificada en el tabulador oficial de referencia: "
+                        f"'{l_desc}' (código {l_code}). Requiere especial atención para el análisis y estudio de su costo ({f'${l_p:,.2f}/día' if l_p > 0 else '0.00'})."
+                    ),
+                    "suggestion": (
+                        "Poner atención y estudiar detalladamente el costo de la mano de obra especializada (ej. calculistas con alta experiencia, "
+                        "analistas de laboratorio especializados, técnicos certificados); solicitar a la empresa contratista soporte curricular, "
+                        "certificación de experiencia demostrable y memoria de cálculo de honorarios o jornales."
+                    ),
+                })
 
     return findings
 
@@ -721,8 +909,14 @@ def generate_default_executive_conclusion(
         issues.append("desviaciones estructurales en la asignación de cuadrillas")
     if any(r in rule_ids for r in ["MAT-002", "MAT-003"]):
         issues.append("sobreconsumo de materiales sin memoria de cálculo")
+    if any(r in rule_ids for r in ["MAT-005"]):
+        issues.append("materiales no registrados en la base de referencia que requieren 3 cotizaciones comerciales")
     if any(r in rule_ids for r in ["EQU-003", "EQU-004"]):
         issues.append("omisión o alteración de factores de depreciación en maquinaria y equipos")
+    if any(r in rule_ids for r in ["EQU-005"]):
+        issues.append("equipos no catalogados pendientes de cotización y memoria de cálculo")
+    if any(r in rule_ids for r in ["LAB-003"]):
+        issues.append("mano de obra técnica especializada sujeta a estudio de honorarios y soporte curricular")
     if any(r in rule_ids for r in ["REN-001"]):
         issues.append("rendimientos atípicos fuera de los estándares de producción")
     if any(r in rule_ids for r in ["ARI-001"]):
@@ -739,6 +933,11 @@ def generate_default_executive_conclusion(
             f"El presupuesto no es apto para aprobación inmediata en su estado actual. "
             f"Presenta {issues_text}. Se requiere la subsanación formal de los hallazgos señalados "
             f"por parte de la empresa contratista previo a cualquier compromiso contractual o financiero."
+        )
+    if issues:
+        return (
+            f"El presupuesto presenta consistencia técnica global, pero registra {total_errors} observaciones "
+            f"moderadas ({issues_text}) que ameritan justificación técnica, cotizaciones o soportes antes de su aprobación definitiva."
         )
     return (
         f"El presupuesto presenta consistencia técnica global, pero registra {total_errors} observaciones "

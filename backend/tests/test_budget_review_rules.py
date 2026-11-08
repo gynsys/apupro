@@ -6,6 +6,8 @@ from app.modules.budget_review.domain.audit_rules import (
     compute_description_similarity,
     compute_snapshot_health_score,
     evaluate_item_audit_rules,
+    generate_default_executive_conclusion,
+    is_specialized_labor_profile,
     is_uncoded_code,
 )
 from app.modules.budget_review.domain.maprex_baseline import (
@@ -329,4 +331,113 @@ def test_health_score_calculation_bounds() -> None:
     many_findings = [{"severity": "CRITICA", "item_code": f"X{i}"} for i in range(50)]
     score_many = compute_snapshot_health_score(many_findings, total_items=5)
     assert score_many == 0.0
+
+
+def test_uncoded_apu_detects_unregistered_materials_and_equipment_and_specialized_labor() -> None:
+    """Verifica detección de insumos no registrados (MAT-005, EQU-005) y mano de obra especializada (LAB-003)."""
+    payload: Dict[str, Any] = {
+        "code": "S/C-001",
+        "covenin_code": "S/C",
+        "description": "REPARACIÓN ESTRUCTURAL CON FIBRA DE CARBONO Y RESINA EPÓXICA",
+        "unit": "M2",
+        "quantity": 10.0,
+        "performance": 12.0,
+        "is_uncoded": True,
+        "materials": [
+            {
+                "code": "MAT-ESP-01",
+                "description": "RESINA EPÓXICA ESTRUCTURAL BICOMPONENTE",
+                "unit": "KG",
+                "quantity": 1.2,
+                "unit_price": 85.0,
+                "is_in_database": False,
+            },
+            {
+                "code": "CEM-01",
+                "description": "CEMENTO PORTLAND GRIS TIPO I",
+                "unit": "SACO",
+                "quantity": 2.0,
+                "unit_price": 10.0,
+                "is_in_database": True,
+            },
+        ],
+        "equipments": [
+            {
+                "code": "BOMBA-01",
+                "description": "BOMBA DE INYECCIÓN DE RESINA EPÓXICA A ALTA PRESIÓN",
+                "unit": "DIA",
+                "quantity": 1.0,
+                "unit_price": 150.0,
+                "is_in_database": False,
+            },
+        ],
+        "labors": [
+            {
+                "code": "ING-01",
+                "description": "INGENIERO CALCULISTA ESTRUCTURAL CON 30 AÑOS DE EXPERIENCIA",
+                "unit": "DIA",
+                "quantity": 0.5,
+                "unit_price": 250.0,
+                "is_in_database": False,
+            },
+            {
+                "code": "OBR-01",
+                "description": "OBRERO DE PRIMERA",
+                "unit": "DIA",
+                "quantity": 2.0,
+                "unit_price": 25.0,
+                "is_in_database": True,
+            },
+        ],
+    }
+
+    findings = evaluate_item_audit_rules(payload, None, None)
+    rule_ids = {f["rule_id"] for f in findings}
+
+    assert "MAT-005" in rule_ids
+    assert "EQU-005" in rule_ids
+    assert "LAB-003" in rule_ids
+
+    # Verificar sugerencias específicas
+    mat_finding = next(f for f in findings if f["rule_id"] == "MAT-005")
+    assert "3 cotizaciones comerciales vigentes" in mat_finding["suggestion"]
+    assert "RESINA EPÓXICA" in mat_finding["message"]
+
+    equ_finding = next(f for f in findings if f["rule_id"] == "EQU-005")
+    assert "memoria de cálculo de costos horarios" in equ_finding["suggestion"]
+
+    lab_finding = next(f for f in findings if f["rule_id"] == "LAB-003")
+    assert "calculistas" in lab_finding["suggestion"].lower() or "soporte curricular" in lab_finding["suggestion"].lower()
+
+
+def test_specialized_labor_profile_detection() -> None:
+    """Verifica el reconocimiento regex de perfiles técnicos especializados."""
+    assert is_specialized_labor_profile("Ingeniero Calculista Estructural") is True
+    assert is_specialized_labor_profile("Analista de Laboratorio de Suelos") is True
+    assert is_specialized_labor_profile("Especialista en Patología de Concreto") is True
+    assert is_specialized_labor_profile("Ingeniero Geotecnista") is True
+    assert is_specialized_labor_profile("Obrero de Primera") is False
+    assert is_specialized_labor_profile("Albañil") is False
+    assert is_specialized_labor_profile("") is False
+
+
+def test_executive_conclusion_includes_quotes_and_specialized_labor() -> None:
+    """Verifica que la conclusión ejecutiva incorpore los avisos de cotizaciones comerciales y mano de obra especializada."""
+    findings = [
+        {"rule_id": "MAT-005", "severity": "MEDIA", "item_code": "P-01"},
+        {"rule_id": "EQU-005", "severity": "MEDIA", "item_code": "P-01"},
+        {"rule_id": "LAB-003", "severity": "MEDIA", "item_code": "P-01"},
+    ]
+    conclusion = generate_default_executive_conclusion(
+        health_score=80.0,
+        critical_count=0,
+        high_count=0,
+        medium_count=3,
+        uncoded_count=1,
+        total_items=3,
+        findings=findings,
+    )
+    assert "3 cotizaciones comerciales" in conclusion
+    assert "equipos no catalogados" in conclusion
+    assert "mano de obra técnica especializada" in conclusion
 

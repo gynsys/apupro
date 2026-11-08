@@ -111,16 +111,19 @@ const RULE_HEADLINES = {
   // Mano de Obra
   'LAB-001': 'Cuadrilla alterada',
   'LAB-002': 'Categoría laboral omitida',
+  'LAB-003': 'Mano de obra especializada / no tabulada',
   // Materiales
   'MAT-001': 'Material maestro omitido',
   'MAT-002': 'Sobreconsumo de material',
   'MAT-003': 'Desperdicio excesivo de material',
   'MAT-004': 'Discrepancia en código de material',
+  'MAT-005': 'Material no registrado (requiere cotización)',
   // Equipos y Depreciaciones
   'EQU-001': 'Equipo maestro omitido',
   'EQU-002': 'Equipo atípico en APU',
   'EQU-003': 'Omisión de depreciación',
   'EQU-004': 'Discrepancia en depreciación',
+  'EQU-005': 'Equipo no registrado (requiere cotización)',
   // Rendimientos
   'REN-001': 'Rendimiento atípico / reducido',
   'REN-002': 'Rendimiento inflado',
@@ -1113,64 +1116,66 @@ export default function BudgetReviewPage() {
             )}
           </div>
 
-          {activeReport && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={openSettingsModal}
-                title="Configuración de Datos Fijos (Revisor, Ente Contratante y Logo)"
-                className="p-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 hover:text-blue-600 flex items-center justify-center cursor-pointer shadow-2xs transition"
-              >
-                <Settings size={16} />
-              </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={openSettingsModal}
+              title="Configuración de Datos Fijos (Revisor, Ente Contratante y Logo)"
+              className="p-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 hover:text-blue-600 flex items-center justify-center cursor-pointer shadow-2xs transition"
+            >
+              <Settings size={16} />
+            </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setNewVersionBudgetId(activeReport.source_budget_id || '');
-                  setShowNewVersionModal(true);
-                }}
-                title={`Revisar Corrección (Nueva Versión v${(activeReport.version_number || 1) + 1})`}
-                className="p-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center cursor-pointer shadow-2xs transition"
-              >
-                <GitBranch size={16} />
-              </button>
+            {activeReport && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewVersionBudgetId(activeReport.source_budget_id || '');
+                    setShowNewVersionModal(true);
+                  }}
+                  title={`Revisar Corrección (Nueva Versión v${(activeReport.version_number || 1) + 1})`}
+                  className="p-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center cursor-pointer shadow-2xs transition"
+                >
+                  <GitBranch size={16} />
+                </button>
 
-              <button
-                type="button"
-                onClick={handleDownloadExcel}
-                disabled={downloadingExcel}
-                title="Descargar Informe Excel (.xlsx)"
-                className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white flex items-center justify-center cursor-pointer shadow-2xs transition"
-              >
-                {downloadingExcel ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <Download size={16} />
-                )}
-              </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadExcel}
+                  disabled={downloadingExcel}
+                  title="Descargar Informe Excel (.xlsx)"
+                  className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white flex items-center justify-center cursor-pointer shadow-2xs transition"
+                >
+                  {downloadingExcel ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Download size={16} />
+                  )}
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  const prevTitle = document.title;
-                  document.title = activeReport?.report_code
-                    ? `Informe_${activeReport.report_code}`
-                    : 'Informe_Revision_Presupuesto';
-                  document.body.classList.add('printing-budget-review');
-                  window.print();
-                  setTimeout(() => {
-                    document.title = prevTitle;
-                    document.body.classList.remove('printing-budget-review');
-                  }, 1000);
-                }}
-                title="Imprimir / Exportar a PDF"
-                className="p-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center justify-center cursor-pointer shadow-2xs transition"
-              >
-                <Printer size={16} />
-              </button>
-            </div>
-          )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const prevTitle = document.title;
+                    document.title = activeReport?.report_code
+                      ? `Informe_${activeReport.report_code}`
+                      : 'Informe_Revision_Presupuesto';
+                    document.body.classList.add('printing-budget-review');
+                    window.print();
+                    setTimeout(() => {
+                      document.title = prevTitle;
+                      document.body.classList.remove('printing-budget-review');
+                    }, 1000);
+                  }}
+                  title="Imprimir / Exportar a PDF"
+                  className="p-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center justify-center cursor-pointer shadow-2xs transition"
+                >
+                  <Printer size={16} />
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
