@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Calculator, Layers, Plus, Ruler, X } from 'lucide-react';
 import { fetchItems } from '../../costbase/services/costbaseService.js';
 import {
@@ -38,22 +38,40 @@ function Toggle({ label, checked, onChange }) {
   );
 }
 
-export default function PerimeterWallModal({ isOpen, onClose, onApply }) {
+export default function PerimeterWallModal({ isOpen, onClose, onApply, initialInput = null, instanceId = null }) {
   const [form, setForm] = useState(DEFAULT_WALL_INPUT);
   const [resolving, setResolving] = useState(false);
+  const [overrides, setOverrides] = useState({});
+
+  useEffect(() => {
+    if (isOpen) {
+      setForm({ ...DEFAULT_WALL_INPUT, ...(initialInput || {}) });
+      setOverrides({});
+    }
+  }, [isOpen, initialInput, instanceId]);
 
   const preview = useMemo(() => calculatePerimeterWall(form), [form]);
+  const rows = useMemo(
+    () => preview.rows.map((row) => ({ ...row, ...(overrides[row.key] || {}) })),
+    [preview.rows, overrides]
+  );
 
   if (!isOpen) return null;
 
   const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+  const setOverride = (key, field, value) => {
+    setOverrides((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), [field]: value } }));
+  };
 
   const apply = async () => {
-    if (!preview.rows.length) return;
+    if (!rows.length) return;
     setResolving(true);
     try {
       const matches = await Promise.all(
-        preview.rows.map(async (row) => {
+        rows.map(async (row) => {
+          if (overrides[row.key]?.cod_par) {
+            return { ...row, match_status: 'manual' };
+          }
           try {
             const result = await fetchItems(0, 3, row.description, 'master');
             const items = Array.isArray(result) ? result : (result?.items || []);
@@ -72,7 +90,7 @@ export default function PerimeterWallModal({ isOpen, onClose, onApply }) {
           }
         })
       );
-      onApply(matches);
+      onApply(matches, { instanceId, input: form });
       onClose();
     } finally {
       setResolving(false);
@@ -120,6 +138,30 @@ export default function PerimeterWallModal({ isOpen, onClose, onApply }) {
               </select>
             </label>
 
+            <div className="grid grid-cols-2 gap-3">
+              <NumberField label="Junta (m)" value={form.joint} onChange={(v) => set('joint', v)} step={0.005} />
+              <div className="rounded-xl bg-amber-50 p-2 text-[10px] leading-relaxed text-amber-800">
+                Bloque: {Math.round((BLOCK_TYPES[form.blockType]?.length || 0) * 100)} × {Math.round((BLOCK_TYPES[form.blockType]?.height || 0) * 100)} × {Math.round((BLOCK_TYPES[form.blockType]?.thickness || 0) * 100)} cm
+              </div>
+            </div>
+
+            <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+              <p className="text-[11px] font-bold text-amber-900">Huecos que descuentan área</p>
+              <Toggle label="Portón" checked={form.includeGate} onChange={(v) => set('includeGate', v)} />
+              {form.includeGate && (
+                <div className="grid grid-cols-3 gap-2">
+                  <NumberField label="Cantidad" value={form.gateCount} onChange={(v) => set('gateCount', v)} step={1} />
+                  <NumberField label="Ancho (m)" value={form.gateWidth} onChange={(v) => set('gateWidth', v)} />
+                  <NumberField label="Alto (m)" value={form.gateHeight} onChange={(v) => set('gateHeight', v)} />
+                </div>
+              )}
+              <div className="grid grid-cols-3 gap-2">
+                <NumberField label="Ventanas" value={form.windowsCount} onChange={(v) => set('windowsCount', v)} step={1} />
+                <NumberField label="Ancho ventana" value={form.windowWidth} onChange={(v) => set('windowWidth', v)} />
+                <NumberField label="Alto ventana" value={form.windowHeight} onChange={(v) => set('windowHeight', v)} />
+              </div>
+            </div>
+
             <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50/60 p-3">
               <Toggle label="Incluir fundación corrida" checked={form.includeFoundation} onChange={(v) => set('includeFoundation', v)} />
               {form.includeFoundation && (
@@ -136,6 +178,21 @@ export default function PerimeterWallModal({ isOpen, onClose, onApply }) {
                 <NumberField label="Separación entre columnas (m)" value={form.columnSpacing} onChange={(v) => set('columnSpacing', v)} />
               )}
               <Toggle label="Incluir acero de refuerzo" checked={form.includeRebar} onChange={(v) => set('includeRebar', v)} />
+              {form.includeRebar && (
+                <details className="rounded-lg border border-amber-200 bg-white/60 p-2">
+                  <summary className="cursor-pointer text-[11px] font-bold text-amber-900">Despiece de acero</summary>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <NumberField label="Barras fundación" value={form.foundationBarCount} onChange={(v) => set('foundationBarCount', v)} step={1} />
+                    <NumberField label="Ø fundación (mm)" value={form.foundationBarDiameter} onChange={(v) => set('foundationBarDiameter', v)} step={2} />
+                    <NumberField label="Estribo fund. (m)" value={form.foundationStirrupSpacing} onChange={(v) => set('foundationStirrupSpacing', v)} step={0.05} />
+                    <NumberField label="Ø estribo fund. (mm)" value={form.foundationStirrupDiameter} onChange={(v) => set('foundationStirrupDiameter', v)} step={2} />
+                    <NumberField label="Barras columna" value={form.columnBarCount} onChange={(v) => set('columnBarCount', v)} step={1} />
+                    <NumberField label="Ø columna (mm)" value={form.columnBarDiameter} onChange={(v) => set('columnBarDiameter', v)} step={2} />
+                    <NumberField label="Estribo col. (m)" value={form.columnStirrupSpacing} onChange={(v) => set('columnStirrupSpacing', v)} step={0.05} />
+                    <NumberField label="Ø estribo col. (mm)" value={form.columnStirrupDiameter} onChange={(v) => set('columnStirrupDiameter', v)} step={2} />
+                  </div>
+                </details>
+              )}
             </div>
 
             <label className="block">
@@ -164,7 +221,10 @@ export default function PerimeterWallModal({ isOpen, onClose, onApply }) {
               <div>
                 <h4 className="text-sm font-bold text-amber-950">Cómputo en cascada</h4>
                 <p className="text-[11px] text-amber-800">
-                  {preview.totals.area} m2 · {preview.totals.blocks} bloques · {preview.totals.concrete} m3 concreto
+                  {preview.totals.area} m2 netos · {preview.totals.blocks} bloques · {preview.totals.concrete} m3 concreto · {preview.totals.rebar} kg acero
+                </p>
+                <p className="text-[10px] text-amber-700">
+                  Área bruta {preview.totals.grossArea} m2 − huecos {preview.totals.openings} m2
                 </p>
               </div>
               <Calculator className="h-5 w-5 text-amber-600" />
@@ -173,33 +233,55 @@ export default function PerimeterWallModal({ isOpen, onClose, onApply }) {
               <table className="w-full text-xs">
                 <thead className="sticky top-0 bg-amber-200 text-amber-950">
                   <tr>
-                    <th className="px-3 py-2 text-left">Partida generada</th>
+                    <th className="px-2 py-2 text-left">Código</th>
+                    <th className="px-2 py-2 text-left">Partida generada</th>
                     <th className="px-2 py-2 text-right">Cantidad</th>
                     <th className="px-2 py-2 text-center">Und</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {preview.rows.map((row, index) => (
-                    <tr key={`${row.description}-${index}`} className="border-t border-amber-200 bg-white/70">
-                      <td className="px-3 py-2 text-amber-950">
-                        <div className="font-semibold">{row.description}</div>
-                        <div className="text-[10px] text-amber-700">{row.formula}</div>
+                  {rows.map((row) => (
+                    <tr key={row.key} className="border-t border-amber-200 bg-white/70">
+                      <td className="px-2 py-2 align-top">
+                        <input
+                          type="text"
+                          value={row.cod_par || ''}
+                          onChange={(e) => setOverride(row.key, 'cod_par', e.target.value)}
+                          placeholder="APU"
+                          className="w-20 rounded border border-amber-300 px-1.5 py-1 text-[10px] font-mono"
+                        />
+                      </td>
+                      <td className="px-2 py-2 text-amber-950">
+                        <input
+                          type="text"
+                          value={row.description}
+                          onChange={(e) => setOverride(row.key, 'description', e.target.value)}
+                          className="w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold hover:border-amber-300 focus:border-amber-500 focus:bg-white focus:outline-none"
+                        />
+                        <div className="px-1 text-[10px] text-amber-700">{row.formula}</div>
                       </td>
                       <td className="px-2 py-2 text-right font-mono font-bold text-amber-950">{row.quantity.toLocaleString('es-VE', { maximumFractionDigits: 2 })}</td>
-                      <td className="px-2 py-2 text-center text-amber-700">{row.unit}</td>
+                      <td className="px-2 py-2 text-center">
+                        <input
+                          type="text"
+                          value={row.unit}
+                          onChange={(e) => setOverride(row.key, 'unit', e.target.value)}
+                          className="w-12 rounded border border-amber-300 px-1 py-1 text-center text-[10px] font-bold"
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             <p className="border-t border-amber-200 px-4 py-2 text-[10px] text-amber-800">
-              Las filas se agregan como partidas editables. La asociación con APUs de la base se realiza después.
+              Puedes corregir código, descripción y unidad antes de incluir. Los huecos se descuentan del área de mampostería y acabados.
             </p>
           </section>
         </div>
 
         <footer className="flex items-center justify-between gap-2 border-t border-amber-200 bg-amber-50 px-4 py-3 sm:px-6">
-          <span className="text-xs text-amber-800">{preview.rows.length} partida(s) se agregarán a la planilla</span>
+          <span className="text-xs text-amber-800">{rows.length} partida(s) se agregarán a la planilla</span>
           <div className="flex items-center gap-2">
             <button type="button" onClick={onClose} className="rounded-xl border border-amber-300 px-4 py-2 text-xs font-bold text-amber-950 hover:bg-amber-100">
               Cancelar

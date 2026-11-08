@@ -72,6 +72,19 @@ describe('rowsReducer', () => {
     expect(isItemEmpty(state.rows[state.rows.length - 1])).toBe(true);
   });
 
+  it('reemplaza las filas de una macro instancia al editarla', () => {
+    const other = { ...createBlankRow('GENERAL'), id: 'other', description: 'Otra partida' };
+    const oldMacro = { ...createBlankRow('PARED PERIMETRAL'), id: 'old', description: 'Pared vieja', macro_instance_id: 'macro-1' };
+    const newMacro = { ...createBlankRow('PARED PERIMETRAL'), id: 'new', description: 'Pared nueva', macro_instance_id: 'macro-1' };
+    const state = rowsReducer(stateWithRows([other, oldMacro]), {
+      type: 'REPLACE_MACRO_ROWS',
+      payload: { instanceId: 'macro-1', rows: [newMacro], activeChapter: 'GENERAL' },
+    });
+    expect(state.rows.some((r) => r.id === 'old')).toBe(false);
+    expect(state.rows.some((r) => r.id === 'new')).toBe(true);
+    expect(state.rows.some((r) => r.id === 'other')).toBe(true);
+  });
+
   it('activa y elimina parciales', () => {
     const row = { ...createBlankRow('GENERAL'), id: 'r1', description: 'Pared', partial: 4 };
     const state = rowsReducer(stateWithRows([row]), {

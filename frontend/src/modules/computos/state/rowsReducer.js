@@ -64,6 +64,18 @@ function rowsReducerCore(state, action) {
       };
     }
 
+    case 'REPLACE_MACRO_ROWS': {
+      const incoming = Array.isArray(payload.rows) ? payload.rows : [];
+      const base = rows.filter(
+        (row, index) => !(index === rows.length - 1 && isItemEmpty(row)) && row.macro_instance_id !== payload.instanceId
+      );
+      return {
+        ...state,
+        activeChapter,
+        rows: normalizeRowsWithSingleTrailingBlank([...base, ...incoming], activeChapter),
+      };
+    }
+
     case 'UPDATE_FIELD': {
       const updated = rows.map((row) => {
         if (row.id !== payload.itemId) return row;

@@ -1218,15 +1218,40 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     });
   };
 
-  const handleAddMacroRows = (rows) => {
+  const handleAddMacroRows = (rows, meta = {}) => {
     if (!Array.isArray(rows) || rows.length === 0) return;
     isDirtyRef.current = true;
+    const instanceId = meta.instanceId || `macro-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const enriched = rows.map((row) => ({
+      ...row,
+      macro_instance_id: instanceId,
+      macro_template_id: 'pared_perimetral',
+      macro_input: meta.input || null,
+    }));
     rowsDispatch({
-      type: 'ADD_ROWS',
-      payload: { rows, activeChapter },
+      type: meta.instanceId ? 'REPLACE_MACRO_ROWS' : 'ADD_ROWS',
+      payload: { rows: enriched, instanceId, activeChapter },
     });
-    toast.success(`${rows.length} partida(s) agregadas a la planilla`);
+    toast.success(`${enriched.length} partida(s) ${meta.instanceId ? 'actualizadas' : 'agregadas'} a la planilla`);
   };
+
+  const macroInstances = useMemo(() => {
+    const map = new Map();
+    capturedItems.forEach((row) => {
+      if (!row.macro_instance_id || !row.macro_input) return;
+      if (!map.has(row.macro_instance_id)) {
+        map.set(row.macro_instance_id, {
+          id: row.macro_instance_id,
+          templateId: row.macro_template_id,
+          input: row.macro_input,
+          name: row.macro_template_id === 'pared_perimetral' ? 'Pared perimetral' : 'Macro actividad',
+          rowCount: 0,
+        });
+      }
+      map.get(row.macro_instance_id).rowCount += 1;
+    });
+    return [...map.values()];
+  }, [capturedItems]);
 
   /**
    * Duplica una partida existente
@@ -2589,6 +2614,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
         setDescriptionFilter={setDescriptionFilter}
         viewMode={viewMode}
         onAddMacroRows={handleAddMacroRows}
+        macroInstances={macroInstances}
       />
 
       {/* BARRA INFERIOR DE ACCIÓN (Siempre accesible en ambas vistas con botón Guardar y Generar) */}

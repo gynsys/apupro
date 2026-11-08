@@ -27,7 +27,44 @@ describe('plantilla de pared perimetral', () => {
       includeConcertina: false,
     });
     const block = BLOCK_TYPES.concreto_15;
-    expect(result.totals.blocks).toBe(Math.round(20 * block.blocksPerM2 * 1.05 * 100) / 100);
+    const blocksPerM2 = 1 / ((block.length + DEFAULT_WALL_INPUT.joint) * (block.height + DEFAULT_WALL_INPUT.joint));
+    expect(result.totals.blocks).toBe(Math.round(20 * blocksPerM2 * (1 + block.waste) * 100) / 100);
+  });
+
+  it('descuenta portones y ventanas del área de mampostería', () => {
+    const result = calculatePerimeterWall({
+      ...DEFAULT_WALL_INPUT,
+      length: 10,
+      height: 3,
+      includeGate: true,
+      gateCount: 1,
+      gateWidth: 3,
+      gateHeight: 2,
+      windowsCount: 2,
+      windowWidth: 1,
+      windowHeight: 1,
+      includeFoundation: false,
+      includeColumns: false,
+      includeConcertina: false,
+      frisoSides: 0,
+    });
+    expect(result.totals.grossArea).toBe(30);
+    expect(result.totals.openings).toBe(8);
+    expect(result.totals.area).toBe(22);
+    expect(result.rows.find((r) => r.key === 'wall')?.quantity).toBe(22);
+  });
+
+  it('calcula acero por despiece, no por kg/m3', () => {
+    const result = calculatePerimeterWall({
+      ...DEFAULT_WALL_INPUT,
+      length: 10,
+      height: 2.5,
+      includeConcertina: false,
+      frisoSides: 0,
+    });
+    expect(result.totals.rebar).toBeGreaterThan(0);
+    expect(result.rows.some((r) => r.key === 'foundation_rebar_long')).toBe(true);
+    expect(result.rows.some((r) => r.key === 'columns_rebar_vertical')).toBe(true);
   });
 
   it('descuenta el friso según las caras', () => {
