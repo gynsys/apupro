@@ -31,6 +31,8 @@ import {
   LayoutGrid,
   Image as ImageIcon,
   Settings,
+  Clock,
+  ChevronRight,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { budgetReviewService } from '../services/budgetReviewService';
@@ -524,11 +526,6 @@ export default function BudgetReviewPage() {
       ]);
       setSnapshots(snaps || []);
       setBudgets(userBudgets || []);
-      if (snaps && snaps.length > 0 && !activeReport) {
-        const latestDetail = await budgetReviewService.getSnapshotDetail(snaps[0].id);
-        setActiveReport(latestDetail);
-        syncFormWithReport(latestDetail);
-      }
     } catch (error) {
       console.error('Error cargando datos iniciales de auditoría:', error);
     } finally {
@@ -1161,6 +1158,16 @@ export default function BudgetReviewPage() {
                   <Copy size={15} className="text-indigo-600" />
                   <span>Guardar Como...</span>
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveReport(null)}
+                  className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  title="Cerrar informe actual y volver a la pantalla de selección"
+                >
+                  <X size={14} className="text-slate-500" />
+                  <span>Cerrar</span>
+                </button>
               </>
             )}
           </div>
@@ -1225,27 +1232,170 @@ export default function BudgetReviewPage() {
         </div>
       </div>
 
-      {/* Estado de Carga o Vacío */}
-      {(loadingList || runningAudit) && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-10 flex flex-col items-center justify-center gap-3 text-slate-600">
-          <Loader2 size={32} className="animate-spin text-blue-600" />
-          <p className="text-sm font-semibold">
+      {/* Estado de Ejecución de Auditoría (SOLO cuando el usuario presiona Auditar o Cargar) */}
+      {runningAudit && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-10 flex flex-col items-center justify-center gap-3 text-slate-600 shadow-sm animate-pulse">
+          <Loader2 size={36} className="animate-spin text-blue-600" />
+          <p className="text-base font-bold text-slate-900">
             Analizando partidas, rendimientos, depreciaciones y recetas APU contra{' '}
             {getDatabaseLabel(selectedDbId)}...
+          </p>
+          <p className="text-xs text-slate-500 max-w-md text-center">
+            Contrastando insumos, cuadrillas y rendimientos oficiales sin alterar su presupuesto original.
           </p>
         </div>
       )}
 
-      {!loadingList && !runningAudit && !activeReport && (
-        <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center space-y-3">
-          <FileSpreadsheet size={40} className="mx-auto text-slate-400" />
-          <h2 className="text-base font-bold text-slate-800">
-            Selecciona o importa un presupuesto para iniciar la auditoría
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto">
-            Elige la base de datos de referencia arriba (ej. <strong>Base Agosto</strong> o{' '}
-            <strong>Base Maestra</strong>), selecciona un presupuesto o sube el archivo Excel/PDF entregado por la contratista.
-          </p>
+      {/* Pantalla en Reposo / Esperando Instrucciones del Usuario */}
+      {!runningAudit && !activeReport && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold mb-3">
+                <ShieldAlert size={14} />
+                <span>Auditoría Técnica y Control de Presupuestos</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                Esperando selección de presupuesto
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
+                El Revisor compara precios unitarios, rendimientos, mano de obra y recetas APU contra la base de referencia seleccionada (<strong>{getDatabaseLabel(selectedDbId)}</strong>) sin modificar su archivo original. Seleccione cómo desea comenzar:
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+              {/* Opción 1: Presupuesto en Sistema */}
+              <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition flex flex-col justify-between">
+                <div>
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center mb-3">
+                    <Activity size={20} />
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-900">Auditar Presupuesto del Sistema</h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Seleccione un presupuesto guardado en la plataforma para auditarlo contra {getDatabaseLabel(selectedDbId)}.
+                  </p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-slate-200">
+                  <select
+                    value={selectedBudgetId}
+                    onChange={(e) => setSelectedBudgetId(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2 truncate"
+                  >
+                    <option value="">Seleccionar presupuesto...</option>
+                    {budgets.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleAuditExistingBudget}
+                    disabled={!selectedBudgetId}
+                    className="w-full px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Activity size={13} />
+                    <span>Iniciar Auditoría</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Opción 2: Cargar Archivo Externo */}
+              <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition flex flex-col justify-between">
+                <div>
+                  <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center mb-3">
+                    <UploadCloud size={20} />
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-900">Importar Archivo Externo</h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Cargue un presupuesto entregado por contratistas en Excel (.xlsx, .xls), LuloWin o PDF para contrastarlo de inmediato.
+                  </p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setShowImportChoiceModal(true)}
+                    className="w-full px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <UploadCloud size={14} />
+                    <span>Cargar Archivo Excel / PDF</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Opción 3: Abrir Auditoría Guardada */}
+              <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition flex flex-col justify-between">
+                <div>
+                  <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center mb-3">
+                    <FolderOpen size={20} />
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-900">Auditorías Guardadas</h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {snapshots.length > 0
+                      ? `Tiene ${snapshots.length} informe(s) de revisión guardados listos para consultar o exportar.`
+                      : 'Aún no tiene informes guardados. Realice su primera auditoría para archivarlos aquí.'}
+                  </p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setShowOpenModal(true)}
+                    disabled={snapshots.length === 0}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 text-slate-800 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <FolderOpen size={14} className="text-blue-600" />
+                    <span>Ver Informes ({snapshots.length})</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Lista rápida de auditorías recientes (si existen) */}
+          {snapshots.length > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+              <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <Clock size={16} className="text-slate-500" />
+                <span>Informes de Auditoría Recientes</span>
+              </h3>
+              <div className="divide-y divide-slate-100">
+                {snapshots.slice(0, 5).map((snap) => (
+                  <div
+                    key={snap.id}
+                    onClick={() => handleOpenSnapshot(snap.id)}
+                    className="py-3 px-3 -mx-3 rounded-xl hover:bg-slate-50 flex items-center justify-between cursor-pointer transition group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center text-xs font-bold">
+                        #{snap.report_code || 'INF'}
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition">
+                          {snap.name || 'Informe de Auditoría'}
+                        </div>
+                        <div className="text-xs text-slate-500 flex items-center gap-2">
+                          <span>{snap.project_name || 'Sin proyecto'}</span>
+                          <span>•</span>
+                          <span>Base: {getDatabaseLabel(snap.database_id)}</span>
+                          <span>•</span>
+                          <span>{new Date(snap.created_at).toLocaleDateString('es-VE')}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                        (snap.health_score || 0) >= 80 ? 'bg-emerald-100 text-emerald-800' :
+                        (snap.health_score || 0) >= 50 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
+                      }`}>
+                        {Math.round(snap.health_score || 0)}/100
+                      </span>
+                      <ChevronRight size={16} className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
