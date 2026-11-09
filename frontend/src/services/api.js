@@ -67,6 +67,9 @@ export async function loginArkoAdmin(email, password) {
   });
 
   if (!response.ok) {
+    if (response.status === 502 || response.status === 503 || response.status === 504) {
+      throw new Error('El servidor está iniciando o temporalmente ocupado. Por favor, reintenta en unos segundos.');
+    }
     const error = await response.json().catch(() => ({}));
     throw new Error(error.detail || 'Credenciales incorrectas');
   }
@@ -114,6 +117,9 @@ export async function loginLandingSite(email, password) {
   });
 
   if (!response.ok) {
+    if (response.status === 502 || response.status === 503 || response.status === 504) {
+      throw new Error('El servidor está iniciando o temporalmente ocupado. Por favor, reintenta en unos segundos.');
+    }
     const error = await response.json().catch(() => ({}));
     throw new Error(error.detail || 'Credenciales incorrectas');
   }
