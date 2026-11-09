@@ -86,8 +86,9 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
         setImportMode('apu_workbook');
       }
 
+      const fallbackName = (fileToLoad?.name ? fileToLoad.name.replace(/\.[^/.]+$/, '') : '').trim();
       setHeader({
-        budget_name: data.header?.budget_name || '',
+        budget_name: data.header?.budget_name || fallbackName || 'Presupuesto Importado',
         project_name: data.header?.project_name || '',
         client_name: data.header?.client_name || '',
         currency: data.header?.currency || 'USD',
@@ -113,11 +114,6 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
         labors: item.labors || [],
       }));
       setItems(parsedItems);
-
-      // Si es libro de APUs de Excel, no necesita generación con IA porque ya tiene APUs completos
-      if (data.source_type !== 'excel_apu') {
-        triggerAutoGeneration(parsedItems);
-      }
     } catch (err) {
       if (activeRequestIdRef.current !== requestId) return;
       setError(err.message || 'No se pudo analizar el archivo.');
@@ -322,6 +318,10 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
       return;
     }
 
+    // Cancelar cualquier generación automática de fondo si el usuario decide crear
+    autoGenCancelledRef.current = true;
+    setAutoGenerating(false);
+
     setCreating(true);
     setError(null);
     setLimitReached(false);
@@ -368,6 +368,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
       toast.success(result.message || 'Presupuesto creado correctamente.');
       if (onCreated) onCreated(result.budget_id);
     } catch (err) {
+      toast.error(err.message || 'No se pudo crear el presupuesto.');
       setError(err.message || 'No se pudo crear el presupuesto.');
       if (err.status === 403) setLimitReached(true);
     } finally {

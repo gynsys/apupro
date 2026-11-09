@@ -115,7 +115,7 @@ def build_preview(data: bytes, filename: str, db: Session, mode: str = "budget")
         item["selected_cod_par"] = None
         item["has_covenin_code_match"] = False
 
-    if mode != "compute_notes":
+    if mode == "compute_notes":
         refine_with_llm(items)
 
     for item in items:
