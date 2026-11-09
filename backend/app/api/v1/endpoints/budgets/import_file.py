@@ -5,6 +5,7 @@ import re
 import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
@@ -957,12 +958,22 @@ def save_computos_draft(
 
     for item in incoming_items:
         draft_id = str(item.get("id") or f"draft-{int(time.time() * 1000)}")
+        clean_name = (item.get("budgetName") or "").strip()
+        incoming_budget_id = str(item.get("budgetId") or "").strip()
+
+        # Protección contra sobreescritura accidental:
+        # Si draft_id coincide con un borrador existente pero el título del proyecto es sustancialmente distinto,
+        # bifurcar a un nuevo draft_id para no sobreescribir ni renombrar el proyecto previo.
+        existing_by_id = next((d for d in drafts if str(d.get("id")) == draft_id), None)
+        if existing_by_id:
+            old_name = (existing_by_id.get("budgetName") or "").strip().lower()
+            new_name = clean_name.lower()
+            if old_name and new_name and old_name != new_name:
+                draft_id = f"draft-{uuid.uuid4().hex[:12]}"
+
         item["id"] = draft_id
         if not item.get("savedAt"):
             item["savedAt"] = datetime.utcnow().isoformat()
-
-        clean_name = (item.get("budgetName") or "").strip()
-        incoming_budget_id = str(item.get("budgetId") or "").strip()
 
         # Conservar hasta 5 versiones anteriores (puntos de restauración) cuando el contenido cambia
         existing_match = next(

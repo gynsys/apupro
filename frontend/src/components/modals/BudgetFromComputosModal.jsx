@@ -1221,6 +1221,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   const handleAddMacroRows = (rows, meta = {}) => {
     if (!Array.isArray(rows) || rows.length === 0) return;
     isDirtyRef.current = true;
+
+    const nonBlankCount = capturedItems.filter((it) => !isItemEmpty(it)).length;
+    if (nonBlankCount === 0 && !meta.instanceId) {
+      setCurrentDraftId(`draft-${Date.now()}`);
+    }
     const instanceId = meta.instanceId || `macro-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const enriched = rows.map((row) => ({
       ...row,
