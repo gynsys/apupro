@@ -9,6 +9,7 @@ import {
   Sparkles,
   Sliders,
   Layers,
+  Wrench,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { budgetService } from '../../services/budgetService';
@@ -21,6 +22,11 @@ export default function BudgetUpdateModal({ isOpen, onClose, budget, onSuccess }
   const [activeTab, setActiveTab] = useState('database'); // 'database' | 'inflation' | 'multiplier'
   const [selectedDbId, setSelectedDbId] = useState('master');
   const [presetMode, setPresetMode] = useState('preset_prices'); // 'preset_prices' | 'preset_factors' | 'preset_full' | 'custom'
+
+  // Correcciones técnicas opcionales (Rendimientos, Depreciaciones, COVENIN)
+  const [correctPerformance, setCorrectPerformance] = useState(false);
+  const [correctDepreciation, setCorrectDepreciation] = useState(false);
+  const [correctDescription, setCorrectDescription] = useState(false);
 
   // Opciones personalizadas (Modo Maprex)
   const [showCustomOptions, setShowCustomOptions] = useState(false);
@@ -106,14 +112,29 @@ export default function BudgetUpdateModal({ isOpen, onClose, budget, onSuccess }
       if (activeTab === 'database') {
         payload.target_database_id = selectedDbId;
         payload.mode = presetMode;
+
+        // Flags para correcciones técnicas opcionales
+        const isPerfActive = presetMode === 'custom'
+          ? !!customOptions.update_partida_performance
+          : (presetMode === 'preset_full' || correctPerformance);
+
+        const isDeprecActive = presetMode === 'custom'
+          ? !!customOptions.update_equipment_depreciation
+          : (presetMode === 'preset_full' || presetMode === 'preset_factors' || correctDepreciation);
+
+        const isDescActive = presetMode === 'custom'
+          ? !!customOptions.update_partida_desc
+          : (presetMode === 'preset_full' || correctDescription);
+
+        payload.update_partida_performance = isPerfActive;
+        payload.update_equipment_depreciation = isDeprecActive;
+        payload.update_partida_desc = isDescActive;
+
         if (presetMode === 'custom') {
           payload = {
             ...payload,
-            update_partida_performance: customOptions.update_partida_performance,
-            update_partida_desc: customOptions.update_partida_desc,
             update_material_prices: customOptions.update_material_prices,
             update_equipment_prices: customOptions.update_equipment_prices,
-            update_equipment_depreciation: customOptions.update_equipment_depreciation,
             update_labor_jornal: customOptions.update_labor_jornal,
             update_labor_bonus: customOptions.update_labor_bonus,
             fixed_labor_bonus: customOptions.enable_fixed_bonus
@@ -394,6 +415,99 @@ export default function BudgetUpdateModal({ isOpen, onClose, budget, onSuccess }
                   </label>
                 </div>
               </div>
+
+              {/* Panel de Correcciones Técnicas Opcionales */}
+              {presetMode !== 'custom' && presetMode !== 'preset_full' && (
+                <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200/90 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-amber-200/80 text-amber-800 flex items-center justify-center shrink-0">
+                        <Wrench size={13} />
+                      </div>
+                      <span className="font-extrabold text-xs sm:text-sm text-amber-950">
+                        Correcciones Técnicas de Partidas y Equipos
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-200/70 text-amber-900 border border-amber-300/60">
+                      Opcional
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-amber-900/85 leading-relaxed m-0">
+                    Si este presupuesto tiene <strong>rendimientos alterados</strong> o <strong>depreciaciones de equipos modificadas</strong>, marca estas casillas para corregirlos de una vez con los valores normativos de la base:
+                  </p>
+
+                  <div className="space-y-2 pt-0.5">
+                    {/* Checkbox Rendimientos */}
+                    <label className={`flex items-start gap-2.5 p-2.5 rounded-lg border transition cursor-pointer ${
+                      correctPerformance
+                        ? 'bg-amber-100/70 border-amber-300 ring-1 ring-amber-400/50'
+                        : 'bg-white border-amber-200/60 hover:bg-white'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={correctPerformance}
+                        onChange={(e) => setCorrectPerformance(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer shrink-0"
+                      />
+                      <div className="text-xs">
+                        <span className="font-extrabold text-slate-900 block">
+                          Corregir / Restaurar Rendimientos de Partidas
+                        </span>
+                        <span className="text-[11px] text-slate-600 block leading-tight mt-0.5">
+                          Sustituye los rendimientos diarios por los valores oficiales del catálogo (corrige partidas con rendimientos alterados o no estándar).
+                        </span>
+                      </div>
+                    </label>
+
+                    {/* Checkbox Depreciación Equipos */}
+                    {presetMode !== 'preset_factors' && (
+                      <label className={`flex items-start gap-2.5 p-2.5 rounded-lg border transition cursor-pointer ${
+                        correctDepreciation
+                          ? 'bg-amber-100/70 border-amber-300 ring-1 ring-amber-400/50'
+                          : 'bg-white border-amber-200/60 hover:bg-white'
+                      }`}>
+                        <input
+                          type="checkbox"
+                          checked={correctDepreciation}
+                          onChange={(e) => setCorrectDepreciation(e.target.checked)}
+                          className="mt-0.5 h-4 w-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer shrink-0"
+                        />
+                        <div className="text-xs">
+                          <span className="font-extrabold text-slate-900 block">
+                            Corregir / Restaurar Factores de Depreciación (COP) de Equipos
+                          </span>
+                          <span className="text-[11px] text-slate-600 block leading-tight mt-0.5">
+                            Aplica los factores de depreciación oficiales de la base (corrige maquinaria y herramientas con depreciación en 0.00 o alterada).
+                          </span>
+                        </div>
+                      </label>
+                    )}
+
+                    {/* Checkbox Descripciones y Unidades */}
+                    <label className={`flex items-start gap-2.5 p-2.5 rounded-lg border transition cursor-pointer ${
+                      correctDescription
+                        ? 'bg-amber-100/70 border-amber-300 ring-1 ring-amber-400/50'
+                        : 'bg-white border-amber-200/60 hover:bg-white'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={correctDescription}
+                        onChange={(e) => setCorrectDescription(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer shrink-0"
+                      />
+                      <div className="text-xs">
+                        <span className="font-extrabold text-slate-900 block">
+                          Homologar Descripciones y Unidades COVENIN
+                        </span>
+                        <span className="text-[11px] text-slate-600 block leading-tight mt-0.5">
+                          Restaura la redacción y unidad de medida oficial de las partidas según el catálogo normativo.
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
 
               {/* Panel Personalizado (Maprex Granular) */}
               {presetMode === 'custom' && (

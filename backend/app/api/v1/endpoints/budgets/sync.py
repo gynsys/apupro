@@ -211,6 +211,9 @@ def sync_budget_advanced(
     updated_labors = 0
     unmatched_labors = set()
     updated_items = 0
+    updated_performances = 0
+    updated_depreciations = 0
+    updated_descriptions = 0
 
     # =========================================================================
     # CASO A: Multiplicador de Cantidades (Pestaña 3)
@@ -263,14 +266,14 @@ def sync_budget_advanced(
             up_mat_qty = False
             up_mat_waste = False
             up_eq_price = True
-            up_eq_deprec = False
+            up_eq_deprec = bool(req.update_equipment_depreciation)
             up_eq_qty = False
             up_lab_jornal = True
             up_lab_bonus = True
             up_lab_crews = False
-            up_par_perf = False
-            up_par_fcas = False
-            up_par_desc = False
+            up_par_perf = bool(req.update_partida_performance)
+            up_par_fcas = bool(req.update_partida_fcas)
+            up_par_desc = bool(req.update_partida_desc)
         elif req.mode == "preset_factors":
             up_mat_price = True
             up_mat_qty = False
@@ -281,9 +284,9 @@ def sync_budget_advanced(
             up_lab_jornal = True
             up_lab_bonus = True
             up_lab_crews = False
-            up_par_perf = False
+            up_par_perf = bool(req.update_partida_performance)
             up_par_fcas = True
-            up_par_desc = False
+            up_par_desc = bool(req.update_partida_desc)
         elif req.mode == "preset_full":
             up_mat_price = True
             up_mat_qty = True
@@ -322,9 +325,13 @@ def sync_budget_advanced(
             for r in m_rows:
                 entry = {"CodMat": r[0], "CosMat": float(r[2] or 0.0), "Descri": r[3], "UniMat": r[4]}
                 if r[0]:
-                    mat_map[str(r[0]).strip().upper()] = entry
+                    code_str = str(r[0]).strip().upper()
+                    mat_map[code_str] = entry
+                    mat_map[re.sub(r'[^A-Z0-9]', '', code_str)] = entry
                 if r[1]:
-                    mat_map[str(r[1]).strip().upper()] = entry
+                    ref_str = str(r[1]).strip().upper()
+                    mat_map[ref_str] = entry
+                    mat_map[re.sub(r'[^A-Z0-9]', '', ref_str)] = entry
         except Exception as exc:
             logger.error("Error cargando materiales en esquema %s: %s", schema, exc, exc_info=True)
             db.rollback()
@@ -338,9 +345,13 @@ def sync_budget_advanced(
             for r in e_rows:
                 entry = {"CodEqu": r[0], "CosDia": float(r[2] or 0.0), "Descri": r[3], "deprec": float(r[4] if r[4] is not None else 1.0)}
                 if r[0]:
-                    eq_map[str(r[0]).strip().upper()] = entry
+                    code_str = str(r[0]).strip().upper()
+                    eq_map[code_str] = entry
+                    eq_map[re.sub(r'[^A-Z0-9]', '', code_str)] = entry
                 if r[1]:
-                    eq_map[str(r[1]).strip().upper()] = entry
+                    ref_str = str(r[1]).strip().upper()
+                    eq_map[ref_str] = entry
+                    eq_map[re.sub(r'[^A-Z0-9]', '', ref_str)] = entry
         except Exception as exc:
             logger.error("Error cargando equipos en esquema %s: %s", schema, exc, exc_info=True)
             db.rollback()
@@ -354,9 +365,13 @@ def sync_budget_advanced(
             for r in l_rows:
                 entry = {"CodMan": r[0], "Jornal": float(r[2] or 0.0), "Bono": float(r[3] or 0.0), "Descri": r[4]}
                 if r[0]:
-                    lab_map[str(r[0]).strip().upper()] = entry
+                    code_str = str(r[0]).strip().upper()
+                    lab_map[code_str] = entry
+                    lab_map[re.sub(r'[^A-Z0-9]', '', code_str)] = entry
                 if r[1]:
-                    lab_map[str(r[1]).strip().upper()] = entry
+                    ref_str = str(r[1]).strip().upper()
+                    lab_map[ref_str] = entry
+                    lab_map[re.sub(r'[^A-Z0-9]', '', ref_str)] = entry
         except Exception as exc:
             logger.error("Error cargando mano de obra en esquema %s: %s", schema, exc, exc_info=True)
             db.rollback()
@@ -371,9 +386,13 @@ def sync_budget_advanced(
                 for r in i_rows:
                     entry = {"CodPar": r[0], "CovPar": r[1], "Descri": r[2], "UniPar": r[3], "RenPar": float(r[4] or 1.0)}
                     if r[0]:
-                        item_map[str(r[0]).strip().upper()] = entry
+                        code_str = str(r[0]).strip().upper()
+                        item_map[code_str] = entry
+                        item_map[re.sub(r'[^A-Z0-9]', '', code_str)] = entry
                     if r[1]:
-                        item_map[str(r[1]).strip().upper()] = entry
+                        cov_str = str(r[1]).strip().upper()
+                        item_map[cov_str] = entry
+                        item_map[re.sub(r'[^A-Z0-9]', '', cov_str)] = entry
             except Exception as exc:
                 logger.error("Error cargando partidas en esquema %s: %s", schema, exc, exc_info=True)
                 db.rollback()
@@ -383,25 +402,40 @@ def sync_budget_advanced(
             if it.is_chapter:
                 continue
 
-            # Actualizar datos de cabecera de partida
+            # Actualizar datos de cabecera de partida (Rendimiento, Descripción, Unidad)
             if (up_par_perf or up_par_desc) and item_map:
                 it_code = str(it.cod_par or "").strip().upper()
                 cov_code = str(it.cov_par or "").strip().upper()
-                master_it = item_map.get(cov_code) or item_map.get(it_code)
+                clean_it = re.sub(r'[^A-Z0-9]', '', it_code)
+                clean_cov = re.sub(r'[^A-Z0-9]', '', cov_code)
+                master_it = (
+                    item_map.get(cov_code)
+                    or (item_map.get(clean_cov) if clean_cov else None)
+                    or item_map.get(it_code)
+                    or (item_map.get(clean_it) if clean_it else None)
+                )
                 if master_it:
+                    item_changed = False
                     if up_par_perf and master_it.get("RenPar", 0) > 0:
                         it.performance = master_it["RenPar"]
+                        updated_performances += 1
+                        item_changed = True
                     if up_par_desc:
                         if master_it.get("Descri"):
                             it.description = master_it["Descri"]
+                            updated_descriptions += 1
+                            item_changed = True
                         if master_it.get("UniPar"):
                             it.unit = master_it["UniPar"]
-                    updated_items += 1
+                            item_changed = True
+                    if item_changed:
+                        updated_items += 1
 
             # Actualizar Materiales
             for m in (it.materials or []):
                 m_code = str(m.codigo or "").strip().upper()
-                cat_m = mat_map.get(m_code)
+                clean_m = re.sub(r'[^A-Z0-9]', '', m_code)
+                cat_m = mat_map.get(m_code) or (mat_map.get(clean_m) if clean_m else None)
                 if cat_m:
                     if up_mat_price:
                         m.precio_unitario = cat_m["CosMat"]
@@ -412,12 +446,14 @@ def sync_budget_advanced(
             # Actualizar Equipos
             for eq in (it.equipments or []):
                 eq_code = str(eq.codigo or "").strip().upper()
-                cat_eq = eq_map.get(eq_code)
+                clean_eq = re.sub(r'[^A-Z0-9]', '', eq_code)
+                cat_eq = eq_map.get(eq_code) or (eq_map.get(clean_eq) if clean_eq else None)
                 if cat_eq:
                     if up_eq_price:
                         eq.precio_unitario = cat_eq["CosDia"]
                     if up_eq_deprec and cat_eq.get("deprec") is not None:
                         eq.depreciacion = cat_eq["deprec"]
+                        updated_depreciations += 1
                     updated_equipments += 1
                 else:
                     unmatched_equipments.add(f"{eq.codigo} ({eq.descripcion[:30] if eq.descripcion else 'Equipo'})")
@@ -425,7 +461,8 @@ def sync_budget_advanced(
             # Actualizar Mano de Obra
             for lab in (it.labors or []):
                 lab_code = str(lab.codigo or "").strip().upper()
-                cat_lab = lab_map.get(lab_code)
+                clean_lab = re.sub(r'[^A-Z0-9]', '', lab_code)
+                cat_lab = lab_map.get(lab_code) or (lab_map.get(clean_lab) if clean_lab else None)
                 if cat_lab:
                     if up_lab_jornal:
                         lab.jornal = cat_lab["Jornal"]
@@ -448,6 +485,18 @@ def sync_budget_advanced(
     diff_amount = round(new_total - old_total, 2)
     diff_percent = round((diff_amount / old_total * 100.0) if old_total > 0 else 0.0, 2)
 
+    actions_done = []
+    if updated_materials > 0 or updated_equipments > 0 or updated_labors > 0:
+        actions_done.append("precios actualizados")
+    if updated_performances > 0:
+        actions_done.append(f"{updated_performances} rendimientos corregidos")
+    if updated_depreciations > 0:
+        actions_done.append(f"{updated_depreciations} depreciaciones corregidas")
+    if updated_descriptions > 0:
+        actions_done.append(f"{updated_descriptions} descripciones homologadas")
+
+    summary_str = f" ({', '.join(actions_done)})" if actions_done else ""
+
     return {
         "status": "ok",
         "budget_id": target_budget.id,
@@ -463,13 +512,16 @@ def sync_budget_advanced(
         "unmatched_labors_count": len(unmatched_labors),
         "unmatched_labors": sorted(list(unmatched_labors))[:15],
         "updated_items_count": updated_items,
+        "updated_performances_count": updated_performances,
+        "updated_depreciations_count": updated_depreciations,
+        "updated_descriptions_count": updated_descriptions,
         "old_total": old_total,
         "new_total": new_total,
         "diff_amount": diff_amount,
         "diff_percent": diff_percent,
         "message": (
-            f"Nueva versión '{target_budget.name}' creada exitosamente. Variación: {diff_amount:+,.2f} ({diff_percent:+.2f}%)."
+            f"Nueva versión '{target_budget.name}' creada exitosamente{summary_str}. Variación: {diff_amount:+,.2f} ({diff_percent:+.2f}%)."
             if req.create_new_version
-            else f"Presupuesto actualizado exitosamente. Variación: {diff_amount:+,.2f} ({diff_percent:+.2f}%)."
+            else f"Presupuesto actualizado exitosamente{summary_str}. Variación: {diff_amount:+,.2f} ({diff_percent:+.2f}%)."
         ),
     }
