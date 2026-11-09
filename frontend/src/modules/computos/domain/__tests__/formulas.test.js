@@ -123,4 +123,20 @@ describe('fórmulas de cómputos', () => {
     expect(cleanFormulaDisplay('')).toBe('');
     expect(cleanFormulaDisplay(null)).toBe('');
   });
+
+  it('permite veces negativo para deducciones de vanos/puertas/ventanas', () => {
+    const pDeduccion = { length: 0.8, width: 1.9, times: -1, unit: 'M2' };
+    const parcial = computePartial(pDeduccion);
+    expect(parcial).toBe(-1.52);
+    expect(pDeduccion.formula).toContain('-1 ×');
+
+    const item = recomputeItemWithPartials({
+      unit: 'M2',
+      partials: [
+        { length: 3.4, width: 2.0, times: 1 },
+        { length: 0.8, width: 1.9, times: -1 },
+      ],
+    });
+    expect(item.quantity).toBe(5.28);
+  });
 });

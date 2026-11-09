@@ -440,10 +440,9 @@ function ComputosTableRow({
                                 <MathQuantityInput
                                   value={it.times ?? 1}
                                   onChange={(val) => handleUpdateItemField(it.id, 'times', val)}
-                                  min={1}
                                   integerOnly
                                   className="w-full px-1 py-1 text-xs text-center font-bold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                                  title={isSteel ? 'Número de piezas / elementos iguales' : 'Número de repeticiones'}
+                                  title={isSteel ? 'Número de piezas / elementos iguales' : 'Número de repeticiones (admite negativos para deducciones)'}
                                 />
                               )}
                             </td>
@@ -770,10 +769,9 @@ function ComputosTableRow({
                                       onChange={(val) =>
                                         handleUpdatePartialField(it.id, p.id, 'times', val)
                                       }
-                                      min={1}
                                       integerOnly
                                       className="w-full px-1 py-0.5 text-xs text-center font-bold bg-white border border-amber-200 rounded"
-                                      title={isSteel ? 'Número de piezas iguales' : 'Veces'}
+                                      title={isSteel ? 'Número de piezas iguales' : 'Veces (admite negativos para deducciones)'}
                                     />
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1 bg-amber-50/30">

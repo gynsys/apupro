@@ -322,7 +322,6 @@ export default function ComputosCards({
                                 <MathQuantityInput
                                   value={it.times ?? 1}
                                   onChange={(val) => handleUpdateItemField(it.id, 'times', val)}
-                                  min={1}
                                   integerOnly
                                   className="w-full px-2.5 py-1.5 text-xs text-center font-bold rounded-lg border border-amber-300 bg-white"
                                 />
@@ -767,7 +766,6 @@ export default function ComputosCards({
                                             onChange={(val) =>
                                               handleUpdatePartialField(it.id, p.id, 'times', val)
                                             }
-                                            min={1}
                                             integerOnly
                                             className="w-full px-1.5 py-1 text-xs text-center font-bold bg-white border border-amber-200 rounded-lg"
                                           />

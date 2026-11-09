@@ -50,6 +50,11 @@ export default function MathQuantityInput({
     let str = String(expr).trim();
     if (str === '') return allowEmpty ? '' : 0;
 
+    // Si el usuario acaba de escribir '-' o '+' solo, no evaluamos aún
+    if (str === '-' || str === '+' || str === '=-' || str === '=+' || str === '=') {
+      return null;
+    }
+
     // Soportar '=' inicial estilo hoja de cálculo / Excel
     if (str.startsWith('=')) {
       str = str.slice(1).trim();
@@ -119,7 +124,8 @@ export default function MathQuantityInput({
       if (onSave) onSave(evaluated);
     } else {
       setLocalVal(formatVal(value));
-      if (localVal && String(localVal).trim() !== '' && String(localVal).trim() !== String(value)) {
+      const trimmed = localVal ? String(localVal).trim() : '';
+      if (trimmed !== '' && trimmed !== String(value) && trimmed !== '-' && trimmed !== '+') {
         toast.error('Fórmula no válida. Se conservó el valor anterior.', { id: 'math-err', duration: 2000 });
       }
     }

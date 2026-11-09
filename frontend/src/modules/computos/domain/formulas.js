@@ -137,7 +137,7 @@ function computePartial(p, parentUnit = '') {
     const parts = [`${baseSource} ${p.linkedTo.sourceUnit || normUnit || ''}`.trim()];
     if (f !== null && f !== 1) parts.push(`× ${f}`);
     if (dist !== null && dist > 0) parts.push(`× ${dist}km`);
-    if (t > 1) parts.unshift(`${t} ×`);
+    if (t !== 1) parts.unshift(`${t} ×`);
     p.formula = `🔗 ${parts.join(' ')} = ${parcial} ${normUnit || ''}`.trim();
     return parcial;
   }
@@ -148,7 +148,7 @@ function computePartial(p, parentUnit = '') {
     const unitWeight = round2(l * h * f);
     const parcial = round2(unitWeight * t);
     p.partial = parcial;
-    p.formula = t > 1
+    p.formula = t !== 1
       ? `${t} × (${l}m × ${h} barras × ${f} kg/m) = ${parcial} kg`
       : `(${l}m × ${h} barras × ${f} kg/m) = ${parcial} kg`;
     return parcial;
@@ -160,7 +160,7 @@ function computePartial(p, parentUnit = '') {
     if (geomResult.baseGeom !== null) {
       const parcial = round2(geomResult.baseGeom * multFactor * multDist * t);
       p.partial = parcial;
-      p.formula = t > 1 ? `${t} × [${geomResult.formulaStr}]` : geomResult.formulaStr;
+      p.formula = t !== 1 ? `${t} × [${geomResult.formulaStr}]` : geomResult.formulaStr;
       if (normUnit === 'M3' || (!normUnit && geomResult.baseGeom > 0)) {
         p.m3 = parcial;
         p._autoM3 = parcial;
@@ -194,7 +194,7 @@ function computePartial(p, parentUnit = '') {
     const innerStr = innerParts.join(' ');
     const displayUnit = normUnit || (dims.length === 3 ? 'm³' : dims.length === 2 ? 'm²' : 'm');
 
-    p.formula = t > 1
+    p.formula = t !== 1
       ? `${t} × (${innerStr}) = ${parcial} ${displayUnit}`
       : `(${innerStr}) = ${parcial} ${displayUnit}`;
 
@@ -206,7 +206,7 @@ function computePartial(p, parentUnit = '') {
   if (m3Val !== null && !isNaN(m3Val) && m3Val > 0) {
     const parcial = round2(m3Val * multFactor * multDist * t);
     p.partial = parcial;
-    p.formula = `${t > 1 ? `${t} × ` : ''}${m3Val} m³${dist !== null && dist > 0 ? ` × ${dist}km` : ''}${f !== null && f !== 1 ? ` × ${f}` : ''} = ${parcial} ${normUnit || 'm³'}`;
+    p.formula = `${t !== 1 ? `${t} × ` : ''}${m3Val} m³${dist !== null && dist > 0 ? ` × ${dist}km` : ''}${f !== null && f !== 1 ? ` × ${f}` : ''} = ${parcial} ${normUnit || 'm³'}`;
     return parcial;
   }
 
@@ -234,9 +234,9 @@ function recomputeItemWithPartials(item) {
   // Suma de M3 para botes y acarreo a partir de los parciales
   const totalM3 = item.partials.reduce((sum, p) => {
     const val = parseFloat(String(p.m3).replace(',', '.'));
-    return sum + (!isNaN(val) && val > 0 ? val : 0);
+    return sum + (!isNaN(val) ? val : 0);
   }, 0);
-  const roundedM3 = totalM3 > 0 ? round2(totalM3) : (item.m3 || '');
+  const roundedM3 = totalM3 !== 0 ? round2(totalM3) : (item.m3 || '');
 
   const partialSummary = item.partials.length <= 4
     ? item.partials.map((p) => `${p.partial || 0}`).join(' + ') + ` = ${roundedTotal} ${item.unit || ''}`
@@ -300,7 +300,8 @@ function recomputeRow(row, field, value) {
   const l = parseNum(updated.length);
   const w = parseNum(updated.width);
   const h = parseNum(updated.height);
-  const t = Math.max(1, parseNum(updated.times) || 1);
+  const rawT = parseNum(updated.times);
+  const t = rawT !== null && rawT !== 0 ? rawT : 1;
   const f = parseNum(updated.factor);
   const dist = parseNum(updated.distance);
   const m3Val = parseNum(updated.m3);
@@ -329,7 +330,7 @@ function recomputeRow(row, field, value) {
     const total = round2(unitWeight * t);
     updated.partial = unitWeight;
     updated.quantity = total;
-    updated.formula = t > 1
+    updated.formula = t !== 1
       ? `${t} × (${l}m × ${h} barras × ${f} kg/m) = ${total} kg`
       : `(${l}m × ${h} barras × ${f} kg/m) = ${total} kg`;
     updated._ownQuantity = total;
@@ -345,7 +346,7 @@ function recomputeRow(row, field, value) {
       const total = round2(parcial * t);
       updated.partial = parcial;
       updated.quantity = total;
-      updated.formula = t > 1 ? `${t} × [${geomResult.formulaStr}]` : geomResult.formulaStr;
+      updated.formula = t !== 1 ? `${t} × [${geomResult.formulaStr}]` : geomResult.formulaStr;
       updated._ownQuantity = total;
       updated._ownFormula = updated.formula;
       if (updated.unit === 'M3') {
@@ -392,7 +393,7 @@ function recomputeRow(row, field, value) {
     const innerStr = innerParts.join(' ');
     const displayUnit = updated.unit || (dims.length === 3 ? 'm³' : dims.length === 2 ? 'm²' : 'm');
 
-    updated.formula = t > 1
+    updated.formula = t !== 1
       ? `${t} × (${innerStr}) = ${total} ${displayUnit}`
       : `(${innerStr}) = ${total} ${displayUnit}`;
     updated._ownQuantity = total;
@@ -408,7 +409,7 @@ function recomputeRow(row, field, value) {
     updated.partial = parcial;
     updated.quantity = total;
 
-    updated.formula = `${t > 1 ? `${t} × ` : ''}${m3Val} m³${dist !== null && dist > 0 ? ` × ${dist}km` : ''}${f !== null && f !== 1 ? ` × ${f}` : ''} = ${total} ${updated.unit || 'm³'}`;
+    updated.formula = `${t !== 1 ? `${t} × ` : ''}${m3Val} m³${dist !== null && dist > 0 ? ` × ${dist}km` : ''}${f !== null && f !== 1 ? ` × ${f}` : ''} = ${total} ${updated.unit || 'm³'}`;
     updated._ownQuantity = total;
     updated._ownFormula = updated.formula;
   } else if (field === 'partial') {
