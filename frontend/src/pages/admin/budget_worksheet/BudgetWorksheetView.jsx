@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Loader, Layers, Plus } from 'lucide-react';
 
 import BudgetSettingsModal from '../../../components/modals/BudgetSettingsModal';
+import BudgetUpdateModal from '../../../components/modals/BudgetUpdateModal';
 import BudgetPrintModal from '../../../components/modals/BudgetPrintModal';
 import BudgetExportExcelModal from '../../../components/modals/BudgetExportExcelModal';
 import SharePartidaModal from '../../../components/modals/SharePartidaModal';
@@ -59,6 +60,9 @@ export default function BudgetWorksheetView() {
               ws.setBudget(updated);
               ws.setSettings(prev => ({ ...prev, ...updated }));
               ws.setShowSettings(false);
+              if (typeof ws.loadBudget === 'function') {
+                ws.loadBudget();
+              }
             }}
           />
         )}
@@ -411,6 +415,13 @@ export default function BudgetWorksheetView() {
           setShowImportSharedPartida(false);
           ws.loadBudget();
         }}
+      />
+
+      <BudgetUpdateModal
+        isOpen={ws.showUpdateModal}
+        onClose={() => ws.setShowUpdateModal(false)}
+        budget={ws.budget}
+        onSuccess={() => ws.loadBudget()}
       />
     </div>
   );

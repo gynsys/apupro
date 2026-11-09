@@ -149,7 +149,16 @@ def update_budget(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> Budget:
     """Actualiza la configuracion y cabecera de un presupuesto."""
-    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
+    budget = (
+        db.query(Budget)
+        .options(
+            selectinload(Budget.items).selectinload(BudgetItem.materials),
+            selectinload(Budget.items).selectinload(BudgetItem.equipments),
+            selectinload(Budget.items).selectinload(BudgetItem.labors),
+        )
+        .filter(Budget.id == budget_id, Budget.user_id == str(current_user.id))
+        .first()
+    )
     if not budget:
         raise HTTPException(status_code=404, detail="Budget not found")
 
@@ -192,7 +201,16 @@ def duplicate_budget(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> Budget:
     """Duplica un presupuesto existente junto con todas sus partidas e insumos."""
-    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
+    budget = (
+        db.query(Budget)
+        .options(
+            selectinload(Budget.items).selectinload(BudgetItem.materials),
+            selectinload(Budget.items).selectinload(BudgetItem.equipments),
+            selectinload(Budget.items).selectinload(BudgetItem.labors),
+        )
+        .filter(Budget.id == budget_id, Budget.user_id == str(current_user.id))
+        .first()
+    )
     if not budget:
         raise HTTPException(status_code=404, detail="Budget not found")
 
@@ -286,7 +304,16 @@ async def upload_budget_logo(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> Dict[str, str]:
     """Sube el logo de la empresa para un presupuesto especifico."""
-    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
+    budget = (
+        db.query(Budget)
+        .options(
+            selectinload(Budget.items).selectinload(BudgetItem.materials),
+            selectinload(Budget.items).selectinload(BudgetItem.equipments),
+            selectinload(Budget.items).selectinload(BudgetItem.labors),
+        )
+        .filter(Budget.id == budget_id, Budget.user_id == str(current_user.id))
+        .first()
+    )
     if not budget:
         raise HTTPException(status_code=404, detail="Budget not found")
 

@@ -235,9 +235,24 @@ export const budgetService = {
   syncPrices: async (budgetId) => {
     const response = await fetch(`${API_URL}/budgets/${budgetId}/sync_prices`, {
       method: 'POST',
+      headers: getAuthHeaders(),
       credentials: 'include'
     });
     if (!response.ok) throw new Error('Error al sincronizar precios');
+    return response.json();
+  },
+
+  syncAdvanced: async (budgetId, payload) => {
+    const response = await fetch(`${API_URL}/budgets/${budgetId}/sync_advanced`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al actualizar el presupuesto');
+    }
     return response.json();
   },
 
@@ -381,11 +396,14 @@ export const budgetService = {
     try {
       const response = await fetch(`${API_URL}/budgets/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify(data)
       });
-      if (!response.ok) throw new Error('Error al actualizar el presupuesto');
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.detail || 'Error al actualizar el presupuesto');
+      }
       const updated = await response.json();
       if (isDeviceOfflineModeActive()) {
         const cached = await getOfflineBudgetDetail(id);

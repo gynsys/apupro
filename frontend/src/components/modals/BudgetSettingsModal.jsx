@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Settings, X, DollarSign, Hash, Percent, UploadCloud, Trash2 } from 'lucide-react';
+import { Settings, X, DollarSign, Hash, Percent, UploadCloud, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { budgetService } from '../../services/budgetService';
 import { useUserCostos } from '../../context/UserCostosContext';
@@ -9,6 +9,7 @@ import DecimalInput from '../DecimalInput';
 export default function BudgetSettingsModal({ budget, onClose, onSave }) {
   const { costosConfig } = useUserCostos();
   const [configTab, setConfigTab] = useState('general');
+  const [saving, setSaving] = useState(false);
   const [logoPreview, setLogoPreview] = useState(() => {
     // Cargar logo desde localStorage
     const savedLogo = localStorage.getItem(`budget_logo_${budget.id}`);
@@ -100,8 +101,24 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
   };
 
   const handleSaveSettings = async () => {
+    if (saving) return;
+    setSaving(true);
     try {
-      const projectName = (settings.project_name || settings.name || budget.project_name || budget.name || '').trim();
+      const projectName = (settings.project_name || settings.name || budget?.project_name || budget?.name || '').trim();
+      if (!projectName) {
+        toast.error('El nombre de la obra / proyecto no puede estar vacío');
+        setSaving(false);
+        return;
+      }
+
+      const toNum = (val, defaultVal = 0.0) => {
+        if (val === null || val === undefined || val === '') return defaultVal;
+        if (typeof val === 'number') return isNaN(val) ? defaultVal : val;
+        const cleaned = String(val).replace(',', '.');
+        const parsed = parseFloat(cleaned);
+        return isNaN(parsed) ? defaultVal : parsed;
+      };
+
       const payload = {
         name: projectName,
         project_name: projectName,
@@ -110,25 +127,32 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
         client_name: (settings.client_name || '').trim(),
         ubicacion: (settings.ubicacion || '').trim(),
         currency: settings.currency || 'USD',
-        exchange_rate: parseFloat(settings.exchange_rate) || 1.0,
-        fcas_percent: parseFloat(settings.fcas_percent) || 0.0,
+        exchange_rate: toNum(settings.exchange_rate, 1.0),
+        fcas_percent: toNum(settings.fcas_percent, 417.0),
         bono_in_fcas: Boolean(settings.bono_in_fcas),
-        admin_percent: parseFloat(settings.admin_percent) || 0.0,
-        profit_percent: parseFloat(settings.profit_percent) || 0.0,
-        iva_percent: parseFloat(settings.iva_percent) || 0.0,
-        labor_bonus: parseFloat(settings.labor_bonus) || 0.0,
-        material_inflation: parseFloat(settings.material_inflation) || 0.0,
-        labor_inflation: parseFloat(settings.labor_inflation) || 0.0,
-        equipment_inflation: parseFloat(settings.equipment_inflation) || 0.0,
+        admin_percent: toNum(settings.admin_percent, 15.0),
+        profit_percent: toNum(settings.profit_percent, 10.0),
+        iva_percent: toNum(settings.iva_percent, 16.0),
+        labor_bonus: toNum(settings.labor_bonus, 0.0),
+        material_inflation: toNum(settings.material_inflation, 0.0),
+        labor_inflation: toNum(settings.labor_inflation, 0.0),
+        equipment_inflation: toNum(settings.equipment_inflation, 0.0),
       };
 
       const updated = await budgetService.update(budget.id, payload);
       localStorage.setItem(`budget_ubicacion_${budget.id}`, payload.ubicacion);
       toast.success('Configuración guardada exitosamente');
-      onSave(updated || { ...budget, ...payload });
+      if (typeof onSave === 'function') {
+        onSave(updated || { ...budget, ...payload });
+      }
+      if (typeof onClose === 'function') {
+        onClose();
+      }
     } catch (error) {
       console.error('Error guardando configuración:', error);
-      toast.error('Error guardando configuración');
+      toast.error(error.message || 'Error guardando configuración');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -432,9 +456,17 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
           <button 
             type="button"
             onClick={handleSaveSettings}
-            className="bg-sky-600 text-white border-none text-sm font-semibold px-5 py-2.5 touch-target flex items-center justify-center rounded-xl cursor-pointer shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:bg-sky-700 hover:-translate-y-[1px]"
+            disabled={saving}
+            className="bg-sky-600 disabled:opacity-50 text-white border-none text-sm font-semibold px-5 py-2.5 touch-target flex items-center justify-center gap-2 rounded-xl cursor-pointer shadow-[0_4px_6px_rgba(2,132,199,0.2)] transition-all hover:bg-sky-700 hover:-translate-y-[1px]"
           >
-            Guardar Configuración
+            {saving ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                <span>Guardando...</span>
+              </>
+            ) : (
+              'Guardar Configuración'
+            )}
           </button>
         </div>
       </div>

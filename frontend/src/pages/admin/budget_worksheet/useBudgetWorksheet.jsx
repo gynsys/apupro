@@ -48,6 +48,7 @@ export function useBudgetWorksheet() {
   });
 
   const [syncing, setSyncing] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
 
   // Search DB Modal
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -219,39 +220,7 @@ export function useBudgetWorksheet() {
   }, [printConfig]);
 
   const handleSyncPrices = () => {
-    toast((t) => (
-      <div className="flex flex-col gap-3 py-1 min-w-[280px] max-w-sm">
-        <p className="text-sm font-medium text-slate-800 leading-snug">
-          ¿Deseas actualizar los precios unitarios de TODO el presupuesto usando la Base Maestra? Los rendimientos y cantidades se mantendrán intactos.
-        </p>
-        <div className="flex justify-end gap-2 mt-1">
-          <button
-            onClick={() => toast.dismiss(t.id)}
-            className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200 cursor-pointer"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={async () => {
-              toast.dismiss(t.id);
-              try {
-                setSyncing(true);
-                await budgetService.syncPrices(id);
-                toast.success('Precios de todo el presupuesto actualizados correctamente');
-                loadBudget();
-              } catch (e) {
-                toast.error('Error al actualizar precios');
-              } finally {
-                setSyncing(false);
-              }
-            }}
-            className="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm cursor-pointer"
-          >
-            Actualizar
-          </button>
-        </div>
-      </div>
-    ), { duration: Infinity });
+    setShowUpdateModal(true);
   };
 
   const handleOpenSearchModal = () => {
@@ -763,6 +732,8 @@ export function useBudgetWorksheet() {
     setEditingChapterName,
     loadBudget,
     handleSyncPrices,
+    showUpdateModal,
+    setShowUpdateModal,
     handleOpenSearchModal,
     handleAddItem,
     handleInsertAIApu,
