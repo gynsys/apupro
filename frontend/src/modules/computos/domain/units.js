@@ -170,6 +170,26 @@ function inferUnitFromDescription(desc = '') {
  * Evalúa de forma segura una expresión de mediciones y extrae sus factores (Largo, Ancho, Alto, Veces).
  */
 
+export function isDiscreteUnit(unit) {
+  if (!unit) return false;
+  const u = String(unit).trim().toUpperCase();
+  return [
+    'PTO', 'PTOS', 'PUNTO', 'PUNTOS',
+    'UND', 'UNID', 'UNIDAD', 'UNIDADES',
+    'PZA', 'PIEZA', 'PIEZAS',
+    'GL', 'GLOBAL', 'SG',
+    'VIAJE', 'VIAJES',
+    'FLETE', 'FLETES',
+    'GAND', 'GANDOLA', 'GANDOLAS',
+    'PAR', 'PARES',
+    'MES', 'MESES',
+    'DIA', 'DIAS', 'DÍAS',
+    'HORA', 'HORAS',
+    'JGO', 'JUEGO', 'JUEGOS',
+    'LOTE', 'LOTES'
+  ].includes(u);
+}
+
 export {
   COMMON_UNITS,
   UNIT_PATTERN,

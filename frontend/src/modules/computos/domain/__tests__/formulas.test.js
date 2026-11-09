@@ -139,4 +139,42 @@ describe('fórmulas de cómputos', () => {
     });
     expect(item.quantity).toBe(5.28);
   });
+
+  it('calcula correctamente unidades discretas como PTO en parciales sin dimensiones y no se multiplica recursivamente', () => {
+    const p1 = { description: 'wc piso2', length: '', width: '', height: '', times: 5, factor: '1.000', unit: 'PTO' };
+    const res1 = computePartial(p1, 'PTO');
+    expect(res1).toBe(5);
+    expect(p1.partial).toBe(5);
+
+    // Llamadas repetidas (re-renders) no deben multiplicar exponencialmente (evita bug 15.625)
+    computePartial(p1, 'PTO');
+    expect(p1.partial).toBe(5);
+    computePartial(p1, 'PTO');
+    expect(p1.partial).toBe(5);
+
+    const p2 = { description: 'Parcial 2', length: '', width: '', height: '', times: 5, factor: '1.000', unit: 'PTO' };
+    const p3 = { description: 'Parcial 3', length: '', width: '', height: '', times: 2, factor: '1.000', unit: 'PTO' };
+    const p4 = { description: 'Parcial 4', length: '', width: '', height: '', times: 2, factor: '1.000', unit: 'PTO' };
+    const p5 = { description: 'banos', length: '', width: '', height: '', times: 4, factor: '1.000', unit: 'PTO' };
+
+    const itemPto = recomputeItemWithPartials({
+      unit: 'PTO',
+      partials: [p1, p2, p3, p4, p5],
+    });
+    // 5 + 5 + 2 + 2 + 4 = 18 PTO
+    expect(itemPto.quantity).toBe(18);
+    expect(p1.partial).toBe(5);
+    expect(p2.partial).toBe(5);
+    expect(p3.partial).toBe(2);
+    expect(p4.partial).toBe(2);
+    expect(p5.partial).toBe(4);
+  });
+
+  it('recalcula fila de unidad discreta al cambiar veces sin dimensiones', () => {
+    const base = { length: '', width: '', height: '', times: 1, factor: '', distance: '', partial: 0, quantity: 0, unit: 'PTO', formula: '' };
+    const result = recomputeRow(base, 'times', '5');
+    expect(result.quantity).toBe(5);
+    expect(result.partial).toBe(1);
+    expect(result.formula).toContain('5 × 1 = 5 PTO');
+  });
 });

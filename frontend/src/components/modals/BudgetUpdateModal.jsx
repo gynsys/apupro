@@ -247,7 +247,7 @@ export default function BudgetUpdateModal({ isOpen, onClose, budget, onSuccess }
                     {availableDatabases.map((dbItem) => (
                       <option key={dbItem.id} value={dbItem.id}>
                         {dbItem.id === 'master'
-                          ? 'Base Maestra CostBase (18.880 partidas)'
+                          ? 'Base Maestra CostBase (17.320 partidas)'
                           : dbItem.id === 'base_septiembre'
                           ? 'Base Septiembre 2026 (13.608 partidas)'
                           : dbItem.id === 'base_agosto'

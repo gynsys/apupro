@@ -2,7 +2,7 @@
  * Fórmulas y recálculo de filas de la planilla de cómputos.
  */
 
-import { UNIT_PATTERN, normalizeUnitStr } from './units.js';
+import { UNIT_PATTERN, normalizeUnitStr, isDiscreteUnit } from './units.js';
 import { getRebarSpec, isSteelRow } from './steel.js';
 import { computeGeometryBase, GEOMETRY_TYPES } from './geometry.js';
 
@@ -122,7 +122,8 @@ function computePartial(p, parentUnit = '') {
   const l = parseNum(p.length);
   const w = parseNum(p.width);
   const h = parseNum(p.height);
-  const t = parseNum(p.times) ?? 1;
+  const rawT = parseNum(p.times);
+  const t = rawT !== null && rawT !== 0 ? rawT : 1;
   const f = parseNum(p.factor);
   const dist = parseNum(p.distance);
 
@@ -210,14 +211,19 @@ function computePartial(p, parentUnit = '') {
     return parcial;
   }
 
-  if (p.partial !== '' && p.partial != null) {
-    const pVal = parseFloat(String(p.partial).replace(',', '.'));
-    if (!isNaN(pVal)) {
-      const parcial = round2(pVal * multFactor * multDist * t);
-      p.formula = `${parcial} ${normUnit || ''}`.trim();
-      return parcial;
-    }
+  // CASO DISCRETO O PUNTUAL: unidades como PTO, UND, PZA, GL o conteo directo por veces
+  if (isDiscreteUnit(normUnit) || (rawT !== null && rawT !== 0 && !normUnit)) {
+    const baseCount = 1;
+    const parcial = round2(baseCount * multFactor * multDist * t);
+    p.partial = parcial;
+    p.formula = t !== 1
+      ? (multFactor !== 1 ? `${t} × ${multFactor} = ${parcial} ${normUnit || ''}`.trim() : `${t} × 1 = ${parcial} ${normUnit || ''}`.trim())
+      : (multFactor !== 1 ? `${multFactor} ${normUnit || ''}`.trim() : `1 ${normUnit || ''}`.trim());
+    return parcial;
   }
+
+  p.partial = 0;
+  p.formula = '';
   return 0;
 }
 
@@ -423,24 +429,31 @@ function recomputeRow(row, field, value) {
       updated._autoM3 = updated.quantity;
     }
   } else {
-    // Si no hay dimensiones ni M3 pero se modifica Factor, Distancia o Veces sobre una cantidad base
-    const currentBase = updated.partial > 0 ? updated.partial : (parseFloat(String(updated.quantity).replace(',', '.')) || 0);
-    if (currentBase > 0) {
-      const parcial = round2(currentBase * multFactor * multDist);
+    // Si no hay dimensiones ni M3 pero la unidad es discreta (PTO, UND, PZA, etc.)
+    if (isDiscreteUnit(updated.unit)) {
+      const baseCount = 1;
+      const parcial = round2(baseCount * multFactor * multDist);
       const total = round2(parcial * t);
       updated.partial = parcial;
       updated.quantity = total;
+      updated.formula = t !== 1
+        ? (multFactor !== 1 ? `${t} × ${multFactor} = ${total} ${updated.unit || ''}`.trim() : `${t} × 1 = ${total} ${updated.unit || ''}`.trim())
+        : (multFactor !== 1 ? `${multFactor} ${updated.unit || ''}`.trim() : `1 ${updated.unit || ''}`.trim());
       updated._ownQuantity = total;
-      if (updated.unit === 'M3' && (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3)) {
-        updated.m3 = total;
-        updated._autoM3 = total;
-      }
+      updated._ownFormula = updated.formula;
     } else {
-      updated.quantity = 0;
-      updated.partial = 0;
-      updated.formula = '';
-      updated._ownQuantity = 0;
-      updated._ownFormula = '';
+      const currentBase = parseNum(updated.partial) || parseNum(updated.quantity) || 0;
+      if (currentBase > 0) {
+        const total = round2(currentBase * t);
+        updated.quantity = total;
+        updated._ownQuantity = total;
+      } else {
+        updated.quantity = 0;
+        updated.partial = 0;
+        updated.formula = '';
+        updated._ownQuantity = 0;
+        updated._ownFormula = '';
+      }
     }
   }
 
