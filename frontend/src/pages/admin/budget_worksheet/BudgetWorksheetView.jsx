@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { Loader, Layers, Plus } from 'lucide-react';
 
@@ -27,6 +28,7 @@ import BudgetSearchModal from './BudgetSearchModal';
 
 export default function BudgetWorksheetView() {
   const ws = useBudgetWorksheet();
+  const navigate = useNavigate();
   const [sharingItem, setSharingItem] = useState(null);
   const [showImportSharedPartida, setShowImportSharedPartida] = useState(false);
   const [showControlObra, setShowControlObra] = useState(false);
@@ -421,7 +423,13 @@ export default function BudgetWorksheetView() {
         isOpen={ws.showUpdateModal}
         onClose={() => ws.setShowUpdateModal(false)}
         budget={ws.budget}
-        onSuccess={() => ws.loadBudget()}
+        onSuccess={(res) => {
+          if (res?.is_new_version && res?.budget_id) {
+            navigate(`/budgets/${res.budget_id}`);
+          } else if (typeof ws.loadBudget === 'function') {
+            ws.loadBudget();
+          }
+        }}
       />
     </div>
   );

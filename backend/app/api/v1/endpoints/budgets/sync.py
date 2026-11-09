@@ -132,7 +132,7 @@ def sync_budget_advanced(
         target_budget = Budget(
             user_id=str(current_user.id),
             name=new_name,
-            project_name=budget.project_name or new_name,
+            project_name=new_name,
             currency=budget.currency,
             exchange_rate=budget.exchange_rate,
             material_inflation=budget.material_inflation,
@@ -468,6 +468,8 @@ def sync_budget_advanced(
         "diff_amount": diff_amount,
         "diff_percent": diff_percent,
         "message": (
-            f"Presupuesto actualizado exitosamente. Variación: {diff_amount:+,.2f} ({diff_percent:+.2f}%)."
+            f"Nueva versión '{target_budget.name}' creada exitosamente. Variación: {diff_amount:+,.2f} ({diff_percent:+.2f}%)."
+            if req.create_new_version
+            else f"Presupuesto actualizado exitosamente. Variación: {diff_amount:+,.2f} ({diff_percent:+.2f}%)."
         ),
     }
