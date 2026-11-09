@@ -27,6 +27,7 @@ from app.modules.budget_review.domain.audit_rules import (
     compute_snapshot_health_score,
     evaluate_item_audit_rules,
     generate_default_executive_conclusion,
+    is_exact_or_1to1_description,
     is_uncoded_code,
 )
 from app.modules.budget_review.domain.maprex_baseline import (
@@ -179,7 +180,7 @@ def _fetch_master_item_and_recipe(
             {"c": clean_code},
         ).fetchone()
 
-    if not row and clean_cov and clean_cov.upper() not in {"S/C", "E S/C", "ES/C"}:
+    if not row and clean_cov and not is_uncoded_code(clean_cov):
         row = db.execute(
             text(
                 f'SELECT "CodPar", "CovPar", "Descri", "UniPar", "RenPar", "PreUni" '
@@ -188,7 +189,7 @@ def _fetch_master_item_and_recipe(
             {"cov": clean_cov},
         ).fetchone()
 
-    if not row and clean_code and clean_code.upper() not in {"S/C", "E S/C", "ES/C"}:
+    if not row and clean_code and not is_uncoded_code(clean_code):
         # En Maprex ciertas partidas de Urbanismo usan código corto pero coinciden con CovPar en CostBase
         row = db.execute(
             text(
@@ -452,10 +453,19 @@ def _execute_snapshot_audit(
         suggested_desc: Optional[str] = None
         suggested_score: Optional[float] = None
 
+        # REGLA DE ORO: Debe haber coincidencia 1 a 1 de Código y Descripción para comparar APUs
+        # Si el código existe en la base pero la descripción es alterada/diferente, no emparejar para contrastar insumos (no comparar peras con manzanas)
+        if master_item and not is_exact_or_1to1_description(desc, master_item["description"]):
+            master_item = None
+            master_recipe = None
+            uncoded_flag = True
+            origin_src = "DESCRIPCION_ALTERADA_IA"
+
         if not master_item:
             uncoded_count += 1
             uncoded_flag = True
-            origin_src = "SIN_CODIGO_COVENIN"
+            if origin_src != "DESCRIPCION_ALTERADA_IA":
+                origin_src = "SIN_CODIGO_COVENIN"
             # No forzar búsqueda ni sugerencias de homologaciones arbitrarias
             suggested_code = None
             suggested_desc = None

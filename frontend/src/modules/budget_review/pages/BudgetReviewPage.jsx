@@ -998,8 +998,9 @@ export default function BudgetReviewPage() {
   }, [filteredFindings, itemMap]);
 
   const nonChapterItems = (activeReport?.items || []).filter((it) => !it.is_chapter);
-  const discrepantItems = nonChapterItems.filter((it) => (it.findings?.length || 0) > 0);
-  const cleanItemsCount = nonChapterItems.length - discrepantItems.length;
+  const codedItems = nonChapterItems.filter((it) => !it.is_uncoded);
+  const discrepantItems = codedItems.filter((it) => (it.findings?.length || 0) > 0);
+  const cleanItemsCount = codedItems.length - discrepantItems.length;
   const uncodedItems = nonChapterItems.filter((it) => it.is_uncoded);
 
   const isComponentDiscrepant = (comp) => {
@@ -1549,7 +1550,7 @@ export default function BudgetReviewPage() {
                       : 'border-transparent text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  Partidas con Discrepancias APU ({discrepantItems.length} de {nonChapterItems.length})
+                  Partidas con Discrepancias APU ({discrepantItems.length} de {codedItems.length})
                 </button>
                 <button
                   type="button"
@@ -1560,7 +1561,7 @@ export default function BudgetReviewPage() {
                       : 'border-transparent text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  Partidas Especiales / APUs No Codificados ({uncodedItems.length})
+                  Partidas Especiales / Evaluadas con IA ({uncodedItems.length})
                 </button>
                 {activeReport.version_comparison && (
                   <button

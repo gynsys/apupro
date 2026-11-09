@@ -7,6 +7,7 @@ from app.modules.budget_review.domain.audit_rules import (
     compute_snapshot_health_score,
     evaluate_item_audit_rules,
     generate_default_executive_conclusion,
+    is_exact_or_1to1_description,
     is_specialized_labor_profile,
     is_uncoded_code,
 )
@@ -440,4 +441,71 @@ def test_executive_conclusion_includes_quotes_and_specialized_labor() -> None:
     assert "1 cotización comercial" in conclusion
     assert "equipos no catalogados" in conclusion
     assert "mano de obra técnica especializada" in conclusion
+
+
+def test_one_to_one_code_and_description_match_prevents_false_positives() -> None:
+    """
+    Verifica que si una partida tiene un código similar/igual pero descripción alterada
+    (ej. E12 S/C: LIMPIEZA Y DESMALEZAMIENTO DEL AREA DE TRABAJO vs BAN039: LIMPIEZA DEL AREA DE TRABAJO),
+    el sistema NO compare peras con manzanas (no emita discrepancias de insumos internos de la receta)
+    y emita el hallazgo DES-ALT-001 evaluándolo con IA.
+    """
+    # 1. Coincidencia 1 a 1 exacta o tipográfica
+    assert is_exact_or_1to1_description("LIMPIEZA DEL ÁREA DE TRABAJO", "LIMPIEZA DEL AREA DE TRABAJO") is True
+    assert is_exact_or_1to1_description("limpieza del area de trabajo", "LIMPIEZA DEL AREA DE TRABAJO") is True
+    
+    # Alcances diferentes deben retornar False
+    assert is_exact_or_1to1_description(
+        "LIMPIEZA Y DESMALEZAMIENTO DEL AREA DE TRABAJO",
+        "LIMPIEZA DEL AREA DE TRABAJO",
+    ) is False
+
+    # 2. Partidas S/C reconocidas como no codificadas
+    assert is_uncoded_code("E12 S/C") is True
+    assert is_uncoded_code("S/C") is True
+    assert is_uncoded_code("01 S-C") is True
+
+    # 3. Al evaluar con evaluate_item_audit_rules, debe emitir DES-ALT-001 y NO comparar insumos de la receta
+    budget_item: Dict[str, Any] = {
+        "item_code": "E12 S/C",
+        "covenin_code": "E12 S/C",
+        "description": "LIMPIEZA Y DESMALEZAMIENTO DEL AREA DE TRABAJO",
+        "unit": "M2",
+        "quantity": 100.0,
+        "performance": 350.0,
+        "imported_unit_price": 1.21,
+        "calculated_unit_price": 1.21,
+        "materials": [{"code": "MAU015", "description": "BOLSA NEGRA", "amount": 0.5}],
+        "equipments": [{"code": "ARB007", "description": "MACHETE ROZADOR", "amount": 2.0}],
+        "labors": [{"code": "1-1.1", "description": "OBRERO DE 1RA", "amount": 4.0}],
+    }
+    master_item: Dict[str, Any] = {
+        "cod_par": "BAN039",
+        "cov_par": "E12 S/C",
+        "description": "LIMPIEZA DEL AREA DE TRABAJO",
+        "unit": "M2",
+        "performance": 200.0,
+        "unit_price": 0.85,
+    }
+    # En la base BAN039 tiene insumos de limpieza de oficina (pañito, jabón),
+    # mientras que el presupuesto tiene machetes y rastrillo.
+    master_recipe: Dict[str, List[Dict[str, Any]]] = {
+        "materials": [{"code": "MAU010", "description": "PAÑITO YES", "amount": 0.1}],
+        "equipments": [{"code": "LIM018", "description": "CEPILLO CARRETERO", "amount": 2.0}],
+        "labors": [{"code": "1-1.1", "description": "OBRERO DE 1RA", "amount": 4.0}],
+    }
+
+    findings = evaluate_item_audit_rules(
+        item_data=budget_item,
+        master_item=master_item,
+        master_recipe=master_recipe,
+    )
+
+    # Debe emitir exactamente DES-ALT-001 y NINGUNA discrepancia de insumos omitidos/extras
+    rule_ids = [f["rule_id"] for f in findings]
+    assert "DES-ALT-001" in rule_ids
+    assert "INS-OMI-001" not in rule_ids
+    assert "INS-EXT-001" not in rule_ids
+    assert budget_item.get("ai_audit_status") is not None
+
 

@@ -99,15 +99,44 @@ def compute_description_similarity(desc_a: str, desc_b: str) -> float:
     return round(inter / union, 4) if union > 0 else 0.0
 
 
+def is_exact_or_1to1_description(desc_a: str, desc_b: str) -> bool:
+    """
+    Determina si existe coincidencia 1 a 1 entre la descripción del presupuesto y la maestra.
+    No permite discrepancias en el alcance (ej. 'LIMPIEZA' vs 'LIMPIEZA Y DESMALEZAMIENTO').
+    Tolera únicamente diferencias tipográficas de acentos, mayúsculas o puntuación menor.
+    """
+    if not desc_a or not desc_b:
+        return False
+    clean_a = strip_accents_upper(desc_a)
+    clean_b = strip_accents_upper(desc_b)
+    if clean_a == clean_b:
+        return True
+    norm_a = re.sub(r"[^A-Z0-9]", "", clean_a)
+    norm_b = re.sub(r"[^A-Z0-9]", "", clean_b)
+    if norm_a == norm_b:
+        return True
+    # Solo tolerar truncamiento legacy en Maprex (límite de 40 caracteres en versiones antiguas)
+    if len(norm_a) >= 35 and norm_b.startswith(norm_a):
+        return True
+    if len(norm_b) >= 35 and norm_a.startswith(norm_b):
+        return True
+    return False
+
+
 def is_uncoded_code(code: str, cov_code: Optional[str] = None) -> bool:
-    """Determina si una partida carece de codificación maestra/COVENIN."""
+    """Determina si una partida carece de codificación maestra/COVENIN o es una partida S/C."""
     clean = (code or "").strip().upper()
     cov = (cov_code or "").strip().upper()
     if not clean:
         return True
+    # Si contiene "S/C", "S.C." o "S-C" en cualquier parte del código (ej. "E12 S/C", "01 S/C", "S/C")
+    if "S/C" in clean or "S-C" in clean or "S.C." in clean:
+        return True
     if any(clean.startswith(p) for p in UNCODED_PREFIXES):
         return True
-    if clean in {"0", "-", "S-C", "S.C.", "S/C."}:
+    if clean in {"0", "-", "SC"}:
+        return True
+    if "S/C" in cov or "S-C" in cov or "S.C." in cov:
         return True
     if cov in {"S/C", "E S/C", "ES/C"} and clean.startswith(("CUST", "NEW", "PART")):
         return True
@@ -476,27 +505,41 @@ def evaluate_item_audit_rules(
     master_perf = float(master_item.get("performance") or 0.0)
     desc_sim = compute_description_similarity(desc, master_desc)
 
-    # 1. Detectar colisión de código Maprex vs CostBase (132 casos conocidos como ARB034, CCS228..231)
-    if master_code in KNOWN_PARTIDA_CODE_COLLISIONS or desc_sim < 0.22:
+    # 1. Verificar coincidencia 1 a 1 de Código y Descripción (Regla de Oro de Auditoría)
+    # Si el código existe en la base pero la descripción es alterada/diferente, no se comparan insumos (no comparar peras con manzanas)
+    # y en su lugar entra la IA a evaluar la coherencia técnica interna de su propio APU.
+    if master_code in KNOWN_PARTIDA_CODE_COLLISIONS or not is_exact_or_1to1_description(desc, master_desc):
         findings.append({
-            "rule_id": "COL-001",
+            "rule_id": "DES-ALT-001" if master_code not in KNOWN_PARTIDA_CODE_COLLISIONS else "COL-001",
             "category": "ESTRUCTURA",
-            "severity": "CRITICA",
+            "severity": "ALTA" if master_code not in KNOWN_PARTIDA_CODE_COLLISIONS else "CRITICA",
             "item_code": code,
             "field_name": "description",
             "imported_value": desc[:100],
             "master_value": master_desc[:100],
             "diff_percent": round((desc_sim - 1.0) * 100.0, 1),
             "message": (
+                f"Código reutilizado con descripción alterada: En el presupuesto se describe como '{desc}', "
+                f"mientras que en la base oficial bajo el código '{master_code}' corresponde a '{master_desc}'. "
+                f"Al no existir coincidencia 1 a 1 de código y descripción, el APU no se compara contra esta receta oficial "
+                f"para evitar contrastar alcances incompatibles."
+            ) if master_code not in KNOWN_PARTIDA_CODE_COLLISIONS else (
                 f"Colisión de código '{master_code}': la descripción del presupuesto no corresponde a la partida "
                 f"registrada en CostBase con ese código (similitud {desc_sim * 100:.0f}%)."
             ),
             "suggestion": (
-                "En catálogos históricos (Base Agosto vs Base Maestra) este código fue asignado a partidas distintas o el contratista cambió "
-                "la descripción manteniendo el código. Homologar por descripción y código COVENIN."
+                "Verificar si se trata de una partida especial atípica que debe codificarse como S/C o ajustar el código al alcance real de la obra."
             ),
         })
-        # Si es otra partida distinta por colisión de código, evitamos falsos positivos de insumos
+        # Si no coincide 1 a 1, entra la IA para evaluar la coherencia técnica de su propio APU
+        ai_eval = audit_uncoded_apu_with_ai(item_data)
+        item_data["ai_audit_status"] = ai_eval.get("status", "CONFORME")
+        item_data["ai_audit_summary"] = (
+            ai_eval.get("summary")
+            or ai_eval.get("technical_diagnosis")
+            or "APU con descripción atípica evaluado técnicamente mediante IA."
+        )
+        # Evitar falsos positivos de insumos: no comparar receta
         return findings
 
     # 2. Comparar Unidad normalizada
