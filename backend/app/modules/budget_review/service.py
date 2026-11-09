@@ -163,53 +163,93 @@ def _fetch_master_item_and_recipe(
     schema: str,
     code: str,
     cov_code: Optional[str],
+    desc: Optional[str] = None,
 ) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, List[Dict[str, Any]]]]]:
-    """Busca una partida en CostBase por CodPar o por CovPar y retorna sus metadatos y receta APU."""
+    """
+    Busca una partida en CostBase priorizando el Código COVENIN (CovPar),
+    y desambigua mediante coincidencia 1 a 1 de descripción cuando múltiples partidas
+    comparten el mismo CovPar (ej. 'E12 S/C'). Si no se encuentra por CovPar,
+    busca secundariamente por el código interno Maprex (CodPar).
+    """
     clean_code = (code or "").strip()
     clean_cov = (cov_code or "").strip()
     if not clean_code and not clean_cov:
         return None, None
 
-    row = None
-    if clean_code:
-        row = db.execute(
+    # Candidatos a evaluar en CovPar (Código COVENIN):
+    # En presupuestos venezolanos, el código de la partida suele ser el Código COVENIN (ej. "E311110120", "E12 S/C")
+    cov_candidates_to_try: List[str] = []
+    if clean_cov:
+        cov_candidates_to_try.append(clean_cov)
+    if clean_code and clean_code.upper() not in [c.upper() for c in cov_candidates_to_try]:
+        cov_candidates_to_try.append(clean_code)
+
+    matched_row = None
+
+    # 1. BÚSQUEDA PRIORITARIA POR CÓDIGO COVENIN (CovPar)
+    for c_try in cov_candidates_to_try:
+        norm_c = re.sub(r"[\s.\-_/]", "", c_try).upper()
+        # Buscamos coincidencias exactas o normalizadas (sin puntos ni guiones) en CovPar
+        rows = db.execute(
             text(
                 f'SELECT "CodPar", "CovPar", "Descri", "UniPar", "RenPar", "PreUni" '
-                f'FROM "{schema}".cost360_items WHERE UPPER("CodPar") = UPPER(:c) LIMIT 1'
+                f'FROM "{schema}".cost360_items '
+                f'WHERE UPPER("CovPar") = UPPER(:cov) '
+                f'   OR REPLACE(REPLACE(REPLACE(REPLACE(UPPER("CovPar"), \'.\', \'\'), \'-\', \'\'), \'_\', \'\'), \' \', \'\') = :norm_cov'
+            ),
+            {"cov": c_try, "norm_cov": norm_c},
+        ).fetchall()
+
+        if not rows:
+            continue
+
+        if len(rows) == 1:
+            matched_row = rows[0]
+            break
+        else:
+            # Si hay múltiples partidas con el mismo CovPar (ej. E12 S/C tiene 16 partidas en Maprex)
+            # Desambiguar seleccionando la que coincida 1 a 1 con la descripción del presupuesto
+            if desc:
+                for r in rows:
+                    cand_desc = str(r[2] or "").strip()
+                    if is_exact_or_1to1_description(desc, cand_desc):
+                        matched_row = r
+                        break
+            if matched_row:
+                break
+            # Si ninguna coincide 1 a 1 en descripción, NO tomar una arbitraria (como BAN039)
+            # para evitar contrastar alcances incompatibles ("peras con manzanas").
+
+    # 2. BÚSQUEDA SECUNDARIA POR CÓDIGO INTERNO MAPREX (CodPar)
+    if not matched_row and clean_code:
+        rows_by_cod = db.execute(
+            text(
+                f'SELECT "CodPar", "CovPar", "Descri", "UniPar", "RenPar", "PreUni" '
+                f'FROM "{schema}".cost360_items WHERE UPPER("CodPar") = UPPER(:c)'
             ),
             {"c": clean_code},
-        ).fetchone()
+        ).fetchall()
+        if len(rows_by_cod) == 1:
+            matched_row = rows_by_cod[0]
+        elif len(rows_by_cod) > 1 and desc:
+            for r in rows_by_cod:
+                if is_exact_or_1to1_description(desc, str(r[2] or "").strip()):
+                    matched_row = r
+                    break
+            if not matched_row:
+                matched_row = rows_by_cod[0]
 
-    if not row and clean_cov and not is_uncoded_code(clean_cov):
-        row = db.execute(
-            text(
-                f'SELECT "CodPar", "CovPar", "Descri", "UniPar", "RenPar", "PreUni" '
-                f'FROM "{schema}".cost360_items WHERE UPPER("CovPar") = UPPER(:cov) LIMIT 1'
-            ),
-            {"cov": clean_cov},
-        ).fetchone()
-
-    if not row and clean_code and not is_uncoded_code(clean_code):
-        # En Maprex ciertas partidas de Urbanismo usan código corto pero coinciden con CovPar en CostBase
-        row = db.execute(
-            text(
-                f'SELECT "CodPar", "CovPar", "Descri", "UniPar", "RenPar", "PreUni" '
-                f'FROM "{schema}".cost360_items WHERE UPPER("CovPar") = UPPER(:c) LIMIT 1'
-            ),
-            {"c": clean_code},
-        ).fetchone()
-
-    if not row:
+    if not matched_row:
         return None, None
 
-    matched_cod_par = str(row[0]).strip()
+    matched_cod_par = str(matched_row[0]).strip()
     master_item = {
         "cod_par": matched_cod_par,
-        "cov_par": str(row[1] or "").strip(),
-        "description": str(row[2] or "").strip(),
-        "unit": str(row[3] or "").strip(),
-        "performance": float(row[4] or 1.0),
-        "unit_price": float(row[5] or 0.0),
+        "cov_par": str(matched_row[1] or "").strip(),
+        "description": str(matched_row[2] or "").strip(),
+        "unit": str(matched_row[3] or "").strip(),
+        "performance": float(matched_row[4] or 1.0),
+        "unit_price": float(matched_row[5] or 0.0),
     }
 
     mat_rows = db.execute(
@@ -446,7 +486,7 @@ def _execute_snapshot_audit(
         master_item, master_recipe = (
             (None, None)
             if uncoded_flag
-            else _fetch_master_item_and_recipe(db, schema, orig_code, cov_code)
+            else _fetch_master_item_and_recipe(db, schema, orig_code, cov_code, desc)
         )
 
         suggested_code: Optional[str] = None
@@ -605,8 +645,16 @@ def _execute_snapshot_audit(
             sheet_name=raw.get("sheet_name"),
             original_code=orig_code,
             normalized_code=orig_code.upper(),
-            covenin_code=cov_code or (master_item.get("cov_par") if master_item else None),
-            matched_master_code=master_item["cod_par"] if master_item else None,
+            covenin_code=(
+                (master_item.get("cov_par") or cov_code or orig_code)
+                if master_item
+                else (cov_code or orig_code)
+            ),
+            matched_master_code=(
+                (master_item.get("cov_par") or master_item["cod_par"])
+                if master_item
+                else None
+            ),
             origin_source=origin_src,
             description=desc,
             master_description=master_item["description"] if master_item else None,

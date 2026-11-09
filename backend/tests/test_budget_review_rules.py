@@ -461,9 +461,10 @@ def test_one_to_one_code_and_description_match_prevents_false_positives() -> Non
     ) is False
 
     # 2. Partidas S/C reconocidas como no codificadas
-    assert is_uncoded_code("E12 S/C") is True
     assert is_uncoded_code("S/C") is True
-    assert is_uncoded_code("01 S-C") is True
+    assert is_uncoded_code("01") is True
+    assert is_uncoded_code("CUST-001") is True
+    assert is_uncoded_code("E12 S/C") is False  # Tiene prefijo de capítulo COVENIN, busca en la base maestra CovPar
 
     # 3. Al evaluar con evaluate_item_audit_rules, debe emitir DES-ALT-001 y NO comparar insumos de la receta
     budget_item: Dict[str, Any] = {

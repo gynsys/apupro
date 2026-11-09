@@ -124,21 +124,26 @@ def is_exact_or_1to1_description(desc_a: str, desc_b: str) -> bool:
 
 
 def is_uncoded_code(code: str, cov_code: Optional[str] = None) -> bool:
-    """Determina si una partida carece de codificación maestra/COVENIN o es una partida S/C."""
+    """
+    Determina si una partida carece de codificación maestra/COVENIN o es una partida S/C genérica.
+    Partidas con prefijo de capítulo COVENIN (ej. 'E12 S/C', 'E33 S/C') no se consideran genéricas
+    para permitir que el motor busque su coincidencia en CovPar de la base maestra.
+    """
     clean = (code or "").strip().upper()
     cov = (cov_code or "").strip().upper()
-    if not clean:
+    if not clean and not cov:
         return True
-    # Si contiene "S/C", "S.C." o "S-C" en cualquier parte del código (ej. "E12 S/C", "01 S/C", "S/C")
-    if "S/C" in clean or "S-C" in clean or "S.C." in clean:
+    # Indicadores explícitos de partidas genéricas sin código (sin capítulo COVENIN asociado)
+    if clean in {"0", "-", "SC", "S/C", "S-C", "S.C.", "S/C."}:
         return True
     if any(clean.startswith(p) for p in UNCODED_PREFIXES):
         return True
-    if clean in {"0", "-", "SC"}:
+    # Números puros (ej. "1", "01", "2.1") que representan números de fila o renglón
+    if re.match(r"^\d+(\.\d+)?$", clean):
         return True
-    if "S/C" in cov or "S-C" in cov or "S.C." in cov:
+    if cov in {"0", "-", "SC", "S/C", "S-C", "S.C."} and not clean:
         return True
-    if cov in {"S/C", "E S/C", "ES/C"} and clean.startswith(("CUST", "NEW", "PART")):
+    if cov in {"S/C", "E S/C", "ES/C"} and clean.startswith(("CUST", "NEW", "PART", "TEMP")):
         return True
     return False
 
@@ -499,7 +504,9 @@ def evaluate_item_audit_rules(
     # -------------------------------------------------------------------------
     # C. REVISIÓN CONTRA PARTIDA MAESTRA CODIFICADA (COSTBASE / MAPREX)
     # -------------------------------------------------------------------------
-    master_code = str(master_item.get("cod_par") or "").strip().upper()
+    master_cov_code = str(master_item.get("cov_par") or "").strip().upper()
+    master_internal_code = str(master_item.get("cod_par") or "").strip().upper()
+    master_code = master_cov_code if master_cov_code and master_cov_code not in {"S/C", "E S/C", "ES/C"} else (master_cov_code or master_internal_code)
     master_desc = str(master_item.get("description") or "").strip()
     master_unit = str(master_item.get("unit") or "").strip()
     master_perf = float(master_item.get("performance") or 0.0)
@@ -508,11 +515,11 @@ def evaluate_item_audit_rules(
     # 1. Verificar coincidencia 1 a 1 de Código y Descripción (Regla de Oro de Auditoría)
     # Si el código existe en la base pero la descripción es alterada/diferente, no se comparan insumos (no comparar peras con manzanas)
     # y en su lugar entra la IA a evaluar la coherencia técnica interna de su propio APU.
-    if master_code in KNOWN_PARTIDA_CODE_COLLISIONS or not is_exact_or_1to1_description(desc, master_desc):
+    if master_internal_code in KNOWN_PARTIDA_CODE_COLLISIONS or not is_exact_or_1to1_description(desc, master_desc):
         findings.append({
-            "rule_id": "DES-ALT-001" if master_code not in KNOWN_PARTIDA_CODE_COLLISIONS else "COL-001",
+            "rule_id": "DES-ALT-001" if master_internal_code not in KNOWN_PARTIDA_CODE_COLLISIONS else "COL-001",
             "category": "ESTRUCTURA",
-            "severity": "ALTA" if master_code not in KNOWN_PARTIDA_CODE_COLLISIONS else "CRITICA",
+            "severity": "ALTA" if master_internal_code not in KNOWN_PARTIDA_CODE_COLLISIONS else "CRITICA",
             "item_code": code,
             "field_name": "description",
             "imported_value": desc[:100],
@@ -520,10 +527,10 @@ def evaluate_item_audit_rules(
             "diff_percent": round((desc_sim - 1.0) * 100.0, 1),
             "message": (
                 f"Código reutilizado con descripción alterada: En el presupuesto se describe como '{desc}', "
-                f"mientras que en la base oficial bajo el código '{master_code}' corresponde a '{master_desc}'. "
+                f"mientras que en la base oficial bajo el código COVENIN '{master_code}' corresponde a '{master_desc}'. "
                 f"Al no existir coincidencia 1 a 1 de código y descripción, el APU no se compara contra esta receta oficial "
                 f"para evitar contrastar alcances incompatibles."
-            ) if master_code not in KNOWN_PARTIDA_CODE_COLLISIONS else (
+            ) if master_internal_code not in KNOWN_PARTIDA_CODE_COLLISIONS else (
                 f"Colisión de código '{master_code}': la descripción del presupuesto no corresponde a la partida "
                 f"registrada en CostBase con ese código (similitud {desc_sim * 100:.0f}%)."
             ),
