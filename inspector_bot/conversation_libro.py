@@ -12,6 +12,7 @@ Maneja las etapas:
   9. Confirmación, generación de la nueva hoja y entrega del documento Excel.
 """
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
