@@ -20,6 +20,7 @@ from app.api.v1.endpoints import allies
 from app.modules.control_obra.router import router as control_obra_router
 from app.modules.budget_review.router import router as budget_review_router
 from app.modules.mdb_import.router import router as mdb_import_router
+from app.modules.mdb_database_import.router import router as mdb_database_import_router
 
 api_router = APIRouter()
 
@@ -29,11 +30,13 @@ api_router.include_router(arko.router, prefix="/arko", tags=["arko360"])
 # Primary CostBase Endpoints
 api_router.include_router(costbase.router, prefix="/costbase", tags=["costbase"])
 api_router.include_router(costbase_databases.router, prefix="/costbase/databases", tags=["costbase_databases"])
+api_router.include_router(mdb_database_import_router, prefix="/costbase/databases", tags=["costbase_databases"])
 api_router.include_router(search_v6.router, prefix="/costbase/v6", tags=["costbase_v6"])
 
 # Backward-Compatible Cost360 Aliases
 api_router.include_router(costbase.router, prefix="/cost360", tags=["cost360"])
 api_router.include_router(costbase_databases.router, prefix="/cost360/databases", tags=["cost360_databases"])
+api_router.include_router(mdb_database_import_router, prefix="/cost360/databases", tags=["cost360_databases"])
 api_router.include_router(search_v6.router, prefix="/cost360/v6", tags=["cost360_v6"])
 api_router.include_router(budgets.router, prefix="/budgets", tags=["budgets"])
 api_router.include_router(mdb_import_router, prefix="/budgets", tags=["budgets"])

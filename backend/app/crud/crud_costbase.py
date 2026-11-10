@@ -194,11 +194,14 @@ def get_items_paginated(
             norm_word = normalize_covenin_code(clean_word)
             if len(norm_word) >= 3:
                 word_filters.append(CostItem.CovPar.ilike(f"{norm_word}%"))
+                word_filters.append(func.replace(CostItem.CovPar, '.', '').ilike(f"{norm_word}%"))
                 word_filters.append(CostItem.CodPar.ilike(f"{norm_word}%"))
                 if norm_word.endswith("RA"):
                     word_filters.append(CostItem.CovPar.ilike(f"%{norm_word}%"))
+                    word_filters.append(func.replace(CostItem.CovPar, '.', '').ilike(f"%{norm_word}%"))
                 elif norm_word.isdigit():
                     word_filters.append(CostItem.CovPar.ilike(f"{norm_word}RA%"))
+                    word_filters.append(func.replace(CostItem.CovPar, '.', '').ilike(f"{norm_word}RA%"))
 
             if word_filters:
                 all_filters.append(or_(*word_filters))
@@ -255,6 +258,7 @@ def get_items_paginated(
                 query = query.filter(
                     or_(
                         CostItem.CovPar.ilike(f"{clean_cov}%"),
+                        func.replace(CostItem.CovPar, '.', '').ilike(f"{clean_cov}%"),
                         CostItem.CodPar.ilike(f"{clean_cov}%")
                     )
                 )

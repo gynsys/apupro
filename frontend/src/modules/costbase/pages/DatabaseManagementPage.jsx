@@ -12,6 +12,7 @@ import { useDatabaseContext } from '../../../contexts/DatabaseContext';
 import { AuthContext } from '../../../context/AuthContext';
 import SubscriptionRequestModal from '../../../components/SubscriptionRequestModal';
 import DecimalInput from '../../../components/DecimalInput';
+import ImportMdbDatabaseTab from '../../mdb_database_import/components/ImportMdbDatabaseTab';
 
 export default function DatabaseManagementPage() {
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ export default function DatabaseManagementPage() {
   const [dbItemsCounts, setDbItemsCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createModalTab, setCreateModalTab] = useState('duplicate'); // 'duplicate' | 'mdb'
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [databaseToDelete, setDatabaseToDelete] = useState(null);
@@ -227,9 +229,26 @@ export default function DatabaseManagementPage() {
                 <p className="text-sm text-blue-600/80 font-medium mt-0.5">Administra y duplica bases de datos de CostBase</p>
               </div>
             </div>
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            {isSuperAdmin && (
+              <button
+                onClick={() => {
+                  setCreateModalTab('mdb');
+                  setShowCreateModal(true);
+                }}
+                className="group flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-700 hover:from-violet-500 hover:to-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-indigo-500/20 hover:shadow-lg hover:shadow-indigo-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out min-h-[44px] touch-target w-full sm:w-auto"
+                title="Importar base de datos Maprex/Lulo desde Access"
+              >
+                <Database size={18} className="group-hover:scale-110 transition-transform duration-300" />
+                <span>Importar MDB</span>
+              </button>
+            )}
             <button
-              onClick={() => setShowCreateModal(true)}
-              className="relative overflow-hidden group bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 rounded-xl shadow-lg shadow-blue-500/30 transition-all active:scale-95"
+              onClick={() => {
+                setCreateModalTab('duplicate');
+                setShowCreateModal(true);
+              }}
+              className="relative overflow-hidden group bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 rounded-xl shadow-lg shadow-blue-500/30 transition-all active:scale-95 min-h-[44px] flex items-center justify-center"
             >
               <div className="absolute inset-0 bg-[#e0f2fe] transform scale-x-0 origin-left transition-transform duration-400 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:scale-x-100"></div>
               <div className="relative z-10 flex items-center gap-2 font-medium text-white group-hover:text-[#1e3a8a] transition-colors">
@@ -237,6 +256,7 @@ export default function DatabaseManagementPage() {
                 <span>Nueva Base de Datos</span>
               </div>
             </button>
+          </div>
           </div>
         </div>
       </div>
@@ -500,22 +520,50 @@ export default function DatabaseManagementPage() {
       {/* Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-[550px] bg-amber-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.08)] overflow-hidden font-sans flex flex-col max-h-[90vh]">
+          <div className="w-full max-w-[620px] bg-slate-50 rounded-3xl shadow-2xl overflow-hidden font-sans flex flex-col max-h-[92vh] border border-slate-200">
             
-            {/* Encabezado */}
-            <div className="flex justify-between items-center px-6 py-4 bg-white/40 border-b border-amber-600/15">
-              <h2 className="m-0 text-xl font-bold text-amber-900 flex items-center gap-2">
-                <Copy className="text-sky-600" /> Duplicar Base de Datos
-              </h2>
+            {/* Encabezado con Tabs */}
+            <div className="flex justify-between items-center px-6 py-4 bg-white border-b border-slate-200">
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setCreateModalTab('duplicate')}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${createModalTab === 'duplicate' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                >
+                  <Copy size={14} />
+                  <span>Duplicar Base</span>
+                </button>
+                {isSuperAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setCreateModalTab('mdb')}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${createModalTab === 'mdb' ? 'bg-gradient-to-r from-violet-600 to-indigo-700 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                  >
+                    <Database size={14} />
+                    <span>Importar MDB Maprex</span>
+                  </button>
+                )}
+              </div>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-amber-700 hover:text-amber-900 bg-transparent transition-colors p-1"
+                className="text-slate-400 hover:text-slate-700 bg-transparent transition-colors p-1 rounded-lg"
               >
-                <X size={24} />
+                <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateDatabase} className="px-6 py-4 flex flex-col gap-4 overflow-y-auto">
+            {createModalTab === 'mdb' ? (
+              <div className="p-6 overflow-y-auto">
+                <ImportMdbDatabaseTab
+                  onSuccess={() => {
+                    loadDatabases();
+                    reloadDatabases();
+                  }}
+                  onClose={() => setShowCreateModal(false)}
+                />
+              </div>
+            ) : (
+            <form onSubmit={handleCreateDatabase} className="px-6 py-4 flex flex-col gap-4 overflow-y-auto bg-amber-50/30">
               
               {/* Nombre de la Base de Datos */}
               <div className="flex flex-col gap-2 w-full">
@@ -625,6 +673,7 @@ export default function DatabaseManagementPage() {
                 </button>
               </div>
             </form>
+            )}
           </div>
         </div>
       )}
