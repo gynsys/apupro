@@ -2,6 +2,11 @@ FROM ghcr.io/gynsys/arko360_platform/backend:latest
 
 WORKDIR /app
 
+# mdbtools: lectura de archivos Microsoft Access/Maprex para importación de presupuestos
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends mdbtools && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install dependencies and remove heavy torch/sentence-transformers packages BEFORE copying app code
 # so this layer stays permanently cached across deploys and does not fill /root/.cache/pip
 RUN pip install --no-cache-dir openpyxl==3.1.2 bleach==6.4.0 google-generativeai cloudscraper markitdown duckduckgo-search xlrd==2.0.1 && \

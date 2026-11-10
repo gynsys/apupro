@@ -19,6 +19,7 @@ from app.api.v1.endpoints import users as users_module
 from app.api.v1.endpoints import allies
 from app.modules.control_obra.router import router as control_obra_router
 from app.modules.budget_review.router import router as budget_review_router
+from app.modules.mdb_import.router import router as mdb_import_router
 
 api_router = APIRouter()
 
@@ -35,6 +36,7 @@ api_router.include_router(costbase.router, prefix="/cost360", tags=["cost360"])
 api_router.include_router(costbase_databases.router, prefix="/cost360/databases", tags=["cost360_databases"])
 api_router.include_router(search_v6.router, prefix="/cost360/v6", tags=["cost360_v6"])
 api_router.include_router(budgets.router, prefix="/budgets", tags=["budgets"])
+api_router.include_router(mdb_import_router, prefix="/budgets", tags=["budgets"])
 api_router.include_router(control_obra_router, tags=["control-obra"])
 api_router.include_router(budget_review_router, tags=["budget-review"])
 api_router.include_router(uploads.router, prefix="/uploads", tags=["uploads"])

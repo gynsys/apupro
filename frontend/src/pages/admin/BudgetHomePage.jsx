@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Folder, FolderOpen, Plus, FileText, Trash2, Edit3, Copy, Search,
   Settings, Printer, FileSpreadsheet, CloudDownload, Upload,
-  MoreVertical, Clock, DollarSign, Loader, Share2, Link2
+  MoreVertical, Clock, DollarSign, Loader, Share2, Link2, Database
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { budgetService } from '../../services/budgetService';
@@ -15,6 +15,7 @@ import BudgetPrintLayout from '../../components/print/BudgetPrintLayout';
 import SubscriptionRequestModal from '../../components/SubscriptionRequestModal';
 import ShareBudgetModal from '../../components/modals/ShareBudgetModal';
 import ImportSharedBudgetModal from '../../components/modals/ImportSharedBudgetModal';
+import ImportMdbModal from '../../modules/mdb_import/components/ImportMdbModal.jsx';
 import { calculateItemPU, calculateBudgetTotals } from '../../utils/apuCalculations';
 
 const CURRENCY_FORMATTER = new Intl.NumberFormat('es-VE', {
@@ -52,12 +53,19 @@ function buildTotalsMap(list) {
 export default function BudgetHomePage() {
   const { user } = useContext(AuthContext) || {};
   const currentUserId = user?.id || user?.email || null;
+  const isSuperAdmin = Boolean(
+    user?.is_superadmin === true ||
+    user?.email === 'admin@arko360.net' ||
+    user?.role === 'superadmin' ||
+    user?.is_admin === true
+  );
   const initialCached = useMemo(() => getCachedBudgets(currentUserId), [currentUserId]);
   const [budgets, setBudgets] = useState(() => initialCached || []);
   const [loading, setLoading] = useState(() => !initialCached);
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingId, setDeletingId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isMdbImportOpen, setIsMdbImportOpen] = useState(false);
   const [importingBackup, setImportingBackup] = useState(false);
   const [sharingBudget, setSharingBudget] = useState(null);
   const [isImportSharedOpen, setIsImportSharedOpen] = useState(false);
@@ -383,6 +391,17 @@ export default function BudgetHomePage() {
                 <Plus size={20} className="group-hover:scale-110 group-hover:rotate-90 transition-transform duration-300" />
                 Nuevo Presupuesto
               </button>
+
+              {isSuperAdmin && (
+                <button
+                  onClick={() => setIsMdbImportOpen(true)}
+                  className="group flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-700 hover:from-violet-500 hover:to-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-indigo-500/20 hover:shadow-lg hover:shadow-indigo-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out min-h-[44px] touch-target w-full sm:w-auto"
+                  title="Importar presupuesto Maprex/Lulo desde Access"
+                >
+                  <Database size={20} className="group-hover:scale-110 transition-transform duration-300" />
+                  Importar MDB
+                </button>
+              )}
               
               {/* Botones Secundarios: 2 columnas en móvil, inline en desktop */}
               <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
@@ -832,6 +851,20 @@ export default function BudgetHomePage() {
             loadBudgets();
             if (newBudgetId) {
               navigate(`/budgets/${newBudgetId}`);
+            }
+          }}
+        />
+      )}
+
+      {isSuperAdmin && (
+        <ImportMdbModal
+          isOpen={isMdbImportOpen}
+          onClose={() => setIsMdbImportOpen(false)}
+          onImported={(result) => {
+            setIsMdbImportOpen(false);
+            loadBudgets();
+            if (result?.budget_id) {
+              navigate(`/budgets/${result.budget_id}`);
             }
           }}
         />
