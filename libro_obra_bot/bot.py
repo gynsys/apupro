@@ -20,7 +20,10 @@ from libro_obra_bot.conversation_libro import (
     ask_confirm_delete_libro,
     execute_confirm_merge_sheets,
     execute_confirm_shift_date,
+    handle_cancel_import,
     handle_cancel_merge,
+    handle_document_upload,
+    handle_menu_importar_libro,
     handle_menu_fusionar_dias,
     handle_select_book_to_fuse,
     handle_select_pair_to_merge,
@@ -166,6 +169,10 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         await handle_menu_fusionar_dias(update, context)
     elif data == "btn_cancel_merge":
         await handle_cancel_merge(update, context)
+    elif data == "btn_libro_menu_importar":
+        await handle_menu_importar_libro(update, context)
+    elif data == "btn_cancel_import":
+        await handle_cancel_import(update, context)
     elif data.startswith("btn_fuse_book_"):
         await handle_select_book_to_fuse(update, context)
     elif data.startswith("btn_merge_pair_"):
@@ -289,6 +296,7 @@ def create_bot_app() -> Application:
     app.add_handler(CommandHandler("recuperar_mensaje", handle_recuperar_mensaje))
     app.add_handler(CommandHandler("mensaje", handle_recuperar_mensaje))
     app.add_handler(CommandHandler("borrar_libro", borrar_libro_command))
+    app.add_handler(CommandHandler("importar", handle_menu_importar_libro))
     app.add_handler(CommandHandler("cancelar", reset_command))
 
     # 2. Conversación multi-etapa del libro de obra
@@ -297,7 +305,10 @@ def create_bot_app() -> Application:
     # 3. Interacciones con botones inline
     app.add_handler(CallbackQueryHandler(handle_callback_query))
 
-    # 4. Mensajes de texto libres
+    # 4. Documentos (importación de libros de obra Excel)
+    app.add_handler(MessageHandler(filters.Document.ALL, handle_document_upload))
+
+    # 5. Mensajes de texto libres
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message))
 
     return app

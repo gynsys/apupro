@@ -1432,3 +1432,116 @@ def merge_daily_sheets(
         "backup_path": backup_file,
     }
     return book_path, final_date, info
+
+
+
+def import_and_sync_project_book(
+    uploaded_file_path: Path,
+    user_id: Optional[int] = None,
+) -> Dict[str, Any]:
+    """
+    Importa y valida un archivo de Libro de Obra (.xlsx) editado externamente por el usuario.
+    Crea un respaldo preventivo de la versión existente en el servidor,
+    sustituye el archivo en libros_de_obra/, y sincroniza completamente
+    las tablas project_metadata y sheet_reports en la base de datos SQLite.
+    """
+    if not uploaded_file_path or not uploaded_file_path.exists():
+        raise FileNotFoundError(f"No se encontró el archivo temporal a importar: {uploaded_file_path}")
+
+    if uploaded_file_path.suffix.lower() != ".xlsx":
+        raise ValueError("El archivo debe ser un libro de Excel en formato .xlsx válido.")
+
+    try:
+        wb = openpyxl.load_workbook(uploaded_file_path, data_only=False)
+    except Exception as exc:
+        raise ValueError(f"No se pudo abrir el archivo Excel. Asegúrate de que no esté corrupto ni protegido: {exc}")
+
+    fixed_sheets = {"DATOS GENERALES", "ACTAS"}
+    if "DATOS GENERALES" not in wb.sheetnames:
+        raise ValueError("El archivo no contiene la hoja obligatoria 'DATOS GENERALES'.")
+
+    # Extraer metadatos de DATOS GENERALES
+    gen_data = extract_general_data_from_workbook(wb)
+    clean_obra = (gen_data.get("obra") or "").strip()
+    if not clean_obra:
+        clean_obra = str(wb["DATOS GENERALES"]["D18"].value or "").strip()
+
+    if not clean_obra:
+        raise ValueError("No se pudo identificar el nombre de la obra en 'DATOS GENERALES' (celda D18).")
+
+    # Verificar hojas diarias
+    daily_sheets = [s for s in wb.sheetnames if s not in fixed_sheets]
+    if not daily_sheets:
+        raise ValueError("El libro no contiene hojas de reporte diario foliadas (ej: 1, 2, 3...).")
+
+    # Renombrar a ruta canónica
+    canonical_name = f"{sanitize_filename(clean_obra)}_Libro_de_Obra.xlsx"
+    target_book_path = BOOKS_DIR / canonical_name
+
+    # 1. Crear respaldo preventivo si el libro ya existía
+    backup_file: Optional[Path] = None
+    if target_book_path.exists():
+        backups_dir = DATA_DIR / "backups"
+        backups_dir.mkdir(parents=True, exist_ok=True)
+        timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_file = backups_dir / f"{target_book_path.stem}_backup_preimport_{timestamp_str}.xlsx"
+        shutil.copy2(target_book_path, backup_file)
+        logger.info("Respaldo pre-importación creado con éxito en: %s", backup_file)
+
+    # 2. Copiar el archivo validado a la ruta canónica
+    shutil.copy2(uploaded_file_path, target_book_path)
+
+    # 3. Abrir en la ubicación definitiva, asegurar orden cronológico y guardar
+    wb_final = openpyxl.load_workbook(target_book_path, data_only=False)
+    sort_sheets_by_date(wb_final)
+    wb_final.save(target_book_path)
+    logger.info("Libro de obra importado exitosamente en: %s", target_book_path)
+
+    # 4. Sincronizar en SQLite
+    # 4a. Project metadata
+    try:
+        raw_start = str(wb_final["DATOS GENERALES"]["G21"].value or "").strip()
+        if raw_start:
+            gen_data["fecha_inicio"] = raw_start
+        save_project_metadata(clean_obra, user_id, gen_data)
+    except Exception as exc:
+        logger.error("Error al actualizar project_metadata tras importación: %s", exc, exc_info=True)
+
+    # 4b. Reindexar sheet_reports para todas las hojas diarias
+    final_daily_sheets = [s for s in wb_final.sheetnames if s not in fixed_sheets]
+    sheet_dates: List[str] = []
+    updated_reports: List[Dict[str, str]] = []
+
+    for s_name in final_daily_sheets:
+        try:
+            s_entry, s_gen, _ = load_sheet_entry_data(target_book_path, s_name)
+            s_date = s_entry.get("fecha") or ""
+            if s_date:
+                sheet_dates.append(s_date)
+            s_msg = build_message_text_from_sheet_data(s_entry, s_gen or gen_data)
+            updated_reports.append({
+                "sheet_name": s_name,
+                "sheet_date": s_date,
+                "message_text": s_msg,
+            })
+        except Exception as sheet_exc:
+            logger.warning("Error al procesar hoja %s para sincronización: %s", s_name, sheet_exc)
+
+    try:
+        sync_sheet_reports_after_restructure(clean_obra, updated_reports)
+        logger.info("sheet_reports sincronizado con éxito para %s (%d hojas)", clean_obra, len(updated_reports))
+    except Exception as exc:
+        logger.error("Error al sincronizar sheet_reports tras importación: %s", exc, exc_info=True)
+
+    first_date = sheet_dates[0] if sheet_dates else "N/A"
+    last_date = sheet_dates[-1] if sheet_dates else "N/A"
+
+    return {
+        "project_name": clean_obra,
+        "book_path": target_book_path,
+        "filename": canonical_name,
+        "total_sheets": len(final_daily_sheets),
+        "first_date": first_date,
+        "last_date": last_date,
+        "backup_path": backup_file,
+    }

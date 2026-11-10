@@ -27,6 +27,7 @@ def get_libro_main_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton("📅 Modificar Fecha de Inicio", callback_data="btn_libro_modificar_fecha_inicio"),
+                InlineKeyboardButton("📥 Importar Libro (.xlsx)", callback_data="btn_libro_menu_importar"),
             ],
             [
                 InlineKeyboardButton("📚 Ver / Descargar Libros", callback_data="btn_libro_ver"),
@@ -91,5 +92,16 @@ def get_confirm_merge_keyboard(sheet1: str, sheet2: str) -> InlineKeyboardMarkup
             [
                 InlineKeyboardButton("❌ Cancelar", callback_data="btn_cancel_merge"),
             ],
+        ]
+    )
+
+
+def get_cancel_import_keyboard() -> InlineKeyboardMarkup:
+    """Botón para cancelar la espera del archivo Excel a importar."""
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("❌ Cancelar Importación", callback_data="btn_cancel_import"),
+            ]
         ]
     )

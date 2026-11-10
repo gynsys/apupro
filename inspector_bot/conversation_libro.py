@@ -36,9 +36,10 @@ from telegram.ext import (
 )
 
 from inspector_bot.ai_labor_describer import generate_labor_description_ai
-from inspector_bot.config import PHOTOS_DIR
+from inspector_bot.config import DATA_DIR, PHOTOS_DIR
 from inspector_bot.google_drive_service import upload_file_to_drive
 from inspector_bot.keyboards import (
+    get_cancel_import_keyboard,
     get_confirm_merge_keyboard,
     get_cancel_shift_date_keyboard,
     get_confirm_shift_date_keyboard,
@@ -47,6 +48,7 @@ from inspector_bot.keyboards import (
     get_libro_menu_keyboard,
 )
 from inspector_bot.libro_obra_service import (
+    import_and_sync_project_book,
     merge_daily_sheets,
     BOOKS_DIR,
     add_daily_entry_to_book,
@@ -2644,6 +2646,153 @@ async def handle_cancel_merge(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
 
 
+async def handle_menu_importar_libro(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Maneja el botón '📥 Importar Libro (.xlsx)' del menú principal."""
+    query = update.callback_query
+    msg_target = query.message if query else update.message
+    if not msg_target:
+        return
+    if query:
+        await query.answer()
+
+    context.user_data["awaiting_import_excel"] = True
+
+    txt = (
+        "📥 *IMPORTAR / ACTUALIZAR LIBRO DE OBRA (.xlsx)*\n\n"
+        "Esta función te permite subir un archivo Excel (`.xlsx`) editado en tu computadora o teléfono "
+        "para actualizar el libro en el bot y sincronizar su base de datos.\n\n"
+        "📋 *Requisitos del archivo:*\n"
+        "• Debe ser un archivo Excel con extensión `.xlsx`\n"
+        "• Debe contener la hoja `DATOS GENERALES` (con el nombre de la obra en D18)\n"
+        "• Debe contener las hojas de reporte diario foliadas (`1`, `2`, `3`...)\n\n"
+        "🔒 *Seguridad garantizada:*\n"
+        "El bot creará automáticamente un respaldo preventivo de la versión previa en el servidor.\n\n"
+        "👉 *Adjunta y envía tu archivo .xlsx ahora en este chat:*"
+    )
+
+    if query and query.message and not query.message.document:
+        try:
+            await query.message.edit_text(txt, parse_mode=ParseMode.MARKDOWN, reply_markup=get_cancel_import_keyboard())
+            return
+        except Exception as exc:
+            logger.debug("No se pudo editar texto para menú importar: %s", exc)
+
+    sent = await msg_target.reply_text(txt, parse_mode=ParseMode.MARKDOWN, reply_markup=get_cancel_import_keyboard())
+    if sent:
+        track_menu_message(context, sent.message_id)
+
+
+async def handle_cancel_import(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Cancela la espera del archivo Excel y retorna al menú principal."""
+    query = update.callback_query
+    msg_target = query.message if query else update.message
+    if not msg_target:
+        return
+    if query:
+        await query.answer()
+
+    context.user_data.pop("awaiting_import_excel", None)
+    await msg_target.reply_text(
+        "❌ Operación de importación cancelada. Volviendo al panel principal.",
+        reply_markup=get_libro_main_keyboard(),
+    )
+
+
+async def handle_document_upload(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Procesa documentos subidos por el usuario, detectando si es una importación de Libro de Obra."""
+    if not update.message or not update.message.document:
+        return
+
+    doc = update.message.document
+    filename = doc.file_name or "libro.xlsx"
+    is_xlsx = filename.lower().endswith(".xlsx")
+
+    # Si no estaba esperando explícitamente una importación
+    if not context.user_data.get("awaiting_import_excel"):
+        if is_xlsx:
+            kb = InlineKeyboardMarkup([
+                [InlineKeyboardButton("📥 Iniciar Importación de Libro", callback_data="btn_libro_menu_importar")],
+                [InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home")],
+            ])
+            await update.message.reply_text(
+                "ℹ️ *¿Deseas importar o actualizar este Libro de Obra?*\n\n"
+                "Para garantizar la verificación de estructura y crear un respaldo preventivo de seguridad, "
+                "inicia el proceso guiado pulsando el botón de abajo:",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=kb,
+            )
+        return
+
+    # Si estaba esperando la importación
+    if not is_xlsx:
+        await update.message.reply_text(
+            "⚠️ *Formato no válido:* El archivo debe ser un libro de Excel en formato `.xlsx`.\n"
+            "Por favor envía el archivo correcto o pulsa Cancelar.",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_cancel_import_keyboard(),
+        )
+        return
+
+    progress = await update.message.reply_text(
+        "⏳ *Descargando, verificando y sincronizando Libro de Obra...*",
+        parse_mode=ParseMode.MARKDOWN,
+    )
+
+    backups_dir = DATA_DIR / "backups"
+    backups_dir.mkdir(parents=True, exist_ok=True)
+    timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    temp_path = backups_dir / f"temp_upload_{timestamp_str}.xlsx"
+
+    try:
+        user_id = update.effective_user.id if update.effective_user else None
+        telegram_file = await doc.get_file()
+        await telegram_file.download_to_drive(str(temp_path))
+
+        summary = import_and_sync_project_book(temp_path, user_id=user_id)
+        if temp_path.exists():
+            temp_path.unlink()
+
+        context.user_data.pop("awaiting_import_excel", None)
+
+        p_name = _clean_md(summary["project_name"])
+        total_sheets = summary["total_sheets"]
+        f_date = summary["first_date"]
+        l_date = summary["last_date"]
+        backup_str = "Se generó una copia de respaldo automática de la versión previa en el servidor." if summary.get("backup_path") else "Se registró como un nuevo Libro de Obra en el sistema."
+
+        success_text = (
+            f"✅ *¡Libro de Obra Importado y Sincronizado Exitosamente!*\n\n"
+            f"🏗 Obra: *{p_name}*\n"
+            f"📄 Hojas diarias foliadas y sincronizadas: *{total_sheets}*\n"
+            f"📅 Período de inspección: *{f_date}* al *{l_date}*\n"
+            f"🔒 {backup_str}\n\n"
+            f"Toda la información del archivo Excel ahora está activa en la base de datos del sistema. "
+            f"Puedes continuar asentando hojas o consultar los mensajes desde el menú principal."
+        )
+
+        await progress.edit_text(
+            success_text,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_libro_main_keyboard(),
+        )
+
+    except Exception as exc:
+        logger.error("Error al importar archivo de libro de obra: %s", exc, exc_info=True)
+        if temp_path.exists():
+            try:
+                temp_path.unlink()
+            except Exception:
+                pass
+        context.user_data.pop("awaiting_import_excel", None)
+        await progress.edit_text(
+            f"❌ *Error al importar el archivo:* {exc}\n\n"
+            "El archivo original del servidor no sufrió ninguna modificación. "
+            "Verifica que el libro contenga la hoja DATOS GENERALES con el nombre de la obra y las hojas diarias foliadas.",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_libro_main_keyboard(),
+        )
+
+
 def get_libro_obra_conversation_handler() -> ConversationHandler:
     """Construye y devuelve el ConversationHandler para el Libro de Obra."""
     return ConversationHandler(
@@ -2673,7 +2822,7 @@ def get_libro_obra_conversation_handler() -> ConversationHandler:
             CommandHandler("recuperar", handle_recuperar_mensaje),
             CommandHandler("fecha_inicio", handle_menu_modificar_fecha_inicio),
             CommandHandler("modificar_fecha_inicio", handle_menu_modificar_fecha_inicio),
-            CallbackQueryHandler(cancel_libro_obra_menu, pattern="^(btn_menu_home|btn_reset|btn_menu_libro|btn_libro_ver|btn_libro_eliminar|btn_libro_registrar|btn_libro_descartar|btn_libro_editar|btn_libro_recuperar_msg|btn_libro_modificar_fecha_inicio|btn_confirm_shift_date|btn_cancel_shift_date|btn_libro_menu_fusionar|btn_cancel_merge|btn_cancel)$"),
+            CallbackQueryHandler(cancel_libro_obra_menu, pattern="^(btn_menu_home|btn_reset|btn_menu_libro|btn_libro_ver|btn_libro_eliminar|btn_libro_registrar|btn_libro_descartar|btn_libro_editar|btn_libro_recuperar_msg|btn_libro_modificar_fecha_inicio|btn_confirm_shift_date|btn_cancel_shift_date|btn_libro_menu_fusionar|btn_cancel_merge|btn_libro_menu_importar|btn_cancel_import|btn_cancel)$"),
             MessageHandler(filters.PHOTO, cancel_libro_obra_photo),
         ],
         allow_reentry=True,
