@@ -56,8 +56,7 @@ export default function BudgetHomePage() {
   const isSuperAdmin = Boolean(
     user?.is_superadmin === true ||
     user?.email === 'admin@arko360.net' ||
-    user?.role === 'superadmin' ||
-    user?.is_admin === true
+    user?.role === 'superadmin'
   );
   const initialCached = useMemo(() => getCachedBudgets(currentUserId), [currentUserId]);
   const [budgets, setBudgets] = useState(() => initialCached || []);

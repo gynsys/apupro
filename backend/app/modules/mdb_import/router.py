@@ -23,7 +23,7 @@ def _require_superadmin(current_user) -> None:
     allowed = (
         getattr(current_user, "is_superadmin", False) is True
         or getattr(current_user, "email", "") == "admin@arko360.net"
-        or getattr(current_user, "role", "") in ("admin", "superadmin")
+        or getattr(current_user, "role", "") == "superadmin"
     )
     if not allowed:
         raise HTTPException(
