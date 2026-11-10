@@ -210,7 +210,7 @@ export default function BudgetSearchModal({
         </div>
 
         {/* Header Fila 2: Visible en pantallas medianas/grandes (desktop) para acceso directo rápido */}
-        <div className="hidden sm:flex px-6 py-2 bg-amber-50/70 border-b border-amber-600/10 items-center gap-2 overflow-x-auto no-scrollbar shrink-0">
+        <div className="hidden sm:flex px-6 py-2 bg-amber-50/70 border-b border-amber-600/10 items-center gap-2 overflow-visible shrink-0">
           {/* Dropdown Base de Datos Desktop */}
           <div 
             className="relative shrink-0"
