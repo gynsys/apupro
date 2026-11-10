@@ -336,6 +336,7 @@ function ComputosTableRow({
                                     isSteel ? 'Long. m' :
                                     it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diám. Ø' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base m' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado A m' :
                                     it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base May. B' :
                                     it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado May.' :
                                     it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Long. m' : '—'
@@ -345,6 +346,7 @@ function ComputosTableRow({
                                     isSteel ? 'Longitud de corte de la barra (m)' :
                                     it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diámetro del cilindro / pilote en metros' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base del triángulo en metros' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado A del triángulo en metros' :
                                     it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base Mayor del trapecio en metros (B)' :
                                     it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado de base mayor en metros' :
                                     it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Longitud de la zanja en metros' : 'Longitud / Largo (m)'
@@ -387,6 +389,7 @@ function ComputosTableRow({
                                   allowEmpty
                                   placeholder={
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Alt. Triáng.' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado B m' :
                                     it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base Men. b' :
                                     it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado Men.' :
                                     it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Ancho m' : '—'
@@ -394,6 +397,7 @@ function ComputosTableRow({
                                   className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
                                   title={
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Altura del triángulo en metros' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado B del triángulo en metros' :
                                     it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base Menor del trapecio en metros (b)' :
                                     it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado de base menor en metros' :
                                     it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Ancho de la zanja en metros' : 'Ancho (m)'
@@ -415,6 +419,7 @@ function ComputosTableRow({
                                     isSteel ? 'Barras' :
                                     it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura H' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Largo m' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado C m' :
                                     it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Altura h' :
                                     it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Altura H' :
                                     it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Prof. H' : '—'
@@ -424,6 +429,7 @@ function ComputosTableRow({
                                     isSteel ? 'Número de barras por elemento' :
                                     it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura o profundidad del cilindro en metros' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Longitud del tramo a 2 aguas en metros' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado C del triángulo en metros (o vacío para isósceles C=A)' :
                                     it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Altura del trapecio en metros (h)' :
                                     it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Altura de la zapata piramidal en metros' :
                                     it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Profundidad de la zanja en metros' : 'Alto (m)'
@@ -475,11 +481,13 @@ function ComputosTableRow({
                                   value={it.distance ?? ''}
                                   onChange={(val) => handleUpdateItemField(it.id, 'distance', val)}
                                   allowEmpty
-                                  placeholder={it.geometryType === GEOMETRY_TYPES.TRAPEZOID && it.unit === 'M3' ? 'Long. L' : '—'}
+                                  placeholder={(it.geometryType === GEOMETRY_TYPES.TRAPEZOID || it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES) && it.unit === 'M3' ? (it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Long. L' : 'Esp. H') : '—'}
                                   className="w-full px-1 py-1 text-xs text-right font-semibold text-amber-950 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
                                   title={
                                     it.geometryType === GEOMETRY_TYPES.TRAPEZOID && it.unit === 'M3'
                                       ? 'Longitud del tramo trapecial en metros (L) para volumen M3'
+                                      : it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES && it.unit === 'M3'
+                                      ? 'Espesor o longitud en metros (H) para volumen M3'
                                       : 'Distancia en kilómetros para partidas de transporte y acarreo (M3-KM, TON-KM)'
                                   }
                                 />
@@ -675,6 +683,7 @@ function ComputosTableRow({
                                         isSteel ? 'Long. m' :
                                         p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diám. Ø' :
                                         p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base m' :
+                                        p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado A m' :
                                         p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base May. B' :
                                         p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado May.' :
                                         p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Long. m' : '0.00'
@@ -684,6 +693,7 @@ function ComputosTableRow({
                                         isSteel ? 'Longitud de corte (m)' :
                                         p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diámetro del cilindro / pilote en metros' :
                                         p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base del triángulo en metros' :
+                                        p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado A del triángulo en metros' :
                                         p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base Mayor del trapecio en metros (B)' :
                                         p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado de base mayor en metros' :
                                         p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Longitud de la zanja en metros' : 'Largo (m)'
@@ -723,6 +733,7 @@ function ComputosTableRow({
                                         allowEmpty
                                         placeholder={
                                           p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Alt. Triáng.' :
+                                          p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado B m' :
                                           p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base Men. b' :
                                           p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado Men.' :
                                           p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Ancho m' : '0.00'
@@ -730,6 +741,7 @@ function ComputosTableRow({
                                         className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
                                         title={
                                           p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Altura del triángulo en metros' :
+                                          p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado B del triángulo en metros' :
                                           p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base Menor del trapecio en metros (b)' :
                                           p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado de base menor en metros' :
                                           p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Ancho de la zanja en metros' : 'Ancho (m)'
@@ -748,6 +760,7 @@ function ComputosTableRow({
                                         isSteel ? 'Barras' :
                                         p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura H' :
                                         p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Largo m' :
+                                        p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado C m' :
                                         p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Altura h' :
                                         p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Altura H' :
                                         p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Prof. H' : '0.00'
@@ -757,6 +770,7 @@ function ComputosTableRow({
                                         isSteel ? 'Número de barras' :
                                         p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura o profundidad del cilindro en metros' :
                                         p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Longitud del tramo a 2 aguas en metros' :
+                                        p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado C del triángulo en metros (o vacío para isósceles C=A)' :
                                         p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Altura del trapecio en metros (h)' :
                                         p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Altura de la zapata piramidal en metros' :
                                         p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Profundidad de la zanja en metros' : 'Alto / Espesor (m)'
@@ -799,10 +813,12 @@ function ComputosTableRow({
                                           handleUpdatePartialField(it.id, p.id, 'distance', val)
                                         }
                                         allowEmpty
-                                        placeholder={p.geometryType === GEOMETRY_TYPES.TRAPEZOID && it.unit === 'M3' ? 'Long. L' : '—'}
+                                        placeholder={(p.geometryType === GEOMETRY_TYPES.TRAPEZOID || p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES) && it.unit === 'M3' ? (p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Long. L' : 'Esp. H') : '—'}
                                         title={
                                           p.geometryType === GEOMETRY_TYPES.TRAPEZOID && it.unit === 'M3'
                                             ? 'Longitud del tramo trapecial en metros (L) para volumen M3'
+                                            : p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES && it.unit === 'M3'
+                                            ? 'Espesor o longitud en metros (H) para volumen M3'
                                             : 'Distancia en kilómetros'
                                         }
                                         className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"

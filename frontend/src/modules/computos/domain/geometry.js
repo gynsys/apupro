@@ -13,6 +13,7 @@ export const GEOMETRY_TYPES = {
   RECTANGLE: 'rectangle',
   CYLINDER: 'cylinder',
   TRIANGLE: 'triangle',
+  TRIANGLE_3_SIDES: 'triangle_3_sides',
   TRAPEZOID: 'trapezoid',
   TRUNCATED_PYRAMID: 'truncated_pyramid',
   TRENCH: 'trench',
@@ -35,10 +36,17 @@ export const GEOMETRY_CONFIGS = [
   },
   {
     id: GEOMETRY_TYPES.TRIANGLE,
-    label: 'Triángulo / Talud / 2 Aguas',
-    shortLabel: 'Triángulo',
+    label: 'Triángulo (Base × Altura / 2)',
+    shortLabel: 'Triángulo (B×H)',
     icon: '📐',
     description: '(Base × Altura / 2) × Longitud',
+  },
+  {
+    id: GEOMETRY_TYPES.TRIANGLE_3_SIDES,
+    label: 'Triángulo por 3 Lados (Isósceles / Herón / Escaleno)',
+    shortLabel: 'Triáng. 3 Lados',
+    icon: '🔺',
+    description: '3 Lados a, b, c (Fórmula de Herón √[s(s-a)(s-b)(s-c)])',
   },
   {
     id: GEOMETRY_TYPES.TRAPEZOID,
@@ -142,6 +150,63 @@ export function computeGeometryBase(row, unit = 'M3') {
         const formulaStr = length !== null && length > 0
           ? `(((${base}m × ${hTri}m) / 2) × ${length}m) = ${roundedVol}m³`
           : `((${base}m × ${hTri}m) / 2) = ${roundedVol}m³`;
+        return { baseGeom: roundedVol, formulaStr };
+      }
+      break;
+    }
+
+    case GEOMETRY_TYPES.TRIANGLE_3_SIDES: {
+      // row.length = Lado A (m), row.width = Lado B (m), row.height = Lado C (m)
+      const a = parseNum(row.sideA ?? row.length);
+      const b = parseNum(row.sideB ?? row.width);
+      let c = parseNum(row.sideC ?? row.height);
+
+      // Si C está vacío pero A y B existen, y pueden formar un isósceles con 2 lados iguales a A (2a > b)
+      if (c === null && a !== null && b !== null && a > 0 && b > 0 && (2 * a > b)) {
+        c = a;
+      }
+
+      if (a !== null && a > 0 && b !== null && b > 0 && c !== null && c > 0) {
+        // Desigualdad triangular: cada lado debe ser menor que la suma de los otros dos
+        const isTriangle = (a + b > c) && (a + c > b) && (b + c > a);
+        if (!isTriangle) {
+          return {
+            baseGeom: 0,
+            formulaStr: `Lados (${a}m, ${b}m, ${c}m) no forman triángulo (desigualdad triangular)`,
+          };
+        }
+
+        const s = (a + b + c) / 2;
+        const radicand = s * (s - a) * (s - b) * (s - c);
+        const areaTri = Math.sqrt(Math.max(0, radicand));
+        const roundedArea = round2(areaTri);
+
+        if (normUnit === 'M' || normUnit === 'ML') {
+          const perim = round2(a + b + c);
+          return {
+            baseGeom: perim,
+            formulaStr: `(${a}m + ${b}m + ${c}m) = ${perim}m`,
+          };
+        }
+
+        if (normUnit === 'M2') {
+          const formulaStr = `√[${round2(s)} × ${round2(s - a)} × ${round2(s - b)} × ${round2(s - c)}] = ${roundedArea}m²`;
+          return {
+            baseGeom: roundedArea,
+            formulaStr,
+          };
+        }
+
+        // Volumen M3: Área × Espesor / Longitud H (en distance)
+        const thick = parseNum(row.distance ?? row.thickness);
+        const hasThick = thick !== null && thick > 0;
+        const lenVal = hasThick ? thick : 1;
+        const vol = areaTri * lenVal;
+        const roundedVol = round2(vol);
+        const formulaStr = hasThick
+          ? `[√[${round2(s)} × ${round2(s - a)} × ${round2(s - b)} × ${round2(s - c)}] × ${lenVal}m] = ${roundedVol}m³`
+          : `√[${round2(s)} × ${round2(s - a)} × ${round2(s - b)} × ${round2(s - c)}] = ${roundedVol}m³`;
+
         return { baseGeom: roundedVol, formulaStr };
       }
       break;

@@ -30,6 +30,66 @@ describe('Intelligent Geometry Templates', () => {
     expect(res.baseGeom).toBe(3.14);
   });
 
+  it('computes 3-side triangle area with Heron\'s formula (user sides 1.67, 1.20, 1.02)', () => {
+    const row = {
+      geometryType: GEOMETRY_TYPES.TRIANGLE_3_SIDES,
+      length: 1.67, // Lado a
+      width: 1.20,  // Lado b
+      height: 1.02, // Lado c
+      unit: 'M2',
+    };
+    const res = computeGeometryBase(row, 'M2');
+    // s = (1.67 + 1.20 + 1.02)/2 = 1.945
+    // area = sqrt(1.945 * 0.275 * 0.745 * 0.925) = sqrt(0.368536...) = 0.60707... -> 0.61 m2
+    expect(res.baseGeom).toBe(0.61);
+    expect(res.formulaStr).toContain('0.61m²');
+    expect(res.formulaStr).toContain('√[');
+  });
+
+  it('computes isosceles triangle when side C is empty (c defaults to a)', () => {
+    const row = {
+      geometryType: GEOMETRY_TYPES.TRIANGLE_3_SIDES,
+      length: 1.67, // Lado a
+      width: 1.20,  // Base b
+      height: '',   // Lado c omitido (isósceles a, b, a)
+      unit: 'M2',
+    };
+    const res = computeGeometryBase(row, 'M2');
+    // a = 1.67, b = 1.20, c = 1.67
+    // s = (1.67 + 1.20 + 1.67)/2 = 2.27
+    // area = (1.20 / 4) * sqrt(4 * 1.67^2 - 1.20^2) = 0.3 * sqrt(11.1556 - 1.44) = 0.3 * 3.117 = 0.935 -> 0.94 m2
+    expect(res.baseGeom).toBe(0.94);
+  });
+
+  it('computes 3-side triangle prism volume for M3 with thickness', () => {
+    const row = {
+      geometryType: GEOMETRY_TYPES.TRIANGLE_3_SIDES,
+      length: 1.67,
+      width: 1.20,
+      height: 1.02,
+      distance: 0.10, // Espesor 10cm = 0.10m
+      unit: 'M3',
+    };
+    const res = computeGeometryBase(row, 'M3');
+    // 0.60707 * 0.10 = 0.0607 -> 0.06 m3
+    expect(res.baseGeom).toBe(0.06);
+    expect(res.formulaStr).toContain('0.1m');
+    expect(res.formulaStr).toContain('0.06m³');
+  });
+
+  it('detects triangle inequality violation and returns 0 with error description', () => {
+    const row = {
+      geometryType: GEOMETRY_TYPES.TRIANGLE_3_SIDES,
+      length: 1.67,
+      width: 1.20,
+      height: 5.00, // 1.67 + 1.20 = 2.87 < 5.00 (imposible cerrar triángulo)
+      unit: 'M2',
+    };
+    const res = computeGeometryBase(row, 'M2');
+    expect(res.baseGeom).toBe(0);
+    expect(res.formulaStr).toContain('no forman triángulo');
+  });
+
   it('computes triangular section volume (V = Base × Altura / 2 × Largo)', () => {
     const row = {
       geometryType: GEOMETRY_TYPES.TRIANGLE,

@@ -336,6 +336,7 @@ export default function ComputosCards({
                                     isSteel ? 'LONG. (m)' :
                                     it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'DIÁMETRO Ø' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'BASE (m)' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'LADO A (m)' :
                                     it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'BASE MAYOR B' :
                                     it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'LADO MAYOR' :
                                     it.geometryType === GEOMETRY_TYPES.TRENCH ? 'LONGITUD' : 'LARGO (m)'
@@ -349,6 +350,7 @@ export default function ComputosCards({
                                     isSteel ? 'Long. m' :
                                     it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diám. Ø' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base m' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado A m' :
                                     it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base May. B' :
                                     it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado May.' :
                                     it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Long. m' : '0.00'
@@ -362,6 +364,7 @@ export default function ComputosCards({
                                     isSteel ? 'DIÁMETRO Ø' :
                                     it.geometryType === GEOMETRY_TYPES.CYLINDER ? '— (CIRCULAR)' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'ALT. TRIÁNG.' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'LADO B (m)' :
                                     it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'BASE MENOR b' :
                                     it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'LADO MENOR' :
                                     it.geometryType === GEOMETRY_TYPES.TRENCH ? 'ANCHO' : 'ANCHO (m)'
@@ -398,6 +401,7 @@ export default function ComputosCards({
                                     allowEmpty
                                     placeholder={
                                       it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Alt. Triáng.' :
+                                      it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado B m' :
                                       it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base Men. b' :
                                       it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado Men.' :
                                       it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Ancho m' : '0.00'
@@ -412,6 +416,7 @@ export default function ComputosCards({
                                     isSteel ? 'N° BARRAS' :
                                     it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'ALTURA H' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'LARGO TRAMO' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'LADO C (m)' :
                                     it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'ALTURA h' :
                                     it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'ALTURA H' :
                                     it.geometryType === GEOMETRY_TYPES.TRENCH ? 'PROFUNDIDAD' : 'ALTO (m)'
@@ -425,6 +430,7 @@ export default function ComputosCards({
                                     isSteel ? 'Barras' :
                                     it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura H' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Largo m' :
+                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado C m' :
                                     it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Altura h' :
                                     it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Altura H' :
                                     it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Prof. H' : '0.00'
@@ -460,7 +466,7 @@ export default function ComputosCards({
                                   className="block text-[10px] font-bold text-amber-900 mb-0.5"
                                   title="Distancia de transporte en Km o Longitud L en m para trapecio"
                                 >
-                                  {it.geometryType === GEOMETRY_TYPES.TRAPEZOID && it.unit === 'M3' ? 'LONG. L (m)' : 'DIST. (km)'}
+                                  {(it.geometryType === GEOMETRY_TYPES.TRAPEZOID || it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES) && it.unit === 'M3' ? (it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'LONG. L (m)' : 'ESPESOR H (m)') : 'DIST. (km)'}
                                 </label>
                                 {isSteel ? (
                                   <div className="w-full px-2 py-1.5 text-xs text-center font-bold text-gray-300 rounded-lg border border-amber-200 bg-gray-50 select-none">
@@ -471,10 +477,12 @@ export default function ComputosCards({
                                     value={it.distance ?? ''}
                                     onChange={(val) => handleUpdateItemField(it.id, 'distance', val)}
                                     allowEmpty
-                                    placeholder={it.geometryType === GEOMETRY_TYPES.TRAPEZOID && it.unit === 'M3' ? 'Long. L' : '—'}
+                                    placeholder={(it.geometryType === GEOMETRY_TYPES.TRAPEZOID || it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES) && it.unit === 'M3' ? (it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Long. L' : 'Esp. H') : '—'}
                                     title={
                                       it.geometryType === GEOMETRY_TYPES.TRAPEZOID && it.unit === 'M3'
                                         ? 'Longitud del tramo trapecial en metros (L) para volumen M3'
+                                        : it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES && it.unit === 'M3'
+                                        ? 'Espesor o longitud en metros (H) para volumen M3'
                                         : 'Distancia de transporte en Km'
                                     }
                                     className="w-full px-2 py-1.5 text-xs text-right font-semibold rounded-lg border border-amber-300 bg-white"
@@ -657,6 +665,7 @@ export default function ComputosCards({
                                               isSteel ? 'Long. (m)' :
                                               p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diám. Ø' :
                                               p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base (m)' :
+                                              p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado A (m)' :
                                               p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base May. B' :
                                               p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado May.' :
                                               p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Long. (m)' : 'Largo (m)'
@@ -672,6 +681,7 @@ export default function ComputosCards({
                                               isSteel ? 'Long. m' :
                                               p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diám. Ø' :
                                               p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base m' :
+                                              p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado A m' :
                                               p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base May. B' :
                                               p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado May.' :
                                               p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Long. m' : '0.00'
@@ -685,6 +695,7 @@ export default function ComputosCards({
                                               isSteel ? 'Diámetro' :
                                               p.geometryType === GEOMETRY_TYPES.CYLINDER ? '— (Circ.)' :
                                               p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Alt. Triáng.' :
+                                              p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado B (m)' :
                                               p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base Men. b' :
                                               p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado Men.' :
                                               p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Ancho (m)' : 'Ancho (m)'
@@ -723,6 +734,7 @@ export default function ComputosCards({
                                               allowEmpty
                                               placeholder={
                                                 p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Alt. Triáng.' :
+                                                p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado B m' :
                                                 p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base Men. b' :
                                                 p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado Men.' :
                                                 p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Ancho m' : '0.00'
@@ -737,6 +749,7 @@ export default function ComputosCards({
                                               isSteel ? 'Barras' :
                                               p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura H' :
                                               p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Largo (m)' :
+                                              p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado C (m)' :
                                               p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Altura h' :
                                               p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Altura H' :
                                               p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Prof. (m)' : 'Alto (m)'
@@ -752,6 +765,7 @@ export default function ComputosCards({
                                               isSteel ? 'Barras' :
                                               p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura H' :
                                               p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Largo m' :
+                                              p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado C m' :
                                               p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Altura h' :
                                               p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Altura H' :
                                               p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Prof. H' : '0.00'
@@ -790,7 +804,7 @@ export default function ComputosCards({
                                         </div>
                                         <div>
                                           <label className="block text-[9px] font-bold text-amber-800">
-                                            {p.geometryType === GEOMETRY_TYPES.TRAPEZOID && it.unit === 'M3' ? 'Long. L (m)' : 'Dist. (km)'}
+                                            {(p.geometryType === GEOMETRY_TYPES.TRAPEZOID || p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES) && it.unit === 'M3' ? (p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Long. L (m)' : 'Esp. H (m)') : 'Dist. (km)'}
                                           </label>
                                           {isSteel ? (
                                             <div className="w-full px-1.5 py-1 text-xs text-center font-bold text-gray-300 bg-gray-50 border border-amber-200 rounded-lg select-none">
@@ -803,10 +817,12 @@ export default function ComputosCards({
                                                 handleUpdatePartialField(it.id, p.id, 'distance', val)
                                               }
                                               allowEmpty
-                                              placeholder={p.geometryType === GEOMETRY_TYPES.TRAPEZOID && it.unit === 'M3' ? 'Long. L' : '—'}
+                                              placeholder={(p.geometryType === GEOMETRY_TYPES.TRAPEZOID || p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES) && it.unit === 'M3' ? (p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Long. L' : 'Esp. H') : '—'}
                                               title={
                                                 p.geometryType === GEOMETRY_TYPES.TRAPEZOID && it.unit === 'M3'
                                                   ? 'Longitud del tramo trapecial en metros (L) para volumen M3'
+                                                  : p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES && it.unit === 'M3'
+                                                  ? 'Espesor o longitud en metros (H) para volumen M3'
                                                   : 'Distancia en kilómetros'
                                               }
                                               className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
