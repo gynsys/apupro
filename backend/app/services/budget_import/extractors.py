@@ -41,6 +41,15 @@ _CODE_ALIASES = {
     "codigo", "codigo covenin", "codigo de partida", "codigo partida",
     "covpar", "cov par", "codpar", "cod par", "cod", "nro", "numero",
     "num", "no", "n", "item", "partida", "n de partida", "nro de partida",
+    "referencia", "ref",
+}
+_REF_ALIASES = {
+    "referencia", "ref", "codpar", "cod par", "codigo maprex", "cod maprex",
+    "codigo interno", "cod interno", "referencia maprex", "ref maprex",
+}
+_COVENIN_ALIASES = {
+    "codigo covenin", "covenin", "cod covenin", "cod. covenin", "cód. covenin",
+    "covpar", "cov par", "norma", "cod norma", "codigo norma",
 }
 _UNIT_ALIASES = {
     "unidad", "unidad de medida", "unidad medida", "und", "un", "ud", "um",
@@ -243,6 +252,14 @@ def _find_header(df: pd.DataFrame) -> Optional[Tuple[int, Dict[str, int]]]:
             (i for i, cell in enumerate(cells) if cell in _CODE_ALIASES and i != desc_col),
             None,
         )
+        ref_col = next(
+            (i for i, cell in enumerate(cells) if cell in _REF_ALIASES and i != desc_col),
+            None,
+        )
+        cov_col = next(
+            (i for i, cell in enumerate(cells) if cell in _COVENIN_ALIASES and i != desc_col),
+            None,
+        )
 
         # Algunos presupuestos titulan la columna de descripción como "Partida".
         if desc_col is None and code_col is not None and cells[code_col] == "partida":
@@ -255,6 +272,8 @@ def _find_header(df: pd.DataFrame) -> Optional[Tuple[int, Dict[str, int]]]:
         score = (3 if desc_col is not None else 0) + (3 if qty_col is not None else 0)
         score += 1 if unit_col is not None else 0
         score += 1 if code_col is not None else 0
+        score += 1 if ref_col is not None else 0
+        score += 1 if cov_col is not None else 0
         roles = {
             "description": desc_col,
         }
@@ -264,6 +283,10 @@ def _find_header(df: pd.DataFrame) -> Optional[Tuple[int, Dict[str, int]]]:
             roles["unit"] = unit_col
         if code_col is not None and code_col != desc_col:
             roles["code"] = code_col
+        if ref_col is not None and ref_col != desc_col:
+            roles["ref"] = ref_col
+        if cov_col is not None and cov_col != desc_col:
+            roles["cov_par"] = cov_col
 
         if best is None or score > best[0]:
             best = (score, row_index, roles)
@@ -304,7 +327,10 @@ def _parse_sheet(df: pd.DataFrame, filename: str) -> Tuple[List[Dict[str, Any]],
 
         quantity = parse_quantity(value_of("quantity")) if "quantity" in columns else None
         unit = _normalize_unit(value_of("unit")) if "unit" in columns else ""
-        code = value_of("code")
+        ref_val = value_of("ref")
+        cov_val = value_of("cov_par")
+        code = ref_val or value_of("code")
+        cov_par = cov_val or (value_of("code") if ref_val else "")
         is_chapter = _is_chapter(description, quantity, unit)
 
         if not is_chapter and not unit:
@@ -314,6 +340,7 @@ def _parse_sheet(df: pd.DataFrame, filename: str) -> Tuple[List[Dict[str, Any]],
 
         items.append({
             "code": code[:80],
+            "cov_par": cov_par[:80] if cov_par else "",
             "description": description[:600],
             "unit": "" if is_chapter else (unit or "und"),
             "quantity": 0.0 if is_chapter else float(quantity or 0.0),

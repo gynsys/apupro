@@ -35,6 +35,7 @@ def _finalize_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         quantity = max(0.0, quantity)
 
         code = str(raw.get("code") or "").strip()
+        cov_par = str(raw.get("cov_par") or "").strip()
         key = ("code", code) if code else (description.lower(), unit, round(quantity, 3), is_chapter)
         if key in seen:
             continue
@@ -42,6 +43,7 @@ def _finalize_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
         result.append({
             "code": code[:80],
+            "cov_par": cov_par[:80] if cov_par else "",
             "description": description[:600],
             "unit": unit,
             "quantity": quantity,

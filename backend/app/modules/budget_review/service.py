@@ -164,12 +164,20 @@ def _fetch_master_item_and_recipe(
     code: str,
     cov_code: Optional[str],
     desc: Optional[str] = None,
+    performance: Optional[float] = None,
+    materials: Optional[List[Dict[str, Any]]] = None,
+    equipments: Optional[List[Dict[str, Any]]] = None,
+    labors: Optional[List[Dict[str, Any]]] = None,
 ) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, List[Dict[str, Any]]]]]:
     """
     Busca una partida en CostBase priorizando el Código COVENIN (CovPar),
-    y desambigua mediante coincidencia 1 a 1 de descripción cuando múltiples partidas
-    comparten el mismo CovPar (ej. 'E12 S/C'). Si no se encuentra por CovPar,
-    busca secundariamente por el código interno Maprex (CodPar).
+    y desambigua de forma resiliente contra inconsistencias nativas de Maprex:
+    1. Si hay múltiples variantes con el mismo CovPar (ej. E321390000 tiene ECS140 y EPO044):
+       - Cruza primero contra el código interno/referencia (CodPar) si viene en el presupuesto.
+       - Filtra por coincidencia 1 a 1 de descripción.
+       - Si varias variantes comparten la misma descripción: desempata por rendimiento idéntico,
+         afinidad de insumos en receta o rendimiento más cercano para no emitir falsos positivos.
+    2. Si no se encuentra por CovPar, busca secundariamente por el código interno Maprex (CodPar).
     """
     clean_code = (code or "").strip()
     clean_cov = (cov_code or "").strip()
@@ -207,18 +215,83 @@ def _fetch_master_item_and_recipe(
             matched_row = rows[0]
             break
         else:
-            # Si hay múltiples partidas con el mismo CovPar (ej. E12 S/C tiene 16 partidas en Maprex)
-            # Desambiguar seleccionando la que coincida 1 a 1 con la descripción del presupuesto
+            # Hay múltiples variantes en Maprex para este código COVENIN
+            # Paso A: Si clean_code coincide con el CodPar de alguna variante, match exacto
+            if clean_code:
+                clean_code_upper = clean_code.upper()
+                exact_by_code = [r for r in rows if str(r[0] or "").strip().upper() == clean_code_upper]
+                if exact_by_code:
+                    matched_row = exact_by_code[0]
+                    break
+
+            # Paso B: Filtrar candidatos que coincidan 1 a 1 en descripción
+            desc_candidates: List[Any] = []
             if desc:
                 for r in rows:
                     cand_desc = str(r[2] or "").strip()
                     if is_exact_or_1to1_description(desc, cand_desc):
-                        matched_row = r
-                        break
-            if matched_row:
+                        desc_candidates.append(r)
+            else:
+                desc_candidates = list(rows)
+
+            if len(desc_candidates) == 1:
+                matched_row = desc_candidates[0]
                 break
-            # Si ninguna coincide 1 a 1 en descripción, NO tomar una arbitraria (como BAN039)
-            # para evitar contrastar alcances incompatibles ("peras con manzanas").
+            elif len(desc_candidates) > 1:
+                # Variantes Maprex con descripción 100% idéntica (ej. E321390000 con ECS140 y EPO044)
+                # B.1: Coincidencia exacta de rendimiento
+                if performance is not None and performance > 0:
+                    perf_exact = [
+                        r for r in desc_candidates
+                        if abs(float(r[4] or 0.0) - performance) < 0.001
+                    ]
+                    if len(perf_exact) == 1:
+                        matched_row = perf_exact[0]
+                        break
+
+                # B.2: Coincidencia de insumos (equipos / materiales) en la receta
+                if equipments or materials:
+                    imp_eq_codes = {
+                        str(e.get("codigo") or e.get("CodEqu") or "").strip().upper()
+                        for e in (equipments or [])
+                        if (e.get("codigo") or e.get("CodEqu"))
+                    }
+                    imp_mat_codes = {
+                        str(m.get("codigo") or m.get("CodMat") or "").strip().upper()
+                        for m in (materials or [])
+                        if (m.get("codigo") or m.get("CodMat"))
+                    }
+
+                    best_cand = None
+                    max_overlap = -1
+                    for r in desc_candidates:
+                        c_par = str(r[0]).strip()
+                        c_eqs = db.execute(
+                            text(f'SELECT "CodIns" FROM "{schema}".cost360_apu_equipment WHERE "CodPar" = :cp'),
+                            {"cp": c_par}
+                        ).scalars().all()
+                        c_mats = db.execute(
+                            text(f'SELECT "CodIns" FROM "{schema}".cost360_apu_materials WHERE "CodPar" = :cp'),
+                            {"cp": c_par}
+                        ).scalars().all()
+                        overlap = len(imp_eq_codes.intersection({str(x).strip().upper() for x in c_eqs})) + \
+                                  len(imp_mat_codes.intersection({str(x).strip().upper() for x in c_mats}))
+                        if overlap > max_overlap:
+                            max_overlap = overlap
+                            best_cand = r
+
+                    if best_cand and max_overlap > 0:
+                        matched_row = best_cand
+                        break
+
+                # B.3: Fallback a la variante con rendimiento más cercano
+                if performance is not None and performance > 0:
+                    desc_candidates.sort(key=lambda r: abs(float(r[4] or 0.0) - performance))
+                    matched_row = desc_candidates[0]
+                    break
+                else:
+                    matched_row = desc_candidates[0]
+                    break
 
     # 2. BÚSQUEDA SECUNDARIA POR CÓDIGO INTERNO MAPREX (CodPar)
     if not matched_row and clean_code:
@@ -231,11 +304,11 @@ def _fetch_master_item_and_recipe(
         ).fetchall()
         if len(rows_by_cod) == 1:
             matched_row = rows_by_cod[0]
-        elif len(rows_by_cod) > 1 and desc:
-            for r in rows_by_cod:
-                if is_exact_or_1to1_description(desc, str(r[2] or "").strip()):
-                    matched_row = r
-                    break
+        elif len(rows_by_cod) > 1:
+            if desc:
+                desc_match = [r for r in rows_by_cod if is_exact_or_1to1_description(desc, str(r[2] or "").strip())]
+                if desc_match:
+                    matched_row = desc_match[0]
             if not matched_row:
                 matched_row = rows_by_cod[0]
 
@@ -486,7 +559,17 @@ def _execute_snapshot_audit(
         master_item, master_recipe = (
             (None, None)
             if uncoded_flag
-            else _fetch_master_item_and_recipe(db, schema, orig_code, cov_code, desc)
+            else _fetch_master_item_and_recipe(
+                db=db,
+                schema=schema,
+                code=orig_code,
+                cov_code=cov_code,
+                desc=desc,
+                performance=float(raw.get("performance") or 1.0) if raw.get("performance") is not None else None,
+                materials=raw.get("materials") or [],
+                equipments=raw.get("equipments") or [],
+                labors=raw.get("labors") or [],
+            )
         )
 
         suggested_code: Optional[str] = None

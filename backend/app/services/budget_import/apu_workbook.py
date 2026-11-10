@@ -158,6 +158,8 @@ def _parse_single_apu_sheet(ws: Worksheet, sheet_name: str, sheet_index: int) ->
     description: Optional[str] = None
     performance: float = 1.0
     code: Optional[str] = None
+    ref_code: Optional[str] = None
+    covenin_code: Optional[str] = None
     unit: str = "und"
     quantity: float = 1.0
 
@@ -227,6 +229,18 @@ def _parse_single_apu_sheet(ws: Worksheet, sheet_name: str, sheet_index: int) ->
                     val_parsed = _to_float(row[c_idx + 1])
                     if val_parsed > 0:
                         performance = val_parsed
+
+            if any(k in supper for k in ("REFERENCIA:", "REF:", "REF.", "CODIGO MAPREX:", "COD. MAPREX:")) and not ref_code:
+                if ":" in sval and len(sval.split(":", 1)[1].strip()) > 0:
+                    ref_code = sval.split(":", 1)[1].strip()
+                elif c_idx + 1 < len(row) and row[c_idx + 1] is not None:
+                    ref_code = _clean_str(row[c_idx + 1])
+
+            if any(k in supper for k in ("CODIGO COVENIN:", "COD. COVENIN:", "COVENIN:")) and not covenin_code:
+                if ":" in sval and len(sval.split(":", 1)[1].strip()) > 0:
+                    covenin_code = sval.split(":", 1)[1].strip()
+                elif c_idx + 1 < len(row) and row[c_idx + 1] is not None:
+                    covenin_code = _clean_str(row[c_idx + 1])
 
             if any(k in supper for k in ("CODIGO:", "CODIGO DE PARTIDA", "COD:")) and not code:
                 if ":" in sval and len(sval.split(":", 1)[1].strip()) > 0:
@@ -361,7 +375,8 @@ def _parse_single_apu_sheet(ws: Worksheet, sheet_name: str, sheet_index: int) ->
     if not description and not materials and not equipments and not labors:
         return None
 
-    final_code = code or part_no or f"APU-{sheet_index:03d}"
+    final_code = ref_code or code or part_no or f"APU-{sheet_index:03d}"
+    final_cov = covenin_code or (code if ref_code else "")
     final_desc = description or f"Partida {final_code}"
 
     return {
@@ -370,6 +385,7 @@ def _parse_single_apu_sheet(ws: Worksheet, sheet_name: str, sheet_index: int) ->
         "fecha": fecha,
         "part_no": part_no,
         "code": final_code,
+        "cov_par": final_cov,
         "description": final_desc,
         "performance": max(0.01, performance),
         "unit": _normalize_unit(unit) or "und",
@@ -441,7 +457,7 @@ def extract_from_apu_workbook(data: bytes, filename: str) -> Dict[str, Any]:
 
         candidate = {
             "cod_par": item_code,
-            "cov_par": item_code,
+            "cov_par": str(apu.get("cov_par") or item_code),
             "description": item_desc,
             "unit": item_unit,
             "score": 1.0,
@@ -451,6 +467,7 @@ def extract_from_apu_workbook(data: bytes, filename: str) -> Dict[str, Any]:
         items.append({
             "row": item_row,
             "code": item_code,
+            "cov_par": str(apu.get("cov_par") or ""),
             "description": item_desc,
             "unit": item_unit,
             "quantity": item_qty,
