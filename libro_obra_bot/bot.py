@@ -18,7 +18,12 @@ from telegram.ext import (
 from libro_obra_bot.config import BOT_TOKEN
 from libro_obra_bot.conversation_libro import (
     ask_confirm_delete_libro,
+    execute_confirm_merge_sheets,
     execute_confirm_shift_date,
+    handle_cancel_merge,
+    handle_menu_fusionar_dias,
+    handle_select_book_to_fuse,
+    handle_select_pair_to_merge,
     execute_delete_libro,
     execute_save_pending_libro_entry,
     get_libro_obra_conversation_handler,
@@ -157,6 +162,16 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         await handle_recuperar_mensaje(update, context)
     elif data == "btn_libro_modificar_fecha_inicio":
         await handle_menu_modificar_fecha_inicio(update, context)
+    elif data == "btn_libro_menu_fusionar":
+        await handle_menu_fusionar_dias(update, context)
+    elif data == "btn_cancel_merge":
+        await handle_cancel_merge(update, context)
+    elif data.startswith("btn_fuse_book_"):
+        await handle_select_book_to_fuse(update, context)
+    elif data.startswith("btn_merge_pair_"):
+        await handle_select_pair_to_merge(update, context)
+    elif data.startswith("btn_confirm_merge_"):
+        await execute_confirm_merge_sheets(update, context)
     elif data == "btn_confirm_shift_date":
         await execute_confirm_shift_date(update, context)
     elif data == "btn_cancel_shift_date":

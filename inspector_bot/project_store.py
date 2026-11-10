@@ -411,3 +411,134 @@ def get_sheet_report_by_date(project_name: str, sheet_date: str) -> Optional[str
         if row and row["message_text"]:
             return str(row["message_text"])
     return None
+
+
+def update_sheet_reports_dates(
+    project_name: str,
+    date_shifts: List[Dict[str, str]],
+) -> None:
+    """
+    Actualiza las fechas y el texto del reporte en sheet_reports tras un desplazamiento correlativo.
+    date_shifts: lista de dicts con keys: sheet_name, old_date_str, new_date_str.
+    """
+    if not project_name:
+        raise ValueError("project_name no puede estar vacío.")
+    if not date_shifts:
+        return
+
+    init_db()
+    project_id = project_name.strip().upper()
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        for item in date_shifts:
+            s_name = str(item["sheet_name"])
+            old_d = str(item.get("old_date_str") or "").strip()
+            new_d = str(item.get("new_date_str") or "").strip()
+
+            cursor.execute(
+                "SELECT message_text FROM sheet_reports WHERE project_id = ? AND sheet_name = ?",
+                (project_id, s_name),
+            )
+            row = cursor.fetchone()
+            if row and row["message_text"]:
+                old_text = str(row["message_text"])
+                if old_d:
+                    new_text = re.sub(
+                        r"(\*?Fecha:\*?\s*)" + re.escape(old_d),
+                        r"\g<1>" + new_d,
+                        old_text,
+                        flags=re.IGNORECASE,
+                    )
+                else:
+                    new_text = old_text
+                cursor.execute(
+                    """
+                    UPDATE sheet_reports
+                    SET sheet_date = ?, message_text = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE project_id = ? AND sheet_name = ?
+                    """,
+                    (new_d, new_text, project_id, s_name),
+                )
+            else:
+                cursor.execute(
+                    """
+                    UPDATE sheet_reports
+                    SET sheet_date = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE project_id = ? AND sheet_name = ?
+                    """,
+                    (new_d, project_id, s_name),
+                )
+        conn.commit()
+
+
+def sync_sheet_reports_after_restructure(
+    project_name: str,
+    updated_sheets: List[Dict[str, str]],
+) -> None:
+    """
+    Reorganiza y sincroniza atómicamente la tabla sheet_reports tras fusionar o renumerar hojas.
+    updated_sheets: lista de dicts con keys: sheet_name, sheet_date, message_text.
+    """
+    if not project_name:
+        raise ValueError("project_name no puede estar vacío.")
+
+    init_db()
+    project_id = project_name.strip().upper()
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM sheet_reports WHERE project_id = ?", (project_id,))
+        for item in updated_sheets:
+            s_name = str(item["sheet_name"])
+            s_date = str(item.get("sheet_date") or "").strip()
+            m_text = str(item.get("message_text") or "").strip()
+            cursor.execute(
+                """
+                INSERT INTO sheet_reports (project_id, sheet_name, sheet_date, message_text, updated_at)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """,
+                (project_id, s_name, s_date, m_text),
+            )
+        conn.commit()
+
+
+def build_message_text_from_sheet_data(
+    entry_data: Dict[str, Any],
+    general_data: Dict[str, Any],
+) -> str:
+    """
+    Reconstruye el mensaje en formato estándar de inspección a partir de los datos de una hoja y obra.
+    """
+    if not entry_data:
+        raise ValueError("entry_data no puede estar vacío.")
+
+    fecha = entry_data.get("fecha") or ""
+    obra = general_data.get("obra") or entry_data.get("obra") or ""
+    lines: List[str] = [
+        f"*Fecha:* {fecha}",
+        f"*Obra:* {obra}",
+    ]
+    if general_data.get("empresa"):
+        lines.append(f"*Nombre de la empresa:* {general_data['empresa']}")
+    if general_data.get("ing_residente"):
+        civ_res = general_data.get("civ_residente", "")
+        civ_str = f"\nCIV: {civ_res}" if civ_res else ""
+        lines.append(f"*Ing. Residente:* {general_data['ing_residente']}{civ_str}")
+    if entry_data.get("personal_inspeccion"):
+        lines.append(f"*Personal de Inspección:* {entry_data['personal_inspeccion']}")
+    if entry_data.get("personal"):
+        lines.append(f"*Personal en Obra:* {entry_data['personal']}")
+
+    act_list = entry_data.get("actividades_list") or []
+    if act_list:
+        lines.append("*Actividades en ejecución:*")
+        for a in act_list:
+            lines.append(f".- {a}")
+    elif entry_data.get("descripcion_labor"):
+        lines.append(f"*Actividades en ejecución:*\n{entry_data['descripcion_labor']}")
+
+    if entry_data.get("equipos"):
+        lines.append(f"*Movimientos de maquinaria y equipos:*\n{entry_data['equipos']}")
+    if entry_data.get("observaciones"):
+        lines.append(f"*Observaciones:*\n{entry_data['observaciones']}")
+
+    return "\n".join(lines)

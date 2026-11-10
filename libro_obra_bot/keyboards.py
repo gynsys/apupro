@@ -23,6 +23,7 @@ def get_libro_main_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton("✏️ Editar una Hoja Guardada", callback_data="btn_libro_menu_editar"),
+                InlineKeyboardButton("🔀 Fusionar Días", callback_data="btn_libro_menu_fusionar"),
             ],
             [
                 InlineKeyboardButton("📅 Modificar Fecha de Inicio", callback_data="btn_libro_modificar_fecha_inicio"),
@@ -73,5 +74,22 @@ def get_home_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
             [InlineKeyboardButton("📖 Volver al Panel del Libro", callback_data="btn_menu_libro")]
+        ]
+    )
+
+
+def get_confirm_merge_keyboard(sheet1: str, sheet2: str) -> InlineKeyboardMarkup:
+    """Botones de confirmación para fusionar dos hojas contiguas."""
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    "✅ Sí, Fusionar Días",
+                    callback_data=f"btn_confirm_merge_{sheet1}_{sheet2}",
+                ),
+            ],
+            [
+                InlineKeyboardButton("❌ Cancelar", callback_data="btn_cancel_merge"),
+            ],
         ]
     )

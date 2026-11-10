@@ -39,6 +39,7 @@ from libro_obra_bot.ai_labor_describer import generate_labor_description_ai
 from libro_obra_bot.config import PHOTOS_DIR
 from libro_obra_bot.google_drive_service import upload_file_to_drive
 from libro_obra_bot.keyboards import (
+    get_confirm_merge_keyboard,
     get_cancel_shift_date_keyboard,
     get_confirm_shift_date_keyboard,
     get_home_keyboard,
@@ -46,6 +47,7 @@ from libro_obra_bot.keyboards import (
     get_libro_menu_keyboard,
 )
 from libro_obra_bot.libro_obra_service import (
+    merge_daily_sheets,
     BOOKS_DIR,
     add_daily_entry_to_book,
     apply_start_date_shift,
@@ -2019,23 +2021,13 @@ async def handle_process_new_start_date(
         for s in shifts[-3:]:
             lines.append(f"• Hoja #{s['sheet_name']}: {format_date_es(s['new_date'])}")
 
-    # Auditoría de saltos / omisiones de días laborales
-    gaps = preview["gaps"]
     lines.append("")
-    lines.append("🔍 *Auditoría de Saltos de Labor:*")
-    if gaps:
-        total_missing = sum(len(g["missing_workdays"]) for g in gaps)
-        lines.append(f"⚠️ *Se detectaron {len(gaps)} salto(s) ({total_missing} día(s) hábil(es) sin asentar):*")
-        for g in gaps:
-            d_str = ", ".join(format_date_es(d) for d in g["missing_workdays"])
-            lines.append(f"• Entre Hoja #{g['from_sheet']} y Hoja #{g['to_sheet']}: Falta asentar *{d_str}*")
-        lines.append("")
-        lines.append("💡 _El cronograma proyectado preservó los días hábiles. Recuerda que deberás asentar estas hojas pendientes en el libro cuando corresponda._")
-    else:
-        lines.append("✅ *Cronograma continuo:* No se detectaron saltos ni omisiones en días hábiles.")
-
+    lines.append("📌 *Información importante:*")
+    lines.append(f"• Se correrán las {total} hojas existentes correlativamente a partir de la nueva fecha de inicio.")
+    lines.append("• Se preserva todo el contenido intacto de cada jornada.")
+    lines.append("• No se crean ni se eliminan hojas en este proceso.")
     lines.append("")
-    lines.append("¿Deseas aplicar estos cambios a todas las hojas del Libro de Obra?")
+    lines.append("¿Deseas aplicar el ajuste de fechas en todas las hojas del Libro de Obra?")
 
     full_msg = "\n".join(lines)
     sent = await msg_target.reply_text(
@@ -2315,6 +2307,343 @@ async def cancel_libro_obra_menu(update: Update, context: ContextTypes.DEFAULT_T
     return ConversationHandler.END
 
 
+async def _show_merge_pairs_for_book(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    filename: str,
+    project_name: str,
+) -> None:
+    """Muestra la lista de pares de hojas contiguas disponibles para fusionar."""
+    query = update.callback_query
+    msg_target = query.message if query else update.message
+    if not msg_target:
+        return
+
+    book_path = BOOKS_DIR / filename
+    if not book_path.exists():
+        await msg_target.reply_text(f"❌ No se encontró el archivo: {filename}")
+        return
+
+    sheets = list_book_sheets(book_path)
+    if len(sheets) < 2:
+        await msg_target.reply_text(
+            f"⚠️ El libro *{project_name}* tiene solo {len(sheets)} hoja(s).\n\n"
+            "Se requieren al menos 2 hojas para poder fusionar días.",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Volver", callback_data="btn_menu_libro")]]),
+        )
+        return
+
+    context.user_data["fusing_book_filename"] = filename
+    context.user_data["fusing_project_name"] = project_name
+
+    txt = (
+        f"🔀 *Fusionar Días — Selecciona el Par a Unificar:*\n"
+        f"🏗 *{project_name}*\n\n"
+        "Selecciona el par de días consecutivos que deseas consolidar en una sola jornada:\n"
+        "_(Se unificarán actividades, personal, maquinarias y observaciones, renumerando las demás hojas)_"
+    )
+
+    buttons: List[List[InlineKeyboardButton]] = []
+    for i in range(len(sheets) - 1):
+        s1 = sheets[i]
+        s2 = sheets[i + 1]
+        s1_num = s1["sheet_name"]
+        s2_num = s2["sheet_name"]
+        f1 = s1["fecha"]
+        f2 = s2["fecha"]
+        btn_title = f"🔀 H{s1_num} ({f1}) + H{s2_num} ({f2})"
+        buttons.append([
+            InlineKeyboardButton(
+                btn_title,
+                callback_data=f"btn_merge_pair_{s1_num}_{s2_num}",
+            )
+        ])
+
+    buttons.append([
+        InlineKeyboardButton("🔙 Volver al Menú", callback_data="btn_menu_libro"),
+    ])
+
+    if query and query.message and not query.message.document:
+        try:
+            await query.message.edit_text(txt, parse_mode=ParseMode.MARKDOWN, reply_markup=InlineKeyboardMarkup(buttons))
+            return
+        except Exception as exc:
+            logger.debug("No se pudo editar texto al mostrar pares de fusión: %s", exc)
+
+    sent = await msg_target.reply_text(txt, parse_mode=ParseMode.MARKDOWN, reply_markup=InlineKeyboardMarkup(buttons))
+    if sent:
+        track_menu_message(context, sent.message_id)
+
+
+async def handle_menu_fusionar_dias(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Maneja el botón '🔀 Fusionar Días' del menú del Libro de Obra."""
+    query = update.callback_query
+    msg_target = query.message if query else update.message
+    if not msg_target:
+        return
+    if query:
+        await query.answer()
+
+    books = list_all_project_books()
+    if not books:
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("✍️ Asentar Primera Hoja", callback_data="btn_libro_registrar")],
+            [InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home")],
+        ])
+        await msg_target.reply_text(
+            "ℹ️ *No tienes ningún Libro de Obra guardado actualmente.*\n\n"
+            "Registra primero hojas para poder fusionar días.",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=kb,
+        )
+        return
+
+    context.user_data["saved_books_cache"] = [b["filename"] for b in books]
+
+    if len(books) == 1:
+        await _show_merge_pairs_for_book(update, context, books[0]["filename"], books[0]["project_name"])
+        return
+
+    buttons: List[List[InlineKeyboardButton]] = []
+    for idx, b in enumerate(books):
+        p_name = b["project_name"]
+        short_btn_title = (p_name[:28] + "...") if len(p_name) > 28 else p_name
+        buttons.append([
+            InlineKeyboardButton(f"🏗 {short_btn_title}", callback_data=f"btn_fuse_book_{idx}")
+        ])
+    buttons.append([InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home")])
+
+    await msg_target.reply_text(
+        "🔀 *Selecciona el Libro de Obra en el que deseas fusionar días:*",
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=InlineKeyboardMarkup(buttons),
+    )
+
+
+async def handle_select_book_to_fuse(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Maneja la selección de un libro para fusionar sus hojas."""
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+
+    data_str = query.data or ""
+    idx_str = data_str.replace("btn_fuse_book_", "").strip()
+    try:
+        idx = int(idx_str)
+        cache = context.user_data.get("saved_books_cache", [])
+        if not (0 <= idx < len(cache)):
+            books = list_all_project_books()
+            cache = [b["filename"] for b in books]
+            context.user_data["saved_books_cache"] = cache
+        filename = cache[idx]
+        books = list_all_project_books()
+        p_name = filename
+        for b in books:
+            if b["filename"] == filename:
+                p_name = b["project_name"]
+                break
+        await _show_merge_pairs_for_book(update, context, filename, p_name)
+    except Exception as exc:
+        logger.error("Error al seleccionar libro para fusionar %s: %s", idx_str, exc, exc_info=True)
+        if query.message:
+            await query.message.reply_text(f"❌ Error al abrir libro: {exc}")
+
+
+async def handle_select_pair_to_merge(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Muestra el diálogo de confirmación para fusionar el par seleccionado."""
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+
+    data_str = query.data or ""
+    match = re.match(r"^btn_merge_pair_(\d+)_(\d+)$", data_str)
+    if not match:
+        if query.message:
+            await query.message.reply_text("❌ Par de hojas no válido.")
+        return
+
+    s1_num, s2_num = match.group(1), match.group(2)
+    filename = context.user_data.get("fusing_book_filename")
+    if not filename:
+        books = list_all_project_books()
+        if books:
+            filename = books[0]["filename"]
+
+    if not filename:
+        if query.message:
+            await query.message.reply_text("❌ No se encontró el libro de obra correspondiente.")
+        return
+
+    book_path = BOOKS_DIR / filename
+    try:
+        e1, _, o1 = load_sheet_entry_data(book_path, s1_num)
+        e2, _, o2 = load_sheet_entry_data(book_path, s2_num)
+        p_name = _clean_md(o1 or o2 or filename)
+        f1 = e1.get("fecha") or "Día 1"
+        f2 = e2.get("fecha") or "Día 2"
+
+        confirm_text = (
+            "⚠️ *CONFIRMACIÓN DE FUSIÓN DE DÍAS*\n\n"
+            f"🏗 Obra: *{p_name}*\n\n"
+            f"¿Estás seguro de que deseas fusionar las siguientes hojas?\n"
+            f"• *Hoja #{s1_num}* — Fecha: `{f1}`\n"
+            f"• *Hoja #{s2_num}* — Fecha: `{f2}`\n\n"
+            f"📋 *Efectos de la fusión:*\n"
+            f"1. Se unificarán las actividades, cuadrilla, maquinaria y observaciones en una sola hoja.\n"
+            f"2. La hoja consolidada tendrá como fecha: *{f2}*\n"
+            f"3. La hoja #{s2_num} se eliminará y todas las hojas posteriores se renumerarán correlativamente.\n"
+            f"4. Se creará un respaldo de seguridad automático antes de aplicar la modificación.\n\n"
+            f"¿Deseas proceder?"
+        )
+
+        context.user_data["pending_merge_info"] = {
+            "filename": filename,
+            "sheet1": s1_num,
+            "sheet2": s2_num,
+            "target_date": f2,
+            "project_name": p_name,
+        }
+
+        if query.message and not query.message.document:
+            try:
+                await query.message.edit_text(
+                    confirm_text,
+                    parse_mode=ParseMode.MARKDOWN,
+                    reply_markup=get_confirm_merge_keyboard(s1_num, s2_num),
+                )
+                return
+            except Exception as exc:
+                logger.debug("No se pudo editar texto para confirmación de fusión: %s", exc)
+
+        await query.message.reply_text(
+            confirm_text,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_confirm_merge_keyboard(s1_num, s2_num),
+        )
+
+    except Exception as exc:
+        logger.error("Error al preparar confirmación de fusión %s+%s: %s", s1_num, s2_num, exc, exc_info=True)
+        if query.message:
+            await query.message.reply_text(f"❌ Error al consultar hojas: {exc}")
+
+
+async def execute_confirm_merge_sheets(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Ejecuta la fusión de las dos hojas seleccionadas."""
+    query = update.callback_query
+    msg_target = query.message if query else update.message
+    if not msg_target:
+        return
+    if query:
+        await query.answer()
+
+    data_str = query.data or ""
+    match = re.match(r"^btn_confirm_merge_(\d+)_(\d+)$", data_str)
+    if not match:
+        await msg_target.reply_text("❌ Par de hojas no válido.", reply_markup=get_libro_main_keyboard())
+        return
+
+    s1_num, s2_num = match.group(1), match.group(2)
+    filename = context.user_data.get("fusing_book_filename")
+    if not filename:
+        pending = context.user_data.get("pending_merge_info")
+        if pending:
+            filename = pending.get("filename")
+    if not filename:
+        books = list_all_project_books()
+        if books:
+            filename = books[0]["filename"]
+
+    if not filename:
+        await msg_target.reply_text("❌ No se encontró el libro de obra.", reply_markup=get_libro_main_keyboard())
+        return
+
+    progress_msg = await msg_target.reply_text("⏳ *Fusionando jornadas diarias y renumerando hojas...*", parse_mode=ParseMode.MARKDOWN)
+
+    try:
+        user_id = update.effective_user.id if update.effective_user else None
+        book_path, final_date, info = merge_daily_sheets(
+            project_name_or_filename=filename,
+            sheet1_name=s1_num,
+            sheet2_name=s2_num,
+            target_date_str=None,
+            user_id=user_id,
+        )
+
+        drive_status = ""
+        try:
+            drive_res = upload_file_to_drive(book_path)
+            if drive_res and drive_res.get("webViewLink"):
+                drive_status = f"\n☁️ [Ver en Google Drive]({drive_res['webViewLink']})"
+        except Exception as drive_exc:
+            logger.warning("No se pudo sincronizar con Drive tras fusión: %s", drive_exc)
+
+        context.user_data.pop("pending_merge_info", None)
+        context.user_data.pop("fusing_book_filename", None)
+        context.user_data.pop("fusing_project_name", None)
+
+        p_name = _clean_md(info.get("project_name") or filename)
+        total_remaining = info.get("total_remaining_sheets", 0)
+
+        success_text = (
+            f"✅ *¡Fusión de Días Completada con Éxito!*\n\n"
+            f"🏗 Obra: *{p_name}*\n"
+            f"🔀 Hojas unificadas: *Hoja #{s1_num} y Hoja #{s2_num}*\n"
+            f"📅 Nueva fecha unificada: *{final_date}*\n"
+            f"📄 Total de hojas actualizadas y foliadas: *{total_remaining}*\n"
+            f"🔒 Respaldo automático de seguridad generado en el servidor.{drive_status}\n\n"
+            f"Adjunto encontrarás el Libro de Obra actualizado con la nueva foliación correlativa:"
+        )
+
+        await progress_msg.edit_text(success_text, parse_mode=ParseMode.MARKDOWN)
+
+        try:
+            with open(book_path, "rb") as doc_file:
+                await msg_target.reply_document(
+                    document=doc_file,
+                    filename=book_path.name,
+                    caption=f"📘 Libro de Obra (Días Fusionados): {p_name}",
+                    reply_markup=get_libro_main_keyboard(),
+                )
+        except Exception as doc_exc:
+            logger.error("Error al enviar documento tras fusión: %s", doc_exc, exc_info=True)
+            await msg_target.reply_text(
+                "📘 El libro fue actualizado. Puedes descargarlo desde *📚 Ver / Descargar Libros*.",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=get_libro_main_keyboard(),
+            )
+
+    except Exception as exc:
+        logger.error("Error al ejecutar fusión de hojas %s+%s: %s", s1_num, s2_num, exc, exc_info=True)
+        await progress_msg.edit_text(
+            f"❌ *Ocurrió un error al fusionar las hojas:* {exc}\n\n"
+            "El archivo original se mantuvo intacto gracias al respaldo preventivo. Intenta nuevamente.",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_libro_main_keyboard(),
+        )
+
+
+async def handle_cancel_merge(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Cancela la operación de fusión y retorna al menú principal."""
+    query = update.callback_query
+    msg_target = query.message if query else update.message
+    if not msg_target:
+        return
+    if query:
+        await query.answer()
+
+    context.user_data.pop("pending_merge_info", None)
+    context.user_data.pop("fusing_book_filename", None)
+    context.user_data.pop("fusing_project_name", None)
+
+    await msg_target.reply_text(
+        "❌ Operación de fusión cancelada. Volviendo al menú principal.",
+        reply_markup=get_libro_main_keyboard(),
+    )
+
+
 def get_libro_obra_conversation_handler() -> ConversationHandler:
     """Construye y devuelve el ConversationHandler para el Libro de Obra."""
     return ConversationHandler(
@@ -2344,7 +2673,7 @@ def get_libro_obra_conversation_handler() -> ConversationHandler:
             CommandHandler("recuperar", handle_recuperar_mensaje),
             CommandHandler("fecha_inicio", handle_menu_modificar_fecha_inicio),
             CommandHandler("modificar_fecha_inicio", handle_menu_modificar_fecha_inicio),
-            CallbackQueryHandler(cancel_libro_obra_menu, pattern="^(btn_menu_home|btn_reset|btn_menu_libro|btn_libro_ver|btn_libro_eliminar|btn_libro_registrar|btn_libro_descartar|btn_libro_editar|btn_libro_recuperar_msg|btn_libro_modificar_fecha_inicio|btn_confirm_shift_date|btn_cancel_shift_date|btn_cancel)$"),
+            CallbackQueryHandler(cancel_libro_obra_menu, pattern="^(btn_menu_home|btn_reset|btn_menu_libro|btn_libro_ver|btn_libro_eliminar|btn_libro_registrar|btn_libro_descartar|btn_libro_editar|btn_libro_recuperar_msg|btn_libro_modificar_fecha_inicio|btn_confirm_shift_date|btn_cancel_shift_date|btn_libro_menu_fusionar|btn_cancel_merge|btn_cancel)$"),
             MessageHandler(filters.PHOTO, cancel_libro_obra_photo),
         ],
         allow_reentry=True,

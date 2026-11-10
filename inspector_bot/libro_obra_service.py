@@ -23,7 +23,13 @@ from openpyxl.worksheet.copier import WorksheetCopy
 
 from inspector_bot.config import DATA_DIR
 from inspector_bot.parser import format_engineer_name, resolve_single_inspector
-from inspector_bot.project_store import save_project_metadata
+from inspector_bot.project_store import (
+    build_message_text_from_sheet_data,
+    get_sheet_report,
+    save_project_metadata,
+    sync_sheet_reports_after_restructure,
+    update_sheet_reports_dates,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -1214,8 +1220,215 @@ def apply_start_date_shift(
     try:
         project_name = preview["project_name"]
         save_project_metadata(project_name, user_id, {"fecha_inicio": new_start_formatted})
+        shifts_data = [
+            {
+                "sheet_name": s["sheet_name"],
+                "old_date_str": s["old_date"].strftime("%d/%m/%Y"),
+                "new_date_str": s["new_date"].strftime("%d/%m/%Y"),
+            }
+            for s in preview["sheet_shifts"]
+        ]
+        update_sheet_reports_dates(project_name, shifts_data)
     except Exception as exc:
-        logger.error("Error al actualizar SQLite para project_metadata con nueva fecha: %s", exc, exc_info=True)
+        logger.error("Error al actualizar SQLite para project_metadata/sheet_reports con nueva fecha: %s", exc, exc_info=True)
 
     return book_path, preview
 
+
+
+
+def merge_daily_sheets(
+    project_name_or_filename: str,
+    sheet1_name: str,
+    sheet2_name: str,
+    target_date_str: Optional[str] = None,
+    user_id: Optional[int] = None,
+) -> Tuple[Path, str, Dict[str, Any]]:
+    """
+    Fusiona dos hojas diarias contiguas en una sola hoja consolidada.
+    Combina actividades, personal, maquinarias, observaciones y descripciones de labor.
+    Escribe la información unificada en sheet1_name, elimina sheet2_name,
+    y renumera correlativamente las hojas restantes (1, 2, ..., N-1).
+    Actualiza la fecha de inicio en DATOS GENERALES y ACTAS si corresponde,
+    y sincroniza de forma atómica la tabla sheet_reports en SQLite.
+    """
+    if not project_name_or_filename or not str(project_name_or_filename).strip():
+        raise ValueError("El nombre del proyecto o archivo no puede estar vacío.")
+    if not sheet1_name or not str(sheet1_name).strip():
+        raise ValueError("sheet1_name no puede estar vacío.")
+    if not sheet2_name or not str(sheet2_name).strip():
+        raise ValueError("sheet2_name no puede estar vacío.")
+
+    s1_str = str(sheet1_name).strip()
+    s2_str = str(sheet2_name).strip()
+    if s1_str == s2_str:
+        raise ValueError("No se puede fusionar una hoja consigo misma.")
+
+    # 1. Localizar libro
+    book_path = find_existing_project_book(project_name_or_filename)
+    if not book_path:
+        direct_path = BOOKS_DIR / project_name_or_filename
+        if direct_path.exists():
+            book_path = direct_path
+        else:
+            raise FileNotFoundError(f"No se encontró el libro de obra para '{project_name_or_filename}'.")
+
+    # 2. Respaldo preventivo
+    backups_dir = DATA_DIR / "backups"
+    backups_dir.mkdir(parents=True, exist_ok=True)
+    timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_file = backups_dir / f"{book_path.stem}_backup_premerge_{timestamp_str}.xlsx"
+    shutil.copy2(book_path, backup_file)
+    logger.info("Respaldo pre-fusión creado con éxito en: %s", backup_file)
+
+    # 3. Cargar libro y verificar existencia de hojas
+    wb = openpyxl.load_workbook(book_path, data_only=False)
+    fixed_sheets = {"DATOS GENERALES", "ACTAS"}
+    if s1_str not in wb.sheetnames:
+        raise ValueError(f"La hoja '{s1_str}' no existe en el libro.")
+    if s2_str not in wb.sheetnames:
+        raise ValueError(f"La hoja '{s2_str}' no existe en el libro.")
+    if s1_str in fixed_sheets or s2_str in fixed_sheets:
+        raise ValueError("No se pueden fusionar las hojas fijas del sistema.")
+
+    e1, g1, obra1 = load_sheet_entry_data(book_path, s1_str)
+    e2, g2, obra2 = load_sheet_entry_data(book_path, s2_str)
+
+    # 4. Determinar fecha objetivo unificada
+    d1_str = str(e1.get("fecha") or "").strip()
+    d2_str = str(e2.get("fecha") or "").strip()
+    if target_date_str and target_date_str.strip():
+        final_date = target_date_str.strip()
+    else:
+        final_date = d2_str if d2_str else d1_str
+
+    # 5. Fusionar actividades deduplicadas preservando orden
+    acts1 = e1.get("actividades_list") or []
+    acts2 = e2.get("actividades_list") or []
+    merged_acts: List[str] = []
+    for a in acts1 + acts2:
+        clean_act = a.strip()
+        if clean_act and clean_act not in merged_acts:
+            merged_acts.append(clean_act)
+    merged_resumen = "\n".join(f"• {a}" for a in merged_acts)
+
+    # 6. Fusionar maquinaria y equipo
+    eq1 = str(e1.get("equipos") or "").strip()
+    eq2 = str(e2.get("equipos") or "").strip()
+    combined_eq_lines: List[str] = []
+    for line in (eq1 + "\n" + eq2).splitlines():
+        c_line = line.strip()
+        if c_line and c_line not in combined_eq_lines:
+            combined_eq_lines.append(c_line)
+    merged_eq = "\n".join(combined_eq_lines)
+
+    # 7. Fusionar observaciones
+    obs1 = str(e1.get("observaciones") or "").strip()
+    obs2 = str(e2.get("observaciones") or "").strip()
+    valid_obs: List[str] = []
+    for ob in [obs1, obs2]:
+        if ob and ob.lower() not in ("sin observaciones", "sin observaciones particulares.", "sin observaciones."):
+            for line in ob.splitlines():
+                c_line = line.strip()
+                if c_line and c_line not in valid_obs:
+                    valid_obs.append(c_line)
+    merged_obs = "\n".join(valid_obs) if valid_obs else "Sin observaciones particulares."
+
+    # 8. Fusionar descripción de labor diaria
+    desc1 = str(e1.get("descripcion_labor") or "").strip()
+    desc2 = str(e2.get("descripcion_labor") or "").strip()
+    if desc1 and desc2 and desc1 != desc2:
+        merged_desc = f"{desc1}\n\n{desc2}"
+    else:
+        merged_desc = desc2 or desc1
+
+    # 9. Personal de cuadrilla y de inspección
+    pers1 = str(e1.get("personal") or "").strip()
+    pers2 = str(e2.get("personal") or "").strip()
+    if pers1 and pers2 and pers1 != pers2:
+        merged_pers = pers2 if len(pers2) >= len(pers1) else pers1
+    else:
+        merged_pers = pers2 or pers1 or "Personal de cuadrilla en obra"
+
+    insp1 = str(e1.get("personal_inspeccion") or "").strip()
+    insp2 = str(e2.get("personal_inspeccion") or "").strip()
+    merged_insp = insp2 or insp1
+
+    # 10. Clima y Horas
+    clima = e2.get("clima") or e1.get("clima") or "SOLEADO"
+    horas = e2.get("horas_trabajadas") or e1.get("horas_trabajadas") or "8 HORAS"
+    control_calidad = e2.get("control_calidad") or e1.get("control_calidad") or ""
+    revisado_por = e2.get("revisado_por") or e1.get("revisado_por") or ""
+
+    merged_entry: Dict[str, Any] = {
+        "fecha": final_date,
+        "clima": clima,
+        "horas_trabajadas": horas,
+        "personal": merged_pers,
+        "personal_inspeccion": merged_insp,
+        "equipos": merged_eq,
+        "descripcion_labor": merged_desc,
+        "actividades": merged_resumen,
+        "resumen_actividades": merged_resumen,
+        "actividades_list": merged_acts,
+        "observaciones": merged_obs,
+        "control_calidad": control_calidad,
+        "revisado_por": revisado_por,
+    }
+
+    # 11. Escribir datos unificados en sheet1 y eliminar sheet2
+    _fill_sheet_cells(wb[s1_str], merged_entry, final_date)
+    wb.remove(wb[s2_str])
+
+    # 12. Renumerar hojas correlativamente usando títulos temporales para evitar colisión
+    daily_sheets = [s for s in wb.sheetnames if s not in fixed_sheets]
+    for idx, s_name in enumerate(daily_sheets):
+        wb[s_name].title = f"__temp_merge_{idx}__"
+
+    for idx in range(len(daily_sheets)):
+        wb[f"__temp_merge_{idx}__"].title = str(idx + 1)
+
+    # 13. Actualizar fecha de inicio en DATOS GENERALES y ACTAS si se modificó la primera hoja
+    new_first_sheet = wb["1"]
+    raw_first_date = str(new_first_sheet["G1"].value or "").strip()
+    new_first_date_val = re.sub(r"^FECHA:\s*", "", raw_first_date, flags=re.IGNORECASE).strip()
+    if new_first_date_val:
+        if "DATOS GENERALES" in wb.sheetnames:
+            safe_set_cell_value(wb["DATOS GENERALES"], "G21", new_first_date_val)
+        if "ACTAS" in wb.sheetnames:
+            safe_set_cell_value(wb["ACTAS"], "F6", new_first_date_val)
+
+    sort_sheets_by_date(wb)
+    wb.save(book_path)
+    logger.info("Fusión de hojas %s y %s completada exitosamente en %s", s1_str, s2_str, book_path)
+
+    # 14. Sincronizar de forma atómica en SQLite (sheet_reports y project_metadata)
+    general_data_for_reports = g1 or g2 or extract_general_data_from_workbook(wb)
+    clean_project_name = general_data_for_reports.get("obra") or book_path.stem.replace("_Libro_de_Obra", "").replace("_", " ")
+
+    try:
+        updated_sheet_reports: List[Dict[str, str]] = []
+        for idx in range(len(daily_sheets)):
+            sheet_num_str = str(idx + 1)
+            s_entry, s_gen, _ = load_sheet_entry_data(book_path, sheet_num_str)
+            s_msg = build_message_text_from_sheet_data(s_entry, s_gen or general_data_for_reports)
+            updated_sheet_reports.append({
+                "sheet_name": sheet_num_str,
+                "sheet_date": s_entry.get("fecha", ""),
+                "message_text": s_msg,
+            })
+
+        sync_sheet_reports_after_restructure(clean_project_name, updated_sheet_reports)
+        if new_first_date_val:
+            save_project_metadata(clean_project_name, user_id, {"fecha_inicio": new_first_date_val})
+    except Exception as exc:
+        logger.error("Error al sincronizar SQLite tras fusión de hojas: %s", exc, exc_info=True)
+
+    info: Dict[str, Any] = {
+        "project_name": clean_project_name,
+        "fused_sheets": (s1_str, s2_str),
+        "target_date": final_date,
+        "total_remaining_sheets": len(daily_sheets),
+        "backup_path": backup_file,
+    }
+    return book_path, final_date, info
