@@ -121,10 +121,13 @@ def format_engineer_name(name: str) -> str:
     Normaliza el nombre del profesional asegurando el prefijo oficial 'Ing.'.
     Ejemplo: 'Génesis Quintero' -> 'Ing. Génesis Quintero'
              'Ing. Pablo Milano' -> 'Ing. Pablo Milano'
+    No añade 'Ing.' si el rol especificado es Maestro, Caporal, Obrero o Técnico.
     """
     if not name:
         return ""
     clean = name.strip(" \t\r\n*.,-")
+    if re.match(r"^(?:Maestro|Caporal|Obrero|T[eé]cnico|Alba[ñn]il)\b", clean, re.IGNORECASE):
+        return clean
     m = re.match(r"^(?:Ingenier[oa]|Ing)\.?\s*(.*)$", clean, re.IGNORECASE)
     if m:
         sub_name = m.group(1).strip(" \t\r\n*.,-")
@@ -188,6 +191,7 @@ def parse_inspection_message(text: str) -> Dict[str, Any]:
         "ing_inspectores": [],
         "ing_inspector": "",
         "civ_inspector": "",
+        "maestro_obra": "",
         "caporal": "",
         "actividades": [],
         "obreros": "",
@@ -367,6 +371,19 @@ def parse_inspection_message(text: str) -> Dict[str, Any]:
                 data["civ_inspector"] = val
                 continue
 
+        # 5.1 MAESTRO DE OBRA
+        match_maestro = re.match(
+            r"^[\s\*\_\#\-\•\>]*(?:Maestro(?:\s+de\s+obra)?|Maestro\s+mayor)[\s\*\_\#]*[:=;\-]?[\s\*\_\#]*(.*)$",
+            line,
+            re.IGNORECASE,
+        )
+        if match_maestro:
+            current_section = "maestro_obra"
+            val = match_maestro.group(1).strip().strip("*._#")
+            if val:
+                data["maestro_obra"] = val
+            continue
+
         # 6. CAPORAL
         match_caporal = re.match(
             r"^[\s\*\_\#\-\•\>]*Caporal(?:\s+general)?[\s\*\_\#]*[:=]?[\s\*\_\#]*(.*)$",
@@ -518,9 +535,36 @@ def parse_inspection_message(text: str) -> Dict[str, Any]:
             if not re.search(r"personal|inspecci|inspector|caporal|obrero|actividad|clima|fecha|obra|empresa", line, re.IGNORECASE):
                 data["ing_residente"] = (data["ing_residente"] + " " + line.strip("*")).strip()
         elif current_section == "ing_inspectores":
+            m_maestro_sub = re.match(
+                r"^[\s\*\_\#\-\•\>]*(?:Maestro(?:\s+de\s+obra)?|Maestro\s+mayor)[\s\*\_\#]*[:=;\-]?[\s\*\_\#]*(.*)$",
+                line,
+                re.IGNORECASE,
+            )
+            if m_maestro_sub:
+                current_section = "maestro_obra"
+                val = m_maestro_sub.group(1).strip().strip("*._#")
+                if val:
+                    data["maestro_obra"] = val
+                continue
+            m_cap_sub = re.match(
+                r"^[\s\*\_\#\-\•\>]*(?:Caporal(?:\s+general)?)[\s\*\_\#]*[:=]?[\s\*\_\#]*(.*)$",
+                line,
+                re.IGNORECASE,
+            )
+            if m_cap_sub and not re.search(r"obra", line, re.IGNORECASE):
+                current_section = "caporal"
+                val = m_cap_sub.group(1).strip().strip("*._#")
+                if val:
+                    data["caporal"] = val
+                continue
+            if re.search(r"obrero|actividad|clima|equipo|observaci|residente", line, re.IGNORECASE):
+                current_section = None
+                continue
             clean_name = line.strip(" \t.-*")
             if clean_name and not re.fullmatch(r"\d+", clean_name):
                 data["ing_inspectores"].append(clean_name)
+        elif current_section == "maestro_obra":
+            data["maestro_obra"] = (data["maestro_obra"] + " " + line.strip("*.")).strip()
         elif current_section == "caporal":
             data["caporal"] = (data["caporal"] + " " + line.strip("*.")).strip()
         elif current_section == "clima":
@@ -570,13 +614,24 @@ def parse_inspection_message(text: str) -> Dict[str, Any]:
     if isinstance(data["ing_inspectores"], list):
         clean_inspectores: List[str] = []
         for insp_item in data["ing_inspectores"]:
-            clean_item = insp_item.strip(" .")
-            if clean_item and not re.fullmatch(r"\d+", clean_item):
-                c_name, ext_civ = extract_civ_from_text(clean_item)
-                if c_name and not re.fullmatch(r"\d+", c_name):
-                    clean_inspectores.append(format_engineer_name(c_name))
-                if ext_civ and not data["civ_inspector"]:
-                    data["civ_inspector"] = ext_civ
+            clean_item = insp_item.strip(" .*")
+            if not clean_item or re.fullmatch(r"\d+", clean_item):
+                continue
+            if re.search(r"maestro(?:\s+de\s+obra)?", clean_item, re.IGNORECASE):
+                m_clean = re.sub(r"^(?:Ing\.?\s*)?(?:Maestro(?:\s+de\s+obra)?)\s*[:\*\.\-]*\s*", "", clean_item, flags=re.IGNORECASE).strip(" *.-")
+                if m_clean and not data.get("maestro_obra"):
+                    data["maestro_obra"] = m_clean
+                continue
+            if re.search(r"caporal", clean_item, re.IGNORECASE):
+                c_clean = re.sub(r"^(?:Ing\.?\s*)?(?:Caporal(?:\s+de\s+obra)?)\s*[:\*\.\-]*\s*", "", clean_item, flags=re.IGNORECASE).strip(" *.-")
+                if c_clean and not data.get("caporal"):
+                    data["caporal"] = c_clean
+                continue
+            c_name, ext_civ = extract_civ_from_text(clean_item)
+            if c_name and not re.fullmatch(r"\d+", c_name):
+                clean_inspectores.append(format_engineer_name(c_name))
+            if ext_civ and not data["civ_inspector"]:
+                data["civ_inspector"] = ext_civ
         data["ing_inspectores"] = clean_inspectores
     data["ing_inspector"] = resolve_single_inspector(data["ing_inspectores"])
     data["civ_inspector"] = data["civ_inspector"].strip().strip("*.")
@@ -606,6 +661,7 @@ def parse_inspection_message(text: str) -> Dict[str, Any]:
                 data["civ_residente"] = m_res.group(1).strip().strip("*._-")
                 break
 
+    data["maestro_obra"] = data.get("maestro_obra", "").strip().strip("*.")
     data["caporal"] = data["caporal"].strip()
     data["obreros"] = data["obreros"].strip()
     data["caporal_obra"] = data["caporal_obra"].strip()

@@ -625,8 +625,28 @@ def _fill_sheet_cells(ws_new: Any, entry_data: Dict[str, Any], fecha_val: str) -
     # 1. Fecha (Cabecera G1:H1)
     safe_set_cell_value(ws_new, "G1", f"FECHA: {fecha_val}")
 
-    # 2. Movimiento de Personal (A3:C6)
+    # 2 & 3. Movimiento de Personal (A3:C6) y Personal de Inspección (A8:C10)
     personal = entry_data.get("personal", "")
+    personal_inspeccion = entry_data.get("personal_inspeccion", "")
+
+    if isinstance(personal_inspeccion, list):
+        insp_parts = [p.strip() for p in personal_inspeccion if p.strip()]
+    elif isinstance(personal_inspeccion, str) and personal_inspeccion.strip():
+        insp_parts = [p.strip() for p in re.split(r"[\n,]+", personal_inspeccion) if p.strip()]
+    else:
+        insp_parts = []
+
+    # Filtrar estrictamente cualquier Maestro de Obra o Caporal que se haya colado en inspección
+    maestro_in_insp = [p for p in insp_parts if re.search(r"maestro(?:\s+de\s+obra)?", p, re.IGNORECASE)]
+    real_inspectores = [p for p in insp_parts if not re.search(r"maestro|caporal", p, re.IGNORECASE)]
+    insp_list = [format_engineer_name(p) for p in real_inspectores]
+    personal_insp_str = "\n".join(insp_list) if insp_list else None
+
+    # Si se detectó maestro en la lista de inspección y no está en personal de cuadrilla (A3), anexarlo a A3
+    if maestro_in_insp and personal and not re.search(r"maestro", str(personal), re.IGNORECASE):
+        clean_m_list = [re.sub(r"^Ing\.?\s*", "", m, flags=re.IGNORECASE).strip(" *.-") for m in maestro_in_insp]
+        personal = f"{personal}, {', '.join(clean_m_list)}"
+
     safe_set_cell_value(
         ws_new,
         "A3",
@@ -634,18 +654,6 @@ def _fill_sheet_cells(ws_new: Any, entry_data: Dict[str, Any], fecha_val: str) -
         alignment=Alignment(wrap_text=True, horizontal="center", vertical="center"),
         font=Font(name="Calibri", size=8.5),
     )
-
-    # 3. Personal de Inspección (A8:C10)
-    personal_inspeccion = entry_data.get("personal_inspeccion", "")
-    if isinstance(personal_inspeccion, list):
-        insp_list = [format_engineer_name(p.strip()) for p in personal_inspeccion if p.strip()]
-        personal_insp_str = "\n".join(insp_list)
-    elif isinstance(personal_inspeccion, str) and personal_inspeccion.strip():
-        parts = [p.strip() for p in re.split(r"[\n,]+", personal_inspeccion) if p.strip()]
-        insp_list = [format_engineer_name(p) for p in parts]
-        personal_insp_str = "\n".join(insp_list)
-    else:
-        personal_insp_str = None
 
     safe_set_cell_value(
         ws_new,

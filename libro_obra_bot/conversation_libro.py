@@ -441,8 +441,20 @@ async def process_full_report_for_libro(update: Update, context: ContextTypes.DE
     actividades = parsed.get("actividades", [])
     obreros = parsed.get("obreros", "")
     caporal = parsed.get("caporal", "") or parsed.get("caporal_obra", "")
+    maestro = parsed.get("maestro_obra", "") or parsed.get("maestro", "")
     equipos = parsed.get("equipos") or parsed.get("maquinaria") or ""
     ensayos = parsed.get("control_calidad") or parsed.get("ensayos") or ""
+
+    # Personal en obra: obreros, maestro de obra y caporal corresponden a la cuadrilla de la contratista (A3:C6)
+    parts_pers: List[str] = []
+    if obreros:
+        parts_pers.append(f"{obreros}".strip())
+    if maestro:
+        clean_m = maestro.strip().strip("*.")
+        parts_pers.append(f"Maestro de Obra: {clean_m}")
+    if caporal:
+        parts_pers.append(f"Caporal: {caporal}".strip())
+    personal_str = ", ".join(parts_pers) if parts_pers else "Personal estándar en obra"
 
     # 1. Generar la redacción formal de ingeniería con IA (incluyendo maquinaria, equipos y ensayos)
     desc_labor_ai = generate_labor_description_ai(
@@ -450,7 +462,7 @@ async def process_full_report_for_libro(update: Update, context: ContextTypes.DE
         obra=obra,
         empresa=empresa,
         fecha=fecha,
-        obreros=f"{obreros}, Caporal: {caporal}".strip(", "),
+        obreros=personal_str,
         equipos=equipos,
         ensayos=ensayos,
     )
@@ -458,14 +470,13 @@ async def process_full_report_for_libro(update: Update, context: ContextTypes.DE
     # 2. Resumen ejecutivo de actividades por partida (limpio de clima)
     resumen_actividades = "\n".join(f"• {a}" for a in actividades)
 
-    # 3. Personal en obra
-    personal_str = f"{obreros}".strip()
-    if caporal:
-        personal_str += f", Caporal: {caporal}"
-
-    # 4. Personal de inspección: en A8:C10 van todos los inspectores reportados en la obra
+    # 4. Personal de inspección: en A8:C10 van exclusivamente los inspectores (excluyendo cuadrilla de contratista)
     if parsed.get("ing_inspectores"):
-        personal_insp_str = "\n".join(format_engineer_name(p) for p in parsed["ing_inspectores"])
+        filtered_insp = [
+            p for p in parsed["ing_inspectores"]
+            if not re.search(r"maestro|caporal", p, re.IGNORECASE)
+        ]
+        personal_insp_str = "\n".join(format_engineer_name(p) for p in filtered_insp) if filtered_insp else inspector_val
     else:
         personal_insp_str = inspector_val
 
