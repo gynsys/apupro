@@ -225,11 +225,8 @@ def build_libro_entry_preview(
 
 
 def get_libro_entry_preview_keyboard() -> InlineKeyboardMarkup:
-    """Devuelve los botones de confirmación, edición, regeneración o descarte de la hoja."""
+    """Devuelve los botones de edición, regeneración o retorno al menú principal."""
     return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("💾 Guardar en Libro de Obra", callback_data="btn_libro_guardar_entry")
-        ],
         [
             InlineKeyboardButton("📋 Recuperar Mensaje Original", callback_data="btn_libro_recuperar_msg"),
         ],
@@ -519,66 +516,47 @@ async def process_full_report_for_libro(update: Update, context: ContextTypes.DE
         "civ_representante": existing_meta.get("civ_representante", ""),
     }
 
-    # Guardar en memoria de sesión como pendiente de confirmación
-    context.user_data["pending_libro_entry"] = {
-        "obra": obra,
-        "entry_data": entry_data,
-        "general_data": general_data,
-        "actividades": actividades,
-        "user_id": user_id,
-        "raw_text": text,
-    }
-    context.user_data["last_raw_report_text"] = text
-    if user_id:
-        save_user_last_report(user_id, text, obra=obra)
-
-    preview_text = build_libro_entry_preview(obra, entry_data, general_data)
-    sent_preview = await safe_reply_markdown(
-        msg_target,
-        preview_text,
-        reply_markup=get_libro_entry_preview_keyboard(),
+    # Ejecutar guardado inmediato sin pedir confirmación previa
+    await save_and_deliver_libro_entry(
+        msg_target=msg_target,
+        context=context,
+        obra=obra,
+        entry_data=entry_data,
+        general_data=general_data,
+        user_id=user_id,
+        raw_text=text,
     )
-    if sent_preview:
-        track_menu_message(context, sent_preview.message_id)
-
     return True
 
 
-async def execute_save_pending_libro_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def save_and_deliver_libro_entry(
+    msg_target: Any,
+    context: ContextTypes.DEFAULT_TYPE,
+    obra: str,
+    entry_data: Dict[str, Any],
+    general_data: Dict[str, Any],
+    user_id: Optional[int],
+    raw_text: Optional[str] = None,
+) -> None:
     """
-    Guarda físicamente la hoja pendiente en el archivo Excel oficial (.xlsx) y en Google Drive.
-    Solo se ejecuta cuando el usuario presiona '💾 Guardar en Libro de Obra'.
+    Guarda físicamente la hoja en el archivo Excel oficial (.xlsx), sincroniza con Google Drive,
+    envía el archivo actualizado al usuario y lo redirige directamente al menú principal.
     """
-    query = update.callback_query
-    msg_target = query.message if query else update.message
     if not msg_target:
-        return
-    if query:
-        await query.answer()
+        raise ValueError("msg_target no puede ser nulo.")
+    if not obra:
+        raise ValueError("obra no puede estar vacía.")
+    if not entry_data:
+        raise ValueError("entry_data no puede estar vacío.")
 
-    pending = context.user_data.get("pending_libro_entry")
-    if not pending:
-        await msg_target.reply_text(
-            "⚠️ No hay ninguna hoja pendiente por guardar o ya fue registrada anteriormente.",
-            reply_markup=get_libro_menu_keyboard(),
-        )
-        return
-
-    obra = pending["obra"]
-    entry_data = pending["entry_data"]
-    general_data = pending["general_data"]
-    user_id = pending.get("user_id")
-
-    # Persistir metadatos de obra
+    # 1. Persistir metadatos de obra y último reporte
     save_project_metadata(obra, user_id, general_data)
+    if raw_text:
+        context.user_data["last_raw_report_text"] = raw_text
+        if user_id:
+            save_user_last_report(user_id, raw_text, obra=obra)
 
     try:
-        if query and query.message:
-            try:
-                await query.message.edit_reply_markup(reply_markup=None)
-            except Exception as edit_err:
-                logger.debug("No se pudo remover teclado al guardar: %s", edit_err)
-
         editing_info = context.user_data.get("editing_existing_sheet")
         if editing_info and editing_info.get("sheet_name"):
             target_sheet = editing_info["sheet_name"]
@@ -588,13 +566,15 @@ async def execute_save_pending_libro_entry(update: Update, context: ContextTypes
             book_path, sheet_name, sheet_num = add_daily_entry_to_book(obra, entry_data, general_data)
             action_verb = "registrada"
 
+        equipos_display = entry_data.get("equipos") or "Herramientas menores y equipos de construcción"
         caption_txt = (
             f"📗 *Libro de Obra Oficial Actualizado*\n\n"
             f"• *Obra:* {obra[:60]}...\n"
             f"• *Hoja {action_verb.capitalize()}:* `{sheet_name}`\n"
             f"• *Fecha:* {entry_data.get('fecha')}\n"
             f"• *Estado del Tiempo:* {entry_data.get('clima')}\n"
-            f"• *Horas Trabajadas:* {entry_data.get('horas_trabajadas')}\n\n"
+            f"• *Horas Trabajadas:* {entry_data.get('horas_trabajadas')}\n"
+            f"• *Maquinaria / Equipos:* {equipos_display}\n\n"
             f"📝 *Descripción técnica:*\n_{entry_data.get('descripcion_labor', '')[:220]}..._\n\n"
             f"🔗 _Firmas vinculadas dinámicamente con 'DATOS GENERALES'._"
         )
@@ -610,42 +590,71 @@ async def execute_save_pending_libro_entry(update: Update, context: ContextTypes
                 track_menu_message(context, sent_doc.message_id)
 
         drive_res = upload_file_to_drive(book_path)
-        reply_kb = []
-        if drive_res and drive_res.get("web_view_link"):
-            reply_kb.append([InlineKeyboardButton("☁️ Abrir en Google Drive", url=drive_res["web_view_link"])])
-        reply_kb.append([
-            InlineKeyboardButton("📋 Recuperar Mensaje de esta Hoja", callback_data="btn_libro_recuperar_msg"),
-        ])
-        reply_kb.append([
-            InlineKeyboardButton(f"✏️ Editar Hoja {sheet_name}", callback_data=f"btn_edit_sheet_{sheet_name}"),
-            InlineKeyboardButton("✍️ Asentar Otra Hoja", callback_data="btn_libro_registrar"),
-        ])
-        reply_kb.append([
-            InlineKeyboardButton("📚 Ver Libros Guardados", callback_data="btn_libro_ver"),
-            InlineKeyboardButton("📖 Menú Libro de Obra", callback_data="btn_menu_libro"),
-        ])
-        reply_kb.append([
-            InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home"),
-        ])
-
         drive_note = f"\n☁️ *Sincronizado en Google Drive:* `{book_path.name}`" if drive_res else ""
+
+        # Redirigir al menú principal con todas las opciones disponibles
+        main_kb_rows = []
+        if drive_res and drive_res.get("web_view_link"):
+            main_kb_rows.append([InlineKeyboardButton("☁️ Abrir en Google Drive", url=drive_res["web_view_link"])])
+        main_kb_rows.extend(get_libro_main_keyboard().inline_keyboard)
+
         sent_conf = await msg_target.reply_text(
-            f"✅ *Hoja #{sheet_name} {action_verb} permanentemente en el archivo Excel oficial.*{drive_note}\n\n"
-            "💡 _Los cambios persisten en el servidor y en la nube. Puedes consultar o editar cualquier hoja en cualquier momento._",
+            f"✅ *Hoja #{sheet_name} {action_verb} exitosamente en el Libro de Obra.*{drive_note}\n\n"
+            "📖 _El asiento fue guardado permanentemente en el archivo Excel oficial._\n\n"
+            "👇 *Menú Principal:*",
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=InlineKeyboardMarkup(reply_kb),
+            reply_markup=InlineKeyboardMarkup(main_kb_rows),
         )
         if sent_conf:
             track_menu_message(context, sent_conf.message_id)
 
-        # Limpiar datos pendientes
-        context.user_data.pop("pending_libro_entry", None)
-        context.user_data.pop("editing_existing_sheet", None)
-        context.user_data.pop("libro_flow", None)
-
     except Exception as exc:
-        logger.error("Error al guardar hoja pendiente en Libro de Obra: %s", exc, exc_info=True)
-        await msg_target.reply_text(f"❌ Ocurrió un error al guardar en el libro: {exc}")
+        logger.error("Error al guardar hoja en Libro de Obra: %s", exc, exc_info=True)
+        await msg_target.reply_text(
+            f"❌ Ocurrió un error al guardar en el libro: {exc}",
+            reply_markup=get_libro_main_keyboard(),
+        )
+
+    # Limpiar estados de sesión
+    context.user_data.pop("pending_libro_entry", None)
+    context.user_data.pop("editing_existing_sheet", None)
+    context.user_data.pop("libro_flow", None)
+
+
+async def execute_save_pending_libro_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Guarda físicamente la hoja pendiente en el archivo Excel oficial (.xlsx) y en Google Drive si quedó pendiente.
+    """
+    query = update.callback_query
+    msg_target = query.message if query else update.message
+    if not msg_target:
+        return
+    if query:
+        await query.answer()
+
+    pending = context.user_data.get("pending_libro_entry")
+    if not pending:
+        await msg_target.reply_text(
+            "ℹ️ No hay ninguna hoja pendiente por guardar o ya fue registrada automáticamente.",
+            reply_markup=get_libro_main_keyboard(),
+        )
+        return
+
+    obra = pending["obra"]
+    entry_data = pending["entry_data"]
+    general_data = pending["general_data"]
+    user_id = pending.get("user_id")
+    raw_text = pending.get("raw_text")
+
+    await save_and_deliver_libro_entry(
+        msg_target=msg_target,
+        context=context,
+        obra=obra,
+        entry_data=entry_data,
+        general_data=general_data,
+        user_id=user_id,
+        raw_text=raw_text,
+    )
 
 
 async def handle_regenerate_libro_desc(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -880,13 +889,26 @@ async def handle_save_edited_field(update: Update, context: ContextTypes.DEFAULT
             entry_data["actividades_list"] = lines
             pending["actividades"] = lines
 
+    # Si se está editando una hoja existente, persistir inmediatamente al archivo Excel oficial
+    editing_info = context.user_data.get("editing_existing_sheet")
+    saved_note = ""
+    if editing_info and editing_info.get("sheet_name"):
+        target_sheet = editing_info["sheet_name"]
+        try:
+            book_path, sheet_name = update_saved_sheet(obra, target_sheet, entry_data, general_data)
+            upload_file_to_drive(book_path)
+            saved_note = f" (guardado en Hoja #{sheet_name})"
+            logger.info("Hoja '%s' persistida directamente en Excel tras editar campo '%s'.", sheet_name, field)
+        except Exception as edit_save_err:
+            logger.error("Error al persistir edición de hoja '%s': %s", target_sheet, edit_save_err, exc_info=True)
+
     logger.info("Campo '%s' del Libro de Obra actualizado exitosamente por el usuario.", field)
 
     preview_text = build_libro_entry_preview(obra, entry_data, general_data)
 
     if update.message:
         sent = await update.message.reply_text(
-            f"✅ *{field_label} actualizada con éxito.*\n\n{preview_text}",
+            f"✅ *{field_label} actualizada con éxito{saved_note}.*\n\n{preview_text}",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_libro_entry_preview_keyboard(),
         )
@@ -1253,11 +1275,14 @@ async def handle_observaciones(update: Update, context: ContextTypes.DEFAULT_TYP
     if user_id:
         save_user_last_report(user_id, report_text, obra=obra)
 
-    resumen = build_libro_entry_preview(obra, entry_data, general_data)
-    await update.message.reply_text(
-        resumen,
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=get_libro_entry_preview_keyboard(),
+    await save_and_deliver_libro_entry(
+        msg_target=update.message,
+        context=context,
+        obra=obra,
+        entry_data=entry_data,
+        general_data=general_data,
+        user_id=user_id,
+        raw_text=report_text,
     )
     return ConversationHandler.END
 

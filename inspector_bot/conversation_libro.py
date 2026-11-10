@@ -17,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import openpyxl
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -38,19 +39,24 @@ from inspector_bot.ai_labor_describer import generate_labor_description_ai
 from inspector_bot.config import PHOTOS_DIR
 from inspector_bot.google_drive_service import upload_file_to_drive
 from inspector_bot.keyboards import (
-    get_awaiting_photos_keyboard,
+    get_cancel_shift_date_keyboard,
+    get_confirm_shift_date_keyboard,
     get_home_keyboard,
+    get_libro_main_keyboard,
     get_libro_menu_keyboard,
-    get_main_menu_keyboard,
-    get_report_action_keyboard,
 )
 from inspector_bot.libro_obra_service import (
     BOOKS_DIR,
     add_daily_entry_to_book,
+    apply_start_date_shift,
+    calculate_start_date_shift_preview,
     delete_project_book,
+    format_date_es,
+    get_sheet_date,
     list_all_project_books,
     list_book_sheets,
     load_sheet_entry_data,
+    parse_date_string,
     update_saved_sheet,
 )
 from inspector_bot.parser import (
@@ -62,7 +68,9 @@ from inspector_bot.project_store import (
     delete_project_metadata,
     get_project_metadata,
     get_recent_projects,
+    get_user_last_report,
     save_project_metadata,
+    save_user_last_report,
 )
 
 logger = logging.getLogger(__name__)
@@ -217,10 +225,10 @@ def build_libro_entry_preview(
 
 
 def get_libro_entry_preview_keyboard() -> InlineKeyboardMarkup:
-    """Devuelve los botones de confirmación, edición, regeneración o descarte de la hoja."""
+    """Devuelve los botones de edición, regeneración o retorno al menú principal."""
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("💾 Guardar en Libro de Obra", callback_data="btn_libro_guardar_entry")
+            InlineKeyboardButton("📋 Recuperar Mensaje Original", callback_data="btn_libro_recuperar_msg"),
         ],
         [
             InlineKeyboardButton("✏️ Editar Descripción", callback_data="btn_libro_edit_desc"),
@@ -260,6 +268,134 @@ def get_libro_edit_fields_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton("🔙 Volver a Vista Previa", callback_data="btn_libro_preview_back"),
         ],
     ])
+
+
+def format_report_text_from_entry(obra: str, entry_data: Dict[str, Any], general_data: Dict[str, Any]) -> str:
+    """Reconstruye un mensaje de reporte en formato texto estructurado para que el usuario pueda copiarlo y editarlo."""
+    fecha = entry_data.get("fecha") or datetime.now().strftime("%d/%m/%Y")
+    clima = entry_data.get("clima") or "SOLEADO"
+    horas = entry_data.get("horas_trabajadas") or "8 HORAS"
+    personal = entry_data.get("personal") or "Personal estándar en obra"
+    equipos = entry_data.get("equipos") or ""
+    empresa = general_data.get("firma_contratista") or ""
+    residente = general_data.get("ing_residente") or ""
+    civ_res = general_data.get("civ_residente") or ""
+    inspector = general_data.get("ing_inspector") or ""
+    civ_insp = general_data.get("civ_inspector") or ""
+
+    actividades = entry_data.get("actividades_list") or []
+    if not actividades:
+        raw_res = entry_data.get("resumen_actividades") or ""
+        actividades = [a.strip(" •-*") for a in raw_res.split("\n") if a.strip(" •-*")]
+    if not actividades:
+        actividades = ["Actividades ejecutadas en obra"]
+
+    acts_formatted = "\n".join(f"• {a}" for a in actividades)
+    observaciones = entry_data.get("observaciones") or "Sin observaciones particulares."
+
+    lines = [
+        f"OBRA: {obra}",
+        f"FECHA: {fecha}",
+        f"ESTADO DEL TIEMPO: {clima}",
+        f"HORAS TRABAJADAS: {horas}",
+    ]
+    if empresa:
+        lines.append(f"EMPRESA CONTRATISTA: {empresa}")
+    if residente:
+        civ_str = f" CIV {civ_res}" if civ_res else ""
+        lines.append(f"INGENIERO RESIDENTE: {residente}{civ_str}")
+    if inspector:
+        civ_str = f" CIV {civ_insp}" if civ_insp else ""
+        lines.append(f"INGENIERO INSPECTOR: {inspector}{civ_str}")
+
+    lines.append(f"PERSONAL EN OBRA: {personal}")
+    if equipos:
+        lines.append(f"EQUIPOS Y MAQUINARIA: {equipos}")
+
+    lines.append("")
+    lines.append("ACTIVIDADES:")
+    lines.append(acts_formatted)
+    lines.append("")
+    lines.append("OBSERVACIONES:")
+    lines.append(observaciones)
+
+    return "\n".join(lines)
+
+
+async def handle_recuperar_mensaje(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Recupera el texto del mensaje enviado para crear la hoja del libro de obra.
+    Permite copiar el reporte exacto, corregir datos o fechas y reenviarlo directamente al chat.
+    """
+    query = update.callback_query
+    msg_target = query.message if query else update.message
+    user_id = update.effective_user.id if update.effective_user else None
+
+    if query:
+        await query.answer()
+
+    text_to_recover = ""
+    source_label = "Último reporte registrado"
+
+    pending = context.user_data.get("pending_libro_entry")
+    if pending and pending.get("raw_text"):
+        text_to_recover = pending["raw_text"]
+        source_label = "Reporte original pendiente de guardar"
+    elif pending and pending.get("entry_data") and pending.get("general_data"):
+        text_to_recover = format_report_text_from_entry(
+            pending.get("obra", "Obra"),
+            pending["entry_data"],
+            pending["general_data"],
+        )
+        source_label = "Borrador de hoja actual"
+    elif context.user_data.get("editing_existing_sheet"):
+        edit_info = context.user_data["editing_existing_sheet"]
+        sheet_entry = edit_info.get("entry_data")
+        sheet_gen = edit_info.get("general_data")
+        sheet_obra = edit_info.get("obra", "Obra")
+        sheet_name = edit_info.get("sheet_name", "Hoja")
+        if sheet_entry and sheet_gen:
+            text_to_recover = format_report_text_from_entry(sheet_obra, sheet_entry, sheet_gen)
+            source_label = f"Reporte de la {sheet_name}"
+    elif context.user_data.get("last_raw_report_text"):
+        text_to_recover = context.user_data["last_raw_report_text"]
+        source_label = "Último reporte enviado en sesión"
+    elif user_id:
+        db_saved = get_user_last_report(user_id)
+        if db_saved and db_saved.get("message_text"):
+            text_to_recover = db_saved["message_text"]
+            source_label = "Último reporte guardado en tu historial"
+
+    if not text_to_recover:
+        await msg_target.reply_text(
+            "ℹ️ *No se encontró ningún reporte previo en memoria o historial.*\n\n"
+            "Puedes pegar tu reporte directamente en el chat para crear una hoja o usar *✍️ Asentar Nueva Hoja Diaria*.",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_libro_main_keyboard(),
+        )
+        return
+
+    recovery_intro = (
+        f"📋 *{source_label}*\n\n"
+        "👇 *Toca el recuadro a continuación para copiar el texto completo.*\n"
+        "Pégalo en el chat, corrige los datos o fechas que desees y envíalo nuevamente:"
+    )
+
+    action_kb = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("✍️ Asentar Nueva Hoja", callback_data="btn_libro_registrar"),
+            InlineKeyboardButton("📖 Menú del Libro", callback_data="btn_menu_libro"),
+        ]
+    ])
+
+    await msg_target.reply_text(recovery_intro, parse_mode=ParseMode.MARKDOWN)
+
+    code_block = f"```text\n{text_to_recover}\n```"
+    try:
+        await msg_target.reply_text(code_block, parse_mode=ParseMode.MARKDOWN, reply_markup=action_kb)
+    except Exception as exc:
+        logger.debug("Error enviando en markdown code block: %s", exc)
+        await msg_target.reply_text(text_to_recover, reply_markup=action_kb)
 
 
 async def process_full_report_for_libro(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str) -> bool:
@@ -303,8 +439,20 @@ async def process_full_report_for_libro(update: Update, context: ContextTypes.DE
     actividades = parsed.get("actividades", [])
     obreros = parsed.get("obreros", "")
     caporal = parsed.get("caporal", "") or parsed.get("caporal_obra", "")
+    maestro = parsed.get("maestro_obra", "") or parsed.get("maestro", "")
     equipos = parsed.get("equipos") or parsed.get("maquinaria") or ""
     ensayos = parsed.get("control_calidad") or parsed.get("ensayos") or ""
+
+    # Personal en obra: obreros, maestro de obra y caporal corresponden a la cuadrilla de la contratista (A3:C6)
+    parts_pers: List[str] = []
+    if obreros:
+        parts_pers.append(f"{obreros}".strip())
+    if maestro:
+        clean_m = maestro.strip().strip("*.")
+        parts_pers.append(f"Maestro de Obra: {clean_m}")
+    if caporal:
+        parts_pers.append(f"Caporal: {caporal}".strip())
+    personal_str = ", ".join(parts_pers) if parts_pers else "Personal estándar en obra"
 
     # 1. Generar la redacción formal de ingeniería con IA (incluyendo maquinaria, equipos y ensayos)
     desc_labor_ai = generate_labor_description_ai(
@@ -312,7 +460,7 @@ async def process_full_report_for_libro(update: Update, context: ContextTypes.DE
         obra=obra,
         empresa=empresa,
         fecha=fecha,
-        obreros=f"{obreros}, Caporal: {caporal}".strip(", "),
+        obreros=personal_str,
         equipos=equipos,
         ensayos=ensayos,
     )
@@ -320,14 +468,13 @@ async def process_full_report_for_libro(update: Update, context: ContextTypes.DE
     # 2. Resumen ejecutivo de actividades por partida (limpio de clima)
     resumen_actividades = "\n".join(f"• {a}" for a in actividades)
 
-    # 3. Personal en obra
-    personal_str = f"{obreros}".strip()
-    if caporal:
-        personal_str += f", Caporal: {caporal}"
-
-    # 4. Personal de inspección: en A8:C10 van todos los inspectores reportados en la obra
+    # 4. Personal de inspección: en A8:C10 van exclusivamente los inspectores (excluyendo cuadrilla de contratista)
     if parsed.get("ing_inspectores"):
-        personal_insp_str = "\n".join(format_engineer_name(p) for p in parsed["ing_inspectores"])
+        filtered_insp = [
+            p for p in parsed["ing_inspectores"]
+            if not re.search(r"maestro|caporal", p, re.IGNORECASE)
+        ]
+        personal_insp_str = "\n".join(format_engineer_name(p) for p in filtered_insp) if filtered_insp else inspector_val
     else:
         personal_insp_str = inspector_val
 
@@ -369,62 +516,47 @@ async def process_full_report_for_libro(update: Update, context: ContextTypes.DE
         "civ_representante": existing_meta.get("civ_representante", ""),
     }
 
-    # Guardar en memoria de sesión como pendiente de confirmación
-    context.user_data["pending_libro_entry"] = {
-        "obra": obra,
-        "entry_data": entry_data,
-        "general_data": general_data,
-        "actividades": actividades,
-        "user_id": user_id,
-    }
-
-    preview_text = build_libro_entry_preview(obra, entry_data, general_data)
-    sent_preview = await safe_reply_markdown(
-        msg_target,
-        preview_text,
-        reply_markup=get_libro_entry_preview_keyboard(),
+    # Ejecutar guardado inmediato sin pedir confirmación previa
+    await save_and_deliver_libro_entry(
+        msg_target=msg_target,
+        context=context,
+        obra=obra,
+        entry_data=entry_data,
+        general_data=general_data,
+        user_id=user_id,
+        raw_text=text,
     )
-    if sent_preview:
-        track_menu_message(context, sent_preview.message_id)
-
     return True
 
 
-async def execute_save_pending_libro_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def save_and_deliver_libro_entry(
+    msg_target: Any,
+    context: ContextTypes.DEFAULT_TYPE,
+    obra: str,
+    entry_data: Dict[str, Any],
+    general_data: Dict[str, Any],
+    user_id: Optional[int],
+    raw_text: Optional[str] = None,
+) -> None:
     """
-    Guarda físicamente la hoja pendiente en el archivo Excel oficial (.xlsx) y en Google Drive.
-    Solo se ejecuta cuando el usuario presiona '💾 Guardar en Libro de Obra'.
+    Guarda físicamente la hoja en el archivo Excel oficial (.xlsx), sincroniza con Google Drive,
+    envía el archivo actualizado al usuario y lo redirige directamente al menú principal.
     """
-    query = update.callback_query
-    msg_target = query.message if query else update.message
     if not msg_target:
-        return
-    if query:
-        await query.answer()
+        raise ValueError("msg_target no puede ser nulo.")
+    if not obra:
+        raise ValueError("obra no puede estar vacía.")
+    if not entry_data:
+        raise ValueError("entry_data no puede estar vacío.")
 
-    pending = context.user_data.get("pending_libro_entry")
-    if not pending:
-        await msg_target.reply_text(
-            "⚠️ No hay ninguna hoja pendiente por guardar o ya fue registrada anteriormente.",
-            reply_markup=get_libro_menu_keyboard(),
-        )
-        return
-
-    obra = pending["obra"]
-    entry_data = pending["entry_data"]
-    general_data = pending["general_data"]
-    user_id = pending.get("user_id")
-
-    # Persistir metadatos de obra
+    # 1. Persistir metadatos de obra y último reporte
     save_project_metadata(obra, user_id, general_data)
+    if raw_text:
+        context.user_data["last_raw_report_text"] = raw_text
+        if user_id:
+            save_user_last_report(user_id, raw_text, obra=obra)
 
     try:
-        if query and query.message:
-            try:
-                await query.message.edit_reply_markup(reply_markup=None)
-            except Exception as edit_err:
-                logger.debug("No se pudo remover teclado al guardar: %s", edit_err)
-
         editing_info = context.user_data.get("editing_existing_sheet")
         if editing_info and editing_info.get("sheet_name"):
             target_sheet = editing_info["sheet_name"]
@@ -434,13 +566,15 @@ async def execute_save_pending_libro_entry(update: Update, context: ContextTypes
             book_path, sheet_name, sheet_num = add_daily_entry_to_book(obra, entry_data, general_data)
             action_verb = "registrada"
 
+        equipos_display = entry_data.get("equipos") or "Herramientas menores y equipos de construcción"
         caption_txt = (
             f"📗 *Libro de Obra Oficial Actualizado*\n\n"
             f"• *Obra:* {obra[:60]}...\n"
             f"• *Hoja {action_verb.capitalize()}:* `{sheet_name}`\n"
             f"• *Fecha:* {entry_data.get('fecha')}\n"
             f"• *Estado del Tiempo:* {entry_data.get('clima')}\n"
-            f"• *Horas Trabajadas:* {entry_data.get('horas_trabajadas')}\n\n"
+            f"• *Horas Trabajadas:* {entry_data.get('horas_trabajadas')}\n"
+            f"• *Maquinaria / Equipos:* {equipos_display}\n\n"
             f"📝 *Descripción técnica:*\n_{entry_data.get('descripcion_labor', '')[:220]}..._\n\n"
             f"🔗 _Firmas vinculadas dinámicamente con 'DATOS GENERALES'._"
         )
@@ -456,39 +590,71 @@ async def execute_save_pending_libro_entry(update: Update, context: ContextTypes
                 track_menu_message(context, sent_doc.message_id)
 
         drive_res = upload_file_to_drive(book_path)
-        reply_kb = []
-        if drive_res and drive_res.get("web_view_link"):
-            reply_kb.append([InlineKeyboardButton("☁️ Abrir en Google Drive", url=drive_res["web_view_link"])])
-        reply_kb.append([
-            InlineKeyboardButton(f"✏️ Editar Hoja {sheet_name}", callback_data=f"btn_edit_sheet_{sheet_name}"),
-            InlineKeyboardButton("✍️ Asentar Otra Hoja", callback_data="btn_libro_registrar"),
-        ])
-        reply_kb.append([
-            InlineKeyboardButton("📚 Ver Libros Guardados", callback_data="btn_libro_ver"),
-            InlineKeyboardButton("📖 Menú Libro de Obra", callback_data="btn_menu_libro"),
-        ])
-        reply_kb.append([
-            InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home"),
-        ])
-
         drive_note = f"\n☁️ *Sincronizado en Google Drive:* `{book_path.name}`" if drive_res else ""
+
+        # Redirigir al menú principal con todas las opciones disponibles
+        main_kb_rows = []
+        if drive_res and drive_res.get("web_view_link"):
+            main_kb_rows.append([InlineKeyboardButton("☁️ Abrir en Google Drive", url=drive_res["web_view_link"])])
+        main_kb_rows.extend(get_libro_main_keyboard().inline_keyboard)
+
         sent_conf = await msg_target.reply_text(
-            f"✅ *Hoja #{sheet_name} {action_verb} permanentemente en el archivo Excel oficial.*{drive_note}\n\n"
-            "💡 _Los cambios persisten en el servidor y en la nube. Puedes consultar o editar cualquier hoja en cualquier momento._",
+            f"✅ *Hoja #{sheet_name} {action_verb} exitosamente en el Libro de Obra.*{drive_note}\n\n"
+            "📖 _El asiento fue guardado permanentemente en el archivo Excel oficial._\n\n"
+            "👇 *Menú Principal:*",
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=InlineKeyboardMarkup(reply_kb),
+            reply_markup=InlineKeyboardMarkup(main_kb_rows),
         )
         if sent_conf:
             track_menu_message(context, sent_conf.message_id)
 
-        # Limpiar datos pendientes
-        context.user_data.pop("pending_libro_entry", None)
-        context.user_data.pop("editing_existing_sheet", None)
-        context.user_data.pop("libro_flow", None)
-
     except Exception as exc:
-        logger.error("Error al guardar hoja pendiente en Libro de Obra: %s", exc, exc_info=True)
-        await msg_target.reply_text(f"❌ Ocurrió un error al guardar en el libro: {exc}")
+        logger.error("Error al guardar hoja en Libro de Obra: %s", exc, exc_info=True)
+        await msg_target.reply_text(
+            f"❌ Ocurrió un error al guardar en el libro: {exc}",
+            reply_markup=get_libro_main_keyboard(),
+        )
+
+    # Limpiar estados de sesión
+    context.user_data.pop("pending_libro_entry", None)
+    context.user_data.pop("editing_existing_sheet", None)
+    context.user_data.pop("libro_flow", None)
+
+
+async def execute_save_pending_libro_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Guarda físicamente la hoja pendiente en el archivo Excel oficial (.xlsx) y en Google Drive si quedó pendiente.
+    """
+    query = update.callback_query
+    msg_target = query.message if query else update.message
+    if not msg_target:
+        return
+    if query:
+        await query.answer()
+
+    pending = context.user_data.get("pending_libro_entry")
+    if not pending:
+        await msg_target.reply_text(
+            "ℹ️ No hay ninguna hoja pendiente por guardar o ya fue registrada automáticamente.",
+            reply_markup=get_libro_main_keyboard(),
+        )
+        return
+
+    obra = pending["obra"]
+    entry_data = pending["entry_data"]
+    general_data = pending["general_data"]
+    user_id = pending.get("user_id")
+    raw_text = pending.get("raw_text")
+
+    await save_and_deliver_libro_entry(
+        msg_target=msg_target,
+        context=context,
+        obra=obra,
+        entry_data=entry_data,
+        general_data=general_data,
+        user_id=user_id,
+        raw_text=raw_text,
+    )
 
 
 async def handle_regenerate_libro_desc(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -723,13 +889,26 @@ async def handle_save_edited_field(update: Update, context: ContextTypes.DEFAULT
             entry_data["actividades_list"] = lines
             pending["actividades"] = lines
 
+    # Si se está editando una hoja existente, persistir inmediatamente al archivo Excel oficial
+    editing_info = context.user_data.get("editing_existing_sheet")
+    saved_note = ""
+    if editing_info and editing_info.get("sheet_name"):
+        target_sheet = editing_info["sheet_name"]
+        try:
+            book_path, sheet_name = update_saved_sheet(obra, target_sheet, entry_data, general_data)
+            upload_file_to_drive(book_path)
+            saved_note = f" (guardado en Hoja #{sheet_name})"
+            logger.info("Hoja '%s' persistida directamente en Excel tras editar campo '%s'.", sheet_name, field)
+        except Exception as edit_save_err:
+            logger.error("Error al persistir edición de hoja '%s': %s", target_sheet, edit_save_err, exc_info=True)
+
     logger.info("Campo '%s' del Libro de Obra actualizado exitosamente por el usuario.", field)
 
     preview_text = build_libro_entry_preview(obra, entry_data, general_data)
 
     if update.message:
         sent = await update.message.reply_text(
-            f"✅ *{field_label} actualizada con éxito.*\n\n{preview_text}",
+            f"✅ *{field_label} actualizada con éxito{saved_note}.*\n\n{preview_text}",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_libro_entry_preview_keyboard(),
         )
@@ -1083,19 +1262,27 @@ async def handle_observaciones(update: Update, context: ContextTypes.DEFAULT_TYP
         "revisado_por": "",
     }
 
+    report_text = format_report_text_from_entry(obra, entry_data, general_data)
     context.user_data["pending_libro_entry"] = {
         "obra": obra,
         "entry_data": entry_data,
         "general_data": general_data,
         "actividades": actividades_list,
         "user_id": user_id,
+        "raw_text": report_text,
     }
+    context.user_data["last_raw_report_text"] = report_text
+    if user_id:
+        save_user_last_report(user_id, report_text, obra=obra)
 
-    resumen = build_libro_entry_preview(obra, entry_data, general_data)
-    await update.message.reply_text(
-        resumen,
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=get_libro_entry_preview_keyboard(),
+    await save_and_deliver_libro_entry(
+        msg_target=update.message,
+        context=context,
+        obra=obra,
+        entry_data=entry_data,
+        general_data=general_data,
+        user_id=user_id,
+        raw_text=report_text,
     )
     return ConversationHandler.END
 
@@ -1203,8 +1390,7 @@ async def cancel_libro_obra_photo(update: Update, context: ContextTypes.DEFAULT_
             "• Para continuar con el Libro de Obra, pega el reporte de la jornada en texto.",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("📋 Ficha Diaria (con fotos)", callback_data="btn_menu_ficha")],
-                [InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home")],
+                [InlineKeyboardButton("📖 Menú del Libro de Obra", callback_data="btn_menu_libro")],
             ]),
         )
     return STATE_SELECT_OBRA
@@ -1252,14 +1438,14 @@ async def return_to_clean_main_menu(update: Update, context: ContextTypes.DEFAUL
             logger.debug("No se pudo eliminar mensaje de callback: %s", exc)
 
     welcome_text = (
-        "🏗 *¡Bienvenido al Asistente de Inspección e Ingeniería!*\n\n"
-        "Selecciona la acción que deseas realizar hoy:\n\n"
-        "📋 *1. Generar Ficha de Inspección*\n"
-        "Convierte tu reporte diario de obra y fotos en un Informe Técnico formal en PDF o Excel (.xlsx) con Memoria Fotográfica.\n\n"
-        "🗓️ *2. Ficha Resumen Semanal*\n"
-        "Consolida automáticamente todas las inspecciones de la semana con actividades únicas y fotos agrupadas.\n\n"
-        "📖 *3. Libro de Obra*\n"
-        "Administra tus libros oficiales en Excel: asienta nuevas hojas, consulta libros guardados o elimínalos."
+        "📖 *Libro de Obra Digital*\n\n"
+        "Asistente exclusivo para el registro, control y seguimiento oficial de Libros de Obra.\n\n"
+        "📌 *Funciones disponibles:*\n"
+        "• ✍️ *Asentar Hoja:* Registra la jornada diaria (personal, maquinaria, avance, clima y observaciones).\n"
+        "• 📚 *Ver Libros:* Consulta el historial y descarga el Excel oficial con todas las hojas foliadas.\n"
+        "• ✏️ *Editar Hoja:* Corrige descripciones u observaciones de asientos guardados.\n"
+        "• 🗑️ *Eliminar Libro:* Administra y limpia libros archivados.\n\n"
+        "Selecciona una opción del panel para comenzar:"
     )
 
     if chat_id:
@@ -1267,7 +1453,7 @@ async def return_to_clean_main_menu(update: Update, context: ContextTypes.DEFAUL
             chat_id=chat_id,
             text=welcome_text,
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=get_main_menu_keyboard(),
+            reply_markup=get_libro_main_keyboard(),
         )
         if sent_welcome:
             track_menu_message(context, sent_welcome.message_id)
@@ -1633,6 +1819,355 @@ async def handle_select_sheet_to_edit(update: Update, context: ContextTypes.DEFA
             await query.message.reply_text(f"❌ Error al cargar datos de la hoja #{sheet_name}: {exc}")
 
 
+
+async def handle_menu_modificar_fecha_inicio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Maneja el botón '📅 Modificar Fecha de Inicio' del panel del Libro de Obra."""
+    query = update.callback_query
+    msg_target = query.message if query else update.message
+    if not msg_target:
+        return
+    if query:
+        await query.answer()
+
+    books = list_all_project_books()
+    if not books:
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("✍️ Llenar Primera Hoja", callback_data="btn_libro_registrar")],
+            [InlineKeyboardButton("🔙 Volver a Libro de Obra", callback_data="btn_menu_libro")],
+        ])
+        await msg_target.reply_text(
+            "ℹ️ *No tienes ningún Libro de Obra guardado actualmente.*\n\n"
+            "Registra primero una hoja para poder modificar la fecha de inicio.",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=kb,
+        )
+        return
+
+    context.user_data["saved_books_cache"] = [b["filename"] for b in books]
+
+    # Si solo hay un libro, pedimos directamente la nueva fecha
+    if len(books) == 1:
+        await _prompt_new_start_date_for_book(update, context, books[0]["filename"], books[0]["project_name"])
+        return
+
+    # Si hay múltiples libros, mostramos selector
+    buttons: List[List[InlineKeyboardButton]] = []
+    for idx, b in enumerate(books):
+        p_name = b["project_name"]
+        short_title = (p_name[:28] + "...") if len(p_name) > 28 else p_name
+        buttons.append([
+            InlineKeyboardButton(f"🏗 {short_title}", callback_data=f"btn_shift_book_{idx}")
+        ])
+    buttons.append([InlineKeyboardButton("🔙 Volver a Libro de Obra", callback_data="btn_menu_libro")])
+
+    await msg_target.reply_text(
+        "📅 *Modificar Fecha de Inicio del Libro de Obra*\n\n"
+        "Selecciona el proyecto cuyo cronograma de hojas deseas desplazar:",
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=InlineKeyboardMarkup(buttons),
+    )
+
+
+async def handle_select_book_to_shift(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Maneja la selección de un libro específico para desplazar su fecha de inicio."""
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+
+    data_str = query.data or ""
+    idx_str = data_str.replace("btn_shift_book_", "").strip()
+    try:
+        idx = int(idx_str)
+        cache = context.user_data.get("saved_books_cache", [])
+        if not (0 <= idx < len(cache)):
+            books = list_all_project_books()
+            cache = [b["filename"] for b in books]
+            context.user_data["saved_books_cache"] = cache
+        filename = cache[idx]
+        books = list_all_project_books()
+        p_name = filename
+        for b in books:
+            if b["filename"] == filename:
+                p_name = b["project_name"]
+                break
+        await _prompt_new_start_date_for_book(update, context, filename, p_name)
+    except Exception as exc:
+        logger.error("Error al seleccionar libro para desplazar fecha %s: %s", idx_str, exc, exc_info=True)
+        if query.message:
+            await query.message.reply_text(f"❌ Error al abrir libro: {exc}")
+
+
+async def _prompt_new_start_date_for_book(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    filename: str,
+    project_name: str,
+) -> None:
+    """Inspecciona el libro y solicita al usuario ingresar la nueva fecha de inicio."""
+    msg_target = update.callback_query.message if update.callback_query else update.message
+    if not msg_target:
+        return
+
+    book_path = BOOKS_DIR / filename
+    try:
+        wb = openpyxl.load_workbook(book_path, data_only=True)
+        fixed_sheets = {"DATOS GENERALES", "ACTAS"}
+        daily_sheets = [s for s in wb.sheetnames if s not in fixed_sheets]
+        if not daily_sheets:
+            await msg_target.reply_text(
+                f"ℹ️ El libro de la obra *{_clean_md(project_name)}* no contiene hojas diarias de reporte.",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=get_libro_main_keyboard(),
+            )
+            return
+
+        sheet_dates: List[Tuple[str, datetime]] = []
+        for s in daily_sheets:
+            dt = get_sheet_date(wb[s])
+            if dt != datetime.max:
+                sheet_dates.append((s, dt))
+
+        if not sheet_dates:
+            await msg_target.reply_text(
+                "❌ No se encontraron fechas válidas asentadas en las hojas del libro.",
+                reply_markup=get_libro_main_keyboard(),
+            )
+            return
+
+        sheet_dates.sort(key=lambda x: x[1])
+        first_sheet_name, old_start_date = sheet_dates[0]
+
+        context.user_data["awaiting_new_start_date"] = {
+            "filename": filename,
+            "project_name": project_name,
+            "old_start_date": old_start_date.strftime("%d/%m/%Y"),
+            "first_sheet_name": first_sheet_name,
+            "total_sheets": len(sheet_dates),
+        }
+
+        old_start_str = format_date_es(old_start_date)
+        prompt_text = (
+            f"📅 *Modificar Fecha de Inicio del Libro de Obra*\n\n"
+            f"🏗 Obra: *{_clean_md(project_name)}*\n"
+            f"• Hojas diarias asentadas: *{len(sheet_dates)}*\n"
+            f"• Fecha de inicio actual (Hoja #{first_sheet_name}): *{old_start_str}*\n\n"
+            f"✍️ *Por favor escribe la NUEVA fecha de inicio para la Hoja 1:*\n"
+            f"Formato: `DD/MM/AAAA` (ejemplo: `02/11/2026`).\n\n"
+            f"💡 _El sistema ajustará secuencialmente todas las hojas posteriores respetando los días hábiles "
+            f"y te mostrará una vista previa con la auditoría de saltos antes de aplicar los cambios._"
+        )
+
+        sent = await msg_target.reply_text(
+            prompt_text,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_cancel_shift_date_keyboard(),
+        )
+        if sent:
+            track_menu_message(context, sent.message_id)
+
+    except Exception as exc:
+        logger.error("Error al preparar cambio de fecha para %s: %s", filename, exc, exc_info=True)
+        await msg_target.reply_text(f"❌ Error al consultar el libro: {exc}")
+
+
+async def handle_process_new_start_date(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    date_text: str,
+) -> bool:
+    """
+    Procesa la nueva fecha de inicio ingresada por el usuario, valida el formato,
+    calcula la proyección secuencial por días hábiles, detecta omisiones (saltos)
+    y despliega la vista previa con botones de confirmación.
+    """
+    await_info = context.user_data.get("awaiting_new_start_date")
+    if not await_info:
+        return False
+
+    msg_target = update.message or (update.callback_query.message if update.callback_query else None)
+    if not msg_target:
+        return False
+
+    filename = await_info["filename"]
+    clean_date = date_text.strip()
+
+    try:
+        preview = calculate_start_date_shift_preview(filename, clean_date)
+    except ValueError as val_err:
+        await msg_target.reply_text(
+            f"⚠️ *Fecha no válida:* {val_err}\n\n"
+            "Por favor escribe una fecha válida en formato `DD/MM/AAAA` (ejemplo: `02/11/2026`):",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_cancel_shift_date_keyboard(),
+        )
+        return True
+    except Exception as exc:
+        logger.error("Error al calcular vista previa de desplazamiento: %s", exc, exc_info=True)
+        await msg_target.reply_text(
+            f"❌ Error al analizar el libro: {exc}",
+            reply_markup=get_cancel_shift_date_keyboard(),
+        )
+        return True
+
+    context.user_data["pending_start_date_shift"] = preview
+
+    old_st = format_date_es(preview["old_start_date"])
+    new_st = format_date_es(preview["new_start_date"])
+    p_name = _clean_md(preview["project_name"])
+    total = preview["total_sheets"]
+
+    lines: List[str] = [
+        "📅 *VISTA PREVIA: MODIFICACIÓN DE FECHA DE INICIO*",
+        f"🏗 Obra: *{p_name}*",
+        "",
+        f"• Fecha de inicio anterior: `{old_st}`",
+        f"• Nueva fecha de inicio: *{new_st}*",
+        f"• Total de hojas a desplazar: *{total}*",
+        "",
+        "📋 *Cronograma proyectado de hojas:*",
+    ]
+
+    shifts = preview["sheet_shifts"]
+    if len(shifts) <= 12:
+        for s in shifts:
+            lines.append(f"• Hoja #{s['sheet_name']}: {format_date_es(s['new_date'])}")
+    else:
+        for s in shifts[:5]:
+            lines.append(f"• Hoja #{s['sheet_name']}: {format_date_es(s['new_date'])}")
+        lines.append(f"  _... ({len(shifts) - 8} hojas intermedias ajustadas correlativamente) ..._")
+        for s in shifts[-3:]:
+            lines.append(f"• Hoja #{s['sheet_name']}: {format_date_es(s['new_date'])}")
+
+    # Auditoría de saltos / omisiones de días laborales
+    gaps = preview["gaps"]
+    lines.append("")
+    lines.append("🔍 *Auditoría de Saltos de Labor:*")
+    if gaps:
+        total_missing = sum(len(g["missing_workdays"]) for g in gaps)
+        lines.append(f"⚠️ *Se detectaron {len(gaps)} salto(s) ({total_missing} día(s) hábil(es) sin asentar):*")
+        for g in gaps:
+            d_str = ", ".join(format_date_es(d) for d in g["missing_workdays"])
+            lines.append(f"• Entre Hoja #{g['from_sheet']} y Hoja #{g['to_sheet']}: Falta asentar *{d_str}*")
+        lines.append("")
+        lines.append("💡 _El cronograma proyectado preservó los días hábiles. Recuerda que deberás asentar estas hojas pendientes en el libro cuando corresponda._")
+    else:
+        lines.append("✅ *Cronograma continuo:* No se detectaron saltos ni omisiones en días hábiles.")
+
+    lines.append("")
+    lines.append("¿Deseas aplicar estos cambios a todas las hojas del Libro de Obra?")
+
+    full_msg = "\n".join(lines)
+    sent = await msg_target.reply_text(
+        full_msg,
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=get_confirm_shift_date_keyboard(),
+    )
+    if sent:
+        track_menu_message(context, sent.message_id)
+
+    return True
+
+
+async def execute_confirm_shift_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Aplica de forma atómica el desplazamiento de fechas en el archivo Excel y en la base de datos."""
+    query = update.callback_query
+    msg_target = query.message if query else update.message
+    if not msg_target:
+        return
+    if query:
+        await query.answer()
+
+    preview = context.user_data.get("pending_start_date_shift")
+    if not preview:
+        await msg_target.reply_text(
+            "⚠️ No hay ninguna modificación de fecha pendiente por confirmar.",
+            reply_markup=get_libro_main_keyboard(),
+        )
+        return
+
+    progress_msg = await msg_target.reply_text("⏳ *Actualizando Libro de Obra con nueva fecha de inicio...*", parse_mode=ParseMode.MARKDOWN)
+
+    try:
+        user_id = update.effective_user.id if update.effective_user else None
+        book_filename = preview["book_filename"]
+        new_start_str = preview["new_start_date"].strftime("%d/%m/%Y")
+
+        book_path, applied_preview = apply_start_date_shift(book_filename, new_start_str, user_id=user_id)
+
+        # Respaldo en Google Drive si está habilitado
+        drive_status = ""
+        try:
+            drive_res = upload_file_to_drive(book_path)
+            if drive_res and drive_res.get("webViewLink"):
+                drive_status = f"\n☁️ [Ver en Google Drive]({drive_res['webViewLink']})"
+        except Exception as drive_exc:
+            logger.warning("No se pudo sincronizar con Drive tras desplazamiento de fecha: %s", drive_exc)
+
+        # Limpiar banderas de estado
+        context.user_data.pop("awaiting_new_start_date", None)
+        context.user_data.pop("pending_start_date_shift", None)
+
+        p_name = _clean_md(preview["project_name"])
+        new_st_str = format_date_es(preview["new_start_date"])
+        total_sheets = preview["total_sheets"]
+
+        success_text = (
+            f"✅ *¡Libro de Obra Actualizado Exitosamente!*\n\n"
+            f"🏗 Obra: *{p_name}*\n"
+            f"📅 Nueva Fecha de Inicio: *{new_st_str}*\n"
+            f"📄 Hojas actualizadas y foliadas: *{total_sheets}*\n"
+            f"🔒 Se generó una copia de respaldo automática previa en el servidor.{drive_status}\n\n"
+            f"Te adjunto a continuación el archivo Excel actualizado para tu revisión inmediata:"
+        )
+
+        await progress_msg.edit_text(success_text, parse_mode=ParseMode.MARKDOWN)
+
+        # Enviar el archivo Excel actualizado directamente
+        try:
+            with open(book_path, "rb") as doc_file:
+                await msg_target.reply_document(
+                    document=doc_file,
+                    filename=book_path.name,
+                    caption=f"📘 Libro de Obra Actualizado: {p_name}",
+                    reply_markup=get_libro_main_keyboard(),
+                )
+        except Exception as doc_exc:
+            logger.error("Error al enviar documento actualizado: %s", doc_exc, exc_info=True)
+            await msg_target.reply_text(
+                "📘 El libro fue actualizado en disco. Puedes descargarlo en cualquier momento desde *📚 Ver / Descargar Libros*.",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=get_libro_main_keyboard(),
+            )
+
+    except Exception as exc:
+        logger.error("Error al ejecutar desplazamiento de fecha de inicio: %s", exc, exc_info=True)
+        await progress_msg.edit_text(
+            f"❌ *Ocurrió un error al aplicar el cambio:* {exc}\n\n"
+            "El archivo original se mantuvo intacto. Intenta nuevamente.",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_libro_main_keyboard(),
+        )
+
+
+async def handle_cancel_shift_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Cancela la modificación de fecha de inicio y retorna al menú principal."""
+    query = update.callback_query
+    msg_target = query.message if query else update.message
+    if not msg_target:
+        return
+    if query:
+        await query.answer()
+
+    context.user_data.pop("awaiting_new_start_date", None)
+    context.user_data.pop("pending_start_date_shift", None)
+
+    await msg_target.reply_text(
+        "❌ Modificación de fecha de inicio cancelada. Volviendo al panel principal.",
+        reply_markup=get_libro_main_keyboard(),
+    )
+
+
 async def show_delete_libro_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Muestra el selector interactivo para eliminar un libro de obra."""
     context.user_data.pop("libro_flow", None)
@@ -1783,22 +2318,14 @@ async def cancel_libro_obra_menu(update: Update, context: ContextTypes.DEFAULT_T
     if query:
         await query.answer()
         data = query.data
-        if data == "btn_menu_ficha":
-            ficha_msg = (
-                "📋 *Modo Ficha Técnica de Inspección*\n\n"
-                "📌 *Pasos simples:*\n"
-                "1️⃣ *Pega tu reporte:* Envía el texto con los datos de la obra y actividades.\n"
-                "2️⃣ *Envía las fotos:* Adjunta imágenes de las labores.\n"
-                "3️⃣ *Elige opción:* Puedes guardar en base de datos o descargar en PDF/Excel.\n\n"
-                "👉 *Pega ahora mismo tu reporte diario para comenzar.*"
-            )
-            await query.message.reply_text(ficha_msg, parse_mode=ParseMode.MARKDOWN)
-        elif data == "btn_menu_libro":
+        if data in ("btn_menu_libro", "btn_menu_home", "btn_reset"):
             await show_libro_obra_hub(update, context)
         elif data == "btn_libro_ver" or data == "btn_libro_editar":
             await show_saved_libros_menu(update, context)
         elif data == "btn_libro_eliminar":
             await show_delete_libro_menu(update, context)
+        elif data == "btn_libro_recuperar_msg":
+            await handle_recuperar_mensaje(update, context)
         elif data == "btn_libro_registrar":
             await start_libro_obra_flow(update, context)
         elif data in ("btn_libro_descartar", "btn_cancel"):
@@ -1834,7 +2361,10 @@ def get_libro_obra_conversation_handler() -> ConversationHandler:
             CommandHandler("menu", cancel_libro_obra),
             CommandHandler("libro", cancel_libro_obra),
             CommandHandler("libros", cancel_libro_obra),
-            CallbackQueryHandler(cancel_libro_obra_menu, pattern="^(btn_menu_ficha|btn_menu_home|btn_reset|btn_show_action_menu|btn_menu_libro|btn_libro_ver|btn_libro_eliminar|btn_libro_registrar|btn_libro_descartar|btn_libro_editar|btn_cancel)$"),
+            CommandHandler("recuperar", handle_recuperar_mensaje),
+            CommandHandler("fecha_inicio", handle_menu_modificar_fecha_inicio),
+            CommandHandler("modificar_fecha_inicio", handle_menu_modificar_fecha_inicio),
+            CallbackQueryHandler(cancel_libro_obra_menu, pattern="^(btn_menu_home|btn_reset|btn_menu_libro|btn_libro_ver|btn_libro_eliminar|btn_libro_registrar|btn_libro_descartar|btn_libro_editar|btn_libro_recuperar_msg|btn_libro_modificar_fecha_inicio|btn_confirm_shift_date|btn_cancel_shift_date|btn_cancel)$"),
             MessageHandler(filters.PHOTO, cancel_libro_obra_photo),
         ],
         allow_reentry=True,
