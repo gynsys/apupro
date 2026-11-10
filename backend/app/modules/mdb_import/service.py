@@ -1,8 +1,9 @@
 """Servicio de importación de presupuestos desde Maprex/Lulo.
 
-El parser usa `mdbtools`, que debe estar instalado en la imagen del backend.
-Los archivos Access 1.0/2.0 muy antiguos no son compatibles con mdbtools; en
-ese caso se devuelve un error claro para que el usuario exporte desde Access.
+Dos vías:
+- `create_budget_from_mdb`: usa mdbtools para Access 97+ (Jet3/Jet4).
+- `create_budget_from_csv_zip`: usa un ZIP con los CSV exportados desde Access
+  antiguo (Jet 1/2), que mdbtools no puede abrir.
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import zipfile
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -29,6 +31,17 @@ from app.db.models.budget import (
 MDB_TABLES = "mdb-tables"
 MDB_EXPORT = "mdb-export"
 REQUIRED_TABLE = "ObraApun"
+TABLES = [
+    "ObraProy",
+    "ObraApun",
+    "ObraPart",
+    "ObraMate",
+    "ObraEqui",
+    "ObraMano",
+    "ObraPainMate",
+    "ObraPainEqui",
+    "ObraPainMano",
+]
 
 
 class MdbImportError(Exception):
@@ -58,22 +71,12 @@ def _run(argv: List[str], timeout: int = 120) -> str:
     if result.returncode != 0:
         detail = (result.stderr or result.stdout or "").strip()
         raise MdbImportError(
-            "No se pudo abrir el archivo Access. "
-            "Verifique que no esté dañado, que no tenga contraseña y que sea un "
-            "formato compatible con mdbtools. "
+            "No se pudo abrir el archivo Access con mdbtools. "
+            "El archivo puede ser Access 1.0/2.0, tener contraseña o estar dañado. "
+            "Para Access antiguo use el ZIP de CSV exportados desde Windows. "
             + (detail[:500] if detail else "")
         )
     return result.stdout
-
-
-def _tables(path: str) -> List[str]:
-    output = _run([_binary(MDB_TABLES), "-1", path])
-    return [line.strip() for line in output.splitlines() if line.strip()]
-
-
-def _table(path: str, table: str) -> List[Dict[str, str]]:
-    output = _run([_binary(MDB_EXPORT), path, table])
-    return list(csv.DictReader(io.StringIO(output)))
 
 
 def _num(value, default=0.0) -> float:
@@ -99,49 +102,76 @@ def _currency(project: Dict[str, str]) -> str:
     return "USD"
 
 
-def create_budget_from_mdb(
-    db: Session,
-    mdb_path: str,
-    user_id: str,
-    name: Optional[str] = None,
-) -> Dict:
-    """Lee el proyecto Maprex y crea un Budget con sus APUs.
-
-    No modifica ninguna base Costbase ni el catálogo maestro.
-    """
-
-    available = set(_tables(mdb_path))
+def _read_mdb_tables(mdb_path: str) -> Dict[str, List[Dict[str, str]]]:
+    output = _run([_binary(MDB_TABLES), "-1", mdb_path])
+    available = {line.strip() for line in output.splitlines() if line.strip()}
     if REQUIRED_TABLE not in available:
         raise MdbImportError(
             "El archivo no contiene la tabla ObraApun. "
             "No parece ser un presupuesto de Maprex/Lulo."
         )
+    tables: Dict[str, List[Dict[str, str]]] = {}
+    for table in TABLES:
+        if table not in available:
+            tables[table] = []
+            continue
+        raw = _run([_binary(MDB_EXPORT), mdb_path, table])
+        tables[table] = list(csv.DictReader(io.StringIO(raw)))
+    return tables
 
-    project_rows = _table(mdb_path, "ObraProy") if "ObraProy" in available else []
-    project = project_rows[0] if project_rows else {}
-    parts = {r["CodPar"]: r for r in _table(mdb_path, "ObraPart") if r.get("CodPar")}
-    lines = _table(mdb_path, "ObraApun")
+
+def _read_csv_zip(zip_path: str) -> Dict[str, List[Dict[str, str]]]:
+    """Lee un ZIP con archivos Obra*.csv exportados con DAO de Windows."""
+    tables: Dict[str, List[Dict[str, str]]] = {table: [] for table in TABLES}
+    try:
+        with zipfile.ZipFile(zip_path) as archive:
+            names = {
+                Path(name).stem.lower(): name
+                for name in archive.namelist()
+                if name.lower().endswith(".csv")
+            }
+            for table in TABLES:
+                member = names.get(table.lower())
+                if not member:
+                    tables[table] = []
+                    continue
+                with archive.open(member) as fh:
+                    text = io.TextIOWrapper(fh, encoding="utf-8-sig", newline="")
+                    tables[table] = list(csv.DictReader(text))
+    except zipfile.BadZipFile as exc:
+        raise MdbImportError("El archivo ZIP no es válido.") from exc
+
+    if not tables.get(REQUIRED_TABLE):
+        raise MdbImportError(
+            "El ZIP no contiene ObraApun.csv. "
+            "Debe incluir los CSV exportados desde Access."
+        )
+    return tables
+
+
+def _build_budget(
+    db: Session,
+    tables: Dict[str, List[Dict[str, str]]],
+    user_id: str,
+    name: Optional[str],
+    source_label: str,
+) -> Dict:
+    project = (tables.get("ObraProy") or [{}])[0]
+    parts = {r["CodPar"]: r for r in tables.get("ObraPart", []) if r.get("CodPar")}
+    lines = tables.get("ObraApun", [])
     materials = {
-        r["CodMat"]: r
-        for r in (_table(mdb_path, "ObraMate") if "ObraMate" in available else [])
-        if r.get("CodMat")
+        r["CodMat"]: r for r in tables.get("ObraMate", []) if r.get("CodMat")
     }
     equipments = {
-        r["CodEqu"]: r
-        for r in (_table(mdb_path, "ObraEqui") if "ObraEqui" in available else [])
-        if r.get("CodEqu")
+        r["CodEqu"]: r for r in tables.get("ObraEqui", []) if r.get("CodEqu")
     }
     labors = {
-        r["CodMan"]: r
-        for r in (_table(mdb_path, "ObraMano") if "ObraMano" in available else [])
-        if r.get("CodMan")
+        r["CodMan"]: r for r in tables.get("ObraMano", []) if r.get("CodMan")
     }
 
     def recipes(table_name: str) -> Dict[str, List[Dict[str, str]]]:
         grouped: Dict[str, List[Dict[str, str]]] = {}
-        if table_name not in available:
-            return grouped
-        for row in _table(mdb_path, table_name):
+        for row in tables.get(table_name, []):
             code = _text(row.get("CodPar"))
             if code:
                 grouped.setdefault(code, []).append(row)
@@ -154,9 +184,9 @@ def create_budget_from_mdb(
     if not lines:
         raise MdbImportError("El archivo no contiene líneas de presupuesto (ObraApun).")
 
-    base_name = name or _text(project.get("Descri")) or Path(mdb_path).stem
+    base_name = name or _text(project.get("Descri")) or Path(source_label).stem
     if base_name.lower() in ("obra sin descripción", "obra sin descripcion"):
-        base_name = Path(mdb_path).stem
+        base_name = Path(source_label).stem
     base_name = f"Importado MDB - {base_name}"
 
     budget = Budget(
@@ -164,10 +194,10 @@ def create_budget_from_mdb(
         name=base_name[:250],
         description=(
             "Presupuesto importado desde Microsoft Access/Maprex. "
-            f"Archivo: {Path(mdb_path).name}"
+            f"Archivo: {Path(source_label).name}"
         ),
         client_name=_text(project.get("Propie")) or None,
-        notes="Importación automática desde MDB. Verificar precios y APUs.",
+        notes="Importación automática desde MDB/CSV. Verificar precios y APUs.",
         currency=_currency(project),
         exchange_rate=1.0,
         fcas_percent=_num(project.get("PreSoc"), 417.0),
@@ -267,3 +297,23 @@ def create_budget_from_mdb(
         **created,
         "warnings": warnings,
     }
+
+
+def create_budget_from_mdb(
+    db: Session,
+    mdb_path: str,
+    user_id: str,
+    name: Optional[str] = None,
+) -> Dict:
+    tables = _read_mdb_tables(mdb_path)
+    return _build_budget(db, tables, user_id, name, mdb_path)
+
+
+def create_budget_from_csv_zip(
+    db: Session,
+    zip_path: str,
+    user_id: str,
+    name: Optional[str] = None,
+) -> Dict:
+    tables = _read_csv_zip(zip_path)
+    return _build_budget(db, tables, user_id, name, zip_path)

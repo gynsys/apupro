@@ -7,8 +7,8 @@ Access (`.mdb`, `.accdb` o `.prx`) como presupuestos de Costbase.
 
 1. El superadmin abre **Gestor de Presupuestos**.
 2. Pulsa **Importar MDB**.
-3. Selecciona el archivo Access.
-4. El backend ejecuta `mdbtools` y lee:
+3. Selecciona el archivo Access o un ZIP de CSV.
+4. El backend ejecuta `mdbtools` o lee el ZIP y obtiene:
    - `ObraProy`
    - `ObraApun`
    - `ObraPart`
@@ -21,6 +21,18 @@ Access (`.mdb`, `.accdb` o `.prx`) como presupuestos de Costbase.
 5. Crea un `Budget` nuevo con sus `BudgetItem` y componentes APU.
 6. Devuelve el resumen y el enlace al presupuesto.
 
+## Access antiguo
+
+Si el archivo es Access 1.0/2.0, `mdbtools` no puede abrirlo. El modal ofrece
+descargar:
+
+```text
+/tools/exportar_mdb_windows.ps1
+```
+
+Ese script usa DAO de 32 bits en Windows, exporta los 9 CSV y genera un ZIP
+listo para subir en el mismo modal.
+
 ## Seguridad
 
 - Solo el superadmin puede llamar al endpoint.
@@ -29,9 +41,9 @@ Access (`.mdb`, `.accdb` o `.prx`) como presupuestos de Costbase.
 
 ## Limitaciones
 
-- `mdbtools` no abre archivos Access 1.0/2.0 muy antiguos.
+- `mdbtools` no abre archivos Access 1.0/2.0.
 - Los archivos con contraseña no se pueden abrir sin la clave.
-- Si el archivo no es compatible, se debe exportar desde Access a CSV/Excel.
+- Si el archivo no es compatible, se debe usar el exportador Windows + ZIP.
 
 ## Backend
 

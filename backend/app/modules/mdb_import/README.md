@@ -10,12 +10,28 @@ Content-Type: multipart/form-data
 Campo: file
 ```
 
+Acepta `.mdb`, `.accdb`, `.prx` y `.zip`.
+
+El ZIP debe contener:
+
+```text
+ObraProy.csv
+ObraApun.csv
+ObraPart.csv
+ObraMate.csv
+ObraEqui.csv
+ObraMano.csv
+ObraPainMate.csv
+ObraPainEqui.csv
+ObraPainMano.csv
+```
+
 Solo superadmin.
 
 ## Requisitos
 
 - `mdbtools` instalado en la imagen (`mdb-tables`, `mdb-export`).
-- Archivo Access sin contraseña y con el esquema Maprex/Lulo.
+- Para Access 1.0/2.0, usar el ZIP de CSV generado desde Windows con DAO.
 
 ## Tablas leídas
 
@@ -48,6 +64,6 @@ ObraPainMano
 
 ## Limitaciones
 
-- `mdbtools` no soporta bases Access 1.0/2.0. Para esos casos hay que
-  exportar desde Access a CSV/Excel.
+- `mdbtools` no soporta bases Access 1.0/2.0. Para esos casos se debe usar el
+  exportador Windows y subir el ZIP de CSV.
 - Archivos con contraseña no se pueden abrir.

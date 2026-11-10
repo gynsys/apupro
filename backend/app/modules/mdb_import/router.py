@@ -11,12 +11,16 @@ from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints.arko import get_current_arko_admin
 from app.db.base import get_db
-from app.modules.mdb_import.service import MdbImportError, create_budget_from_mdb
+from app.modules.mdb_import.service import (
+    MdbImportError,
+    create_budget_from_csv_zip,
+    create_budget_from_mdb,
+)
 
 router = APIRouter()
 
 MAX_MDB_BYTES = 100 * 1024 * 1024
-ALLOWED_SUFFIXES = {".mdb", ".accdb", ".prx"}
+ALLOWED_SUFFIXES = {".mdb", ".accdb", ".prx", ".zip"}
 
 
 def _require_superadmin(current_user) -> None:
@@ -45,7 +49,7 @@ async def import_mdb_budget(
     if suffix not in ALLOWED_SUFFIXES:
         raise HTTPException(
             status_code=400,
-            detail="El archivo debe ser .mdb, .accdb o .prx.",
+            detail="El archivo debe ser .mdb, .accdb, .prx o .zip.",
         )
 
     tmp_path = None
@@ -64,10 +68,18 @@ async def import_mdb_budget(
                     )
                 tmp.write(chunk)
 
-        result = create_budget_from_mdb(
-            db=db,
-            mdb_path=tmp_path,
-            user_id=str(current_user.id),
+        result = (
+            create_budget_from_csv_zip(
+                db=db,
+                zip_path=tmp_path,
+                user_id=str(current_user.id),
+            )
+            if suffix == ".zip"
+            else create_budget_from_mdb(
+                db=db,
+                mdb_path=tmp_path,
+                user_id=str(current_user.id),
+            )
         )
         return result
     except HTTPException:

@@ -35,8 +35,8 @@ export default function ImportMdbModal({ isOpen, onClose, onImported }) {
     setResult(null);
     if (!nextFile) return;
     const lower = nextFile.name.toLowerCase();
-    if (!/\.(mdb|accdb|prx)$/.test(lower)) {
-      setError('Selecciona un archivo .mdb, .accdb o .prx.');
+    if (!/\.(mdb|accdb|prx|zip)$/.test(lower)) {
+      setError('Selecciona un archivo .mdb, .accdb, .prx o un ZIP de CSV.');
       return;
     }
     if (nextFile.size > MAX_BYTES) {
@@ -110,7 +110,7 @@ export default function ImportMdbModal({ isOpen, onClose, onImported }) {
                 <p className="mt-1 text-xs text-slate-500">
                   {file
                     ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
-                    : 'Formatos permitidos: .mdb, .accdb y .prx · máximo 100 MB'}
+                    : 'Formatos: .mdb, .accdb, .prx o ZIP de CSV · máximo 100 MB'}
                 </p>
                 <span className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 shadow-sm ring-1 ring-indigo-200">
                   <Upload className="h-3.5 w-3.5" /> Elegir archivo
@@ -119,7 +119,7 @@ export default function ImportMdbModal({ isOpen, onClose, onImported }) {
               <input
                 ref={inputRef}
                 type="file"
-                accept=".mdb,.accdb,.prx"
+                accept=".mdb,.accdb,.prx,.zip"
                 className="hidden"
                 onChange={(e) => selectFile(e.target.files?.[0] || null)}
               />
@@ -130,6 +130,16 @@ export default function ImportMdbModal({ isOpen, onClose, onImported }) {
                   Se creará un presupuesto nuevo con sus partidas, APUs, materiales, equipos y mano de obra.
                   No se modifica ninguna base Costbase.
                 </p>
+                <p className="mt-1 text-amber-800">
+                  Si el archivo es Access 1.0/2.0, expórtalo a CSV con el script de Windows y súbelo como ZIP.
+                </p>
+                <a
+                  href="/tools/exportar_mdb_windows.ps1"
+                  download
+                  className="mt-2 inline-flex items-center gap-1 font-bold text-indigo-700 underline underline-offset-2"
+                >
+                  Descargar exportador para Access antiguo
+                </a>
               </div>
 
               {error && (
