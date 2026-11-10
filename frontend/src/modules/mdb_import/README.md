@@ -24,14 +24,29 @@ Access (`.mdb`, `.accdb` o `.prx`) como presupuestos de Costbase.
 ## Access antiguo
 
 Si el archivo es Access 1.0/2.0, `mdbtools` no puede abrirlo. El modal ofrece
-descargar:
+dos opciones:
+
+### Puente local (recomendado)
+
+Descargar:
 
 ```text
-/tools/exportar_mdb_windows.ps1
+/tools/Instalador_Puente_CostBase.zip
 ```
 
-Ese script usa DAO de 32 bits en Windows, exporta los 9 CSV y genera un ZIP
-listo para subir en el mismo modal.
+Descomprimir, ejecutar `Instalar_Puente_CostBase.cmd` y dejar el puente activo.
+El puente escucha en `http://127.0.0.1:8765`, abre el MDB con DAO de 32 bits y
+devuelve un ZIP al navegador.
+
+### Exportador manual
+
+Descargar:
+
+```text
+/tools/Exportador_MDB_Windows.zip
+```
+
+Ejecutar `Exportar_MDB_Windows.cmd`, seleccionar el MDB y subir el ZIP generado.
 
 ## Seguridad
 

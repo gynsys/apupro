@@ -8,7 +8,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { importMdbBudget } from '../services/mdbImportService.js';
+import { importMdbBudget, checkLocalBridge, convertWithLocalBridge } from '../services/mdbImportService.js';
 
 const MAX_BYTES = 100 * 1024 * 1024;
 
@@ -18,6 +18,7 @@ export default function ImportMdbModal({ isOpen, onClose, onImported }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
+  const [bridgeStatus, setBridgeStatus] = useState('checking');
 
   useEffect(() => {
     if (isOpen) {
@@ -25,7 +26,14 @@ export default function ImportMdbModal({ isOpen, onClose, onImported }) {
       setUploading(false);
       setError('');
       setResult(null);
+      setBridgeStatus('checking');
+      let active = true;
+      checkLocalBridge().then((online) => {
+        if (active) setBridgeStatus(online ? 'online' : 'offline');
+      });
+      return () => { active = false; };
     }
+    return undefined;
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -51,7 +59,16 @@ export default function ImportMdbModal({ isOpen, onClose, onImported }) {
     setUploading(true);
     setError('');
     try {
-      const data = await importMdbBudget(file);
+      let uploadFile = file;
+      const isZip = /\.zip$/i.test(file.name);
+      if (!isZip && bridgeStatus === 'online') {
+        const zipBlob = await convertWithLocalBridge(file);
+        const baseName = file.name.replace(/\.[^.]+$/, '');
+        uploadFile = new File([zipBlob], `${baseName}_csv.zip`, {
+          type: 'application/zip',
+        });
+      }
+      const data = await importMdbBudget(uploadFile);
       setResult(data);
     } catch (err) {
       setError(err.message || 'No se pudo importar el archivo.');
@@ -124,23 +141,46 @@ export default function ImportMdbModal({ isOpen, onClose, onImported }) {
                 onChange={(e) => selectFile(e.target.files?.[0] || null)}
               />
 
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
-                <p className="font-bold">El archivo se procesa en el servidor</p>
-                <p className="mt-1 text-amber-800">
-                  Se creará un presupuesto nuevo con sus partidas, APUs, materiales, equipos y mano de obra.
-                  No se modifica ninguna base Costbase.
+              <div className={`rounded-xl border px-4 py-3 text-xs ${
+                bridgeStatus === 'online'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                  : 'border-amber-200 bg-amber-50 text-amber-900'
+              }`}>
+                <p className="flex items-center gap-2 font-bold">
+                  <span className={`h-2 w-2 rounded-full ${
+                    bridgeStatus === 'online'
+                      ? 'bg-emerald-500'
+                      : bridgeStatus === 'checking'
+                        ? 'animate-pulse bg-amber-500'
+                        : 'bg-slate-400'
+                  }`} />
+                  {bridgeStatus === 'online'
+                    ? 'Puente local conectado'
+                    : bridgeStatus === 'checking'
+                      ? 'Buscando puente local...'
+                      : 'Puente local no detectado'}
                 </p>
-                <p className="mt-1 text-amber-800">
-                  Si el archivo es Access 1.0/2.0, descarga el exportador, descomprime el ZIP,
-                  ejecuta <strong>Exportar_MDB_Windows.cmd</strong> con doble clic y sube el ZIP generado.
+                <p className="mt-1">
+                  {bridgeStatus === 'online'
+                    ? 'El .mdb se convierte en tu laptop y luego se sube a Costbase.'
+                    : 'Para Access 1.0/2.0 instala el puente local o usa el exportador manual.'}
                 </p>
-                <a
-                  href="/tools/Exportador_MDB_Windows.zip"
-                  download
-                  className="mt-2 inline-flex items-center gap-1 font-bold text-indigo-700 underline underline-offset-2"
-                >
-                  Descargar exportador Windows (.zip)
-                </a>
+                <div className="mt-2 flex flex-wrap gap-3">
+                  <a
+                    href="/tools/Instalador_Puente_CostBase.zip"
+                    download
+                    className="font-bold text-indigo-700 underline underline-offset-2"
+                  >
+                    Instalar puente local (.zip)
+                  </a>
+                  <a
+                    href="/tools/Exportador_MDB_Windows.zip"
+                    download
+                    className="font-bold text-indigo-700 underline underline-offset-2"
+                  >
+                    Exportador manual (.zip)
+                  </a>
+                </div>
               </div>
 
               {error && (
@@ -204,7 +244,7 @@ export default function ImportMdbModal({ isOpen, onClose, onImported }) {
               <button
                 type="button"
                 onClick={submit}
-                disabled={!file || uploading}
+                disabled={!file || uploading || bridgeStatus === 'checking'}
                 className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-40"
               >
                 {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}

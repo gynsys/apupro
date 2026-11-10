@@ -16,7 +16,7 @@ $ErrorActionPreference = "Stop"
 if ([Environment]::Is64BitProcess) {
     $ps32 = Join-Path $env:WINDIR "SysWOW64\WindowsPowerShell\v1.0\powershell.exe"
     if (-not (Test-Path $ps32)) {
-        throw "No se encontró PowerShell de 32 bits."
+        throw "No se encontro PowerShell de 32 bits."
     }
     & $ps32 -NoProfile -ExecutionPolicy Bypass -File $PSCommandPath -MdbPath $MdbPath
     exit $LASTEXITCODE
@@ -112,7 +112,7 @@ try {
     Write-Host "ZIP generado:"
     Write-Host $zipPath
     Write-Host ""
-    Write-Host "Súbelo en Costbase -> Gestor de Presupuestos -> Importar MDB."
+    Write-Host "Subelo en Costbase -> Gestor de Presupuestos -> Importar MDB."
 }
 finally {
     if (Test-Path $work) {
