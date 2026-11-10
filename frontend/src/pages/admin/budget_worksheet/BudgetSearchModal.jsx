@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Database, FileText, Sparkles, X, Plus, ChevronDown, Share2, Menu, Check } from 'lucide-react';
+import { Search, Database, FileText, Sparkles, X, Plus, Share2, Menu, Check } from 'lucide-react';
 import { CostbaseSearchBar as Cost360SearchBar } from '../../../modules/costbase/components/CostbaseSearchBar';
 
 export default function BudgetSearchModal({
@@ -32,8 +32,6 @@ export default function BudgetSearchModal({
   loadMoreSearchResults,
   onAddItem,
 }) {
-  const [modalDbDropdownOpen, setModalDbDropdownOpen] = useState(false);
-  const [modalBudgetDropdownOpen, setModalBudgetDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (!isOpen) return null;
@@ -211,95 +209,51 @@ export default function BudgetSearchModal({
 
         {/* Header Fila 2: Visible en pantallas medianas/grandes (desktop) para acceso directo rápido */}
         <div className="hidden sm:flex px-6 py-2 bg-amber-50/70 border-b border-amber-600/10 items-center gap-2 overflow-visible shrink-0">
-          {/* Dropdown Base de Datos Desktop */}
-          <div 
-            className="relative shrink-0"
-            onMouseEnter={() => setModalDbDropdownOpen(true)}
-            onMouseLeave={() => setModalDbDropdownOpen(false)}
-          >
-            <button
-              type="button"
-              onClick={() => setModalDbDropdownOpen(prev => !prev)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-xs text-xs sm:text-sm cursor-pointer whitespace-nowrap"
+          {/* Selector Base de Datos Desktop */}
+          <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm shadow-xs">
+            <Database size={14} className="text-amber-700 shrink-0" />
+            <select
+              value={activeDatabase?.is_budget ? '' : (activeDatabase?.id || 'master')}
+              onChange={(e) => {
+                const db = databases.find(d => d.id === e.target.value);
+                if (db) {
+                  setActiveDatabase(db);
+                  setSearchQuery('');
+                  setSearchCovenin('');
+                }
+              }}
+              className="bg-transparent outline-none font-medium text-slate-700 cursor-pointer max-w-[190px]"
+              title="Seleccionar base de datos"
             >
-              <Database size={14} className="text-amber-700 shrink-0" />
-              <span className="max-w-[120px] truncate">{activeDatabase?.name || 'Base de Datos'}</span>
-              <ChevronDown size={14} className={`shrink-0 transition-transform duration-200 ${modalDbDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {modalDbDropdownOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setModalDbDropdownOpen(false)} />
-                <div className="absolute top-full left-0 pt-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="bg-white border border-slate-200 rounded-xl shadow-xl min-w-[210px] overflow-hidden py-1">
-                    {databases.map(db => (
-                      <button
-                        key={db.id}
-                        type="button"
-                        onClick={() => {
-                          setActiveDatabase(db);
-                          setSearchQuery('');
-                          setSearchCovenin('');
-                          setModalDbDropdownOpen(false);
-                        }}
-                        className={`w-full text-left px-4 py-2 text-xs sm:text-sm hover:bg-slate-50 transition-colors flex items-center gap-2 cursor-pointer ${
-                          activeDatabase?.id === db.id ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700'
-                        }`}
-                      >
-                        <Database size={14} className="shrink-0" />
-                        <span className="truncate">{db.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
+              {activeDatabase?.is_budget && <option value="">Presupuesto activo</option>}
+              {databases.map(db => (
+                <option key={db.id} value={db.id}>{db.name}</option>
+              ))}
+            </select>
           </div>
 
-          {/* Dropdown Presupuestos Desktop */}
-          <div 
-            className="relative shrink-0"
-            onMouseEnter={() => setModalBudgetDropdownOpen(true)}
-            onMouseLeave={() => setModalBudgetDropdownOpen(false)}
-          >
-            <button
-              type="button"
-              onClick={() => setModalBudgetDropdownOpen(prev => !prev)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-xs text-xs sm:text-sm cursor-pointer whitespace-nowrap"
+          {/* Selector Presupuestos Desktop */}
+          <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm shadow-xs">
+            <FileText size={14} className="text-slate-500 shrink-0" />
+            <select
+              value={activeDatabase?.is_budget ? activeDatabase.id : ''}
+              onChange={(e) => {
+                const budgetId = e.target.value.replace(/^budget_/, '');
+                const selected = availableBudgets.find(b => String(b.id) === String(budgetId));
+                if (selected) {
+                  setActiveDatabase({ id: 'budget_' + selected.id, name: selected.name, is_budget: true });
+                  setSearchQuery('');
+                  setSearchCovenin('');
+                }
+              }}
+              className="bg-transparent outline-none font-medium text-slate-700 cursor-pointer max-w-[190px]"
+              title="Seleccionar presupuesto"
             >
-              <FileText size={14} className="text-slate-500 shrink-0" />
-              <span>Presupuestos</span>
-              <ChevronDown size={14} className={`shrink-0 transition-transform duration-200 ${modalBudgetDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {modalBudgetDropdownOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setModalBudgetDropdownOpen(false)} />
-                <div className="absolute top-full left-0 pt-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="bg-white border border-slate-200 rounded-xl shadow-xl min-w-[210px] overflow-hidden py-1 max-h-60 overflow-y-auto">
-                    {availableBudgets.filter(b => b.id !== currentBudgetId).map(b => (
-                      <button
-                        key={b.id}
-                        type="button"
-                        onClick={() => {
-                          setActiveDatabase({ id: 'budget_' + b.id, name: b.name, is_budget: true });
-                          setSearchQuery('');
-                          setSearchCovenin('');
-                          setModalBudgetDropdownOpen(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2 cursor-pointer"
-                      >
-                        <FileText size={14} className="text-slate-400 shrink-0" />
-                        <span className="truncate">{b.name}</span>
-                      </button>
-                    ))}
-                    {availableBudgets.length <= 1 && (
-                      <div className="px-4 py-3 text-xs sm:text-sm text-slate-500 italic text-center">
-                        No hay otros presupuestos
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
+              <option value="">Presupuestos...</option>
+              {availableBudgets.filter(b => String(b.id) !== String(currentBudgetId)).map(b => (
+                <option key={b.id} value={'budget_' + b.id}>{b.name}</option>
+              ))}
+            </select>
           </div>
 
           {/* Botón Crear APU con IA Desktop */}
