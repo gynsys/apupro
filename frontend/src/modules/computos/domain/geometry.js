@@ -78,7 +78,7 @@ function round2(val) {
 
 function parseNum(v) {
   if (v === '' || v == null) return null;
-  const n = parseFloat(String(v).replace(',', '.'));
+  const n = parseFloat(String(v).replace(',', '.').replace(/\.{2,}/g, '.'));
   return isNaN(n) ? null : n;
 }
 

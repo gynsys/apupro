@@ -242,9 +242,9 @@ export function useBudgetWorksheet() {
         const dbId = activeDatabase?.id || 'master';
         const apuData = await costbaseService.fetchApuDetails(apuCode, dbId);
         if (apuData) {
-          materials = (apuData.materiales || []).map(m => ({
-            id: `m-${m.codigo || m.CodMat || m.ref_code || Math.random()}`,
-            codigo: m.codigo || m.CodMat || m.ref_code || '',
+          materials = (apuData.materiales || []).map((m, idx) => ({
+            id: 'm-' + (m.cod_ins || m.codigo || m.CodMat || m.ref_code || idx),
+            codigo: m.cod_ins || m.codigo || m.CodMat || m.ref_code || '',
             descripcion: m.descripcion || m.Descri || '',
             unidad: m.unidad || m.UniMat || '',
             cantidad: Number(m.cantidad || m.CanIns || 0),
@@ -252,9 +252,9 @@ export function useBudgetWorksheet() {
             precio_unitario: Number(m.precio_unitario || m.CosMat || m.precio || 0),
             origen: activeDatabase?.is_master ? 'historico' : 'base_personalizada'
           }));
-          equipments = (apuData.equipos || []).map(e => ({
-            id: `e-${e.codigo || e.CodEqu || e.ref_code || Math.random()}`,
-            codigo: e.codigo || e.CodEqu || e.ref_code || '',
+          equipments = (apuData.equipos || []).map((e, idx) => ({
+            id: 'e-' + (e.cod_ins || e.codigo || e.CodEqu || e.ref_code || idx),
+            codigo: e.cod_ins || e.codigo || e.CodEqu || e.ref_code || '',
             descripcion: e.descripcion || e.Descri || '',
             unidad: e.unidad || 'Día',
             cantidad: Number(e.cantidad || e.CanIns || 0),
@@ -262,9 +262,9 @@ export function useBudgetWorksheet() {
             precio_unitario: Number(e.precio_unitario || e.CosDia || e.precio || 0),
             origen: activeDatabase?.is_master ? 'historico' : 'base_personalizada'
           }));
-          labors = (apuData.mano_obra || []).map(l => ({
-            id: `l-${l.codigo || l.CodMan || l.ref_code || Math.random()}`,
-            codigo: l.codigo || l.CodMan || l.ref_code || '',
+          labors = (apuData.mano_obra || []).map((l, idx) => ({
+            id: 'l-' + (l.cod_ins || l.codigo || l.CodMan || l.ref_code || idx),
+            codigo: l.cod_ins || l.codigo || l.CodMan || l.ref_code || '',
             descripcion: l.descripcion || l.Descri || '',
             unidad: l.unidad || 'Día',
             cantidad: Number(l.cantidad || l.CanIns || 0),

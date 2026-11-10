@@ -159,7 +159,12 @@ function computePartial(p, parentUnit = '') {
   if (p.geometryType && p.geometryType !== GEOMETRY_TYPES.RECTANGLE) {
     const geomResult = computeGeometryBase(p, normUnit || 'M3');
     if (geomResult.baseGeom !== null) {
-      const parcial = round2(geomResult.baseGeom * multFactor * multDist * t);
+      const is3DGeometryWithDistance = (
+        (p.geometryType === GEOMETRY_TYPES.TRAPEZOID || p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES) &&
+        (normUnit === 'M3' || (!normUnit && geomResult.baseGeom > 0))
+      );
+      const effectiveDist = is3DGeometryWithDistance ? 1 : multDist;
+      const parcial = round2(geomResult.baseGeom * multFactor * effectiveDist * t);
       p.partial = parcial;
       p.formula = t !== 1 ? `${t} × [${geomResult.formulaStr}]` : geomResult.formulaStr;
       if (normUnit === 'M3' || (!normUnit && geomResult.baseGeom > 0)) {
@@ -348,7 +353,12 @@ function recomputeRow(row, field, value) {
   if (updated.geometryType && updated.geometryType !== GEOMETRY_TYPES.RECTANGLE) {
     const geomResult = computeGeometryBase(updated, updated.unit);
     if (geomResult.baseGeom !== null) {
-      const parcial = round2(geomResult.baseGeom * multFactor * multDist);
+      const is3DGeometryWithDistance = (
+        (updated.geometryType === GEOMETRY_TYPES.TRAPEZOID || updated.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES) &&
+        String(updated.unit || '').trim().toUpperCase() === 'M3'
+      );
+      const effectiveDist = is3DGeometryWithDistance ? 1 : multDist;
+      const parcial = round2(geomResult.baseGeom * multFactor * effectiveDist);
       const total = round2(parcial * t);
       updated.partial = parcial;
       updated.quantity = total;

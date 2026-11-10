@@ -235,4 +235,36 @@ describe('Steel Rebar Diameter Selection & Factor Synchronization', () => {
     // 5m * 2 barras = 10 ml * 0.559 = 5.59 kg
     expect(target.quantity).toBe(5.59);
   });
+
+  it('calculates 3-sided triangles with thickness without double-multiplying distance', () => {
+    // Triangle 1: sides 1.67, 1.00, 1.20 with thickness 0.23m
+    const t1 = {
+      id: 'tri-1',
+      unit: 'M3',
+      geometryType: 'triangle_3_sides',
+      length: 1.67,
+      width: 1.00,
+      height: 1.20,
+      distance: 0.23,
+      times: 1,
+    };
+    const res1 = recomputeRow(t1, 'distance', 0.23);
+    expect(res1.quantity).toBe(0.14);
+    expect(res1.partial).toBe(0.14);
+
+    // Triangle 2: sides 1.47 (with typo 1..47), 1.00, 1.07 with thickness 0.23m
+    const t2 = {
+      id: 'tri-2',
+      unit: 'M3',
+      geometryType: 'triangle_3_sides',
+      length: '1..47',
+      width: 1.00,
+      height: 1.07,
+      distance: 0.23,
+      times: 1,
+    };
+    const res2 = recomputeRow(t2, 'distance', 0.23);
+    expect(res2.quantity).toBe(0.12);
+    expect(res2.partial).toBe(0.12);
+  });
 });
