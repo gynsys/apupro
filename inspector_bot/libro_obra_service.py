@@ -10,10 +10,11 @@ import copy
 import logging
 import os
 import re
+import shutil
 import unicodedata
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import openpyxl
 from openpyxl.cell.cell import MergedCell
@@ -22,8 +23,11 @@ from openpyxl.worksheet.copier import WorksheetCopy
 
 from inspector_bot.config import DATA_DIR
 from inspector_bot.parser import format_engineer_name, resolve_single_inspector
+from inspector_bot.project_store import save_project_metadata
 
 logger = logging.getLogger(__name__)
+
+SPANISH_DAYS: List[str] = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 
 THIN_SIDE = Side(border_style="thin", color="000000")
 THIN_BORDER = Border(left=THIN_SIDE, right=THIN_SIDE, top=THIN_SIDE, bottom=THIN_SIDE)
@@ -980,3 +984,230 @@ def load_sheet_entry_data(book_path: Union[str, Path], sheet_name: str) -> Tuple
     }
 
     return entry_data, general_data, obra
+
+
+def parse_date_string(date_str: str) -> datetime:
+    """
+    Parsea una cadena de texto a un objeto datetime.
+    Soporta formato ISO (AAAA-MM-DD) y formato latino tradicional (DD/MM/AAAA o DD-MM-AAAA).
+    Valida y genera ValueError temprano si el formato no es válido.
+    """
+    if not date_str or not str(date_str).strip():
+        raise ValueError("La fecha no puede estar vacía.")
+
+    clean_str = str(date_str).strip()
+
+    # Formato ISO YYYY-MM-DD
+    m_iso = re.search(r"^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$", clean_str)
+    if m_iso:
+        y, mo, d = int(m_iso.group(1)), int(m_iso.group(2)), int(m_iso.group(3))
+        return datetime(y, mo, d)
+
+    # Formato latino DD/MM/YYYY o DD-MM-YYYY
+    m_lat = re.search(r"^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$", clean_str)
+    if m_lat:
+        d, mo, y = int(m_lat.group(1)), int(m_lat.group(2)), int(m_lat.group(3))
+        if y < 100:
+            y += 2000
+        return datetime(y, mo, d)
+
+    raise ValueError(f"Formato de fecha inválido: '{date_str}'. Por favor usa DD/MM/AAAA (ej: 01/11/2026).")
+
+
+def format_date_es(dt: datetime) -> str:
+    """Formatea un objeto datetime en español indicando el día de la semana (ej: Lunes 26/10/2026)."""
+    if not isinstance(dt, datetime):
+        raise ValueError("El parámetro dt debe ser una instancia de datetime.")
+    day_name = SPANISH_DAYS[dt.weekday()]
+    return f"{day_name} {dt.strftime('%d/%m/%Y')}"
+
+
+def count_workdays_between(start_dt: datetime, end_dt: datetime, valid_workdays: Set[int]) -> int:
+    """
+    Cuenta cuántos días hábiles transcurrieron entre start_dt (exclusivo) y end_dt (inclusivo)
+    con base en el conjunto de días laborables válidos.
+    """
+    if end_dt <= start_dt:
+        return 0
+    cur = start_dt + timedelta(days=1)
+    workdays = 0
+    while cur <= end_dt:
+        if cur.weekday() in valid_workdays:
+            workdays += 1
+        cur += timedelta(days=1)
+    return workdays
+
+
+def add_workdays(start_dt: datetime, num_workdays: int, valid_workdays: Set[int]) -> datetime:
+    """Añade una cantidad de días hábiles a una fecha base respetando los días hábiles válidos."""
+    if num_workdays < 0:
+        raise ValueError("El número de días hábiles no puede ser negativo.")
+    cur = start_dt
+    added = 0
+    while added < num_workdays:
+        cur += timedelta(days=1)
+        if cur.weekday() in valid_workdays:
+            added += 1
+    return cur
+
+
+def calculate_start_date_shift_preview(project_name_or_filename: str, new_start_date_str: str) -> Dict[str, Any]:
+    """
+    Calcula la vista previa del desplazamiento secuencial de fechas del libro a partir
+    de una nueva fecha de inicio para la Hoja 1, preservando los días hábiles y detectando
+    saltos u omisiones de jornadas en el libro de obra.
+    """
+    if not project_name_or_filename or not project_name_or_filename.strip():
+        raise ValueError("El nombre o archivo de proyecto no puede estar vacío.")
+
+    # 1. Localizar archivo del libro
+    book_path = find_existing_project_book(project_name_or_filename)
+    if not book_path:
+        direct_path = BOOKS_DIR / project_name_or_filename
+        if direct_path.exists():
+            book_path = direct_path
+        else:
+            raise FileNotFoundError(f"No se encontró el libro de obra para '{project_name_or_filename}'.")
+
+    # 2. Cargar libro y recolectar hojas diarias
+    wb = openpyxl.load_workbook(book_path, data_only=True)
+    fixed_sheets = {"DATOS GENERALES", "ACTAS"}
+    daily_sheets = [s for s in wb.sheetnames if s not in fixed_sheets]
+    if not daily_sheets:
+        raise ValueError("El libro de obra seleccionado no tiene hojas diarias asentadas.")
+
+    sheet_dates: List[Tuple[str, datetime]] = []
+    for s_name in daily_sheets:
+        dt = get_sheet_date(wb[s_name])
+        if dt != datetime.max:
+            sheet_dates.append((s_name, dt))
+
+    if not sheet_dates:
+        raise ValueError("No se pudieron leer fechas válidas en las hojas diarias del libro.")
+
+    # Ordenar por fecha cronológica para reconocer inequívocamente la primera hoja
+    sheet_dates.sort(key=lambda item: item[1])
+    first_sheet_name, old_start_date = sheet_dates[0]
+
+    new_start_date = parse_date_string(new_start_date_str)
+    if old_start_date == new_start_date:
+        raise ValueError(
+            f"La nueva fecha ({new_start_date_str}) es idéntica a la fecha actual de la Hoja {first_sheet_name}."
+        )
+
+    # 3. Determinar régimen laboral del libro (Lunes a Viernes por defecto; incluye fines de semana si ya existían)
+    valid_workdays: Set[int] = {0, 1, 2, 3, 4}
+    for _, dt in sheet_dates:
+        if dt.weekday() in (5, 6):
+            valid_workdays.add(dt.weekday())
+    if new_start_date.weekday() in (5, 6):
+        valid_workdays.add(new_start_date.weekday())
+
+    # 4. Calcular el desplazamiento secuencial por días hábiles
+    sheet_shifts: List[Dict[str, Any]] = []
+    for s_name, old_dt in sheet_dates:
+        workday_offset = count_workdays_between(old_start_date, old_dt, valid_workdays)
+        new_dt = add_workdays(new_start_date, workday_offset, valid_workdays)
+        sheet_shifts.append({
+            "sheet_name": s_name,
+            "old_date": old_dt,
+            "new_date": new_dt,
+            "workday_offset": workday_offset,
+        })
+
+    # 5. Detección robusta de saltos (gaps / jornadas laborales omitidas)
+    gaps: List[Dict[str, Any]] = []
+    for i in range(len(sheet_shifts) - 1):
+        s_curr = sheet_shifts[i]
+        s_next = sheet_shifts[i + 1]
+        dt1 = s_curr["new_date"]
+        dt2 = s_next["new_date"]
+        if (dt2 - dt1).days > 1:
+            missing_workdays: List[datetime] = []
+            cur = dt1 + timedelta(days=1)
+            while cur < dt2:
+                if cur.weekday() in valid_workdays:
+                    missing_workdays.append(cur)
+                cur += timedelta(days=1)
+            if missing_workdays:
+                gaps.append({
+                    "from_sheet": s_curr["sheet_name"],
+                    "to_sheet": s_next["sheet_name"],
+                    "from_date": dt1,
+                    "to_date": dt2,
+                    "missing_workdays": missing_workdays,
+                })
+
+    # Obtener nombre legible del proyecto
+    gen_data = extract_general_data_from_workbook(wb)
+    clean_project_name = gen_data.get("obra") or book_path.stem.replace("_Libro_de_Obra", "").replace("_", " ")
+
+    return {
+        "book_path": book_path,
+        "book_filename": book_path.name,
+        "project_name": clean_project_name,
+        "first_sheet_name": first_sheet_name,
+        "old_start_date": old_start_date,
+        "new_start_date": new_start_date,
+        "total_sheets": len(sheet_shifts),
+        "sheet_shifts": sheet_shifts,
+        "gaps": gaps,
+        "valid_workdays": sorted(list(valid_workdays)),
+    }
+
+
+def apply_start_date_shift(
+    project_name_or_filename: str,
+    new_start_date_str: str,
+    user_id: Optional[int] = None,
+) -> Tuple[Path, Dict[str, Any]]:
+    """
+    Aplica de forma atómica y segura el cambio de fecha de inicio en el libro de obra Excel.
+    Crea una copia de respaldo antes de modificar, actualiza las celdas G1 de todas las hojas,
+    actualiza G21 en DATOS GENERALES, reordena las hojas y actualiza los metadatos en SQLite.
+    """
+    preview = calculate_start_date_shift_preview(project_name_or_filename, new_start_date_str)
+    book_path: Path = preview["book_path"]
+
+    # 1. Crear respaldo preventivo
+    backups_dir = DATA_DIR / "backups"
+    backups_dir.mkdir(parents=True, exist_ok=True)
+    timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_file = backups_dir / f"{book_path.stem}_backup_preshift_{timestamp_str}.xlsx"
+    shutil.copy2(book_path, backup_file)
+    logger.info("Respaldo creado con éxito en: %s", backup_file)
+
+    # 2. Cargar libro con fórmulas preservadas (data_only=False)
+    wb = openpyxl.load_workbook(book_path, data_only=False)
+
+    # 3. Actualizar la celda G1 de cada hoja diaria con su nueva fecha proyectada
+    for item in preview["sheet_shifts"]:
+        s_name = item["sheet_name"]
+        new_dt = item["new_date"]
+        if s_name in wb.sheetnames:
+            ws = wb[s_name]
+            safe_set_cell_value(ws, "G1", f"FECHA: {new_dt.strftime('%d/%m/%Y')}")
+
+    # 4. Actualizar fecha de inicio en DATOS GENERALES si existe
+    new_start_formatted = preview["new_start_date"].strftime("%d/%m/%Y")
+    if "DATOS GENERALES" in wb.sheetnames:
+        safe_set_cell_value(wb["DATOS GENERALES"], "G21", new_start_formatted)
+
+    # 5. Actualizar en ACTAS (F6: fecha de acta de inicio) si la hoja existe
+    if "ACTAS" in wb.sheetnames:
+        safe_set_cell_value(wb["ACTAS"], "F6", new_start_formatted)
+
+    # 6. Reordenar cronológicamente y normalizar numeración
+    sort_sheets_by_date(wb)
+    wb.save(book_path)
+    logger.info("Libro de Obra actualizado exitosamente con nueva fecha de inicio en: %s", book_path)
+
+    # 7. Actualizar persistencia en SQLite
+    try:
+        project_name = preview["project_name"]
+        save_project_metadata(project_name, user_id, {"fecha_inicio": new_start_formatted})
+    except Exception as exc:
+        logger.error("Error al actualizar SQLite para project_metadata con nueva fecha: %s", exc, exc_info=True)
+
+    return book_path, preview
+

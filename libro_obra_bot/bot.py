@@ -18,17 +18,22 @@ from telegram.ext import (
 from libro_obra_bot.config import BOT_TOKEN
 from libro_obra_bot.conversation_libro import (
     ask_confirm_delete_libro,
+    execute_confirm_shift_date,
     execute_delete_libro,
     execute_save_pending_libro_entry,
     get_libro_obra_conversation_handler,
     handle_cancel_or_back_preview,
+    handle_cancel_shift_date,
     handle_discard_pending_libro_entry,
     handle_download_libro,
     handle_menu_editar_hoja,
+    handle_menu_modificar_fecha_inicio,
+    handle_process_new_start_date,
     handle_recuperar_mensaje,
     handle_regenerate_libro_desc,
     handle_save_edited_field,
     handle_select_book_to_edit,
+    handle_select_book_to_shift,
     handle_select_sheet_to_edit,
     handle_show_edit_fields_menu,
     handle_start_edit_libro_field,
@@ -75,6 +80,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "• /libros o /ver - Ver libros guardados y descargar Excel\n"
         "• /editar - Modificar una hoja asentada previamente\n"
         "• /recuperar - Recuperar el texto del último reporte enviado para corregirlo y reenviarlo\n"
+        "• /fecha_inicio - Modificar la fecha de inicio de la obra y desplazar las hojas con auditoría de saltos\n"
         "• /borrar_libro - Eliminar un libro de obra\n"
         "• /cancelar - Cancelar el flujo actual"
     )
@@ -117,6 +123,8 @@ async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     context.user_data.pop("libro_flow", None)
     context.user_data.pop("pending_libro_entry", None)
     context.user_data.pop("pending_edit_field", None)
+    context.user_data.pop("awaiting_new_start_date", None)
+    context.user_data.pop("pending_start_date_shift", None)
     if update.message:
         await update.message.reply_text(
             "🔄 Operación cancelada. Regresando al panel principal.",
@@ -147,6 +155,12 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         await help_command(update, context)
     elif data == "btn_libro_recuperar_msg":
         await handle_recuperar_mensaje(update, context)
+    elif data == "btn_libro_modificar_fecha_inicio":
+        await handle_menu_modificar_fecha_inicio(update, context)
+    elif data == "btn_confirm_shift_date":
+        await execute_confirm_shift_date(update, context)
+    elif data == "btn_cancel_shift_date":
+        await handle_cancel_shift_date(update, context)
     elif data == "btn_libro_guardar_entry":
         await execute_save_pending_libro_entry(update, context)
     elif data == "btn_libro_edit_desc":
@@ -175,6 +189,8 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         await handle_discard_pending_libro_entry(update, context)
     elif data.startswith("btn_edit_book_"):
         await handle_select_book_to_edit(update, context)
+    elif data.startswith("btn_shift_book_"):
+        await handle_select_book_to_shift(update, context)
     elif data.startswith("btn_edit_sheet_"):
         await handle_select_sheet_to_edit(update, context)
     elif data.startswith("btn_dl_libro_"):
@@ -191,6 +207,12 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     text = update.message.text.strip()
+
+    # Si el usuario está ingresando una nueva fecha de inicio para la obra
+    if context.user_data.get("awaiting_new_start_date"):
+        processed = await handle_process_new_start_date(update, context, text)
+        if processed:
+            return
 
     # Si el usuario está editando un campo en la vista previa del libro
     if context.user_data.get("pending_edit_field"):
@@ -247,6 +269,8 @@ def create_bot_app() -> Application:
     app.add_handler(CommandHandler("ver", libros_command))
     app.add_handler(CommandHandler("editar", editar_command))
     app.add_handler(CommandHandler("recuperar", handle_recuperar_mensaje))
+    app.add_handler(CommandHandler("fecha_inicio", handle_menu_modificar_fecha_inicio))
+    app.add_handler(CommandHandler("modificar_fecha_inicio", handle_menu_modificar_fecha_inicio))
     app.add_handler(CommandHandler("recuperar_mensaje", handle_recuperar_mensaje))
     app.add_handler(CommandHandler("mensaje", handle_recuperar_mensaje))
     app.add_handler(CommandHandler("borrar_libro", borrar_libro_command))

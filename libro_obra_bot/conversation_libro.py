@@ -16,6 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import openpyxl
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -37,6 +38,8 @@ from libro_obra_bot.ai_labor_describer import generate_labor_description_ai
 from libro_obra_bot.config import PHOTOS_DIR
 from libro_obra_bot.google_drive_service import upload_file_to_drive
 from libro_obra_bot.keyboards import (
+    get_cancel_shift_date_keyboard,
+    get_confirm_shift_date_keyboard,
     get_home_keyboard,
     get_libro_main_keyboard,
     get_libro_menu_keyboard,
@@ -44,10 +47,15 @@ from libro_obra_bot.keyboards import (
 from libro_obra_bot.libro_obra_service import (
     BOOKS_DIR,
     add_daily_entry_to_book,
+    apply_start_date_shift,
+    calculate_start_date_shift_preview,
     delete_project_book,
+    format_date_es,
+    get_sheet_date,
     list_all_project_books,
     list_book_sheets,
     load_sheet_entry_data,
+    parse_date_string,
     update_saved_sheet,
 )
 from libro_obra_bot.parser import (
@@ -1774,6 +1782,355 @@ async def handle_select_sheet_to_edit(update: Update, context: ContextTypes.DEFA
             await query.message.reply_text(f"❌ Error al cargar datos de la hoja #{sheet_name}: {exc}")
 
 
+
+async def handle_menu_modificar_fecha_inicio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Maneja el botón '📅 Modificar Fecha de Inicio' del panel del Libro de Obra."""
+    query = update.callback_query
+    msg_target = query.message if query else update.message
+    if not msg_target:
+        return
+    if query:
+        await query.answer()
+
+    books = list_all_project_books()
+    if not books:
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("✍️ Llenar Primera Hoja", callback_data="btn_libro_registrar")],
+            [InlineKeyboardButton("🔙 Volver a Libro de Obra", callback_data="btn_menu_libro")],
+        ])
+        await msg_target.reply_text(
+            "ℹ️ *No tienes ningún Libro de Obra guardado actualmente.*\n\n"
+            "Registra primero una hoja para poder modificar la fecha de inicio.",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=kb,
+        )
+        return
+
+    context.user_data["saved_books_cache"] = [b["filename"] for b in books]
+
+    # Si solo hay un libro, pedimos directamente la nueva fecha
+    if len(books) == 1:
+        await _prompt_new_start_date_for_book(update, context, books[0]["filename"], books[0]["project_name"])
+        return
+
+    # Si hay múltiples libros, mostramos selector
+    buttons: List[List[InlineKeyboardButton]] = []
+    for idx, b in enumerate(books):
+        p_name = b["project_name"]
+        short_title = (p_name[:28] + "...") if len(p_name) > 28 else p_name
+        buttons.append([
+            InlineKeyboardButton(f"🏗 {short_title}", callback_data=f"btn_shift_book_{idx}")
+        ])
+    buttons.append([InlineKeyboardButton("🔙 Volver a Libro de Obra", callback_data="btn_menu_libro")])
+
+    await msg_target.reply_text(
+        "📅 *Modificar Fecha de Inicio del Libro de Obra*\n\n"
+        "Selecciona el proyecto cuyo cronograma de hojas deseas desplazar:",
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=InlineKeyboardMarkup(buttons),
+    )
+
+
+async def handle_select_book_to_shift(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Maneja la selección de un libro específico para desplazar su fecha de inicio."""
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+
+    data_str = query.data or ""
+    idx_str = data_str.replace("btn_shift_book_", "").strip()
+    try:
+        idx = int(idx_str)
+        cache = context.user_data.get("saved_books_cache", [])
+        if not (0 <= idx < len(cache)):
+            books = list_all_project_books()
+            cache = [b["filename"] for b in books]
+            context.user_data["saved_books_cache"] = cache
+        filename = cache[idx]
+        books = list_all_project_books()
+        p_name = filename
+        for b in books:
+            if b["filename"] == filename:
+                p_name = b["project_name"]
+                break
+        await _prompt_new_start_date_for_book(update, context, filename, p_name)
+    except Exception as exc:
+        logger.error("Error al seleccionar libro para desplazar fecha %s: %s", idx_str, exc, exc_info=True)
+        if query.message:
+            await query.message.reply_text(f"❌ Error al abrir libro: {exc}")
+
+
+async def _prompt_new_start_date_for_book(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    filename: str,
+    project_name: str,
+) -> None:
+    """Inspecciona el libro y solicita al usuario ingresar la nueva fecha de inicio."""
+    msg_target = update.callback_query.message if update.callback_query else update.message
+    if not msg_target:
+        return
+
+    book_path = BOOKS_DIR / filename
+    try:
+        wb = openpyxl.load_workbook(book_path, data_only=True)
+        fixed_sheets = {"DATOS GENERALES", "ACTAS"}
+        daily_sheets = [s for s in wb.sheetnames if s not in fixed_sheets]
+        if not daily_sheets:
+            await msg_target.reply_text(
+                f"ℹ️ El libro de la obra *{_clean_md(project_name)}* no contiene hojas diarias de reporte.",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=get_libro_main_keyboard(),
+            )
+            return
+
+        sheet_dates: List[Tuple[str, datetime]] = []
+        for s in daily_sheets:
+            dt = get_sheet_date(wb[s])
+            if dt != datetime.max:
+                sheet_dates.append((s, dt))
+
+        if not sheet_dates:
+            await msg_target.reply_text(
+                "❌ No se encontraron fechas válidas asentadas en las hojas del libro.",
+                reply_markup=get_libro_main_keyboard(),
+            )
+            return
+
+        sheet_dates.sort(key=lambda x: x[1])
+        first_sheet_name, old_start_date = sheet_dates[0]
+
+        context.user_data["awaiting_new_start_date"] = {
+            "filename": filename,
+            "project_name": project_name,
+            "old_start_date": old_start_date.strftime("%d/%m/%Y"),
+            "first_sheet_name": first_sheet_name,
+            "total_sheets": len(sheet_dates),
+        }
+
+        old_start_str = format_date_es(old_start_date)
+        prompt_text = (
+            f"📅 *Modificar Fecha de Inicio del Libro de Obra*\n\n"
+            f"🏗 Obra: *{_clean_md(project_name)}*\n"
+            f"• Hojas diarias asentadas: *{len(sheet_dates)}*\n"
+            f"• Fecha de inicio actual (Hoja #{first_sheet_name}): *{old_start_str}*\n\n"
+            f"✍️ *Por favor escribe la NUEVA fecha de inicio para la Hoja 1:*\n"
+            f"Formato: `DD/MM/AAAA` (ejemplo: `02/11/2026`).\n\n"
+            f"💡 _El sistema ajustará secuencialmente todas las hojas posteriores respetando los días hábiles "
+            f"y te mostrará una vista previa con la auditoría de saltos antes de aplicar los cambios._"
+        )
+
+        sent = await msg_target.reply_text(
+            prompt_text,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_cancel_shift_date_keyboard(),
+        )
+        if sent:
+            track_menu_message(context, sent.message_id)
+
+    except Exception as exc:
+        logger.error("Error al preparar cambio de fecha para %s: %s", filename, exc, exc_info=True)
+        await msg_target.reply_text(f"❌ Error al consultar el libro: {exc}")
+
+
+async def handle_process_new_start_date(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    date_text: str,
+) -> bool:
+    """
+    Procesa la nueva fecha de inicio ingresada por el usuario, valida el formato,
+    calcula la proyección secuencial por días hábiles, detecta omisiones (saltos)
+    y despliega la vista previa con botones de confirmación.
+    """
+    await_info = context.user_data.get("awaiting_new_start_date")
+    if not await_info:
+        return False
+
+    msg_target = update.message or (update.callback_query.message if update.callback_query else None)
+    if not msg_target:
+        return False
+
+    filename = await_info["filename"]
+    clean_date = date_text.strip()
+
+    try:
+        preview = calculate_start_date_shift_preview(filename, clean_date)
+    except ValueError as val_err:
+        await msg_target.reply_text(
+            f"⚠️ *Fecha no válida:* {val_err}\n\n"
+            "Por favor escribe una fecha válida en formato `DD/MM/AAAA` (ejemplo: `02/11/2026`):",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_cancel_shift_date_keyboard(),
+        )
+        return True
+    except Exception as exc:
+        logger.error("Error al calcular vista previa de desplazamiento: %s", exc, exc_info=True)
+        await msg_target.reply_text(
+            f"❌ Error al analizar el libro: {exc}",
+            reply_markup=get_cancel_shift_date_keyboard(),
+        )
+        return True
+
+    context.user_data["pending_start_date_shift"] = preview
+
+    old_st = format_date_es(preview["old_start_date"])
+    new_st = format_date_es(preview["new_start_date"])
+    p_name = _clean_md(preview["project_name"])
+    total = preview["total_sheets"]
+
+    lines: List[str] = [
+        "📅 *VISTA PREVIA: MODIFICACIÓN DE FECHA DE INICIO*",
+        f"🏗 Obra: *{p_name}*",
+        "",
+        f"• Fecha de inicio anterior: `{old_st}`",
+        f"• Nueva fecha de inicio: *{new_st}*",
+        f"• Total de hojas a desplazar: *{total}*",
+        "",
+        "📋 *Cronograma proyectado de hojas:*",
+    ]
+
+    shifts = preview["sheet_shifts"]
+    if len(shifts) <= 12:
+        for s in shifts:
+            lines.append(f"• Hoja #{s['sheet_name']}: {format_date_es(s['new_date'])}")
+    else:
+        for s in shifts[:5]:
+            lines.append(f"• Hoja #{s['sheet_name']}: {format_date_es(s['new_date'])}")
+        lines.append(f"  _... ({len(shifts) - 8} hojas intermedias ajustadas correlativamente) ..._")
+        for s in shifts[-3:]:
+            lines.append(f"• Hoja #{s['sheet_name']}: {format_date_es(s['new_date'])}")
+
+    # Auditoría de saltos / omisiones de días laborales
+    gaps = preview["gaps"]
+    lines.append("")
+    lines.append("🔍 *Auditoría de Saltos de Labor:*")
+    if gaps:
+        total_missing = sum(len(g["missing_workdays"]) for g in gaps)
+        lines.append(f"⚠️ *Se detectaron {len(gaps)} salto(s) ({total_missing} día(s) hábil(es) sin asentar):*")
+        for g in gaps:
+            d_str = ", ".join(format_date_es(d) for d in g["missing_workdays"])
+            lines.append(f"• Entre Hoja #{g['from_sheet']} y Hoja #{g['to_sheet']}: Falta asentar *{d_str}*")
+        lines.append("")
+        lines.append("💡 _El cronograma proyectado preservó los días hábiles. Recuerda que deberás asentar estas hojas pendientes en el libro cuando corresponda._")
+    else:
+        lines.append("✅ *Cronograma continuo:* No se detectaron saltos ni omisiones en días hábiles.")
+
+    lines.append("")
+    lines.append("¿Deseas aplicar estos cambios a todas las hojas del Libro de Obra?")
+
+    full_msg = "\n".join(lines)
+    sent = await msg_target.reply_text(
+        full_msg,
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=get_confirm_shift_date_keyboard(),
+    )
+    if sent:
+        track_menu_message(context, sent.message_id)
+
+    return True
+
+
+async def execute_confirm_shift_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Aplica de forma atómica el desplazamiento de fechas en el archivo Excel y en la base de datos."""
+    query = update.callback_query
+    msg_target = query.message if query else update.message
+    if not msg_target:
+        return
+    if query:
+        await query.answer()
+
+    preview = context.user_data.get("pending_start_date_shift")
+    if not preview:
+        await msg_target.reply_text(
+            "⚠️ No hay ninguna modificación de fecha pendiente por confirmar.",
+            reply_markup=get_libro_main_keyboard(),
+        )
+        return
+
+    progress_msg = await msg_target.reply_text("⏳ *Actualizando Libro de Obra con nueva fecha de inicio...*", parse_mode=ParseMode.MARKDOWN)
+
+    try:
+        user_id = update.effective_user.id if update.effective_user else None
+        book_filename = preview["book_filename"]
+        new_start_str = preview["new_start_date"].strftime("%d/%m/%Y")
+
+        book_path, applied_preview = apply_start_date_shift(book_filename, new_start_str, user_id=user_id)
+
+        # Respaldo en Google Drive si está habilitado
+        drive_status = ""
+        try:
+            drive_res = upload_file_to_drive(book_path)
+            if drive_res and drive_res.get("webViewLink"):
+                drive_status = f"\n☁️ [Ver en Google Drive]({drive_res['webViewLink']})"
+        except Exception as drive_exc:
+            logger.warning("No se pudo sincronizar con Drive tras desplazamiento de fecha: %s", drive_exc)
+
+        # Limpiar banderas de estado
+        context.user_data.pop("awaiting_new_start_date", None)
+        context.user_data.pop("pending_start_date_shift", None)
+
+        p_name = _clean_md(preview["project_name"])
+        new_st_str = format_date_es(preview["new_start_date"])
+        total_sheets = preview["total_sheets"]
+
+        success_text = (
+            f"✅ *¡Libro de Obra Actualizado Exitosamente!*\n\n"
+            f"🏗 Obra: *{p_name}*\n"
+            f"📅 Nueva Fecha de Inicio: *{new_st_str}*\n"
+            f"📄 Hojas actualizadas y foliadas: *{total_sheets}*\n"
+            f"🔒 Se generó una copia de respaldo automática previa en el servidor.{drive_status}\n\n"
+            f"Te adjunto a continuación el archivo Excel actualizado para tu revisión inmediata:"
+        )
+
+        await progress_msg.edit_text(success_text, parse_mode=ParseMode.MARKDOWN)
+
+        # Enviar el archivo Excel actualizado directamente
+        try:
+            with open(book_path, "rb") as doc_file:
+                await msg_target.reply_document(
+                    document=doc_file,
+                    filename=book_path.name,
+                    caption=f"📘 Libro de Obra Actualizado: {p_name}",
+                    reply_markup=get_libro_main_keyboard(),
+                )
+        except Exception as doc_exc:
+            logger.error("Error al enviar documento actualizado: %s", doc_exc, exc_info=True)
+            await msg_target.reply_text(
+                "📘 El libro fue actualizado en disco. Puedes descargarlo en cualquier momento desde *📚 Ver / Descargar Libros*.",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=get_libro_main_keyboard(),
+            )
+
+    except Exception as exc:
+        logger.error("Error al ejecutar desplazamiento de fecha de inicio: %s", exc, exc_info=True)
+        await progress_msg.edit_text(
+            f"❌ *Ocurrió un error al aplicar el cambio:* {exc}\n\n"
+            "El archivo original se mantuvo intacto. Intenta nuevamente.",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_libro_main_keyboard(),
+        )
+
+
+async def handle_cancel_shift_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Cancela la modificación de fecha de inicio y retorna al menú principal."""
+    query = update.callback_query
+    msg_target = query.message if query else update.message
+    if not msg_target:
+        return
+    if query:
+        await query.answer()
+
+    context.user_data.pop("awaiting_new_start_date", None)
+    context.user_data.pop("pending_start_date_shift", None)
+
+    await msg_target.reply_text(
+        "❌ Modificación de fecha de inicio cancelada. Volviendo al panel principal.",
+        reply_markup=get_libro_main_keyboard(),
+    )
+
+
 async def show_delete_libro_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Muestra el selector interactivo para eliminar un libro de obra."""
     context.user_data.pop("libro_flow", None)
@@ -1968,7 +2325,9 @@ def get_libro_obra_conversation_handler() -> ConversationHandler:
             CommandHandler("libro", cancel_libro_obra),
             CommandHandler("libros", cancel_libro_obra),
             CommandHandler("recuperar", handle_recuperar_mensaje),
-            CallbackQueryHandler(cancel_libro_obra_menu, pattern="^(btn_menu_home|btn_reset|btn_menu_libro|btn_libro_ver|btn_libro_eliminar|btn_libro_registrar|btn_libro_descartar|btn_libro_editar|btn_libro_recuperar_msg|btn_cancel)$"),
+            CommandHandler("fecha_inicio", handle_menu_modificar_fecha_inicio),
+            CommandHandler("modificar_fecha_inicio", handle_menu_modificar_fecha_inicio),
+            CallbackQueryHandler(cancel_libro_obra_menu, pattern="^(btn_menu_home|btn_reset|btn_menu_libro|btn_libro_ver|btn_libro_eliminar|btn_libro_registrar|btn_libro_descartar|btn_libro_editar|btn_libro_recuperar_msg|btn_libro_modificar_fecha_inicio|btn_confirm_shift_date|btn_cancel_shift_date|btn_cancel)$"),
             MessageHandler(filters.PHOTO, cancel_libro_obra_photo),
         ],
         allow_reentry=True,

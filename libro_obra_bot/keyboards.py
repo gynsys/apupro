@@ -26,12 +26,40 @@ def get_libro_main_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton("✏️ Editar una Hoja Guardada", callback_data="btn_libro_menu_editar"),
             ],
             [
+                InlineKeyboardButton("📅 Modificar Fecha de Inicio", callback_data="btn_libro_modificar_fecha_inicio"),
+            ],
+            [
                 InlineKeyboardButton("📚 Ver / Descargar Libros", callback_data="btn_libro_ver"),
                 InlineKeyboardButton("🗑️ Eliminar un Libro", callback_data="btn_libro_eliminar"),
             ],
             [
                 InlineKeyboardButton("ℹ️ Ayuda e Instrucciones", callback_data="btn_libro_ayuda"),
             ],
+        ]
+    )
+
+
+def get_confirm_shift_date_keyboard() -> InlineKeyboardMarkup:
+    """Botones de confirmación para aplicar el desplazamiento de fecha de inicio."""
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("✅ Confirmar y Actualizar Libro", callback_data="btn_confirm_shift_date"),
+            ],
+            [
+                InlineKeyboardButton("❌ Cancelar Operación", callback_data="btn_cancel_shift_date"),
+            ],
+        ]
+    )
+
+
+def get_cancel_shift_date_keyboard() -> InlineKeyboardMarkup:
+    """Botón sencillo para cancelar la espera de nueva fecha de inicio."""
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("❌ Cancelar Operación", callback_data="btn_cancel_shift_date"),
+            ]
         ]
     )
 
