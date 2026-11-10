@@ -79,6 +79,7 @@ export function useBudgetWorksheet() {
   const [availableBudgets, setAvailableBudgets] = useState([]);
   const [chapterName, setChapterName] = useState("");
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [showExportExcelModal, setShowExportExcelModal] = useState(false);
   const [exportingBudgetExcel, setExportingBudgetExcel] = useState(false);
 
@@ -242,34 +243,34 @@ export function useBudgetWorksheet() {
         const apuData = await costbaseService.fetchApuDetails(apuCode, dbId);
         if (apuData) {
           materials = (apuData.materiales || []).map(m => ({
-            id: `m-${m.codigo}`,
-            codigo: m.codigo,
-            descripcion: m.descripcion,
-            unidad: m.unidad,
-            cantidad: m.cantidad,
-            desperdicio: m.desperdicio || 0,
-            precio_unitario: m.precio_unitario,
+            id: `m-${m.codigo || m.CodMat || m.ref_code || Math.random()}`,
+            codigo: m.codigo || m.CodMat || m.ref_code || '',
+            descripcion: m.descripcion || m.Descri || '',
+            unidad: m.unidad || m.UniMat || '',
+            cantidad: Number(m.cantidad || m.CanIns || 0),
+            desperdicio: Number(m.desperdicio || m.Desper || 0),
+            precio_unitario: Number(m.precio_unitario || m.CosMat || m.precio || 0),
             origen: activeDatabase?.is_master ? 'historico' : 'base_personalizada'
           }));
           equipments = (apuData.equipos || []).map(e => ({
-            id: `e-${e.codigo}`,
-            codigo: e.codigo,
-            descripcion: e.descripcion,
-            unidad: e.unidad,
-            cantidad: e.cantidad,
-            depreciacion: e.depreciacion ?? 1.0,
-            precio_unitario: e.precio_unitario,
+            id: `e-${e.codigo || e.CodEqu || e.ref_code || Math.random()}`,
+            codigo: e.codigo || e.CodEqu || e.ref_code || '',
+            descripcion: e.descripcion || e.Descri || '',
+            unidad: e.unidad || 'Día',
+            cantidad: Number(e.cantidad || e.CanIns || 0),
+            depreciacion: Number(e.depreciacion ?? e.Deprec ?? 1.0),
+            precio_unitario: Number(e.precio_unitario || e.CosDia || e.precio || 0),
             origen: activeDatabase?.is_master ? 'historico' : 'base_personalizada'
           }));
           labors = (apuData.mano_obra || []).map(l => ({
-            id: `l-${l.codigo}`,
-            codigo: l.codigo,
-            descripcion: l.descripcion,
-            unidad: l.unidad,
-            cantidad: l.cantidad,
-            jornal: l.jornal,
-            bono: l.bono,
-            precio_unitario: l.precio_unitario,
+            id: `l-${l.codigo || l.CodMan || l.ref_code || Math.random()}`,
+            codigo: l.codigo || l.CodMan || l.ref_code || '',
+            descripcion: l.descripcion || l.Descri || '',
+            unidad: l.unidad || 'Día',
+            cantidad: Number(l.cantidad || l.CanIns || 0),
+            jornal: Number(l.jornal || l.Jornal || 0),
+            bono: Number(l.bono || l.Bono || 0),
+            precio_unitario: Number(l.precio_unitario || ((l.jornal || 0) + (l.bono || 0))),
             origen: activeDatabase?.is_master ? 'historico' : 'base_personalizada'
           }));
         }
@@ -278,12 +279,12 @@ export function useBudgetWorksheet() {
       }
 
       await budgetService.addItem(id, {
-        cod_par: item.CodPar || item.codigo || '',
-        cov_par: item.CovPar || '',
-        description: item.Descri || item.descripcion || '',
-        unit: item.UniPar || item.unidad || 'UND',
+        cod_par: item.CodPar || item.codigo || item.id || '',
+        cov_par: item.CovPar || item.cov_par || '',
+        description: item.Descri || item.descripcion || item.description || '',
+        unit: item.UniPar || item.unidad || item.unit || 'UND',
         quantity: 1.0,
-        performance: item.RenPar || item.rendimiento || 1.0,
+        performance: Number(item.RenPar || item.rendimiento || item.performance || 1.0),
         order: targetOrder,
         is_chapter: false,
         materials,
@@ -293,9 +294,9 @@ export function useBudgetWorksheet() {
       setShowSearchModal(false);
       loadBudget();
       toast.success(
-        activeDatabase.is_master
+        activeDatabase?.is_master
           ? 'Partida agregada al presupuesto'
-          : `Partida agregada con precios de “${activeDatabase.name}”`
+          : `Partida agregada con precios de “${activeDatabase?.name || 'Base de Datos'}”`
       );
     } catch (error) {
       console.error('Error agregando partida:', error);
@@ -407,14 +408,25 @@ export function useBudgetWorksheet() {
   };
 
   const confirmDelete = async () => {
-    if (!itemToDelete) return;
+    if (!itemToDelete || isDeleting) return;
+    setIsDeleting(true);
     try {
       await budgetService.deleteItem(id, itemToDelete.id);
-      setBudget(prev => ({ ...prev, items: prev.items.filter(i => i.id !== itemToDelete.id) }));
+      if (selectedItemId === itemToDelete.id) {
+        setSelectedItemId(null);
+      }
+      setBudget(prev => ({
+        ...prev,
+        items: (prev.items || []).filter(i => i.id !== itemToDelete.id)
+      }));
       setItemToDelete(null);
       toast.success('Eliminada correctamente');
+      loadBudget();
     } catch (error) {
+      console.error('Error eliminando la fila:', error);
       toast.error('Error eliminando la fila');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -740,6 +752,7 @@ export function useBudgetWorksheet() {
     handleAddChapter,
     handleDeleteItem,
     confirmDelete,
+    isDeleting,
     handleSaveChapterEdit,
     handleDragEnd,
     handleMoveItem,

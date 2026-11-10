@@ -1,9 +1,10 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
 
 export default function BudgetDeleteModal({
   itemToDelete,
+  isDeleting = false,
   onConfirm,
   onCancel,
 }) {
@@ -23,14 +24,27 @@ export default function BudgetDeleteModal({
         </p>
         <div className="flex flex-col gap-2.5 sm:gap-3">
           <button 
+            type="button"
+            disabled={isDeleting}
             onClick={onConfirm}
-            className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors w-full shadow-lg shadow-red-500/30 text-sm cursor-pointer"
+            className={`px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-all w-full shadow-lg shadow-red-500/30 text-sm flex items-center justify-center gap-2 cursor-pointer ${
+              isDeleting ? 'opacity-60 cursor-not-allowed' : 'active:scale-95'
+            }`}
           >
-            Sí, eliminar
+            {isDeleting ? (
+              <>
+                <Loader2 size={16} className="animate-spin text-white" />
+                <span>Eliminando...</span>
+              </>
+            ) : (
+              'Sí, eliminar'
+            )}
           </button>
           <button 
+            type="button"
+            disabled={isDeleting}
             onClick={onCancel}
-            className="px-5 py-3 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors w-full text-sm cursor-pointer"
+            className="px-5 py-3 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors w-full text-sm cursor-pointer disabled:opacity-50"
           >
             Cancelar
           </button>

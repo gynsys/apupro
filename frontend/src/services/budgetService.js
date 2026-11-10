@@ -333,6 +333,7 @@ export const budgetService = {
     try {
       const response = await fetch(`${API_URL}/budgets/${budgetId}/items/${itemId}`, {
         method: 'DELETE',
+        headers: getAuthHeaders(),
         credentials: 'include'
       });
       if (!response.ok) throw new Error('Error al eliminar partida');
@@ -406,9 +407,13 @@ export const budgetService = {
       }
       const updated = await response.json();
       if (isDeviceOfflineModeActive()) {
-        const cached = await getOfflineBudgetDetail(id);
-        if (cached) {
-          await saveOfflineBudgetDetail({ ...cached, ...updated });
+        try {
+          const cached = await getOfflineBudgetDetail(id);
+          if (cached) {
+            await saveOfflineBudgetDetail({ ...cached, ...updated });
+          }
+        } catch (offlineErr) {
+          console.warn('[budgetService] Error updating offline budget cache:', offlineErr);
         }
       }
       return updated;
@@ -433,6 +438,7 @@ export const budgetService = {
   delete: async (id) => {
     const response = await fetch(`${API_URL}/budgets/${id}`, {
       method: 'DELETE',
+      headers: getAuthHeaders(),
       credentials: 'include'
     });
     if (!response.ok) throw new Error('Error al eliminar el presupuesto');
@@ -443,6 +449,7 @@ export const budgetService = {
   duplicateBudget: async (id, newName) => {
     const response = await fetch(`${API_URL}/budgets/${id}/duplicate?new_name=${encodeURIComponent(newName)}`, {
       method: 'POST',
+      headers: getAuthHeaders(),
       credentials: 'include'
     });
     if (!response.ok) throw new Error('Error al duplicar el presupuesto');
@@ -454,7 +461,7 @@ export const budgetService = {
     try {
       const response = await fetch(`${API_URL}/budgets/${budgetId}/items`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify(data)
       });

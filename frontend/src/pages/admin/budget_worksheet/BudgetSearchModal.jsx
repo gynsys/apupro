@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Database, FileText, Sparkles, X, Plus, Share2, Menu, Check } from 'lucide-react';
+import { Search, Database, FileText, Sparkles, X, Plus, Share2, Menu, Check, Loader2 } from 'lucide-react';
 import { CostbaseSearchBar as Cost360SearchBar } from '../../../modules/costbase/components/CostbaseSearchBar';
 
 export default function BudgetSearchModal({
@@ -33,6 +33,20 @@ export default function BudgetSearchModal({
   onAddItem,
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [addingCode, setAddingCode] = useState(null);
+
+  const handleIncludeClick = async (item) => {
+    if (addingCode) return;
+    const itemKey = item.CodPar || item.id || item.codigo;
+    setAddingCode(itemKey);
+    try {
+      await onAddItem(item);
+    } catch (e) {
+      console.error('Error adding item:', e);
+    } finally {
+      setAddingCode(null);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -340,10 +354,26 @@ export default function BudgetSearchModal({
                     </p>
                   </div>
                   <button 
-                    onClick={() => onAddItem(item)}
-                    className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5 bg-transparent border border-sky-200 hover:border-sky-500 hover:bg-sky-50 text-sky-700 px-4 py-2 sm:py-1.5 rounded-lg font-semibold transition-colors text-xs active:scale-95 cursor-pointer"
+                    disabled={Boolean(addingCode)}
+                    onClick={() => handleIncludeClick(item)}
+                    className={`w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5 border px-4 py-2 sm:py-1.5 rounded-lg font-semibold transition-colors text-xs active:scale-95 cursor-pointer ${
+                      addingCode === (item.CodPar || item.id || item.codigo)
+                        ? 'bg-sky-100 text-sky-800 border-sky-300 cursor-wait'
+                        : addingCode
+                          ? 'opacity-50 cursor-not-allowed bg-transparent border-slate-200 text-slate-400'
+                          : 'bg-transparent border-sky-200 hover:border-sky-500 hover:bg-sky-50 text-sky-700'
+                    }`}
                   >
-                    <Plus size={14} /> Incluir
+                    {addingCode === (item.CodPar || item.id || item.codigo) ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin text-sky-600" />
+                        <span>Incluyendo...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={14} /> Incluir
+                      </>
+                    )}
                   </button>
                 </div>
               ))}

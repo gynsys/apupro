@@ -22,6 +22,7 @@ from app.schemas.costbase import (
 from app.crud.crud_costbase import (
     get_items_paginated,
     get_item_by_code,
+    get_item_by_code_or_covpar,
     get_apu_materials,
     get_apu_equipments,
     get_apu_labors,
@@ -405,7 +406,7 @@ def get_apu(
             raise HTTPException(status_code=404, detail="Partida no encontrada en la base personalizada")
 
     # 2. Buscar en catálogo maestro
-    item = get_item_by_code(db, clean_code) or get_item_by_code(db, item_code)
+    item = get_item_by_code_or_covpar(db, clean_code) or get_item_by_code_or_covpar(db, item_code)
     if not item:
         # Fallback a búsqueda en CustomCostItem si no se halló en la base maestra
         ci = _find_custom_cost_item(db, clean_code, user_id=user_id, is_superadmin=is_superadmin) or _find_custom_cost_item(db, item_code, user_id=user_id, is_superadmin=is_superadmin)
@@ -415,7 +416,7 @@ def get_apu(
 
     factors = get_db_factors(db, database_id)
 
-    mat_results = get_apu_materials(db, item_code)
+    mat_results = get_apu_materials(db, item.CodPar)
     materiales = []
     for rel, mat in mat_results:
         desperdicio = rel.Desper if hasattr(rel, 'Desper') and rel.Desper else 0.0
@@ -427,7 +428,7 @@ def get_apu(
             precio_unitario=round(precio, 4), subtotal=round(subtotal, 2), desperdicio=desperdicio
         ))
 
-    eq_results = get_apu_equipments(db, item_code)
+    eq_results = get_apu_equipments(db, item.CodPar)
     equipos = []
     for rel, eq in eq_results:
         depreciacion = rel.Deprec if hasattr(rel, 'Deprec') and rel.Deprec else 1.0
@@ -440,7 +441,7 @@ def get_apu(
             precio_unitario=round(precio_adquisicion, 4), subtotal=round(subtotal, 2), depreciacion=depreciacion
         ))
 
-    mo_results = get_apu_labors(db, item_code)
+    mo_results = get_apu_labors(db, item.CodPar)
     mano_obra = []
     for rel, mo in mo_results:
         jornal = (mo.Jornal or 0.0) * factors["lab"]

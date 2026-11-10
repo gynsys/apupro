@@ -31,8 +31,17 @@ function openOfflineDb() {
   if (dbInstancePromise) return dbInstancePromise;
 
   dbInstancePromise = new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      resolve(null);
+    }, 2000);
+
     try {
       const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+
+      request.onblocked = () => {
+        clearTimeout(timer);
+        resolve(null);
+      };
 
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
@@ -51,14 +60,17 @@ function openOfflineDb() {
       };
 
       request.onsuccess = (event) => {
+        clearTimeout(timer);
         resolve(event.target.result);
       };
 
       request.onerror = () => {
+        clearTimeout(timer);
         dbInstancePromise = null;
         resolve(null);
       };
     } catch (_e) {
+      clearTimeout(timer);
       dbInstancePromise = null;
       resolve(null);
     }
@@ -84,13 +96,29 @@ async function putRecord(storeName, record) {
   }
 
   return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(false), 2000);
     try {
       const tx = db.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);
-      store.put(record);
-      tx.oncomplete = () => resolve(true);
-      tx.onerror = () => resolve(false);
+      const req = store.put(record);
+      req.onerror = () => {
+        clearTimeout(timer);
+        resolve(false);
+      };
+      tx.oncomplete = () => {
+        clearTimeout(timer);
+        resolve(true);
+      };
+      tx.onerror = () => {
+        clearTimeout(timer);
+        resolve(false);
+      };
+      tx.onabort = () => {
+        clearTimeout(timer);
+        resolve(false);
+      };
     } catch (_e) {
+      clearTimeout(timer);
       resolve(false);
     }
   });
@@ -104,13 +132,25 @@ async function getRecord(storeName, key) {
   }
 
   return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), 2000);
     try {
       const tx = db.transaction(storeName, 'readonly');
       const store = tx.objectStore(storeName);
       const req = store.get(key);
-      req.onsuccess = () => resolve(req.result || null);
-      req.onerror = () => resolve(null);
+      req.onsuccess = () => {
+        clearTimeout(timer);
+        resolve(req.result || null);
+      };
+      req.onerror = () => {
+        clearTimeout(timer);
+        resolve(null);
+      };
+      tx.onabort = () => {
+        clearTimeout(timer);
+        resolve(null);
+      };
     } catch (_e) {
+      clearTimeout(timer);
       resolve(null);
     }
   });
@@ -124,13 +164,25 @@ async function getAllRecords(storeName) {
   }
 
   return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve([]), 2000);
     try {
       const tx = db.transaction(storeName, 'readonly');
       const store = tx.objectStore(storeName);
       const req = store.getAll();
-      req.onsuccess = () => resolve(Array.isArray(req.result) ? req.result : []);
-      req.onerror = () => resolve([]);
+      req.onsuccess = () => {
+        clearTimeout(timer);
+        resolve(Array.isArray(req.result) ? req.result : []);
+      };
+      req.onerror = () => {
+        clearTimeout(timer);
+        resolve([]);
+      };
+      tx.onabort = () => {
+        clearTimeout(timer);
+        resolve([]);
+      };
     } catch (_e) {
+      clearTimeout(timer);
       resolve([]);
     }
   });
@@ -144,13 +196,25 @@ async function deleteRecord(storeName, key) {
   }
 
   return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(false), 2000);
     try {
       const tx = db.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);
       store.delete(key);
-      tx.oncomplete = () => resolve(true);
-      tx.onerror = () => resolve(false);
+      tx.oncomplete = () => {
+        clearTimeout(timer);
+        resolve(true);
+      };
+      tx.onerror = () => {
+        clearTimeout(timer);
+        resolve(false);
+      };
+      tx.onabort = () => {
+        clearTimeout(timer);
+        resolve(false);
+      };
     } catch (_e) {
+      clearTimeout(timer);
       resolve(false);
     }
   });

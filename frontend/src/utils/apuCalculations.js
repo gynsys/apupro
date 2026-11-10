@@ -97,11 +97,9 @@ export function calculateItemBreakdown(item, budget = {}) {
   if (!bonoInFcas) {
     totBono = round2(labors.reduce((acc, currLab) => {
       const q = parseFloat(currLab.cantidad ?? currLab.quantity ?? currLab.CanIns ?? 0);
-      const bBonus = (currLab.bono !== undefined && currLab.bono !== null && !isNaN(Number(currLab.bono)))
-        ? Number(currLab.bono)
-        : ((currLab.Bono !== undefined && currLab.Bono !== null && !isNaN(Number(currLab.Bono)))
-          ? Number(currLab.Bono)
-          : defaultLaborBonus);
+      const rawBono = currLab.bono ?? currLab.Bono ?? currLab.labor_bonus ?? currLab.bonus;
+      const parsedBono = parseFloat(rawBono);
+      const bBonus = (!isNaN(parsedBono) && parsedBono > 0) ? parsedBono : defaultLaborBonus;
       const b = bBonus * exRate;
       const baseCost = round2(q * b);
       return acc + (baseCost * (1 + (labInflation / 100)));

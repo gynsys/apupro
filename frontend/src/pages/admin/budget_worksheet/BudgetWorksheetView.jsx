@@ -381,8 +381,11 @@ export default function BudgetWorksheetView() {
 
       <BudgetDeleteModal
         itemToDelete={ws.itemToDelete}
+        isDeleting={ws.isDeleting}
         onConfirm={ws.confirmDelete}
-        onCancel={() => ws.setItemToDelete(null)}
+        onCancel={() => {
+          if (!ws.isDeleting) ws.setItemToDelete(null);
+        }}
       />
 
       {ws.showAIApuModal && (
