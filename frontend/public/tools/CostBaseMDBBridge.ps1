@@ -28,6 +28,7 @@ function Send-Bytes($stream, [int]$status, [string]$contentType, [byte[]]$body, 
         "Access-Control-Allow-Methods: GET, POST, OPTIONS",
         "Access-Control-Allow-Headers: Content-Type, X-Filename",
         "Access-Control-Allow-Private-Network: true",
+        "Cross-Origin-Resource-Policy: cross-origin",
         "Content-Type: $contentType",
         "Content-Length: $($body.Length)",
         "Connection: close"

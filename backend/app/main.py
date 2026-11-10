@@ -255,7 +255,7 @@ async def add_security_headers(request: Request, call_next: Callable[[Request], 
         "style-src 'self' 'unsafe-inline' https:; "
         "img-src 'self' data: blob: https:; "
         "font-src 'self' data: https:; "
-        "connect-src 'self' https: wss: ws:; "
+        "connect-src 'self' https: wss: ws: http://127.0.0.1:8765 http://localhost:8765; "
         "frame-ancestors 'none';"
     )
     return response
