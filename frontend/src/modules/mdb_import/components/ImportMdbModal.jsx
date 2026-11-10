@@ -131,14 +131,15 @@ export default function ImportMdbModal({ isOpen, onClose, onImported }) {
                   No se modifica ninguna base Costbase.
                 </p>
                 <p className="mt-1 text-amber-800">
-                  Si el archivo es Access 1.0/2.0, expórtalo a CSV con el script de Windows y súbelo como ZIP.
+                  Si el archivo es Access 1.0/2.0, descarga el exportador, descomprime el ZIP,
+                  ejecuta <strong>Exportar_MDB_Windows.cmd</strong> con doble clic y sube el ZIP generado.
                 </p>
                 <a
-                  href="/tools/exportar_mdb_windows.ps1"
+                  href="/tools/Exportador_MDB_Windows.zip"
                   download
                   className="mt-2 inline-flex items-center gap-1 font-bold text-indigo-700 underline underline-offset-2"
                 >
-                  Descargar exportador para Access antiguo
+                  Descargar exportador Windows (.zip)
                 </a>
               </div>
 
