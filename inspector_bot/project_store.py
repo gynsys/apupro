@@ -77,6 +77,16 @@ def init_db() -> None:
             )
             """
         )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_last_reports (
+                user_id INTEGER PRIMARY KEY,
+                obra TEXT,
+                message_text TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
         conn.commit()
 
 
@@ -284,3 +294,41 @@ def delete_project_metadata(project_name: str) -> bool:
         cursor.execute("DELETE FROM project_metadata WHERE project_id = ?", (project_id,))
         conn.commit()
         return cursor.rowcount > 0
+
+def save_user_last_report(user_id: int, message_text: str, obra: Optional[str] = None) -> None:
+    """Guarda o actualiza el último texto de reporte enviado por un usuario."""
+    init_db()
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT OR REPLACE INTO user_last_reports (user_id, obra, message_text, updated_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            """,
+            (user_id, obra or "", message_text),
+        )
+        conn.commit()
+
+
+def get_user_last_report(user_id: int) -> Optional[Dict[str, Any]]:
+    """Obtiene el último texto de reporte registrado por el usuario."""
+    init_db()
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT user_id, obra, message_text, updated_at
+            FROM user_last_reports
+            WHERE user_id = ?
+            """,
+            (user_id,),
+        )
+        row = cursor.fetchone()
+        if row:
+            return {
+                "user_id": row["user_id"],
+                "obra": row["obra"],
+                "message_text": row["message_text"],
+                "updated_at": row["updated_at"],
+            }
+        return None

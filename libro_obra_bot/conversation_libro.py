@@ -59,7 +59,9 @@ from libro_obra_bot.project_store import (
     delete_project_metadata,
     get_project_metadata,
     get_recent_projects,
+    get_user_last_report,
     save_project_metadata,
+    save_user_last_report,
 )
 
 logger = logging.getLogger(__name__)
@@ -220,6 +222,9 @@ def get_libro_entry_preview_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton("💾 Guardar en Libro de Obra", callback_data="btn_libro_guardar_entry")
         ],
         [
+            InlineKeyboardButton("📋 Recuperar Mensaje Original", callback_data="btn_libro_recuperar_msg"),
+        ],
+        [
             InlineKeyboardButton("✏️ Editar Descripción", callback_data="btn_libro_edit_desc"),
             InlineKeyboardButton("📝 Más Campos...", callback_data="btn_libro_edit_menu"),
         ],
@@ -257,6 +262,134 @@ def get_libro_edit_fields_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton("🔙 Volver a Vista Previa", callback_data="btn_libro_preview_back"),
         ],
     ])
+
+
+def format_report_text_from_entry(obra: str, entry_data: Dict[str, Any], general_data: Dict[str, Any]) -> str:
+    """Reconstruye un mensaje de reporte en formato texto estructurado para que el usuario pueda copiarlo y editarlo."""
+    fecha = entry_data.get("fecha") or datetime.now().strftime("%d/%m/%Y")
+    clima = entry_data.get("clima") or "SOLEADO"
+    horas = entry_data.get("horas_trabajadas") or "8 HORAS"
+    personal = entry_data.get("personal") or "Personal estándar en obra"
+    equipos = entry_data.get("equipos") or ""
+    empresa = general_data.get("firma_contratista") or ""
+    residente = general_data.get("ing_residente") or ""
+    civ_res = general_data.get("civ_residente") or ""
+    inspector = general_data.get("ing_inspector") or ""
+    civ_insp = general_data.get("civ_inspector") or ""
+
+    actividades = entry_data.get("actividades_list") or []
+    if not actividades:
+        raw_res = entry_data.get("resumen_actividades") or ""
+        actividades = [a.strip(" •-*") for a in raw_res.split("\n") if a.strip(" •-*")]
+    if not actividades:
+        actividades = ["Actividades ejecutadas en obra"]
+
+    acts_formatted = "\n".join(f"• {a}" for a in actividades)
+    observaciones = entry_data.get("observaciones") or "Sin observaciones particulares."
+
+    lines = [
+        f"OBRA: {obra}",
+        f"FECHA: {fecha}",
+        f"ESTADO DEL TIEMPO: {clima}",
+        f"HORAS TRABAJADAS: {horas}",
+    ]
+    if empresa:
+        lines.append(f"EMPRESA CONTRATISTA: {empresa}")
+    if residente:
+        civ_str = f" CIV {civ_res}" if civ_res else ""
+        lines.append(f"INGENIERO RESIDENTE: {residente}{civ_str}")
+    if inspector:
+        civ_str = f" CIV {civ_insp}" if civ_insp else ""
+        lines.append(f"INGENIERO INSPECTOR: {inspector}{civ_str}")
+
+    lines.append(f"PERSONAL EN OBRA: {personal}")
+    if equipos:
+        lines.append(f"EQUIPOS Y MAQUINARIA: {equipos}")
+
+    lines.append("")
+    lines.append("ACTIVIDADES:")
+    lines.append(acts_formatted)
+    lines.append("")
+    lines.append("OBSERVACIONES:")
+    lines.append(observaciones)
+
+    return "\n".join(lines)
+
+
+async def handle_recuperar_mensaje(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Recupera el texto del mensaje enviado para crear la hoja del libro de obra.
+    Permite copiar el reporte exacto, corregir datos o fechas y reenviarlo directamente al chat.
+    """
+    query = update.callback_query
+    msg_target = query.message if query else update.message
+    user_id = update.effective_user.id if update.effective_user else None
+
+    if query:
+        await query.answer()
+
+    text_to_recover = ""
+    source_label = "Último reporte registrado"
+
+    pending = context.user_data.get("pending_libro_entry")
+    if pending and pending.get("raw_text"):
+        text_to_recover = pending["raw_text"]
+        source_label = "Reporte original pendiente de guardar"
+    elif pending and pending.get("entry_data") and pending.get("general_data"):
+        text_to_recover = format_report_text_from_entry(
+            pending.get("obra", "Obra"),
+            pending["entry_data"],
+            pending["general_data"],
+        )
+        source_label = "Borrador de hoja actual"
+    elif context.user_data.get("editing_existing_sheet"):
+        edit_info = context.user_data["editing_existing_sheet"]
+        sheet_entry = edit_info.get("entry_data")
+        sheet_gen = edit_info.get("general_data")
+        sheet_obra = edit_info.get("obra", "Obra")
+        sheet_name = edit_info.get("sheet_name", "Hoja")
+        if sheet_entry and sheet_gen:
+            text_to_recover = format_report_text_from_entry(sheet_obra, sheet_entry, sheet_gen)
+            source_label = f"Reporte de la {sheet_name}"
+    elif context.user_data.get("last_raw_report_text"):
+        text_to_recover = context.user_data["last_raw_report_text"]
+        source_label = "Último reporte enviado en sesión"
+    elif user_id:
+        db_saved = get_user_last_report(user_id)
+        if db_saved and db_saved.get("message_text"):
+            text_to_recover = db_saved["message_text"]
+            source_label = "Último reporte guardado en tu historial"
+
+    if not text_to_recover:
+        await msg_target.reply_text(
+            "ℹ️ *No se encontró ningún reporte previo en memoria o historial.*\n\n"
+            "Puedes pegar tu reporte directamente en el chat para crear una hoja o usar *✍️ Asentar Nueva Hoja Diaria*.",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_libro_main_keyboard(),
+        )
+        return
+
+    recovery_intro = (
+        f"📋 *{source_label}*\n\n"
+        "👇 *Toca el recuadro a continuación para copiar el texto completo.*\n"
+        "Pégalo en el chat, corrige los datos o fechas que desees y envíalo nuevamente:"
+    )
+
+    action_kb = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("✍️ Asentar Nueva Hoja", callback_data="btn_libro_registrar"),
+            InlineKeyboardButton("📖 Menú del Libro", callback_data="btn_menu_libro"),
+        ]
+    ])
+
+    await msg_target.reply_text(recovery_intro, parse_mode=ParseMode.MARKDOWN)
+
+    code_block = f"```text\n{text_to_recover}\n```"
+    try:
+        await msg_target.reply_text(code_block, parse_mode=ParseMode.MARKDOWN, reply_markup=action_kb)
+    except Exception as exc:
+        logger.debug("Error enviando en markdown code block: %s", exc)
+        await msg_target.reply_text(text_to_recover, reply_markup=action_kb)
 
 
 async def process_full_report_for_libro(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str) -> bool:
@@ -373,7 +506,11 @@ async def process_full_report_for_libro(update: Update, context: ContextTypes.DE
         "general_data": general_data,
         "actividades": actividades,
         "user_id": user_id,
+        "raw_text": text,
     }
+    context.user_data["last_raw_report_text"] = text
+    if user_id:
+        save_user_last_report(user_id, text, obra=obra)
 
     preview_text = build_libro_entry_preview(obra, entry_data, general_data)
     sent_preview = await safe_reply_markdown(
@@ -456,6 +593,9 @@ async def execute_save_pending_libro_entry(update: Update, context: ContextTypes
         reply_kb = []
         if drive_res and drive_res.get("web_view_link"):
             reply_kb.append([InlineKeyboardButton("☁️ Abrir en Google Drive", url=drive_res["web_view_link"])])
+        reply_kb.append([
+            InlineKeyboardButton("📋 Recuperar Mensaje de esta Hoja", callback_data="btn_libro_recuperar_msg"),
+        ])
         reply_kb.append([
             InlineKeyboardButton(f"✏️ Editar Hoja {sheet_name}", callback_data=f"btn_edit_sheet_{sheet_name}"),
             InlineKeyboardButton("✍️ Asentar Otra Hoja", callback_data="btn_libro_registrar"),
@@ -1080,13 +1220,18 @@ async def handle_observaciones(update: Update, context: ContextTypes.DEFAULT_TYP
         "revisado_por": "",
     }
 
+    report_text = format_report_text_from_entry(obra, entry_data, general_data)
     context.user_data["pending_libro_entry"] = {
         "obra": obra,
         "entry_data": entry_data,
         "general_data": general_data,
         "actividades": actividades_list,
         "user_id": user_id,
+        "raw_text": report_text,
     }
+    context.user_data["last_raw_report_text"] = report_text
+    if user_id:
+        save_user_last_report(user_id, report_text, obra=obra)
 
     resumen = build_libro_entry_preview(obra, entry_data, general_data)
     await update.message.reply_text(
@@ -1785,6 +1930,8 @@ async def cancel_libro_obra_menu(update: Update, context: ContextTypes.DEFAULT_T
             await show_saved_libros_menu(update, context)
         elif data == "btn_libro_eliminar":
             await show_delete_libro_menu(update, context)
+        elif data == "btn_libro_recuperar_msg":
+            await handle_recuperar_mensaje(update, context)
         elif data == "btn_libro_registrar":
             await start_libro_obra_flow(update, context)
         elif data in ("btn_libro_descartar", "btn_cancel"):
@@ -1820,7 +1967,8 @@ def get_libro_obra_conversation_handler() -> ConversationHandler:
             CommandHandler("menu", cancel_libro_obra),
             CommandHandler("libro", cancel_libro_obra),
             CommandHandler("libros", cancel_libro_obra),
-            CallbackQueryHandler(cancel_libro_obra_menu, pattern="^(btn_menu_home|btn_reset|btn_menu_libro|btn_libro_ver|btn_libro_eliminar|btn_libro_registrar|btn_libro_descartar|btn_libro_editar|btn_cancel)$"),
+            CommandHandler("recuperar", handle_recuperar_mensaje),
+            CallbackQueryHandler(cancel_libro_obra_menu, pattern="^(btn_menu_home|btn_reset|btn_menu_libro|btn_libro_ver|btn_libro_eliminar|btn_libro_registrar|btn_libro_descartar|btn_libro_editar|btn_libro_recuperar_msg|btn_cancel)$"),
             MessageHandler(filters.PHOTO, cancel_libro_obra_photo),
         ],
         allow_reentry=True,

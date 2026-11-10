@@ -25,6 +25,7 @@ from libro_obra_bot.conversation_libro import (
     handle_discard_pending_libro_entry,
     handle_download_libro,
     handle_menu_editar_hoja,
+    handle_recuperar_mensaje,
     handle_regenerate_libro_desc,
     handle_save_edited_field,
     handle_select_book_to_edit,
@@ -73,6 +74,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "• /asentar o /nuevo - Iniciar llenado de hoja\n"
         "• /libros o /ver - Ver libros guardados y descargar Excel\n"
         "• /editar - Modificar una hoja asentada previamente\n"
+        "• /recuperar - Recuperar el texto del último reporte enviado para corregirlo y reenviarlo\n"
         "• /borrar_libro - Eliminar un libro de obra\n"
         "• /cancelar - Cancelar el flujo actual"
     )
@@ -143,6 +145,8 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         await show_delete_libro_menu(update, context)
     elif data == "btn_libro_ayuda":
         await help_command(update, context)
+    elif data == "btn_libro_recuperar_msg":
+        await handle_recuperar_mensaje(update, context)
     elif data == "btn_libro_guardar_entry":
         await execute_save_pending_libro_entry(update, context)
     elif data == "btn_libro_edit_desc":
@@ -242,6 +246,9 @@ def create_bot_app() -> Application:
     app.add_handler(CommandHandler("libros", libros_command))
     app.add_handler(CommandHandler("ver", libros_command))
     app.add_handler(CommandHandler("editar", editar_command))
+    app.add_handler(CommandHandler("recuperar", handle_recuperar_mensaje))
+    app.add_handler(CommandHandler("recuperar_mensaje", handle_recuperar_mensaje))
+    app.add_handler(CommandHandler("mensaje", handle_recuperar_mensaje))
     app.add_handler(CommandHandler("borrar_libro", borrar_libro_command))
     app.add_handler(CommandHandler("cancelar", reset_command))
 
