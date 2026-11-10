@@ -10,6 +10,7 @@ from app.modules.budget_review.domain.audit_rules import (
     is_exact_or_1to1_description,
     is_specialized_labor_profile,
     is_uncoded_code,
+    requires_materials_by_description,
 )
 from app.modules.budget_review.domain.maprex_baseline import (
     classify_costbase_item_origin,
@@ -508,5 +509,97 @@ def test_one_to_one_code_and_description_match_prevents_false_positives() -> Non
     assert "INS-OMI-001" not in rule_ids
     assert "INS-EXT-001" not in rule_ids
     assert budget_item.get("ai_audit_status") is not None
+
+
+def test_unit_equivalences_ton_tonf_and_transport() -> None:
+    """Verifica que ton y tonf, m3xkm y m3-km, pto y ptos sean equivalentes y no emitan UNI-001."""
+    assert normalize_unit("ton") == "TONF"
+    assert normalize_unit("TONF") == "TONF"
+    assert normalize_unit("tn") == "TONF"
+    assert normalize_unit("tf") == "TONF"
+    assert normalize_unit("tonelada") == "TONF"
+    assert normalize_unit("toneladas") == "TONF"
+    assert normalize_unit("m3xkm") == "M3-KM"
+    assert normalize_unit("m3-km") == "M3-KM"
+    assert normalize_unit("pto") == "PTO"
+    assert normalize_unit("ptos") == "PTO"
+
+    # Partida M.803.321.200 con 'ton' en presupuesto y 'tonf' en base seleccionada
+    master_item: Dict[str, Any] = {
+        "cod_par": "ASF001",
+        "cov_par": "M803321200",
+        "description": "COLOCACION DE MEZCLA ASFALTICA EN CALIENTE PARA CARPETA CORRIDA",
+        "unit": "tonf",
+        "performance": 120.0,
+        "unit_price": 45.0,
+    }
+    item_data: Dict[str, Any] = {
+        "original_code": "M.803.321.200",
+        "covenin_code": "M.803.321.200",
+        "description": "COLOCACION DE MEZCLA ASFALTICA EN CALIENTE PARA CARPETA CORRIDA",
+        "unit": "ton",
+        "quantity": 50.0,
+        "performance": 120.0,
+        "imported_unit_price": 45.0,
+        "calculated_unit_price": 45.0,
+        "materials": [],
+        "equipments": [],
+        "labors": [],
+    }
+    findings = evaluate_item_audit_rules(item_data, master_item, None)
+    rule_ids = {f["rule_id"] for f in findings}
+    assert "UNI-001" not in rule_ids, "ton vs tonf no debe disparar UNI-001"
+
+
+def test_codified_item_with_zero_materials_never_triggers_est005() -> None:
+    """
+    Verifica que en partidas codificadas (con master_item) NO se aplique la regla heurística EST-005
+    (la revisión es 1 a 1 contra la receta oficial) y que transporte/acarreo excluya el requerimiento de materiales.
+    """
+    desc = "TRANSPORTE NO URBANO EN CAMIONES, DE MATERIALES PARA LA CONSTRUCCION DE BASES Y SUB-BASES"
+    # 1. requires_materials_by_description debe excluir TRANSPORTE
+    assert requires_materials_by_description(desc) is False
+
+    # 2. Partida codificada C.118200303 con 0 materiales en su receta
+    master_item: Dict[str, Any] = {
+        "cod_par": "TRN001",
+        "cov_par": "C118200303",
+        "description": desc,
+        "unit": "m3-km",
+        "performance": 1.0,
+        "unit_price": 0.85,
+    }
+    master_recipe: Dict[str, List[Dict[str, Any]]] = {
+        "materials": [],
+        "equipments": [
+            {"code": "CAM001", "description": "CAMION VOLTEO 8 M3", "unit": "día", "quantity": 1.0, "unit_price": 100.0, "waste_or_deprec": 1.0},
+        ],
+        "labors": [
+            {"code": "CHO001", "description": "CHOFER DE 1RA", "unit": "día", "quantity": 1.0, "unit_price": 20.0, "bonus": 5.0},
+        ],
+    }
+    item_data: Dict[str, Any] = {
+        "original_code": "C.118200303",
+        "covenin_code": "C.118200303",
+        "description": desc,
+        "unit": "m3xkm",
+        "quantity": 1500.0,
+        "performance": 1.0,
+        "imported_unit_price": 0.85,
+        "calculated_unit_price": 0.85,
+        "materials": [],
+        "equipments": [
+            {"code": "CAM001", "resolved_master_code": "CAM001", "description": "CAMION VOLTEO 8 M3", "unit": "día", "quantity": 1.0, "unit_price": 100.0, "waste_or_deprec": 1.0},
+        ],
+        "labors": [
+            {"code": "CHO001", "resolved_master_code": "CHO001", "description": "CHOFER DE 1RA", "unit": "día", "quantity": 1.0, "unit_price": 20.0, "bonus": 5.0},
+        ],
+    }
+    findings = evaluate_item_audit_rules(item_data, master_item, master_recipe)
+    rule_ids = {f["rule_id"] for f in findings}
+    assert "EST-005" not in rule_ids, "Partida codificada no debe disparar EST-005"
+    assert "EST-006" not in rule_ids, "Partida codificada no debe disparar EST-006"
+    assert "UNI-001" not in rule_ids, "m3xkm vs m3-km no debe disparar UNI-001"
+
 
 

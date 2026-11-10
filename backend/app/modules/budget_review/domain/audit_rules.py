@@ -153,7 +153,10 @@ def requires_materials_by_description(description: str) -> bool:
     clean = strip_accents_upper(description)
     if not clean:
         return False
-    if any(clean.startswith(w) for w in ("DEMOLICION", "REMOCION", "EXCAVACION", "ACARREO", "BOTE ", "DESMONTAJE", "LIMPIEZA")):
+    if any(clean.startswith(w) for w in (
+        "DEMOLICION", "REMOCION", "EXCAVACION", "ACARREO", "BOTE ", "DESMONTAJE",
+        "LIMPIEZA", "TRANSPORTE", "FLETE", "CARGA ", "DESCARGA", "MOVILIZACION"
+    )):
         return False
     return any(kw in clean for kw in SUPPLY_KEYWORDS)
 
@@ -326,33 +329,37 @@ def evaluate_item_audit_rules(
                     "suggestion": "Consolidar o eliminar las líneas duplicadas del insumo en el APU.",
                 })
 
-    if requires_materials_by_description(desc) and len(materials) == 0 and (len(equipments) > 0 or len(labors) > 0):
-        findings.append({
-            "rule_id": "EST-005",
-            "category": "MATERIALES",
-            "severity": "CRITICA",
-            "item_code": code,
-            "field_name": "materials_count",
-            "imported_value": "0 materiales",
-            "master_value": f"{len(master_recipe.get('materials', []))} materiales" if master_recipe else ">= 1 material",
-            "diff_percent": -100.0,
-            "message": "La descripción indica SUMINISTRO/CONSTRUCCIÓN pero el APU no incluye ningún material.",
-            "suggestion": "Incorporar los materiales de la receta maestra o cambiar el alcance a solo colocación/mano de obra.",
-        })
+    # EST-005 y EST-006: Reglas heurísticas exclusivas para partidas NO codificadas (S/C).
+    # En partidas codificadas la comparación es estrictamente 1 a 1 contra la receta de la base seleccionada
+    # mediante MAT-001 (materiales omitidos) y LAB-001 (cuadrilla de mano de obra omitida o alterada).
+    if not master_item:
+        if requires_materials_by_description(desc) and len(materials) == 0 and (len(equipments) > 0 or len(labors) > 0):
+            findings.append({
+                "rule_id": "EST-005",
+                "category": "MATERIALES",
+                "severity": "CRITICA",
+                "item_code": code,
+                "field_name": "materials_count",
+                "imported_value": "0 materiales",
+                "master_value": ">= 1 material",
+                "diff_percent": -100.0,
+                "message": "La descripción indica SUMINISTRO/CONSTRUCCIÓN pero el APU no incluye ningún material.",
+                "suggestion": "Incorporar los materiales correspondientes o cambiar el alcance a solo colocación/mano de obra.",
+            })
 
-    if (len(materials) > 0 or len(equipments) > 0) and len(labors) == 0:
-        findings.append({
-            "rule_id": "EST-006",
-            "category": "MANO_OBRA",
-            "severity": "ALTA",
-            "item_code": code,
-            "field_name": "labors_count",
-            "imported_value": "0 cuadrilla",
-            "master_value": f"{len(master_recipe.get('labors', []))} obreros" if master_recipe else ">= 1 obrero",
-            "diff_percent": -100.0,
-            "message": "El APU tiene materiales/equipos pero carece totalmente de cuadrilla de Mano de Obra.",
-            "suggestion": "Verificar si se omitió la cuadrilla de ejecución.",
-        })
+        if (len(materials) > 0 or len(equipments) > 0) and len(labors) == 0:
+            findings.append({
+                "rule_id": "EST-006",
+                "category": "MANO_OBRA",
+                "severity": "ALTA",
+                "item_code": code,
+                "field_name": "labors_count",
+                "imported_value": "0 cuadrilla",
+                "master_value": ">= 1 obrero",
+                "diff_percent": -100.0,
+                "message": "El APU tiene materiales/equipos pero carece totalmente de cuadrilla de Mano de Obra.",
+                "suggestion": "Verificar si se omitió la cuadrilla de ejecución.",
+            })
 
     # Coherencia matemática interna (si el archivo trae precio unitario explícito y desglose APU)
     if imported_price > 0 and calc_price > 0 and (materials or equipments or labors):
@@ -562,20 +569,20 @@ def evaluate_item_audit_rules(
             "imported_value": unit,
             "master_value": master_unit,
             "diff_percent": None,
-            "message": f"Unidad de medida alterada: el presupuesto usa '{unit}' pero la norma maestra exige '{master_unit}'.",
-            "suggestion": f"Ajustar la unidad a '{master_unit}' y verificar las cantidades de obra y rendimiento.",
+            "message": f"Unidad de medida alterada: el presupuesto usa '{unit}' pero la base seleccionada tiene '{master_unit}'.",
+            "suggestion": f"Ajustar la unidad a '{master_unit}' conforme a la base seleccionada y verificar las cantidades de obra y rendimiento.",
         })
 
     # 3. Comparar Rendimiento (RenPar)
     if perf > 0 and master_perf > 0:
         rend_diff_pct = ((perf - master_perf) / master_perf) * 100.0
         if abs(rend_diff_pct) > 3.0:
-            # Rendimiento menor al maestro encarece artificialmente Equipos y Mano de Obra por unidad
+            # Rendimiento menor a la base seleccionada encarece artificialmente Equipos y Mano de Obra por unidad
             severity = "CRITICA" if rend_diff_pct < -20.0 else ("ALTA" if abs(rend_diff_pct) > 10.0 else "MEDIA")
             direction_msg = (
                 "reducido (infla el costo unitario de equipos y mano de obra)"
                 if rend_diff_pct < 0
-                else "incrementado respecto al maestro"
+                else "incrementado respecto a la base seleccionada"
             )
             findings.append({
                 "rule_id": "REN-001",
@@ -588,9 +595,9 @@ def evaluate_item_audit_rules(
                 "diff_percent": round(rend_diff_pct, 2),
                 "message": (
                     f"Rendimiento {direction_msg}: importado {perf:.2f} {unit}/día vs. "
-                    f"maestro {master_perf:.2f} {master_unit}/día ({rend_diff_pct:+.1f}%)."
+                    f"base seleccionada {master_perf:.2f} {master_unit}/día ({rend_diff_pct:+.1f}%)."
                 ),
-                "suggestion": f"Restablecer el rendimiento maestro de {master_perf:.2f} {master_unit}/día o exigir justificación técnica.",
+                "suggestion": f"Restablecer el rendimiento oficial de {master_perf:.2f} {master_unit}/día según la base seleccionada o exigir justificación técnica.",
             })
 
     if not master_recipe:
@@ -628,8 +635,8 @@ def evaluate_item_audit_rules(
                 "imported_value": "No incluido (0.00)",
                 "master_value": f"{float(m_mst.get('quantity') or 0.0):.4f} {m_mst.get('unit') or ''}",
                 "diff_percent": -100.0,
-                "message": f"Material maestro faltante en el APU: {m_code} ({m_mst.get('description')}).",
-                "suggestion": f"Verificar por qué se omitió el material {m_code} de la estructura original del APU.",
+                "message": f"Material oficial faltante según la base seleccionada: {m_code} ({m_mst.get('description')}).",
+                "suggestion": f"Verificar por qué se omitió el material {m_code} de la receta oficial en la base seleccionada.",
             })
         else:
             m_imp = imp_mats[m_code]
@@ -651,7 +658,7 @@ def evaluate_item_audit_rules(
                         "diff_percent": round(q_diff_pct, 2),
                         "message": (
                             f"Cantidad de material manipulada en {m_code} ({m_mst.get('description')}): "
-                            f"importado {imp_q:.4f} vs. maestro {mst_q:.4f} ({q_diff_pct:+.1f}%)."
+                            f"importado {imp_q:.4f} vs. base seleccionada {mst_q:.4f} ({q_diff_pct:+.1f}%)."
                         ),
                         "suggestion": f"Corregir el rendimiento/cantidad unitaria del material a {mst_q:.4f}.",
                     })
@@ -670,7 +677,7 @@ def evaluate_item_audit_rules(
                     "imported_value": f"{imp_waste:.1f}%",
                     "master_value": f"{mst_waste:.1f}%",
                     "diff_percent": round(imp_waste - mst_waste, 2),
-                    "message": f"Desperdicio excesivo en material {m_code}: {imp_waste:.1f}% (maestro: {mst_waste:.1f}%).",
+                    "message": f"Desperdicio excesivo en material {m_code}: {imp_waste:.1f}% (base seleccionada: {mst_waste:.1f}%).",
                     "suggestion": f"Ajustar el porcentaje de desperdicio al valor normativo ({mst_waste:.1f}%).",
                 })
 
@@ -742,8 +749,8 @@ def evaluate_item_audit_rules(
                 "imported_value": "No incluido (0.00)",
                 "master_value": f"{float(e_mst.get('quantity') or 0.0):.4f}",
                 "diff_percent": -100.0,
-                "message": f"Equipo maestro ausente en el APU: {e_code} ({e_mst.get('description')}).",
-                "suggestion": f"Incluir el equipo {e_code} o verificar si fue sustituido.",
+                "message": f"Equipo oficial ausente según la base seleccionada: {e_code} ({e_mst.get('description')}).",
+                "suggestion": f"Incluir el equipo {e_code} o verificar si fue sustituido conforme a la base seleccionada.",
             })
         else:
             e_imp = imp_eqs[e_code]
@@ -765,7 +772,7 @@ def evaluate_item_audit_rules(
                         "diff_percent": round(q_diff_pct, 2),
                         "message": (
                             f"Cantidad de equipo alterada en {e_code} ({e_mst.get('description')}): "
-                            f"importado {imp_q:.4f} vs. maestro {mst_q:.4f} ({q_diff_pct:+.1f}%)."
+                            f"importado {imp_q:.4f} vs. base seleccionada {mst_q:.4f} ({q_diff_pct:+.1f}%)."
                         ),
                         "suggestion": f"Restablecer la cantidad del equipo a {mst_q:.4f}.",
                     })
@@ -786,7 +793,7 @@ def evaluate_item_audit_rules(
                     "master_value": f"{mst_dep:.5f}",
                     "diff_percent": None,
                     "message": f"Factor de depreciación/alquiler fuera de rango válido (0 < Deprec <= 1) en {e_code}: {imp_dep:.5f}.",
-                    "suggestion": f"Restablecer el factor de depreciación maestro ({mst_dep:.5f}).",
+                    "suggestion": f"Restablecer el factor de depreciación oficial ({mst_dep:.5f}).",
                 })
             elif mst_dep > 0 and abs(imp_dep - mst_dep) > 0.0005:
                 dep_diff_pct = ((imp_dep - mst_dep) / mst_dep) * 100.0
@@ -822,7 +829,7 @@ def evaluate_item_audit_rules(
                         "diff_percent": round(dep_diff_pct, 2),
                         "message": (
                             f"Factor de depreciación manipulado en equipo {e_code} ({e_mst.get('description')}): "
-                            f"importado {imp_dep:.5f} vs. maestro {mst_dep:.5f} ({dep_diff_pct:+.1f}%)."
+                            f"importado {imp_dep:.5f} vs. base seleccionada {mst_dep:.5f} ({dep_diff_pct:+.1f}%)."
                         ),
                         "suggestion": f"Corregir el factor de depreciación del equipo {e_code} a {mst_dep:.5f}.",
                     })
