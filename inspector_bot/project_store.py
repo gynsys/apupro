@@ -87,6 +87,18 @@ def init_db() -> None:
             )
             """
         )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS sheet_reports (
+                project_id TEXT,
+                sheet_name TEXT,
+                sheet_date TEXT,
+                message_text TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (project_id, sheet_name)
+            )
+            """
+        )
         conn.commit()
 
 
@@ -295,6 +307,7 @@ def delete_project_metadata(project_name: str) -> bool:
         conn.commit()
         return cursor.rowcount > 0
 
+
 def save_user_last_report(user_id: int, message_text: str, obra: Optional[str] = None) -> None:
     """Guarda o actualiza el último texto de reporte enviado por un usuario."""
     init_db()
@@ -332,3 +345,69 @@ def get_user_last_report(user_id: int) -> Optional[Dict[str, Any]]:
                 "updated_at": row["updated_at"],
             }
         return None
+
+def save_sheet_report(project_name: str, sheet_name: str, sheet_date: str, message_text: str) -> None:
+    """Guarda o actualiza el texto del reporte asociado a una hoja específica del libro de obra."""
+    if not project_name:
+        raise ValueError("project_name no puede estar vacío.")
+    if not sheet_name:
+        raise ValueError("sheet_name no puede estar vacío.")
+    if not message_text:
+        raise ValueError("message_text no puede estar vacío.")
+
+    init_db()
+    project_id = project_name.strip().upper()
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT OR REPLACE INTO sheet_reports (project_id, sheet_name, sheet_date, message_text, updated_at)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """,
+            (project_id, str(sheet_name), str(sheet_date or ""), message_text),
+        )
+        conn.commit()
+
+
+def get_sheet_report(project_name: str, sheet_name: str) -> Optional[str]:
+    """Obtiene el texto del reporte guardado para una hoja específica."""
+    if not project_name or not sheet_name:
+        return None
+    init_db()
+    project_id = project_name.strip().upper()
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT message_text FROM sheet_reports
+            WHERE project_id = ? AND sheet_name = ?
+            """,
+            (project_id, str(sheet_name)),
+        )
+        row = cursor.fetchone()
+        if row and row["message_text"]:
+            return str(row["message_text"])
+    return None
+
+
+def get_sheet_report_by_date(project_name: str, sheet_date: str) -> Optional[str]:
+    """Obtiene el texto del reporte guardado para una fecha específica en un proyecto."""
+    if not project_name or not sheet_date:
+        return None
+    init_db()
+    project_id = project_name.strip().upper()
+    clean_d = sheet_date.strip()
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT message_text FROM sheet_reports
+            WHERE project_id = ? AND sheet_date = ?
+            ORDER BY updated_at DESC LIMIT 1
+            """,
+            (project_id, clean_d),
+        )
+        row = cursor.fetchone()
+        if row and row["message_text"]:
+            return str(row["message_text"])
+    return None

@@ -68,8 +68,11 @@ from libro_obra_bot.project_store import (
     delete_project_metadata,
     get_project_metadata,
     get_recent_projects,
+    get_sheet_report,
+    get_sheet_report_by_date,
     get_user_last_report,
     save_project_metadata,
+    save_sheet_report,
     save_user_last_report,
 )
 
@@ -271,131 +274,75 @@ def get_libro_edit_fields_keyboard() -> InlineKeyboardMarkup:
 
 
 def format_report_text_from_entry(obra: str, entry_data: Dict[str, Any], general_data: Dict[str, Any]) -> str:
-    """Reconstruye un mensaje de reporte en formato texto estructurado para que el usuario pueda copiarlo y editarlo."""
+    """Reconstruye un mensaje de reporte en formato texto estándar para que el usuario pueda copiarlo y editarlo."""
+    if not obra:
+        raise ValueError("obra no puede estar vacía.")
+    if not entry_data:
+        raise ValueError("entry_data no puede estar vacío.")
+
     fecha = entry_data.get("fecha") or datetime.now().strftime("%d/%m/%Y")
-    clima = entry_data.get("clima") or "SOLEADO"
-    horas = entry_data.get("horas_trabajadas") or "8 HORAS"
+    clima = entry_data.get("clima") or "Soleado"
+    horas = entry_data.get("horas_trabajadas") or "8 horas"
     personal = entry_data.get("personal") or "Personal estándar en obra"
     equipos = entry_data.get("equipos") or ""
-    empresa = general_data.get("firma_contratista") or ""
-    residente = general_data.get("ing_residente") or ""
+    empresa = general_data.get("firma_contratista") or general_data.get("empresa") or ""
+    residente = general_data.get("ing_residente") or general_data.get("ingeniero_residente") or ""
     civ_res = general_data.get("civ_residente") or ""
-    inspector = general_data.get("ing_inspector") or ""
+    inspector = entry_data.get("personal_inspeccion") or general_data.get("ing_inspector") or ""
     civ_insp = general_data.get("civ_inspector") or ""
 
     actividades = entry_data.get("actividades_list") or []
     if not actividades:
         raw_res = entry_data.get("resumen_actividades") or ""
-        actividades = [a.strip(" •-*") for a in raw_res.split("\n") if a.strip(" •-*")]
+        actividades = [a.strip(" •-*.") for a in raw_res.split("\n") if a.strip(" •-*.\t")]
     if not actividades:
         actividades = ["Actividades ejecutadas en obra"]
 
-    acts_formatted = "\n".join(f"• {a}" for a in actividades)
-    observaciones = entry_data.get("observaciones") or "Sin observaciones particulares."
+    acts_formatted = "\n".join(f".- {a}" for a in actividades)
+    observaciones = entry_data.get("observaciones") or ""
 
-    lines = [
-        f"OBRA: {obra}",
-        f"FECHA: {fecha}",
-        f"ESTADO DEL TIEMPO: {clima}",
-        f"HORAS TRABAJADAS: {horas}",
+    lines: List[str] = [
+        f"*Fecha:* {fecha}",
+        f"*Obra:* {obra}",
     ]
     if empresa:
-        lines.append(f"EMPRESA CONTRATISTA: {empresa}")
+        lines.append(f"*Nombre de la empresa:* {empresa}")
     if residente:
-        civ_str = f" CIV {civ_res}" if civ_res else ""
-        lines.append(f"INGENIERO RESIDENTE: {residente}{civ_str}")
+        lines.append(f"*Ing. Residente:* {residente}")
+        if civ_res:
+            lines.append(f"CIV: {civ_res}")
     if inspector:
-        civ_str = f" CIV {civ_insp}" if civ_insp else ""
-        lines.append(f"INGENIERO INSPECTOR: {inspector}{civ_str}")
+        clean_insp_lines = [l.strip() for l in inspector.splitlines() if l.strip()]
+        lines.append(f"*Personal de Inspección:* {clean_insp_lines[0] if clean_insp_lines else inspector}")
+        if civ_insp:
+            lines.append(f"CIV: {civ_insp}")
+        for extra_insp in clean_insp_lines[1:]:
+            lines.append(extra_insp)
 
-    lines.append(f"PERSONAL EN OBRA: {personal}")
-    if equipos:
-        lines.append(f"EQUIPOS Y MAQUINARIA: {equipos}")
-
-    lines.append("")
-    lines.append("ACTIVIDADES:")
+    lines.append(f"*Personal en Obra:* {personal}")
+    lines.append("*Actividades en ejecución:*")
     lines.append(acts_formatted)
-    lines.append("")
-    lines.append("OBSERVACIONES:")
-    lines.append(observaciones)
+    if equipos and equipos.lower() not in ("none", "en blanco", "sin equipos"):
+        lines.append("*Movimientos de maquinaria y equipos:*")
+        lines.append(equipos)
+    if observaciones and observaciones.lower() not in ("sin observaciones", "sin observaciones particulares.", "none"):
+        lines.append(f"*Observaciones:* {observaciones}")
+    else:
+        lines.append("*Observaciones:*")
+    lines.append(f"*Estado del Tiempo:* {clima}")
+    lines.append(f"*Horas trabajadas:* {horas}")
 
     return "\n".join(lines)
 
 
 async def handle_recuperar_mensaje(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Recupera el texto del mensaje enviado para crear la hoja del libro de obra.
-    Permite copiar el reporte exacto, corregir datos o fechas y reenviarlo directamente al chat.
+    Redirige al usuario al selector interactivo de hojas guardadas para que seleccione qué día/hoja recuperar.
     """
     query = update.callback_query
-    msg_target = query.message if query else update.message
-    user_id = update.effective_user.id if update.effective_user else None
-
     if query:
         await query.answer()
-
-    text_to_recover = ""
-    source_label = "Último reporte registrado"
-
-    pending = context.user_data.get("pending_libro_entry")
-    if pending and pending.get("raw_text"):
-        text_to_recover = pending["raw_text"]
-        source_label = "Reporte original pendiente de guardar"
-    elif pending and pending.get("entry_data") and pending.get("general_data"):
-        text_to_recover = format_report_text_from_entry(
-            pending.get("obra", "Obra"),
-            pending["entry_data"],
-            pending["general_data"],
-        )
-        source_label = "Borrador de hoja actual"
-    elif context.user_data.get("editing_existing_sheet"):
-        edit_info = context.user_data["editing_existing_sheet"]
-        sheet_entry = edit_info.get("entry_data")
-        sheet_gen = edit_info.get("general_data")
-        sheet_obra = edit_info.get("obra", "Obra")
-        sheet_name = edit_info.get("sheet_name", "Hoja")
-        if sheet_entry and sheet_gen:
-            text_to_recover = format_report_text_from_entry(sheet_obra, sheet_entry, sheet_gen)
-            source_label = f"Reporte de la {sheet_name}"
-    elif context.user_data.get("last_raw_report_text"):
-        text_to_recover = context.user_data["last_raw_report_text"]
-        source_label = "Último reporte enviado en sesión"
-    elif user_id:
-        db_saved = get_user_last_report(user_id)
-        if db_saved and db_saved.get("message_text"):
-            text_to_recover = db_saved["message_text"]
-            source_label = "Último reporte guardado en tu historial"
-
-    if not text_to_recover:
-        await msg_target.reply_text(
-            "ℹ️ *No se encontró ningún reporte previo en memoria o historial.*\n\n"
-            "Puedes pegar tu reporte directamente en el chat para crear una hoja o usar *✍️ Asentar Nueva Hoja Diaria*.",
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=get_libro_main_keyboard(),
-        )
-        return
-
-    recovery_intro = (
-        f"📋 *{source_label}*\n\n"
-        "👇 *Toca el recuadro a continuación para copiar el texto completo.*\n"
-        "Pégalo en el chat, corrige los datos o fechas que desees y envíalo nuevamente:"
-    )
-
-    action_kb = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("✍️ Asentar Nueva Hoja", callback_data="btn_libro_registrar"),
-            InlineKeyboardButton("📖 Menú del Libro", callback_data="btn_menu_libro"),
-        ]
-    ])
-
-    await msg_target.reply_text(recovery_intro, parse_mode=ParseMode.MARKDOWN)
-
-    code_block = f"```text\n{text_to_recover}\n```"
-    try:
-        await msg_target.reply_text(code_block, parse_mode=ParseMode.MARKDOWN, reply_markup=action_kb)
-    except Exception as exc:
-        logger.debug("Error enviando en markdown code block: %s", exc)
-        await msg_target.reply_text(text_to_recover, reply_markup=action_kb)
+    await handle_menu_editar_hoja(update, context)
 
 
 async def process_full_report_for_libro(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str) -> bool:
@@ -565,6 +512,9 @@ async def save_and_deliver_libro_entry(
         else:
             book_path, sheet_name, sheet_num = add_daily_entry_to_book(obra, entry_data, general_data)
             action_verb = "registrada"
+
+        if raw_text:
+            save_sheet_report(obra, str(sheet_name), str(entry_data.get("fecha", "")), raw_text)
 
         equipos_display = entry_data.get("equipos") or "Herramientas menores y equipos de construcción"
         caption_txt = (
@@ -1647,25 +1597,39 @@ async def _show_sheets_for_book(
     context.user_data["editing_project_name"] = project_name
 
     txt = (
-        f"✏️ *Hojas Disponibles para Editar en:*\n"
+        f"✏️ *Editar Hoja Guardada — Selecciona el Día:*\n"
         f"🏗 *{project_name}*\n\n"
-        f"Selecciona la hoja que deseas consultar o modificar:"
+        f"Selecciona la hoja cuyo mensaje deseas recuperar para corregir y reenviar:"
     )
 
     buttons: List[List[InlineKeyboardButton]] = []
-    for s in sheets:
-        s_name = s["sheet_name"]
-        fecha = s["fecha"]
-        buttons.append([
-            InlineKeyboardButton(
-                f"📑 Hoja {s_name} • {fecha}",
-                callback_data=f"btn_edit_sheet_{s_name}",
-            )
-        ])
+    if len(sheets) > 10:
+        row_acc: List[InlineKeyboardButton] = []
+        for s in sheets:
+            s_name = s["sheet_name"]
+            fecha = s["fecha"]
+            short_fecha = fecha[:5] if len(fecha) >= 5 else fecha
+            btn_title = f"📑 H{s_name} • {short_fecha}"
+            row_acc.append(InlineKeyboardButton(btn_title, callback_data=f"btn_edit_sheet_{s_name}"))
+            if len(row_acc) == 2:
+                buttons.append(row_acc)
+                row_acc = []
+        if row_acc:
+            buttons.append(row_acc)
+    else:
+        for s in sheets:
+            s_name = s["sheet_name"]
+            fecha = s["fecha"]
+            buttons.append([
+                InlineKeyboardButton(
+                    f"📑 Hoja {s_name} • {fecha}",
+                    callback_data=f"btn_edit_sheet_{s_name}",
+                )
+            ])
 
     buttons.append([
         InlineKeyboardButton("📚 Ver Libros Guardados", callback_data="btn_libro_ver"),
-        InlineKeyboardButton("🔙 Menú Libro de Obra", callback_data="btn_menu_libro"),
+        InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home"),
     ])
 
     if query and query.message and not query.message.document:
@@ -1692,8 +1656,8 @@ async def handle_menu_editar_hoja(update: Update, context: ContextTypes.DEFAULT_
     books = list_all_project_books()
     if not books:
         kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("✍️ Llenar Primera Hoja", callback_data="btn_libro_registrar")],
-            [InlineKeyboardButton("🔙 Volver a Libro de Obra", callback_data="btn_menu_libro")],
+            [InlineKeyboardButton("✍️ Asentar Primera Hoja", callback_data="btn_libro_registrar")],
+            [InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home")],
         ])
         await msg_target.reply_text(
             "ℹ️ *No tienes ningún Libro de Obra guardado actualmente.*\n\n"
@@ -1718,7 +1682,7 @@ async def handle_menu_editar_hoja(update: Update, context: ContextTypes.DEFAULT_
         buttons.append([
             InlineKeyboardButton(f"🏗 {short_btn_title}", callback_data=f"btn_edit_book_{idx}")
         ])
-    buttons.append([InlineKeyboardButton("🔙 Volver a Libro de Obra", callback_data="btn_menu_libro")])
+    buttons.append([InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home")])
 
     await msg_target.reply_text(
         "✏️ *Selecciona el Libro de Obra cuya hoja deseas editar:*",
@@ -1758,7 +1722,10 @@ async def handle_select_book_to_edit(update: Update, context: ContextTypes.DEFAU
 
 
 async def handle_select_sheet_to_edit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Carga los datos de una hoja seleccionada y abre la vista previa interactiva en modo edición."""
+    """
+    Recupera el mensaje de la hoja seleccionada y se lo entrega al usuario formateado
+    en un bloque de código para que lo copie, edite y reenvíe al chat.
+    """
     query = update.callback_query
     if not query:
         return
@@ -1784,39 +1751,52 @@ async def handle_select_sheet_to_edit(update: Update, context: ContextTypes.DEFA
         if not obra:
             obra = context.user_data.get("editing_project_name") or "Libro de Obra"
 
-        context.user_data["pending_libro_entry"] = {
-            "obra": obra,
-            "entry_data": entry_data,
-            "general_data": general_data,
-            "user_id": update.effective_user.id if update.effective_user else None,
-        }
         context.user_data["editing_existing_sheet"] = {
             "sheet_name": sheet_name,
             "book_path": str(book_path),
+            "obra": obra,
+            "fecha": entry_data.get("fecha", ""),
         }
         context.user_data["editing_book_filename"] = filename
         context.user_data["editing_project_name"] = obra
 
-        preview_text = build_libro_entry_preview(obra, entry_data, general_data)
-        full_text = (
-            f"✏️ *MODO EDICIÓN: Hoja #{sheet_name}*\n"
-            f"Modifica cualquier bloque y pulsa *💾 Guardar en Libro de Obra* para actualizar el Excel.\n\n"
-            + preview_text
-        )
+        # Buscar el mensaje original guardado o reconstruirlo con fidelidad
+        msg_text = get_sheet_report(obra, str(sheet_name))
+        if not msg_text and entry_data.get("fecha"):
+            msg_text = get_sheet_report_by_date(obra, str(entry_data["fecha"]))
+        if not msg_text:
+            msg_text = format_report_text_from_entry(obra, entry_data, general_data)
+
+        fecha_display = entry_data.get("fecha") or "Fecha no especificada"
+        reply_lines = [
+            f"📋 *Mensaje Recuperado — Hoja #{sheet_name}* ({fecha_display})",
+            f"🏗 *Obra:* {obra[:60]}...",
+            "",
+            "👇 *Toca el cuadro para copiar el reporte completo.*",
+            "Pégalo en el chat, realiza las modificaciones que necesites y envíalo. El bot actualizará la hoja automáticamente en el archivo Excel oficial (.xlsx):",
+            "",
+            f"```text\n{msg_text}\n```",
+        ]
+        full_text = "\n".join(reply_lines)
+
+        reply_kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📑 Elegir Otra Hoja", callback_data="btn_libro_menu_editar")],
+            [InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home")],
+        ])
 
         if query.message:
             sent_msg = await safe_reply_markdown(
                 query.message,
                 full_text,
-                reply_markup=get_libro_entry_preview_keyboard(),
+                reply_markup=reply_kb,
             )
             if sent_msg:
                 track_menu_message(context, sent_msg.message_id)
 
     except Exception as exc:
-        logger.error("Error al cargar hoja para editar: %s", exc, exc_info=True)
+        logger.error("Error al cargar mensaje de la hoja para editar: %s", exc, exc_info=True)
         if query.message:
-            await query.message.reply_text(f"❌ Error al cargar datos de la hoja #{sheet_name}: {exc}")
+            await query.message.reply_text(f"❌ Error al recuperar el mensaje de la hoja #{sheet_name}: {exc}")
 
 
 

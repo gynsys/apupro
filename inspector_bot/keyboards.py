@@ -1,6 +1,4 @@
-"""
-Teclados interactivos y utilidades de interfaz para el Bot Inspector.
-"""
+"""Teclados interactivos y utilidades de interfaz para el Bot de Libro de Obra."""
 import re
 import unicodedata
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
@@ -16,128 +14,64 @@ def sanitize_filename(name: str) -> str:
     return clean[:40] if clean else "Obra"
 
 
-def get_main_menu_keyboard() -> InlineKeyboardMarkup:
-    """Crea los botones del menú principal para elegir la función."""
+def get_libro_main_keyboard() -> InlineKeyboardMarkup:
+    """Crea los botones principales para el Bot de Libro de Obra."""
     return InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("📋 Generar Ficha Diaria", callback_data="btn_menu_ficha"),
+                InlineKeyboardButton("✍️ Asentar Nueva Hoja Diaria", callback_data="btn_libro_registrar"),
             ],
             [
-                InlineKeyboardButton("🗓️ Ficha Resumen Semanal", callback_data="btn_menu_resumen_semanal"),
+                InlineKeyboardButton("✏️ Editar una Hoja Guardada", callback_data="btn_libro_menu_editar"),
             ],
             [
-                InlineKeyboardButton("📖 Libro de Obra", callback_data="btn_menu_libro"),
+                InlineKeyboardButton("📅 Modificar Fecha de Inicio", callback_data="btn_libro_modificar_fecha_inicio"),
             ],
+            [
+                InlineKeyboardButton("📚 Ver / Descargar Libros", callback_data="btn_libro_ver"),
+                InlineKeyboardButton("🗑️ Eliminar un Libro", callback_data="btn_libro_eliminar"),
+            ],
+            [
+                InlineKeyboardButton("ℹ️ Ayuda e Instrucciones", callback_data="btn_libro_ayuda"),
+            ],
+        ]
+    )
+
+
+def get_confirm_shift_date_keyboard() -> InlineKeyboardMarkup:
+    """Botones de confirmación para aplicar el desplazamiento de fecha de inicio."""
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("✅ Confirmar y Actualizar Libro", callback_data="btn_confirm_shift_date"),
+            ],
+            [
+                InlineKeyboardButton("❌ Cancelar Operación", callback_data="btn_cancel_shift_date"),
+            ],
+        ]
+    )
+
+
+def get_cancel_shift_date_keyboard() -> InlineKeyboardMarkup:
+    """Botón sencillo para cancelar la espera de nueva fecha de inicio."""
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("❌ Cancelar Operación", callback_data="btn_cancel_shift_date"),
+            ]
         ]
     )
 
 
 def get_libro_menu_keyboard() -> InlineKeyboardMarkup:
-    """Crea los botones del menú secundario para el Módulo de Libro de Obra."""
-    return InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton("✍️ Llenar / Asentar Hoja", callback_data="btn_libro_registrar"),
-                InlineKeyboardButton("✏️ Editar una Hoja Guardada", callback_data="btn_libro_menu_editar"),
-            ],
-            [
-                InlineKeyboardButton("📚 Ver Libros Guardados", callback_data="btn_libro_ver"),
-                InlineKeyboardButton("🗑️ Eliminar un Libro", callback_data="btn_libro_eliminar"),
-            ],
-            [
-                InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home"),
-            ],
-        ]
-    )
-
-
-def get_awaiting_photos_keyboard(photo_count: int = 0) -> InlineKeyboardMarkup:
-    """
-    Teclado minimalista mientras el usuario está adjuntando fotos.
-    No muestra los botones finales para evitar ruido visual y confusión.
-    """
-    if photo_count == 0:
-        return InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton("⏩ Continuar sin fotos", callback_data="btn_show_action_menu"),
-                ],
-                [
-                    InlineKeyboardButton("🔄 Reiniciar", callback_data="btn_reset"),
-                ],
-            ]
-        )
-    return InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(f"✅ Listo, continuar ({photo_count} fotos) 👉", callback_data="btn_show_action_menu"),
-            ],
-            [
-                InlineKeyboardButton("🔄 Reiniciar", callback_data="btn_reset"),
-            ],
-        ]
-    )
-
-
-def get_report_action_keyboard(photo_count: int = 0) -> InlineKeyboardMarkup:
-    """
-    Botones principales para el reporte recibido.
-    Permite explícitamente Guardar en Historial/BD, Generar PDF, Generar Excel, o Registrar en Libro de Obra.
-    """
-    p_text = f" ({photo_count} fotos)" if photo_count > 0 else ""
-    return InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(f"💾 Guardar Jornada en Historial{p_text}", callback_data="btn_save_daily_entry"),
-            ],
-            [
-                InlineKeyboardButton(f"📄 Descargar PDF{p_text}", callback_data="btn_gen_pdf"),
-                InlineKeyboardButton(f"📊 Descargar Excel{p_text}", callback_data="btn_gen_excel"),
-            ],
-            [
-                InlineKeyboardButton(f"📦 Descargar Ambos (PDF + Excel){p_text}", callback_data="btn_gen_both"),
-            ],
-            [
-                InlineKeyboardButton("📖 Registrar en Libro de Obra (con IA)", callback_data="btn_to_libro_ai"),
-            ],
-            [
-                InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home"),
-                InlineKeyboardButton("🔄 Reiniciar", callback_data="btn_reset"),
-            ],
-        ]
-    )
-
-
-def get_format_keyboard(photo_count: int = 0) -> InlineKeyboardMarkup:
-    """Compatibilidad con selector de formato."""
-    return get_report_action_keyboard(photo_count)
-
-
-def get_post_save_keyboard() -> InlineKeyboardMarkup:
-    """Botones posteriores al guardado en base de datos."""
-    return InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton("📄 Descargar PDF", callback_data="btn_gen_pdf"),
-                InlineKeyboardButton("📊 Descargar Excel", callback_data="btn_gen_excel"),
-            ],
-            [
-                InlineKeyboardButton("📦 Descargar Ambos", callback_data="btn_gen_both"),
-                InlineKeyboardButton("📖 Libro de Obra (IA)", callback_data="btn_to_libro_ai"),
-            ],
-            [
-                InlineKeyboardButton("🗓️ Ir a Resumen Semanal", callback_data="btn_menu_resumen_semanal"),
-                InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home"),
-            ],
-        ]
-    )
+    """Compatibilidad: devuelve el teclado principal del Libro de Obra."""
+    return get_libro_main_keyboard()
 
 
 def get_home_keyboard() -> InlineKeyboardMarkup:
-    """Botón simple para retornar al menú principal."""
+    """Botón para volver al menú principal del Libro de Obra."""
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("🏠 Volver al Menú Principal", callback_data="btn_menu_home")]
+            [InlineKeyboardButton("📖 Volver al Panel del Libro", callback_data="btn_menu_libro")]
         ]
     )

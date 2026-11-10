@@ -22,7 +22,6 @@ def get_libro_main_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton("✍️ Asentar Nueva Hoja Diaria", callback_data="btn_libro_registrar"),
             ],
             [
-                InlineKeyboardButton("📋 Recuperar Último Mensaje", callback_data="btn_libro_recuperar_msg"),
                 InlineKeyboardButton("✏️ Editar una Hoja Guardada", callback_data="btn_libro_menu_editar"),
             ],
             [
