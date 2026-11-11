@@ -1375,21 +1375,20 @@ async def return_to_clean_main_menu(update: Update, context: ContextTypes.DEFAUL
     context.user_data.pop("del_books_cache", None)
     context.user_data.pop("del_names_cache", None)
 
-    # 2. Borrar mensajes de menú previos si existen para un chat limpio
+    query = update.callback_query
+    callback_message_id = query.message.message_id if query and query.message else None
+
+    # 2. Borrar mensajes de menú previos si existen para un chat limpio.
+    # No borrar el mensaje que se va a editar como panel actual.
     tracked_ids = context.user_data.pop("tracked_menu_messages", [])
     if chat_id and tracked_ids:
         for msg_id in tracked_ids:
+            if msg_id == callback_message_id:
+                continue
             try:
                 await context.bot.delete_message(chat_id=chat_id, message_id=msg_id)
             except Exception as exc:
                 logger.debug("No se pudo eliminar mensaje previo %s: %s", msg_id, exc)
-
-    query = update.callback_query
-    if query and query.message and not query.message.document:
-        try:
-            await query.message.delete()
-        except Exception as exc:
-            logger.debug("No se pudo eliminar mensaje de callback: %s", exc)
 
     welcome_text = (
         "📖 *Libro de Obra Digital*\n\n"
@@ -1401,6 +1400,19 @@ async def return_to_clean_main_menu(update: Update, context: ContextTypes.DEFAUL
         "• 🗑️ *Eliminar Libro:* Administra y limpia libros archivados.\n\n"
         "Selecciona una opción del panel para comenzar:"
     )
+
+    if query and query.message and not query.message.document:
+        # Reemplazar el panel actual en lugar de borrarlo y enviar otro.
+        try:
+            await query.message.edit_text(
+                welcome_text,
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=get_libro_main_keyboard(),
+            )
+            track_menu_message(context, query.message.message_id)
+            return
+        except Exception as exc:
+            logger.debug("No se pudo editar el panel de callback: %s", exc)
 
     if chat_id:
         sent_welcome = await context.bot.send_message(

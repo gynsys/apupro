@@ -31,6 +31,7 @@ apupro_platform/
     ├── conversation_libro.py         # Lógica conversacional, menús interactivos, importación y entrega
     ├── parser.py                     # Extractor de campos desde texto libre / semi-estructurado
     ├── ai_labor_describer.py         # Redacción técnica de la Labor Diaria con Gemini + respaldo heurístico
+    ├── flow_cleanup.py               # Limpieza de mensajes: un solo panel de texto por chat
     ├── libro_obra_service.py         # Motor Excel (openpyxl): plantilla, celdas, fechas, fusión, importación y backups
     ├── project_store.py              # Capa SQLite (inspector_bot.db): obras, inspecciones y reportes por hoja
     ├── google_drive_service.py       # Integración opcional con Google Drive API / Sheets
@@ -74,6 +75,25 @@ flowchart TD
 ```
 
 ---
+
+## 2.1. Flujo visual limpio
+
+`flow_cleanup.py` mantiene la conversación sin acumular mensajes:
+
+- **Mensaje del usuario:** se elimina al recibirlo mediante `cleanup_user_message` (TypeHandler en grupo `-100`).
+- **Panel del bot:** `CleanBot` reemplaza el panel de texto anterior al enviar uno nuevo.
+- **Menú principal:** cuando se pulsa un botón inline, `return_to_clean_main_menu` edita el mismo mensaje con `edit_text` en lugar de borrarlo y crear otro.
+- **Documentos:** los `.xlsx` descargados no se borran automáticamente para que el usuario pueda abrirlos.
+
+Limitaciones:
+
+- Telegram solo permite borrar mensajes propios o mensajes de usuario en chats privados; en grupos el bot necesita permisos de administrador.
+- La edición puede fallar si el mensaje tiene más de 48 horas o si es un documento/foto.
+- El tracking del último panel vive en memoria; tras reiniciar el bot se vuelve a crear un panel nuevo.
+
+---
+
+
 
 ## 3. Guía de Uso: Comandos y Menú Principal
 

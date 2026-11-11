@@ -12,10 +12,12 @@ from telegram.ext import (
     CommandHandler,
     ContextTypes,
     MessageHandler,
+    TypeHandler,
     filters,
 )
 
 from libro_obra_bot.config import BOT_TOKEN
+from libro_obra_bot.flow_cleanup import CleanBot, cleanup_user_message
 from libro_obra_bot.conversation_libro import (
     ask_confirm_delete_libro,
     execute_confirm_merge_sheets,
@@ -277,8 +279,11 @@ def create_bot_app() -> Application:
     if not BOT_TOKEN or BOT_TOKEN.startswith("PEGA_"):
         raise ValueError("Token de Telegram no configurado. Define TELEGRAM_LIBRO_BOT_TOKEN o TELEGRAM_BOT_TOKEN.")
 
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = ApplicationBuilder().bot(CleanBot(BOT_TOKEN)).build()
     app.add_error_handler(global_error_handler)
+
+    # 0. Limpieza del mensaje entrante del usuario (antes de los handlers)
+    app.add_handler(TypeHandler(Update, cleanup_user_message), group=-100)
 
     # 1. Comandos principales
     app.add_handler(CommandHandler("start", start_command))
