@@ -600,6 +600,32 @@ def evaluate_item_audit_rules(
                 "suggestion": f"Restablecer el rendimiento oficial de {master_perf:.2f} {master_unit}/día según la base seleccionada o exigir justificación técnica.",
             })
 
+    # 4. Comparar Precio Unitario Global frente a la base oficial
+    master_pu = float(master_item.get("unit_price") or 0.0)
+    eval_pu = imported_price if imported_price > 0 else calc_price
+    if master_pu > 0 and eval_pu > 0:
+        pu_diff_pct = ((eval_pu - master_pu) / master_pu) * 100.0
+        if abs(pu_diff_pct) > 5.0:
+            is_overcost = pu_diff_pct > 0
+            severity = "CRITICA" if abs(pu_diff_pct) > 25.0 else "ALTA"
+            findings.append({
+                "rule_id": "PRE-001",
+                "category": "COHERENCIA",
+                "severity": severity,
+                "item_code": code,
+                "field_name": "unit_price",
+                "imported_value": f"${eval_pu:,.2f}",
+                "master_value": f"${master_pu:,.2f}",
+                "diff_percent": round(pu_diff_pct, 2),
+                "message": (
+                    f"Precio unitario de partida {'con sobrecosto' if is_overcost else 'subvaluado'} frente a la base técnica: "
+                    f"declarado ${eval_pu:,.2f} vs. base oficial ${master_pu:,.2f} ({pu_diff_pct:+.1f}%)."
+                ),
+                "suggestion": (
+                    "Revisar y conciliar los insumos, rendimientos y tarifas directas del APU para ajustar el precio unitario a la base técnica oficial."
+                ),
+            })
+
     if not master_recipe:
         return findings
 
@@ -680,6 +706,29 @@ def evaluate_item_audit_rules(
                     "message": f"Desperdicio excesivo en material {m_code}: {imp_waste:.1f}% (base seleccionada: {mst_waste:.1f}%).",
                     "suggestion": f"Ajustar el porcentaje de desperdicio al valor normativo ({mst_waste:.1f}%).",
                 })
+
+            mst_mat_p = float(m_mst.get("unit_price") or 0.0)
+            imp_mat_p = float(m_imp.get("unit_price") or 0.0)
+            if mst_mat_p > 0 and imp_mat_p > 0:
+                mat_p_diff = ((imp_mat_p - mst_mat_p) / mst_mat_p) * 100.0
+                if abs(mat_p_diff) > 10.0:
+                    findings.append({
+                        "rule_id": "MAT-006",
+                        "category": "MATERIALES",
+                        "severity": "ALTA" if abs(mat_p_diff) > 25.0 else "MEDIA",
+                        "item_code": code,
+                        "component_code": m_code,
+                        "component_description": str(m_imp.get("description") or m_mst.get("description") or ""),
+                        "field_name": "material_price",
+                        "imported_value": f"${imp_mat_p:,.2f}",
+                        "master_value": f"${mst_mat_p:,.2f}",
+                        "diff_percent": round(mat_p_diff, 2),
+                        "message": (
+                            f"Precio del material alterado en {m_code} ({m_mst.get('description')}): "
+                            f"importado ${imp_mat_p:,.2f} vs. base seleccionada ${mst_mat_p:,.2f} ({mat_p_diff:+.1f}%)."
+                        ),
+                        "suggestion": f"Ajustar el precio unitario del material a la tarifa oficial (${mst_mat_p:,.2f}) o consignar cotización comercial.",
+                    })
 
             if m_code in KNOWN_MATERIAL_CODE_COLLISIONS:
                 findings.append({
@@ -834,6 +883,31 @@ def evaluate_item_audit_rules(
                         "suggestion": f"Corregir el factor de depreciación del equipo {e_code} a {mst_dep:.5f}.",
                     })
 
+            imp_eq_p = float(e_imp.get("unit_price") or 0.0)
+            mst_eq_p = float(e_mst.get("unit_price") or 0.0)
+            imp_daily = imp_eq_p * imp_dep if imp_eq_p > 0 else 0.0
+            mst_daily = mst_eq_p * mst_dep if mst_eq_p > 0 else 0.0
+            if mst_daily > 0 and imp_daily > 0:
+                eq_p_diff = ((imp_daily - mst_daily) / mst_daily) * 100.0
+                if abs(eq_p_diff) > 10.0:
+                    findings.append({
+                        "rule_id": "EQU-006",
+                        "category": "EQUIPOS",
+                        "severity": "ALTA" if abs(eq_p_diff) > 25.0 else "MEDIA",
+                        "item_code": code,
+                        "component_code": e_code,
+                        "component_description": str(e_imp.get("description") or e_mst.get("description") or ""),
+                        "field_name": "equipment_daily_cost",
+                        "imported_value": f"${imp_daily:,.2f}/día",
+                        "master_value": f"${mst_daily:,.2f}/día",
+                        "diff_percent": round(eq_p_diff, 2),
+                        "message": (
+                            f"Costo diario del equipo alterado en {e_code} ({e_mst.get('description')}): "
+                            f"importado ${imp_daily:,.2f}/día vs. base seleccionada ${mst_daily:,.2f}/día ({eq_p_diff:+.1f}%)."
+                        ),
+                        "suggestion": f"Conciliar la tarifa diaria del equipo ({mst_daily:,.2f}/día) y verificar factor de depreciación o costo horario.",
+                    })
+
         for e_code, e_imp in imp_eqs.items():
             if e_code not in mst_eqs and e_imp.get("is_in_database") is False:
                 e_desc = str(e_imp.get("description") or e_code).strip()
@@ -895,6 +969,29 @@ def evaluate_item_audit_rules(
                             f"importado {imp_q:.2f} vs. maestro {mst_q:.2f} ({q_diff_pct:+.1f}%)."
                         ),
                         "suggestion": f"Restablecer la cantidad de personal en cuadrilla a {mst_q:.2f}.",
+                    })
+
+            imp_jornal = float(l_imp.get("unit_price") or 0.0)
+            mst_jornal = float(l_mst.get("unit_price") or 0.0)
+            if mst_jornal > 0 and imp_jornal > 0:
+                lab_j_diff = ((imp_jornal - mst_jornal) / mst_jornal) * 100.0
+                if abs(lab_j_diff) > 10.0:
+                    findings.append({
+                        "rule_id": "LAB-004",
+                        "category": "MANO_OBRA",
+                        "severity": "ALTA" if abs(lab_j_diff) > 25.0 else "MEDIA",
+                        "item_code": code,
+                        "component_code": l_code,
+                        "component_description": str(l_imp.get("description") or l_mst.get("description") or ""),
+                        "field_name": "labor_jornal",
+                        "imported_value": f"${imp_jornal:,.2f}/día",
+                        "master_value": f"${mst_jornal:,.2f}/día",
+                        "diff_percent": round(lab_j_diff, 2),
+                        "message": (
+                            f"Jornal de mano de obra alterado en {l_code} ({l_mst.get('description')}): "
+                            f"importado ${imp_jornal:,.2f}/día vs. tabulador oficial ${mst_jornal:,.2f}/día ({lab_j_diff:+.1f}%)."
+                        ),
+                        "suggestion": f"Ajustar el jornal al tabulador oficial vigente (${mst_jornal:,.2f}/día).",
                     })
 
         for l_code, l_imp in imp_labs.items():

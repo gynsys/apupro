@@ -1572,17 +1572,25 @@ export default function BudgetReviewPage() {
 
                     <p className="m-0 font-medium text-slate-700 leading-relaxed pt-0.5">
                       {monetarySummary.net_incidence !== 0 ? (
-                        <>
-                          Las desviaciones técnicas y rendimientos modificados detectados representan una variación económica de{' '}
-                          <strong className={monetarySummary.net_incidence > 0 ? 'text-red-800' : 'text-emerald-800'}>
-                            {monetarySummary.net_incidence > 0 ? '+' : ''}
-                            {formatMoney(monetarySummary.net_incidence)} ({monetarySummary.net_incidence > 0 ? '+' : ''}{monetarySummary.incidence_percent.toFixed(2)}%)
-                          </strong>{' '}
-                          frente a la base técnica oficial. Se recomienda subsanar los APUs observados y fijar el presupuesto oficial ajustado de contratación en{' '}
-                          <strong className="text-blue-900">
-                            {formatMoney(monetarySummary.adjusted_amount)}
-                          </strong>.
-                        </>
+                        (() => {
+                          const hasRend = (activeReport?.findings || []).some((f) => f.category === 'RENDIMIENTO');
+                          const leadText = hasRend
+                            ? 'Las desviaciones técnicas y rendimientos modificados detectados representan una variación económica de '
+                            : 'Las variaciones detectadas en insumos y análisis de precios unitarios representan una incidencia económica de ';
+                          return (
+                            <>
+                              {leadText}
+                              <strong className={monetarySummary.net_incidence > 0 ? 'text-red-800' : 'text-emerald-800'}>
+                                {monetarySummary.net_incidence > 0 ? '+' : ''}
+                                {formatMoney(monetarySummary.net_incidence)} ({monetarySummary.net_incidence > 0 ? '+' : ''}{monetarySummary.incidence_percent.toFixed(2)}%)
+                              </strong>{' '}
+                              frente a la base técnica oficial. Se recomienda subsanar los APUs observados y fijar el presupuesto oficial ajustado de contratación en{' '}
+                              <strong className="text-blue-900">
+                                {formatMoney(monetarySummary.adjusted_amount)}
+                              </strong>.
+                            </>
+                          );
+                        })()
                       ) : (
                         'No se evidencia variación monetaria neta entre los análisis del presupuesto y los costos de la base técnica oficial.'
                       )}

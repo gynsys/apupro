@@ -603,3 +603,53 @@ def test_codified_item_with_zero_materials_never_triggers_est005() -> None:
 
 
 
+
+
+def test_price_and_rate_discrepancy_rules() -> None:
+    """Verifica detección 1 a 1 de discrepancias de precio unitario, material, equipo y mano de obra."""
+    master_item: Dict[str, Any] = {
+        "cod_par": "PAR001",
+        "cov_par": "C.100",
+        "description": "EXCAVACION EN TIERRA A MANO",
+        "unit": "m3",
+        "performance": 5.0,
+        "unit_price": 100.0,
+    }
+    master_recipe: Dict[str, List[Dict[str, Any]]] = {
+        "materials": [
+            {"code": "MAT001", "description": "MATERIAL BASE", "unit": "kg", "quantity": 2.0, "unit_price": 10.0, "waste_or_deprec": 0.0},
+        ],
+        "equipments": [
+            {"code": "EQU001", "description": "EQUIPO BASE", "unit": "día", "quantity": 1.0, "unit_price": 100.0, "waste_or_deprec": 1.0},
+        ],
+        "labors": [
+            {"code": "LAB001", "description": "OBRERO BASE", "unit": "día", "quantity": 1.0, "unit_price": 20.0, "waste_or_deprec": 0.0},
+        ],
+    }
+
+    item_data: Dict[str, Any] = {
+        "original_code": "PAR001",
+        "covenin_code": "C.100",
+        "description": "EXCAVACION EN TIERRA A MANO",
+        "unit": "m3",
+        "quantity": 10.0,
+        "performance": 5.0,
+        "imported_unit_price": 125.0,
+        "calculated_unit_price": 125.0,
+        "materials": [
+            {"code": "MAT001", "resolved_master_code": "MAT001", "description": "MATERIAL BASE", "unit": "kg", "quantity": 2.0, "unit_price": 15.0, "waste_or_deprec": 0.0},
+        ],
+        "equipments": [
+            {"code": "EQU001", "resolved_master_code": "EQU001", "description": "EQUIPO BASE", "unit": "día", "quantity": 1.0, "unit_price": 140.0, "waste_or_deprec": 1.0},
+        ],
+        "labors": [
+            {"code": "LAB001", "resolved_master_code": "LAB001", "description": "OBRERO BASE", "unit": "día", "quantity": 1.0, "unit_price": 30.0},
+        ],
+    }
+
+    findings = evaluate_item_audit_rules(item_data, master_item, master_recipe)
+    rule_ids = {f["rule_id"]: f for f in findings}
+    assert "PRE-001" in rule_ids, "Debe detectar variación en precio unitario de partida"
+    assert "MAT-006" in rule_ids, "Debe detectar variación en precio de material"
+    assert "EQU-006" in rule_ids, "Debe detectar variación en costo diario de equipo"
+    assert "LAB-004" in rule_ids, "Debe detectar variación en jornal de mano de obra"

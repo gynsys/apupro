@@ -337,7 +337,7 @@ def _fetch_master_item_and_recipe(
 
     eq_rows = db.execute(
         text(
-            f'SELECT ae."CodIns", e."Descri", ae."CanIns", e."CosDia", ae."Deprec", e."deprec_factor" '
+            f'SELECT ae."CodIns", e."Descri", ae."CanIns", e."precio", ae."Deprec", e."deprec_factor", e."CosDia" '
             f'FROM "{schema}".cost360_apu_equipment ae '
             f'LEFT JOIN "{schema}".cost360_equipment e ON e."CodEqu" = ae."CodIns" '
             f'WHERE ae."CodPar" = :cp'
@@ -373,8 +373,12 @@ def _fetch_master_item_and_recipe(
                 "description": str(r[1] or "").strip(),
                 "unit": "día",
                 "quantity": float(r[2] or 0.0),
-                "unit_price": float(r[3] or 0.0),
-                "waste_or_deprec": float(r[4] if r[4] is not None else (r[5] if r[5] is not None else 1.0)),
+                "unit_price": float(r[3] or 0.0) if float(r[3] or 0.0) > 0 else float(r[6] or 0.0),
+                "waste_or_deprec": (
+                    float(r[4] if r[4] is not None else (r[5] if r[5] is not None else 1.0))
+                    if float(r[3] or 0.0) > 0
+                    else 1.0
+                ),
             }
             for r in eq_rows
         ],
