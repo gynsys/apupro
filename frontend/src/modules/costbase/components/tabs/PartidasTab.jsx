@@ -1,12 +1,13 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiLayers, FiEdit2, FiTrash2, FiDownload } from 'react-icons/fi';
+import { FiLayers, FiEdit2, FiTrash2, FiDownload, FiBookOpen } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import GlassCard from '../../../../components/shared/GlassCard';
 import Cost360SearchBar from '../Cost360SearchBar';
 import { useCost360Search } from '../../hooks/useCost360Search';
 import costbaseService, { fetchItems } from '../../services/costbaseService';
 import EditPartidaModal from '../modals/EditPartidaModal';
+import PartidaMedicionModal from '../modals/PartidaMedicionModal';
 import { AuthContext } from '../../../../context/AuthContext';
 
 const generatePartidasExcel = (items) => {
@@ -78,6 +79,7 @@ const generatePartidasExcel = (items) => {
 const PartidasTab = ({ onlyCoded, selectedDatabase = 'master' }) => {
   const navigate = useNavigate();
   const [editingItem, setEditingItem] = useState(null);
+  const [documentacionItem, setDocumentacionItem] = useState(null);
 
   const { user } = useContext(AuthContext);
   const isSuperAdmin = user?.is_superadmin === true || user?.email === 'admin@arko360.net';
@@ -210,6 +212,14 @@ const PartidasTab = ({ onlyCoded, selectedDatabase = 'master' }) => {
                       </span>
                       <div className="flex gap-2">
                         <button
+                          onClick={(e) => { e.stopPropagation(); setDocumentacionItem(item); }}
+                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-white rounded transition"
+                          title="Medición y pago"
+                          aria-label={`Ver medición y pago de ${item.CovPar || item.CodPar}`}
+                        >
+                          <FiBookOpen size={16} />
+                        </button>
+                        <button
                           onClick={(e) => { e.stopPropagation(); setEditingItem(item); }}
                           className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded transition"
                           title="Editar Partida"
@@ -267,6 +277,13 @@ const PartidasTab = ({ onlyCoded, selectedDatabase = 'master' }) => {
           selectedDatabase={selectedDatabase}
           onClose={() => setEditingItem(null)}
           onUpdated={handleSearch}
+        />
+      )}
+
+      {documentacionItem && (
+        <PartidaMedicionModal
+          item={documentacionItem}
+          onClose={() => setDocumentacionItem(null)}
         />
       )}
     </>
