@@ -307,6 +307,8 @@ def get_libro_entry_preview_keyboard() -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton("🔙 Menú Libro de Obra", callback_data="btn_menu_libro"),
+        ],
+        [
             InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home"),
         ],
     ])
@@ -317,18 +319,26 @@ def get_libro_edit_fields_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("📝 Descripción de la Labor", callback_data="btn_libro_edit_desc"),
+        ],
+        [
             InlineKeyboardButton("💬 Observaciones", callback_data="btn_libro_edit_obs"),
         ],
         [
             InlineKeyboardButton("👥 Personal en Obra", callback_data="btn_libro_edit_pers"),
+        ],
+        [
             InlineKeyboardButton("🚜 Maquinaria y Equipos", callback_data="btn_libro_edit_equip"),
         ],
         [
             InlineKeyboardButton("📌 Resumen Partidas", callback_data="btn_libro_edit_partidas"),
+        ],
+        [
             InlineKeyboardButton("🌦️ Clima / Horas", callback_data="btn_libro_edit_clima"),
         ],
         [
             InlineKeyboardButton("🏛️ C.I.V. Residente", callback_data="btn_libro_edit_civ_res"),
+        ],
+        [
             InlineKeyboardButton("🏛️ C.I.V. Inspector", callback_data="btn_libro_edit_civ_insp"),
         ],
         [
@@ -1598,10 +1608,14 @@ async def show_saved_libros_menu(update: Update, context: ContextTypes.DEFAULT_T
 
     buttons.append([
         InlineKeyboardButton("✍️ Llenar / Asentar Hoja", callback_data="btn_libro_registrar"),
+    ])
+    buttons.append([
         InlineKeyboardButton("🗑️ Eliminar un Libro", callback_data="btn_libro_eliminar"),
     ])
     buttons.append([
         InlineKeyboardButton("🔙 Volver a Libro de Obra", callback_data="btn_menu_libro"),
+    ])
+    buttons.append([
         InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home"),
     ])
 
@@ -1828,6 +1842,8 @@ async def handle_download_libro(update: Update, context: ContextTypes.DEFAULT_TY
         reply_kb = [
             [
                 InlineKeyboardButton("🔙 Volver a Libros", callback_data="btn_libro_ver"),
+            ],
+            [
                 InlineKeyboardButton("📖 Menú Libro de Obra", callback_data="btn_menu_libro"),
             ],
             [
@@ -1917,6 +1933,8 @@ async def _show_sheets_for_book(
 
     buttons.append([
         InlineKeyboardButton("📚 Ver Libros Guardados", callback_data="btn_libro_ver"),
+    ])
+    buttons.append([
         InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home"),
     ])
 

@@ -15,7 +15,11 @@ def sanitize_filename(name: str) -> str:
 
 
 def get_libro_main_keyboard() -> InlineKeyboardMarkup:
-    """Crea los botones principales para el Bot de Libro de Obra."""
+    """Crea los botones principales para el Bot de Libro de Obra.
+
+    Cada opción ocupa una fila completa para que las descripciones largas se
+    lean sin truncarse en Telegram.
+    """
     return InlineKeyboardMarkup(
         [
             [
@@ -23,14 +27,20 @@ def get_libro_main_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton("✏️ Editar una Hoja Guardada", callback_data="btn_libro_menu_editar"),
+            ],
+            [
                 InlineKeyboardButton("🔀 Fusionar Días", callback_data="btn_libro_menu_fusionar"),
             ],
             [
                 InlineKeyboardButton("📅 Modificar Fecha de Inicio", callback_data="btn_libro_modificar_fecha_inicio"),
+            ],
+            [
                 InlineKeyboardButton("📥 Importar Libro (.xlsx)", callback_data="btn_libro_menu_importar"),
             ],
             [
                 InlineKeyboardButton("📚 Ver / Descargar Libros", callback_data="btn_libro_ver"),
+            ],
+            [
                 InlineKeyboardButton("👥 Compartir Libro", callback_data="btn_libro_compartir"),
             ],
             [
