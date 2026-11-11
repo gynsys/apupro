@@ -1,0 +1,54 @@
+COVENIN — MINDUR 2000-92                                                                                                                                                         3
+TITULO 1 GENERALIDADES
+CAPITULO 1 ASPECTOS GENERALES
+1.1 VALIDEZ Y ALCANCE
+e                             Esta Norma establece los criterios para la determinación de los Cómputos Métricos y la Codificación
+de las Partidas para el presupuesto del proyecto, y construcción de las nuevas edificaciones que se
+ejecuten en el territorio nacional. Las obras temporales o provisionales también deberán cumplir con
+”                            estas disposiciones.
+
+La presente Norma sustituye a la Parte lA Edificaciónes, de las Norma COVENIN 2000-92
+Mediciones y Codificación de Partidas para Estudios, Proyectos y Construcción, en los Capítulos que se
+mencionan en la Introducción de esta Norma.
+
+La Codificación de Partidas se aplicará solamente a las edificaciones nuevas. Hasta tanto la
+presente Norma no contenga la Parte 11.B correspondiente a Estudios, Proyectos y Construcción de
+Reparaciones y Reformas de las edificaciones existentes, corresponderá a la Autoridad Compe-
+tente establecer los criterios de Codificación de Partidas para estos presupuestos.
+
+Como resultado de los análisis de las nuevas tecnologías y buscando la optimización de los
+procesos constructivos se establece la organización de  las Partidas de acuerdo con las siguientes
+Partes:      '
+
+PARTE ILA1-— PARTIDAS PARA ESTUDIOS, PROYECTOS Y  CONSTRUCCIÓN DE
+EDIFICACIONES NUEVAS PARA ÁREAS DE CONSTRUCCIÓN MAYORES DE 10000M2, en cuyo
+caso usaremos la codificación que contiene la letra | y 9 digitos: (IXXXXXXXXX)
+
+PARTE ILA2     PARTIDAS PARA ESTUDIOS, PROYECTOS Y CONSTRUCCIÓN DE
+EDIFICACIONES NUEVAS PARA RANGO DE ÁREAS DE CONSTRUCCIÓN ENTRE 1000M2 Y
+10000M2, en cuyo caso usaremos la codificación que contiene la letra E y 9 dígitos: (EXXXXXXXXX)
+
+PARTE I1LA3     PARTIDAS PARA ESTUDIOS, PROYECTOS Y CONSTRUCCIÓN DE
+EDIFICACIONES NUEVAS PARA RANGO DE ÁREAS DE CONSTRUCCIÓN MENORES DE 1000M2,
+en cuyo caso usaremos la codificación que contiene la letra M y 9 dígitos: (MXXIXI0000X)
+
+PARTE 11.81     PARTIDAS PARA ESTUDIOS, PROYECTOS Y CONSTRUCCIÓN DE
+REPARACIONES GENERALES DE EDIFICACIONES EXISTENTES, INCLUYENDO REPARACIÓN DE
+LA ESTRUCTURA, en cuyo caso usaremos la codificación que contiene la letra R y 9 digitos
+(RXXXXXXXXX)
+
+PARTE 11.82     PARTIDAS PARA ESTUDIOS, PROYECTOS Y CONSTRUCCIÓN DE
+REPARACIONES PARCIALES DE EDIFICACIONES EXISTENTES, QUE NO INCLUYEN
+REPARACIÓN DE LA ESTRUCTURA, en cuyo caso usaremos la codificación que contiene la letra P y 9
+digitos: (PXXXXXXXXX)
+
+Los presupuestos de edificaciones para Reformas de edificaciones existentes: Remodelaciones,
+Ampliaciones, etc. que se incluyen en la PARTE IB, no llevarán una codificación específica, sino que se
+estructurarán con las Partidas de las Partes antes mencionadas, según las exigencias propias de los
+referidos trabajos.
+
+Los presupuestos de edificaciones que requieran el uso de Partidas relativas a vialidad o hidráulica
+no contempladas en esta Norma usarán los códigos, descripción, unidades de medida y cómputos
+
+5                        métricos indicados en las Normas COVENIN 2000 - 91 vigente en su Parte | Carreteras y en su Pante lll
+Obras Hidráulicas, sujeto a la aprobación del organismo contratante.

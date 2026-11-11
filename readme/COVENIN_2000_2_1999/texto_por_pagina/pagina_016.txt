@@ -1,0 +1,42 @@
+1 0                                                                                                                                                                COVENIN — MINDUR 2000-92
+2)       Maquinarias hasta 10 tf de peso:
+El transporte se medirá por Partida separada, según el código E900 considerando el
+peso del total de maquinarias dentro de ese rango y en base a viaje completo de
+camión.
+3)        Maquinarias de más de 10 tf de peso:
+Se pagará por Partida separada, según las Partidas E901 y E902, considerando el
+peso de cada maquinaria dentro de ese rango de peso. La ida y el regreso se pagará
+como un solo viaje por maquinaria y no se reconocerá cuando una maquinaria se
+sustituya por otra. En este grupo de Partidas se incluyen las maquinarias para pilotes,
+muros especia les y obras afines.
+2.13.2 Transporte de materiales como insumo de Partidas
+Todo material que aparezca como insumo de Partida se considera como puesto en obra bajo la
+responsabilidad del contratista. El transporte hasta el sitio de la obra deberá ser incluido como insumo
+en el Análisis de Precios unitarios, salvo en los siguientes casos:
+
+- El transporte de aquellos materiales que por sus características de tamaño, peso y cantidad,
+tales como piezas menores de electricidad y plomería y similares (cajetines, interruptores,
+tomacorrientes, accesorios sanitarios, etc), puedan ser transportados, en su totalidad, en el
+vehículo de servicio de la empresa, el cual se previó en los Gastos Generales de obra y por
+consiguiente, dicho costo se considera incluido en los mismos.
+
+- El transporte de algunos materiales que por su volumen considerable, tiene mucha incidencia
+en los costos de las obras, tales como agregados, cementos, bloques de arcilla y concreto,
+refuerzos y estructuras metálicas y estructuras de madera, se pagarán por el Capitulo E9
+Transporte como Partidas separadas y no en el alcance de algunas Partidas.
+
+Los transportes de pilotes prefabricados de concreto armado, tubos metálicos para pilotes,
+tablestacas y perfiles metálicos para pilotaje se pagarán por Partidas separadas según el
+Capítulo E9 Transportes.
+2.13.3 Transporte de maquinarias como componentes de Partidas
+No se prevé transporte de maquinarias como componente de costo en los análisis precios unitarios
+de Partidas
+2.13.4 Otros transportes
+En el Capítulo E9 se incluyen los transportes en ferrys para uso marítimo y fluvial.
+2.14 EXCAVACIÓN EN OBRAS PREPARATORIAS
+Para excavaciones en zanjas, el volumen de excavación se determinará multiplicando su sección
+transversal por la longitud. En el caso de que la zanja tenga profundidad variable se utilizará para
+efectos de ubicación de la Partida correspondiente, la máxima profundidad alcanzada.
+En la excavación de zanjas a mano, se medirán los volúmenes reales de excavación a partir de la
+rasante del terreno y se ubicará a efectos de presupuesto, en la Partida correspondiente a la máxima
+p.ofundidad alcanzada en ese sitio.

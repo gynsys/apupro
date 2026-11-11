@@ -1,0 +1,41 @@
+COVENIN - MINDUR 2000 - 92                                                                         111
+PARTIDAS E905 TRANSPORTE DE CEMENTOS
+Alcance
+
+e                            Comprende el transporte hasta el sitio de la obra, del cemento utilizado en las estructuras y demás
+elementos de concreto y obras de albañileria y acabados de la edificación.
+
+z                    Medición
+
+La unidad de medida será el saco (s) para transporte hasta 50 km y la tonelada fuerza por kilómetro
+
+(tf . km) para transporte para distancias comprendidas entre 50 y 200 km. y la medición se realizará
+sobre la obra ejecutada.
+
+- En el caso de usar la unidad de medida tonelada fuerza por kilómetro (tf. Km), a efectos de la
+determinación del precio unitario de la Partida, la cantidad total de m       transportado será el pro-
+ducto de multiplicar el peso total de cemento utilizado medido en tone  .s fuerza (tf) por la distancia
+hasta el sitio de la obra, medido en kilómetros (km).
+
+La cantidad de cemento transportado será la obtenida de las Partidas de los Capitulos E3, E4 y E8,
+respectivamente.
+PARTIDAS E906 TRANSPORTE DE BLOQUES DE ARCILLA
+PARTIDAS E907 TRANSPORTE DE BLOQUES DE CONCRETO
+PARTIDAS E908 TRANSPORTE DE LADRILLOS Y OTROS ELEMENTOS
+MACIZOS DE ARCILLA
+Alcance
+
+Comprende el transporte hasta el sitio de la obra de los bloques y/o ladrillos utilizados en las obras
+
+de albañilería y acabados de la edificación.
+Medición
+
+La unidad de medida será la tonelada fuerza por kilómetro (tf . km) y la medición se realizará sobre
+la obra ejecutada.
+
+A efectos de la determinación del precio unitario de la Partida la cantidad total de material
+
+-                    transportado será el producto de multiplicar el peso total de bloques y/o ladrillos utilizados, medido en
+
+toneladas fuerza (tf) en la obra ejecutada, por la distancia hasta el sitio de la obra, medido en
+kilómetros (km).

@@ -1,0 +1,55 @@
+COVENIN - MINDUR 2000-92                                                                                                                                                                81
+SUBCAPÍTULO E61 TUBERÍAS
+Alcance
+
+Comprende el suministro, transporte e instalación de las tuberías de los sistemas de aguas claras,
+
+aguas residuales, aguas de lluvias, sistemas de ventilación y especiales (gases, incendio, residuos
+
+E              sólidos, aire acondicionado etc.) exteriores a los recintos sanitarios, según el material, diámetro
+nominal y forma de colocación (colgantes, embutidas y fijadas a la superficie), conforme a los planos y
+especificaciones del proyecto de Instalaciones Sanitarias.
+
+En el precio unitario de las Partidas se incluyen los materiales y su transporte hasta el sitio de la
+obra, el uso de las maquinarias y herramientas, el replanteo y la mano de obra necesarios para la total y
+completa ejecución de las mismas, así como también las pruebas de presión hidrostática, remates y
+recolección de los desperdicios, según la siguiente codificación y descripción que se detalla al final del
+Capítulo E6:
+
+- E611... TUBERÍAS PARA AGUAS CLARAS
+
+E612...      TUBERÍAS PARA AGUAS RESIDUALES.
+
+E613... TUBERÍAS PARA VENTILACIÓN.
+
+E614...      TUBERÍAS PARA AGUAS PLUVIALES
+
+E615.... TUBERÍAS PARA GASES
+
+E616...      TUBERÍAS PARA INCENDIO
+
+E617...       TUBERÍAS PARA RESIDUOS SÓLIDOS
+
+Se establecen los siguientes conceptos:
+
+Diámetro Nominal de tubería: Es la denominación usual en el mercado del diámetro del tubo,
+expresado en pulgadas y en milímetros, equivalente al diámetro interior del mismo.
+
+Espesor Nominal de tubería: Es la denominación usual en el mercado del espesor del tubo,
+expresado en pulgadas y en milimetros, equivalente al espesor señalado en las normas.
+
+Medición
+
+La unidad de medida será el metro lineal (m) según los diámetros y el tipo de material y forma de
+colocación. Se tomará la longitud efectiva, incluyendo las piezas especiales y de conexión ubicadas en
+el eje de la tubería
+
+Se establecen los siguientes criterios de medición:
+
+En el precio unitario de estas Partidas se incluyen las conexiones y su material de junta. El
+suministro y transporte de las llaves de paso, válvulas, grifos, medidores, etc. se computarán en forma
+separada en los Subcapítulos E63, E64 y E65 ya que su instalación está incluida en el alcance de las
+Partidas de tuberías o puntos sanitarios.
+
+Igualmente se incluyen en el precio unitario de las Tuberías, los elementos de fijación de acuerdo
+con las características de la instalación, así como también los desperdicios de las tuberias.

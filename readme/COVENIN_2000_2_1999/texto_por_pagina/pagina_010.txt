@@ -1,0 +1,28 @@
+4                                                                                                                                                                                           COVENIN — MINDUR 2000-92
+1.2 ORGANIZACION DE ESTA NORMA
+Esta Norma se refiere a la Parte IlA2, y está constituida por las normas de  mediciones, los
+esquemas de codificación de Partidas, y la lista de las Partidas organizadas en Títulos, Capitulos y Sub-
+capitulos. Las Partidas se identifican mediante un código compuesto de la letra "E" y nueve digitos, de
+los cuales el primero identifica el Capítulo, el segundo, o el  segundo y el tercero identifican el
+Subcapítulo y las restantes posiciones representan diferentes  parámetros tales como tipo de miembro o
+elemento, su acabado, manera de ejecución, material, dimensiones, forma,actividad, etc.
+1.3 DEFINICIONES GENERALES
+Para los efectos de esta Norma, los siguientes términos se interpretarán con el significado que se                   <
+define a continuación. En este vocabulario las palabras subrayadas señalan términos aqui definidos.
+Consultar la Norma COVENIN - MINDUR 2004-98 “Terminología de las Normas de edificaciones".
+Se incorporan a este Subtitulo las siguientes definiciones:
+demolición: Fragmentación de una edificación, o parte de ella, en tamaños tales  que puedan ser
+transportados al sitio de disposición final
+diámetro nominal de tubería: Es la denominación usual en el mercado del diámetro del  tubo,
+expresado en pulgadas y en milimetros, equivalente al diámetro interior del mismo.
+espesor nominal de tubería: Es la denominación usual en el mercado del espesor del tubo, expresado
+en pulgadas y en milimetros, equivalente al espesor señalado en las normas.
+infraestructura: Parte de la estructura necesaria para soportar la superestructura de la edificación por
+debajo de la cota superior del pedestal o de la viga de riostra o de la viga de fundación
+puntos sanitarios:Las instalaciones hasta los orificios de abastecimientos o descargas de las aguas o
+a los drenes de piso. El diámetro del punto sanitario lo define el diámetro de la tubería de descarga o
+alimentación del artefacto correspondiente.
+remoción: Desmontar y/o desarmar, sin afectar las características principales de los elementos de una
+edificación, de tal manera que puedan ser transportados para su eventual reutilización
+superestructura: Parte de la estructura de la edificación por encima de la cota superior del pedestal o
+viga de riostra o viga de fundación

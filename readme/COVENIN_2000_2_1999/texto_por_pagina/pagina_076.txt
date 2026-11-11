@@ -1,0 +1,45 @@
+80                                                                                                                                                                  COVENIN - MINDUR 2000-92
+Criterios de medición
+
+A efectos de la medición de las Partidas Instalaciones Sanitarias se establecen  y definen los
+siguientes términos con sus correspondientes criterios de medición:
+
+Recintos sanitarios: Recintos techados, dentro o fuera de la edificación donde  existen
+agrupaciones de servicios sanitarios con un solo abastecimiento o descarga según se trate de aguas
+claras o aguas residuales, tales como baños, vestuarios, cocinas, lavaderos, laboratorios, consultorios,
+etc., sin que las paredes o tabiques sean tajantemente indicativos como elementos demarcadores del
+mismo. Las instalaciones sanitarias de tuberías y conexiones en dichos recintos se medirán por Puntos
+Sanitarios de Aguas Claras o Residuales (ptos.) de acuerdo a sus diámetros, forma de colocación y tipo                      :
+de material a usar. Entendiéndose por Puntos Sanitarios, las instalaciones hasta los orificios de abas-
+tecimientos o descargas de las aguas o a los drenes de piso. El diámetro del Punto Sanitario lo define el
+diámetro de la tubería de descarga o alimentación del artefacto correspondiente.
+
+A continuación se presentan algunos ejemplos:
+
+1. UnW.C. fiene un punto de aguas claras y un punto de aguas residuales.
+
+2. Un lavamanos con dos llaves y dos entradas de agua: fria  y caliente, tiene dos puntos de aguas
+claras y uno de aguas residuales.
+
+3. El dren de piso dentro de un recinto sanitario se le computa como un punto de aguas
+
+residuales y el dren en si (marco y rejilla) se medirá por Partidas separada.
+
+4. En los registros de aguas residuales, tanto los tapones como las tapas se computarán como piezas
+por Partidas separadas.
+
+Áreas exteriores a recintos sanitarios: En dichas áreas, techadas o no, dentro o fuera de la
+edificación, las tuberias que les dan servicio se medirán por metro lineal (m.) especificando sus diáme-
+tros, forma de colocación y tipo de material. Las tuberías se computarán hasta la primera conexión de
+bifurcación, inclusive, perteneciente al ramal que sirve al recinto sanitario.
+
+De la misma manera se medirán por metro lineal (m.) las instalaciones correspondientes a tuberías
+para ventilación, aguas de lluvias y bajantes de aguas residuales. También se medirán por metro lineal
+(m.) de tubería las instalaciones correspondientes a los orificios que prestan servicios aislados tales
+como drenes recolectores en patios y estacionamientos, los bebederos en corredores o pasillos, salidas
+para riego y similares.
+
+Si una tubería sirve a mas de un recinto sanitario no contiguos, esta se incluirá en el alcance de los
+puntos sanitarios de dichos recintos, salvo el tramo comprendido entre la última conexión del primer
+recinto y la primera conexión del siguiente recinto. En general si una tubería atraviesa el área de un
+recinto sanitario, sin dar ni recibir ningún tipo de servicio al mismo, ésta se medirá por metro lineal (m).

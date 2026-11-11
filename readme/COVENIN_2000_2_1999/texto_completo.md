@@ -1,0 +1,6228 @@
+# COVENIN-MINDUR 2000-2:1999 — Texto OCR completo
+
+> Transcripción OCR automática. Revisar contra el PDF original antes de usar en producción.
+
+## Página 1
+
+NORMA                                                COVENIN
+VENEZOLANA                                  2000-2:1999
+EAT
+SECTOR CONSTRUCCIÓN.
+MEDICIONES Y CODIFICACIÓN
+DE PARTIDAS PARA ESTUDIOS,
+PROYECTOS Y CONSTRUCCIÓN.
+PARTE 2: EDIFICACIONES.
+SUPLEMENTO DE LA NORMA
+COVENIN-MINDUR 2000/11.A-92
+(Provisional)
+4)            E
+FONDONORMA
+O A E SN A EE RP]      EA
+
+## Página 2
+
+COVENIN — MINDUR 2000-92                                                                                                                                                                 1
+INTRODUCCION
+La Comisión Permanente de Normas para Edificaciones del Ministerio del Desarrollo Urbano, presenta
+e                     el SUPLEMENTO No. 1 DE LA NORMA COVENIN — MINDUR 2000 del año 1992, como resultado de
+la primera revisión y actualización elaborada por representantes de la Contraloría General de la
+República, la Contraloría Interna del Centro Simón Bolivar, la Contraloría Interna y la Comisión de
+Normas para Construcción de Edificaciones del Ministerio del Desarrollo Urbano, y el Instituto Nacional
+A                       de Costos (INC-CIV), del Colegio de Ingenieros de Venezuela, incorporándose las observaciones que el
+uso de la norma COVENIN — MINDUR 2000-92 "MEDICIONES Y CODIFICACIÓN DE PARTIDAS
+PARA ESTUDIOS, PROYECTOS Y CONSTRUCCIÓN. Parte !I.A EDIFICACIONES", declarada
+obligatoria en la Gaceta Oficial No. 35225, del 3 de Junio de 1993, ha generado desde su publicación.
+Este Suplemento sustituye todos los Capítulos y Subcapítulos de la Norma COVENIN — MINDUR
+2000-92 que se mencionan a continuación:
+O CAPÍTULO 1 ASPECTOS GENERALES
+Revisión y actualización.
+O CAPÍTULO 2 CRITERIOS GENERALES DE CODIFICACIÓN, DESCRIPCIÓN Y MEDICIÓN DE
+PARTIDAS
+Revisión y actualización.
+O CAPÍTULO E1 OBRAS PRELIMINARES
+Se modifico el alcance de las Partidas E1
+O CAPÍTULO E3 ESTRUCTURAS
+Se modificó la descripción de las Partidas de Concreto de los Subcapítulos E32 y E33,
+manteniendo la codificación original. Se desarrolló el Subcapítulo E36 ESTRUCTURAS
+METÁLICAS en lo referente a las normas de medición, esquemas de codificación de Partidas y la
+lista de Partidas.
+DO CAPÍTULO E4 OBRAS ARQUITECTÓNICAS
+Se desarrolló el Subcapítulo E42 IMPERMEABILIZACIÓN para hacerlo
+consistente con la nueva norma venezolana COVENIN — MINDUR 3400 -98
+"IMPERMEABILIZACIÓN DE EDIFICACIONES".
+D CAPÍTULO E6 INSTALACIONES SANITARIAS
+Revisión y actualización, permaneciendo los dibujos sin modificaciones.
+O CAPÍTULOS E9 TRANSPORTES
+Revisado y actualizado.
+b               Para resolver las consultas de una manera más expedita, la Comisión ha considerado conveniente
+»             aplicar el procedimiento que se presenta en la "GUÍA PARA LAS CONSULTAS TÉCNICAS A LA
+COMISIÓN DE NORMAS DEL MINDUR”, la cual se presenta al final de este Suplemento.
+En los Esquemas de codificación y en la Descripción de las Partidas, por razones didácticas, se ha
+mn                       respetado la notación de las unidades, conforme al Artículo 2.8 Notación y Unidades de la Norma 2000-
+92, además de corresponder a las capacidades de los nuevos computadores que discriminan entre las
+mayúsculas y las minúsculas.
+La Comisión agradece la colaboración de las siguientes entidades y personas:
+A la Asociación Venezolana de Impermeabilizadores, en la persona del Sr. Alberto Badalá, por su
+asesoría en la revisión del Subcapitulo E42 Impermeabilización. Al Ing. Arnaldo Gutiérrez, Ponente de
+
+## Página 3
+
+10                                                                                                  COVENIN — MINDUR 2000-92
+
+la Subcomisión de Estructuras  por su asesoría, revisión y edición de este  Suplemento. A los
+representantes de los diferentes Organismos públicos y privados, empresas, contratistas, inspectores y
+auditores por sus consultas y observaciones a la Norma COVENIN — MINDUR 2000-92.
+
+La Comisión exhorta a los Ingenieros, Arquitectos y Profesionales afines para que le hagan llegar las
+observaciones que el uso del Suplemento ocasiones, según las pautas establecidas en la Guía incluida
+al final de esta publicación.                                                                                                                           .
+Caracas, 10 de Febrero de 1999
+Por la Comisión Permanentes de Normas para Edificaciones
+
+Salomón Epelboim
+Carmen Lobo de Silva
+Joaquín Marín
+
+César Carreño (Ponente)
+Arnaldo Gutiérrez ( Editor)
+Elizabeth Pérez
+
+Félix Morán
+
+José Fernández
+
+Félix García B.
+Angel Figuera
+Carlos Díaz F.
+
+## Página 4
+
+COVENIN — MINDUR 2000-92                                                                                                                                                                  MI
+PROLOGO
+El CONSEJO SUPERIOR DE FONDONORMA, en su reunión No. XX del día de 1999, aprobó las
+siguientes modificaciones y actualizaciones a la Norma Venezolana COVENIN — MINDUR 2000-92.
+4                 elaborada por la Comisión Permamente de Normas para de Edificaciones del Ministerio del Desarrollo
+Urbano (MINDUR), como Suplemento No. 1, siendo ésta su primera versión.
+La presente actualización de norma venezolana (obligatoria) es de carácter provisional por un
+>:                 periodo de dos años, contados a partir de la fecha de su publicación, a fin de obtener y procesar las
+observaciones que su uso ocasione. Las observaciones y consultas técnicas deberán entregarse por
+escrito y debidamente documentadas, según las pautas establecidas en la "Guía para Consultas
+Técnicas a la Comisión de Normas del MINDUR", las cuales se detallan al final de esta publicación.
+Distribución y Venta:
+:      FONDONORMA , Fondo para la Normalización y Certificación de la Calidad
+Torre Fondocomún, Piso 12
+Av. Andrés Bello, Caracas
+Teléfono (desde el extranjero 582 o desde Venezuela 02) 575.41.11
+
+## Página 5
+
+COVENIN — MINDUR 2000-92                                                                                                                       V
+INDICE
+e                                                                  TITULO 1 GENERALIDADES
+Pág.
+%                     CAPITULO 1 ASPECTOS GENERALES                                                          3
+1.1 VALIDEZ Y ALCANCE                                                                                  3
+1.2 ORGANIZACIÓN DE ESTA NORMA                                                          4
+1.3 DEFINICIONES GENERALES                                                                    4
+CAPÍTULO 2 CRITERIOS GENERALES DE CODIFICACIÓN,
+DESCRIPCION DE PARTIDAS Y MEDICIÓN DE PARTIDAS                5
+2.1 CONDICIONES GENERALES DE CONTRATACIÓN                                       5
+2.2 CALIDAD DE LOS MATERIALES                                                           5
+2.3 CÓMPUTOS MÉTRICOS                                                                             5
+2.4 CRITERIOS DE CODIFICACIÓN DE PARTIDAS                                           6
+2.5 CRITERIOS GENERALES DE DESCRIPCIÓN DE PARTIDAS                            6
+2.6 CRITERIOS GENERALES DE MEDICIÓN DE PARTIDAS                                 7
+2.7 ALCANCE DE LAS PARTIDAS                                                                   7
+2.8 NOTACIÓN Y UNIDADES                                                                     8
+2.9 CRITERIOS DE APROXIMACIÓN EN LOS CÓMPUTOS MÉTRICOS                     9
+2.10 MEDICIÓN DE ÁREAS                                                                         9
+2.11 INTERSECCIONES                                                                            9
+2.12 VACIOS Y ÁREAS DESCONTABLES                                                            9
+2.13 MEDICIÓN DE LA ACTIVIDAD DE TRANSPORTE                                          9
+2.13.1 Partidas de transporte en camiones                                                                9
+2.13.2 Transporte de materiales como insumos de Partidas                                          10
+2.13.3 Transporte de maquinarias como componentes de Partidas                                 10
+2.13.4 Otros transportes                                                                                       10
+2.14 EXCAVACIÓN EN OBRAS PREPARATORIAS                                              10
+2.15 BIBLIOGRAFIA                                                                                 11
+TITULO 3 PARTIDAS DE OBRAS
+CAPÍTULO E1 OBRAS PRELIMINARES                                                   13
+Definición                                                                                                      15
+Alcance                                                                                                        15
+SUBCAPÍTULO E11 INSTALACIONES PROVISIONALES                                   15
+Alcance                                                                                                                             15
+Medición                                                                                                       15
+PARTIDAS E113 CERCAS Y PORTONES                                                          16
+Alcance                                                                                                        16
+Medición                                                                                                       16
+SUBCAPÍTULO E12 LIMPIEZA DEL TERRENO                                                 18
+
+## Página 6
+
+VI                                                                                                                   COVENIN — MINDUR 2000-92
+Pág
+PARTIDAS E121 DEFORESTACIÓN                                              18
+Alcance                                                                                                         18
+Medición                                                                                                        18
+PARTIDAS E122 TALA DE VEGETACIÓN HERBÁCEA                                       18                                    '
+Alcance                                                                                                         18
+Medición                                                                                                        18                                       .
+PARTIDAS E123 TALA Y DESRAIZAMIENTO DE ÁRBOLES INDIVIDUALES             19
+Alcance                                                                                                                              19
+Medición                                                                                                                             19
+SUBCAPÍTULO E13 DEMOLICIONES                                                               20
+Alcance                                                                                                         20
+Medición       Í                                                                                                20
+SUBCAPÍTULO E14 REMOCIONES                                                                    21
+Alcance                                                                                                         21
+Medición                                                                                                        21
+Tabla A1 Construcciones Provisionales para Edificaciones Convencionales                17
+ESQUEMAS DE CODIFICACIÓN                                                                        23
+PARTIDAS                                                                                                     29
+CAPÍTULO E3 ESTRUCTURAS                                                  35
+SUBCAPÍTULO E32 INFRAESTRUCTURA DE CONCRETO                                     37
+Definición                                                                                                      37
+SUBCAPIÍTULO E33 SUPERESTRUCUTURAS DE CONCRETO                            39
+Definición                                              -                                                       39
+SUBCAPITULO E36 ESTRUCUTURAS METÁLICAS                                          41
+Definición                                                                                                       41
+Alcance                                                                                                         41
+Medición                                                                                                        41
+Correcciones en otras partes de la Norma 2000-92                                                 43
+ESQUEMAS DE CODIFICACIÓN                                                                        44
+PARTIDAS                                                                                                     45
+CAPÍTULO E4 OBRAS ARQUITECTÓNICAS                                                     65
+SUBCAPÍTULO E42 IMPERMEABILIZACIÓN                                                        67
+Definición                                                                                                       67                                         A
+Alcance                                                                                                         67
+Medición                                                                                                        67
+Esquema de codificación                                                                                               69
+Partidas                                                                                                         73
+CAPÍTULO E6 INSTALACIONES SANITARIAS Y ESPECIALES                           17
+Alcance                                                                                                         79
+Criterios de Medición                                                                                        80
+
+## Página 7
+
+COVENIN — MINDUR 2000-92                                                                                                                                                               VII
+Pág.
+SUBCAPÍTULO E61 TUBERÍAS                                                            81
+Alcance                                                                                                                  81
+Medición                                                                                                                 81
+SUBCAPÍTULO E62 PUNTOS SANITARIOS                                                   83
+Alcance                                                                                                                  83
+”                         Medición                                                                                                                 83
+SUBCAPÍTULO E63 LLAVES DE PASO                                                           84
+SUBCAPÍTULO E64 OTRAS PIEZAS ESPECIALES: VÁLVULAS,
+GRIFOS, MEDIDORES                                                          84
+Alcance                                                                                                                  84
+Medición                                                                                                                 84
+SUBCAPÍTULO E65 VARIOS; REGISTROS                                                          85
+Alcance                                                                     í                                              85
+Medición                                                                                                                 85
+SUBCAPÍTULO E66 ARTEFACTOS SANITARIOS                                                86
+Alcance                                                                                                                  86
+Medición                                                                                                                 86
+Esquemas de Codificación                                                                                            87
+Partidas                                                                                                                  95
+CAPÍTULO E9 TRANSPORTES                                                                             105
+Alcance                                                                                                                                                                                    107
+Criterios Generales de Medición                                                                              108
+Partidas E900 Transporte de maquinaria liviana con peso hasta 10 tf                           109
+Partidas E901, E 902 Transporte de maquinaria pesada                                              109
+Partidas E903 Transporte de tierra, agregados para concreto y escombros                     110
+Partidas E905 Transporte de cementos                                                                          111
+* Partidas E906 Transporte de bloques de arcilla                                                             111
+Partidas E907 Transporte de bloques de concreto                                                        111
+Partidas E908 Transporte de ladrillos y otros elementos macizos de arcilla                     111
+Partidas E909 Transporte de estructuras metálicas                                                     112
+Partidas E910 Transporte de estructuras de madera                                                    112
+Partidas E911 Transporte de los elementos para la construcción de muros
+de suelo armado                                                                                                    113
+Partidas E913 Transporte de mezclas asfálticas en caliente                                          113
+Partidas E914 Transporte de mezclas asfálticas en frio                                                113
+Partidas E915 Transporte de elementos prefabricados de concreto armado,
+tablestacas, perfiles y tubos metálicos                                                  114
+Esquemas de codificación                                                                                                  115
+Partidas                                                                                                                                                                                    117
+A                     Guía para las Consultas Técnicas a la Comisión de Normas del MINDUR               133
+Publicaciones de la Comisión                                                                    135
+
+## Página 8
+
+TITULO 1
+GENERALIDADES
+
+## Página 9
+
+COVENIN — MINDUR 2000-92                                                                                                                                                         3
+TITULO 1 GENERALIDADES
+CAPITULO 1 ASPECTOS GENERALES
+1.1 VALIDEZ Y ALCANCE
+e                             Esta Norma establece los criterios para la determinación de los Cómputos Métricos y la Codificación
+de las Partidas para el presupuesto del proyecto, y construcción de las nuevas edificaciones que se
+ejecuten en el territorio nacional. Las obras temporales o provisionales también deberán cumplir con
+”                            estas disposiciones.
+
+La presente Norma sustituye a la Parte lA Edificaciónes, de las Norma COVENIN 2000-92
+Mediciones y Codificación de Partidas para Estudios, Proyectos y Construcción, en los Capítulos que se
+mencionan en la Introducción de esta Norma.
+
+La Codificación de Partidas se aplicará solamente a las edificaciones nuevas. Hasta tanto la
+presente Norma no contenga la Parte 11.B correspondiente a Estudios, Proyectos y Construcción de
+Reparaciones y Reformas de las edificaciones existentes, corresponderá a la Autoridad Compe-
+tente establecer los criterios de Codificación de Partidas para estos presupuestos.
+
+Como resultado de los análisis de las nuevas tecnologías y buscando la optimización de los
+procesos constructivos se establece la organización de  las Partidas de acuerdo con las siguientes
+Partes:      '
+
+PARTE ILA1-— PARTIDAS PARA ESTUDIOS, PROYECTOS Y  CONSTRUCCIÓN DE
+EDIFICACIONES NUEVAS PARA ÁREAS DE CONSTRUCCIÓN MAYORES DE 10000M2, en cuyo
+caso usaremos la codificación que contiene la letra | y 9 digitos: (IXXXXXXXXX)
+
+PARTE ILA2     PARTIDAS PARA ESTUDIOS, PROYECTOS Y CONSTRUCCIÓN DE
+EDIFICACIONES NUEVAS PARA RANGO DE ÁREAS DE CONSTRUCCIÓN ENTRE 1000M2 Y
+10000M2, en cuyo caso usaremos la codificación que contiene la letra E y 9 dígitos: (EXXXXXXXXX)
+
+PARTE I1LA3     PARTIDAS PARA ESTUDIOS, PROYECTOS Y CONSTRUCCIÓN DE
+EDIFICACIONES NUEVAS PARA RANGO DE ÁREAS DE CONSTRUCCIÓN MENORES DE 1000M2,
+en cuyo caso usaremos la codificación que contiene la letra M y 9 dígitos: (MXXIXI0000X)
+
+PARTE 11.81     PARTIDAS PARA ESTUDIOS, PROYECTOS Y CONSTRUCCIÓN DE
+REPARACIONES GENERALES DE EDIFICACIONES EXISTENTES, INCLUYENDO REPARACIÓN DE
+LA ESTRUCTURA, en cuyo caso usaremos la codificación que contiene la letra R y 9 digitos
+(RXXXXXXXXX)
+
+PARTE 11.82     PARTIDAS PARA ESTUDIOS, PROYECTOS Y CONSTRUCCIÓN DE
+REPARACIONES PARCIALES DE EDIFICACIONES EXISTENTES, QUE NO INCLUYEN
+REPARACIÓN DE LA ESTRUCTURA, en cuyo caso usaremos la codificación que contiene la letra P y 9
+digitos: (PXXXXXXXXX)
+
+Los presupuestos de edificaciones para Reformas de edificaciones existentes: Remodelaciones,
+Ampliaciones, etc. que se incluyen en la PARTE IB, no llevarán una codificación específica, sino que se
+estructurarán con las Partidas de las Partes antes mencionadas, según las exigencias propias de los
+referidos trabajos.
+
+Los presupuestos de edificaciones que requieran el uso de Partidas relativas a vialidad o hidráulica
+no contempladas en esta Norma usarán los códigos, descripción, unidades de medida y cómputos
+
+5                        métricos indicados en las Normas COVENIN 2000 - 91 vigente en su Parte | Carreteras y en su Pante lll
+Obras Hidráulicas, sujeto a la aprobación del organismo contratante.
+
+## Página 10
+
+4                                                                                                                                                                                           COVENIN — MINDUR 2000-92
+1.2 ORGANIZACION DE ESTA NORMA
+Esta Norma se refiere a la Parte IlA2, y está constituida por las normas de  mediciones, los
+esquemas de codificación de Partidas, y la lista de las Partidas organizadas en Títulos, Capitulos y Sub-
+capitulos. Las Partidas se identifican mediante un código compuesto de la letra "E" y nueve digitos, de
+los cuales el primero identifica el Capítulo, el segundo, o el  segundo y el tercero identifican el
+Subcapítulo y las restantes posiciones representan diferentes  parámetros tales como tipo de miembro o
+elemento, su acabado, manera de ejecución, material, dimensiones, forma,actividad, etc.
+1.3 DEFINICIONES GENERALES
+Para los efectos de esta Norma, los siguientes términos se interpretarán con el significado que se                   <
+define a continuación. En este vocabulario las palabras subrayadas señalan términos aqui definidos.
+Consultar la Norma COVENIN - MINDUR 2004-98 “Terminología de las Normas de edificaciones".
+Se incorporan a este Subtitulo las siguientes definiciones:
+demolición: Fragmentación de una edificación, o parte de ella, en tamaños tales  que puedan ser
+transportados al sitio de disposición final
+diámetro nominal de tubería: Es la denominación usual en el mercado del diámetro del  tubo,
+expresado en pulgadas y en milimetros, equivalente al diámetro interior del mismo.
+espesor nominal de tubería: Es la denominación usual en el mercado del espesor del tubo, expresado
+en pulgadas y en milimetros, equivalente al espesor señalado en las normas.
+infraestructura: Parte de la estructura necesaria para soportar la superestructura de la edificación por
+debajo de la cota superior del pedestal o de la viga de riostra o de la viga de fundación
+puntos sanitarios:Las instalaciones hasta los orificios de abastecimientos o descargas de las aguas o
+a los drenes de piso. El diámetro del punto sanitario lo define el diámetro de la tubería de descarga o
+alimentación del artefacto correspondiente.
+remoción: Desmontar y/o desarmar, sin afectar las características principales de los elementos de una
+edificación, de tal manera que puedan ser transportados para su eventual reutilización
+superestructura: Parte de la estructura de la edificación por encima de la cota superior del pedestal o
+viga de riostra o viga de fundación
+
+## Página 11
+
+COVENIN- MINDUR 2000-92                                                                                                                                                               5
+CAPITULO 2  CRITERIOS  GENERALES DE CODIFICACIÓN, DESCRIPCIÓN Y
+MEDICION DE PARTIDAS
+2.1 CONDICIONES GENERALES DE CONTRATACIÓN
+Las condiciones generales de contratación para los contratos destinados al estudio, proyecto y
+
+.                        construcción de edificaciones públicas que se celebren con los Ministerios, los Institutos Autónomos, las
+
+Empresas del Estado y cualesquiera otros entes de la Administración Pública Nacional, se regirán por
+
+los Decretos "Condiciones Generales de Contratación para Estudios y Proyectos" y "Condiciones
+
+Generales de Contratación para la Ejecución de Obras" vigentes, publicados en la Gaceta Oficial de
+í                   la República de Venezuela. En consecuencia, antes de hacer oferta  alguna a los entes de la
+
+Administración Pública Nacional queda entendido que:
+
+a) El Contratista de estudios y proyectos, según el referido Decreto:
+
+- Ha estudiado y verificado cuidadosamente los documentos que constituyen el instrumento
+contractual. Toda Partida que se preste a cambio de especificación  por conveniencias del
+procedimiento de ejecución de la misma, deberá ser consultada con el Organismo contratante
+
+“previa a su contratación.
+
+- Ha solicitado al ente contratante cualquier información adicional que necesite, y se pueda
+suministrar, y está satisfecho con ellas.
+
+b) El Contratista de construcción, según el referido Decreto:
+
+- Conoce y ha estudiado los planos del proyecto, sus especificaciones y cómputos métricos. Una
+vez iniciada la obra cuando se requiera cambiar una o más Partidas de un presupuesto ya
+aprobado, debido a conveniencias en el procedimiento de construcción de las mismas y no
+detectables en la etapa de presupuesto, esto podrá ser posible tan pronto lo autorice el
+organismo contratante previa aprobación de la Contraloría General de la República cuando asi lo
+estipule el contrato. Se entiende que dichos cambios darán  lugar a la tramitación de los
+presupuestos de modificación de obra que corresponda.
+
+- Ha solicitado al ente contratante cualquier información adicional que necesite, y se pueda
+suministrar, y está satisfecho con ellas.
+
+- Ha visitado el sitio y la zona de trabajo, que lo conoce, al igual que sus accesos y condiciones
+comerciales y laborales regionales.
+
+2.2 CALIDAD DE LOS MATERIALES
+
+En general los insumos que se utilicen en la ejecución de las Partidas serán de óptima calidad,
+
+prefiriéndose aquellos que tengan la marca NORVEN. Cualquier prueba que se requiera para demostrar
+
+la calidad especificada será por cuenta del contratista. Además, en las Partidas que así lo requieran se
+exigirá por escrito la garantia correspondiente.
+
+2.3 CÓMPUTOS MÉTRICOS
+
+A efectos de la elaboración del presupuesto de la obra se realizarán los cómputos métricos sobre
+
+planos, y para efectos de la medición de las cantidades realmente ejecutadas, se realizarán los
+
+cómputos en obra.
+
+Compete al Profesional Responsable de la obra por la parte contratante verificar y conformar las
+
+cantidades de obra de las Partidas correspondientes en los casos que se enumeran a continuación :
+
+- Los proyectos tipos, donde el computista desconoce la fuente de suministro de los materiales y las
+
+-                             circunstancias bajo las cuales se construirá la misma.
+
+- Los proyectos de instalaciones eléctricas, por la forma esquemática en que se elaboran los planos
+es difícil computar con precisión las cantidades de obras.
+
+- — Las Partidas que solo pueden ser computadas en el sitio o durante su ejecución y en las cuales e!
+Profesional Responsable por la parte contratante decidirá sobre las condiciones topográficas de la
+zona, condición de carga del transporte, profundidad de pilotes y tablestacas, etc., tales como las
+Partidas E315 Entibados, E316 Achicamiento, E321 Pilotes, muros especiales y obras afines, etc
+
+## Página 12
+
+ES                                                                                                                                                                          COVENIN — MINDUR 2000-92
+
+A conveniencia del Organismo contratante, cuando una edificación consta de varios módulos, los
+cómputos métricos podrán presentarse separadamente o en conjunto.
+
+2.4 CRITERIOS DE CODIFICACIÓN DE PARTIDAS
+
+Todas las Partidas de un presupuesto estarán completamente definidas por su código, descripción
+completa y la unidad de medida conforme a la presente Norma. Cualquier omisión o modificación de                  >
+alguno de los aspectos antes mencionados, invalida dicha Partida para efectos de esta Norma.
+
+En esta Norma figuran las Partidas más usuales, pero mediante la agrupación lógica de las
+diferentes variables y siguiendo los lineamientos básicos de los esquemas generales de elaboración de
+Partidas que figuran al final de cada Capítulo, se pueden crear los nuevo códigos, descripción y unidad
+de medición de las Partidas que sean necesarias siempre y cuando estén definidas detalladamente en
+las especificaciones particulares de la obra. No obstante estas nuevas Partidas no tendrán vigencia
+hasta tanto el Organismo contratante las apruebe.
+
+Como las Partidas están intrinsecamente vinculadas a un Banco de Datos Referenciales, a los fines
+de esta Norma no es permitido:
+
+- El uso del concepto de suma global (S.G.) como unidad de medida.
+
+- — Laequivalencia de Partidas.
+
+- El fraccionamiento de Partidas.
+
+-  Lacombinación de Partidas o de sus fracciones para formar nuevas Partidas.
+
+En el caso de rescisión de contrato o de reinicio de obras paralizadas durante tiempo prolongado
+por fuerza mayor, y de acuerdo con los resultados de la auditoría técnica podrán aparecer Partidas no
+contempladas en esta Norma, las cuales serán objeto de un estudio especial respaldado con una
+Memoria Descriptiva bien detallada.
+
+2.5 CRITERIOS GENERALES DE DESCRIPCIÓN DE PARTIDAS
+
+En la redacción de la descripción de las Partidas correspondientes a esta Norma se establecen los
+siguientes criterios generales:
+
+En la descripción de las Partidas en general, no debe aparecer ningún tipo de modelo, ni marca de
+fabricación, sino las características especificas de las mismas. No obstante en los análisis de precios de
+aquellas Partidas, que así lo requieran, sí se señalarán los modelos o marcas reconocidas y
+
+aprobadas que realmente se usarán en la obra, de acuerdo con las especificaciones y en cumplimiento
+con lo establecido en las condiciones generales de contratación.
+La Inspección será responsable de que se coloque en la obra el modelo o marca aprobado en los
+análisis de precios unitarios.
+
+En las Partidas de construcción de paredes, revestimientos y piezas sanitarias, se incluyen el
+suministro, transporte y colocación en la obra; por consiguiente estos términos no se incluirán en la
+u eripción de dichas Partidas. No obstante en aquellas Partidas, donde solo se consideren algunos de
+us Conceptos, los mismos se mencionarán en su descripción, tales cómo las Partidas de válvulas y
+plezas especiales donde solo se incluye el suministro y transporte hasta el sitio de la obra.
+
+## Página 13
+
+COVENIN- MINDUR 2000-92                                                                                                                                                                                                          7
+
+De la misma manera queda entendido que todas las Partidas referidas a construcción donde no se
+
+indique lo contrario en su alcance, incluyen la elaboración completa de los mismos y su puesta en obra;
+por consiguiente no se indicarán en la descripción de las mismas los términos de:  construcción,
+elaboración, confección, fabricación etc. No obstante en aquellas Partidas, que así lo requieran, por
+precisarse varias etapas en su alcance, si se señalarán por separado en la descripción de la Partida
+que cubra cada etapa, tal como el caso del Subcapítulo E36 de Estructuras metálicas, donde se prevé
+Á                        la Partida de fabricación como una de las etapas de elaboración de la estructura.
+2.6 CRITERIOS GENERALES DE MEDICIÓN DE PARTIDAS
+Las Partidas se han concebido considerando la forma más idónea de  ejecutarlas y medirlas
+.                   conforme a las prácticas y economía de la industria de la construcción que garantizan el cumplimiento
+de las Especificaciones del proyecto, por lo que a efectos de su medición y pago corresponde al
+Profesional Responsable por la parte contratante, de acuerdo con las circunstancias de la obra, definir
+la aplicación de cada Partida antes del inicio de la obra. En cada Capítulo se detallan los criterios de
+medición que apliquen en cada caso. Los criterios de medición en obra serán los mismos que se utilizan
+para la medición sobre los planos.
+
+Para los efectos de medición, en las Partidas no se tomarán en cuenta los  conceptos de
+desperdicio, esponjamiento y densificación, no contemplados en el alcance de las Partidas correspon-
+dientes. Estos conceptos se tomarán en cuenta en el análisis de precios unitarios en los casos en que
+apliquen.
+
+2.7 ALCANCE DE LAS PARTIDAS
+
+Aefectos de su medición en obra las Partidas deberán estar  completamente ejecutadas,
+entendiéndose por tal, que cumplen con el alcance correspondiente descrito en la presente Norma y
+cumplen con las pruebas y garantías requeridas. Los casos particulares no contemplados en esta
+Norma, como los cortes de cuentas por paralización de obras o rescisión de contratos, se realizarán de
+común acuerdo entre las partes, previa autorización escrita del Organismo contratante, conforme lo
+establecen las "Condiciones Generales de Contratación".
+
+En todos los contratos de obra, que así lo requieran , de acuerdo a lo  establecido en las
+"Condiciones Generales de Contratación" según el Artículo 2 numeral 2 y 7 respectivamente, se
+incluirá la Partida de Limpieza y Conservación de la edificación, prevista en el Subcapítulo E813, salvo
+en las Partidas del Subcapitulo E811 Jardinería, donde el mantenimiento durante el lapso de garantía,
+estará incluido en el alcance de las mismas
+
+En caso de obras motivo de varios contratos, el alcance de las Partidas se cumplirá con el finiquito
+de cada contrato, con la entrega de la parte contratada completamente limpia y libre de desperdicios. Al
+final del último contrato, en caso de requerirse una limpieza general de la edificación, de Partidas ya
+finiquitadas en anteriores contratos, se podrá usar una Partida de Limpieza general, sin código, con una
+memoria explicativa conformada por el Profesional Responsable por la parte contratante justificando
+dicha Partida.
+
+Las Partidas de armaduras de refuerzo se consideran  ejecutadas una vez vaciado el concreto. En
+el caso de cierre de contratos, cuando por razones técnicas, según el proyecto o por autorización del
+profesional responsable por la parte contratante, se dejan arranques de cabillas en cualquier miembro
+estructural, en cuyo caso se considera que el alcance de dichas Partidas ha sido cubierto, siempre y
+
+A                      cuando se le dé una capa de pintura anticorrosiva como protección de dichas cabillas.
+
+Las bases para grúas y plantas dosificadoras se consideran incluidos en el precio de costo del
+equipo.
+
+Las Partidas de encofrados se consideran ejecutadas una vez desencofradas.
+
+Cuando en un miembro o elemento estructural se especifica que una de sus caras o lados debe
+acabarse en obra limpia, su volumen de concreto se computará como acabado en obra limpia.
+
+## Página 14
+
+8                                                                                                                                                                                    COVENIN — MINDUR 2000-92
+
+Las Partidas de Instalaciones Sanitarias, Eléctricas y Electromecánicas, se medirán una vez
+ejecutadas y probadas, cuando asi se requiera, se exceptúan los materiales o equipos que por conve-
+niencia del Organismo contratante se anticipe su adquisición por parte del contratista, no previéndose
+su instalación inmediata.
+
+En general las Partidas de suministro y transporte de materiales cuya instalación se incluye en el
+alcance de otras Partidas, su medición en obra para efectos de pago solo se reconocerá una vez
+completada su instalación. Este criterio aplica a las Partidas de válvulas, grifos, llaves de paso, etc., de
+Instalaciones Sanitarias. Las conexiones flexibles o universales se consideran como una conexión más.
+
+En la contratación de ventanas se utilizarán las Partidas de ventanas con vidrios. En casos
+eventuales y excepcionales, previa explicación detallada en la Memoria Descriptiva, se utilizarán las
+Partidas de ventanas sin vidrios y las Partidas de Vidrio por separado.
+
+Las estructuras de mampostería se desglosarán en las Partidas existentes hasta tanto se elaboren
+las correspondientes normas de proyecto y construcción.
+
+Como criterio general, la nivelación y el replanteo necesarios están incluidos en el alcance de las
+Partidas que asi lo requieran. Igualmente se considera que el Contratista  entregará su trabajo
+rematado, libre de escombros y completamente limpio. El bote de sus desperdicios está incluido dentro
+del alcance de la Partida correspondiente.
+
+En general, toda labor o material involucrado en la ejecución de una Partida y cuya medición no se
+considera especificamente, se incluyen en el análisis de precios unitarios.
+
+La construcción de vallas publicitarias no se reconocerá como Partida  separada por cuanto
+corresponde a los gastos generales de la empresa contratista, tal como está contemplado en las
+“Condiciones Generales de Contratación".
+
+Los casos particulares no contemplados en esta Norma se realizarán de común acuerdo entre las
+partes.
+
+2.8 NOTACIÓN Y UNIDADES
+
+Cuando se requiera en los documentos del Contrato y en los planos y especificaciones, la notación
+y unidades serán las de las Normas venezolanas COVENIN - MINDUR vigentes o, en su defecto,
+deberán estar precisamente definidas en los mismos. Cuando se necesiten otras unidades deberán
+
+encerrarse entre paréntesis y estar acompañadas por sus equivalencias métricas. Para separar las
+cifras decimales se preferirá el punto a la coma, pero cualquiera que sea el sistema que se adopte
+deberá mantenerse la consistencia en los Cómputos Métricos.
+
+En 1976 la Comisión Permanente de Normas para Estructuras de Edificaciones del Ministerio del
+Desarrollo Urbano decidió mantener el sistema MKS, Metro (m) - Kilogramo fuerza (kgf) - Segundo (s),y
+no adoptar el sistema internacional de unidades Sl, Metro (m) - Kilogramo masa (Kgm) - Segundo (s),
+donde la unidad de fuerza es el Newton (N). También resolvió mantener el punto en lugar de la coma
+para separar las cifras decimales, tomando en cuenta, entre otras cosas, el uso diario de las
+computadoras y calculadoras por parte de nuestros profesionales y técnicos.
+
+## Página 15
+
+COVENIN- MINDUR 2000-92                                                                                                                                                                                          9
+2.9 CRITERIOS DE APROXIMACIÓN EN LOS CÓMPUTOS MÉTRICOS
+En general, para efectos de la cuantificación de las cantidades de obras e insumos, se utilizarán
+dos cifras decimales redondeadas. En estructuras metálicas las dimensiones en los planos se precisan
+al milimetro por razones de fabricación en taller y se utilizarán para efectos de los cálculos intermedios
+requeridos en la elaboración de los cómputos a fin de no propagar errores de redondeo.
+2.10 MEDICIONES DE ÁREAS
+-                 Las mediciones se harán según las áreas en desarrollo, es decir, verdadero tamaño y no en
+proyección horizontal.
+2.11 INTERSECCIONES
+“ En general, todo elemento o miembro que se intercepte, sean nodos, paredes, etc., se tomará en
+cuenta una sola vez.
+2.12 VACIOS Y ÁREAS DESCONTABLES
+En general, sea en losas, paredes, cielorrasos, revestimientos, etc., se calculará el área neta
+descontando los vacíos y áreas descontables, cualquiera sea su tamaño, como por ejemplo las áreas
+ocupadas por columnas, muros, ventanas, luminarias, etc. En el caso de los revestimientos, los áreas
+de remates se incluirán en las Partidas correspondientes, y su incidencia se tomará en cuenta en los
+rendimientos de dichas Partidas.
+2.13 MEDICIÓN DE LA ACTIVIDAD DE TRANSPORTE
+El Capítulo E9 engloba todas las Partidas de transporte de materiales y maquinarias, así como el
+bote de materiales desechables correspondientes a los  Capitulos E1 Obras Preliminares, E2
+Movimiento de Tierra y Urbanismo, E3 Estructuras, E4 Obras Arquitectónicas y E8 Obras de servicio y
+Varios, no obstante se establecen los siguientes criterios de medición:
+2.13.1 Partidas de transporte en camiones
+,                    La medición del transporte en camiones de materiales o maquinarias se hará una sola vez, de
+origen a destino dentro de la clasificación correspondiente. A efectos de la medición de las distancias
+las Partidas de Transporte son excluyentes.
+En cuanto a transporte de maquinarias se establece los siguientes criterios de medición:
+1) Cuando el Contratista no disponga en la localidad la maquinaria a utilizarse en la obra, la
+distancia de transporte deberá ser debidamente razonada y justificada ante el Profesional
+responsable por la parte contratante para su conformidad antes del inicio de los trabajos.
+
+## Página 16
+
+1 0                                                                                                                                                                COVENIN — MINDUR 2000-92
+2)       Maquinarias hasta 10 tf de peso:
+El transporte se medirá por Partida separada, según el código E900 considerando el
+peso del total de maquinarias dentro de ese rango y en base a viaje completo de
+camión.
+3)        Maquinarias de más de 10 tf de peso:
+Se pagará por Partida separada, según las Partidas E901 y E902, considerando el
+peso de cada maquinaria dentro de ese rango de peso. La ida y el regreso se pagará
+como un solo viaje por maquinaria y no se reconocerá cuando una maquinaria se
+sustituya por otra. En este grupo de Partidas se incluyen las maquinarias para pilotes,
+muros especia les y obras afines.
+2.13.2 Transporte de materiales como insumo de Partidas
+Todo material que aparezca como insumo de Partida se considera como puesto en obra bajo la
+responsabilidad del contratista. El transporte hasta el sitio de la obra deberá ser incluido como insumo
+en el Análisis de Precios unitarios, salvo en los siguientes casos:
+
+- El transporte de aquellos materiales que por sus características de tamaño, peso y cantidad,
+tales como piezas menores de electricidad y plomería y similares (cajetines, interruptores,
+tomacorrientes, accesorios sanitarios, etc), puedan ser transportados, en su totalidad, en el
+vehículo de servicio de la empresa, el cual se previó en los Gastos Generales de obra y por
+consiguiente, dicho costo se considera incluido en los mismos.
+
+- El transporte de algunos materiales que por su volumen considerable, tiene mucha incidencia
+en los costos de las obras, tales como agregados, cementos, bloques de arcilla y concreto,
+refuerzos y estructuras metálicas y estructuras de madera, se pagarán por el Capitulo E9
+Transporte como Partidas separadas y no en el alcance de algunas Partidas.
+
+Los transportes de pilotes prefabricados de concreto armado, tubos metálicos para pilotes,
+tablestacas y perfiles metálicos para pilotaje se pagarán por Partidas separadas según el
+Capítulo E9 Transportes.
+2.13.3 Transporte de maquinarias como componentes de Partidas
+No se prevé transporte de maquinarias como componente de costo en los análisis precios unitarios
+de Partidas
+2.13.4 Otros transportes
+En el Capítulo E9 se incluyen los transportes en ferrys para uso marítimo y fluvial.
+2.14 EXCAVACIÓN EN OBRAS PREPARATORIAS
+Para excavaciones en zanjas, el volumen de excavación se determinará multiplicando su sección
+transversal por la longitud. En el caso de que la zanja tenga profundidad variable se utilizará para
+efectos de ubicación de la Partida correspondiente, la máxima profundidad alcanzada.
+En la excavación de zanjas a mano, se medirán los volúmenes reales de excavación a partir de la
+rasante del terreno y se ubicará a efectos de presupuesto, en la Partida correspondiente a la máxima
+p.ofundidad alcanzada en ese sitio.
+
+## Página 17
+
+COVENIN- MINDUR 2000-92                                                                                                                                        11
+2.15 BIBLIOGRAFIA
+A continuación se suministra una bibliografia general y las referencias  especializadas de la
+presente Norma.
+Comisión de Electricidad, CODELECTRA. "Código Eléctrico Nacional" Norma COVENIN  200
+CODELECTRA, Caracas 1981.
+Comisión de Normas del MINDUR. "Terminología de las Normas de Edificaciones".  Norma
+venezolana COVENIN — MINDUR 2004-98, Caracas 1999.
+Comisión de Normas del MINDUR. "Impermeabilización de Edificaciones”. Norma
+Venezolana COVENIN — MINDUR 3400-98., Caracas 1999.
+Comisión Venezolana de Normas Industriales. "Sector Construcción. Especificaciones, Codificación
+y Mediciones", Parte | Carreteras; Parte lll Obras Hidráulicas. Norma COVENIN 2000 - 80
+Ministerio de Obras Públicas, No. 387. "Condiciones Generales de Contratación para Estudios y
+Proyectos". Gaceta Oficial de la República de Venezuela No. 30875, 3 de Septiembre de 1975, págs
+231.370 -231.375.
+Ministerio de Obras Públicas. "Manual de Normas  y Criterios para Proyectos de Instalaciones
+Eléctricas". Dirección de Edificios. Tomo l, 412 págs; Tomo Il, págs 557 págs. Caracas, 1968.
+Ministerio del Desarrollo Urbano. “Recomendaciones normativas para la racionalización de
+los proyectos y adecuación a los recursos económicos del país". Dirección General Sectorial
+de Edificaciones. Octubre 1989. 20 págs.
+Ministerios del Desarrollo Urbano y del Ambiente y de los Recursos Naturales Renovables.
+"Normas para movimientos de tierra y de conservación ambiental con fines urbanísticos".
+Resoluciones MINDUR No. 221 y MARNR No. 566 del 21-10-1983. Gaceta Oficial de la
+República de Venezuela, No. 32887 del 2 de Febrero de 1984.
+Ministerio de Sanidad y Asistencia Social. "Normas Sanitarias para proyecto, construcción,
+reparación, reforma y mantenimiento de edificaciones". Gaceta Oficial de la República de
+A                      Venezuela No. 4044 Extraordinario, 8 de Septiembre de 1988, 93 págs.
+Presidencia de la República. "Condiciones Generales de Contratación para Ejecución de
+Obras". Gaceta Oficial de la República de Venezuela No. 34797, 12 de Septiembre de 1991
+
+## Página 18
+
+CAPITULO E1
+OBRAS PRELIMINARES
+
+## Página 19
+
+COVENIN - MINDUR 2000 - 92                                                                                                                                      1 5
+TITULO 3 PARTIDAS DE OBRAS
+CAPITULO E1 OBRAS PRELIMINARES
+
+d                   Definición
+
+En esta Norma se entiende por obras preliminares el conjunto de trabajos y obras que deben
+ejecutarse antes de la construcción de una edificación, para proteger el terreno y las construcciones
+colindantes, así como para facilitar y permitir la iniciación y desarrollo de las construcciones.
+
+-                          En el caso de construcción de edificaciones sobre una ya existente, las obras preliminares incluyen
+los trabajos de acondicionamiento de la edificación existente tales como demolición y limpieza.
+Alcance
+
+Este Capítulo está constituido por las siguientes Subcapítulos, cuyo esquema de codificación y la
+
+descripción de sus Partidas se suministran al final del Capítulo:
+¿El     INSTALACIONES PROVISIONALES.
+
+Ef...        LIMPIEZA DEL TERRENO.
+
+ES.     DEMOLICIONES.
+
+El4...     REMOCIONES.
+
+SUBCAPITULO E11 INSTALACIONES PROVISIONALES
+
+Este Subcapítulo comprende el siguiente grupo de Partidas:
+
+E111.. CONSTRUCCIONES CONVENCIONALES.
+
+E112... CONSTRUCCIONES PREFABRICADAS.
+
+E113... CERCAS Y PORTONES.
+
+Alcance
+
+Comprende todas las construcciones provisionales que se requieran para la ejecución de la obra,
+tales como oficinas, incluyendo las de la Inspección, depósitos de materiales, vestuarios, casetas,
+comedores, dormitorios, sanitarios, instalaciones de luz y fuerza eléctrica, instalaciones sanitarias,
+obras de drenaje y la construcción necesaria para el montaje y desmontaje de equipos a utilizarse en la
+construcción. Se incluirá además las aducciones, acometidas y descargas necesarias que prestan
+servicios únicamente para las obras provisionales dentro del área de la construcción, las cuales se
+considerarán como partidas separadas..
+
+Las construcciones prefabricadas desmontables y las móviles o rodantes ("trailers") son por cuenta
+del Contratista por lo que su retiro y/o desmontaje del sitio de la obra está incluido en el monto de estas
+Partidas. Las construcciones convencionales y las prefabricadas no desmontables son propiedad del
+Contratante, incluyendo todo artefacto empotrado a excepción del aire acondicionado, cocina y nevera
+por los cuales se pagará por su uso cuando sea debidamente aprobado por el Organismo contratante
+En caso de ser necesario, el Contratante pagará su demolición, carga y transporte por las Partidas
+correspondientes a estas actividades. Las construcciones e instalaciones objeto de estas Partidas
+cumplirán las requisitos y disposiciones legales de higiene y seguridad industrial y de seguridad
+estructural previstas en las Normas COVENIN - MINDUR, en las Normas del Ministerio de Sanidad y
+Asistencia Social, la Ley del Trabajo y el Contrato Colectivo de Trabajo vigentes.
+
+P                       A título informativo al final del Capítulo E1 se incluye la Tabla A1 con las áreas de construcciones
+provisionales para edificaciones convencionales.
+Medición
+
+La unidad de medida será conforme con las caracteristicas de las Partidas, por ejemplo el metro
+(m), el metro cuadrado (m ) y el metro cuadrado por día (m /día) para las construcciones prefabricadas
+rodantes (trailers) y prefabricadas desmontables.
+
+Se computará el área de construcción por planta en verdadero tamaño.
+
+## Página 20
+
+16                                                                               COVENIN - MINDUR 2000 — 92
+PARTIDAS E113 CERCAS Y PORTONES
+Alcance
+
+Comprende la construcción de cercas y portones que servirán  para el cerramiento exterior
+provisional del terreno donde se ubicará la obra, su precio unitario abarca los trabajos que sean
+preciso realizar para su colocación como las fundaciones de los parales,  vigas de fundación,
+machones, vigas de corona, etc., en los casos que se requieran. Las puertas y portones sean o no del
+mismo material, se computarán como Partidas separadas.
+Medición
+
+Según el caso, la unidad de medida será el metro ( m) o el metro cuadrado (m2).
+
+## Página 21
+
+COVENIN - MINDUR 2000 - 92                     17
+al
+o
+a?
+>
+83         8  8  8
+SN         al  o  8
+w O         o  [==]  p<
+.        o'3
+Dd >
+a
+<X
+¿      17)
+24%
+2 [Sx| 8        g|8|8
+21448        218 ]|8
+o 12
+E  r
+uu
+A
+X=
+ro]
+a 1
+pa
+u ww
+z [02         8    8
+S ($3         ?    E
+16) La
+< < uy
+10)  o
+pra
+o
+uu  |
+la]
+E lus               ¿
+N >               5
+3 [<n               2
+<X  s               =y
+e                 :
+y                 pS
+2                 .
+>  E               E
+2                 ¿
+Z luo               g
+oa < 2               E
+un u <               $
+w ¡e               E
+E  Z               ?
+9  o               8
+se                 2
+9                 5
+]
+-                 =
+uN SE               E
+3 las] 8        8    8  E
+y      O << o        o    o  1]
+(0) w 0 ld        =    [To]  o
+pu au               E
+< IO               É
+ó      <X                 1]
+e                 e
+>=                 =
+La]
+di               Pp.
+2        2  >  5  s  3
+F                --
+3
+bo
+uy    2  8  ES]  8  3
+oOR8   f=]  -  2  )  3
+cla lalalslgelg8lel,
+2. D  o  7]  =  5]  o  2  <
+est5lelsls|sl|el|é]|3
+21*13818]18]838]8
+
+## Página 22
+
+18                                                                                                  COVENIN - MINDUR 2000 - 92
+
+SUBCAPITULO E12 LIMPIEZA DEL TERRENO
+
+Este Subcapitulo comprende el siguiente grupo de Partidas:
+
+E121.... DEFORESTACIÓN.
+
+E122... TALA DE VEGETACIÓN HERBÁCEA.
+
+E123... TALA Y DESRAIZAMIENTO DE ÁRBOLES INDIVIDUALES.
+PARTIDAS E121 DEFORESTACION
+Alcance
+
+Comprende el desraizamiento y todos los trabajos para la remoción, quema y limpieza de árboles,
+leños, arbustos, matorrales, pastos, cultivos, raices, desechos vegetales y en general, de todo tipo de
+vegetación en las zonas indicadas en los planos o señalada por el Profesional Responsable por la parte
+contratante, previa la autorización legal correspondiente. Queda incluido en el precio la eliminación de
+los desperdicios por quema o por cualquier otro sistema que no involucre la carga y el transporte de los
+mismos. No obstante cuando a criterio del Profesional Responsable por la parte contratante se
+considere necesario la carga y el transporte de los desperdicios, se medirán y pagarán por los Grupos
+de Partidas E134 y E903 respectivamente.
+Medición
+
+Se computarán las áreas realmente deforestadas en verdadero tamaño. En la descripción de las
+Partidas se establecen varias categorías de acuerdo al área a deforestar y como unidad de medida la
+hectárea (ha) o el metro cuadrado (m ). El Profesional Responsable por la parte contratante definirá, en
+base a las características de la vegetación del terreno, el tipo de deforestación a efectuarse, el cual será
+excluyente para un mismo terreno. La densidad de la vegetación existente se tomará en cuenta en los
+rendimientos de los análisis de precios unitarios de dichas partidas.
+PARTIDAS E122 TALA DE VEGETACION HERBACEA
+Alcance
+
+Comprende la tala de vegetación herbácea del terreno asignado para la construcción de la obra, asi
+como la quema de los desperdicios.
+Medición                                                   a
+
+La unidad de medida será el metro cuadrado (m ) según corresponda a la descripción de la Partida.
+
+Se computarán las áreas realmente taladas, en verdadero tamaño.
+
+## Página 23
+
+COVENIN - MINDUR 2000 - 92                                                                                                                 19
+PARTIDAS E123 TALA Y DESRAIZAMIENTO DE ARBOLES INDIVIDUALES
+Alcance
+
+Comprende la tala y desraizamiento o traslado de árboles y plantas que sean un obstáculo para la
+ejecución de los trabajos indicados en los planos o autorizados por el Profesional Responsable por la
+parte contratante o el Organismo Público competente, previa la autorización legal correspondiente. Esta
+Partida se aplica exclusivamente cuando se trate de árboles aislados que no hayan sido contemplados
+
+-                  en las Partidas anteriores E121 y E122, siempre y cuando las cantidades taladas sean menores de 5
+
+piezas por hectárea, para árboles con altura mayor de 5 m. Y menores de 10 piezas por hectárea para
+árboles con altura inferior a 5 m.
+Medición
+
+La unidad de medida será la pieza (pza.) y se computarán por elementos aislados.
+
+## Página 24
+
+20                                                                                COVENIN - MINDUR 2000 - 92
+SUBCAPITULO E13 DEMOLICIONES
+Definición
+
+Demolición: Fragmentación de una edificación, o. parte de ella, en tamaños tales que puedan ser
+transportados al sitio de disposición final
+Alcance
+
+Comprende la demolición de aquellas construcciones o elementos aislados que obstaculicen la
+nueva construcción tales como fundaciones, columnas, techos, muros de sostenimiento, paredes,
+pavimentos, estanques, etc., y la movilización interna dentro del terreno ó área de la obra de los es-
+combros hasta el lugar definitivo de carga para bote, el cual será  asignado por el Profesional
+Responsable de la obra por la parte contratante. El precio unitario no incluye la carga ni el transporte de
+los escombros, que se computarán según los Grupos de Partidas E134 y E903, respectivamente.
+
+En el caso de miembros o elementos constructivos no visibles hasta el momento de excavar, el
+Contratista tendrá el derecho de solicitar la modificación de las cantidades de obras contratada a que
+diere lugar, siempre y cuando esta solicitud esté debidamente documentada  y conformada por el
+Profesional Responsable de la obra por la parte contratante.
+
+Este Subcapitulo comprende el siguiente grupo de Partidas:
+
+E131...  DEMOLICIONES DE CONSTRUCCIONES.
+
+E132...  DEMOLICIONES DE ELEMENTOS AISLADOS.
+
+E133..  DEMOLICIONES DE PAVIMENTOS Y SIMILARES.
+
+E134.. CARGA DE MATERIAL PROCEDENTE DE LA DEMOLICIÓN.
+
+Medición
+
+Para las demoliciones de construcciones la unidad de medida será el metro cuadrado (m2) de
+construcción a demoler, correspondiente al área total obtenida de la suma de las áreas en verdadero
+tamaño de cada uno de los pisos o techos. En el caso de demoliciones de casas de una planta y
+ranchos, en el alcance de dichas partidas se incluye la demolición de la infraestructura. En las
+demoliciones de edificaciones de más de una planta se establece la separación de Demolición de
+Infraestructura y Demolición de Superestructura, manteniendo el mismo criterio de medición y de
+
+acuerdo a lo señalado en los planos del nuevo proyecto ó en su defecto a criterio del Profesional
+Responsable por la parte contratante.
+
+La demolición de las obras de arte, pavimentos, brocales y aceras se medirá en metros cúbicos
+(m3) según la cubicación del elemento a demolerse.
+
+Para los elementos o miembros aislados la unidad de medición será la indicada en la codificación y
+descripción de la Partida . En los casos no contemplados , la unidad de medida corresponderá a la de su
+construcción (pieza, metro (m), metro cuadrado (m2), metro cúbico (m3), kilogramo fuerza (kgf)). Se
+considerarán las partidas de demolición de elementos aislados de concreto o mampostería de acuerdo a
+su posición (verticales, horizontales o inclinados)
+
+En las Partidas E134 Cargas de material procedente de la demolición, la unidad de medida será el
+metro cúbico (m ). En las Partidas E134 y E903 se usará el metro cúbico (m ) para medir el volumen de
+escombros en estado suelto, incluyendo vacíos, sobre  camiones, tanto para la carga como para el
+transporte.
+
+## Página 25
+
+COVENIN - MINDUR 2000 - 92                                                                                     21
+SUBCAPITULO E14 REMOCIONES
+Definición
+
+Remoción: Desmontar y/o desarmar, sin afectar las características principales de los elementos de
+una edificación, de tal manera que puedan ser transportados para su eventual reutilización
+
+Alcance
+
+Comprende la remoción de   aquellas estructuras, miembros o elementos que deben ser
+
+»                       desarmados y desmontados sin dañarlos, tales como monumentos, estructuras metálicas o de madera,
+estanques metálicos elevados, cercas, etc. En todos los casos queda incluido en el precio unitario la
+movilización interna de los mismo y el  posible almacenamiento provisional dentro del terreno de la
+obra, en el sitio señalado por el Profesional Responsable por el ente contratante.
+
+En el caso de las estructuras metálicas la  Partida de Remoción incluye la  clasificación, el
+movimiento interno dentro del terreno de la obra y el apilamiento provisional del material. En caso de
+requerirse limpieza por medios mecánicos y/o protección con pintura anticorrosiva u otro tipo de
+revestimiento, estas se computarán por Partidas separadas. El precio unitario no incluye la carga ni el
+transporte de los elementos removidos, que se computarán según los Grupos de Partidas E147 y E903,
+respectivamente.
+
+Este Subcapítulo comprende los siguientes grupos de Partidas:
+
+E141... REMOCIONES DE ELEMENTOS METÁLICOS.
+
+E142... REMOCIONES DE ELEMENTOS DE MADERA
+
+E143.... REMOCIONES DE ELEMENTOS DE MAMPOSTERÍA
+
+E144.... REMOCIONES DE ELEMENTOS COMBINADOS
+
+E145... REMOCIONES DE ARTEFACTOS
+
+E146... REMOCIONES DE MONUMENTOS
+
+E147... CARGA DE ELEMENTOS PROCEDENTES DE REMOCIONES.
+Medición
+
+La unidad de medida será el kilogramo fuerza (kgf), el metro (m) o el metro cuadrado (m2), o el
+metro cúbico (m3), o la pieza (pza.)medida en la forma indicada para el cómputo de su construcción
+original.
+
+En los Grupos de Partidas E147 Carga de elementos procedentes de remociones, la unidad de
+medida será la tonelada fuerza (tf) o el metro cúbico (mi).
+
+## Página 26
+
+COVENIN - MINDUR 2000 - 92
+23
+E        o
+o
+2
+e
+a
+o
+a
+>
+mn
+o
+=
+D   2          S
+=   S
+o
+k,
+S
+a    o
+ha)  7]  o
+NN  E  SN]
+>    E
+3   - "UE
+€
+<X   232 o 2    a
+Pe   28 28    Zg 2
+<   ce $e    | 8
+2   Se co    e
+<X   ¡57 Ns    16) YN
+e
+mn
+=          E     .
+iy     >    E   33 32
+5      5
+3   43 ¿735   33 58
+PE   o D Sm a  pS   E $ ES 2
+uu   £ O 23% 2  >-4   E2 E8 E
+] SR E  5   25 SÉ 5
+E o E)  o  y   2.2 es 3
+e) o >3 1%)  <   wo wo aL
+o   8
+o   sE         5 £
+e   8%         3 8
+a   E         Se
+S   £.5         5.5
+¿2         gs
+<   E         Su
+o 8         SÉ
+15)         oa
+o
+har
+z
+n n
+4       a   27%
+S   ¿Ss
+Q   2
+[00]   os
+e   22
+17)   £a
+=
+AS   >
+E   lu  OMXXI0 AXUWI—S=-Z<Xu0
+
+## Página 27
+
+2                                                                                                                                                                                               COVENIN - MINDUR 2000 - 92
+o ad
+E
+E E E £
+9 po 2 E
+2 2 2 2 e eN z z
+o w m d " " y ed pa de Y a
+o ¡0 ¡0) o vu 1) — a Da AN el ln
+EEE
+ooo
+LO a
+“NmAoOo
+$5. EE
+L£ L£ L£ VO PR
+2  =
+o  o  o
+2 liósi 3   $
+GS las ¿S.edoo, 5
+ECGECTDOCEDOE
+to 00U0y$0Uy9Yo.u.> oO
+<X oOzeg0zg2t215%0
+E MEDIA do
+2
+, m   ” $
+o  2  E  pe    50>%8:>2 ¿2 8
+E 3  8    53882 S8>¿.
+= o a ou DOCOo"y  0940090 uc
+E 3 o2>»   ORDENES
+vo» 0058250 o  Su e 3% 1]
+==. o€ ou =ozg2e DEL>E e -“ ES
+>. >220Cc y  o. D 5 Soon?
+EVEE Y... 20.25  SOTA E SS a o
+837.22 0:_%  EEFERMEPES
+ES -- E  LS  ==       lr —
+ZaviaE=soco=m8 SRW>RISRNES
+O                Ñ  YN  :
+—                Go  o b=
+c = co
+z           $       25 Sou 08
+uy m        eS      vu NE S
+a        o      — o  110]
+= S        3      E Mos De
+uy 5        ES      ES Bx 3%
+3 MES         rd       LS $ 53
+u A         E       2 o ña
+ES        (97      “0 NX a <X
+a                nn
+<X                vn 2
+a] >              ou
+> les             ES
+E SES              22
+16) o              o >
+< los              ne
+nxn.0              e UL
+o
+al
+E
+mn
+a p22
++ 11Ste
+o és
+a la
+pre] m0
+n £a
+Ss
+13 po  Omx<xu LW -Z XxX XU0O
+
+## Página 28
+
+COVENIN - MINDUR 2000 - 92
+m
+E]
+E
+a
+a
+o
+o
+>
+7
+o
+=
+o
+DO  3
+Y  ES
+o
+o  o  u  o  A]
+de  E  E  E  E
+o o
+o o
+A - mo
+h D D
+o               21,325
++              :2E_ Ea
+>               OD Ye  mn
+Zn  Es eeh  G  2   SesEgsy Ene
+25 E cnc oESs o En o ELfSZERENE v $. +2
+SA. LE [oo 5d. So = 25 > ola
+Bra 3%a sva v SvvjE9gE£ar En e
+E SEX so E 3 35 EAT E A A
+la]                S    2
+-    o
+3                Ú   e
+3  c              2   NS
+a  S              a,   És.
+É  e              S   ¿2
+<.                  o
+o  ES              43  23
+X  la]               3   pS
+>              E E  2 e 3
+Ll   a ==
+[a]              o  PES
+_              a]   mM
+4      o
+E
+pe
+Ez  a]
+a  o
+<X  o
+Q  32
+[02]  ao
+7  Es
+17)  a e
+Qu
+se lu  OMXXIO QAXUWI-—-=-2XXxU0
+
+## Página 29
+
+26                    COVENIN - MINDUR 2000 - 92
+IS
+o
+2     7
+E 9     = a
+8 ps     AE
+MN -     ES
+v      E o
+" S    E
+= E     A E
+“Mm MN
+8 ¿     eo. 2 2o
+[Ye [e]    TONO
+_- Mm    O —rQuuwN
+3%
+E
+a
+13]
+a
+>
+nm
+[e]
+E
+ho]
+e 3
+e $ 3
+>
+3?
+o co
+< uy
+se. NN 2)
+Ñ Fed       o
+hd 3       Ñ
+o  2 3      E     2
+o 5 E  o
+a   2 5 5  po  SS     A
+E   5 a 2 En e  SS w  mn  = 012 a q
+=I 6 =mMmESiwS 2  == 3 las EH? 23  c
+z o £ 0 $ 3  5 a oo. A  Yo
+o ya 3 1] E) [o]  a = 2539 E  S53
+Ce AS A > A 3 0 fJo00Qr <EloO=a0 a O
+So - N = A a  = A Na - N a+  E]
+1/2)
+E          A"     :
+po     c
+Z        e    2
+73  mn  o  ou pr     E
+o    -  —-    n
+5 M2 32  So vSETZ  E  =  Z    Pa
+uy So a 2  Sm $ 5   6"  FS  o     3
+her cn E  $e 269 »E  2  >  2     Ed
+AT co. 3  ES oS< 5  a  ús 5     7]
+20 uy  O a Om >=  a  x 2 E    o
+e]  mn
+E  E
+o  2
+“wm
+9  S    Es
++    he]
+O  e    Es
+8)  e]    0 1
+¡0    wa
+-    7]
+e)
+pe
+pas ]
+=  $
+e  o
+<  2
+Q  3
+a í
+Sa  la]
+m
+o  E
+E  uy  0oo0XX0 0XUWI-—-=-Z2XXU0
+—           .        ER    —
+
+## Página 30
+
+COVENIN - MINDUR 2000 - 92
+27
+pS
+“
+4      1)
+E
+£
+a
+o
+a
+>
+“m
+o
+E
+o
+= | 8
+= S
+o
+E l7
+a
+2  3 13
+S  ES a
+:      o o
+<  Y La
+=  7 a
+1]
+pS  ai. >
+Z   5 oj= 2213 2
+lo)  o E   A E E
+o  o 2  o oa2 *lE231E25
+o  a Saa TO cu 5 aa 3
+E  2 0% o ou A E
+Cco»>>uwo € ES 715 v EfS v E
+oy) oc20295 92 29 2 9
+o cz o 9 2018283528
+EStos5oce2zl£o2gS3813538
+E A A EROS Eds E E
+CSI22 5282220200 0 Lo o Ss
+13) DODCOSOA co Ou + =jwr=>
+E
+pun]
+o             Lo
+P             953
+=  É           2309
+7]  A           ES$
+Mm
+—  En      2 |2  vb
+Se       o    2 a
+o  Eos      o = 25  o 1
+ZE      $3 153 EE
+aa      iu mE  35:33
+w E uw E Oz zSs
+7)       < nN  Lo]
+e)
+>
+“m
+E  2
+5      a  ==
+<X  Q
+Q  o
+mm  $
+po]  [a]
+n  5
+mm
+a  —
+Pe  uy O0OnmXxX0 AXUWI-—-=-2XXu0
+
+## Página 31
+
+28              COVENIN - MINDUR 2000 — 92
+N Y
+<      E
+E      AE
++             S Ea
+5      VoSgAn
+a      So05g92
+TIONAYG
+O TON
+o
+=       E
+S     2  ?
+<     o  -<u
+o     É  E
+y.          <    <
+ad  a
+Oo
+E     ES
+=. 2% 3
+u           28828 lus
+a]     a 212 3 % 33
+E     E CI
+É           <uoza [1=
+=  a]
+E
+o
+o. n E
+E E o S
+Se gue 5
+lo) Es ÉS $
+2 ta sta E
+E S o L%09s50
+£ovEzan53u0
+20090 302
+2288332132   2
+223 0233ÉE 83   S
+¿nd S2DEtsS   2
+0.20% u|>5   5
+WrRE=ZUEOS|E   o
+"EN Yu din   E]
+o       !    ,
+P           S v
+a           ES IS
+u           sc
+o 2          v5.'s
+í z2         353s8
+9 É         Xx e €
+52         Day
+7         3%
+ua         02%
+o
+Jl
+P
+Mm
+e
+Q S
+0
+Pr a
+=
+3 lu  0O0XIXO QAXUWI=—-=-2XXU0O0
+
+## Página 32
+
+COVENIN - MINDUR 2000 - 92                                                                                                                                                               29
+PARTIDA             UNIDAD                            DESCRIPCION
+:SUBCAPÍTULO E11 INSTALACIONES PROVISIONALES                 i
+E111110000        m? CONSTRUCCIÓN PROVISIONAL CONVENCIONAL DE OFICINAS, CON FRISO Y
+:                                                                     CIELO RASO.
+E111120000       m2 CONSTRUCCIÓN PROVISIONAL CONVENCIONAL DE OFICINAS, SIN FRISO NI
+x                                                                     CIELO RASO.
+E111200000             m2 CONSTRUCCIÓN PROVISIONAL CONVENCIONAL DE DEPOSITOS.
+E111300000             m2 CONSTRUCCIÓN PROVISIONAL CONVENCIONAL DE VESTUARIOS Y CASETAS.
+E111400000            m2 CONSTRUCCIÓN PROVISIONAL CONVENCIONAL DE SANITARIOS.
+E111510000       m2 CONSTRUCCIÓN PROVISIONAL CONVENCIONAL DE ÁREAS CUBIERTAS. SIN
+CERRAMIENTOS LATERALES, CON PISO.
+E111520000       m2 CONSTRUCCIÓN PROVISIONAL CONVENCIONAL DE ÁREAS CUBIERTAS, SIN
+CERRAMIENTOS LATERALES, SIN PISO.
+E111710000          m2 CONSTRUCCIÓN PROVISIONAL CONVENCIONAL DE DORMITORIOS, CON
+FRISO Y CIELO RASO.
+E111720000          m2? CONSTRUCCIÓN PROVISIONAL CONVENCIONAL DE DORMITORIOS, SIN FRISO
+NI CIELO RASO.
+E112100000            m2 INSTALACIONES PROVISIONALES PREFABRICADAS DE OFICINAS.
+E112200000            m2 INSTALACIONES PROVISIONALES PREFABRICADAS DE DEPOSITOS.
+E112300000          m2 INSTALACIONES PROVISIONALES PREFABRICADAS DE VESTUARIOS Y
+CASETAS.
+E112400000            m2 INSTALACIONES PROVISIONALES PREFABRICADAS DE SANITARIOS.
+E113111005        m CONSTRUCCIÓN DE CERCAS PROVISIONALES DE 5 HILOS DE ALAMBRE DE
+PÚAS Y ESTANTES DE MADERA.
+E113111007        m CONSTRUCCIÓN DE CERCAS PROVISIONALES DE 7 HILOS DE ALAMBRE DE
+PÚAS Y ESTANTES DE MADERA.
+E113112007        m CONSTRUCCIÓN DE CERCAS PROVISIONALES DE 7 HILOS DE ALAMBRE DE
+PÚAS Y ESTANTES METÁLICOS.
+E113114000          m2 CONSTRUCCIÓN DE CERCAS PROVISIONALES PREFABRICADAS DE
+CONCRETO.
+E113115009            m CONSTRUCCIÓN DE CERCAS PROVISIONALES DE MALLA CICLÓN, CALIBRE N*
+9, CON 3 HILOS DE ALAMBRE DE PÚAS Y CORONAMIENTO INCLINADO DE h =
+1.80 m (SIN BROCAL).
+E113115010        m CONSTRUCCIÓN DE CERCAS PROVISIONALES DE MALLA CICLÓN, CALIBRE
+N? 10, CON 3 HILOS DE ALAMBRE DE PÚAS Y CORONAMIENTO INCLINADO DE
+h = 1.80 m (SIN BROCAL).
+
+## Página 33
+
+30                                                                                                                                                                  COVENIN - MINDUR 2000-92
+PARTIDA           UNIDAD                        DESCRIPCION
+E113115011           m CONSTRUCCIÓN DE CERCAS PROVISIONALES DE MALLA CICLÓN, CALIBRE N*
+11, CON 3 HILOS DE ALAMBRE DE PÚAS Y CORONAMIENTO INCLINADO DE h=
+1.80 m (SIN BROCAL).
+E113116015        m2? CONSTRUCCIÓN DE CERCAS PROVISIONALES DE BLOQUES DE CONCRETO
+DE ESPESOR 15 cm. INCLUYE MACHONES, VIGAS DE CORONA, VIGAS DE
+FUNDACIÓN, REFUERZO METÁLICO, ENCOFRADO Y TRANSPORTE DE LOS
+MATERIALES HASTA 50 km DE DISTANCIA.
+E113116020        m2 CONSTRUCCIÓN DE CERCAS PROVISIONALES DE BLOQUES DE CONCRETO
+DE ESPESOR 20 cm. INCLUYE MACHONES, VIGAS DE CORONA, VIGAS DE
+FUNDACIÓN, REFUERZO METÁLICO, ENCOFRADO
+E113121000      m?  CONSTRUCCIÓN DE PORTONES DE MARCO Y REFUERZO DE MADERA Y
+ALAMBRE DE PÚAS.
+E113122000 —    m2 CONSTRUCCIÓN DE PORTONES CON MARCO, REFUERZO DE MADERA Y
+LÁMINAS METÁLICAS.
+E113123000        m2 CONSTRUCCIÓN DE PORTONES CON MARCO, REFUERZO METÁLICO Y
+LÁMINAS METÁLICAS.
+E113124009           m2 CONSTRUCCIÓN DE PORTONES DE MALLA CICLÓN, CALIBRE N*9.
+E113124010            m2 CONSTRUCCIÓN DE PORTONES DE MALLA CICLÓN, CALIBRE N' 10.
+E113124011            m2 CONSTRUCCIÓN DE PORTONES DE MALLA CICLÓN, CALIBRE N' 11.
+E114101019        m ACOMETIDA PROVISIONAL DE ELECTRICIDAD CON TUBO  CONDUIT
+GALVANIZADO SIN ROSCA D=1", INCLUYE CAJA DE DISTRIBUCION.
+E114203019        m ADUCCIÓN PROVISIONAL DE AGUAS CLARAS CON TUBO DE ACERO
+GALVANIZADO ISO D=3/4"
+E114305102             m DESCARGA PROVISIONAL DE AGUAS RESIDUALES CON TUBO DE PVC D=4"
+ SUBCAPÍTULO E12 LIMPIEZA DEL TERRENO               |
+E121100000           ha DEFORESTACIÓN PESADA Y LIMPIEZA PARA TERRACEO (CUBIERTA VEGETAL
+MUY DENSA, CON UNA ALTURA PREDOMINANTE MINIMA DE 20 m), MAYOR DE
+UNA HECTÁREA. INCLUYE DESRAIZAMIENTO Y ELIMINACIÓN DE TRINCHERAS.
+E121200000        ha DEFORESTACIÓN MEDIANA Y LIMPIEZA PARA TERRACEO (BOSQUE
+MEDIANAMENTE DENSO, CON UNA ALTURA PREDOMINANTE COMPRENDIDA
+ENTRE 8 m Y 20 m), MAYOR DE UNA HECTÁREA. INCLUYE DESRAIZAMIENTO Y                       .
+ELIMINACIÓN DE TRINCHERAS.
+E121300000        ha DEFORESTACIÓN LIVIANA Y LIMPIEZA PARA TERRACEO  (RASTROJOS,
+VEGETACIÓN BAJA EN GENERAL, CON ALTURA INFERIOR A 8 m), EN ÁREAS                 á
+MAYORES DE 5 HECTÁREAS. INCLUYE DESRAIZAMIENTO Y ELIMINACIÓN DE
+TRINCHERAS.
+E121400000        ha DEFORESTACIÓN LIVIANA Y LIMPIEZA PARA TERRACEO (RASTROJOS,
+VEGETACIÓN BAJA EN GENERAL, CON ALTURA INFERIOR A 8 m), EN ÁREAS
+COMPRENDIDAS ENTRE 1 Y 5 HECTÁREAS. INCLUYE DESRAIZAMIENTO Y
+ELIMINACIÓN DE TRINCHERAS.
+
+## Página 34
+
+COVENIN - MINDUR 2000 - 92                                                                                                                                                                      31
+PARTIDA            UNIDAD                         DESCRIPCION
+E121500000        m? DEFORESTACIÓN LIVIANA Y LIMPIEZA PARA  TERRACEO (RASTROJOS,
+VEGETACIÓN BAJA EN GENERAL, CON ALTURA INFERIOR A 8 m), EN ÁREAS
+MENORES DE 1 HECTÁREA. INCLUYE DESRAIZAMIENTO Y ELIMINACIÓN DE
+TRINCHERAS.
+E122100000        m? TALA DE VEGETACIÓN HERBÁCEA, CON USO DE DESBROZADORA Y/O
+CORTADORA.
+j                           E122200000            m2 TALA DE VEGETACIÓN HERBÁCEA A MANO (MACHETEO), CON ALTURA MAYOR
+DE 1.50 m.
+E122300000        m2 TALA DE VEGETACIÓN HERBÁCEA A MANO (MACHETEO), CON ALTURA
+MENOR O IGUAL A 1.50 m.
+E123100000        Pza TALA Y DESRAIZAMIENTO DE ÁRBOLES CON ALTURA SUPERIOR A 12 m, EN
+CANTIDADES MENORES DE 5 PIEZAS POR HECTÁREA.
+E123200000         Pza TALA Y DESRAIZAMIENTO DE ÁRBOLES CON ALTURA ENTRE 5 m Y 12 m, EN
+CANTIDADES MENORES DE 5 PIEZAS POR HECTÁREA.
+E123300000       Pza TALA Y DESRAIZAMIENTO DE ÁRBOLES CON ALTURA INFERIOR A 5 m, EN
+CANTIDADES MENORES DE 10 PIEZAS POR HECTÁREA.
+i SUBCAPÍTULO E13 DEMOLICIONES
+E131222000        m2? DEMOLICIÓN DE CASAS,  SIN INCLUIR INFRAESTRUCTURA, UTILIZANDO
+EQUIPO LIVIANO, MEDIDA SEGÚN EL ÁREA DE CONSTRUCCIÓN.
+E131322000      m2 DEMOLICIÓN DE EDIFICIOS, SIN INCLUIR INFRAESTRUCTURA, UTILIZANDO
+EQUIPO LIVIANO, MEDIDO SEGÚN EL ÁREA DE CONSTRUCCIÓN.
+E131313000          m2? DEMOLICIÓN DE INFRAESTRUCTURA DE EDIFICIOS, MEDIDO SEGÚN EL ÁREA
+DE PISO CORRESPONDIENTE.
+E131103000          m2 DEMOLICIÓN DE RANCHOS, INCLUYENDO INFRAESTRUCTURA MEDIDO SEGÚN
+EL ÁREA DE CONSTRUCCIÓN.
+E132112000       m3 DEMOLICIÓN DE MIEMBROS HORIZONTALES DE CONCRETO ARMADO CON
+EQUIPO LIVIANO (COMPRESOR).
+E132122000        mY DEMOLICIÓN DE MIEMBROS VERTICALES DE CONCRETO ARMADO CON
+EQUIPO LIVIANO (COMPRESOR).
+E132212000         m3 DEMOLICIÓN DE MIEMBROS HORIZONTALES DE CONCRETO SIN ARMAR CON
+EQUIPO LIVIANO (COMPRESOR).
+E132222000      m3 DEMOLICIÓN DE MIEMBROS VERTICALES DE CONCRETO SIN ARMAR CON
+EQUIPO LIVIANO (COMPRESOR).
+E132312000        m3 DEMOLICIÓN DE ELEMENTOS HORIZONTALES DE MAMPOSTERIA CON
+EQUIPO LIVIANO (COMPRESOR).
+E132322000        m3 DEMOLICIÓN DE ELEMENTOS VERTICALES DE MAMPOSTERIA CON EQUIPO
+LIVIANO (COMPRESOR).
+
+## Página 35
+
+30                                                                                                                                                COVENIN - MINDUR 2000-92
+PARTIDA                UNIDAD                                  DESCRIPCION
+E132411015        m2 DEMOLICIÓN A MANO DE PAREDES DE LADRILLO MACIZO, ESPESOR HASTA
+15 cm.
+E132411030          m2 DEMOLICIÓN A MANO DE PAREDES DE LADRILLO MACIZO. ESPESOR MAYOR
+DE 15 cm. HASTA 30 cm
+E132421000            m? DEMOLICIÓN A MANO DE PAREDES DE BLOQUES.                                                    :
+E132611000           m2 DEMOLICIÓN A MANO DE ALCANTARILLAS METÁLICAS  (MEDIDAS POR EL
+ÁREA DE SU DESARROLLO).
+E132621012            m      DEMOLICIÓN A MANO DE TUBERÍAS DE CONCRETO DE DIAMETROS ENTRE 4 Y
+12 plg (30 cm).
+E132621024          m     DEMOLICIÓN DE TUBERÍAS DE CONCRETO DE DIAMETROS ENTRE 12 Y 24 plg
+,                  (30 A 60 cm).
+E132620050          m DEMOLICIÓN DE TUBERÍAS DE CONCRETO DE DIAMETROS MAYORES A 24 plg
+(60 cm).
+E132711000            m      DEMOLICIÓN A MANO DE CERCAS DE ALAMBRE DE PÚAS.
+E132713000            m      DEMOLICIÓN A MÁQUINA DE CERCAS DE ALAMBRE DE PÚAS.
+E132721000            m DEMOLICIÓN A MANO DE CERCAS DE MALLA CICLÓN.
+E132723000             m       DEMOLICIÓN A MÁQUINA DE CERCAS DE MALLA CICLÓN.
+E133120000           m3 DEMOLICIÓN DE PAVIMENTO DE CONCRETO CON EQUIPO LIVIANO
+(COMPRESOR).
+E133130000            m3 DEMOLICIÓN DE PAVIMENTO DE CONCRETO CON EQUIPO PESADO.
+E133220000        m3 DEMOLICIÓN DE ACERAS Y CUNETAS DE CONCRETO CON EQUIPO LIVIANO
+(COMPRESOR).
+E133230000             m3 DEMOLICIÓN DE ACERAS Y CUNETAS DE CONCRETO CON EQUIPO PESADO.
+E133320000           m3 DEMOLICIÓN DE BROCALES DE CONCRETO CON EQUIPO LIVIANO
+(COMPRESOR).
+E133330000            m3 DEMOLICIÓN DE BROCALES DE CONCRETO CON EQUIPO PESADO.
+E133420000           m3 DEMOLICIÓN DE PAVIMENTO DE ASFALTO CON    EQUIPO LIVIANO
+(COMPRESOR).
+E133430000           m3 DEMOLICIÓN DE PAVIMENTO DE ASFALTO CON EQUIPO PESADO.
+E133520000          m3 DEMOLICIÓN DE PAVIMENTOS COMBINADOS DE CONCRETO Y ASFALTO CON
+EQUIPO LIVIANO (COMPRESOR) .                                                                                         E
+E133530000         m3 DEMOLICIÓN DE PAVIMENTOS COMBINADOS DE CONCRETO Y ASFALTO CON
+EQUIPO PESADO.
+E133600000            m3 DEMOLICIÓN DE BASES Y SUB-BASES DE PAVIMENTOS.
+E134120000            kgf DEMOLICIÓN DE ESTRUCTURAS METÁLICAS CON EQUIPO LIVIANO
+
+## Página 36
+
+COVENIN - MINDUR 2000 - 92                                                                                                                                                                     33
+PARTIDA          UNIDAD                       DESCRIPCION
+E135120000            kgf DEMOLICIÓN DE ESTRUCTURAS DE MADERA CON EQUIPO LIVIANO
+E136010000       m3 CARGA A MANO DEL MATERIAL PROVENIENTE DE LAS DEMOLICIONES O
+>                                              PREPARACIÓN DEL SITIO.
+E136020000       m3 CARGA CON EQUIPO LIVIANO DEL MATERIAL PROVENIENTE DE LAS
+p                                                            DEMOLICIONES O PREPARACIÓN DEL SITIO.
+E136030000       m3 CARGA CON EQUIPO PESADO DEL MATERIAL PROVENIENTE DE LAS
+DEMOLICIONES O PREPARACIÓN DEL SITIO.
+| SUBCAPÍTULO E14 REMOCIONES
+E141101000       kgf DESARMADO, REMOCIÓN, LIMPIEZA, CLASIFICACIÓN, ACARREO INTERNO Y
+ALMACENAMIENTO EN SITIO, DE ESTRUCTURAS METÁLICAS.
+E141202000       m2? DESARMADO, REMOCIÓN, LIMPIEZA, CLASIFICACIÓN, ACARREO INTERNO Y
+ALMACENAMIENTO EN SITIO, DE TABIQUES O PUERTAS METÁLICAS.
+E141401000       m3 DESARMADO, REMOCIÓN, LIMPIEZA, CLASIFICACIÓN, ACARREO INTERNO Y
+ALMACENAMIENTO EN SITIO, DE ESTRUCTURAS DE MADERA.
+E141501000       m2? DESARMADO, REMOCIÓN, LIMPIEZA, CLASIFICACIÓN, ACARREO INTERNO Y
+ALMACENAMIENTO EN SITIO, DE TABIQUES O PUERTAS DE MADERA.
+E141711000           m2? REMOCIÓN DE ALCANTARILLAS METÁLICAS, INCLUYENDO LAS OPERACIONES
+NECESARIAS PARA DESARMAR Y EXTRAER DE SU SITIO LOS DIFERENTES
+ELEMENTOS MEDIDOS POR EL ÁREA DE SU DESARROLLO.
+E141721000        m    REMOCIÓN DE TUBERÍAS DE CONCRETO, INCLUYENDO LAS OPERACIONES
+NECESARIAS PARA DESARMAR Y EXTRAER DE SU SITIO LOS DIFERENTES
+ELEMENTOS
+E141731000       m    REMOCIÓN DE TUBERÍAS METÁLICAS, INCLUYENDO LAS OPERACIONES
+NECESARIAS PARA DESARMAR Y EXTRAER DE SU SITIO LOS DIFERENTES
+ELEMENTOS
+E141811000      m   REMOCIÓN DE CERCAS DE ALAMBRE DE PÚAS CON RECUPERACIÓN DE
+MATERIALES Y ALMACENAMIENTO.
+E141821000       m    REMOCIÓN DE CERCAS DE MALLA CICLÓN CON RECUPERACIÓN DE
+MATERIALES Y ALMACENAMIENTO.
+E142001000       tÚ    CARGA A MANO DE ESTRUCTURAS METÁLICAS PROVENIENTES DE LA
+PREPARACIÓN DEL SITIO, PARA SU TRANSPORTE FUERA DEL SITIO DE LA
+.                                                                  OBRA (MEDIDA SOBRE CAMIONES).
+E142002000      tf    CARGA A MÁQUINA DE ESTRUCTURAS METÁLICAS PROVENIENTES DE LA
+PREPARACIÓN DEL SITIO, PARA SU TRANSPORTE FUERA DEL SITIO DE LA
+OBRA (MEDIDA SOBRE CAMIONES).
+
+## Página 37
+
+CAPÍTULO E3 ESTRUCTURAS
+
+## Página 38
+
+COVENIN - MINDUR 2000 - 92                                                                                                                        3T
+SUBCAPITULO E32 INFRAESTRUCTURA DE CONCRETO
+Definición
+En esta Norma se entiende por infraestructura todas las obras de concreto a partir de la cota
+superior de la losa o placa de fundación o de la base de pavimento necesarias para soportar la
+z                        superestructura de la edificación.
+En el precio unitario de las Partidas se incluyen los materiales, maquinarias y herramientas, el
+replanteo, la nivelación y la mano de obra necesarias para la total y completa ejecución de las mismas
+Salvo que se indique lo contrario en la descripción de la Partida, la armadura de refuerzo, el encofrado y
+.                        el transporte de los agregados y cemento se computarán por Partidas separadas.
+En ningún caso la resistencia del concreto vaciado será inferior a la resistencia especificada en las
+Partidas previstas. La utilización de concreto premezclado queda a criterio del Ingeniero Responsable
+por la parte contratante, pero sin reconocimiento de ningún incremento de precio por tal modificación del
+proceso constructivo.
+
+## Página 39
+
+COVENIN - MINDUR 2000 - 92                                                                                                                                                 39
+SUBCAPITULO E33 SUPERESTRUCTURA DE CONCRETO
+Definición
+Comprende todas las obras de concreto correspondientes a la estructura de la edificación contada
+:                       a partir de la cota superior de la losa o placa de fundación o de la base de pavimento.
+En el precio unitario de las Partidas se incluyen los materiales, maquinarias y herramientas, la
+nivelación, el replanteo y la mano de obra necesarios para la total y completa ejecución de las mismas..
+-                         Se excluyen los refuerzos metálicos, los encofrados y el transporte de los agregados y cemento.
+En ningún caso la resistencia del concreto vaciado será inferior a la resistencia especificada en las
+Partidas previstas. La utilización de concreto premezclado queda a criterio del Ingeniero Responsable
+por la parte contratante, pero sin reconocimiento de ningún incremento de precio por tal modificación del
+proceso constructivo.
+Miembros de borde, vigas, dinteles, etc., se computarán en las Partidas correspondientes.
+
+## Página 40
+
+COVENIN — MINDUR 2000-92                                                                                                                                                              4 1
+SUBCAPÍTULO E36 ESTRUCTURAS METÁLICAS
+
+Definición
+
+Estructura metálica es toda estructura o parte de estructura formada principalmente por miembros,
+elementos o piezas de metal estructural o de acero estructural según se define en la Norma
+
+-                    venezolana COVENIN - MINDUR 1755 - 82 "Código de Prácticas Normalizadas para la Fabricación
+
+y Construcción de Estructuras de Acero".
+-                   Alcance
+En el precio unitario de las Partidas se incluyen los materiales, y uso de maquinarias y herramientas,
+el replanteo y la mano de obra necesarios para la total y completa ejecución de las mismas, según la
+siguiente codificación y descripción que se detalla al final del Capítulo E3:
+Se establece la clasificación según los materiales en:
+E361 ESTRUCTURAS METALICAS DE ACERO.
+E362 ESTRUCTURAS METALICAS DE ALUMINIO.
+Las Partidas se agrupan según la Actividad en:
+
+E36X1 SUMINISTRO.
+
+E36X2 FABRICACION.
+
+E36X3 LIMPIEZA Y PREPARACION DE SUPERFICIES.
+
+E36X4 SISTEMA DE PROTECCION.
+
+E36X5 MONTAJE.
+
+E36X6 SUMINISTRO, FABRICACION, LIMPIEZA Y PREPARACION DE
+
+SUPERFICIES, SISTEMA DE PROTECCION.
+
+El grupo de Partidas E36X6 abarca las primeras cuatro actividades como una alternativa cuando las
+características de la obra lo permitan para simplificar la descripción del alcance del trabajo, a criterio del
+Organismo Contratante. Las particularidades de cada obra justifican el que la actividad E36X5 Montaje
+se use siempre como una Partida separada.
+
+Medición
+
+La unidad de medida será el kilogramo fuerza (kgf).
+
+Los pesos de los miembros y demás componentes de la estructura metálica se obtendrén
+multiplicando las dimensiones acotadas en los planos, en milimetros (mm) o metros (m) o metros
+cuadrados (m”) o metros cúbicos (m/), por el peso por unidad de medida, kilogramo por metro lineal
+(kgf/m) o kilogramo por metro cuadrado (kgf/m”) o kilogramo por metro cúbico (kgf/m*), correspondiente
+al tipo, calidad y dimensiones del miembro, elemento o pieza indicado en los planos y especificaciones,
+según lo establece el Artículo 9.3 de la Norma venezolana COVENIN - MINDUR 1755 vigente.
+
+Se establecen los siguientes criterios de medición:
+
+.                 1. En la medición de las Partidas no se considerará el peso correspondiente a soldadura, asi como
+tampoco el porcentaje de desperdicio en perfiles, planchas y pernos de  anclaje durante la
+fabricación, ni el de tornillos defectuosos y/o perdidos en obra durante el montaje, por estar
+contemplado, cuando se justifique debidamente, en el análisis de precios unitarios. En el caso del
+sofito metálico (steel deck o encofrado colaborante) se incluyen los solapes transversales y
+longitudinales, además de los desperdicios.
+
+2. Adicionalmente a las reglas contenidas en la Sección 9.3 de la Norma venezolana COVENIN -
+
+MINDUR 1755 -82 para el cálculo de los pesos en estructuras de acero, en las Partidas de
+
+suministro de los productos de acero se observarán las siguientes:
+
+## Página 41
+
+42                                                                                                                                                                                COVENIN - MINDUR 2000-92
+2a. En los perfiles se calculará el peso de la pieza tomando como peso unitario del acero 7850
+kgflm?.
+2b. En las planchas lisas se calculará el peso tomando como peso unitario del acero 8000 kgf/m?.
+En las planchas lagrimadas se usará como peso unitario del acero 8270 kgfm?. En las
+planchas laminadas en frio se calculará el peso considerando un peso unitario del acero de
+8050 kgf/m?.
+Las planchas codificadas en las Partidas E36112 corresponden a piezas individuales, tales
+como cartelas, huellas para escaleras, y otros usos similares, y por consiguiente no deben
+computarse bajo este código las planchas que se utilizan para fabricar perfiles soldados.
+2c. En productos de acero galvanizado, se calculará el peso basándose en el peso correspondiente
+al acero, calculado con un peso unitario de 7850 kgfm', sumándole el peso de la capa de zinc.
+En el caso de las láminas galvanizadas para techos y sofitos se usará como peso unitario del
+acero 8050 kgf/m? y para el recubrimiento de zinc lo estipulado en la Norma venezolana
+COVENIN 941-76 "Planchas delgadas de acero al carbono por inmersión en caliente.
+Condiciones y requisitos generales ".
+3. Para efectos de la medición de las Partidas E36X3 Limpieza y Preparación de superficies y
+Sistemas de Protección, se considerará el kgf de estructura metálica tratada y/o pintada.
+La descripción de las Partidas de Limpieza y Preparación de Superficies se basa en las definiciones
+y notación del Consejo de la Pintura de Estructuras de Acero (Steel Structures Painting Council,
+SSPC) y para las cuales existen equivalencias con otras clasificaciones internacionales.
+Las Partidas de Limpieza y Preparación de Superficies y las de Sistema de Protección deben ser
+mutuamente compatibles en las diversas etapas constructivas. Ambos grupos de Partidas están
+orientadas a su ejecución en taller, tal como se considera en el Capítulo 34 de la Norma venezolana
+COVENIN - MINDUR 1618-98 "Estructuras de Acero para Edificaciones. Método de los
+Estados Límites" y en las Secciones 6.5 y 8.4 de la Norma COVENIN - MINDUR 1755-82
+"Código de Prácticas Normalizadas para la Fabricación y Construcción de Estructuras de
+Acero." En el alcance de las Partidas de Fabricación se incluye una capa de pintura de protección
+anticorrosiva y de igual manera en las Partidas de Montaje se incluye los retoques con pintura de
+protección anticorrosiva en las áreas que asi lo requieran, tal como está contemplado en el Artículo
+23.5 de la COVENIN - MINDUR 1618-98 y los Artículo 7.15 y 7.16 de la COVENIN - MINDUR 1755.
+
+4. Las losas de tabelones se contemplan en las Partidas E333 Losas, placas y pérgolas. Los sistemas
+de piso a base de losas mixtas acero - concreto, vaciadas sobre sofito metálico (steel deck o
+encofrado colaborante) o elementos prefabricados, se computarán considerando los elementos
+metálicos según el presente Subcapitulo, y la losa de concreto como losa maciza según el
+Subcapítulo E33, y el acero de retracción y temperatura y/o de refuerzo según el Subcapitulo E352.
+
+5. Los pilotes y tablestacas metálicas se consideran en el Subcapítulo E32.
+
+6. Las Partidas E36X5 Montaje incluyen el servicio y costo de personal, equipo de izamiento, y equipo
+de transporte para la movilización de los equipos de izamiento, así como la movilización y
+desmovilización de los equipos de montaje en el sitio de la obra. En el montaje de los sistemas de
+piso con sofito metálico (steel deck o encofrado colaborante), en las Partidas se considerarán
+incluidas las arandelas que se sueldan en los empalmes y solapes de las láminas metálicas.
+
+En las Partidas de Montaje se considera que el área de trabajo está en condiciones que permitan la
+operatividad de grúas autopropulsadas y otras maquinarias necesarias para el montaje. La custodia
+del material y los equipos en obra serán por cuenta del Contratista.
+
+7. La actividad de transporte desde el suplidor hasta el taller de fabricación, y la de transporte desde el
+taller de fabricación hasta la obra, se medirán, ambas, como Partidas separadas según el
+Subcapitulo E909 de Transportes.
+
+## Página 42
+
+COVENIN — MINDUR 2000-92                                                                                                                                                               43
+La entrega, manejo y almacenamiento de los materiales y estructuras se regirá por la Norma
+venezolana COVENIN - MINDUR 1755 vigente.
+
+Correcciones en otras partes de la Norma COVENIN — MINDUR 2000- 92:
+
+* pág. 25: Añadir en la última linea de Documentos a entregar de la Partida E01502:
+
+j                      En el caso de estructuras metálicas, deben incluirse los planos de fabricación y montaje. Los planos de
+fabricación deben ser aprobados por el Ingeniero estructural responsable del proyecto, conforme lo
+establece la Norma venezolana COVENIN - MINDUR 1755 vigente  "Código de Prácticas
+Normalizadas para la Fabricación y Construcción de Estructuras de Acero."
+
+* pág.48: En el Alcance, en el segundo párrafo que se refiere a estructuras metálicas, se deberá leer:
+
+cOn pintura anticorrosiva u otro tipo de revestimiento, estas se computarán por Partidas separadas
+
+según el Subcapítulo E46 Acabados con Pinturas. La carga y el transporte se contemplan en las
+
+Partidas E142 y E903, respectivamente.
+
+* pág. 84: En la última línea de la Partidas E333 deberá leerse:
+
+fuerza (kgf) según el Subcapítulo E36.
+
+## Página 43
+
+44                     COVENIN - MINDUR 2000-92
+|
+pr. e
+Es
+ll
+ll E
+Mo
+e  eS
+o  2
+o
+3             2  5  E
+3 3             No -3:0  a|3  =
+|      a Y             S32%32 SÉ e lus
+wd             o $38 2 13.3 O
+o |     2            ¿3338 [65 R8ó sE
+ABREN  ole E             A E E
+FR   7  Els S             333% 5192€8l0 5 El9 Ela 35 E
+3  c  s|= 2             H = a 2 [8 £ 3 sio 2 £
+p-1  1  215 »             E  5 n 3 Hu o [9 33
+[5322 8 3218 ele 2           FA  | [ES Seo 2s
+(E 333 Elg 53 Eu 588         8888 [¿¿[2£ 5/3 313 85
+[a = 23 5|/2 mn lo wi < E         E. A s sis 3 5|s si2 3 $
+O O E         Ec Nas O
+   >              25m
+225
+|      5           SA]
+-           Lan
+      5           53D
+|        3                 5E Ej
+g          an5s5            z
+|      E          290 set
+|      $          32
+w 1]          :OTvOoOgEÉ
+2 |          205352
+a o          no
+o          E nn + oEE£S
+Ss 15       EEES ER ELREE
+2 je       =<==w |8%7 2 2
+|    n 5       DDwmx 25555%
+|    3 >       xXo SECTAS
+|    2 |2     t| eg32% [255232
+|    = 173 EN    3  “" ElS 0650     2   2
+    $ lg |3    leia...     2  2
+o          O  a          a
+[    E       = .
+|   3ols |s   de ias s bl  el. 18  3
+|   n + % E   s|2 E A E      mn   7]
+E]   hu   21 5ju   Ss. 5   Ñ
+”  Ss. E o   SiS" o . o olN Yo 38     É   E
+| £  SS o o   =|82 83882822508   S  3   =
+$  £= E E   E - EE  a ád a y   £  E]   Ss
+los  so | 3   s|s|% E   5 ld   Ki
+E  Nm = mn   Ojea i- NO + ni A A na   3 a   Qu
+|                          za ui
+o                          oNÑN o
+ES            S   >»5i  B-     E25Ís
+2]            5   «¿e  n 3     SES5S
+>|            8   383  E $     RES
+ud            e   2983  sg 0     Esf833
+2            2   ES%  DS     Saga
+y            pa   3d  na     Bu>3
+GE>:3        o   Le]    Y      «o
+>|
+Ss     o
+ez |     $
+wp 2    E
+=l.3    2
+=h    =                          :
+ ME    QN
+| E                           |
+<
+En
+gl 53
+3 Mo <*
+El 3 <
+a zE
+<X Eu
+Q| n=
+cm u
+> ll me
+se $
+ll
+B 3 UE DD) E X 3 O >. 3 MIE:
+
+## Página 44
+
+COVENIN-MINDUR 2000-92                                                                                                                                                                 45
+PARTIDA              UNIDAD                     DESCRIPCION
+j                      ¡SUBCAPITULO E32 INFRAESTRUCTURA DE CONCRETO
+.                      E322000115           mi      CONCRETO DE Fc 150 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE CABEZALES DE PILOTES..
+E322000120           m      CONCRETO DE Fc 200 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE CABEZALES DE PILOTES.
+E322000125           m      CONCRETO DE Fc 250 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+j                                       PARA LA CONSTRUCCION DE CABEZALES DE PILOTES.
+E322000130           m      CONCRETO DE Fc 300 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE CABEZALES DE PILOTES.
+E322000135           mi      CONCRETO DE Fc 350 Kgfícm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE CABEZALES DE PILOTES.
+E323000115           mé      CONCRETO DE Fc 150 Kgfícm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE BASES Y ESCALONES.
+E323000120           m      CONCRETO DE Fc 200 Kgfícm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE BASES Y ESCALONES.
+E323000125           m      CONCRETO DE Fc 250 Kgfícm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE BASES Y ESCALONES.
+E323000130           mi      CONCRETO DE Fc 300 Kgfícm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE BASES Y ESCALONES.
+E323000135           m      CONCRETO DE Fc 350 Kgfícm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE BASES Y ESCALONES.
+E324000115           m      CONCRETO DE Fc 150 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE PEDESTALES.
+E324000115           m      CONCRETO DE Fc 150 Kgfícm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE PEDESTALES.
+E324000120           mi      CONCRETO DE Fc 200 Kgfícm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE PEDESTALES.
+E324000125           mi      CONCRETO DE Fc 250 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE PEDESTALES.
+E324000130           mi      CONCRETO DE Fc 300 Kgfícm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE PEDESTALES.
+E324000135           mi      CONCRETO DE Fc 350 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE PEDESTALES.
+E325000115           mi      CONCRETO DE Fc 150 Kgfícm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE VIGAS DE RIOSTRA, TIRANTES Y
+FUNDACIONES DE PARED
+
+## Página 45
+
+4 6                                                                                                                                                                                         COVENIN-MINDUR 2000-92
+
+PARTIDA             UNIDAD                      DESCRIPCION
+
+E325000120           m      CONCRETO DE Fc 200 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE VIGAS DE RIOSTRA, TIRANTES Y
+FUNDACIONES DE PARED.
+
+E325000125           m      CONCRETO DE Fc 250 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE VIGAS DE RIOSTRA, TIRANTES Y
+FUNDACIONES DE PARED.
+
+E325000130           mi      CONCRETO DE Fc 300 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE VIGAS DE RIOSTRA, TIRANTES Y
+FUNDACIONES DE PARED.
+
+E325000135           m      CONCRETO DE Fc 350 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE VIGAS DE RIOSTRA, TIRANTES Y
+FUNDACIONES DE PARED.
+
+E326000115           m      CONCRETO DE Fc 150 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+
+                    PARA LA CONSTRUCCION DE LOSA DE FUNDACION, TIPO MACIZA.
+
+E326000120           m      CONCRETO DE Fc 200 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE LOSA DE FUNDACION, TIPO MACIZA.
+
+E326000125           m      CONCRETO DE Fc 250 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE LOSA DE FUNDACION, TIPO MACIZA.
+
+E326000130           mi      CONCRETO DE Fc 300 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE LOSA DE FUNDACION, TIPO MACIZA.
+
+E326000135           mi      CONCRETO DE Fc 350 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE LOSA DE FUNDACION, TIPO MACIZA.
+
+E327000115           mé      CONCRETO DE Fc 150 Kgfícm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE VIGAS DE FUNDACION.
+
+E327000120           mé      CONCRETO DE Fc 200 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE VIGAS DE FUNDACION.
+
+E327000125           mé      CONCRETO DE Fc 250 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE VIGAS DE FUNDACION.
+
+E327000130           m      CONCRETO DE Fc 300 Kgfícm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE VIGAS DE FUNDACION.
+
+E327000135           m      CONCRETO DE Fc 350 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE VIGAS DE FUNDACION.
+
+E328000115           mi      CONCRETO DE Fc 150 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE BASE DE PAVIMENTO.
+
+E328000120           m      CONCRETO DE Fc 200 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE BASE DE PAVIMENTO.
+
+E328000125           m      CONCRETO DE Fc 250 Kgfícm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE BASE DE PAVIMENTO.
+
+E328000130           m      CONCRETO DE Fc 300 Kgf/cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE BASE DE PAVIMENTO.
+
+E328000135           mé      CONCRETO DE Fc 350 Kgfícm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE BASE DE PAVIMENTO.
+
+## Página 46
+
+COVENIN-MINDUR 2000-92                                                                                47
+PARTIDA           UNIDAD                 DESCRIPCION
+¡SUBCAPITULO E33 SUPERESTRUCTURA DE CONCRETO
+E331100120       m” CONCRETO DE Fc 200 kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE COLUMNAS RECTANGULARES.
+:                E331100125       m? CONCRETO DE Fc 250 kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE COLUMNAS RECTANGULARES.
+E331100130       m' CONCRETO DE Fc 300 kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE COLUMNAS RECTANGULARES.
+E331100135       m? CONCRETO DE Fc 350 kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+3                                 PARA LA CONSTRUCCION DE COLUMNAS RECTANGULARES.
+E331100140       m? CONCRETO DE Fc 400 kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE.
+PARA LA CONSTRUCCION DE COLUMNAS RECTANGULARES.
+E331100220        M? CONCRETO DE Fc 200 kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA,
+PARA LA CONSTRUCCION DE COLUMNAS RECTANGULARES.
+E331100225        m? CONCRETO DE Fc 250 kgí/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA,
+PARA LA CONSTRUCCION DE COLUMNAS RECTANGULARES.
+E331100230        m* CONCRETO DE Fc 300 kgíf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA,
+PARA LA CONSTRUCCION DE COLUMNAS RECTANGULARES.
+E331100235        m' CONCRETO DE Fc 350 kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA,
+PARA LA CONSTRUCCION DE COLUMNAS RECTANGULARES.
+E331100240        m? CONCRETO DE Fc 400 kgí/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA,
+PARA LA CONSTRUCCION DE COLUMNAS RECTANGULARES.
+E331200120       m? CONCRETO DE Fc 200 kgí/ cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE COLUMNAS CIRCULARES.
+E331200125       m? CONCRETO DE Fc 250 kgí/ cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE COLUMNAS CIRCULARES.
+E331200130       m? CONCRETO DE Fc 300 kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE COLUMNAS CIRCULARES.
+E331200135       m' CONCRETO DE Fc 350 kgíf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE,
+PARA LA CONSTRUCCION DE COLUMNAS CIRCULARES.
+E331200140       m? CONCRETO DE Fc 400 kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE.
+PARA LA CONSTRUCCION DE COLUMNAS CIRCULARES.
+E331200220        m? CONCRETO DE Fc 200 kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+PARA LA CONSTRUCCION DE COLUMNAS CIRCULARES.
+E331200225        m? CONCRETO DE Fc 250 kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA,
+PARA LA CONSTRUCCION DE COLUMNAS CIRCULARES.
+E331200230        m? CONCRETO DE Fc 300 kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+PARA LA CONSTRUCCION DE COLUMNAS CIRCULARES.
+
+## Página 47
+
+48                                                                                                                                                                                         COVENIN-MINDUR 2000-92
+PARTIDA                UNIDAD                         DESCRIPCION
+E331200235            m? CONCRETO DE Fc 350 kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE COLUMNAS CIRCULARES.
+E331200240            m? CONCRETO DE Fc 400 kgf/ cm” A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE COLUMNAS CIRCULARES.
+E331300120            m?” CONCRETO DE Fc 200 kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION COLUMNAS FORMA POLIGONAL.
+E331300125           m? CONCRETO DE Fc 250 kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION COLUMNAS FORMA POLIGONAL.
+E331300130           m? CONCRETO DE Fc 300 kgí/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION COLUMNAS FORMA POLIGONAL..
+E331300135           m? CONCRETO DE Fc 350 kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+=                CONSTRUCCION COLUMNAS FORMA POLIGONAL.
+E331300140           m” CONCRETO DE Fc 400 kgí/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION COLUMNAS FORMA POLIGONAL.
+E331300220            m? CONCRETO DE Fc 200 kgf/ cm” A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION COLUMNAS FORMA POLIGONAL..
+E331300225            m? CONCRETO DE Fc 250 kgí/ cm” A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION COLUMNAS FORMA POLIGONAL.
+E331300230            m” CONCRETO DE Fc 300 kgíf/ cm” A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION COLUMNAS FORMA POLIGONAL.
+E331300235            m? CONCRETO DE Fc 350 kgí/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION COLUMNAS FORMA POLIGONAL.
+E331300240             m? CONCRETO DE Fc 400 kgí/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION COLUMNAS FORMA POLIGONAL..
+E332000120             m* CONCRETO DE Fc 200 kgfíl cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION VIGAS DE CARGA Y MACIZADOS.
+E332000125         m? CONCRETO DE Fc 250 kgf/ cm? LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE VIGAS DE CARGA Y MACIZADOS.
+E332000130           m? CONCRETO DE Fc 300 kgí/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION VIGAS DE CARGA Y MACIZADOS.
+E332000135          m? CONCRETO DE Fc 350 kgf/ cm” A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION VIGAS DE CARGA Y MACIZADOS.
+E332000140           m* CONCRETO DE Fc 400 kgí/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA                      -
+CONSTRUCCION VIGAS DE CARGA Y MACIZADOS.
+E332000220            m? CONCRETO DE Fc 200 kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION VIGAS DE CARGA Y MACIZADOS.
+E332000225            m? CONCRETO DE Fc 250 kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION VIGAS DE CARGA Y MACIZADOS.
+E332000230            m? CONCRETO DE Fc 300 kgíl cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION VIGAS DE CARGA Y MACIZADOS.
+
+## Página 48
+
+COVENIN-MINDUR 2000-92                                                                                                                                                                49
+
+PARTIDA                UNIDAD                         DESCRIPCION
+
+E332000230            m? CONCRETO DE Fc 300 kgf/ cm? ALOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION VIGAS DE CARGA Y MACIZADOS.
+
+E332000235            m? CONCRETO DE Fc 350 kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+
+-                                                               CONSTRUCCION VIGAS DE CARGA Y MACIZADOS.
+E332000240            m? CONCRETO DE Fc 400 kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+h                                                                   CONSTRUCCION VIGAS DE CARGA Y MACIZADOS.
+
+E333120120            m? LOSA NERVADA EN UNA DIRECCION, e = 20 cm CON CONCRETO Fc 200 kgf/ cm?
+A LOS 28 DIAS.
+
+E333120125           m? LOSA NERVADA EN UNA DIRECCION, e = 20 cm CON CONCRETO Fc 250 kgf/ cm?
+A LOS 28 DIAS.
+
+E333120130           m? LOSA NERVADA EN UNA DIRECCION, e = 20 cm CON CONCRETO Fc 300 kgf/ cm?
+A LOS 28 DIAS.
+
+E333120135           m? LOSA NERVADA EN UNA DIRECCION, e = 20 cm CON CONCRETO Fc 350 kgí/ cm?
+A LOS 28 DIAS.
+
+E333120140            m? LOSA NERVADA EN UNA DIRECCION, e = 20 cm CON CONCRETO Fc 400 kgí/ cm?
+A LOS 28 DIAS.
+
+E333125120           m? LOSA NERVADA EN UNA DIRECCION, e = 25 cm CON CONCRETO Fc 200 kgf/ cm?
+A LOS 28 DIAS.
+
+E333125125           m? LOSA NERVADA EN UNA DIRECCION, e = 25 cm CON CONCRETO Fc 250 kgí/ cm?
+A LOS 28 DIAS.
+
+E333125130            m? LOSA NERVADA EN UNA DIRECCION, e = 25 cm CON CONCRETO Fc 300 kgí/ cm?
+A LOS 28 DIAS.
+
+E333125135            m? LOSA NERVADA EN UNA DIRECCION, e = 25 cm CON CONCRETO Fc 350 kgf/ cm?
+A LOS 28 DIAS.
+
+E333125140            m? LOSA NERVADA EN UNA DIRECCION, e = 25 cm CON CONCRETO Fc 400 kgf/ cm?
+A LOS 28 DIAS.
+
+E333130120           m? LOSA NERVADA EN UNA DIRECCION, e = 30 cm CON CONCRETO Fc 200 kgf/ cm?
+ALOS 28 DIAS.
+
+E333130125            m? LOSA NERVADA EN UNA DIRECCION, e = 30 cm CON CONCRETO Fc 250 kgf/ cm?
+A LOS 28 DIAS.
+
+E333130130            m? LOSA NERVADA EN UNA DIRECCION, e = 30 cm CON CONCRETO Fc 300 kgí/ cm?
+A LOS 28 DIAS.
+
+E333130135           m? LOSA NERVADA EN UNA DIRECCION, e = 30 cm CON CONCRETO Fc 350 kgf/ cm?
+A LOS 28 DIAS.
+
+E333130140           m? LOSA NERVADA EN UNA DIRECCION, e = 30 cm CON CONCRETO Fc 400 kgf/ cm?
+A LOS 28 DIAS.
+
+E333135120           m? LOSA NERVADA EN UNA DIRECCION, e = 35 cm CON CONCRETO Fc 200 kgf/ cm?
+A LOS 28 DIAS.
+
+E333135125           m? LOSA NERVADA EN UNA DIRECCION, e = 35 cm CON CONCRETO Fc 250 kgf/ cm?
+A LOS 28 DIAS.
+
+E333135130           m? LOSA NERVADA EN UNA DIRECCION, e = 35 cm CON CONCRETO Fc 300 kgf/! cm*
+A LOS 28 DIAS.
+
+E333135135           m? LOSA NERVADA EN UNA DIRECCION, e = 35 cm CON CONCRETO Fc 350 kgf/ cm*
+A LOS 28 DIAS.
+
+## Página 49
+
+50                                                                                                                                                                                          COVENIN—MINDUR 2000-92
+PARTIDA             UNIDAD                      DESCRIPCION
+E333135140           m” LOSA NERVADA EN UNA DIRECCION, e = 35 cm CON CONCRETO Fc 400 kgí/ cm?
+A LOS 28 DIAS.
+E333220120         m” LOSA NERVADA EN DOS DIRECCIONES, e = 20 cm CON CONCRETO Fc 200 kgf/
+cm? ALOS 28 DIAS.
+E333220125         m” LOSA NERVADA EN DOS DIRECCIONES, e = 20 cm CON CONCRETO Fc 250 kgf/
+cm? A LOS 28 DIAS.
+E333220130         m” LOSA NERVADA EN DOS DIRECCIONES, e = 20 cm CON CONCRETO Fe 300 kgf!                   :
+cm? A LOS 28 DIAS.
+E333220135         m” LOSA NERVADA EN DOS DIRECCIONES, e = 20 cm CON CONCRETO Fe 350 kgí/
+cm? A LOS 28 DIAS.
+E333220140         m” LOSA NERVADA EN DOS DIRECCIONES, e = 20 cm CON CONCRETO Fc 400 kgf/
+k               cm” A LOS 28 DIAS.
+E333225120         m” LOSA NERVADA EN DOS DIRECCIONES, e = 25 cm CON CONCRETO Fc 200 kgf/
+cm? A LOS 28 DIAS.
+E333225125          m” LOSA NERVADA EN DOS DIRECCIONES, e = 25 cm CON CONCRETO Fc 250 kgf/
+cm? A LOS 28 DIAS.
+E333225130         m” LOSA NERVADA EN DOS DIRECCIONES, e = 25 cm CON CONCRETO Fc 300 kgfl
+cm” A LOS 28 DIAS.
+E333225135          m” LOSA NERVADA EN DOS DIRECCIONES, e = 25 cm CON CONCRETO Fc 350 kgf/
+cm? A LOS 28 DIAS.
+E333225140          m” LOSA NERVADA EN DOS DIRECCIONES, e = 25 cm CON CONCRETO Fc 400 kgf/
+cm? A LOS 28 DIAS.                                       :
+E333230120          m” LOSA NERVADA EN DOS DIRECCIONES, e = 30 cm CON CONCRETO Fc 200 kgf/
+cm? A LOS 28 DIAS.
+E333230125          m” LOSA NERVADA EN DOS DIRECCIONES, e = 30 cm CON CONCRETO Fc 250 kgf/
+cm? A LOS 28 DIAS.
+E333230130          m” LOSA NERVADA EN DOS DIRECCIONES, e = 30 cm CON CONCRETO Fc 300 kgf!
+cm? A LOS 28 DIAS.
+E333230135         m” LOSA NERVADA EN DOS DIRECCIONES, e = 30 cm CON CONCRETO Fc 350 kgí/
+cm? A LOS 28 DIAS.
+E333230140         m” LOSA NERVADA EN DOS DIRECCIONES, e = 30 cm CON CONCRETO Fe 400 kgf/
+cm? A LOS 28 DIAS.
+E333235120          m” LOSA NERVADA EN DOS DIRECCIONES, e = 35 cm CON CONCRETO Fc 200 kgf/
+cm? A LOS 28 DIAS.
+E333235125         m” LOSA NERVADA EN DOS DIRECCIONES, e = 35 cm CON CONCRETO Fe 250 kgf/
+cm? A LOS 28 DIAS.
+E333235130         m” LOSA NERVADA EN DOS DIRECCIONES, e = 35 cm CON CONCRETO Fe 300 kgf/
+cm? ALOS 28 DIAS.
+E333235135         m” LOSA NERVADA EN DOS DIRECCIONES, e = 35 cm CON CONCRETO Fe 350 kgf/
+cm? A LOS 28 DIAS.
+E333235140         m” LOSA NERVADA EN DOS DIRECCIONES, e = 35 cm CON CONCRETO Fc 400 kgf/
+cm? A LOS 28 DIAS.
+E333308120          m? LOSA MACIZA, e = 8 cm CON CONCRETO Fc 200  kgf/ cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+
+## Página 50
+
+COVENIN-MINDUR 2000-92                                                                    51
+PARTIDA         UNIDAD              DESCRIPCION
+E333308125      m? LOSA MACIZA, e = 8 cm CON CONCRETO Fc 250 kgfl cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+»              E333308130       m? LOSA MACIZA, e = 8 cm CON CONCRETO Fc 300 kgf/ cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+E333308135       m? LOSA MACIZA, e = 8 cm CON CONCRETO Fc 350 kgfí cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+E333308140       m? LOSA MACIZA, e = 8 cm CON CONCRETO Fc 400 kgf/ cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+E333308220       m? LOSA MACIZA, e = 8 cm CON CONCRETO Fc 200 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333308225       m? LOSA MACIZA, e = 8 cm CON CONCRETO Fc 250 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333308230       m? LOSA MACIZA, e = 8 cm CON CONCRETO Fc 300 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333308235       m” LOSA MACIZA, e = 8 cm CON CONCRETO Fc 350 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333308240       m? LOSA MACIZA, e = 8 cm CON CONCRETO Fc 400 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333310120       m? LOSA MACIZA, e = 10 cm CON CONCRETO Fc 200 kgf/ cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+E333310125       m? LOSA MACIZA, e = 10 cm CON CONCRETO Fc 250 kgf/ cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+E333310130       m? LOSA MACIZA, e = 10 cm CON CONCRETO Fc 300 kgf/ cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+E333310135       m? LOSA MACIZA, e = 10 cm CON CONCRETO Fc 350 kgf cm? A LOS 28 DIAS,
+                                                                    ACABADO CORRIENTE.
+E333310140       m? LOSA MACIZA, e = 10 cm CON CONCRETO Fc 400 kgf/ cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+E333310220       m? LOSA MACIZA, e = 10 cm CON CONCRETO Fc 200 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333310225       m? LOSA MACIZA, e = 10 cm CON CONCRETO Fc 250 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333310230       m? LOSA MACIZA, e = 10 cm CON CONCRETO Fc 300 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333310235       m? LOSA MACIZA, e = 10 cm CON CONCRETO Fc 350 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333310240       m? LOSA MACIZA, e = 10 cm CON CONCRETO Fc 400 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333312120       m? LOSA MACIZA, e = 12 cm CON CONCRETO Fc 200 kgf/ cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+E333312125       m? LOSA MACIZA, e = 12 cm CON CONCRETO Fc 250 kgf/ cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+
+## Página 51
+
+52                                                                        COVENIN-MINDUR 2000-92
+PARTIDA          UNIDAD                DESCRIPCION
+E333312130       m? LOSA MACIZA, e = 12 cm CON CONCRETO Fc 300 kgf/ cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+E333312135       m? LOSA MACIZA, e = 12 cm CON CONCRETO Fc 350 kgf/ cm? A LOS 28 DIAS.
+ACABADO CORRIENTE.
+E333312140       m? LOSA MACIZA, e = 12 cm CON CONCRETO Fc 400 kgf/ cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+E333312220       m? LOSA MACIZA, e = 12 cm CON CONCRETO Fc 200 kgí/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333312225       m? LOSA MACIZA, e = 12 cm CON CONCRETO Fc 250 kgfl cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333312230       m? LOSA MACIZA, e = 12 cm CON CONCRETO Fe 300 kgí/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333312235       m? LOSA MACIZA, e = 12 cm CON CONCRETO Fc 350 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333312240       mí LOSA MACIZA, e = 12 cm CON CONCRETO Fc 400 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333315120       m? LOSA MACIZA, e = 15 cm CON CONCRETO Fc 200 kgf/ cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+E333315125       m? LOSA MACIZA, e = 15 cm CON CONCRETO Fc 250 kgf/ cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+E333315130       m” LOSA MACIZA, e = 15 cm CON CONCRETO Fe 300 kgf/ cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+E333315135       m? LOSA MACIZA, e = 15 cm CON CONCRETO Fc 350 kgfl cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+E333315140       m” LOSA MACIZA, e = 15 cm CON CONCRETO Fc 400 kgf/ cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+E333315220       m” LOSA MACIZA, e = 15 cm CON CONCRETO Fc 200 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333315225       m” LOSA MACIZA, e = 15 cm CON CONCRETO Fc 250 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333315230       m” LOSA MACIZA, e = 15 cm CON CONCRETO Fc 300 kgíl cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333315235       m* LOSA MACIZA, e = 15 cm CON CONCRETO Fc 350 kgf/ cm? A LOS 28 DIAS.
+ACABADO OBRA LIMPIA
+E333315240       m” LOSA MACIZA, e = 15 cm CON CONCRETO Fc 400 kgf/ cm? A LOS 28 DIAS.
+ACABADO OBRA LIMPIA.
+E333320120       m? LOSA MACIZA, e = 20 cm CON CONCRETO Fc 200 kgf/ cm? A LOS 28 DIAS.
+ACABADO CORRIENTE.
+E333320125       m” LOSA MACIZA, e = 20 cm CON CONCRETO Fc 250 kgfl cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+E333320130       m” LOSA MACIZA, e = 20 cm CON CONCRETO Fc 300 kgf/ cm? A LOS 28 DIAS,
+ACABADO CORRIENTE.
+
+## Página 52
+
+COVENIN-MINDUR 2000-97                                                                                                                                                                  93
+PARTIDA             UNIDAD                    DESCRIPCION
+E333320135       m? LOSA MACIZA, e = 20 cm CON CONCRETO Fc 350 kgíf/ cm? A LOS 28 DIAS.
+ACABADO CORRIENTE.
+E333320140       m? LOSA MACIZA, e = 20 cm CON CONCRETO Fc 400 kgf/ cm? A LOS 28 DIAS,
+»                                                                      ACABADO CORRIENTE
+E333320220       m? LOSA MACIZA, e = 20 cm CON CONCRETO Fc 200 kgf/ cm? A LOS 28 DIAS.
+ACABADO OBRA LIMPIA.
+;                 E333320225       m? LOSA MACIZA, e = 20 cm CON CONCRETO Fc 250 kgf/ cm” A LOS 28 DIAS.
+ACABADO OBRA LIMPIA.
+E333320230       m? LOSA MACIZA, e = 20 cm CON CONCRETO Fc 300 kgf/ cm” A LOS 28 DIAS.
+ACABADO OBRA LIMPIA.
+E333320235       m? LOSA MACIZA, e = 20 cm CON CONCRETO Fc 350 kgf/ cm” A LOS 28 DIAS.
+ACABADO OBRA LIMPIA.
+E333320240       m? LOSA MACIZA, e = 20 cm CON CONCRETO Fc 400 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333425220         m? LOSA RETICULAR, e = 25 cm CON CONCRETO Fc 200 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333425225         mí LOSA RETICULAR, e = 25 cm CON CONCRETO Fc 250 kgf/ cm? A LOS 28 DIAS.
+ACABADO OBRA LIMPIA.
+E333425230         m? LOSA RETICULAR, e = 25 cm CON CONCRETO Fc 300 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333425235          m? LOSA RETICULAR, e = 25 cm CON CONCRETO Fc 350 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.                                                                   4
+E333425240          m? LOSA RETICULAR, e = 25 cm CON CONCRETO Fc 400 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333430220         m? LOSA RETICULAR, e = 30 cm CON CONCRETO Fc 200 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333430225         m? LOSA RETICULAR, e = 30 cm CON CONCRETO Fc 250 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333430230         m” LOSA RETICULAR, e = 30 cm CON CONCRETO Fc 300 kgf/ cm” A LOS 28 DIAS.
+ACABADO OBRA LIMPIA.
+E333430235         m” LOSA RETICULAR, e = 30 cm CON CONCRETO Fc 350 kgf/ cm? A LOS 28 DIAS.
+,                                                                       ACABADO OBRA LIMPIA.
+E333430240         m” LOSA RETICULAR, e = 30 cm CON CONCRETO Fc 400 kgf/ cm” A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333435220         m” LOSA RETICULAR, e = 35 cm CON CONCRETO Fc 200 kgf/ cm” A LOS 28 DIAS.
+ACABADO OBRA LIMPIA.
+E333435225         m” LOSA RETICULAR, e = 35 cm CON CONCRETO Fc 250 kgf/ cm” A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+
+## Página 53
+
+54                                                                                                    COVENIN-MINDUR 2000-92
+PARTIDA             UNIDAD                      DESCRIPCION
+E333435230          m? LOSA RETICULAR, e = 35 cm CON CONCRETO Fc 300 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333435235         m? LOSA RETICULAR, e = 35 cm CON CONCRETO Fc 350 kgfl cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333435240          m? LOSA RETICULAR, e = 35 cm CON CONCRETO Fc 400 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333440220          m? LOSA RETICULAR, e = 40 cm CON CONCRETO Fc 200 kgf/ cm? A LOS 28 DIAS,                     A
+ACABADO OBRA LIMPIA.
+E333440225          m? LOSA RETICULAR, e = 40 cm CON CONCRETO Fc 250 kgfl cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333440230          m” LOSA RETICULAR, e = 40 cm CON CONCRETO Fc 300 kgf/ cm? A LOS 28 DIAS,
+-                 ACABADO OBRA LIMPIA.
+E333440235          m? LOSA RETICULAR, e = 40 cm CON CONCRETO Fc 350 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333440240          m” LOSA RETICULAR, e = 40 cm CON CONCRETO Fc 400 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333445220         m? LOSA RETICULAR, e = 45 cm CON CONCRETO Fe 200 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333445225          m? LOSA RETICULAR, e = 45 cm CON CONCRETO Fc 250 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333445230          m? LOSA RETICULAR, e = 45 cm CON CONCRETO Fc 300 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333445235          m? LOSA RETICULAR, e = 45 cm CON CONCRETO Fc 350 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333445240         m* LOSA RETICULAR, e = 45 cm CON CONCRETO Fc 400 kgf/cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333520220         m” LOSA HONGADA, ESPESOR PROMEDIO HASTA 20 cm CONCRETO Fc 200 kgf/
+cm?” A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+E333520225         m? LOSA HONGADA, ESPESOR PROMEDIO HASTA 20 cm CONCRETO Fc 250 kgf/
+cm” A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+E333520230          m” LOSA HONGADA, ESPESOR PROMEDIO HASTA 20 cm  CONCRETO Fe 300
+kgfícm? A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+E333520235        m? LOSA HONGADA, ESPESOR PROMEDIO HASTA 20 cm CONCRETO Fc 350 kgf/
+cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+E333520240        m? LOSA HONGADA, ESPESOR PROMEDIO HASTA 20 cm CONCRETO Fc 400 kgf/
+cm” A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+E333525220         m” LOSA HONGADA, ESPESOR PROMEDIO DE 21 A 25 cm CONCRETO Fc 200 kgí/
+cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+
+## Página 54
+
+COVENIN-MINDUR 2000-92                                                                                                                                                                                                                        3 5
+PARTIDA             UNIDAD                    DESCRIPCION
+E333525225        m” LOSA HONGADA, ESPESOR PROMEDIO DE 21 A 25 cm CONCRETO Fc 250 kgí/
+cm” A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+»                  E333525230         m? LOSA HONGADA, ESPESOR PROMEDIO DE 21 A 25 cm CONCRETO Fc 300 kgf/
+cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+E333525235        m? LOSA HONGADA, ESPESOR PROMEDIO DE 21 A 25 cm CONCRETO Fc 350 kgí/
+:                                                                cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+E333525240         m? LOSA HONGADA, ESPESOR PROMEDIO DE 21 A 25 cm CONCRETO Fc 400 kgf/
+cm” ALOS 28 DIAS, ACABADO OBRA LIMPIA.
+E333530220         m? LOSA HONGADA, ESPESOR PROMEDIO DE 26 A 30 cm CONCRETO Fc 200 kgf/
+,                                cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+E333530225         m? LOSA HONGADA, ESPESOR PROMEDIO DE 26 A 30 cm CONCRETO Fc 250 kgf/
+cm” A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+E333530230         m? LOSA HONGADA, ESPESOR PROMEDIO DE 26 A 30 cm CONCRETO Fc 300 kgf/
+cm” A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+E333530235         m? LOSA HONGADA, ESPESOR PROMEDIO DE 26 A 30 cm CONCRETO Fc 350 kgf/
+cm” A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+E333530240         m? LOSA HONGADA, ESPESOR PROMEDIO DE 26 A 30 cm CONCRETO Fc 400 kgf/
+cm?” ALOS 28 DIAS, ACABADO OBRA LIMPIA.
+E333535220         m? LOSA HONGADA, ESPESOR PROMEDIO SUPERIOR A 31 cm CONCRETO Fc 200
+kgfl cm” A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+E333535225         m? LOSA HONGADA, ESPESOR PROMEDIO SUPERIOR A 31 cm CONCRETO Fc 250
+kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+E333535230         m? LOSA HONGADA, ESPESOR PROMEDIO SUPERIOR A 31 cm CONCRETO Fc 300
+kgf/ cm? ALOS 28 DIAS, ACABADO OBRA LIMPIA.
+E333535235         m? LOSA HONGADA, ESPESOR PROMEDIO SUPERIOR A 31 cm CONCRETO Fc 350
+kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+E333535240         m? LOSA HONGADA, ESPESOR PROMEDIO SUPERIOR A 31 cm CONCRETO Fc 400
+kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA.
+E333666008          m? LOSA DE TABELONES, CONSTITUIDA POR: TABELONES DE 6x20x60 cm,
+PERFILES DOBLE TE DE 8, MALLA SOLDADA Y RECUBRIMIENTO CON
+CONCRETO e=4 cm POR ENCIMA DEL PERFIL (INCLUIDOS EN EL PRECIO
+TODOS LOS ELEMENTOS DESCRITOS)
+E333666010          m? LOSA DE TABELONES, CONSTITUIDA POR: TABELONES DE 6x20x60 cm,
+PERFILES DOBLE TE DE 10, MALLA SOLDADA Y RECUBRIMIENTO CON
+CONCRETO e=4 cm POR ENCIMA DEL PERFIL (INCLUIDOS EN EL PRECIO
+TODOS LOS ELEMENTOS DESCRITOS).
+E333666012          m? LOSA DE TABELONES, CONSTITUIDA POR: TABELONES DE 6x20x60 cm,
+PERFILES DOBLE TE DE 12, MALLA SOLDADA Y RECUBRIMIENTO CON
+CONCRETO e=4 cm POR ENCIMA DEL PERFIL (INCLUIDOS EN EL PRECIO
+TODOS LOS ELEMENTOS DESCRITOS).
+
+## Página 55
+
+56                                                                                                                                                                                        COVENIN-MINDUR 2000-92
+PARTIDA       UNIDAD            DESCRIPCION
+E333668010     m' LOSA DE TABELONES, CONSTITUIDA POR: TABELONES DE 6x20x80 cm,
+PERFILES DOBLE TE DE 10, MALLA SOLDADA Y RECUBRIMIENTO CON
+CONCRETO e=4 cm POR ENCIMA DEL PERFIL (INCLUIDOS EN EL PRECIO
+TODOS LOS ELEMENTOS DESCRITOS).
+E333668012     m” LOSA DE TABELONES, CONSTITUIDA POR: TABELONES DE 6x20x80 cm,
+PERFILES DOBLE TE DE 12, MALLA SOLDADA Y RECUBRIMIENTO CON
+CONCRETO e=4 cm POR ENCIMA DEL PERFIL (INCLUIDOS EN EL PRECIO
+TODOS LOS ELEMENTOS DESCRITOS).
+E333668014     mí LOSA DE TABELONES, CONSTITUIDA POR: TABELONES DE 6x20x80 cm,
+PERFILES DOBLE TE DE 14, MALLA SOLDADA Y RECUBRIMIENTO CON
+CONCRETO e=4 cm POR ENCIMA DEL PERFIL (INCLUIDOS EN EL PRECIO
+TODOS LOS ELEMENTOS DESCRITOS).
+E333686010     m” LOSA DE TABELONES, CONSTITUIDA POR: TABELONES DE 8x20x60 cm,
+:      PERFILES DOBLE TE DE 10, MALLA SOLDADA Y RECUBRIMIENTO CON
+CONCRETO e=4 cm POR ENCIMA DEL PERFIL (INCLUIDOS EN EL PRECIO
+TODOS LOS ELEMENTOS DESCRITOS).
+E333686012     mí LOSA DE TABELONES, CONSTITUIDA POR: TABELONES DE 8x20x60 cm,
+PERFILES DOBLE TE DE 12, MALLA SOLDADA Y RECUBRIMIENTO CON
+CONCRETO e=4 cm POR ENCIMA DEL PERFIL (INCLUIDOS EN EL PRECIO
+TODOS LOS ELEMENTOS DESCRITOS).
+E333686014     m? LOSA DE TABELONES, CONSTITUIDA POR: TABELONES DE 8x20x60 cm,
+PERFILES DOBLE TE DE 14, MALLA SOLDADA Y RECUBRIMIENTO CON
+CONCRETO e=4 cm POR ENCIMA DEL PERFIL (INCLUIDOS EN EL PRECIO
+TODOS LOS ELEMENTOS DESCRITOS).
+E333688012     m? LOSA DE TABELONES, CONSTITUIDA POR: TABELONES DE 8x20x80 cm,
+PERFILES DOBLE TE DE 12, MALLA SOLDADA Y RECUBRIMIENTO CON
+CONCRETO e=4 cm POR ENCIMA DEL PERFIL (INCLUIDOS EN EL PRECIO
+TODOS LOS ELEMENTOS DESCRITOS).
+E333688014     m” LOSA DE TABELONES, CONSTITUIDA POR: TABELONES DE 8x20x80 cm,
+PERFILES DOBLE TE DE 14, MALLA SOLDADA Y RECUBRIMIENTO CON
+CONCRETO e=4 cm POR ENCIMA DEL PERFIL.(INCLUIDOS EN EL PRECIO
+TODOS LOS ELEMENTOS DESCRITOS).
+E334000115           m? CONCRETO DE Fc 150 Kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE MACHONES, VIGAS DE CORONA, DINTELES,
+ARRIOSTRAMIENTO DE PAREDES.
+E334000120     m* CONCRETO DE Fc 200 Kgí/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE MACHONES, VIGAS DE CORONA,  DINTELES.
+ARRIOSTRAMIENTO DE PAREDES.
+E334000125     m” CONCRETO DE Fc 250 Kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE  MACHONES, VIGAS DE CORONA,  DINTELES.
+ARRIOSTRAMIENTO DE PAREDES.
+E334000130           m? CONCRETO DE Fc 300 Kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE MACHONES, VIGAS DE CORONA,  DINTELES.
+ARRIOSTRAMIENTO DE PAREDES.
+
+## Página 56
+
+COVENIN-MINDUR 2000-92                                                                                                                                                                 57
+PARTIDA                UNIDAD                         DESCRIPCION
+E334000135          m? CONCRETO DE Fc 350 Kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE  MACHONES, VIGAS DE CORONA,  DINTELES.
+ARRIOSTRAMIENTO DE PAREDES.
+E334000140           m? CONCRETO DE Fc 400 Kgf! cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE MACHONES, VIGAS DE CORONA, DINTELES.
+                                                                      ARRIOSTRAMIENTO DE PAREDES.
+E334000215            m? CONCRETO DE Fc 150 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION [DE MACHONES, VIGAS DE CORONA, DINTELES.
+ARRIOSTRAMIENTO DE PAREDES.
+E334000220            m? CONCRETO DE Fc 200 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+4                                 CONSTRUCCION [DE  MACHONES, VIGAS DE CORONA,  DINTELES.
+ARRIOSTRAMIENTO DE PAREDES.
+E334000225            m? CONCRETO DE Fc 250 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE  MACHONES, VIGAS DE CORONA,  DINTELES,
+ARRIOSTRAMIENTO DE PAREDES.
+E334000230            m? CONCRETO DE Fc 300 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE  MACHONES, VIGAS DE CORONA, DINTELES,
+ARRIOSTRAMIENTO DE PAREDES.
+E334000235             m” CONCRETO DE Fc 350 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE  MACHONES, VIGAS DE CORONA, DINTELES,
+ARRIOSTRAMIENTO DE PAREDES.
+E334000240             m? CONCRETO DE Fc 400 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE MACHONES, VIGAS DE CORONA, DINTELES,
+ARRIOSTRAMIENTO DE PAREDES.
+E335100120            m? CONCRETO DE Fc 200 Kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO RECTA.
+E335100125            m? CONCRETO DE Fc 250 Kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO RECTA.
+E335100130            m? CONCRETO DE Fc 300 Kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO RECTA.
+E335100135           m? CONCRETO DE Fc 350 Kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+:                                                            CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO RECTA
+E335100140           m? CONCRETO DE Fc 400 Kgfí/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO RECTA.
+E335100220            m? CONCRETO DE Fc 200 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO RECTA.
+
+## Página 57
+
+58                                                                                                                                                                                         COVENIN-MINDUR 2000-92
+PARTIDA               UNIDAD                          DESCRIPCION
+E335100225           m? CONCRETO DE Fc 250 Kgf/ cm” A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO RECTA.
+E335100230            m” CONCRETO DE Fc 300 Kgf/ cm” A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO RECTA.
+E335100235            m? CONCRETO DE Fc 350 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO RECTA.
+E335100240            m? CONCRETO DE Fc 400 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO RECTA.
+E335200120 -       m” CONCRETO DE Fc 200 Kgíf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO EN CURVAS.
+E335200125           m? CONCRETO DE Fc 250 Kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO EN CURVAS.
+E335200130           m? CONCRETO DE Fc 300 Kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO EN CURVAS.
+E335200135           m” CONCRETO DE Fc 350 Kgí/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO EN CURVAS.
+E335200140           m? CONCRETO DE Fc 400 Kgí/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO EN CURVAS.
+E335200220            m? CONCRETO DE Fc 200 Kgí/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO EN CURVAS.
+E335200225            m? CONCRETO DE Fc 250 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO EN CURVAS.
+E335200230            m' CONCRETO DE Fc 300 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO EN CURVAS.
+E335200235           m? CONCRETO DE Fc 350 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO EN CURVAS.
+E335200240           m? CONCRETO DE Fc 400 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE ESCALERAS, INCLUYENDO DESCANSO, TIPO EN CURVAS.
+E336100220           m? CONCRETO DE Fc 200 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE GRADERIAS ELEVADAS (TRIBUNAS).
+E336100230           m? CONCRETO DE Fc 300 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE GRADERIAS ELEVADAS (TRIBUNAS).
+
+## Página 58
+
+COVENIN-MINDUR 2000-92                                                                                                                                                                 59
+PARTIDA               UNIDAD                       DESCRIPCION
+E336100235            m? CONCRETO DE Fc 350 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE GRADERIAS ELEVADAS (TRIBUNAS).
+E336100240            m? CONCRETO DE Fc 400 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+q                                                                 CONSTRUCCION DE GRADERIAS ELEVADAS (TRIBUNAS).
+E336200215            m? CONCRETO DE Fc 150 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE GRADERIAS SOBRE TIERRA.
+E336200220            m? CONCRETO DE Fc 200 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE GRADERIAS SOBRE TIERRA.
+E336200225            m? CONCRETO DE Fc 250 Kgf! cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE GRADERIAS SOBRE TIERRA.
+E336200230            m? CONCRETO DE Fc 300 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE GRADERIAS SOBRE TIERRA.
+E336200235            m? CONCRETO DE Fc 350 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE GRADERIAS SOBRE TIERRA.
+E336200240           m? CONCRETO DE Fc 400 Kgf/ cm? ALOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE GRADERIAS SOBRE TIERRA.
+E337000115        m? CONCRETO DE Fc 150 Kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA
+CONSTRUCCION DE ELEMENTOS  ARQUITECTONICOS  (BARANDAS,
+ANTEPECHOS, ATICOS, PANTALLAS, PESTAÑAS, PARASOLES, ETC.).
+E337000120        m? CONCRETO DE Fc 200 Kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA
+CONSTRUCCION DE ELEMENTOS  ARQUITECTONICOS  (BARANDAS,
+ANTEPECHOS, ATICOS, PANTALLAS, PESTAÑAS, PARASOLES, ETC.).
+E337000125        m? CONCRETO DE Fc 250 Kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA
+CONSTRUCCION DE ELEMENTOS  ARQUITECTONICOS  (BARANDAS,
+ANTEPECHOS, ATICOS, PANTALLAS, PESTAÑAS, PARASOLES, ETC.).
+E337000130        m? CONCRETO DE Fc 300 Kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA
+CONSTRUCCION DE ELEMENTOS  ARQUITECTONICOS  (BARANDAS,
+ANTEPECHOS, ATICOS, PANTALLAS, PESTAÑAS, PARASOLES, ETC.).
+E337000135        m? CONCRETO DE Fc 350 Kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA
+CONSTRUCCION DE ELEMENTOS  ARQUITECTONICOS  (BARANDAS,
+ANTEPECHOS, ATICOS, PANTALLAS, PESTAÑAS, PARASOLES, ETC.).
+E337000140        m? CONCRETO DE Fc 400 Kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA
+CONSTRUCCION DE ELEMENTOS  ARQUITECTONICOS  (BARANDAS,
+ANTEPECHOS, ATICOS, PANTALLAS, PESTAÑAS, PARASOLES, ETC.).
+E337000215           m? CONCRETO DE Fc 150 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE ELEMENTOS  ARQUITECTONICOS  (BARANDAS.
+ANTEPECHOS, ATICOS, PANTALLAS, PESTAÑAS, PARASOLES, ETC.).
+
+## Página 59
+
+6 0                                                                                                                                                                                          COVENIN-MINDUR 2000-92
+PARTIDA                UNIDAD                          DESCRIPCION
+E337000220           m? CONCRETO DE Fc 200 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE ELEMENTOS  ARQUITECTONICOS  (BARANDAS,
+ANTEPECHOS, ATICOS, PANTALLAS, PESTAÑAS, PARASOLES, ETC.).
+E337000225            m* CONCRETO DE Fc 250 Kgf/ cm” A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE ELEMENTOS  ARQUITECTONICOS  (BARANDAS,
+ANTEPECHOS, ATICOS, PANTALLAS, PESTAÑAS, PARASOLES, ETC.).
+E337000230            m” CONCRETO DE Fc 300 Kgí/ cm” A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION. DE ELEMENTOS  ARQUITECTONICOS  (BARANDAS,
+ANTEPECHOS, ATICOS, PANTALLAS, PESTAÑAS, PARASOLES, ETC.).
+E337000235            m” CONCRETO DE Fc 350 Kgí/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE ELEMENTOS ARQUITECTONICOS  (BARANDAS,
+E              ANTEPECHOS, ATICOS, PANTALLAS, PESTAÑAS, PARASOLES, ETC.).
+E337000240            m” CONCRETO DE Fc 400 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE ELEMENTOS  ARQUITECTONICOS  (BARANDAS,
+ANTEPECHOS, ATICOS, PANTALLAS, PESTAÑAS, PARASOLES, ETC.).
+E339000120          m?” CONCRETO DE Fc 200 Kgf/ cm” A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE MUROS Y PANTALLAS.
+E339000125           m* CONCRETO DE Fc 250 Kgf/ cm? A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE MUROS Y PANTALLAS.
+E339000130           m” CONCRETO DE Fc 300 Kgí/ cm” A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE MUROS Y PANTALLAS.
+E339000135           m? CONCRETO DE Fc 350 Kgf/ cm” A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE MUROS Y PANTALLAS.
+E339000140           m” CONCRETO DE Fc 400 Kgí/ cm” A LOS 28 DIAS, ACABADO CORRIENTE, PARA LA
+CONSTRUCCION DE MUROS Y PANTALLAS.
+E339000220           m* CONCRETO DE Fc 200 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE MUROS Y PANTALLAS.
+E339000225            m? CONCRETO DE Fc 250 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE MUROS Y PANTALLAS.
+E339000230            m? CONCRETO DE Fc 300 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE MUROS Y PANTALLAS.
+E339000235           m? CONCRETO DE Fc 350 Kgf/ cm” A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE MUROS Y PANTALLAS.
+E339000240            m? CONCRETO DE Fc 400 Kgf/ cm? A LOS 28 DIAS, ACABADO OBRA LIMPIA, PARA LA
+CONSTRUCCION DE MUROS Y PANTALLAS.
+
+## Página 60
+
+COVENIN — MINDUR 2000-92                                                                                                                                                                        61
+CODIGO                 UNIDAD              DESCRIPCION
+SUBCAPITULO E36 ESTRUCTURAS METÁLICA
+E361111100              kgf        SUMINISTRO DE PERFILES DE ACERO LAMINADOS NACIONALES PARA LA
+:                                                                      FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE TRANSPORTE
+E361111200               kgf        SUMINISTRO DE PERFILES DE ACERO LAMINADOS IMPORTADOS PARA LA
+.                                                                     FABRICACION DE ESTRUCTURAS DE ACERO.NO INCLUYE TRANSPORTE
+E361112100             kgf       SUMINISTRO DE PERFILES DE ACERO ELECTROSOLDADOS NACIONALES
+PARA LA FABRICACIÓN DE ESTRUCTURAS DE ACERO.NO INCLUYE
+TRANSPORTE.
+E361113100               kgf        SUMINISTRO DE PERFILES DE ACERO SOLDADOS NACIONALES PARA LA
+Es                                           FABRICACION DE ESTRUCTURAS DE ACERO.NO INCLUYE TRANSPORTE.
+E361114100               kgf        SUMINISTRO DE PERFILES DE ACERO TUBULARES NACIONALES PARA LA
+FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE TRANSPORTE
+E361115100             kgf       SUMINISTRO DE PERFILES DE ACERO FORMADOS EN FRÍO NACIONALES
+PARA LA FABRICACION DE ESTRUCTURAS DE ACERO. NO INCLUYE
+TRANSPORTE.
+E361121100              kgf        SUMINISTRO DE PLANCHAS LISAS DE ACERO NACIONALES PARA LA
+FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE TRANSPORTE
+E361121200              kgf        SUMINISTRO DE PLANCHAS LISAS DE ACERO IMPORTADAS PARA LA
+FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE TRANSPORTE.
+E361122100             kgf       SUMINISTRO DE PLANCHAS LAGRIMADAS DE ACERO NACIONALES PARA
+LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE
+TRANSPORTE
+E361122200              kgf       SUMINISTRO DE PLANCHAS LAGRIMADAS DE ACERO IMPORTADAS PARA
+LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE
+TRANSPORTE
+E361131200           kgf      SUMINISTRO DE REJILLAS PARA PISOS LISAS DE ACERO IMPORTADAS
+PARA LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE
+TRANSPORTE
+E361133100            kgf      SUMINISTRO DE REJILLAS PARA PISOS ANTIRRESBALANTES DE ACERO
+NACIONALES PARA LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO
+INCLUYE TRANSPORTE.
+E361133200            kgf      SUMINISTRO DE REJILLAS PARA PISOS ANTIRRESBALANTES DE ACERO
+IMPORTADAS PARA LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO
+INCLUYE TRANSPORTE.
+.                      E361141100               kgf        SUMINISTRO DE SOFITO METÁLICO (ENCOFRADO COLABORANTE)
+NACIONAL DE 38 mm DE ALTURA PARA LA FABRICACIÓN DE SISTEMAS DE
+PISOS. NO INCLUYE TRANSPORTE.
+E361141200               kgf        SUMINISTRO DE SOFITO METÁLICO (ENCOFRADO COLABORANTE)
+IMPORTADO DE 38 mm DE ALTURA PARA LA FABRICACIÓN DE SISTEMAS
+DE PISOS. NO INCLUYE TRANSPORTE.
+E361142100               kgf        SUMINISTRO DE SOFITO METÁLICO (ENCOFRADO COLABORANTE)
+NACIONAL DE 76 mm DE ALTURA PARA LA FABRICACIÓN DE SISTEMAS DE
+PISOS. NO INCLUYE TRANSPORTE
+
+## Página 61
+
+62                                                                                  COVENIN - MINDUR 2000-92
+
+CODIGO             UNIDAD                    DESCRIPCION
+
+E361142200            kgf      SUMINISTRO DE SOFITO METÁLICO  (ENCOFRADO COLABORANTE)
+IMPORTADO DE 76 mm DE ALTURA PARA LA FABRICACIÓN DE SISTEMAS
+DE PISOS. NO INCLUYE TRANSPORTE.
+
+E361151100           kgf      SUMINISTRO DE PERNOS DE ANCLAJE NACIONALES CALIDAD SAE 1020
+PARA LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE
+TRANSPORTE.
+
+E361151200            kgf      SUMINISTRO DE PERNOS DE ANCLAJE IMPORTADOS CALIDAD SAE 1020
+PARA LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE
+TRANSPORTE                                                                        -
+
+E361152100           kgf      SUMINISTRO DE PERNOS DE ANCLAJE NACIONALES CALIDAD SAE 1040
+PARA LA FABRICACIÓN DE ESTRUCTURAS DE ACERO NO INCLUYE
+TRANSPORTE.
+
+E361152200            kgf      SUMINISTRO DE PERNOS DE ANCLAJE IMPORTADOS CALIDAD SAE 1040
+
+E                   PARA LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE
+
+TRANSPORTE.
+
+E361153100               kgf        SUMINISTRO DE PERNOS DE ANCLAJE NACIONALES CALIDAD A307 PARA
+LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE
+TRANSPORTE.
+
+E361153200               kof        SUMINISTRO DE PERNOS DE ANCLAJE IMPORTADOS CALIDAD A307 PARA
+LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE
+TRANSPORTE.
+
+E361154100               kgf        SUMINISTRO DE PERNOS DE ANCLAJE NACIONALES CALIDAD A325 PARA
+LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE
+TRANSPORTE.
+
+E361154200                 kgf         SUMINISTRO DE PERNOS DE ANCLAJE IMPORTADOS CALIDAD A325 PARA
+LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE
+TRANSPORTE
+
+E361155100              kgf        SUMINISTRO DE PERNOS DE ANCLAJE NACIONALES CALIDAD A490 PARA
+LA FABRICACIÓN DE HESTRUCTURAS DE ACERO. NO INCLUYE
+TRANSPORTE.
+
+E361155200               kgf        SUMINISTRO DE PERNOS DE ANCLAJE IMPORTADOS CALIDAD A490 PARA
+LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE
+TRANSPORTE.
+
+E361163100           kgf      SUMINISTRO DE TORNILLERÍA ESTRUCTURAL NACIONAL CALIDAD A307
+PARA LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE
+TRANSPORTE.
+
+E361163200              kgf       SUMINISTRO DE TORNILLERÍA ESTRUCTURAL IMPORTADA CALIDAD A307
+PARA LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE
+TRANSPORTE.
+
+E361164100           kgf      SUMINISTRO DE TORNILLERÍA ESTRUCTURAL NACIONAL CALIDAD A325
+PARA LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE
+TRANSPORTE.
+
+E361164200              kgf        SUMINISTRO DE TORNILLERÍA ESTRUCTURAL IMPORTADA CALIDAD A325
+PARA LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE
+TRANSPORTE
+
+## Página 62
+
+COVENIN — MINDUR 2000-92                                                                                                                                                                  63
+CODIGO               UNIDAD            DESCRIPCION
+E361165100           kgf      SUMINISTRO DE TORNILLERÍA ESTRUCTURAL NACIONAL CALIDAD A490
+PARA LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE
+TRANSPORTE.
+E361165200               kgf        SUMINISTRO DE TORNILLERÍA ESTRUCTURAL IMPORTADA CALIDAD A490
+PARA LA FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE
+d                                                     TRANSPORTE.
+E361170100             kgf       SUMINISTRO DE CONECTORES DE CORTE NACIONAL PARA LA
+FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE TRANSPORTE.
+                   E361170200             kgf       SUMINISTRO DE CONECTORES DE CORTE IMPORTADO PARA LA
+FABRICACIÓN DE ESTRUCTURAS DE ACERO. NO INCLUYE TRANSPORTE.
+E361210000           kgf      FABRICACIÓN DE MIEMBROS DE ACERO HASTA DE 15 kgfím DE PESO
+PARA LA ELABORACION DE ESTRUCTURAS DE ACERO.
+E361220000               kgf        FABRICACIÓN DE MIEMBROS DE ACERO DE 15 A 30 kgfím DE PESO PARA
+LA ELABORACION DE ESTRUCTURAS DE ACERO.
+E361230000                kgf         FABRICACIÓN DE MIEMBROS DE ACERO DE 30 A 90 kgf/m DE PESO PARA
+LA ELABORACION DE ESTRUCTURAS DE ACERO.
+E361240000                kgf        FABRICACIÓN DE MIEMBROS DE ACERO DE 90 A 150 kgf/m DE PESO PARA
+LA ELABORACION DE ESTRUCTURAS DE ACERO.
+E361250000            kgf      FABRICACIÓN DE MIEMBROS DE ACERO DE MAS DE 150 kgf/m DE PESO
+PARA LA ELABORACION DE ESTRUCTURAS DE ACERO.
+E361310000             kgf       LIMPIEZA Y PREPARACIÓN DE SUPERFICIES DE ACERO CON
+DISOLVENTES (SSPC- SP1).
+E361320000             kgf       LIMPIEZA Y PREPARACIÓN DE SUPERFICIES DE ACERO CON
+HERRAMIENTAS (SSPC- SP2)
+E361330000              kgf       LIMPIEZA Y PREPARACIÓN DE SUPERFICIES DE ACERO CON CHORRO A
+PRESION (SSPC-SP7)
+361340000               kgf       LIMPIEZA Y PREPARACIÓN DE SUPERFICIES DE ACERO CON CHORRO A
+PRESION HASTA METAL GRIS COMERCIAL (SSPC-SP6)
+E361350000              kgf       LIMPIEZA Y PREPARACIÓN DE SUPERFICIES DE ACERO CON CHORRO A
+PRESION HASTA METAL CASI BLANCO (SSPC-SP10)
+E361360000             kgf       LIMPIEZA Y PREPARACIÓN DE SUPERFICIES DE ACERO CON CHORRO A
+PRESION HASTA METAL BLANCO (SSPC-SPS5)
+E361411000            kgf      SISTEMA DE PROTECCIÓN EN ESTRUCTURAS DE ACERO, MEDIANTE LA
+APLICACIÓN DE FONDO Y ESMALTE RICO EN  ZINC.SEGÚN
+ESPECIFICACIONES.
+E361412000            kgf      SISTEMA DE PROTECCIÓN EN ESTRUCTURAS DE ACERO, MEDIANTE LA
+APLICACIÓN DE FONDO Y ESMALTE EPOXICO, SEGÚN
+ESPECIFICACIONES.
+E361413000            kgf      SISTEMA DE PROTECCIÓN EN ESTRUCTURAS DE ACERO, MEDIANTE LA
+APLICACIÓN DE FONDO Y ESMALTE  ALQUIDICO, SEGÚN
+ESPECIFICACIONES
+E361414000           kgf      SISTEMA DE PROTECCIÓN EN ESTRUCTURAS DE ACERO, MEDIANTE LA
+APLICACIÓN DE FONDO Y ESMALTE DE CAUCHO CLORADO, SEGÚN
+ESPECIFICACIONES.
+
+## Página 63
+
+64                                                                                                                                                                                 COVENIN — MINDUR 2000-92
+
+CODIGO           UNIDAD                  DESCRIPCION
+
+E361420000           kof      SISTEMA DE PROTECCIÓN EN ESTRUCTURAS DE ACERO, MEDIANTE LA
+APLICACIÓN DE GALVANIZADO.SEGÚN ESPECIFICACIONES
+
+E361511000                kgf         MONTAJE DE ESTRUCTURA DE ACERO CON CONEXIONES SOLDADAS
+
+E361512000                 kgf         MONTAJE DE ESTRUCTURA DE ACERO CON CONEXIONES EMPERNADAS
+
+E361521000          kgf     MONTAJE DE SISTEMAS DE PISOS EN ACERO, CON SOFITO METÁLICO
+(ENCOFRADO COLABORANTE)
+
+E361522000           kgf      MONTAJE DE SISTEMAS DE PISOS EN ACERO, CON REJILLAS             ,
+ELECTROFORJADAS.
+
+E361523000           kgf      MONTAJE DE SISTEMAS DE PISOS EN ACERO, CON PLANCHAS
+LAGRIMADAS.
+
+E361611000          kgf     SUMINISTRO, FABRICACIÓN, LIMPIEZA Y SISTEMA DE PROTECCIÓN DE
+
+-               ESTRUCTURA DE ACERO CON CONEXIONES SOLDADAS, SEGÚN
+
+ESPECIFICACIONES
+
+E361612000         kgf     SUMINISTRO, FABRICACIÓN,LIMPIEZA Y SISTEMA DE PROTECCIÓN DE
+ESTRUCTURA DE ACERO CON CONEXIONES EMPERNADAS, SEGÚN
+ESPECIFICACIONES
+
+E361621000        kgf    SUMINISTRO,FABRICACIÓN,LIMPIEZA Y SISTEMA DE PROTECCIÓN DE
+SISTEMAS DE PISOS DE ACERO, CON SOFITO METÁLICO (ENCOFRADO
+COLABORANTE).
+
+E361622000          kgf     SUMINISTRO, FABRICACIÓN, LIMPIEZA Y SISTEMA DE PROTECCIÓN DE
+SISTEMAS DE PISOS DE ACERO, CON REJILLAS ELECTROSOLDADAS.
+
+E361623000         kgf     SUMINISTRO, FABRICACIÓN,LIMPIEZA Y SISTEMA DE PROTECCIÓN DE
+SISTEMAS DE PISOS DE ACERO, CON PLANCHAS LAGRIMADAS
+
+E362210000               kgf        FABRICACIÓN DE MIEMBROS DE ALUMINIO HASTA 200 kgf DE PESO PARA
+LA ELABORACION DE ESTRUCTURAS DE ALUMINIO
+
+## Página 64
+
+CAPÍTULO E4 OBRAS
+ARQUITECTÓNICAS
+SUBCAPÍTULO E42
+
+IMPERMEABILIZACIÓN
+
+## Página 65
+
+COVENIN — MINDUR 2000-92                                                                                                                                                                67
+
+SUBCAPÍTULO E42 IMPERMEABILIZACIÓN
+
+Definición
+
+La impermeabilización comprende el conjunto de operaciones de protección de la edificación o de
+»                   cualquiera de sus partes contra las filtraciones u otros deterioros debidos a la humedad, conforme se
+establece en la Norma venezolana COVENIN — MINDUR 3400-98  "Impermeabilización de
+
+Edificaciones”.
+
+;                    Alcance
+En el precio unitario de las Partidas se incluyen los materiales, maquinarias y herramientas, y la mano
+de obra necesarias para la total y completa ejecución de las mismas conforme a los documentos del
+contrato, según la siguiente codificación y descripción que se detalla al final del Capítulo E4:
+j      a) Para los procedimientos incluidos en los Capítulos 5 y 7 de la Norma venezolana COVENIN-
+MINDUR 3400-98:
+Capítulo (E4 o R4), Subcapítulo (un dígito), Ubicación ( dos digitos), Tipo (un dígito), Modo
+(dos dígitos) y Actividades Complementarias (dos digitos).
+b) Para los procedimientos de juntas incluidos en los Capítulos 6 y 7, de la mencionada Norma
+Capítulo (E4 o R4) , Subcapítulo ( un dígito) , Función ( un dígito), Posición  (un digito),
+Modo(dos digitos) y Actividades Complementarias (dos digitos).
+
+En todos los casos se escogerá la Actividad Complementaria más representativa para la Partida.
+
+En el campo correspondiente al Capítulo. se reserva la letra E  para las Partidas de
+impermeabilización de obras nuevas y la letra R para las Partidas de   reimpermeabilización.
+Análogamente se procederá con las Partidas de impermeabilización o reimpermeabilización de juntas.
+
+La ejecución de las pendientes y los raseos en las losas o placas previas a la colocación de la
+impermeabilización está contemplada en las Partidas E416 y E417, respectivamente.
+
+Medición
+La unidad de medida será el metro cuadrado (m?)  para la impermeabilización o reimpermeabilización
+especificada, excepto en las juntas, cuya unidad de medida es el metro (m).
+
+Se computarán las áreas netas en su verdadero tamaño descontando las áreas debidas a vacios o
+huecos. Se computarán las longitudes de las juntas rellenadas y de cubrejuntas colocadas de acuerdo
+con los planos y especificaciones del proyecto.
+
+:               En el precio unitario de las Partidas se contemplan las protecciones metálicas o de materiales
+apropiados alrededor de los tubos o uniones de paredes, las chapas de guarnición y en general todos
+los detalles y accesorios necesarios para la buena ejecución de los trabajos.
+
+## Página 66
+
+COVE!
+NIN —
+MINDUR 2000-
+92
+wm
+|                      6
+a le=3 ¿                     |
+$539 y E
+s ÉSE 3 2 wm
+x Ev 2 E S 5 :
+S0 o = s $ .
+:       E ¡EA 2 3 y
+En
+É $3553 2 = A o
+á Drla    E   :
+= E 25s E E : :
+2 203% E 8 $
+Z [39 É $   is
+ql ER E E ; :
+a F=82 23 ys
+= 20:24 dE :
+o 5282523 : E d
+o O)  - 23 ! :
+, RAS a
+E cr898g osos ógoR
+o qa3 10373787800
+< Er
+Soros odo ta noe
+crigis tata
+7  TELS IBER
+:     La 2rRo9
+«2 e  2  :  z
+22595  E  :
+2225  =  E  sE E
+Si? c=  o  2  o
+id  ¿E E  3  - O
+:  15 5  2  26 £   «e
++.) . o? 2 zo  42
+HA po 2585525 e dE    c
+¡Sins ERE Ps23 esó5885875     E
+A AE     - € q
+E  estgstcs TS 2£538855S   s 2 E
+ES  si5sta << o. o So 2  5gl E :
+o a]     coz  po E E  :  :
+:  E sp ds ar S  o
+ES  y  O LoE  :
+o  Ss 285  se285553 seS8  , 3
+ES  ,0oÉ         10  ES 2280223 HARI
+e +            E   ESP 33535 3523
+E Re E, .2>5    =]  “5 338323283 20724
+o m7 2.0 o   5-0 = 07)         S   835388  És
+7 E 3R5Ez0 ES =  E  o o =  6268 ocu
+-— 2 $  eS zo?  hi I8E>  e.  2 = -  de;  :
+EF Sc2yz =  ¿AA eS   _— - s  O oS
+SEn2Zz ESREESEZR  = ax 0   E : EE:
+bd iiiaididdiiód  3 eS     a   :
+Loifts sE csSiróSoS  oz $    S  = !
+Id, BE       e
+HIERE E  ,oÉEu  -
+   ida ¿SES
+:  SH Hd sEdiBi=tiós = o 2 ¿a a
+ESE E ose SS 32 HO ED £
+:  SHE o 2” 232 ERELSER  3
+: 2H  pa-2388 SiESPEES
+: sESqEEGEEgE 225  Do =
+0  STE  > espa, sSRs5£f£
+>       |         nd
+E  a     pe iSgbsgsós q3tos" Oo
+Sons 7  o  173   o  A LES a  E FU
+¿disco ist £     E  REE E
+desisgiiózal 7]       R   sEStescsos
+z d.s2 3858228 o               es  38355385
+HERE              23225
+papa           E
+o Hieilaciigede sos E
+2 naa ti                  j
+S HAB TE o Fa a m
+: o Ei g
+S 505 ao   suo G  SES :    E
+AHH S y Sé. 22 25 o       7
+253885 228238 suo =  2 Sa   rd e   o  2
+ E S 55832  26€ 2305  o o  o
+he   HA 2 SsBssegEs o o e o >  o
+E  :  HO o   _-  «u e Dn o de y  o
+i    3 288   o Y     -  Lor
+E  q:    cda i iaa hol 252528  o
+        .  E  dia iódados so5325S x 4
+|    :  dÉESTE E  o
+: E   PARE sus os
+E        o  E    ESSE SE £ a 324 mE
+: + |  3ERni=S3¿l 2225  o
+Ss               o $  donblaniadidddo
+|                 a : E  Eerandaióias
+Oo o            _— “Nm  Qs es255%
+.      a             od dd =s  ese Sipel
+| |                      . _ z   es 23 Es
+y E                = - o  cd E
+:                    je  558
+1                                 E In o=
+|                     ERA :
+0 |                      SNS
+ou
+Q JE                        |
+m lo
+> a
+nm ||£
+di
+Aj »
+ma <
+12) XI XA
+G>2>-"ru
+OrFOzZ-0
+XI Y
+
+## Página 67
+
+70                       COVENIN — MINDUR 2000-92
+ESE S
+555555658
+E A
+"NA
+SL
+5        Ud
+dls $ ip ÉsV3
+lies 8 E $ 3 3
+= zo - 5  pl
+2180 DE E . . Y
+| 808_% 3 3 €                        :
+=|2:%8 ¿855 E E 3
+uIi$0583352 3 3 23
+a IiEeSio? 4-5
+2 | OF LAA TORDOERO
+olor 828832 3828858
+TS ARA
+MEE RERE RE REE
+ollo li32ziniasrs
+IJDLELHR E FLO
+c   .
+pe                 es:
+o      p     Y   2 c 5 :0  o
+Ps.  yá    E   LE. 3.8. Ss  5
+o  =             o , 7  == E
+2  E  El  ys » ES  Z  32 85858488c285
+AA AAA A AE
+2  7  3  05 .2 5  SL se 3503802722824
+=  o  F7  co cu 3  cu SUE Ecce coceocSc
+E  €  2  9 = S e om  S e. EC RVEBAR SRA
+u  u  u  O o Ou oO£  Oo OxsODO OSS00006E080
+A, E LE E ASA
+c   o
+$  Sa os
+€ E os
+o o a 3
+E] 2 13] S
+53 9 y =%
+08 % £ 2
+vu 5 o ma Do
+Qo o 17) o
+ES  0
+Z
+p=
+.
+ía     £
+S     gs    ¿2
+=     zo    <=.
+e    ozJ3    uz
+o l|£    05m    Qu
+S    cou.N    sw
+XI |3    ROSE    Fo
+€
+2
+o
+o
+2
+«|
+sl
+3 [E
+215
+D la
+a (E
+N ES
+pe
+OL lx
+< luw omx<x0u ILCOI-FWOFOZ-0<0
+o
+
+## Página 68
+
+COVENIN
+— MINDUR
+2000-92
+71
+“m
+2 w
+allez 3
+altsz $ ¿
+,    80 2 _£ E £ É
+=  [2]  o o S E :
+xlers 3 TE
+É ENE E E 2 E
+DD “o? S   sé
+B 020 3   s g£ 8 E
+      $ a Ns E 537
+.        eras € 3   -
+= jo  Q 3%   2 E g
+y 305628 3 5
+yu lirgsz E E
+a AER E % 5 :
+= CORRES 38 dz
+'3] cx8887 3828258
+) oyg2  S39   s
+E 7323823 737+387895
+O SOBRE ERES
+ERA ¡UL
+<X =o= 2.5  SE?
+or aiBl3iB280b
+am — 05m - 80
+y     ERA AA
+voS$ e  5  E  sE .
+200  2  S  eE   ó
+23225 e  2  SE ge  ¿2    E
+$EjEz E A  L a 2)     o
+2 =$ o£  a o 5.B8255808    E : z
+n » a]  < o  a: o27  E     1,3
+z 025.255 35 Soengorz     Ea o
+503  eS52£ 55 53lo E £    o 2
+: : En2i 28  $ 6   2 vao 2 o    ” €  o
+w2 c o Les  43 ES 3 33 8 $  cÉs : ¿  :
+Souwg8 cosa Co IC CIER: iS sacess  E
+e  A a 233
+>  WA  , pl opa
+S  d  A ses iis5g3€ HS E
+á  E  E  aii al
+3  ó  iso ES ERESSSiSoS
+, o ÉE           [=)   E  E  s8a5as3 88288
+— cUE ¿o          co _    o 8 8É ES
+.   E Mo  coD  o E    e  o DO Sa ss  PR
+q   A AAA ¿8>2 E]  E ..  e - + AN El covuoo
+4 siolensiensósónosós ¿$X 88 E
+Ss FO AO E. pl       ¿2
+- isos tigiideisas 5 3 FHE  S    E
+HE ;    Sue Ra 2o0-   o      w E
+pbsnios SE oP3ES ¿258% sEs2853£a  ¿Dn e   >
+ES ES  Sogogrugs 53233 uva  ral E? a z
+Hi a zeosys DO 3
+ss bss Es Es3ó0s  TITO IE
+:   53555853 5ES8 > ue > tantito SoNsEf£
+     5383055285 ES Sp sitos oiloiol
+:     HORTERA An
+:     esnetsetabsliabe? o=
+e  sesgos Estos isss
+e     ú  -   ú ó  E ES35528255285
+¿E24  ui   2  ES]           E    Eo se5=853%0
+so58S 8.:.282  E   : H
+Sabor isazs a             o   EN
+o= 82323228 3
+npaz SE285£88£
+z ssiagi3ts EL pES 3 ER
+2) SESPE2 52880 g£2 E s S
+Sans es£ Eu] =$ =“ E E E
+= HEEE S 3 8 >  :
+o  ES SERERERILSS  E ;    ;          E
+< es ttpciigasasis Sig 2   5.5  :
+12332 = Eg alas  e2n3 238  5.5  E
+= ao  7  oy  Vw0D 3 535  E  :   ¿    :
+E 23558 3  Su oz  3235 NE ES 2 oc,0 £oÉ  E]
+sE  55 Ss 3 7 5 oo 0 =- = n =>. —  o  Z
+2 SL ES20 55258 DEB 873 EE   HH si   si
+AAA naa 5 esf2n2s  32
+A    sssitaitoiooss HINA 4
+E  EE  dede deci iedooseso $ 5 HE
+o  a]  des 3 dqand ieitolbibensciióo  E
+++  +  5   HH  2202?
+SS  g  E  PES N ES iSEBEiciSios
+53 8 8  SH >
+                         o ]   SES 28ES
+                   e  N .       hn e :
+y q E 5 2]   en sd
+E                         Y Dn au a o  Pe:
+|                            ú $ E Se$rs
+y !                                E LOS=NSa
+ello
+a le
+< ls
+Q ja
+a E
+E]
+Mm po
+di
+a ==
+a xy oma<x
+o     3 >
+XOG>-
+REWOFOZ
+ox
+
+## Página 69
+
+72                                                                                                                                                                                        COVENIN — MINDUR 2000-92
+55555858
+"no" uonr
+CNA mnon
+_S ñ o   E
+sii. ?.>b95
+> Mis o E c he «>
+08 n =   a 3
+d lince 2 2 q 2
+- LOGO o == a o
+X |c —    =    o
+Ox £
+I|20958  Ss SS 2 $                            ,
+e :0o 15) o o o
+SS EOSY8_2= 8 == e
+ER A AS o s 3
+w SENS E=] LD
+= oo Om“ Lu] 1] o
+os 0 [1 md o o mn
+AS e a O E
+pa e  D  E  1
+á PER = IP O A A a A a
+S OUNAMIDARDARES
+UOYOROSYVO- OTTO SON
+Oo PE A AA Y 2 +
+o Loret totototo
+» 2052025849 16303
+5 cor i3 ¿3 aaa
+ro 23.
+JOLLA LORO OLO
+E   .
+,                    -
+«Le                O a =
+3      A    2   o JU  o
+2    5  o.    2    DIA INE  c
+2  Ez  E  E    e]   ocñotfoldos .L>
+A.       ¿    <=.
+2  13  5. 8  £3  2  3 2 S.Bañ8as88c235
+$  pe  E a  au  le]  2 ans 207307352025 Í=
+wo  =  E  Oo 0u ve  0 SOLEADO
+2  5  E  E n- a  oL£ “a OOO OA O
+=  o  $  cÍZ <c0 .e8p  So SIS So cococeEoceEe
+=  c  > e Q= Sw oGU  o w S820 0 3003852082506
+u  uy  uo O o ou Ov  Ou OwODO o 05006 TOGSO
+o  o  o  o  o  o   o  o o > - ue eE  y >
+IS    2
+ESSE ES
+4 mn —
+a  o > o
+=o0 a YN o
+no o o
+ca o S =
+83 3 E 3
+5    2
+o > o 2 o
+Oo a 10) o
+o
+é2
+o      n     ”n Oo
+<      a     sc
+ja]      ce     EE
+> ju    200    2
+Els    TLOD    2
+rs    QQ.    au
+£
+o 15    oN    oo
+XI 15    Roc    Ro
+E
+o
+o
+o
+SN
+e
+E |S
+a |E                                      ;
+X |5
+Q la
+d
+m |£
+2 jo
+Mm pa
+Si
+EJE O0mXxXo0 ILOIT-PEWOFROZ-=0<0
+—
+
+## Página 70
+
+COVENIN — MINDUR 2000-92                                                                                             TS
+CODIGO            UNIDAD             DESCRIPCION
+SUBCAPITULO E42 IMPERMEABILIZACIÓN!
+E420110163          m?     IMPERMEABILIZACIÓN TRANSITABLE EN LOSAS O PLACAS
+HORIZONTALES DE CONCRETO VACIADAS EN SITIO CON UNA
+MEMBRANA ASFÁLTICA CON REFUERZO DE POLIESTER e = 4 mm
+.                                                SEMIADHERIDO EN CALIENTE CON SOPLETE, ACABADO DE LOSETAS
+DE CONCRETO PREFABRICADAS
+E420120163          m?     IMPERMEABILIZACIÓN TRANSITABLE EN LOSAS O PLACAS
+:                                         HORIZONTALES DE CONCRETO VACIADAS EN SITIO CON UNA
+MEMBRANA ASFÁLTICA CON REFUERZO DE FIBRA DE VIDRIO e = 4 mm
+SEMIADHERIDO EN CALIENTE CON SOPLETE, ACABADO DE LOSETAS
+DE CONCRETO PREFABRICADAS
+E420150263          m     IMPERMEABILIZACIÓN TRANSITABLE EN LOSAS O PLACAS
+HORIZONTALES DE CONCRETO VACIADAS EN SITIO CON ASFÁLTO
++                      OXIDADO Y TRES (3) VELOS DE FIBRA DE VIDRIO ADHERIDOS EN
+CALIENTE, ACABADO DE LOSETAS DE CONCRETO PREFABRICADAS
+E420160363          m?     IMPERMEABILIZACIÓN TRANSITABLE EN LOSAS O PLACAS
+HORIZONTALES DE CONCRETO VACIADAS EN SITIO CON EMULSIÓN
+ASFÁLTICA Y TRES (3) VELOS DE FIBRA DE VIDRIO ADHERIDOS EN
+FRÍO, ACABADO DE LOSETAS DE CONCRETO PREFABRICADAS
+E420170363         m?     IMPERMEABILIZACIÓN TRANSITABLE EN LOSAS O PLACAS
+HORIZONTALES DE CONCRETO VACIADAS EN SITIO CON ASFÁLTO
+PLÁSTICO Y TRES (3) VELOS DE FIBRA DE VIDRIO ADHERIDOS EN
+FRÍO, ACABADO DE LOSETAS DE CONCRETO PREFABRICADAS
+E420220151          m?     IMPERMEABILIZACIÓN NO TRANSITABLE EN LOSAS O PLACAS
+HORIZONTALES DE CONCRETO VACIADAS EN SITIO CON UNA
+MEMBRANA ASFÁLTICA CON REFUERZO DE FIBRA DE VIDRIO e = 4 mm
+SEMIADHERIDO EN CALIENTE CON SOPLETE, ACABADO DE PINTURA
+ASFÁLTICA COLOR ALUMINIO
+E420230151          m?     IMPERMEABILIZACIÓN NO TRANSITABLE EN LOSAS O PLACAS
+HORIZONTALES DE CONCRETO VACIADAS EN SITIO CON UNA
+MEMBRANA ASFÁLTICA CON REFUERZO DE FIBRA DE VIDRIO e = 3 mm
+SEMIADHERIDO EN CALIENTE CON FOLIO DE ALUMINIO
+E420240400          m?     IMPERMEABILIZACIÓN NO TRANSITABLE EN LOSAS O PLACAS
+HORIZONTALES DE CONCRETO VACIADAS EN SITIO CON UNA
+MEMBRANA ASFÁLTICA CON REFUERZO DE POLIESTER e = 4 mm
+SEMIADHERIDO EN FORMA AUTOADHERIBLE, CON FOLIO DE ALUMINIO
+E420250251          m?     IMPERMEABILIZACIÓN NO TRANSITABLE EN LOSAS O PLACAS
+HORIZONTALES DE CONCRETO VACIADAS EN SITIO CON ASFALTO
+OXIDADO Y TRES (3) VELOS DE FIBRA DE VIDRIO ADHERIDOS EN
+CALIENTE, ACABADO DE PINTURA ASFÁLTICA COLOR ALUMINIO
+E420260351          m?     IMPERMEABILIZACIÓN NO TRANSITABLE EN LOSAS O PLACAS
+-                                               HORIZONTALES DE CONCRETO VACIADAS EN SITIO CON EMULSIÓN
+ASFÁLTICA Y TRES (3) VELOS DE FIBRA DE VIDRIO ADHERIDOS EN
+FRÍO, ACABADO DE PINTURA ASFÁLTICA COLOR ALUMINIO
+
+## Página 71
+
+74                                                                         COVENIN — MINDUR 2000-92
+CODIGO              UNIDAD                DESCRIPCION
+E420270351             m?      IMPERMEABILIZACIÓN NO TRANSITABLE EN LOSAS O PLACAS
+HORIZONTALES DE CONCRETO VACIADAS EN SITIO CON ASFALTO
+PLÁSTICO Y TRES (3) VELOS DE FIBRA DE VIDRIO ADHERIDOS EN FRÍO.
+ACABADO DE PINTURA ASFÁLTICA COLOR ALUMINIO
+E420280100             m?      IMPERMEABILIZACIÓN NO TRANSITABLE EN LOSAS O PLACAS
+HORIZONTALES DE CONCRETO VACIADAS EN SITIO CON   UNA
+MEMBRANA ASFALTICA CON REFUERZO DE POLIESTER e = 4 mm
+SEMIADHERIDO EN CALIENTE CON SOPLETE, CON FOLIO GRANULAR.                          E
+E420310163             m?      IMPERMEABILIZACIÓN —TRANSITABLE EN LOSAS O PLACAS
+HORIZONTALES DE CONCRETO PREFABRICADAS CON      UNA
+MEMBRANA ASFALTICA CON REFUERZO DE POLIESTER e = 4 mm NO
+ADHERIDO EN CALIENTE CON SOPLETE, ACABADO DE LOSETAS DE
+CONCRETO PREFABRICADAS
+E420410151         m*      IMPERMEABILIZACIÓN NO TRANSITABLE EN LOSAS O PLACAS
+HORIZONTALES DE CONCRETO PREFABRICADAS CON      UNA
+MEMBRANA ASFALTICA CON REFUERZO DE POLIESTER e = 4 mm NO
+ADHERIDO EN CALIENTE CON SOPLETE, ACABADO DE PINTURA
+ASFÁLTICA COLOR ALUMINIO
+E420510151             m?      IMPERMEABILIZACIÓN EN LOSAS O PLACAS INCLINADAS DE
+CONCRETO VACIADAS EN SITIO CON UNA MEMBRANA ASFALTICA
+CON REFUERZO DE POLIESTER e = 4 mm NO ADHERIDO EN CALIENTE
+CON SOPLETE, ACABADO DE PINTURA ASFÁLTICA COLOR ALUMINIO
+E420610151             m?      IMPERMEABILIZACIÓN EN LOSAS O PLACAS INCLINADAS DE
+CONCRETO PREFABRICADAS CON UNA MEMBRANA ASFALTICA CON
+REFUERZO DE POLIESTER e = 4 mm NO ADHERIDO EN CALIENTE CON
+SOPLETE, ACABADO DE PINTURA ASFÁLTICA COLOR ALUMINIO
+E420710151             m*      IMPERMEABILIZACIÓN EN TECHOS HORIZONTALES DE MADERA CON
+MEMBRANA ASFALTICA Y REFUERZO DE POLIESTER e = 4 mm NO
+ADHERIDO EN CALIENTE CON SOPLETE, ACABADO DE PINTURA              ,
+ASFÁLTICA COLOR ALUMINIO
+E420810165        m?    IMPERMEABILIZACIÓN EN TECHOS INCLINADOS DE MADERA CON
+MEMBRANA ASFALTICA Y REFUERZO DE POLIESTER e = 4 mm NO
+ADHERIDO EN CALIENTE CON SOPLETE Y ACABADO CON TEJAS DE
+ARCILLA CRIOLLA
+E420910616              m?       IMPERMEABILIZACIÓN EN BAÑOS, COCINAS, LAVANDERÍAS Y SAUNAS
+CON VELO DE FIBRA DE POLIESTER ADHERIDA e = 4 mm EN FRIO CON
+RESINA SINTÉTICA ACRÍLICA MEDIANTE RODILLO O BROCHA, SEGÚN
+ESPECIFICACIONES
+E421000223             m?      IMPERMEABILIZACIÓN EN FUNDACIONES Y PAREDES DE MUROS
+FABRICADOS EN SITIO CON APLICACIÓN DE ASFALTO OXIDADO EN
+CALIENTE, SEGÚN ESPECIFICACIONES
+E421000322             m?      IMPERMEABILIZACIÓN EN FUNDACIONES Y PAREDES DE MUROS
+FABRICADOS EN SITIO CON APLICACIÓN DE ASFALTO PLÁSTICO
+FIIBROSO EN FRIO, SEGÚN ESPECIFICACIONES
+E421110166          m?     IMPERMEABILIZACIÓN EN JARDINERAS FABRICADAS EN SITIO CON
+MEMBRANA ASFÁLTICA CON REFUERZO DE POLIESTER e = 4 mm
+SEMIADHERIDO EN CALIENTE CON USO DE SOPLETE Y ACABADO DE
+FRISO REQUEMADO, SEGÚN ESPECIFICACIONES
+
+## Página 72
+
+COVENIN — MINDUR 2000-92                                                                                              75
+CODIGO            UNIDAD             DESCRIPCION
+E421210179           m?     IMPERMEABILIZACIÓN EN ESTACIONAMIENTO FABRICADOS EN SITIO
+CON MEMBRANA ASFÁLTICA CON REFUERZO DE POLIESTER, e = 4 mm
+SEMIADHERIDO EN CALIENTE CON USO DE SOPLETE. SEGÚN
+ESPECIFICACIONES. INCLUYE REJILLA DE DRENAJE
+E421300324           m?     IMPERMEABILIZACIÓN  SUPERFICIE INTERNA EN TANQUES CON
+?                                                                               EMULSIÓN ASFÁLTICA EN FRÍO, SEGÚN ESPECIFICACIONES
+E421400325           m?     IMPERMEABILIZACIÓN SUPERFICIE  EXTERNA EN TANQUES CON
+ASFALTO PLÁSTICO FIBROSO EN FRÍO, SEGÚN ESPECIFICACIONES
+]              E421510166           m?     IMPERMEABILIZACIÓN SUPERFICIE INTERNA DE FOSOS DE
+ASCENSORES CON UNA MEMBRANA ASFÁLTICA CONREFUERZO DE
+POLIESTER e = 4 mm SEMIADHERIDO EN CALIENTE CON SOPLETE.
+ACABADO DE FRISO REQUEMADO
+E421600325           m?     IMPERMEABILIZACIÓN SUPERFICIE EXTERNA DE FOSOS  DE
+'                        ASCENSORES CON ASFALTO PLÁSTICO  FIBROSO SEGÚN
+ESPECIFICACIONES
+E421730454         m?    IMPERMEABILIZACIÓN EN DUCTOS DE AIRE ACONDICIONADO CON
+MEMBRANA ASFÁLTICA CON REFUERZO DE FIBRA DE VIDRIO e = 3 mm
+SEMIADHERIDO EN FORMA AUTOADHERIBLE, CON FOLIO ALUMINIO,
+SEGÚN ESPECIFICACIONES
+E421810155        m?    IMPERMEABILIZACIÓN EN CANCHAS DEPORTIVAS FABRICADAS EN
+SITIO CON MEMBRANA ASFÁLTICA CON REFUERZO DE POLIESTER e =
+4 mm SEMIADHERIDO CON USO DE SOPLETE, ACABADO
+ANTIDESLIZANTE SEGÚN ESPECIFICACIONES
+E421960152            m?      IMPERMEABILIZACIÓN EN HELIPUERTOS FABRICADOS EN SITIO CON
+MEMBRANA ASFÁLTICA CON REFUERZO DE POLIESTER e = 4 mm
+SEMIADHERIDO CON USO DE SOPLETE ACABADO CON PINTURA
+VERDE SEGÚN ESPECIFICACIONES
+E422010167           m?     IMPERMEABILIZACIÓN EN PISCINAS FABRICADAS EN SITIO CON
+MEMBRANA ASFÁLTICA CON REFUERZO DE POLIESTER e = 4 mm
+SEMIADHERIDO CON USO DE SOPLETE, ACABADO DE CERÁMICA
+SEGÚN ESPECIFICACIONES
+E422110100           mi     IMPERMEABILIZACIÓN EN LAGUNAS DE OXIDACIÓN FABRICADAS EN
+SITIO CON MEMBRANA ASFÁLTICA CON REFUERZO DE POLIESTER e=
+4 mm SEMIADHERIDO (CON USO DE SOPLETE, SEGÚN
+ESPECIFICACIONES
+SUBCAPITULO E42 IMPERMEABILIZACIÓN DE JUNTAS!
+E421214262           M      CONSTRUCCIÓN DE JUNTAS DE DILATACIÓN CON SELLADOR
+ELÁSTICO,    INCLUYENDO CONFIGURACIÓN,    DIMENSIONADO,
+,                                                          DELIMITACIÓN DE BORDES Y AISLAMIENTO DE FONDO, SEPARACIÓN 2
+cm. INCLUYE TODAS LAS ETAPAS
+E421214263           m      CONSTRUCCIÓN DE JUNTAS DE DILATACIÓN CON SELLADOR
+-                                        ELÁSTICO,    INCLUYENDO CONFIGURACIÓN,    DIMENSIONADO,
+DELIMITACIÓN DE BORDES Y AISLAMIENTO DE FONDO, SEPARACIÓN 3
+cm. INCLUYE TODAS LAS ETAPAS
+E421214264           m      CONSTRUCCIÓN DE JUNTAS DE DILATACIÓN CON SELLADOR
+ELÁSTICO,    INCLUYENDO    CONFIGURACIÓN,    DIMENSIONADO,
+DELIMITACIÓN DE BORDES Y AISLAMIENTO DE FONDO. SEPARACIÓN 4
+cm. INCLUYE TODAS LAS ETAPAS
+
+## Página 73
+
+76                                                                                                                                                                                                           COVENIN — MINDUR 2000-92
+CODIGO              UNIDAD                DESCRIPCION
+E422213261             m      INSTALACIÓN DE TAPAJUNTAS DE ACERO GALVANIZADO EN JUNTAS
+DE DILATACIÓN DE SEPARACIÓN DE 1 cm, SEGÚN ESPECIFICACIONES
+E422213262             m      INSTALACIÓN DE TAPAJUNTAS DE ACERO GALVANIZADO EN JUNTAS
+DE DILATACIÓN DE SEPARACIÓN DE 2 cm, SEGÚN ESPECIFICACIONES
+E422213263             m       INSTALACIÓN DE TAPAJUNTAS DE ACERO GALVANIZADO EN JUNTAS
+DE DILATACIÓN DE SEPARACIÓN DE 3 cm, SEGÚN ESPECIFICACIONES
+E422213264             m      INSTALACIÓN DE TAPAJUNTAS DE ACERO GALVANIZADO EN JUNTAS
+DE DILATACIÓN DE SEPARACIÓN DE 4 cm, SEGÚN ESPECIFICACIONES
+E423213261             m      INSTALACIÓN DE TAPAJUNTAS DE  ALUMINIO EN JUNTAS DE
+DILATACIÓN DE SEPARACIÓN DE 1 cm, SEGÚN ESPECIFICACIONES
+E423213262             m      INSTALACIÓN DE TAPAJUNTAS DE  ALUMINIO EN JUNTAS DE
+DILATACIÓN DE SEPARACIÓN DE 2 cm, SEGÚN ESPECIFICACIONES
+E423213263             m      INSTALACIÓN DE TAPAJUNTAS DE  ALUMINIO EN JUNTAS DE
+DILATACIÓN DE SEPARACIÓN DE 3 cm, SEGÚN ESPECIFICACIONES
+E423213264             m      INSTALACIÓN DE TAPAJUNTAS DE  ALUMINIO EN JUNTAS DE
+DILATACIÓN DE SEPARACIÓN DE 4 cm, SEGÚN ESPECIFICACIONES
+¡SUBCAPITULO R42 REIMPERMEABILIZACIÓN
+R420110163            m?      REIMPERMEABILIZACIÓN TRANSITABLE EN LOSAS O PLACAS
+HORIZONTALES DE CONCRETO VACIADAS EN SITIO CON UNA
+MEMBRANA ASFÁLTICA CON REFUERZO DE POLIESTER e = 4 mm
+SEMIADHERIDO EN CALIENTE CON SOPLETE, ACABADO DE LOSETAS
+DE CONCRETO PREFABRICADAS
+R420240400            m?      REIMPERMEABILIZACIÓN NO TRANSITABLE EN LOSAS O PLACAS
+HORIZONTALES DE CONCRETO VACIADAS EN SITIO CON UNA
+MEMBRANA ASFÁLTICA CON REFUERZO DE POLIESTER e = 4 mm
+SEMIADHERIDA EN FORMA AUTOADHERIBLE CON FOLIO DE ALUMINIO
+
+## Página 74
+
+|           CAPITULO E6
+INSTALACIONES SANITARIAS Y
+ESPECIALES
+
+## Página 75
+
+COVENIN - MINDUR 2000-92                                                                                                                                                                79
+CAPÍTULO E6 INSTALACIONES SANITARIAS Y ESPECIALES
+Alcance
+
+»                              En esta Norma las Instalaciones Sanitarias comprenden el suministro e instalación de las tuberías y
+artefactos destinados a los servicios de aguas claras, aguas residuales, aguas de lluvias y ventilación,
+así como sus componentes y accesorios a ser instalados en las edificaciones conforme a los planos y
+
+]              especificaciones del proyecto. Igualmente el alcance de este Capítulo se aplica a las tuberias y
+conexiones de los sistemas de incendios, gases, residuos sólidos y a los desagúes de los sistemas de
+aire acondicionado y demás elementos propios de las instalaciones sanitarias que aparezcan en dichos
+sistemas.
+
+Este Capítulo comprende los siguientes Subcapitulos:
+
+- E61      TUBERÍAS
+
+E62            PUNTOS SANITARIOS
+
+E63          LLAVES DE PASO
+
+E64          OTRAS PIEZAS ESPECIALES: VÁLVULAS, GRIFOS, MEDIDORES
+
+E65         REGISTROS
+
+E66           ARTEFACTOS SANITARIOS.
+
+En el precio unitario de las Partidas se incluyen los materiales y su transporte hasta el sitio de la
+obra, el uso de las maquinarias y herramientas, el replanteo y la mano de obra necesarios para la total y
+completa ejecución de las mismas, así como también los remates y la recolección de sus desperdicios.
+
+El pago de estas Partidas se efectuará una vez colocadas y probadas las correspondientes
+instalaciones sanitarias.
+
+Los sépticos, sumideros, tanquillas y bocas de visita se pagarán según las Partidas del Capitulo E8
+Obras de Servicio y Varios.
+
+Los sistemas de bombeo se contemplarán en el Capítulo E7 Instalaciones Mecánicas.
+
+En el precio unitario de las Partidas Puntos Sanitarios o Tuberías se incluyen las conexiones,
+desperdicios y los materiales requeridos para su instalación, pero no así las protecciones, aislantes,
+pinturas, asfaltos, etc., los cuales se medirán como Partidas separadas en los Capítulos
+correspondientes.
+
+-                  Las Partidas Válvulas, Llaves de paso, Grifos y Medidores se refieren a piezas que soportan
+presiones conforme a las "Normas Sanitarias para Proyecto, Construcción, Reparación, Reforma y
+Mantenimiento de Edificaciones” vigentes. Por sus condiciones especiales en estas Partidas solo se
+considerará el suministro y transporte hasta el sitio de la obra por cuanto su instalación está
+contemplada en las Partidas de Tuberías y Puntos Sanitarios. En caso de requerirse algunas de estas
+piezas en las Partidas de Artefactos Sanitarios, las mismas se incluirán en el alcance de dichas
+Partidas, tales como Llaves de Arresto
+
+Cuando por motivo de cambio de proyecto posterior a la aprobación de las Partidas de Puntos
+Sanitarios o Tuberías se requiera agregar tuberías y/o conexiones no previstas en el presupuesto
+aprobado, estos materiales adicionales y su instalación se medirán como Partidas separadas sin
+variación de las Partidas originalmente aprobadas.
+
+## Página 76
+
+80                                                                                                                                                                  COVENIN - MINDUR 2000-92
+Criterios de medición
+
+A efectos de la medición de las Partidas Instalaciones Sanitarias se establecen  y definen los
+siguientes términos con sus correspondientes criterios de medición:
+
+Recintos sanitarios: Recintos techados, dentro o fuera de la edificación donde  existen
+agrupaciones de servicios sanitarios con un solo abastecimiento o descarga según se trate de aguas
+claras o aguas residuales, tales como baños, vestuarios, cocinas, lavaderos, laboratorios, consultorios,
+etc., sin que las paredes o tabiques sean tajantemente indicativos como elementos demarcadores del
+mismo. Las instalaciones sanitarias de tuberías y conexiones en dichos recintos se medirán por Puntos
+Sanitarios de Aguas Claras o Residuales (ptos.) de acuerdo a sus diámetros, forma de colocación y tipo                      :
+de material a usar. Entendiéndose por Puntos Sanitarios, las instalaciones hasta los orificios de abas-
+tecimientos o descargas de las aguas o a los drenes de piso. El diámetro del Punto Sanitario lo define el
+diámetro de la tubería de descarga o alimentación del artefacto correspondiente.
+
+A continuación se presentan algunos ejemplos:
+
+1. UnW.C. fiene un punto de aguas claras y un punto de aguas residuales.
+
+2. Un lavamanos con dos llaves y dos entradas de agua: fria  y caliente, tiene dos puntos de aguas
+claras y uno de aguas residuales.
+
+3. El dren de piso dentro de un recinto sanitario se le computa como un punto de aguas
+
+residuales y el dren en si (marco y rejilla) se medirá por Partidas separada.
+
+4. En los registros de aguas residuales, tanto los tapones como las tapas se computarán como piezas
+por Partidas separadas.
+
+Áreas exteriores a recintos sanitarios: En dichas áreas, techadas o no, dentro o fuera de la
+edificación, las tuberias que les dan servicio se medirán por metro lineal (m.) especificando sus diáme-
+tros, forma de colocación y tipo de material. Las tuberías se computarán hasta la primera conexión de
+bifurcación, inclusive, perteneciente al ramal que sirve al recinto sanitario.
+
+De la misma manera se medirán por metro lineal (m.) las instalaciones correspondientes a tuberías
+para ventilación, aguas de lluvias y bajantes de aguas residuales. También se medirán por metro lineal
+(m.) de tubería las instalaciones correspondientes a los orificios que prestan servicios aislados tales
+como drenes recolectores en patios y estacionamientos, los bebederos en corredores o pasillos, salidas
+para riego y similares.
+
+Si una tubería sirve a mas de un recinto sanitario no contiguos, esta se incluirá en el alcance de los
+puntos sanitarios de dichos recintos, salvo el tramo comprendido entre la última conexión del primer
+recinto y la primera conexión del siguiente recinto. En general si una tubería atraviesa el área de un
+recinto sanitario, sin dar ni recibir ningún tipo de servicio al mismo, ésta se medirá por metro lineal (m).
+
+## Página 77
+
+COVENIN - MINDUR 2000-92                                                                                                                                                                81
+SUBCAPÍTULO E61 TUBERÍAS
+Alcance
+
+Comprende el suministro, transporte e instalación de las tuberías de los sistemas de aguas claras,
+
+aguas residuales, aguas de lluvias, sistemas de ventilación y especiales (gases, incendio, residuos
+
+E              sólidos, aire acondicionado etc.) exteriores a los recintos sanitarios, según el material, diámetro
+nominal y forma de colocación (colgantes, embutidas y fijadas a la superficie), conforme a los planos y
+especificaciones del proyecto de Instalaciones Sanitarias.
+
+En el precio unitario de las Partidas se incluyen los materiales y su transporte hasta el sitio de la
+obra, el uso de las maquinarias y herramientas, el replanteo y la mano de obra necesarios para la total y
+completa ejecución de las mismas, así como también las pruebas de presión hidrostática, remates y
+recolección de los desperdicios, según la siguiente codificación y descripción que se detalla al final del
+Capítulo E6:
+
+- E611... TUBERÍAS PARA AGUAS CLARAS
+
+E612...      TUBERÍAS PARA AGUAS RESIDUALES.
+
+E613... TUBERÍAS PARA VENTILACIÓN.
+
+E614...      TUBERÍAS PARA AGUAS PLUVIALES
+
+E615.... TUBERÍAS PARA GASES
+
+E616...      TUBERÍAS PARA INCENDIO
+
+E617...       TUBERÍAS PARA RESIDUOS SÓLIDOS
+
+Se establecen los siguientes conceptos:
+
+Diámetro Nominal de tubería: Es la denominación usual en el mercado del diámetro del tubo,
+expresado en pulgadas y en milímetros, equivalente al diámetro interior del mismo.
+
+Espesor Nominal de tubería: Es la denominación usual en el mercado del espesor del tubo,
+expresado en pulgadas y en milimetros, equivalente al espesor señalado en las normas.
+
+Medición
+
+La unidad de medida será el metro lineal (m) según los diámetros y el tipo de material y forma de
+colocación. Se tomará la longitud efectiva, incluyendo las piezas especiales y de conexión ubicadas en
+el eje de la tubería
+
+Se establecen los siguientes criterios de medición:
+
+En el precio unitario de estas Partidas se incluyen las conexiones y su material de junta. El
+suministro y transporte de las llaves de paso, válvulas, grifos, medidores, etc. se computarán en forma
+separada en los Subcapítulos E63, E64 y E65 ya que su instalación está incluida en el alcance de las
+Partidas de tuberías o puntos sanitarios.
+
+Igualmente se incluyen en el precio unitario de las Tuberías, los elementos de fijación de acuerdo
+con las características de la instalación, así como también los desperdicios de las tuberias.
+
+## Página 78
+
+82                                                                                                                                                                       COVENIN - MINDUR 2000-92
+En el caso de tuberías de hierro fundido, el material de juntas en conexiones puede ser, según las
+indicaciones del proyecto, de goma ó de plomo y estopa (calafateo).
+En el caso de las tuberias de concreto, el material de juntas de conexión puede ser, según las
+indicaciones de proyecto, de goma o de mortero de arena - cemento.
+
+## Página 79
+
+COVENIN - MINDUR 2000-92                                                                                                                                                                                       83
+SUBCAPÍTULO E62 PUNTOS SANITARIOS
+Alcance
+>                      Comprende los trabajos necesarios para el suministro, transporte e instalación de los materiales
+para el funcionamiento de los puntos sanitarios de aguas claras o residuales, según el material, forma
+de colocación (suspendidas, embutidas y fijadas a la superficie) y diámetro, conforme a los planos y
+especificaciones del proyecto de Instalaciones Sanitarias, incluyendo los tubos y conexiones dentro de
+-                            los recintos sanitarios.
+
+En el precio unitario de las Partidas se incluyen los materiales, el uso de las maquinarias y
+herramientas, el replanteo y la mano de obra necesarios para la total y completa ejecución de las
+mismas, las pruebas de presión, los remates y recolección de desperdicios, así como también el
+transporte de los materiales hasta el sitio de la obra, según la siguiente codificación y descripción que
+se detalla al final del Capítulo E6:
+
+E621         PUNTOS SANITARIOS DE AGUAS CLARAS
+
+E622         PUNTOS SANITARIOS DE AGUAS RESIDUALES
+
+Los tapones y las tapas de registros se computarán según el Subcapítulo E66; véase la Figura 6.1
+
+En la instalación de los calentadores de agua localizados dentro del recinto sanitario se considera
+un Punto Sanitario de aguas claras.
+
+Medición
+
+La unidad de medida será el punto sanitario (pto.) según el tipo de material, forma de colocación y
+el diámetro del orificio de entrada o salida.
+
+En el precio unitario de estas Partidas se incluyen las conexiones, su material de junta y el material
+de fijación.
+
+En el caso de puntos de aguas residuales con uso de tuberías de hierro fundido, en
+los mismos se incluyen el material de juntas en conexiones: juntas de goma o calafateo.
+
+## Página 80
+
+84                                                                                                                                                                            COVENIN - MINDUR 2000-92
+SUBCAPITULO E63 LLAVES DE PASO
+SUBCAPITULO E64 OTRAS PIEZAS ESPECIALES: VALVULAS,
+GRIFOS, MEDIDORES.
+
+Alcance
+
+Se refiere al suministro y transporte al sitio de obra de todas las llaves de paso, válvulas, grifos,                :
+medidores, y otras piezas especiales, necesarias conforme a los planos y especificaciones del proyecto
+de Instalaciones Sanitarias, según la codificación y descripción que se detalla al final del Capítulo E6.
+
+En el precio unitario de las Partidas se incluye solo el suministro y el transporte hasta el sitio de la
+obra de las piezas, por cuanto su instalación está contemplada en las Partidas Puntos Sanitarios y/o
+Tuberías, según la codificación y descripción que se detalla al final del Capítulo E6. Se incluye así
+mismo una Unión Universal, o su equivalente, para facilitar su remoción cuando sea necesario, salvo
+para las piezas a instalarse a final de la tubería.
+
+A efectos de su medición para pago, estas Partidas no serán computadas hasta tanto el Profesional
+Responsable de la obra por la parte contratante no conforme su instalación.
+Medición
+
+La unidad de medida será la pieza (pza).
+
+Se indicará en cada Partida el tipo, diámetro y demás características de la pieza.
+
+## Página 81
+
+COVENIN - MINDUR 2000-92                                                                                                                                                                           85
+SUBCAPITULO E65 VARIOS: REGISTROS
+Alcance
+Comprende el suministro y el transporte hasta el sitio de la obra de todos los registros, incluyendo
+.                          los tapones y tapas correspondientes, necesarios conforme a los planos y especificaciones del proyecto
+de Instalaciones Sanitarias.
+En el precio unitario de las Partidas se incluye el suministro, el transporte y colocación de las piezas
+:                      en los sitios indicados según los planos y especificaciones del proyecto. Se incluye además el materia!
+de fijación
+Medición
+_ La unidad de medida será la pieza (pza.).
+Se indicará en cada Partida las características de la pieza según especificaciones.
+
+## Página 82
+
+86                                                                                                                                                                  COVENIN - MINDUR 2000-92
+SUBCAPITULO E66 ARTEFACTOS SANITARIOS
+Alcance
+
+Se refiere al suministro, transporte y colocación de todas las piezas sanitarias, incluyendo sus
+griferías y herrajes, según los planos y especificaciones del proyecto de Instalaciones Sanitarias, tales                  :
+como lavamanos, excusados, bidets, urinarios, bañeras, calentadores, bateas, lavamopas, fregaderos,
+bebederos, rejillas, drenes. Los accesorios para baños se computarán por este Subcapitulo
+
+En el alcance de estas Partidas se incluyen todos los trabajos y materiales necesarios para su
+instalación hasta dejarlos en correcto funcionamiento de acuerdo a las exigencias del contrato, esto
+abarca las conexiones, niples, llaves de arresto, y los demás implementos necesarios para la conexión
+del artefacto al sistema, según la codificación y descripción que se detalla al final del Capítulo E6.
+
+La ducha se computará en el presente Subcapitulo y en su alcance incluye el grupo mezclador y la
+regadera. La Bañera se computará como pieza sanitaria e incluye además del grupo mezclador y la
+regadera, el grifo de alimentación.
+
+En la grifería del bidet se incluye la válvula rompevacios
+Medición
+
+La unidad de medida será la pieza (pza).
+
+Se indicará en cada Partida el tipo y demás características de la pieza y sus accesorios.
+
+En el precio unitario de estas Partidas se incluyen la griferia, los herrajes de las piezas, los
+elementos de fijación y los trabajos de remates requeridos para la correcta instalación de las piezas.
+
+## Página 83
+
+COVENIN - MINDUR 2000-92                                                                                                                                                                                      87
+EZ E   EE
+o e E    => E ERE
+o 3  CES5s=ESE E  E
+14 EEFEESTSEJEREEESS
+ENS ESESOaOSSOSS
+wI2==< SS Ahi $6 003 YO
+Ej =< == = WEEDS e
+Mos Es 3 aa a A E
+4    (SNS ANAIS
+00 se. ooo osoossosos
+e —= — UU 29 Y UY 5 == 00 000
+00050 Oo0O0OOOOSO-*”NdyD Y
+z     o
+o     3
+a     E
+o     a
+Ó 2  3 3
+2 o  5 o
+- Dd  2 o
+16)  w u
+[>]  al A
+o  o  o
+0   $
+Z   Ñ  Ñ  Ñ  o 0
+=   e  =  E  3 o o
+(va   o  ou  o  o 15] o $  sl =
+uy   £  Sa  2  e 7 : o  o $
+E   5  5  3  2.2 $ $3 $250
+o        o y o PE ia E
+= ps =— en 2 s E 2-8 DE DE O
+IIA 4.5 E LME A A
+2 14 38 AU 2.2 07 AA
+S ES -= 2]  x= 0 E — E +
+(=] o  (=]  (=]  [=] [2] D__ 5  (=] [=]
+5|   E
+z
+O
+16)
+<  .
+o
+co
+5
+mn              mn
+2        Y     o
+E        2     3
+n             a     E
+pa    5    c    =     2
+3]    y    O    2     7
+=    o    Ps
+o    t    o    a   o o
+mM    n    5    mn   D 2
+o    o    3    o   c 2
+>    >    S    >   3 ES
+<X    <    >    X   £ 14
+o
+En
+-
+£ Dn
+a <
+a
+<« u
+o 8
+ep e
+Nn =
+a
+ElB-z=o-<o<o-ozuo NIZ-FEXIE-X0 > WNQAWO-=< 34 Ju:
+o
+
+## Página 84
+
+88                                                                                                                                                                            COVENIN - MINDUR 2000-92
+E  E
+E ] 3 E E
+28 58 eL E E E
+Ello = = = a] Ss
+— z 2 = S
+A A
+<||5 = — a] m x=
+ola . eo. -. se =-
+— + 112) 19) mm
+SS -0 [e] [e] o e
+z
+2
+18) 2 3
+10) c =
+= o E
+ol 3 €
+o >
+o  o
+pS
+p:  N  N
+E  E E
+ul  2  E  2 o  PA É
+E   5  3  2 £ => $5
+Ed e  HS
+o LES 3 2 3] Z E qe
+Ñ   Pa  > = >  7
+S =  A  152) > E y
+[2] o  =)  =] l=]  = [=]
+WEA NAAA
+>
+ES
+o
+13)
+<
+2
+15]
+3
+Mm
+Ra
+m   o
+ol £   3
+D 3   =
+> 9   2
+pa   7%)
+3   o
+>   >
+>   <
+_—   o
+o
+an
+llo
+Ella
+as
+<z
+ol <
+alo
+mie
+z
+3)
+a
+eN
+Sl: ZN
+—   E  —
+Sp   <X IO Ozu0w NIÍZ=FIX-<X0 > U4NaJOoO-<X3u0
+
+## Página 85
+
+COVENIN - MINDUR 2000-92                                                                                                                                                       89
+O
+1.   2, =
+Gle:. 8 8
+AE 7 O
+,    ala2S229a063200aauu
+OTTADDÓROD
+DOO0oODocoo:r*-
+de
+12)
+2 o  o  Do  [5
+ol 5  3  3  S
+Oo E 2]  >]  €  2
+20 20 2  9
+al  e = 0 n o 3
+O sc o = o 2 DY
+O 3 2 eS £5
+27% o € uo ug
+0 0 o Yy5
+o
+3
+o
+D E 0
+o => hol
+E       E 2 he
+c%       2 S E o
+o  Ss £      di o o 2 £
+3  3       18] o o o = 10)
+E  S €      9 e 2 2   )
+A E      Ss $5 >
+—  WN       * 400 2+1 5% y
+YN
+uy
+E
+ns
+<X
+¡6)
+<X
+>
+z           Ñ
+-           a       Ñ
+a
+o             o
+E     (5)   == 2 x    =00
+o  $  o  ED  D E  ET 2  el25É
+t  o  Do 00  a. PP. SNOOP >  ajo 2
+o  ps  a 0 . y vn a mn => eo. .ooS 7  512 09S
+3  8  -E  LS SGES<cS_ ae $  Ss12 2 8
+a  E  S8 55 [328233835588 SogRlc2sa
+E  Do 25 o 2 ZISEBTO> OS RSEZS ss
+]  =o £x£ M6S I3ESELEIE SIGLAS
+9  42 948 50 [2357 ECES EEES OS ES
+==  SN  Ge]  x  = a N 2  Aa E=z>euulcds
+3
+a         $
+o
+w
+a]         - 0          8
+ou
+mn         pe          (1d
+uy         D<          a
+>         o          Y
+.         EU          Q
+an         05          E
+2]         x= uu          "9
+Allo
+SU z0rxo-ozuwua0 NIZ=-EFIX-=0 > 14O0OaAIO-<X JU
+
+## Página 86
+
+90                                                                                                                                                                 COVENIN - MINDUR 2000-92
+e]
+2
+ad         mu         7
+17,  PA      €         >          Ñ
+uy  3      o         o          %.-7
+O  FA  o  905     [5] —      2
+<X  €   h=]  <co2       c 23        D   o
+=  Ú   tol   ao       Vas        E   3
+2   2  >0300     > o      2   2
+el 3   1558       55%        E   E
+50      o
+Q  E   ó  Sp       ST        e   ó
+-   7  NA       Ns        -   7]
+n         a         la]
+uy         2         2    S
+7  6   5  3         E    E
+Ss + 2:       S..o2  Sm .2
+O  <=   <=   cXHR>sS        X= y   <= 3
+Q  >   3  “>       E E  == *u2
+172)  v    A   SE2       020  382
+¿  S   a  o ho       o ED  oEsN
+£   L   060       CA +]  A
+5   5  Doo       DUO
+E  2   2  ez       £LÉ  A
+a  <   <  2232       23232  2 23YW
+=   7]  a 2)       E)  Nm
+o
+0  orÉ  9
+e]  o3  O
+per"  Ea  s-
+e)  22  oo
+o  5  25
+—   Nn o
+<    Y ío io  [0]  - A
+1r3    oo 3%
+u    AS  Sas
+L    S35  2220
+x    EEE  v=0
+o)    000  aos
+o Y 00  ouÑo
+2       22 o  Er  o o
+2    á    2385  5   2.
+E  o  o    vo uo.=   o   23392
+z  ps  2    S SE  3   coa
+iu  3 8    ge22  3   ES É
+=  3    E  $   Ec3
+=         =    =92
+pe |  = y    EEZG5  ==   Hou
+<X  — 0]    > MA  7   = 7]
+dl  Ñ
+1]  je]    o                   to  1
+e   =        ,  2    o o
+e)  NE    5         e £  5     33 É
+o  0%0    +         cs £  2     835
+==  a E    m    o      "3    0%u0
+E  odo    o     ía]   < <  la]     o2 o
+s38S    >     is   SoxJso       E
+E   y     e   Nno209 -     000 yg
+Nas   =     7]   ENO É     Nas
+€  a]
+N
+2  a
+o]
+El g2     .       :   $   g2
+ú  SS     S       S   S   Ss
+=  ED     o      23   7   Ss
+o    - 0      =    3   98
+AS  a Y      O        = 9   a Y     13]
+> 9     05         S   os    S 5
+SÍ  2    a      £ so   o   20
+wu  bo      e        56   2-a    oa
+22     > Y        2 o   Lw    E]
+No        e]   o    "Mk =]
+o
+3
+n
+el 92
+al S£
+<  E -
+al $z
+3  a <x
+177)  LX. 0
+[e]
+2 ls
+3 uy  ZNFI1SIO-OZU0 NIZ=-F-ILX-X0  >  140NouIOoO-—-<X JU
+
+## Página 87
+
+COVENIN - MINDUR 2000-92                                                                                                                                                                        9 1
+m
+y pS
+<X                  2 o
+ES 3                Ss %
+Lilo a                <€ E
+ol< S                E
+y] D                 a
+PS E               2 3
+á E                > 8
+_— SN                > WS
+Fr       4
+<    >] E 3
+xls   Sa > 5
+w 2 o £ 2 2 e
+EJE < o   oo2
+<X o c ES o CEDOM
+So 2 ou 2 Ss u3
+o 10] (Su ora
+É A SOX DOoa0
+o
+á      : c  oo. vuvpoanvoa 22.»
+ú      E  POLL LLLLEESS
+¿    JA A
+<      s 2  STR EEE
+[e] -  ANAND OO-—=—ra o
+z
+po
+Z
+5 o 3 o     o         o Py
+las 3 £     9         a %
+s- Z = = 2  mn   =         = ==
+E mn E]  o   o         1] WM
+3 lc [o] o  2   D         € le]
+<2 760 q  <X   uy         2 0
+e o 132)  ses   NN         e. NN
+7.
+o]
+vo o
+o >0 y
+zl338   ES
+=|[=2>   S              g 8
+ElzEz   p              Ss $
+rr o   2            n o 3
+"cos   c            a o
+wjoeso   D            o o y
+52$€   a            u e ñ
+200   o            DD ú Y
+_—     3]            7 = o]
+ó
+Olla
+Els
+wr
+3 px 2
+[01] wm E
+olés
+O u
+e Y
+o
+3 lo
+Elo
+log
+ES +
+Xx
+QuE
+O w ==
+a lez
+3 <
+nix<0
+pe                -
+HE =ZNFITIO-O0ZU0N NIZ-EXIL-X0 > WNAWO-XJ3UD
+pl
+
+## Página 88
+
+92                                                                                                                                                                            COVENIN - MINDUR 2000-92
+¿13
+17  2   3   Ú
+a]  S   S   3
+u  2   S   E
+E   Ó   o
+—   7   a
+m%  eE5 £S6  é5 eS
+a  o  o     E
+o  o  oo oo
+e]  qa ga  00 ym
+2  pac E A  y 20 A
+vea vo
+y  a 18 14
+ES 5 <  a a <
+a 5% de  + A>
+ES  7  a  <=
+ma  oÉ     Pa
+3 | 33     -
+o  Ss 5     3
+(5)  = 0     3.
+am 8     O Y
+==     Ñ a
+19]
+< | 8   3   E
+[52  >=   2   £
+A E   E   E
+¡iS  s   o   [0
+1d  Ex   <X   10)
+0)  —   A   (52)
+;     £
+lo)  $]     3
+ps  2 $    £$
+pS  £ 8    3 3
+n3    03
+"” 0    No
+7)
+je)
+z
+í  had
+als
+pr  mM
+=  ES
+óÓ
+2  88
+E   S
+> A
+o)  £3
+O o
+2
+pr
+Nn
+el 28
+a  Oz
+<X  É<
+E
+a <
+2  <6
+< ls   E
+= 17, <XJ  =      pun
+< [ú  z   LO-0Z2U40 NIZ-EXIL-2X0 > UWUNAWO-X<J3UN
+
+## Página 89
+
+COVENIN - MINDUR 2000-92                                                                                                                                                            93
+z
+2
+o
+<
+2  o    c    =
+uu  =    o    o
+w  2    o    o
+a]  E    5.   0
+o  $    cd   38
+ls    ES   sé
+g    Do
+3 E    S    ¿
+-=    3    a
+E
+2
+Í  S
+114  w    E
+o  ho    2
+=  o    S
+jo]  o    o
+o  o    =
+Co   2
+Ss $   2
+a $   9
+7    7
+o
+3
+o  N
+Bl. y 3   E
+==  c   o   =
+(52  o 3  >   $]
+pm]  o 2  a   s
+E  3 o  [=)  2 2 8
+o o  o  - o
+=  a te  E  E = 0
+vo 2  ¡2  25.8. ¿e
+DE  E  0%
+a     a -
+o”  ,   o o o
+o    3  "25383 e y Y $38
+z  cócóc 558882. Po DD > 2s
+lA
+=   > o  LICEO    7
+u  Saez soon 22_222 se
+pa  LS 5555509390002 593
+u  ino osas ot 025520982
+o     D0    a 2
+ll e e Ti A
+= ] Es] YOORoO >] - A a:
+o o o Oo0o0ooOoO o.” ar _— q
+|
+n
+2  ESA
+tu  Se
+sx)  2 a
+e  go
+e)  Sp
+< su
+CAOS
+o
+ES
+2 | 82
+  RO
+»         Os>
+<  Q
+o  uy
+:  wtE
+e  EZ
+>  a <x
+177)  < 0
+[e]
+ LD —zZNFEXIILO-0Z2U0M NIZ-FAIL-I0N > WNAWO—X 30
+$)
+A      e   a       o a
+
+## Página 90
+
+94                                                                                                                                                        COVENIN - MINDUR 2000-92
+mn
+uy
+z
+o
+2
+uy
+a                    444.
+Q                    rr —.r.”? O
+2-3                  xx x Xx
+¿E O      5555   SESÉEl rsoorpaara
+lu OS        rra IS Soo 3 pe > Leiro
+= 008002        Goo. e un. ro 0000003908
+Ilóroias        AS E E ER
+0Y0-OwDGOO
+aljesa5e23        23558] 859%] 5558] 25CRNEAS
+oo  mm             o     o
+el  DE               ES     D
+Xx  as              S     o
+x  oSsít o         o   ES  o   2
+u DE ¿o         -   ,  ==   =
+El8Z2o0o832<£         8s   88$l| 3<   o
+slss85585         5 5   ss? 55   5
+=pfe22925          e3   Ses 23   9
+orIa=zx        mm <X  ca2|  E
+$
+|        y
+!        230
+lo o 2 LS£ “E
+Mc = o == U
+!     a a oQoQ
+¡E 3 -= Lys LR =    E      =
+alía 203-2332 £u    2   2  2
+Qlg 2 2 395 8uy    a   $  a
+TS _ TB ao a    So   77  s3
+og cc En s..   SY  gs  33
+ISTEE8 73 ES 723   e   o S  =$
+- E 2 o o vo ¿5   oo   g  eg
+asas ce-E£E-o23238$   ca  h=j   e
+cacas eos coscoÑ   3 5   es  398
+AE E   3.8   SS  38
+5305625302502   ss  ab | ss
+y                . Y
+ol g£                >
+513                4
+ue                38
+=p?                23
+wie                no
+Els                2»           y
+wie                E
+-                aS
+=                =
+Oo li
+El:
+=3flc
+Sá
+Lo
+/
+o
+30
+200
+ENFO
+alos:
+Sé                                  :
+Slé=
+Dl
+7 ES
+¡LO
+lo
+EE =ZNONFIITXIO—O0ZUONO NIZ-=FEIL-X0 > WNAWO-=<1u0
+l
+E É—————   A <> E A AA    -
+
+## Página 91
+
+COVENIN - MINDUR 2000-92                                                                                                                         95
+CODIGO                         UNIDAD                        DESCRIPCION
+SUBCAPITULO E 61 TUBERIAS
+
+E611020051                   m              TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 2
+plg (51 mm), ISO 11, COLGANTE. INCLUYE CONEXIONES
+
+E611020064              m          TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 2 Y
+plg (54 mm), ISO II, COLGANTE. INCLUYE CONEXIONES
+
+:                          E611020076                m            TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 3 plg
+
+(76 mm), 1SO ll, COLGANTE. INCLUYE CONEXIONES
+
+E611020102                 m            TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 4 plg
+
+(102 mm), ISO Il, COLGANTE. INCLUYE CONEXIONES
+
+E631021013                   m              TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO , DIAMETRO %
+plg (13 mm), ISO 11, EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+
+E611021019                   m              TUBERÍA AGUAS CLARAS, DEACERO GALVANIZADO, DIAMETRO %
+plg (19 mm), ISO 11, EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES
+
+E611021025               m           TUBERÍA AGUAS CLARAS, DEACERO GALVANIZADO, DIAMETRO 1 plg
+(25 mm), 1SO Il, EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+
+E611021032                 m             TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 1%
+plg (32 mm), ISO 11, EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+
+E611021038                   m              TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 1 Y
+plg (38 mm), ISO II, EMBUTIDA O EN          DA. INCLUYE CONEXIONES.
+
+E611021051                   m              TUBERÍA AGUAS CLARAS, DE ACE!                 NIZADO, DIAMETRO 2 plg
+(51 mm), ISO ll, EMBUTIDA O ENTERKADA. ¡“CLUYE CONEXIONES.
+
+E611021064                 m            TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 2 Y
+plg (64 mm), ISO 11, EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+
+E611021076                 m             TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 3 plg
+(76 mm), 1SO ll, EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+
+E611021102                    m              TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 4 plg
+(102 mm), ISO 11, EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+
+E611022051                 m            TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 2 plg
+(51 mm), ISO ll, FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+
+E611022064                 m             TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 2 1/2
+plg (64 mm), ISO ll, FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+
+E611022076                   m              TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 3 plg
+(76 mm), ISO ll, FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+
+E611022102                  m             TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 4 plg
+(102 mm), 1SO ll, FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+
+E611030051               m           TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 2 plg
+(51 mm), ASTM, COLGANTE. INCLUYE CONEXIONES.
+
+## Página 92
+
+96                                                                                                                                                       COVENIN - MINDUR 2000-92
+CODIGO                          UNIDAD                      DESCRIPCION
+E611030064                      m           TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 2 %
+plg (64 mm), ASTM, COLGANTE. INCLUYE CONEXIONES.
+E611030076                    m          TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 3 plg
+(76 mm), ASTM, COLGANTE. INCLUYE CONEXIONES.
+E611030102                    m           TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 4 plg
+(102 mm), ASTM, COLGANTE. INCLUYE CONEXIONES.
+E611031013                      m           TUBERÍA AGUAS CLARAS, DEACERO GALVANIZADO, DIAMETRO %
+plg (13 mm),ASTM EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+E611031019                     m           TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO %
+plg (19 mm), ASTM, EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+E611031025                    m           TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 1 plg
+5                           (25 mm), ASTM, EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+E611031032                    m           TUBERÍA AGUAS CLARAS, DEACERO GALVANIZADO , DIAMETRO 1 Y
+plg (32 mm), ASTM, EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+E611031038                        m            TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 1 Y
+plg (38 mm), ASTM, EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+E611031051                   m          TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 2 plg
+(51 mm), ASTM, EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+E611031064                    m           TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 2 %
+plg (54 mm), ASTM, EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+E611031076                    m           TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 3 plg
+(76 mm), ASTM. EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+E611031102                      m           TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 4 plg
+(102 mm), ASTM. EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+E611032051                     m           TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 2 plg
+(51 mm), ASTM. FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+E611032064                    m          TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 2 Y
+plg (64 mm), ASTM. FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+E611032076                   m          TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 3 plg
+(76 mm), ASTM, FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+E611032102                      m           TUBERÍA AGUAS CLARAS, DE ACERO GALVANIZADO, DIAMETRO 4 plg
+(102 mm), ASTM, FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+E612040051                    m          TUBERÍA AGUAS RESIDUALES, DE HIERRO FUNDIDO, DIAMETRO 2 plg
+(51 mm) . COLGANTE. INCLUYE CONEXIONES.
+E612040076                   m          TUBERÍA AGUAS RESIDUALES, DE HIERRO FUNDIDO, DIAMETRO 3 plg
+(76 mm) . COLGANTE. INCLUYE CONEXIONES.
+E612040102                   m          TUBERÍA AGUAS RESIDUALES, DE HIERRO FUNDIDO,DIAMETRO 4 plg
+(102 mm) COLGANTE. INCLUYE CONEXIONES.
+E612040152                   m          TUBERÍA AGUAS RESIDUALES, DE HIERRO FUNDIDO,DIAMETRO 6 plg
+(152 mm) . COLGANTE. INCLUYE CONEXIONES
+
+## Página 93
+
+COVENIN - MINDUR 2000-92                                                                                                                                                      97
+CODIGO                      UNIDAD                      DESCRIPCION
+E612041051                  m         TUBERÍA AGUAS RESIDUALES, DE HIERRO  FUNDIDO,DIAMETRO 2 plg
+(51 mm). EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+E612041076                   m          TUBERÍA AGUAS RESIDUALES, DE HIERRO FUNDIDO, DIAMETRO 3 plg
+(76 mm) EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+.                           E612041102                   m          TUBERÍA AGUAS RESIDUALES, DE HIERRO FUNDIDO,DIAMETRO 4  plg
+(102 mm) EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+:                           E612041152                   m          TUBERÍA AGUAS  RESIDUALES, DE HIERRO FUNDIDO,DIAMETRO 6 plg
+(152 mm) EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+E612042051                  m         TUBERÍA AGUAS  RESIDUALES, DE HIERRO FUNDIDO,DIAMETRO 2 plg
+(51 mm) FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+E612042076                    m          TUBERÍA AGUAS RESIDUALES, DE HIERRO FUNDIDO, DIAMETRO 3 plg
+(76 mm) FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+E612042102                  m         TUBERÍA AGUAS  RESIDUALES, DE HIERRO FUNDIDO,DIAMETRO 4 plg
+(102 mm) FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+E612042152                  m         TUBERÍA AGUAS RESIDUALES,DE HIERRO FUNDIDO, DIAMETRO 6 plg
+(152 mm) FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+E612051152             m       TUBERÍA AGUAS RESIDUALES,DE CONCRETO, CLASE 1,DIAMETRO 6
+plg (152 mm). ENTERRADA.
+E612051203                   m          TUBERÍA AGUAS RESIDUALES,DE CONCRETO, CLASE  1,DIAMETRO 8
+plg (203 mm). ENTERRADA.
+E612051254                   m          TUBERÍA AGUAS RESIDUALES, DE CONCRETO, CLASE  Le
+DIAMETRO 10 plg (254 mm) ENTERRADA.
+E612051304                   m          TUBERÍA AGUAS RESIDUALES, DE CONCRETO, CLASE 1
+DIAMETRO 12 plg (304 mm) ENTERRADA.
+E612070051                   m          TUBERÍA AGUAS RESIDUALES, PVC, DIAMETRO 2 plg (51 mm),e =1.8mm
+COLGANTE INCLUYE CONEXIONES.
+E612080051                   m          TUBERÍA AGUAS RESIDUALES, PVC, DIAMETRO 2 plg (5imm), e=32
+mm COLGANTE. INCLUYE CONEXIONES.
+E612080076                  m         TUBERÍA AGUAS RESIDUALES, PVC, DIAMETRO 3 plg (76 mm), e=3.2
+mm COLGANTE. INCLUYE CONEXIONES.
+E612080102                   m         TUBERÍA AGUAS RESIDUALES, PVC, DIAMETRO 4  plg (102mm), e =3.2
+;                                                                             mm COLGANTE. INCLUYE CONEXIONES.
+E612081051                m        TUBERÍA AGUAS RESIDUALES, PVC, DIAMETRO 2  plg (51 mm), e =3.2
+mm EMBUTIDA O ENTERRADA INCLUYE CONEXIONES
+E612181076              m       TUBERÍA AGUAS RESIDUALES, PVC, DIAMETRO 3 plg (76 mm). e =3.2
+mm EMBUTIDA O ENTERRADA INCLUYE CONEXIONES
+E612081102                m        TUBERÍA AGUAS RESIDUALES, PVC, DIAMETRO 4  plg (102mm), e = 3.2
+mm EMBUTIDA O ENTERRADA INCLUYE CONEXIONES
+
+## Página 94
+
+98                                                                                                                                       COVENIN - MINDUR 2000-92
+CODIGO                   UNIDAD                 DESCRIPCION
+E612082051                    m          TUBERÍA AGUAS RESIDUALES, PVC, DIAMETRO 2 plg (51mm), e =3.2
+mm FIJADA A LA SUPERFICIE INCLUYE CONEXIONES
+E612082076                m        TUBERÍA AGUAS RESIDUALES, PVC, DIAMETRO 3 plg (76 mm), e =3.2
+mm FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES
+E612082102               m        TUBERÍA AGUAS RESIDUALES, PVC, DIAMETRO 4 plg (102mm), e =3.2
+mm FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES
+E613011038                m         TUB.PARA VENTILACIÓN, DE ACERO GALVANIZADO,       ISO 1,
+DIAMETRO 1 Y plg (38 mm). EMBUTIDA O ENTERRADA. INCLUYE                      -
+CONEXIONES.
+E613011051                   m          TUB.PARA VENTILACIÓN, DE ACERO GALVANIZADO, ISO I, DIAMETRO
+2 plg (51 mm).EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+E613012051                     m           TUB.PARA VENTILACIÓN, DE ACERO GALVANIZADO, ISO I, DIAMETRO
+:                      ¿                              2 plg (51 mm). FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+E613012064                 m         TUB.PARA VENTILACIÓN, DE ACERO GALVANIZADO, ISO !, DIAMETRO
+2 Y. plg (54 mm). FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+E613012076                      m            TUB.PARA VENTILACIÓN, DE ACERO GALVANIZADO, ISO 1, DIAMETRO
+3 plg (76 mm). FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+E613071051                m        TUB. PARA VENTILACIÓN, DE P.V.C. LIVIANO, E =1.8 mm, DIAMETRO
+2 plg (51 mm) EMBUTIDA O ENTERRADA. INCLUYE CONEXIONES.
+E613072051                  m         TUB. PARA VENTILACIÓN, DE P.V.C. LIVIANO, E =1.8 mm, DIAMETRO 2
+plg (51 mm) FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+E613072076                  m          TUB. PARA VENTILACIÓN, DE P.V.C. LIVIANO, E =1.8 mm, DIAMETRO 3
+plg (76 mm) FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+E613072160                m         TUB. PARA VENTILACIÓN DE DUCTO DE BASURA, DE P.V.C.
+DIAMETRO 160 mm FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES
+Y SOMBRERO.
+E614042076                m        TUBERÍA AGUAS PLUVIALES, DE HIERRO FUNDIDO, DIAMETRO 3
+Plg (76 mm). FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+E614042102            m      TUBERÍA AGUAS PLUVIALES, DE HIERRO FUNDIDO, DIAMETRO 4 plg
+(102 mm). FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+E614042152           m      TUBERÍA AGUAS PLUVIALES, DE HIERRO FUNDIDO, DIAMETRO 6 plg
+(152 mm). FIJADA A LA SUPERFICIE. INCLUYE CONEXIONES.
+E614082076                m         TUBERÍA AGUAS PLUVIALES,      DE P.V.C. PESADO, E =3.2 mm,
+DIAMETRO      3  plg (76 mm). FIJADA A LA SUPERFICIE. INCLUYE
+CONEXIONES.
+E614182102               m         TUBERÍA AGUAS PLUVIALES, DEP.V.C. PESADO, E =3.2 mm,
+DIAMETRO 4  plg (102 mm). FIJADA A LA SUPERFICIE. INCLUYE
+CONEXIONES.
+E617092400                m          TUBERÍA DE RESIDUOS SÓLIDOS DEP.V.C. A.S.T.M., DIAMETRO 400
+mm. FIJADA A LA SUPERFICIE. INCLUYE BOCAS DE CARGA. NO
+INCLUYE TAPA
+
+## Página 95
+
+COVENIN - MINDUR 2000-92                                                                                                                               99
+CODIGO                     UNIDAD                    DESCRIPCION
+SUBCAPITULO E 62 PUNTOS SANITARIOS
+E621011013                  pto.         PUNTOS DE AGUAS CLARAS, DE ACERO GALVANIZADO, ISO II, DIÁME-
+TRO % plg. (13 mm) EMBUTIDO O ENTERRADO. INCLUYE
+p                                                                    CONEXIONES.
+E621011032                   pto.         PUNTOS DE AGUAS CLARAS, DE ACERO GALVANIZADO,ISO ll, DIAME-
+TRO 1 1/4 plg (32 mm) EMBUTIDO O ENTERRADO. INCLUYE
+z                                                                    CONEXIONES.
+E621021013                     pto.          PUNTOS DE AGUAS CLARAS, DE ACERO GALVANIZADO, ASTM, DIAME-
+TRO 1/2 plg (13 mm)      EMBUTIDO O ENTERRADO. INCLUYE
+CONEXIONES.
+E621021032                   pto.         PUNTOS DE AGUAS CLARAS, DE ACERO GALVANIZADO, ASTM, DIAME-
+-                                        TRO 1 1/4 plg (32 mm) EMBUTIDO O ENTERRADO. INCLUYE
+CONEXIONES.
+E622030051             pto.      PUNTOS DE AGUAS RESIDUALES, DE HIERRO FUNDIDO, DIAMETRO
+2 plg (51 mm). COLGANTE. INCLUYE CONEXIONES.
+E622030076                 pto.        PUNTOS DE AGUAS RESIDUALES, DE HIERRO FUNDIDO, DIAMETRO
+3 Plg (76 mm). COLGANTE. INCLUYE CONEXIONES.
+E622030102                pto.        PUNTOS DE AGUAS RESIDUALES, DE HIERRO FUNDIDO, DIAMETRO
+4 Plg (102 mm). COLGANTE. INCLUYE CONEXIONES.
+E622031051                  pto.         PUNTOS DE AGUAS RESIDUALES, DE HIERRO FUNDIDO, DIAMETRO
+2 (51 mm). EMBUTIDO O ENTERRAD” INCLUYE CONEXIONES.
+E622031076                 pto.        PUNTOS DE AGUAS RESIDUALES, - ¿IERRO FUNDIDO, DIAMETRO
+3 Plg (76 mm). EMBUTIDO O ENTERRADO. INCLUYE CONEXIONES
+E622031102                pto.        PUNTOS DE AGUAS RESIDUALES, DE HIERRO FUNDIDO, DIAMETRO
+4 Plg (102 mm). EMBUTIDO O ENTERRADO. INCLUYE CONEXIONES.
+E622050051                 pto.        PUNTOS DE AGUAS RESIDUALES, DE PVC, DIAMETRO 2 plg (51
+mm), e =3.2 mm . COLGANTE. INCLUYE CONEXIONES.
+E622050102                 pto.        PUNTOS DE AGUAS RESIDUALES, DE PVC, DIAMETRO 4 plg (102
+mm), e =3.2 mm . COLGANTE. INCLUYE CONEXIONES.
+E622051051                 pto.        PUNTOS DE AGUAS RESIDUALES, DE PVC, DIAMETRO 2 plg (51
+mm), e =3.2 mm. EMBUTIDO O ENTERRADO. INCLUYE CONEXIONES.
+E622051102                 pto.        PUNTOS DE AGUAS RESIDUALES, DE PVC, DIAMETRO 4 plg (102
+mm), e =3.2 mm. EMBUTIDO O ENTERRADO. INCLUYE CONEXIONES
+SUBCAPITULO E 63 LLAVES DE PASO
+E631010019               pza       SUMINISTRO Y TRANSPORTE DE LLAVE DE PASO, TIPO COMPUERTA,
+DE BRONCE, DIAMETRO 3/4 plg (19 mm). .
+
+## Página 96
+
+1 00                                                                                                                                                 COVENIN - MINDUR 2000-92
+CODIGO                   UNIDAD                 DESCRIPCION
+E631010025               pza       SUMINISTRO Y TRANSPORTE DE LLAVE DE PASO, TIPO COMPUERTA,
+DE BRONCE, DIAMETRO 1 plg (25 mm). .
+E631010032               pza        SUMINISTRO Y TRANSPORTE DE LLAVE DE PASO, TIPO COMPUERTA,
+DE BRONCE, DIAMETRO 1 1/4 plg (32 mm). .
+E631010038               pza        SUMINISTRO Y TRANSPORTE DE LLAVE DE PASO, TIPO COMPUERTA,
+DE BRONCE, DIAMETRO 1 1/2 plg (38 mm). .
+E631010051               pza        SUMINISTRO Y TRANSPORTE DE LLAVE DE PASO, TIPO COMPUERTA,
+DE BRONCE, DIAMETRO 2 plg (51 mm). .
+E631010064               pza        SUMINISTRO Y TRANSPORTE DE LLAVE DE PASO, TIPO COMPUERTA,
+A                          DE BRONCE, DIAMETRO 2 1/2 plg (64 mm). .
+E631010076               pza       SUMINISTRO Y TRANSPORTE DE LLAVE DE PASO, TIPO COMPUERTA,
+DE BRONCE, DIAMETRO 3 plg (76 mm). .
+E632020019             pza       SUMINISTRO Y TRANSPORTE DE LLAVE DE PASO, TIPO ESFÉRICA O
+DE BOLA, DE ALEACIÓN DE METALES, DIAMETRO 3/4 plg (19 mm). .
+£632020025             pza       SUMINISTRO Y TRANSPORTE DE LLAVE DE PASO, TIPO ESFÉRICA O
+DE BOLA, DE ALEACIÓN DE METALES, DIAMETRO 1 plg (25 mm). .
+E632020032             pza       SUMINISTRO Y TRANSPORTE DE LLAVE DE PASO, TIPO ESFÉRICA O
+DE BOLA, DE ALEACIÓN DE METALES, DIAMETRO 1 1/4 plg (32 mm). .
+E632020038              pza       SUMINISTRO Y TRANSPORTE DE LLAVE DE PASO, TIPO ESFÉRICA O
+DE BOLA, DE ALEACIÓN DE METALES, DIAMETRO 1 1/2 plg (38 mm). .
+E632020051              pza       SUMINISTRO Y TRANSPORTE DE LLAVE DE PASO, TIPO ESFÉRICA O
+DE BOLA, DE ALEACIÓN DE METALES, DIAMETRO 2 plg (51 mm). .
+E632020064              pza       SUMINISTRO Y TRANSPORTE DE LLAVE DE PASO, TIPO ESFÉRICA O
+DE BOLA, DE ALEACIÓN DE METALES, DIAMETRO 2 1/2 plg (64 mm). .
+E632020076             pza       SUMINISTRO Y TRANSPORTE DE LLAVE DE PASO, TIPO ESFÉRICA O
+DE BOLA, DE ALEACIÓN DE METALES, DIAMETRO 3 plg (76 mm).
+SUBCAPITULO E 64 VALVULAS
+E642010019               pza        SUMINISTRO Y TRANSPORTE DE VALVULA DE RETENCIÓN
+HORIZONTAL (CHECK VALVE), DE BRONCE, DIAMETRO 3/4 plg (19 mm).
+E642010025               pza        SUMINISTRO Y TRANSPORTE DE VALVULA DE RETENCIÓN
+HORIZONTAL (CHECK VALVE), DE BRONCE, DIAMETRO 1 plg (25 mm).
+E642010032               pza        SUMINISTRO Y TRANSPORTE DE VALVULA DE RETENCIÓN
+HORIZONTAL (CHECK VALVE), DE BRONCE, DIAMETRO 1 1/4 plg (32
+mm).
+
+## Página 97
+
+COVENIN - MINDUR 2000-92                                                                                                                                                    1 01
+CODIGO                   UNIDAD                   DESCRIPCION
+E642010038               pza        SUMINISTRO Y TRANSPORTE DE VALVULA DE RETENCIÓN
+HORIZONTAL (CHECK VALVE), DE BRONCE, DIAMETRO 1 1/2 plg (38
+mm).
+4                       E642010051                pza        SUMINISTRO Y TRANSPORTE DE VALVULA DE RETENCIÓN
+HORIZONTAL (CHECK VALVE), DE BRONCE, DIAMETRO 2 plg (51 mm).
+E642010064                pza        SUMINISTRO Y TRANSPORTE DE VALVULA DE RETENCIÓN
+.                                             HORIZONTAL (CHECK VALVE), DE BRONCE, DIAMETRO 2 1/2 plg (64
+mm).
+E642010076               pza        SUMINISTRO Y TRANSPORTE DE VALVULA DE RETENCIÓN
+HORIZONTAL (CHECK VALVE), DE BRONCE, DIAMETRO 3 plg (76 mm).
+E643010019               pza       SUMINISTRO Y TRANSPORTE DE VALVULA DE RETENCIÓN VERTICAL
+(MARACA-CHECK VALVE), DE BRONC       *METRO 3/4 plg (19 mm).
+E643010025               pza       SUMINISTRO Y TRANSPORTE DE V.         DE RETENCIÓN VERTICAL
+(MARACA-CHECK VALVE), DE BRONCE, DIAMETRO 1 plg (25 mm).
+E643010032               pza       SUMINISTRO Y TRANSPORTE DE VALVULA DE RETENCIÓN VERTICAL
+(MARACA-CHECK VALVE), DE BRONCE, DIAMETRO 1 1/4 plg (32 mm).
+E643010038               pza       SUMINISTRO Y TRANSPORTE DE VALVULA DE RETENCIÓN VERTICAL
+(MARACA-CHECK VALVE), DE BRONCE, DIAMETRO 1 1/2 plg (38 mm).
+E643010051               pza       SUMINISTRO Y TRANSPORTE DE VALVULA DE RETENCIÓN VERTICAL
+(MARACA-CHECK VALVE), DE BRONCE, DIAMETRO 2 plg (51 mm).
+E643010064                pza        SUMINISTRO Y TRANSPORTE DE VALVULA DE RETENCIÓN VERTICAL
+(MARACA-CHECK VALVE), DE BRONCE, DIAMETRO 2 1/2 plg (64 mm).
+pza       SUMINISTRO Y TRANSPORTE DE VALVULA DE RETENCIÓN VERTICAL
+E643010076                                 (MARACA-CHECK VALVE), DE BRONCE, DIAMETRO 3 plg (76 mm).
+E644010019               pza        SUMINISTRO Y TRANSPORTE DE VALVULA TIPO FLOTANTE, DE
+BRONCE, DIAMETRO 3/4 plg (19 mm).
+E644010025               pza       SUMINISTRO Y TRANSPORTE DE VALVULA TIPO FLOTANTE, DE
+BRONCE, DIAMETRO 1 plg (25 mm).
+E644010038                pza        SUMINISTRO Y TRANSPORTE DE VALVULA TIPO FLOTANTE, DE
+BRONCE, DIAMETRO 1 1/2 plg (38 mm).
+E644010051                pza        SUMINISTRO Y TRANSPORTE DE VALVULA TIPO FLOTANTE, DE
+BRONCE, DIAMETRO 2 plg (51 mm).
+E644010064                pza        SUMINISTRO Y TRANSPORTE DE VALVULA TIPO FLOTANTE, DE
+BRONCE, DIAMETRO 2 1/2 plg (64 mm).
+E644010076               pza        SUMINISTRO Y TRANSPORTE DE VÁLVULA TIPO FLOTANTE, DE
+BRONCE, DIÁMETRO 3 plg (76 mm).
+
+## Página 98
+
+102                                                                                                                                                    COVENIN - MINDUR 2000-92
+
+CODIGO                       UNIDAD                    DESCRIPCION
+
+E645010013                   pza         SUMINISTRO Y TRANSPORTE DE GRIFO DE BRONCE, DIAMETRO %% plg
+(13 mm).
+
+E645020013                  pza         SUMINISTRO Y TRANSPORTE DE GRIFO DE HIERRO CROMADO,
+DIAMETRO % plg (13 mm)
+
+E646010019                  Pza         SUMINISTRO Y TRANSPORTE DE MEDIDOR DE BRONCE, DIAMETRO
+3/4 plg (19 mm).
+
+E646010025               Pza       SUMINISTRO Y TRANSPORTE DE MEDIDOR DE BRONCE, DIAMETRO 1
+plg (25 mm)
+
+SUBCAPITULO E 65 REGISTROS
+
+E651041051                   pza         TAPON DE REGISTRO, PARA TUBERÍA COLGANTE, DE H.F., D= 2"
+
+E651041076                  pza         TAPON DE REGISTRO, PARA TUBERÍA COLGANTE, DE H.F., D= 3"
+
+E651041102                   pza         TAPON DE REGISTRO, PARA TUBERÍA COLGANTE, DE H.F., D= 4"
+
+E651011051                   pza         TAPON DE REGISTRO, PARA TUBERÍA COLGANTE, DE BRONCE, D=2"
+
+E651012051                    pza         TAPA DE REGISTRO, PARA TUBERÍA EMBUTIDA, DE BRONCE D= 2"
+
+E651012076                  pza         TAPA DE REGISTRO, PARA TUBERÍA EMBUTIDA, DE BRONCE D= 3"
+
+E651012102                  pza         TAPA DE REGISTRO, PARA TUBERÍA EMBUTIDA, DE BRONCE D= 4"
+
+E653054400                   pza          MARCO, PUERTA Y MANILLA DE ALUMINIO PARA BOCA DEL DUCTO DE
+BASURA DE 400 mm. INCLUYE FIJACIÓN.
+
+SUBCAPITULO E 66 ARTEFACTOS SANITARIOS
+
+E661110111               Pza       LAVAMANOS PARA COLGAR, DE 1 LLAVE, BLANCO O COLOR CLARO,
+DE ANCHO MENOR DE 54 cm, RECTANGULAR. (INCLUYE GRIFERIA Y
+LLAVE DE ARRESTO).
+
+E661110112                  Pza         LAVAMANOS PARA COLGAR DE UNA LLAVE, BLANCO O COLOR
+CLARO,ANCHO MENOR DE 54 CMS., OVALADO, INCLUYE GRIFERIA Y
+LLAVE DE ARRESTO.
+
+E661124111                 Pza        LAVAMANOS PARA COLGAR DE DOS LLAVES, GRIFERIA 4", BLANCO O
+COLOR      CLARO,      MENOR      DE      54      CM      DE      ANCHO,
+RECTANGULAR.INCLUYE GRIFERIA Y LLAVE DE ARRESTO.
+
+E661124112                 Pza        LAVAMANOS PARA COLGAR DE DOS LLAVES, GRIFERIA 4", BLANCO O
+COLOR CLARO,MENOR DE 54 CM DE ANCHO, OVALADO. INCLUYE
+GRIFERIA Y LLAVE DE ARRESTO.
+
+## Página 99
+
+COVENIN - MINDUR 2000-92                                                                                                                                                     103
+CODIGO                    UNIDAD                    DESCRIPCION
+E661224111               pza       LAVAMANOS CON PEDESTAL, DE 2 LLAVES, GRIFERIA 4 plg, BLANCO
+O COLOR CLARO, DE ANCHO MENOR DE 54 cm, RECTANGULAR
+(INCLUYE GRIFERIA Y LLAVE DE ARRESTO).
+E662111111           pza     W.C. DE ASIENTO, TANQUE BAJO, DESCARGA AL PISO, BLANCO O
+4                                                                    COLOR CLARO, LINEA ECONOMICA CONVENCIONAL. INCLUYE
+GRIFERIA, LLAVE DE ARRESTO, BRIDA,SELLO DE CERA Y TORNILLOS.
+E662111121                 pza        W.C. DE ASIENTO,TANQUE BAJO, DESCARGA AL PISO,BLANCO O
+COLOR CLARO, LINEA MEDIA CONVENCIONAL. INCLUYE GRIFERIA.
+LLAVE DE ARRESTO, BRIDA, SELLO DE CERA Y TORNILLOS.
+E662111231                 pza        W.C. DE ASIENTO,TANQUE BAJO, DESCARGA AL PISO, COLOR
+OSCURO, LINEA DE LUJO CONVENCIONAL. INCLUYE GRIFERIA, LLAVE
+DE ARRESTO, BRIDA, SELLO DE CERA Y TORNILLOS.
+E662141100                    pza          W.C. DE ASIENTO, CON FLUXOMETRO INCLUIDO, DESCARGA AL PISO.
+BLANCO O COLOR CLARO. INCLUYE GRIFERIA, BRIDA, SELLO DE
+CERA Y TORNILLOS.
+E663112110                 pza        URINARIO, CON SIFON CROMADO, ALIMENTADO CON LLAVE,
+DESCARGA A LA PARED, BLANCO O COLOR CLARO, LINEA
+ECONOMICA. INCLUYE GRIFERIA Y ELEMENTOS DE FIJACION.
+E663212120                 pza        URINARIO CON SIFON INTEGRADO, ALIMENTADO CON LLAVE.
+DESCARGA A LA PARED, BLANCO O COLOR CLARO, LINEA MEDIA
+INCLUYE GRIFERIA Y ELEMENTOS DE FIJACION.
+E663212130                 pza        URINARIO CON SIFON INTEGRADO, ALIMENTADO CON LLAVE,
+DESCARGA A LA PARED, BLANCO O COLOR CLARO, LINEA DE LUJO,
+INCLUYE GRIFERIA Y ELEMENTOS DE FIJACION.
+E664100220              pza       BIDET, COLOR OSCURO LINEA MEDIA. INCLUYE GRIFERIA, LLAVE DE
+ARRESTO, BRIDA, SELLO DE CERA Y TORNILLOS.
+E664100230                 pza        BIDET, COLOR OSCURO LINEA DE LUJO. INCLUYE GRIFERIA, LLAVE DE
+ARRESTO, BRIDA, SELLO DE CERA Y TORNILLOS.
+E664101110                 pza        BIDET,¡BLANCO O COLOR CLARO LINEA ECONOMICA. INCLUYE
+GRIFERIA,LLAVE ARRESTO, BRIDA, SELLO DE CERA Y TORNILLOS.
+E668022020                   pza         TOALLERA METÁLICA PARA FIJAR CON TORNILLOS
+E668042020                 pza         JABONERA SIN ASA, METÁLICA, PARA FIJAR CON TORNILLOS.
+E668082020                 Pza        JABONERA BASCULANTE DE FRASCO, METÁLICA, PARA FIJAR CON
+TORNILLOS.
+E668102020                  pza         PORTARROLLO DE PAPEL METÁLICO PARA FIJAR CON TORNILLOS.
+£668112020                 pza        GANCHO COLGADOR SENCILLO METÁLICO PARA FIJAR CON
+d                                                                   TORNILLOS
+E.668122020                pza         GANCHO COLGADOR DOBLE METÁLICO PARA FIJAR CON TORNILLOS
+E669311051            pza      DREN DE PISO CIRCULAR ESTANDAR, DE BRONCE, PARA TUBO DE
+DESCARGA SUSPENDIDO DE 2 plg (51 mm).
+E669311076           pza      DREN DE PISO CIRCULAR ESTANDAR, DE BRONCE, PARA TUBO DE
+DESCARGA SUSPENDIDO DE 3 plg (76 mm).
+
+## Página 100
+
+1 10) 4                                                                                                                                                        COVENIN - MINDUR 2000-92
+
+CODIGO                       UNIDAD                    DESCRIPCION
+
+E669311102                  pza         DREN DE PISO CIRCULAR ESTANDAR, DE BRONCE, PARA TUBO DE
+DESCARGA SUSPENDIDO DE 4 plg (102 mm).
+
+E669312051                  pza         DREN DE PISO CIRCULAR ESTANDAR, CROMADO, PARA TUBO DE
+DESCARGA SUSPENDIDO DE 2 plg (51 mm).
+
+E669321051                  pza         DREN DE PISO CIRCULAR ESTANDAR, DE BRONCE, PARA TUBO DE
+DESCARGA EMBUTIDO DE 2 plg (51 mm).
+
+E667611111                   pza         BAÑERA RECTANGULAR BLANCO O COLOR CLARO, DE DIMENSIONES
+L< DE 1.50 MTS Y A< 0.80 MTS, INCLUYE GRIFERIA METÁLICA
+
+E667221051                  pza         CALENTADOR ELECTRICO DE CAPACIDAD= 100 LITROS
+
+E667222751                   pza         CALENTADOR ELECTRICO DE CAPACIDAD= 27 LITROS
+
+E667223551 *              pza         CALENTADOR ELECTRICO DE CAPACIDAD= 35 LITROS.
+
+E£667120031                  pza         DUCHA, DE DOS LLAVES DE ACERO INOXIDABLE, INCLUYENDO
+GRUPO MEZCLADORA Y REGADERA.
+
+E667130031                      pza           DUCHA TELEFONO DE ACERO INOXIDABLE
+
+E667225051                  pza         CALENTADOR ELECTRICO DE CAPACIDAD= 50 LITROS
+
+E667228051                  pza         CALENTADOR ELECTRICO DE CAPACIDAD= 80 LITROS
+
+E667420032                   pza          FREGADERO DE DOS PONCHERAS DE ACERO INOXIDABLE
+
+## Página 101
+
+CAPITULO E9
+TRANSPORTES
+
+## Página 102
+
+COVENIN - MINDUR 2000 - 92                                                                                                                                                            1 07
+CAPÍTULO E9 TRANSPORTES
+Alcance
+Este Capitulo comprende los transportes de materiales y maquinarias, así como el bote de
+:               materiales desechables, correspondiente a los Capitulos E1 Obras Preliminares, E2 Movimiento de
+Tierra y Urbanismo, E3 Estructuras, E4 Obras Arquitectónicas y E8 Obras de Servicio y Varios.
+
+Como se indica en el esquema de codificación, se han considerado los aspectos de posición del
+material a transportar, el medio de transporte, la condición de recorrido y la distancia, para definir el
+alcance de cada Partida.
+
+Los grupos de Partidas cuyo esquema de codificación y la descripción de sus Partidas se
+suministran al final del Capítulo, son las siguientes:
+
+" E900...      TRANSPORTE DE MAQUINARIA LIVIANA CON PESO HASTA 10 tf
+
+E901...      TRANSPORTE DE MAQUINARIA PESADA CON PESO DE 10 A 30 tf
+
+E902...      TRANSPORTE DE MAQUINARIA PESADA CON PESO MAYOR DE 30 tf
+
+E903...      TRANSPORTE DE TIERRA, AGREGADOS Y ESCOMBROS
+
+E905...       TRANSPORTE DE CEMENTOS
+
+E906...      TRANSPORTE DE BLOQUES DE ARCILLA
+
+E907...      TRANSPORTE DE BLOQUES DE CONCRETO
+
+E908...      TRANSPORTE DE LADRILLOS Y OTROS ELEMENTOS MACIZOS DE ARCILLA
+
+E909...      TRANSPORTE DE ESTRUCTURAS METÁLICAS
+
+E910...      TRANSPORTE DE ESTRUCTURAS DE MADERA
+
+E911...      TRANSPORTE DE LOS ELEMENTOS PARA LA CONSTRUCCIÓN DE MUROS
+
+DE SUELO ARMADO
+E913...      TRANSPORTE DE MEZCLAS ASFÁLTICAS EN CALIENTE
+E914... TRANSPORTE DE MEZCLAS ASFÁLTICAS EN FRÍO
+E915...      TRANSPORTE DE ELEMENTOS PREFABRICADOS DE CONCRETO ARMADO,
+,                                                TABLESTACAS, PERFILES Y TUBOS METÁLICOS
+
+## Página 103
+
+108                                                                               COVENIN — MINDUR 2000-92
+CRITERIOS GENERALES DE MEDICIÓN
+
+Adicionalmente a los criterios generales de medición de la actividad de transporte dados en el
+Artículo 2.12, se deben tomar en consideración los que se suministran a continuación:
+
+Independientemente de la estimación de las cantidades de obra que pueda hacerse, bajo la
+responsabilidad del Profesional Responsable de la obra por la parte contratante deben verificarse en el
+sitio las cantidades realmente ejecutadas. En el caso de utilizar un solo transporte para varios mate-
+riales, se pagará el transporte correspondiente a cada material en forma separada.
+
+En esta Norma ningún transporte puede dar origen al pago simultáneo por varias Partidas, por
+consiguiente a efectos de pago de una misma operación de transporte, el uso de cualquier Partida
+excluye la utilización de las demás Partidas.
+
+En ningún caso se tendrá en cuenta el volumen de esponjamiento, el cual se considerará en los
+análisis de precios unitarios, cuando aplique.
+
+La unidad de medida será el metro cúbico por kilómetro (m3. km), la tonelada fuerza por kilómetro
+(tf km), saco (s) y el metro cúbico por 50 metros (m3.50 m) según la característica propia de cada
+Partida de transporte, como se detalla a continuación:
+
+En las Partidas E900, E901, E902, E905, E906, E907, E908, E909, E911 y E913, toneladas fuerza por
+kilómetro (tf . km)., a excepción de E905 donde también se usa el saco(s)
+
+En las Partidas E903, E904 (excepto la Partida E90323), E910 y E914, metros cúbicos por
+kilómetro (m? . km).
+
+En las Partidas E90323, metros cúbicos por estaciones de 50 m  (mé . 50  m) según las
+características propias de este grupo de Partidas.
+
+Cuando se necesite un transporte de mayor tonelaje que lo realmente transportado y previa
+conformidad del Profesional Responsable por la parte contratante, su incidencia se tomará en cuenta en
+el análisis de precios unitarios.
+
+## Página 104
+
+COVENIN - MINDUR 2000 - 92                                                                                   109
+PARTIDAS E900 TRANSPORTE DE MAQUINARIA LIVIANA CON PESO
+HASTA 10 tf
+Alcance
+.                       Comprende el transporte de maquinarias menores con peso menor de 10 toneladas fuerza por el
+conjunto de maquinarias. Incluye los transportes de maquinarias menores que se usan en la
+construcción de la obra.
+                    Medición
+La unidad de medida será la tonelada fuerza por kilómetro (tf . km) medido para el total de las
+maquinarias menores
+- Se incluye en el precio unitario solo un viaje de ida y vuelta por el total de maquinaria que se
+utilizarán en la obra, no desarmada, y no se reconocerá el transporte cuando una maquinaria sea
+sustituida por otra.
+PARTIDAS E901 TRANSPORTE DE MAQUINARIA PESADA CON PESO DE 10 A
+30 tf
+PARTIDAS E902 TRANSPORTE DE MAQUINARIA PESADA CON PESO
+MAYOR DE 30 tf
+Alcance
+Comprende el transporte de maquinarias pesadas con peso igual o mayor de 10 toneladas fuerza
+por maquinaria individual, no por el conjunto. Incluye los transportes de maquinarias para construcción
+de pilotes y muros de concreto proyectado.
+Medición
+La unidad de medida será la tonelada fuerza por kilómetro (tf . km).medido para cada maquinaria a
+transportar.
+Se incluye en el precio unitario solo un viaje de ida y vuelta por maquinaria en situación operativa,
+no desarmada, y no se reconocerá el transporte cuando una maquinaria sea sustituida por otra.
+
+## Página 105
+
+110                                                                                                                               COVENIN — MINDUR 2000-92
+PARTIDAS E903 TRANSPORTE DE TIERRA, AGREGADOS Y ESCOMBROS
+Alcance                ;
+
+Comprende el transporte y bote de material proveniente de  demoliciones, remociones y
+excavaciones correspondientes a la preparación del sitio según las actividades contempladas en las
+Partidas E13 y E14, de los movimientos de tierra contemplados en el Capítulo E2, las excavaciones en
+zanjas y fundaciones del Capítulo E3, los agregados para concretos y morteros especificados en los
+Capitulos E3, E4 y E8, así como también los materiales para las bases y sub-bases, pavimentos
+asfálticos y muros de gaviones, contemplados en el Capítulo E8.
+
+En esta Norma ningún transporte puede dar origen al pago simultáneo por varias Partidas; por
+consiguiente, a efectos de pago de una misma operación de transporte, el uso de cualquier Partida
+excluye la utilización de las demás Partidas.
+
+Medición    -
+
+La unidad de medida será el metro cúbico por kilómetro (m*km) en el caso de transporte de
+escombros debido a demoliciones y agregados, en ambos casos se medirá en estado suelto, sobre
+camiones, el peso o volumen real transportado.
+
+Para el transporte de tierra la unidad de medida también será el metro cúbico por kilómetro (m*.km)
+excepto en las Partidas E90323 correspondientes a transporte de tierra proveniente de movimiento de
+tierra con maquinaria pesada (mototraílla), cuya unidad de medida será el metro  cúbico por estaciones
+de 50 metros (mí. 50 m). El volumen del material a transportar y botar será el volumen resultante de la
+diferencia de las secciones transversales o cuadrículas tomadas antes y después de la excavación.
+
+En ningún caso se tendrá en cuenta el volumen de esponjamiento, el cual se considerará en los
+análisis de precios unitarios, cuando aplique.
+
+En esta Norma se considera transporte urbano, los transportes en zonas pobladas, únicamente
+con tránsito denso continuo o incidencia grande de semáforos. La clasificación del tipo de transporte
+queda a criterio del Organismo contratante. En los casos en que el transporte abarque recorridos urba-
+nos y no urbanos ó montañosos, se utilizarán las Partidas correspondientes que resulten de considerar
+como origen para las distancias, el centro de masas del sitio de carga. Las distancias se redondearán
+a la décima de kilómetro. En caso de que para un mismo recorrido se apliquen características
+diferentes, se calificará con la clasificación mas desfavorable que aplique.
+
+## Página 106
+
+COVENIN - MINDUR 2000 - 92                                                                         111
+PARTIDAS E905 TRANSPORTE DE CEMENTOS
+Alcance
+
+e                            Comprende el transporte hasta el sitio de la obra, del cemento utilizado en las estructuras y demás
+elementos de concreto y obras de albañileria y acabados de la edificación.
+
+z                    Medición
+
+La unidad de medida será el saco (s) para transporte hasta 50 km y la tonelada fuerza por kilómetro
+
+(tf . km) para transporte para distancias comprendidas entre 50 y 200 km. y la medición se realizará
+sobre la obra ejecutada.
+
+- En el caso de usar la unidad de medida tonelada fuerza por kilómetro (tf. Km), a efectos de la
+determinación del precio unitario de la Partida, la cantidad total de m       transportado será el pro-
+ducto de multiplicar el peso total de cemento utilizado medido en tone  .s fuerza (tf) por la distancia
+hasta el sitio de la obra, medido en kilómetros (km).
+
+La cantidad de cemento transportado será la obtenida de las Partidas de los Capitulos E3, E4 y E8,
+respectivamente.
+PARTIDAS E906 TRANSPORTE DE BLOQUES DE ARCILLA
+PARTIDAS E907 TRANSPORTE DE BLOQUES DE CONCRETO
+PARTIDAS E908 TRANSPORTE DE LADRILLOS Y OTROS ELEMENTOS
+MACIZOS DE ARCILLA
+Alcance
+
+Comprende el transporte hasta el sitio de la obra de los bloques y/o ladrillos utilizados en las obras
+
+de albañilería y acabados de la edificación.
+Medición
+
+La unidad de medida será la tonelada fuerza por kilómetro (tf . km) y la medición se realizará sobre
+la obra ejecutada.
+
+A efectos de la determinación del precio unitario de la Partida la cantidad total de material
+
+-                    transportado será el producto de multiplicar el peso total de bloques y/o ladrillos utilizados, medido en
+
+toneladas fuerza (tf) en la obra ejecutada, por la distancia hasta el sitio de la obra, medido en
+kilómetros (km).
+
+## Página 107
+
+1 12                                                                                                                               COVENIN — MINDUR 2000-92
+PARTIDAS E909 TRANSPORTE DE ESTRUCTURAS METÁLICAS
+Alcance
+
+Comprende el transporte hasta el sitio de la obra de los elementos, miembros o estructuras metá-
+licas utilizados en la edificación.
+Medición
+
+La unidad de medida será la tonelada fuerza por kilómetro (tf. km) medida sobre camiones.
+
+A efectos de la determinación del precio unitario de la Partida la cantidad total de material
+transportado será el producto de multiplicar el peso total de estructura metálica utilizada medido sobre
+camiones, en toneladas fuerza (tf), por la distancia hasta el sitio de la obra, medido en kilómetros (km).
+PARTIDAS E910 TRANSPORTE DE ESTRUCTURAS DE MADERA
+Alcance
+
+Comprende el transporte hasta el sitio de la obra de los elementos, miembros o estructuras de
+madera a utilizados en la edificación.
+
+Medición
+
+La unidad de medida será el metro cúbico por kilómetro (m3.km) medidos sobre camiones.
+
+A efectos de la determinación del precio unitario de la Partida la cantidad total de material
+transportado será el producto de terres. qee! el volumen total de estructura de madera utilizada medido
+sobre camiones, en metros cúbicos (m?), por la distancia hasta el sitio de la obra, medido en kilómetros
+(km).
+
+## Página 108
+
+COVENIN - MINDUR 2000 - 92                                                                                                            LL es]
+PARTIDAS E911 TRANSPORTE DE LOS ELEMENTOS PARA LA CONSTRUCCIÓN
+DE MUROS DE SUELO ARMADO
+
+Alcance
+
+:                    Comprende el transporte de los paneles prefabricados de concreto armado, sus conexiones, las
+tiras de anclajes y las juntas especiales requeridas según el proyecto, hasta el sitio de la obra.
+
+:                   Medición
+
+La unidad de medida será la tonelada fuerza por kilómetro (tf . km) para los paneles prefabricados
+
+de concreto armado, sus conexiones, tiras de anclajes y juntas especiales requeridas según el proyec-
+to.
+PARTIDAS E913 TRANSPORTE DE MEZCLAS ASFÁLTICAS EN CALIENTE
+PARTIDAS E914 TRANSPORTE DE MEZCLAS ASFÁLTICAS EN FRÍO
+Alcance
+
+Comprende el transporte desde el sitio de suministro hasta la obra de las mezclas asfálticas
+utilizadas en los pavimentos asfálticos correspondientes a las obras de servicio de la edificación.
+Criterio general
+
+Independientemente de la estimación de las cantidades de obra que pueda hacerse, bajo la
+responsabilidad del Profesional Responsable de la obra por la parte contratante deben verificarse en el
+sitio las cantidades realmente ejecutadas. En el caso de utilizar un solo transporte para varios
+materiales, se pagará el transporte correspondiente a cada material en forma separada.
+
+Medición
+
+La unidad de medida será el metro cúbico por kilómetro (m3 . Km) en el caso de mezclas asfálticas
+elaboradas en frio o de la tonelada fuerza por kilómetro (tf . km) en el caso de las mezclas asfálticas en
+caliente.
+
+El volumen o peso del asfalto transportado será medido en los pavimentos ejecutados según las
+especificaciones del proyecto. En esta Partida se aplicará el criterio general de que las Partidas de
+Transportes son excluyentes entre sí.
+
+%
+
+## Página 109
+
+114                                                                                                                   COVENIN — MINDUR 2000-92
+PARTIDAS E915 TRANSPORTE DE ELEMENTOS   PREFABRICADOS DE
+CONCRETO ARMADO,    TABLESTACAS,    PERFILES. Y
+TUBOS METALICOS
+Los transportes de elementos prefabricados de concreto armado, pilotes prefabricados, tablestacas,
+perfiles y tubos metálicos se medirán en toneladas fuerzas por kilómetros (tf . km) según las distancias
+estipuladas en la descripción de las Partidas. En caso de utilizar un solo transporte para varios
+materiales se pagará el transporte correspondiente a cada material. Las Partidas referentes al
+transporte del mismo material son excluyentes entre sí, es decir, se puede utilizar una sola Partida
+según la distancia total a recorrer. El transporte se medirá únicamente cuando el material halla sido
+utilizado como insumo en Partidas de la obra.
+
+## Página 110
+
+COVENIN - MINDUR 2000 - 92                   115
+2
+e
+o     E EEEEEEEEEEEE
+<X  277 SEE5EEFSFESENESEESESGEESES
+o  he]           co  o
+9  EII RESTICEESEERES
+     z ALETAS ERE
+E  D-EEEFEEBESESEEEEEEEEE EEES
+a      ono o   e] mm o
+a  2% Now   2Srnocireraaas
+EEXBERERERNANA ARAARAAADR
+ETE             E
+222000000072 rrororerrroaam
+Qoaoo2o00000000000000o0o0oonono
+pa955
+o
+o €
+B5eS
+> iS
+o. >
+-   - 2
+o
+bs  Ñ
+_
+n e
+Le. e
+se “=p
+o o  :
+D>LD2 RS
+CESE, 2
+Sos .wos
+Oc uUucoOota
+TAO 0
+e
+o
+e
+sg
+= y
+E]
+Bo
+33
+o
+253
+3 TE
+noi
+E
+S o
+ES
+SE x M
+x 52] [2]
+= E E
+n
+o      -
+T      YN
+22      9
+Mm    Ly LD
+o
+273  > = =
+o o= oowD o
+o o oo vn 2 o
+n ES oS o > Nn
+os as a> e
+:         Da o > oo se
+5 E]  5] vn
+O  E a] a= o
+oc  n > N
+E  p. > Ek  ._ hs]
+> 2  —= o-= o
+uy  ES a Lo o
+=>  u 38Y3 oo sm 2
+[es]  = 00 zo Zo a)
+o)  a. Oo a  oo o
+£2p» SS”. e -
+E > 20 3 0 o
+or 23 o.- > E
+Lo o CA o a So
+2" £ 23u0 <=E E
+o  o  o  [=)
+a  om                     $5
+<X  uy  f- a X Zz 1%) a e) a RF uu n
+6]
+a —        >          Pa, "A E
+
+## Página 111
+
+116                    COVENIN — MINDUR 2000-92
+E
+Xx
+o
+$     8          EEEEEEEEEE
+e   E  o          ETE
+¿  x   a         ENOSDIIORNAOSS
+pus  7  £         e;   e. eo . a
+Dn            TT EEEEEEEEES
+XX   co
+o  -  |         s5ESEERTZESS
+2  2         ETA ro 2“-DO >
+5         EERKECKON NA
+wD  f=]         222006000
+[2]  7         2000500550559
+E
+o
+O   o 73
+c
+—    o
+18  225
+a]   502
+a   oo
+le]  =-2 3
+o
+a  1
+n a e
+6=0 «4
+E
+o 03o3s-
+PrSs2 ¿rs
+sio28s53
+3
+OLuioaa
+pa
+o
+ME
+s
++
+£ 0
+0
++
+38
+a
+253
+Eto
+no
+'    S
+c   E e
+|  Xx x 9
+x 152] PS
+<= E 1%)
+LY
+pm    2
+S  hoj    S
+7    =  ]
+v Zo oo    3  2
+»  eSoR IBER    SS e            '
+a]        c  ==
+2 >¿R7 ERE?    5  5
+DO  lo] = o = = A    mM  nm
+o   E=U09= REC" LOSo    o  o
+E  SoúcecEs o 0000-00    as  2
+Y 6 20 o - 00    =
+t  5]  E oz 0      Ln  =
+a   5." 0302 “uso oSa€    y  o            y
+par   Quo VDo0Vo novo PA    17]  %
+77    Mm  mM
+m   SS 9 =D    a  he
+e)  ESPLPELO220000EÉS    mn  mn
+uc33=Ñ020E0o0400    2  E
+Eo 2 2a0£o G    [a]  o
+ESTE ODOSSE DESEES    Ñ
+500703 522 20365    9  3
+ODO JE<X<uuWwEDnd£uo    =  2
+ooo o =— _— _—    pe  pes
+m
+lla + =<zo.ocruo
+PP   e                      da
+
+## Página 112
+
+COVENIN — MINDUR 2000-92                                                                                                                                          1 1 Y
+CODIGO                 UNIDAD                  DESCRIPCION
+SUBCAPITULO E 900 TRANSPORTE DE MAQUINARIA LIVIANA CON PESO
+HASTA 10 TF
+:                        E900040000             VIAJE TRANSPORTE DE MAQUINARIA LIVIANA PARA LA PREPARACIÓN DEL SITIO,
+DRENAJES, MOVIMIENTO DE TIERRA, BASES, ASFALTOS, CON PESO HASTA
+10 tf POR CONJUNTO DE MAQUINARIAS. INCLUYE CARGA Y DESCARGA.
+SUBCAPITULO E 901 TRANSPORTE DE MAQUINARIA PESADA CON
+PESO DE 10 A 30 TF
+
+E901010000           1f.km TRANSPORTE DE MAQUINARIA PESADA PARA LA PREPARACIÓN DEL SITIO,
+DRENAJES, MOVIMIENTO DE TIERRA, BASES, ASFALTOS, CON PESO DE 10
+A 30 tf POR MAQUINARIA.
+
+SUBCAPITULO E 902 TRANSPORTE DE MAQUINARIA PESADA CON PESO
+MAYOR DE 30 TF
+
+E902010000            tf.km TRANSPORTE DE MAQUINARIA PESADA PARA LA PREPARACIÓN DEL SITIO, .
+DRENAJES, MOVIMIENTO DE TIERRA, BASES, ASFALTOS, CON PESO MAYOR
+DE 30 tf POR MAQUINARIA.
+
+SUBCAPITULO E 903 TRANSPORTE DE TIERRA, AGREGADOS Y ESCOMBROS
+
+E903141001           m”.km TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO A DISTANCIAS DE HASTA 1 km
+INCLUSIVE.
+
+E903141002          m”.km TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 1
+km Y HASTA 2 km INCLUSIVE.
+
+E903141003          m'.km TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 2
+km Y HASTA 3 km INCLUSIVE.
+
+l                  E903141004          m”.km TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 3
+km Y HASTA 4 km INCLUSIVE.
+
+E903141005          m”.km TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 4
+km y HASTA 5 km INCLUSIVE.
+
+## Página 113
+
+118                                                                                                                                           COVENIN — MINDUR 2000-9
+
+CODIGO                 UNIDAD                  DESCRIPCION
+
+E903141006          m*. km     TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 5
+km Y HASTA 6 km INCLUSIVE.
+
+E903141007          m.km     TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 6
+km Y HASTA 7 km INCLUSIVE.
+
+E903141008          m*. km     TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 7
+km Y HASTA 8 km INCLUSIVE.
+
+E903141009          m.km     TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 8
+km Y HASTA 9 km INCLUSIVE.
+
+E903141010      - mikm     TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 9
+km Y HASTA 10 km INCLUSIVE.
+
+E903141011           m.km     TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+
+e                 ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 10
+km Y HASTA 11 km INCLUSIVE
+
+E903141012          m*.km     TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 11
+km Y HASTA 12 km INCLUSIVE
+
+E903141013          m*. km     TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 12
+km Y HASTA 13 km INCLUSIVE
+
+E903141014          m.km     TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 13
+km Y HASTA 14 km INCLUSIVE
+
+E903141015          m.km     TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 14
+km Y HASTA 15 km INCLUSIVE
+
+E903141016          m.km     TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 15
+km Y HASTA 16 km INCLUSIVE
+
+E903141017          m.km     TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 16
+km Y HASTA 17 km INCLUSIVE
+
+E903141018          mé. km     TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 17
+km Y HASTA 18 km INCLUSIVE
+
+E903141019          m.km     TRANSPORTE NO URB.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 18
+km Y HASTA 19 km INCLUSIVE
+
+## Página 114
+
+COVENIN — MINDUR 2000-92                                                                                                                                                     119
+
+CODIGO                 UNIDAD                  DESCRIPCION
+
+E903141020          m.km     TRANSPORTE NO URB.EN CAMIONES, DE   TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 19
+km Y HASTA 20 km INCLUSIVE
+
+E903141050          m.km     TRANSPORTE NO URB.EN CAMIONES, DE  TIERRA, AGREGADOS Y
+
+>                                                                  ESCOMBROS MEDIDO EN ESTADO SUELTO, A DIST. MAYORES DE 50 km.
+
+E903142003          m”. km     TRANSPORTE URBANO.EN CAMIONES, DE   TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 2
+
+3                                                                       km Y HASTA 3 km INCLUSIVE.
+
+E903142004          m.km     TRANSPORTE URBANO.EN CAMIONES, DE   TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 3
+km Y HASTA 4 km INCLUSIVE.
+
+E903142005          mé. km     TRANSPORTE URBANO EN CAMION”     DE TIERRA, AGREGADOS Y
+
+al                            ESCOMBROS MEDIDO EN ESTADO SU:            STANCIAS MAYORES DE 4
+km Y HASTA 5 km INCLUSIVE.
+
+E903142006          mi. km     TRANSPORTE URBANO.EN CAMIONE.       - TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 5
+km Y HASTA 6 km INCLUSIVE.
+
+E903142008           mé km     TRANSPORTE URBANO.EN CAMIONES, DE   TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 7
+km Y HASTA 8 km INCLUSIVE.
+
+E903142009          m*. km     TRANSPORTE URBANO.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUF'” >. A DISTANCIAS MAYORES DE 8
+km Y HASTA 9 km INCLUSIVE.
+
+E903142010          m. km     TRANSPORTE URBANO.EN CAMION            TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SU:            “TANCIAS MAYORES DE 9
+km Y HASTA 10 km INCLUSIVE
+
+E903142011           mÍ. km     TRANSPORTE URBANO.EN CAMIONES, DE   TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 10
+km Y HASTA 11 km INCLUSIVE
+
+E903142012          m.km     TRANSPORTE URBANO.EN CAMIONES, DE   TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 11
+km Y HASTA 12 km INCLUSIVE
+
+E903142013          m.km     TRANSPORTE URBANO.EN CAMIONES, DE   TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 12
+km Y HASTA 13 km INCLUSIVE
+
+E903142014          mé km     TRANSPORTE URBANO.EN CAMIONES, DE   TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 13
+km Y HASTA 14 km INCLUSIVE
+
+E903142015          mé. km     TRANSPORTE URBANO.EN CAMIONES, DE   TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 14
+km Y HASTA 15 km INCLUSIVE
+
+E903142016          m km     TRANSPORTE URBANO.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 15
+km Y HASTA 16 km INCLUSIVE
+
+## Página 115
+
+1 20                                                                                                                                                                     COVENIN — MINDUR 2000-9
+
+CODIGO                 UNIDAD                  DESCRIPCION
+
+E903142017          m.km     TRANSPORTE URBANO.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 16
+km Y HASTA 17 km INCLUSIVE
+
+E903142018          m.km     TRANSPORTE URBANO.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 17
+km Y HASTA 18 km INCLUSIVE
+
+E903142019          mi. km     TRANSPORTE URBANO.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 18
+km Y HASTA 19 km INCLUSIVE
+
+E903142020          mi. km     TRANSPORTE URBANO.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 19
+km Y HASTA 20 km INCLUSIVE
+
+E903142025       " m.km     TRANSPORTE URBANO.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 20
+km Y HASTA 50 km INCLUSIVE
+
+E903142050          m.km     TRANSPORTE URBANO.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 50
+km.
+
+E903143001           m.km     TRANSPORTE MONTAÑ.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS DE HASTA 1 km
+INCLUSIVE.
+
+E903143002          m.km     TRANSPORTE MONTAÑ.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 1
+km Y HASTA 2 km INCLUSIVE.
+
+E903143003          m*.km     TRANSPORTE MONTAÑ.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 2
+km Y HASTA 3 km INCLUSIVE.
+
+E903143004          mé.km     TRANSPORTE MONTAÑ.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 3
+km Y HASTA 4 km INCLUSIVE.
+
+E903143005          mi. km     TRANSPORTE MONTAN.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 4
+km Y HASTA 5 km INCLUSIVE.
+
+E903143006          mé.km     TRANSPORTE MONTAÑ.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 5
+km Y HASTA 6 km INCLUSIVE.
+
+E903143008          mi. km     TRANSPORTE MONTAÑ.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 7
+km Y HASTA 8 km INCLUSIVE.
+
+E903143009          m.km     TRANSPORTE MONTAÑ.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 8
+km Y HASTA 9 km INCLUSIVE.
+
+E903143010          m.km     TRANSPORTE MONTAÑ.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 9
+km Y HASTA 10 km INCLUSIVE
+
+## Página 116
+
+COVENIN — MINDUR 2000-92                                                                                                                                                                   121
+
+CODIGO                 UNIDAD                  DESCRIPCION
+
+E903143011           m*.km     TRANSPORTE MONTAÑ.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 10
+km Y HASTA 11 km INCLUSIVE
+
+E903143012           m*.km     TRANSPORTE MONTAÑ.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 11
+km Y HASTA 12 km INCLUSIVE
+
+E903143013           mÍ. km     TRANSPORTE MONTAÑ.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 12
+km Y HASTA 13 km INCLUSIVE
+
+E903143014           m*. km     TRANSPORTE MONTAÑ.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 13
+km Y HASTA 14 km INCLUSIVE
+
+E903143015           m*. km     TRANSPORTE   MONTAÑ.EN CAMIONES, "E TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELT"       TANCIAS MAYORES DE 14
+
+7                                       km Y HASTA 15 km INCLUSIVE
+
+E903143016           m. km     TRANSPORTE MONTAÑ.EN CAMIONES.        TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 15
+km Y HASTA 16 km INCLUSIVE
+
+E903143017           m*. km     TRANSPORTE MONTAÑ.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 16
+km Y HASTA 17 km INCLUSIVE
+
+E903143018           m*.km     TRANSPORTE MONTAÑ.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 17
+km Y HASTA 18 km INCLUSIVE
+
+E903143019           m*.km     TRANSPORTE MONTAÑ.EN CAMIONES DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUE       DISTANCIAS MAYORES DE 18
+km Y HASTA 19 km INCLUSIVE
+
+E903143020           m.km     TRANSPORTE MONTAÑ.EN CAMIONE.. JE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 19
+km Y HASTA 20 km INCLUSIVE
+
+E903143025           m.km     TRANSPORTE MONTAÑ.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO,A DISTANCIAS MAYORES DE 20
+km Y HASTA 50 km INCLUSIVE
+
+E903143050           m*.km     TRANSPORTE MONTAÑ.EN CAMIONES, DE TIERRA, AGREGADOS Y
+ESCOMBROS MEDIDO EN ESTADO SUELTO, A DISTANCIAS MAYORES DE 50
+km.
+
+E903241001           m*.km     TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS DE HASTA 1 km INCLUSIVE.
+
+E903241002           m.km     TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 1 km Y HASTA 2 km
+INCLUSIVE.
+
+E903241003           m*.km     TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 2 km Y HASTA 3 km
+INCLUSIVE.
+
+E903241004           m*.km     TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 3 km Y HASTA 4 km
+INCLUSIVE.
+
+## Página 117
+
+122                                                                      COVENIN — MINDUR 2000-9
+CODIGO            UNIDAD             DESCRIPCION
+E903241005        m*.km    TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 4 km Y HASTA 5 km
+INCLUSIVE.
+E903241006        m*. km    TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 5 km Y HASTA 6 km
+INCLUSIVE.
+E903241007        m. km    TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 6 km Y HASTA 7 km
+INCLUSIVE.
+E903241008        m.km    TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 7 km Y HASTA 8 km
+INCLUSIVE.
+E903241009    " mikm    TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 8 km Y HASTA 9 km
+INCLUSIVE.
+E903241010        m*.km    TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 9 km Y HASTA 10 km
+INCLUSIVE.
+E903241011        m.km    TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 10 km Y HASTA 11 km
+INCLUSIVE.
+E903241012        m. km    TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 11 km Y HASTA 12 km.
+INCLUSIVE.
+E903241013        m*.km    TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 12 km Y HASTA 13 km
+INCLUSIVE.
+E903241014        m'. km    TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 13 km Y HASTA 14 km
+INCLUSIVE.
+E903241015        mi. km    TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 14 km Y HASTA 15 km
+INCLUSIVE.
+E903241016        mi. km    TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 15 km Y HASTA 16 km
+INCLUSIVE.
+E903241017        m*.km    TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 16 km Y HASTA 17 km
+INCLUSIVE.
+E903241018        m*. km    TRANSPORTE NO URBANO EN CAMIONES DE TIERRA.MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 17 km Y HASTA 18 km
+INCLUSIVE.
+E903241019        m*.km    TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 18 km Y HASTA 19 km
+INCLUSIVE.
+
+## Página 118
+
+COVENIN — MINDUR 2000-92                                                                                                                                                                             128
+CODIGO                    UNIDAD                    DESCRIPCION
+E903241020            m*.km      TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 19 km Y HASTA 20 km
+INCLUSIVE.
+E903241025            m.km      TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 20 km Y HASTA 50 km
+-                                                              INCLUSIVE.
+E903241050            m.km      TRANSPORTE NO URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 50 km
+E903242001           m.km     TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN SECCIONES
+(BANCO) A DISTANCIAS DE HASTA 1 km INCLUSIVE.
+E903242002          m*.km     TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN SECCIONES
+(BANCO) A DISTANCIAS MAYORES DE 1 km Y HASTA 2 km INCLUSIVE.
+E903242003          m*.km     TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN SECCIONES
+(BANCO) A DISTANCIAS MAYORES DE 2 km Y HASTA 3 km INCLUSIVE.
+E903242004          m.km     TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN SECCIONES
+(BANCO) A DISTANCIAS MAYORES DE 3 km Y HASTA 4 km INCLUSIVE.
+E903242005          m. km     TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN SECCIONES
+(BANCO) A DISTANCIAS MAYORES DE 4 km Y HASTA 5 km INCLUSIVE.
+E903242006          m*.km     TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN SECCIONES
+(BANCO) A DISTANCIAS MAYORES DE 5 km Y HASTA 6 km INCLUSIVE.
+E903242007          m*.km     TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN SECCIONES
+(BANCO) A DISTANCIAS MAYORES DE 6 km Y HASTA 7 km INCLUSIVE.
+E903242008           m*.km     TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN SECCIONES
+(BANCO) A DISTANCIAS MAYORES DE 7 km Y HASTA 8 km INCLUSIVE.
+E903242009           m.km     TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN SECCIONES
+(BANCO) A DISTANCIAS MAYORES DE 8 km Y HASTA 9 km INCLUSIVE.
+E903242010           m.km     TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN SECCIONES
+(BANCO) A DISTANCIAS MAYORES DE 9 km Y HASTA 10 km INCLUSIVE.
+E903242011          m. km     TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN SECCIONES
+(BANCO) A DISTANCIAS MAYORES DE 10 km Y HASTA 11 km INCLUSIVE.
+E903242012           m.km     TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN SECCIONES
+(BANCO) A DISTANCIAS MAYORES DE 11 km Y HASTA 12 km INCLUSIVE.
+E903242013          m*.km     TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN SECCIONES
+(BANCO) A DISTANCIAS MAYORES DE 12 km Y HASTA 13 km INCLUSIVE.
+E903242014          m.km     TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN SECCIONES
+(BANCO) A DISTANCIAS MAYORES DE 13 km Y HASTA 14 km INCLUSIVE.
+E903242015          m.km     TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN SECCIONES
+(BANCO) A DISTANCIAS MAYORES DE 14 km Y HASTA 15 km INCLUSIVE.
+E903242016          m'. km     TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN SECCIONES
+(BANCO) A DISTANCIAS MAYORES DE 15 km Y HASTA 16 km INCLUSIVE.
+E903242017          m.km     TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN SECCIONES
+(BANCO) A DISTANCIAS MAYORES DE 16 km Y HASTA 17 km INCLUSIVE.
+
+## Página 119
+
+124                                                                                                                                                                      COVENIN — MINDUR 2000-9
+CODIGO                  UNIDAD                   DESCRIPCION
+
+E903242018              m. km         TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 17 km Y HASTA 18
+km INCLUSIVE.
+
+E903242019              m.km         TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 18 km Y HASTA 19
+km INCLUSIVE.
+
+E903242020              m.km         TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 19 km Y HASTA 20
+km INCLUSIVE.
+
+E903242025              m*.km         TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 20 km Y HASTA 50
+km INCLUSIVE.
+
+E903242050      .       mé.km         TRANSPORTE URBANO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 50 km.
+
+E903243001               m.km         TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS DE HASTA 1 km INCLUSIVE.
+
+E903243002              m.km         TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 1 km Y HASTA 2 km
+INCLUSIVE.
+
+E903243003              mé. km         TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 2 km Y HASTA 3 km
+INCLUSIVE.
+
+E903243004              m'. km         TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 3 km Y HASTA 4 km
+INCLUSIVE.
+
+E903243005              m.km         TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 4 km Y HASTA 5 km
+INCLUSIVE.
+
+E903243006              m*.km         TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 5 km Y HASTA 6 km
+INCLUSIVE.
+
+E903243007              mÍ.km         TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 6 km Y HASTA 7 km
+INCLUSIVE.
+
+E903243008              mé. km         TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 7 km Y HASTA 8 km
+INCLUSIVE.                                                                                          s
+
+E903243009              m.km         TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 8 km Y HASTA 9 km
+INCLUSIVE.
+
+E903243010              mé. km         TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 9 km Y HASTA 10
+km INCLUSIVE.
+
+E903243011               m*. km         TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 10 km Y HASTA 11
+km INCLUSIVE.
+
+## Página 120
+
+COVENIN — MINDUR 2000-92                                                                                             125
+CODIGO                 UNIDAD                 DESCRIPCION
+
+E903243012             m.km        TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 11 km Y HASTA 12
+
+km INCLUSIVE.
+E903243013             m.km        TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 12 km Y HASTA 13
+
+'                                                           km INCLUSIVE.
+E903243014         m.km     TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 13 km Y HASTA 14
+
+-                                                          km INCLUSIVE.
+E903243015             m'.km        TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 14 km Y HASTA 15
+
+km INCLUSIVE.
+E903243016         m*.km      TRANSPORTE MONTAÑOSO EN    “¡ONES DE TIERRA,MEDIDO EN
+-                                    SECCIONES (BANCO) A DISTANC       *YORES DE 15 km Y HASTA 16
+
+km INCLUSIVE.
+E903243017             m*.km        TRANSPORTE MONTAÑOSO EN :             DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIA.          ES DE 16 km Y HASTA 17
+
+km INCLUSIVE.
+
+                      E903243018             m.km        TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 17 km Y HASTA 18
+km INCLUSIVE.
+
+E903243019             mé.km        TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCI** “AYORES DE 18 km Y HASTA 19
+km INCLUSIVE.
+
+E903243020         m*.km     TRANSPORTE MONTAÑOSO EN «     ¡ES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIA.     *YORES DE 19 km Y HASTA 20
+km INCLUSIVE.
+
+E903243025         mé. km     TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 20 km Y HASTA 50
+km INCLUSIVE.
+
+E.903243050             m.km        TRANSPORTE MONTAÑOSO EN CAMIONES DE TIERRA,MEDIDO EN
+SECCIONES (BANCO) A DISTANCIAS MAYORES DE 50 km.
+
+SUBCAPITULO E 905 TRANSPORTE DE CEMENTOS
+'                E905040050            SACO       TRANSPORTE EN CAMIONES DE CEMENTO A DISTANCIAS HASTA 50
+km.
+
+E905040200              tf. km        TRANSPORTE BEN CAMIONES DE CEMENTO A DISTANCIAS
+COMPRENDIDAS ENTRE 50 Y 200 km.
+
+## Página 121
+
+126                                                                                                                                                                                 COVENIN — MINDUR 2000-9
+CODIGO                   UNIDAD                     DESCRIPCION
+SUBCAPITULO E 906 TRANSPORTE DE BLOQUES DE ARCILLA
+E906040050               tf. km          TRANSPORTE EN CAMIONES DE BLOQUES DE ARCILLA A DISTANCIAS
+HASTA 50 km.
+E906040200                 tf. km           TRANSPORTE EN CAMIONES DE BLOQUES DE ARCILLA A DISTANCIAS
+MAYORES DE 50 km HASTA 200 km.
+SUBCAPITULO E 907 TRANSPORTE DE BLOQUES DE CONCRETO
+E907040050                tf .km          TRANSPORTE EN CAMIONES DE BLOQUES DE CONCRETO A
+DISTANCIAS HASTA 50 km.
+E.907.040.200               tf. km          TRANSPORTE EN CAMIONES DE BLOQUES DE CONCRETO A
+DISTANCIAS MAYORES DE 50 km HASTA 200 km
+SUBCAPITULO E 908 TRANSPORTE DE LADRILLOS Y OTROS ELEMENTOS
+DE ARCILLA
+E.908.040.050             tf. km          TRANSPORTE EN CAMIONES DE LADRILLOS Y OTROS ELEMENTOS DE
+ARCILLA A DISTANCIAS HASTA 50 KMS.
+E.908.040.200               tf. km           TRANSPORTE EN CAMIONES DE LADRILLOS Y OTROS ELEMENTOS DE
+ARCILLA A DISTANCIAS MAYORES DE 50 KMS Y HASTA 200 KMS.
+SUBCAPITULO E 909 TRANSPORTE DE ESTRUCTURAS METALICAS
+E909040050                tf. km          TRANSPORTE EN CAMIONES DE ESTRUCTURAS METÁLICAS A
+DISTANCIAS HASTA 50 km.
+E909040200                tf. km          TRANSPORTE EN CAMIONES DE ESTRUCTURAS METÁLICAS A
+DISTANCIAS MAYORES DE 50 Y HASTA 200 km INCLUSIVE.
+SUBCAPITULO E 913 TRANSPORTE DE MEZCLAS ASFALTICAS EN
+CALIENTE
+E913341002             tf. km        TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 1 km Y HASTA 2 km INCLUSIVE.
+E913341003             tf. km        TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 2 km Y HASTA 3 km INCLUSIVE.
+
+## Página 122
+
+COVENIN — MINDUR 2000-92                                                                                                                                                                       127
+CODIGO                  UNIDAD                   DESCRIPCION
+E913341004              tf. km         TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 3 km Y HASTA 4 km INCLUSIVE.
+E913341005              tf. km         TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+:                                                                                  MAYORES DE 4 km Y HASTA 5 km INCLUSIVE.
+E913341006              tf. km         TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+»                                                                               MAYORES DE 5 km Y HASTA 6 km INCLUSIVE.
+E913341007              tf. km         TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 6 km Y HASTA 7 km INCLUSIVE.
+E913341008              tf. km         TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+ss                                  CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 7 km Y HASTA 8 km INCLUSIVE.
+E913341009               tf. km         TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 8 km Y HASTA 9 km INCLUSIVE.
+E913341010              tf. km         TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 9 km Y HASTA 10 km INCLUSIVE.
+E913341015              tf. km         TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 10 km
+E913342002          tf. km      TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 1 km Y HASTA 2 km INCLUSIVE.
+E913342003          tf.km      TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 2 km Y HASTA 3 km INCLUSIVE.
+E913342004          tf. km      TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 3 km Y HASTA 4 km INCLUSIVE.
+E913342005               tf. km         TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 4 km Y HASTA 5 km INCLUSIVE.
+E913342006          tf. km      TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 5 km Y HASTA 6 km INCLUSIVE.
+E913342007          tf .km      TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 6 km Y HASTA 7 km INCLUSIVE.
+E913342008               tf. km         TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 7 km Y HASTA 8 km INCLUSIVE.
+
+## Página 123
+
+1 28                                                                                                                                                                           COVENIN — MINDUR 2000-9
+CODIGO                    UNIDAD                     DESCRIPCION
+E913342009                tf. km          TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 8 km Y HASTA 9 km INCLUSIVE.
+E913342010                tf. km          TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 9 km Y HASTA 10 km INCLUSIVE.
+E913342015                tf. km          TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 10 km
+E913343002                tf. km          TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 1 km Y HASTA 2 km INCLUSIVE.
+E913343003                tf. km          TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 2 km Y HASTA 3 km INCLUSIVE.
+E913343004                tf. km          TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 3 km Y HASTA 4 km INCLUSIVE.
+E913343005                 tf. km           TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 4 km Y HASTA 5 km INCLUSIVE.
+E913343006                tf. km          TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 5 km Y HASTA 6 km INCLUSIVE.
+E913343007                tf. km          TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 6 km Y HASTA 7 km INCLUSIVE.
+E913343008                tf. km          TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 7 km Y HASTA 8 km INCLUSIVE.
+E913343009                tf. km          TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 8 km Y HASTA 9 km INCLUSIVE.
+E913343010                tf. km          TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 9 km Y HASTA 10 km INCLUSIVE.                                                             P
+E.913.343.015              tf. km          TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+CALIENTE PARA LA CONSTRUCCION DE PAVIMENTOS, A DISTANCIAS
+MAYORES DE 10 km.
+
+## Página 124
+
+COVENIN — MINDUR 2000-92                                                                                                                                                                   129
+CODIGO                 UNIDAD                 DESCRIPCION
+SUBCAPITULO E 914 TRANSPORTE DE MEZCLAS ASFALTICAS EN
+FRIO
+a                 E914341002             m*.km        TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 1 km Y HASTA 2
+km INCLUSIVE.
+;                 E914341003             m*.km        TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 2 km Y HASTA 3
+km INCLUSIVE.
+E914341004             m. km        TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+o                                  FRÍO PARA LA CONSTRUCCION DE PAVIMENTO,MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 3 km Y HASTA 4
+km INCLUSIVE.
+E914341005             m*.km        TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 4 km Y HASTA 5
+km INCLUSIVE.
+E914341006             m?. km        TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO PARA LA CONSTRUCCION DE PAVIMENTO,MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 5 km Y HASTA 6
+km INCLUSIVE.
+E914341007              m*.km        TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 6 km Y HASTA 7
+km INCLUSIVE.
+E914341008             m.km        TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 7 km Y HASTA 8
+km INCLUSIVE.
+E914341009             m.km        TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 8 km Y HASTA 9
+km INCLUSIVE.
+E914341010             m.km        TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 9 km Y HASTA 10
+km INCLUSIVE.
+E914341015             m.km        TRANSPORTE NO URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+-                                                                           VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 10 km.
+E914342002             m'. km        TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO, PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 1 km Y HASTA 2
+km INCLUSIVE.
+
+## Página 125
+
+130                                                                                                                                                   COVENIN — MINDUR 2000-9
+CODIGO               UNIDAD               DESCRIPCION
+E914342003        m. km     TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO, PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 2 km Y HASTA 3
+km INCLUSIVE.
+E914342004        mi km     TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO, PARA LA CONSTRUCCION DE PAVIMENTO,MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 3 km Y HASTA 4
+km INCLUSIVE.
+E914342005         m. km     TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO, PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 4 km Y HASTA 5
+km INCLUSIVE.
+E914342006     s      m.km       TRANSPORTE    URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+J                                 FRÍO.PARA LA CONSTRUCCION DE  PAVIMENTO,MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 5 km Y HASTA 6
+km INCLUSIVE
+E914342007        m.km     TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO, PARA LA CONSTRUCCION DE  PAVIMENTO,MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 6 km Y HASTA 7
+km INCLUSIVE
+E914342008         m*.km     TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO, PARA LA CONSTRUCCION DE PAVIMENTI O, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 7 km Y HASTA 8
+km INCLUSIVE.
+E914342009        mé. km     TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO, PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 8 km Y HASTA 9
+km INCLUSIVE.
+E914342010        m.km     TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO, PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 9 km Y HASTA 10
+km INCLUSIVE
+E914342015        mé. km     TRANSPORTE URBANO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO PARA LA CONSTRUCCION DE  PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 10 km.
+E914343002                m*. km          TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO PARA LA CONSTRUCCION DE  PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 1 km Y HASTA 2
+km INCLUSIVE.
+E914343003               mÍ. km         TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO PARA LA CONSTRUCCION DE  PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 2 km Y HASTA 3
+km INCLUSIVE
+E914343004              m.km         TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO PARA LA CONSTRUCCION DE  PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 3 km Y HASTA 4
+km INCLUSIVE.
+
+## Página 126
+
+COVENIN — MINDUR 2000-92                                                                                                                                                 131
+CODIGO                 UNIDAD                 DESCRIPCION
+E914343005              m*.km         TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 4 km Y HASTA 5
+km INCLUSIVE
+>                    E914343007               m*.km         TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 6 km Y HASTA 7
+km INCLUSIVE.
+E914343008               m*.km         TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 7 km Y HASTA 8
+km INCLUSIVE.
+E914343009               m*.km         TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+-                                  FRÍO PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 8 km Y HASTA 9
+km INCLUSIVE.
+E914343010               mi.km         TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 9 km Y HASTA 10
+km INCLUSIVE.
+E914343015               m*.km         TRANSPORTE MONTAÑOSO EN CAMIONES DE MEZCLA ASFÁLTICA EN
+FRÍO PARA LA CONSTRUCCION DE PAVIMENTO, MEDIDO SEGUN
+VOLUMEN COLOCADO, A DISTANCIAS MAYORES DE 10 km.
+
+## Página 127
+
+1 32                                                                                                                                                                                                           COVENIN — MINDUR 2000-9
+CODIGO                                       UNIDAD                                         DESCRIPCION
+
+## Página 128
+
+COVENIN — MINDUR 200-92                                                                                                                                                              133
+GUIA PARA LAS CONSULTAS TECNICAS A LA COMISIÓN DE
+NORMAS DEL MINDUR
+INTRODUCCIÓN
+La Comisión de Normas del Ministerio del Desarrollo Urbano ha acordado que todas las
+interpretaciones oficiales de sus normas se tratarán de la misma manera formal. A tales efectos, todas
+>                          las consultas deberán dirigirse por escrito a la sede de la Comisión.
+
+Las consultas se tramitarán lo más pronto posible, pero debido a la complejidad del trabajo y a
+los procedimientos que han de seguirse, algunas interpretaciones y respuestas pueden consumir un
+tiempo considerable. La Comisión no responderá a las consultas planteadas telefónicamente ni a las
+que omitan las pautas siguientes.
+
+RESPONSABILIDADES DE LA COMISIÓN
+Las actividades de la Comisión en lo que respecta a las interpretaciones oficiales de las normas que
+le competen, están estrictamente limitadas a interpretar los requisitos de sus normas o a considerar
+revisiones de las disposiciones existentes que se fundamenten en nuevos datos o tecnologías. Ni la
+Comisión ni sus miembros están autorizados para ofrecer interpretaciones o servicios de consultoria
+sobre problemas particulares de una obra de ingeniería ni requisitos de las normas que se apliquen a la
+fabricación que no estén comprendidos en las mismas o asuntos no cubiertos especificamente por sus
+normas. En tales casos, el interpelador deberá buscar asistencia de un ingeniero experimentado en el
+campo particular de interés cuestionado.
+PROCEDIMIENTO
+Datos del Destinatario y del Remitente
+Todas las consultas tiene que ser por escrito y dirigirse a la Comisión de Normas del MINDUR, cuya
+dirección es :
+Comisión de Normas
+MINISTERIO DEL DESARROLLO URBANO
+Dirección de Proyectos
+Torre Oeste, Piso 48                                            Tel. 576.43.22, 571.12.22, Ext. 9500 y 9551
+Av. Lecuna, Parque Central,Caracas 1015                  Fax: (02) 571.13.67
+Las consultas contendrán el nombre o nombres de los solicitantes, profesión, el organismo que
+representa, cuando sea pertinente, su dirección, teléfonos, telefaxes, correo electrónico, asi como la
+suficiente información como para que la Comisión pueda entender cabalmente el asunto consultado.
+Para facilitar la organización y agilizar la tramitación es muy importante aislar cada problema, anexando
+toda la documentación pertinente, de forma que cada asunto deberá ser consultado separadamente.
+,                 Cuando el asunto consultado no esté definido claramente, o cuando se presenten cuestionamientos
+mezclados, la consulta será devuelta para ser aclarada.
+A fin de lograr un procesamiento eficiente, todas las consultas serán presentadas en el orden y
+<                          formato que se describe a continuación :
+
+1       Alcance. Cada consulta se enfocará a una sola disposición de la norma, a menos que el asunto
+en cuestión relacione dos o más documentos. En el alcance de la pregunta se comenzará
+identificando la norma venezolana COVENIN - MINDUR, su año de edición y cuál (es) de sus
+Artículos, Secciones, Subsecciones abarca (n) el asunto consultado.
+
+## Página 129
+
+134                                                                                                                                             COVENIN- MINDUR 2000-92
+
+2      Objeto de la Consulta. En el objetivo de la consulta se manifestará claramente si se trata de
+obtener una interpretación de los requisitos normativos o de solicitar la revisión de una
+disposición particular fundamentada en nuevos criterios, datos o tecnologías.
+
+3      Contenido de la Consulta. La consulta debe ser concisa pero completa, a fin de permitir que la
+Comisión comprenda rápida y cabalmente el asunto en cuestión. Cuando sea apropiado, se
+usarán dibujos y croquis, y han de citarse, con sus datos identificadores, todos los párrafos,
+figuras y tablas pertinentes a la consulta. Si el asunto consultado tiene como propósito una
+revisión de la norma, deberá anexarse las justificaciones y documentación técnicas pertinentes.
+
+4     Solución Sugerida. El interpelador, según sea el Objeto de la consulta, deberá redactar una
+proposición de solución sugerida, manifestando su  interpretación de las disposiciones
+pertinentes al asunto cuestionado, o redactar el texto de la revisión propuesta.
+
+INTERPRETACIÓN Y REVISIÓN DE LAS DISPOSICIONES NORMATIVAS
+
+Las interpretaciones oficiales de las disposiciones de las normas venezolanas COVENIN —MINDUR
+las efectuará la Comisión. El Presidente de la Comisión referirá la consulta a los miembros que tengan
+más experiencia sobre el tema. Una vez redactada la contestación será presentada a la Comisión en
+pleno para su revisión y aprobación. Luego de ser sancionada, el texto  pasará a ser una interpretación
+oficial, y la Secretaría de la Comisión enviará la respuesta a los solicitantes, a las dependencias
+oficiales involucradas y a FONDONORMA para su publicación.
+PUBLICACIÓN DE LAS INTERPRETACIONES
+
+Todas estas interpretaciones oficiales deberán ser publicadas en el Boletín de FONDONORMA,
+Fondo para la Normalización y Certificación de la Calidad e incorporadas en la futura edición de la
+norma venezolana correspondiente, así como en el Informe Anual de la Comisión.
+
+## Página 130
+
+PUBLICACIONES DE LA COMISION PERMANENTE DE NORMAS
+PARA ESTRUCTURAS DE EDIFICACIONES DEL MINDUR
+NORMAS COVENIN - MINDUR
+k                         1618-82 Estructuras de Acero para Edificaciones. Proyecto, Fabricación y Construcción. 1980,
+345 págs.
+e                          1618-98 Estructuras de Acero para Edificaciones. Método de los Estados Límites. A publicarse
+en 1999.
+1753-85 Estructuras de Concreto Armado para Edificaciones. Análisis y Diseño. 1985, 425 págs.
+1755-82 Código de Prácticas Normalizadas para la Fabricación y Construcción de Estructuras
+>           de Acero. 1982, 97 págs.
+1756-82 Edificaciones Antisísmicas. 1982, 198 págs.
+1756-98 Edificaciones Sismorresistentes. A publicarse en 1999.
+2000-92 Sector Construcción. Mediciones y Codificación de Partidas para Estudio, Proyectos y
+Construcción. Parte lI-A Edificaciones. 1993, 375 págs.
+Suplemento No. 1, 1999, 101 págs.
+2002-88 Criterios y Acciones Mínimas para el Proyecto de Edificaciones. 1989, 108 págs.
+2003-87 Acciones del Viento sobre las Construcciones. 1988, 158 págs.
+2004-98 Terminología de las Normas de Edificaciones. 1998, 122 págs.
+2733-90 Proyecto, Construcción y Adaptación de Edificaciones de Uso Público Accesibles a
+Personas con Impedimentos Físicos. 1991, 44 págs.
+3400-98 Impermeabilización en Edificaciones. 1998.
+MANUALES
+* Epelboim, Salomón; Arnal, Henrique. Manual para el Proyecto de Estructuras de Concreto
+Armado para Edificaciones. 2* Edición . 1996. 950 págs.
+* Marín, Joaquín; Guell, Antonio. Manual para el Cálculo de Columnas de Concreto Armado. 2?.
+Impresión revisada, 1991, 222 págs.
+Distribución y Venta:
+Ministerio de Fomento
+-                         COMISION VENEZOLANA DE NORMAS INDUSTRIALES
+Torre Fondocomún, Piso 12
+Av. Andrés Bello, Caracas Tels. (02) 575.44.98, 575.41.11
+Librería Técnica Vega.
+Plaza de las Tres Gracias, Los Chaguaramos. Caracas
+Tels. (02) 662.13.97, 662.18.71, 662.28.48; Fax (582) 662.20.92
+
+## Página 131
+
+COVENIN
+
+CATEGORIA
+2000-2:1999                                                                                  H
+(Provisional)
+
+— a A A A E
+A O ES A O O ON O
+FONDONORMA
+Av. Andrés Bello Edif. Torre Fondo Común Pisos 11 y 12
+Telf. 575. 41. 11 Fax: 574. 13. 12
+CARACAS
+
+o          er                S
+publicación de: roxvoxora       j
+LC.S:  91.040.01                          RESERVADOS TODOS LOS DERECHOS
+E         q.                               Prohibida la reproducción total o parcial, por cualquier medio.
+ISBN: —980-06-2297-7
+A IS E RADA AS
+Descriptores: Edificios, medición, presupuesto, construcción, proyecto de construcción.

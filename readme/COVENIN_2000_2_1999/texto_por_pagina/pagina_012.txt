@@ -1,0 +1,53 @@
+ES                                                                                                                                                                          COVENIN — MINDUR 2000-92
+
+A conveniencia del Organismo contratante, cuando una edificación consta de varios módulos, los
+cómputos métricos podrán presentarse separadamente o en conjunto.
+
+2.4 CRITERIOS DE CODIFICACIÓN DE PARTIDAS
+
+Todas las Partidas de un presupuesto estarán completamente definidas por su código, descripción
+completa y la unidad de medida conforme a la presente Norma. Cualquier omisión o modificación de                  >
+alguno de los aspectos antes mencionados, invalida dicha Partida para efectos de esta Norma.
+
+En esta Norma figuran las Partidas más usuales, pero mediante la agrupación lógica de las
+diferentes variables y siguiendo los lineamientos básicos de los esquemas generales de elaboración de
+Partidas que figuran al final de cada Capítulo, se pueden crear los nuevo códigos, descripción y unidad
+de medición de las Partidas que sean necesarias siempre y cuando estén definidas detalladamente en
+las especificaciones particulares de la obra. No obstante estas nuevas Partidas no tendrán vigencia
+hasta tanto el Organismo contratante las apruebe.
+
+Como las Partidas están intrinsecamente vinculadas a un Banco de Datos Referenciales, a los fines
+de esta Norma no es permitido:
+
+- El uso del concepto de suma global (S.G.) como unidad de medida.
+
+- — Laequivalencia de Partidas.
+
+- El fraccionamiento de Partidas.
+
+-  Lacombinación de Partidas o de sus fracciones para formar nuevas Partidas.
+
+En el caso de rescisión de contrato o de reinicio de obras paralizadas durante tiempo prolongado
+por fuerza mayor, y de acuerdo con los resultados de la auditoría técnica podrán aparecer Partidas no
+contempladas en esta Norma, las cuales serán objeto de un estudio especial respaldado con una
+Memoria Descriptiva bien detallada.
+
+2.5 CRITERIOS GENERALES DE DESCRIPCIÓN DE PARTIDAS
+
+En la redacción de la descripción de las Partidas correspondientes a esta Norma se establecen los
+siguientes criterios generales:
+
+En la descripción de las Partidas en general, no debe aparecer ningún tipo de modelo, ni marca de
+fabricación, sino las características especificas de las mismas. No obstante en los análisis de precios de
+aquellas Partidas, que así lo requieran, sí se señalarán los modelos o marcas reconocidas y
+
+aprobadas que realmente se usarán en la obra, de acuerdo con las especificaciones y en cumplimiento
+con lo establecido en las condiciones generales de contratación.
+La Inspección será responsable de que se coloque en la obra el modelo o marca aprobado en los
+análisis de precios unitarios.
+
+En las Partidas de construcción de paredes, revestimientos y piezas sanitarias, se incluyen el
+suministro, transporte y colocación en la obra; por consiguiente estos términos no se incluirán en la
+u eripción de dichas Partidas. No obstante en aquellas Partidas, donde solo se consideren algunos de
+us Conceptos, los mismos se mencionarán en su descripción, tales cómo las Partidas de válvulas y
+plezas especiales donde solo se incluye el suministro y transporte hasta el sitio de la obra.

@@ -1,0 +1,44 @@
+COVENIN — MINDUR 2000-92                                                                                                                                                                67
+
+SUBCAPÍTULO E42 IMPERMEABILIZACIÓN
+
+Definición
+
+La impermeabilización comprende el conjunto de operaciones de protección de la edificación o de
+»                   cualquiera de sus partes contra las filtraciones u otros deterioros debidos a la humedad, conforme se
+establece en la Norma venezolana COVENIN — MINDUR 3400-98  "Impermeabilización de
+
+Edificaciones”.
+
+;                    Alcance
+En el precio unitario de las Partidas se incluyen los materiales, maquinarias y herramientas, y la mano
+de obra necesarias para la total y completa ejecución de las mismas conforme a los documentos del
+contrato, según la siguiente codificación y descripción que se detalla al final del Capítulo E4:
+j      a) Para los procedimientos incluidos en los Capítulos 5 y 7 de la Norma venezolana COVENIN-
+MINDUR 3400-98:
+Capítulo (E4 o R4), Subcapítulo (un dígito), Ubicación ( dos digitos), Tipo (un dígito), Modo
+(dos dígitos) y Actividades Complementarias (dos digitos).
+b) Para los procedimientos de juntas incluidos en los Capítulos 6 y 7, de la mencionada Norma
+Capítulo (E4 o R4) , Subcapítulo ( un dígito) , Función ( un dígito), Posición  (un digito),
+Modo(dos digitos) y Actividades Complementarias (dos digitos).
+
+En todos los casos se escogerá la Actividad Complementaria más representativa para la Partida.
+
+En el campo correspondiente al Capítulo. se reserva la letra E  para las Partidas de
+impermeabilización de obras nuevas y la letra R para las Partidas de   reimpermeabilización.
+Análogamente se procederá con las Partidas de impermeabilización o reimpermeabilización de juntas.
+
+La ejecución de las pendientes y los raseos en las losas o placas previas a la colocación de la
+impermeabilización está contemplada en las Partidas E416 y E417, respectivamente.
+
+Medición
+La unidad de medida será el metro cuadrado (m?)  para la impermeabilización o reimpermeabilización
+especificada, excepto en las juntas, cuya unidad de medida es el metro (m).
+
+Se computarán las áreas netas en su verdadero tamaño descontando las áreas debidas a vacios o
+huecos. Se computarán las longitudes de las juntas rellenadas y de cubrejuntas colocadas de acuerdo
+con los planos y especificaciones del proyecto.
+
+:               En el precio unitario de las Partidas se contemplan las protecciones metálicas o de materiales
+apropiados alrededor de los tubos o uniones de paredes, las chapas de guarnición y en general todos
+los detalles y accesorios necesarios para la buena ejecución de los trabajos.

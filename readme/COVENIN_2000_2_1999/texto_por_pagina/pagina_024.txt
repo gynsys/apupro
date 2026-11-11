@@ -1,0 +1,55 @@
+20                                                                                COVENIN - MINDUR 2000 - 92
+SUBCAPITULO E13 DEMOLICIONES
+Definición
+
+Demolición: Fragmentación de una edificación, o. parte de ella, en tamaños tales que puedan ser
+transportados al sitio de disposición final
+Alcance
+
+Comprende la demolición de aquellas construcciones o elementos aislados que obstaculicen la
+nueva construcción tales como fundaciones, columnas, techos, muros de sostenimiento, paredes,
+pavimentos, estanques, etc., y la movilización interna dentro del terreno ó área de la obra de los es-
+combros hasta el lugar definitivo de carga para bote, el cual será  asignado por el Profesional
+Responsable de la obra por la parte contratante. El precio unitario no incluye la carga ni el transporte de
+los escombros, que se computarán según los Grupos de Partidas E134 y E903, respectivamente.
+
+En el caso de miembros o elementos constructivos no visibles hasta el momento de excavar, el
+Contratista tendrá el derecho de solicitar la modificación de las cantidades de obras contratada a que
+diere lugar, siempre y cuando esta solicitud esté debidamente documentada  y conformada por el
+Profesional Responsable de la obra por la parte contratante.
+
+Este Subcapitulo comprende el siguiente grupo de Partidas:
+
+E131...  DEMOLICIONES DE CONSTRUCCIONES.
+
+E132...  DEMOLICIONES DE ELEMENTOS AISLADOS.
+
+E133..  DEMOLICIONES DE PAVIMENTOS Y SIMILARES.
+
+E134.. CARGA DE MATERIAL PROCEDENTE DE LA DEMOLICIÓN.
+
+Medición
+
+Para las demoliciones de construcciones la unidad de medida será el metro cuadrado (m2) de
+construcción a demoler, correspondiente al área total obtenida de la suma de las áreas en verdadero
+tamaño de cada uno de los pisos o techos. En el caso de demoliciones de casas de una planta y
+ranchos, en el alcance de dichas partidas se incluye la demolición de la infraestructura. En las
+demoliciones de edificaciones de más de una planta se establece la separación de Demolición de
+Infraestructura y Demolición de Superestructura, manteniendo el mismo criterio de medición y de
+
+acuerdo a lo señalado en los planos del nuevo proyecto ó en su defecto a criterio del Profesional
+Responsable por la parte contratante.
+
+La demolición de las obras de arte, pavimentos, brocales y aceras se medirá en metros cúbicos
+(m3) según la cubicación del elemento a demolerse.
+
+Para los elementos o miembros aislados la unidad de medición será la indicada en la codificación y
+descripción de la Partida . En los casos no contemplados , la unidad de medida corresponderá a la de su
+construcción (pieza, metro (m), metro cuadrado (m2), metro cúbico (m3), kilogramo fuerza (kgf)). Se
+considerarán las partidas de demolición de elementos aislados de concreto o mampostería de acuerdo a
+su posición (verticales, horizontales o inclinados)
+
+En las Partidas E134 Cargas de material procedente de la demolición, la unidad de medida será el
+metro cúbico (m ). En las Partidas E134 y E903 se usará el metro cúbico (m ) para medir el volumen de
+escombros en estado suelto, incluyendo vacíos, sobre  camiones, tanto para la carga como para el
+transporte.

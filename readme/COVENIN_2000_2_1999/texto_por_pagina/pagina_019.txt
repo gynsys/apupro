@@ -1,0 +1,65 @@
+COVENIN - MINDUR 2000 - 92                                                                                                                                      1 5
+TITULO 3 PARTIDAS DE OBRAS
+CAPITULO E1 OBRAS PRELIMINARES
+
+d                   Definición
+
+En esta Norma se entiende por obras preliminares el conjunto de trabajos y obras que deben
+ejecutarse antes de la construcción de una edificación, para proteger el terreno y las construcciones
+colindantes, así como para facilitar y permitir la iniciación y desarrollo de las construcciones.
+
+-                          En el caso de construcción de edificaciones sobre una ya existente, las obras preliminares incluyen
+los trabajos de acondicionamiento de la edificación existente tales como demolición y limpieza.
+Alcance
+
+Este Capítulo está constituido por las siguientes Subcapítulos, cuyo esquema de codificación y la
+
+descripción de sus Partidas se suministran al final del Capítulo:
+¿El     INSTALACIONES PROVISIONALES.
+
+Ef...        LIMPIEZA DEL TERRENO.
+
+ES.     DEMOLICIONES.
+
+El4...     REMOCIONES.
+
+SUBCAPITULO E11 INSTALACIONES PROVISIONALES
+
+Este Subcapítulo comprende el siguiente grupo de Partidas:
+
+E111.. CONSTRUCCIONES CONVENCIONALES.
+
+E112... CONSTRUCCIONES PREFABRICADAS.
+
+E113... CERCAS Y PORTONES.
+
+Alcance
+
+Comprende todas las construcciones provisionales que se requieran para la ejecución de la obra,
+tales como oficinas, incluyendo las de la Inspección, depósitos de materiales, vestuarios, casetas,
+comedores, dormitorios, sanitarios, instalaciones de luz y fuerza eléctrica, instalaciones sanitarias,
+obras de drenaje y la construcción necesaria para el montaje y desmontaje de equipos a utilizarse en la
+construcción. Se incluirá además las aducciones, acometidas y descargas necesarias que prestan
+servicios únicamente para las obras provisionales dentro del área de la construcción, las cuales se
+considerarán como partidas separadas..
+
+Las construcciones prefabricadas desmontables y las móviles o rodantes ("trailers") son por cuenta
+del Contratista por lo que su retiro y/o desmontaje del sitio de la obra está incluido en el monto de estas
+Partidas. Las construcciones convencionales y las prefabricadas no desmontables son propiedad del
+Contratante, incluyendo todo artefacto empotrado a excepción del aire acondicionado, cocina y nevera
+por los cuales se pagará por su uso cuando sea debidamente aprobado por el Organismo contratante
+En caso de ser necesario, el Contratante pagará su demolición, carga y transporte por las Partidas
+correspondientes a estas actividades. Las construcciones e instalaciones objeto de estas Partidas
+cumplirán las requisitos y disposiciones legales de higiene y seguridad industrial y de seguridad
+estructural previstas en las Normas COVENIN - MINDUR, en las Normas del Ministerio de Sanidad y
+Asistencia Social, la Ley del Trabajo y el Contrato Colectivo de Trabajo vigentes.
+
+P                       A título informativo al final del Capítulo E1 se incluye la Tabla A1 con las áreas de construcciones
+provisionales para edificaciones convencionales.
+Medición
+
+La unidad de medida será conforme con las caracteristicas de las Partidas, por ejemplo el metro
+(m), el metro cuadrado (m ) y el metro cuadrado por día (m /día) para las construcciones prefabricadas
+rodantes (trailers) y prefabricadas desmontables.
+
+Se computará el área de construcción por planta en verdadero tamaño.

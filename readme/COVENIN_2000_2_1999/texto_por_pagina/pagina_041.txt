@@ -1,0 +1,53 @@
+42                                                                                                                                                                                COVENIN - MINDUR 2000-92
+2a. En los perfiles se calculará el peso de la pieza tomando como peso unitario del acero 7850
+kgflm?.
+2b. En las planchas lisas se calculará el peso tomando como peso unitario del acero 8000 kgf/m?.
+En las planchas lagrimadas se usará como peso unitario del acero 8270 kgfm?. En las
+planchas laminadas en frio se calculará el peso considerando un peso unitario del acero de
+8050 kgf/m?.
+Las planchas codificadas en las Partidas E36112 corresponden a piezas individuales, tales
+como cartelas, huellas para escaleras, y otros usos similares, y por consiguiente no deben
+computarse bajo este código las planchas que se utilizan para fabricar perfiles soldados.
+2c. En productos de acero galvanizado, se calculará el peso basándose en el peso correspondiente
+al acero, calculado con un peso unitario de 7850 kgfm', sumándole el peso de la capa de zinc.
+En el caso de las láminas galvanizadas para techos y sofitos se usará como peso unitario del
+acero 8050 kgf/m? y para el recubrimiento de zinc lo estipulado en la Norma venezolana
+COVENIN 941-76 "Planchas delgadas de acero al carbono por inmersión en caliente.
+Condiciones y requisitos generales ".
+3. Para efectos de la medición de las Partidas E36X3 Limpieza y Preparación de superficies y
+Sistemas de Protección, se considerará el kgf de estructura metálica tratada y/o pintada.
+La descripción de las Partidas de Limpieza y Preparación de Superficies se basa en las definiciones
+y notación del Consejo de la Pintura de Estructuras de Acero (Steel Structures Painting Council,
+SSPC) y para las cuales existen equivalencias con otras clasificaciones internacionales.
+Las Partidas de Limpieza y Preparación de Superficies y las de Sistema de Protección deben ser
+mutuamente compatibles en las diversas etapas constructivas. Ambos grupos de Partidas están
+orientadas a su ejecución en taller, tal como se considera en el Capítulo 34 de la Norma venezolana
+COVENIN - MINDUR 1618-98 "Estructuras de Acero para Edificaciones. Método de los
+Estados Límites" y en las Secciones 6.5 y 8.4 de la Norma COVENIN - MINDUR 1755-82
+"Código de Prácticas Normalizadas para la Fabricación y Construcción de Estructuras de
+Acero." En el alcance de las Partidas de Fabricación se incluye una capa de pintura de protección
+anticorrosiva y de igual manera en las Partidas de Montaje se incluye los retoques con pintura de
+protección anticorrosiva en las áreas que asi lo requieran, tal como está contemplado en el Artículo
+23.5 de la COVENIN - MINDUR 1618-98 y los Artículo 7.15 y 7.16 de la COVENIN - MINDUR 1755.
+
+4. Las losas de tabelones se contemplan en las Partidas E333 Losas, placas y pérgolas. Los sistemas
+de piso a base de losas mixtas acero - concreto, vaciadas sobre sofito metálico (steel deck o
+encofrado colaborante) o elementos prefabricados, se computarán considerando los elementos
+metálicos según el presente Subcapitulo, y la losa de concreto como losa maciza según el
+Subcapítulo E33, y el acero de retracción y temperatura y/o de refuerzo según el Subcapitulo E352.
+
+5. Los pilotes y tablestacas metálicas se consideran en el Subcapítulo E32.
+
+6. Las Partidas E36X5 Montaje incluyen el servicio y costo de personal, equipo de izamiento, y equipo
+de transporte para la movilización de los equipos de izamiento, así como la movilización y
+desmovilización de los equipos de montaje en el sitio de la obra. En el montaje de los sistemas de
+piso con sofito metálico (steel deck o encofrado colaborante), en las Partidas se considerarán
+incluidas las arandelas que se sueldan en los empalmes y solapes de las láminas metálicas.
+
+En las Partidas de Montaje se considera que el área de trabajo está en condiciones que permitan la
+operatividad de grúas autopropulsadas y otras maquinarias necesarias para el montaje. La custodia
+del material y los equipos en obra serán por cuenta del Contratista.
+
+7. La actividad de transporte desde el suplidor hasta el taller de fabricación, y la de transporte desde el
+taller de fabricación hasta la obra, se medirán, ambas, como Partidas separadas según el
+Subcapitulo E909 de Transportes.

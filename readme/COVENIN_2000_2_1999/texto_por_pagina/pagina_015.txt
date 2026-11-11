@@ -1,0 +1,31 @@
+COVENIN- MINDUR 2000-92                                                                                                                                                                                          9
+2.9 CRITERIOS DE APROXIMACIÓN EN LOS CÓMPUTOS MÉTRICOS
+En general, para efectos de la cuantificación de las cantidades de obras e insumos, se utilizarán
+dos cifras decimales redondeadas. En estructuras metálicas las dimensiones en los planos se precisan
+al milimetro por razones de fabricación en taller y se utilizarán para efectos de los cálculos intermedios
+requeridos en la elaboración de los cómputos a fin de no propagar errores de redondeo.
+2.10 MEDICIONES DE ÁREAS
+-                 Las mediciones se harán según las áreas en desarrollo, es decir, verdadero tamaño y no en
+proyección horizontal.
+2.11 INTERSECCIONES
+“ En general, todo elemento o miembro que se intercepte, sean nodos, paredes, etc., se tomará en
+cuenta una sola vez.
+2.12 VACIOS Y ÁREAS DESCONTABLES
+En general, sea en losas, paredes, cielorrasos, revestimientos, etc., se calculará el área neta
+descontando los vacíos y áreas descontables, cualquiera sea su tamaño, como por ejemplo las áreas
+ocupadas por columnas, muros, ventanas, luminarias, etc. En el caso de los revestimientos, los áreas
+de remates se incluirán en las Partidas correspondientes, y su incidencia se tomará en cuenta en los
+rendimientos de dichas Partidas.
+2.13 MEDICIÓN DE LA ACTIVIDAD DE TRANSPORTE
+El Capítulo E9 engloba todas las Partidas de transporte de materiales y maquinarias, así como el
+bote de materiales desechables correspondientes a los  Capitulos E1 Obras Preliminares, E2
+Movimiento de Tierra y Urbanismo, E3 Estructuras, E4 Obras Arquitectónicas y E8 Obras de servicio y
+Varios, no obstante se establecen los siguientes criterios de medición:
+2.13.1 Partidas de transporte en camiones
+,                    La medición del transporte en camiones de materiales o maquinarias se hará una sola vez, de
+origen a destino dentro de la clasificación correspondiente. A efectos de la medición de las distancias
+las Partidas de Transporte son excluyentes.
+En cuanto a transporte de maquinarias se establece los siguientes criterios de medición:
+1) Cuando el Contratista no disponga en la localidad la maquinaria a utilizarse en la obra, la
+distancia de transporte deberá ser debidamente razonada y justificada ante el Profesional
+responsable por la parte contratante para su conformidad antes del inicio de los trabajos.

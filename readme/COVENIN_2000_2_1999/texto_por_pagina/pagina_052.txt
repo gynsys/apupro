@@ -1,0 +1,40 @@
+COVENIN-MINDUR 2000-97                                                                                                                                                                  93
+PARTIDA             UNIDAD                    DESCRIPCION
+E333320135       m? LOSA MACIZA, e = 20 cm CON CONCRETO Fc 350 kgíf/ cm? A LOS 28 DIAS.
+ACABADO CORRIENTE.
+E333320140       m? LOSA MACIZA, e = 20 cm CON CONCRETO Fc 400 kgf/ cm? A LOS 28 DIAS,
+»                                                                      ACABADO CORRIENTE
+E333320220       m? LOSA MACIZA, e = 20 cm CON CONCRETO Fc 200 kgf/ cm? A LOS 28 DIAS.
+ACABADO OBRA LIMPIA.
+;                 E333320225       m? LOSA MACIZA, e = 20 cm CON CONCRETO Fc 250 kgf/ cm” A LOS 28 DIAS.
+ACABADO OBRA LIMPIA.
+E333320230       m? LOSA MACIZA, e = 20 cm CON CONCRETO Fc 300 kgf/ cm” A LOS 28 DIAS.
+ACABADO OBRA LIMPIA.
+E333320235       m? LOSA MACIZA, e = 20 cm CON CONCRETO Fc 350 kgf/ cm” A LOS 28 DIAS.
+ACABADO OBRA LIMPIA.
+E333320240       m? LOSA MACIZA, e = 20 cm CON CONCRETO Fc 400 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333425220         m? LOSA RETICULAR, e = 25 cm CON CONCRETO Fc 200 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333425225         mí LOSA RETICULAR, e = 25 cm CON CONCRETO Fc 250 kgf/ cm? A LOS 28 DIAS.
+ACABADO OBRA LIMPIA.
+E333425230         m? LOSA RETICULAR, e = 25 cm CON CONCRETO Fc 300 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333425235          m? LOSA RETICULAR, e = 25 cm CON CONCRETO Fc 350 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.                                                                   4
+E333425240          m? LOSA RETICULAR, e = 25 cm CON CONCRETO Fc 400 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333430220         m? LOSA RETICULAR, e = 30 cm CON CONCRETO Fc 200 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333430225         m? LOSA RETICULAR, e = 30 cm CON CONCRETO Fc 250 kgf/ cm? A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333430230         m” LOSA RETICULAR, e = 30 cm CON CONCRETO Fc 300 kgf/ cm” A LOS 28 DIAS.
+ACABADO OBRA LIMPIA.
+E333430235         m” LOSA RETICULAR, e = 30 cm CON CONCRETO Fc 350 kgf/ cm? A LOS 28 DIAS.
+,                                                                       ACABADO OBRA LIMPIA.
+E333430240         m” LOSA RETICULAR, e = 30 cm CON CONCRETO Fc 400 kgf/ cm” A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.
+E333435220         m” LOSA RETICULAR, e = 35 cm CON CONCRETO Fc 200 kgf/ cm” A LOS 28 DIAS.
+ACABADO OBRA LIMPIA.
+E333435225         m” LOSA RETICULAR, e = 35 cm CON CONCRETO Fc 250 kgf/ cm” A LOS 28 DIAS,
+ACABADO OBRA LIMPIA.

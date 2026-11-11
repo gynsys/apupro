@@ -1,0 +1,50 @@
+8                                                                                                                                                                                    COVENIN — MINDUR 2000-92
+
+Las Partidas de Instalaciones Sanitarias, Eléctricas y Electromecánicas, se medirán una vez
+ejecutadas y probadas, cuando asi se requiera, se exceptúan los materiales o equipos que por conve-
+niencia del Organismo contratante se anticipe su adquisición por parte del contratista, no previéndose
+su instalación inmediata.
+
+En general las Partidas de suministro y transporte de materiales cuya instalación se incluye en el
+alcance de otras Partidas, su medición en obra para efectos de pago solo se reconocerá una vez
+completada su instalación. Este criterio aplica a las Partidas de válvulas, grifos, llaves de paso, etc., de
+Instalaciones Sanitarias. Las conexiones flexibles o universales se consideran como una conexión más.
+
+En la contratación de ventanas se utilizarán las Partidas de ventanas con vidrios. En casos
+eventuales y excepcionales, previa explicación detallada en la Memoria Descriptiva, se utilizarán las
+Partidas de ventanas sin vidrios y las Partidas de Vidrio por separado.
+
+Las estructuras de mampostería se desglosarán en las Partidas existentes hasta tanto se elaboren
+las correspondientes normas de proyecto y construcción.
+
+Como criterio general, la nivelación y el replanteo necesarios están incluidos en el alcance de las
+Partidas que asi lo requieran. Igualmente se considera que el Contratista  entregará su trabajo
+rematado, libre de escombros y completamente limpio. El bote de sus desperdicios está incluido dentro
+del alcance de la Partida correspondiente.
+
+En general, toda labor o material involucrado en la ejecución de una Partida y cuya medición no se
+considera especificamente, se incluyen en el análisis de precios unitarios.
+
+La construcción de vallas publicitarias no se reconocerá como Partida  separada por cuanto
+corresponde a los gastos generales de la empresa contratista, tal como está contemplado en las
+“Condiciones Generales de Contratación".
+
+Los casos particulares no contemplados en esta Norma se realizarán de común acuerdo entre las
+partes.
+
+2.8 NOTACIÓN Y UNIDADES
+
+Cuando se requiera en los documentos del Contrato y en los planos y especificaciones, la notación
+y unidades serán las de las Normas venezolanas COVENIN - MINDUR vigentes o, en su defecto,
+deberán estar precisamente definidas en los mismos. Cuando se necesiten otras unidades deberán
+
+encerrarse entre paréntesis y estar acompañadas por sus equivalencias métricas. Para separar las
+cifras decimales se preferirá el punto a la coma, pero cualquiera que sea el sistema que se adopte
+deberá mantenerse la consistencia en los Cómputos Métricos.
+
+En 1976 la Comisión Permanente de Normas para Estructuras de Edificaciones del Ministerio del
+Desarrollo Urbano decidió mantener el sistema MKS, Metro (m) - Kilogramo fuerza (kgf) - Segundo (s),y
+no adoptar el sistema internacional de unidades Sl, Metro (m) - Kilogramo masa (Kgm) - Segundo (s),
+donde la unidad de fuerza es el Newton (N). También resolvió mantener el punto en lugar de la coma
+para separar las cifras decimales, tomando en cuenta, entre otras cosas, el uso diario de las
+computadoras y calculadoras por parte de nuestros profesionales y técnicos.

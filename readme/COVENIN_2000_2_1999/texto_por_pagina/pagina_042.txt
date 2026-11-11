@@ -1,0 +1,24 @@
+COVENIN — MINDUR 2000-92                                                                                                                                                               43
+La entrega, manejo y almacenamiento de los materiales y estructuras se regirá por la Norma
+venezolana COVENIN - MINDUR 1755 vigente.
+
+Correcciones en otras partes de la Norma COVENIN — MINDUR 2000- 92:
+
+* pág. 25: Añadir en la última linea de Documentos a entregar de la Partida E01502:
+
+j                      En el caso de estructuras metálicas, deben incluirse los planos de fabricación y montaje. Los planos de
+fabricación deben ser aprobados por el Ingeniero estructural responsable del proyecto, conforme lo
+establece la Norma venezolana COVENIN - MINDUR 1755 vigente  "Código de Prácticas
+Normalizadas para la Fabricación y Construcción de Estructuras de Acero."
+
+* pág.48: En el Alcance, en el segundo párrafo que se refiere a estructuras metálicas, se deberá leer:
+
+cOn pintura anticorrosiva u otro tipo de revestimiento, estas se computarán por Partidas separadas
+
+según el Subcapítulo E46 Acabados con Pinturas. La carga y el transporte se contemplan en las
+
+Partidas E142 y E903, respectivamente.
+
+* pág. 84: En la última línea de la Partidas E333 deberá leerse:
+
+fuerza (kgf) según el Subcapítulo E36.

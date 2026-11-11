@@ -1,0 +1,41 @@
+COVENIN - MINDUR 2000 - 92                                                                                                                                                            1 07
+CAPÍTULO E9 TRANSPORTES
+Alcance
+Este Capitulo comprende los transportes de materiales y maquinarias, así como el bote de
+:               materiales desechables, correspondiente a los Capitulos E1 Obras Preliminares, E2 Movimiento de
+Tierra y Urbanismo, E3 Estructuras, E4 Obras Arquitectónicas y E8 Obras de Servicio y Varios.
+
+Como se indica en el esquema de codificación, se han considerado los aspectos de posición del
+material a transportar, el medio de transporte, la condición de recorrido y la distancia, para definir el
+alcance de cada Partida.
+
+Los grupos de Partidas cuyo esquema de codificación y la descripción de sus Partidas se
+suministran al final del Capítulo, son las siguientes:
+
+" E900...      TRANSPORTE DE MAQUINARIA LIVIANA CON PESO HASTA 10 tf
+
+E901...      TRANSPORTE DE MAQUINARIA PESADA CON PESO DE 10 A 30 tf
+
+E902...      TRANSPORTE DE MAQUINARIA PESADA CON PESO MAYOR DE 30 tf
+
+E903...      TRANSPORTE DE TIERRA, AGREGADOS Y ESCOMBROS
+
+E905...       TRANSPORTE DE CEMENTOS
+
+E906...      TRANSPORTE DE BLOQUES DE ARCILLA
+
+E907...      TRANSPORTE DE BLOQUES DE CONCRETO
+
+E908...      TRANSPORTE DE LADRILLOS Y OTROS ELEMENTOS MACIZOS DE ARCILLA
+
+E909...      TRANSPORTE DE ESTRUCTURAS METÁLICAS
+
+E910...      TRANSPORTE DE ESTRUCTURAS DE MADERA
+
+E911...      TRANSPORTE DE LOS ELEMENTOS PARA LA CONSTRUCCIÓN DE MUROS
+
+DE SUELO ARMADO
+E913...      TRANSPORTE DE MEZCLAS ASFÁLTICAS EN CALIENTE
+E914... TRANSPORTE DE MEZCLAS ASFÁLTICAS EN FRÍO
+E915...      TRANSPORTE DE ELEMENTOS PREFABRICADOS DE CONCRETO ARMADO,
+,                                                TABLESTACAS, PERFILES Y TUBOS METÁLICOS

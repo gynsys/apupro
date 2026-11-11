@@ -1,0 +1,798 @@
+{
+  "source": "C:\\Users\\pablo\\Downloads\\2000-2-1999-codficacion-y-mediciones-edificaciones.pdf",
+  "pages": 131,
+  "dpi": 250,
+  "language": "spa",
+  "psm": 6,
+  "started_at": "2026-11-10 22:58:00",
+  "pages_processed": [
+    {
+      "page": 1,
+      "chars": 362,
+      "status": "ok",
+      "file": "pagina_001.txt"
+    },
+    {
+      "page": 2,
+      "chars": 3066,
+      "status": "ok",
+      "file": "pagina_002.txt"
+    },
+    {
+      "page": 3,
+      "chars": 1046,
+      "status": "ok",
+      "file": "pagina_003.txt"
+    },
+    {
+      "page": 4,
+      "chars": 1283,
+      "status": "ok",
+      "file": "pagina_004.txt"
+    },
+    {
+      "page": 5,
+      "chars": 3607,
+      "status": "ok",
+      "file": "pagina_005.txt"
+    },
+    {
+      "page": 6,
+      "chars": 4459,
+      "status": "ok",
+      "file": "pagina_006.txt"
+    },
+    {
+      "page": 7,
+      "chars": 4720,
+      "status": "ok",
+      "file": "pagina_007.txt"
+    },
+    {
+      "page": 8,
+      "chars": 22,
+      "status": "ok",
+      "file": "pagina_008.txt"
+    },
+    {
+      "page": 9,
+      "chars": 3348,
+      "status": "ok",
+      "file": "pagina_009.txt"
+    },
+    {
+      "page": 10,
+      "chars": 2498,
+      "status": "ok",
+      "file": "pagina_010.txt"
+    },
+    {
+      "page": 11,
+      "chars": 4004,
+      "status": "ok",
+      "file": "pagina_011.txt"
+    },
+    {
+      "page": 12,
+      "chars": 3190,
+      "status": "ok",
+      "file": "pagina_012.txt"
+    },
+    {
+      "page": 13,
+      "chars": 4349,
+      "status": "ok",
+      "file": "pagina_013.txt"
+    },
+    {
+      "page": 14,
+      "chars": 3336,
+      "status": "ok",
+      "file": "pagina_014.txt"
+    },
+    {
+      "page": 15,
+      "chars": 2486,
+      "status": "ok",
+      "file": "pagina_015.txt"
+    },
+    {
+      "page": 16,
+      "chars": 2957,
+      "status": "ok",
+      "file": "pagina_016.txt"
+    },
+    {
+      "page": 17,
+      "chars": 2231,
+      "status": "ok",
+      "file": "pagina_017.txt"
+    },
+    {
+      "page": 18,
+      "chars": 30,
+      "status": "ok",
+      "file": "pagina_018.txt"
+    },
+    {
+      "page": 19,
+      "chars": 3403,
+      "status": "ok",
+      "file": "pagina_019.txt"
+    },
+    {
+      "page": 20,
+      "chars": 676,
+      "status": "ok",
+      "file": "pagina_020.txt"
+    },
+    {
+      "page": 21,
+      "chars": 1130,
+      "status": "ok",
+      "file": "pagina_021.txt"
+    },
+    {
+      "page": 22,
+      "chars": 2127,
+      "status": "ok",
+      "file": "pagina_022.txt"
+    },
+    {
+      "page": 23,
+      "chars": 958,
+      "status": "ok",
+      "file": "pagina_023.txt"
+    },
+    {
+      "page": 24,
+      "chars": 3121,
+      "status": "ok",
+      "file": "pagina_024.txt"
+    },
+    {
+      "page": 25,
+      "chars": 2090,
+      "status": "ok",
+      "file": "pagina_025.txt"
+    },
+    {
+      "page": 26,
+      "chars": 683,
+      "status": "ok",
+      "file": "pagina_026.txt"
+    },
+    {
+      "page": 27,
+      "chars": 1319,
+      "status": "ok",
+      "file": "pagina_027.txt"
+    },
+    {
+      "page": 28,
+      "chars": 734,
+      "status": "ok",
+      "file": "pagina_028.txt"
+    },
+    {
+      "page": 29,
+      "chars": 990,
+      "status": "ok",
+      "file": "pagina_029.txt"
+    },
+    {
+      "page": 30,
+      "chars": 725,
+      "status": "ok",
+      "file": "pagina_030.txt"
+    },
+    {
+      "page": 31,
+      "chars": 706,
+      "status": "ok",
+      "file": "pagina_031.txt"
+    },
+    {
+      "page": 32,
+      "chars": 2425,
+      "status": "ok",
+      "file": "pagina_032.txt"
+    },
+    {
+      "page": 33,
+      "chars": 2694,
+      "status": "ok",
+      "file": "pagina_033.txt"
+    },
+    {
+      "page": 34,
+      "chars": 2363,
+      "status": "ok",
+      "file": "pagina_034.txt"
+    },
+    {
+      "page": 35,
+      "chars": 2463,
+      "status": "ok",
+      "file": "pagina_035.txt"
+    },
+    {
+      "page": 36,
+      "chars": 2496,
+      "status": "ok",
+      "file": "pagina_036.txt"
+    },
+    {
+      "page": 37,
+      "chars": 23,
+      "status": "ok",
+      "file": "pagina_037.txt"
+    },
+    {
+      "page": 38,
+      "chars": 1195,
+      "status": "ok",
+      "file": "pagina_038.txt"
+    },
+    {
+      "page": 39,
+      "chars": 1183,
+      "status": "ok",
+      "file": "pagina_039.txt"
+    },
+    {
+      "page": 40,
+      "chars": 3133,
+      "status": "ok",
+      "file": "pagina_040.txt"
+    },
+    {
+      "page": 41,
+      "chars": 4275,
+      "status": "ok",
+      "file": "pagina_041.txt"
+    },
+    {
+      "page": 42,
+      "chars": 1300,
+      "status": "ok",
+      "file": "pagina_042.txt"
+    },
+    {
+      "page": 43,
+      "chars": 1982,
+      "status": "ok",
+      "file": "pagina_043.txt"
+    },
+    {
+      "page": 44,
+      "chars": 2634,
+      "status": "ok",
+      "file": "pagina_044.txt"
+    },
+    {
+      "page": 45,
+      "chars": 3025,
+      "status": "ok",
+      "file": "pagina_045.txt"
+    },
+    {
+      "page": 46,
+      "chars": 2595,
+      "status": "ok",
+      "file": "pagina_046.txt"
+    },
+    {
+      "page": 47,
+      "chars": 3025,
+      "status": "ok",
+      "file": "pagina_047.txt"
+    },
+    {
+      "page": 48,
+      "chars": 2896,
+      "status": "ok",
+      "file": "pagina_048.txt"
+    },
+    {
+      "page": 49,
+      "chars": 2749,
+      "status": "ok",
+      "file": "pagina_049.txt"
+    },
+    {
+      "page": 50,
+      "chars": 2458,
+      "status": "ok",
+      "file": "pagina_050.txt"
+    },
+    {
+      "page": 51,
+      "chars": 2392,
+      "status": "ok",
+      "file": "pagina_051.txt"
+    },
+    {
+      "page": 52,
+      "chars": 2583,
+      "status": "ok",
+      "file": "pagina_052.txt"
+    },
+    {
+      "page": 53,
+      "chars": 2460,
+      "status": "ok",
+      "file": "pagina_053.txt"
+    },
+    {
+      "page": 54,
+      "chars": 2928,
+      "status": "ok",
+      "file": "pagina_054.txt"
+    },
+    {
+      "page": 55,
+      "chars": 2807,
+      "status": "ok",
+      "file": "pagina_055.txt"
+    },
+    {
+      "page": 56,
+      "chars": 2775,
+      "status": "ok",
+      "file": "pagina_056.txt"
+    },
+    {
+      "page": 57,
+      "chars": 2780,
+      "status": "ok",
+      "file": "pagina_057.txt"
+    },
+    {
+      "page": 58,
+      "chars": 2844,
+      "status": "ok",
+      "file": "pagina_058.txt"
+    },
+    {
+      "page": 59,
+      "chars": 2650,
+      "status": "ok",
+      "file": "pagina_059.txt"
+    },
+    {
+      "page": 60,
+      "chars": 3094,
+      "status": "ok",
+      "file": "pagina_060.txt"
+    },
+    {
+      "page": 61,
+      "chars": 2692,
+      "status": "ok",
+      "file": "pagina_061.txt"
+    },
+    {
+      "page": 62,
+      "chars": 2985,
+      "status": "ok",
+      "file": "pagina_062.txt"
+    },
+    {
+      "page": 63,
+      "chars": 1830,
+      "status": "ok",
+      "file": "pagina_063.txt"
+    },
+    {
+      "page": 64,
+      "chars": 69,
+      "status": "ok",
+      "file": "pagina_064.txt"
+    },
+    {
+      "page": 65,
+      "chars": 2670,
+      "status": "ok",
+      "file": "pagina_065.txt"
+    },
+    {
+      "page": 66,
+      "chars": 2483,
+      "status": "ok",
+      "file": "pagina_066.txt"
+    },
+    {
+      "page": 67,
+      "chars": 967,
+      "status": "ok",
+      "file": "pagina_067.txt"
+    },
+    {
+      "page": 68,
+      "chars": 2395,
+      "status": "ok",
+      "file": "pagina_068.txt"
+    },
+    {
+      "page": 69,
+      "chars": 1525,
+      "status": "ok",
+      "file": "pagina_069.txt"
+    },
+    {
+      "page": 70,
+      "chars": 2864,
+      "status": "ok",
+      "file": "pagina_070.txt"
+    },
+    {
+      "page": 71,
+      "chars": 2967,
+      "status": "ok",
+      "file": "pagina_071.txt"
+    },
+    {
+      "page": 72,
+      "chars": 3061,
+      "status": "ok",
+      "file": "pagina_072.txt"
+    },
+    {
+      "page": 73,
+      "chars": 1982,
+      "status": "ok",
+      "file": "pagina_073.txt"
+    },
+    {
+      "page": 74,
+      "chars": 61,
+      "status": "ok",
+      "file": "pagina_074.txt"
+    },
+    {
+      "page": 75,
+      "chars": 3090,
+      "status": "ok",
+      "file": "pagina_075.txt"
+    },
+    {
+      "page": 76,
+      "chars": 3062,
+      "status": "ok",
+      "file": "pagina_076.txt"
+    },
+    {
+      "page": 77,
+      "chars": 2617,
+      "status": "ok",
+      "file": "pagina_077.txt"
+    },
+    {
+      "page": 78,
+      "chars": 522,
+      "status": "ok",
+      "file": "pagina_078.txt"
+    },
+    {
+      "page": 79,
+      "chars": 1944,
+      "status": "ok",
+      "file": "pagina_079.txt"
+    },
+    {
+      "page": 80,
+      "chars": 1408,
+      "status": "ok",
+      "file": "pagina_080.txt"
+    },
+    {
+      "page": 81,
+      "chars": 880,
+      "status": "ok",
+      "file": "pagina_081.txt"
+    },
+    {
+      "page": 82,
+      "chars": 1682,
+      "status": "ok",
+      "file": "pagina_082.txt"
+    },
+    {
+      "page": 83,
+      "chars": 1196,
+      "status": "ok",
+      "file": "pagina_083.txt"
+    },
+    {
+      "page": 84,
+      "chars": 727,
+      "status": "ok",
+      "file": "pagina_084.txt"
+    },
+    {
+      "page": 85,
+      "chars": 1243,
+      "status": "ok",
+      "file": "pagina_085.txt"
+    },
+    {
+      "page": 86,
+      "chars": 2074,
+      "status": "ok",
+      "file": "pagina_086.txt"
+    },
+    {
+      "page": 87,
+      "chars": 1255,
+      "status": "ok",
+      "file": "pagina_087.txt"
+    },
+    {
+      "page": 88,
+      "chars": 835,
+      "status": "ok",
+      "file": "pagina_088.txt"
+    },
+    {
+      "page": 89,
+      "chars": 1015,
+      "status": "ok",
+      "file": "pagina_089.txt"
+    },
+    {
+      "page": 90,
+      "chars": 1554,
+      "status": "ok",
+      "file": "pagina_090.txt"
+    },
+    {
+      "page": 91,
+      "chars": 3128,
+      "status": "ok",
+      "file": "pagina_091.txt"
+    },
+    {
+      "page": 92,
+      "chars": 3354,
+      "status": "ok",
+      "file": "pagina_092.txt"
+    },
+    {
+      "page": 93,
+      "chars": 3018,
+      "status": "ok",
+      "file": "pagina_093.txt"
+    },
+    {
+      "page": 94,
+      "chars": 3083,
+      "status": "ok",
+      "file": "pagina_094.txt"
+    },
+    {
+      "page": 95,
+      "chars": 2713,
+      "status": "ok",
+      "file": "pagina_095.txt"
+    },
+    {
+      "page": 96,
+      "chars": 2588,
+      "status": "ok",
+      "file": "pagina_096.txt"
+    },
+    {
+      "page": 97,
+      "chars": 2718,
+      "status": "ok",
+      "file": "pagina_097.txt"
+    },
+    {
+      "page": 98,
+      "chars": 2325,
+      "status": "ok",
+      "file": "pagina_098.txt"
+    },
+    {
+      "page": 99,
+      "chars": 3153,
+      "status": "ok",
+      "file": "pagina_099.txt"
+    },
+    {
+      "page": 100,
+      "chars": 1534,
+      "status": "ok",
+      "file": "pagina_100.txt"
+    },
+    {
+      "page": 101,
+      "chars": 23,
+      "status": "ok",
+      "file": "pagina_101.txt"
+    },
+    {
+      "page": 102,
+      "chars": 1814,
+      "status": "ok",
+      "file": "pagina_102.txt"
+    },
+    {
+      "page": 103,
+      "chars": 1981,
+      "status": "ok",
+      "file": "pagina_103.txt"
+    },
+    {
+      "page": 104,
+      "chars": 1483,
+      "status": "ok",
+      "file": "pagina_104.txt"
+    },
+    {
+      "page": 105,
+      "chars": 2586,
+      "status": "ok",
+      "file": "pagina_105.txt"
+    },
+    {
+      "page": 106,
+      "chars": 1885,
+      "status": "ok",
+      "file": "pagina_106.txt"
+    },
+    {
+      "page": 107,
+      "chars": 1354,
+      "status": "ok",
+      "file": "pagina_107.txt"
+    },
+    {
+      "page": 108,
+      "chars": 1863,
+      "status": "ok",
+      "file": "pagina_108.txt"
+    },
+    {
+      "page": 109,
+      "chars": 909,
+      "status": "ok",
+      "file": "pagina_109.txt"
+    },
+    {
+      "page": 110,
+      "chars": 994,
+      "status": "ok",
+      "file": "pagina_110.txt"
+    },
+    {
+      "page": 111,
+      "chars": 1135,
+      "status": "ok",
+      "file": "pagina_111.txt"
+    },
+    {
+      "page": 112,
+      "chars": 1963,
+      "status": "ok",
+      "file": "pagina_112.txt"
+    },
+    {
+      "page": 113,
+      "chars": 2661,
+      "status": "ok",
+      "file": "pagina_113.txt"
+    },
+    {
+      "page": 114,
+      "chars": 3015,
+      "status": "ok",
+      "file": "pagina_114.txt"
+    },
+    {
+      "page": 115,
+      "chars": 2806,
+      "status": "ok",
+      "file": "pagina_115.txt"
+    },
+    {
+      "page": 116,
+      "chars": 2974,
+      "status": "ok",
+      "file": "pagina_116.txt"
+    },
+    {
+      "page": 117,
+      "chars": 2430,
+      "status": "ok",
+      "file": "pagina_117.txt"
+    },
+    {
+      "page": 118,
+      "chars": 3342,
+      "status": "ok",
+      "file": "pagina_118.txt"
+    },
+    {
+      "page": 119,
+      "chars": 2912,
+      "status": "ok",
+      "file": "pagina_119.txt"
+    },
+    {
+      "page": 120,
+      "chars": 2383,
+      "status": "ok",
+      "file": "pagina_120.txt"
+    },
+    {
+      "page": 121,
+      "chars": 1983,
+      "status": "ok",
+      "file": "pagina_121.txt"
+    },
+    {
+      "page": 122,
+      "chars": 3273,
+      "status": "ok",
+      "file": "pagina_122.txt"
+    },
+    {
+      "page": 123,
+      "chars": 2824,
+      "status": "ok",
+      "file": "pagina_123.txt"
+    },
+    {
+      "page": 124,
+      "chars": 2804,
+      "status": "ok",
+      "file": "pagina_124.txt"
+    },
+    {
+      "page": 125,
+      "chars": 2762,
+      "status": "ok",
+      "file": "pagina_125.txt"
+    },
+    {
+      "page": 126,
+      "chars": 1577,
+      "status": "ok",
+      "file": "pagina_126.txt"
+    },
+    {
+      "page": 127,
+      "chars": 334,
+      "status": "ok",
+      "file": "pagina_127.txt"
+    },
+    {
+      "page": 128,
+      "chars": 3259,
+      "status": "ok",
+      "file": "pagina_128.txt"
+    },
+    {
+      "page": 129,
+      "chars": 2103,
+      "status": "ok",
+      "file": "pagina_129.txt"
+    },
+    {
+      "page": 130,
+      "chars": 1932,
+      "status": "ok",
+      "file": "pagina_130.txt"
+    },
+    {
+      "page": 131,
+      "chars": 636,
+      "status": "ok",
+      "file": "pagina_131.txt"
+    }
+  ],
+  "elapsed_seconds": 525.6,
+  "finished_at": "2026-11-10 23:06:45"
+}

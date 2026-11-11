@@ -1,0 +1,46 @@
+COVENIN - MINDUR 2000 - 92                                                                                     21
+SUBCAPITULO E14 REMOCIONES
+Definición
+
+Remoción: Desmontar y/o desarmar, sin afectar las características principales de los elementos de
+una edificación, de tal manera que puedan ser transportados para su eventual reutilización
+
+Alcance
+
+Comprende la remoción de   aquellas estructuras, miembros o elementos que deben ser
+
+»                       desarmados y desmontados sin dañarlos, tales como monumentos, estructuras metálicas o de madera,
+estanques metálicos elevados, cercas, etc. En todos los casos queda incluido en el precio unitario la
+movilización interna de los mismo y el  posible almacenamiento provisional dentro del terreno de la
+obra, en el sitio señalado por el Profesional Responsable por el ente contratante.
+
+En el caso de las estructuras metálicas la  Partida de Remoción incluye la  clasificación, el
+movimiento interno dentro del terreno de la obra y el apilamiento provisional del material. En caso de
+requerirse limpieza por medios mecánicos y/o protección con pintura anticorrosiva u otro tipo de
+revestimiento, estas se computarán por Partidas separadas. El precio unitario no incluye la carga ni el
+transporte de los elementos removidos, que se computarán según los Grupos de Partidas E147 y E903,
+respectivamente.
+
+Este Subcapítulo comprende los siguientes grupos de Partidas:
+
+E141... REMOCIONES DE ELEMENTOS METÁLICOS.
+
+E142... REMOCIONES DE ELEMENTOS DE MADERA
+
+E143.... REMOCIONES DE ELEMENTOS DE MAMPOSTERÍA
+
+E144.... REMOCIONES DE ELEMENTOS COMBINADOS
+
+E145... REMOCIONES DE ARTEFACTOS
+
+E146... REMOCIONES DE MONUMENTOS
+
+E147... CARGA DE ELEMENTOS PROCEDENTES DE REMOCIONES.
+Medición
+
+La unidad de medida será el kilogramo fuerza (kgf), el metro (m) o el metro cuadrado (m2), o el
+metro cúbico (m3), o la pieza (pza.)medida en la forma indicada para el cómputo de su construcción
+original.
+
+En los Grupos de Partidas E147 Carga de elementos procedentes de remociones, la unidad de
+medida será la tonelada fuerza (tf) o el metro cúbico (mi).

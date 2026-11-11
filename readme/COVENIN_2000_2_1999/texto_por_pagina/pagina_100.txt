@@ -1,0 +1,32 @@
+1 10) 4                                                                                                                                                        COVENIN - MINDUR 2000-92
+
+CODIGO                       UNIDAD                    DESCRIPCION
+
+E669311102                  pza         DREN DE PISO CIRCULAR ESTANDAR, DE BRONCE, PARA TUBO DE
+DESCARGA SUSPENDIDO DE 4 plg (102 mm).
+
+E669312051                  pza         DREN DE PISO CIRCULAR ESTANDAR, CROMADO, PARA TUBO DE
+DESCARGA SUSPENDIDO DE 2 plg (51 mm).
+
+E669321051                  pza         DREN DE PISO CIRCULAR ESTANDAR, DE BRONCE, PARA TUBO DE
+DESCARGA EMBUTIDO DE 2 plg (51 mm).
+
+E667611111                   pza         BAÑERA RECTANGULAR BLANCO O COLOR CLARO, DE DIMENSIONES
+L< DE 1.50 MTS Y A< 0.80 MTS, INCLUYE GRIFERIA METÁLICA
+
+E667221051                  pza         CALENTADOR ELECTRICO DE CAPACIDAD= 100 LITROS
+
+E667222751                   pza         CALENTADOR ELECTRICO DE CAPACIDAD= 27 LITROS
+
+E667223551 *              pza         CALENTADOR ELECTRICO DE CAPACIDAD= 35 LITROS.
+
+E£667120031                  pza         DUCHA, DE DOS LLAVES DE ACERO INOXIDABLE, INCLUYENDO
+GRUPO MEZCLADORA Y REGADERA.
+
+E667130031                      pza           DUCHA TELEFONO DE ACERO INOXIDABLE
+
+E667225051                  pza         CALENTADOR ELECTRICO DE CAPACIDAD= 50 LITROS
+
+E667228051                  pza         CALENTADOR ELECTRICO DE CAPACIDAD= 80 LITROS
+
+E667420032                   pza          FREGADERO DE DOS PONCHERAS DE ACERO INOXIDABLE

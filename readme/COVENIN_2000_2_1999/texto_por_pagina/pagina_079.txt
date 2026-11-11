@@ -1,0 +1,34 @@
+COVENIN - MINDUR 2000-92                                                                                                                                                                                       83
+SUBCAPÍTULO E62 PUNTOS SANITARIOS
+Alcance
+>                      Comprende los trabajos necesarios para el suministro, transporte e instalación de los materiales
+para el funcionamiento de los puntos sanitarios de aguas claras o residuales, según el material, forma
+de colocación (suspendidas, embutidas y fijadas a la superficie) y diámetro, conforme a los planos y
+especificaciones del proyecto de Instalaciones Sanitarias, incluyendo los tubos y conexiones dentro de
+-                            los recintos sanitarios.
+
+En el precio unitario de las Partidas se incluyen los materiales, el uso de las maquinarias y
+herramientas, el replanteo y la mano de obra necesarios para la total y completa ejecución de las
+mismas, las pruebas de presión, los remates y recolección de desperdicios, así como también el
+transporte de los materiales hasta el sitio de la obra, según la siguiente codificación y descripción que
+se detalla al final del Capítulo E6:
+
+E621         PUNTOS SANITARIOS DE AGUAS CLARAS
+
+E622         PUNTOS SANITARIOS DE AGUAS RESIDUALES
+
+Los tapones y las tapas de registros se computarán según el Subcapítulo E66; véase la Figura 6.1
+
+En la instalación de los calentadores de agua localizados dentro del recinto sanitario se considera
+un Punto Sanitario de aguas claras.
+
+Medición
+
+La unidad de medida será el punto sanitario (pto.) según el tipo de material, forma de colocación y
+el diámetro del orificio de entrada o salida.
+
+En el precio unitario de estas Partidas se incluyen las conexiones, su material de junta y el material
+de fijación.
+
+En el caso de puntos de aguas residuales con uso de tuberías de hierro fundido, en
+los mismos se incluyen el material de juntas en conexiones: juntas de goma o calafateo.

@@ -1,0 +1,64 @@
+COVENIN — MINDUR 2000-92                                                                                                                                                              4 1
+SUBCAPÍTULO E36 ESTRUCTURAS METÁLICAS
+
+Definición
+
+Estructura metálica es toda estructura o parte de estructura formada principalmente por miembros,
+elementos o piezas de metal estructural o de acero estructural según se define en la Norma
+
+-                    venezolana COVENIN - MINDUR 1755 - 82 "Código de Prácticas Normalizadas para la Fabricación
+
+y Construcción de Estructuras de Acero".
+-                   Alcance
+En el precio unitario de las Partidas se incluyen los materiales, y uso de maquinarias y herramientas,
+el replanteo y la mano de obra necesarios para la total y completa ejecución de las mismas, según la
+siguiente codificación y descripción que se detalla al final del Capítulo E3:
+Se establece la clasificación según los materiales en:
+E361 ESTRUCTURAS METALICAS DE ACERO.
+E362 ESTRUCTURAS METALICAS DE ALUMINIO.
+Las Partidas se agrupan según la Actividad en:
+
+E36X1 SUMINISTRO.
+
+E36X2 FABRICACION.
+
+E36X3 LIMPIEZA Y PREPARACION DE SUPERFICIES.
+
+E36X4 SISTEMA DE PROTECCION.
+
+E36X5 MONTAJE.
+
+E36X6 SUMINISTRO, FABRICACION, LIMPIEZA Y PREPARACION DE
+
+SUPERFICIES, SISTEMA DE PROTECCION.
+
+El grupo de Partidas E36X6 abarca las primeras cuatro actividades como una alternativa cuando las
+características de la obra lo permitan para simplificar la descripción del alcance del trabajo, a criterio del
+Organismo Contratante. Las particularidades de cada obra justifican el que la actividad E36X5 Montaje
+se use siempre como una Partida separada.
+
+Medición
+
+La unidad de medida será el kilogramo fuerza (kgf).
+
+Los pesos de los miembros y demás componentes de la estructura metálica se obtendrén
+multiplicando las dimensiones acotadas en los planos, en milimetros (mm) o metros (m) o metros
+cuadrados (m”) o metros cúbicos (m/), por el peso por unidad de medida, kilogramo por metro lineal
+(kgf/m) o kilogramo por metro cuadrado (kgf/m”) o kilogramo por metro cúbico (kgf/m*), correspondiente
+al tipo, calidad y dimensiones del miembro, elemento o pieza indicado en los planos y especificaciones,
+según lo establece el Artículo 9.3 de la Norma venezolana COVENIN - MINDUR 1755 vigente.
+
+Se establecen los siguientes criterios de medición:
+
+.                 1. En la medición de las Partidas no se considerará el peso correspondiente a soldadura, asi como
+tampoco el porcentaje de desperdicio en perfiles, planchas y pernos de  anclaje durante la
+fabricación, ni el de tornillos defectuosos y/o perdidos en obra durante el montaje, por estar
+contemplado, cuando se justifique debidamente, en el análisis de precios unitarios. En el caso del
+sofito metálico (steel deck o encofrado colaborante) se incluyen los solapes transversales y
+longitudinales, además de los desperdicios.
+
+2. Adicionalmente a las reglas contenidas en la Sección 9.3 de la Norma venezolana COVENIN -
+
+MINDUR 1755 -82 para el cálculo de los pesos en estructuras de acero, en las Partidas de
+
+suministro de los productos de acero se observarán las siguientes:
