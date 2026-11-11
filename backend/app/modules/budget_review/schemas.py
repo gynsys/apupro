@@ -89,6 +89,7 @@ class FindingOut(BaseModel):
     rule_id: str
     category: str
     severity: str
+    finding_type: str = "DISCREPANCIA"
     item_code: str
     covenin_code: Optional[str] = None
     component_code: Optional[str] = None
@@ -196,6 +197,8 @@ class ReviewSnapshotSummaryOut(BaseModel):
     high_findings_count: int
     medium_findings_count: int
     info_findings_count: int
+    errors_count: int = 0
+    discrepancies_count: int = 0
     health_score: float
     created_at: datetime
     updated_at: Optional[datetime] = None

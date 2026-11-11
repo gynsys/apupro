@@ -156,3 +156,40 @@ def is_native_maprex_deprec_difference(
     if abs(imported_deprec - 1.0) <= tolerance and abs(master_deprec - 0.01) <= tolerance:
         return True
     return False
+
+
+ERROR_RULE_IDS: FrozenSet[str] = frozenset({
+    "EST-001",  # Falta de unidad de medida
+    "EST-002",  # Cómputo métrico inválido (<= 0 o vacío)
+    "EST-003",  # Rendimiento nulo o inválido (<= 0)
+    "EST-004",  # Insumo duplicado en análisis de precios unitarios
+    "EST-005",  # Partida de suministro u obra civil sin insumos de materiales
+    "EST-006",  # Partida de obra sin cuadrilla de mano de obra
+    "EST-007",  # Duplicidad de partida
+    "DUP-001",  # Duplicidad explícita
+    "COH-001",  # Descuadre aritmético en APU
+    "ARI-001",  # Error aritmético en sumatoria de capítulo
+})
+
+INFO_RULE_IDS: FrozenSet[str] = frozenset({
+    "MAT-004",  # Variación reconocida en catálogo histórico Maprex
+    "EQU-004",  # Variación reconocida en catálogo histórico Maprex
+})
+
+
+def classify_finding_nature(rule_id: str) -> str:
+    """Clasifica el hallazgo estrictamente según su naturaleza funcional:
+
+    - ERROR: Inconsistencias de formato, cómputo inválido, campos vacíos o descuadres aritméticos que invalidan el análisis.
+    - DISCREPANCIA: Diferencias técnicas o económicas frente a la base oficial (rendimientos, precios unitarios, consumos, cuadrillas, tarifas).
+    - INFORMATIVO: Notas de correspondencia en catálogo histórico.
+    """
+    if not isinstance(rule_id, str):
+        return "DISCREPANCIA"
+    rule_clean = rule_id.strip().upper()
+    if rule_clean in ERROR_RULE_IDS:
+        return "ERROR"
+    if rule_clean in INFO_RULE_IDS:
+        return "INFORMATIVO"
+    return "DISCREPANCIA"
+

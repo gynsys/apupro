@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 import uuid
 
 from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
+from app.modules.budget_review.domain.maprex_baseline import classify_finding_nature
 
 
 def generate_review_uuid() -> str:
@@ -85,6 +86,16 @@ class ReviewSnapshot(Base):
         cascade="all, delete-orphan",
         order_by="ReviewFinding.id",
     )
+
+    @property
+    def errors_count(self) -> int:
+        """Cantidad de hallazgos que constituyen inconsistencias o errores que invalidan."""
+        return sum(1 for f in (self.findings or []) if getattr(f, "finding_type", "") == "ERROR")
+
+    @property
+    def discrepancies_count(self) -> int:
+        """Cantidad de hallazgos que constituyen discrepancias técnicas o económicas frente a la base."""
+        return sum(1 for f in (self.findings or []) if getattr(f, "finding_type", "") == "DISCREPANCIA")
 
 
 class ReviewItem(Base):
@@ -219,6 +230,11 @@ class ReviewFinding(Base):
 
     snapshot = relationship("ReviewSnapshot", back_populates="findings")
     item = relationship("ReviewItem", back_populates="findings")
+
+    @property
+    def finding_type(self) -> str:
+        """Naturaleza técnica del hallazgo: 'ERROR', 'DISCREPANCIA' o 'INFORMATIVO'."""
+        return classify_finding_nature(self.rule_id)
 
     @property
     def covenin_code(self) -> Optional[str]:

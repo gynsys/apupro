@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 
 from app.modules.budget_review.domain.audit_rules import (
     calculate_apu_unit_price,
+    classify_finding_nature,
     compute_description_similarity,
     compute_snapshot_health_score,
     evaluate_item_audit_rules,
@@ -653,3 +654,33 @@ def test_price_and_rate_discrepancy_rules() -> None:
     assert "MAT-006" in rule_ids, "Debe detectar variación en precio de material"
     assert "EQU-006" in rule_ids, "Debe detectar variación en costo diario de equipo"
     assert "LAB-004" in rule_ids, "Debe detectar variación en jornal de mano de obra"
+
+
+def test_classify_finding_nature() -> None:
+    """Verifica que las reglas se clasifiquen estrictamente como ERROR, DISCREPANCIA o INFORMATIVO."""
+    # Errores que invalidan el análisis
+    assert classify_finding_nature("EST-001") == "ERROR"
+    assert classify_finding_nature("EST-002") == "ERROR"
+    assert classify_finding_nature("EST-003") == "ERROR"
+    assert classify_finding_nature("EST-004") == "ERROR"
+    assert classify_finding_nature("EST-005") == "ERROR"
+    assert classify_finding_nature("EST-006") == "ERROR"
+    assert classify_finding_nature("EST-007") == "ERROR"
+    assert classify_finding_nature("DUP-001") == "ERROR"
+    assert classify_finding_nature("COH-001") == "ERROR"
+    assert classify_finding_nature("ARI-001") == "ERROR"
+
+    # Informativos de catálogo histórico
+    assert classify_finding_nature("MAT-004") == "INFORMATIVO"
+    assert classify_finding_nature("EQU-004") == "INFORMATIVO"
+
+    # Discrepancias técnicas o económicas frente a la base oficial
+    assert classify_finding_nature("PRE-001") == "DISCREPANCIA"
+    assert classify_finding_nature("REN-001") == "DISCREPANCIA"
+    assert classify_finding_nature("MAT-001") == "DISCREPANCIA"
+    assert classify_finding_nature("MAT-002") == "DISCREPANCIA"
+    assert classify_finding_nature("MAT-006") == "DISCREPANCIA"
+    assert classify_finding_nature("EQU-001") == "DISCREPANCIA"
+    assert classify_finding_nature("EQU-006") == "DISCREPANCIA"
+    assert classify_finding_nature("LAB-001") == "DISCREPANCIA"
+    assert classify_finding_nature("LAB-004") == "DISCREPANCIA"

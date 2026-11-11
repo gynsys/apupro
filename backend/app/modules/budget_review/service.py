@@ -23,6 +23,7 @@ from app.db.base import Base, engine
 from app.db.models.budget import Budget, BudgetItem
 from app.modules.budget_review.domain.audit_rules import (
     calculate_apu_unit_price,
+    classify_finding_nature,
     compute_description_similarity,
     compute_snapshot_health_score,
     evaluate_item_audit_rules,
@@ -888,6 +889,7 @@ def _execute_snapshot_audit(
                 "rule_id": "EST-007",
                 "category": "ESTRUCTURA",
                 "severity": "MEDIA",
+                "finding_type": "ERROR",
                 "item_code": effective_display_code,
                 "field_name": "duplicate_partida",
                 "imported_value": f"{count} partidas con código {orig_code}",
@@ -1335,6 +1337,8 @@ def get_review_snapshot_detail(db: Session, snapshot_id: str, user_id: str) -> D
         "high_findings_count": snap.high_findings_count,
         "medium_findings_count": snap.medium_findings_count,
         "info_findings_count": snap.info_findings_count,
+        "errors_count": snap.errors_count,
+        "discrepancies_count": snap.discrepancies_count,
         "health_score": snap.health_score,
         "created_at": snap.created_at,
         "updated_at": snap.updated_at or snap.created_at,
@@ -2185,6 +2189,7 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
     # =========================================================================
     ws_find = wb.create_sheet("Hallazgos de Auditoria")
     ws_find.append([
+        "Tipo de Hallazgo",
         "Regla",
         "Categoría",
         "Código Partida",
@@ -2199,36 +2204,55 @@ def export_audit_report_excel(db: Session, snapshot_id: str, user_id: str) -> Tu
     ])
     style_header_row(ws_find, 1)
 
-    crit_fill = PatternFill("solid", fgColor="FEE2E2")
-    high_fill = PatternFill("solid", fgColor="FFEDD5")
+    error_fill = PatternFill("solid", fgColor="FEE2E2")
+    discrepancy_fill = PatternFill("solid", fgColor="FEF3C7")
     info_fill = PatternFill("solid", fgColor="E0F2FE")
 
     for f in detail.get("findings") or []:
+        rule = getattr(f, "rule_id", "") if hasattr(f, "rule_id") else (f.get("rule_id", "") if isinstance(f, dict) else "")
+        f_type = (
+            getattr(f, "finding_type", None)
+            or (f.get("finding_type") if isinstance(f, dict) else None)
+            or classify_finding_nature(rule)
+        )
+        type_label = "Error" if f_type == "ERROR" else ("Informativo" if f_type == "INFORMATIVO" else "Discrepancia")
+        cat = getattr(f, "category", "") if hasattr(f, "category") else (f.get("category", "") if isinstance(f, dict) else "")
+        it_code = getattr(f, "item_code", "") if hasattr(f, "item_code") else (f.get("item_code", "") if isinstance(f, dict) else "")
+        c_code = getattr(f, "component_code", None) if hasattr(f, "component_code") else (f.get("component_code") if isinstance(f, dict) else None)
+        c_desc = getattr(f, "component_description", None) if hasattr(f, "component_description") else (f.get("component_description") if isinstance(f, dict) else None)
+        f_name = getattr(f, "field_name", "") if hasattr(f, "field_name") else (f.get("field_name", "") if isinstance(f, dict) else "")
+        imp_val = getattr(f, "imported_value", None) if hasattr(f, "imported_value") else (f.get("imported_value") if isinstance(f, dict) else None)
+        mst_val = getattr(f, "master_value", None) if hasattr(f, "master_value") else (f.get("master_value") if isinstance(f, dict) else None)
+        d_pct = getattr(f, "diff_percent", None) if hasattr(f, "diff_percent") else (f.get("diff_percent") if isinstance(f, dict) else None)
+        msg = getattr(f, "message", "") if hasattr(f, "message") else (f.get("message", "") if isinstance(f, dict) else "")
+        sug = getattr(f, "suggestion", None) if hasattr(f, "suggestion") else (f.get("suggestion") if isinstance(f, dict) else None)
+
         ws_find.append([
-            f.rule_id,
-            f.category,
-            f.item_code,
-            f.component_code or "-",
-            f.component_description or "-",
-            f.field_name,
-            f.imported_value or "-",
-            f.master_value or "-",
-            f"{f.diff_percent:+.2f}%" if f.diff_percent is not None else "-",
-            f.message,
-            f.suggestion or "-",
+            type_label,
+            rule,
+            cat,
+            it_code,
+            c_code or "-",
+            c_desc or "-",
+            f_name,
+            imp_val or "-",
+            mst_val or "-",
+            f"{d_pct:+.2f}%" if d_pct is not None else "-",
+            msg,
+            sug or "-",
         ])
         row_cells = ws_find[ws_find.max_row]
-        if getattr(f, "severity", "") == "CRITICA":
-            for c in row_cells[:3]:
-                c.fill = crit_fill
-        elif getattr(f, "severity", "") == "ALTA":
-            for c in row_cells[:3]:
-                c.fill = high_fill
-        elif getattr(f, "severity", "") == "INFO_MAPREX":
-            for c in row_cells[:3]:
+        if f_type == "ERROR":
+            for c in row_cells[:4]:
+                c.fill = error_fill
+        elif f_type == "DISCREPANCIA":
+            for c in row_cells[:4]:
+                c.fill = discrepancy_fill
+        elif f_type == "INFORMATIVO":
+            for c in row_cells[:4]:
                 c.fill = info_fill
 
-    for idx, width in enumerate([12, 16, 16, 16, 38, 16, 20, 22, 14, 65, 55], start=1):
+    for idx, width in enumerate([16, 12, 16, 16, 16, 38, 16, 20, 22, 14, 65, 55], start=1):
         ws_find.column_dimensions[get_column_letter(idx)].width = width
     ws_find.freeze_panes = "A2"
 

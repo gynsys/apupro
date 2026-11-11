@@ -44,27 +44,40 @@ import { budgetService } from '../../../services/budgetService';
 import { useDatabase } from '../../../contexts/DatabaseContext';
 import BudgetImportChoiceModal from '../../../components/modals/BudgetImportChoiceModal';
 
-const SEVERITY_CONFIG = {
-  CRITICA: {
-    label: 'Crítica',
-    badgeClass: 'bg-red-100 text-red-800 border-red-200',
-    cardClass: 'border-red-200 bg-red-50/40',
+const FINDING_NATURE_CONFIG = {
+  ERROR: {
+    label: 'Error',
+    shortLabel: 'Error',
+    badgeClass: 'bg-rose-100 text-rose-800 border-rose-200',
+    cardClass: 'border-rose-200 bg-rose-50/40',
+    tagClass: 'text-rose-700 bg-rose-50 border-rose-200',
   },
-  ALTA: {
-    label: 'Alta',
+  DISCREPANCIA: {
+    label: 'Discrepancia',
+    shortLabel: 'Discrepancia',
     badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
     cardClass: 'border-amber-200 bg-amber-50/40',
+    tagClass: 'text-amber-800 bg-amber-50 border-amber-200',
   },
-  MEDIA: {
-    label: 'Media',
-    badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    cardClass: 'border-yellow-200 bg-yellow-50/30',
-  },
-  INFO_MAPREX: {
-    label: 'Catálogo Histórico',
+  INFORMATIVO: {
+    label: 'Informativo',
+    shortLabel: 'Info',
     badgeClass: 'bg-sky-100 text-sky-800 border-sky-200',
     cardClass: 'border-sky-200 bg-sky-50/40',
+    tagClass: 'text-sky-800 bg-sky-50 border-sky-200',
   },
+};
+
+const getFindingNature = (f) => {
+  if (f?.finding_type) return f.finding_type;
+  const ruleId = f?.rule_id || '';
+  const errorRules = new Set([
+    'EST-001', 'EST-002', 'EST-003', 'EST-004', 'EST-005', 'EST-006', 'EST-007',
+    'DUP-001', 'COH-001', 'ARI-001',
+  ]);
+  if (errorRules.has(ruleId)) return 'ERROR';
+  if (ruleId === 'MAT-004' || ruleId === 'EQU-004' || f?.severity === 'INFO_MAPREX') return 'INFORMATIVO';
+  return 'DISCREPANCIA';
 };
 
 const REVIEW_STATUS_CONFIG = {
@@ -110,25 +123,31 @@ const ORIGIN_LABELS = {
 };
 
 const RULE_HEADLINES = {
+  // Precios y Rendimientos
+  'PRE-001': 'Discrepancia en precio unitario de partida',
+  'REN-001': 'Rendimiento atípico / reducido',
+  'REN-002': 'Rendimiento inflado',
+  'UNI-001': 'Discrepancia en unidad de medida',
+  'DES-ALT-001': 'Discrepancia en descripción de partida',
   // Mano de Obra
   'LAB-001': 'Cuadrilla alterada',
   'LAB-002': 'Categoría laboral omitida',
   'LAB-003': 'Mano de obra especializada / no tabulada',
+  'LAB-004': 'Discrepancia en jornal de mano de obra',
   // Materiales
   'MAT-001': 'Material maestro omitido',
   'MAT-002': 'Sobreconsumo de material',
   'MAT-003': 'Desperdicio excesivo de material',
   'MAT-004': 'Discrepancia en código de material',
   'MAT-005': 'Material no registrado (requiere cotización)',
+  'MAT-006': 'Discrepancia en precio unitario de material',
   // Equipos y Depreciaciones
   'EQU-001': 'Equipo maestro omitido',
   'EQU-002': 'Equipo atípico en APU',
   'EQU-003': 'Omisión de depreciación',
   'EQU-004': 'Discrepancia en depreciación',
   'EQU-005': 'Equipo no registrado (requiere cotización)',
-  // Rendimientos
-  'REN-001': 'Rendimiento atípico / reducido',
-  'REN-002': 'Rendimiento inflado',
+  'EQU-006': 'Discrepancia en costo diario de equipo',
   // Estructura y Duplicidad
   'EST-001': 'Falta de unidad de medida',
   'EST-002': 'Cómputo métrico inválido',
@@ -283,7 +302,7 @@ export default function BudgetReviewPage() {
   const [savingMeta, setSavingMeta] = useState(false);
 
   const [activeTab, setActiveTab] = useState('findings'); // 'findings' | 'items' | 'uncoded' | 'versions'
-  const [severityFilter, setSeverityFilter] = useState('ALL');
+  const [natureFilter, setNatureFilter] = useState('ALL'); // 'ALL' | 'ERROR' | 'DISCREPANCIA' | 'INFORMATIVO'
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedItemId, setExpandedItemId] = useState(null);
@@ -860,6 +879,19 @@ export default function BudgetReviewPage() {
     return Array.from(groups.values()).flat();
   }, [activeReport?.findings]);
 
+  const findingNatureCounts = useMemo(() => {
+    let errors = 0;
+    let discrepancies = 0;
+    let info = 0;
+    uniqueFindings.forEach((f) => {
+      const nat = getFindingNature(f);
+      if (nat === 'ERROR') errors += 1;
+      else if (nat === 'INFORMATIVO') info += 1;
+      else discrepancies += 1;
+    });
+    return { errors, discrepancies, info };
+  }, [uniqueFindings]);
+
   const partidaStats = useMemo(
     () => computePartidaApprovalStats(activeReport?.items),
     [activeReport?.items]
@@ -965,7 +997,7 @@ export default function BudgetReviewPage() {
   }, [activeReport, uniqueFindings, partidaStats.score]);
 
   const filteredFindings = uniqueFindings.filter((f) => {
-    if (severityFilter !== 'ALL' && f.severity !== severityFilter) return false;
+    if (natureFilter !== 'ALL' && getFindingNature(f) !== natureFilter) return false;
     if (categoryFilter !== 'ALL' && f.category !== categoryFilter) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
@@ -1498,14 +1530,31 @@ export default function BudgetReviewPage() {
               {uniqueFindings.length > 0 ? (
                 <>
                   Se detectaron{' '}
-                  <strong className="text-red-700">{uniqueFindings.length}</strong>{' '}
+                  <strong className="text-slate-900">{uniqueFindings.length}</strong>{' '}
                   {uniqueFindings.length === 1
-                    ? 'error o desviación técnica que requiere'
-                    : 'errores o desviaciones técnicas que requieren'}{' '}
-                  corrección.
+                    ? 'observación técnica que requiere revisión'
+                    : 'observaciones técnicas que requieren revisión'}
+                  {findingNatureCounts.errors > 0 || findingNatureCounts.discrepancies > 0 ? (
+                    <>
+                      {' '}(
+                      {findingNatureCounts.errors > 0 && (
+                        <span className="text-rose-700 font-bold">
+                          {findingNatureCounts.errors} {findingNatureCounts.errors === 1 ? 'error' : 'errores'}
+                        </span>
+                      )}
+                      {findingNatureCounts.errors > 0 && findingNatureCounts.discrepancies > 0 && ', '}
+                      {findingNatureCounts.discrepancies > 0 && (
+                        <span className="text-amber-800 font-bold">
+                          {findingNatureCounts.discrepancies} {findingNatureCounts.discrepancies === 1 ? 'discrepancia técnica' : 'discrepancias técnicas'}
+                        </span>
+                      )}
+                      )
+                    </>
+                  ) : null}
+                  .
                 </>
               ) : (
-                'No se detectaron desviaciones técnicas con respecto a la base de contraste seleccionada.'
+                'No se detectaron errores ni discrepancias técnicas con respecto a la base de contraste seleccionada.'
               )}
             </div>
 
@@ -1514,7 +1563,7 @@ export default function BudgetReviewPage() {
 
             {/* Conclusión preliminar / dictamen técnico */}
             <div className={`p-4 rounded-xl border text-xs sm:text-sm leading-relaxed ${
-              activeReport.critical_findings_count > 0 || activeReport.high_findings_count > 0
+              uniqueFindings.length > 0
                 ? 'bg-amber-50/80 border-amber-200 text-amber-950'
                 : 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
             }`}>
@@ -1741,6 +1790,19 @@ export default function BudgetReviewPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2 pb-2 sm:pb-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <select
+                      value={natureFilter}
+                      onChange={(e) => setNatureFilter(e.target.value)}
+                      className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-slate-50 font-bold text-slate-800"
+                    >
+                      <option value="ALL">Todos los hallazgos ({uniqueFindings.length})</option>
+                      <option value="ERROR">Solo Errores ({findingNatureCounts.errors})</option>
+                      <option value="DISCREPANCIA">Solo Discrepancias ({findingNatureCounts.discrepancies})</option>
+                      {findingNatureCounts.info > 0 && (
+                        <option value="INFORMATIVO">Notas de catálogo ({findingNatureCounts.info})</option>
+                      )}
+                    </select>
+
+                    <select
                       value={categoryFilter}
                       onChange={(e) => setCategoryFilter(e.target.value)}
                       className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-slate-50 font-semibold text-slate-700"
@@ -1816,7 +1878,8 @@ export default function BudgetReviewPage() {
                                     tag = '[CONSIGNAR SOPORTE / ESTUDIAR]';
                                   }
                                 }
-                                return `  ${i + 1}. ${getFindingHeadline(f)}: ${formatFindingDiagnosis(f)}. ${tag}`;
+                                const nat = FINDING_NATURE_CONFIG[getFindingNature(f)] || FINDING_NATURE_CONFIG.DISCREPANCIA;
+                                return `  ${i + 1}. [${nat.label.toUpperCase()}] ${getFindingHeadline(f)}: ${formatFindingDiagnosis(f)}. ${tag}`;
                               })
                               .join('\n');
                             return `${header}\n${items}`;
@@ -1885,6 +1948,14 @@ export default function BudgetReviewPage() {
                                 <div className="space-y-1 min-w-0">
                                   <div>
                                     <span className="font-black text-slate-900 mr-1.5">{idx + 1}.</span>
+                                    {(() => {
+                                      const nat = FINDING_NATURE_CONFIG[getFindingNature(f)] || FINDING_NATURE_CONFIG.DISCREPANCIA;
+                                      return (
+                                        <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 rounded border mr-1.5 ${nat.tagClass}`}>
+                                          {nat.label}
+                                        </span>
+                                      );
+                                    })()}
                                     <span className="font-extrabold text-slate-900 mr-1">
                                       {getFindingHeadline(f)}:
                                     </span>
@@ -1927,14 +1998,17 @@ export default function BudgetReviewPage() {
                   </div>
                 ) : (
                   filteredFindings.map((f) => {
-                    const sev = SEVERITY_CONFIG[f.severity] || SEVERITY_CONFIG.MEDIA;
+                    const nat = FINDING_NATURE_CONFIG[getFindingNature(f)] || FINDING_NATURE_CONFIG.DISCREPANCIA;
                     return (
                       <div
                         key={f.id}
-                        className={`rounded-xl border p-3.5 sm:p-4 transition ${sev.cardClass}`}
+                        className={`rounded-xl border p-3.5 sm:p-4 transition ${nat.cardClass}`}
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                           <div className="flex flex-wrap items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded-md text-[11px] font-black uppercase border ${nat.tagClass}`}>
+                              {nat.label}
+                            </span>
                             <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-[11px] font-bold text-slate-700">
                               {f.rule_id} · {f.category}
                             </span>
@@ -3379,6 +3453,14 @@ export default function BudgetReviewPage() {
                         className="print-avoid-break pt-1.5 pb-1.5 pl-2 border-b border-slate-200 text-xs leading-relaxed"
                       >
                         <span className="font-black text-slate-900 mr-1">{idx + 1}.</span>
+                        {(() => {
+                          const nat = FINDING_NATURE_CONFIG[getFindingNature(f)] || FINDING_NATURE_CONFIG.DISCREPANCIA;
+                          return (
+                            <span className={`text-[9px] font-black uppercase px-1 py-0.5 rounded mr-1 ${nat.tagClass}`}>
+                              [{nat.label}]
+                            </span>
+                          );
+                        })()}
                         <span className="font-extrabold text-slate-900 mr-1">{getFindingHeadline(f)}:</span>
                         <span className="text-slate-800 font-medium">{formatFindingDiagnosis(f)}.</span>{' '}
                         {(() => {

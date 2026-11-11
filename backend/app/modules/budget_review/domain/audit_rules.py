@@ -11,6 +11,7 @@ from app.modules.budget_review.domain.maprex_baseline import (
     KNOWN_MATERIAL_CODE_COLLISIONS,
     KNOWN_PARTIDA_CODE_COLLISIONS,
     classify_costbase_item_origin,
+    classify_finding_nature,
     is_native_maprex_deprec_difference,
     normalize_unit,
 )
@@ -1023,24 +1024,40 @@ def evaluate_item_audit_rules(
                     ),
                 })
 
+    for f in findings:
+        f["finding_type"] = classify_finding_nature(str(f.get("rule_id") or ""))
+
     return findings
 
 
 def compute_snapshot_health_score(findings: List[Dict[str, Any]], total_items: int) -> float:
     """Porcentaje de partidas aprobadas (0 a 100): partidas sin observaciones / total de partidas.
 
-    Una partida se considera con observaciones si tiene al menos un hallazgo de severidad
-    CRITICA, ALTA o MEDIA. INFO_MAPREX no penaliza porque es diferencia nativa entre catálogos.
+    Una partida se considera con observaciones si presenta al menos un error o discrepancia
+    técnica/económica. Las notas informativas de catálogo (INFO_MAPREX / INFORMATIVO) no penalizan.
     Los hallazgos a nivel de capítulo (ARI-001) no corresponden a una partida y no se cuentan.
     """
     if total_items <= 0:
         return 100.0
+
+    def is_penalizing(f: Dict[str, Any]) -> bool:
+        if f.get("rule_id") == "ARI-001":
+            return False
+        if f.get("finding_type") == "INFORMATIVO" or f.get("severity") == "INFO_MAPREX":
+            return False
+        if f.get("finding_type") in {"ERROR", "DISCREPANCIA"}:
+            return True
+        if f.get("severity") in {"CRITICA", "ALTA", "MEDIA"}:
+            return True
+        rule = str(f.get("rule_id") or "").strip()
+        if rule and classify_finding_nature(rule) in {"ERROR", "DISCREPANCIA"}:
+            return True
+        return False
+
     observed_codes = {
         str(f.get("item_code") or "").strip().upper()
         for f in findings
-        if f.get("severity") in {"CRITICA", "ALTA", "MEDIA"}
-        and f.get("rule_id") != "ARI-001"
-        and str(f.get("item_code") or "").strip()
+        if is_penalizing(f) and str(f.get("item_code") or "").strip()
     }
     observed_count = min(len(observed_codes), total_items)
     approved = total_items - observed_count
@@ -1055,10 +1072,12 @@ def generate_default_executive_conclusion(
     uncoded_count: int,
     total_items: int,
     findings: List[Dict[str, Any]],
+    errors_count: Optional[int] = None,
+    discrepancies_count: Optional[int] = None,
 ) -> str:
     """Genera una conclusión técnica preliminar y ejecutiva según los hallazgos reales detectados."""
-    total_errors = critical_count + high_count + medium_count
-    if total_errors == 0 and uncoded_count == 0:
+    total_obs = len(findings) if findings else (critical_count + high_count + medium_count)
+    if total_obs == 0 and uncoded_count == 0:
         return (
             "El presupuesto evaluado cumple satisfactoriamente con los criterios de rendimientos, "
             "consumos de materiales, equipos y mano de obra establecidos en la base técnica de referencia. "
@@ -1085,12 +1104,20 @@ def generate_default_executive_conclusion(
         issues.append("errores aritméticos en sumatorias de partidas o capítulos")
     if any(r in rule_ids for r in ["DUP-001"]):
         issues.append("duplicidad de partidas dentro del presupuesto")
+    if any(r in rule_ids for r in ["PRE-001"]):
+        issues.append("discrepancias en precios unitarios de partidas")
+    if any(r in rule_ids for r in ["MAT-006"]):
+        issues.append("discrepancias en precios unitarios de materiales")
+    if any(r in rule_ids for r in ["EQU-006"]):
+        issues.append("discrepancias en costos diarios o tarifas de equipos")
+    if any(r in rule_ids for r in ["LAB-004"]):
+        issues.append("discrepancias en jornales de mano de obra")
     if uncoded_count > 0:
         issues.append(f"{uncoded_count} APUs atípicos sin codificación COVENIN o discrepantes con la base de referencia")
 
     issues_text = ", ".join(issues) if issues else "discrepancias técnicas detectadas frente a la base de datos de referencia institucional"
 
-    if critical_count > 0 or high_count > 0 or health_score < 75.0:
+    if health_score < 75.0 or critical_count > 0 or high_count > 0:
         return (
             f"El presupuesto no es apto para aprobación inmediata en su estado actual. "
             f"Presenta {issues_text}. Se requiere la subsanación formal de los hallazgos señalados "
@@ -1098,10 +1125,10 @@ def generate_default_executive_conclusion(
         )
     if issues:
         return (
-            f"El presupuesto presenta consistencia técnica global, pero registra {total_errors} observaciones "
-            f"moderadas ({issues_text}) que ameritan justificación técnica, cotizaciones o soportes antes de su aprobación definitiva."
+            f"El presupuesto presenta consistencia técnica global, pero registra {total_obs} observaciones "
+            f"técnicas ({issues_text}) que ameritan justificación técnica, cotizaciones o soportes antes de su aprobación definitiva."
         )
     return (
-        f"El presupuesto presenta consistencia técnica global, pero registra {total_errors} observaciones "
-        f"moderadas que ameritan justificación técnica o ajustes menores antes de su aprobación definitiva."
+        f"El presupuesto presenta consistencia técnica global, pero registra {total_obs} observaciones "
+        f"técnicas que ameritan justificación técnica o ajustes menores antes de su aprobación definitiva."
     )
