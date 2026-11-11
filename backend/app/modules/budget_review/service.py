@@ -212,87 +212,32 @@ def _fetch_master_item_and_recipe(
         if not rows:
             continue
 
-        if len(rows) == 1:
-            matched_row = rows[0]
+        # Regla estricta: Solo hay coincidencia si tanto el código como la descripción son iguales (1 a 1)
+        desc_candidates: List[Any] = []
+        if desc:
+            for r in rows:
+                cand_desc = str(r[2] or "").strip()
+                if is_exact_or_1to1_description(desc, cand_desc):
+                    desc_candidates.append(r)
+        else:
+            desc_candidates = list(rows)
+
+        if not desc_candidates:
+            # El código existe en la base pero la descripción es diferente: NO se empareja 1 a 1
+            continue
+
+        if len(desc_candidates) == 1:
+            matched_row = desc_candidates[0]
             break
         else:
-            # Hay múltiples variantes en Maprex para este código COVENIN
-            # Paso A: Si clean_code coincide con el CodPar de alguna variante, match exacto
+            # Múltiples variantes con la misma descripción en Maprex: priorizar coincidencia de código interno
             if clean_code:
-                clean_code_upper = clean_code.upper()
-                exact_by_code = [r for r in rows if str(r[0] or "").strip().upper() == clean_code_upper]
+                exact_by_code = [r for r in desc_candidates if str(r[0] or "").strip().upper() == clean_code.upper()]
                 if exact_by_code:
                     matched_row = exact_by_code[0]
                     break
-
-            # Paso B: Filtrar candidatos que coincidan 1 a 1 en descripción
-            desc_candidates: List[Any] = []
-            if desc:
-                for r in rows:
-                    cand_desc = str(r[2] or "").strip()
-                    if is_exact_or_1to1_description(desc, cand_desc):
-                        desc_candidates.append(r)
-            else:
-                desc_candidates = list(rows)
-
-            if len(desc_candidates) == 1:
-                matched_row = desc_candidates[0]
-                break
-            elif len(desc_candidates) > 1:
-                # Variantes Maprex con descripción 100% idéntica (ej. E321390000 con ECS140 y EPO044)
-                # B.1: Coincidencia exacta de rendimiento
-                if performance is not None and performance > 0:
-                    perf_exact = [
-                        r for r in desc_candidates
-                        if abs(float(r[4] or 0.0) - performance) < 0.001
-                    ]
-                    if len(perf_exact) == 1:
-                        matched_row = perf_exact[0]
-                        break
-
-                # B.2: Coincidencia de insumos (equipos / materiales) en la receta
-                if equipments or materials:
-                    imp_eq_codes = {
-                        str(e.get("codigo") or e.get("CodEqu") or "").strip().upper()
-                        for e in (equipments or [])
-                        if (e.get("codigo") or e.get("CodEqu"))
-                    }
-                    imp_mat_codes = {
-                        str(m.get("codigo") or m.get("CodMat") or "").strip().upper()
-                        for m in (materials or [])
-                        if (m.get("codigo") or m.get("CodMat"))
-                    }
-
-                    best_cand = None
-                    max_overlap = -1
-                    for r in desc_candidates:
-                        c_par = str(r[0]).strip()
-                        c_eqs = db.execute(
-                            text(f'SELECT "CodIns" FROM "{schema}".cost360_apu_equipment WHERE "CodPar" = :cp'),
-                            {"cp": c_par}
-                        ).scalars().all()
-                        c_mats = db.execute(
-                            text(f'SELECT "CodIns" FROM "{schema}".cost360_apu_materials WHERE "CodPar" = :cp'),
-                            {"cp": c_par}
-                        ).scalars().all()
-                        overlap = len(imp_eq_codes.intersection({str(x).strip().upper() for x in c_eqs})) + \
-                                  len(imp_mat_codes.intersection({str(x).strip().upper() for x in c_mats}))
-                        if overlap > max_overlap:
-                            max_overlap = overlap
-                            best_cand = r
-
-                    if best_cand and max_overlap > 0:
-                        matched_row = best_cand
-                        break
-
-                # B.3: Fallback a la variante con rendimiento más cercano
-                if performance is not None and performance > 0:
-                    desc_candidates.sort(key=lambda r: abs(float(r[4] or 0.0) - performance))
-                    matched_row = desc_candidates[0]
-                    break
-                else:
-                    matched_row = desc_candidates[0]
-                    break
+            matched_row = desc_candidates[0]
+            break
 
     # 2. BÚSQUEDA SECUNDARIA POR CÓDIGO INTERNO MAPREX (CodPar)
     if not matched_row and clean_code:
@@ -303,15 +248,12 @@ def _fetch_master_item_and_recipe(
             ),
             {"c": clean_code},
         ).fetchall()
-        if len(rows_by_cod) == 1:
+        if desc:
+            desc_match = [r for r in rows_by_cod if is_exact_or_1to1_description(desc, str(r[2] or "").strip())]
+            if desc_match:
+                matched_row = desc_match[0]
+        elif rows_by_cod:
             matched_row = rows_by_cod[0]
-        elif len(rows_by_cod) > 1:
-            if desc:
-                desc_match = [r for r in rows_by_cod if is_exact_or_1to1_description(desc, str(r[2] or "").strip())]
-                if desc_match:
-                    matched_row = desc_match[0]
-            if not matched_row:
-                matched_row = rows_by_cod[0]
 
     if not matched_row:
         return None, None
