@@ -29,6 +29,7 @@ from libro_obra_bot.conversation_libro import (
     handle_menu_fusionar_dias,
     handle_select_book_to_fuse,
     handle_select_book_to_share,
+    handle_revoke_member,
     handle_select_pair_to_merge,
     execute_delete_libro,
     execute_save_pending_libro_entry,
@@ -186,6 +187,8 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         await show_share_libro_menu(update, context)
     elif data.startswith("btn_share_book_"):
         await handle_select_book_to_share(update, context)
+    elif data.startswith("btn_revoke_member_"):
+        await handle_revoke_member(update, context)
     elif data == "btn_libro_eliminar":
         await show_delete_libro_menu(update, context)
     elif data == "btn_libro_ayuda":

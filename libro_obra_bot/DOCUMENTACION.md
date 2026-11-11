@@ -114,6 +114,33 @@ owner    → creador del libro; puede compartir, editar y eliminar
 editor   → residente o inspector invitado; puede leer y editar
 ```
 
+Límite:
+
+```text
+Máximo 2 usuarios activos por libro: 1 owner + 1 editor.
+Solo el owner invita.
+Solo puede existir una invitación pendiente.
+Al revocar al inspector se libera el cupo.
+```
+
+Concurrencia:
+
+```text
+project_locks
+- project_id
+- user_id
+- acquired_at
+- expires_at
+```
+
+Mientras un usuario edita una obra, otro recibe:
+
+```text
+🔒 Libro en edición por otro usuario.
+```
+
+El bloqueo vence a los 30 minutos y se libera al guardar o cancelar.
+
 Flujo:
 
 ```text

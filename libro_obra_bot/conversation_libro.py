@@ -70,6 +70,7 @@ from libro_obra_bot.parser import (
 )
 from libro_obra_bot.project_store import (
     accept_project_invite,
+    acquire_project_lock,
     can_access_project,
     create_project_invite,
     delete_project_metadata,
@@ -80,7 +81,9 @@ from libro_obra_bot.project_store import (
     get_sheet_report_by_date,
     get_user_last_report,
     list_project_members,
+    release_project_lock,
     remove_project_member,
+    revoke_pending_invites,
     save_project_metadata,
     save_sheet_report,
     save_user_last_report,
@@ -122,6 +125,36 @@ def _accessible_books(update: Update) -> List[Dict[str, Any]]:
 def _require_project_access(update: Update, project_name: str) -> bool:
     user_id = _user_id(update)
     return bool(user_id and can_access_project(project_name, user_id))
+
+
+async def _acquire_edit_lock(update: Update, project_name: str, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    """Adquiere el bloqueo de edición o avisa que otro usuario lo tiene."""
+    user_id = _user_id(update)
+    if not user_id:
+        return False
+    previous = context.user_data.get("project_edit_lock")
+    if previous and previous != project_name:
+        release_project_lock(previous, user_id)
+        context.user_data.pop("project_edit_lock", None)
+    result = acquire_project_lock(project_name, user_id)
+    if not result.get("ok"):
+        await update.effective_message.reply_text(
+            "🔒 *Libro en edición por otro usuario.*\n\n"
+            "Espera a que termine o pídele que cierre la edición. "
+            "El bloqueo se libera automáticamente en 30 minutos.",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        return False
+    context.user_data["project_edit_lock"] = project_name
+    context.user_data["current_user_id"] = user_id
+    return True
+
+
+async def _release_edit_lock(context: ContextTypes.DEFAULT_TYPE) -> None:
+    project_name = context.user_data.pop("project_edit_lock", None)
+    user_id = context.user_data.get("current_user_id")
+    if project_name and user_id:
+        release_project_lock(project_name, user_id)
 
 
 def is_full_inspection_report(text: str) -> bool:
@@ -417,6 +450,8 @@ async def process_full_report_for_libro(update: Update, context: ContextTypes.DE
             parse_mode=ParseMode.MARKDOWN,
         )
         return True
+    if not await _acquire_edit_lock(update, obra, context):
+        return True
     inspector_val = resolve_single_inspector(
         parsed.get("ing_inspectores", []),
         existing_meta.get("ing_inspector", ""),
@@ -607,6 +642,7 @@ async def save_and_deliver_libro_entry(
     context.user_data.pop("pending_libro_entry", None)
     context.user_data.pop("editing_existing_sheet", None)
     context.user_data.pop("libro_flow", None)
+    await _release_edit_lock(context)
 
 
 async def execute_save_pending_libro_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -992,6 +1028,10 @@ async def handle_select_obra(update: Update, context: ContextTypes.DEFAULT_TYPE)
             parse_mode=ParseMode.MARKDOWN,
         )
         return STATE_SELECT_OBRA
+
+    if not await _acquire_edit_lock(update, obra_name, context):
+        return STATE_SELECT_OBRA
+
     if existing_meta and existing_meta.get("ing_residente"):
         context.user_data["libro_flow"]["general_data"] = existing_meta
         today_str = datetime.now().strftime("%d/%m/%Y")
@@ -1368,6 +1408,7 @@ async def handle_confirmar_borrado(update: Update, context: ContextTypes.DEFAULT
 async def cancel_libro_obra(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Cancela la conversación y limpia el flujo."""
     context.user_data.pop("libro_flow", None)
+    await _release_edit_lock(context)
     if update.message:
         await update.message.reply_text("Operación cancelada. Volviendo al estado principal.", reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
@@ -1404,6 +1445,7 @@ async def return_to_clean_main_menu(update: Update, context: ContextTypes.DEFAUL
     """Limpia los mensajes de menús previos en el chat y muestra el Menú Principal limpio."""
     chat = update.effective_chat
     chat_id = chat.id if chat else None
+    await _release_edit_lock(context)
 
     # 1. Limpiar estados de sesión
     context.user_data.pop("current_report", None)
@@ -1581,14 +1623,17 @@ async def show_share_libro_menu(update: Update, context: ContextTypes.DEFAULT_TY
     if query:
         await query.answer()
 
-    books = _accessible_books(update)
+    books = [
+        b for b in _accessible_books(update)
+        if get_project_owner(b["project_name"]) == _user_id(update)
+    ]
     if not books:
         kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("🔙 Volver a Libro de Obra", callback_data="btn_menu_libro")],
         ])
         await msg_target.reply_text(
-            "👥 No tienes libros disponibles para compartir.\n"
-            "Primero asienta una hoja para crear tu libro de obra.",
+            "👥 No tienes libros propios para compartir.\n"
+            "Solo el residente creador puede invitar al inspector.",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=kb,
         )
@@ -1672,15 +1717,76 @@ async def handle_select_book_to_share(update: Update, context: ContextTypes.DEFA
             ])
 
         members = list_project_members(project_name)
+        member_buttons = []
+        if any(m.get("role") != "owner" for m in members):
+            member_buttons.append([
+                InlineKeyboardButton("🗑️ Revocar inspector", callback_data=f"btn_revoke_member_{idx}")
+            ])
         if members:
-            text += f"\n\n👤 *Miembros actuales:* {len(members)}"
+            text += f"\n\n👤 *Miembros actuales:* {len(members)}/{2}"
+
+        if member_buttons:
+            kb = InlineKeyboardMarkup(member_buttons + list(kb.inline_keyboard))
 
         await query.message.reply_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=kb)
     except PermissionError as exc:
-        await query.message.reply_text(f"⛔ {exc}")
+        members = list_project_members(selected.get("project_name", "")) if 'selected' in locals() else []
+        kb_rows = []
+        if members and any(m.get("role") != "owner" for m in members):
+            kb_rows.append([
+                InlineKeyboardButton("🗑️ Revocar inspector", callback_data=f"btn_revoke_member_{idx}")
+            ])
+        kb_rows.append([InlineKeyboardButton("🔙 Volver a Compartir", callback_data="btn_libro_compartir")])
+        await query.message.reply_text(
+            f"🔒 {exc}",
+            reply_markup=InlineKeyboardMarkup(kb_rows),
+        )
     except Exception as exc:
         logger.error("Error generando invitación: %s", exc, exc_info=True)
         await query.message.reply_text("❌ No se pudo generar la invitación.")
+
+
+
+async def handle_revoke_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Revoca el acceso del inspector invitado al libro."""
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+
+    try:
+        idx = int((query.data or "").replace("btn_revoke_member_", ""))
+        cache = context.user_data.get("share_books_cache", [])
+        if not (0 <= idx < len(cache)):
+            await query.message.reply_text("❌ No se encontró el libro.")
+            return
+        selected = cache[idx]
+        project_name = selected["project_name"]
+        user_id = _user_id(update)
+        if get_project_owner(project_name) != user_id:
+            await query.message.reply_text("⛔ Solo el residente creador puede revocar el acceso.")
+            return
+
+        members = list_project_members(project_name)
+        target = next((m for m in members if m.get("role") != "owner"), None)
+        if not target:
+            await query.message.reply_text("ℹ️ Este libro no tiene inspector invitado.")
+            return
+
+        if remove_project_member(project_name, target["user_id"], removed_by=user_id):
+            await query.message.reply_text(
+                "✅ Acceso revocado. El libro vuelve a tener un solo usuario.\n"
+                "Ya puedes invitar a otro inspector.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("👥 Compartir Libro", callback_data="btn_libro_compartir")],
+                    [InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home")],
+                ]),
+            )
+        else:
+            await query.message.reply_text("❌ No se pudo revocar el acceso.")
+    except Exception as exc:
+        logger.error("Error revocando miembro: %s", exc, exc_info=True)
+        await query.message.reply_text("❌ Error al revocar el acceso.")
 
 
 
@@ -1759,6 +1865,8 @@ async def _show_sheets_for_book(
     book_path = BOOKS_DIR / filename
     if not _require_project_access(update, project_name):
         await msg_target.reply_text("⛔ No tienes acceso a ese libro de obra.")
+        return
+    if not await _acquire_edit_lock(update, project_name, context):
         return
     if not book_path.exists():
         await msg_target.reply_text(f"❌ No se encontró el archivo: {filename}")
@@ -2509,6 +2617,8 @@ async def _show_merge_pairs_for_book(
     book_path = BOOKS_DIR / filename
     if not _require_project_access(update, project_name):
         await msg_target.reply_text("⛔ No tienes acceso a ese libro de obra.")
+        return
+    if not await _acquire_edit_lock(update, project_name, context):
         return
     if not book_path.exists():
         await msg_target.reply_text(f"❌ No se encontró el archivo: {filename}")

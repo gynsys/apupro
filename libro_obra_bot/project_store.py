@@ -19,6 +19,7 @@ from libro_obra_bot.config import DATA_DIR
 logger = logging.getLogger(__name__)
 
 DB_PATH = DATA_DIR / "inspector_bot.db"
+MAX_PROJECT_MEMBERS = 2
 
 
 @contextmanager
@@ -124,6 +125,16 @@ def init_db() -> None:
                 expires_at TIMESTAMP NOT NULL,
                 used_by INTEGER,
                 used_at TIMESTAMP
+            )
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS project_locks (
+                project_id TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                acquired_at TIMESTAMP NOT NULL,
+                expires_at TIMESTAMP NOT NULL
             )
             """
         )
@@ -409,15 +420,79 @@ def get_user_project_names(user_id: int) -> List[str]:
         return [row["obra"] for row in cursor.fetchall() if row["obra"]]
 
 
+def get_project_member_count(project_name: str) -> int:
+    init_db()
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT COUNT(*) AS n FROM project_members WHERE project_id = ?",
+            (_project_key(project_name),),
+        )
+        row = cursor.fetchone()
+        return int(row["n"]) if row else 0
+
+
+def get_project_role(project_name: str, user_id: Optional[int]) -> Optional[str]:
+    if user_id is None:
+        return None
+    init_db()
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT role FROM project_members WHERE project_id = ? AND user_id = ?",
+            (_project_key(project_name), user_id),
+        )
+        row = cursor.fetchone()
+        return row["role"] if row else None
+
+
+def get_pending_invite(project_name: str) -> Optional[Dict[str, Any]]:
+    init_db()
+    now = datetime.utcnow().isoformat(timespec="seconds")
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT * FROM project_invites
+            WHERE project_id = ? AND used_by IS NULL AND expires_at > ?
+            ORDER BY created_at DESC LIMIT 1
+            """,
+            (_project_key(project_name), now),
+        )
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
+def revoke_pending_invites(project_name: str) -> int:
+    init_db()
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM project_invites WHERE project_id = ? AND used_by IS NULL",
+            (_project_key(project_name),),
+        )
+        conn.commit()
+        return cursor.rowcount
+
+
 def create_project_invite(
     project_name: str,
     created_by: int,
     role: str = "editor",
     expires_hours: int = 168,
 ) -> Dict[str, Any]:
-    """Crea un código de invitación temporal para un libro concreto."""
-    if not can_access_project(project_name, created_by):
-        raise PermissionError("No tienes acceso a este libro.")
+    """Crea un código de invitación temporal, solo para el owner y con cupo."""
+    if get_project_owner(project_name) != created_by:
+        raise PermissionError("Solo el residente creador puede invitar.")
+    if get_project_member_count(project_name) >= MAX_PROJECT_MEMBERS:
+        raise PermissionError(
+            f"El libro ya tiene {MAX_PROJECT_MEMBERS} usuarios. "
+            "Revoca al inspector actual antes de invitar a otro."
+        )
+    if get_pending_invite(project_name):
+        raise PermissionError(
+            "Ya existe una invitación pendiente. Compártela o revócala antes de crear otra."
+        )
 
     project_id = _project_key(project_name)
     code = secrets.token_urlsafe(9).replace("-", "").replace("_", "")[:12]
@@ -425,6 +500,30 @@ def create_project_invite(
 
     with _get_connection() as conn:
         cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE")
+        cursor.execute(
+            "SELECT COUNT(*) AS n FROM project_members WHERE project_id = ?",
+            (project_id,),
+        )
+        if int(cursor.fetchone()["n"]) >= MAX_PROJECT_MEMBERS:
+            conn.rollback()
+            raise PermissionError(
+                f"El libro ya tiene {MAX_PROJECT_MEMBERS} usuarios. "
+                "Revoca al inspector actual antes de invitar a otro."
+            )
+        cursor.execute(
+            """
+            SELECT 1 FROM project_invites
+            WHERE project_id = ? AND used_by IS NULL AND expires_at > ?
+            LIMIT 1
+            """,
+            (project_id, datetime.utcnow().isoformat(timespec="seconds")),
+        )
+        if cursor.fetchone():
+            conn.rollback()
+            raise PermissionError(
+                "Ya existe una invitación pendiente. Compártela o revócala antes de crear otra."
+            )
         cursor.execute(
             """
             INSERT INTO project_invites (code, project_id, role, created_by, expires_at)
@@ -466,6 +565,30 @@ def accept_project_invite(code: str, user_id: int) -> Optional[Dict[str, Any]]:
 
     with _get_connection() as conn:
         cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE")
+        cursor.execute(
+            "SELECT used_by, expires_at FROM project_invites WHERE code = ?",
+            (code,),
+        )
+        current = cursor.fetchone()
+        if not current or current["used_by"]:
+            conn.rollback()
+            return None
+        try:
+            if datetime.fromisoformat(str(current["expires_at"])) < datetime.utcnow():
+                conn.rollback()
+                return None
+        except (TypeError, ValueError):
+            conn.rollback()
+            return None
+        cursor.execute(
+            "SELECT COUNT(*) AS n FROM project_members WHERE project_id = ?",
+            (invite["project_id"],),
+        )
+        count = int(cursor.fetchone()["n"])
+        if count >= MAX_PROJECT_MEMBERS:
+            conn.rollback()
+            return None
         cursor.execute(
             """
             INSERT OR IGNORE INTO project_members (project_id, user_id, role, invited_by)
@@ -511,11 +634,17 @@ def list_project_members(project_name: str) -> List[Dict[str, Any]]:
         return [dict(row) for row in cursor.fetchall()]
 
 
-def remove_project_member(project_name: str, user_id: int) -> bool:
+def remove_project_member(
+    project_name: str,
+    user_id: int,
+    removed_by: Optional[int] = None,
+) -> bool:
     init_db()
     project_id = _project_key(project_name)
     owner = get_project_owner(project_name)
     if owner == user_id:
+        return False
+    if removed_by is not None and owner != removed_by:
         return False
     with _get_connection() as conn:
         cursor = conn.cursor()
@@ -524,7 +653,81 @@ def remove_project_member(project_name: str, user_id: int) -> bool:
             (project_id, user_id),
         )
         conn.commit()
+        removed = cursor.rowcount > 0
+    if removed:
+        revoke_pending_invites(project_name)
+    return removed
+
+
+def acquire_project_lock(
+    project_name: str,
+    user_id: int,
+    ttl_minutes: int = 30,
+) -> Dict[str, Any]:
+    """Bloqueo de edición por obra para evitar escrituras simultáneas."""
+    init_db()
+    project_id = _project_key(project_name)
+    now = datetime.utcnow()
+    now_iso = now.isoformat(timespec="seconds")
+    expires_iso = (now + timedelta(minutes=ttl_minutes)).isoformat(timespec="seconds")
+
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE")
+        cursor.execute("DELETE FROM project_locks WHERE expires_at <= ?", (now_iso,))
+        cursor.execute(
+            "SELECT user_id, expires_at FROM project_locks WHERE project_id = ?",
+            (project_id,),
+        )
+        row = cursor.fetchone()
+        if row and row["user_id"] != user_id:
+            conn.commit()
+            return {
+                "ok": False,
+                "holder": row["user_id"],
+                "expires_at": row["expires_at"],
+            }
+        cursor.execute(
+            """
+            INSERT INTO project_locks (project_id, user_id, acquired_at, expires_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(project_id) DO UPDATE SET
+                user_id = excluded.user_id,
+                acquired_at = excluded.acquired_at,
+                expires_at = excluded.expires_at
+            """,
+            (project_id, user_id, now_iso, expires_iso),
+        )
+        conn.commit()
+
+    return {"ok": True, "expires_at": expires_iso}
+
+
+def release_project_lock(project_name: str, user_id: int) -> bool:
+    init_db()
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM project_locks WHERE project_id = ? AND user_id = ?",
+            (_project_key(project_name), user_id),
+        )
+        conn.commit()
         return cursor.rowcount > 0
+
+
+def get_project_lock(project_name: str) -> Optional[Dict[str, Any]]:
+    init_db()
+    now = datetime.utcnow().isoformat(timespec="seconds")
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM project_locks WHERE expires_at <= ?", (now,))
+        cursor.execute(
+            "SELECT * FROM project_locks WHERE project_id = ?",
+            (_project_key(project_name),),
+        )
+        row = cursor.fetchone()
+        conn.commit()
+        return dict(row) if row else None
 
 
 def get_recent_projects(user_id: Optional[int] = None) -> List[str]:
