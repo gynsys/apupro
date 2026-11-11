@@ -11,7 +11,7 @@ import {
   PURE_UNIT_LINE_RE,
   MEASURE_TRAILING_RE,
 } from './patterns.js';
-import { evaluateMeasurementFormula, round2, cleanFormulaDisplay } from './formulas.js';
+import { computePartial, evaluateMeasurementFormula, round2, cleanFormulaDisplay } from './formulas.js';
 
 function createBlankRow(chapter = '') {
   return {
@@ -81,6 +81,15 @@ function extractCoveninSearchKeywords(text) {
   return clean.slice(0, 2).join(' ');
 }
 
+function hasSpatialDimensions(row) {
+  const parseDim = (v) => {
+    if (v === '' || v == null) return null;
+    const n = parseFloat(String(v).replace(',', '.').replace(/\.{2,}/g, '.'));
+    return isNaN(n) ? null : n;
+  };
+  return (parseDim(row?.length) ?? 0) > 0 || (parseDim(row?.width) ?? 0) > 0 || (parseDim(row?.height) ?? 0) > 0;
+}
+
 function sanitizeItemDecimals(item) {
   if (!item) return item;
   const parseRound = (v) => {
@@ -98,12 +107,31 @@ function sanitizeItemDecimals(item) {
     sanitized.m3 = parseRound(item.m3);
   }
   if (Array.isArray(item.partials) && item.partials.length > 0) {
-    sanitized.partials = item.partials.map((p) => ({
-      ...p,
-      formula: p.formula ? cleanFormulaDisplay(p.formula) : p.formula,
-      partial: parseRound(p.partial) ?? 0,
-      m3: p.m3 !== '' && p.m3 != null ? parseRound(p.m3) : p.m3,
-    }));
+    let recomputedAny = false;
+    sanitized.partials = item.partials.map((p) => {
+      const nextP = {
+        ...p,
+        formula: p.formula ? cleanFormulaDisplay(p.formula) : p.formula,
+        partial: parseRound(p.partial) ?? 0,
+        m3: p.m3 !== '' && p.m3 != null ? parseRound(p.m3) : p.m3,
+      };
+      if (!nextP.linkedTo && hasSpatialDimensions(nextP)) {
+        const probe = { ...nextP };
+        const expectedPartial = computePartial(probe, sanitized.unit);
+        if (nextP.partial !== expectedPartial) {
+          recomputedAny = true;
+          nextP.partial = expectedPartial;
+          nextP.formula = probe.formula ? cleanFormulaDisplay(probe.formula) : nextP.formula;
+          if (nextP.quantity !== undefined) {
+            nextP.quantity = expectedPartial;
+          }
+          if (probe.m3 !== '' && probe.m3 != null) {
+            nextP.m3 = probe.m3;
+          }
+        }
+      }
+      return nextP;
+    });
     const sumPartials = round2(
       sanitized.partials.reduce((sum, p) => sum + (Number(p.partial) || 0), 0)
     );
@@ -111,8 +139,22 @@ function sanitizeItemDecimals(item) {
       sanitized.linkedTo = null;
       sanitized.quantity = sumPartials;
       sanitized.partial = 0;
-    } else if (sumPartials > 0 && sanitized.quantity !== sumPartials) {
+    } else if ((recomputedAny || sumPartials > 0) && sanitized.quantity !== sumPartials) {
       sanitized.quantity = sumPartials;
+    }
+    if (recomputedAny) {
+      const hasAnyM3 = sanitized.partials.some((p) => p.m3 !== '' && p.m3 != null && !isNaN(Number(p.m3)));
+      if (hasAnyM3) {
+        const totalM3 = round2(sanitized.partials.reduce((sum, p) => sum + (Number(p.m3) || 0), 0));
+        if (totalM3 > 0) sanitized.m3 = totalM3;
+      }
+      const formulaParts = sanitized.partials
+        .filter((p) => Number(p.partial) !== 0)
+        .map((p) => String(p.partial));
+      sanitized.formula = formulaParts.length > 0
+        ? `${formulaParts.join(' + ')} = ${sumPartials} ${sanitized.unit || ''}`.trim()
+        : '';
+      sanitized.partial = 0;
     }
   }
   return sanitized;

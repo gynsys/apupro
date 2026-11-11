@@ -18,7 +18,7 @@ import MathQuantityInput from '../../../pages/admin/budget_worksheet/MathQuantit
 import { COMMON_UNITS } from '../domain/units.js';
 import { isItemEmpty } from '../domain/rows.js';
 import { isSteelRow, REBAR_DIAMETERS, getRebarSpec } from '../domain/steel.js';
-import { GEOMETRY_CONFIGS, GEOMETRY_TYPES } from '../domain/geometry.js';
+import { GEOMETRY_CONFIGS, GEOMETRY_TYPES, getDefaultGeometryType } from '../domain/geometry.js';
 import { cleanFormulaDisplay } from '../domain/formulas.js';
 import DescriptionEnricher from './DescriptionEnricher.jsx';
 export default function ComputosCards({
@@ -284,7 +284,7 @@ export default function ComputosCards({
                                   <span>📐 Forma:</span>
                                 </label>
                                 <select
-                                  value={it.geometryType || GEOMETRY_TYPES.RECTANGLE}
+                                  value={it.geometryType || getDefaultGeometryType(it.unit)}
                                   onChange={(e) => handleUpdateItemField(it.id, 'geometryType', e.target.value)}
                                   className="flex-1 min-w-0 max-w-full truncate px-2 py-1 text-xs font-bold rounded-lg border border-amber-300 bg-white text-amber-950 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-xs"
                                 >
@@ -624,7 +624,7 @@ export default function ComputosCards({
                                           />
                                           {!isSteel && (
                                             <select
-                                              value={p.geometryType || GEOMETRY_TYPES.RECTANGLE}
+                                              value={p.geometryType || getDefaultGeometryType(it.unit)}
                                               onChange={(e) => handleUpdatePartialField(it.id, p.id, 'geometryType', e.target.value)}
                                               className="px-1.5 py-0.5 text-[10px] font-bold rounded border border-amber-300 bg-white text-amber-950 cursor-pointer shrink-0"
                                               title="Forma geométrica de este tramo"

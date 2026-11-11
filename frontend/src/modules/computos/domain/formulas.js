@@ -4,7 +4,7 @@
 
 import { UNIT_PATTERN, normalizeUnitStr, isDiscreteUnit } from './units.js';
 import { getRebarSpec, isSteelRow } from './steel.js';
-import { computeGeometryBase, GEOMETRY_TYPES } from './geometry.js';
+import { computeGeometryBase, GEOMETRY_TYPES, isBoxGeometry } from './geometry.js';
 
 function round2(val) {
   if (val === null || val === undefined || isNaN(val) || val === '') return 0;
@@ -156,7 +156,7 @@ function computePartial(p, parentUnit = '') {
   }
 
   // Cálculo de figuras geométricas especiales (Cilindro, Triángulo, Trapecio, Zapata piramidal, Zanja)
-  if (p.geometryType && p.geometryType !== GEOMETRY_TYPES.RECTANGLE) {
+  if (!isBoxGeometry(p.geometryType)) {
     const geomResult = computeGeometryBase(p, normUnit || 'M3');
     if (geomResult.baseGeom !== null) {
       const is3DGeometryWithDistance = (
@@ -350,7 +350,7 @@ function recomputeRow(row, field, value) {
   }
 
   // Cálculo de figuras geométricas especiales (Cilindro, Triángulo, Zapata piramidal, Zanja)
-  if (updated.geometryType && updated.geometryType !== GEOMETRY_TYPES.RECTANGLE) {
+  if (!isBoxGeometry(updated.geometryType)) {
     const geomResult = computeGeometryBase(updated, updated.unit);
     if (geomResult.baseGeom !== null) {
       const is3DGeometryWithDistance = (

@@ -18,7 +18,7 @@ import {
 import MathQuantityInput from '../../../pages/admin/budget_worksheet/MathQuantityInput';
 import { COMMON_UNITS } from '../domain/units.js';
 import { isSteelRow, REBAR_DIAMETERS, getRebarSpec } from '../domain/steel.js';
-import { GEOMETRY_CONFIGS, GEOMETRY_TYPES } from '../domain/geometry.js';
+import { GEOMETRY_CONFIGS, GEOMETRY_TYPES, getDefaultGeometryType } from '../domain/geometry.js';
 import { cleanFormulaDisplay } from '../domain/formulas.js';
 import { auditDescription } from '../../../utils/descriptionAuditor';
 import DescriptionEnricher from './DescriptionEnricher.jsx';
@@ -224,7 +224,7 @@ function ComputosTableRow({
                                         <div className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-950 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded shadow-2xs">
                                           <span className="text-amber-700">Forma:</span>
                                           <select
-                                            value={it.geometryType || GEOMETRY_TYPES.RECTANGLE}
+                                            value={it.geometryType || getDefaultGeometryType(it.unit)}
                                             onChange={(e) => handleUpdateItemField(it.id, 'geometryType', e.target.value)}
                                             className="bg-transparent font-bold text-amber-950 focus:outline-none cursor-pointer"
                                             title="Seleccione forma geométrica para fórmulas automáticas"
@@ -638,7 +638,7 @@ function ComputosTableRow({
                                       />
                                       {!isSteel && (
                                         <select
-                                          value={p.geometryType || GEOMETRY_TYPES.RECTANGLE}
+                                          value={p.geometryType || getDefaultGeometryType(it.unit)}
                                           onChange={(e) => handleUpdatePartialField(it.id, p.id, 'geometryType', e.target.value)}
                                           className="text-[10px] font-bold bg-amber-50 text-amber-950 border border-amber-300 rounded px-1 py-0.5 cursor-pointer shrink-0"
                                           title="Forma geométrica de este parcial"

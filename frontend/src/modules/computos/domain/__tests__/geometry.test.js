@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { computeGeometryBase, GEOMETRY_TYPES } from '../geometry.js';
-import { recomputeRow } from '../formulas.js';
+import { computeGeometryBase, GEOMETRY_CONFIGS, GEOMETRY_TYPES, getDefaultGeometryType } from '../geometry.js';
+import { recomputeItemWithPartials, recomputeRow } from '../formulas.js';
 import { rowsReducer } from '../../state/rowsReducer.js';
 
 describe('Intelligent Geometry Templates', () => {
@@ -266,5 +266,32 @@ describe('Steel Rebar Diameter Selection & Factor Synchronization', () => {
     const res2 = recomputeRow(t2, 'distance', 0.23);
     expect(res2.quantity).toBe(0.12);
     expect(res2.partial).toBe(0.12);
+  });
+
+  it('exposes Rectángulo and Prisma options cleanly in GEOMETRY_CONFIGS with unit-aware default', () => {
+    const ids = GEOMETRY_CONFIGS.map((g) => g.id);
+    const shortLabels = GEOMETRY_CONFIGS.map((g) => g.shortLabel);
+    expect(ids).toContain(GEOMETRY_TYPES.RECTANGLE);
+    expect(ids).toContain(GEOMETRY_TYPES.PRISM);
+    expect(shortLabels).toContain('Rectángulo');
+    expect(shortLabels).toContain('Prisma');
+    expect(getDefaultGeometryType('M2')).toBe(GEOMETRY_TYPES.RECTANGLE);
+    expect(getDefaultGeometryType('M3')).toBe(GEOMETRY_TYPES.PRISM);
+  });
+
+  it('computes M2 rectangle walls without implicit thickness (Partida 14 Ikatira Ina)', () => {
+    const item = recomputeItemWithPartials({
+      id: 'item-ikatira-14',
+      unit: 'M2',
+      partials: [
+        { id: 'p1', length: 2.67, width: '', height: 1.97, times: 1, geometryType: GEOMETRY_TYPES.RECTANGLE },
+        { id: 'p2', length: 2.67, width: '', height: 2.40, times: 1, geometryType: GEOMETRY_TYPES.PRISM },
+        { id: 'p3', length: 2.17, width: '', height: 0.70, times: -1 },
+      ],
+    });
+    expect(item.partials[0].partial).toBe(5.26);
+    expect(item.partials[1].partial).toBe(6.41);
+    expect(item.partials[2].partial).toBe(-1.52);
+    expect(item.quantity).toBe(10.15);
   });
 });

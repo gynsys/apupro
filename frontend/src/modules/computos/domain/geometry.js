@@ -11,6 +11,7 @@
 
 export const GEOMETRY_TYPES = {
   RECTANGLE: 'rectangle',
+  PRISM: 'prism',
   CYLINDER: 'cylinder',
   TRIANGLE: 'triangle',
   TRIANGLE_3_SIDES: 'triangle_3_sides',
@@ -19,13 +20,30 @@ export const GEOMETRY_TYPES = {
   TRENCH: 'trench',
 };
 
+export function getDefaultGeometryType(unit = '') {
+  return String(unit || '').trim().toUpperCase() === 'M3'
+    ? GEOMETRY_TYPES.PRISM
+    : GEOMETRY_TYPES.RECTANGLE;
+}
+
+export function isBoxGeometry(geometryType) {
+  return !geometryType || geometryType === GEOMETRY_TYPES.RECTANGLE || geometryType === GEOMETRY_TYPES.PRISM;
+}
+
 export const GEOMETRY_CONFIGS = [
   {
     id: GEOMETRY_TYPES.RECTANGLE,
+    label: 'Rectángulo / Área (Largo × Ancho o Alto)',
+    shortLabel: 'Rectángulo',
+    icon: '▭',
+    description: 'Largo × Ancho o Alto tradicional en m²',
+  },
+  {
+    id: GEOMETRY_TYPES.PRISM,
     label: 'Prisma Rectangular (L × A × H)',
     shortLabel: 'Prisma',
     icon: '📦',
-    description: 'Largo × Ancho × Alto tradicional',
+    description: 'Largo × Ancho × Alto tradicional en m³',
   },
   {
     id: GEOMETRY_TYPES.CYLINDER,
@@ -91,7 +109,7 @@ function parseNum(v) {
  * @returns {{ baseGeom: number, formulaStr: string, trenchDetails?: Object }}
  */
 export function computeGeometryBase(row, unit = 'M3') {
-  const geomType = row.geometryType || GEOMETRY_TYPES.RECTANGLE;
+  const geomType = row.geometryType || getDefaultGeometryType(unit);
   const normUnit = String(unit || '').trim().toUpperCase();
 
   switch (geomType) {
@@ -294,6 +312,7 @@ export function computeGeometryBase(row, unit = 'M3') {
     }
 
     case GEOMETRY_TYPES.RECTANGLE:
+    case GEOMETRY_TYPES.PRISM:
     default:
       break;
   }

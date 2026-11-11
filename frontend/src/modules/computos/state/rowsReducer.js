@@ -8,6 +8,7 @@
  */
 import { createBlankRow, isItemEmpty, normalizeRowsWithSingleTrailingBlank } from '../domain/rows.js';
 import { computePartial, recomputeItemWithPartials, recomputeRow, round2 } from '../domain/formulas.js';
+import { getDefaultGeometryType, isBoxGeometry } from '../domain/geometry.js';
 import { applyReactiveLinks, computeLinkedQuantity, getRowOwnQuantity } from '../domain/links.js';
 import { getRebarSpec } from '../domain/steel.js';
 
@@ -79,23 +80,52 @@ function rowsReducerCore(state, action) {
     case 'UPDATE_FIELD': {
       const updated = rows.map((row) => {
         if (row.id !== payload.itemId) return row;
-        // Si la fila tiene parciales y se actualiza una dimensión física en la fila padre,
-        // sincronizar el primer parcial propio (no vinculado) antes de recalcular
-        if (
-          Array.isArray(row.partials) &&
-          row.partials.length > 0 &&
-          ['length', 'width', 'height', 'times', 'factor', 'distance'].includes(payload.field)
-        ) {
-          const firstOwnIdx = row.partials.findIndex((p) => !p?.linkedTo);
-          if (firstOwnIdx !== -1) {
-            const nextPartials = row.partials.map((p, idx) => {
-              if (idx !== firstOwnIdx) return p;
-              const nextP = { ...p, [payload.field]: payload.value };
+        if (Array.isArray(row.partials) && row.partials.length > 0) {
+          // Si la fila tiene parciales y se actualiza una dimensión física en la fila padre,
+          // sincronizar el primer parcial propio (no vinculado) antes de recalcular
+          if (['length', 'width', 'height', 'times', 'factor', 'distance'].includes(payload.field)) {
+            const firstOwnIdx = row.partials.findIndex((p) => !p?.linkedTo);
+            if (firstOwnIdx !== -1) {
+              const nextPartials = row.partials.map((p, idx) => {
+                if (idx !== firstOwnIdx) return p;
+                const nextP = { ...p, [payload.field]: payload.value };
+                nextP.partial = computePartial(nextP, row.unit);
+                return nextP;
+              });
+              return recomputeItemWithPartials({ ...row, partials: nextPartials });
+            }
+          } else if (payload.field === 'geometryType') {
+            const nextPartials = row.partials.map((p) => {
+              if (p?.linkedTo) return p;
+              const nextP = { ...p, geometryType: payload.value };
               nextP.partial = computePartial(nextP, row.unit);
               return nextP;
             });
-            return recomputeItemWithPartials({ ...row, partials: nextPartials });
+            return recomputeItemWithPartials({ ...row, geometryType: payload.value, partials: nextPartials });
+          } else if (payload.field === 'unit') {
+            const nextGeom = isBoxGeometry(row.geometryType)
+              ? getDefaultGeometryType(payload.value)
+              : row.geometryType;
+            const nextPartials = row.partials.map((p) => {
+              if (p?.linkedTo) return p;
+              const pGeom = isBoxGeometry(p.geometryType)
+                ? getDefaultGeometryType(payload.value)
+                : p.geometryType;
+              return { ...p, geometryType: pGeom };
+            });
+            return recomputeRow(
+              { ...row, geometryType: nextGeom, partials: nextPartials },
+              'unit',
+              payload.value
+            );
           }
+        }
+        if (payload.field === 'unit' && isBoxGeometry(row.geometryType)) {
+          return recomputeRow(
+            { ...row, geometryType: getDefaultGeometryType(payload.value) },
+            'unit',
+            payload.value
+          );
         }
         return recomputeRow(row, payload.field, payload.value);
       });
@@ -134,6 +164,7 @@ function rowsReducerCore(state, action) {
       const updated = rows.map((row) => {
         if (row.id !== payload.itemId) return row;
         if (row.partials && row.partials.length > 0) return row;
+        const defaultGeom = row.geometryType || getDefaultGeometryType(row.unit);
         const first = {
           id: newId('part'),
           description: 'Parcial 1',
@@ -144,6 +175,7 @@ function rowsReducerCore(state, action) {
           factor: row.factor || '',
           distance: row.distance || '',
           m3: row.m3 || '',
+          geometryType: defaultGeom,
           partial: row.partial || 0,
           observations: '',
         };
@@ -157,10 +189,11 @@ function rowsReducerCore(state, action) {
           factor: '',
           distance: '',
           m3: '',
+          geometryType: defaultGeom,
           partial: 0,
           observations: '',
         };
-        first.partial = computePartial(first);
+        first.partial = computePartial(first, row.unit);
         return recomputeItemWithPartials({ ...row, partials: [first, second] });
       });
       const withLinks = applyReactiveLinks(updated);
@@ -183,6 +216,7 @@ function rowsReducerCore(state, action) {
         const partial = {
           id: newId('part'),
           description: `Parcial ${nextNum}`,
+          geometryType: row.geometryType || getDefaultGeometryType(row.unit),
           times: 1,
           length: '',
           width: '',

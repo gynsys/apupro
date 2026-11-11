@@ -80,4 +80,26 @@ describe('filas de cómputos', () => {
     const normalized = normalizeRowsWithSingleTrailingBlank([rawItem], 'ESTRUCTURAS');
     expect(normalized[0].quantity).toBe(0.24);
   });
+
+  it('recalcula parciales con dimensiones desincronizadas al sanear filas cargadas (ej. Partida 14 M2)', () => {
+    const staleItem14 = {
+      id: 'item-ikatira-14',
+      unit: 'M2',
+      description: 'DEMOLICION DE PAREDES DE LADRILLOS MACIZO DE 15 CM DE ESPESOR',
+      quantity: 1.52,
+      m3: 1.75,
+      partial: 1.75,
+      partials: [
+        { id: 'p1', length: 2.67, width: '', height: 1.97, times: 1, m3: 0.79, partial: 0.79, quantity: 0.79, formula: '' },
+        { id: 'p2', length: 2.67, width: '', height: 2.4, times: 1, m3: 0.96, partial: 0.96, quantity: 0.96, formula: '' },
+        { id: 'p3', length: 2.17, width: '', height: 0.7, times: -1, m3: -0.23, partial: -0.23, quantity: -0.23, formula: '' },
+      ],
+    };
+    const sanitized = sanitizeItemDecimals(staleItem14);
+    expect(sanitized.partials[0].partial).toBe(5.26);
+    expect(sanitized.partials[1].partial).toBe(6.41);
+    expect(sanitized.partials[2].partial).toBe(-1.52);
+    expect(sanitized.quantity).toBe(10.15);
+    expect(sanitized.m3).toBe(1.52);
+  });
 });

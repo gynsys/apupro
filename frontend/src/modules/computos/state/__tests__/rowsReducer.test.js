@@ -286,6 +286,30 @@ describe('rowsReducer', () => {
     const afterRedo = rowsReducer(afterUndo, { type: 'REDO' });
     expect(afterRedo.rows.some((r) => r.id === 'r1')).toBe(false);
   });
+
+  it('propaga cambio de geometría y unidad desde la fila padre a sus parciales propios', () => {
+    const row = {
+      ...createBlankRow('GENERAL'),
+      id: 'r-geom',
+      unit: 'M3',
+      partials: [
+        { id: 'p1', length: 0.5, width: '', height: 2, times: 1, partial: 1 },
+      ],
+    };
+    const withCylinder = rowsReducer(stateWithRows([row]), {
+      type: 'UPDATE_FIELD',
+      payload: { itemId: 'r-geom', field: 'geometryType', value: 'cylinder', activeChapter: 'GENERAL' },
+    });
+    expect(withCylinder.rows[0].partials[0].geometryType).toBe('cylinder');
+    expect(withCylinder.rows[0].quantity).toBe(0.39);
+
+    const switchedToM2 = rowsReducer(withCylinder, {
+      type: 'UPDATE_FIELD',
+      payload: { itemId: 'r-geom', field: 'unit', value: 'M2', activeChapter: 'GENERAL' },
+    });
+    expect(switchedToM2.rows[0].unit).toBe('M2');
+    expect(switchedToM2.rows[0].quantity).toBe(3.14);
+  });
 });
 
 describe('selectores de filas', () => {
