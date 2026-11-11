@@ -489,9 +489,11 @@ def create_project_invite(
             f"El libro ya tiene {MAX_PROJECT_MEMBERS} usuarios. "
             "Revoca al inspector actual antes de invitar a otro."
         )
-    if get_pending_invite(project_name):
+    pending = get_pending_invite(project_name)
+    if pending:
         raise PermissionError(
-            "Ya existe una invitación pendiente. Compártela o revócala antes de crear otra."
+            f"Ya existe la invitación {pending['code']} pendiente. "
+            "Compártela o revócala antes de crear otra."
         )
 
     project_id = _project_key(project_name)
@@ -513,16 +515,18 @@ def create_project_invite(
             )
         cursor.execute(
             """
-            SELECT 1 FROM project_invites
+            SELECT code FROM project_invites
             WHERE project_id = ? AND used_by IS NULL AND expires_at > ?
             LIMIT 1
             """,
             (project_id, datetime.utcnow().isoformat(timespec="seconds")),
         )
-        if cursor.fetchone():
+        pending_row = cursor.fetchone()
+        if pending_row:
             conn.rollback()
             raise PermissionError(
-                "Ya existe una invitación pendiente. Compártela o revócala antes de crear otra."
+                f"Ya existe la invitación {pending_row['code']} pendiente. "
+                "Compártela o revócala antes de crear otra."
             )
         cursor.execute(
             """
