@@ -31,6 +31,9 @@ def get_libro_main_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton("📚 Ver / Descargar Libros", callback_data="btn_libro_ver"),
+                InlineKeyboardButton("👥 Compartir Libro", callback_data="btn_libro_compartir"),
+            ],
+            [
                 InlineKeyboardButton("🗑️ Eliminar un Libro", callback_data="btn_libro_eliminar"),
             ],
             [

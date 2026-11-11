@@ -28,6 +28,7 @@ from libro_obra_bot.conversation_libro import (
     handle_menu_importar_libro,
     handle_menu_fusionar_dias,
     handle_select_book_to_fuse,
+    handle_select_book_to_share,
     handle_select_pair_to_merge,
     execute_delete_libro,
     execute_save_pending_libro_entry,
@@ -51,10 +52,12 @@ from libro_obra_bot.conversation_libro import (
     return_to_clean_main_menu,
     show_delete_libro_menu,
     show_libro_obra_hub,
+    show_share_libro_menu,
     show_saved_libros_menu,
     start_libro_obra_flow,
 )
 from libro_obra_bot.keyboards import get_libro_main_keyboard
+from libro_obra_bot.project_store import accept_project_invite, init_db
 
 # Configuración del registrador de logs
 logging.basicConfig(
@@ -65,7 +68,27 @@ logger = logging.getLogger("libro_obra_bot")
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Comando /start: Da la bienvenida y muestra el panel principal del Libro de Obra."""
+    """Comando /start: procesa invitaciones y muestra el panel principal."""
+    user = update.effective_user
+    args = context.args or []
+
+    if args and args[0].startswith("join_") and user:
+        code = args[0].replace("join_", "", 1).strip()
+        accepted = accept_project_invite(code, user.id)
+        if accepted:
+            await update.message.reply_text(
+                "✅ *Invitación aceptada*\n\n"
+                f"🏗 *Obra:* {accepted['project_name']}\n"
+                "Ya puedes leer y editar este libro de obra.",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=get_libro_main_keyboard(),
+            )
+            return
+        await update.message.reply_text(
+            "❌ La invitación no es válida, ya fue usada o venció."
+        )
+        return
+
     await return_to_clean_main_menu(update, context)
 
 
@@ -159,6 +182,10 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         await handle_menu_editar_hoja(update, context)
     elif data == "btn_libro_ver":
         await show_saved_libros_menu(update, context)
+    elif data == "btn_libro_compartir":
+        await show_share_libro_menu(update, context)
+    elif data.startswith("btn_share_book_"):
+        await handle_select_book_to_share(update, context)
     elif data == "btn_libro_eliminar":
         await show_delete_libro_menu(update, context)
     elif data == "btn_libro_ayuda":
@@ -322,6 +349,7 @@ def create_bot_app() -> Application:
 def main() -> None:
     """Punto de entrada principal para ejecutar el bot de Libro de Obra."""
     logger.info("Iniciando Bot de Libro de Obra Digital en Telegram...")
+    init_db()
     app = create_bot_app()
     logger.info("Bot de Libro de Obra activo y escuchando...")
     app.run_polling(drop_pending_updates=True)

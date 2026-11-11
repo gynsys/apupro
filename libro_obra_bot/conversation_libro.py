@@ -69,12 +69,18 @@ from libro_obra_bot.parser import (
     resolve_single_inspector,
 )
 from libro_obra_bot.project_store import (
+    accept_project_invite,
+    can_access_project,
+    create_project_invite,
     delete_project_metadata,
     get_project_metadata,
+    get_project_owner,
     get_recent_projects,
     get_sheet_report,
     get_sheet_report_by_date,
     get_user_last_report,
+    list_project_members,
+    remove_project_member,
     save_project_metadata,
     save_sheet_report,
     save_user_last_report,
@@ -95,6 +101,27 @@ logger = logging.getLogger(__name__)
     STATE_CONFIRMAR,
     STATE_CONFIRMAR_BORRADO,
 ) = range(10)
+
+
+def _user_id(update: Update) -> Optional[int]:
+    user = update.effective_user
+    return user.id if user else None
+
+
+def _accessible_books(update: Update) -> List[Dict[str, Any]]:
+    """Libros visibles para el usuario, filtrando por membresía del proyecto."""
+    user_id = _user_id(update)
+    if user_id is None:
+        return []
+    return [
+        book for book in list_all_project_books()
+        if can_access_project(book.get("project_name", ""), user_id)
+    ]
+
+
+def _require_project_access(update: Update, project_name: str) -> bool:
+    user_id = _user_id(update)
+    return bool(user_id and can_access_project(project_name, user_id))
 
 
 def is_full_inspection_report(text: str) -> bool:
@@ -383,6 +410,13 @@ async def process_full_report_for_libro(update: Update, context: ContextTypes.DE
     existing_meta = get_project_metadata(obra)
     if existing_meta and existing_meta.get("obra"):
         obra = existing_meta["obra"]
+    if existing_meta and not _require_project_access(update, obra):
+        await msg_target.reply_text(
+            "⛔ No tienes acceso a ese libro de obra. "
+            "Pídele al residente que te invite desde *Compartir Libro*.",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        return True
     inspector_val = resolve_single_inspector(
         parsed.get("ing_inspectores", []),
         existing_meta.get("ing_inspector", ""),
@@ -951,6 +985,13 @@ async def handle_select_obra(update: Update, context: ContextTypes.DEFAULT_TYPE)
     context.user_data["libro_flow"]["obra"] = obra_name
 
     existing_meta = get_project_metadata(obra_name)
+    if existing_meta and not _require_project_access(update, obra_name):
+        await update.message.reply_text(
+            "⛔ No tienes acceso a ese libro de obra. "
+            "Pídele al residente que te invite desde *Compartir Libro*.",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        return STATE_SELECT_OBRA
     if existing_meta and existing_meta.get("ing_residente"):
         context.user_data["libro_flow"]["general_data"] = existing_meta
         today_str = datetime.now().strftime("%d/%m/%Y")
@@ -1478,7 +1519,7 @@ async def show_saved_libros_menu(update: Update, context: ContextTypes.DEFAULT_T
             except Exception as exc:
                 logger.debug("No se pudo borrar mensaje anterior en show_saved_libros_menu: %s", exc)
 
-    books = list_all_project_books()
+    books = _accessible_books(update)
     if not books:
         kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("✍️ Llenar Primera Hoja", callback_data="btn_libro_registrar")],
@@ -1531,6 +1572,118 @@ async def show_saved_libros_menu(update: Update, context: ContextTypes.DEFAULT_T
         track_menu_message(context, sent_list.message_id)
 
 
+async def show_share_libro_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Muestra los libros del usuario para generar una invitación de edición."""
+    query = update.callback_query
+    msg_target = query.message if query else update.message
+    if not msg_target:
+        return
+    if query:
+        await query.answer()
+
+    books = _accessible_books(update)
+    if not books:
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔙 Volver a Libro de Obra", callback_data="btn_menu_libro")],
+        ])
+        await msg_target.reply_text(
+            "👥 No tienes libros disponibles para compartir.\n"
+            "Primero asienta una hoja para crear tu libro de obra.",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=kb,
+        )
+        return
+
+    context.user_data["share_books_cache"] = [
+        {"filename": b["filename"], "project_name": b["project_name"]}
+        for b in books
+    ]
+    buttons = []
+    for idx, book in enumerate(books):
+        name = book["project_name"]
+        display = (name[:42] + "...") if len(name) > 42 else name
+        buttons.append([
+            InlineKeyboardButton(f"👥 {display}", callback_data=f"btn_share_book_{idx}")
+        ])
+    buttons.append([
+        InlineKeyboardButton("🔙 Volver a Libro de Obra", callback_data="btn_menu_libro"),
+    ])
+
+    await msg_target.reply_text(
+        "👥 *Compartir Libro de Obra*\n\n"
+        "Selecciona el libro. El residente y el inspector invitado podrán "
+        "leer y editar las hojas del mismo libro.\n\n"
+        "La invitación es temporal y de un solo uso.",
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=InlineKeyboardMarkup(buttons),
+    )
+
+
+async def handle_select_book_to_share(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Genera el enlace de invitación para el libro seleccionado."""
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+
+    data = query.data or ""
+    try:
+        idx = int(data.replace("btn_share_book_", ""))
+        cache = context.user_data.get("share_books_cache", [])
+        if not (0 <= idx < len(cache)):
+            await query.message.reply_text("❌ No se encontró el libro. Vuelve a intentarlo.")
+            return
+        selected = cache[idx]
+        project_name = selected["project_name"]
+        user_id = _user_id(update)
+        if not user_id or not can_access_project(project_name, user_id):
+            await query.message.reply_text("⛔ No tienes acceso a ese libro.")
+            return
+
+        invite = create_project_invite(project_name, user_id, role="editor", expires_hours=168)
+        me = await context.bot.get_me()
+        username = (me.username or "").strip()
+
+        if username:
+            link = f"https://t.me/{username}?start=join_{invite['code']}"
+            text = (
+                f"👥 *Invitación para editar el libro*\n\n"
+                f"🏗 *Obra:* {project_name}\n"
+                f"🔑 *Código:* `{invite['code']}`\n"
+                f"📅 *Vence:* {invite['expires_at']}\n\n"
+                "El residente y el inspector invitado podrán leer y editar las hojas.\n"
+                "Comparte este enlace con el inspector:"
+            )
+            kb = InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔗 Abrir invitación", url=link)],
+                [InlineKeyboardButton("🔙 Volver a Compartir", callback_data="btn_libro_compartir")],
+            ])
+        else:
+            link = ""
+            text = (
+                f"👥 *Invitación para editar el libro*\n\n"
+                f"🏗 *Obra:* {project_name}\n"
+                f"🔑 *Código:* `{invite['code']}`\n\n"
+                "Envía este comando al inspector:\n"
+                f"`/start join_{invite['code']}`"
+            )
+            kb = InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Volver a Compartir", callback_data="btn_libro_compartir")],
+            ])
+
+        members = list_project_members(project_name)
+        if members:
+            text += f"\n\n👤 *Miembros actuales:* {len(members)}"
+
+        await query.message.reply_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=kb)
+    except PermissionError as exc:
+        await query.message.reply_text(f"⛔ {exc}")
+    except Exception as exc:
+        logger.error("Error generando invitación: %s", exc, exc_info=True)
+        await query.message.reply_text("❌ No se pudo generar la invitación.")
+
+
+
 async def handle_download_libro(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Entrega el archivo Excel del libro seleccionado al chat de Telegram con botones de navegación limpia."""
     query = update.callback_query
@@ -1544,7 +1697,7 @@ async def handle_download_libro(update: Update, context: ContextTypes.DEFAULT_TY
         idx = int(idx_str)
         cache = context.user_data.get("saved_books_cache", [])
         if not (0 <= idx < len(cache)):
-            books = list_all_project_books()
+            books = _accessible_books(update)
             cache = [b["filename"] for b in books]
             context.user_data["saved_books_cache"] = cache
 
@@ -1553,6 +1706,14 @@ async def handle_download_libro(update: Update, context: ContextTypes.DEFAULT_TY
             return
 
         filename = cache[idx]
+        user_id = _user_id(update)
+        allowed = bool(user_id) and any(
+            book.get("filename") == filename
+            for book in _accessible_books(update)
+        )
+        if not allowed:
+            await query.message.reply_text("⛔ No tienes acceso a ese libro de obra.")
+            return
         file_path = BOOKS_DIR / filename
         if not file_path.exists():
             await query.message.reply_text(f"❌ El archivo `{filename}` ya no se encuentra en el servidor.", parse_mode=ParseMode.MARKDOWN)
@@ -1596,6 +1757,9 @@ async def _show_sheets_for_book(
         return
 
     book_path = BOOKS_DIR / filename
+    if not _require_project_access(update, project_name):
+        await msg_target.reply_text("⛔ No tienes acceso a ese libro de obra.")
+        return
     if not book_path.exists():
         await msg_target.reply_text(f"❌ No se encontró el archivo: {filename}")
         return
@@ -1669,7 +1833,7 @@ async def handle_menu_editar_hoja(update: Update, context: ContextTypes.DEFAULT_
     if query:
         await query.answer()
 
-    books = list_all_project_books()
+    books = _accessible_books(update)
     if not books:
         kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("✍️ Asentar Primera Hoja", callback_data="btn_libro_registrar")],
@@ -1720,11 +1884,11 @@ async def handle_select_book_to_edit(update: Update, context: ContextTypes.DEFAU
         idx = int(idx_str)
         cache = context.user_data.get("saved_books_cache", [])
         if not (0 <= idx < len(cache)):
-            books = list_all_project_books()
+            books = _accessible_books(update)
             cache = [b["filename"] for b in books]
             context.user_data["saved_books_cache"] = cache
         filename = cache[idx]
-        books = list_all_project_books()
+        books = _accessible_books(update)
         p_name = filename
         for b in books:
             if b["filename"] == filename:
@@ -1752,7 +1916,7 @@ async def handle_select_sheet_to_edit(update: Update, context: ContextTypes.DEFA
 
     filename = context.user_data.get("editing_book_filename")
     if not filename:
-        books = list_all_project_books()
+        books = _accessible_books(update)
         if books:
             filename = books[0]["filename"]
 
@@ -1825,7 +1989,7 @@ async def handle_menu_modificar_fecha_inicio(update: Update, context: ContextTyp
     if query:
         await query.answer()
 
-    books = list_all_project_books()
+    books = _accessible_books(update)
     if not books:
         kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("✍️ Llenar Primera Hoja", callback_data="btn_libro_registrar")],
@@ -1877,11 +2041,11 @@ async def handle_select_book_to_shift(update: Update, context: ContextTypes.DEFA
         idx = int(idx_str)
         cache = context.user_data.get("saved_books_cache", [])
         if not (0 <= idx < len(cache)):
-            books = list_all_project_books()
+            books = _accessible_books(update)
             cache = [b["filename"] for b in books]
             context.user_data["saved_books_cache"] = cache
         filename = cache[idx]
-        books = list_all_project_books()
+        books = _accessible_books(update)
         p_name = filename
         for b in books:
             if b["filename"] == filename:
@@ -2164,13 +2328,16 @@ async def show_delete_libro_menu(update: Update, context: ContextTypes.DEFAULT_T
     if query:
         await query.answer()
 
-    books = list_all_project_books()
+    books = [
+        b for b in _accessible_books(update)
+        if get_project_owner(b["project_name"]) == _user_id(update)
+    ]
     if not books:
         kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("🔙 Volver a Libro de Obra", callback_data="btn_menu_libro")],
             [InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home")],
         ])
-        await msg_target.reply_text("ℹ️ No tienes ningún Libro de Obra registrado para eliminar.", reply_markup=kb)
+        await msg_target.reply_text("ℹ️ No tienes libros propios para eliminar.", reply_markup=kb)
         return
 
     context.user_data["del_books_cache"] = [b["filename"] for b in books]
@@ -2213,7 +2380,7 @@ async def ask_confirm_delete_libro(update: Update, context: ContextTypes.DEFAULT
         cache_files = context.user_data.get("del_books_cache", [])
         cache_names = context.user_data.get("del_names_cache", [])
         if not (0 <= idx < len(cache_files)):
-            books = list_all_project_books()
+            books = _accessible_books(update)
             cache_files = [b["filename"] for b in books]
             cache_names = [b["project_name"] for b in books]
             context.user_data["del_books_cache"] = cache_files
@@ -2221,6 +2388,9 @@ async def ask_confirm_delete_libro(update: Update, context: ContextTypes.DEFAULT
 
         filename = cache_files[idx]
         proj_name = cache_names[idx] if idx < len(cache_names) else filename
+        if get_project_owner(proj_name) != _user_id(update):
+            await query.message.reply_text("⛔ Solo el residente creador puede eliminar este libro.")
+            return
 
         kb = InlineKeyboardMarkup([
             [
@@ -2256,7 +2426,7 @@ async def execute_delete_libro(update: Update, context: ContextTypes.DEFAULT_TYP
         cache_files = context.user_data.get("del_books_cache", [])
         cache_names = context.user_data.get("del_names_cache", [])
         if not (0 <= idx < len(cache_files)):
-            books = list_all_project_books()
+            books = _accessible_books(update)
             cache_files = [b["filename"] for b in books]
             cache_names = [b["project_name"] for b in books]
 
@@ -2266,6 +2436,9 @@ async def execute_delete_libro(update: Update, context: ContextTypes.DEFAULT_TYP
 
         filename = cache_files[idx]
         proj_name = cache_names[idx] if idx < len(cache_names) else filename
+        if get_project_owner(proj_name) != _user_id(update):
+            await query.message.reply_text("⛔ Solo el residente creador puede eliminar este libro.")
+            return
 
         # 1. Borrar archivo
         del_file = delete_project_book(proj_name)
@@ -2334,6 +2507,9 @@ async def _show_merge_pairs_for_book(
         return
 
     book_path = BOOKS_DIR / filename
+    if not _require_project_access(update, project_name):
+        await msg_target.reply_text("⛔ No tienes acceso a ese libro de obra.")
+        return
     if not book_path.exists():
         await msg_target.reply_text(f"❌ No se encontró el archivo: {filename}")
         return
@@ -2399,7 +2575,7 @@ async def handle_menu_fusionar_dias(update: Update, context: ContextTypes.DEFAUL
     if query:
         await query.answer()
 
-    books = list_all_project_books()
+    books = _accessible_books(update)
     if not books:
         kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("✍️ Asentar Primera Hoja", callback_data="btn_libro_registrar")],
@@ -2448,11 +2624,11 @@ async def handle_select_book_to_fuse(update: Update, context: ContextTypes.DEFAU
         idx = int(idx_str)
         cache = context.user_data.get("saved_books_cache", [])
         if not (0 <= idx < len(cache)):
-            books = list_all_project_books()
+            books = _accessible_books(update)
             cache = [b["filename"] for b in books]
             context.user_data["saved_books_cache"] = cache
         filename = cache[idx]
-        books = list_all_project_books()
+        books = _accessible_books(update)
         p_name = filename
         for b in books:
             if b["filename"] == filename:
@@ -2482,7 +2658,7 @@ async def handle_select_pair_to_merge(update: Update, context: ContextTypes.DEFA
     s1_num, s2_num = match.group(1), match.group(2)
     filename = context.user_data.get("fusing_book_filename")
     if not filename:
-        books = list_all_project_books()
+        books = _accessible_books(update)
         if books:
             filename = books[0]["filename"]
 
@@ -2566,7 +2742,7 @@ async def execute_confirm_merge_sheets(update: Update, context: ContextTypes.DEF
         if pending:
             filename = pending.get("filename")
     if not filename:
-        books = list_all_project_books()
+        books = _accessible_books(update)
         if books:
             filename = books[0]["filename"]
 

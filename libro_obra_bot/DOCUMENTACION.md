@@ -95,6 +95,43 @@ Limitaciones:
 
 
 
+## 2.2. Compartición por libro
+
+Cada libro tiene miembros independientes. Un usuario no ve libros de los que no
+es miembro.
+
+Tablas nuevas:
+
+```text
+project_members (project_id, user_id, role, invited_by, created_at)
+project_invites (code, project_id, role, created_by, expires_at, used_by, used_at)
+```
+
+Roles:
+
+```text
+owner    → creador del libro; puede compartir, editar y eliminar
+editor   → residente o inspector invitado; puede leer y editar
+```
+
+Flujo:
+
+```text
+Menú → 👥 Compartir Libro
+→ seleccionar libro
+→ generar enlace / código temporal
+→ el inspector abre el enlace
+→ /start join_<código>
+→ queda agregado como editor
+```
+
+El enlace es de un solo uso y vence en 7 días. El residente y el inspector
+pueden leer y editar las hojas. Solo el owner puede eliminar el libro.
+
+---
+
+
+
 ## 3. Guía de Uso: Comandos y Menú Principal
 
 ### Comandos Disponibles

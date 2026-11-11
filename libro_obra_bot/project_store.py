@@ -6,9 +6,11 @@ por usuario o por proyecto para no tener que solicitarlos repetidamente.
 import json
 import logging
 import re
+import secrets
 import sqlite3
 import unicodedata
 from contextlib import contextmanager
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Set
 
@@ -99,6 +101,41 @@ def init_db() -> None:
             )
             """
         )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS project_members (
+                project_id TEXT NOT NULL,
+                user_id INTEGER NOT NULL,
+                role TEXT NOT NULL DEFAULT 'editor',
+                invited_by INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (project_id, user_id)
+            )
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS project_invites (
+                code TEXT PRIMARY KEY,
+                project_id TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'editor',
+                created_by INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP NOT NULL,
+                used_by INTEGER,
+                used_at TIMESTAMP
+            )
+            """
+        )
+        # Migración: el creador de cada libro existente queda como owner.
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO project_members (project_id, user_id, role, invited_by)
+            SELECT project_id, user_id, 'owner', user_id
+            FROM project_metadata
+            WHERE user_id IS NOT NULL
+            """
+        )
         conn.commit()
 
 
@@ -169,7 +206,7 @@ def save_project_metadata(project_name: str, user_id: Optional[int], data: Dict[
                 ing_residente, civ_residente, ing_inspector, civ_inspector, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(project_id) DO UPDATE SET
-                user_id = COALESCE(excluded.user_id, project_metadata.user_id),
+                user_id = project_metadata.user_id,
                 obra = COALESCE(excluded.obra, project_metadata.obra),
                 ente_contratante = COALESCE(excluded.ente_contratante, project_metadata.ente_contratante),
                 firma_contratista = COALESCE(excluded.firma_contratista, project_metadata.firma_contratista),
@@ -207,6 +244,18 @@ def save_project_metadata(project_name: str, user_id: Optional[int], data: Dict[
                 data.get("civ_inspector"),
             ),
         )
+        if user_id is not None:
+            cursor.execute(
+                """
+                INSERT OR IGNORE INTO project_members (project_id, user_id, role, invited_by)
+                SELECT ?, ?, 'owner', ?
+                WHERE EXISTS (
+                    SELECT 1 FROM project_metadata
+                    WHERE project_id = ? AND user_id = ?
+                )
+                """,
+                (project_id, user_id, user_id, project_id, user_id),
+            )
         conn.commit()
 
 
@@ -284,13 +333,217 @@ def get_project_metadata(project_name: str) -> Dict[str, Any]:
         return {}
 
 
+def _project_key(project_name: str) -> str:
+    return (project_name or "").strip().upper()
+
+
+def get_project_owner(project_name: str) -> Optional[int]:
+    """Retorna el user_id del creador del proyecto, si existe."""
+    init_db()
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT user_id FROM project_metadata WHERE project_id = ?",
+            (_project_key(project_name),),
+        )
+        row = cursor.fetchone()
+        return row["user_id"] if row and row["user_id"] is not None else None
+
+
+def ensure_owner_membership(project_name: str, user_id: Optional[int]) -> None:
+    if user_id is None:
+        return
+    project_id = _project_key(project_name)
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO project_members (project_id, user_id, role, invited_by)
+            VALUES (?, ?, 'owner', ?)
+            """,
+            (project_id, user_id, user_id),
+        )
+        conn.commit()
+
+
+def can_access_project(project_name: str, user_id: Optional[int]) -> bool:
+    """Indica si el usuario es miembro del libro (owner, editor o inspector)."""
+    if not project_name or user_id is None:
+        return False
+    init_db()
+    project_id = _project_key(project_name)
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ?",
+            (project_id, user_id),
+        )
+        if cursor.fetchone():
+            return True
+        cursor.execute(
+            "SELECT user_id FROM project_metadata WHERE project_id = ?",
+            (project_id,),
+        )
+        row = cursor.fetchone()
+        if row and row["user_id"] == user_id:
+            ensure_owner_membership(project_name, user_id)
+            return True
+    return False
+
+
+def get_user_project_names(user_id: int) -> List[str]:
+    """Proyectos donde el usuario es miembro activo."""
+    init_db()
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT DISTINCT pm.obra
+            FROM project_metadata pm
+            JOIN project_members m ON m.project_id = pm.project_id
+            WHERE m.user_id = ?
+            ORDER BY pm.updated_at DESC
+            """,
+            (user_id,),
+        )
+        return [row["obra"] for row in cursor.fetchall() if row["obra"]]
+
+
+def create_project_invite(
+    project_name: str,
+    created_by: int,
+    role: str = "editor",
+    expires_hours: int = 168,
+) -> Dict[str, Any]:
+    """Crea un código de invitación temporal para un libro concreto."""
+    if not can_access_project(project_name, created_by):
+        raise PermissionError("No tienes acceso a este libro.")
+
+    project_id = _project_key(project_name)
+    code = secrets.token_urlsafe(9).replace("-", "").replace("_", "")[:12]
+    expires_at = (datetime.utcnow() + timedelta(hours=expires_hours)).isoformat(timespec="seconds")
+
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO project_invites (code, project_id, role, created_by, expires_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (code, project_id, role, created_by, expires_at),
+        )
+        conn.commit()
+
+    return {
+        "code": code,
+        "project_id": project_id,
+        "project_name": project_name,
+        "role": role,
+        "expires_at": expires_at,
+    }
+
+
+def get_project_invite(code: str) -> Optional[Dict[str, Any]]:
+    init_db()
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM project_invites WHERE code = ?", (code,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
+def accept_project_invite(code: str, user_id: int) -> Optional[Dict[str, Any]]:
+    """Acepta una invitación y agrega al usuario como editor del libro."""
+    invite = get_project_invite(code)
+    if not invite or invite.get("used_by"):
+        return None
+    try:
+        expires = datetime.fromisoformat(str(invite["expires_at"]))
+        if expires < datetime.utcnow():
+            return None
+    except (TypeError, ValueError):
+        return None
+
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO project_members (project_id, user_id, role, invited_by)
+            VALUES (?, ?, ?, ?)
+            """,
+            (invite["project_id"], user_id, invite.get("role") or "editor", invite["created_by"]),
+        )
+        cursor.execute(
+            """
+            UPDATE project_invites
+            SET used_by = ?, used_at = CURRENT_TIMESTAMP
+            WHERE code = ? AND used_by IS NULL
+            """,
+            (user_id, code),
+        )
+        cursor.execute(
+            "SELECT obra FROM project_metadata WHERE project_id = ?",
+            (invite["project_id"],),
+        )
+        row = cursor.fetchone()
+        conn.commit()
+
+    return {
+        "project_id": invite["project_id"],
+        "project_name": row["obra"] if row else invite["project_id"],
+        "role": invite.get("role") or "editor",
+    }
+
+
+def list_project_members(project_name: str) -> List[Dict[str, Any]]:
+    init_db()
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT user_id, role, created_at
+            FROM project_members
+            WHERE project_id = ?
+            ORDER BY CASE role WHEN 'owner' THEN 0 WHEN 'editor' THEN 1 ELSE 2 END, created_at
+            """,
+            (_project_key(project_name),),
+        )
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def remove_project_member(project_name: str, user_id: int) -> bool:
+    init_db()
+    project_id = _project_key(project_name)
+    owner = get_project_owner(project_name)
+    if owner == user_id:
+        return False
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM project_members WHERE project_id = ? AND user_id = ?",
+            (project_id, user_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+
+
 def get_recent_projects(user_id: Optional[int] = None) -> List[str]:
     """Retorna la lista de proyectos registrados recientemente."""
     init_db()
     with _get_connection() as conn:
         cursor = conn.cursor()
         if user_id:
-            cursor.execute("SELECT obra FROM project_metadata WHERE user_id = ? ORDER BY updated_at DESC LIMIT 10", (user_id,))
+            cursor.execute(
+                """
+                SELECT DISTINCT pm.obra
+                FROM project_metadata pm
+                JOIN project_members m ON m.project_id = pm.project_id
+                WHERE m.user_id = ?
+                ORDER BY pm.updated_at DESC
+                LIMIT 10
+                """,
+                (user_id,),
+            )
         else:
             cursor.execute("SELECT obra FROM project_metadata ORDER BY updated_at DESC LIMIT 10")
         rows = cursor.fetchall()
@@ -300,10 +553,12 @@ def get_recent_projects(user_id: Optional[int] = None) -> List[str]:
 def delete_project_metadata(project_name: str) -> bool:
     """Elimina los metadatos de un proyecto de la base de datos."""
     init_db()
-    project_id = project_name.strip().upper()
+    project_id = _project_key(project_name)
     with _get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM project_metadata WHERE project_id = ?", (project_id,))
+        cursor.execute("DELETE FROM project_members WHERE project_id = ?", (project_id,))
+        cursor.execute("DELETE FROM project_invites WHERE project_id = ?", (project_id,))
         conn.commit()
         return cursor.rowcount > 0
 
