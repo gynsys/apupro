@@ -29,6 +29,10 @@ from libro_obra_bot.conversation_libro import (
     handle_menu_fusionar_dias,
     handle_select_book_to_fuse,
     handle_select_book_to_share,
+    handle_share_generate_invite,
+    handle_share_revoke_link,
+    handle_share_revoke_member,
+    handle_share_replace_member,
     handle_revoke_member,
     handle_select_pair_to_merge,
     execute_delete_libro,
@@ -75,18 +79,43 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     if args and args[0].startswith("join_") and user:
         code = args[0].replace("join_", "", 1).strip()
-        accepted = accept_project_invite(code, user.id)
+        accepted = accept_project_invite(
+            code=code,
+            user_id=user.id,
+            username=user.username,
+            full_name=user.full_name,
+        )
         if accepted:
+            owner_id = accepted.get("created_by")
+            if owner_id and owner_id != user.id:
+                try:
+                    display_name = user.full_name or ""
+                    if user.username:
+                        display_name += f" (@{user.username})"
+                    await context.bot.send_message(
+                        chat_id=owner_id,
+                        text=(
+                            "🔔 *Nuevo Inspector Vinculado*\n\n"
+                            f"👷 {display_name} ha aceptado tu invitación y se ha unido como Inspector al Libro de Obra:\n"
+                            f"🏗 *{accepted.get('project_name')}*\n\n"
+                            "Ya pueden consultar y registrar hojas de obra de forma colaborativa."
+                        ),
+                        parse_mode=ParseMode.MARKDOWN,
+                    )
+                except Exception as notif_exc:
+                    logger.warning("No se pudo notificar al residente sobre el nuevo inspector: %s", notif_exc)
+
             await update.message.reply_text(
-                "✅ *Invitación aceptada*\n\n"
+                "✅ *¡Invitación aceptada!*\n\n"
                 f"🏗 *Obra:* {accepted['project_name']}\n"
-                "Ya puedes leer y editar este libro de obra.",
+                "Te has vinculado como *Inspector*. Ya puedes consultar, asentar y editar hojas en este libro oficial.",
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=get_libro_main_keyboard(),
             )
             return
         await update.message.reply_text(
-            "❌ La invitación no es válida, ya fue usada o venció."
+            "❌ La invitación no es válida, ya fue utilizada o ha expirado.\n"
+            "Pídele al residente de la obra que te genere un nuevo enlace desde *Compartir Libro*."
         )
         return
 
@@ -187,8 +216,14 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         await show_share_libro_menu(update, context)
     elif data.startswith("btn_share_book_"):
         await handle_select_book_to_share(update, context)
-    elif data.startswith("btn_revoke_member_"):
-        await handle_revoke_member(update, context)
+    elif data.startswith("btn_share_gen_") or data.startswith("btn_share_regen_"):
+        await handle_share_generate_invite(update, context)
+    elif data.startswith("btn_share_revoke_link_"):
+        await handle_share_revoke_link(update, context)
+    elif data.startswith("btn_share_revoke_member_") or data.startswith("btn_revoke_member_"):
+        await handle_share_revoke_member(update, context)
+    elif data.startswith("btn_share_replace_member_"):
+        await handle_share_replace_member(update, context)
     elif data == "btn_libro_eliminar":
         await show_delete_libro_menu(update, context)
     elif data == "btn_libro_ayuda":

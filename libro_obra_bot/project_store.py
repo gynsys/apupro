@@ -147,6 +147,11 @@ def init_db() -> None:
             WHERE user_id IS NOT NULL
             """
         )
+        for col_def in ("username TEXT", "full_name TEXT"):
+            try:
+                cursor.execute(f"ALTER TABLE project_members ADD COLUMN {col_def}")
+            except sqlite3.OperationalError:
+                pass
         conn.commit()
 
 
@@ -480,21 +485,30 @@ def create_project_invite(
     created_by: int,
     role: str = "editor",
     expires_hours: int = 168,
+    force_regenerate: bool = False,
 ) -> Dict[str, Any]:
     """Crea un código de invitación temporal, solo para el owner y con cupo."""
     if get_project_owner(project_name) != created_by:
         raise PermissionError("Solo el residente creador puede invitar.")
     if get_project_member_count(project_name) >= MAX_PROJECT_MEMBERS:
         raise PermissionError(
-            f"El libro ya tiene {MAX_PROJECT_MEMBERS} usuarios. "
+            f"El libro ya tiene el cupo máximo de {MAX_PROJECT_MEMBERS} usuarios (residente e inspector). "
             "Revoca al inspector actual antes de invitar a otro."
         )
-    pending = get_pending_invite(project_name)
-    if pending:
-        raise PermissionError(
-            f"Ya existe la invitación {pending['code']} pendiente. "
-            "Compártela o revócala antes de crear otra."
-        )
+
+    if force_regenerate:
+        revoke_pending_invites(project_name)
+    else:
+        pending = get_pending_invite(project_name)
+        if pending:
+            return {
+                "code": pending["code"],
+                "project_id": pending["project_id"],
+                "project_name": project_name,
+                "role": pending.get("role") or role,
+                "expires_at": pending["expires_at"],
+                "is_existing": True,
+            }
 
     project_id = _project_key(project_name)
     code = secrets.token_urlsafe(9).replace("-", "").replace("_", "")[:12]
@@ -515,21 +529,6 @@ def create_project_invite(
             )
         cursor.execute(
             """
-            SELECT code FROM project_invites
-            WHERE project_id = ? AND used_by IS NULL AND expires_at > ?
-            LIMIT 1
-            """,
-            (project_id, datetime.utcnow().isoformat(timespec="seconds")),
-        )
-        pending_row = cursor.fetchone()
-        if pending_row:
-            conn.rollback()
-            raise PermissionError(
-                f"Ya existe la invitación {pending_row['code']} pendiente. "
-                "Compártela o revócala antes de crear otra."
-            )
-        cursor.execute(
-            """
             INSERT INTO project_invites (code, project_id, role, created_by, expires_at)
             VALUES (?, ?, ?, ?, ?)
             """,
@@ -543,6 +542,7 @@ def create_project_invite(
         "project_name": project_name,
         "role": role,
         "expires_at": expires_at,
+        "is_existing": False,
     }
 
 
@@ -555,7 +555,12 @@ def get_project_invite(code: str) -> Optional[Dict[str, Any]]:
         return dict(row) if row else None
 
 
-def accept_project_invite(code: str, user_id: int) -> Optional[Dict[str, Any]]:
+def accept_project_invite(
+    code: str,
+    user_id: int,
+    username: Optional[str] = None,
+    full_name: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
     """Acepta una invitación y agrega al usuario como editor del libro."""
     invite = get_project_invite(code)
     if not invite or invite.get("used_by"):
@@ -595,10 +600,22 @@ def accept_project_invite(code: str, user_id: int) -> Optional[Dict[str, Any]]:
             return None
         cursor.execute(
             """
-            INSERT OR IGNORE INTO project_members (project_id, user_id, role, invited_by)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO project_members (project_id, user_id, role, invited_by, username, full_name)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(project_id, user_id) DO UPDATE SET
+                role = excluded.role,
+                invited_by = excluded.invited_by,
+                username = excluded.username,
+                full_name = excluded.full_name
             """,
-            (invite["project_id"], user_id, invite.get("role") or "editor", invite["created_by"]),
+            (
+                invite["project_id"],
+                user_id,
+                invite.get("role") or "editor",
+                invite["created_by"],
+                username,
+                full_name,
+            ),
         )
         cursor.execute(
             """
@@ -619,6 +636,7 @@ def accept_project_invite(code: str, user_id: int) -> Optional[Dict[str, Any]]:
         "project_id": invite["project_id"],
         "project_name": row["obra"] if row else invite["project_id"],
         "role": invite.get("role") or "editor",
+        "created_by": invite.get("created_by"),
     }
 
 
@@ -628,7 +646,7 @@ def list_project_members(project_name: str) -> List[Dict[str, Any]]:
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT user_id, role, created_at
+            SELECT user_id, role, invited_by, username, full_name, created_at
             FROM project_members
             WHERE project_id = ?
             ORDER BY CASE role WHEN 'owner' THEN 0 WHEN 'editor' THEN 1 ELSE 2 END, created_at

@@ -13,6 +13,7 @@ Maneja las etapas:
 """
 import logging
 import re
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -74,6 +75,7 @@ from libro_obra_bot.project_store import (
     can_access_project,
     create_project_invite,
     delete_project_metadata,
+    get_pending_invite,
     get_project_metadata,
     get_project_owner,
     get_recent_projects,
@@ -1678,129 +1680,320 @@ async def show_share_libro_menu(update: Update, context: ContextTypes.DEFAULT_TY
     )
 
 
-async def handle_select_book_to_share(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Genera el enlace de invitación para el libro seleccionado."""
+def _resolve_share_project_and_idx(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    prefix: str,
+) -> Tuple[Optional[str], int]:
+    """Extrae y valida el nombre del proyecto y el índice asociado a la acción de compartir."""
     query = update.callback_query
-    if not query:
-        return
-    await query.answer()
+    data = (query.data if query else "") or ""
+    idx = -1
+    if data.startswith(prefix):
+        raw_idx = data.replace(prefix, "").strip()
+        try:
+            idx = int(raw_idx)
+        except ValueError:
+            idx = -1
 
-    data = query.data or ""
-    try:
-        idx = int(data.replace("btn_share_book_", ""))
-        cache = context.user_data.get("share_books_cache", [])
-        if not (0 <= idx < len(cache)):
-            await query.message.reply_text("❌ No se encontró el libro. Vuelve a intentarlo.")
-            return
+    cache = context.user_data.get("share_books_cache", [])
+    if 0 <= idx < len(cache):
         selected = cache[idx]
-        project_name = selected["project_name"]
-        user_id = _user_id(update)
-        if not user_id or not can_access_project(project_name, user_id):
-            await query.message.reply_text("⛔ No tienes acceso a ese libro.")
-            return
+        context.user_data["share_active_book"] = {"idx": idx, "project_name": selected["project_name"]}
+        return selected["project_name"], idx
 
-        invite = create_project_invite(project_name, user_id, role="editor", expires_hours=168)
-        me = await context.bot.get_me()
-        username = (me.username or "").strip()
+    active = context.user_data.get("share_active_book")
+    if active and isinstance(active, dict) and active.get("project_name"):
+        return str(active["project_name"]), int(active.get("idx", 0))
 
-        if username:
-            link = f"https://t.me/{username}?start=join_{invite['code']}"
-            text = (
-                f"👥 *Invitación para editar el libro*\n\n"
-                f"🏗 *Obra:* {project_name}\n"
-                f"🔑 *Código:* `{invite['code']}`\n"
-                f"📅 *Vence:* {invite['expires_at']}\n\n"
-                "El residente y el inspector invitado podrán leer y editar las hojas.\n"
-                "Comparte este enlace con el inspector:"
-            )
-            kb = InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔗 Abrir invitación", url=link)],
-                [InlineKeyboardButton("🔙 Volver a Compartir", callback_data="btn_libro_compartir")],
-            ])
-        else:
-            link = ""
-            text = (
-                f"👥 *Invitación para editar el libro*\n\n"
-                f"🏗 *Obra:* {project_name}\n"
-                f"🔑 *Código:* `{invite['code']}`\n\n"
-                "Envía este comando al inspector:\n"
-                f"`/start join_{invite['code']}`"
-            )
-            kb = InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Volver a Compartir", callback_data="btn_libro_compartir")],
-            ])
+    return None, -1
 
-        members = list_project_members(project_name)
-        member_buttons = []
-        if any(m.get("role") != "owner" for m in members):
-            member_buttons.append([
-                InlineKeyboardButton("🗑️ Revocar inspector", callback_data=f"btn_revoke_member_{idx}")
-            ])
-        if members:
-            text += f"\n\n👤 *Miembros actuales:* {len(members)}/{2}"
 
-        if member_buttons:
-            kb = InlineKeyboardMarkup(member_buttons + list(kb.inline_keyboard))
+def _format_share_panel(
+    bot_username: str,
+    project_name: str,
+    user_id: int,
+    idx: int,
+) -> Tuple[str, InlineKeyboardMarkup]:
+    """Construye el texto y teclado del panel de gestión de colaboradores para un libro."""
+    members = list_project_members(project_name)
+    inspector = next((m for m in members if m.get("role") != "owner"), None)
+    pending_invite = get_pending_invite(project_name)
 
-        await query.message.reply_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=kb)
-    except PermissionError as exc:
-        members = list_project_members(selected.get("project_name", "")) if 'selected' in locals() else []
-        kb_rows = []
-        if members and any(m.get("role") != "owner" for m in members):
-            kb_rows.append([
-                InlineKeyboardButton("🗑️ Revocar inspector", callback_data=f"btn_revoke_member_{idx}")
-            ])
-        kb_rows.append([InlineKeyboardButton("🔙 Volver a Compartir", callback_data="btn_libro_compartir")])
-        await query.message.reply_text(
-            f"🔒 {exc}",
-            reply_markup=InlineKeyboardMarkup(kb_rows),
+    text_lines: List[str] = [
+        "👥 *Gestión de Colaboradores del Libro*",
+        f"🏗 *Obra:* {project_name}\n",
+        "👑 *Residente (Propietario):* Tú",
+    ]
+
+    if inspector:
+        insp_name = inspector.get("full_name") or inspector.get("username") or f"ID {inspector['user_id']}"
+        user_at = f" (@{inspector['username']})" if inspector.get("username") else ""
+        joined_date = str(inspector.get("created_at") or "")[:10]
+        date_str = f" el {joined_date}" if joined_date else ""
+        text_lines.append(f"👷 *Inspector asignado:* {insp_name}{user_at}")
+        text_lines.append(
+            f"📅 _Vinculado{date_str}_\n"
+            "⚡ _Habilitado para registrar y consultar hojas del libro._\n"
         )
-    except Exception as exc:
-        logger.error("Error generando invitación: %s", exc, exc_info=True)
-        await query.message.reply_text("❌ No se pudo generar la invitación.")
+    else:
+        text_lines.append("👷 *Inspector asignado:* _Ninguno aún (libro de 1 solo usuario)_\n")
+
+    kb_rows: List[List[InlineKeyboardButton]] = []
+
+    if pending_invite:
+        code = str(pending_invite["code"])
+        expires_raw = str(pending_invite.get("expires_at") or "")
+        expires_clean = expires_raw[:16].replace("T", " ")
+        invite_url = f"https://t.me/{bot_username}?start=join_{code}" if bot_username else f"/start join_{code}"
+
+        text_lines.append("🔗 *Enlace de Invitación Activo:*")
+        text_lines.append(f"• Código: `{code}`")
+        text_lines.append(f"• Vence: `{expires_clean}`")
+        if bot_username:
+            text_lines.append(f"\n📲 *Enlace directo:* \n`{invite_url}`\n")
+        else:
+            text_lines.append(f"\nComando: `/start join_{code}`\n")
+
+        if bot_username:
+            msg_share = f"Te invito a colaborar como Inspector en el Libro de Obra '{project_name}'. Únete pulsando aquí:"
+            share_link = f"https://t.me/share/url?url={urllib.parse.quote(invite_url)}&text={urllib.parse.quote(msg_share)}"
+            kb_rows.append([InlineKeyboardButton("📤 Enviar por Telegram al Inspector", url=share_link)])
+
+        kb_rows.append([
+            InlineKeyboardButton("❌ Revocar este Enlace", callback_data=f"btn_share_revoke_link_{idx}"),
+            InlineKeyboardButton("🔄 Regenerar Enlace", callback_data=f"btn_share_regen_{idx}"),
+        ])
+    elif inspector:
+        text_lines.append("🔗 *Enlace de Invitación:* _Inactivo (el cupo de inspector ya está cubierto)._")
+        kb_rows.append([
+            InlineKeyboardButton("🚫 Desvincular Inspector", callback_data=f"btn_share_revoke_member_{idx}"),
+            InlineKeyboardButton("🔄 Reemplazar Inspector", callback_data=f"btn_share_replace_member_{idx}"),
+        ])
+    else:
+        text_lines.append("🔗 *Enlace de Invitación:* _Inactivo. Pulsa abajo para generar una invitación temporal._")
+        kb_rows.append([
+            InlineKeyboardButton("🔗 Generar Enlace de Invitación", callback_data=f"btn_share_gen_{idx}")
+        ])
+
+    kb_rows.append([
+        InlineKeyboardButton("🔙 Volver a Libros", callback_data="btn_libro_compartir"),
+        InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home"),
+    ])
+
+    return "\n".join(text_lines), InlineKeyboardMarkup(kb_rows)
 
 
-
-async def handle_revoke_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Revoca el acceso del inspector invitado al libro."""
+async def handle_select_book_to_share(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Muestra el panel de gestión de colaboradores para el libro seleccionado."""
     query = update.callback_query
     if not query:
         return
     await query.answer()
 
+    project_name, idx = _resolve_share_project_and_idx(update, context, "btn_share_book_")
+    if not project_name:
+        await query.message.reply_text("❌ No se encontró el libro. Vuelve a intentarlo.")
+        return
+
+    user_id = _user_id(update)
+    if not user_id or not can_access_project(project_name, user_id):
+        await query.message.reply_text("⛔ No tienes acceso a ese libro.")
+        return
+
+    me = await context.bot.get_me()
+    bot_username = (me.username or "").strip()
+    panel_text, panel_kb = _format_share_panel(bot_username, project_name, user_id, idx)
+
     try:
-        idx = int((query.data or "").replace("btn_revoke_member_", ""))
-        cache = context.user_data.get("share_books_cache", [])
-        if not (0 <= idx < len(cache)):
-            await query.message.reply_text("❌ No se encontró el libro.")
-            return
-        selected = cache[idx]
-        project_name = selected["project_name"]
-        user_id = _user_id(update)
-        if get_project_owner(project_name) != user_id:
-            await query.message.reply_text("⛔ Solo el residente creador puede revocar el acceso.")
-            return
+        await query.edit_message_text(panel_text, parse_mode=ParseMode.MARKDOWN, reply_markup=panel_kb)
+    except Exception:
+        await query.message.reply_text(panel_text, parse_mode=ParseMode.MARKDOWN, reply_markup=panel_kb)
 
-        members = list_project_members(project_name)
-        target = next((m for m in members if m.get("role") != "owner"), None)
-        if not target:
-            await query.message.reply_text("ℹ️ Este libro no tiene inspector invitado.")
-            return
 
-        if remove_project_member(project_name, target["user_id"], removed_by=user_id):
-            await query.message.reply_text(
-                "✅ Acceso revocado. El libro vuelve a tener un solo usuario.\n"
-                "Ya puedes invitar a otro inspector.",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("👥 Compartir Libro", callback_data="btn_libro_compartir")],
-                    [InlineKeyboardButton("🏠 Menú Principal", callback_data="btn_menu_home")],
-                ]),
-            )
-        else:
-            await query.message.reply_text("❌ No se pudo revocar el acceso.")
+async def handle_share_generate_invite(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Genera o regenera un enlace de invitación temporal para el inspector."""
+    query = update.callback_query
+    if not query:
+        return
+
+    prefix = "btn_share_regen_" if (query.data or "").startswith("btn_share_regen_") else "btn_share_gen_"
+    force = prefix == "btn_share_regen_"
+    project_name, idx = _resolve_share_project_and_idx(update, context, prefix)
+    if not project_name:
+        await query.answer("❌ No se encontró el libro.", show_alert=True)
+        return
+
+    user_id = _user_id(update)
+    if not user_id or get_project_owner(project_name) != user_id:
+        await query.answer("⛔ Solo el residente creador puede generar invitaciones.", show_alert=True)
+        return
+
+    try:
+        create_project_invite(project_name, user_id, role="editor", expires_hours=168, force_regenerate=force)
+        alert_msg = "🔄 Enlace regenerado con éxito" if force else "✅ Enlace de invitación generado"
+        await query.answer(alert_msg)
+    except PermissionError as exc:
+        await query.answer(f"🔒 {exc}", show_alert=True)
+        return
     except Exception as exc:
-        logger.error("Error revocando miembro: %s", exc, exc_info=True)
-        await query.message.reply_text("❌ Error al revocar el acceso.")
+        logger.error("Error al generar invitación: %s", exc, exc_info=True)
+        await query.answer("❌ Error al generar la invitación.", show_alert=True)
+        return
+
+    me = await context.bot.get_me()
+    bot_username = (me.username or "").strip()
+    panel_text, panel_kb = _format_share_panel(bot_username, project_name, user_id, idx)
+
+    try:
+        await query.edit_message_text(panel_text, parse_mode=ParseMode.MARKDOWN, reply_markup=panel_kb)
+    except Exception:
+        await query.message.reply_text(panel_text, parse_mode=ParseMode.MARKDOWN, reply_markup=panel_kb)
+
+
+async def handle_share_revoke_link(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Revoca inmediatamente cualquier enlace de invitación pendiente."""
+    query = update.callback_query
+    if not query:
+        return
+
+    project_name, idx = _resolve_share_project_and_idx(update, context, "btn_share_revoke_link_")
+    if not project_name:
+        await query.answer("❌ No se encontró el libro.", show_alert=True)
+        return
+
+    user_id = _user_id(update)
+    if not user_id or get_project_owner(project_name) != user_id:
+        await query.answer("⛔ Solo el residente creador puede revocar el enlace.", show_alert=True)
+        return
+
+    try:
+        revoke_pending_invites(project_name)
+        await query.answer("✅ Enlace de invitación revocado con éxito")
+    except Exception as exc:
+        logger.error("Error revocando enlace pendiente: %s", exc, exc_info=True)
+        await query.answer("❌ Error al revocar el enlace.", show_alert=True)
+        return
+
+    me = await context.bot.get_me()
+    bot_username = (me.username or "").strip()
+    panel_text, panel_kb = _format_share_panel(bot_username, project_name, user_id, idx)
+
+    try:
+        await query.edit_message_text(panel_text, parse_mode=ParseMode.MARKDOWN, reply_markup=panel_kb)
+    except Exception:
+        await query.message.reply_text(panel_text, parse_mode=ParseMode.MARKDOWN, reply_markup=panel_kb)
+
+
+async def handle_share_revoke_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Revoca el acceso del inspector asignado al libro."""
+    query = update.callback_query
+    if not query:
+        return
+
+    prefix = "btn_share_revoke_member_" if (query.data or "").startswith("btn_share_revoke_member_") else "btn_revoke_member_"
+    project_name, idx = _resolve_share_project_and_idx(update, context, prefix)
+    if not project_name:
+        await query.answer("❌ No se encontró el libro.", show_alert=True)
+        return
+
+    user_id = _user_id(update)
+    if not user_id or get_project_owner(project_name) != user_id:
+        await query.answer("⛔ Solo el residente creador puede desvincular al inspector.", show_alert=True)
+        return
+
+    members = list_project_members(project_name)
+    target = next((m for m in members if m.get("role") != "owner"), None)
+    if not target:
+        await query.answer("ℹ️ Este libro no tiene inspector asignado.", show_alert=True)
+        return
+
+    target_user_id = target["user_id"]
+    try:
+        remove_project_member(project_name, target_user_id, removed_by=user_id)
+        revoke_pending_invites(project_name)
+        await query.answer("✅ Inspector desvinculado con éxito")
+    except Exception as exc:
+        logger.error("Error desvinculando inspector: %s", exc, exc_info=True)
+        await query.answer("❌ Error al desvincular al inspector.", show_alert=True)
+        return
+
+    # Notificación informativa al inspector desvinculado
+    try:
+        await context.bot.send_message(
+            chat_id=target_user_id,
+            text=(
+                "ℹ️ *Aviso de Acceso al Libro de Obra*\n\n"
+                f"Tu vinculación como Inspector en la obra *{project_name}* ha sido revocada por el residente."
+            ),
+            parse_mode=ParseMode.MARKDOWN,
+        )
+    except Exception as notif_exc:
+        logger.info("No se pudo notificar al inspector desvinculado: %s", notif_exc)
+
+    me = await context.bot.get_me()
+    bot_username = (me.username or "").strip()
+    panel_text, panel_kb = _format_share_panel(bot_username, project_name, user_id, idx)
+
+    try:
+        await query.edit_message_text(panel_text, parse_mode=ParseMode.MARKDOWN, reply_markup=panel_kb)
+    except Exception:
+        await query.message.reply_text(panel_text, parse_mode=ParseMode.MARKDOWN, reply_markup=panel_kb)
+
+
+async def handle_share_replace_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Desvincula al inspector actual y genera automáticamente un nuevo enlace para otro inspector."""
+    query = update.callback_query
+    if not query:
+        return
+
+    project_name, idx = _resolve_share_project_and_idx(update, context, "btn_share_replace_member_")
+    if not project_name:
+        await query.answer("❌ No se encontró el libro.", show_alert=True)
+        return
+
+    user_id = _user_id(update)
+    if not user_id or get_project_owner(project_name) != user_id:
+        await query.answer("⛔ Solo el residente creador puede reemplazar al inspector.", show_alert=True)
+        return
+
+    members = list_project_members(project_name)
+    target = next((m for m in members if m.get("role") != "owner"), None)
+    if target:
+        target_user_id = target["user_id"]
+        remove_project_member(project_name, target_user_id, removed_by=user_id)
+        try:
+            await context.bot.send_message(
+                chat_id=target_user_id,
+                text=(
+                    "ℹ️ *Aviso de Acceso al Libro de Obra*\n\n"
+                    f"Tu vinculación como Inspector en la obra *{project_name}* ha sido sustituida por el residente."
+                ),
+                parse_mode=ParseMode.MARKDOWN,
+            )
+        except Exception as notif_exc:
+            logger.info("No se pudo notificar al inspector sustituido: %s", notif_exc)
+
+    try:
+        create_project_invite(project_name, user_id, role="editor", expires_hours=168, force_regenerate=True)
+        await query.answer("🔄 Inspector removido y nuevo enlace generado")
+    except Exception as exc:
+        logger.error("Error al reemplazar inspector con nueva invitación: %s", exc, exc_info=True)
+        await query.answer("❌ Error al generar nuevo enlace.", show_alert=True)
+        return
+
+    me = await context.bot.get_me()
+    bot_username = (me.username or "").strip()
+    panel_text, panel_kb = _format_share_panel(bot_username, project_name, user_id, idx)
+
+    try:
+        await query.edit_message_text(panel_text, parse_mode=ParseMode.MARKDOWN, reply_markup=panel_kb)
+    except Exception:
+        await query.message.reply_text(panel_text, parse_mode=ParseMode.MARKDOWN, reply_markup=panel_kb)
+
+
+# Alias de retrocompatibilidad
+handle_revoke_member = handle_share_revoke_member
 
 
 
