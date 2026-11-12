@@ -310,9 +310,9 @@ def _parse_single_apu_sheet(ws: Worksheet, sheet_name: str, sheet_index: int) ->
 
         # Extracción de insumos según sección
         if mode == "MATERIALES":
-            if any(term in row_clean for term in ("NO.", "DESCRIPCI", "UND.", "PRECIO")):
-                continue
             col_code = _clean_str(row[0]) if len(row) > 0 and row[0] is not None else ""
+            if not col_code and any(term in row_clean for term in ("NO.", "DESCRIPCI", "UND.", "PRECIO")):
+                continue
             desc = _clean_str(row[2]) if len(row) > 2 and row[2] is not None else ""
             if not desc and len(row) > 1 and isinstance(row[1], str) and len(str(row[1])) > 3:
                 desc = _clean_str(row[1])
@@ -332,9 +332,9 @@ def _parse_single_apu_sheet(ws: Worksheet, sheet_name: str, sheet_index: int) ->
                 })
 
         elif mode == "EQUIPOS":
-            if any(term in row_clean for term in ("NO.", "DESCRIPCI", "COP/DEP", "PRECIO")):
-                continue
             col_code = _clean_str(row[0]) if len(row) > 0 and row[0] is not None else ""
+            if not col_code and any(term in row_clean for term in ("NO.", "DESCRIPCI", "COP/DEP", "PRECIO")):
+                continue
             desc = _clean_str(row[2]) if len(row) > 2 and row[2] is not None else ""
             if not desc and len(row) > 1 and isinstance(row[1], str) and len(str(row[1])) > 3:
                 desc = _clean_str(row[1])
@@ -353,9 +353,9 @@ def _parse_single_apu_sheet(ws: Worksheet, sheet_name: str, sheet_index: int) ->
                 })
 
         elif mode == "MANO DE OBRA":
-            if any(term in row_clean for term in ("NO.", "DESCRIPCI", "JORNAL", "BONO")):
-                continue
             col_code = _clean_str(row[0]) if len(row) > 0 and row[0] is not None else ""
+            if not col_code and any(term in row_clean for term in ("NO.", "DESCRIPCI", "JORNAL", "BONO")):
+                continue
             desc = _clean_str(row[2]) if len(row) > 2 and row[2] is not None else ""
             if not desc and len(row) > 1 and isinstance(row[1], str) and len(str(row[1])) > 3:
                 desc = _clean_str(row[1])

@@ -340,10 +340,16 @@ def sync_budget_advanced(
         eq_map: Dict[str, Dict[str, Any]] = {}
         try:
             e_rows = db.execute(
-                text(f'SELECT "CodEqu", ref_code, "CosDia", "Descri", deprec_factor FROM "{schema}".cost360_equipment')
+                text(f'SELECT "CodEqu", ref_code, "CosDia", "Descri", deprec_factor, "precio" FROM "{schema}".cost360_equipment')
             ).fetchall()
             for r in e_rows:
-                entry = {"CodEqu": r[0], "CosDia": float(r[2] or 0.0), "Descri": r[3], "deprec": float(r[4] if r[4] is not None else 1.0)}
+                entry = {
+                    "CodEqu": r[0],
+                    "CosDia": float(r[2] or 0.0),
+                    "Descri": r[3],
+                    "deprec": float(r[4] if r[4] is not None else 1.0),
+                    "precio": float(r[5] or 0.0),
+                }
                 if r[0]:
                     code_str = str(r[0]).strip().upper()
                     eq_map[code_str] = entry
@@ -450,7 +456,16 @@ def sync_budget_advanced(
                 cat_eq = eq_map.get(eq_code) or (eq_map.get(clean_eq) if clean_eq else None)
                 if cat_eq:
                     if up_eq_price:
-                        eq.precio_unitario = cat_eq["CosDia"]
+                        # En el catálogo, CosDia ya está afectado por el factor
+                        # de depreciación; el APU del presupuesto guarda el
+                        # precio diario bruto y aplica la depreciación al calcular.
+                        deprec = cat_eq.get("deprec") or 1.0
+                        if cat_eq.get("precio", 0.0) > 0:
+                            eq.precio_unitario = cat_eq["precio"]
+                        elif deprec > 0:
+                            eq.precio_unitario = cat_eq["CosDia"] / deprec
+                        else:
+                            eq.precio_unitario = cat_eq["CosDia"]
                     if up_eq_deprec and cat_eq.get("deprec") is not None:
                         eq.depreciacion = cat_eq["deprec"]
                         updated_depreciations += 1
@@ -468,7 +483,10 @@ def sync_budget_advanced(
                         lab.jornal = cat_lab["Jornal"]
                     if req.fixed_labor_bonus is not None and req.fixed_labor_bonus >= 0:
                         lab.bono = float(req.fixed_labor_bonus)
-                    elif up_lab_bonus:
+                    elif up_lab_bonus and cat_lab["Bono"] > 0:
+                        # Las bases históricas pueden traer Bono=0 porque el
+                        # archivo de origen no lo incluye. No borrar el bono
+                        # que ya tenía el presupuesto en ese caso.
                         lab.bono = cat_lab["Bono"]
                     updated_labors += 1
                 else:
