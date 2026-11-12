@@ -147,18 +147,59 @@ export default function PartidaMedicionModal({ item, onClose }) {
 
               {tab === 'pago' && (
                 <div className="space-y-4">
-                  <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 mb-1.5">
-                      Forma de pago
+                  {/* Bloque 1: Hito de Reconocimiento y Liquidación */}
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="p-1 rounded-md bg-emerald-200 text-emerald-800">
+                        <FiCheckCircle size={14} />
+                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-900">
+                          Forma de pago
+                        </p>
+                        <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
+                          Hito de reconocimiento (COVENIN Art. 2.7)
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-sm font-semibold text-emerald-950 leading-relaxed">
+                      {typeof doc.pago === 'object' ? doc.pago.hito : doc.pago}
                     </p>
-                    <p className="text-sm leading-relaxed text-slate-700">{doc.pago}</p>
+                    {typeof doc.pago === 'object' && doc.pago.criterio && (
+                      <p className="text-xs text-emerald-800 mt-2.5 pt-2.5 border-t border-emerald-200/70 leading-relaxed">
+                        <strong className="text-emerald-900">Base de liquidación:</strong> {doc.pago.criterio}
+                      </p>
+                    )}
                   </div>
-                  <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-100 p-4">
-                    <FiInfo className="text-amber-600 shrink-0 mt-0.5" size={16} />
-                    <p className="text-xs leading-relaxed text-amber-800">
-                      La norma COVENIN regula el criterio de medición. Las condiciones
-                      contractuales de pago pueden variar según el proyecto.
-                    </p>
+
+                  {/* Bloque 2: Inclusiones en el Precio Unitario (APU) */}
+                  {typeof doc.pago === 'object' && doc.pago.inclusiones?.length > 0 && (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-2">
+                        Inclusiones en el precio unitario (No cobrables por separado)
+                      </p>
+                      <ul className="space-y-1.5">
+                        {doc.pago.inclusiones.map((inc) => (
+                          <li key={inc} className="flex items-start gap-2 text-xs text-slate-700">
+                            <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-600 shrink-0" />
+                            <span>{inc}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Bloque 3: Condiciones y Marco Contractual */}
+                  <div className="flex items-start gap-2.5 rounded-xl bg-amber-50/80 border border-amber-200 p-4">
+                    <FiInfo className="text-amber-700 shrink-0 mt-0.5" size={16} />
+                    <div className="text-xs leading-relaxed text-amber-900">
+                      <p className="font-semibold mb-0.5">Condiciones contractuales y control de valuación:</p>
+                      <p>
+                        {typeof doc.pago === 'object' && doc.pago.condiciones
+                          ? doc.pago.condiciones
+                          : 'La norma COVENIN regula el criterio de medición y los hitos técnicos de ejecución. Las condiciones contractuales de pago (anticipos, valuaciones periódicas y retenciones de fiel cumplimiento) se rigen por las Condiciones Generales de Contratación vigentes.'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
