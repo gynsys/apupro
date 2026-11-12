@@ -97,9 +97,6 @@ def find_existing_project_book(project_name: str) -> Optional[Path]:
 
     query_tokens = _tokenize(project_name)
     if not query_tokens:
-        if len(existing_files) == 1:
-            logger.info("Consulta sin palabras distintivas ('%s'). Reutilizando el único libro existente: %s", project_name, existing_files[0].name)
-            return existing_files[0]
         return None
 
     best_file: Optional[Path] = None
