@@ -54,6 +54,23 @@ partidas_ocr.csv
   capítulo, subcapítulo y página PDF.
   La columna requiere_revision marca 333 filas con unidad ambigua o texto
   dudoso. Requiere revisión antes de importar.
+
+TABLAS_LEGIBLES.pdf
+  Reimpresión de las 55 páginas de tablas y 5 esquemas rotados, en alta
+  resolución y con el texto espejo eliminado. Es la versión más cómoda para
+  leer las tablas.
+
+tablas_mejoradas/
+  TABLAS_LEGIBLES.md
+    Tablas reconstruidas por columnas, página por página.
+  pagina_XXX.md
+    Una tabla Markdown por página.
+  esquema_XXX.txt
+    Texto de los esquemas que estaban girados 90°.
+
+partidas_mejoradas.csv
+  Re-OCR de 802 partidas. Mejora la separación código/unidad/descripción
+  respecto a partidas_ocr.csv, pero todavía requiere revisión.
 ```
 
 ## Columnas de partidas_ocr.csv

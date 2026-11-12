@@ -1,0 +1,33 @@
+N
+DO
+1: Ranchos O: Tota! 11A mano
+El |3. Demoliciones 1: Construcciones | 2: Casas me
+1: infraestructura 2:Eq.Liviano
+3: Edificios m3
+O 2. Superestructura  ¡3:Eq. Pesado
+B
+R 1. Concreto 1: Horizontal
+A 2 Elementos armado
+s aislados m3| 2: Vertical
+2: Concreto
+Pp sin armar 3: Combinado l
+R
+E 2: Mamposterla
+L
+| 1: Ladrillo Macizo
+M 4: Paredes 15:esp.=< 30cm
+: m2| 2: Bloques
+N 30:esp.entre 15-30 cm
+A 1: Pisos
+R 5: Revestimien- m2| 2: Paredes
+E tos 3: Techos
+S
+6: Tubería m24| 1: Alcantariilas
+l metálicas
+2: Concreto 04: p <q" 2
+M3: Metálicas 12: e entre 4-12" 5
+4: Plásticas 24.9 entrei2"-24" z
+50.0 >24” z
+3
+A:
+2: Ciclón ño

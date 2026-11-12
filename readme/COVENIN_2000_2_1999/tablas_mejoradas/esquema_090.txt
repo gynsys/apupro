@@ -1,0 +1,40 @@
+Cae] sue.cariuLo] osuero | —ecemento Tun] 10 marea Tornero omensones]
+E6 [S:ARTEFACTOS —|9:Drenes 3:Drenes circulares 1:Dran piso para tubería 1:Bronce 032: 0 1 14" Y
+SANITARIOS suspendida 2:Sromado 038: a 1 112"
+| 2:Dren piso para tubería 3:Hierro fundido |051: q 2"
+N embutida 4 Bronce-Hierro |076: a 3"
+| 5 3:Rejilla con cúpula para fundido 102: 0 4"
+| T jardinera S'Aluminio | [15286
+| A 4:Dren rejilla plana para 203: 6 8"
+| L para impermeabilización
+A 5:Dran rejilla cúpula para
+c techo
+| 6:.Drer rejilla plana con altura
+o graduable para impermea-
+N bilización
+E
+5
+5
+Á 9:Inodoro (con sifón t:Bronce 010: 8 10 cm
+N lacorporado 5:Alurrinio 012: 0 12 cm
+l 015.0 15em
+T 020: 6 20 cm
+A
+R 4.Drenes rectangu- 1:Dren de esquina t:Bronce 051: p 2”
+A fundido 102: 6 4"
+S
+3:Inodoro (con sifón 1:Bronce 910: 10cmx 10 en
+Y incorporado) 5:Aluminio 012: 12m x 12 cm
+015: 15 cm x 15 cm
+E 020: 20 em x 20 cm
+5
+P 3:Hierro fundido |102:8 4”
+E 1270 $"
+Cc 152: 6"
+Í 178:2 7" o
+Á 20390 8” Es
+L 229: 8 9" z
+E 254: 8 10" z
+5 279: 811" ó
+305.9 12" 2
+s

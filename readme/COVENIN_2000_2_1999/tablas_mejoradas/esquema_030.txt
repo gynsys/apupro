@@ -1,0 +1,28 @@
+z
+E
+8
+El /3: Demoliciones 3: Pavimentos y : Pavimentos de 1:A mano 0000
+similares ma concreto
+2: Áceras y cunetas
+O de concreto
+B 3: Brocales de 2:Eq. Liviano
+R concreto
+Á 4: Pavimento de
+5 asfalto 3:Eq. Pesado
+5: Pavimento combi-
+Pp nado conereto y
+R asfalto
+E 6: Bases y sub-bases
+L 4: Elementos kgf 1: Estructuras metál.
+] metálicos m2 2: Tabiques o puertas
+M m 3: Marcos metálicos
+| 5: Elementos m 1: Estructuras madera.
+N madera 2: Tabiques o puertas
+Á m3 |3: Marcos madera
+R
+E 6: Carga de mate-
+S riales provenien-
+tes de la demol'-
+ción m3
+A
+y

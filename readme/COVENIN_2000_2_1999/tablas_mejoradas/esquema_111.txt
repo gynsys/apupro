@@ -1,0 +1,34 @@
+EC IONES IE IE
+«—L
+EhÉñá—ÁáAÁKÁáÁáÁáÁ—Z-AAKÉÁKÁA > _— A ——_ —_—— ——————————— A 2 __ pal
+E9 |
+| 05: Cemento portland tf x km 1: Suelto 1: Sanoola 1: No urbano |050: Hasta 50 km
+06: Bloques de arcilla 2: Original (en banco) | 2: Ferry 2: Urbano
+T 07: Bloques de concreto m3x km [3: Final (colocado) 3: Equipo pesado 3: Montañoso
+08: Ladrillos y elementos (Mototrailla)
+R macizos de arcilla Saco 4: Camiones 200: > 50 km hasta 200 km.
+99: Acero de refuerzo y 5: Par autopro-
+Á Estructuras metálicas pulsión
+10: Estructuras de maderas
+N 11: Escamnas de concreto para
+muros de suelo armado
+5 12: Pletinas de acero para
+muros de suelo armado
+P 15: Elementos prefabricados de
+concreto armado,
+0
+R
+T 001: Hasta 1 km
+13: Mezclas asfálticas en caliente 002: >1km- 2km
+E 003: >2km- 3km
+004: >3km- 4km
+Ss 14: Mezclas asfálticas en frio. 005: >4km- 5km
+006: >5km- 6km
+007: > Gkm- 7 km
+008: > 7km- 8 km
+009: > Bkm- 9km
+010: > 9km- 10 km 2
+015: Mayor de 10 km a
+;
+TI
+| :
