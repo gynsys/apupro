@@ -31,6 +31,24 @@ falla actualiza a junio en costbase v2
 
 ## Hallazgo 1 — Importación incompleta
 
+El problema afectó a **ambos** Excel:
+
+```text
+falla original    → falta ELE025 en C.220 nocturno
+falla actualizada → falta ELE025 en C.220 nocturno
+```
+
+Además, en `falla original` el importador agregó una fila falsa:
+
+```text
+MO-005 — descripción "895" — jornal 0
+```
+
+Era la fila de **Prestaciones Sociales (895 %)** interpretada como mano de obra.
+
+Por eso **no sirve reutilizar ninguno de los dos presupuestos importados**. Hay
+que reimportar ambos después de desplegar la corrección.
+
 En la partida **C.220 S/C — SEÑALIZACIÓN Y CONTROL DE TRÁNSITO (NOCTURNO)**, el Excel tiene 8 equipos y CostBase importó 7.
 
 Falta:
