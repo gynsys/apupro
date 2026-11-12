@@ -311,7 +311,7 @@ def _parse_single_apu_sheet(ws: Worksheet, sheet_name: str, sheet_index: int) ->
         # Extracción de insumos según sección
         if mode == "MATERIALES":
             col_code = _clean_str(row[0]) if len(row) > 0 and row[0] is not None else ""
-            if not col_code and any(term in row_clean for term in ("NO.", "DESCRIPCI", "UND.", "PRECIO")):
+            if not col_code:
                 continue
             desc = _clean_str(row[2]) if len(row) > 2 and row[2] is not None else ""
             if not desc and len(row) > 1 and isinstance(row[1], str) and len(str(row[1])) > 3:
@@ -333,7 +333,7 @@ def _parse_single_apu_sheet(ws: Worksheet, sheet_name: str, sheet_index: int) ->
 
         elif mode == "EQUIPOS":
             col_code = _clean_str(row[0]) if len(row) > 0 and row[0] is not None else ""
-            if not col_code and any(term in row_clean for term in ("NO.", "DESCRIPCI", "COP/DEP", "PRECIO")):
+            if not col_code:
                 continue
             desc = _clean_str(row[2]) if len(row) > 2 and row[2] is not None else ""
             if not desc and len(row) > 1 and isinstance(row[1], str) and len(str(row[1])) > 3:
@@ -354,7 +354,7 @@ def _parse_single_apu_sheet(ws: Worksheet, sheet_name: str, sheet_index: int) ->
 
         elif mode == "MANO DE OBRA":
             col_code = _clean_str(row[0]) if len(row) > 0 and row[0] is not None else ""
-            if not col_code and any(term in row_clean for term in ("NO.", "DESCRIPCI", "JORNAL", "BONO")):
+            if not col_code:
                 continue
             desc = _clean_str(row[2]) if len(row) > 2 and row[2] is not None else ""
             if not desc and len(row) > 1 and isinstance(row[1], str) and len(str(row[1])) > 3:
