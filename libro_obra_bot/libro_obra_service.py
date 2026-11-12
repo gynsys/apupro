@@ -161,11 +161,30 @@ def list_all_project_books() -> List[Dict[str, Any]]:
             daily_sheets = [s for s in wb.sheetnames if s not in ["DATOS GENERALES", "ACTAS"]]
             sheet_count = len(daily_sheets)
 
-            project_title = file_path.stem.replace("_Libro_de_Obra", "").replace("_", " ")
-            if "DATOS GENERALES" in wb.sheetnames:
+            file_stem = file_path.stem.replace("_Libro_de_Obra", "").strip()
+            project_title = file_stem.replace("_", " ")
+
+            # 1. Intentar resolver el título oficial y canónico desde project_metadata
+            try:
+                from libro_obra_bot.project_store import _get_connection
+                with _get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT project_id, obra FROM project_metadata")
+                    for row_pid, row_obra in cursor.fetchall():
+                        c_stem = sanitize_filename(row_obra or row_pid)
+                        if c_stem == file_stem or (len(file_stem) >= 30 and (c_stem.startswith(file_stem[:30]) or file_stem.startswith(c_stem[:30]))):
+                            project_title = row_obra or row_pid
+                            break
+            except Exception as meta_exc:
+                logger.debug("No se pudo resolver título desde metadata: %s", meta_exc)
+
+            # 2. Respaldo secundario: si no coincidió en metadata, inspeccionar DATOS GENERALES
+            if project_title == file_stem.replace("_", " ") and "DATOS GENERALES" in wb.sheetnames:
                 try:
                     val_obra = str(wb["DATOS GENERALES"]["B4"].value or "").strip()
-                    if val_obra:
+                    if val_obra and val_obra.lower() not in ["prueba", "test", "obra"] and (
+                        sanitize_filename(val_obra)[:15] in file_stem or file_stem[:15] in sanitize_filename(val_obra)
+                    ):
                         project_title = val_obra
                 except Exception as exc:
                     logger.error("Error leyendo nombre de obra en %s: %s", file_path.name, exc, exc_info=True)
