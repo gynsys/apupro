@@ -465,12 +465,14 @@ export const SUBCHAPTER_DOCUMENTATION = {
 };
 
 export function getPartidaDocumentacion(item) {
-  const code = String(item?.CovPar || item?.CodPar || '').trim().toUpperCase();
-  const match = code.match(/^E(\d)(\d{2})/);
+  const rawCode = String(item?.CovPar || item?.CodPar || '').trim().toUpperCase();
+  const clean = rawCode.replace(/[^A-Z0-9]/g, '');
+  const match = clean.match(/^([A-Z])(\d)(\d)/);
   if (!match) return null;
 
-  const chapterCode = `E${match[1]}`;
-  const subchapterCode = `E${match[2]}`;
+  const letter = match[1];
+  const chapterCode = `${letter}${match[2]}`;
+  const subchapterCode = `${letter}${match[2]}${match[3]}`;
   const chapter = CHAPTER_DOCUMENTATION[chapterCode];
   const subchapter = SUBCHAPTER_DOCUMENTATION[subchapterCode];
   const doc = subchapter || chapter;

@@ -22,6 +22,20 @@ describe('documentación de partida', () => {
     expect(doc.title).toBe('Superestructura de concreto');
   });
 
+  it('hereda la ficha del subcapítulo E34 para encofrados (E342010111)', () => {
+    const encofradoItem = {
+      CodPar: 'E342010111',
+      CovPar: 'E342010111',
+      Descri: 'ENCOFRADO DE MADERA, TIPO RECTO, ACABADO CORRIENTE, EN COLUMNAS.',
+      UniPar: 'm2',
+    };
+    const doc = getPartidaDocumentacion(encofradoItem);
+    expect(doc).toBeTruthy();
+    expect(doc.inheritedFrom).toBe('E34');
+    expect(doc.title).toBe('Encofrados');
+    expect(doc.pago.hito).toContain('desencofrado el elemento estructural');
+  });
+
   it('muestra la medición y permite abrir la pestaña de pago', () => {
     render(<PartidaMedicionModal item={item} onClose={vi.fn()} />);
 
