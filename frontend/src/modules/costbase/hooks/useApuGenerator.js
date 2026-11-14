@@ -101,6 +101,7 @@ export function useApuGenerator({ setSettings }) {
       };
       setDebugInfo(currentDebug);
     } else if (
+      response.generation_engine === 'v3_compound' ||
       response.generation_engine === 'v3_delta' ||
       response.telemetria_v3 ||
       response.v3_delta_plan ||
@@ -109,14 +110,19 @@ export function useApuGenerator({ setSettings }) {
       response.debug_base_apu
     ) {
       currentDebug = {
-        message: (response.generation_engine === 'v3_delta' || response.telemetria_v3)
-          ? 'Motor v3.0: Selección IA de Mejor Partida Base + Ajustes Puntuales (Delta)'
-          : 'Generación asistida por RAG Híbrido y Adaptación de Partida Base',
+        message: response.generation_engine === 'v3_compound'
+          ? 'Motor v3.0 Compuesto: Sub-Partidas Individuales + Indicaciones a Toneladas'
+          : ((response.generation_engine === 'v3_delta' || response.telemetria_v3)
+            ? 'Motor v3.0: Selección IA de Mejor Partida Base + Ajustes Puntuales (Delta)'
+            : 'Generación asistida por RAG Híbrido y Adaptación de Partida Base'),
         solicitud_usuario: textToSubmit,
         generation_engine: response.generation_engine || (response.telemetria_v3 ? 'v3_delta' : 'rag'),
         telemetria: response.telemetria_v3 || response.debug_meta || null,
         seleccion_base: response.debug_base_selection || null,
         v3_delta_plan: response.v3_delta_plan || null,
+        v3_compound_plan: response.v3_compound_plan || null,
+        compound_trace: response.compound_trace || null,
+        sub_partidas_soporte: response.sub_partidas_soporte || null,
         v3_applied_deltas: response.v3_applied_deltas || null,
         calibrador_labor_equipos: response.debug_calibrator_trace || null,
         poda_discordancias: response.debug_pruning_trace || null,
@@ -222,6 +228,11 @@ export function useApuGenerator({ setSettings }) {
         equipments: response.equipments || [],
         labors: response.labors || [],
         advertencias: advertenciasPublicas,
+        supuestos_tecnicos: response.supuestos_tecnicos || [],
+        sub_partidas_soporte: response.sub_partidas_soporte || null,
+        compound_trace: response.compound_trace || null,
+        total_tons_contrato: response.total_tons_contrato || null,
+        generation_engine: response.generation_engine || null,
         source: response.source || null,
         similarity: response.similarity || null
       });
@@ -307,6 +318,108 @@ export function useApuGenerator({ setSettings }) {
     await handleGenerate(textPrompt, false, true, true, null);
   }, [basePrompt, handleGenerate]);
 
+  const handleUpdateCompoundIndications = useCallback((customFactorsByTag) => {
+    setItem(prevItem => {
+      if (!prevItem || !Array.isArray(prevItem.sub_partidas_soporte) || prevItem.sub_partidas_soporte.length === 0) {
+        return prevItem;
+      }
+      const subs = prevItem.sub_partidas_soporte;
+      const traceByTag = {};
+      (prevItem.compound_trace || []).forEach(t => {
+        traceByTag[t.actividad] = t;
+      });
+
+      const factors = [];
+      const rends = [];
+      const newTrace = [];
+
+      subs.forEach(s => {
+        const tag = s.actividad;
+        const prevT = traceByTag[tag] || {};
+        const rawFactor = customFactorsByTag && customFactorsByTag[tag] !== undefined
+          ? parseFloat(customFactorsByTag[tag])
+          : parseFloat(prevT.f_por_ton ?? 1.0);
+        const f = Number.isFinite(rawFactor) && rawFactor > 0 ? rawFactor : 0.0001;
+        const r = parseFloat(s.rendimiento || prevT.rendimiento_base || 1.0) || 1.0;
+        factors.push(f);
+        rends.push(r);
+        newTrace.push({
+          actividad: tag,
+          unidad: s.unidad_resultante || prevT.unidad || 'm3',
+          f_por_ton: f,
+          rendimiento_base: r,
+          share: s.share ?? prevT.share ?? 1.0,
+        });
+      });
+
+      const crewDaysPerTon = factors.reduce((acc, f, idx) => acc + (f / rends[idx]), 0);
+      const masterPerf = crewDaysPerTon > 0 ? Number((1.0 / crewDaysPerTon).toFixed(6)) : 1.0;
+
+      const newMaterials = [];
+      const newEquipments = [];
+      const newLabors = [];
+
+      subs.forEach((s, idx) => {
+        const f = factors[idx];
+        const r = rends[idx];
+        const dayScale = (f * masterPerf) / r;
+        const subApu = s.apu || {};
+
+        (subApu.materials || []).forEach(m => {
+          const cant = (parseFloat(m.cantidad) || 0) * f;
+          const pu = parseFloat(m.precio_unitario) || 0;
+          const desp = parseFloat(m.desperdicio) || 0;
+          const factorDesp = desp > 0 ? 1.0 + (desp / 100.0) : 1.0;
+          newMaterials.push({
+            ...m,
+            cantidad: cant,
+            total: Number((cant * pu * factorDesp).toFixed(4)),
+            actividad_origen: s.actividad,
+          });
+        });
+
+        (subApu.equipments || []).forEach(e => {
+          const cant = (parseFloat(e.cantidad) || 0) * dayScale;
+          const pu = parseFloat(e.precio_unitario) || 0;
+          const dep = parseFloat(e.depreciacion) || 1.0;
+          const costoDia = cant * pu * dep;
+          newEquipments.push({
+            ...e,
+            cantidad: cant,
+            costo_dia: Number(costoDia.toFixed(4)),
+            total: Number((costoDia / masterPerf).toFixed(4)),
+            actividad_origen: s.actividad,
+          });
+        });
+
+        (subApu.labors || []).forEach(l => {
+          const cant = (parseFloat(l.cantidad) || 0) * dayScale;
+          const jornal = parseFloat(l.jornal) || 0;
+          const bono = parseFloat(l.bono) || 0;
+          const costoDia = cant * (jornal + bono);
+          newLabors.push({
+            ...l,
+            cantidad: cant,
+            costo_dia: Number(costoDia.toFixed(4)),
+            total: Number((costoDia / masterPerf).toFixed(4)),
+            actividad_origen: s.actividad,
+          });
+        });
+      });
+
+      toast.success('Indicaciones aplicadas al APU maestro en toneladas');
+      return {
+        ...prevItem,
+        performance: masterPerf,
+        rendimiento: masterPerf,
+        materials: newMaterials,
+        equipments: newEquipments,
+        labors: newLabors,
+        compound_trace: newTrace,
+      };
+    });
+  }, []);
+
   return {
     loading,
     item,
@@ -337,6 +450,7 @@ export function useApuGenerator({ setSettings }) {
     handleGenerate,
     handleAcceptExactMatch,
     handleRejectExactMatch,
+    handleUpdateCompoundIndications,
     dismissClarification
   };
 }

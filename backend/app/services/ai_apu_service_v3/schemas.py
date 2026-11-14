@@ -3,7 +3,7 @@ Schemas for AI APU Service v3.0 (Best-Match Base Selection + Surgical Delta Patc
 """
 
 from typing import Any, Dict, List, Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class V3MaterialDeltaOp(BaseModel):
@@ -74,6 +74,14 @@ class V3EquipmentDeltaOp(BaseModel):
         default="Ajuste de equipo según alcance solicitado",
         description="Justificación técnica del ajuste de equipo"
     )
+
+    @field_validator("price_basis", mode="before")
+    @classmethod
+    def _normalize_price_basis(cls, v: Any) -> str:
+        s = str(v or "").strip().lower()
+        if any(tok in s for tok in ("repos", "deprec", "compra", "adquis")):
+            return "valor_reposicion"
+        return "tarifa_diaria"
 
 
 class V3LaborDeltaOp(BaseModel):
@@ -210,3 +218,32 @@ class V3ReviewPatch(BaseModel):
         default="Ajuste de consistencia física y económica",
         description="Justificación técnica integral de la corrección"
     )
+
+
+
+class ActivityScope(BaseModel):
+    """Una actividad detectada dentro de una descripcion compuesta (pliego con una sola partida)."""
+    tag: str = Field(description="Identificador de la familia de actividad (ej. DEMOLICION)")
+    description: str = Field(description="Descripcion tecnica de la actividad para resolverla con su propia partida base")
+    share: float = Field(
+        default=1.0,
+        description="Fraccion (0-1] de las toneladas totales que procesa esta actividad",
+    )
+    order: int = Field(default=0, description="Orden de ejecucion en obra")
+    unit: str = Field(default="m3", description="Unidad canonica convertible a la unidad maestra (ton, kg, m3, Gl, m2, m)")
+    carrier: Literal["mass", "volume", "lump", "area", "length"] = Field(
+        default="volume", description="Magnitud que mide la unidad de la actividad"
+    )
+    material: str = Field(default="escombro_mixto", description="Clave del material que mueve (tabla de densidades)")
+    state: Literal["en_sitio", "suelto"] = Field(default="suelto", description="Estado del material al medirse")
+    share_kind: Literal["all", "ferrous", "non_ferrous"] = Field(
+        default="all", description="Fraccion de la masa total que procesa la actividad"
+    )
+
+
+class CompoundPlan(BaseModel):
+    """Resultado del detector de N actividades en una descripcion compuesta."""
+    is_compound: bool = False
+    master_unit: str = "ton"
+    ferrous_pct: float = Field(default=3.0, description="Porcentaje de ferrosos en peso usado para repartir las actividades")
+    activities: List[ActivityScope] = Field(default_factory=list)

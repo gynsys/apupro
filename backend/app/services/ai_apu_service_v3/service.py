@@ -11,6 +11,11 @@ from typing import Any, Dict, Optional
 from sqlalchemy.orm import Session
 
 from app.core.logging import logger
+from app.services.ai_apu_service_v3.compound_detector import detect_compound_activities
+from app.services.ai_apu_service_v3.compound_service import (
+    generate_apu_v3_compound,
+    is_master_ton_unit,
+)
 from app.services.ai_apu_service_v3.delta_applier import apply_v3_deltas_to_base_apu
 from app.services.ai_apu_service_v3.selector_planner import (
     fetch_enriched_candidates_for_v3,
@@ -29,6 +34,10 @@ def generate_apu_v3(
     deep_well_depth: Optional[float] = None,
     use_embeddings: bool = False,
     quantity: Optional[float] = None,
+    total_tons: Optional[float] = None,
+    ferrous_pct: Optional[float] = None,
+    rubble_density_t_per_m3: Optional[float] = None,
+    units_per_ton: Optional[Dict[str, float]] = None,
 ) -> Dict[str, Any]:
     """
     Punto de entrada principal para el Motor v3.0 (Selección de Mejor Partida Base + Ajustes Delta).
@@ -38,6 +47,27 @@ def generate_apu_v3(
         raise ValueError("user_description es obligatorio y debe ser una cadena no vacía")
     if db is None:
         raise ValueError("db Session es obligatoria para el Motor v3.0")
+
+    # RAMA COMPUESTA: partida en toneladas cuya descripcion integra N actividades -> un unico APU
+    if is_master_ton_unit(requested_unit) and not manual_base_code:
+        compound_plan = detect_compound_activities(user_description, ferrous_pct=ferrous_pct)
+        if compound_plan.is_compound:
+            logger.info(
+                "[V3 Engine] Descripcion compuesta detectada (%d actividades) -> v3_compound",
+                len(compound_plan.activities),
+            )
+            return generate_apu_v3_compound(
+                user_description=user_description,
+                db=db,
+                compound_plan=compound_plan,
+                total_tons=total_tons if total_tons else quantity,
+                covenin_prefix=covenin_prefix,
+                context=context,
+                lump_execution_days=execution_days,
+                density_override_t_per_m3=rubble_density_t_per_m3,
+                units_per_ton=units_per_ton,
+                use_embeddings=use_embeddings,
+            )
 
     t_start = time.time()
     logger.info("[V3 Engine] Iniciando generación v3.0 (use_embeddings=%s, qty=%s) para: %.80s", use_embeddings, quantity, user_description)

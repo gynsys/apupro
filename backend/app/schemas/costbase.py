@@ -164,6 +164,11 @@ class AiApuGenerateRequest(BaseModel):
     use_typesafe_jev: Optional[bool] = False
     # Flag para omitir re-evaluación ontológica cuando el usuario ya respondió una aclaratoria
     bypass_ontology: Optional[bool] = False
+    # Parámetros de Macro-Partida Compuesta en Toneladas (Motor v3.0)
+    total_tons: Optional[float] = None
+    ferrous_pct: Optional[float] = None
+    rubble_density_t_per_m3: Optional[float] = None
+    units_per_ton: Optional[Dict[str, float]] = None
 
 
 class SmartSelectRequest(BaseModel):

@@ -19,6 +19,7 @@ import SubscriptionRequestModal from '../../../components/SubscriptionRequestMod
 import ApuGeneratorHeader from '../components/ai-generator/ApuGeneratorHeader';
 import ExactMatchCard from '../components/ai-generator/ExactMatchCard';
 import ClarificationAlertCard from '../components/ai-generator/ClarificationAlertCard';
+import CompoundSubpartidasPanel from '../components/ai-generator/CompoundSubpartidasPanel';
 import GuidedAssistantModal from '../components/ai-generator/GuidedAssistantModal';
 import ImportFromDbPanel from '../components/ai-generator/ImportFromDbPanel';
 
@@ -714,6 +715,16 @@ export default function AIApuGeneratorPage() {
                 ))}
               </ul>
             </div>
+          )}
+
+          {generator.item.sub_partidas_soporte && generator.item.sub_partidas_soporte.length > 0 && (
+            <CompoundSubpartidasPanel
+              subPartidas={generator.item.sub_partidas_soporte}
+              compoundTrace={generator.item.compound_trace || []}
+              supuestosTecnicos={generator.item.supuestos_tecnicos || []}
+              totalTons={generator.item.total_tons_contrato}
+              onApplyIndications={generator.handleUpdateCompoundIndications}
+            />
           )}
 
           <ApuEditorUI

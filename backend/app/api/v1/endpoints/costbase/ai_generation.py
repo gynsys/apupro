@@ -106,7 +106,7 @@ _CLARIFICATION_ANSWER_RE = re.compile(
     r"|sin\s+(?:winche|cam[ií][oó]n|compresor|andamio|mezcladora|trompo|oxicorte|vibrocompactador)\b"
     r"|con\s+(?:winche|cam[ií][oó]n|compresor|andamio|mezcladora|trompo|oxicorte|vibrocompactador|martillo|herramientas|se[nñ]orita)\b"
     r"|incluye\s+(?:alquiler\s+de\s+andamio|andamio|carga\s+y\s+bote|cam[ií][oó]n)\b"
-    r"|\d[\d.,]*\s*(?:m|m2|m²|m3|m³|ml|cm|mm|hp|kg|und|pza|d[ií]as?)\b"
+    r"|\d[\d.,]*\s*(?:m|m2|m²|m3|m³|ml|cm|mm|hp|kg|ton|toneladas?|tn|und|pza|d[ií]as?)\b"
     r"|\d[\d.,]*\s*[x×]\s*\d[\d.,]*)",
     re.IGNORECASE,
 )
@@ -284,11 +284,16 @@ def generate_ai_apu_route(
     raw_desc_lower = (raw_desc or "").lower()
     effective_unit = (payload.unit or "").strip().lower()
     if not effective_unit:
-        unit_match = re.search(r'\b(gl|sg|global|suma\s*global|pza|und|unidad|piezas?|m2|m²|m3|m³|ml|mts?|metros?\s*lineales?|pto|puntos?)\b', raw_desc_lower)
+        unit_match = re.search(
+            r'\b(gl|sg|global|suma\s*global|pza|und|unidad|piezas?|m2|m²|m3|m³|ml|mts?|metros?\s*lineales?|pto|puntos?|ton|toneladas?|tn)\b',
+            raw_desc_lower,
+        )
         if unit_match:
             matched_u = unit_match.group(1)
             if matched_u in ("gl", "sg", "global", "suma global"):
                 effective_unit = "Gl"
+            elif matched_u in ("ton", "tonelada", "toneladas", "tn"):
+                effective_unit = "ton"
             elif matched_u in ("pieza", "piezas"):
                 effective_unit = "pza"
             elif matched_u == "unidad":
@@ -546,6 +551,25 @@ def generate_ai_apu_route(
             payload.description
         )
         try:
+            effective_total_tons = payload.total_tons
+            if not effective_total_tons:
+                tons_match = re.search(r"\b(\d+(?:[.,]\d+)?)\s*(?:toneladas?|ton|tn)\b", raw_desc_lower)
+                if tons_match:
+                    try:
+                        effective_total_tons = float(tons_match.group(1).replace(",", "."))
+                    except ValueError:
+                        effective_total_tons = None
+            if not effective_total_tons and payload.history:
+                for msg in reversed(payload.history):
+                    m_text = (getattr(msg, "content", "") or "").lower()
+                    tm = re.search(r"\b(\d+(?:[.,]\d+)?)\s*(?:toneladas?|ton|tn)\b", m_text)
+                    if tm:
+                        try:
+                            effective_total_tons = float(tm.group(1).replace(",", "."))
+                            break
+                        except ValueError:
+                            pass
+
             v3_result = generate_apu_v3(
                 user_description=payload.description,
                 db=db,
@@ -555,6 +579,10 @@ def generate_ai_apu_route(
                 manual_base_code=payload.base_partida_code,
                 execution_days=payload.execution_days,
                 deep_well_depth=effective_depth,
+                total_tons=effective_total_tons,
+                ferrous_pct=payload.ferrous_pct,
+                rubble_density_t_per_m3=payload.rubble_density_t_per_m3,
+                units_per_ton=payload.units_per_ton,
             )
             if jev_analysis:
                 v3_result["jev_analysis"] = jev_analysis
