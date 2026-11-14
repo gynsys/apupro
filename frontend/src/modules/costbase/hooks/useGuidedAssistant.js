@@ -265,8 +265,8 @@ export function validateStepInput(text, step, isMaintenance = false, currentStep
     return { isValid: true };
   }
 
-  // Filtro anti-basura (excepto para "m" como unidad de metro)
-  if (isGibberish(clean) && clean.toLowerCase() !== 'm') {
+  // Filtro anti-basura (excepto para "m" o "t" como unidades de metro/tonelada)
+  if (isGibberish(clean) && !['m', 't'].includes(clean.toLowerCase())) {
     return {
       isValid: false,
       error: `La respuesta "${clean}" no parece una descripción técnica válida. Por favor utiliza términos constructivos o selecciona una opción sugerida.`
@@ -291,7 +291,8 @@ export function validateStepInput(text, step, isMaintenance = false, currentStep
     }
     const VALID_UNITS = [
       'und', 'unidad', 'unidades', 'pza', 'pieza', 'piezas', 'm', 'ml', 'metro', 'metros',
-      'm2', 'm²', 'm3', 'm³', 'kg', 'kgf', 'ton', 'tonf', 'pto', 'punto', 'puntos',
+      'm2', 'm²', 'm3', 'm³', 'kg', 'kgf', 'ton', 'tonf', 't', 'tn', 'tm', 'tonelada', 'toneladas',
+      'pto', 'punto', 'puntos',
       'gl', 'sg', 'global', 'suma global',
       'gln', 'galon', 'galones', 'jgo', 'juego', 'saco', 'sacos', 'sac', 'viaje', 'viajes',
       'mes', 'dia', 'hora', 'sugerir por ia', 'omitir', 'ninguno', 'm3-km', 'm³-km', 't-km', 'ton-km'
@@ -737,8 +738,8 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
           id: `bot-val-${Date.now()}`,
           sender: 'bot',
           step: 0,
-          text: `Aviso: "${cleanText}" no es una unidad de cómputo válida.\n\nPor favor selecciona una unidad o escribe una unidad estándar (und, pza, m², m, m³, Gl):`,
-          chips: ['und', 'pza', 'm²', 'm', 'm³', 'Gl']
+          text: `Aviso: "${cleanText}" no es una unidad de cómputo válida.\n\nPor favor selecciona una unidad o escribe una unidad estándar (und, pza, m², m, m³, ton, kg, Gl):`,
+          chips: ['und', 'pza', 'm²', 'm', 'm³', 'ton', 'kg', 'Gl']
         };
         setGuidedMessages(prev => [...prev, newUserMsg, botValMsg]);
         setChatInputValue('');
@@ -823,7 +824,7 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
         sender: 'bot',
         step: 0,
         text: `${lines}\n\nTu descripción cuenta con excelente nivel de detalle. Para calcular rendimientos y costos unitarios con exactitud, por favor selecciona o indica la unidad de cómputo:`,
-        chips: ['m²', 'm³', 'und', 'pza', 'm', 'Gl']
+        chips: ['m²', 'm³', 'ton', 'kg', 'und', 'pza', 'm', 'Gl']
       };
       setGuidedMessages(prev => [...prev, newUserMsg, botNeedUnitMsg]);
       setChatInputValue('');
@@ -866,8 +867,8 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
           id: `bot-val-${Date.now()}`,
           sender: 'bot',
           step: 6,
-          text: `Aviso: "${cleanText}" no es una unidad de cómputo válida.\n\nPor favor selecciona una unidad o escribe una unidad estándar (und, pza, m², m, m³, Gl):`,
-          chips: ['und', 'pza', 'm²', 'm', 'm³', 'Gl']
+          text: `Aviso: "${cleanText}" no es una unidad de cómputo válida.\n\nPor favor selecciona una unidad o escribe una unidad estándar (und, pza, m², m, m³, ton, kg, Gl):`,
+          chips: ['und', 'pza', 'm²', 'm', 'm³', 'ton', 'kg', 'Gl']
         };
         setGuidedMessages(prev => [...prev, newUserMsg, botValMsg]);
         setChatInputValue('');
@@ -891,6 +892,8 @@ export function useGuidedAssistant({ user, initialGuided = true, onComplete }) {
           'm²',
           'm',
           'm³',
+          'ton',
+          'kg',
           'Gl'
         ]
       };

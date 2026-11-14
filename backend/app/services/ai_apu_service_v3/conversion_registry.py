@@ -144,8 +144,37 @@ INDICATOR_LIBRARY: Tuple[DefaultIndicator, ...] = (
         ),
     ),
     DefaultIndicator(
+        key="apuntalamiento_temporal_und",
+        description_pattern=re.compile(r"\b(apuntal\w*|entibad\w*|acodal\w*|puntal\w*|sostenimiento)", re.IGNORECASE),
+        unit="und",
+        units_per_ton=0.04,  # ~1 puntal cada 3 m2 apuntalados -> ~0.04 und/ton
+        source=(
+            "0,04 und/ton de puntales temporales de seguridad (~1 puntal cada 25 ton de edificacion; "
+            "supuesto editable segun patologia estructural)"
+        ),
+    ),
+    DefaultIndicator(
+        key="apuntalamiento_temporal_pza",
+        description_pattern=re.compile(r"\b(apuntal\w*|entibad\w*|acodal\w*|puntal\w*|sostenimiento)", re.IGNORECASE),
+        unit="pza",
+        units_per_ton=0.04,
+        source=(
+            "0,04 pza/ton de puntales temporales de seguridad (~1 puntal cada 25 ton de edificacion; "
+            "supuesto editable segun patologia estructural)"
+        ),
+    ),
+    DefaultIndicator(
+        key="apuntalamiento_temporal_m",
+        description_pattern=re.compile(r"\b(apuntal\w*|entibad\w*|acodal\w*|puntal\w*|sostenimiento)", re.IGNORECASE),
+        unit="m",
+        units_per_ton=0.12,
+        source=(
+            "0,12 m/ton de apuntalamiento lineal preventivo (supuesto editable segun patologia estructural)"
+        ),
+    ),
+    DefaultIndicator(
         key="corte_especializado_m2",
-        description_pattern=re.compile(r"\bcorte\b", re.IGNORECASE),
+        description_pattern=re.compile(r"\b(corte|fragmentaci\w*)\b", re.IGNORECASE),
         unit="m2",
         units_per_ton=0.05,  # sección de corte en nudos/juntas críticas por tonelada demolida
         source=(
@@ -155,7 +184,7 @@ INDICATOR_LIBRARY: Tuple[DefaultIndicator, ...] = (
     ),
     DefaultIndicator(
         key="corte_especializado_m",
-        description_pattern=re.compile(r"\bcorte\b", re.IGNORECASE),
+        description_pattern=re.compile(r"\b(corte|fragmentaci\w*)\b", re.IGNORECASE),
         unit="m",
         units_per_ton=0.20,
         source=(
@@ -165,7 +194,7 @@ INDICATOR_LIBRARY: Tuple[DefaultIndicator, ...] = (
     ),
     DefaultIndicator(
         key="corte_especializado_und",
-        description_pattern=re.compile(r"\bcorte\b", re.IGNORECASE),
+        description_pattern=re.compile(r"\b(corte|fragmentaci\w*)\b", re.IGNORECASE),
         unit="und",
         units_per_ton=0.10,
         source=(
@@ -175,7 +204,7 @@ INDICATOR_LIBRARY: Tuple[DefaultIndicator, ...] = (
     ),
     DefaultIndicator(
         key="acarreo_escombros_m3xm",
-        description_pattern=re.compile(r"\b(acarreo|carga|manipulaci\w*|transporte|bote)\b", re.IGNORECASE),
+        description_pattern=re.compile(r"\b(acarreo|carga|manipulaci\w*|transporte|bote|acopio|separaci\w*)\b", re.IGNORECASE),
         unit="m3xm",
         units_per_ton=round((1.0 / 1.35) * 20.0, 4),  # 0.7407 m3/ton * 20 m distancia media en patio = 14.8148 m3xm/ton
         source=(
@@ -185,7 +214,7 @@ INDICATOR_LIBRARY: Tuple[DefaultIndicator, ...] = (
     ),
     DefaultIndicator(
         key="transporte_carga_escombros_vje",
-        description_pattern=re.compile(r"\b(acarreo|carga|transporte|bote|viaje|escombro\w*)\b", re.IGNORECASE),
+        description_pattern=re.compile(r"\b(acarreo|carga|transporte|bote|viaje|escombro\w*|acopio|separaci\w*)\b", re.IGNORECASE),
         unit="vje",
         units_per_ton=0.10,  # Camión volteo estándar ~8 m3 sueltos (~10 ton/viaje) -> 0.10 vje/ton
         source=(

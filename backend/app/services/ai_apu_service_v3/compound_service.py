@@ -43,6 +43,7 @@ _MASS_UNITS = ("ton", "t", "tn", "kg", "kgf")
 _LUMP_UNITS = ("gl", "sg")
 _AFFINITY_THRESHOLD = 0.25
 _DEFAULT_LUMP_DAYS = 10.0
+_DEFAULT_REFERENCE_TONS = 1000.0
 _STOPWORDS = {
     "para", "con", "sin", "del", "las", "los", "desde", "hasta", "incluye", "excluye", "entre",
     "sobre", "como", "otra", "otro", "esta", "este", "mediante", "segun", "cada", "hacia",
@@ -95,12 +96,19 @@ def _clarification(
     plan: Optional[CompoundPlan],
     required_params: List[Dict[str, str]],
     sub_partidas: Optional[List[Dict[str, Any]]] = None,
+    options: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
+    questions = [p["label"] for p in required_params] or [message]
+    full_message = message
+    if required_params:
+        details = " ".join(p["label"] for p in required_params)
+        if details not in full_message:
+            full_message = f"{message} {details}".strip()
     return {
         "status": "clarification_needed",
-        "clarification_message": message,
-        "options": [],
-        "questions": [p["label"] for p in required_params] or [message],
+        "clarification_message": full_message,
+        "options": options or [],
+        "questions": questions,
         "required_params": required_params,
         "sub_partidas": sub_partidas or [],
         "generation_engine": "v3_compound",
@@ -177,13 +185,8 @@ def generate_apu_v3_compound(
     if not compound_plan.is_compound or not compound_plan.activities:
         raise ValueError("compound_plan debe contener al menos una actividad detectada")
 
-    if total_tons is None or float(total_tons) <= 0:
-        return _clarification(
-            "La partida compuesta se expresa en toneladas.",
-            compound_plan,
-            [{"key": "total_tons", "label": "Total de toneladas de la partida (necesario para prorratear)."}],
-        )
-    tons = float(total_tons)
+    has_explicit_tons = bool(total_tons is not None and float(total_tons) > 0)
+    tons = float(total_tons) if has_explicit_tons else _DEFAULT_REFERENCE_TONS
     user_factors: Dict[str, float] = units_per_ton or {}
     activities = sorted(compound_plan.activities, key=lambda a: a.order)
 
@@ -194,7 +197,7 @@ def generate_apu_v3_compound(
     warnings: List[str] = []
     assumptions: List[str] = [
         f"Porcentaje de ferrosos en peso: {compound_plan.ferrous_pct:g}% (supuesto editable; minimo normativo 1%).",
-        "Rendimientos por jornada de 8 horas.",
+        "Rendimientos por jornada de 8 horas (APU expresado por 1,00 tonelada).",
     ]
 
     # ---------------- ETAPA 1: precio unitario por sub-partida ----------------
@@ -230,25 +233,19 @@ def generate_apu_v3_compound(
             context=context,
         )
         base_unit_raw = str((base_apu or {}).get("unidad") or "")
-        if (
-            plan.selected_codpar != "NONE"
-            and base_unit_raw
-            and not _units_are_equivalent(plan.target_unit, base_unit_raw)
-        ):
-            # El LLM cambio la unidad de una base real y reinvento el rendimiento: se revierte al catalogo.
-            warnings.append(
-                f"[{activity.tag}] El planificador cambio la unidad de la base {plan.selected_codpar} "
-                f"de '{base_unit_raw}' a '{plan.target_unit}'; se revirtio a '{base_unit_raw}' con el "
-                "rendimiento oficial del catalogo."
-            )
+        if plan.selected_codpar != "NONE" and base_unit_raw and not is_lump:
+            if not _units_are_equivalent(plan.target_unit, base_unit_raw):
+                warnings.append(
+                    f"[{activity.tag}] El planificador cambio la unidad de la base {plan.selected_codpar} "
+                    f"de '{base_unit_raw}' a '{plan.target_unit}'; se revirtio a '{base_unit_raw}' con el "
+                    "rendimiento oficial del catalogo."
+                )
+                for ops in (plan.material_ops, plan.equipment_ops, plan.labor_ops):
+                    ops[:] = [op for op in ops if op.op != "modify_qty"]
             plan.target_unit = base_unit_raw
             plan.keep_base_performance = True
             plan.new_performance = None
             plan.performance_reason = None
-            for ops in (plan.material_ops, plan.equipment_ops, plan.labor_ops):
-                ops[:] = [op for op in ops if op.op != "modify_qty"]
-        elif plan.selected_codpar != "NONE" and base_unit_raw:
-            plan.target_unit = base_unit_raw
         elif plan.selected_codpar == "NONE" and not is_lump and _norm_unit(plan.target_unit) in _LUMP_UNITS:
             plan.target_unit = activity.unit or "m3"
 
@@ -276,10 +273,15 @@ def generate_apu_v3_compound(
         from_scratch = plan.selected_codpar == "NONE"
         affinity = None if from_scratch else round(base_affinity(activity.description, base_desc), 2)
 
-        if _norm_unit(unit) in _LUMP_UNITS and not (lump_execution_days and float(lump_execution_days) > 0):
-            assumptions.append(
-                f"[{activity.tag}] Suma global calculada con {_DEFAULT_LUMP_DAYS:g} jornadas de 8 h (supuesto editable)."
-            )
+        if _norm_unit(unit) in _LUMP_UNITS:
+            if not (lump_execution_days and float(lump_execution_days) > 0):
+                assumptions.append(
+                    f"[{activity.tag}] Suma global calculada con {_DEFAULT_LUMP_DAYS:g} jornadas de 8 h (supuesto editable)."
+                )
+            if not has_explicit_tons:
+                assumptions.append(
+                    f"[{activity.tag}] Suma global prorrateada sobre {_DEFAULT_REFERENCE_TONS:g} ton de referencia (editable en la tabla de indicaciones)."
+                )
 
         entry.update({
             "partida_base": plan.selected_codpar,
@@ -361,7 +363,7 @@ def generate_apu_v3_compound(
     merged["v3_compound_plan"] = compound_plan.model_dump()
     # Soporte anexo: APU completo de cada sub-partida (precio unitario en su propia unidad)
     merged["sub_partidas_soporte"] = sub_partidas
-    merged["total_tons_contrato"] = tons
+    merged["total_tons_contrato"] = tons if has_explicit_tons else None
     merged["telemetria_v3"] = {
         "engine": "v3_compound",
         "total_ms": round((time.time() - t_start) * 1000.0, 1),
