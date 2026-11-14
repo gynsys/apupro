@@ -318,14 +318,19 @@ def validate_detected_activities(
     u_up = _norm_ascii_upper(user_description)
     has_ferrous_act = any(a.share_kind == "ferrous" for a in activities)
     has_rubble_load_act = any(
-        a.share_kind != "ferrous"
-        and "CARGA" in a.description
-        and not re.search(r"\b(?:DEMOLICION|FRAGMENTACION|APUNTALAMIENTO)\b", a.description)
+        (a.share_kind == "non_ferrous" and "CARGA" in a.description)
+        or a.tag.startswith("CARGA")
+        or (
+            a.share_kind != "ferrous"
+            and "CARGA" in a.description
+            and not re.search(r"^\s*(?:DEMOLICION|FRAGMENTACION|APUNTALAMIENTO)\b", a.description)
+        )
         for a in activities
     )
     if (
         has_ferrous_act
         and not has_rubble_load_act
+        and "CARGA_MECANICA_ESCOMBROS_NO_FERROSOS" not in seen_tags
         and re.search(r"\bCARGA\s+(?:MECANICA\s+)?DE\s+ESCOMBROS\b", u_up)
     ):
         next_order = max((a.order for a in activities), default=0) + 1
@@ -346,7 +351,7 @@ def validate_detected_activities(
             )
         )
 
-    # Si existe una sub-partida dedicada de FRAGMENTACION, limpiar referencias a fragmentación/oxicorte
+    # Si existe una sub-partida dedicada de FRAGMENTACION, limpiar referencias a fragmentación/oxicorte/martillo
     # dentro de la sub-partida de DEMOLICION primaria para evitar duplicar la misma partida base (ej. B01009).
     has_dedicated_frag = any(
         re.search(r"\b(?:FRAGMENTACION|TRITURACION)\b", _norm_ascii_upper(a.description))
@@ -356,13 +361,20 @@ def validate_detected_activities(
     if has_dedicated_frag:
         for a in activities:
             a_up = _norm_ascii_upper(a.description)
-            if "DEMOLICION" in a_up and "FRAGMENTACION" in a_up:
+            if "DEMOLICION" in a_up:
                 cleaned_dem = re.sub(
-                    r",?\s*INCLUYENDO\s+FRAGMENTACION.*$",
+                    r",?\s*INCLUYE(?:NDO)?\s+FRAGMENTACI[OÓ]N.*$",
                     "",
                     a.description,
                     flags=re.IGNORECASE,
                 ).strip()
+                cleaned_dem = re.sub(
+                    r"\s+(?:MEDIANTE|CON)\s+RETROEXCAVADORA\s+CON\s+MARTILLO(?:\s+HIDR[AÁ]ULICO)?(?:\s+Y\s+)?",
+                    " CON ",
+                    cleaned_dem,
+                    flags=re.IGNORECASE,
+                ).strip()
+                cleaned_dem = re.sub(r"\s{2,}", " ", cleaned_dem).strip(" ,.")
                 if len(cleaned_dem) >= 10:
                     if not re.search(r"\bEQUIPO\s+PESADO\b", _norm_ascii_upper(cleaned_dem)):
                         cleaned_dem = f"{cleaned_dem} CON EQUIPO PESADO"

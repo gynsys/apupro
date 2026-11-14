@@ -424,8 +424,8 @@ export function useApuGenerator({ setSettings }) {
       });
 
       const masterPerf = (targetMoPerTon > 0 && masterCrewDailyCost > 0)
-        ? Number((masterCrewDailyCost / targetMoPerTon).toFixed(6))
-        : Number(baseMasterPerf.toFixed(6));
+        ? Math.max(0.01, Number((masterCrewDailyCost / targetMoPerTon).toFixed(2)))
+        : Math.max(0.01, Number(baseMasterPerf.toFixed(2)));
 
       newLabors.forEach(lab => {
         lab.total = Number((lab.costo_dia / masterPerf).toFixed(4));

@@ -231,7 +231,8 @@ def _ensure_compound_sub_item_equipment(
         })
         changed = True
 
-    # 0. Apuntalamiento temporal: si es con puntales de madera, eliminar madera de encofrado de puentes (ENC006)
+    # 0. Apuntalamiento temporal: si es con puntales de madera, eliminar madera de encofrado de puentes (ENC006);
+    #    si es con puntales metálicos, asegurar código oficial ENC061 evitando referenciales sin código ("S/C").
     if re.search(r"\b(?:APUNTAL|ENTIBAD|ACODAL|SOSTENIMIENTO)\w*\b", desc_up):
         if "MADERA" in desc_up and "TABLA" not in desc_up:
             before_m_sh = len(mats)
@@ -243,6 +244,41 @@ def _ensure_compound_sub_item_equipment(
                 )
             ]
             if len(mats) != before_m_sh:
+                changed = True
+        elif re.search(r"\b(?:METALIC\w*|TELESCOPIC\w*|HIERRO|ACERO)\b", desc_up):
+            has_valid_metal_prop = False
+            for idx_m, m_item in enumerate(mats):
+                m_desc_u = str(m_item.get("descripcion") or "").upper()
+                m_code_u = str(m_item.get("codigo") or "").strip().upper()
+                if "PUNTAL" in m_desc_u:
+                    has_valid_metal_prop = True
+                    if m_code_u in ("", "S/C", "NONE") or str(m_item.get("origen") or "") != "historico":
+                        mats[idx_m] = {
+                            "id": "m-enc061",
+                            "codigo": "ENC061",
+                            "cod_ins": "ENC061",
+                            "ref_code": "ENC061",
+                            "descripcion": "PUNTAL DE HIERRO P/ENCOFRADO HASTA 4 M-A",
+                            "unidad": "pza",
+                            "cantidad": round(max(0.5, float(m_item.get("cantidad") or 2.0)), 2),
+                            "desperdicio": 0.0,
+                            "precio_unitario": 18.0,
+                            "origen": "historico",
+                        }
+                        changed = True
+            if not has_valid_metal_prop:
+                mats.append({
+                    "id": "m-enc061",
+                    "codigo": "ENC061",
+                    "cod_ins": "ENC061",
+                    "ref_code": "ENC061",
+                    "descripcion": "PUNTAL DE HIERRO P/ENCOFRADO HASTA 4 M-A",
+                    "unidad": "pza",
+                    "cantidad": 2.0,
+                    "desperdicio": 0.0,
+                    "precio_unitario": 18.0,
+                    "origen": "historico",
+                })
                 changed = True
         _ensure_min_labor(r"\bAYUDANTE\b", "1-1.2", "AYUDANTE - TABULADOR CONSTRUCCION -N2", 2, 2.44, 3.22)
 
@@ -364,12 +400,12 @@ def _ensure_compound_sub_item_equipment(
         if len(mats) != before_m:
             changed = True
 
-        # Si el LLM reemplazó el cargador por un código sintético EQ-IA subvalorado (< $50/día), sustituirlo por COP010 oficial
+        # Estandarizar cualquier cargador frontal / Payloader (ej. COP009 CAT 966-F o EQ-IA) al canónico COP010 CAT 950-F
         for idx_e, eq_item in enumerate(eqs):
             e_desc_u = str(eq_item.get("descripcion") or "").upper()
-            if re.search(r"\b(?:CARGADOR|PAYLOADER)\b", e_desc_u):
-                daily_cost = float(eq_item.get("precio_unitario") or 0.0) * float(eq_item.get("depreciacion") or 1.0)
-                if daily_cost < 50.0 or str(eq_item.get("codigo") or "").upper().startswith("EQ-IA"):
+            e_code_u = str(eq_item.get("codigo") or "").strip().upper()
+            if e_code_u in ("COP009", "COP010") or re.search(r"\b(?:CARGADOR\s+DE\s+CAUCHOS|CARGADOR\s+FRONTAL|PAYLOADER|CAT\s*950|CAT\s*966)\b", e_desc_u):
+                if e_code_u != "COP010" or float(eq_item.get("precio_unitario") or 0.0) * float(eq_item.get("depreciacion") or 1.0) < 50.0:
                     eqs[idx_e] = {
                         "id": "e-cop010",
                         "codigo": "COP010",
@@ -384,7 +420,7 @@ def _ensure_compound_sub_item_equipment(
                     }
                     changed = True
 
-        if not _has_eq(r"\b(?:CARGADOR|PAYLOADER|CAT\s*950|CAT\s*966)\b"):
+        if not _has_eq(r"\b(?:CARGADOR|PAYLOADER|CAT\s*950)\b"):
             eqs.append({
                 "id": "e-cop010",
                 "codigo": "COP010",
@@ -424,13 +460,13 @@ def _ensure_compound_sub_item_equipment(
         and re.search(r"\b(?:SEPARACION|ACOPIO|CARGA|CORTE|REMOCION|CLASIFICACION)\b", desc_up)
     )
     if is_ferrous_handling:
-        # Purgar grúa autopropulsada de $10,000/día, señorita/trípode y soldadora de arco (oxicorte usa soplete a gas)
+        # Purgar grúa autopropulsada de $10,000/día, señorita/trípode, soldadora de arco y retroexcavadora con martillo
         if "GRUA" not in desc_up:
             before_eq_f = len(eqs)
             eqs[:] = [
                 e for e in eqs
                 if not re.search(
-                    r"\b(?:GRUA\s+AUTOPROPULSADA|SEÑORITA|SENORITA|TRIPODE\s+PARA|SOLDADORA\s+LINCOLN|MAQUINA\s+DE\s+SOLDAR|CORTADORA\s+DE\s+CERAMICA)\b",
+                    r"\b(?:GRUA\s+AUTOPROPULSADA|SEÑORITA|SENORITA|TRIPODE\s+PARA|SOLDADORA\s+LINCOLN|MAQUINA\s+DE\s+SOLDAR|CORTADORA\s+DE\s+CERAMICA|RETROEXCAVADORA.*MARTILLO|MARTILLO\s+HIDRAULICO)\b",
                     str(e.get("descripcion") or "").upper(),
                 )
             ]
@@ -474,7 +510,7 @@ def _ensure_compound_sub_item_equipment(
         # En partidas medidas en kg (ej. 300 kg/día = 0.3 ton/día), un Payloader CAT 950-F interviene
         # solo una fracción de jornada (0.05 día) para apoyar la carga de chatarra ya acopiada.
         loader_qty_ferrous = 0.05 if _norm_unit(str(partida.get("unit") or "")) == "kg" else 1.0
-        if not _has_eq(r"\b(?:CARGADOR|PAYLOADER|RETROEXCAVADOR\w*)\b"):
+        if not _has_eq(r"\b(?:CARGADOR|PAYLOADER|CAT\s*950|CAT\s*966)\b"):
             eqs.append({
                 "id": "e-cop010",
                 "codigo": "COP010",
@@ -488,12 +524,25 @@ def _ensure_compound_sub_item_equipment(
                 "origen": "historico",
             })
             changed = True
-        elif _norm_unit(str(partida.get("unit") or "")) == "kg":
-            for eq_item in eqs:
-                if re.search(r"\b(?:CARGADOR|PAYLOADER)\b", str(eq_item.get("descripcion") or "").upper()):
-                    if float(eq_item.get("cantidad") or 0.0) > 0.10:
-                        eq_item["cantidad"] = loader_qty_ferrous
-                        changed = True
+        else:
+            for idx_e, eq_item in enumerate(eqs):
+                e_desc_u = str(eq_item.get("descripcion") or "").upper()
+                e_code_u = str(eq_item.get("codigo") or "").strip().upper()
+                if e_code_u in ("COP009", "COP010") or re.search(r"\b(?:CARGADOR|PAYLOADER|CAT\s*950|CAT\s*966)\b", e_desc_u):
+                    target_q = loader_qty_ferrous if (_norm_unit(str(partida.get("unit") or "")) == "kg" and float(eq_item.get("cantidad") or 0.0) > 0.10) else round(max(0.01, float(eq_item.get("cantidad") or loader_qty_ferrous)), 2)
+                    eqs[idx_e] = {
+                        "id": "e-cop010",
+                        "codigo": "COP010",
+                        "cod_ins": "COP010",
+                        "ref_code": "COP010",
+                        "descripcion": "CARGADOR DE CAUCHOS CAT 950-F (4,00 C.Y)",
+                        "unidad": "día",
+                        "cantidad": target_q,
+                        "depreciacion": 0.003522,
+                        "precio_unitario": 318715.14,
+                        "origen": "historico",
+                    }
+                    changed = True
         if not _has_lab(r"\bOPERADOR\s+DE\s+EQUIPO\s+PESADO"):
             labs.append({
                 "id": "l-op-pesado",
@@ -548,6 +597,10 @@ def _ensure_compound_sub_item_equipment(
             lab["cantidad"] = max(1, int(round(float(lab.get("cantidad") or 1.0))))
         for eq_item in apu.get("equipments") or []:
             eq_item["cantidad"] = max(0.01, round(float(eq_item.get("cantidad") or 0.01), 2))
+        if "partida" in apu and isinstance(apu["partida"], dict):
+            perf_sub = round(max(0.01, float(apu["partida"].get("performance") or apu["partida"].get("rendimiento") or 1.0)), 2)
+            apu["partida"]["performance"] = perf_sub
+            apu["partida"]["rendimiento"] = perf_sub
         _calculate_apu_subtotals(apu)
 
 
@@ -574,7 +627,13 @@ def generate_apu_v3_compound(
     has_explicit_tons = bool(total_tons is not None and float(total_tons) > 0)
     tons = float(total_tons) if has_explicit_tons else _DEFAULT_REFERENCE_TONS
     user_factors: Dict[str, float] = units_per_ton or {}
-    activities = sorted(compound_plan.activities, key=lambda a: a.order)
+    sorted_acts = sorted(compound_plan.activities, key=lambda a: a.order)
+    activities: List[SubActivity] = []
+    seen_act_tags: set[str] = set()
+    for act in sorted_acts:
+        if act.tag not in seen_act_tags:
+            seen_act_tags.add(act.tag)
+            activities.append(act)
 
     # ---------------- ETAPA 0: bloqueo por ambigüedades técnicas ----------------
     ambiguity_params: List[Dict[str, str]] = []
@@ -796,10 +855,11 @@ def generate_apu_v3_compound(
             public_subs,
         )
 
+    dedup_assumptions = list(dict.fromkeys(assumptions))
     merged["partida"]["unit"] = MASTER_UNIT
-    merged["supuestos_tecnicos"] = assumptions
-    merged["notas_adaptacion"] = assumptions + merged.get("notas_adaptacion", [])
-    merged["advertencias"] = warnings
+    merged["supuestos_tecnicos"] = dedup_assumptions
+    merged["notas_adaptacion"] = list(dict.fromkeys(dedup_assumptions + merged.get("notas_adaptacion", [])))
+    merged["advertencias"] = list(dict.fromkeys(warnings))
     merged["v3_compound_plan"] = compound_plan.model_dump()
     # Soporte anexo: APU completo de cada sub-partida (precio unitario en su propia unidad)
     merged["sub_partidas_soporte"] = sub_partidas

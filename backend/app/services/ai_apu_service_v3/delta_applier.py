@@ -537,12 +537,19 @@ def apply_v3_deltas_to_base_apu(
             result["partida"]["rendimiento"] = base_perf
     enforce_discordant_inputs_purging(result, user_description, base_apu)
 
-    # Garantizar que todas las cantidades de obreros en mano de obra sean números enteros >= 1
-    # y que las cantidades de equipos se redondeen a 2 decimales
+    # Garantizar que todas las cantidades de obreros en mano de obra sean números enteros >= 1,
+    # que las cantidades de equipos se redondeen a 2 decimales y el rendimiento tenga máximo 2 decimales
     for lab in result.get("labors") or []:
         lab["cantidad"] = max(1, int(round(float(lab.get("cantidad") or 1.0))))
     for eq in result.get("equipments") or []:
         eq["cantidad"] = max(0.01, round(float(eq.get("cantidad") or 0.01), 2))
+    if "partida" in result and isinstance(result["partida"], dict):
+        perf_val = round(
+            max(0.01, float(result["partida"].get("performance") or result["partida"].get("rendimiento") or 1.0)),
+            2,
+        )
+        result["partida"]["performance"] = perf_val
+        result["partida"]["rendimiento"] = perf_val
 
     # 7. Calcular subtotales matemáticos exactos
     _calculate_apu_subtotals(result)
