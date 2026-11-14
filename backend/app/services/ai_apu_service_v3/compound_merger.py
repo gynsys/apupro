@@ -127,7 +127,13 @@ def _labor_role_key(lab: Dict[str, Any]) -> str:
             return "ROLE::AYUDANTE"
         if "OBRERO" in clean:
             return "ROLE::OBRERO DE 1RA"
-        if "OPERADOR DE EQUIPO PESADO" in clean or "OPERADOR DE MAQUINA PESADA" in clean:
+        if (
+            "OPERADOR DE EQUIPO PESADO" in clean
+            or "OPERADOR DE MAQUINA PESADA" in clean
+            or "OPERADOR DE PALA" in clean
+            or "OPERADOR DE RETROEXCAVADORA" in clean
+            or "OPERADOR DE CARGADOR" in clean
+        ):
             return "ROLE::OPERADOR DE EQUIPO PESADO DE 1RA"
         if "SOLDADOR" in clean:
             return "ROLE::SOLDADOR DE 1RA"
@@ -223,20 +229,36 @@ def merge_activity_apus_to_master_ton(
                 template["jornal"] = jornal
                 template["bono"] = bono
                 labor_buckets[role_key] = {
+                    "role_key": role_key,
                     "template": template,
                     "weighted_person_days": d_i * qty,
+                    "active_days": d_i,
+                    "max_qty": qty,
+                    "sum_qty": qty,
                     "tags": [c.tag],
                 }
             else:
                 labor_buckets[role_key]["weighted_person_days"] += d_i * qty
+                labor_buckets[role_key]["sum_qty"] += qty
+                if qty > labor_buckets[role_key]["max_qty"]:
+                    labor_buckets[role_key]["max_qty"] = qty
                 if c.tag not in labor_buckets[role_key]["tags"]:
                     labor_buckets[role_key]["tags"].append(c.tag)
+                    labor_buckets[role_key]["active_days"] += d_i
 
     labors: List[Dict[str, Any]] = []
     master_crew_daily_cost = 0.0
     for bucket in labor_buckets.values():
-        avg_workers = bucket["weighted_person_days"] / crew_days_per_ton if crew_days_per_ton > 0 else 1.0
+        r_key = bucket["role_key"]
+        active_days = float(bucket["active_days"] or crew_days_per_ton or 1.0)
+        avg_workers = bucket["weighted_person_days"] / active_days if active_days > 0 else 1.0
         int_workers = max(1, int(round(avg_workers)))
+        if r_key in ("ROLE::AYUDANTE", "ROLE::OBRERO DE 1RA") and len(bucket["tags"]) >= 2:
+            int_workers = max(
+                int_workers,
+                int(bucket["max_qty"]),
+                min(8, int(round(float(bucket["sum_qty"]) * 0.65))),
+            )
         item = bucket["template"]
         item["cantidad"] = int_workers
         item["actividad_origen"] = ", ".join(bucket["tags"])

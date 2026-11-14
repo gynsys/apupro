@@ -111,22 +111,28 @@ def _enrich_and_check_ambiguity(
 
     # --- 1. Regla general para Apuntalamiento / Entibado / Sostenimiento ---
     if re.search(r"\b(?:APUNTAL|ENTIBAD|ACODAL|SOSTENIMIENTO)\w*\b", d_up):
+        # Ignorar disyuntivas ambiguas ("METALICO O DE MADERA") al verificar si el usuario ya eligió material
+        u_up_clean = re.sub(
+            r"\b(?:METALIC[OA]S?\s+O\s+DE\s+MADERA|DE\s+MADERA\s+O\s+METALIC[OA]S?)\b",
+            "",
+            u_up,
+        )
         has_metallic_in_user = bool(
             re.search(
                 r"\b(?:PUNTAL(?:ES)?\s+METALIC\w*|TELESCOPIC\w*|PUNTAL(?:ES)?\s+DE\s+HIERRO|PUNTAL(?:ES)?\s+DE\s+ACERO|APUNTALAMIENTO\s+(?:CON\s+PUNTAL\w*\s+)?METALIC\w*)\b",
-                u_up,
+                u_up_clean,
             )
         )
         has_steel_profiles_in_user = bool(
             re.search(
                 r"\b(?:CON\s+PERFIL(?:ES)?\s+(?:ESTRUCTURAL(?:ES)?|METALIC\w*|DE\s+ACERO)|APUNTAL\w*\s+(?:TEMPORAL\s+(?:DE\s+SEGURIDAD\s+)?)?(?:CON|DE|MEDIANTE)\s+PERFIL(?:ES)?)\b",
-                u_up,
+                u_up_clean,
             )
         )
         has_wood_in_user = bool(
             re.search(
                 r"\b(?:PUNTAL(?:ES)?\s+DE\s+MADERA|APUNTALAMIENTO\s+(?:TEMPORAL\s+(?:DE\s+SEGURIDAD\s+)?)?(?:CON|DE)\s+(?:PUNTALES\s+DE\s+)?MADERA|ENTIBADO\s+DE\s+MADERA|CON\s+PUNTALES\s+DE\s+MADERA)\b",
-                u_up,
+                u_up_clean,
             )
         )
 
@@ -143,7 +149,7 @@ def _enrich_and_check_ambiguity(
             question = None
             options = []
             material = "acero_estructural"
-            if not re.search(r"\bPUNTAL(?:ES)?\b", _norm_ascii_upper(d_clean)):
+            if not re.search(r"\b(?:METALIC\w*|HIERRO|TELESCOPIC\w*)\b", _norm_ascii_upper(d_clean)):
                 d_clean = (
                     f"{d_clean} CON PUNTALES METALICOS TELESCOPICOS DE HIERRO "
                     "(APUNTALAMIENTO Y SOSTENIMIENTO DE ELEMENTOS ESTRUCTURALES)"
@@ -159,8 +165,9 @@ def _enrich_and_check_ambiguity(
         elif has_wood_in_user:
             question = None
             options = []
+            material = "madera"
             if "MADERA" not in _norm_ascii_upper(d_clean):
-                d_clean = f"{d_clean} CON PUNTALES DE MADERA"
+                d_clean = f"{d_clean} EXCLUSIVAMENTE CON PUNTALES DE MADERA (SIN ENCOFRADO DE TABLAS)"
             desc = d_clean
         elif bool(user_description and user_description.strip()):
             # El usuario envió descripción de obra pero no especificó el tipo de apuntalamiento -> exigir aclaratoria

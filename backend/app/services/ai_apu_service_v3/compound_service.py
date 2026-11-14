@@ -209,6 +209,48 @@ def _ensure_compound_sub_item_equipment(
     def _has_mat(pattern: str) -> bool:
         return any(re.search(pattern, str(m.get("descripcion") or "").upper()) for m in mats)
 
+    def _ensure_min_labor(pattern: str, code: str, desc_label: str, min_qty: int, jornal: float, bono: float) -> None:
+        nonlocal changed
+        for l_item in labs:
+            if re.search(pattern, str(l_item.get("descripcion") or "").upper()):
+                if int(round(float(l_item.get("cantidad") or 0))) < min_qty:
+                    l_item["cantidad"] = min_qty
+                    changed = True
+                return
+        labs.append({
+            "id": f"l-{code.lower()}",
+            "codigo": code,
+            "cod_ins": code,
+            "ref_code": code,
+            "descripcion": desc_label,
+            "unidad": "día",
+            "cantidad": min_qty,
+            "jornal": jornal,
+            "bono": bono,
+            "origen": "historico",
+        })
+        changed = True
+
+    # 0. Apuntalamiento temporal: si es con puntales de madera, eliminar madera de encofrado de puentes (ENC006)
+    if re.search(r"\b(?:APUNTAL|ENTIBAD|ACODAL|SOSTENIMIENTO)\w*\b", desc_up):
+        if "MADERA" in desc_up and "TABLA" not in desc_up:
+            before_m_sh = len(mats)
+            mats[:] = [
+                m for m in mats
+                if not (
+                    str(m.get("codigo") or "").upper() == "ENC006"
+                    or "SAQUI-SAQUI" in str(m.get("descripcion") or "").upper()
+                )
+            ]
+            if len(mats) != before_m_sh:
+                changed = True
+        _ensure_min_labor(r"\bAYUDANTE\b", "1-1.2", "AYUDANTE - TABULADOR CONSTRUCCION -N2", 2, 2.44, 3.22)
+
+    # 0b. Demolición primaria de edificación con equipo pesado
+    if "DEMOLICION" in desc_up and not is_manual:
+        _ensure_min_labor(r"\bAYUDANTE\b", "1-1.2", "AYUDANTE - TABULADOR CONSTRUCCION -N2", 2, 2.44, 3.22)
+        _ensure_min_labor(r"\bOBRERO\b", "1-1.1", "OBRERO DE 1RA -N1", 2, 2.25, 3.22)
+
     # 1. Fragmentación mecánica y corte de escombros en el suelo
     is_fragmentation = bool(
         re.search(r"\b(?:FRAGMENTACION|TRITURACION|REPICA\w*)\b", desc_up)
@@ -245,15 +287,20 @@ def _ensure_compound_sub_item_equipment(
         if not _has_lab(r"\bOPERADOR\s+DE\s+EQUIPO\s+PESADO"):
             labs.append({
                 "id": "l-op-pesado",
-                "codigo": "MO-OP-PES1",
-                "descripcion": "OPERADOR DE EQUIPO PESADO DE 1RA",
+                "codigo": "24-5.4",
+                "cod_ins": "24-5.4",
+                "descripcion": "OPERADOR DE EQUIPO PESADO DE 1RA -N8",
                 "unidad": "día",
                 "cantidad": 1,
-                "jornal": 31.70,
-                "bono": 0.0,
+                "jornal": 3.50,
+                "bono": 3.22,
                 "origen": "historico",
             })
             changed = True
+
+        # Asegurar ayudantes y obreros para manipulación de escombros y asistencia de corte en el suelo
+        _ensure_min_labor(r"\bAYUDANTE\b", "1-1.2", "AYUDANTE - TABULADOR CONSTRUCCION -N2", 2, 2.44, 3.22)
+        _ensure_min_labor(r"\bOBRERO\b", "1-1.1", "OBRERO DE 1RA -N1", 2, 2.25, 3.22)
 
         # Asegurar equipo de oxicorte para corte especializado de cabillas/perfiles embebidos
         if re.search(r"\b(?:OXICORTE|CORTE|CABILLA|ACERO|ARMADO)\b", desc_up):
@@ -274,11 +321,12 @@ def _ensure_compound_sub_item_equipment(
             if not _has_lab(r"\b(?:SOLDADOR|HERRERO)\b"):
                 labs.append({
                     "id": "l-soldador-1ra",
-                    "codigo": "MO-SOL-1RA",
-                    "descripcion": "SOLDADOR DE 1RA",
+                    "codigo": "MOB144",
+                    "cod_ins": "MOB144",
+                    "descripcion": "SOLDADOR DE 1ra.",
                     "unidad": "día",
                     "cantidad": 1,
-                    "jornal": 31.70,
+                    "jornal": 4.00,
                     "bono": 0.0,
                     "origen": "historico",
                 })
@@ -376,13 +424,13 @@ def _ensure_compound_sub_item_equipment(
         and re.search(r"\b(?:SEPARACION|ACOPIO|CARGA|CORTE|REMOCION|CLASIFICACION)\b", desc_up)
     )
     if is_ferrous_handling:
-        # Purgar grúa autopropulsada de $10,000/día y señorita/trípode heredados de desmontaje de torres
+        # Purgar grúa autopropulsada de $10,000/día, señorita/trípode y soldadora de arco (oxicorte usa soplete a gas)
         if "GRUA" not in desc_up:
             before_eq_f = len(eqs)
             eqs[:] = [
                 e for e in eqs
                 if not re.search(
-                    r"\b(?:GRUA\s+AUTOPROPULSADA|SEÑORITA|SENORITA|TRIPODE\s+PARA)\b",
+                    r"\b(?:GRUA\s+AUTOPROPULSADA|SEÑORITA|SENORITA|TRIPODE\s+PARA|SOLDADORA\s+LINCOLN|MAQUINA\s+DE\s+SOLDAR|CORTADORA\s+DE\s+CERAMICA)\b",
                     str(e.get("descripcion") or "").upper(),
                 )
             ]
@@ -410,15 +458,19 @@ def _ensure_compound_sub_item_equipment(
         if not _has_lab(r"\b(?:SOLDADOR|HERRERO)\b"):
             labs.append({
                 "id": "l-soldador-1ra",
-                "codigo": "MO-SOL-1RA",
-                "descripcion": "SOLDADOR DE 1RA",
+                "codigo": "MOB144",
+                "cod_ins": "MOB144",
+                "descripcion": "SOLDADOR DE 1ra.",
                 "unidad": "día",
                 "cantidad": 1,
-                "jornal": 31.70,
+                "jornal": 4.00,
                 "bono": 0.0,
                 "origen": "historico",
             })
             changed = True
+        _ensure_min_labor(r"\bAYUDANTE\b", "1-1.2", "AYUDANTE - TABULADOR CONSTRUCCION -N2", 2, 2.44, 3.22)
+        _ensure_min_labor(r"\bOBRERO\b", "1-1.1", "OBRERO DE 1RA -N1", 2, 2.25, 3.22)
+
         # En partidas medidas en kg (ej. 300 kg/día = 0.3 ton/día), un Payloader CAT 950-F interviene
         # solo una fracción de jornada (0.05 día) para apoyar la carga de chatarra ya acopiada.
         loader_qty_ferrous = 0.05 if _norm_unit(str(partida.get("unit") or "")) == "kg" else 1.0
@@ -445,12 +497,13 @@ def _ensure_compound_sub_item_equipment(
         if not _has_lab(r"\bOPERADOR\s+DE\s+EQUIPO\s+PESADO"):
             labs.append({
                 "id": "l-op-pesado",
-                "codigo": "MO-OP-PES1",
-                "descripcion": "OPERADOR DE EQUIPO PESADO DE 1RA",
+                "codigo": "24-5.4",
+                "cod_ins": "24-5.4",
+                "descripcion": "OPERADOR DE EQUIPO PESADO DE 1RA -N8",
                 "unidad": "día",
                 "cantidad": 1,
-                "jornal": 31.70,
-                "bono": 0.0,
+                "jornal": 3.50,
+                "bono": 3.22,
                 "origen": "historico",
             })
             changed = True
@@ -486,7 +539,10 @@ def _ensure_compound_sub_item_equipment(
         if "CERAMICA" not in desc_up:
             apu["equipments"] = [
                 e for e in (apu.get("equipments") or [])
-                if not re.search(r"\b(?:CORTADORA\s+DE\s+CERAMICA|MOTOSIERRA)\b", str(e.get("descripcion") or "").upper())
+                if not re.search(
+                    r"\b(?:CORTADORA\s+DE\s+CERAMICA|MOTOSIERRA|SOLDADORA\s+LINCOLN)\b",
+                    str(e.get("descripcion") or "").upper(),
+                )
             ]
         for lab in apu.get("labors") or []:
             lab["cantidad"] = max(1, int(round(float(lab.get("cantidad") or 1.0))))

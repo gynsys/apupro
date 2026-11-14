@@ -372,17 +372,27 @@ export function useApuGenerator({ setSettings }) {
           const rate = (jornal + bono) > 0 ? (jornal + bono) : (parseFloat(l.precio_unitario) || 0);
           targetMoPerTon += d_i * qty * rate;
 
-          const roleKey = String(l.codigo || l.cod_ins || l.descripcion || 'OBRERO').trim().toUpperCase();
+          const descUp = String(l.descripcion || '').trim().toUpperCase();
+          const roleKey = String(l.codigo || l.cod_ins || descUp || 'OBRERO').trim().toUpperCase();
           if (!laborBuckets[roleKey]) {
             laborBuckets[roleKey] = {
+              descUp,
               template: { ...l, jornal: jornal || rate, bono },
               weightedPersonDays: d_i * qty,
+              activeDays: d_i,
+              maxQty: qty,
+              sumQty: qty,
               tags: [s.actividad],
             };
           } else {
             laborBuckets[roleKey].weightedPersonDays += d_i * qty;
+            laborBuckets[roleKey].sumQty += qty;
+            if (qty > laborBuckets[roleKey].maxQty) {
+              laborBuckets[roleKey].maxQty = qty;
+            }
             if (!laborBuckets[roleKey].tags.includes(s.actividad)) {
               laborBuckets[roleKey].tags.push(s.actividad);
+              laborBuckets[roleKey].activeDays += d_i;
             }
           }
         });
@@ -391,8 +401,16 @@ export function useApuGenerator({ setSettings }) {
       const newLabors = [];
       let masterCrewDailyCost = 0;
       Object.values(laborBuckets).forEach(bucket => {
-        const avgWorkers = crewDaysPerTon > 0 ? (bucket.weightedPersonDays / crewDaysPerTon) : 1;
-        const intWorkers = Math.max(1, Math.round(avgWorkers));
+        const activeDays = bucket.activeDays || crewDaysPerTon || 1;
+        const avgWorkers = activeDays > 0 ? (bucket.weightedPersonDays / activeDays) : 1;
+        let intWorkers = Math.max(1, Math.round(avgWorkers));
+        if ((bucket.descUp.includes('AYUDANTE') || bucket.descUp.includes('OBRERO')) && bucket.tags.length >= 2) {
+          intWorkers = Math.max(
+            intWorkers,
+            bucket.maxQty,
+            Math.min(8, Math.round(bucket.sumQty * 0.65))
+          );
+        }
         const jornal = parseFloat(bucket.template.jornal) || 0;
         const bono = parseFloat(bucket.template.bono) || 0;
         const costoDia = intWorkers * (jornal + bono);
