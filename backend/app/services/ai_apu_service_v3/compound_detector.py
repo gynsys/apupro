@@ -333,7 +333,7 @@ def validate_detected_activities(
                 order=next_order,
                 unit="m3",
                 carrier="volume",
-                material="escombro_concreto",
+                material="escombro_mixto",
                 state="suelto",
                 share_kind="non_ferrous",
             )

@@ -571,6 +571,19 @@ def generate_ai_apu_route(
                         except ValueError:
                             pass
 
+            effective_rubble_density = payload.rubble_density_t_per_m3
+            if not effective_rubble_density:
+                dens_match = re.search(
+                    r"(?:densidad\s*(?:de\s*)?(\d+(?:[.,]\d+)?)|(\d+(?:[.,]\d+)?)\s*t/m[3³])",
+                    raw_desc_lower,
+                )
+                if dens_match:
+                    raw_d = dens_match.group(1) or dens_match.group(2)
+                    try:
+                        effective_rubble_density = float(raw_d.replace(",", "."))
+                    except ValueError:
+                        effective_rubble_density = None
+
             v3_result = generate_apu_v3(
                 user_description=payload.description,
                 db=db,
@@ -582,7 +595,7 @@ def generate_ai_apu_route(
                 deep_well_depth=effective_depth,
                 total_tons=effective_total_tons,
                 ferrous_pct=payload.ferrous_pct,
-                rubble_density_t_per_m3=payload.rubble_density_t_per_m3,
+                rubble_density_t_per_m3=effective_rubble_density,
                 units_per_ton=payload.units_per_ton,
             )
             if jev_analysis:

@@ -58,12 +58,24 @@ STATE_IN_SITU = "en_sitio"
 STATE_LOOSE = "suelto"
 
 
+_MATERIAL_ALIASES: Dict[str, str] = {
+    "escombro_concreto": "escombro_mixto",
+    "escombros": "escombro_mixto",
+    "escombro": "escombro_mixto",
+    "acero_estructural": "acero",
+    "chatarra": "acero",
+    "hierro": "acero",
+    "concreto": "concreto_armado",
+}
+
+
 def density_for(material: str, state: str) -> Tuple[float, str]:
     """
     Devuelve (densidad t/m3, nota de fuente) para el material y estado.
     Lanza MissingConversionData si el material no esta en la tabla o no hay valor para el estado.
     """
-    key = str(material or "").strip().lower()
+    raw_key = str(material or "").strip().lower()
+    key = _MATERIAL_ALIASES.get(raw_key, raw_key)
     entry = MATERIAL_DENSITIES.get(key)
     if entry is None:
         raise MissingConversionData(
