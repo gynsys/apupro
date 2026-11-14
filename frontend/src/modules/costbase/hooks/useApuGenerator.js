@@ -353,11 +353,69 @@ export function useApuGenerator({ setSettings }) {
       });
 
       const crewDaysPerTon = factors.reduce((acc, f, idx) => acc + (f / rends[idx]), 0);
-      const masterPerf = crewDaysPerTon > 0 ? Number((1.0 / crewDaysPerTon).toFixed(6)) : 1.0;
+      const baseMasterPerf = crewDaysPerTon > 0 ? (1.0 / crewDaysPerTon) : 1.0;
 
-      const newMaterials = [];
-      const newEquipments = [];
+      // 1. Consolidar mano de obra por oficio en cantidades enteras >= 1
+      const laborBuckets = {};
+      let targetMoPerTon = 0;
+
+      subs.forEach((s, idx) => {
+        const f = factors[idx];
+        const r = rends[idx];
+        const d_i = f / r;
+        const subApu = s.apu || {};
+
+        (subApu.labors || []).forEach(l => {
+          const qty = Math.max(1, Math.round(parseFloat(l.cantidad) || 1));
+          const jornal = parseFloat(l.jornal) || 0;
+          const bono = parseFloat(l.bono) || 0;
+          const rate = (jornal + bono) > 0 ? (jornal + bono) : (parseFloat(l.precio_unitario) || 0);
+          targetMoPerTon += d_i * qty * rate;
+
+          const roleKey = String(l.codigo || l.cod_ins || l.descripcion || 'OBRERO').trim().toUpperCase();
+          if (!laborBuckets[roleKey]) {
+            laborBuckets[roleKey] = {
+              template: { ...l, jornal: jornal || rate, bono },
+              weightedPersonDays: d_i * qty,
+              tags: [s.actividad],
+            };
+          } else {
+            laborBuckets[roleKey].weightedPersonDays += d_i * qty;
+            if (!laborBuckets[roleKey].tags.includes(s.actividad)) {
+              laborBuckets[roleKey].tags.push(s.actividad);
+            }
+          }
+        });
+      });
+
       const newLabors = [];
+      let masterCrewDailyCost = 0;
+      Object.values(laborBuckets).forEach(bucket => {
+        const avgWorkers = crewDaysPerTon > 0 ? (bucket.weightedPersonDays / crewDaysPerTon) : 1;
+        const intWorkers = Math.max(1, Math.round(avgWorkers));
+        const jornal = parseFloat(bucket.template.jornal) || 0;
+        const bono = parseFloat(bucket.template.bono) || 0;
+        const costoDia = intWorkers * (jornal + bono);
+        masterCrewDailyCost += costoDia;
+        newLabors.push({
+          ...bucket.template,
+          cantidad: intWorkers,
+          costo_dia: Number(costoDia.toFixed(4)),
+          actividad_origen: bucket.tags.join(', '),
+        });
+      });
+
+      const masterPerf = (targetMoPerTon > 0 && masterCrewDailyCost > 0)
+        ? Number((masterCrewDailyCost / targetMoPerTon).toFixed(6))
+        : Number(baseMasterPerf.toFixed(6));
+
+      newLabors.forEach(lab => {
+        lab.total = Number((lab.costo_dia / masterPerf).toFixed(4));
+      });
+
+      // 2. Escalar y consolidar materiales y equipos con masterPerf
+      const matBuckets = {};
+      const eqBuckets = {};
 
       subs.forEach((s, idx) => {
         const f = factors[idx];
@@ -365,46 +423,56 @@ export function useApuGenerator({ setSettings }) {
         const dayScale = (f * masterPerf) / r;
         const subApu = s.apu || {};
 
-        (subApu.materials || []).forEach(m => {
+        (subApu.materials || []).forEach((m, mIdx) => {
           const cant = (parseFloat(m.cantidad) || 0) * f;
-          const pu = parseFloat(m.precio_unitario) || 0;
-          const desp = parseFloat(m.desperdicio) || 0;
-          const factorDesp = desp > 0 ? 1.0 + (desp / 100.0) : 1.0;
-          newMaterials.push({
-            ...m,
-            cantidad: cant,
-            total: Number((cant * pu * factorDesp).toFixed(4)),
-            actividad_origen: s.actividad,
-          });
+          const mKey = `${String(m.codigo || m.cod_ins || '').trim().toUpperCase()}::${String(m.descripcion || mIdx).trim().toUpperCase()}`;
+          if (!matBuckets[mKey]) {
+            matBuckets[mKey] = { item: { ...m, cantidad: cant }, tags: [s.actividad] };
+          } else {
+            matBuckets[mKey].item.cantidad += cant;
+            if (!matBuckets[mKey].tags.includes(s.actividad)) {
+              matBuckets[mKey].tags.push(s.actividad);
+            }
+          }
         });
 
-        (subApu.equipments || []).forEach(e => {
+        (subApu.equipments || []).forEach((e, eIdx) => {
           const cant = (parseFloat(e.cantidad) || 0) * dayScale;
-          const pu = parseFloat(e.precio_unitario) || 0;
-          const dep = parseFloat(e.depreciacion) || 1.0;
-          const costoDia = cant * pu * dep;
-          newEquipments.push({
-            ...e,
-            cantidad: cant,
-            costo_dia: Number(costoDia.toFixed(4)),
-            total: Number((costoDia / masterPerf).toFixed(4)),
-            actividad_origen: s.actividad,
-          });
+          const eKey = `${String(e.codigo || e.cod_ins || '').trim().toUpperCase()}::${String(e.descripcion || eIdx).trim().toUpperCase()}`;
+          if (!eqBuckets[eKey]) {
+            eqBuckets[eKey] = { item: { ...e, cantidad: cant }, tags: [s.actividad] };
+          } else {
+            eqBuckets[eKey].item.cantidad += cant;
+            if (!eqBuckets[eKey].tags.includes(s.actividad)) {
+              eqBuckets[eKey].tags.push(s.actividad);
+            }
+          }
         });
+      });
 
-        (subApu.labors || []).forEach(l => {
-          const cant = (parseFloat(l.cantidad) || 0) * dayScale;
-          const jornal = parseFloat(l.jornal) || 0;
-          const bono = parseFloat(l.bono) || 0;
-          const costoDia = cant * (jornal + bono);
-          newLabors.push({
-            ...l,
-            cantidad: cant,
-            costo_dia: Number(costoDia.toFixed(4)),
-            total: Number((costoDia / masterPerf).toFixed(4)),
-            actividad_origen: s.actividad,
-          });
-        });
+      const newMaterials = Object.values(matBuckets).map(mb => {
+        const m = mb.item;
+        const pu = parseFloat(m.precio_unitario) || 0;
+        const desp = parseFloat(m.desperdicio) || 0;
+        const factorDesp = desp > 0 ? 1.0 + (desp / 100.0) : 1.0;
+        return {
+          ...m,
+          total: Number((m.cantidad * pu * factorDesp).toFixed(4)),
+          actividad_origen: mb.tags.join(', '),
+        };
+      });
+
+      const newEquipments = Object.values(eqBuckets).map(eb => {
+        const e = eb.item;
+        const pu = parseFloat(e.precio_unitario) || 0;
+        const dep = parseFloat(e.depreciacion) || 1.0;
+        const costoDia = e.cantidad * pu * dep;
+        return {
+          ...e,
+          costo_dia: Number(costoDia.toFixed(4)),
+          total: Number((costoDia / masterPerf).toFixed(4)),
+          actividad_origen: eb.tags.join(', '),
+        };
       });
 
       toast.success('Indicaciones aplicadas al APU maestro en toneladas');

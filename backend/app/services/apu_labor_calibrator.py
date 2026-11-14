@@ -1281,8 +1281,8 @@ def balance_crew_and_equipments(
 
         # Sincronización de herramientas eléctricas menores de preparación de superficie:
         desc_c_paint = norm_text(description)
-        is_pigment_color = any(p in desc_c_paint for p in ["OXIDO NEGRO", "OXIDO ROJO", "OXIDO AMARILLO", "OXIDO VERDE", "PIGMENTO", "COLOR", "PISO", "SOBREPISO", "REQUEMADO", "MORTERO"])
-        is_metal_prep = (not is_pigment_color) and any(k in desc_c_paint for k in ["CEPILLADO", "OXIDO", "DECAPADO", "SANEAMIENTO", "PELDANO", "ESCALERA", "BARANDA", "REJA", "ANTICORROSIV", "METALIC"])
+        is_pigment_color = any(p in desc_c_paint for p in ["OXIDO NEGRO", "OXIDO ROJO", "OXIDO AMARILLO", "OXIDO VERDE", "PIGMENTO", "COLOR", "PISO", "SOBREPISO", "REQUEMADO", "MORTERO", "APUNTALAMIENTO", "PUNTAL"])
+        is_metal_prep = (not is_pigment_color) and any(k in desc_c_paint for k in ["CEPILLADO", "OXIDO", "DECAPADO", "SANEAMIENTO", "PELDANO", "ESCALERA", "BARANDA", "REJA", "ANTICORROSIV"])
         if is_metal_prep:
             # 1. Sustituir esmeril industrial pesado de 7" por amoladora liviana de 4 1/2" para trabajo en sitio
             for eq in equipments:

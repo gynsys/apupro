@@ -16,6 +16,8 @@ Matematica (exacta):
 """
 
 import copy
+import re
+import unicodedata
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
@@ -110,13 +112,70 @@ def _activity_rendimiento(apu: Dict[str, Any], tag: str) -> float:
     return rend
 
 
+def _labor_role_key(lab: Dict[str, Any]) -> str:
+    desc = str(lab.get("descripcion") or "").strip()
+    if desc:
+        nfkd = unicodedata.normalize("NFKD", desc)
+        clean = "".join(ch for ch in nfkd if not unicodedata.combining(ch)).upper()
+        # Quitar sufijos de tabulador como "- TABULADOR CONSTRUCCION -N2" o "-N8" y puntos
+        clean = re.sub(r"\s*-\s*TABULADOR.*$", "", clean)
+        clean = re.sub(r"\s*-N\d+\b", "", clean)
+        clean = clean.replace(".", "").strip()
+        if "CAPORAL" in clean:
+            return "ROLE::CAPORAL"
+        if "MAESTRO DE OBRA" in clean or "MAESTRO GENERAL" in clean:
+            return "ROLE::MAESTRO DE OBRA"
+        if "AYUDANTE" in clean:
+            return "ROLE::AYUDANTE"
+        if "OBRERO" in clean:
+            return "ROLE::OBRERO DE 1RA"
+        if "OPERADOR DE EQUIPO PESADO" in clean or "OPERADOR DE MAQUINA PESADA" in clean:
+            return "ROLE::OPERADOR DE EQUIPO PESADO DE 1RA"
+        if "SOLDADOR" in clean:
+            return "ROLE::SOLDADOR DE 1RA"
+        if "HERRERO" in clean or "MONTADOR" in clean:
+            return "ROLE::HERRERO DE 1RA"
+        if "ALBANIL" in clean:
+            return "ROLE::ALBANIL DE 1RA"
+        if "CARPINTERO" in clean:
+            return "ROLE::CARPINTERO DE 1RA"
+        if "ELECTRICISTA" in clean:
+            return "ROLE::ELECTRICISTA DE 1RA"
+        if "PLOMERO" in clean:
+            return "ROLE::PLOMERO DE 1RA"
+        return f"ROLE::{clean}"
+    code = str(lab.get("codigo") or lab.get("cod_ins") or "").strip().upper()
+    return code or "OBRERO"
+
+
+def _item_merge_key(item: Dict[str, Any], fallback_prefix: str, idx: int) -> str:
+    code = str(item.get("codigo") or item.get("cod_ins") or "").strip().upper()
+    desc = str(item.get("descripcion") or "").strip()
+    nfkd = unicodedata.normalize("NFKD", desc)
+    clean_desc = "".join(ch for ch in nfkd if not unicodedata.combining(ch)).upper()
+    if code and clean_desc:
+        return f"{code}::{clean_desc}"
+    if code:
+        return code
+    if clean_desc:
+        return clean_desc
+    return f"{fallback_prefix}_{idx}"
+
+
 def merge_activity_apus_to_master_ton(
     contributions: List[ActivityContribution],
     total_tons: float,
     master_description: str,
     rubble_density_t_per_m3: float = DEFAULT_RUBBLE_DENSITY_T_PER_M3,
 ) -> Dict[str, Any]:
-    """Funde N APUs de actividad en un unico APU en toneladas (costo exacto por tonelada)."""
+    """
+    Funde N APUs de actividad en un unico APU en toneladas:
+    1. Consolida la cuadrilla por oficio y redondea la cantidad de cada trabajador a un NUMERO ENTERO >= 1.
+    2. Ajusta el rendimiento diario maestro R_master (ton/dia) de esa cuadrilla entera de modo que el
+       costo unitario de mano de obra por tonelada sea exactamente sum(f_i * SubtotalMO_i).
+    3. Escala los equipos por (f_i * R_master / R_i) y los materiales por f_i, consolidando insumos repetidos
+       y conservando el costo directo exacto por tonelada: CD_master = sum(f_i * CD_i).
+    """
     if not contributions:
         raise ValueError("Se requiere al menos una actividad para fusionar")
     if not master_description or not master_description.strip():
@@ -142,33 +201,102 @@ def merge_activity_apus_to_master_ton(
         rendimientos.append(_activity_rendimiento(c.apu, c.tag))
 
     crew_days_per_ton = sum(f / r for f, r in zip(factors, rendimientos))
-    master_perf = round(1.0 / crew_days_per_ton, 6)
+    base_master_perf = 1.0 / crew_days_per_ton if crew_days_per_ton > 0 else 1.0
 
-    materials: List[Dict[str, Any]] = []
-    equipments: List[Dict[str, Any]] = []
+    # --- 1. Consolidar mano de obra en números enteros >= 1 y calcular TargetMO por tonelada ---
+    labor_buckets: Dict[str, Dict[str, Any]] = {}
+    target_mo_per_ton = 0.0
+
+    for c, f, r in zip(contributions, factors, rendimientos):
+        d_i = f / r  # dias-cuadrilla de la sub-partida i por tonelada
+        for lab in c.apu.get("labors") or []:
+            qty = max(1, int(round(float(lab.get("cantidad") or 1.0))))
+            jornal = float(lab.get("jornal") or 0.0)
+            bono = float(lab.get("bono") or 0.0)
+            rate = jornal + bono
+            if rate <= 0.0:
+                rate = float(lab.get("precio_unitario") or 0.0)
+                jornal = rate
+            target_mo_per_ton += d_i * qty * rate
+
+            role_key = _labor_role_key(lab)
+            if role_key not in labor_buckets:
+                template = copy.deepcopy(lab)
+                template["jornal"] = jornal
+                template["bono"] = bono
+                labor_buckets[role_key] = {
+                    "template": template,
+                    "weighted_person_days": d_i * qty,
+                    "tags": [c.tag],
+                }
+            else:
+                labor_buckets[role_key]["weighted_person_days"] += d_i * qty
+                if c.tag not in labor_buckets[role_key]["tags"]:
+                    labor_buckets[role_key]["tags"].append(c.tag)
+
     labors: List[Dict[str, Any]] = []
+    master_crew_daily_cost = 0.0
+    for bucket in labor_buckets.values():
+        avg_workers = bucket["weighted_person_days"] / crew_days_per_ton if crew_days_per_ton > 0 else 1.0
+        int_workers = max(1, int(round(avg_workers)))
+        item = bucket["template"]
+        item["cantidad"] = int_workers
+        item["actividad_origen"] = ", ".join(bucket["tags"])
+        rate = float(item.get("jornal") or 0.0) + float(item.get("bono") or 0.0)
+        master_crew_daily_cost += int_workers * rate
+        labors.append(item)
+
+    if target_mo_per_ton > 0.0 and master_crew_daily_cost > 0.0:
+        master_perf = round(master_crew_daily_cost / target_mo_per_ton, 6)
+    else:
+        master_perf = round(base_master_perf, 6)
+
+    # --- 2. Escalar y consolidar materiales y equipos con el R_master calibrado ---
+    mat_buckets: Dict[str, Dict[str, Any]] = {}
+    eq_buckets: Dict[str, Dict[str, Any]] = {}
     notes: List[str] = []
 
     for c, f, r in zip(contributions, factors, rendimientos):
         day_scale = f * master_perf / r
-        for m in c.apu.get("materials") or []:
-            item = copy.deepcopy(m)
-            item["cantidad"] = float(item.get("cantidad") or 0.0) * f
-            item["actividad_origen"] = c.tag
-            materials.append(item)
-        for e in c.apu.get("equipments") or []:
-            item = copy.deepcopy(e)
-            item["cantidad"] = float(item.get("cantidad") or 0.0) * day_scale
-            item["actividad_origen"] = c.tag
-            equipments.append(item)
-        for lab in c.apu.get("labors") or []:
-            item = copy.deepcopy(lab)
-            item["cantidad"] = float(item.get("cantidad") or 0.0) * day_scale
-            item["actividad_origen"] = c.tag
-            labors.append(item)
+        for idx_m, m in enumerate(c.apu.get("materials") or []):
+            m_key = _item_merge_key(m, f"MAT_{c.tag}", idx_m)
+            scaled_qty = float(m.get("cantidad") or 0.0) * f
+            if m_key not in mat_buckets:
+                item = copy.deepcopy(m)
+                item["cantidad"] = scaled_qty
+                mat_buckets[m_key] = {"item": item, "tags": [c.tag]}
+            else:
+                mat_buckets[m_key]["item"]["cantidad"] += scaled_qty
+                if c.tag not in mat_buckets[m_key]["tags"]:
+                    mat_buckets[m_key]["tags"].append(c.tag)
+
+        for idx_e, e in enumerate(c.apu.get("equipments") or []):
+            e_key = _item_merge_key(e, f"EQ_{c.tag}", idx_e)
+            scaled_qty = float(e.get("cantidad") or 0.0) * day_scale
+            if e_key not in eq_buckets:
+                item = copy.deepcopy(e)
+                item["cantidad"] = scaled_qty
+                eq_buckets[e_key] = {"item": item, "tags": [c.tag]}
+            else:
+                eq_buckets[e_key]["item"]["cantidad"] += scaled_qty
+                if c.tag not in eq_buckets[e_key]["tags"]:
+                    eq_buckets[e_key]["tags"].append(c.tag)
+
         notes.append(
             f"[{c.tag}] {f:.6g} {c.unit}/ton | rendimiento base {r:g} {c.unit}/dia"
         )
+
+    materials: List[Dict[str, Any]] = []
+    for mb in mat_buckets.values():
+        it = mb["item"]
+        it["actividad_origen"] = ", ".join(mb["tags"])
+        materials.append(it)
+
+    equipments: List[Dict[str, Any]] = []
+    for eb in eq_buckets.values():
+        it = eb["item"]
+        it["actividad_origen"] = ", ".join(eb["tags"])
+        equipments.append(it)
 
     result: Dict[str, Any] = {
         "status": "completed",

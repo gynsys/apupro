@@ -239,6 +239,14 @@ class ActivityScope(BaseModel):
     share_kind: Literal["all", "ferrous", "non_ferrous"] = Field(
         default="all", description="Fraccion de la masa total que procesa la actividad"
     )
+    ambiguity_question: Optional[str] = Field(
+        default=None,
+        description="Pregunta de aclaratoria si la sub-partida tiene ambiguedad tecnica (material, sistema o metodo constructivo no especificado por el usuario)",
+    )
+    ambiguity_options: List[str] = Field(
+        default_factory=list,
+        description="Opciones concretas sugeridas al usuario para resolver la ambiguedad de esta sub-partida",
+    )
 
 
 class CompoundPlan(BaseModel):

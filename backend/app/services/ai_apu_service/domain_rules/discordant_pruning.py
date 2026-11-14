@@ -838,14 +838,30 @@ def enforce_discordant_inputs_purging(
                     })
                     continue
 
-            # 8. Minicargador / Bobcat / Minishovel -> Solo si se solicita expresamente
-            if not re.search(r"\b(?:MINICARGADOR|MINI\s*CARGADOR|BOBCAT|MINISHOVEL|MINI\s*SHOVEL|CARGADOR\s+FRONTAL)\b", desc_upper):
+            # 8. Minicargador / Bobcat / Minishovel / Cargador Frontal -> Solo si se solicita o en carga mecánica de escombros/demolición
+            if not re.search(
+                r"\b(?:MINICARGADOR|MINI\s*CARGADOR|BOBCAT|MINISHOVEL|MINI\s*SHOVEL|CARGADOR|PAYLOADER|EQUIPO\s+PESADO|CARGA\s+MECANICA|CARGA\s+DE\s+ESCOMBROS|CARGA\s+EN\s+CAMIONES)\b",
+                desc_upper,
+            ):
                 if re.search(r"\b(?:MINICARGADOR|MINI\s*CARGADOR|BOBCAT|MINISHOVEL|MINI\s*SHOVEL|CARGADOR\s+FRONTAL)\b", eq_desc_upper):
                     pruning_trace["equipos_purgados"].append({
                         "descripcion": eq_desc,
                         "codigo": eq.get("codigo"),
-                        "motivo": "Minicargador/Bobcat excluido (solo se incluye bajo solicitud explícita)",
+                        "motivo": "Minicargador/Bobcat excluido (solo se incluye bajo solicitud explícita o carga mecánica)",
                         "regla": "MINICARGADOR_BOBCAT_EXCLUIDO",
+                    })
+                    continue
+
+            # 8.5. Motosierra de madera -> Excluir en demolición/fragmentación/corte de concreto, acero o escombros
+            if re.search(r"\b(?:CONCRETO|ESCOMBRO\w*|CABILLA\w*|ACERO|FERROSO\w*|CHATARRA|ESTRUCTURA)\b", desc_upper) and not re.search(
+                r"\b(?:ARBOL\w*|TALA\w*|PODA\w*|MADERA|DEFORESTACION|DESMALEZAMIENTO|FORESTAL)\b", desc_upper
+            ):
+                if re.search(r"\bMOTOSIERRA\b", eq_desc_upper):
+                    pruning_trace["equipos_purgados"].append({
+                        "descripcion": eq_desc,
+                        "codigo": eq.get("codigo"),
+                        "motivo": "Motosierra excluida (herramienta forestal/madera improcedente en corte o fragmentación de concreto/acero)",
+                        "regla": "MOTOSIERRA_EN_CONCRETO_EXCLUIDA",
                     })
                     continue
 

@@ -90,6 +90,68 @@ class TestCompoundDetector(unittest.TestCase):
         with self.assertRaises(ValueError):
             detect_compound_activities("  ", llm_call=_fake_llm(GENERIC_PAYLOAD))
 
+    def test_shoring_ambiguity_triggers_question_when_unspecified(self) -> None:
+        payload = {
+            "is_compound": True,
+            "activities": [
+                {
+                    "tag": "APUNTALAMIENTO",
+                    "description": "APUNTALAMIENTO TEMPORAL DE SEGURIDAD METALICO O DE MADERA",
+                    "unit": "m2",
+                    "material": "concreto_armado",
+                    "state": "en_sitio",
+                    "share_kind": "all",
+                    "order": 1,
+                },
+                {
+                    "tag": "DEMOLICION",
+                    "description": "DEMOLICION MECANICA DE EDIFICACION",
+                    "unit": "m3",
+                    "material": "concreto_armado",
+                    "state": "en_sitio",
+                    "share_kind": "all",
+                    "order": 2,
+                },
+            ],
+        }
+        user_desc = "Demolicion integral por medios mecanicos incluyendo apuntalamiento temporal de seguridad"
+        plan = detect_compound_activities(user_desc, llm_call=_fake_llm(payload))
+        shoring = plan.activities[0]
+        self.assertIsNotNone(shoring.ambiguity_question)
+        self.assertGreaterEqual(len(shoring.ambiguity_options), 2)
+        self.assertNotIn("MADERA", shoring.description)
+
+    def test_shoring_ambiguity_resolved_when_user_specifies_metallic_props(self) -> None:
+        payload = {
+            "is_compound": True,
+            "activities": [
+                {
+                    "tag": "APUNTALAMIENTO",
+                    "description": "APUNTALAMIENTO TEMPORAL DE SEGURIDAD",
+                    "unit": "m2",
+                    "material": "concreto_armado",
+                    "state": "en_sitio",
+                    "share_kind": "all",
+                    "order": 1,
+                },
+                {
+                    "tag": "DEMOLICION",
+                    "description": "DEMOLICION MECANICA DE EDIFICACION",
+                    "unit": "m3",
+                    "material": "concreto_armado",
+                    "state": "en_sitio",
+                    "share_kind": "all",
+                    "order": 2,
+                },
+            ],
+        }
+        user_desc = "Demolicion integral incluyendo apuntalamiento temporal de seguridad, con puntales metalicos telescopicos"
+        plan = detect_compound_activities(user_desc, llm_call=_fake_llm(payload))
+        shoring = plan.activities[0]
+        self.assertIsNone(shoring.ambiguity_question)
+        self.assertIn("PUNTALES METALICOS TELESCOPICOS", shoring.description)
+        self.assertEqual(shoring.material, "acero_estructural")
+
 
 if __name__ == "__main__":
     unittest.main()

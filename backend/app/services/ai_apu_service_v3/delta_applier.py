@@ -532,7 +532,14 @@ def apply_v3_deltas_to_base_apu(
     # o si la cuadrilla sufrió alteraciones
     if final_unit != base_unit or not plan.keep_base_performance or len(plan.labor_ops) > 0:
         calibrate_apu_crew_and_equipment(result, base_apu)
+        if plan.keep_base_performance and final_unit == base_unit and base_perf > 0:
+            result["partida"]["performance"] = base_perf
+            result["partida"]["rendimiento"] = base_perf
     enforce_discordant_inputs_purging(result, user_description, base_apu)
+
+    # Garantizar que todas las cantidades de obreros en mano de obra sean números enteros >= 1
+    for lab in result.get("labors") or []:
+        lab["cantidad"] = max(1, int(round(float(lab.get("cantidad") or 1.0))))
 
     # 7. Calcular subtotales matemáticos exactos
     _calculate_apu_subtotals(result)

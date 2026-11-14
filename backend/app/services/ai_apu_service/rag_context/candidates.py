@@ -25,11 +25,18 @@ INCOMPATIBLE_POLARITY_RULES: List[Tuple[Set[str], Set[str], float]] = [
         {"ventilacion", "sanitaria", "desague", "bajante", "norma 656", "aguas servidas"},
         0.25
     ),
-    # 3. Trabajo Manual / Espacio Confinado / Reparación Puntual VS Maquinaria Pesada
+    # 3. Trabajo Manual / Espacio Confinado / Acarreo en Bolsas VS Maquinaria Pesada / Medios Mecánicos
     (
-        {"a mano", "manual", "con carretilla", "espacio confinado", "en sotano", "reparacion puntual"},
-        {"retroexcavadora", "payloader", "tractor", "jumbo", "camion roquero", "planta de concreto", "camion mixer"},
-        0.30
+        {
+            "a mano", "manual", "con carretilla", "uso de carretillas", "con uso de bolsas",
+            "en bolsas", "descarga a mano", "espacio confinado", "en sotano", "reparacion puntual"
+        },
+        {
+            "retroexcavadora", "payloader", "cargador", "tractor", "jumbo", "camion roquero",
+            "planta de concreto", "camion mixer", "mecanica", "mecanico", "medios mecanicos",
+            "equipo pesado", "a maquina", "martillo"
+        },
+        0.45
     ),
     # 4. Cable Sumergible de Pozo VS Cable Eléctrico Convencional en Ducto
     (
@@ -111,6 +118,17 @@ INCOMPATIBLE_POLARITY_RULES: List[Tuple[Set[str], Set[str], float]] = [
             "breaker", "tomacorriente", "acometida", "banco de ductos", "subestacion"
         },
         0.60
+    ),
+    # 14. Encofrado / Puntales de Madera en Puentes VS Apuntalamiento Metálico / Puntales Telescópicos de Hierro
+    (
+        {
+            "madera", "puntales de madera", "encofrado de madera", "puentes y pontones"
+        },
+        {
+            "puntales metalicos", "puntal metalico", "telescopico", "telescopicos",
+            "puntal de hierro", "puntales de hierro", "apuntalamiento metalico", "perfiles estructurales de acero"
+        },
+        0.45
     )
 ]
 

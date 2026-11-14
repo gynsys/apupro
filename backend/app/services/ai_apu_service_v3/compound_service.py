@@ -18,6 +18,9 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.core.logging import logger
+from app.services.ai_apu_service.reconciliation.equipment import reconcile_equipment_with_database
+from app.services.ai_apu_service.reconciliation.labor import reconcile_labor_with_database
+from app.services.ai_apu_service.reconciliation.materials import reconcile_materials_with_database
 from app.services.ai_apu_service_v3.compound_merger import (
     ActivityContribution,
     merge_activity_apus_to_master_ton,
@@ -31,7 +34,10 @@ from app.services.ai_apu_service_v3.conversion_registry import (
     density_for,
     lookup_default_indicator,
 )
-from app.services.ai_apu_service_v3.delta_applier import apply_v3_deltas_to_base_apu
+from app.services.ai_apu_service_v3.delta_applier import (
+    _calculate_apu_subtotals,
+    apply_v3_deltas_to_base_apu,
+)
 from app.services.ai_apu_service_v3.schemas import ActivityScope, CompoundPlan
 from app.services.ai_apu_service_v3.selector_planner import (
     fetch_enriched_candidates_for_v3,
@@ -165,6 +171,283 @@ def _resolve_indicator(
     )
 
 
+def _ensure_compound_sub_item_equipment(
+    apu: Dict[str, Any],
+    activity: ActivityScope,
+    db: Session,
+) -> None:
+    """
+    Garantiza por primeros principios que las sub-partidas mecánicas de una partida compuesta
+    cuenten con su maquinaria pesada y equipos especializados reales del catálogo COVENIN
+    (retroexcavadora con martillo para fragmentación en el suelo, equipo de oxicorte para corte
+    especializado/chatarra ferrosa, y cargador frontal Payloader para carga mecánica), y que
+    todas las cantidades de obreros sean números enteros >= 1.
+    """
+    desc_up = unicodedata.normalize("NFKD", str(activity.description or "")).encode("ascii", "ignore").decode("ascii").upper()
+    is_manual = bool(re.search(r"\b(?:A\s+MANO|MANUAL(?:MENTE)?)\b", desc_up))
+    if is_manual:
+        return
+
+    mats: List[Dict[str, Any]] = apu.setdefault("materials", [])
+    eqs: List[Dict[str, Any]] = apu.setdefault("equipments", [])
+    labs: List[Dict[str, Any]] = apu.setdefault("labors", [])
+    partida: Dict[str, Any] = apu.setdefault("partida", {})
+    changed = False
+
+    def _has_eq(pattern: str) -> bool:
+        return any(re.search(pattern, str(e.get("descripcion") or "").upper()) for e in eqs)
+
+    def _has_lab(pattern: str) -> bool:
+        return any(re.search(pattern, str(l.get("descripcion") or "").upper()) for l in labs)
+
+    def _has_mat(pattern: str) -> bool:
+        return any(re.search(pattern, str(m.get("descripcion") or "").upper()) for m in mats)
+
+    # 1. Fragmentación mecánica y corte de escombros en el suelo
+    is_fragmentation = bool(
+        re.search(r"\b(?:FRAGMENTACION|TRITURACION|REPICA\w*)\b", desc_up)
+        or (re.search(r"\bCORTE\b", desc_up) and re.search(r"\b(?:ESCOMBRO\w*|CONCRETO)\b", desc_up))
+    )
+    if is_fragmentation:
+        # Purgar motosierra de madera, cortadora de cerámica o soldadora de arco si se inyectaron por error
+        before_len = len(eqs)
+        eqs[:] = [
+            e for e in eqs
+            if not re.search(
+                r"\b(?:MOTOSIERRA|DESMALEZADORA|CORTAGRAM\w*|CORTADORA\s+DE\s+CERAMICA|SOLDADORA\s+LINCOLN|MAQUINA\s+DE\s+SOLDAR)\b",
+                str(e.get("descripcion") or "").upper(),
+            )
+        ]
+        if len(eqs) != before_len:
+            changed = True
+
+        # Asegurar retroexcavadora con martillo hidráulico para demoler/fragmentar en el suelo
+        if not _has_eq(r"\b(?:RETROEXCAVADORA.*MARTILLO|MARTILLO\s+HIDRAULICO|MARTILLO\s+ROMPEDOR)\b"):
+            eqs.append({
+                "id": "e-mov022",
+                "codigo": "MOV022",
+                "cod_ins": "MOV022",
+                "ref_code": "MOV022",
+                "descripcion": "RETROEXCAVADORA CASE 580 CON MARTILLO 18",
+                "unidad": "día",
+                "cantidad": 1.0,
+                "depreciacion": 1.0,
+                "precio_unitario": 830.02,
+                "origen": "historico",
+            })
+            changed = True
+        if not _has_lab(r"\bOPERADOR\s+DE\s+EQUIPO\s+PESADO"):
+            labs.append({
+                "id": "l-op-pesado",
+                "codigo": "MO-OP-PES1",
+                "descripcion": "OPERADOR DE EQUIPO PESADO DE 1RA",
+                "unidad": "día",
+                "cantidad": 1,
+                "jornal": 31.70,
+                "bono": 0.0,
+                "origen": "historico",
+            })
+            changed = True
+
+        # Asegurar equipo de oxicorte para corte especializado de cabillas/perfiles embebidos
+        if re.search(r"\b(?:OXICORTE|CORTE|CABILLA|ACERO|ARMADO)\b", desc_up):
+            if not _has_eq(r"\b(?:OXICORTE|OXIGENO[\s-]*ACETILENO)\b"):
+                eqs.append({
+                    "id": "e-her013",
+                    "codigo": "HER013",
+                    "cod_ins": "HER013",
+                    "ref_code": "HER013",
+                    "descripcion": "EQUIPO OXICORTE C/CILINDROS OXIGENO Y AC",
+                    "unidad": "día",
+                    "cantidad": 1.0,
+                    "depreciacion": 1.0,
+                    "precio_unitario": 66.40,
+                    "origen": "historico",
+                })
+                changed = True
+            if not _has_lab(r"\b(?:SOLDADOR|HERRERO)\b"):
+                labs.append({
+                    "id": "l-soldador-1ra",
+                    "codigo": "MO-SOL-1RA",
+                    "descripcion": "SOLDADOR DE 1RA",
+                    "unidad": "día",
+                    "cantidad": 1,
+                    "jornal": 31.70,
+                    "bono": 0.0,
+                    "origen": "historico",
+                })
+                changed = True
+            if not _has_mat(r"\b(?:OXIGENO|ACETILENO)\b"):
+                mats.append({
+                    "id": "m-oxigeno-ind",
+                    "codigo": "MAT-OXI-IND",
+                    "descripcion": "BOMBONA DE OXIGENO INDUSTRIAL Y GAS ACETILENO PARA OXICORTE",
+                    "unidad": "und",
+                    "cantidad": 0.05,
+                    "desperdicio": 0.0,
+                    "precio_unitario": 35.0,
+                    "origen": "ia",
+                })
+                changed = True
+
+        curr_perf = float(partida.get("performance") or 1.0)
+        if curr_perf < 12.0 and _norm_unit(str(partida.get("unit") or "")) == "m3":
+            partida["performance"] = 28.0
+            partida["rendimiento"] = 28.0
+            changed = True
+
+    # 2. Carga mecánica de escombros con Payloader / Cargador Frontal
+    is_mech_loading = bool(
+        re.search(r"\bCARGA\b", desc_up)
+        and re.search(r"\b(?:ESCOMBRO\w*|DEMOLICION\w*|NO\s+FERROSO\w*|EQUIPO\s+PESADO|PAYLOADER|CARGADOR)\b", desc_up)
+        and not re.search(r"\b(?:SEPARACION|CHATARRA|FERROSO\w*\s+Y)\b", desc_up)
+    )
+    if is_mech_loading:
+        # Eliminar bolsas si provinieron de una base manual descartada
+        before_m = len(mats)
+        mats[:] = [m for m in mats if not re.search(r"\b(?:BOLSA|SACO)\b", str(m.get("descripcion") or "").upper())]
+        if len(mats) != before_m:
+            changed = True
+
+        if not _has_eq(r"\b(?:CARGADOR|PAYLOADER|CAT\s*950|CAT\s*966)\b"):
+            eqs.append({
+                "id": "e-cop010",
+                "codigo": "COP010",
+                "cod_ins": "COP010",
+                "ref_code": "COP010",
+                "descripcion": "CARGADOR DE CAUCHOS CAT 950-F (4,00 C.Y)",
+                "unidad": "día",
+                "cantidad": 1.0,
+                "depreciacion": 1.0,
+                "precio_unitario": 405.84,
+                "origen": "historico",
+            })
+            changed = True
+        if not _has_lab(r"\bOPERADOR\s+DE\s+EQUIPO\s+PESADO"):
+            labs.append({
+                "id": "l-op-pesado",
+                "codigo": "MO-OP-PES1",
+                "descripcion": "OPERADOR DE EQUIPO PESADO DE 1RA",
+                "unidad": "día",
+                "cantidad": 1,
+                "jornal": 31.70,
+                "bono": 0.0,
+                "origen": "historico",
+            })
+            changed = True
+        curr_perf = float(partida.get("performance") or 1.0)
+        if curr_perf < 60.0 and _norm_unit(str(partida.get("unit") or "")) == "m3":
+            partida["performance"] = 250.0
+            partida["rendimiento"] = 250.0
+            changed = True
+
+    # 3. Separación, corte con oxicorte, acopio y carga de materiales ferrosos / chatarra
+    is_ferrous_handling = bool(
+        re.search(r"\b(?:FERROSO\w*|CHATARRA|PERFIL(?:ES)?\s+METALIC\w*)\b", desc_up)
+        and re.search(r"\b(?:SEPARACION|ACOPIO|CARGA|CORTE|REMOCION|CLASIFICACION)\b", desc_up)
+    )
+    if is_ferrous_handling:
+        # Purgar grúa autopropulsada de $10,000/día y señorita/trípode heredados de desmontaje de torres
+        if "GRUA" not in desc_up:
+            before_eq_f = len(eqs)
+            eqs[:] = [
+                e for e in eqs
+                if not re.search(
+                    r"\b(?:GRUA\s+AUTOPROPULSADA|SEÑORITA|SENORITA|TRIPODE\s+PARA)\b",
+                    str(e.get("descripcion") or "").upper(),
+                )
+            ]
+            labs[:] = [
+                l for l in labs
+                if not re.search(r"\b(?:GRUERO|OPERADOR\s+DE\s+GRUA|MONTADOR)\b", str(l.get("descripcion") or "").upper())
+            ]
+            if len(eqs) != before_eq_f:
+                changed = True
+
+        if not _has_eq(r"\b(?:OXICORTE|OXIGENO[\s-]*ACETILENO)\b"):
+            eqs.append({
+                "id": "e-her013",
+                "codigo": "HER013",
+                "cod_ins": "HER013",
+                "ref_code": "HER013",
+                "descripcion": "EQUIPO OXICORTE C/CILINDROS OXIGENO Y AC",
+                "unidad": "día",
+                "cantidad": 1.0,
+                "depreciacion": 1.0,
+                "precio_unitario": 66.40,
+                "origen": "historico",
+            })
+            changed = True
+        if not _has_lab(r"\b(?:SOLDADOR|HERRERO)\b"):
+            labs.append({
+                "id": "l-soldador-1ra",
+                "codigo": "MO-SOL-1RA",
+                "descripcion": "SOLDADOR DE 1RA",
+                "unidad": "día",
+                "cantidad": 1,
+                "jornal": 31.70,
+                "bono": 0.0,
+                "origen": "historico",
+            })
+            changed = True
+        if not _has_eq(r"\b(?:CARGADOR|PAYLOADER|RETROEXCAVADOR\w*)\b"):
+            eqs.append({
+                "id": "e-cop010",
+                "codigo": "COP010",
+                "cod_ins": "COP010",
+                "ref_code": "COP010",
+                "descripcion": "CARGADOR DE CAUCHOS CAT 950-F (4,00 C.Y)",
+                "unidad": "día",
+                "cantidad": 1.0,
+                "depreciacion": 1.0,
+                "precio_unitario": 405.84,
+                "origen": "historico",
+            })
+            changed = True
+        if not _has_lab(r"\bOPERADOR\s+DE\s+EQUIPO\s+PESADO"):
+            labs.append({
+                "id": "l-op-pesado",
+                "codigo": "MO-OP-PES1",
+                "descripcion": "OPERADOR DE EQUIPO PESADO DE 1RA",
+                "unidad": "día",
+                "cantidad": 1,
+                "jornal": 31.70,
+                "bono": 0.0,
+                "origen": "historico",
+            })
+            changed = True
+
+    # Normalizar consumo de cilindros de oxígeno/acetileno cuando la partida está en kg/kgf
+    # (1 cilindro rinde ~1.000 kg de corte de acero = 0.001 cil/kg, evitando 1.000 cil/ton)
+    if _norm_unit(str(partida.get("unit") or "")) == "kg":
+        for m in mats:
+            m_desc = str(m.get("descripcion") or "").upper()
+            if re.search(r"\b(?:OXIGENO|ACETILENO)\b", m_desc) and float(m.get("cantidad") or 0.0) > 0.02:
+                m["cantidad"] = 0.001
+                changed = True
+
+    # Garantizar que toda la mano de obra tenga cantidad entera >= 1
+    for lab in labs:
+        raw_q = float(lab.get("cantidad") or 1.0)
+        int_q = max(1, int(round(raw_q)))
+        if raw_q != float(int_q):
+            lab["cantidad"] = int_q
+            changed = True
+
+    if changed:
+        reconcile_materials_with_database(apu, db)
+        reconcile_equipment_with_database(apu, db)
+        reconcile_labor_with_database(apu, db)
+        if "CERAMICA" not in desc_up:
+            apu["equipments"] = [
+                e for e in (apu.get("equipments") or [])
+                if not re.search(r"\b(?:CORTADORA\s+DE\s+CERAMICA|MOTOSIERRA)\b", str(e.get("descripcion") or "").upper())
+            ]
+        for lab in apu.get("labors") or []:
+            lab["cantidad"] = max(1, int(round(float(lab.get("cantidad") or 1.0))))
+        _calculate_apu_subtotals(apu)
+
+
 def generate_apu_v3_compound(
     user_description: str,
     db: Session,
@@ -189,6 +472,40 @@ def generate_apu_v3_compound(
     tons = float(total_tons) if has_explicit_tons else _DEFAULT_REFERENCE_TONS
     user_factors: Dict[str, float] = units_per_ton or {}
     activities = sorted(compound_plan.activities, key=lambda a: a.order)
+
+    # ---------------- ETAPA 0: bloqueo por ambigüedades técnicas ----------------
+    ambiguity_params: List[Dict[str, str]] = []
+    ambiguity_options: List[str] = []
+    preview_subs: List[Dict[str, Any]] = []
+    for activity in activities:
+        preview_subs.append({
+            "actividad": activity.tag,
+            "descripcion_actividad": activity.description,
+            "unidad_natural_sugerida": activity.unit,
+            "share": activity.share,
+            "estado": "requiere_aclaratoria" if activity.ambiguity_question else "pendiente",
+        })
+        if activity.ambiguity_question:
+            ambiguity_params.append({
+                "key": f"ambiguity:{activity.tag}",
+                "label": f"[{activity.tag}] {activity.ambiguity_question}",
+            })
+            for opt in activity.ambiguity_options or []:
+                if opt not in ambiguity_options:
+                    ambiguity_options.append(opt)
+
+    if ambiguity_params:
+        logger.info(
+            "[V3 Compound] Aclaratoria requerida por ambigüedad técnica en %d sub-partida(s)",
+            len(ambiguity_params),
+        )
+        return _clarification(
+            "Para evitar suposiciones sobre materiales o sistemas constructivos no especificados, por favor aclara lo siguiente:",
+            compound_plan,
+            ambiguity_params,
+            preview_subs,
+            options=ambiguity_options,
+        )
 
     t_start = time.time()
     contributions: List[ActivityContribution] = []
@@ -224,13 +541,18 @@ def generate_apu_v3_compound(
             top_k=6,
             use_embeddings=use_embeddings,
         )
+        sub_context = (
+            f"{context or 'Partida compuesta COVENIN'}. "
+            f"Macro-partida original: {user_description}. "
+            "REGLA: Cantidades de obreros en números enteros >= 1. No usar partidas manuales (bolsas/carretillas) cuando la actividad es mecánica."
+        )
         # No forzamos requested_unit ni execution_days en actividades fisicas para no inducir 'Gl' en el selector.
         plan, base_apu, _, _ = plan_v3_selection_and_deltas(
             user_description=activity.description,
             enriched_candidates=candidates,
             requested_unit="Gl" if is_lump else None,
             execution_days=effective_lump_days,
-            context=context,
+            context=sub_context,
         )
         base_unit_raw = str((base_apu or {}).get("unidad") or "")
         if plan.selected_codpar != "NONE" and base_unit_raw and not is_lump:
@@ -267,6 +589,7 @@ def generate_apu_v3_compound(
             execution_days=effective_lump_days,
             covenin_prefix=covenin_prefix,
         )
+        _ensure_compound_sub_item_equipment(apu, activity, db)
         partida = apu.get("partida") or {}
         unit = str(partida.get("unit") or "")
         base_desc = str((base_apu or {}).get("descripcion") or "")

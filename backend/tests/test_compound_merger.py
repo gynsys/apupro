@@ -75,6 +75,35 @@ class TestMerge(unittest.TestCase):
         )
         self.assertEqual(merged["partida"]["unit"], "ton")
         self.assertAlmostEqual(merged["costo_directo"], expected, delta=expected * 1e-3)
+        for lab in merged["labors"]:
+            self.assertIsInstance(lab["cantidad"], int)
+            self.assertGreaterEqual(lab["cantidad"], 1)
+
+    def test_heterogeneous_crews_consolidated_into_positive_integers(self) -> None:
+        a = _make_apu("m3", 28.0)
+        a["labors"] = [
+            {"codigo": "MO-CAP", "descripcion": "CAPORAL", "cantidad": 1, "jornal": 29.96, "bono": 0.0},
+            {"codigo": "MO-OBR", "descripcion": "OBRERO DE 1RA", "cantidad": 6, "jornal": 24.75, "bono": 0.0},
+        ]
+        _calculate_apu_subtotals(a)
+
+        b = _make_apu("m3", 250.0)
+        b["labors"] = [
+            {"codigo": "MO-OP", "descripcion": "OPERADOR DE EQUIPO PESADO DE 1RA", "cantidad": 1, "jornal": 31.70, "bono": 0.0},
+            {"codigo": "MO-AYU", "descripcion": "AYUDANTE", "cantidad": 2, "jornal": 26.25, "bono": 0.0},
+        ]
+        _calculate_apu_subtotals(b)
+
+        contribs = [
+            ActivityContribution("FRAGMENTACION", a, "m3", 1.0, density_t_m3=1.45),
+            ActivityContribution("CARGA", b, "m3", 0.97, density_t_m3=1.45),
+        ]
+        merged = merge_activity_apus_to_master_ton(contribs, 1000.0, "demolicion y carga", 1.45)
+        expected_cd = (1.0 / 1.45) * a["costo_directo"] + (0.97 / 1.45) * b["costo_directo"]
+        self.assertAlmostEqual(merged["costo_directo"], expected_cd, delta=expected_cd * 1e-3)
+        for lab in merged["labors"]:
+            self.assertEqual(lab["cantidad"], int(lab["cantidad"]))
+            self.assertGreaterEqual(lab["cantidad"], 1)
 
     def test_trace_and_tags(self) -> None:
         a = _make_apu("ton", 10.0)

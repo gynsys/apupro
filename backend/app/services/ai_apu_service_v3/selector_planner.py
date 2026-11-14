@@ -5,7 +5,9 @@ Stage 1 & Stage 2 of AI APU Service v3.0:
 """
 
 import json
+import re
 import time
+import unicodedata
 from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
@@ -29,15 +31,20 @@ REGLA DE ORO DE REDACCIÓN Y MEJORA TÉCNICA COVENIN (adapted_description):
 - Elimina cualquier mención coloquial a casas, quintas, apartamentos o clientes privados; usa terminología normativa formal de ingeniería civil.
 
 REGLAS DE ORO DE COHERENCIA CONSTRUCTIVA POR PRIMEROS PRINCIPIOS:
-1. CAUSALIDAD DIRECTA DE LA CUADRILLA (SIN OFICIOS FANTASMA):
+1. CAUSALIDAD DIRECTA DE LA CUADRILLA (SIN OFICIOS FANTASMA) Y CANTIDADES ENTERAS DE OBREROS:
    - Cada cargo de mano de obra DEBE tener una relación de causa y efecto directa con la acción física de la partida.
+   - CANTIDAD DE OBREROS EN NÚMEROS ENTEROS: La cantidad (`new_quantity`) de CADA trabajador en `labor_ops` DEBE ser un número entero positivo (`1, 2, 3, 4...`). PROHIBIDO usar cantidades fraccionarias de obreros o supervisores (nunca `0.10`, `0.25`, `0.50`).
    - En DESMALEZAMIENTO, DEFORESTACIÓN, TALA, PODA O LIMPIEZA DE TERRENO: TERMINANTEMENTE PROHIBIDO incluir Albañil, Plomero, Electricista, Soldador o Carpintero. La cuadrilla natural se compone de: `CAPORAL`, `OBRERO DE 1RA` (operador de desmalezadora a motor / motosierra / machetero) y `AYUDANTE` (recogida, rastrilleo y apilado).
-   - En HERRERÍA, ESTRUCTURAS METÁLICAS O CERCAS CON TUBOS SOLDADOS: Si la partida involucra soldadura, corte de perfiles o fijación metálica, el oficial técnico debe ser `SOLDADOR DE 1RA` o `HERRERO DE 1RA` (no albañil).
+   - En HERRERÍA, ESTRUCTURAS METÁLICAS, CORTE DE ACERO/OXICORTE O CERCAS CON TUBOS SOLDADOS: Si la partida involucra soldadura, oxicorte, corte de perfiles o fijación metálica, el oficial técnico debe ser `SOLDADOR DE 1RA` o `HERRERO DE 1RA` (no albañil).
    - En PARTIDAS ATÍPICAS O ESPECIALIZADAS (ej. geomembranas PEAD, impermeabilizaciones, micropilotes): Asigna el especialista idóneo (`IMPERMEABILIZADOR DE 1RA`, `TÉCNICO ESPECIALISTA`) con sus herramientas y equipos correspondientes.
-2. ÁMBITO DE TRABAJO Y ESCALA POR UNIDAD DE MEDIDA:
+2. MAQUINARIA PESADA Y OXICORTE EN DEMOLICIÓN, FRAGMENTACIÓN Y CARGA MECÁNICA:
+   - En FRAGMENTACIÓN MECÁNICA Y CORTE DE ESCOMBROS DE CONCRETO ARMADO EN EL SUELO: Incluye obligatoriamente `RETROEXCAVADORA CASE 580 CON MARTILLO` (con `OPERADOR DE EQUIPO PESADO DE 1RA`) para demoler/triturar los elementos en el suelo y `EQUIPO OXICORTE C/CILINDROS OXIGENO Y AC` (con `SOLDADOR DE 1RA` y consumo de oxígeno/acetileno) para cortar cabillas y perfiles embebidos. TERMINANTEMENTE PROHIBIDO incluir motosierra de madera (`MOTOSIERRA`) en concreto o acero.
+   - En CARGA MECÁNICA DE ESCOMBROS O MATERIAL DE DEMOLICIÓN: Elige la partida base de carga con maquinaria pesada (`CMT156` con `CARGADOR / PAYLOADER`, `M136030000` `CARGA CON EQUIPO PESADO`, o `CMT155` con `RETROEXCAVADOR`). TERMINANTEMENTE PROHIBIDO elegir partidas manuales con uso de bolsas (`LAI711`) o carretillas cuando la actividad pide carga mecánica.
+   - En SEPARACIÓN, CORTE, ACOPIO Y CARGA DE MATERIALES FERROSOS / CHATARRA: Incluye obligatoriamente `EQUIPO OXICORTE C/CILINDROS OXIGENO Y AC` + `SOLDADOR DE 1RA` para el seccionamiento de perfiles/cabillas, y equipo mecánico de carga (`RETROEXCAVADORA` o `CARGADOR DE CAUCHOS`) + `OPERADOR DE EQUIPO PESADO DE 1RA`.
+3. ÁMBITO DE TRABAJO Y ESCALA POR UNIDAD DE MEDIDA:
    - Si la unidad es territorial (`ha` = 10.000 m², `km` lineal o grandes volúmenes de tierra): PROHIBIDO asignar cuadrillas enanas de 1 o 2 trabajadores. Debes estructurar una BRIGADA DE CAMPO PROPORCIONAL (mínimo 4 a 8 trabajadores en hectáreas) con dotación coherente de equipos motrices (ej. 2 a 4 desmalezadoras de motor, machetes y rastrillos).
    - Rendimiento diario proporcional: En `ha`, el rendimiento diario por brigada debe ser una fracción realista (típicamente 0.20 a 0.50 ha/día).
-3. PURGA OBLIGATORIA DE INSUMOS FANTASMA HEREDADOS (MODALIDAD A):
+4. PURGA OBLIGATORIA DE INSUMOS FANTASMA HEREDADOS (MODALIDAD A):
    - Si la partida candidata base seleccionada contiene insumos que contradicen la acción física solicitada (por ejemplo, un Albañil o cemento en una partida base elegida para desmalezamiento), DEBES ELIMINARLOS quirúrgicamente con `op: "remove"`.
 
 MODALIDAD A — ADAPTACIÓN QUIRÚRGICA DESDE PARTIDA BASE (CUANDO HAY CANDIDATA COMPATIBLE):
@@ -49,15 +56,15 @@ MODALIDAD A — ADAPTACIÓN QUIRÚRGICA DESDE PARTIDA BASE (CUANDO HAY CANDIDATA
 
 MODALIDAD B — CREACIÓN REGULADA DESDE CERO (`selected_codpar: "NONE"` CUANDO NO HAY COINCIDENCIA CONSTRUCTIVA):
 Si ninguna de las candidatas pertenece a la actividad/sistema constructivo solicitado (o si la lista de candidatas está vacía) PERO la descripción del usuario es completa y clara:
-1. Coloca `"selected_codpar": "NONE"`, `"keep_base_performance": false` y calcula `"new_performance"` según las Horas-Hombre diarias de la cuadrilla (`Obreros_Activos * 8 h/día / HH_por_unidad`).
+1. Coloca `"selected_codpar": "NONE"`, `"keep_base_performance": false` y calcula `"new_performance"` según las Horas-Hombre diarias de la cuadrilla (`Obreros_Activos * 8 h/día / HH_por_unidad`) o la productividad real de la maquinaria pesada asignada.
 2. Construye la receta completa usando operaciones `"op": "add"` en `material_ops`, `equipment_ops` y `labor_ops` siguiendo estas REGLAS OBLIGATORIAS COVENIN:
    - REGLA DE MATERIALES: Expresa consumos técnicos exactos por 1 unidad de medida (`target_unit`) con desperdicio normativo (`3%` a `10%`). Si la partida es solo Instalación (`I/S`), Demolición, Remoción o Desmontaje, PROHIBIDO incluir la compra del activo principal.
    - REGLA DE EQUIPOS: Incluye siempre `HERRAMIENTAS MENORES` (`new_quantity: 1.0`, `depreciation_factor: 1.0`, `estimated_price_usd: 1.50`). Para herramientas eléctricas o equipos propios, usa factor de depreciación diario (`depreciation_factor` entre `0.002` y `0.015`) sobre su valor de reposición en USD, o `1.0` si el precio es tarifa diaria.
-   - REGLA DE MANO DE OBRA: Asigna los oficios técnicos exactamente requeridos por la actividad física:
-     * Supervisión: `MAESTRO DE OBRA` o `CAPORAL` (`0.10` a `0.50`).
-     * Especialistas según oficio real: `ALBAÑIL DE 1RA` (albañilería/concreto), `SOLDADOR DE 1RA` o `HERRERO DE 1RA` (metálicas/soldadura), `PLOMERO DE 1RA` (tuberías/gas), `ELECTRICISTA DE 1RA` (electricidad), `PINTOR DE 1RA` (pintura), `IMPERMEABILIZADOR` (impermeabilización/geomembranas), `CARPINTERO DE 1RA` (madera/encofrados).
+   - REGLA DE MANO DE OBRA (CANTIDADES ENTERAS >= 1): Asigna los oficios técnicos exactamente requeridos por la actividad física con cantidad entera (`1, 2, 3...`):
+     * Supervisión: `MAESTRO DE OBRA` o `CAPORAL` (`new_quantity: 1`).
+     * Especialistas según oficio real: `OPERADOR DE EQUIPO PESADO DE 1RA` (maquinaria pesada), `ALBAÑIL DE 1RA` (albañilería/concreto), `SOLDADOR DE 1RA` o `HERRERO DE 1RA` (metálicas/soldadura/oxicorte), `PLOMERO DE 1RA` (tuberías/gas), `ELECTRICISTA DE 1RA` (electricidad), `PINTOR DE 1RA` (pintura), `IMPERMEABILIZADOR` (impermeabilización/geomembranas), `CARPINTERO DE 1RA` (madera/encofrados).
      * En labores de campo/áreas verdes: NO usar especialistas de obra civil; usar `OBRERO DE 1RA` (operadores de desmalezadora/macheteros) y `AYUDANTE`.
-     * Apoyo: `AYUDANTE` y/o `OBRERO DE 1RA` dimensionados a la escala de la partida.
+     * Apoyo: `AYUDANTE` y/o `OBRERO DE 1RA` dimensionados en números enteros a la escala de la partida.
 3. Solo pon `"clarification_needed": true` si la descripción del usuario está incompleta o carece de actividad/material definitorio.
 - Responde SIEMPRE en formato JSON válido cumpliendo el esquema solicitado.
 """
@@ -108,6 +115,56 @@ def _format_candidate_recipe_summary(index: int, score: float, apu_data: Dict[st
     return summary
 
 
+def _expand_search_query_for_covenin(user_description: str) -> str:
+    """
+    Expande la consulta de búsqueda léxica con el vocabulario técnico exacto del catálogo COVENIN
+    para actividades de apuntalamiento, fragmentación mecánica, oxicorte y carga con equipo pesado.
+    """
+    nfkd = unicodedata.normalize("NFKD", str(user_description or ""))
+    d_up = "".join(ch for ch in nfkd if not unicodedata.combining(ch)).upper()
+    is_manual = bool(re.search(r"\b(?:A\s+MANO|MANUAL(?:MENTE)?)\b", d_up))
+    extra: List[str] = []
+
+    if re.search(r"\b(?:APUNTAL|ENTIBAD|SOSTENIMIENTO)\w*\b", d_up):
+        if re.search(r"\b(?:METALIC\w*|TELESCOPIC\w*|HIERRO|ACERO)\b", d_up):
+            extra.append("APUNTALAMIENTO Y SOSTENIMIENTO DE ELEMENTOS ESTRUCTURALES DURANTE SU REPARACION PUNTAL DE HIERRO")
+        elif re.search(r"\bMADERA\b", d_up):
+            extra.append("APUNTALAMIENTO SOSTENIMIENTO MADERA PUNTALES")
+        else:
+            extra.append("APUNTALAMIENTO Y SOSTENIMIENTO DE ELEMENTOS ESTRUCTURALES")
+
+    if (
+        re.search(r"\b(?:FRAGMENTACION|TRITURACION|REPICA\w*)\b", d_up)
+        or (re.search(r"\bCORTE\b", d_up) and re.search(r"\b(?:ESCOMBRO\w*|CONCRETO)\b", d_up))
+    ) and not is_manual:
+        extra.append(
+            "DEMOLICION DE ESTRUCTURA DE CONCRETO ARMADO EXISTENTE A MAQUINA INCLUYE MARTILLO Y COMPRESOR CORTE DE CABILLAS EQUIPO DE OXICORTE"
+        )
+
+    if (
+        re.search(r"\bCARGA\b", d_up)
+        and re.search(r"\b(?:ESCOMBRO\w*|DEMOLICION\w*|MECANIC\w*|EQUIPO\s+PESADO|PAYLOADER|CARGADOR)\b", d_up)
+        and not re.search(r"\b(?:FERROSO\w*\s+Y|CHATARRA|SEPARACION)\b", d_up)
+        and not is_manual
+    ):
+        extra.append(
+            "CARGA EN CAMIONES DE MATERIAL PROVENIENTE DE LAS DEMOLICIONES CON EL USO DE CARGADOR PAYLOADER EQUIPO PESADO EXCLUYE EL CAMION"
+        )
+
+    if (
+        re.search(r"\b(?:FERROSO\w*|CHATARRA|PERFIL(?:ES)?\s+METALIC\w*)\b", d_up)
+        and re.search(r"\b(?:SEPARACION|ACOPIO|CARGA|CORTE|REMOCION)\b", d_up)
+        and not is_manual
+    ):
+        extra.append(
+            "REMOCION DE ELEMENTOS ESTRUCTURALES DE ACERO INCLUYE USO DE EQUIPO OXICORTE CORTE DE CABILLAS CARGA CON EQUIPO PESADO"
+        )
+
+    if not extra:
+        return user_description
+    return f"{user_description} {' '.join(extra)}"
+
+
 def fetch_enriched_candidates_for_v3(
     db: Session,
     user_description: str,
@@ -129,9 +186,10 @@ def fetch_enriched_candidates_for_v3(
         raise ValueError("user_description debe ser un string no vacío")
 
     t0 = time.time()
+    search_query = _expand_search_query_for_covenin(user_description)
     candidates, _ = get_dynamic_candidates(
         db,
-        user_description,
+        search_query,
         covenin_prefix or "",
         limit=12,
         use_embeddings=use_embeddings,
@@ -222,7 +280,7 @@ def _build_v3_selector_prompt(
         f"4. REDACCIÓN Y MEJORA TÉCNICA (adapted_description): Profesionaliza la redacción en MAYÚSCULAS usando terminología técnica formal COVENIN pero SIN INVENTAR FASES O ALCANCES NO SOLICITADOS (ej: si piden acarreo manual, no agregues bote ni transporte vehicular ni contenedores; mantén las palabras asociadas a la acción y elemento pedido).\n"
         f"5. Si un insumo de la base se mantiene pero cambia su especificación (ej. otro tipo de bloque, otra resistencia de concreto, otro diámetro de tubería), usa `op: \"replace\"` indicando `target_code` del insumo original en la base.\n"
         f"6. Si un insumo de la base sobra o contradice la solicitud del usuario, usa `op: \"remove\"` indicando su `target_code`.\n"
-        f"7. REGLA DE EQUIPOS DE LOGÍSTICA PESADA (SOLO POR SOLICITUD EXPLÍCITA): Elimina (`op: \"remove\"`) o abstente de agregar el WINCHE CABRESTANTE (+ GÜINCHERO), CAMIÓN F-350/VOLTEO/CONTENEDOR (+ CHOFER), COMPRESOR NEUMÁTICO (+ OPERADOR), PLANTA ELÉCTRICA/GENERADOR, BOMBA DE ACHIQUE, BOMBA DE CONCRETO, MINICARGADOR/BOBCAT, MONTACARGAS, PLATAFORMA ELEVADORA/MANLIFT, ANDAMIO TUBULAR/COLGANTE, EQUIPO AIRLESS, FRESADORA/ESCARIFICADORA DE PISO, CORTADORA DE PAVIMENTO DE CARRO, HIDROLAVADORA INDUSTRIAL, EQUIPO DE TOPOGRAFÍA, EQUIPO DE ENSAYO o EQUIPO DE OXICORTE/GRÚA/SEÑORITA salvo que el usuario lo haya solicitado expresamente en su descripción.\n"
+        f"7. REGLA DE EQUIPOS DE LOGÍSTICA Y MAQUINARIA PESADA: Elimina (`op: \"remove\"`) o abstente de agregar WINCHE CABRESTANTE (+ GÜINCHERO), CAMIÓN F-350/VOLTEO/CONTENEDOR (+ CHOFER), PLANTA ELÉCTRICA/GENERADOR, BOMBA DE ACHIQUE, BOMBA DE CONCRETO, MONTACARGAS, PLATAFORMA ELEVADORA/MANLIFT, ANDAMIO TUBULAR/COLGANTE, EQUIPO AIRLESS, FRESADORA/ESCARIFICADORA DE PISO, CORTADORA DE PAVIMENTO DE CARRO, HIDROLAVADORA INDUSTRIAL, EQUIPO DE TOPOGRAFÍA o EQUIPO DE ENSAYO salvo que el usuario lo haya solicitado expresamente. En cambio, en actividades de FRAGMENTACIÓN MECÁNICA / DEMOLICIÓN A MÁQUINA incluye obligatoriamente `RETROEXCAVADORA CASE 580 CON MARTILLO` (o `COMPRESOR + MARTILLO`), en CORTE ESPECIALIZADO / SEPARACIÓN DE FERROSOS incluye `EQUIPO OXICORTE C/CILINDROS OXIGENO Y AC` (+ `SOLDADOR DE 1RA`), y en CARGA MECÁNICA DE ESCOMBROS elige la base con `CARGADOR / PAYLOADER` o `RETROEXCAVADORA` (PROHIBIDO elegir acarreos manuales en bolsas o motosierra de madera). En `labor_ops`, toda cantidad (`new_quantity`) de obreros/oficiales/caporal DEBE ser un número entero positivo (`1, 2, 3...`).\n"
         f"8. UNIDADES COMPUESTAS DE TRANSPORTE Y ACARREO (M3-M, M3-KM, TON-KM): En 'M3-M' (volumen x metros de distancia horizontal), el rendimiento diario representa Volumen x Distancia (mínimo 100 a 300 M3-M/día para una cuadrilla de 1-2 obreros con carretillas, NUNCA rendimientos de excavación de 10-20 m3). En 'M3-KM' (transporte vehicular en camión), el rendimiento diario representa Volumen x Kilómetros (mínimo 300 a 800 M3-KM/día), y la tarifa del camión es diaria de alquiler (price_basis: 'tarifa_diaria', depreciation_factor: 1.0).\n\n"
         f"Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta:\n"
         "{\n"
@@ -302,6 +360,14 @@ def plan_v3_selection_and_deltas(
     try:
         if not isinstance(raw_dict, dict):
             raw_dict = {}
+        valid_ops = {"remove", "replace", "modify_qty", "add"}
+        for op_list_key in ("material_ops", "equipment_ops", "labor_ops"):
+            raw_ops = raw_dict.get(op_list_key)
+            if isinstance(raw_ops, list):
+                raw_dict[op_list_key] = [
+                    item for item in raw_ops
+                    if isinstance(item, dict) and str(item.get("op") or "").strip().lower() in valid_ops
+                ]
         plan = V3AdaptationPlan.model_validate(raw_dict)
     except Exception as val_err:
         logger.error("Error validando V3AdaptationPlan con Pydantic: %s. Reconstruyendo plan base.", val_err, exc_info=True)
