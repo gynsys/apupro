@@ -168,6 +168,12 @@ def _resolve_indicator(
         f"units_per_ton:{activity.tag}",
         f"[{activity.tag}] La partida base esta en '{unit}' ({base_description[:80]}). "
         f"Indica cuantos {unit} de esta actividad corresponden a cada tonelada.",
+        options=(
+            f"0.12 {unit}/ton (factor preventivo típico)",
+            f"0.25 {unit}/ton",
+            f"0.50 {unit}/ton",
+            f"1.00 {unit}/ton",
+        ),
     )
 
 
@@ -552,6 +558,7 @@ def generate_apu_v3_compound(
     contributions: List[ActivityContribution] = []
     sub_partidas: List[Dict[str, Any]] = []
     pending: List[Dict[str, str]] = []
+    pending_options: List[str] = []
     warnings: List[str] = []
     assumptions: List[str] = [
         f"Porcentaje de ferrosos en peso: {compound_plan.ferrous_pct:g}% (supuesto editable; minimo normativo 1%).",
@@ -618,6 +625,9 @@ def generate_apu_v3_compound(
                 "key": f"clarification:{activity.tag}",
                 "label": f"[{activity.tag}] {plan.clarification_reason or activity.description}",
             })
+            for opt in (plan.clarification_options or []):
+                if opt and opt not in pending_options:
+                    pending_options.append(opt)
             sub_partidas.append(entry)
             continue
 
@@ -671,6 +681,9 @@ def generate_apu_v3_compound(
         except MissingConversionData as exc:
             entry["estado"] = "pendiente_indicacion"
             pending.append({"key": exc.param_key, "label": str(exc)})
+            for opt in getattr(exc, "options", ()):
+                if opt and opt not in pending_options:
+                    pending_options.append(opt)
             sub_partidas.append(entry)
             continue
 
@@ -691,11 +704,18 @@ def generate_apu_v3_compound(
 
     if pending:
         public_subs = [{k: v for k, v in s.items() if k != "apu"} for s in sub_partidas]
+        if not pending_options:
+            pending_options = [
+                "Escombro mixto suelto (1.35 t/m3)",
+                "Edificación mixta en sitio (2.00 t/m3)",
+                "Concreto armado en sitio (2.40 t/m3)",
+            ]
         result = _clarification(
             "Se calcularon las sub-partidas disponibles; faltan indicaciones para fusionarlas en toneladas.",
             compound_plan,
             pending,
             public_subs,
+            options=pending_options,
         )
         result["advertencias"] = warnings
         return result

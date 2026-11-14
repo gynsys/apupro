@@ -21,9 +21,10 @@ from typing import Dict, Optional, Pattern, Tuple
 class MissingConversionData(ValueError):
     """Falta un dato clave del usuario para convertir una actividad a la unidad maestra."""
 
-    def __init__(self, param_key: str, message: str) -> None:
+    def __init__(self, param_key: str, message: str, options: Optional[Tuple[str, ...]] = None) -> None:
         super().__init__(message)
         self.param_key = param_key
+        self.options: Tuple[str, ...] = options or ()
 
 
 @dataclass(frozen=True)
@@ -68,20 +69,43 @@ _MATERIAL_ALIASES: Dict[str, str] = {
     "concreto": "concreto_armado",
 }
 
+_DEFAULT_DENSITY_CHIPS: Tuple[str, ...] = (
+    "Escombro mixto suelto (1.35 t/m3)",
+    "Edificación mixta en sitio (2.00 t/m3)",
+    "Concreto armado en sitio (2.40 t/m3)",
+    "Mampostería de bloque/ladrillo (1.80 t/m3)",
+)
+
+
+def _resolve_material_key(raw_material: str) -> str:
+    raw_key = str(raw_material or "").strip().lower()
+    if raw_key in MATERIAL_DENSITIES:
+        return raw_key
+    if raw_key in _MATERIAL_ALIASES:
+        return _MATERIAL_ALIASES[raw_key]
+    # Solo hacer inferencia por subcadenas cuando el nombre contiene palabras compuestas conocidas
+    if any(tok in raw_key for tok in ("escombro", "residuo", "demolicion")):
+        return "escombro_mixto"
+    if any(tok in raw_key for tok in ("concreto_", "hormigon")):
+        return "concreto_armado"
+    if any(tok in raw_key for tok in ("ferroso", "chatarra", "acero_", "perfil")):
+        return "acero"
+    return raw_key
+
 
 def density_for(material: str, state: str) -> Tuple[float, str]:
     """
     Devuelve (densidad t/m3, nota de fuente) para el material y estado.
     Lanza MissingConversionData si el material no esta en la tabla o no hay valor para el estado.
     """
-    raw_key = str(material or "").strip().lower()
-    key = _MATERIAL_ALIASES.get(raw_key, raw_key)
+    key = _resolve_material_key(material)
     entry = MATERIAL_DENSITIES.get(key)
     if entry is None:
         raise MissingConversionData(
             "density_t_per_m3",
             f"Material '{material}' no esta en la tabla de densidades. Indica la densidad (t/m3) "
             f"o elige uno de: {', '.join(sorted(MATERIAL_DENSITIES))}.",
+            options=_DEFAULT_DENSITY_CHIPS,
         )
     st = str(state or "").strip().lower()
     if st == STATE_IN_SITU:
@@ -93,6 +117,7 @@ def density_for(material: str, state: str) -> Tuple[float, str]:
                 "density_t_per_m3",
                 f"'{entry.label}' no tiene densidad en sitio en la tabla. Indica el material "
                 "predominante (ej. concreto armado, mamposteria) o la densidad en t/m3.",
+                options=_DEFAULT_DENSITY_CHIPS,
             )
         return entry.insitu_t_m3, f"{entry.label} en sitio: {entry.range_note}"
     if st == STATE_LOOSE:
@@ -102,6 +127,7 @@ def density_for(material: str, state: str) -> Tuple[float, str]:
             raise MissingConversionData(
                 "density_t_per_m3",
                 f"'{entry.label}' no tiene densidad suelta ni en sitio en la tabla. Indica la densidad (t/m3).",
+                options=_DEFAULT_DENSITY_CHIPS,
             )
         value = round(entry.insitu_t_m3 / entry.swell_factor, 4)
         return value, (
@@ -111,6 +137,7 @@ def density_for(material: str, state: str) -> Tuple[float, str]:
     raise MissingConversionData(
         "density_t_per_m3",
         f"Estado '{state}' invalido para convertir volumen a toneladas (use en_sitio o suelto).",
+        options=_DEFAULT_DENSITY_CHIPS,
     )
 
 

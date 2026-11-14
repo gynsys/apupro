@@ -107,7 +107,8 @@ _CLARIFICATION_ANSWER_RE = re.compile(
     r"|con\s+(?:winche|cam[ií][oó]n|compresor|andamio|mezcladora|trompo|oxicorte|vibrocompactador|martillo|herramientas|se[nñ]orita|puntales?|perfiles?|retroexcavadora|payloader|cargador)\b"
     r"|por\s+medios\s+(?:mec[aá]nicos|manuales)\b"
     r"|incluye\s+(?:alquiler\s+de\s+andamio|andamio|carga\s+y\s+bote|cam[ií][oó]n)\b"
-    r"|\d[\d.,]*\s*(?:m|m2|m²|m3|m³|ml|cm|mm|hp|kg|ton|toneladas?|tn|und|pza|d[ií]as?)\b"
+    r"|(?:escombro|concreto|edificaci[oó]n|mamposter[ií]a|densidad|factor)\b"
+    r"|\d[\d.,]*\s*(?:t/m[3³]|m2/ton|m/ton|und/ton|pza/ton|m|m2|m²|m3|m³|ml|cm|mm|hp|kg|ton|toneladas?|tn|und|pza|d[ií]as?)\b"
     r"|\d[\d.,]*\s*[x×]\s*\d[\d.,]*)",
     re.IGNORECASE,
 )
