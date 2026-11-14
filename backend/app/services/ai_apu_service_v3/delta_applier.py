@@ -538,8 +538,11 @@ def apply_v3_deltas_to_base_apu(
     enforce_discordant_inputs_purging(result, user_description, base_apu)
 
     # Garantizar que todas las cantidades de obreros en mano de obra sean números enteros >= 1
+    # y que las cantidades de equipos se redondeen a 2 decimales
     for lab in result.get("labors") or []:
         lab["cantidad"] = max(1, int(round(float(lab.get("cantidad") or 1.0))))
+    for eq in result.get("equipments") or []:
+        eq["cantidad"] = max(0.01, round(float(eq.get("cantidad") or 0.01), 2))
 
     # 7. Calcular subtotales matemáticos exactos
     _calculate_apu_subtotals(result)

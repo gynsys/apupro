@@ -104,6 +104,9 @@ class TestMerge(unittest.TestCase):
         for lab in merged["labors"]:
             self.assertEqual(lab["cantidad"], int(lab["cantidad"]))
             self.assertGreaterEqual(lab["cantidad"], 1)
+        for eq in merged["equipments"]:
+            self.assertEqual(eq["cantidad"], round(eq["cantidad"], 2))
+            self.assertGreaterEqual(eq["cantidad"], 0.01)
 
     def test_trace_and_tags(self) -> None:
         a = _make_apu("ton", 10.0)

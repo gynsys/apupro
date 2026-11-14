@@ -301,6 +301,7 @@ def _ensure_compound_sub_item_equipment(
         re.search(r"\bCARGA\b", desc_up)
         and re.search(r"\b(?:ESCOMBRO\w*|DEMOLICION\w*|NO\s+FERROSO\w*|EQUIPO\s+PESADO|PAYLOADER|CARGADOR)\b", desc_up)
         and not re.search(r"\b(?:SEPARACION|CHATARRA|FERROSO\w*\s+Y)\b", desc_up)
+        and activity.share_kind != "ferrous"
     )
     if is_mech_loading:
         # Eliminar bolsas si provinieron de una base manual descartada
@@ -308,6 +309,26 @@ def _ensure_compound_sub_item_equipment(
         mats[:] = [m for m in mats if not re.search(r"\b(?:BOLSA|SACO)\b", str(m.get("descripcion") or "").upper())]
         if len(mats) != before_m:
             changed = True
+
+        # Si el LLM reemplazó el cargador por un código sintético EQ-IA subvalorado (< $50/día), sustituirlo por COP010 oficial
+        for idx_e, eq_item in enumerate(eqs):
+            e_desc_u = str(eq_item.get("descripcion") or "").upper()
+            if re.search(r"\b(?:CARGADOR|PAYLOADER)\b", e_desc_u):
+                daily_cost = float(eq_item.get("precio_unitario") or 0.0) * float(eq_item.get("depreciacion") or 1.0)
+                if daily_cost < 50.0 or str(eq_item.get("codigo") or "").upper().startswith("EQ-IA"):
+                    eqs[idx_e] = {
+                        "id": "e-cop010",
+                        "codigo": "COP010",
+                        "cod_ins": "COP010",
+                        "ref_code": "COP010",
+                        "descripcion": "CARGADOR DE CAUCHOS CAT 950-F (4,00 C.Y)",
+                        "unidad": "día",
+                        "cantidad": round(max(0.01, float(eq_item.get("cantidad") or 1.0)), 2),
+                        "depreciacion": 0.003522,
+                        "precio_unitario": 318715.14,
+                        "origen": "historico",
+                    }
+                    changed = True
 
         if not _has_eq(r"\b(?:CARGADOR|PAYLOADER|CAT\s*950|CAT\s*966)\b"):
             eqs.append({
@@ -318,8 +339,8 @@ def _ensure_compound_sub_item_equipment(
                 "descripcion": "CARGADOR DE CAUCHOS CAT 950-F (4,00 C.Y)",
                 "unidad": "día",
                 "cantidad": 1.0,
-                "depreciacion": 1.0,
-                "precio_unitario": 405.84,
+                "depreciacion": 0.003522,
+                "precio_unitario": 318715.14,
                 "origen": "historico",
             })
             changed = True
@@ -344,6 +365,8 @@ def _ensure_compound_sub_item_equipment(
     # 3. Separación, corte con oxicorte, acopio y carga de materiales ferrosos / chatarra
     is_ferrous_handling = bool(
         re.search(r"\b(?:FERROSO\w*|CHATARRA|PERFIL(?:ES)?\s+METALIC\w*)\b", desc_up)
+        and not re.search(r"\bNO\s+FERROSO\w*\b", desc_up)
+        and activity.share_kind != "non_ferrous"
         and re.search(r"\b(?:SEPARACION|ACOPIO|CARGA|CORTE|REMOCION|CLASIFICACION)\b", desc_up)
     )
     if is_ferrous_handling:
@@ -390,6 +413,9 @@ def _ensure_compound_sub_item_equipment(
                 "origen": "historico",
             })
             changed = True
+        # En partidas medidas en kg (ej. 300 kg/día = 0.3 ton/día), un Payloader CAT 950-F interviene
+        # solo una fracción de jornada (0.05 día) para apoyar la carga de chatarra ya acopiada.
+        loader_qty_ferrous = 0.05 if _norm_unit(str(partida.get("unit") or "")) == "kg" else 1.0
         if not _has_eq(r"\b(?:CARGADOR|PAYLOADER|RETROEXCAVADOR\w*)\b"):
             eqs.append({
                 "id": "e-cop010",
@@ -398,12 +424,18 @@ def _ensure_compound_sub_item_equipment(
                 "ref_code": "COP010",
                 "descripcion": "CARGADOR DE CAUCHOS CAT 950-F (4,00 C.Y)",
                 "unidad": "día",
-                "cantidad": 1.0,
-                "depreciacion": 1.0,
-                "precio_unitario": 405.84,
+                "cantidad": loader_qty_ferrous,
+                "depreciacion": 0.003522,
+                "precio_unitario": 318715.14,
                 "origen": "historico",
             })
             changed = True
+        elif _norm_unit(str(partida.get("unit") or "")) == "kg":
+            for eq_item in eqs:
+                if re.search(r"\b(?:CARGADOR|PAYLOADER)\b", str(eq_item.get("descripcion") or "").upper()):
+                    if float(eq_item.get("cantidad") or 0.0) > 0.10:
+                        eq_item["cantidad"] = loader_qty_ferrous
+                        changed = True
         if not _has_lab(r"\bOPERADOR\s+DE\s+EQUIPO\s+PESADO"):
             labs.append({
                 "id": "l-op-pesado",
@@ -426,12 +458,19 @@ def _ensure_compound_sub_item_equipment(
                 m["cantidad"] = 0.001
                 changed = True
 
-    # Garantizar que toda la mano de obra tenga cantidad entera >= 1
+    # Garantizar que toda la mano de obra tenga cantidad entera >= 1 y equipos redondeados a 2 decimales
     for lab in labs:
         raw_q = float(lab.get("cantidad") or 1.0)
         int_q = max(1, int(round(raw_q)))
         if raw_q != float(int_q):
             lab["cantidad"] = int_q
+            changed = True
+
+    for eq_item in eqs:
+        raw_eq_q = float(eq_item.get("cantidad") or 0.01)
+        rounded_eq_q = max(0.01, round(raw_eq_q, 2))
+        if raw_eq_q != rounded_eq_q:
+            eq_item["cantidad"] = rounded_eq_q
             changed = True
 
     if changed:
@@ -445,6 +484,8 @@ def _ensure_compound_sub_item_equipment(
             ]
         for lab in apu.get("labors") or []:
             lab["cantidad"] = max(1, int(round(float(lab.get("cantidad") or 1.0))))
+        for eq_item in apu.get("equipments") or []:
+            eq_item["cantidad"] = max(0.01, round(float(eq_item.get("cantidad") or 0.01), 2))
         _calculate_apu_subtotals(apu)
 
 

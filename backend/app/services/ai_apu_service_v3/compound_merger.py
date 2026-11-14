@@ -121,10 +121,8 @@ def _labor_role_key(lab: Dict[str, Any]) -> str:
         clean = re.sub(r"\s*-\s*TABULADOR.*$", "", clean)
         clean = re.sub(r"\s*-N\d+\b", "", clean)
         clean = clean.replace(".", "").strip()
-        if "CAPORAL" in clean:
+        if "CAPORAL" in clean or "MAESTRO DE OBRA" in clean or "MAESTRO GENERAL" in clean:
             return "ROLE::CAPORAL"
-        if "MAESTRO DE OBRA" in clean or "MAESTRO GENERAL" in clean:
-            return "ROLE::MAESTRO DE OBRA"
         if "AYUDANTE" in clean:
             return "ROLE::AYUDANTE"
         if "OBRERO" in clean:
@@ -289,12 +287,14 @@ def merge_activity_apus_to_master_ton(
     materials: List[Dict[str, Any]] = []
     for mb in mat_buckets.values():
         it = mb["item"]
+        it["cantidad"] = round(float(it.get("cantidad") or 0.0), 4)
         it["actividad_origen"] = ", ".join(mb["tags"])
         materials.append(it)
 
     equipments: List[Dict[str, Any]] = []
     for eb in eq_buckets.values():
         it = eb["item"]
+        it["cantidad"] = max(0.01, round(float(it.get("cantidad") or 0.01), 2))
         it["actividad_origen"] = ", ".join(eb["tags"])
         equipments.append(it)
 

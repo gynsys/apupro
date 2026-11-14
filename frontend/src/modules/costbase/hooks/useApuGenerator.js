@@ -452,23 +452,27 @@ export function useApuGenerator({ setSettings }) {
 
       const newMaterials = Object.values(matBuckets).map(mb => {
         const m = mb.item;
+        const cant = Number(m.cantidad.toFixed(4));
         const pu = parseFloat(m.precio_unitario) || 0;
         const desp = parseFloat(m.desperdicio) || 0;
         const factorDesp = desp > 0 ? 1.0 + (desp / 100.0) : 1.0;
         return {
           ...m,
-          total: Number((m.cantidad * pu * factorDesp).toFixed(4)),
+          cantidad: cant,
+          total: Number((cant * pu * factorDesp).toFixed(4)),
           actividad_origen: mb.tags.join(', '),
         };
       });
 
       const newEquipments = Object.values(eqBuckets).map(eb => {
         const e = eb.item;
+        const cant = Math.max(0.01, Number(e.cantidad.toFixed(2)));
         const pu = parseFloat(e.precio_unitario) || 0;
         const dep = parseFloat(e.depreciacion) || 1.0;
-        const costoDia = e.cantidad * pu * dep;
+        const costoDia = cant * pu * dep;
         return {
           ...e,
+          cantidad: cant,
           costo_dia: Number(costoDia.toFixed(4)),
           total: Number((costoDia / masterPerf).toFixed(4)),
           actividad_origen: eb.tags.join(', '),

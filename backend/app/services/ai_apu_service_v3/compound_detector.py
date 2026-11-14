@@ -191,11 +191,15 @@ def _enrich_and_check_ambiguity(
     )
     is_explicit_manual = bool(re.search(r"\b(?:A\s+MANO|MANUAL(?:MENTE)?)\b", d_up_now))
 
-    # 3a. Fragmentación y corte de escombros en el suelo
+    # 3a. Fragmentación y corte de escombros en el suelo (excluyendo la sub-partida de demolición primaria)
     if (
-        re.search(r"\b(?:FRAGMENTACION|TRITURACION|REPICA\w*)\b", d_up_now)
-        or (re.search(r"\bCORTE\b", d_up_now) and re.search(r"\b(?:ESCOMBRO\w*|CONCRETO)\b", d_up_now))
-    ) and not is_explicit_manual:
+        (
+            re.search(r"\b(?:FRAGMENTACION|TRITURACION|REPICA\w*)\b", d_up_now)
+            or (re.search(r"\bCORTE\b", d_up_now) and re.search(r"\b(?:ESCOMBRO\w*|CONCRETO)\b", d_up_now))
+        )
+        and "DEMOLICION" not in d_up_now
+        and not is_explicit_manual
+    ):
         additions: List[str] = []
         if not re.search(r"\b(?:RETROEXCAVADORA|MARTILLO)\b", d_up_now):
             additions.append("CON RETROEXCAVADORA CON MARTILLO HIDRAULICO")
@@ -208,7 +212,7 @@ def _enrich_and_check_ambiguity(
     elif (
         re.search(r"\bCARGA\b", d_up_now)
         and re.search(r"\b(?:ESCOMBRO\w*|MATERIAL\w*|DEMOLICION\w*|NO\s+FERROSO\w*)\b", d_up_now)
-        and not re.search(r"\b(?:FERROSO\w*\s+Y|CHATARRA|SEPARACION)\b", d_up_now)
+        and not re.search(r"\b(?:FERROSO\w*\s+Y|CHATARRA|SEPARACION|DEMOLICION\s+INTEGRAL|DEMOLICION\s+DE)\b", d_up_now)
         and (is_macro_mechanical or "MECANIC" in d_up_now)
         and not is_explicit_manual
     ):
@@ -220,6 +224,7 @@ def _enrich_and_check_ambiguity(
     # 3c. Separación, corte, acopio y carga de materiales ferrosos / chatarra
     elif (
         re.search(r"\b(?:FERROSO\w*|CHATARRA|PERFIL(?:ES)?\s+METALIC\w*|ACERO\s+DE\s+REFUERZO)\b", d_up_now)
+        and not re.search(r"\bNO\s+FERROSO\w*\b", d_up_now)
         and re.search(r"\b(?:SEPARACION|ACOPIO|CARGA|CLASIFICACION|CORTE|REMOCION)\b", d_up_now)
         and not is_explicit_manual
     ):
@@ -333,6 +338,28 @@ def validate_detected_activities(
                 share_kind="non_ferrous",
             )
         )
+
+    # Si existe una sub-partida dedicada de FRAGMENTACION, limpiar referencias a fragmentación/oxicorte
+    # dentro de la sub-partida de DEMOLICION primaria para evitar duplicar la misma partida base (ej. B01009).
+    has_dedicated_frag = any(
+        re.search(r"\b(?:FRAGMENTACION|TRITURACION)\b", _norm_ascii_upper(a.description))
+        and "DEMOLICION" not in _norm_ascii_upper(a.description)
+        for a in activities
+    )
+    if has_dedicated_frag:
+        for a in activities:
+            a_up = _norm_ascii_upper(a.description)
+            if "DEMOLICION" in a_up and "FRAGMENTACION" in a_up:
+                cleaned_dem = re.sub(
+                    r",?\s*INCLUYENDO\s+FRAGMENTACION.*$",
+                    "",
+                    a.description,
+                    flags=re.IGNORECASE,
+                ).strip()
+                if len(cleaned_dem) >= 10:
+                    if not re.search(r"\bEQUIPO\s+PESADO\b", _norm_ascii_upper(cleaned_dem)):
+                        cleaned_dem = f"{cleaned_dem} CON EQUIPO PESADO"
+                    a.description = cleaned_dem.upper()
 
     if len(activities) < 2:
         return CompoundPlan(is_compound=False, master_unit=master_unit, ferrous_pct=ferrous_pct)
