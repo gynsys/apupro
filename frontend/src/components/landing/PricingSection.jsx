@@ -2,7 +2,7 @@ import React from 'react';
 import { Check } from 'lucide-react';
 
 // Ajusta aquí el precio y los créditos del plan IA sin tocar el diseño.
-const AI_MONTHLY_PRICE = '19.99';
+const AI_MONTHLY_PRICE = '9.99';
 const AI_MONTHLY_CREDITS = '30';
 
 export default function PricingSection({ onRegisterClick }) {
