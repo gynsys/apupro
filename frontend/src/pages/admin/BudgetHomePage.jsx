@@ -420,10 +420,10 @@ export default function BudgetHomePage() {
                 <button
                   onClick={() => setIsMdbImportOpen(true)}
                   className="group flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-700 hover:from-violet-500 hover:to-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-indigo-500/20 hover:shadow-lg hover:shadow-indigo-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out min-h-[44px] touch-target w-full sm:w-auto"
-                  title="Importar presupuesto Maprex/Lulo desde Access"
+                  title="Importar presupuesto desde base de datos (.mdb)"
                 >
                   <Database size={20} className="group-hover:scale-110 transition-transform duration-300" />
-                  Importar MDB
+                  Desde *.mdb
                 </button>
               )}
               

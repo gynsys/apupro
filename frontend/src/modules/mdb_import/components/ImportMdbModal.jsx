@@ -93,7 +93,7 @@ export default function ImportMdbModal({ isOpen, onClose, onImported }) {
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900">Importar presupuesto MDB</h2>
-              <p className="text-xs text-slate-500">Transforma un proyecto Maprex/Lulo en un presupuesto Costbase.</p>
+              <p className="text-xs text-slate-500">Transforma un proyecto desde base de datos (.mdb) en un presupuesto Costbase.</p>
             </div>
           </div>
           <button
